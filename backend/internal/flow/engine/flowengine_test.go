@@ -600,7 +600,7 @@ func (suite *FlowEngineTestSuite) TestExecute_CompleteResponse() {
 
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), constants.FlowStatusComplete, step.Status)
-	assert.Equal(suite.T(), constants.StepTypeView, step.Type)
+	assert.Equal(suite.T(), constants.FlowStepType(""), step.Type)
 }
 
 func (suite *FlowEngineTestSuite) TestExecute_WithCurrentNodeSet() {

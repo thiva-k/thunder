@@ -114,16 +114,8 @@ func (fe *FlowEngine) Execute(ctx *model.EngineContext) (model.FlowStep, *servic
 
 	// If we reach here, it means the flow has been executed successfully.
 	flowStep.Status = constants.FlowStatusComplete
-	if ctx.CurrentNodeResponse != nil {
-		if ctx.CurrentNodeResponse.Assertion != "" {
-			flowStep.Assertion = ctx.CurrentNodeResponse.Assertion
-		}
-		// Set the step type based on the final node's response type
-		if ctx.CurrentNodeResponse.Type == constants.NodeResponseTypeView {
-			flowStep.Type = constants.StepTypeView
-		} else if ctx.CurrentNodeResponse.Type == constants.NodeResponseTypeRedirection {
-			flowStep.Type = constants.StepTypeRedirection
-		}
+	if ctx.CurrentNodeResponse != nil && ctx.CurrentNodeResponse.Assertion != "" {
+		flowStep.Assertion = ctx.CurrentNodeResponse.Assertion
 	}
 
 	return flowStep, nil
