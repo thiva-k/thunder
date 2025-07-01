@@ -24,9 +24,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/flow/constants"
 	"github.com/asgardeo/thunder/internal/flow/model"
-	applicationservicemock "github.com/asgardeo/thunder/tests/mocks/application/servicemock"
-	"github.com/asgardeo/thunder/tests/mocks/flow/daomock"
-	"github.com/asgardeo/thunder/tests/mocks/flow/enginemock"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -34,10 +32,7 @@ import (
 
 type FlowServiceTestSuite struct {
 	suite.Suite
-	service            FlowServiceInterface
-	mockFlowDAO        *daomock.FlowDAOInterfaceMock
-	mockFlowEngine     *enginemock.FlowEngineInterfaceMock
-	mockApplicationSvc *applicationservicemock.ApplicationServiceInterfaceMock
+	service FlowServiceInterface
 }
 
 func TestFlowServiceSuite(t *testing.T) {
@@ -52,9 +47,7 @@ func (suite *FlowServiceTestSuite) SetupTest() {
 }
 
 func (suite *FlowServiceTestSuite) BeforeTest(suiteName, testName string) {
-	suite.mockFlowDAO = daomock.NewFlowDAOInterfaceMock(suite.T())
-	suite.mockFlowEngine = enginemock.NewFlowEngineInterfaceMock(suite.T())
-	suite.mockApplicationSvc = applicationservicemock.NewApplicationServiceInterfaceMock(suite.T())
+	// No mocks needed for simplified tests
 }
 
 func (suite *FlowServiceTestSuite) TestIsNewFlow() {
@@ -216,3 +209,44 @@ func (suite *FlowServiceTestSuite) TestGetFlowService() {
 	assert.NotNil(suite.T(), service2)
 	assert.Same(suite.T(), service1, service2, "Should return the same singleton instance")
 }
+
+// Test getFlowGraph function with different scenarios
+func (suite *FlowServiceTestSuite) TestGetFlowGraph_EmptyAppID() {
+	_, err := getFlowGraph("", constants.FlowTypeAuthentication)
+	assert.NotNil(suite.T(), err) // ServiceError should not be nil
+	assert.IsType(suite.T(), &serviceerror.ServiceError{}, err)
+}
+
+// Test basic FlowService methods that don't require complex mocking
+func (suite *FlowServiceTestSuite) TestFlowService_BasicMethods() {
+	fs := &FlowService{}
+	
+	// Test that we can create a FlowService instance
+	assert.NotNil(suite.T(), fs)
+	
+	// Test calling methods that have validation logic
+	_, err := fs.loadContextFromStore("", nil)
+	assert.NotNil(suite.T(), err) // Should fail with empty flowID
+	assert.IsType(suite.T(), &serviceerror.ServiceError{}, err)
+}
+
+// Test additional helper function coverage
+func (suite *FlowServiceTestSuite) TestInitContext_EmptyAppID() {
+	fs := &FlowService{}
+	
+	// Test with empty app ID - should return error without needing mocks
+	_, err := fs.initContext("", constants.FlowTypeAuthentication, nil)
+	assert.NotNil(suite.T(), err)
+	assert.IsType(suite.T(), &serviceerror.ServiceError{}, err)
+}
+
+func (suite *FlowServiceTestSuite) TestLoadNewContext_EmptyAppID() {
+	fs := &FlowService{}
+	
+	// Test with empty app ID - should return error without needing mocks
+	_, err := fs.loadNewContext("", "action123", constants.FlowTypeAuthentication, nil, nil)
+	assert.NotNil(suite.T(), err)
+	assert.IsType(suite.T(), &serviceerror.ServiceError{}, err)
+}
+
+
