@@ -101,12 +101,12 @@ func (suite *UtilsTestSuite) TestBuildGraphFromDefinition_ValidSingleNode() {
 	assert.NotNil(suite.T(), graph)
 	assert.Equal(suite.T(), "test-graph", graph.GetID())
 	assert.Equal(suite.T(), constants.FlowTypeAuthentication, graph.GetType())
-	
+
 	// Should have one node
 	nodes := graph.GetNodes()
 	assert.Len(suite.T(), nodes, 1)
 	assert.Contains(suite.T(), nodes, "start-node")
-	
+
 	// Should set start node
 	assert.Equal(suite.T(), "start-node", graph.GetStartNodeID())
 }
@@ -132,18 +132,18 @@ func (suite *UtilsTestSuite) TestBuildGraphFromDefinition_ValidMultipleNodes() {
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), graph)
-	
+
 	// Should have two nodes
 	nodes := graph.GetNodes()
 	assert.Len(suite.T(), nodes, 2)
 	assert.Contains(suite.T(), nodes, "start-node")
 	assert.Contains(suite.T(), nodes, "end-node")
-	
+
 	// Should have edge
 	edges := graph.GetEdges()
 	assert.Contains(suite.T(), edges, "start-node")
 	assert.Contains(suite.T(), edges["start-node"], "end-node")
-	
+
 	// Should set start node (node with no previous nodes)
 	assert.Equal(suite.T(), "start-node", graph.GetStartNodeID())
 }
@@ -189,7 +189,7 @@ func (suite *UtilsTestSuite) TestBuildGraphFromDefinition_WithExecutor() {
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), graph)
-	
+
 	node, exists := graph.GetNode("exec-node")
 	assert.True(suite.T(), exists)
 	assert.NotNil(suite.T(), node.GetExecutorConfig())
@@ -212,7 +212,7 @@ func (suite *UtilsTestSuite) TestBuildGraphFromDefinition_WithAuthSuccessNode() 
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), graph)
-	
+
 	node, exists := graph.GetNode("auth-success")
 	assert.True(suite.T(), exists)
 	// AUTH_SUCCESS nodes should get default AuthAssertExecutor

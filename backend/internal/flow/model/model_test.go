@@ -27,6 +27,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const testNodeID = "test-node"
+
 type ModelTestSuite struct {
 	suite.Suite
 }
@@ -121,10 +123,12 @@ func (suite *ModelTestSuite) TestGraph_AddEdge_Success() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node1 := NewPromptOnlyNode("node1", false, false)
 	node2 := NewPromptOnlyNode("node2", false, false)
-	graph.AddNode(node1)
-	graph.AddNode(node2)
+	err := graph.AddNode(node1)
+	assert.NoError(suite.T(), err)
+	err = graph.AddNode(node2)
+	assert.NoError(suite.T(), err)
 
-	err := graph.AddEdge("node1", "node2")
+	err = graph.AddEdge("node1", "node2")
 
 	assert.NoError(suite.T(), err)
 	edges := graph.GetEdges()
@@ -153,9 +157,10 @@ func (suite *ModelTestSuite) TestGraph_AddEdge_EmptyToNodeID() {
 func (suite *ModelTestSuite) TestGraph_AddEdge_FromNodeNotExists() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node2 := NewPromptOnlyNode("node2", false, false)
-	graph.AddNode(node2)
+	err := graph.AddNode(node2)
+	assert.NoError(suite.T(), err)
 
-	err := graph.AddEdge("nonexistent", "node2")
+	err = graph.AddEdge("nonexistent", "node2")
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "node with fromNodeID does not exist")
@@ -164,9 +169,10 @@ func (suite *ModelTestSuite) TestGraph_AddEdge_FromNodeNotExists() {
 func (suite *ModelTestSuite) TestGraph_AddEdge_ToNodeNotExists() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node1 := NewPromptOnlyNode("node1", false, false)
-	graph.AddNode(node1)
+	err := graph.AddNode(node1)
+	assert.NoError(suite.T(), err)
 
-	err := graph.AddEdge("node1", "nonexistent")
+	err = graph.AddEdge("node1", "nonexistent")
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "node with toNodeID does not exist")
@@ -176,11 +182,14 @@ func (suite *ModelTestSuite) TestGraph_RemoveEdge_Success() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node1 := NewPromptOnlyNode("node1", false, false)
 	node2 := NewPromptOnlyNode("node2", false, false)
-	graph.AddNode(node1)
-	graph.AddNode(node2)
-	graph.AddEdge("node1", "node2")
+	err := graph.AddNode(node1)
+	assert.NoError(suite.T(), err)
+	err = graph.AddNode(node2)
+	assert.NoError(suite.T(), err)
+	err = graph.AddEdge("node1", "node2")
+	assert.NoError(suite.T(), err)
 
-	err := graph.RemoveEdge("node1", "node2")
+	err = graph.RemoveEdge("node1", "node2")
 
 	assert.NoError(suite.T(), err)
 	edges := graph.GetEdges()
@@ -201,9 +210,10 @@ func (suite *ModelTestSuite) TestGraph_RemoveEdge_EmptyFromNodeID() {
 func (suite *ModelTestSuite) TestGraph_RemoveEdge_FromNodeNotExists() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node2 := NewPromptOnlyNode("node2", false, false)
-	graph.AddNode(node2)
+	err := graph.AddNode(node2)
+	assert.NoError(suite.T(), err)
 
-	err := graph.RemoveEdge("nonexistent", "node2")
+	err = graph.RemoveEdge("nonexistent", "node2")
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "node with fromNodeID does not exist")
@@ -271,9 +281,10 @@ func (suite *ModelTestSuite) TestGraph_GetStartNodeID_NotSet() {
 func (suite *ModelTestSuite) TestGraph_SetStartNode_Success() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node := NewPromptOnlyNode("start-node", false, false)
-	graph.AddNode(node)
+	err := graph.AddNode(node)
+	assert.NoError(suite.T(), err)
 
-	err := graph.SetStartNode("start-node")
+	err = graph.SetStartNode("start-node")
 
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), "start-node", graph.GetStartNodeID())
@@ -291,8 +302,10 @@ func (suite *ModelTestSuite) TestGraph_SetStartNode_NodeNotExists() {
 func (suite *ModelTestSuite) TestGraph_GetStartNode_Success() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node := NewPromptOnlyNode("start-node", false, false)
-	graph.AddNode(node)
-	graph.SetStartNode("start-node")
+	err := graph.AddNode(node)
+	assert.NoError(suite.T(), err)
+	err = graph.SetStartNode("start-node")
+	assert.NoError(suite.T(), err)
 
 	startNode, err := graph.GetStartNode()
 
@@ -338,7 +351,8 @@ func (suite *ModelTestSuite) TestGraph_ToJSON_EmptyGraph() {
 func (suite *ModelTestSuite) TestGraph_ToJSON_WithNodes() {
 	graph := NewGraph("test-graph", constants.FlowTypeAuthentication)
 	node := NewPromptOnlyNode("prompt-node", false, false)
-	graph.AddNode(node)
+	err := graph.AddNode(node)
+	assert.NoError(suite.T(), err)
 
 	jsonStr, err := graph.ToJSON()
 
@@ -349,7 +363,7 @@ func (suite *ModelTestSuite) TestGraph_ToJSON_WithNodes() {
 
 // Node Tests
 func (suite *ModelTestSuite) TestNewNode_Success() {
-	nodeID := "test-node"
+	nodeID := testNodeID
 	nodeType := "PROMPT_ONLY"
 
 	node, err := NewNode(nodeID, nodeType, false, false)
@@ -363,7 +377,7 @@ func (suite *ModelTestSuite) TestNewNode_Success() {
 }
 
 func (suite *ModelTestSuite) TestNewNode_EmptyType() {
-	nodeID := "test-node"
+	nodeID := testNodeID
 
 	node, err := NewNode(nodeID, "", false, false)
 
@@ -373,7 +387,7 @@ func (suite *ModelTestSuite) TestNewNode_EmptyType() {
 }
 
 func (suite *ModelTestSuite) TestNewNode_UnsupportedType() {
-	nodeID := "test-node"
+	nodeID := testNodeID
 
 	node, err := NewNode(nodeID, "UNSUPPORTED_TYPE", false, false)
 
@@ -383,7 +397,7 @@ func (suite *ModelTestSuite) TestNewNode_UnsupportedType() {
 }
 
 func (suite *ModelTestSuite) TestNode_SetAsStartNode() {
-	node := NewPromptOnlyNode("test-node", false, false)
+	node := NewPromptOnlyNode(testNodeID, false, false)
 
 	node.SetAsStartNode()
 
@@ -391,7 +405,7 @@ func (suite *ModelTestSuite) TestNode_SetAsStartNode() {
 }
 
 func (suite *ModelTestSuite) TestNode_SetAsFinalNode() {
-	node := NewPromptOnlyNode("test-node", false, false)
+	node := NewPromptOnlyNode(testNodeID, false, false)
 
 	node.SetAsFinalNode()
 
@@ -399,7 +413,7 @@ func (suite *ModelTestSuite) TestNode_SetAsFinalNode() {
 }
 
 func (suite *ModelTestSuite) TestNode_NextNodeManagement() {
-	node := NewPromptOnlyNode("test-node", false, false)
+	node := NewPromptOnlyNode(testNodeID, false, false)
 
 	// Initially empty
 	assert.Empty(suite.T(), node.GetNextNodeList())
@@ -432,7 +446,7 @@ func (suite *ModelTestSuite) TestNode_NextNodeManagement() {
 }
 
 func (suite *ModelTestSuite) TestNode_PreviousNodeManagement() {
-	node := NewPromptOnlyNode("test-node", false, false)
+	node := NewPromptOnlyNode(testNodeID, false, false)
 
 	// Initially empty
 	assert.Empty(suite.T(), node.GetPreviousNodeList())
@@ -461,7 +475,7 @@ func (suite *ModelTestSuite) TestNode_PreviousNodeManagement() {
 }
 
 func (suite *ModelTestSuite) TestNode_InputDataManagement() {
-	node := NewPromptOnlyNode("test-node", false, false)
+	node := NewPromptOnlyNode(testNodeID, false, false)
 
 	// Initially empty slice, not nil
 	inputData := node.GetInputData()
@@ -478,7 +492,7 @@ func (suite *ModelTestSuite) TestNode_InputDataManagement() {
 }
 
 func (suite *ModelTestSuite) TestNode_ExecutorManagement() {
-	node := NewTaskExecutionNode("test-node", false, false)
+	node := NewTaskExecutionNode(testNodeID, false, false)
 
 	// Initially nil
 	assert.Nil(suite.T(), node.GetExecutor())
@@ -499,7 +513,7 @@ func (suite *ModelTestSuite) TestNewTaskExecutionNode() {
 	assert.Equal(suite.T(), constants.NodeTypeTaskExecution, node.GetType())
 }
 
-// Prompt Only Node Tests  
+// Prompt Only Node Tests
 func (suite *ModelTestSuite) TestNewPromptOnlyNode() {
 	nodeID := "prompt-node"
 

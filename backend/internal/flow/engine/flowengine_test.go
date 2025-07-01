@@ -690,7 +690,7 @@ func (suite *FlowEngineTestSuite) TestExecute_MultipleNodeTransition() {
 
 func (suite *FlowEngineTestSuite) TestExecute_FailureResponse() {
 	mockNode := &MockNode{
-		id:       "failure-node", 
+		id:       "failure-node",
 		nodeType: constants.NodeTypeTaskExecution,
 		executor: &MockExecutor{}, // Provide executor
 		response: &model.NodeResponse{

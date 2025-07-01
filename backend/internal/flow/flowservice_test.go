@@ -220,10 +220,10 @@ func (suite *FlowServiceTestSuite) TestGetFlowGraph_EmptyAppID() {
 // Test basic FlowService methods that don't require complex mocking
 func (suite *FlowServiceTestSuite) TestFlowService_BasicMethods() {
 	fs := &FlowService{}
-	
+
 	// Test that we can create a FlowService instance
 	assert.NotNil(suite.T(), fs)
-	
+
 	// Test calling methods that have validation logic
 	_, err := fs.loadContextFromStore("", nil)
 	assert.NotNil(suite.T(), err) // Should fail with empty flowID
@@ -233,7 +233,7 @@ func (suite *FlowServiceTestSuite) TestFlowService_BasicMethods() {
 // Test additional helper function coverage
 func (suite *FlowServiceTestSuite) TestInitContext_EmptyAppID() {
 	fs := &FlowService{}
-	
+
 	// Test with empty app ID - should return error without needing mocks
 	_, err := fs.initContext("", constants.FlowTypeAuthentication, nil)
 	assert.NotNil(suite.T(), err)
@@ -242,11 +242,9 @@ func (suite *FlowServiceTestSuite) TestInitContext_EmptyAppID() {
 
 func (suite *FlowServiceTestSuite) TestLoadNewContext_EmptyAppID() {
 	fs := &FlowService{}
-	
+
 	// Test with empty app ID - should return error without needing mocks
 	_, err := fs.loadNewContext("", "action123", constants.FlowTypeAuthentication, nil, nil)
 	assert.NotNil(suite.T(), err)
 	assert.IsType(suite.T(), &serviceerror.ServiceError{}, err)
 }
-
-
