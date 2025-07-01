@@ -493,3 +493,254 @@ func (m *MockExecutor) GetUserIDFromContext(ctx *model.NodeContext) (string, err
 func (m *MockExecutor) GetRequiredData(ctx *model.NodeContext) []model.InputData {
 	return []model.InputData{}
 }
+
+// Additional comprehensive engine tests to reach 90% coverage
+
+func (suite *FlowEngineTestSuite) TestExecute_ViewResponse() {
+	mockNode := &MockNode{
+		id:       "view-node",
+		nodeType: constants.NodeTypePromptOnly,
+		response: &model.NodeResponse{
+			Type:   constants.NodeResponseTypeView,
+			Status: constants.NodeStatusIncomplete,
+			RequiredData: []model.InputData{
+				{Name: "username", Type: "string", Required: true},
+			},
+			Actions: []model.Action{
+				{Type: constants.ActionTypeUserInput, ID: "login"},
+			},
+		},
+		nextNodes: []string{"next-node"},
+	}
+
+	mockGraph := &MockGraph{
+		startNode: mockNode,
+		nodes: map[string]model.NodeInterface{
+			"view-node": mockNode,
+			"next-node": &MockNode{id: "next-node", nodeType: constants.NodeTypeTaskExecution},
+		},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: nil,
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), constants.StepTypeView, step.Type)
+	assert.Equal(suite.T(), constants.FlowStatusIncomplete, step.Status)
+	assert.NotEmpty(suite.T(), step.Data.Inputs)
+	assert.Equal(suite.T(), "username", step.Data.Inputs[0].Name)
+}
+
+func (suite *FlowEngineTestSuite) TestExecute_RedirectionResponse() {
+	mockNode := &MockNode{
+		id:       "redirect-node",
+		nodeType: constants.NodeTypeTaskExecution,
+		executor: &MockExecutor{}, // Provide executor to avoid setNodeExecutor
+		response: &model.NodeResponse{
+			Type:        constants.NodeResponseTypeRedirection,
+			Status:      constants.NodeStatusIncomplete,
+			RedirectURL: "https://example.com/oauth",
+		},
+	}
+
+	mockGraph := &MockGraph{
+		startNode: mockNode,
+		nodes:     map[string]model.NodeInterface{"redirect-node": mockNode},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: nil,
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), constants.StepTypeRedirection, step.Type)
+	assert.Equal(suite.T(), constants.FlowStatusIncomplete, step.Status)
+	assert.Equal(suite.T(), "https://example.com/oauth", step.Data.RedirectURL)
+}
+
+func (suite *FlowEngineTestSuite) TestExecute_CompleteResponse() {
+	mockNode := &MockNode{
+		id:       "complete-node",
+		nodeType: constants.NodeTypeTaskExecution,
+		executor: &MockExecutor{}, // Provide executor
+		response: &model.NodeResponse{
+			Type:   constants.NodeResponseTypeView,
+			Status: constants.NodeStatusComplete,
+		},
+		isFinalNode: true,
+	}
+
+	mockGraph := &MockGraph{
+		startNode: mockNode,
+		nodes:     map[string]model.NodeInterface{"complete-node": mockNode},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: nil,
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), constants.FlowStatusComplete, step.Status)
+	assert.Equal(suite.T(), constants.StepTypeView, step.Type)
+}
+
+func (suite *FlowEngineTestSuite) TestExecute_WithCurrentNodeSet() {
+	// Test when CurrentNode is already set in context
+	mockNode := &MockNode{
+		id:       "current-node",
+		nodeType: constants.NodeTypePromptOnly,
+		response: &model.NodeResponse{
+			Type:   constants.NodeResponseTypeView,
+			Status: constants.NodeStatusIncomplete, // Add proper status
+		},
+	}
+
+	mockGraph := &MockGraph{
+		startNode: mockNode,
+		nodes:     map[string]model.NodeInterface{"current-node": mockNode},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: mockNode, // Current node already set
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), constants.FlowStatusIncomplete, step.Status)
+}
+
+func (suite *FlowEngineTestSuite) TestExecute_MultipleNodeTransition() {
+	// Test scenario with multiple nodes and transitions
+	nextNode := &MockNode{
+		id:       "next-node",
+		nodeType: constants.NodeTypeTaskExecution,
+		executor: &MockExecutor{}, // Provide executor
+		response: &model.NodeResponse{
+			Type:   constants.NodeResponseTypeView,
+			Status: constants.NodeStatusComplete,
+		},
+		isFinalNode: true,
+	}
+
+	startNode := &MockNode{
+		id:       "start-node",
+		nodeType: constants.NodeTypeDecision,
+		response: &model.NodeResponse{
+			Type:       constants.NodeResponseTypeView,
+			Status:     constants.NodeStatusComplete,
+			NextNodeID: "next-node",
+		},
+		nextNodes: []string{"next-node"},
+	}
+
+	mockGraph := &MockGraph{
+		startNode: startNode,
+		nodes: map[string]model.NodeInterface{
+			"start-node": startNode,
+			"next-node":  nextNode,
+		},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: nil,
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.Nil(suite.T(), err)
+	// Should move to next node and complete
+	assert.Equal(suite.T(), constants.FlowStatusComplete, step.Status)
+}
+
+func (suite *FlowEngineTestSuite) TestExecute_FailureResponse() {
+	mockNode := &MockNode{
+		id:       "failure-node", 
+		nodeType: constants.NodeTypeTaskExecution,
+		executor: &MockExecutor{}, // Provide executor
+		response: &model.NodeResponse{
+			Type:          constants.NodeResponseTypeView,
+			Status:        constants.NodeStatusFailure,
+			FailureReason: "Authentication failed",
+		},
+	}
+
+	mockGraph := &MockGraph{
+		startNode: mockNode,
+		nodes:     map[string]model.NodeInterface{"failure-node": mockNode},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: nil,
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), constants.ErrorUnsupportedNodeResponseStatus.Code, err.Code)
+	assert.Equal(suite.T(), constants.FlowStatusError, step.Status)
+}
+
+func (suite *FlowEngineTestSuite) TestExecute_RetryResponse() {
+	mockNode := &MockNode{
+		id:       "retry-node",
+		nodeType: constants.NodeTypeTaskExecution,
+		executor: &MockExecutor{}, // Provide executor
+		response: &model.NodeResponse{
+			Type:          constants.NodeResponseTypeRetry,
+			Status:        constants.NodeStatusIncomplete, // Add status
+			FailureReason: "Authentication failed - please retry",
+		},
+	}
+
+	mockGraph := &MockGraph{
+		startNode: mockNode,
+		nodes:     map[string]model.NodeInterface{"retry-node": mockNode},
+	}
+
+	ctx := &model.EngineContext{
+		FlowID:      "test-flow",
+		FlowType:    constants.FlowTypeAuthentication,
+		AppID:       "test-app",
+		Graph:       mockGraph,
+		CurrentNode: nil,
+	}
+
+	step, err := suite.engine.Execute(ctx)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), constants.StepTypeView, step.Type) // Retry maps to view type
+	assert.Equal(suite.T(), constants.FlowStatusIncomplete, step.Status)
+	assert.Equal(suite.T(), "Authentication failed - please retry", step.FailureReason)
+}
