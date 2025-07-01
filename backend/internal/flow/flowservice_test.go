@@ -24,9 +24,9 @@ import (
 
 	"github.com/asgardeo/thunder/internal/flow/constants"
 	"github.com/asgardeo/thunder/internal/flow/model"
-	daomock "github.com/asgardeo/thunder/tests/mocks/flow/daomock"
-	enginemock "github.com/asgardeo/thunder/tests/mocks/flow/enginemock"
 	applicationservicemock "github.com/asgardeo/thunder/tests/mocks/application/servicemock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/daomock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/enginemock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -34,10 +34,10 @@ import (
 
 type FlowServiceTestSuite struct {
 	suite.Suite
-	service             FlowServiceInterface
-	mockFlowDAO         *daomock.FlowDAOInterfaceMock
-	mockFlowEngine      *enginemock.FlowEngineInterfaceMock
-	mockApplicationSvc  *applicationservicemock.ApplicationServiceInterfaceMock
+	service            FlowServiceInterface
+	mockFlowDAO        *daomock.FlowDAOInterfaceMock
+	mockFlowEngine     *enginemock.FlowEngineInterfaceMock
+	mockApplicationSvc *applicationservicemock.ApplicationServiceInterfaceMock
 }
 
 func TestFlowServiceSuite(t *testing.T) {
@@ -211,28 +211,8 @@ func (suite *FlowServiceTestSuite) TestValidateDefaultFlowConfigs() {
 func (suite *FlowServiceTestSuite) TestGetFlowService() {
 	service1 := GetFlowService()
 	service2 := GetFlowService()
-	
+
 	assert.NotNil(suite.T(), service1)
 	assert.NotNil(suite.T(), service2)
 	assert.Same(suite.T(), service1, service2, "Should return the same singleton instance")
 }
-
-// Mock a simple GraphInterface for testing
-type mockGraph struct {
-	id       string
-	flowType constants.FlowType
-}
-
-func (m *mockGraph) GetID() string                           { return m.id }
-func (m *mockGraph) GetType() constants.FlowType            { return m.flowType }
-func (m *mockGraph) GetNodes() map[string]model.NodeInterface { return make(map[string]model.NodeInterface) }
-func (m *mockGraph) GetEdges() map[string][]string          { return make(map[string][]string) }
-func (m *mockGraph) GetStartNodeID() string                 { return "start" }
-func (m *mockGraph) SetNodes(nodes map[string]model.NodeInterface) {}
-func (m *mockGraph) SetEdges(edges map[string][]string)    {}
-func (m *mockGraph) SetStartNode(nodeID string) error      { return nil }
-func (m *mockGraph) AddNode(node model.NodeInterface) error { return nil }
-func (m *mockGraph) RemoveNode(nodeID string) error        { return nil }
-func (m *mockGraph) AddEdge(fromNodeID, toNodeID string) error { return nil }
-func (m *mockGraph) RemoveEdge(fromNodeID, toNodeID string) error { return nil }
-func (m *mockGraph) ToJSON() (string, error)               { return "{}", nil }
