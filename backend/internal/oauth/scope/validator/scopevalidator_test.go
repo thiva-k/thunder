@@ -46,7 +46,7 @@ func (suite *ScopeValidatorTestSuite) TestNewAPIScopeValidator() {
 
 func (suite *ScopeValidatorTestSuite) TestValidateScopes_EmptyRequestedScopes() {
 	validScopes, err := suite.validator.ValidateScopes("", "test_client")
-	
+
 	assert.Nil(suite.T(), err)
 	assert.Equal(suite.T(), "", validScopes)
 }

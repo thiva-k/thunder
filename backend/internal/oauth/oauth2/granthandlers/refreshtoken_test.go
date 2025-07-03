@@ -240,7 +240,9 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateTimeClaim_ValidClaim
 		return claim > now // This would be true if claim is in the future, indicating an error
 	}
 
-	errorResponse := suite.handler.validateTimeClaim(claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger)
+	errorResponse := suite.handler.validateTimeClaim(
+		claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger,
+	)
 
 	assert.Nil(suite.T(), errorResponse)
 }
@@ -254,7 +256,9 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateTimeClaim_MissingCla
 		return false
 	}
 
-	errorResponse := suite.handler.validateTimeClaim(claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger)
+	errorResponse := suite.handler.validateTimeClaim(
+		claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger,
+	)
 
 	assert.NotNil(suite.T(), errorResponse) // Missing claims should cause errors based on the code
 	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorResponse.Error)
@@ -272,7 +276,9 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateTimeClaim_InvalidCla
 		return false
 	}
 
-	errorResponse := suite.handler.validateTimeClaim(claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger)
+	errorResponse := suite.handler.validateTimeClaim(
+		claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger,
+	)
 
 	assert.NotNil(suite.T(), errorResponse)
 	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorResponse.Error)
@@ -291,7 +297,9 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateTimeClaim_Comparison
 		return true // Always return true to simulate error condition
 	}
 
-	errorResponse := suite.handler.validateTimeClaim(claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger)
+	errorResponse := suite.handler.validateTimeClaim(
+		claims, "iat", cmp, constants.ErrorInvalidRequest, "Test error", logger,
+	)
 
 	assert.NotNil(suite.T(), errorResponse)
 	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorResponse.Error)
@@ -429,6 +437,7 @@ func (suite *ClientCredentialsGrantHandlerTestSuite) TestValidateGrant_Mismatche
 	assert.Equal(suite.T(), constants.ErrorInvalidClient, errorResponse.Error)
 	assert.Equal(suite.T(), "Invalid client credentials", errorResponse.ErrorDescription)
 }
+
 // Authorization Code Grant Handler Tests
 // Note: The ValidateGrant method for authorization code requires database interaction
 // for code validation, so we focus on testing the basic validation logic that
@@ -499,7 +508,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingAu
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingClientID() {
 	tokenRequest := &model.TokenRequest{
-		GrantType:    constants.GrantTypeAuthorizationCode,
+		GrantType: constants.GrantTypeAuthorizationCode,
 		// Missing ClientID
 		ClientSecret: "test_secret",
 		Code:         "valid_auth_code",

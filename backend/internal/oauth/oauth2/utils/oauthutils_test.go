@@ -30,6 +30,8 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 )
 
+const testRedirectURI = "http://localhost:8080/callback"
+
 type OAuthUtilsTestSuite struct {
 	suite.Suite
 }
@@ -40,11 +42,13 @@ func TestOAuthUtilsTestSuite(t *testing.T) {
 
 func (suite *OAuthUtilsTestSuite) TestGetOAuthMessage_ValidInitialAuthorizationRequest() {
 	// Create a valid initial authorization request
-	req := httptest.NewRequest("GET", "/oauth2/authorize?client_id=test_client&response_type=code&redirect_uri=http://localhost:8080/callback", nil)
+	url := "/oauth2/authorize?client_id=test_client&response_type=code&redirect_uri=" + testRedirectURI
+	req := httptest.NewRequest("GET", url, nil)
 	w := httptest.NewRecorder()
 
 	// Parse form to populate PostForm
-	req.ParseForm()
+	err := req.ParseForm()
+	assert.NoError(suite.T(), err)
 
 	message, err := GetOAuthMessage(req, w)
 
@@ -53,7 +57,7 @@ func (suite *OAuthUtilsTestSuite) TestGetOAuthMessage_ValidInitialAuthorizationR
 	assert.Equal(suite.T(), constants.TypeInitialAuthorizationRequest, message.RequestType)
 	assert.Equal(suite.T(), "test_client", message.RequestQueryParams[constants.ClientID])
 	assert.Equal(suite.T(), "code", message.RequestQueryParams[constants.ResponseType])
-	assert.Equal(suite.T(), "http://localhost:8080/callback", message.RequestQueryParams[constants.RedirectURI])
+	assert.Equal(suite.T(), testRedirectURI, message.RequestQueryParams[constants.RedirectURI])
 }
 
 func (suite *OAuthUtilsTestSuite) TestGetOAuthMessage_ValidAuthorizationResponseFromFramework() {
@@ -63,7 +67,8 @@ func (suite *OAuthUtilsTestSuite) TestGetOAuthMessage_ValidAuthorizationResponse
 	w := httptest.NewRecorder()
 
 	// Parse form to populate PostForm
-	req.ParseForm()
+	err := req.ParseForm()
+	assert.NoError(suite.T(), err)
 
 	message, err := GetOAuthMessage(req, w)
 
@@ -99,7 +104,8 @@ func (suite *OAuthUtilsTestSuite) TestGetOAuthMessage_InvalidRequestType() {
 	w := httptest.NewRecorder()
 
 	// Parse form to populate PostForm
-	req.ParseForm()
+	err := req.ParseForm()
+	assert.NoError(suite.T(), err)
 
 	message, err := GetOAuthMessage(req, w)
 
@@ -123,7 +129,7 @@ func (suite *OAuthUtilsTestSuite) TestGetOAuthMessage_FormParsingError() {
 }
 
 func (suite *OAuthUtilsTestSuite) TestGetURIWithQueryParams_ValidParams() {
-	uri := "http://localhost:8080/callback"
+	uri := testRedirectURI
 	params := map[string]string{
 		"code":  "authorization_code",
 		"state": "test_state",
@@ -137,7 +143,7 @@ func (suite *OAuthUtilsTestSuite) TestGetURIWithQueryParams_ValidParams() {
 }
 
 func (suite *OAuthUtilsTestSuite) TestGetURIWithQueryParams_WithError() {
-	uri := "http://localhost:8080/callback"
+	uri := testRedirectURI
 	params := map[string]string{
 		constants.Error:            "invalid_request",
 		constants.ErrorDescription: "Invalid client ID",
@@ -151,7 +157,7 @@ func (suite *OAuthUtilsTestSuite) TestGetURIWithQueryParams_WithError() {
 }
 
 func (suite *OAuthUtilsTestSuite) TestGetURIWithQueryParams_InvalidError() {
-	uri := "http://localhost:8080/callback"
+	uri := testRedirectURI
 	params := map[string]string{
 		constants.Error: "invalid\"error", // Contains invalid character
 	}
