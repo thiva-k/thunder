@@ -51,6 +51,17 @@ func (suite *ScopeValidatorTestSuite) TestValidateScopes_EmptyRequestedScopes() 
 	assert.Equal(suite.T(), "", validScopes)
 }
 
+func (suite *ScopeValidatorTestSuite) TestScopeError_ErrorCreation() {
+	// Test ScopeError struct creation
+	scopeError := &ScopeError{
+		Error:            "invalid_scope",
+		ErrorDescription: "The requested scope is invalid",
+	}
+
+	assert.Equal(suite.T(), "invalid_scope", scopeError.Error)
+	assert.Equal(suite.T(), "The requested scope is invalid", scopeError.ErrorDescription)
+}
+
 // Note: Tests involving database interactions would require database mocking
 // which is more complex and would need the database provider interfaces
 // to be mockable. For now, we're focusing on the basic functionality

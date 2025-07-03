@@ -211,3 +211,47 @@ func (suite *AuthzValidatorTestSuite) TestNewAuthorizationValidator() {
 	assert.NotNil(suite.T(), validator)
 	assert.IsType(suite.T(), &AuthorizationValidator{}, validator)
 }
+
+func (suite *AuthzValidatorTestSuite) TestValidateInitialAuthorizationRequest_EmptyClientID() {
+	msg := &model.OAuthMessage{
+		RequestQueryParams: map[string]string{
+			constants.ResponseType: constants.ResponseTypeCode,
+			constants.RedirectURI:  "https://example.com/callback",
+			constants.ClientID:     "", // Empty client ID
+		},
+	}
+
+	app := &appmodel.OAuthApplication{
+		ClientID:          "test_client",
+		AllowedGrantTypes: []string{constants.GrantTypeAuthorizationCode},
+		RedirectURIs:      []string{"https://example.com/callback"},
+	}
+
+	hasError, errorCode, errorDesc := suite.validator.validateInitialAuthorizationRequest(msg, app)
+
+	assert.False(suite.T(), hasError)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorCode)
+	assert.Equal(suite.T(), "Missing client_id parameter", errorDesc)
+}
+
+func (suite *AuthzValidatorTestSuite) TestValidateInitialAuthorizationRequest_EmptyResponseType() {
+	msg := &model.OAuthMessage{
+		RequestQueryParams: map[string]string{
+			constants.ClientID:     "test_client",
+			constants.RedirectURI:  "https://example.com/callback",
+			constants.ResponseType: "", // Empty response type
+		},
+	}
+
+	app := &appmodel.OAuthApplication{
+		ClientID:          "test_client",
+		AllowedGrantTypes: []string{constants.GrantTypeAuthorizationCode},
+		RedirectURIs:      []string{"https://example.com/callback"},
+	}
+
+	hasError, errorCode, errorDesc := suite.validator.validateInitialAuthorizationRequest(msg, app)
+
+	assert.True(suite.T(), hasError)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorCode)
+	assert.Equal(suite.T(), "Missing response_type parameter", errorDesc)
+}

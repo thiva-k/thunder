@@ -285,6 +285,26 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateTimeClaim_InvalidCla
 	assert.Equal(suite.T(), "Invalid refresh token", errorResponse.ErrorDescription)
 }
 
+func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateGrant_EmptyRefreshToken() {
+	tokenRequest := &model.TokenRequest{
+		GrantType:    constants.GrantTypeRefreshToken,
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+		RefreshToken: "",
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorResponse.Error)
+	assert.Equal(suite.T(), "Refresh token is required", errorResponse.ErrorDescription)
+}
+
 func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateTimeClaim_ComparisonFails() {
 	claims := map[string]interface{}{
 		"iat": float64(1609459200),
