@@ -40,6 +40,11 @@ type ClientCredentialsGrantHandlerTestSuite struct {
 	handler *ClientCredentialsGrantHandler
 }
 
+type AuthorizationCodeGrantHandlerTestSuite struct {
+	suite.Suite
+	handler *AuthorizationCodeGrantHandler
+}
+
 func TestRefreshTokenGrantHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(RefreshTokenGrantHandlerTestSuite))
 }
@@ -48,12 +53,20 @@ func TestClientCredentialsGrantHandlerTestSuite(t *testing.T) {
 	suite.Run(t, new(ClientCredentialsGrantHandlerTestSuite))
 }
 
+func TestAuthorizationCodeGrantHandlerTestSuite(t *testing.T) {
+	suite.Run(t, new(AuthorizationCodeGrantHandlerTestSuite))
+}
+
 func (suite *RefreshTokenGrantHandlerTestSuite) SetupTest() {
 	suite.handler = &RefreshTokenGrantHandler{}
 }
 
 func (suite *ClientCredentialsGrantHandlerTestSuite) SetupTest() {
 	suite.handler = &ClientCredentialsGrantHandler{}
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
+	suite.handler = &AuthorizationCodeGrantHandler{}
 }
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestValidateGrant_ValidRequest() {
@@ -403,6 +416,136 @@ func (suite *ClientCredentialsGrantHandlerTestSuite) TestValidateGrant_Mismatche
 		GrantType:    constants.GrantTypeClientCredentials,
 		ClientID:     "test_client",
 		ClientSecret: "wrong_secret", // Secret doesn't match
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorInvalidClient, errorResponse.Error)
+	assert.Equal(suite.T(), "Invalid client credentials", errorResponse.ErrorDescription)
+}
+// Authorization Code Grant Handler Tests
+// Note: The ValidateGrant method for authorization code requires database interaction
+// for code validation, so we focus on testing the basic validation logic that
+// doesn't require database dependencies.
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingGrantType() {
+	tokenRequest := &model.TokenRequest{
+		// Missing GrantType
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+		Code:         "valid_auth_code",
+		RedirectURI:  "http://localhost:8080/callback",
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorResponse.Error)
+	assert.Equal(suite.T(), "Missing grant type", errorResponse.ErrorDescription)
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_InvalidGrantType() {
+	tokenRequest := &model.TokenRequest{
+		GrantType:    constants.GrantTypeClientCredentials, // Wrong grant type
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+		Code:         "valid_auth_code",
+		RedirectURI:  "http://localhost:8080/callback",
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorUnsupportedGrantType, errorResponse.Error)
+	assert.Equal(suite.T(), "Unsupported grant type", errorResponse.ErrorDescription)
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingAuthorizationCode() {
+	tokenRequest := &model.TokenRequest{
+		GrantType:    constants.GrantTypeAuthorizationCode,
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+		// Missing Code
+		RedirectURI: "http://localhost:8080/callback",
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorInvalidGrant, errorResponse.Error)
+	assert.Equal(suite.T(), "Authorization code is required", errorResponse.ErrorDescription)
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingClientID() {
+	tokenRequest := &model.TokenRequest{
+		GrantType:    constants.GrantTypeAuthorizationCode,
+		// Missing ClientID
+		ClientSecret: "test_secret",
+		Code:         "valid_auth_code",
+		RedirectURI:  "http://localhost:8080/callback",
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorInvalidClient, errorResponse.Error)
+	assert.Equal(suite.T(), "Client Id is required", errorResponse.ErrorDescription)
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingRedirectURI() {
+	tokenRequest := &model.TokenRequest{
+		GrantType:    constants.GrantTypeAuthorizationCode,
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+		Code:         "valid_auth_code",
+		// Missing RedirectURI
+	}
+
+	oauthApp := &appmodel.OAuthApplication{
+		ClientID:     "test_client",
+		ClientSecret: "test_secret",
+	}
+
+	errorResponse := suite.handler.ValidateGrant(tokenRequest, oauthApp)
+
+	assert.NotNil(suite.T(), errorResponse)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorResponse.Error)
+	assert.Equal(suite.T(), "Redirect URI is required", errorResponse.ErrorDescription)
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_InvalidClientCredentials() {
+	tokenRequest := &model.TokenRequest{
+		GrantType:    constants.GrantTypeAuthorizationCode,
+		ClientID:     "wrong_client",
+		ClientSecret: "wrong_secret",
+		Code:         "valid_auth_code",
+		RedirectURI:  "http://localhost:8080/callback",
 	}
 
 	oauthApp := &appmodel.OAuthApplication{
