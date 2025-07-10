@@ -162,6 +162,7 @@ func (s *FlowService) loadContextFromStore(flowID string, logger *log.Logger) (*
 
 	flowDAO := dao.GetFlowDAO()
 	ctx, exists := flowDAO.GetContextFromStore(flowID)
+	logger.Info("Fetched context from store", log.String("flowID", flowID), log.Any("context", ctx)) 
 	if !exists {
 		return nil, &constants.ErrorInvalidFlowID
 	}

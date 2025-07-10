@@ -35,14 +35,14 @@ type PromptOnlyNode struct {
 func NewPromptOnlyNode(id string, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &PromptOnlyNode{
 		Node: &Node{
-			id:               id,
-			_type:            constants.NodeTypePromptOnly,
-			isStartNode:      isStartNode,
-			isFinalNode:      isFinalNode,
-			nextNodeList:     []string{},
-			previousNodeList: []string{},
-			inputData:        []InputData{},
-			executorConfig:   nil,
+			ID:               id,
+			Type:             constants.NodeTypeDecision,
+			IsStartNodeField: isStartNode,
+			IsFinalNodeField: isFinalNode,
+			NextNodeList:     []string{},
+			PreviousNodeList: []string{},
+			InputData:        []InputData{},
+			ExecutorConfig:   &ExecutorConfig{},
 		},
 	}
 }

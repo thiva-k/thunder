@@ -23,7 +23,7 @@ import (
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
-// DecisionNode represents a node that makes decisions based on input data.
+// DecisionNode represents a node that makes a decision in the flow
 type DecisionNode struct {
 	*Node
 }
@@ -32,14 +32,14 @@ type DecisionNode struct {
 func NewDecisionNode(id string, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &DecisionNode{
 		Node: &Node{
-			id:               id,
-			_type:            constants.NodeTypeDecision,
-			isStartNode:      isStartNode,
-			isFinalNode:      isFinalNode,
-			nextNodeList:     []string{},
-			previousNodeList: []string{},
-			inputData:        []InputData{},
-			executorConfig:   nil,
+			ID:               id,
+			Type:             constants.NodeTypeDecision,
+			IsStartNodeField: isStartNode,
+			IsFinalNodeField: isFinalNode,
+			NextNodeList:     []string{},
+			PreviousNodeList: []string{},
+			InputData:        []InputData{},
+			ExecutorConfig:   &ExecutorConfig{},
 		},
 	}
 }

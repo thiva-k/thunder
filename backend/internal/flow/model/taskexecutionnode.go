@@ -32,21 +32,21 @@ type TaskExecutionNode struct {
 func NewTaskExecutionNode(id string, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &TaskExecutionNode{
 		Node: &Node{
-			id:               id,
-			_type:            constants.NodeTypeTaskExecution,
-			isStartNode:      isStartNode,
-			isFinalNode:      isFinalNode,
-			nextNodeList:     []string{},
-			previousNodeList: []string{},
-			inputData:        []InputData{},
-			executorConfig:   &ExecutorConfig{},
+			ID:               id,
+			Type:             constants.NodeTypeTaskExecution,
+			IsStartNodeField: isStartNode,
+			IsFinalNodeField: isFinalNode,
+			NextNodeList:     []string{},
+			PreviousNodeList: []string{},
+			InputData:        []InputData{},
+			ExecutorConfig:   &ExecutorConfig{},
 		},
 	}
 }
 
 // Execute executes the node's executor.
 func (n *TaskExecutionNode) Execute(ctx *NodeContext) (*NodeResponse, *serviceerror.ServiceError) {
-	if n.executorConfig == nil || n.executorConfig.Executor == nil {
+	if n.ExecutorConfig == nil || n.ExecutorConfig.Executor == nil {
 		return nil, &constants.ErrorNodeExecutorNotFound
 	}
 
@@ -60,7 +60,7 @@ func (n *TaskExecutionNode) Execute(ctx *NodeContext) (*NodeResponse, *serviceer
 
 // triggerExecutor triggers the executor configured for the node.
 func (n *TaskExecutionNode) triggerExecutor(ctx *NodeContext) (*ExecutorResponse, *serviceerror.ServiceError) {
-	execResp, err := n.executorConfig.Executor.Execute(ctx)
+	execResp, err := n.ExecutorConfig.Executor.Execute(ctx)
 	if err != nil {
 		svcErr := constants.ErrorNodeExecutorExecError
 		svcErr.ErrorDescription = "Error executing node executor: " + err.Error()

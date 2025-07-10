@@ -71,14 +71,14 @@ type NodeInterface interface {
 
 // Node implements the NodeInterface
 type Node struct {
-	id               string
-	_type            constants.NodeType
-	isStartNode      bool
-	isFinalNode      bool
-	nextNodeList     []string
-	previousNodeList []string
-	inputData        []InputData
-	executorConfig   *ExecutorConfig
+	ID               string             `json:"id"`
+	Type             constants.NodeType `json:"type"`
+	IsStartNodeField bool               `json:"isStartNode"`
+	IsFinalNodeField bool               `json:"isFinalNode"`
+	NextNodeList     []string           `json:"nextNodeList"`
+	PreviousNodeList []string           `json:"previousNodeList"`
+	InputData        []InputData        `json:"inputData"`
+	ExecutorConfig   *ExecutorConfig    `json:"executorConfig"`
 }
 
 var _ NodeInterface = (*Node)(nil)
@@ -113,48 +113,48 @@ func (n *Node) Execute(ctx *NodeContext) (*NodeResponse, *serviceerror.ServiceEr
 
 // GetID returns the node's ID
 func (n *Node) GetID() string {
-	return n.id
+	return n.ID
 }
 
 // GetType returns the node's type
 func (n *Node) GetType() constants.NodeType {
-	return n._type
+	return n.Type
 }
 
 // IsStartNode checks if the node is a start node
 func (n *Node) IsStartNode() bool {
-	return n.isStartNode
+	return n.IsStartNodeField
 }
 
 // SetAsStartNode sets the node as a start node
 func (n *Node) SetAsStartNode() {
-	n.isStartNode = true
+	n.IsStartNodeField = true
 }
 
 // IsFinalNode checks if the node is a final node
 func (n *Node) IsFinalNode() bool {
-	return n.isFinalNode
+	return n.IsFinalNodeField
 }
 
 // SetAsFinalNode sets the node as a final node
 func (n *Node) SetAsFinalNode() {
-	n.isFinalNode = true
+	n.IsFinalNodeField = true
 }
 
 // GetNextNodeList returns the list of next node IDs
 func (n *Node) GetNextNodeList() []string {
-	if n.nextNodeList == nil {
+	if n.NextNodeList == nil {
 		return []string{}
 	}
-	return n.nextNodeList
+	return n.NextNodeList
 }
 
 // SetNextNodeList sets the list of next node IDs
 func (n *Node) SetNextNodeList(nextNodeIDList []string) {
 	if nextNodeIDList == nil {
-		n.nextNodeList = []string{}
+		n.NextNodeList = []string{}
 	} else {
-		n.nextNodeList = nextNodeIDList
+		n.NextNodeList = nextNodeIDList
 	}
 }
 
@@ -163,27 +163,27 @@ func (n *Node) AddNextNodeID(nextNodeID string) {
 	if nextNodeID == "" {
 		return
 	}
-	if n.nextNodeList == nil {
-		n.nextNodeList = []string{}
+	if n.NextNodeList == nil {
+		n.NextNodeList = []string{}
 	}
 	// Check for duplicates before adding
-	for _, id := range n.nextNodeList {
+	for _, id := range n.NextNodeList {
 		if id == nextNodeID {
 			return
 		}
 	}
-	n.nextNodeList = append(n.nextNodeList, nextNodeID)
+	n.NextNodeList = append(n.NextNodeList, nextNodeID)
 }
 
 // RemoveNextNodeID removes a next node ID from the list
 func (n *Node) RemoveNextNodeID(nextNodeID string) {
-	if nextNodeID == "" || n.nextNodeList == nil {
+	if nextNodeID == "" || n.NextNodeList == nil {
 		return
 	}
 
-	for i, id := range n.nextNodeList {
+	for i, id := range n.NextNodeList {
 		if id == nextNodeID {
-			n.nextNodeList = append(n.nextNodeList[:i], n.nextNodeList[i+1:]...)
+			n.NextNodeList = append(n.NextNodeList[:i], n.NextNodeList[i+1:]...)
 			return
 		}
 	}
@@ -191,18 +191,18 @@ func (n *Node) RemoveNextNodeID(nextNodeID string) {
 
 // GetPreviousNodeList returns the list of previous node IDs
 func (n *Node) GetPreviousNodeList() []string {
-	if n.previousNodeList == nil {
+	if n.PreviousNodeList == nil {
 		return []string{}
 	}
-	return n.previousNodeList
+	return n.PreviousNodeList
 }
 
 // SetPreviousNodeList sets the list of previous node IDs
 func (n *Node) SetPreviousNodeList(previousNodeIDList []string) {
 	if previousNodeIDList == nil {
-		n.previousNodeList = []string{}
+		n.PreviousNodeList = []string{}
 	} else {
-		n.previousNodeList = previousNodeIDList
+		n.PreviousNodeList = previousNodeIDList
 	}
 }
 
@@ -211,27 +211,27 @@ func (n *Node) AddPreviousNodeID(previousNodeID string) {
 	if previousNodeID == "" {
 		return
 	}
-	if n.previousNodeList == nil {
-		n.previousNodeList = []string{}
+	if n.PreviousNodeList == nil {
+		n.PreviousNodeList = []string{}
 	}
 	// Check for duplicates before adding
-	for _, id := range n.previousNodeList {
+	for _, id := range n.PreviousNodeList {
 		if id == previousNodeID {
 			return
 		}
 	}
-	n.previousNodeList = append(n.previousNodeList, previousNodeID)
+	n.PreviousNodeList = append(n.PreviousNodeList, previousNodeID)
 }
 
 // RemovePreviousNodeID removes a previous node ID from the list
 func (n *Node) RemovePreviousNodeID(previousNodeID string) {
-	if previousNodeID == "" || n.previousNodeList == nil {
+	if previousNodeID == "" || n.PreviousNodeList == nil {
 		return
 	}
 
-	for i, id := range n.previousNodeList {
+	for i, id := range n.PreviousNodeList {
 		if id == previousNodeID {
-			n.previousNodeList = append(n.previousNodeList[:i], n.previousNodeList[i+1:]...)
+			n.PreviousNodeList = append(n.PreviousNodeList[:i], n.PreviousNodeList[i+1:]...)
 			return
 		}
 	}
@@ -239,58 +239,58 @@ func (n *Node) RemovePreviousNodeID(previousNodeID string) {
 
 // GetInputData returns the input data for the node
 func (n *Node) GetInputData() []InputData {
-	return n.inputData
+	return n.InputData
 }
 
 // SetInputData sets the input data for the node
 func (n *Node) SetInputData(inputData []InputData) {
-	n.inputData = inputData
+	n.InputData = inputData
 }
 
 // GetExecutorConfig returns the executor configuration for the node
 func (n *Node) GetExecutorConfig() *ExecutorConfig {
-	return n.executorConfig
+	return n.ExecutorConfig
 }
 
 // SetExecutorConfig sets the executor configuration for the node
 func (n *Node) SetExecutorConfig(executorConfig *ExecutorConfig) {
-	n.executorConfig = executorConfig
+	n.ExecutorConfig = executorConfig
 }
 
 // GetExecutor returns the executor associated with the node
 func (n *Node) GetExecutor() ExecutorInterface {
-	if n.executorConfig == nil {
+	if n.ExecutorConfig == nil {
 		return nil
 	}
-	return n.executorConfig.Executor
+	return n.ExecutorConfig.Executor
 }
 
 // SetExecutor sets the executor for the node
 func (n *Node) SetExecutor(executor ExecutorInterface) {
-	if n.executorConfig == nil {
-		n.executorConfig = &ExecutorConfig{}
-		n.executorConfig.Name = executor.GetName()
+	if n.ExecutorConfig == nil {
+		n.ExecutorConfig = &ExecutorConfig{}
+		n.ExecutorConfig.Name = executor.GetName()
 	}
-	n.executorConfig.Executor = executor
+	n.ExecutorConfig.Executor = executor
 }
 
 // Clone creates a deep copy of the Node
 func (n *Node) Clone() (sysutils.ClonableInterface, error) {
-	nextCopy := append([]string{}, n.nextNodeList...)
-	prevCopy := append([]string{}, n.previousNodeList...)
-	inputCopy := append([]InputData{}, n.inputData...)
+	nextCopy := append([]string{}, n.NextNodeList...)
+	prevCopy := append([]string{}, n.PreviousNodeList...)
+	inputCopy := append([]InputData{}, n.InputData...)
 
 	var execConfigCopy *ExecutorConfig
-	if n.executorConfig != nil {
+	if n.ExecutorConfig != nil {
 		execConfigCopy = &ExecutorConfig{
-			Name:       n.executorConfig.Name,
-			IdpName:    n.executorConfig.IdpName,
-			Properties: sysutils.DeepCopyMapOfStrings(n.executorConfig.Properties),
-			Executor:   n.executorConfig.Executor,
+			Name:       n.ExecutorConfig.Name,
+			IdpName:    n.ExecutorConfig.IdpName,
+			Properties: sysutils.DeepCopyMapOfStrings(n.ExecutorConfig.Properties),
+			Executor:   n.ExecutorConfig.Executor,
 		}
 	}
 
-	nodeCopy, err := NewNode(n.id, string(n._type), n.isStartNode, n.isFinalNode)
+	nodeCopy, err := NewNode(n.ID, string(n.Type), n.IsStartNodeField, n.IsFinalNodeField)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clone node: %w", err)
 	}
