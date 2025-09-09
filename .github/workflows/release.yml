@@ -132,6 +132,13 @@ jobs:
           path: target/dist/*.zip
           if-no-files-found: error
 
+      - name: 📦 Upload Shared Certificates
+        uses: actions/upload-artifact@v4
+        with:
+          name: thunder-certificates
+          path: target/out/.cert/*
+          if-no-files-found: error
+
       - name: 🏷️ Create Git Tag
         run: |
           git config --local user.email "action@github.com"
@@ -283,6 +290,12 @@ jobs:
           package-manager: 'npm'
           dependency-path: 'samples/apps/oauth'
 
+      - name: 📥 Download Shared Certificates
+        uses: actions/download-artifact@v4
+        with:
+          name: thunder-certificates
+          path: target/out/.cert/
+
       - name: 🏷️ Set Sample Apps Version
         run: |
           # Get the product version from the previous job
@@ -355,6 +368,12 @@ jobs:
           node-version: '20'
           package-manager: 'npm'
           dependency-path: 'samples/apps/oauth'
+
+      - name: 📥 Download Shared Certificates
+        uses: actions/download-artifact@v4
+        with:
+          name: thunder-certificates
+          path: target/out/.cert/
 
       - name: 🏷️ Set Sample Apps Version
         run: |
