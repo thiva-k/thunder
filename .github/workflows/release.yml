@@ -89,6 +89,23 @@ jobs:
       - name: 🧹 Clean Previous Builds
         run: make clean_all
 
+      - name: 🔐 Generate Shared Certificates
+        run: |
+          echo "🔐 Generating shared SSL certificates for all components..."
+          # Ensure the certificate directory exists
+          mkdir -p target/out/.cert
+          
+          # Generate certificates 
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout target/out/.cert/server.key \
+            -out target/out/.cert/server.cert \
+            -subj "/O=WSO2/OU=Thunder/CN=localhost"
+          
+          echo "✅ Shared certificates generated:"
+          ls -la target/out/.cert/
+          echo "📄 Certificate info:"
+          openssl x509 -in target/out/.cert/server.cert -text -noout | head -10
+
       - name: 🔨 Build Thunder Release Artifacts
         run: |
           # Define platform matrix as arrays
