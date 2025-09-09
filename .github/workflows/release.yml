@@ -110,7 +110,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: thunder-certificates
-          path: target/out/.cert/*
+          path: |
+            target/out/.cert/server.cert
+            target/out/.cert/server.key
           if-no-files-found: error
 
       - name: 🔨 Build Thunder Release Artifacts
