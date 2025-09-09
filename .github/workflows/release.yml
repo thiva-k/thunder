@@ -149,6 +149,19 @@ jobs:
           path: target/dist/*.zip
           if-no-files-found: error
 
+      - name: 🔍 Debug Certificate Location
+        run: |
+          echo "🔍 Checking certificate files before upload..."
+          echo "Current directory: $(pwd)"
+          echo "Contents of target/:"
+          ls -la target/ || echo "target/ doesn't exist"
+          echo "Contents of target/out/:"
+          ls -la target/out/ || echo "target/out/ doesn't exist"
+          echo "Contents of target/out/.cert/:"
+          ls -la target/out/.cert/ || echo "target/out/.cert/ doesn't exist"
+          echo "Looking for certificate files anywhere:"
+          find . -name "server.cert" -o -name "server.key" 2>/dev/null || echo "No certificate files found"
+
       - name: 📦 Upload Shared Certificates
         uses: actions/upload-artifact@v4
         with:
