@@ -69,7 +69,8 @@ jobs:
       - name: 🏷️ Set Test Version
         id: version
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          if [[ "${{ github.event_name }}" == "log
+          _request" ]]; then
             TEST_VERSION="0.1.0-pr-${{ github.event.number }}"
           else
             TEST_VERSION="${{ github.event.inputs.test_version || '0.1.0-test' }}"
