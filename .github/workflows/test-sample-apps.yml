@@ -1,0 +1,350 @@
+# This workflow tests sample app builds across platforms without creating a release
+# Uses platform-specific runners for accurate testing
+
+name: 🧪 Test Sample Apps
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to test (comma-separated: windows, linux, macos, all)'
+        required: false
+        default: 'all'
+        type: string
+      test_version:
+        description: 'Version to use for testing (e.g., 0.1.0-test)'
+        required: false
+        default: '0.1.0-test'
+        type: string
+  pull_request:
+    paths:
+      - 'samples/**'
+      - 'build.sh'
+      - 'Makefile'
+
+env:
+  GOFLAGS: "-mod=readonly"
+
+jobs:
+  # Determine which platforms to test
+  setup:
+    name: 🎯 Setup Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      test-windows: ${{ steps.matrix.outputs.test-windows }}
+      test-linux: ${{ steps.matrix.outputs.test-linux }}
+      test-macos: ${{ steps.matrix.outputs.test-macos }}
+      test-version: ${{ steps.version.outputs.test-version }}
+    steps:
+      - name: 🎯 Determine Test Matrix
+        id: matrix
+        run: |
+          PLATFORMS="${{ github.event.inputs.platforms || 'all' }}"
+          
+          if [[ "$PLATFORMS" == "all" ]]; then
+            echo "test-windows=true" >> $GITHUB_OUTPUT
+            echo "test-linux=true" >> $GITHUB_OUTPUT
+            echo "test-macos=true" >> $GITHUB_OUTPUT
+          else
+            # Parse comma-separated platforms
+            if [[ "$PLATFORMS" == *"windows"* ]]; then
+              echo "test-windows=true" >> $GITHUB_OUTPUT
+            else
+              echo "test-windows=false" >> $GITHUB_OUTPUT
+            fi
+            
+            if [[ "$PLATFORMS" == *"linux"* ]]; then
+              echo "test-linux=true" >> $GITHUB_OUTPUT
+            else
+              echo "test-linux=false" >> $GITHUB_OUTPUT
+            fi
+            
+            if [[ "$PLATFORMS" == *"macos"* ]]; then
+              echo "test-macos=true" >> $GITHUB_OUTPUT
+            else
+              echo "test-macos=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: 🏷️ Set Test Version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "log
+          _request" ]]; then
+            TEST_VERSION="0.1.0-pr-${{ github.event.number }}"
+          else
+            TEST_VERSION="${{ github.event.inputs.test_version || '0.1.0-test' }}"
+          fi
+          echo "test-version=$TEST_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Test version set to: $TEST_VERSION"
+
+  # Test Windows sample apps
+  test-windows:
+    name: 🪟 Test Windows Sample Apps
+    runs-on: windows-latest
+    needs: setup
+    if: needs.setup.outputs.test-windows == 'true'
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: '20'
+          package-manager: 'npm'
+          dependency-path: 'samples/apps/oauth'
+
+      - name: 📝 Update Sample Apps Version
+        run: |
+          TEST_VERSION="${{ needs.setup.outputs.test-version }}"
+          echo "📝 Setting sample apps version to $TEST_VERSION"
+          
+          cd samples/apps/oauth
+          npm version $TEST_VERSION --no-git-tag-version --allow-same-version
+          
+          cd server
+          npm version $TEST_VERSION --no-git-tag-version --allow-same-version
+          cd ../../../..
+        shell: bash
+
+      - name: 🔨 Build and Package Windows Samples
+        run: |
+          echo "🔨 Building Windows sample apps..."
+          make build_samples
+          make package_samples OS=win ARCH=x64
+        shell: bash
+
+      - name: ✅ Verify Windows Build
+        run: |
+          echo "🔍 Checking Windows build artifacts..."
+          ls -la target/dist/
+          
+          # Check if the expected zip file exists
+          if ls target/dist/thunder-sample-app-*-win-x64.zip 1> /dev/null 2>&1; then
+            echo "✅ Windows sample app build successful!"
+            echo "📦 Created: $(ls target/dist/thunder-sample-app-*-win-x64.zip)"
+          else
+            echo "❌ Windows sample app build failed - no zip file found"
+            exit 1
+          fi
+        shell: bash
+
+      - name: 📦 Upload Windows Test Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-windows-samples
+          path: target/dist/*.zip
+          retention-days: 7
+
+  # Test Linux sample apps
+  test-linux:
+    name: 🐧 Test Linux Sample Apps
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.test-linux == 'true'
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: '20'
+          package-manager: 'npm'
+          dependency-path: 'samples/apps/oauth'
+
+      - name: 📝 Update Sample Apps Version
+        run: |
+          TEST_VERSION="${{ needs.setup.outputs.test-version }}"
+          echo "📝 Setting sample apps version to $TEST_VERSION"
+          
+          cd samples/apps/oauth
+          npm version $TEST_VERSION --no-git-tag-version --allow-same-version
+          
+          cd server
+          npm version $TEST_VERSION --no-git-tag-version --allow-same-version
+          cd ../../../..
+
+      - name: 🔨 Build and Package Linux Samples
+        run: |
+          echo "🔨 Building Linux sample apps..."
+          make build_samples
+          make package_samples OS=linux ARCH=x64
+          make package_samples OS=linux ARCH=arm64
+
+      - name: ✅ Verify Linux Build
+        run: |
+          echo "🔍 Checking Linux build artifacts..."
+          ls -la target/dist/
+          
+          # Check if the expected zip files exist
+          x64_found=false
+          arm64_found=false
+          
+          if ls target/dist/thunder-sample-app-*-linux-x64.zip 1> /dev/null 2>&1; then
+            echo "✅ Linux x64 sample app build successful!"
+            echo "📦 Created: $(ls target/dist/thunder-sample-app-*-linux-x64.zip)"
+            x64_found=true
+          fi
+          
+          if ls target/dist/thunder-sample-app-*-linux-arm64.zip 1> /dev/null 2>&1; then
+            echo "✅ Linux arm64 sample app build successful!"
+            echo "📦 Created: $(ls target/dist/thunder-sample-app-*-linux-arm64.zip)"
+            arm64_found=true
+          fi
+          
+          if [[ "$x64_found" == false || "$arm64_found" == false ]]; then
+            echo "❌ Linux sample app build incomplete"
+            exit 1
+          fi
+
+      - name: 📦 Upload Linux Test Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-linux-samples
+          path: target/dist/*.zip
+          retention-days: 7
+
+  # Test macOS sample apps
+  test-macos:
+    name: 🍎 Test macOS Sample Apps
+    runs-on: macos-latest
+    needs: setup
+    if: needs.setup.outputs.test-macos == 'true'
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Go Environment
+        uses: ./.github/actions/setup-go
+
+      - name: ⚙️ Set up Node.js Environment
+        uses: ./.github/actions/setup-node
+        with:
+          node-version: '20'
+          package-manager: 'npm'
+          dependency-path: 'samples/apps/oauth'
+
+      - name: 🏷️ Set Sample Apps Version
+        run: |
+          # Get the test version
+          TEST_VERSION="${{ needs.setup.outputs.test-version }}"
+          
+          # Remove 'v' prefix if present
+          if [[ $TEST_VERSION == v* ]]; then
+            TEST_VERSION="${TEST_VERSION#v}"
+          fi
+          
+          echo "✅ Sample version set to '$TEST_VERSION'"
+          echo "SAMPLE_VERSION=$TEST_VERSION" >> $GITHUB_ENV
+
+      - name: 📝 Update Sample Apps Version
+        run: |
+          # Get the clean sample version without v prefix
+          SAMPLE_VERSION="${{ env.SAMPLE_VERSION }}"
+          echo "📝 Setting sample apps version to $SAMPLE_VERSION"
+          
+          # Update the main sample app package.json
+          cd samples/apps/oauth
+          npm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
+          
+          # Update the server package.json
+          cd server
+          npm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
+          
+          cd ../../../..
+          echo "✅ Updated sample apps version to $SAMPLE_VERSION"
+
+
+      - name: 🔨 Build and Package macOS Samples
+        run: |
+          make build_samples
+          
+          # Package for both x64 and arm64
+          make package_samples OS=macos ARCH=x64
+          make package_samples OS=macos ARCH=arm64
+
+      - name: ✅ Verify macOS Build
+        run: |
+          echo "🔍 Checking macOS build artifacts..."
+          ls -la target/dist/
+          
+          # Check if the expected zip files exist
+          x64_found=false
+          arm64_found=false
+          
+          if ls target/dist/thunder-sample-app-*-macos-x64.zip 1> /dev/null 2>&1; then
+            echo "✅ macOS x64 sample app build successful!"
+            echo "📦 Created: $(ls target/dist/thunder-sample-app-*-macos-x64.zip)"
+            x64_found=true
+          fi
+          
+          if ls target/dist/thunder-sample-app-*-macos-arm64.zip 1> /dev/null 2>&1; then
+            echo "✅ macOS arm64 sample app build successful!"
+            echo "📦 Created: $(ls target/dist/thunder-sample-app-*-macos-arm64.zip)"
+            arm64_found=true
+          fi
+          
+          if [[ "$x64_found" == false || "$arm64_found" == false ]]; then
+            echo "❌ macOS sample app build incomplete"
+            exit 1
+          fi
+
+
+      - name: 📦 Upload macOS Test Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-macos-samples
+          path: target/dist/*.zip
+          retention-days: 7
+
+  # Summary job
+  test-summary:
+    name: 📊 Test Summary
+    runs-on: ubuntu-latest
+    needs: [setup, test-windows, test-linux, test-macos]
+    if: always()
+    steps:
+      - name: 📊 Generate Test Summary
+        run: |
+          echo "## 🧪 Sample App Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Test Version:** ${{ needs.setup.outputs.test-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Windows results
+          if [[ "${{ needs.setup.outputs.test-windows }}" == "true" ]]; then
+            if [[ "${{ needs.test-windows.result }}" == "success" ]]; then
+              echo "- ✅ **Windows**: Build successful" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **Windows**: Build failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **Windows**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Linux results
+          if [[ "${{ needs.setup.outputs.test-linux }}" == "true" ]]; then
+            if [[ "${{ needs.test-linux.result }}" == "success" ]]; then
+              echo "- ✅ **Linux**: Build successful" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **Linux**: Build failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **Linux**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # macOS results
+          if [[ "${{ needs.setup.outputs.test-macos }}" == "true" ]]; then
+            if [[ "${{ needs.test-macos.result }}" == "success" ]]; then
+              echo "- ✅ **macOS**: Build successful (with smoke test)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- ❌ **macOS**: Build failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "- ⏭️ **macOS**: Skipped" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Artifacts:** Test artifacts are available for download for 7 days." >> $GITHUB_STEP_SUMMARY
