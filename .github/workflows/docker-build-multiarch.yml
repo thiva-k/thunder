@@ -1,0 +1,57 @@
+name: 🐳 Build Multi-Arch Docker Image Artifacts
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-docker-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+        include:
+          - platform: linux/amd64
+            arch: amd64
+          - platform: linux/arm64
+            arch: arm64
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 📖 Read version
+      id: version
+      run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+
+    - name: 🏗️ Build Docker image for ${{ matrix.arch }}
+      id: build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: ${{ matrix.platform }}
+        push: false
+        tags: thunder:${{ steps.version.outputs.VERSION }}-${{ matrix.arch }},thunder:latest-${{ matrix.arch }}
+        outputs: type=docker,dest=./thunder-image-${{ matrix.arch }}.tar
+
+    - name: 📦 Upload Docker image artifact for ${{ matrix.arch }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: thunder-docker-image-${{ matrix.arch }}
+        path: ./thunder-image-${{ matrix.arch }}.tar
+        retention-days: 30
+
+    - name: 📊 Image info for ${{ matrix.arch }}
+      run: |
+        echo "Docker image built successfully for ${{ matrix.arch }}!"
+        echo "Image size: $(du -h thunder-image-${{ matrix.arch }}.tar | cut -f1)"
+        echo "To load the image locally, run:"
+        echo "docker load < thunder-image-${{ matrix.arch }}.tar"
+        echo "Then run with:"
+        echo "docker run --rm -p 8090:8090 thunder:latest-${{ matrix.arch }}"
