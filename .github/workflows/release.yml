@@ -44,8 +44,6 @@ jobs:
           VERSION="${{ github.event.inputs.version }}"
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      # Note: Sample app version setting moved to platform-specific jobs
-
       - name: 🏷️ Update Product Version
         run: |
           # Store version with v prefix in version.txt
@@ -143,10 +141,6 @@ jobs:
           
           echo "✅ Thunder built for all platforms successfully!"
 
-      # Note: Node.js setup and sample app version updates moved to platform-specific jobs
-
-      # Note: Sample app packaging moved to platform-specific jobs below
-
       - name: 📝 Read Updated Version
         id: version
         run: echo "version=$(cat version.txt)" >> $GITHUB_OUTPUT
@@ -157,7 +151,6 @@ jobs:
           name: thunder-distribution
           path: target/dist/*.zip
           if-no-files-found: error
-
 
       - name: 🏷️ Create Git Tag
         run: |
@@ -182,6 +175,20 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: 📥 Download Shared Certificates for Docker
+        uses: actions/download-artifact@v4
+        with:
+          name: thunder-certificates
+          path: target/out/.cert/
+
+      - name: 📋 Prepare Docker Build Context
+        run: |
+          # Copy certificates into the Docker build context
+          mkdir -p docker-certs
+          cp target/out/.cert/server.cert docker-certs/
+          cp target/out/.cert/server.key docker-certs/
+          echo "✅ Certificates prepared for Docker build context"
+
       - name: 🐳 Build and Push Multi-Arch Docker Image
         run: |
           # Convert repository name to lowercase for GHCR
@@ -197,18 +204,19 @@ jobs:
           echo "🐳 Building and pushing Docker image: ${IMAGE_NAME}:${DOCKER_VERSION}"
           
           # Build and push multi-arch image with version and latest tags
+          # Pass shared certificates as build context with paths relative to build context
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --tag "${IMAGE_NAME}:${DOCKER_VERSION}" \
             --tag "${IMAGE_NAME}:latest" \
+            --build-arg CERT_FILE=docker-certs/server.cert \
+            --build-arg KEY_FILE=docker-certs/server.key \
             --push \
             .
           
           echo "✅ Docker image pushed successfully!"
           echo "📦 Image available at: ${IMAGE_NAME}:${DOCKER_VERSION}"
           echo "📦 Image available at: ${IMAGE_NAME}:latest"
-
-      # Note: GitHub release creation moved to finalize-release job
 
       - name: 📝 Calculate Next Version
         id: next_version
@@ -289,7 +297,6 @@ jobs:
       #       echo "✅ No changes to commit"
       #     fi
 
-  # Platform-specific sample app packaging jobs
   package-samples-linux:
     name: 📦 Package Linux & Windows Samples
     runs-on: ubuntu-latest
@@ -440,7 +447,6 @@ jobs:
           path: target/dist/*.zip
           if-no-files-found: error
 
-  # Combined job to collect all artifacts and create release
   finalize-release:
     name: 🎯 Finalize Release
     runs-on: ubuntu-latest
