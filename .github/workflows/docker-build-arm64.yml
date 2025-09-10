@@ -1,0 +1,81 @@
+name: 🐳 Build ARM64 Docker Image and Push to GHCR
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-push-arm64:
+    runs-on: ubuntu-24.04-arm  # Native ARM64 runner!
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔐 Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📖 Read version
+      id: version
+      run: echo "VERSION=$(cat version.txt)" >> $GITHUB_OUTPUT
+
+    - name: 🏗️ Build ARM64 Docker image (native)
+      run: |
+        # Convert repository name to lowercase for GHCR
+        REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        IMAGE_NAME="ghcr.io/${REPO_NAME}"
+        
+        # Get version without 'v' prefix for Docker tags
+        DOCKER_VERSION="${{ steps.version.outputs.VERSION }}"
+        if [[ $DOCKER_VERSION == v* ]]; then
+          DOCKER_VERSION="${DOCKER_VERSION#v}"
+        fi
+        
+        echo "🐳 Building native ARM64 Docker image: ${IMAGE_NAME}:${DOCKER_VERSION}"
+        
+        # Build the image using normal docker build (native ARM64)
+        docker build \
+          --tag "${IMAGE_NAME}:${DOCKER_VERSION}-arm64" \
+          --tag "${IMAGE_NAME}:latest-arm64" \
+          .
+
+    - name: 🚀 Push ARM64 Docker image
+      run: |
+        REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        IMAGE_NAME="ghcr.io/${REPO_NAME}"
+        DOCKER_VERSION="${{ steps.version.outputs.VERSION }}"
+        if [[ $DOCKER_VERSION == v* ]]; then
+          DOCKER_VERSION="${DOCKER_VERSION#v}"
+        fi
+        
+        echo "🚀 Pushing ARM64 Docker image to GHCR..."
+        
+        # Push both tags
+        docker push "${IMAGE_NAME}:${DOCKER_VERSION}-arm64"
+        docker push "${IMAGE_NAME}:latest-arm64"
+
+    - name: 📊 Image info
+      run: |
+        REPO_NAME=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        IMAGE_NAME="ghcr.io/${REPO_NAME}"
+        DOCKER_VERSION="${{ steps.version.outputs.VERSION }}"
+        if [[ $DOCKER_VERSION == v* ]]; then
+          DOCKER_VERSION="${DOCKER_VERSION#v}"
+        fi
+        
+        echo "✅ ARM64 Docker image pushed successfully!"
+        echo "📦 Image available at: ${IMAGE_NAME}:${DOCKER_VERSION}-arm64"
+        echo "📦 Image available at: ${IMAGE_NAME}:latest-arm64"
+        echo "🏗️  Architecture: linux/arm64 (Native Apple Silicon support)"
+        echo ""
+        echo "📥 To download and run the image locally:"
+        echo "1. Pull the image: docker pull ${IMAGE_NAME}:latest-arm64"
+        echo "2. Run the container: docker run --rm -p 8090:8090 ${IMAGE_NAME}:latest-arm64"
+        echo "3. Or with custom config: docker run --rm -p 8090:8090 -v \$(pwd)/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml ${IMAGE_NAME}:latest-arm64"
