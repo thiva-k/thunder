@@ -97,9 +97,6 @@ RUN cd /tmp/dist && \
     cp -r thunder-*/* /opt/thunder/ && \
     rm -rf /tmp/thunder-* /tmp/dist
 
-# Copy shared certificates from builder stage
-COPY --from=builder /app/target/out/.cert/ /opt/thunder/.cert/
-
 # Set ownership and permissions
 RUN chown -R thunder:thunder /opt/thunder && \
     chmod +x thunder start.sh scripts/init_script.sh
