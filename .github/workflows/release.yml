@@ -22,8 +22,8 @@ env:
   GOFLAGS: "-mod=readonly"
 
 jobs:
-  release:
-    name: 📦 Build and Release
+  build-thunder:
+    name: ⚡ Build Thunder
     runs-on: ubuntu-latest
     steps:
       - name: 📥 Checkout Code
@@ -279,6 +279,7 @@ jobs:
           cd ../../../..
           echo "✅ Updated sample apps version to $NEXT_VERSION"
 
+      # TODO
       # - name: 📈 Commit and Push Version Update
       #   run: |
       #     git config --local user.email "action@github.com"
@@ -300,7 +301,7 @@ jobs:
   package-samples-linux:
     name: 📦 Package Linux & Windows Samples
     runs-on: ubuntu-latest
-    needs: release
+    needs: build-thunder
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -379,7 +380,7 @@ jobs:
   package-samples-macos:
     name: 📦 Package macOS Samples
     runs-on: macos-latest
-    needs: release
+    needs: build-thunder
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -447,10 +448,10 @@ jobs:
           path: target/dist/*.zip
           if-no-files-found: error
 
-  finalize-release:
-    name: 🎯 Finalize Release
+  release:
+    name: 🚀 Release
     runs-on: ubuntu-latest
-    needs: [release, package-samples-linux, package-samples-macos]
+    needs: [build-thunder, package-samples-linux, package-samples-macos]
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
