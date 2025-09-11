@@ -34,6 +34,7 @@ import (
 	"github.com/asgardeo/thunder/internal/flow/model"
 	idpmodel "github.com/asgardeo/thunder/internal/idp/model"
 	idpservice "github.com/asgardeo/thunder/internal/idp/service"
+	"github.com/asgardeo/thunder/internal/system/config"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
@@ -294,13 +295,34 @@ func getIDP(idpName string) (*idpmodel.IDP, error) {
 	idpSvc := idpservice.GetIDPService()
 	idp, err := idpSvc.GetIdentityProviderByName(idpName)
 	if err != nil {
-		return nil, fmt.Errorf("error while getting IDP with the name %s: %w", idpName, err)
-	}
-	if idp == nil {
+		if idpName == "Local" && err == idpmodel.ErrIDPNotFound {
+			return getDefaultLocalIDP()
+		}
 		return nil, fmt.Errorf("IDP with name %s does not exist", idpName)
 	}
 
 	return idp, nil
+}
+
+// getDefaultLocalIDP retrieves the default Local IDP configuration.
+func getDefaultLocalIDP() (*idpmodel.IDP, error) {
+	runtimeConfig := config.GetThunderRuntime()
+	if runtimeConfig == nil {
+		return nil, fmt.Errorf("runtime configuration not available")
+	}
+
+	if !runtimeConfig.Config.IDP.LocalFallbackEnabled {
+		return nil, fmt.Errorf("local IDP fallback is disabled")
+	}
+
+	defaultIDP := &idpmodel.IDP{
+		ID:          runtimeConfig.Config.IDP.DefaultLocalIDP.ID,
+		Name:        runtimeConfig.Config.IDP.DefaultLocalIDP.Name,
+		Description: runtimeConfig.Config.IDP.DefaultLocalIDP.Description,
+		Properties:  []idpmodel.IDPProperty{},
+	}
+
+	return defaultIDP, nil
 }
 
 // getIDPConfigs retrieves the IDP configurations for a given executor configuration.

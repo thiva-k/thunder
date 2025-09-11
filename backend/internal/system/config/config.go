@@ -130,6 +130,16 @@ type CORSConfig struct {
 	AllowedOrigins []string `yaml:"allowed_origins" json:"allowed_origins"`
 }
 
+// IDPConfig holds the configuration details for identity providers.
+type IDPConfig struct {
+	LocalFallbackEnabled bool `yaml:"local_fallback_enabled" json:"local_fallback_enabled"`
+	DefaultLocalIDP      struct {
+		ID          string `yaml:"id" json:"id"`
+		Name        string `yaml:"name" json:"name"`
+		Description string `yaml:"description" json:"description"`
+	} `yaml:"default_local_idp" json:"default_local_idp"`
+}
+
 // Config holds the complete configuration details of the server.
 type Config struct {
 	Server     ServerConfig     `yaml:"server" json:"server"`
@@ -141,6 +151,7 @@ type Config struct {
 	Flow       FlowConfig       `yaml:"flow" json:"flow"`
 	Crypto     CryptoConfig     `yaml:"crypto" json:"crypto"`
 	CORS       CORSConfig       `yaml:"cors" json:"cors"`
+	IDP        IDPConfig        `yaml:"idp" json:"idp"`
 }
 
 // LoadConfig loads the configurations from the specified YAML file and applies defaults.

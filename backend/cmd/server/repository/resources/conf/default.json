@@ -66,5 +66,13 @@
   },
   "crypto": {
     "key": ""
+  },
+  "idp": {
+    "local_fallback_enabled": true,
+    "default_local_idp": {
+      "id": "local-idp-default",
+      "name": "Local",
+      "description": "Default Local Identity Provider for basic authentication"
+    }
   }
 }
