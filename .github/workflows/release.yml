@@ -547,12 +547,32 @@ jobs:
           # Get changelog from Release Drafter
           CHANGELOG="${{ steps.changelog.outputs.body }}"
 
-          # Combine for release description 
+          # Combine for release description with categorized download sections
           echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
           echo "$INTRO" >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV
           echo "## 🔀 What's Changed" >> $GITHUB_ENV
           echo "$CHANGELOG" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "## ⚡ Thunder Server Downloads" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "Download the Thunder server for your platform:" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "- \`thunder-$RELEASE_VERSION-linux-arm64.zip\` - Linux ARM64" >> $GITHUB_ENV
+          echo "- \`thunder-$RELEASE_VERSION-linux-x64.zip\` - Linux x64" >> $GITHUB_ENV
+          echo "- \`thunder-$RELEASE_VERSION-macos-arm64.zip\` - macOS ARM64 (Apple Silicon)" >> $GITHUB_ENV
+          echo "- \`thunder-$RELEASE_VERSION-macos-x64.zip\` - macOS x64 (Intel)" >> $GITHUB_ENV
+          echo "- \`thunder-$RELEASE_VERSION-win-x64.zip\` - Windows x64" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "## 🚀 Sample App Downloads" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "Download the sample application for your platform:" >> $GITHUB_ENV
+          echo "" >> $GITHUB_ENV
+          echo "- \`sample-app-$RELEASE_VERSION-linux-arm64.zip\` - Linux ARM64" >> $GITHUB_ENV
+          echo "- \`sample-app-$RELEASE_VERSION-linux-x64.zip\` - Linux x64" >> $GITHUB_ENV
+          echo "- \`sample-app-$RELEASE_VERSION-macos-arm64.zip\` - macOS ARM64 (Apple Silicon)" >> $GITHUB_ENV
+          echo "- \`sample-app-$RELEASE_VERSION-macos-x64.zip\` - macOS x64 (Intel)" >> $GITHUB_ENV
+          echo "- \`sample-app-$RELEASE_VERSION-win-x64.zip\` - Windows x64" >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV
           echo "$QUICKSTART" >> $GITHUB_ENV
           echo "" >> $GITHUB_ENV
