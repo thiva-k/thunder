@@ -12,7 +12,8 @@ on:
 
 env:
   GOFLAGS: "-mod=readonly"
-
+  GOEXPERIMENT: "greenteagc,jsonv2"
+  
 jobs:
   lint:
     name: 🧹 Lint Code

@@ -25,6 +25,7 @@ permissions:
 
 env:
   GOFLAGS: "-mod=readonly"
+  GOEXPERIMENT: "greenteagc,jsonv2"
 
 jobs:
   build-thunder:
