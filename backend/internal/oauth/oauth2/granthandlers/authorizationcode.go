@@ -130,7 +130,8 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 		}
 
 		// Validate PKCE
-		if err := pkce.ValidatePKCE(authCode.CodeChallenge, authCode.CodeChallengeMethod, tokenRequest.CodeVerifier); err != nil {
+		if err := pkce.ValidatePKCE(authCode.CodeChallenge, authCode.CodeChallengeMethod,
+			tokenRequest.CodeVerifier); err != nil {
 			logger.Error("PKCE validation failed", log.Error(err))
 			return nil, &model.ErrorResponse{
 				Error:            constants.ErrorInvalidGrant,
