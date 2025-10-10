@@ -144,6 +144,66 @@ func (_c *userStoreInterfaceMock_DeleteUser_Call) RunAndReturn(run func(id strin
 	return _c
 }
 
+// GetGroupCountForUser provides a mock function for the type userStoreInterfaceMock
+func (_mock *userStoreInterfaceMock) GetGroupCountForUser(userID string) (int, error) {
+	ret := _mock.Called(userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetGroupCountForUser")
+	}
+
+	var r0 int
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (int, error)); ok {
+		return returnFunc(userID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) int); ok {
+		r0 = returnFunc(userID)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// userStoreInterfaceMock_GetGroupCountForUser_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetGroupCountForUser'
+type userStoreInterfaceMock_GetGroupCountForUser_Call struct {
+	*mock.Call
+}
+
+// GetGroupCountForUser is a helper method to define mock.On call
+//   - userID string
+func (_e *userStoreInterfaceMock_Expecter) GetGroupCountForUser(userID interface{}) *userStoreInterfaceMock_GetGroupCountForUser_Call {
+	return &userStoreInterfaceMock_GetGroupCountForUser_Call{Call: _e.mock.On("GetGroupCountForUser", userID)}
+}
+
+func (_c *userStoreInterfaceMock_GetGroupCountForUser_Call) Run(run func(userID string)) *userStoreInterfaceMock_GetGroupCountForUser_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *userStoreInterfaceMock_GetGroupCountForUser_Call) Return(n int, err error) *userStoreInterfaceMock_GetGroupCountForUser_Call {
+	_c.Call.Return(n, err)
+	return _c
+}
+
+func (_c *userStoreInterfaceMock_GetGroupCountForUser_Call) RunAndReturn(run func(userID string) (int, error)) *userStoreInterfaceMock_GetGroupCountForUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUser provides a mock function for the type userStoreInterfaceMock
 func (_mock *userStoreInterfaceMock) GetUser(id string) (user.User, error) {
 	ret := _mock.Called(id)
@@ -200,6 +260,80 @@ func (_c *userStoreInterfaceMock_GetUser_Call) Return(user1 user.User, err error
 }
 
 func (_c *userStoreInterfaceMock_GetUser_Call) RunAndReturn(run func(id string) (user.User, error)) *userStoreInterfaceMock_GetUser_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetUserGroups provides a mock function for the type userStoreInterfaceMock
+func (_mock *userStoreInterfaceMock) GetUserGroups(userID string, limit int, offset int) ([]user.UserGroup, error) {
+	ret := _mock.Called(userID, limit, offset)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserGroups")
+	}
+
+	var r0 []user.UserGroup
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, int, int) ([]user.UserGroup, error)); ok {
+		return returnFunc(userID, limit, offset)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, int, int) []user.UserGroup); ok {
+		r0 = returnFunc(userID, limit, offset)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]user.UserGroup)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, int, int) error); ok {
+		r1 = returnFunc(userID, limit, offset)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// userStoreInterfaceMock_GetUserGroups_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserGroups'
+type userStoreInterfaceMock_GetUserGroups_Call struct {
+	*mock.Call
+}
+
+// GetUserGroups is a helper method to define mock.On call
+//   - userID string
+//   - limit int
+//   - offset int
+func (_e *userStoreInterfaceMock_Expecter) GetUserGroups(userID interface{}, limit interface{}, offset interface{}) *userStoreInterfaceMock_GetUserGroups_Call {
+	return &userStoreInterfaceMock_GetUserGroups_Call{Call: _e.mock.On("GetUserGroups", userID, limit, offset)}
+}
+
+func (_c *userStoreInterfaceMock_GetUserGroups_Call) Run(run func(userID string, limit int, offset int)) *userStoreInterfaceMock_GetUserGroups_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 int
+		if args[1] != nil {
+			arg1 = args[1].(int)
+		}
+		var arg2 int
+		if args[2] != nil {
+			arg2 = args[2].(int)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+		)
+	})
+	return _c
+}
+
+func (_c *userStoreInterfaceMock_GetUserGroups_Call) Return(userGroups []user.UserGroup, err error) *userStoreInterfaceMock_GetUserGroups_Call {
+	_c.Call.Return(userGroups, err)
+	return _c
+}
+
+func (_c *userStoreInterfaceMock_GetUserGroups_Call) RunAndReturn(run func(userID string, limit int, offset int) ([]user.UserGroup, error)) *userStoreInterfaceMock_GetUserGroups_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -125,7 +125,7 @@ func (uh *userHandler) HandleUserPostRequest(w http.ResponseWriter, r *http.Requ
 func (uh *userHandler) HandleUserGetRequest(w http.ResponseWriter, r *http.Request) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, handlerLoggerComponentName))
 
-	id := strings.TrimPrefix(r.URL.Path, "/users/")
+	id := r.PathValue("id")
 	if id == "" {
 		http.Error(w, "Bad Request: Missing user id.", http.StatusBadRequest)
 		return
@@ -147,6 +147,47 @@ func (uh *userHandler) HandleUserGetRequest(w http.ResponseWriter, r *http.Reque
 
 	// Log the user response.
 	logger.Debug("User GET response sent", log.String("user id", id))
+}
+
+// HandleUserGroupsGetRequest handles the get user groups request.
+func (ah *userHandler) HandleUserGroupsGetRequest(w http.ResponseWriter, r *http.Request) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+
+	id := r.PathValue("id")
+	if id == "" {
+		handleError(w, logger, &ErrorMissingUserID)
+		return
+	}
+
+	limit, offset, svcErr := parsePaginationParams(r.URL.Query())
+	if svcErr != nil {
+		handleError(w, logger, svcErr)
+		return
+	}
+
+	if limit == 0 {
+		limit = serverconst.DefaultPageSize
+	}
+
+	groupListResponse, svcErr := ah.userService.GetUserGroups(id, limit, offset)
+	if svcErr != nil {
+		handleError(w, logger, svcErr)
+		return
+	}
+
+	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(groupListResponse); err != nil {
+		logger.Error("Error encoding response", log.Error(err))
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+		return
+	}
+
+	logger.Debug("Successfully retrieved user groups", log.String("user id", id),
+		log.Int("limit", limit), log.Int("offset", offset),
+		log.Int("totalResults", groupListResponse.TotalResults),
+		log.Int("count", groupListResponse.Count))
 }
 
 // HandleUserPutRequest handles the user request.
