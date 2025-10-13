@@ -32,29 +32,94 @@ env:
   GOFLAGS: "-mod=readonly"
 
 jobs:
-  build-thunder:
-    name: ⚡ Build Thunder
+  build-thunder:  
+    name: ⚡ Build Thunder  
+    runs-on: ubuntu-latest  
+    steps:  
+      - name: 📥 Checkout Code  
+        uses: actions/checkout@v4  
+        with:  
+          fetch-depth: 0  
+
+      - name: ✅ Validate Release Version  
+        run: |  
+          if ! [[ ${{ github.event.inputs.version }} =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9a-zA-Z.-]+)?(\+[0-9a-zA-Z.-]+)?$ ]]; then  
+            echo "❌ Error: Version '${{ github.event.inputs.version }}' does not follow format vX.Y[.Z][-PRERELEASE][+BUILD]"  
+            echo "❌ Version must start with 'v'"  
+            exit 1  
+          fi  
+          echo "✅ Version '${{ github.event.inputs.version }}' is valid"  
+
+      - name: 🏷️ Update Product Version  
+        run: |  
+          VERSION="${{ github.event.inputs.version }}"  
+          echo "$VERSION" > version.txt  
+
+      - name: ⚙️ Set up Go Environment  
+        uses: ./.github/actions/setup-go  
+
+      - name: 🗄️ Cache Go Modules  
+        uses: actions/cache@v4  
+        id: cache-go-modules  
+        with:  
+          path: |  
+            ~/.cache/go-build  
+            ~/go/pkg/mod  
+          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}  
+          restore-keys: |  
+            ${{ runner.os }}-go-modules-  
+
+      - name: 📦 Install Dependencies  
+        run: |  
+          cd backend  
+          go mod download  
+          cd ../tests/integration  
+          go mod download  
+
+      - name: 🧹 Clean Previous Builds  
+        run: make clean_all
+
+      - name: 🔨 Build Product with Coverage  
+        run: |  
+          set -e  
+          make build_with_coverage_only OS=$(go env GOOS) ARCH=$(go env GOARCH)
+          
+          # Find the built distribution
+          DIST_PATH=$(find target/dist -name "thunder-*.zip" | head -1)
+          echo "Built distribution: $DIST_PATH"
+
+      - name: 📦 Upload Built Distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: thunder-distribution
+          path: target/dist/*.zip
+          if-no-files-found: error
+
+  test-integration:
+    name: 🧪 Integration Tests (${{ matrix.database }})
+    needs: build-thunder
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        database: [sqlite, postgres]
+      fail-fast: false
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: asgthunder
+          POSTGRES_PASSWORD: asgthunder
+          POSTGRES_DB: thunderdb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Need full history for tagging
-
-      - name: ✅ Validate Release Version
-        run: |
-          if ! [[ ${{ github.event.inputs.version }} =~ ^v[0-9]+\.[0-9]+(\.[0-9]+)?(-[0-9a-zA-Z.-]+)?(\+[0-9a-zA-Z.-]+)?$ ]]; then
-            echo "❌ Error: Version '${{ github.event.inputs.version }}' does not follow format vX.Y[.Z][-PRERELEASE][+BUILD]"
-            echo "❌ Version must start with 'v'"
-            exit 1
-          fi
-          echo "✅ Version '${{ github.event.inputs.version }}' is valid"
-
-      - name: 🏷️ Update Product Version
-        run: |
-          # Store version with v prefix in version.txt
-          VERSION="${{ github.event.inputs.version }}"
-          echo "$VERSION" > version.txt
 
       - name: ⚙️ Set up Go Environment
         uses: ./.github/actions/setup-go
@@ -77,13 +142,49 @@ jobs:
           cd ../tests/integration
           go mod download
 
-      - name: 🛠️ Build and Run Tests
+      - name: 📝 Configure Test Database
         run: |
-            set -e
-            make all OS=$(go env GOOS) ARCH=$(go env GOARCH)
+          chmod +x backend/tests/scripts/setup-test-config.sh
+          ./backend/tests/scripts/setup-test-config.sh
+        env:
+          DB_TYPE: ${{ matrix.database }}
 
-      - name: 🧹 Clean Previous Builds
-        run: make clean_all
+      - name: 🧪 Run Integration Tests (${{ matrix.database }})
+        uses: ./.github/actions/run-integration-tests
+        with:
+          database-type: ${{ matrix.database }}
+          coverage-enabled: true
+
+  build-and-package:
+    name: 📦 Build and Package Release
+    runs-on: ubuntu-latest
+    needs: [build-thunder, test-integration]
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ⚙️ Set up Go Environment
+        uses: ./.github/actions/setup-go
+
+      - name: 🗄️ Cache Go Modules
+        uses: actions/cache@v4
+        id: cache-go-modules
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-modules-
+
+      - name: 📦 Install Dependencies
+        run: |
+          cd backend
+          go mod download
+          cd ../tests/integration
+          go mod download
 
       - name: 🔐 Generate Shared Certificates
         run: |
@@ -133,7 +234,7 @@ jobs:
             echo "🔨 Building Thunder backend & frontend for $OS/$ARCH..."
             make build_backend OS=$OS ARCH=$ARCH
             make build_frontend OS=$OS ARCH=$ARCH
-
+            
             # Optional: Add a small delay to prevent resource contention
             sleep 1
           done
@@ -150,6 +251,7 @@ jobs:
           name: thunder-distribution
           path: target/dist/*.zip
           if-no-files-found: error
+          overwrite: true
 
       - name: 🏷️ Create Git Tag
         run: |
@@ -299,7 +401,7 @@ jobs:
   package-samples-linux:
     name: 📦 Package Linux & Windows Samples
     runs-on: ubuntu-latest
-    needs: build-thunder
+    needs: build-and-package
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -378,7 +480,7 @@ jobs:
   package-samples-macos:
     name: 📦 Package macOS Samples
     runs-on: macos-latest
-    needs: build-thunder
+    needs: build-and-package
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
@@ -449,7 +551,7 @@ jobs:
   release:
     name: 🚀 Release
     runs-on: ubuntu-latest
-    needs: [build-thunder, package-samples-linux, package-samples-macos]
+    needs: [build-and-package, package-samples-linux, package-samples-macos]
     outputs:
       release_tag: ${{ steps.release_info.outputs.release_tag }}
     steps:
@@ -655,8 +757,7 @@ jobs:
             const releaseTag = '${{ needs.release.outputs.release_tag }}';
             const thunderPackUrl = `https://github.com/${{ github.repository }}/releases/download/${releaseTag}/thunder-${releaseTag.replace('v', '')}-linux-x64.zip`;
             const pushBenchmarkToGitHub = ${{ github.repository == 'asgardeo/thunder' }};
-            
-            
+
             // Define CPU core configurations to test
             const cpuCoreConfigs = ['4', '8'];
             
