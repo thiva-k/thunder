@@ -29,26 +29,25 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
-	authzconstants "github.com/asgardeo/thunder/internal/oauth/oauth2/authz/constants"
-	authzmodel "github.com/asgardeo/thunder/internal/oauth/oauth2/authz/model"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/authz"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
-	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/authz/storemock"
+	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/authzmock"
 	usersvcmock "github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
 type AuthorizationCodeGrantHandlerTestSuite struct {
 	suite.Suite
-	handler         *authorizationCodeGrantHandler
-	mockJWTService  *jwtmock.JWTServiceInterfaceMock
-	mockAuthZStore  *storemock.AuthorizationCodeStoreInterfaceMock
-	mockUserService *usersvcmock.UserServiceInterfaceMock
-	oauthApp        *appmodel.OAuthAppConfigProcessedDTO
-	testAuthzCode   authzmodel.AuthorizationCode
-	testTokenReq    *model.TokenRequest
+	handler          *authorizationCodeGrantHandler
+	mockJWTService   *jwtmock.JWTServiceInterfaceMock
+	mockAuthzService *authzmock.AuthorizeServiceInterfaceMock
+	mockUserService  *usersvcmock.UserServiceInterfaceMock
+	oauthApp         *appmodel.OAuthAppConfigProcessedDTO
+	testAuthzCode    authz.AuthorizationCode
+	testTokenReq     *model.TokenRequest
 }
 
 func TestAuthorizationCodeGrantHandlerSuite(t *testing.T) {
@@ -65,13 +64,13 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 	_ = config.InitializeThunderRuntime("test", testConfig)
 
 	suite.mockJWTService = &jwtmock.JWTServiceInterfaceMock{}
-	suite.mockAuthZStore = &storemock.AuthorizationCodeStoreInterfaceMock{}
+	suite.mockAuthzService = &authzmock.AuthorizeServiceInterfaceMock{}
 	suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
 
 	suite.handler = &authorizationCodeGrantHandler{
-		JWTService:  suite.mockJWTService,
-		AuthZStore:  suite.mockAuthZStore,
-		UserService: suite.mockUserService,
+		jwtService:   suite.mockJWTService,
+		authzService: suite.mockAuthzService,
+		userService:  suite.mockUserService,
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
@@ -96,7 +95,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 		RedirectURI: "https://client.example.com/callback",
 	}
 
-	suite.testAuthzCode = authzmodel.AuthorizationCode{
+	suite.testAuthzCode = authz.AuthorizationCode{
 		CodeID:           "test-code-id",
 		Code:             "test-auth-code",
 		ClientID:         "test-client-id",
@@ -105,12 +104,12 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 		TimeCreated:      time.Now().Add(-5 * time.Minute),
 		ExpiryTime:       time.Now().Add(5 * time.Minute),
 		Scopes:           "read write",
-		State:            authzconstants.AuthCodeStateActive,
+		State:            authz.AuthCodeStateActive,
 	}
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestNewAuthorizationCodeGrantHandler() {
-	handler := newAuthorizationCodeGrantHandler()
+	handler := newAuthorizationCodeGrantHandler(suite.mockJWTService, suite.mockUserService, suite.mockAuthzService)
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*GrantHandlerInterface)(nil), handler)
 }
@@ -188,9 +187,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateGrant_MissingRe
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_Success() {
 	// Mock authorization code store to return valid code
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(suite.testAuthzCode, nil)
-	suite.mockAuthZStore.On("DeactivateAuthorizationCode", suite.testAuthzCode).Return(nil)
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+		Return(&suite.testAuthzCode, nil)
 
 	// Mock user service to return user for attributes
 	mockUser := &user.User{
@@ -222,14 +220,14 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_Success() {
 	assert.Equal(suite.T(), "test-user-id", ctx.TokenAttributes["sub"])
 	assert.Equal(suite.T(), "test-client-id", ctx.TokenAttributes["aud"])
 
-	suite.mockAuthZStore.AssertExpectations(suite.T())
+	suite.mockAuthzService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_InvalidAuthorizationCode() {
 	// Mock authorization code store to return error
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(authzmodel.AuthorizationCode{}, errors.New("code not found"))
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+		Return(nil, errors.New("invalid authorization code"))
 
 	ctx := &model.TokenContext{
 		TokenAttributes: make(map[string]interface{}),
@@ -242,55 +240,13 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_InvalidAuth
 	assert.Equal(suite.T(), constants.ErrorInvalidGrant, err.Error)
 	assert.Equal(suite.T(), "Invalid authorization code", err.ErrorDescription)
 
-	suite.mockAuthZStore.AssertExpectations(suite.T())
-}
-
-func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_EmptyAuthorizationCode() {
-	// Mock authorization code store to return empty code
-	emptyCode := authzmodel.AuthorizationCode{Code: ""}
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(emptyCode, nil)
-
-	ctx := &model.TokenContext{
-		TokenAttributes: make(map[string]interface{}),
-	}
-
-	result, err := suite.handler.HandleGrant(suite.testTokenReq, suite.oauthApp, ctx)
-
-	assert.Nil(suite.T(), result)
-	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), constants.ErrorInvalidGrant, err.Error)
-	assert.Equal(suite.T(), "Invalid authorization code", err.ErrorDescription)
-
-	suite.mockAuthZStore.AssertExpectations(suite.T())
-}
-
-func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_DeactivateError() {
-	// Mock authorization code store to return valid code but fail deactivation
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(suite.testAuthzCode, nil)
-	suite.mockAuthZStore.On("DeactivateAuthorizationCode", suite.testAuthzCode).
-		Return(errors.New("deactivate failed"))
-
-	ctx := &model.TokenContext{
-		TokenAttributes: make(map[string]interface{}),
-	}
-
-	result, err := suite.handler.HandleGrant(suite.testTokenReq, suite.oauthApp, ctx)
-
-	assert.Nil(suite.T(), result)
-	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), constants.ErrorServerError, err.Error)
-	assert.Equal(suite.T(), "Failed to invalidate authorization code", err.ErrorDescription)
-
-	suite.mockAuthZStore.AssertExpectations(suite.T())
+	suite.mockAuthzService.AssertExpectations(suite.T())
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_JWTGenerationError() {
 	// Mock authorization code store to return valid code
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(suite.testAuthzCode, nil)
-	suite.mockAuthZStore.On("DeactivateAuthorizationCode", suite.testAuthzCode).Return(nil)
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+		Return(&suite.testAuthzCode, nil)
 
 	// Mock user service to return user for attributes
 	mockUser := &user.User{
@@ -315,7 +271,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_JWTGenerati
 	assert.Equal(suite.T(), constants.ErrorServerError, err.Error)
 	assert.Equal(suite.T(), "Failed to generate token", err.ErrorDescription)
 
-	suite.mockAuthZStore.AssertExpectations(suite.T())
+	suite.mockAuthzService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
 }
 
@@ -324,9 +280,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_EmptyScopes
 	authzCodeWithEmptyScopes := suite.testAuthzCode
 	authzCodeWithEmptyScopes.Scopes = ""
 
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(authzCodeWithEmptyScopes, nil)
-	suite.mockAuthZStore.On("DeactivateAuthorizationCode", authzCodeWithEmptyScopes).Return(nil)
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+		Return(&authzCodeWithEmptyScopes, nil)
 
 	// Mock user service to return user for attributes
 	mockUser := &user.User{
@@ -349,15 +304,14 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_EmptyScopes
 	assert.NotNil(suite.T(), result)
 	assert.Empty(suite.T(), result.AccessToken.Scopes)
 
-	suite.mockAuthZStore.AssertExpectations(suite.T())
+	suite.mockAuthzService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_NilTokenAttributes() {
 	// Test with nil token attributes
-	suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-		Return(suite.testAuthzCode, nil)
-	suite.mockAuthZStore.On("DeactivateAuthorizationCode", suite.testAuthzCode).Return(nil)
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+		Return(&suite.testAuthzCode, nil)
 
 	// Mock user service to return user for attributes
 	mockUser := &user.User{
@@ -384,7 +338,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_NilTokenAtt
 	assert.Equal(suite.T(), "test-user-id", ctx.TokenAttributes["sub"])
 	assert.Equal(suite.T(), "test-client-id", ctx.TokenAttributes["aud"])
 
-	suite.mockAuthZStore.AssertExpectations(suite.T())
+	suite.mockAuthzService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
 }
 
@@ -432,7 +386,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateAuthorizationCo
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateAuthorizationCode_InactiveCode() {
 	inactiveCode := suite.testAuthzCode
-	inactiveCode.State = authzconstants.AuthCodeStateInactive
+	inactiveCode.State = authz.AuthCodeStateInactive
 
 	err := validateAuthorizationCode(suite.testTokenReq, inactiveCode)
 	assert.NotNil(suite.T(), err)
@@ -503,12 +457,14 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			// Reset mocks for each test case
-			suite.mockAuthZStore = &storemock.AuthorizationCodeStoreInterfaceMock{}
+			suite.mockAuthzService = &authzmock.AuthorizeServiceInterfaceMock{}
 			suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
 			suite.mockJWTService = &jwtmock.JWTServiceInterfaceMock{}
-			suite.handler.AuthZStore = suite.mockAuthZStore
-			suite.handler.UserService = suite.mockUserService
-			suite.handler.JWTService = suite.mockJWTService
+			suite.handler = &authorizationCodeGrantHandler{
+				jwtService:   suite.mockJWTService,
+				authzService: suite.mockAuthzService,
+				userService:  suite.mockUserService,
+			}
 
 			accessTokenAttrs := []string{"email", "username"}
 			if tc.includeInAccessToken {
@@ -552,9 +508,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 				authzCode.Scopes = "openid read write"
 			}
 
-			suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-				Return(authzCode, nil)
-			suite.mockAuthZStore.On("DeactivateAuthorizationCode", authzCode).Return(nil)
+			suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+				Return(&authzCode, nil)
 
 			mockUser := &user.User{
 				ID:         "test-user-id",
@@ -632,7 +587,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 				assert.Empty(suite.T(), result.IDToken.Token, tc.description)
 			}
 
-			suite.mockAuthZStore.AssertExpectations(suite.T())
+			suite.mockAuthzService.AssertExpectations(suite.T())
 			suite.mockUserService.AssertExpectations(suite.T())
 			suite.mockJWTService.AssertExpectations(suite.T())
 		})
@@ -668,12 +623,14 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			suite.mockAuthZStore = &storemock.AuthorizationCodeStoreInterfaceMock{}
+			suite.mockAuthzService = &authzmock.AuthorizeServiceInterfaceMock{}
 			suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
 			suite.mockJWTService = &jwtmock.JWTServiceInterfaceMock{}
-			suite.handler.AuthZStore = suite.mockAuthZStore
-			suite.handler.UserService = suite.mockUserService
-			suite.handler.JWTService = suite.mockJWTService
+			suite.handler = &authorizationCodeGrantHandler{
+				jwtService:   suite.mockJWTService,
+				authzService: suite.mockAuthzService,
+				userService:  suite.mockUserService,
+			}
 
 			accessTokenAttrs := []string{"email", "username"}
 			if tc.includeInAccessToken {
@@ -716,9 +673,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 				authzCode.Scopes = "openid read write"
 			}
 
-			suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
-				Return(authzCode, nil)
-			suite.mockAuthZStore.On("DeactivateAuthorizationCode", authzCode).Return(nil)
+			suite.mockAuthzService.On("GetAuthorizationCodeDetails", "test-client-id", "test-auth-code").
+				Return(&authzCode, nil)
 
 			mockUser := &user.User{
 				ID:         "test-user-id",
@@ -778,7 +734,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 				assert.Empty(suite.T(), result.IDToken.Token, tc.description)
 			}
 
-			suite.mockAuthZStore.AssertExpectations(suite.T())
+			suite.mockAuthzService.AssertExpectations(suite.T())
 			suite.mockUserService.AssertExpectations(suite.T())
 			suite.mockJWTService.AssertExpectations(suite.T())
 		})

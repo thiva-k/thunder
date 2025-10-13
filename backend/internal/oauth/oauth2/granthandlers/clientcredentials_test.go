@@ -61,7 +61,7 @@ func (suite *ClientCredentialsGrantHandlerTestSuite) SetupTest() {
 
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.handler = &clientCredentialsGrantHandler{
-		JWTService: suite.mockJWTService,
+		jwtService: suite.mockJWTService,
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
@@ -77,7 +77,7 @@ func (suite *ClientCredentialsGrantHandlerTestSuite) SetupTest() {
 }
 
 func (suite *ClientCredentialsGrantHandlerTestSuite) TestNewClientCredentialsGrantHandler() {
-	handler := newClientCredentialsGrantHandler()
+	handler := newClientCredentialsGrantHandler(suite.mockJWTService)
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*GrantHandlerInterface)(nil), handler)
 }

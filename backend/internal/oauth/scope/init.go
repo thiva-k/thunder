@@ -16,15 +16,9 @@
  * under the License.
  */
 
-package model
+package scope
 
-// OAuthParameters represents the parameters required for OAuth2 authorization.
-type OAuthParameters struct {
-	State               string
-	ClientID            string
-	RedirectURI         string
-	ResponseType        string
-	Scopes              string
-	CodeChallenge       string
-	CodeChallengeMethod string
+// Initialize initializes and returns a new scope validator.
+func Initialize() ScopeValidatorInterface {
+	return newAPIScopeValidator()
 }

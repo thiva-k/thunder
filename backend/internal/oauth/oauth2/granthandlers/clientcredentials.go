@@ -31,13 +31,13 @@ import (
 
 // clientCredentialsGrantHandler handles the client credentials grant type.
 type clientCredentialsGrantHandler struct {
-	JWTService jwt.JWTServiceInterface
+	jwtService jwt.JWTServiceInterface
 }
 
 // newClientCredentialsGrantHandler creates a new instance of ClientCredentialsGrantHandler.
-func newClientCredentialsGrantHandler() GrantHandlerInterface {
+func newClientCredentialsGrantHandler(jwtService jwt.JWTServiceInterface) GrantHandlerInterface {
 	return &clientCredentialsGrantHandler{
-		JWTService: jwt.GetJWTService(),
+		jwtService: jwtService,
 	}
 }
 
@@ -92,7 +92,7 @@ func (h *clientCredentialsGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 		validityPeriod = config.GetThunderRuntime().Config.JWT.ValidityPeriod
 	}
 
-	token, _, err := h.JWTService.GenerateJWT(tokenRequest.ClientID, tokenRequest.ClientID, iss,
+	token, _, err := h.jwtService.GenerateJWT(tokenRequest.ClientID, tokenRequest.ClientID, iss,
 		validityPeriod, jwtClaims)
 	if err != nil {
 		return nil, &model.ErrorResponse{

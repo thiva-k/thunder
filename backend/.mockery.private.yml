@@ -28,3 +28,19 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: cache
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/oauth/oauth2/introspect:
+    config:
+      all: true
+      dir: internal/oauth/oauth2/introspect
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: introspect
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/oauth/oauth2/authz:
+    config:
+      all: true
+      dir: internal/oauth/oauth2/authz
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: authz
+      filename: "{{.InterfaceName}}_mock_test.go"
