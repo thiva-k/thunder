@@ -1,0 +1,109 @@
+openapi: 3.0.3
+
+info:
+  title: Metadata API
+  description: This API provides metadata for Thunder's services.
+  version: "1.0"
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://{host}:{port}
+    variables:
+      host:
+        default: "localhost"
+      port:
+        default: "8090"
+
+paths:
+  /meta/oidc/scopes:
+    get:
+      tags:
+        - meta
+      summary: Get OIDC Standard Scopes
+      description: |
+        This endpoint provides applications with metadata about which claims are associated 
+        with each standard OIDC scope.
+      responses:
+        '200':
+          description: Successfully retrieved OIDC standard scopes metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OIDCScopesResponse'
+              example:
+                scopes:
+                  - scope: "openid"
+                    description: "REQUIRED scope for OpenID Connect authentication"
+                    claims:
+                      - "sub"
+                  - scope: "profile"
+                    description: "Requests access to end-user's default profile claims"
+                    claims:
+                      - "name"
+                      - "family_name"
+                      - "given_name"
+                      - "middle_name"
+                      - "nickname"
+                      - "preferred_username"
+                      - "profile"
+                      - "picture"
+                      - "website"
+                      - "gender"
+                      - "birthdate"
+                      - "zoneinfo"
+                      - "locale"
+                      - "updated_at"
+                  - scope: "email"
+                    description: "Requests access to email and email_verified claims"
+                    claims:
+                      - "email"
+                      - "email_verified"
+                  - scope: "phone"
+                    description: "Requests access to phone_number and phone_number_verified claims"
+                    claims:
+                      - "phone_number"
+                      - "phone_number_verified"
+                  - scope: "address"
+                    description: "Requests access to address claim"
+                    claims:
+                      - "address"
+
+components:
+  schemas:
+    OIDCScopesResponse:
+      type: object
+      properties:
+        scopes:
+          type: array
+          description: List of OIDC scopes with their associated claims
+          items:
+            $ref: '#/components/schemas/OIDCScopeMetadata'
+      required:
+        - scopes
+
+    OIDCScopeMetadata:
+      type: object
+      properties:
+        scope:
+          type: string
+          description: The OIDC scope name
+          example: "profile"
+        description:
+          type: string
+          description: Human-readable description of what the scope provides access to
+          example: "Requests access to end-user's default profile claims"
+        claims:
+          type: array
+          description: List of claims associated with this scope
+          items:
+            type: string
+          example:
+            - "name"
+            - "family_name"
+            - "given_name"
+      required:
+        - scope
+        - description
+        - claims
