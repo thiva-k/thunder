@@ -16,46 +16,44 @@
  * under the License.
  */
 
-package store
+package cert
 
 import (
 	"errors"
 
-	"github.com/asgardeo/thunder/internal/cert/constants"
-	"github.com/asgardeo/thunder/internal/cert/model"
 	"github.com/asgardeo/thunder/internal/system/cache"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-const cachedStoreLoggerComponentName = "CachedBackedCertificateStore"
+const cacheBackedStoreLoggerComponentName = "CacheBackedCertificateStore"
 
-// CachedBackedCertificateStore is the implementation of CertificateStoreInterface that uses caching.
-type CachedBackedCertificateStore struct {
-	CertByIDCache        cache.CacheInterface[*model.Certificate]
-	CertByReferenceCache cache.CacheInterface[*model.Certificate]
-	Store                CertificateStoreInterface
+// cacheBackedStore is the implementation of CertificateStoreInterface that uses caching.
+type cacheBackedStore struct {
+	certByIDCache        cache.CacheInterface[*Certificate]
+	certByReferenceCache cache.CacheInterface[*Certificate]
+	store                certificateStoreInterface
 }
 
 // NewCachedBackedCertificateStore creates a new instance of CachedBackedCertificateStore.
-func NewCachedBackedCertificateStore() CertificateStoreInterface {
-	return &CachedBackedCertificateStore{
-		CertByIDCache:        cache.GetCache[*model.Certificate]("CertificateByIDCache"),
-		CertByReferenceCache: cache.GetCache[*model.Certificate]("CertificateByReferenceCache"),
-		Store:                NewCertificateStore(),
+func newCachedBackedCertificateStore() certificateStoreInterface {
+	return &cacheBackedStore{
+		certByIDCache:        cache.GetCache[*Certificate]("CertificateByIDCache"),
+		certByReferenceCache: cache.GetCache[*Certificate]("CertificateByReferenceCache"),
+		store:                newCertificateStore(),
 	}
 }
 
 // GetCertificateByID retrieves a certificate by its ID, using cache if available.
-func (s *CachedBackedCertificateStore) GetCertificateByID(id string) (*model.Certificate, error) {
+func (s *cacheBackedStore) GetCertificateByID(id string) (*Certificate, error) {
 	cacheKey := cache.CacheKey{
 		Key: id,
 	}
-	cachedCert, ok := s.CertByIDCache.Get(cacheKey)
+	cachedCert, ok := s.certByIDCache.Get(cacheKey)
 	if ok {
 		return cachedCert, nil
 	}
 
-	cert, err := s.Store.GetCertificateByID(id)
+	cert, err := s.store.GetCertificateByID(id)
 	if err != nil || cert == nil {
 		return cert, err
 	}
@@ -65,15 +63,15 @@ func (s *CachedBackedCertificateStore) GetCertificateByID(id string) (*model.Cer
 }
 
 // GetCertificateByReference retrieves a certificate by its reference type and ID, using cache if available.
-func (s *CachedBackedCertificateStore) GetCertificateByReference(refType constants.CertificateReferenceType,
-	refID string) (*model.Certificate, error) {
+func (s *cacheBackedStore) GetCertificateByReference(refType CertificateReferenceType,
+	refID string) (*Certificate, error) {
 	cacheKey := getCertByReferenceCacheKey(refType, refID)
-	cachedCert, ok := s.CertByReferenceCache.Get(cacheKey)
+	cachedCert, ok := s.certByReferenceCache.Get(cacheKey)
 	if ok {
 		return cachedCert, nil
 	}
 
-	cert, err := s.Store.GetCertificateByReference(refType, refID)
+	cert, err := s.store.GetCertificateByReference(refType, refID)
 	if err != nil || cert == nil {
 		return cert, err
 	}
@@ -83,8 +81,8 @@ func (s *CachedBackedCertificateStore) GetCertificateByReference(refType constan
 }
 
 // CreateCertificate creates a new certificate and caches it.
-func (s *CachedBackedCertificateStore) CreateCertificate(cert *model.Certificate) error {
-	if err := s.Store.CreateCertificate(cert); err != nil {
+func (s *cacheBackedStore) CreateCertificate(cert *Certificate) error {
+	if err := s.store.CreateCertificate(cert); err != nil {
 		return err
 	}
 	s.cacheCertificate(cert)
@@ -92,8 +90,8 @@ func (s *CachedBackedCertificateStore) CreateCertificate(cert *model.Certificate
 }
 
 // UpdateCertificateByID updates an existing certificate by its ID and refreshes the cache.
-func (s *CachedBackedCertificateStore) UpdateCertificateByID(existingCert, updatedCert *model.Certificate) error {
-	if err := s.Store.UpdateCertificateByID(existingCert, updatedCert); err != nil {
+func (s *cacheBackedStore) UpdateCertificateByID(existingCert, updatedCert *Certificate) error {
+	if err := s.store.UpdateCertificateByID(existingCert, updatedCert); err != nil {
 		return err
 	}
 
@@ -105,9 +103,9 @@ func (s *CachedBackedCertificateStore) UpdateCertificateByID(existingCert, updat
 }
 
 // UpdateCertificateByReference updates an existing certificate by its reference type and ID and refreshes the cache.
-func (s *CachedBackedCertificateStore) UpdateCertificateByReference(existingCert,
-	updatedCert *model.Certificate) error {
-	if err := s.Store.UpdateCertificateByReference(existingCert, updatedCert); err != nil {
+func (s *cacheBackedStore) UpdateCertificateByReference(existingCert,
+	updatedCert *Certificate) error {
+	if err := s.store.UpdateCertificateByReference(existingCert, updatedCert); err != nil {
 		return err
 	}
 
@@ -119,16 +117,16 @@ func (s *CachedBackedCertificateStore) UpdateCertificateByReference(existingCert
 }
 
 // DeleteCertificateByID deletes a certificate by its ID and invalidates the caches.
-func (s *CachedBackedCertificateStore) DeleteCertificateByID(id string) error {
+func (s *cacheBackedStore) DeleteCertificateByID(id string) error {
 	cacheKey := cache.CacheKey{
 		Key: id,
 	}
-	existingCert, ok := s.CertByIDCache.Get(cacheKey)
+	existingCert, ok := s.certByIDCache.Get(cacheKey)
 	if !ok {
 		var err error
-		existingCert, err = s.Store.GetCertificateByID(id)
+		existingCert, err = s.store.GetCertificateByID(id)
 		if err != nil {
-			if errors.Is(err, constants.ErrCertificateNotFound) {
+			if errors.Is(err, ErrCertificateNotFound) {
 				return nil
 			}
 			return err
@@ -138,7 +136,7 @@ func (s *CachedBackedCertificateStore) DeleteCertificateByID(id string) error {
 		return nil
 	}
 
-	if err := s.Store.DeleteCertificateByID(id); err != nil {
+	if err := s.store.DeleteCertificateByID(id); err != nil {
 		return err
 	}
 	s.invalidateCertificateCache(existingCert.ID, existingCert.RefType, existingCert.RefID)
@@ -147,15 +145,15 @@ func (s *CachedBackedCertificateStore) DeleteCertificateByID(id string) error {
 }
 
 // DeleteCertificateByReference deletes a certificate by its reference type and ID and invalidates the caches.
-func (s *CachedBackedCertificateStore) DeleteCertificateByReference(refType constants.CertificateReferenceType,
+func (s *cacheBackedStore) DeleteCertificateByReference(refType CertificateReferenceType,
 	refID string) error {
 	cacheKey := getCertByReferenceCacheKey(refType, refID)
-	existingCert, ok := s.CertByReferenceCache.Get(cacheKey)
+	existingCert, ok := s.certByReferenceCache.Get(cacheKey)
 	if !ok {
 		var err error
-		existingCert, err = s.Store.GetCertificateByReference(refType, refID)
+		existingCert, err = s.store.GetCertificateByReference(refType, refID)
 		if err != nil {
-			if errors.Is(err, constants.ErrCertificateNotFound) {
+			if errors.Is(err, ErrCertificateNotFound) {
 				return nil
 			}
 			return err
@@ -165,7 +163,7 @@ func (s *CachedBackedCertificateStore) DeleteCertificateByReference(refType cons
 		return nil
 	}
 
-	if err := s.Store.DeleteCertificateByReference(refType, refID); err != nil {
+	if err := s.store.DeleteCertificateByReference(refType, refID); err != nil {
 		return err
 	}
 	s.invalidateCertificateCache(existingCert.ID, existingCert.RefType, existingCert.RefID)
@@ -174,18 +172,18 @@ func (s *CachedBackedCertificateStore) DeleteCertificateByReference(refType cons
 }
 
 // cacheCertificate caches the certificate by ID and reference.
-func (s *CachedBackedCertificateStore) cacheCertificate(cert *model.Certificate) {
+func (s *cacheBackedStore) cacheCertificate(cert *Certificate) {
 	if cert == nil {
 		return
 	}
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, cachedStoreLoggerComponentName))
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, cacheBackedStoreLoggerComponentName))
 
 	// Cache by ID
 	if cert.ID != "" {
 		idCacheKey := cache.CacheKey{
 			Key: cert.ID,
 		}
-		if err := s.CertByIDCache.Set(idCacheKey, cert); err != nil {
+		if err := s.certByIDCache.Set(idCacheKey, cert); err != nil {
 			logger.Error("Failed to cache certificate by ID", log.Error(err),
 				log.String("certID", cert.ID))
 		} else {
@@ -196,7 +194,7 @@ func (s *CachedBackedCertificateStore) cacheCertificate(cert *model.Certificate)
 	// Cache by reference type and ID
 	if cert.RefType != "" && cert.RefID != "" {
 		refCacheKey := getCertByReferenceCacheKey(cert.RefType, cert.RefID)
-		if err := s.CertByReferenceCache.Set(refCacheKey, cert); err != nil {
+		if err := s.certByReferenceCache.Set(refCacheKey, cert); err != nil {
 			logger.Error("Failed to cache certificate by reference", log.Error(err),
 				log.String("refType", string(cert.RefType)), log.String("refID", cert.RefID))
 		} else {
@@ -207,16 +205,16 @@ func (s *CachedBackedCertificateStore) cacheCertificate(cert *model.Certificate)
 }
 
 // invalidateCertificateCache invalidates all certificate caches for the given ID and reference.
-func (s *CachedBackedCertificateStore) invalidateCertificateCache(id string,
-	refType constants.CertificateReferenceType, refID string) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, cachedStoreLoggerComponentName))
+func (s *cacheBackedStore) invalidateCertificateCache(id string,
+	refType CertificateReferenceType, refID string) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, cacheBackedStoreLoggerComponentName))
 
 	// Invalidate ID cache
 	if id != "" {
 		idCacheKey := cache.CacheKey{
 			Key: id,
 		}
-		if err := s.CertByIDCache.Delete(idCacheKey); err != nil {
+		if err := s.certByIDCache.Delete(idCacheKey); err != nil {
 			logger.Error("Failed to invalidate certificate cache by ID", log.Error(err),
 				log.String("certID", id))
 		} else {
@@ -227,7 +225,7 @@ func (s *CachedBackedCertificateStore) invalidateCertificateCache(id string,
 	// Invalidate reference cache
 	if refType != "" && refID != "" {
 		refCacheKey := getCertByReferenceCacheKey(refType, refID)
-		if err := s.CertByReferenceCache.Delete(refCacheKey); err != nil {
+		if err := s.certByReferenceCache.Delete(refCacheKey); err != nil {
 			logger.Error("Failed to invalidate certificate cache by reference", log.Error(err),
 				log.String("refType", string(refType)), log.String("refID", refID))
 		} else {
@@ -238,7 +236,7 @@ func (s *CachedBackedCertificateStore) invalidateCertificateCache(id string,
 }
 
 // getCertByReferenceCacheKey generates a cache key for a certificate based on its reference type and ID.
-func getCertByReferenceCacheKey(refType constants.CertificateReferenceType, refID string) cache.CacheKey {
+func getCertByReferenceCacheKey(refType CertificateReferenceType, refID string) cache.CacheKey {
 	return cache.CacheKey{
 		Key: string(refType) + ":" + refID,
 	}

@@ -58,8 +58,7 @@ func registerServices(mux *http.ServeMux) {
 	if err != nil {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
-	// TODO: this needs to be removed once the application service is refactored to use DI.
-	certservice := cert.NewCertificateService()
+	certservice, _ := cert.Initialize()
 	applicationService := application.Initialize(mux, certservice)
 
 	_ = flowexec.Initialize(mux, flowMgtService, applicationService)
