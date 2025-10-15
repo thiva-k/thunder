@@ -219,6 +219,7 @@ func (th *TokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 		ExpiresIn:    tokenRespDTO.AccessToken.ExpiresIn,
 		RefreshToken: tokenRespDTO.RefreshToken.Token,
 		Scope:        scopes,
+		IDToken:      tokenRespDTO.IDToken.Token,
 	}
 
 	logger.Debug("Token generated successfully", log.String("client_id", clientID),

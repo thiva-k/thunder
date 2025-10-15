@@ -20,6 +20,7 @@ package granthandlers
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 	"time"
 
@@ -165,19 +166,24 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 	// Get token configuration from OAuth app
 	iss := ""
 	validityPeriod := int64(0)
-	if oauthApp.Token != nil && oauthApp.Token.AccessToken != nil {
-		iss = oauthApp.Token.AccessToken.Issuer
-		validityPeriod = oauthApp.Token.AccessToken.ValidityPeriod
-	}
-	if iss == "" {
+
+	// Get issuer from token config
+	if oauthApp.Token != nil && oauthApp.Token.Issuer != "" {
+		iss = oauthApp.Token.Issuer
+	} else {
 		iss = config.GetThunderRuntime().Config.JWT.Issuer
 	}
-	if validityPeriod == 0 {
+
+	// Get validity period from access token config
+	if oauthApp.Token != nil && oauthApp.Token.AccessToken != nil {
+		validityPeriod = oauthApp.Token.AccessToken.ValidityPeriod
+	} else {
 		validityPeriod = config.GetThunderRuntime().Config.JWT.ValidityPeriod
 	}
 
-	userAttributes := map[string]interface{}{}
-	if len(oauthApp.Token.AccessToken.UserAttributes) > 0 {
+	var attrs map[string]interface{}
+	if len(oauthApp.Token.AccessToken.UserAttributes) > 0 ||
+		(oauthApp.Token != nil && oauthApp.Token.IDToken != nil && len(oauthApp.Token.IDToken.UserAttributes) > 0) {
 		user, svcErr := h.UserService.GetUser(authCode.AuthorizedUserID)
 		if svcErr != nil {
 			logger.Error("Failed to fetch user attributes",
@@ -188,7 +194,6 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 			}
 		}
 
-		var attrs map[string]interface{}
 		if err := json.Unmarshal(user.Attributes, &attrs); err != nil {
 			logger.Error("Failed to unmarshal user attributes", log.String("userID", authCode.AuthorizedUserID),
 				log.Error(err))
@@ -197,11 +202,14 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 				ErrorDescription: "Something went wrong",
 			}
 		}
+	}
 
+	accessTokenAttributes := make(map[string]interface{})
+	if len(oauthApp.Token.AccessToken.UserAttributes) > 0 && attrs != nil {
 		for _, attr := range oauthApp.Token.AccessToken.UserAttributes {
 			if val, ok := attrs[attr]; ok {
 				jwtClaims[attr] = val
-				userAttributes[attr] = val
+				accessTokenAttributes[attr] = val
 			}
 		}
 	}
@@ -230,12 +238,23 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 		ExpiresIn:      3600,
 		Scopes:         authorizedScopes,
 		ClientID:       tokenRequest.ClientID,
-		UserAttributes: userAttributes,
+		UserAttributes: accessTokenAttributes,
 	}
 
-	return &model.TokenResponseDTO{
+	tokenResponse := &model.TokenResponseDTO{
 		AccessToken: *accessToken,
-	}, nil
+	}
+
+	// Generate ID token if 'openid' scope is present
+	if slices.Contains(authorizedScopes, "openid") {
+		idToken, errResponse := h.generateIDToken(authCode, tokenRequest, authorizedScopes, attrs, oauthApp)
+		if errResponse != nil {
+			return nil, errResponse
+		}
+		tokenResponse.IDToken = *idToken
+	}
+
+	return tokenResponse, nil
 }
 
 // validateAuthorizationCode validates the authorization code against the token request.
@@ -278,4 +297,95 @@ func validateAuthorizationCode(tokenRequest *model.TokenRequest,
 	}
 
 	return nil
+}
+
+// getIDTokenClaims generates ID token claims based on scopes and application configuration
+func getIDTokenClaims(scopes []string, userAttributes map[string]interface{},
+	oauthApp *appmodel.OAuthAppConfigProcessedDTO) map[string]interface{} {
+	claims := make(map[string]interface{})
+	now := time.Now().Unix()
+	claims["auth_time"] = now
+
+	var idTokenUserAttributes []string
+	if oauthApp.Token != nil && oauthApp.Token.IDToken != nil {
+		idTokenUserAttributes = oauthApp.Token.IDToken.UserAttributes
+	}
+
+	if len(idTokenUserAttributes) == 0 {
+		return claims
+	}
+
+	for _, scope := range scopes {
+		var scopeClaims []string
+
+		if oauthApp.Token != nil && oauthApp.Token.IDToken != nil &&
+			oauthApp.Token.IDToken.ScopeClaims != nil {
+			if appClaims, exists := oauthApp.Token.IDToken.ScopeClaims[scope]; exists {
+				scopeClaims = appClaims
+			}
+		}
+
+		if scopeClaims == nil {
+			if scope, exists := constants.StandardOIDCScopes[scope]; exists {
+				scopeClaims = scope.Claims
+			}
+		}
+
+		for _, claim := range scopeClaims {
+			if slices.Contains(idTokenUserAttributes, claim) && userAttributes[claim] != nil {
+				claims[claim] = userAttributes[claim]
+			}
+		}
+	}
+
+	return claims
+}
+
+// generateIDToken generates an ID token for the given authorization code and scopes
+func (h *authorizationCodeGrantHandler) generateIDToken(authCode authzmodel.AuthorizationCode,
+	tokenRequest *model.TokenRequest, authorizedScopes []string, attrs map[string]interface{},
+	oauthApp *appmodel.OAuthAppConfigProcessedDTO) (*model.TokenDTO, *model.ErrorResponse) {
+	idTokenClaims := getIDTokenClaims(authorizedScopes, attrs, oauthApp)
+
+	// Resolve ID token issuer and validity period
+	idTokenIss := ""
+	idTokenValidityPeriod := int64(0)
+
+	// Get issuer from token config
+	if oauthApp.Token != nil && oauthApp.Token.Issuer != "" {
+		idTokenIss = oauthApp.Token.Issuer
+	} else {
+		idTokenIss = config.GetThunderRuntime().Config.JWT.Issuer
+	}
+
+	// Get validity period from ID token config
+	if oauthApp.Token != nil && oauthApp.Token.IDToken != nil {
+		idTokenValidityPeriod = oauthApp.Token.IDToken.ValidityPeriod
+	}
+	if idTokenValidityPeriod == 0 {
+		idTokenValidityPeriod = config.GetThunderRuntime().Config.JWT.ValidityPeriod
+	}
+
+	// Generate ID token JWT
+	idToken, _, err := h.JWTService.GenerateJWT(authCode.AuthorizedUserID, authCode.ClientID,
+		idTokenIss, idTokenValidityPeriod, idTokenClaims)
+	if err != nil {
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorServerError,
+			ErrorDescription: "Failed to generate ID token",
+		}
+	}
+
+	// Create ID token DTO
+	idTokenDTO := &model.TokenDTO{
+		Token:          idToken,
+		TokenType:      constants.TokenTypeJWT,
+		IssuedAt:       time.Now().Unix(),
+		ExpiresIn:      idTokenValidityPeriod,
+		Scopes:         authorizedScopes,
+		ClientID:       tokenRequest.ClientID,
+		UserAttributes: idTokenClaims,
+	}
+
+	return idTokenDTO, nil
 }
