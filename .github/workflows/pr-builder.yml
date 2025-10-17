@@ -70,3 +70,12 @@ jobs:
           set -e
           export LOG_LEVEL=debug
           make all OS=$(go env GOOS) ARCH=$(go env GOARCH)
+
+      - name: 📊 Upload Coverage Report to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/coverage_integration.out
+          flags: integration
+          name: integration-tests
+          fail_ci_if_error: false
