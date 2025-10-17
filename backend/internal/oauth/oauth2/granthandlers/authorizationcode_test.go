@@ -459,3 +459,328 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestValidateAuthorizationCo
 	assert.Equal(suite.T(), constants.ErrorInvalidGrant, err.Error)
 	assert.Equal(suite.T(), "Expired authorization code", err.ErrorDescription)
 }
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups() {
+	testCases := []struct {
+		name                 string
+		includeInAccessToken bool
+		includeInIDToken     bool
+		includeOpenIDScope   bool
+		scopeClaimsForGroups bool
+		expectedGroups       []string
+		mockGroups           []user.UserGroup
+		description          string
+	}{
+		{
+			name:                 "Groups in access token with ID token config",
+			includeInAccessToken: true,
+			includeInIDToken:     true,
+			includeOpenIDScope:   false,
+			scopeClaimsForGroups: false,
+			expectedGroups:       []string{"Admin", "Users"},
+			mockGroups: []user.UserGroup{
+				{ID: "group1", Name: "Admin"},
+				{ID: "group2", Name: "Users"},
+			},
+			description: "Should include groups in access token when configured (IDToken config " +
+				"present but openid scope not requested)",
+		},
+		{
+			name:                 "Groups in both access and ID tokens",
+			includeInAccessToken: true,
+			includeInIDToken:     true,
+			includeOpenIDScope:   true,
+			scopeClaimsForGroups: true,
+			expectedGroups:       []string{"Admin", "Users"},
+			mockGroups: []user.UserGroup{
+				{ID: "group1", Name: "Admin"},
+				{ID: "group2", Name: "Users"},
+			},
+			description: "Should include groups in both tokens when configured with openid scope and scope claims",
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			// Reset mocks for each test case
+			suite.mockAuthZStore = &storemock.AuthorizationCodeStoreInterfaceMock{}
+			suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
+			suite.mockJWTService = &jwtmock.JWTServiceInterfaceMock{}
+			suite.handler.AuthZStore = suite.mockAuthZStore
+			suite.handler.UserService = suite.mockUserService
+			suite.handler.JWTService = suite.mockJWTService
+
+			accessTokenAttrs := []string{"email", "username"}
+			if tc.includeInAccessToken {
+				accessTokenAttrs = append(accessTokenAttrs, "groups")
+			}
+			var idTokenConfig *appmodel.IDTokenConfig
+			if tc.includeInIDToken {
+				if tc.scopeClaimsForGroups {
+					// Include groups in ID token config with scope claims mapping
+					idTokenConfig = &appmodel.IDTokenConfig{
+						UserAttributes: []string{"email", "username", "groups"},
+						ScopeClaims: map[string][]string{
+							"openid": {"email", "username", "groups"},
+						},
+					}
+				} else {
+					idTokenConfig = &appmodel.IDTokenConfig{
+						UserAttributes: []string{"email", "username"},
+					}
+				}
+			}
+
+			oauthAppWithGroups := &appmodel.OAuthAppConfigProcessedDTO{
+				ClientID:           "test-client-id",
+				HashedClientSecret: "hashed-secret",
+				RedirectURIs:       []string{"https://client.example.com/callback"},
+				GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
+				ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
+				TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
+					constants.TokenEndpointAuthMethodClientSecretPost},
+				Token: &appmodel.OAuthTokenConfig{
+					AccessToken: &appmodel.TokenConfig{
+						UserAttributes: accessTokenAttrs,
+					},
+					IDToken: idTokenConfig,
+				},
+			}
+
+			authzCode := suite.testAuthzCode
+			if tc.includeOpenIDScope {
+				authzCode.Scopes = "openid read write"
+			}
+
+			suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
+				Return(authzCode, nil)
+			suite.mockAuthZStore.On("DeactivateAuthorizationCode", authzCode).Return(nil)
+
+			mockUser := &user.User{
+				ID:         "test-user-id",
+				Attributes: json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
+			}
+			suite.mockUserService.On("GetUser", "test-user-id").Return(mockUser, nil)
+
+			mockGroups := &user.UserGroupListResponse{
+				TotalResults: len(tc.mockGroups),
+				StartIndex:   0,
+				Count:        len(tc.mockGroups),
+				Groups:       tc.mockGroups,
+			}
+			suite.mockUserService.On("GetUserGroups", "test-user-id", DefaultGroupListLimit, 0).
+				Return(mockGroups, nil)
+
+			var capturedAccessTokenClaims map[string]interface{}
+			var capturedIDTokenClaims map[string]interface{}
+
+			// Mock access token generation
+			suite.mockJWTService.On("GenerateJWT", "test-user-id", "test-client-id",
+				mock.AnythingOfType("string"), mock.AnythingOfType("int64"),
+				mock.AnythingOfType("map[string]interface {}")).
+				Run(func(args mock.Arguments) {
+					capturedAccessTokenClaims = args.Get(4).(map[string]interface{})
+				}).
+				Return("test-jwt-token", int64(3600), nil).Once()
+
+			// Mock ID token generation if openid scope is present
+			if tc.includeOpenIDScope {
+				suite.mockJWTService.On("GenerateJWT", "test-user-id", "test-client-id",
+					mock.AnythingOfType("string"), mock.AnythingOfType("int64"),
+					mock.AnythingOfType("map[string]interface {}")).
+					Run(func(args mock.Arguments) {
+						capturedIDTokenClaims = args.Get(4).(map[string]interface{})
+					}).
+					Return("test-id-token", int64(3600), nil).Once()
+			}
+
+			ctx := &model.TokenContext{
+				TokenAttributes: make(map[string]interface{}),
+			}
+
+			result, err := suite.handler.HandleGrant(suite.testTokenReq, oauthAppWithGroups, ctx)
+
+			assert.Nil(suite.T(), err, tc.description)
+			assert.NotNil(suite.T(), result, tc.description)
+
+			// Verify access token groups
+			if tc.includeInAccessToken {
+				assert.NotNil(suite.T(), capturedAccessTokenClaims["groups"], tc.description)
+				groupsInClaims, ok := capturedAccessTokenClaims["groups"].([]string)
+				assert.True(suite.T(), ok, tc.description)
+				assert.Equal(suite.T(), tc.expectedGroups, groupsInClaims, tc.description)
+
+				assert.NotNil(suite.T(), result.AccessToken.UserAttributes["groups"], tc.description)
+				groupsInAttrs, ok := result.AccessToken.UserAttributes["groups"].([]string)
+				assert.True(suite.T(), ok, tc.description)
+				assert.Equal(suite.T(), tc.expectedGroups, groupsInAttrs, tc.description)
+			} else {
+				assert.Nil(suite.T(), capturedAccessTokenClaims["groups"], tc.description)
+				assert.Nil(suite.T(), result.AccessToken.UserAttributes["groups"], tc.description)
+			}
+
+			// Verify ID token groups
+			if tc.includeInIDToken && tc.includeOpenIDScope && tc.scopeClaimsForGroups {
+				assert.NotNil(suite.T(), result.IDToken.Token, tc.description)
+				assert.NotNil(suite.T(), capturedIDTokenClaims["groups"], tc.description)
+				groupsInIDToken, ok := capturedIDTokenClaims["groups"].([]string)
+				assert.True(suite.T(), ok, tc.description)
+				assert.Equal(suite.T(), tc.expectedGroups, groupsInIDToken, tc.description)
+			} else if tc.includeOpenIDScope {
+				assert.NotNil(suite.T(), result.IDToken.Token, tc.description)
+			} else {
+				assert.Empty(suite.T(), result.IDToken.Token, tc.description)
+			}
+
+			suite.mockAuthZStore.AssertExpectations(suite.T())
+			suite.mockUserService.AssertExpectations(suite.T())
+			suite.mockJWTService.AssertExpectations(suite.T())
+		})
+	}
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGroups() {
+	testCases := []struct {
+		name                 string
+		includeInAccessToken bool
+		includeInIDToken     bool
+		includeOpenIDScope   bool
+		scopeClaimsForGroups bool
+		description          string
+	}{
+		{
+			name:                 "Empty groups in access token",
+			includeInAccessToken: true,
+			includeInIDToken:     true,
+			includeOpenIDScope:   false,
+			scopeClaimsForGroups: false,
+			description:          "Should not include groups claim in access token when user has no groups",
+		},
+		{
+			name:                 "Empty groups with both tokens",
+			includeInAccessToken: true,
+			includeInIDToken:     true,
+			includeOpenIDScope:   true,
+			scopeClaimsForGroups: true,
+			description:          "Should not include groups claim in either token when user has no groups",
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.Run(tc.name, func() {
+			suite.mockAuthZStore = &storemock.AuthorizationCodeStoreInterfaceMock{}
+			suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
+			suite.mockJWTService = &jwtmock.JWTServiceInterfaceMock{}
+			suite.handler.AuthZStore = suite.mockAuthZStore
+			suite.handler.UserService = suite.mockUserService
+			suite.handler.JWTService = suite.mockJWTService
+
+			accessTokenAttrs := []string{"email", "username"}
+			if tc.includeInAccessToken {
+				accessTokenAttrs = append(accessTokenAttrs, "groups")
+			}
+			var idTokenConfig *appmodel.IDTokenConfig
+			if tc.includeInIDToken {
+				if tc.scopeClaimsForGroups {
+					idTokenConfig = &appmodel.IDTokenConfig{
+						UserAttributes: []string{"email", "username", "groups"},
+						ScopeClaims: map[string][]string{
+							"openid": {"email", "username", "groups"},
+						},
+					}
+				} else {
+					idTokenConfig = &appmodel.IDTokenConfig{
+						UserAttributes: []string{"email", "username"},
+					}
+				}
+			}
+
+			oauthAppWithGroups := &appmodel.OAuthAppConfigProcessedDTO{
+				ClientID:           "test-client-id",
+				HashedClientSecret: "hashed-secret",
+				RedirectURIs:       []string{"https://client.example.com/callback"},
+				GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
+				ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
+				TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
+					constants.TokenEndpointAuthMethodClientSecretPost},
+				Token: &appmodel.OAuthTokenConfig{
+					AccessToken: &appmodel.TokenConfig{
+						UserAttributes: accessTokenAttrs,
+					},
+					IDToken: idTokenConfig,
+				},
+			}
+
+			authzCode := suite.testAuthzCode
+			if tc.includeOpenIDScope {
+				authzCode.Scopes = "openid read write"
+			}
+
+			suite.mockAuthZStore.On("GetAuthorizationCode", "test-client-id", "test-auth-code").
+				Return(authzCode, nil)
+			suite.mockAuthZStore.On("DeactivateAuthorizationCode", authzCode).Return(nil)
+
+			mockUser := &user.User{
+				ID:         "test-user-id",
+				Attributes: json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
+			}
+			suite.mockUserService.On("GetUser", "test-user-id").Return(mockUser, nil)
+
+			mockGroups := &user.UserGroupListResponse{
+				TotalResults: 0,
+				StartIndex:   0,
+				Count:        0,
+				Groups:       []user.UserGroup{}, // Empty groups
+			}
+			suite.mockUserService.On("GetUserGroups", "test-user-id", DefaultGroupListLimit, 0).
+				Return(mockGroups, nil)
+
+			var capturedAccessTokenClaims map[string]interface{}
+			var capturedIDTokenClaims map[string]interface{}
+
+			// Mock access token generation
+			suite.mockJWTService.On("GenerateJWT", "test-user-id", "test-client-id",
+				mock.AnythingOfType("string"), mock.AnythingOfType("int64"),
+				mock.AnythingOfType("map[string]interface {}")).
+				Run(func(args mock.Arguments) {
+					capturedAccessTokenClaims = args.Get(4).(map[string]interface{})
+				}).
+				Return("test-jwt-token", int64(3600), nil).Once()
+
+			// Mock ID token generation if openid scope is present
+			if tc.includeOpenIDScope {
+				suite.mockJWTService.On("GenerateJWT", "test-user-id", "test-client-id",
+					mock.AnythingOfType("string"), mock.AnythingOfType("int64"),
+					mock.AnythingOfType("map[string]interface {}")).
+					Run(func(args mock.Arguments) {
+						capturedIDTokenClaims = args.Get(4).(map[string]interface{})
+					}).
+					Return("test-id-token", int64(3600), nil).Once()
+			}
+
+			ctx := &model.TokenContext{
+				TokenAttributes: make(map[string]interface{}),
+			}
+
+			result, err := suite.handler.HandleGrant(suite.testTokenReq, oauthAppWithGroups, ctx)
+
+			assert.Nil(suite.T(), err, tc.description)
+			assert.NotNil(suite.T(), result, tc.description)
+
+			assert.Nil(suite.T(), capturedAccessTokenClaims["groups"], tc.description)
+			assert.Nil(suite.T(), result.AccessToken.UserAttributes["groups"], tc.description)
+
+			// Verify ID token
+			if tc.includeOpenIDScope {
+				assert.NotNil(suite.T(), result.IDToken.Token, tc.description)
+				assert.Nil(suite.T(), capturedIDTokenClaims["groups"], tc.description)
+			} else {
+				assert.Empty(suite.T(), result.IDToken.Token, tc.description)
+			}
+
+			suite.mockAuthZStore.AssertExpectations(suite.T())
+			suite.mockUserService.AssertExpectations(suite.T())
+			suite.mockJWTService.AssertExpectations(suite.T())
+		})
+	}
+}

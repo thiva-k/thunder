@@ -37,6 +37,14 @@ import (
 	"github.com/asgardeo/thunder/internal/user"
 )
 
+// TODO: Temporary constant, move to a common place/ use a different strategy.
+const (
+	// UserAttributeGroups is the constant for user's groups.
+	UserAttributeGroups = "groups"
+	// DefaultGroupListLimit is the default limit for group list retrieval.
+	DefaultGroupListLimit = 20
+)
+
 // authorizationCodeGrantHandler handles the authorization code grant type.
 type authorizationCodeGrantHandler struct {
 	JWTService  jwt.JWTServiceInterface
@@ -182,6 +190,7 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 	}
 
 	var attrs map[string]interface{}
+	userGroups := make([]string, 0)
 	if len(oauthApp.Token.AccessToken.UserAttributes) > 0 ||
 		(oauthApp.Token != nil && oauthApp.Token.IDToken != nil && len(oauthApp.Token.IDToken.UserAttributes) > 0) {
 		user, svcErr := h.UserService.GetUser(authCode.AuthorizedUserID)
@@ -202,6 +211,25 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 				ErrorDescription: "Something went wrong",
 			}
 		}
+
+		// Retrieve user groups if required
+		if slices.Contains(oauthApp.Token.AccessToken.UserAttributes, UserAttributeGroups) ||
+			(oauthApp.Token != nil && oauthApp.Token.IDToken != nil &&
+				slices.Contains(oauthApp.Token.IDToken.UserAttributes, UserAttributeGroups)) {
+			groups, svcErr := h.UserService.GetUserGroups(authCode.AuthorizedUserID, DefaultGroupListLimit, 0)
+			if svcErr != nil {
+				logger.Error("Failed to fetch user groups", log.String("userID", authCode.AuthorizedUserID),
+					log.Any("error", svcErr))
+				return nil, &model.ErrorResponse{
+					Error:            constants.ErrorServerError,
+					ErrorDescription: "Something went wrong",
+				}
+			}
+
+			for _, group := range groups.Groups {
+				userGroups = append(userGroups, group.Name)
+			}
+		}
 	}
 
 	accessTokenAttributes := make(map[string]interface{})
@@ -211,6 +239,18 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 				jwtClaims[attr] = val
 				accessTokenAttributes[attr] = val
 			}
+		}
+	}
+
+	// Handle user groups
+	if len(userGroups) > 0 {
+		if slices.Contains(oauthApp.Token.AccessToken.UserAttributes, UserAttributeGroups) {
+			jwtClaims[UserAttributeGroups] = userGroups
+			accessTokenAttributes[UserAttributeGroups] = userGroups
+		}
+		if oauthApp.Token != nil && oauthApp.Token.IDToken != nil &&
+			slices.Contains(oauthApp.Token.IDToken.UserAttributes, UserAttributeGroups) {
+			attrs[UserAttributeGroups] = userGroups
 		}
 	}
 
