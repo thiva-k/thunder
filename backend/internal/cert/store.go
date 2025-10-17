@@ -16,55 +16,52 @@
  * under the License.
  */
 
-// Package store defines the storage interface and implementation for managing certificates.
-package store
+package cert
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/asgardeo/thunder/internal/cert/constants"
-	"github.com/asgardeo/thunder/internal/cert/model"
 	dbmodel "github.com/asgardeo/thunder/internal/system/database/model"
 	dbprovider "github.com/asgardeo/thunder/internal/system/database/provider"
 )
 
-// CertificateStoreInterface defines the methods for certificate storage operations.
-type CertificateStoreInterface interface {
-	GetCertificateByID(id string) (*model.Certificate, error)
-	GetCertificateByReference(refType constants.CertificateReferenceType, refID string) (*model.Certificate, error)
-	CreateCertificate(cert *model.Certificate) error
-	UpdateCertificateByID(existingCert, updatedCert *model.Certificate) error
-	UpdateCertificateByReference(existingCert, updatedCert *model.Certificate) error
+// certificateStoreInterface defines the methods for certificate storage operations.
+type certificateStoreInterface interface {
+	GetCertificateByID(id string) (*Certificate, error)
+	GetCertificateByReference(refType CertificateReferenceType, refID string) (*Certificate, error)
+	CreateCertificate(cert *Certificate) error
+	UpdateCertificateByID(existingCert, updatedCert *Certificate) error
+	UpdateCertificateByReference(existingCert, updatedCert *Certificate) error
 	DeleteCertificateByID(id string) error
-	DeleteCertificateByReference(refType constants.CertificateReferenceType, refID string) error
+	DeleteCertificateByReference(refType CertificateReferenceType, refID string) error
 }
 
-// CertificateStore implements the CertificateStoreInterface for managing certificates.
-type CertificateStore struct {
+// certificateStore implements the certificateStoreInterface for managing certificates.
+type certificateStore struct {
 	DBProvider dbprovider.DBProviderInterface
 }
 
 // NewCertificateStore creates a new instance of CertificateStore.
-func NewCertificateStore() CertificateStoreInterface {
-	return &CertificateStore{
+func newCertificateStore() certificateStoreInterface {
+	return &certificateStore{
 		DBProvider: dbprovider.GetDBProvider(),
 	}
 }
 
 // GetCertificateByID retrieves a certificate by its ID.
-func (s *CertificateStore) GetCertificateByID(id string) (*model.Certificate, error) {
+func (s *certificateStore) GetCertificateByID(id string) (*Certificate, error) {
 	return s.getCertificate(QueryGetCertificateByID, id)
 }
 
 // GetCertificateByReference retrieves a certificate by its reference type and ID.
-func (s *CertificateStore) GetCertificateByReference(refType constants.CertificateReferenceType, refID string) (
-	*model.Certificate, error) {
+func (s *certificateStore) GetCertificateByReference(refType CertificateReferenceType, refID string) (
+	*Certificate, error) {
 	return s.getCertificate(QueryGetCertificateByReference, refType, refID)
 }
 
 // getCertificate retrieves a certificate based on a query and its arguments.
-func (s *CertificateStore) getCertificate(query dbmodel.DBQuery, args ...interface{}) (*model.Certificate, error) {
+func (s *certificateStore) getCertificate(query dbmodel.DBQuery, args ...interface{}) (*Certificate, error) {
 	dbClient, err := s.DBProvider.GetDBClient("identity")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database client: %w", err)
@@ -75,7 +72,7 @@ func (s *CertificateStore) getCertificate(query dbmodel.DBQuery, args ...interfa
 		return nil, fmt.Errorf("failed to execute query: %w", err)
 	}
 	if len(results) == 0 {
-		return nil, constants.ErrCertificateNotFound
+		return nil, ErrCertificateNotFound
 	}
 	if len(results) > 1 {
 		return nil, errors.New("multiple certificates found")
@@ -89,7 +86,7 @@ func (s *CertificateStore) getCertificate(query dbmodel.DBQuery, args ...interfa
 }
 
 // buildCertificateFromResultRow builds a Certificate object from a database result row.
-func (s *CertificateStore) buildCertificateFromResultRow(row map[string]interface{}) (*model.Certificate, error) {
+func (s *certificateStore) buildCertificateFromResultRow(row map[string]interface{}) (*Certificate, error) {
 	certID, ok := row["cert_id"].(string)
 	if !ok {
 		return nil, errors.New("failed to parse cert_id as string")
@@ -99,7 +96,7 @@ func (s *CertificateStore) buildCertificateFromResultRow(row map[string]interfac
 	if !ok {
 		return nil, errors.New("failed to parse ref_type as string")
 	}
-	refType := constants.CertificateReferenceType(refTypeStr)
+	refType := CertificateReferenceType(refTypeStr)
 
 	refID, ok := row["ref_id"].(string)
 	if !ok {
@@ -110,14 +107,14 @@ func (s *CertificateStore) buildCertificateFromResultRow(row map[string]interfac
 	if !ok {
 		return nil, errors.New("failed to parse type as string")
 	}
-	certType := constants.CertificateType(typeStr)
+	certType := CertificateType(typeStr)
 
 	value, ok := row["value"].(string)
 	if !ok {
 		return nil, errors.New("failed to parse value as string")
 	}
 
-	return &model.Certificate{
+	return &Certificate{
 		ID:      certID,
 		RefType: refType,
 		RefID:   refID,
@@ -127,7 +124,7 @@ func (s *CertificateStore) buildCertificateFromResultRow(row map[string]interfac
 }
 
 // CreateCertificate creates a new certificate in the database.
-func (s *CertificateStore) CreateCertificate(cert *model.Certificate) error {
+func (s *certificateStore) CreateCertificate(cert *Certificate) error {
 	dbClient, err := s.DBProvider.GetDBClient("identity")
 	if err != nil {
 		return fmt.Errorf("failed to get database client: %w", err)
@@ -145,18 +142,18 @@ func (s *CertificateStore) CreateCertificate(cert *model.Certificate) error {
 }
 
 // UpdateCertificateByID updates a certificate by its ID.
-func (s *CertificateStore) UpdateCertificateByID(existingCert, updatedCert *model.Certificate) error {
+func (s *certificateStore) UpdateCertificateByID(existingCert, updatedCert *Certificate) error {
 	return s.updateCertificate(QueryUpdateCertificateByID, existingCert.ID, updatedCert.Type, updatedCert.Value)
 }
 
 // UpdateCertificateByReference updates a certificate by its reference type and ID.
-func (s *CertificateStore) UpdateCertificateByReference(existingCert, updatedCert *model.Certificate) error {
+func (s *certificateStore) UpdateCertificateByReference(existingCert, updatedCert *Certificate) error {
 	return s.updateCertificate(QueryUpdateCertificateByReference, existingCert.RefType, existingCert.RefID,
 		updatedCert.Type, updatedCert.Value)
 }
 
 // updateCertificate updates a certificate based on a query and its arguments.
-func (s *CertificateStore) updateCertificate(query dbmodel.DBQuery, args ...interface{}) error {
+func (s *certificateStore) updateCertificate(query dbmodel.DBQuery, args ...interface{}) error {
 	dbClient, err := s.DBProvider.GetDBClient("identity")
 	if err != nil {
 		return fmt.Errorf("failed to get database client: %w", err)
@@ -174,18 +171,18 @@ func (s *CertificateStore) updateCertificate(query dbmodel.DBQuery, args ...inte
 }
 
 // DeleteCertificateByID deletes a certificate by its ID.
-func (s *CertificateStore) DeleteCertificateByID(id string) error {
+func (s *certificateStore) DeleteCertificateByID(id string) error {
 	return s.deleteCertificate(QueryDeleteCertificateByID, id)
 }
 
 // DeleteCertificateByReference deletes a certificate by its reference type and ID.
-func (s *CertificateStore) DeleteCertificateByReference(refType constants.CertificateReferenceType,
+func (s *certificateStore) DeleteCertificateByReference(refType CertificateReferenceType,
 	refID string) error {
 	return s.deleteCertificate(QueryDeleteCertificateByReference, refType, refID)
 }
 
 // deleteCertificate deletes a certificate based on a query and its arguments.
-func (s *CertificateStore) deleteCertificate(query dbmodel.DBQuery, args ...interface{}) error {
+func (s *certificateStore) deleteCertificate(query dbmodel.DBQuery, args ...interface{}) error {
 	dbClient, err := s.DBProvider.GetDBClient("identity")
 	if err != nil {
 		return fmt.Errorf("failed to get database client: %w", err)

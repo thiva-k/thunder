@@ -16,16 +16,13 @@
  * under the License.
  */
 
-// Package model defines the data structures used in the certificate service.
-package model
-
-import "github.com/asgardeo/thunder/internal/cert/constants"
+package cert
 
 // Certificate represents a certificate structure in the system.
 type Certificate struct {
 	ID      string
-	RefType constants.CertificateReferenceType
+	RefType CertificateReferenceType
 	RefID   string
-	Type    constants.CertificateType
+	Type    CertificateType
 	Value   string
 }

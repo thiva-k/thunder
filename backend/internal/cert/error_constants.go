@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package constants
+package cert
 
 import "github.com/asgardeo/thunder/internal/system/error/serviceerror"
 

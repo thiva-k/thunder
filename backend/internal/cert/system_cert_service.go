@@ -36,15 +36,19 @@ type SystemCertificateServiceInterface interface {
 }
 
 // SystemCertificateService implements the SystemCertificateServiceInterface for managing system certificates.
-type SystemCertificateService struct{}
+type systemCertificateService struct{}
 
 // NewSystemCertificateService creates a new instance of SystemCertificateService.
 func NewSystemCertificateService() SystemCertificateServiceInterface {
-	return &SystemCertificateService{}
+	return &systemCertificateService{}
+}
+
+func newSystemCertificateService() SystemCertificateServiceInterface {
+	return &systemCertificateService{}
 }
 
 // GetTLSConfig loads the TLS configuration from the certificate and key files.
-func (c *SystemCertificateService) GetTLSConfig(cfg *config.Config, currentDirectory string) (*tls.Config, error) {
+func (c *systemCertificateService) GetTLSConfig(cfg *config.Config, currentDirectory string) (*tls.Config, error) {
 	certFilePath := path.Join(currentDirectory, cfg.Security.CertFile)
 	keyFilePath := path.Join(currentDirectory, cfg.Security.KeyFile)
 
@@ -70,7 +74,7 @@ func (c *SystemCertificateService) GetTLSConfig(cfg *config.Config, currentDirec
 }
 
 // GetCertificateKid extracts the Key ID (kid) from the TLS certificate using SHA-256 thumbprint.
-func (c *SystemCertificateService) GetCertificateKid(tlsConfig *tls.Config) (string, error) {
+func (c *systemCertificateService) GetCertificateKid(tlsConfig *tls.Config) (string, error) {
 	if tlsConfig == nil {
 		return "", errors.New("TLS configuration is not set")
 	}

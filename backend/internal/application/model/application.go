@@ -20,7 +20,7 @@
 package model
 
 import (
-	certconst "github.com/asgardeo/thunder/internal/cert/constants"
+	"github.com/asgardeo/thunder/internal/cert"
 )
 
 // TokenConfig represents the token configuration structure.
@@ -96,8 +96,8 @@ type InboundAuthConfigProcessedDTO struct {
 
 // ApplicationCertificate represents the certificate structure in the application request response.
 type ApplicationCertificate struct {
-	Type  certconst.CertificateType `json:"type"`
-	Value string                    `json:"value"`
+	Type  cert.CertificateType `json:"type"`
+	Value string               `json:"value"`
 }
 
 // ApplicationRequest represents the request structure for creating or updating an application.

@@ -16,8 +16,7 @@
  * under the License.
  */
 
-// Package constants defines the constants used in the certificate service.
-package constants
+package cert
 
 import "errors"
 
