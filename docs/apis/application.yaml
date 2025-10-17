@@ -119,10 +119,16 @@ paths:
                     pkce_required: false
                     public_client: false
                     token:
+                      issuer: "thunder-oauth"
                       access_token:
-                        issuer: "thunder"
                         validity_period: 3600
                         user_attributes: ["email", "username"]
+                      id_token:
+                        validity_period: 3600
+                        user_attributes: ["email", "name", "given_name", "family_name"]
+                        scope_claims:
+                          profile: ["name", "family_name", "given_name", "picture"]
+                          employee: ["emp_id", "department"]
       responses:
         "201":
           description: Application created
@@ -165,10 +171,16 @@ paths:
                       pkce_required: false
                       public_client: false
                       token:
+                        issuer: "thunder-oauth"
                         access_token:
-                          issuer: "thunder"
                           validity_period: 3600
                           user_attributes: ["email", "username"]
+                        id_token:
+                          validity_period: 1800
+                          user_attributes: ["email", "email_verified", "name", "given_name", "family_name"]
+                          scope_claims:
+                            profile: ["name", "given_name", "family_name"]
+                            email: ["email", "email_verified"]
         "400":
           description: Bad request
           content:
@@ -261,10 +273,16 @@ paths:
                       pkce_required: false
                       public_client: false
                       token:
+                        issuer: "thunder-oauth"
                         access_token:
-                          issuer: "thunder"
                           validity_period: 3600
                           user_attributes: ["email", "username"]
+                        id_token:
+                          validity_period: 1800
+                          user_attributes: ["email", "email_verified", "name", "given_name", "family_name"]
+                          scope_claims:
+                            profile: ["name", "given_name", "family_name"]
+                            email: ["email", "email_verified"]
         "400":
           description: Bad request
           content:
@@ -355,6 +373,13 @@ paths:
                         issuer: "thunder"
                         validity_period: 3600
                         user_attributes: ["email", "username"]
+                      id_token:
+                        issuer: "thunder-oidc"
+                        validity_period: 1800
+                        user_attributes: ["email", "email_verified", "name", "given_name", "family_name"]
+                        scope_claims:
+                          profile: ["name", "given_name", "family_name"]
+                          email: ["email", "email_verified"]
       responses:
         "200":
           description: Application updated
@@ -399,10 +424,16 @@ paths:
                       pkce_required: false
                       public_client: false
                       token:
+                        issuer: "thunder-oauth"
                         access_token:
-                          issuer: "thunder"
                           validity_period: 3600
                           user_attributes: ["email", "username"]
+                        id_token:
+                          validity_period: 1800
+                          user_attributes: ["email", "email_verified", "name", "given_name", "family_name"]
+                          scope_claims:
+                            profile: ["name", "given_name", "family_name"]
+                            email: ["email", "email_verified"]
         "400":
           description: Bad request
           content:
@@ -720,6 +751,30 @@ components:
           description: The user attributes to include in the token.
           example: ["email", "username"]
 
+    IDTokenConfig:
+      type: object
+      properties:
+        validity_period:
+          type: integer
+          description: The validity period of the ID token in seconds. If not specified, uses the same validity as access token.
+          example: 3600
+        user_attributes:
+          type: array
+          items:
+            type: string
+          description: The user attributes to include in the ID token. Only claims requested by scopes AND listed here will be included.
+          example: ["email", "name", "given_name", "family_name"]
+        scope_claims:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          description: Custom scope-to-claims mapping. Overrides default OIDC scope claims or defines custom scopes.
+          example:
+            profile: ["name", "family_name", "given_name", "picture"]
+            employee: ["emp_id", "department"]
+
     Certificate:
       type: object
       properties:
@@ -808,8 +863,15 @@ components:
         token:
           type: object
           properties:
+            issuer:
+              type: string
+              description: |
+                The issuer for both access token and ID token.
+              example: "thunder-oauth"
             access_token:
               $ref: '#/components/schemas/TokenConfig'
+            id_token:
+              $ref: '#/components/schemas/IDTokenConfig'
 
     OAuthAppConfigComplete:
       type: object
@@ -863,8 +925,15 @@ components:
         token:
           type: object
           properties:
+            issuer:
+              type: string
+              description: |
+                The issuer for both access token and ID token.
+              example: "thunder-oauth"
             access_token:
               $ref: '#/components/schemas/TokenConfig'
+            id_token:
+              $ref: '#/components/schemas/IDTokenConfig'
 
     Error:
       type: object

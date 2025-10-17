@@ -114,7 +114,7 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 	appID := sysutils.GenerateUUID()
 
 	// Process token configuration
-	rootToken, finalOAuthToken := processTokenConfiguration(app)
+	rootToken, finalOAuthAccessToken, finalOAuthIDToken, finalOAuthTokenIssuer := processTokenConfiguration(app)
 
 	// Validate and prepare the certificate if provided.
 	cert, svcErr := as.getValidatedCertificateForCreate(appID, app)
@@ -134,12 +134,11 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		Token:                     rootToken,
 	}
 	if inboundAuthConfig != nil {
-		// Wrap the finalOAuthToken in OAuthTokenConfig structure
-		var oAuthTokenConfig *model.OAuthTokenConfig
-		if finalOAuthToken != nil {
-			oAuthTokenConfig = &model.OAuthTokenConfig{
-				AccessToken: finalOAuthToken,
-			}
+		// Wrap the finalOAuthAccessToken and finalOAuthIDToken in OAuthTokenConfig structure
+		oAuthTokenConfig := &model.OAuthTokenConfig{
+			Issuer:      finalOAuthTokenIssuer,
+			AccessToken: finalOAuthAccessToken,
+			IDToken:     finalOAuthIDToken,
 		}
 
 		processedInboundAuthConfig := model.InboundAuthConfigProcessedDTO{
@@ -196,11 +195,10 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 	}
 	if inboundAuthConfig != nil {
 		// Construct the return DTO with processed token configuration
-		var returnTokenConfig *model.OAuthTokenConfig
-		if finalOAuthToken != nil {
-			returnTokenConfig = &model.OAuthTokenConfig{
-				AccessToken: finalOAuthToken,
-			}
+		returnTokenConfig := &model.OAuthTokenConfig{
+			Issuer:      finalOAuthTokenIssuer,
+			AccessToken: finalOAuthAccessToken,
+			IDToken:     finalOAuthIDToken,
 		}
 
 		returnInboundAuthConfig := model.InboundAuthConfigDTO{
@@ -394,7 +392,7 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 	}
 
 	// Process token configuration
-	rootToken, finalOAuthToken := processTokenConfiguration(app)
+	rootToken, finalOAuthAccessToken, finalOAuthIDToken, finalOAuthTokenIssuer := processTokenConfiguration(app)
 
 	processedDTO := &model.ApplicationProcessedDTO{
 		ID:                        appID,
@@ -408,12 +406,11 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		Token:                     rootToken,
 	}
 	if inboundAuthConfig != nil {
-		// Wrap the finalOAuthToken in OAuthTokenConfig structure
-		var oAuthTokenConfig *model.OAuthTokenConfig
-		if finalOAuthToken != nil {
-			oAuthTokenConfig = &model.OAuthTokenConfig{
-				AccessToken: finalOAuthToken,
-			}
+		// Wrap the finalOAuthAccessToken and finalOAuthIDToken in OAuthTokenConfig structure
+		oAuthTokenConfig := &model.OAuthTokenConfig{
+			Issuer:      finalOAuthTokenIssuer,
+			AccessToken: finalOAuthAccessToken,
+			IDToken:     finalOAuthIDToken,
 		}
 
 		processedInboundAuthConfig := model.InboundAuthConfigProcessedDTO{
@@ -460,11 +457,10 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 	}
 	if inboundAuthConfig != nil {
 		// Construct the return DTO with processed token configuration
-		var returnTokenConfig *model.OAuthTokenConfig
-		if finalOAuthToken != nil {
-			returnTokenConfig = &model.OAuthTokenConfig{
-				AccessToken: finalOAuthToken,
-			}
+		returnTokenConfig := &model.OAuthTokenConfig{
+			Issuer:      finalOAuthTokenIssuer,
+			AccessToken: finalOAuthAccessToken,
+			IDToken:     finalOAuthIDToken,
 		}
 
 		returnInboundAuthConfig := model.InboundAuthConfigDTO{
@@ -1004,7 +1000,8 @@ func getDefaultTokenConfigFromDeployment() *model.TokenConfig {
 }
 
 // processTokenConfiguration processes token configuration for an application, applying defaults where necessary.
-func processTokenConfiguration(app *model.ApplicationDTO) (*model.TokenConfig, *model.TokenConfig) {
+func processTokenConfiguration(app *model.ApplicationDTO) (
+	*model.TokenConfig, *model.TokenConfig, *model.IDTokenConfig, string) {
 	// Resolve root token config
 	var rootToken *model.TokenConfig
 	if app.Token != nil {
@@ -1028,7 +1025,7 @@ func processTokenConfiguration(app *model.ApplicationDTO) (*model.TokenConfig, *
 		rootToken.UserAttributes = make([]string, 0)
 	}
 
-	// Resolve OAuth token config
+	// Resolve OAuth access token config
 	var oauthAccessToken *model.TokenConfig
 	if len(app.InboundAuthConfig) > 0 && app.InboundAuthConfig[0].OAuthAppConfig != nil &&
 		app.InboundAuthConfig[0].OAuthAppConfig.Token != nil &&
@@ -1037,9 +1034,6 @@ func processTokenConfiguration(app *model.ApplicationDTO) (*model.TokenConfig, *
 	}
 
 	if oauthAccessToken != nil {
-		if oauthAccessToken.Issuer == "" {
-			oauthAccessToken.Issuer = rootToken.Issuer
-		}
 		if oauthAccessToken.ValidityPeriod == 0 {
 			oauthAccessToken.ValidityPeriod = rootToken.ValidityPeriod
 		}
@@ -1048,13 +1042,47 @@ func processTokenConfiguration(app *model.ApplicationDTO) (*model.TokenConfig, *
 		}
 	} else {
 		oauthAccessToken = &model.TokenConfig{
-			Issuer:         rootToken.Issuer,
 			ValidityPeriod: rootToken.ValidityPeriod,
 			UserAttributes: rootToken.UserAttributes,
 		}
 	}
 
-	return rootToken, oauthAccessToken
+	// Resolve OAuth ID token config
+	var oauthIDToken *model.IDTokenConfig
+	if len(app.InboundAuthConfig) > 0 && app.InboundAuthConfig[0].OAuthAppConfig != nil &&
+		app.InboundAuthConfig[0].OAuthAppConfig.Token != nil &&
+		app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken != nil {
+		oauthIDToken = app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken
+	}
+
+	if oauthIDToken != nil {
+		if oauthIDToken.ValidityPeriod == 0 {
+			oauthIDToken.ValidityPeriod = rootToken.ValidityPeriod
+		}
+		if oauthIDToken.UserAttributes == nil {
+			oauthIDToken.UserAttributes = make([]string, 0)
+		}
+		if oauthIDToken.ScopeClaims == nil {
+			oauthIDToken.ScopeClaims = make(map[string][]string)
+		}
+	} else {
+		oauthIDToken = &model.IDTokenConfig{
+			ValidityPeriod: rootToken.ValidityPeriod,
+			UserAttributes: rootToken.UserAttributes,
+			ScopeClaims:    make(map[string][]string),
+		}
+	}
+
+	var tokenIssuer string
+	if len(app.InboundAuthConfig) > 0 && app.InboundAuthConfig[0].OAuthAppConfig != nil &&
+		app.InboundAuthConfig[0].OAuthAppConfig.Token != nil &&
+		app.InboundAuthConfig[0].OAuthAppConfig.Token.Issuer != "" {
+		tokenIssuer = app.InboundAuthConfig[0].OAuthAppConfig.Token.Issuer
+	} else {
+		tokenIssuer = rootToken.Issuer
+	}
+
+	return rootToken, oauthAccessToken, oauthIDToken, tokenIssuer
 }
 
 // validatePublicClientConfiguration validates that public client configurations are correct.

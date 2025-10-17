@@ -30,9 +30,18 @@ type TokenConfig struct {
 	UserAttributes []string `json:"user_attributes"`
 }
 
-// OAuthTokenConfig represents the OAuth token configuration structure with access_token wrapper.
+// IDTokenConfig represents the ID token configuration structure.
+type IDTokenConfig struct {
+	ValidityPeriod int64               `json:"validity_period"`
+	UserAttributes []string            `json:"user_attributes"`
+	ScopeClaims    map[string][]string `json:"scope_claims,omitempty"`
+}
+
+// OAuthTokenConfig represents the OAuth token configuration structure with access_token and id_token wrappers.
 type OAuthTokenConfig struct {
-	AccessToken *TokenConfig `json:"access_token,omitempty"`
+	Issuer      string         `json:"issuer,omitempty"`
+	AccessToken *TokenConfig   `json:"access_token,omitempty"`
+	IDToken     *IDTokenConfig `json:"id_token,omitempty"`
 }
 
 // ApplicationDTO represents the data transfer object for application service operations.
