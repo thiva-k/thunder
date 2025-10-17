@@ -26,7 +26,11 @@ PROJECT_DIR := $(realpath $(dir $(abspath $(lastword $(MAKEFILE_LIST)))))/backen
 PROJECT_BIN_DIR := $(PROJECT_DIR)/bin
 TOOL_BIN ?= $(PROJECT_BIN_DIR)/tools
 GOLANGCI_LINT ?= $(TOOL_BIN)/golangci-lint
+MOCKERY ?= $(TOOL_BIN)/mockery
+
+# Tools versions
 GOLANGCI_LINT_VERSION ?= v1.64.8
+MOCKERY_VERSION ?= v3.5.5
 
 $(TOOL_BIN):
 	mkdir -p $(TOOL_BIN)
@@ -95,6 +99,10 @@ docker-build-multiarch-push:
 lint: golangci-lint
 	cd backend && $(GOLANGCI_LINT) run ./...
 
+mockery: install-mockery
+	cd backend && $(MOCKERY) --config .mockery.public.yml
+	cd backend && $(MOCKERY) --config .mockery.private.yml
+
 help:
 	@echo "Makefile targets:"
 	@echo "  all                           - Clean, build, and test the project."
@@ -116,13 +124,15 @@ help:
 	@echo "  docker-build-multiarch-latest - Build multi-arch Docker image with latest tag."
 	@echo "  docker-build-multiarch-push   - Build and push multi-arch images to registry."
 	@echo "  lint                          - Run golangci-lint on the project."
+	@echo "  mockery                       - Generate mocks for unit tests using mockery."
 	@echo "  help                          - Show this help message."
 
 .PHONY: all prepare clean clean_all build build_samples package_samples run
 .PHONY: docker-build docker-build-latest docker-build-multiarch 
 .PHONY: docker-build-multiarch-latest docker-build-multiarch-push
 .PHONY: test_unit test_integration build_with_coverage test
-.PHONY: lint help go_install_tool golangci-lint
+.PHONY: help go_install_tool
+.PHONY: lint golangci-lint mockery install-mockery
 
 define go_install_tool
 	cd /tmp && \
@@ -133,3 +143,8 @@ golangci-lint: $(GOLANGCI_LINT)
 
 $(GOLANGCI_LINT): $(TOOL_BIN)
 	$(call go_install_tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+install-mockery: $(MOCKERY)
+
+$(MOCKERY): $(TOOL_BIN)
+	$(call go_install_tool,$(MOCKERY),github.com/vektra/mockery/v3,$(MOCKERY_VERSION))

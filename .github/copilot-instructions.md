@@ -40,7 +40,8 @@ The project is structured as a monorepo to manage the backend, frontend, and sam
   - tests/: Common unit tests related files.
     - mocks/: Generated mocks for unit tests.
     - resources/: Test resource files.
-  - .mockery.yml: Mockery configurations related to mock generation.
+  - .mockery.private.yml: Mockery configurations for private interfaces.
+  - .mockery.public.yml: Mockery configurations for public interfaces.
 - frontend/: Individual frontend application code.
   - apps/gate/: Gate app implementation which serves UIs for login, registration and recovery. 
   - packages/: Common frontend packages such as UI components, services, and contexts.
@@ -113,7 +114,7 @@ The project is structured as a monorepo to manage the backend, frontend, and sam
 #### Unit Tests
 - Ensure unit tests are written to achieve at least 80% coverage.
 - Use `stretchr/testify` for tests and follow the test suite pattern.
-- `mockery` is used to generate mocks; configurations are in `/backend/.mockery.yml`.
+- `mockery` is used to generate mocks; configurations for private and public interfaces are in `.mockery.private.yml` and `.mockery.public.yml` respectively. Mocks can be generated using `make mockery` command from the project root directory.
 - Place generated mocks in the `/backend/tests/mocks/` directory.
 - Unit tests can be run using `make test_unit` command from the project root directory. Alternatively `go test` command can also be used from the `/backend` directory with applicable flags.
 
