@@ -52,6 +52,7 @@ type UserServiceInterface interface {
 	CreateUser(user *User) (*User, *serviceerror.ServiceError)
 	CreateUserByPath(handlePath string, request CreateUserByPathRequest) (*User, *serviceerror.ServiceError)
 	GetUser(userID string) (*User, *serviceerror.ServiceError)
+	GetUserGroups(userID string, limit, offset int) (*UserGroupListResponse, *serviceerror.ServiceError)
 	UpdateUser(userID string, user *User) (*User, *serviceerror.ServiceError)
 	DeleteUser(userID string) *serviceerror.ServiceError
 	IdentifyUser(filters map[string]interface{}) (*string, *serviceerror.ServiceError)
@@ -278,6 +279,56 @@ func (us *userService) GetUser(userID string) (*User, *serviceerror.ServiceError
 
 	logger.Debug("Successfully retrieved user", log.String("id", userID))
 	return &user, nil
+}
+
+// GetUserGroups retrieves groups of a user with pagination.
+func (as *userService) GetUserGroups(userID string, limit, offset int) (
+	*UserGroupListResponse, *serviceerror.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+
+	if userID == "" {
+		return nil, &ErrorMissingUserID
+	}
+
+	if err := validatePaginationParams(limit, offset); err != nil {
+		return nil, err
+	}
+
+	invalidUserIDs, err := as.userStore.ValidateUserIDs([]string{userID})
+	if err != nil {
+		logger.Error("Failed to validate user IDs", log.String("error", err.Error()))
+		return nil, &ErrorInternalServerError
+	}
+
+	if len(invalidUserIDs) > 0 {
+		logger.Debug("User not found", log.String("id", userID))
+		return nil, &ErrorUserNotFound
+	}
+
+	totalCount, err := as.userStore.GetGroupCountForUser(userID)
+	if err != nil {
+		logger.Error("Failed to get group count for user", log.String("userID", userID), log.Error(err))
+		return nil, &ErrorInternalServerError
+	}
+
+	groups, err := as.userStore.GetUserGroups(userID, limit, offset)
+	if err != nil {
+		logger.Error("Failed to get user groups", log.String("id", userID), log.Error(err))
+		return nil, &ErrorInternalServerError
+	}
+
+	path := fmt.Sprintf("/users/%s/groups", userID)
+	links := buildPaginationLinks(path, limit, offset, totalCount)
+
+	response := &UserGroupListResponse{
+		TotalResults: totalCount,
+		Groups:       groups,
+		StartIndex:   offset + 1,
+		Count:        len(groups),
+		Links:        links,
+	}
+
+	return response, nil
 }
 
 // UpdateUser update the user for given user id.

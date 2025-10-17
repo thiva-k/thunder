@@ -32,6 +32,8 @@ type userStoreInterface interface {
 	GetUserList(limit, offset int, filters map[string]interface{}) ([]User, error)
 	CreateUser(user User, credentials []Credential) error
 	GetUser(id string) (User, error)
+	GetGroupCountForUser(userID string) (int, error)
+	GetUserGroups(userID string, limit, offset int) ([]UserGroup, error)
 	UpdateUser(user *User) error
 	DeleteUser(id string) error
 	IdentifyUser(filters map[string]interface{}) (*string, error)
@@ -354,6 +356,53 @@ func (us *userStore) ValidateUserIDs(userIDs []string) ([]string, error) {
 	return invalidUserIDs, nil
 }
 
+// GetGroupCountForUser retrieves the total count of groups a user belongs to.
+func (us *userStore) GetGroupCountForUser(userID string) (int, error) {
+	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	if err != nil {
+		return 0, fmt.Errorf("failed to get database client: %w", err)
+	}
+
+	countResults, err := dbClient.Query(QueryGetGroupCountForUser, userID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get group count for user: %w", err)
+	}
+
+	if len(countResults) == 0 {
+		return 0, nil
+	}
+
+	if count, ok := countResults[0]["total"].(int64); ok {
+		return int(count), nil
+	}
+	return 0, fmt.Errorf("unexpected type for total: %T", countResults[0]["total"])
+}
+
+// GetUserGroups retrieves groups that a user belongs to with pagination.
+func (us *userStore) GetUserGroups(userID string, limit, offset int) ([]UserGroup, error) {
+	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get database client: %w", err)
+	}
+
+	results, err := dbClient.Query(QueryGetGroupsForUser, userID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get groups for user: %w", err)
+	}
+
+	groups := make([]UserGroup, 0, len(results))
+	for _, row := range results {
+		group, err := buildGroupFromResultRow(row)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build group from result row: %w", err)
+		}
+
+		groups = append(groups, group)
+	}
+
+	return groups, nil
+}
+
 func buildUserFromResultRow(row map[string]interface{}) (User, error) {
 	userID, ok := row["user_id"].(string)
 	if !ok {
@@ -392,6 +441,32 @@ func buildUserFromResultRow(row map[string]interface{}) (User, error) {
 	}
 
 	return user, nil
+}
+
+// buildGroupFromResultRow constructs a UserGroup from a database result row.
+func buildGroupFromResultRow(row map[string]interface{}) (UserGroup, error) {
+	groupID, ok := row["group_id"].(string)
+	if !ok {
+		return UserGroup{}, fmt.Errorf("failed to parse group_id as string")
+	}
+
+	name, ok := row["name"].(string)
+	if !ok {
+		return UserGroup{}, fmt.Errorf("failed to parse name as string")
+	}
+
+	ouID, ok := row["ou_id"].(string)
+	if !ok {
+		return UserGroup{}, fmt.Errorf("failed to parse ou_id as string")
+	}
+
+	group := UserGroup{
+		ID:                 groupID,
+		Name:               name,
+		OrganizationUnitID: ouID,
+	}
+
+	return group, nil
 }
 
 // maskMapValues masks the values in a map to prevent sensitive data from being logged.

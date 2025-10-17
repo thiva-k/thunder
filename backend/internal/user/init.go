@@ -20,6 +20,7 @@ package user
 
 import (
 	"net/http"
+	"strings"
 
 	oupkg "github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/middleware"
@@ -57,7 +58,20 @@ func registerRoutes(mux *http.ServeMux, userHandler *userHandler) {
 		AllowedHeaders:   "Content-Type, Authorization",
 		AllowCredentials: true,
 	}
-	mux.HandleFunc(middleware.WithCORS("GET /users/", userHandler.HandleUserGetRequest, opts2))
+	mux.HandleFunc(middleware.WithCORS("GET /users/",
+		func(w http.ResponseWriter, r *http.Request) {
+			path := strings.TrimPrefix(r.URL.Path, "/users/")
+			segments := strings.Split(path, "/")
+			r.SetPathValue("id", segments[0])
+
+			if len(segments) == 1 {
+				userHandler.HandleUserGetRequest(w, r)
+			} else if len(segments) == 2 && segments[1] == "groups" {
+				userHandler.HandleUserGroupsGetRequest(w, r)
+			} else {
+				http.NotFound(w, r)
+			}
+		}, opts2))
 	mux.HandleFunc(middleware.WithCORS("PUT /users/", userHandler.HandleUserPutRequest, opts2))
 	mux.HandleFunc(middleware.WithCORS("DELETE /users/", userHandler.HandleUserDeleteRequest, opts2))
 	mux.HandleFunc(middleware.WithCORS("OPTIONS /users/", func(w http.ResponseWriter, r *http.Request) {
