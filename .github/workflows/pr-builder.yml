@@ -71,11 +71,29 @@ jobs:
           export LOG_LEVEL=debug
           make all OS=$(go env GOOS) ARCH=$(go env GOARCH)
 
-      - name: 📊 Upload Coverage Report to Codecov
+      - name: 📊 Upload Unit Test Coverage Report to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: backend/coverage_unit.out
+          flags: backend-unit
+          name: Backend Unit Tests
+          fail_ci_if_error: false
+
+      - name: 📊 Upload Integration Test Coverage Report to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: target/coverage_integration.out
-          flags: integration
-          name: integration-tests
+          flags: backend-integration
+          name: Backend Integration Tests
+          fail_ci_if_error: false
+
+      - name: 📊 Upload Combined Coverage Report to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/coverage_combined.out
+          flags: backend-combined
+          name: Backend Combined Coverage
           fail_ci_if_error: false
