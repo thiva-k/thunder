@@ -44,7 +44,9 @@ type oAuthConfig struct {
 
 // oAuthTokenConfig represents the OAuth token configuration structure for JSON marshaling/unmarshaling.
 type oAuthTokenConfig struct {
-	AccessToken *tokenConfig `json:"access_token,omitempty"`
+	Issuer      string         `json:"issuer,omitempty"`
+	AccessToken *tokenConfig   `json:"access_token,omitempty"`
+	IDToken     *idTokenConfig `json:"id_token,omitempty"`
 }
 
 // tokenConfig represents the token configuration structure for JSON marshaling/unmarshaling.
@@ -52,6 +54,13 @@ type tokenConfig struct {
 	Issuer         string   `json:"issuer,omitempty"`
 	ValidityPeriod int64    `json:"validity_period,omitempty"`
 	UserAttributes []string `json:"user_attributes,omitempty"`
+}
+
+// idTokenConfig represents the ID token configuration structure for JSON marshaling/unmarshaling.
+type idTokenConfig struct {
+	ValidityPeriod int64               `json:"validity_period,omitempty"`
+	UserAttributes []string            `json:"user_attributes,omitempty"`
+	ScopeClaims    map[string][]string `json:"scope_claims,omitempty"`
 }
 
 // ApplicationStoreInterface defines the interface for application data persistence operations.
@@ -216,13 +225,23 @@ func (st *applicationStore) GetOAuthApplication(clientID string) (*model.OAuthAp
 
 	// Convert token config if present
 	var oauthTokenConfig *model.OAuthTokenConfig
-	if oAuthConfig.Token != nil && oAuthConfig.Token.AccessToken != nil {
+	if oAuthConfig.Token != nil {
 		oauthTokenConfig = &model.OAuthTokenConfig{
-			AccessToken: &model.TokenConfig{
+			Issuer: oAuthConfig.Token.Issuer,
+		}
+		if oAuthConfig.Token.AccessToken != nil {
+			oauthTokenConfig.AccessToken = &model.TokenConfig{
 				Issuer:         oAuthConfig.Token.AccessToken.Issuer,
 				ValidityPeriod: oAuthConfig.Token.AccessToken.ValidityPeriod,
 				UserAttributes: oAuthConfig.Token.AccessToken.UserAttributes,
-			},
+			}
+		}
+		if oAuthConfig.Token.IDToken != nil {
+			oauthTokenConfig.IDToken = &model.IDTokenConfig{
+				ValidityPeriod: oAuthConfig.Token.IDToken.ValidityPeriod,
+				UserAttributes: oAuthConfig.Token.IDToken.UserAttributes,
+				ScopeClaims:    oAuthConfig.Token.IDToken.ScopeClaims,
+			}
 		}
 	}
 
@@ -380,13 +399,23 @@ func getOAuthConfigJSONBytes(inboundAuthConfig model.InboundAuthConfigProcessedD
 	}
 
 	// Include token config if present
-	if inboundAuthConfig.OAuthAppConfig.Token != nil && inboundAuthConfig.OAuthAppConfig.Token.AccessToken != nil {
+	if inboundAuthConfig.OAuthAppConfig.Token != nil {
 		oauthConfig.Token = &oAuthTokenConfig{
-			AccessToken: &tokenConfig{
+			Issuer: inboundAuthConfig.OAuthAppConfig.Token.Issuer,
+		}
+		if inboundAuthConfig.OAuthAppConfig.Token.AccessToken != nil {
+			oauthConfig.Token.AccessToken = &tokenConfig{
 				Issuer:         inboundAuthConfig.OAuthAppConfig.Token.AccessToken.Issuer,
 				ValidityPeriod: inboundAuthConfig.OAuthAppConfig.Token.AccessToken.ValidityPeriod,
 				UserAttributes: inboundAuthConfig.OAuthAppConfig.Token.AccessToken.UserAttributes,
-			},
+			}
+		}
+		if inboundAuthConfig.OAuthAppConfig.Token.IDToken != nil {
+			oauthConfig.Token.IDToken = &idTokenConfig{
+				ValidityPeriod: inboundAuthConfig.OAuthAppConfig.Token.IDToken.ValidityPeriod,
+				UserAttributes: inboundAuthConfig.OAuthAppConfig.Token.IDToken.UserAttributes,
+				ScopeClaims:    inboundAuthConfig.OAuthAppConfig.Token.IDToken.ScopeClaims,
+			}
 		}
 	}
 
@@ -611,13 +640,23 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 
 		// Extract token config from OAuth config if present
 		var oauthTokenConfig *model.OAuthTokenConfig
-		if oauthConfig.Token != nil && oauthConfig.Token.AccessToken != nil {
+		if oauthConfig.Token != nil {
 			oauthTokenConfig = &model.OAuthTokenConfig{
-				AccessToken: &model.TokenConfig{
+				Issuer: oauthConfig.Token.Issuer,
+			}
+			if oauthConfig.Token.AccessToken != nil {
+				oauthTokenConfig.AccessToken = &model.TokenConfig{
 					Issuer:         oauthConfig.Token.AccessToken.Issuer,
 					ValidityPeriod: oauthConfig.Token.AccessToken.ValidityPeriod,
 					UserAttributes: oauthConfig.Token.AccessToken.UserAttributes,
-				},
+				}
+			}
+			if oauthConfig.Token.IDToken != nil {
+				oauthTokenConfig.IDToken = &model.IDTokenConfig{
+					ValidityPeriod: oauthConfig.Token.IDToken.ValidityPeriod,
+					UserAttributes: oauthConfig.Token.IDToken.UserAttributes,
+					ScopeClaims:    oauthConfig.Token.IDToken.ScopeClaims,
+				}
 			}
 		}
 
