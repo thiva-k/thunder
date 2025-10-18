@@ -153,7 +153,7 @@ To quickly get started with Thunder, you can use the sample app provided with th
         "auth_flow_graph_id": "auth_flow_config_basic",
         "registration_flow_graph_id": "registration_flow_config_basic",
         "is_registration_flow_enabled": true,
-        "user_attributes": ["given_name","family_name","email","groups"]
+        "user_attributes": ["given_name","family_name","email","groups"],
         "inbound_auth_config": [{
             "type": "oauth2",
             "config": {
@@ -165,11 +165,13 @@ To quickly get started with Thunder, you can use the sample app provided with th
                 "token_endpoint_auth_methods": ["client_secret_basic", "client_secret_post"],
                 "pkce_required": false,
                 "public_client": false,
-                "access_token": {
+                "token": {
+                    "issuer": "thunder",
+                    "access_token": {
                         "validity_period": 3600,
                         "user_attributes": ["given_name","family_name","email","groups"]
-                },
-                "id_token": {
+                    },
+                    "id_token": {
                         "validity_period": 3600,
                         "user_attributes": ["given_name","family_name","email","groups"],
                         "scope_claims": {
@@ -178,6 +180,7 @@ To quickly get started with Thunder, you can use the sample app provided with th
                             "phone": ["phone_number","phone_number_verified"],
                             "group": ["groups"]
                         }
+                    }
                 }
             }
         }]
@@ -405,20 +408,49 @@ To try out the Client Credentials flow, follow these steps:
                     ],
                     "pkce_required": false,
                     "public_client": false,
-                    "access_token": {
-                        "validity_period": 3600,
-                        "user_attributes": ["given_name","family_name","email","groups"]
-                    },
-                    "id_token": {
-                        "validity_period": 3600,
-                        "user_attributes": ["given_name","family_name","email","groups"],
-                        "scope_claims": {
-                            "profile": ["name","given_name","family_name","picture"],
-                            "email": ["email","email_verified"],
-                            "phone": ["phone_number","phone_number_verified"],
-                            "group": ["groups"]
+                    "token": {
+                        "issuer": "thunder",
+                        "access_token": {
+                            "validity_period": 3600,
+                            "user_attributes": [
+                                "given_name",
+                                "family_name",
+                                "email",
+                                "groups"
+                            ]
+                        },
+                        "id_token": {
+                            "validity_period": 3600,
+                            "user_attributes": [
+                                "given_name",
+                                "family_name",
+                                "email",
+                                "groups"
+                            ],
+                            "scope_claims": {
+                                "email": [
+                                    "email",
+                                    "email_verified"
+                                ],
+                                "group": [
+                                    "groups"
+                                ],
+                                "phone": [
+                                    "phone_number",
+                                    "phone_number_verified"
+                                ],
+                                "profile": [
+                                    "name",
+                                    "given_name",
+                                    "family_name",
+                                    "picture"
+                                ]
+                            }
                         }
                     }
+                }
+            }
+        ]
     }'
     ```
 
