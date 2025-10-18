@@ -153,6 +153,7 @@ To quickly get started with Thunder, you can use the sample app provided with th
         "auth_flow_graph_id": "auth_flow_config_basic",
         "registration_flow_graph_id": "registration_flow_config_basic",
         "is_registration_flow_enabled": true,
+        "user_attributes": ["given_name","family_name","email","groups"]
         "inbound_auth_config": [{
             "type": "oauth2",
             "config": {
@@ -163,7 +164,21 @@ To quickly get started with Thunder, you can use the sample app provided with th
                 "response_types": ["code"],
                 "token_endpoint_auth_methods": ["client_secret_basic", "client_secret_post"],
                 "pkce_required": false,
-                "public_client": false
+                "public_client": false,
+                "access_token": {
+                        "validity_period": 3600,
+                        "user_attributes": ["given_name","family_name","email","groups"]
+                },
+                "id_token": {
+                        "validity_period": 3600,
+                        "user_attributes": ["given_name","family_name","email","groups"],
+                        "scope_claims": {
+                            "profile": ["name","given_name","family_name","picture"],
+                            "email": ["email","email_verified"],
+                            "phone": ["phone_number","phone_number_verified"],
+                            "group": ["groups"]
+                        }
+                }
             }
         }]
     }'
@@ -389,10 +404,21 @@ To try out the Client Credentials flow, follow these steps:
                         "client_secret_post"
                     ],
                     "pkce_required": false,
-                    "public_client": false
-                }
-            }
-        ]
+                    "public_client": false,
+                    "access_token": {
+                        "validity_period": 3600,
+                        "user_attributes": ["given_name","family_name","email","groups"]
+                    },
+                    "id_token": {
+                        "validity_period": 3600,
+                        "user_attributes": ["given_name","family_name","email","groups"],
+                        "scope_claims": {
+                            "profile": ["name","given_name","family_name","picture"],
+                            "email": ["email","email_verified"],
+                            "phone": ["phone_number","phone_number_verified"],
+                            "group": ["groups"]
+                        }
+                    }
     }'
     ```
 
@@ -420,8 +446,8 @@ To try out the Client Credentials flow, follow these steps:
             "username": "thor",
             "password": "<password>",
             "email": "thor@thunder.sky",
-            "firstName": "Thor",
-            "lastName": "Odinson",
+            "given_name": "Thor",
+            "family_name": "Odinson",
             "age": 1534,
             "abilities": [
                 "strength",
@@ -606,8 +632,8 @@ curl -kL https://localhost:8090/oauth2/jwks
             "username": "thor",
             "password": "<password>",
             "email": "thor@thunder.sky",
-            "firstName": "Thor",
-            "lastName": "Odinson",
+            "given_name": "Thor",
+            "family_name": "Odinson",
             "age": 1534,
             "abilities": [
                 "strength",
@@ -1027,8 +1053,8 @@ curl -kL https://localhost:8090/oauth2/jwks
             "username": "thor",
             "password": "<password>",
             "email": "thor@thunder.sky",
-            "firstName": "Thor",
-            "lastName": "Odinson",
+            "given_name": "Thor",
+            "family_name": "Odinson",
             "mobileNumber": "+94xxxxxxxxx"
         }
     }'
