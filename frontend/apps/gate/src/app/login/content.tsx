@@ -26,7 +26,7 @@ import InputLabel from '@oxygen-ui/react/src/components/InputLabel/InputLabel';
 import Typography from '@oxygen-ui/react/src/components/Typography/Typography';
 import React, { useState, useEffect, ReactElement } from 'react';
 import axios from 'axios';
-import AppConfig from '@/configs/app.json';
+import AppConfig from '@/configs/app.config';
 
 interface LoginInput {
   name: string;

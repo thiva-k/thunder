@@ -19,6 +19,7 @@
 import fs from 'fs';
 import path from 'path';
 import https from 'https';
+import http from 'http';
 import { fileURLToPath, parse } from 'url';
 import next from 'next';
 
@@ -35,31 +36,50 @@ if (fs.existsSync(requiredServerFilesConfig)) {
   process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(nextConfig);
 }
 
-const PORT = 9090;
-const HOST = 'localhost';
+const PORT = process.env.PORT || 9090;
+const HOST = process.env.HOST || 'localhost';
+const ENABLE_HTTPS = process.env.ENABLE_HTTPS !== 'false';
 const keyPath = path.resolve(__dirname, 'server.key');
 const certPath = path.resolve(__dirname, 'server.cert');
 const dev = process.env.NODE_ENV === 'development';
 const app = next({ dev: dev, dir: __dirname });
-const httpsOptions = {
-  key: fs.readFileSync(keyPath),
-  cert: fs.readFileSync(certPath),
-};
+
+// HTTPS options - only used if ENABLE_HTTPS is true
+let httpsOptions = null;
+if (ENABLE_HTTPS) {
+  try {
+    httpsOptions = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath),
+    };
+  } catch (error) {
+    console.error(`Failed to load SSL certificates: ${error.message}`);
+    console.error('Either provide valid certificates or set ENABLE_HTTPS=false');
+    process.exit(1);
+  }
+}
 
 const handle = app.getRequestHandler();
 
 function getTimestampWithOffset() {
   const now = new Date();
 
-  const pad = (n) => n.toString().padStart(2, '0');
+  const pad = n => n.toString().padStart(2, '0');
 
-  const isoDate = now.getFullYear() + '-' +
-                  pad(now.getMonth() + 1) + '-' +
-                  pad(now.getDate()) + 'T' +
-                  pad(now.getHours()) + ':' +
-                  pad(now.getMinutes()) + ':' +
-                  pad(now.getSeconds()) + '.' +
-                  now.getMilliseconds().toString().padStart(3, '0');
+  const isoDate =
+    now.getFullYear() +
+    '-' +
+    pad(now.getMonth() + 1) +
+    '-' +
+    pad(now.getDate()) +
+    'T' +
+    pad(now.getHours()) +
+    ':' +
+    pad(now.getMinutes()) +
+    ':' +
+    pad(now.getSeconds()) +
+    '.' +
+    now.getMilliseconds().toString().padStart(3, '0');
 
   const offsetMin = now.getTimezoneOffset();
   const offsetSign = offsetMin <= 0 ? '+' : '-';
@@ -70,16 +90,28 @@ function getTimestampWithOffset() {
   return `${isoDate}${tzOffset}`;
 }
 
-console.log(`Starting WSO2 Thunder gate app in ${dev ? 'development' : 'production'} mode...`);
+console.log(
+  `Starting WSO2 Thunder gate app in ${dev ? 'development' : 'production'} mode with ${ENABLE_HTTPS ? 'HTTPS' : 'HTTP'}...`,
+);
 
 app.prepare().then(() => {
-  https.createServer(httpsOptions, (req, res) => {
+  const requestHandler = (req, res) => {
     const parsedUrl = parse(req.url, true);
     handle(req, res, parsedUrl);
-  }).listen(PORT, () => {
+  };
+
+  let server;
+  if (ENABLE_HTTPS && httpsOptions) {
+    server = https.createServer(httpsOptions, requestHandler);
+  } else {
+    server = http.createServer(requestHandler);
+  }
+
+  server.listen(PORT, HOST, () => {
     const isoWithOffset = getTimestampWithOffset();
+    const protocol = ENABLE_HTTPS ? 'https' : 'http';
     console.log(
-      `time=${isoWithOffset} level=INFO msg="WSO2 Thunder gate app started..." address=${HOST}:${PORT}`
+      `time=${isoWithOffset} level=INFO msg="WSO2 Thunder gate app started..." address=${protocol}://${HOST}:${PORT}`,
     );
   });
 });

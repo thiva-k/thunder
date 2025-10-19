@@ -21,7 +21,7 @@ import ThemeToggle from '@oxygen-ui/react/src/components/ThemeToggle/ThemeToggle
 import Grid from '@oxygen-ui/react/src/components/Grid/Grid';
 import Paper from '@oxygen-ui/react/src/components/Paper/Paper';
 import Typography from '@oxygen-ui/react/src/components/Typography/Typography';
-import AppConfig from '@/configs/app.json';
+import AppConfig from '@/configs/app.config';
 import BaseLayout from '@/layouts/base';
 import SideImage from '@/images/layout-image';
 import type { Metadata } from 'next';
