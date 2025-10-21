@@ -87,17 +87,17 @@ type GoogleUserInfo struct {
 
 // DiscoveryDocument represents OIDC discovery document
 type DiscoveryDocument struct {
-	Issuer                           string   `json:"issuer"`
-	AuthorizationEndpoint            string   `json:"authorization_endpoint"`
-	TokenEndpoint                    string   `json:"token_endpoint"`
-	UserinfoEndpoint                 string   `json:"userinfo_endpoint"`
-	JwksURI                          string   `json:"jwks_uri"`
-	ResponseTypesSupported           []string `json:"response_types_supported"`
-	SubjectTypesSupported            []string `json:"subject_types_supported"`
-	IDTokenSigningAlgValuesSupported []string `json:"id_token_signing_alg_values_supported"`
-	ScopesSupported                  []string `json:"scopes_supported"`
-	TokenEndpointAuthMethodSupported string   `json:"token_endpoint_auth_method_supported"`
-	ClaimsSupported                  []string `json:"claims_supported"`
+	Issuer                            string   `json:"issuer"`
+	AuthorizationEndpoint             string   `json:"authorization_endpoint"`
+	TokenEndpoint                     string   `json:"token_endpoint"`
+	UserinfoEndpoint                  string   `json:"userinfo_endpoint"`
+	JwksURI                           string   `json:"jwks_uri"`
+	ResponseTypesSupported            []string `json:"response_types_supported"`
+	SubjectTypesSupported             []string `json:"subject_types_supported"`
+	IDTokenSigningAlgValuesSupported  []string `json:"id_token_signing_alg_values_supported"`
+	ScopesSupported                   []string `json:"scopes_supported"`
+	TokenEndpointAuthMethodsSupported []string `json:"token_endpoint_auth_methods_supported"`
+	ClaimsSupported                   []string `json:"claims_supported"`
 }
 
 // JWKS represents JSON Web Key Set
@@ -217,10 +217,10 @@ func (m *MockGoogleOIDCServer) handleDiscovery(w http.ResponseWriter, r *http.Re
 		JwksURI:               fmt.Sprintf("%s/oauth2/v3/certs", baseURL),
 		ResponseTypesSupported: []string{"code", "token", "id_token", "code token", "code id_token",
 			"token id_token", "code token id_token"},
-		SubjectTypesSupported:            []string{"public"},
-		IDTokenSigningAlgValuesSupported: []string{"RS256"},
-		ScopesSupported:                  []string{"openid", "email", "profile"},
-		TokenEndpointAuthMethodSupported: "client_secret_post",
+		SubjectTypesSupported:             []string{"public"},
+		IDTokenSigningAlgValuesSupported:  []string{"RS256"},
+		ScopesSupported:                   []string{"openid", "email", "profile"},
+		TokenEndpointAuthMethodsSupported: []string{"client_secret_post", "client_secret_basic"},
 		ClaimsSupported: []string{"aud", "email", "email_verified", "exp", "family_name",
 			"given_name", "iat", "iss", "locale", "name", "picture", "sub"},
 	}

@@ -114,13 +114,6 @@ var (
 		Error:            "Invalid response type",
 		ErrorDescription: "One or more provided response types are invalid",
 	}
-	// ErrorMissingTokenEndpointAuthMethod is the error returned when token endpoint auth method is not provided.
-	ErrorMissingTokenEndpointAuthMethod = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1017",
-		Error:            "Missing token endpoint authentication method",
-		ErrorDescription: "Token endpoint authentication method is required and must be specified",
-	}
 	// ErrorInvalidTokenEndpointAuthMethod is the error returned when an invalid token endpoint auth method
 	// is provided.
 	ErrorInvalidTokenEndpointAuthMethod = serviceerror.ServiceError{

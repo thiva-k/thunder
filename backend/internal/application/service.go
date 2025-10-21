@@ -574,6 +574,17 @@ func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*model.In
 		}
 	}
 
+	// Apply DCR-compliant defaults for OAuth configuration if not specified.
+	if len(oauthAppConfig.GrantTypes) == 0 {
+		oauthAppConfig.GrantTypes = []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode}
+	}
+	if len(oauthAppConfig.ResponseTypes) == 0 {
+		oauthAppConfig.ResponseTypes = []oauth2const.ResponseType{oauth2const.ResponseTypeCode}
+	}
+	if oauthAppConfig.TokenEndpointAuthMethod == "" {
+		oauthAppConfig.TokenEndpointAuthMethod = oauth2const.TokenEndpointAuthMethodClientSecretBasic
+	}
+
 	// Validate the grant types.
 	for _, grantType := range oauthAppConfig.GrantTypes {
 		if !grantType.IsValid() {
@@ -589,9 +600,6 @@ func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*model.In
 	}
 
 	// Validate the token endpoint authentication method.
-	if oauthAppConfig.TokenEndpointAuthMethod == "" {
-		return nil, &ErrorMissingTokenEndpointAuthMethod
-	}
 	if !oauthAppConfig.TokenEndpointAuthMethod.IsValid() {
 		return nil, &ErrorInvalidTokenEndpointAuthMethod
 	}
