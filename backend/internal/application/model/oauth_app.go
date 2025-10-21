@@ -30,27 +30,27 @@ import (
 
 // OAuthAppConfig represents the structure for OAuth application configuration.
 type OAuthAppConfig struct {
-	ClientID                string                                `json:"client_id"`
-	RedirectURIs            []string                              `json:"redirect_uris"`
-	GrantTypes              []oauth2const.GrantType               `json:"grant_types"`
-	ResponseTypes           []oauth2const.ResponseType            `json:"response_types"`
-	TokenEndpointAuthMethod []oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_methods"`
-	PKCERequired            bool                                  `json:"pkce_required"`
-	PublicClient            bool                                  `json:"public_client"`
-	Token                   *OAuthTokenConfig                     `json:"token,omitempty"`
+	ClientID                string                              `json:"client_id"`
+	RedirectURIs            []string                            `json:"redirect_uris"`
+	GrantTypes              []oauth2const.GrantType             `json:"grant_types"`
+	ResponseTypes           []oauth2const.ResponseType          `json:"response_types"`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method"`
+	PKCERequired            bool                                `json:"pkce_required"`
+	PublicClient            bool                                `json:"public_client"`
+	Token                   *OAuthTokenConfig                   `json:"token,omitempty"`
 }
 
 // OAuthAppConfigComplete represents the complete structure for OAuth application configuration.
 type OAuthAppConfigComplete struct {
-	ClientID                string                                `json:"client_id"`
-	ClientSecret            string                                `json:"client_secret,omitempty"`
-	RedirectURIs            []string                              `json:"redirect_uris"`
-	GrantTypes              []oauth2const.GrantType               `json:"grant_types"`
-	ResponseTypes           []oauth2const.ResponseType            `json:"response_types"`
-	TokenEndpointAuthMethod []oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_methods"`
-	PKCERequired            bool                                  `json:"pkce_required"`
-	PublicClient            bool                                  `json:"public_client"`
-	Token                   *OAuthTokenConfig                     `json:"token,omitempty"`
+	ClientID                string                              `json:"client_id"`
+	ClientSecret            string                              `json:"client_secret,omitempty"`
+	RedirectURIs            []string                            `json:"redirect_uris"`
+	GrantTypes              []oauth2const.GrantType             `json:"grant_types"`
+	ResponseTypes           []oauth2const.ResponseType          `json:"response_types"`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method"`
+	PKCERequired            bool                                `json:"pkce_required"`
+	PublicClient            bool                                `json:"public_client"`
+	Token                   *OAuthTokenConfig                   `json:"token,omitempty"`
 }
 
 // OAuthAppConfigDTO represents the data transfer object for OAuth application configuration.
@@ -61,7 +61,7 @@ type OAuthAppConfigDTO struct {
 	RedirectURIs            []string
 	GrantTypes              []oauth2const.GrantType
 	ResponseTypes           []oauth2const.ResponseType
-	TokenEndpointAuthMethod []oauth2const.TokenEndpointAuthMethod
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod
 	PKCERequired            bool
 	PublicClient            bool
 	Token                   *OAuthTokenConfig
@@ -79,7 +79,7 @@ func (o *OAuthAppConfigDTO) IsAllowedResponseType(responseType string) bool {
 
 // IsAllowedTokenEndpointAuthMethod checks if the provided token endpoint authentication method is allowed.
 func (o *OAuthAppConfigDTO) IsAllowedTokenEndpointAuthMethod(method oauth2const.TokenEndpointAuthMethod) bool {
-	return isAllowedTokenEndpointAuthMethod(o.TokenEndpointAuthMethod, method)
+	return o.TokenEndpointAuthMethod == method
 }
 
 // ValidateRedirectURI validates the provided redirect URI against the registered redirect URIs.
@@ -95,7 +95,7 @@ type OAuthAppConfigProcessedDTO struct {
 	RedirectURIs            []string
 	GrantTypes              []oauth2const.GrantType
 	ResponseTypes           []oauth2const.ResponseType
-	TokenEndpointAuthMethod []oauth2const.TokenEndpointAuthMethod
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod
 	PKCERequired            bool
 	PublicClient            bool
 	Token                   *OAuthTokenConfig
@@ -113,7 +113,7 @@ func (o *OAuthAppConfigProcessedDTO) IsAllowedResponseType(responseType string) 
 
 // IsAllowedTokenEndpointAuthMethod checks if the provided token endpoint authentication method is allowed.
 func (o *OAuthAppConfigProcessedDTO) IsAllowedTokenEndpointAuthMethod(method oauth2const.TokenEndpointAuthMethod) bool {
-	return isAllowedTokenEndpointAuthMethod(o.TokenEndpointAuthMethod, method)
+	return o.TokenEndpointAuthMethod == method
 }
 
 // ValidateRedirectURI validates the provided redirect URI against the registered redirect URIs.
@@ -140,15 +140,6 @@ func isAllowedResponseType(responseTypes []oauth2const.ResponseType, responseTyp
 		return false
 	}
 	return slices.Contains(responseTypes, oauth2const.ResponseType(responseType))
-}
-
-// isAllowedTokenEndpointAuthMethod checks if the provided token authentication method is in the allowed list.
-func isAllowedTokenEndpointAuthMethod(methods []oauth2const.TokenEndpointAuthMethod,
-	method oauth2const.TokenEndpointAuthMethod) bool {
-	if method == "" {
-		return false
-	}
-	return slices.Contains(methods, method)
 }
 
 // validateRedirectURI checks if the provided redirect URI is valid against the registered redirect URIs.

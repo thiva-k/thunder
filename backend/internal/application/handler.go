@@ -262,10 +262,7 @@ func (ah *applicationHandler) HandleApplicationGetRequest(w http.ResponseWriter,
 		if len(responseTypes) == 0 {
 			responseTypes = []oauth2const.ResponseType{}
 		}
-		tokenAuthMethods := returnInboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod
-		if len(tokenAuthMethods) == 0 {
-			tokenAuthMethods = []oauth2const.TokenEndpointAuthMethod{}
-		}
+		tokenAuthMethod := returnInboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod
 
 		returnInboundAuthConfigs := make([]model.InboundAuthConfig, 0)
 		for _, config := range appDTO.InboundAuthConfig {
@@ -274,7 +271,7 @@ func (ah *applicationHandler) HandleApplicationGetRequest(w http.ResponseWriter,
 				RedirectURIs:            redirectURIs,
 				GrantTypes:              grantTypes,
 				ResponseTypes:           responseTypes,
-				TokenEndpointAuthMethod: tokenAuthMethods,
+				TokenEndpointAuthMethod: tokenAuthMethod,
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
@@ -483,10 +480,7 @@ func (ah *applicationHandler) processInboundAuthConfig(logger *log.Logger, appDT
 		if len(responseTypes) == 0 {
 			responseTypes = []oauth2const.ResponseType{}
 		}
-		tokenAuthMethods := returnInboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod
-		if len(tokenAuthMethods) == 0 {
-			tokenAuthMethods = []oauth2const.TokenEndpointAuthMethod{}
-		}
+		tokenAuthMethod := returnInboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod
 
 		returnInboundAuthConfigs := make([]model.InboundAuthConfigComplete, 0)
 		for _, config := range appDTO.InboundAuthConfig {
@@ -496,7 +490,7 @@ func (ah *applicationHandler) processInboundAuthConfig(logger *log.Logger, appDT
 				RedirectURIs:            redirectURIs,
 				GrantTypes:              grantTypes,
 				ResponseTypes:           responseTypes,
-				TokenEndpointAuthMethod: tokenAuthMethods,
+				TokenEndpointAuthMethod: tokenAuthMethod,
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,

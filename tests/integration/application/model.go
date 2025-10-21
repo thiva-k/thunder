@@ -53,7 +53,7 @@ type OAuthAppConfig struct {
 	RedirectURIs            []string `json:"redirect_uris"`
 	GrantTypes              []string `json:"grant_types"`
 	ResponseTypes           []string `json:"response_types"`
-	TokenEndpointAuthMethod []string `json:"token_endpoint_auth_methods"`
+	TokenEndpointAuthMethod string   `json:"token_endpoint_auth_method"`
 	PKCERequired            bool     `json:"pkce_required"`
 	PublicClient            bool     `json:"public_client"`
 }
@@ -160,7 +160,7 @@ func (app *Application) equals(expectedApp Application) bool {
 					return false
 				}
 
-				if !compareStringSlices(oauth.TokenEndpointAuthMethod, expectedOAuth.TokenEndpointAuthMethod) {
+				if oauth.TokenEndpointAuthMethod != expectedOAuth.TokenEndpointAuthMethod {
 					return false
 				}
 

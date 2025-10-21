@@ -588,11 +588,12 @@ func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*model.In
 		}
 	}
 
-	// Validate the token endpoint authentication methods.
-	for _, authMethod := range oauthAppConfig.TokenEndpointAuthMethod {
-		if !authMethod.IsValid() {
-			return nil, &ErrorInvalidTokenEndpointAuthMethod
-		}
+	// Validate the token endpoint authentication method.
+	if oauthAppConfig.TokenEndpointAuthMethod == "" {
+		return nil, &ErrorMissingTokenEndpointAuthMethod
+	}
+	if !oauthAppConfig.TokenEndpointAuthMethod.IsValid() {
+		return nil, &ErrorInvalidTokenEndpointAuthMethod
 	}
 
 	// Validate public client configurations
@@ -1087,8 +1088,7 @@ func processTokenConfiguration(app *model.ApplicationDTO) (
 
 // validatePublicClientConfiguration validates that public client configurations are correct.
 func validatePublicClientConfiguration(oauthConfig *model.OAuthAppConfigDTO) *serviceerror.ServiceError {
-	if len(oauthConfig.TokenEndpointAuthMethod) != 1 ||
-		oauthConfig.TokenEndpointAuthMethod[0] != oauth2const.TokenEndpointAuthMethodNone {
+	if oauthConfig.TokenEndpointAuthMethod != oauth2const.TokenEndpointAuthMethodNone {
 		return serviceerror.CustomServiceError(ErrorPublicClientInvalidConfiguration,
 			"Public clients must use only 'none' as token endpoint authentication method")
 	}

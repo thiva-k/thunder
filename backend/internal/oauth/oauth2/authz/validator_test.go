@@ -43,13 +43,12 @@ func (suite *AuthorizationValidatorTestSuite) SetupTest() {
 	suite.validator = newAuthorizationValidator()
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
-		ClientID:           "test-client-id",
-		HashedClientSecret: "hashed-secret",
-		RedirectURIs:       []string{"https://client.example.com/callback"},
-		GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
-		ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
-		TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-			constants.TokenEndpointAuthMethodClientSecretPost},
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 	}
 }
 
@@ -112,13 +111,12 @@ func (suite *AuthorizationValidatorTestSuite) TestValidateInitialAuthorizationRe
 func (suite *AuthorizationValidatorTestSuite) TestValidateAuthzRequest_CodeGrantNotAllowed() {
 	// Create an app that doesn't allow authorization code grant type
 	restrictedApp := &appmodel.OAuthAppConfigProcessedDTO{
-		ClientID:           "test-client-id",
-		HashedClientSecret: "hashed-secret",
-		RedirectURIs:       []string{"https://client.example.com/callback"},
-		GrantTypes:         []constants.GrantType{constants.GrantTypeClientCredentials}, // no auth code
-		ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
-		TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-			constants.TokenEndpointAuthMethodClientSecretPost},
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeClientCredentials}, // no auth code
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 	}
 
 	msg := &OAuthMessage{
@@ -156,13 +154,12 @@ func (suite *AuthorizationValidatorTestSuite) TestValidateInitialAuthorizationRe
 func (suite *AuthorizationValidatorTestSuite) TestValidateInitialAuthorizationRequest_UnsupportedResponseType() {
 	// Create an app that doesn't support "code" response type
 	restrictedApp := &appmodel.OAuthAppConfigProcessedDTO{
-		ClientID:           "test-client-id",
-		HashedClientSecret: "hashed-secret",
-		RedirectURIs:       []string{"https://client.example.com/callback"},
-		GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
-		ResponseTypes:      []constants.ResponseType{}, // no response types allowed
-		TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-			constants.TokenEndpointAuthMethodClientSecretPost},
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{}, // no response types allowed
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 	}
 
 	msg := &OAuthMessage{
