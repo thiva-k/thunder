@@ -157,7 +157,7 @@ func (suite *TokenHandlerTestSuite) TestHandleTokenRequest_MissingClientSecret()
 	mockApp := &applicationmodel.OAuthAppConfigProcessedDTO{
 		ClientID:                "test-client-id",
 		HashedClientSecret:      "hashed-secret",
-		TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{constants.TokenEndpointAuthMethodClientSecretPost},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
 	}
 	suite.mockAppService.On("GetOAuthApplication", "test-client-id").Return(mockApp, nil).Once()

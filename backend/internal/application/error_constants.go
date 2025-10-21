@@ -118,9 +118,9 @@ var (
 	// is provided.
 	ErrorInvalidTokenEndpointAuthMethod = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1014",
+		Code:             "APP-1016",
 		Error:            "Invalid token endpoint authentication method",
-		ErrorDescription: "One or more provided token endpoint authentication methods are invalid",
+		ErrorDescription: "The provided token endpoint authentication method is invalid",
 	}
 	// ErrorInvalidRedirectURI is the error returned when an invalid redirect URI is provided.
 	ErrorInvalidRedirectURI = serviceerror.ServiceError{

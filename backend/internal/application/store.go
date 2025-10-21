@@ -36,7 +36,7 @@ type oAuthConfig struct {
 	RedirectURIs            []string          `json:"redirect_uris"`
 	GrantTypes              []string          `json:"grant_types"`
 	ResponseTypes           []string          `json:"response_types"`
-	TokenEndpointAuthMethod []string          `json:"token_endpoint_auth_methods"`
+	TokenEndpointAuthMethod string            `json:"token_endpoint_auth_method"`
 	PKCERequired            bool              `json:"pkce_required"`
 	PublicClient            bool              `json:"public_client"`
 	Token                   *oAuthTokenConfig `json:"token,omitempty"`
@@ -218,10 +218,7 @@ func (st *applicationStore) GetOAuthApplication(clientID string) (*model.OAuthAp
 		responseTypes = append(responseTypes, oauth2const.ResponseType(rt))
 	}
 
-	tokenEndpointAuthMethods := make([]oauth2const.TokenEndpointAuthMethod, 0)
-	for _, am := range oAuthConfig.TokenEndpointAuthMethod {
-		tokenEndpointAuthMethods = append(tokenEndpointAuthMethods, oauth2const.TokenEndpointAuthMethod(am))
-	}
+	tokenEndpointAuthMethod := oauth2const.TokenEndpointAuthMethod(oAuthConfig.TokenEndpointAuthMethod)
 
 	// Convert token config if present
 	var oauthTokenConfig *model.OAuthTokenConfig
@@ -252,7 +249,7 @@ func (st *applicationStore) GetOAuthApplication(clientID string) (*model.OAuthAp
 		RedirectURIs:            oAuthConfig.RedirectURIs,
 		GrantTypes:              grantTypes,
 		ResponseTypes:           responseTypes,
-		TokenEndpointAuthMethod: tokenEndpointAuthMethods,
+		TokenEndpointAuthMethod: tokenEndpointAuthMethod,
 		PKCERequired:            oAuthConfig.PKCERequired,
 		PublicClient:            oAuthConfig.PublicClient,
 		Token:                   oauthTokenConfig,
@@ -389,13 +386,12 @@ func getAppJSONDataBytes(app *model.ApplicationProcessedDTO) ([]byte, error) {
 // getOAuthConfigJSONBytes constructs the OAuth configuration JSON data bytes.
 func getOAuthConfigJSONBytes(inboundAuthConfig model.InboundAuthConfigProcessedDTO) ([]byte, error) {
 	oauthConfig := oAuthConfig{
-		RedirectURIs:  inboundAuthConfig.OAuthAppConfig.RedirectURIs,
-		GrantTypes:    utils.ConvertToStringSlice(inboundAuthConfig.OAuthAppConfig.GrantTypes),
-		ResponseTypes: utils.ConvertToStringSlice(inboundAuthConfig.OAuthAppConfig.ResponseTypes),
-		TokenEndpointAuthMethod: utils.ConvertToStringSlice(
-			inboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod),
-		PKCERequired: inboundAuthConfig.OAuthAppConfig.PKCERequired,
-		PublicClient: inboundAuthConfig.OAuthAppConfig.PublicClient,
+		RedirectURIs:            inboundAuthConfig.OAuthAppConfig.RedirectURIs,
+		GrantTypes:              utils.ConvertToStringSlice(inboundAuthConfig.OAuthAppConfig.GrantTypes),
+		ResponseTypes:           utils.ConvertToStringSlice(inboundAuthConfig.OAuthAppConfig.ResponseTypes),
+		TokenEndpointAuthMethod: string(inboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod),
+		PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
+		PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 	}
 
 	// Include token config if present
@@ -633,10 +629,7 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 			responseTypes = append(responseTypes, oauth2const.ResponseType(rt))
 		}
 
-		var tokenEndpointAuthMethods []oauth2const.TokenEndpointAuthMethod
-		for _, am := range oauthConfig.TokenEndpointAuthMethod {
-			tokenEndpointAuthMethods = append(tokenEndpointAuthMethods, oauth2const.TokenEndpointAuthMethod(am))
-		}
+		tokenEndpointAuthMethod := oauth2const.TokenEndpointAuthMethod(oauthConfig.TokenEndpointAuthMethod)
 
 		// Extract token config from OAuth config if present
 		var oauthTokenConfig *model.OAuthTokenConfig
@@ -670,7 +663,7 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 				RedirectURIs:            oauthConfig.RedirectURIs,
 				GrantTypes:              grantTypes,
 				ResponseTypes:           responseTypes,
-				TokenEndpointAuthMethod: tokenEndpointAuthMethods,
+				TokenEndpointAuthMethod: tokenEndpointAuthMethod,
 				PKCERequired:            oauthConfig.PKCERequired,
 				PublicClient:            oauthConfig.PublicClient,
 				Token:                   oauthTokenConfig,

@@ -114,8 +114,7 @@ paths:
                       - "refresh_token"
                     response_types:
                       - "code"
-                    token_endpoint_auth_methods:
-                      - "client_secret_basic"
+                    token_endpoint_auth_method: "client_secret_basic"
                     pkce_required: false
                     public_client: false
                     token:
@@ -166,8 +165,7 @@ paths:
                         - "refresh_token"
                       response_types:
                         - "code"
-                      token_endpoint_auth_methods:
-                        - "client_secret_basic"
+                      token_endpoint_auth_method: "client_secret_basic"
                       pkce_required: false
                       public_client: false
                       token:
@@ -268,8 +266,7 @@ paths:
                         - "refresh_token"
                       response_types:
                         - "code"
-                      token_endpoint_auth_methods:
-                        - "client_secret_basic"
+                      token_endpoint_auth_method: "client_secret_basic"
                       pkce_required: false
                       public_client: false
                       token:
@@ -364,8 +361,7 @@ paths:
                       - "client_credentials"
                     response_types:
                       - "code"
-                    token_endpoint_auth_methods:
-                      - "client_secret_basic"
+                    token_endpoint_auth_method: "client_secret_basic"
                     pkce_required: false
                     public_client: false
                     token:
@@ -419,8 +415,7 @@ paths:
                         - "client_credentials"
                       response_types:
                         - "code"
-                      token_endpoint_auth_methods:
-                        - "client_secret_basic"
+                      token_endpoint_auth_method: "client_secret_basic"
                       pkce_required: false
                       public_client: false
                       token:
@@ -834,22 +829,20 @@ components:
           items:
             type: string
             enum: ["authorization_code", "client_credentials", "refresh_token", "implicit", "password"]
-          description: A list of grant types supported by the OAuth application.
+          description: A list of grant types supported by the OAuth application. Defaults to ["authorization_code"] if not specified.
           example: ["authorization_code", "refresh_token"]
         response_types:
           type: array
           items:
             type: string
             enum: ["code", "token"]
-          description: A list of response types supported by the OAuth application.
+          description: A list of response types supported by the OAuth application. Defaults to ["code"] if not specified.
           example: ["code"]
-        token_endpoint_auth_methods:
-          type: array
-          items:
-            type: string
-            enum: ["client_secret_basic", "client_secret_post", "none"]
-          description: A list of token endpoint authentication methods supported by the OAuth application.
-          example: ["client_secret_basic"]
+        token_endpoint_auth_method:
+          type: string
+          enum: ["client_secret_basic", "client_secret_post", "none"]
+          description: The token endpoint authentication method for the OAuth application. Defaults to "client_secret_basic" if not specified.
+          example: "client_secret_basic"
         pkce_required:
           type: boolean
           description: Whether PKCE (Proof Key for Code Exchange) is required for this application.
@@ -896,22 +889,20 @@ components:
           items:
             type: string
             enum: ["authorization_code", "client_credentials", "refresh_token", "implicit", "password"]
-          description: A list of grant types supported by the OAuth application.
+          description: A list of grant types supported by the OAuth application. Defaults to ["authorization_code"] if not specified.
           example: ["authorization_code", "refresh_token"]
         response_types:
           type: array
           items:
             type: string
             enum: ["code", "token"]
-          description: A list of response types supported by the OAuth application.
+          description: A list of response types supported by the OAuth application. Defaults to ["code"] if not specified.
           example: ["code"]
-        token_endpoint_auth_methods:
-          type: array
-          items:
-            type: string
-            enum: ["client_secret_basic", "client_secret_post", "none"]
-          description: A list of token endpoint authentication methods supported by the OAuth application.
-          example: ["client_secret_basic"]
+        token_endpoint_auth_method:
+          type: string
+          enum: ["client_secret_basic", "client_secret_post", "none"]
+          description: The token endpoint authentication method for the OAuth application. Defaults to "client_secret_basic" if not specified.
+          example: "client_secret_basic"
         pkce_required:
           type: boolean
           description: Whether PKCE (Proof Key for Code Exchange) is required for this application.

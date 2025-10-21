@@ -65,14 +65,13 @@ func (suite *ClientCredentialsGrantHandlerTestSuite) SetupTest() {
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
-		AppID:              "app123",
-		ClientID:           "client123",
-		HashedClientSecret: "hashedsecret123",
-		RedirectURIs:       []string{"https://example.com/callback"},
-		GrantTypes:         []constants.GrantType{constants.GrantTypeClientCredentials},
-		ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
-		TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-			constants.TokenEndpointAuthMethodClientSecretBasic},
+		AppID:                   "app123",
+		ClientID:                "client123",
+		HashedClientSecret:      "hashedsecret123",
+		RedirectURIs:            []string{"https://example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeClientCredentials},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretBasic,
 	}
 }
 

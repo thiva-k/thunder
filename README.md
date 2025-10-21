@@ -162,7 +162,7 @@ To quickly get started with Thunder, you can use the sample app provided with th
                 "redirect_uris": ["https://localhost:3000"],
                 "grant_types": ["authorization_code", "client_credentials"],
                 "response_types": ["code"],
-                "token_endpoint_auth_methods": ["client_secret_basic", "client_secret_post"],
+                "token_endpoint_auth_method": "client_secret_basic",
                 "pkce_required": false,
                 "public_client": false,
                 "token": {
@@ -259,10 +259,7 @@ To try out the Client Credentials flow, follow these steps:
                     "grant_types": [
                         "client_credentials"
                     ],
-                    "token_endpoint_auth_methods": [
-                        "client_secret_basic",
-                        "client_secret_post"
-                    ],
+                    "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false
                 }
@@ -322,10 +319,7 @@ To try out the Client Credentials flow, follow these steps:
                     "grant_types": [
                         "client_credentials"
                     ],
-                    "token_endpoint_auth_methods": [
-                        "client_secret_basic",
-                        "client_secret_post"
-                    ],
+                    "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false
                 }
@@ -402,10 +396,7 @@ To try out the Client Credentials flow, follow these steps:
                     "response_types": [
                         "code"
                     ],
-                    "token_endpoint_auth_methods": [
-                        "client_secret_basic",
-                        "client_secret_post"
-                    ],
+                    "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false,
                     "token": {
@@ -566,10 +557,7 @@ To try out the Client Credentials flow, follow these steps:
                     "response_types": [
                         "code"
                     ],
-                    "token_endpoint_auth_methods": [
-                        "client_secret_basic",
-                        "client_secret_post"
-                    ],
+                    "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false
                 }

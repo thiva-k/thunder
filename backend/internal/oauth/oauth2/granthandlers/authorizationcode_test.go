@@ -74,13 +74,12 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
-		ClientID:           "test-client-id",
-		HashedClientSecret: "hashed-secret",
-		RedirectURIs:       []string{"https://client.example.com/callback"},
-		GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
-		ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
-		TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-			constants.TokenEndpointAuthMethodClientSecretPost},
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 		Token: &appmodel.OAuthTokenConfig{
 			AccessToken: &appmodel.TokenConfig{
 				UserAttributes: []string{"email", "username"},
@@ -488,13 +487,12 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 			}
 
 			oauthAppWithGroups := &appmodel.OAuthAppConfigProcessedDTO{
-				ClientID:           "test-client-id",
-				HashedClientSecret: "hashed-secret",
-				RedirectURIs:       []string{"https://client.example.com/callback"},
-				GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
-				ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
-				TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-					constants.TokenEndpointAuthMethodClientSecretPost},
+				ClientID:                "test-client-id",
+				HashedClientSecret:      "hashed-secret",
+				RedirectURIs:            []string{"https://client.example.com/callback"},
+				GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+				ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+				TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 				Token: &appmodel.OAuthTokenConfig{
 					AccessToken: &appmodel.TokenConfig{
 						UserAttributes: accessTokenAttrs,
@@ -653,13 +651,12 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 			}
 
 			oauthAppWithGroups := &appmodel.OAuthAppConfigProcessedDTO{
-				ClientID:           "test-client-id",
-				HashedClientSecret: "hashed-secret",
-				RedirectURIs:       []string{"https://client.example.com/callback"},
-				GrantTypes:         []constants.GrantType{constants.GrantTypeAuthorizationCode},
-				ResponseTypes:      []constants.ResponseType{constants.ResponseTypeCode},
-				TokenEndpointAuthMethod: []constants.TokenEndpointAuthMethod{
-					constants.TokenEndpointAuthMethodClientSecretPost},
+				ClientID:                "test-client-id",
+				HashedClientSecret:      "hashed-secret",
+				RedirectURIs:            []string{"https://client.example.com/callback"},
+				GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+				ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+				TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 				Token: &appmodel.OAuthTokenConfig{
 					AccessToken: &appmodel.TokenConfig{
 						UserAttributes: accessTokenAttrs,
