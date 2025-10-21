@@ -93,28 +93,12 @@ packages:
       pkgname: jwksmock
       filename: "{{.InterfaceName}}_mock.go"
 
-  github.com/asgardeo/thunder/internal/oauth/scope/provider:
+  github.com/asgardeo/thunder/internal/oauth/scope:
     config:
       all: true
-      dir: tests/mocks/oauth/scope/providermock
+      dir: tests/mocks/oauth/scopemock
       structname: '{{.InterfaceName}}Mock'
-      pkgname: providermock
-      filename: "{{.InterfaceName}}_mock.go"
-
-  github.com/asgardeo/thunder/internal/oauth/scope/validator:
-    config:
-      all: true
-      dir: tests/mocks/oauth/scope/validatormock
-      structname: '{{.InterfaceName}}Mock'
-      pkgname: validatormock
-      filename: "{{.InterfaceName}}_mock.go"
-
-  github.com/asgardeo/thunder/internal/oauth/session/store:
-    config:
-      all: true
-      dir: tests/mocks/oauth/session/storemock
-      structname: '{{.InterfaceName}}Mock'
-      pkgname: storemock
+      pkgname: scopemock
       filename: "{{.InterfaceName}}_mock.go"
 
   github.com/asgardeo/thunder/internal/oauth/oauth2/authz:
@@ -123,14 +107,6 @@ packages:
       dir: tests/mocks/oauth/oauth2/authzmock
       structname: '{{.InterfaceName}}Mock'
       pkgname: authzmock
-      filename: "{{.InterfaceName}}_mock.go"
-
-  github.com/asgardeo/thunder/internal/oauth/oauth2/authz/store:
-    config:
-      all: true
-      dir: tests/mocks/oauth/oauth2/authz/storemock
-      structname: '{{.InterfaceName}}Mock'
-      pkgname: storemock
       filename: "{{.InterfaceName}}_mock.go"
 
   github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers:
@@ -243,4 +219,12 @@ packages:
       dir: tests/mocks/httpmock
       structname: '{{.InterfaceName}}Mock'
       pkgname: httpmock
+      filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/application:
+    config:
+      all: true
+      dir: tests/mocks/applicationmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: applicationmock
       filename: "{{.InterfaceName}}_mock.go"

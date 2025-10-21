@@ -16,15 +16,17 @@
  * under the License.
  */
 
-package model
+package authz
 
-// OAuthParameters represents the parameters required for OAuth2 authorization.
-type OAuthParameters struct {
-	State               string
-	ClientID            string
-	RedirectURI         string
-	ResponseType        string
-	Scopes              string
-	CodeChallenge       string
-	CodeChallengeMethod string
-}
+import "errors"
+
+// Authorization code states.
+const (
+	AuthCodeStateActive   = "ACTIVE"
+	AuthCodeStateInactive = "INACTIVE"
+	AuthCodeStateExpired  = "EXPIRED"
+	AuthCodeStateRevoked  = "REVOKED"
+)
+
+// ErrAuthorizationCodeNotFound is returned when an authorization code is not found in the database.
+var ErrAuthorizationCodeNotFound = errors.New("authorization code not found")

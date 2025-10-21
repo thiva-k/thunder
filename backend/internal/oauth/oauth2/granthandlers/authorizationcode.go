@@ -25,9 +25,7 @@ import (
 	"time"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
-	authzconstants "github.com/asgardeo/thunder/internal/oauth/oauth2/authz/constants"
-	authzmodel "github.com/asgardeo/thunder/internal/oauth/oauth2/authz/model"
-	"github.com/asgardeo/thunder/internal/oauth/oauth2/authz/store"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/authz"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/pkce"
@@ -47,17 +45,21 @@ const (
 
 // authorizationCodeGrantHandler handles the authorization code grant type.
 type authorizationCodeGrantHandler struct {
-	JWTService  jwt.JWTServiceInterface
-	AuthZStore  store.AuthorizationCodeStoreInterface
-	UserService user.UserServiceInterface
+	jwtService   jwt.JWTServiceInterface
+	authzService authz.AuthorizeServiceInterface
+	userService  user.UserServiceInterface
 }
 
 // newAuthorizationCodeGrantHandler creates a new instance of AuthorizationCodeGrantHandler.
-func newAuthorizationCodeGrantHandler() GrantHandlerInterface {
+func newAuthorizationCodeGrantHandler(
+	jwtService jwt.JWTServiceInterface,
+	userService user.UserServiceInterface,
+	authzService authz.AuthorizeServiceInterface,
+) GrantHandlerInterface {
 	return &authorizationCodeGrantHandler{
-		JWTService:  jwt.GetJWTService(),
-		AuthZStore:  store.NewAuthorizationCodeStore(),
-		UserService: user.GetUserService(),
+		jwtService:   jwtService,
+		authzService: authzService,
+		userService:  userService,
 	}
 }
 
@@ -136,7 +138,7 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 
 	// Generate access token
 	iss, validityPeriod := resolveTokenConfig(oauthApp)
-	token, _, err := h.JWTService.GenerateJWT(authCode.AuthorizedUserID, authCode.ClientID,
+	token, _, err := h.jwtService.GenerateJWT(authCode.AuthorizedUserID, authCode.ClientID,
 		iss, validityPeriod, jwtClaims)
 	if err != nil {
 		return nil, &model.ErrorResponse{
@@ -168,25 +170,25 @@ func (h *authorizationCodeGrantHandler) retrieveAndValidateAuthCode(
 	tokenRequest *model.TokenRequest,
 	oauthApp *appmodel.OAuthAppConfigProcessedDTO,
 	logger *log.Logger,
-) (authzmodel.AuthorizationCode, *model.ErrorResponse) {
-	authCode, err := h.AuthZStore.GetAuthorizationCode(tokenRequest.ClientID, tokenRequest.Code)
-	if err != nil || authCode.Code == "" {
-		return authzmodel.AuthorizationCode{}, &model.ErrorResponse{
+) (*authz.AuthorizationCode, *model.ErrorResponse) {
+	authCode, codeErr := h.authzService.GetAuthorizationCodeDetails(tokenRequest.ClientID, tokenRequest.Code)
+	if codeErr != nil {
+		return nil, &model.ErrorResponse{
 			Error:            constants.ErrorInvalidGrant,
 			ErrorDescription: "Invalid authorization code",
 		}
 	}
 
 	// Validate the retrieved authorization code
-	errResponse := validateAuthorizationCode(tokenRequest, authCode)
+	errResponse := validateAuthorizationCode(tokenRequest, *authCode)
 	if errResponse != nil && errResponse.Error != "" {
-		return authzmodel.AuthorizationCode{}, errResponse
+		return nil, errResponse
 	}
 
 	// Validate PKCE if required or if code challenge was provided during authorization
 	if oauthApp.RequiresPKCE() || authCode.CodeChallenge != "" {
 		if tokenRequest.CodeVerifier == "" {
-			return authzmodel.AuthorizationCode{}, &model.ErrorResponse{
+			return nil, &model.ErrorResponse{
 				Error:            constants.ErrorInvalidRequest,
 				ErrorDescription: "code_verifier is required",
 			}
@@ -196,22 +198,12 @@ func (h *authorizationCodeGrantHandler) retrieveAndValidateAuthCode(
 		if err := pkce.ValidatePKCE(authCode.CodeChallenge, authCode.CodeChallengeMethod,
 			tokenRequest.CodeVerifier); err != nil {
 			logger.Debug("PKCE validation failed", log.Error(err))
-			return authzmodel.AuthorizationCode{}, &model.ErrorResponse{
+			return nil, &model.ErrorResponse{
 				Error:            constants.ErrorInvalidGrant,
 				ErrorDescription: "Invalid code verifier",
 			}
 		}
 	}
-
-	// Invalidate the authorization code after use
-	err = h.AuthZStore.DeactivateAuthorizationCode(authCode)
-	if err != nil {
-		return authzmodel.AuthorizationCode{}, &model.ErrorResponse{
-			Error:            constants.ErrorServerError,
-			ErrorDescription: "Failed to invalidate authorization code",
-		}
-	}
-
 	return authCode, nil
 }
 
@@ -241,7 +233,7 @@ func (h *authorizationCodeGrantHandler) fetchUserAttributesAndGroups(
 	}
 
 	// Fetch user attributes
-	user, svcErr := h.UserService.GetUser(userID)
+	user, svcErr := h.userService.GetUser(userID)
 	if svcErr != nil {
 		logger.Error("Failed to fetch user attributes", log.String("userID", userID), log.Any("error", svcErr))
 		return nil, nil, &model.ErrorResponse{
@@ -263,7 +255,7 @@ func (h *authorizationCodeGrantHandler) fetchUserAttributesAndGroups(
 		(oauthApp.Token.IDToken != nil && slices.Contains(oauthApp.Token.IDToken.UserAttributes, UserAttributeGroups))
 
 	if needsGroups {
-		groups, svcErr := h.UserService.GetUserGroups(userID, DefaultGroupListLimit, 0)
+		groups, svcErr := h.userService.GetUserGroups(userID, DefaultGroupListLimit, 0)
 		if svcErr != nil {
 			logger.Error("Failed to fetch user groups", log.String("userID", userID), log.Any("error", svcErr))
 			return nil, nil, &model.ErrorResponse{
@@ -343,7 +335,7 @@ func resolveTokenConfig(oauthApp *appmodel.OAuthAppConfigProcessedDTO) (string, 
 }
 
 // updateContextAttributes updates the token context with subject and audience.
-func updateContextAttributes(ctx *model.TokenContext, authCode authzmodel.AuthorizationCode) {
+func updateContextAttributes(ctx *model.TokenContext, authCode *authz.AuthorizationCode) {
 	if ctx.TokenAttributes == nil {
 		ctx.TokenAttributes = make(map[string]interface{})
 	}
@@ -375,7 +367,7 @@ func buildTokenResponse(
 
 // validateAuthorizationCode validates the authorization code against the token request.
 func validateAuthorizationCode(tokenRequest *model.TokenRequest,
-	code authzmodel.AuthorizationCode) *model.ErrorResponse {
+	code authz.AuthorizationCode) *model.ErrorResponse {
 	if tokenRequest.ClientID != code.ClientID {
 		return &model.ErrorResponse{
 			Error:            constants.ErrorInvalidClient,
@@ -391,14 +383,14 @@ func validateAuthorizationCode(tokenRequest *model.TokenRequest,
 		}
 	}
 
-	if code.State == authzconstants.AuthCodeStateInactive {
+	if code.State == authz.AuthCodeStateInactive {
 		// TODO: Revoke all the tokens issued for this authorization code.
 
 		return &model.ErrorResponse{
 			Error:            constants.ErrorInvalidGrant,
 			ErrorDescription: "Inactive authorization code",
 		}
-	} else if code.State != authzconstants.AuthCodeStateActive {
+	} else if code.State != authz.AuthCodeStateActive {
 		return &model.ErrorResponse{
 			Error:            constants.ErrorInvalidGrant,
 			ErrorDescription: "Inactive authorization code",
@@ -458,7 +450,7 @@ func getIDTokenClaims(scopes []string, userAttributes map[string]interface{},
 }
 
 // generateIDToken generates an ID token for the given authorization code and scopes
-func (h *authorizationCodeGrantHandler) generateIDToken(authCode authzmodel.AuthorizationCode,
+func (h *authorizationCodeGrantHandler) generateIDToken(authCode *authz.AuthorizationCode,
 	tokenRequest *model.TokenRequest, authorizedScopes []string, attrs map[string]interface{},
 	oauthApp *appmodel.OAuthAppConfigProcessedDTO) (*model.TokenDTO, *model.ErrorResponse) {
 	idTokenClaims := getIDTokenClaims(authorizedScopes, attrs, oauthApp)
@@ -483,7 +475,7 @@ func (h *authorizationCodeGrantHandler) generateIDToken(authCode authzmodel.Auth
 	}
 
 	// Generate ID token JWT
-	idToken, _, err := h.JWTService.GenerateJWT(authCode.AuthorizedUserID, authCode.ClientID,
+	idToken, _, err := h.jwtService.GenerateJWT(authCode.AuthorizedUserID, authCode.ClientID,
 		idTokenIss, idTokenValidityPeriod, idTokenClaims)
 	if err != nil {
 		return nil, &model.ErrorResponse{

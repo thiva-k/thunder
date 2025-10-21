@@ -29,6 +29,7 @@ import (
 	"github.com/asgardeo/thunder/internal/group"
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/notification"
+	"github.com/asgardeo/thunder/internal/oauth"
 	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -63,23 +64,14 @@ func registerServices(mux *http.ServeMux) {
 
 	_ = flowexec.Initialize(mux, flowMgtService, applicationService)
 
+	// Initialize OAuth services.
+	oauth.Initialize(mux, applicationService, userService, jwtService)
+
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.
 
 	// Register the health service.
 	services.NewHealthCheckService(mux)
-
-	// Register the token service.
-	services.NewTokenService(mux)
-
-	// Register the authorization service.
-	services.NewAuthorizationService(mux)
-
-	// Register the JWKS service.
-	services.NewJWKSAPIService(mux)
-
-	// Register the introspection service.
-	services.NewIntrospectionAPIService(mux)
 
 	// Register the authentication service.
 	services.NewAuthenticationService(mux)

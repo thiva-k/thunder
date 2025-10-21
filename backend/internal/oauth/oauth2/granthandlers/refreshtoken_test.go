@@ -73,8 +73,8 @@ func (suite *RefreshTokenGrantHandlerTestSuite) SetupTest() {
 	suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
 
 	suite.handler = &refreshTokenGrantHandler{
-		JWTService:  suite.mockJWTService,
-		UserService: suite.mockUserService,
+		jwtService:  suite.mockJWTService,
+		userService: suite.mockUserService,
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
@@ -115,7 +115,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TearDownTest() {
 }
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestNewRefreshTokenGrantHandler() {
-	handler := newRefreshTokenGrantHandler()
+	handler := newRefreshTokenGrantHandler(suite.mockJWTService, suite.mockUserService)
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*RefreshTokenGrantHandlerInterface)(nil), handler)
 }
