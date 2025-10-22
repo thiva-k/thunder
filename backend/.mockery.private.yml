@@ -44,3 +44,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: authz
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/authn:
+    config:
+      all: true
+      dir: internal/authn
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: authn
+      filename: "{{.InterfaceName}}_mock_test.go"
