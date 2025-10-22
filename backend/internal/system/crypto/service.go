@@ -20,31 +20,32 @@
 package crypto
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/asgardeo/thunder/internal/system/config"
-	"github.com/asgardeo/thunder/internal/system/crypto/hash"
+	"github.com/asgardeo/thunder/internal/system/hash"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-// Algorithm represents supported encryption algorithms.
-type Algorithm string
-
 const (
-	// AESGCM represents AES-GCM algorithm
-	AESGCM Algorithm = "AES-GCM"
-	// DefaultKeySize defines the default key size for AES-GCM
-	DefaultKeySize = 32
+	// aesgcmAlgorithm represents AES-GCM algorithm
+	aesgcmAlgorithm = "AES-GCM"
+	// defaultKeySize defines the default key size for AES-GCM
+	defaultKeySize = 32
 )
 
 // CryptoService provides cryptographic operations.
 type CryptoService struct {
 	Key []byte
 	Kid string
-	Alg CryptoAlgorithm
-	Mu  sync.RWMutex // For thread-safe key updates
 }
 
 var (
@@ -86,7 +87,7 @@ func initCryptoService() (*CryptoService, error) {
 	// Generate new key as fallback for development
 	logger.Warn("No valid crypto key found in configuration, generating a new one")
 
-	key, err := GenerateRandomKey(DefaultKeySize)
+	key, err := generateRandomKey(defaultKeySize)
 	if err != nil {
 		return nil, err
 	}
@@ -104,39 +105,96 @@ func NewCryptoService(key []byte) (*CryptoService, error) {
 
 	return &CryptoService{
 		Key: key,
-		Kid: getKeyID(key),      // Generate a unique key ID
-		Alg: &AESGCMAlgorithm{}, // Default to AES-256-GCM
+		Kid: getKeyID(key), // Generate a unique key ID
 	}, nil
-}
-
-// GenerateRandomKey generates a random key of the specified size.
-func GenerateRandomKey(keySize int) ([]byte, error) {
-	key := make([]byte, keySize)
-	_, err := rand.Read(key)
-	if err != nil {
-		return nil, err
-	}
-	return key, nil
 }
 
 // Encrypt encrypts the given plaintext and returns a JSON string
 // containing the encrypted data.
 func (cs *CryptoService) Encrypt(plaintext []byte) (string, error) {
-	cs.Mu.RLock()
-	key := cs.Key
-	cs.Mu.RUnlock()
+	// Create AES cipher
+	block, err := aes.NewCipher(cs.Key)
+	if err != nil {
+		return "", err
+	}
 
-	return cs.Alg.Encrypt(key, cs.Kid, plaintext)
+	// Create GCM mode
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", err
+	}
+
+	// Create a nonce
+	nonce := make([]byte, aesgcm.NonceSize())
+	if _, err = rand.Read(nonce); err != nil {
+		return "", err
+	}
+
+	// Encrypt and authenticate plaintext, prepend nonce
+	ciphertext := aesgcm.Seal(nonce, nonce, plaintext, nil)
+
+	// Create metadata structure
+	encData := EncryptedData{
+		Algorithm:  aesgcmAlgorithm,
+		Ciphertext: base64.StdEncoding.EncodeToString(ciphertext),
+		KeyID:      cs.Kid, // Unique identifier for the key
+	}
+
+	// Serialize to JSON
+	jsonData, err := json.Marshal(encData)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonData), nil
 }
 
 // Decrypt decrypts the given JSON string produced by Encrypt
 // and returns the original plaintext.
 func (cs *CryptoService) Decrypt(encodedData string) ([]byte, error) {
-	cs.Mu.RLock()
-	key := cs.Key
-	cs.Mu.RUnlock()
+	// Deserialize JSON
+	var encData EncryptedData
+	if err := json.Unmarshal([]byte(encodedData), &encData); err != nil {
+		return nil, fmt.Errorf("invalid data format: %w", err)
+	}
 
-	return cs.Alg.Decrypt(key, encodedData)
+	// Verify algorithm
+	if encData.Algorithm != aesgcmAlgorithm {
+		return nil, fmt.Errorf("unsupported algorithm: %s", encData.Algorithm)
+	}
+
+	// Decode the payload
+	ciphertext, err := base64.StdEncoding.DecodeString(encData.Ciphertext)
+	if err != nil {
+		return nil, fmt.Errorf("invalid payload encoding: %w", err)
+	}
+
+	// Create AES cipher
+	block, err := aes.NewCipher(cs.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create GCM mode
+	aesGCM, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify ciphertext length
+	nonceSize := aesGCM.NonceSize()
+	if len(ciphertext) < nonceSize {
+		return nil, errors.New("ciphertext too short")
+	}
+
+	// Extract nonce and decrypt
+	nonce, encryptedData := ciphertext[:nonceSize], ciphertext[nonceSize:]
+	plaintext, err := aesGCM.Open(nil, nonce, encryptedData, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return plaintext, nil
 }
 
 // EncryptString encrypts the given plaintext string and returns a
@@ -153,6 +211,16 @@ func (cs *CryptoService) DecryptString(ciphertext string) (string, error) {
 		return "", err
 	}
 	return string(plaintext), nil
+}
+
+// generateRandomKey generates a random key of the specified size.
+func generateRandomKey(keySize int) ([]byte, error) {
+	key := make([]byte, keySize)
+	_, err := rand.Read(key)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // getKeyID generates a unique identifier for the key.
