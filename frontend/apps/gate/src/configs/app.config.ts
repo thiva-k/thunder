@@ -29,7 +29,7 @@ interface AppConfig {
  * Environment variables take precedence over JSON values when available.
  */
 const getThunderHost = (): string => {
-  return process.env.NEXT_PUBLIC_THUNDER_HOST || 'https://localhost:8090';
+  return process.env.NEXT_PUBLIC_THUNDER_HOST || 'http://0.0.0.0:8090';
 };
 
 export const AppConfig: AppConfig = {
