@@ -26,7 +26,7 @@ import (
 	"path"
 
 	"github.com/asgardeo/thunder/internal/system/config"
-	"github.com/asgardeo/thunder/internal/system/crypto/hash"
+	"github.com/asgardeo/thunder/internal/system/hash"
 )
 
 // SystemCertificateServiceInterface defines the interface for system certificate operations.

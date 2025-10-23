@@ -34,7 +34,7 @@ type MockThunderRuntime struct {
 
 func TestCryptoService(t *testing.T) {
 	// Generate a random key
-	key, err := GenerateRandomKey(DefaultKeySize)
+	key, err := generateRandomKey(defaultKeySize)
 	if err != nil {
 		t.Fatalf("Failed to generate key: %v", err)
 	}
@@ -74,7 +74,7 @@ func TestCryptoService(t *testing.T) {
 
 func TestTampering(t *testing.T) {
 	// Generate a random key
-	key, _ := GenerateRandomKey(DefaultKeySize)
+	key, _ := generateRandomKey(defaultKeySize)
 	service, _ := NewCryptoService(key)
 
 	// Encrypt some data
@@ -110,7 +110,7 @@ func TestTampering(t *testing.T) {
 
 func TestEncryptedObjectFormat(t *testing.T) {
 	// Generate a random key
-	key, _ := GenerateRandomKey(DefaultKeySize)
+	key, _ := generateRandomKey(defaultKeySize)
 	service, _ := NewCryptoService(key)
 
 	// Encrypt some data
@@ -125,8 +125,8 @@ func TestEncryptedObjectFormat(t *testing.T) {
 	}
 
 	// Verify the structure
-	if encData.Algorithm != AESGCM {
-		t.Errorf("Expected algorithm %s, got %s", AESGCM, encData.Algorithm)
+	if encData.Algorithm != aesgcmAlgorithm {
+		t.Errorf("Expected algorithm %s, got %s", aesgcmAlgorithm, encData.Algorithm)
 	}
 	if encData.Ciphertext == "" {
 		t.Error("Ciphertext should not be empty")
@@ -138,7 +138,7 @@ func TestEncryptedObjectFormat(t *testing.T) {
 
 func TestEncryptDecryptCycle(t *testing.T) {
 	// Generate a key
-	key, _ := GenerateRandomKey(DefaultKeySize)
+	key, _ := generateRandomKey(defaultKeySize)
 	service, _ := NewCryptoService(key)
 
 	// Test various data types
@@ -172,8 +172,8 @@ func TestEncryptDecryptCycle(t *testing.T) {
 
 func TestDifferentKeysEncryption(t *testing.T) {
 	// Generate two different keys
-	key1, _ := GenerateRandomKey(DefaultKeySize)
-	key2, _ := GenerateRandomKey(DefaultKeySize)
+	key1, _ := generateRandomKey(defaultKeySize)
+	key2, _ := generateRandomKey(defaultKeySize)
 
 	service1, _ := NewCryptoService(key1)
 	service2, _ := NewCryptoService(key2)
@@ -192,13 +192,13 @@ func TestDifferentKeysEncryption(t *testing.T) {
 	}
 }
 
-func TestNonDefaultKeySize(t *testing.T) {
+func TestNondefaultKeySize(t *testing.T) {
 	// Test various key sizes
 	testCases := []int{16, 24} // 128, 192 bits
 	// Test data
 	original := "This is a secret message that needs encryption!"
 	for _, size := range testCases {
-		key, _ := GenerateRandomKey(size)
+		key, _ := generateRandomKey(size)
 		service, _ := NewCryptoService(key)
 
 		encrypted, err := service.EncryptString(original)
@@ -222,7 +222,7 @@ func TestNonDefaultKeySize(t *testing.T) {
 
 func TestWrongKeySize(t *testing.T) {
 	// Generate a key of incorrect size
-	key, _ := GenerateRandomKey(30)
+	key, _ := generateRandomKey(30)
 	service, _ := NewCryptoService(key)
 	_, err := service.EncryptString("Test data")
 	if err == nil {
