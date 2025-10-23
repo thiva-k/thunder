@@ -23,10 +23,17 @@ import (
 	"net/url"
 	"slices"
 
+	"github.com/asgardeo/thunder/internal/cert"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 )
+
+// OAuthAppCertificate represents the certificate structure for an OAuth application.
+type OAuthAppCertificate struct {
+	Type  cert.CertificateType `json:"type"`
+	Value string               `json:"value"`
+}
 
 // OAuthAppConfig represents the structure for OAuth application configuration.
 type OAuthAppConfig struct {
@@ -38,9 +45,8 @@ type OAuthAppConfig struct {
 	PKCERequired            bool                                `json:"pkce_required"`
 	PublicClient            bool                                `json:"public_client"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty"`
-	JWKSUri                 string                              `json:"jwks_uri,omitempty"`
-	JWKS                    map[string]interface{}              `json:"jwks,omitempty"`
-	Scope                   string                              `json:"scope,omitempty"`
+	Certificate             *OAuthAppCertificate                `json:"certificate,omitempty"`
+	Scopes                  []string                            `json:"scopes,omitempty"`
 }
 
 // OAuthAppConfigComplete represents the complete structure for OAuth application configuration.
@@ -54,9 +60,8 @@ type OAuthAppConfigComplete struct {
 	PKCERequired            bool                                `json:"pkce_required"`
 	PublicClient            bool                                `json:"public_client"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty"`
-	JWKSUri                 string                              `json:"jwks_uri,omitempty"`
-	JWKS                    map[string]interface{}              `json:"jwks,omitempty"`
-	Scope                   string                              `json:"scope,omitempty"`
+	Certificate             *OAuthAppCertificate                `json:"certificate,omitempty"`
+	Scopes                  []string                            `json:"scopes,omitempty"`
 }
 
 // OAuthAppConfigDTO represents the data transfer object for OAuth application configuration.
@@ -71,9 +76,8 @@ type OAuthAppConfigDTO struct {
 	PKCERequired            bool
 	PublicClient            bool
 	Token                   *OAuthTokenConfig
-	JWKSUri                 string
-	JWKS                    map[string]interface{}
-	Scope                   string
+	Certificate             *OAuthAppCertificate
+	Scopes                  []string
 }
 
 // IsAllowedGrantType checks if the provided grant type is allowed.
@@ -108,9 +112,8 @@ type OAuthAppConfigProcessedDTO struct {
 	PKCERequired            bool
 	PublicClient            bool
 	Token                   *OAuthTokenConfig
-	JWKSUri                 string
-	JWKS                    map[string]interface{}
-	Scope                   string
+	Certificate             *OAuthAppCertificate
+	Scopes                  []string
 }
 
 // IsAllowedGrantType checks if the provided grant type is allowed.

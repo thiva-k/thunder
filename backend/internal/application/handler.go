@@ -260,9 +260,8 @@ func (ah *applicationHandler) HandleApplicationGetRequest(w http.ResponseWriter,
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
-				JWKSUri:                 config.OAuthAppConfig.JWKSUri,
-				JWKS:                    config.OAuthAppConfig.JWKS,
-				Scope:                   config.OAuthAppConfig.Scope,
+				Certificate:             config.OAuthAppConfig.Certificate,
+				Scopes:                  config.OAuthAppConfig.Scopes,
 			}
 			returnInboundAuthConfigs = append(returnInboundAuthConfigs, model.InboundAuthConfig{
 				Type:           config.Type,
@@ -464,9 +463,8 @@ func (ah *applicationHandler) processInboundAuthConfig(logger *log.Logger, appDT
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
-				JWKSUri:                 config.OAuthAppConfig.JWKSUri,
-				JWKS:                    config.OAuthAppConfig.JWKS,
-				Scope:                   config.OAuthAppConfig.Scope,
+				Certificate:             config.OAuthAppConfig.Certificate,
+				Scopes:                  config.OAuthAppConfig.Scopes,
 			}
 			returnInboundAuthConfigs = append(returnInboundAuthConfigs, model.InboundAuthConfigComplete{
 				Type:           config.Type,
@@ -532,9 +530,8 @@ func (ah *applicationHandler) processInboundAuthConfigFromRequest(
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
-				JWKSUri:                 config.OAuthAppConfig.JWKSUri,
-				JWKS:                    config.OAuthAppConfig.JWKS,
-				Scope:                   config.OAuthAppConfig.Scope,
+				Certificate:             config.OAuthAppConfig.Certificate,
+				Scopes:                  config.OAuthAppConfig.Scopes,
 			},
 		}
 		inboundAuthConfigDTOs = append(inboundAuthConfigDTOs, inboundAuthConfigDTO)

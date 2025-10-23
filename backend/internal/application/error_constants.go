@@ -50,38 +50,24 @@ var (
 		Error:            "Invalid application name",
 		ErrorDescription: "The provided application name is invalid or empty",
 	}
-	// ErrorInvalidClientSecret is the error returned when an invalid client secret is provided.
-	ErrorInvalidClientSecret = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1005",
-		Error:            "Invalid client secret",
-		ErrorDescription: "The provided client secret is invalid or empty",
-	}
-	// ErrorInvalidRedirectURIs is the error returned when invalid redirect URIs are provided.
-	ErrorInvalidRedirectURIs = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1006",
-		Error:            "Invalid redirect URIs",
-		ErrorDescription: "At least one valid redirect URI is required",
-	}
 	// ErrorInvalidApplicationURL is the error returned when an invalid application URL is provided.
 	ErrorInvalidApplicationURL = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1007",
+		Code:             "APP-1005",
 		Error:            "Invalid application URL",
 		ErrorDescription: "The provided application URL is not a valid URI",
 	}
 	// ErrorInvalidLogoURL is the error returned when an invalid logo URL is provided.
 	ErrorInvalidLogoURL = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1008",
+		Code:             "APP-1006",
 		Error:            "Invalid logo URL",
 		ErrorDescription: "The provided logo URL is not a valid URI",
 	}
 	// ErrorInvalidAuthFlowGraphID is the error returned when an invalid auth flow graph ID is provided.
 	ErrorInvalidAuthFlowGraphID = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1009",
+		Code:             "APP-1007",
 		Error:            "Invalid auth flow graph ID",
 		ErrorDescription: "The provided authentication flow graph ID is invalid",
 	}
@@ -89,159 +75,85 @@ var (
 	// is provided.
 	ErrorInvalidRegistrationFlowGraphID = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1010",
+		Code:             "APP-1008",
 		Error:            "Invalid registration flow graph ID",
 		ErrorDescription: "The provided registration flow graph ID is invalid",
 	}
 	// ErrorInvalidInboundAuthConfig is the error returned when invalid inbound auth config is provided.
 	ErrorInvalidInboundAuthConfig = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1011",
+		Code:             "APP-1009",
 		Error:            "Invalid inbound authentication configuration",
 		ErrorDescription: "The provided inbound authentication configuration is invalid",
 	}
 	// ErrorInvalidGrantType is the error returned when an invalid grant type is provided.
 	ErrorInvalidGrantType = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1012",
+		Code:             "APP-1010",
 		Error:            "Invalid grant type",
 		ErrorDescription: "One or more provided grant types are invalid",
 	}
 	// ErrorInvalidResponseType is the error returned when an invalid response type is provided.
 	ErrorInvalidResponseType = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1013",
+		Code:             "APP-1011",
 		Error:            "Invalid response type",
 		ErrorDescription: "One or more provided response types are invalid",
+	}
+	// ErrorInvalidRedirectURI is the error returned when an invalid redirect URI is provided.
+	ErrorInvalidRedirectURI = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "APP-1012",
+		Error:            "Invalid redirect URI",
+		ErrorDescription: "One or more provided redirect URIs are not valid URIs",
 	}
 	// ErrorInvalidTokenEndpointAuthMethod is the error returned when an invalid token endpoint auth method
 	// is provided.
 	ErrorInvalidTokenEndpointAuthMethod = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1016",
+		Code:             "APP-1013",
 		Error:            "Invalid token endpoint authentication method",
 		ErrorDescription: "The provided token endpoint authentication method is invalid",
-	}
-	// ErrorInvalidRedirectURI is the error returned when an invalid redirect URI is provided.
-	ErrorInvalidRedirectURI = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1015",
-		Error:            "Invalid redirect URI",
-		ErrorDescription: "One or more provided redirect URIs are not valid URIs",
-	}
-	// ErrorRedirectURIWithFragment is the error returned when a redirect URI contains a fragment component.
-	ErrorRedirectURIWithFragment = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1014",
-		Error:            "Redirect URI contains fragment",
-		ErrorDescription: "Redirect URIs must not contain a fragment component as per RFC 6749 Section 3.1.2",
 	}
 	// ErrorInvalidCertificateType is the error returned when an invalid certificate type is provided.
 	ErrorInvalidCertificateType = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1016",
+		Code:             "APP-1014",
 		Error:            "Invalid certificate type",
 		ErrorDescription: "The provided certificate type is not supported",
 	}
 	// ErrorInvalidCertificateValue is the error returned when an invalid certificate value is provided.
 	ErrorInvalidCertificateValue = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1017",
+		Code:             "APP-1015",
 		Error:            "Invalid certificate value",
 		ErrorDescription: "The provided certificate value is invalid",
 	}
 	// ErrorInvalidJWKSURI is the error returned when an invalid JWKS URI is provided.
 	ErrorInvalidJWKSURI = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1018",
+		Code:             "APP-1016",
 		Error:            "Invalid JWKS URI",
 		ErrorDescription: "The provided JWKS URI is not a valid URI",
-	}
-	// ErrorJWKSConfigurationConflict is the error returned when both jwks and jwks_uri are provided.
-	ErrorJWKSConfigurationConflict = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1025",
-		Error:            "Invalid JWKS configuration",
-		ErrorDescription: "Cannot specify both 'jwks' and 'jwks_uri' parameters",
-	}
-	// ErrorJWKSUriNotHTTPS is the error returned when jwks_uri does not use HTTPS.
-	ErrorJWKSUriNotHTTPS = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1026",
-		Error:            "Invalid JWKS URI scheme",
-		ErrorDescription: "'jwks_uri' must use HTTPS scheme",
-	}
-	// ErrorPublicClientInvalidAuthMethod is the error returned when public client uses invalid auth method.
-	ErrorPublicClientInvalidAuthMethod = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1027",
-		Error:            "Invalid public client configuration",
-		ErrorDescription: "Public clients must use only 'none' as token endpoint authentication method",
-	}
-	// ErrorPublicClientInvalidGrantType is the error returned when public client uses invalid grant type.
-	ErrorPublicClientInvalidGrantType = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1028",
-		Error:            "Invalid public client configuration",
-		ErrorDescription: "Public clients cannot use the client_credentials grant type",
-	}
-	// ErrorPublicClientHasSecret is the error returned when public client has client secret.
-	ErrorPublicClientHasSecret = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1029",
-		Error:            "Invalid public client configuration",
-		ErrorDescription: "Public clients cannot have client secrets",
-	}
-	// ErrorClientCredentialsWithResponseTypes is the error returned when
-	// client_credentials grant is used with response types.
-	ErrorClientCredentialsWithResponseTypes = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1030",
-		Error:            "Invalid grant type configuration",
-		ErrorDescription: "client_credentials grant type cannot be used with response types",
-	}
-	// ErrorAuthorizationCodeMissingCodeResponseType is the error returned when
-	// authorization_code grant is used without code response type.
-	ErrorAuthorizationCodeMissingCodeResponseType = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1031",
-		Error:            "Invalid response type configuration",
-		ErrorDescription: "authorization_code grant type requires 'code' response type",
-	}
-	// ErrorClientCredentialsWithNoneAuth is the error returned when
-	// client_credentials grant is used with none auth method.
-	ErrorClientCredentialsWithNoneAuth = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1032",
-		Error:            "Invalid authentication method configuration",
-		ErrorDescription: "client_credentials grant type cannot use 'none' authentication method",
-	}
-	// ErrorAuthorizationCodeMissingRedirectURI is the error returned when
-	// authorization_code grant is used without redirect URIs.
-	ErrorAuthorizationCodeMissingRedirectURI = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1033",
-		Error:            "Missing required redirect URI",
-		ErrorDescription: "authorization_code grant type requires redirect URIs",
 	}
 	// ErrorApplicationNil is the error returned when the application object is nil.
 	ErrorApplicationNil = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1019",
+		Code:             "APP-1017",
 		Error:            "Application is nil",
 		ErrorDescription: "The provided application object is nil",
 	}
 	// ErrorInvalidRequestFormat is the error returned when the request format is invalid.
 	ErrorInvalidRequestFormat = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1020",
+		Code:             "APP-1018",
 		Error:            "Invalid request format",
 		ErrorDescription: "The request body is malformed or contains invalid data",
 	}
 	// ErrorCertificateClientError is the error returned when a certificate operation fails due to client error.
 	ErrorCertificateClientError = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1021",
+		Code:             "APP-1019",
 		Error:            "Certificate operation failed",
 		ErrorDescription: "An error occurred while processing the application certificate",
 	}
@@ -249,7 +161,7 @@ var (
 	// already exists.
 	ErrorApplicationAlreadyExistsWithName = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1022",
+		Code:             "APP-1020",
 		Error:            "Application already exists",
 		ErrorDescription: "An application with the same name already exists",
 	}
@@ -257,9 +169,30 @@ var (
 	// already exists.
 	ErrorApplicationAlreadyExistsWithClientID = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "APP-1023",
+		Code:             "APP-1021",
 		Error:            "Application with client ID already exists",
 		ErrorDescription: "An application with the same client ID already exists",
+	}
+	// ErrorJWKSUriNotHTTPS is the error returned when jwks_uri does not use HTTPS.
+	ErrorJWKSUriNotHTTPS = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "APP-1022",
+		Error:            "Invalid JWKS URI scheme",
+		ErrorDescription: "'jwks_uri' must use HTTPS scheme",
+	}
+	// ErrorInvalidPublicClientConfiguration is the generic error returned for public client configuration issues.
+	ErrorInvalidPublicClientConfiguration = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "APP-1023",
+		Error:            "Invalid public client configuration",
+		ErrorDescription: "The public client configuration is invalid",
+	}
+	// ErrorInvalidOAuthConfiguration is the generic error returned for OAuth configuration issues.
+	ErrorInvalidOAuthConfiguration = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "APP-1024",
+		Error:            "Invalid OAuth configuration",
+		ErrorDescription: "The OAuth configuration is invalid",
 	}
 )
 

@@ -19,12 +19,14 @@
 package dcr
 
 import (
-	"fmt"
-	"time"
+	"encoding/json"
+	"strings"
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/cert"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	oauthutils "github.com/asgardeo/thunder/internal/oauth/oauth2/utils"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
@@ -55,7 +57,15 @@ func (ds *dcrService) RegisterClient(request *DCRRegistrationRequest) (
 		return nil, &ErrorInvalidRequestFormat
 	}
 
-	appDTO := ds.convertDCRToApplicationDTO(request)
+	if request.JWKSUri != "" && len(request.JWKS) > 0 {
+		return nil, &ErrorJWKSConfigurationConflict
+	}
+
+	appDTO, err := ds.convertDCRToApplicationDTO(request)
+	if err != nil {
+		logger.Error("Failed to convert DCR request to application DTO", log.String("error", err.Error))
+		return nil, &ErrorServerError
+	}
 
 	createdApp, err := ds.appService.CreateApplication(appDTO)
 	if err != nil {
@@ -63,24 +73,62 @@ func (ds *dcrService) RegisterClient(request *DCRRegistrationRequest) (
 		return nil, ds.mapApplicationErrorToDCRError(err)
 	}
 
-	response := ds.convertApplicationToDCRResponse(createdApp)
+	response, err := ds.convertApplicationToDCRResponse(createdApp, request.ClientName)
+	if err != nil {
+		logger.Error("Failed to convert application to DCR response", log.String("error", err.Error))
+		return nil, err
+	}
 
 	return response, nil
 }
 
 // convertDCRToApplicationDTO converts DCR registration request to Application DTO.
-func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest) *model.ApplicationDTO {
+func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest) (
+	*model.ApplicationDTO, *serviceerror.ServiceError) {
 	isPublicClient := request.TokenEndpointAuthMethod == oauth2const.TokenEndpointAuthMethodNone
 
+	var oauthCertificate *model.OAuthAppCertificate
+	if request.JWKSUri != "" {
+		oauthCertificate = &model.OAuthAppCertificate{
+			Type:  cert.CertificateTypeJWKSURI,
+			Value: request.JWKSUri,
+		}
+	} else if len(request.JWKS) > 0 {
+		jwksBytes, err := json.Marshal(request.JWKS)
+		if err == nil {
+			oauthCertificate = &model.OAuthAppCertificate{
+				Type:  cert.CertificateTypeJWKS,
+				Value: string(jwksBytes),
+			}
+		}
+	}
+
+	var scopes []string
+	if request.Scope != "" {
+		scopes = strings.Fields(request.Scope)
+	}
+
+	// Generate client ID if client_name is not provided and use it as both app name and client ID
+	var clientID string
+	appName := request.ClientName
+	if appName == "" {
+		generatedClientID, err := oauthutils.GenerateOAuth2ClientID()
+		if err != nil {
+			return nil, &ErrorServerError
+		}
+		clientID = generatedClientID
+		appName = clientID
+	}
+
 	oauthAppConfig := &model.OAuthAppConfigDTO{
+		ClientID:                clientID,
 		RedirectURIs:            request.RedirectURIs,
 		GrantTypes:              request.GrantTypes,
 		ResponseTypes:           request.ResponseTypes,
 		TokenEndpointAuthMethod: request.TokenEndpointAuthMethod,
 		PublicClient:            isPublicClient,
-		JWKSUri:                 request.JWKSUri,
-		JWKS:                    request.JWKS,
-		Scope:                   request.Scope,
+		Certificate:             oauthCertificate,
+		Scopes:                  scopes,
 	}
 
 	inboundAuthConfig := []model.InboundAuthConfigDTO{
@@ -88,11 +136,6 @@ func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest
 			Type:           model.OAuthInboundAuthType,
 			OAuthAppConfig: oauthAppConfig,
 		},
-	}
-
-	appName := request.ClientName
-	if appName == "" {
-		appName = ds.generateDefaultClientName()
 	}
 
 	appDTO := &model.ApplicationDTO{
@@ -105,16 +148,37 @@ func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest
 		Contacts:          request.Contacts,
 	}
 
-	return appDTO
+	return appDTO, nil
 }
 
 // convertApplicationToDCRResponse converts Application DTO to DCR registration response.
-func (ds *dcrService) convertApplicationToDCRResponse(appDTO *model.ApplicationDTO) *DCRRegistrationResponse {
+func (ds *dcrService) convertApplicationToDCRResponse(appDTO *model.ApplicationDTO, originalClientName string) (
+	*DCRRegistrationResponse, *serviceerror.ServiceError) {
 	if len(appDTO.InboundAuthConfig) == 0 || appDTO.InboundAuthConfig[0].OAuthAppConfig == nil {
-		return &DCRRegistrationResponse{}
+		return &DCRRegistrationResponse{}, nil
 	}
 
 	oauthConfig := appDTO.InboundAuthConfig[0].OAuthAppConfig
+
+	clientName := originalClientName
+	if clientName == "" {
+		clientName = oauthConfig.ClientID
+	}
+
+	var jwksURI string
+	var jwks map[string]interface{}
+	if oauthConfig.Certificate != nil {
+		switch oauthConfig.Certificate.Type {
+		case cert.CertificateTypeJWKSURI:
+			jwksURI = oauthConfig.Certificate.Value
+		case cert.CertificateTypeJWKS:
+			if err := json.Unmarshal([]byte(oauthConfig.Certificate.Value), &jwks); err != nil {
+				return nil, &ErrorServerError
+			}
+		}
+	}
+
+	scopeString := strings.Join(oauthConfig.Scopes, " ")
 
 	response := &DCRRegistrationResponse{
 		ClientID:                oauthConfig.ClientID,
@@ -123,20 +187,20 @@ func (ds *dcrService) convertApplicationToDCRResponse(appDTO *model.ApplicationD
 		RedirectURIs:            oauthConfig.RedirectURIs,
 		GrantTypes:              oauthConfig.GrantTypes,
 		ResponseTypes:           oauthConfig.ResponseTypes,
-		ClientName:              appDTO.Name,
+		ClientName:              clientName,
 		ClientURI:               appDTO.URL,
 		LogoURI:                 appDTO.LogoURL,
 		TokenEndpointAuthMethod: oauthConfig.TokenEndpointAuthMethod,
-		JWKSUri:                 oauthConfig.JWKSUri,
-		JWKS:                    oauthConfig.JWKS,
-		Scope:                   oauthConfig.Scope,
+		JWKSUri:                 jwksURI,
+		JWKS:                    jwks,
+		Scope:                   scopeString,
 		TosURI:                  appDTO.TosURI,
 		PolicyURI:               appDTO.PolicyURI,
 		Contacts:                appDTO.Contacts,
 		AppID:                   oauthConfig.AppID,
 	}
 
-	return response
+	return response, nil
 }
 
 // mapApplicationErrorToDCRError maps Application service errors to DCR standard errors.
@@ -160,11 +224,4 @@ func (ds *dcrService) mapApplicationErrorToDCRError(appErr *serviceerror.Service
 	}
 
 	return dcrErr
-}
-
-// generateDefaultClientName generates a unique default client name.
-// This is used when client_name is not provided in the DCR request.
-func (ds *dcrService) generateDefaultClientName() string {
-	timestamp := time.Now().UnixNano() / int64(time.Millisecond)
-	return fmt.Sprintf("OAuth2 Client %d", timestamp)
 }

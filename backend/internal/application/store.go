@@ -33,16 +33,14 @@ import (
 
 // oAuthConfig is the structure for unmarshaling OAuth configuration JSON.
 type oAuthConfig struct {
-	RedirectURIs            []string               `json:"redirect_uris"`
-	GrantTypes              []string               `json:"grant_types"`
-	ResponseTypes           []string               `json:"response_types"`
-	TokenEndpointAuthMethod string                 `json:"token_endpoint_auth_method"`
-	PKCERequired            bool                   `json:"pkce_required"`
-	PublicClient            bool                   `json:"public_client"`
-	Token                   *oAuthTokenConfig      `json:"token,omitempty"`
-	JWKSUri                 string                 `json:"jwks_uri,omitempty"`
-	JWKS                    map[string]interface{} `json:"jwks,omitempty"`
-	Scope                   string                 `json:"scope,omitempty"`
+	RedirectURIs            []string          `json:"redirect_uris"`
+	GrantTypes              []string          `json:"grant_types"`
+	ResponseTypes           []string          `json:"response_types"`
+	TokenEndpointAuthMethod string            `json:"token_endpoint_auth_method"`
+	PKCERequired            bool              `json:"pkce_required"`
+	PublicClient            bool              `json:"public_client"`
+	Token                   *oAuthTokenConfig `json:"token,omitempty"`
+	Scopes                  []string          `json:"scopes,omitempty"`
 }
 
 // oAuthTokenConfig represents the OAuth token configuration structure for JSON marshaling/unmarshaling.
@@ -256,9 +254,7 @@ func (st *applicationStore) GetOAuthApplication(clientID string) (*model.OAuthAp
 		PKCERequired:            oAuthConfig.PKCERequired,
 		PublicClient:            oAuthConfig.PublicClient,
 		Token:                   oauthTokenConfig,
-		JWKSUri:                 oAuthConfig.JWKSUri,
-		JWKS:                    oAuthConfig.JWKS,
-		Scope:                   oAuthConfig.Scope,
+		Scopes:                  oAuthConfig.Scopes,
 	}, nil
 }
 
@@ -401,9 +397,7 @@ func getOAuthConfigJSONBytes(inboundAuthConfig model.InboundAuthConfigProcessedD
 		TokenEndpointAuthMethod: string(inboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod),
 		PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 		PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
-		JWKSUri:                 inboundAuthConfig.OAuthAppConfig.JWKSUri,
-		JWKS:                    inboundAuthConfig.OAuthAppConfig.JWKS,
-		Scope:                   inboundAuthConfig.OAuthAppConfig.Scope,
+		Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 	}
 
 	// Include token config if present
@@ -726,9 +720,7 @@ func buildOAuthInboundAuthConfig(row map[string]interface{}, basicApp model.Basi
 			PKCERequired:            oauthConfig.PKCERequired,
 			PublicClient:            oauthConfig.PublicClient,
 			Token:                   oauthTokenConfig,
-			JWKSUri:                 oauthConfig.JWKSUri,
-			JWKS:                    oauthConfig.JWKS,
-			Scope:                   oauthConfig.Scope,
+			Scopes:                  oauthConfig.Scopes,
 		},
 	}
 	return inboundAuthConfig, nil

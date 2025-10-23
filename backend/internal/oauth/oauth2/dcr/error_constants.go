@@ -46,6 +46,14 @@ var (
 		ErrorDescription: "One or more client metadata values are invalid",
 	}
 
+	// ErrorJWKSConfigurationConflict is the error returned when both jwks and jwks_uri are provided
+	ErrorJWKSConfigurationConflict = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "invalid_client_metadata",
+		Error:            "JWKS configuration conflict",
+		ErrorDescription: "Cannot specify both 'jwks' and 'jwks_uri' parameters",
+	}
+
 	// ErrorServerError is the standard error for server issues
 	ErrorServerError = serviceerror.ServiceError{
 		Type:             serviceerror.ServerErrorType,
