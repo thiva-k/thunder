@@ -525,7 +525,7 @@ func decodeAttributesFromAssertion(assertion string) (string, map[string]string,
 	userID := ""
 	for key, value := range jwtPayload {
 		switch key {
-		case "sub":
+		case oauth2const.ClaimSub:
 			if strValue, ok := value.(string); ok {
 				userID = strValue
 			} else {

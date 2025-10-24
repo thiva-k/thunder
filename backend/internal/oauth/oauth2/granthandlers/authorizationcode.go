@@ -345,12 +345,11 @@ func updateContextAttributes(ctx *model.TokenContext, authCode *authz.Authorizat
 	if ctx.TokenAttributes == nil {
 		ctx.TokenAttributes = make(map[string]interface{})
 	}
-	ctx.TokenAttributes["sub"] = authCode.AuthorizedUserID
-	// Set audience to resource if provided, otherwise use client ID
+	ctx.TokenAttributes[constants.ClaimSub] = authCode.AuthorizedUserID
 	if authCode.Resource != "" {
-		ctx.TokenAttributes["aud"] = authCode.Resource
+		ctx.TokenAttributes[constants.ClaimAud] = authCode.Resource
 	} else {
-		ctx.TokenAttributes["aud"] = authCode.ClientID
+		ctx.TokenAttributes[constants.ClaimAud] = authCode.ClientID
 	}
 }
 
@@ -431,7 +430,7 @@ func getIDTokenClaims(scopes []string, userAttributes map[string]interface{},
 	oauthApp *appmodel.OAuthAppConfigProcessedDTO) map[string]interface{} {
 	claims := make(map[string]interface{})
 	now := time.Now().Unix()
-	claims["auth_time"] = now
+	claims[constants.ClaimAuthTime] = now
 
 	var idTokenUserAttributes []string
 	if oauthApp.Token != nil && oauthApp.Token.IDToken != nil {
