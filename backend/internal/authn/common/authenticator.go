@@ -19,8 +19,6 @@
 package common
 
 import (
-	"time"
-
 	"github.com/asgardeo/thunder/internal/idp"
 )
 
@@ -34,12 +32,24 @@ const (
 	AuthenticatorOIDC        = "OIDCAuthenticator"
 )
 
-// AuthenticatorMeta represents an authenticator's metadata including its AAL weight.
+// AuthenticationFactor represents the type of authentication factor.
+type AuthenticationFactor string
+
+const (
+	// FactorKnowledge represents "something you know" (e.g., password, PIN).
+	FactorKnowledge AuthenticationFactor = "KNOWLEDGE"
+	// FactorPossession represents "something you have" (e.g., OTP device, SMS).
+	FactorPossession AuthenticationFactor = "POSSESSION"
+	// FactorInherence represents "something you are" (e.g., biometrics).
+	FactorInherence AuthenticationFactor = "INHERENCE"
+)
+
+// AuthenticatorMeta represents an authenticator's metadata including authentication factors.
 type AuthenticatorMeta struct {
 	// Name is the unique identifier for the authenticator (used in individual authentication APIs)
 	Name string
-	// AALWeight represents the strength of the authenticator for AAL calculation
-	AALWeight int
+	// Factors represents the authentication factors this authenticator validates
+	Factors []AuthenticationFactor
 }
 
 // AuthenticatorReference represents an engaged authenticator in the authentication flow.
@@ -48,35 +58,35 @@ type AuthenticatorReference struct {
 	Authenticator string `json:"authenticator"`
 	// Step is the step number in the flow where this authenticator was engaged
 	Step int `json:"step"`
-	// Timestamp is the time when the authenticator was engaged
-	Timestamp time.Time `json:"timestamp"`
+	// Timestamp is the authenticator engaged time (Unix epoch time in seconds)
+	Timestamp int64 `json:"timestamp"`
 }
 
 // authenticatorRegistry holds the metadata for all authenticators in the system.
 var authenticatorRegistry = map[string]AuthenticatorMeta{
 	AuthenticatorCredentials: {
-		Name:      AuthenticatorCredentials,
-		AALWeight: 1,
+		Name:    AuthenticatorCredentials,
+		Factors: []AuthenticationFactor{FactorKnowledge},
 	},
 	AuthenticatorSMSOTP: {
-		Name:      AuthenticatorSMSOTP,
-		AALWeight: 1,
+		Name:    AuthenticatorSMSOTP,
+		Factors: []AuthenticationFactor{FactorPossession},
 	},
 	AuthenticatorGoogle: {
-		Name:      AuthenticatorGoogle,
-		AALWeight: 1,
+		Name:    AuthenticatorGoogle,
+		Factors: []AuthenticationFactor{FactorKnowledge},
 	},
 	AuthenticatorGithub: {
-		Name:      AuthenticatorGithub,
-		AALWeight: 1,
+		Name:    AuthenticatorGithub,
+		Factors: []AuthenticationFactor{FactorKnowledge},
 	},
 	AuthenticatorOAuth: {
-		Name:      AuthenticatorOAuth,
-		AALWeight: 1,
+		Name:    AuthenticatorOAuth,
+		Factors: []AuthenticationFactor{FactorKnowledge},
 	},
 	AuthenticatorOIDC: {
-		Name:      AuthenticatorOIDC,
-		AALWeight: 1,
+		Name:    AuthenticatorOIDC,
+		Factors: []AuthenticationFactor{FactorKnowledge},
 	},
 }
 
@@ -88,12 +98,12 @@ func getAuthenticatorMetaData(name string) *AuthenticatorMeta {
 	return nil
 }
 
-// GetAuthenticatorWeight returns the AAL weight for the given authenticator or executor name.
-func GetAuthenticatorWeight(name string) int {
+// GetAuthenticatorFactors returns the authentication factors for the given authenticator.
+func GetAuthenticatorFactors(name string) []AuthenticationFactor {
 	if auth := getAuthenticatorMetaData(name); auth != nil {
-		return auth.AALWeight
+		return auth.Factors
 	}
-	return 0
+	return []AuthenticationFactor{}
 }
 
 // GetAuthenticatorNameForIDPType returns the authenticator name for a given IDP type.

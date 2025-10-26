@@ -25,6 +25,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 type GeneratorTestSuite struct {
@@ -91,7 +93,7 @@ func (suite *GeneratorTestSuite) TestGenerateAssertionSingleAuthenticator() {
 				{
 					Authenticator: tc.authenticator,
 					Step:          1,
-					Timestamp:     time.Now(),
+					Timestamp:     time.Now().Unix(),
 				},
 			}
 
@@ -175,7 +177,7 @@ func (suite *GeneratorTestSuite) TestGenerateAssertionMultipleAuthenticators() {
 				authenticators[i] = authncm.AuthenticatorReference{
 					Authenticator: auth,
 					Step:          i + 1,
-					Timestamp:     time.Now(),
+					Timestamp:     time.Now().Unix(),
 				}
 			}
 
@@ -196,12 +198,12 @@ func (suite *GeneratorTestSuite) TestGenerateAssertionDuplicateAuthenticators() 
 		{
 			Authenticator: authncm.AuthenticatorCredentials,
 			Step:          1,
-			Timestamp:     time.Now(),
+			Timestamp:     time.Now().Unix(),
 		},
 		{
 			Authenticator: authncm.AuthenticatorCredentials,
 			Step:          2,
-			Timestamp:     time.Now(),
+			Timestamp:     time.Now().Unix(),
 		},
 	}
 
@@ -233,7 +235,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionWithNilContext() {
 	authenticator := authncm.AuthenticatorReference{
 		Authenticator: authncm.AuthenticatorCredentials,
 		Step:          1,
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().Unix(),
 	}
 
 	result, err := suite.generator.UpdateAssertion(nil, authenticator)
@@ -252,7 +254,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionAddingSecondFactor() {
 			{
 				Authenticator: authncm.AuthenticatorCredentials,
 				Step:          1,
-				Timestamp:     time.Now(),
+				Timestamp:     time.Now().Unix(),
 			},
 		},
 	}
@@ -260,7 +262,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionAddingSecondFactor() {
 	newAuthenticator := authncm.AuthenticatorReference{
 		Authenticator: authncm.AuthenticatorSMSOTP,
 		Step:          2,
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().Unix(),
 	}
 
 	result, err := suite.generator.UpdateAssertion(existingContext, newAuthenticator)
@@ -280,7 +282,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionWithInvalidAuthenticator() {
 			{
 				Authenticator: authncm.AuthenticatorCredentials,
 				Step:          1,
-				Timestamp:     time.Now(),
+				Timestamp:     time.Now().Unix(),
 			},
 		},
 	}
@@ -288,7 +290,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionWithInvalidAuthenticator() {
 	newAuthenticator := authncm.AuthenticatorReference{
 		Authenticator: "",
 		Step:          2,
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().Unix(),
 	}
 
 	result, err := suite.generator.UpdateAssertion(existingContext, newAuthenticator)
@@ -303,7 +305,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionMultipleTimes() {
 		{
 			Authenticator: authncm.AuthenticatorCredentials,
 			Step:          1,
-			Timestamp:     time.Now(),
+			Timestamp:     time.Now().Unix(),
 		},
 	})
 	suite.Nil(err1)
@@ -312,7 +314,7 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionMultipleTimes() {
 	context2, err2 := suite.generator.UpdateAssertion(context1.Context, authncm.AuthenticatorReference{
 		Authenticator: authncm.AuthenticatorSMSOTP,
 		Step:          2,
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().Unix(),
 	})
 	suite.Nil(err2)
 	suite.Equal(AALLevel2, context2.Context.AAL)
@@ -321,109 +323,113 @@ func (suite *GeneratorTestSuite) TestUpdateAssertionMultipleTimes() {
 	context3, err3 := suite.generator.UpdateAssertion(context2.Context, authncm.AuthenticatorReference{
 		Authenticator: authncm.AuthenticatorGoogle,
 		Step:          3,
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().Unix(),
 	})
 	suite.Nil(err3)
-	suite.Equal(AALLevel1, context3.Context.AAL)
+	// Adding Google (knowledge factor) to existing Credentials (knowledge) + SMS OTP (possession)
+	// still has 2 factors (knowledge + possession), so AAL2
+	suite.Equal(AALLevel2, context3.Context.AAL)
 	suite.Len(context3.Context.Authenticators, 3)
 }
 
 func (suite *GeneratorTestSuite) TestVerifyAssurance() {
 	testCases := []struct {
-		name        string
-		contextAAL  AssuranceLevel
-		contextIAL  AssuranceLevel
-		requiredAAL AssuranceLevel
-		requiredIAL AssuranceLevel
-		expected    bool
+		name          string
+		contextAAL    AssuranceLevel
+		contextIAL    AssuranceLevel
+		requiredAAL   AssuranceLevel
+		requiredIAL   AssuranceLevel
+		expectSuccess bool
+		expectedError *serviceerror.ServiceError
 	}{
 		{
-			name:        "Exact AAL match",
-			contextAAL:  AALLevel2,
-			contextIAL:  IALLevel1,
-			requiredAAL: AALLevel2,
-			requiredIAL: IALLevel1,
-			expected:    true,
+			name:          "Exact AAL match",
+			contextAAL:    AALLevel2,
+			contextIAL:    IALLevel1,
+			requiredAAL:   AALLevel2,
+			requiredIAL:   IALLevel1,
+			expectSuccess: true,
 		},
 		{
-			name:        "Higher AAL than required",
-			contextAAL:  AALLevel3,
-			contextIAL:  IALLevel1,
-			requiredAAL: AALLevel2,
-			requiredIAL: IALLevel1,
-			expected:    true,
+			name:          "Higher AAL than required",
+			contextAAL:    AALLevel3,
+			contextIAL:    IALLevel1,
+			requiredAAL:   AALLevel2,
+			requiredIAL:   IALLevel1,
+			expectSuccess: true,
 		},
 		{
-			name:        "Lower AAL than required",
-			contextAAL:  AALLevel1,
-			contextIAL:  IALLevel1,
-			requiredAAL: AALLevel2,
-			requiredIAL: IALLevel1,
-			expected:    false,
+			name:          "Lower AAL than required",
+			contextAAL:    AALLevel1,
+			contextIAL:    IALLevel1,
+			requiredAAL:   AALLevel2,
+			requiredIAL:   IALLevel1,
+			expectSuccess: false,
 		},
 		{
-			name:        "Exact IAL match",
-			contextAAL:  AALLevel1,
-			contextIAL:  IALLevel2,
-			requiredAAL: AALLevel1,
-			requiredIAL: IALLevel2,
-			expected:    true,
+			name:          "Exact IAL match",
+			contextAAL:    AALLevel1,
+			contextIAL:    IALLevel2,
+			requiredAAL:   AALLevel1,
+			requiredIAL:   IALLevel2,
+			expectSuccess: true,
 		},
 		{
-			name:        "Higher IAL than required",
-			contextAAL:  AALLevel1,
-			contextIAL:  IALLevel3,
-			requiredAAL: AALLevel1,
-			requiredIAL: IALLevel2,
-			expected:    true,
+			name:          "Higher IAL than required",
+			contextAAL:    AALLevel1,
+			contextIAL:    IALLevel3,
+			requiredAAL:   AALLevel1,
+			requiredIAL:   IALLevel2,
+			expectSuccess: true,
 		},
 		{
-			name:        "Lower IAL than required",
-			contextAAL:  AALLevel1,
-			contextIAL:  IALLevel1,
-			requiredAAL: AALLevel1,
-			requiredIAL: IALLevel2,
-			expected:    false,
+			name:          "Lower IAL than required",
+			contextAAL:    AALLevel1,
+			contextIAL:    IALLevel1,
+			requiredAAL:   AALLevel1,
+			requiredIAL:   IALLevel2,
+			expectSuccess: false,
 		},
 		{
-			name:        "No required levels",
-			contextAAL:  AALLevel1,
-			contextIAL:  IALLevel1,
-			requiredAAL: "",
-			requiredIAL: "",
-			expected:    true,
+			name:          "No required levels - invalid input",
+			contextAAL:    AALLevel1,
+			contextIAL:    IALLevel1,
+			requiredAAL:   "",
+			requiredIAL:   "",
+			expectSuccess: false,
+			expectedError: &ErrorNoAssuranceRequirements,
 		},
 		{
-			name:        "Only AAL required",
-			contextAAL:  AALLevel2,
-			contextIAL:  IALLevel1,
-			requiredAAL: AALLevel2,
-			requiredIAL: "",
-			expected:    true,
+			name:          "Only AAL required",
+			contextAAL:    AALLevel2,
+			contextIAL:    IALLevel1,
+			requiredAAL:   AALLevel2,
+			requiredIAL:   "",
+			expectSuccess: true,
 		},
 		{
-			name:        "Only IAL required",
-			contextAAL:  AALLevel1,
-			contextIAL:  IALLevel2,
-			requiredAAL: "",
-			requiredIAL: IALLevel2,
-			expected:    true,
+			name:          "Only IAL required",
+			contextAAL:    AALLevel1,
+			contextIAL:    IALLevel2,
+			requiredAAL:   "",
+			requiredIAL:   IALLevel2,
+			expectSuccess: true,
 		},
 		{
-			name:        "Both AAL and IAL higher than required",
-			contextAAL:  AALLevel3,
-			contextIAL:  IALLevel3,
-			requiredAAL: AALLevel1,
-			requiredIAL: IALLevel1,
-			expected:    true,
+			name:          "Both AAL and IAL higher than required",
+			contextAAL:    AALLevel3,
+			contextIAL:    IALLevel3,
+			requiredAAL:   AALLevel1,
+			requiredIAL:   IALLevel1,
+			expectSuccess: true,
 		},
 		{
-			name:        "AAL meets but IAL does not",
-			contextAAL:  AALLevel2,
-			contextIAL:  IALLevel1,
-			requiredAAL: AALLevel2,
-			requiredIAL: IALLevel2,
-			expected:    false,
+			name:          "AAL meets but IAL does not",
+			contextAAL:    AALLevel2,
+			contextIAL:    IALLevel1,
+			requiredAAL:   AALLevel2,
+			requiredIAL:   IALLevel2,
+			expectSuccess: false,
 		},
 	}
 
@@ -436,182 +442,163 @@ func (suite *GeneratorTestSuite) TestVerifyAssurance() {
 					{
 						Authenticator: authncm.AuthenticatorCredentials,
 						Step:          1,
-						Timestamp:     time.Now(),
+						Timestamp:     time.Now().Unix(),
 					},
 				},
 			}
 
-			result := suite.generator.VerifyAssurance(context, tc.requiredAAL, tc.requiredIAL)
+			verified, err := suite.generator.VerifyAssurance(context, tc.requiredAAL, tc.requiredIAL)
 
-			suite.Equal(tc.expected, result)
+			suite.Equal(tc.expectSuccess, verified)
+			if tc.expectedError != nil {
+				suite.NotNil(err)
+				suite.Equal(tc.expectedError.Code, err.Code)
+			} else {
+				suite.Nil(err)
+			}
 		})
 	}
 }
 
 func (suite *GeneratorTestSuite) TestVerifyAssuranceNilContext() {
-	result := suite.generator.VerifyAssurance(nil, AALLevel1, IALLevel1)
-	suite.False(result)
+	verified, err := suite.generator.VerifyAssurance(nil, AALLevel1, IALLevel1)
+	suite.False(verified)
+	suite.NotNil(err)
+	suite.Equal(ErrorNilAssuranceContext.Code, err.Code)
 }
 
-func (suite *GeneratorTestSuite) TestExtractUniqueAuthenticators() {
+func (suite *GeneratorTestSuite) TestExtractUniqueFactors() {
 	generator := &authAssertGenerator{}
 
 	testCases := []struct {
-		name             string
-		authenticators   []authncm.AuthenticatorReference
-		expectedUnique   int
-		expectedContains []string
+		name                    string
+		authenticators          []authncm.AuthenticatorReference
+		expectedUniqueAuthCount int
+		expectedUniqueFactors   int
+		expectedAuthContains    []string
+		expectedFactorsContains []authncm.AuthenticationFactor
 	}{
 		{
-			name: "All unique authenticators",
+			name: "All unique authenticators with different factors",
 			authenticators: []authncm.AuthenticatorReference{
-				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now()},
-				{Authenticator: authncm.AuthenticatorSMSOTP, Step: 2, Timestamp: time.Now()},
-				{Authenticator: authncm.AuthenticatorGoogle, Step: 3, Timestamp: time.Now()},
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorSMSOTP, Step: 2, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorGoogle, Step: 3, Timestamp: time.Now().Unix()},
 			},
-			expectedUnique: 3,
-			expectedContains: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP,
+			expectedUniqueAuthCount: 3,
+			expectedUniqueFactors:   2, // KNOWLEDGE and POSSESSION
+			expectedAuthContains: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP,
 				authncm.AuthenticatorGoogle},
+			expectedFactorsContains: []authncm.AuthenticationFactor{
+				authncm.FactorKnowledge, authncm.FactorPossession,
+			},
 		},
 		{
 			name: "Duplicate authenticators",
 			authenticators: []authncm.AuthenticatorReference{
-				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now()},
-				{Authenticator: authncm.AuthenticatorCredentials, Step: 2, Timestamp: time.Now()},
-				{Authenticator: authncm.AuthenticatorSMSOTP, Step: 3, Timestamp: time.Now()},
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 2, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorSMSOTP, Step: 3, Timestamp: time.Now().Unix()},
 			},
-			expectedUnique:   2,
-			expectedContains: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
+			expectedUniqueAuthCount: 2,
+			expectedUniqueFactors:   2, // KNOWLEDGE and POSSESSION
+			expectedAuthContains:    []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
+			expectedFactorsContains: []authncm.AuthenticationFactor{
+				authncm.FactorKnowledge, authncm.FactorPossession,
+			},
 		},
 		{
 			name: "All same authenticator",
 			authenticators: []authncm.AuthenticatorReference{
-				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now()},
-				{Authenticator: authncm.AuthenticatorCredentials, Step: 2, Timestamp: time.Now()},
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 2, Timestamp: time.Now().Unix()},
 			},
-			expectedUnique:   1,
-			expectedContains: []string{authncm.AuthenticatorCredentials},
+			expectedUniqueAuthCount: 1,
+			expectedUniqueFactors:   1, // KNOWLEDGE only
+			expectedAuthContains:    []string{authncm.AuthenticatorCredentials},
+			expectedFactorsContains: []authncm.AuthenticationFactor{authncm.FactorKnowledge},
 		},
 	}
 
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "GeneratorTestSuite"))
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			result := generator.extractUniqueAuthenticators(tc.authenticators)
+			authMap, factorSet := generator.extractUniqueAuthenticators(tc.authenticators, logger)
 
-			suite.Equal(tc.expectedUnique, len(result))
-			for _, expected := range tc.expectedContains {
-				suite.True(result[expected])
+			suite.Equal(tc.expectedUniqueAuthCount, len(authMap))
+			suite.Equal(tc.expectedUniqueFactors, len(factorSet))
+
+			for _, expected := range tc.expectedAuthContains {
+				suite.True(authMap[expected])
+			}
+
+			for _, expected := range tc.expectedFactorsContains {
+				suite.True(factorSet[expected])
 			}
 		})
 	}
 }
 
-func (suite *GeneratorTestSuite) TestCalculateAAL() {
+func (suite *GeneratorTestSuite) TestDeriveAAL() {
 	generator := &authAssertGenerator{}
 
 	testCases := []struct {
-		name        string
-		authMap     map[string]bool
-		expectedAAL AssuranceLevel
+		name           string
+		authenticators []authncm.AuthenticatorReference
+		expectedAAL    AssuranceLevel
 	}{
 		{
-			name:        "Single authenticator - AAL1",
-			authMap:     map[string]bool{authncm.AuthenticatorCredentials: true},
+			name: "Single authenticator - AAL1",
+			authenticators: []authncm.AuthenticatorReference{
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now().Unix()},
+			},
 			expectedAAL: AALLevel1,
 		},
 		{
 			name: "Valid MFA combination",
-			authMap: map[string]bool{authncm.AuthenticatorCredentials: true,
-				authncm.AuthenticatorSMSOTP: true},
+			authenticators: []authncm.AuthenticatorReference{
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorSMSOTP, Step: 2, Timestamp: time.Now().Unix()},
+			},
 			expectedAAL: AALLevel2,
 		},
 		{
-			name: "Invalid combination",
-			authMap: map[string]bool{authncm.AuthenticatorGoogle: true,
-				authncm.AuthenticatorGithub: true},
+			name: "Invalid combination - both knowledge factors",
+			authenticators: []authncm.AuthenticatorReference{
+				{Authenticator: authncm.AuthenticatorGoogle, Step: 1, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorGithub, Step: 2, Timestamp: time.Now().Unix()},
+			},
 			expectedAAL: AALLevel1,
 		},
 		{
-			name: "Three authenticators - invalid",
-			authMap: map[string]bool{authncm.AuthenticatorCredentials: true,
-				authncm.AuthenticatorSMSOTP: true, authncm.AuthenticatorGoogle: true},
-			expectedAAL: AALLevel1,
+			name: "Three authenticators with two factors (knowledge + possession)",
+			authenticators: []authncm.AuthenticatorReference{
+				{Authenticator: authncm.AuthenticatorCredentials, Step: 1, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorSMSOTP, Step: 2, Timestamp: time.Now().Unix()},
+				{Authenticator: authncm.AuthenticatorGoogle, Step: 3, Timestamp: time.Now().Unix()},
+			},
+			expectedAAL: AALLevel2,
 		},
 		{
-			name:        "Single unknown authenticator",
-			authMap:     map[string]bool{"UnknownAuthenticator": true},
-			expectedAAL: AALLevel1,
+			name: "Single unknown authenticator",
+			authenticators: []authncm.AuthenticatorReference{
+				{Authenticator: "UnknownAuthenticator", Step: 1, Timestamp: time.Now().Unix()},
+			},
+			expectedAAL: AALUnknown,
 		},
 		{
-			name:        "Empty authenticator map",
-			authMap:     map[string]bool{},
-			expectedAAL: AALLevel1,
+			name:           "Empty authenticator list",
+			authenticators: []authncm.AuthenticatorReference{},
+			expectedAAL:    AALUnknown,
 		},
 	}
 
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "GeneratorTestSuite"))
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			result := generator.calculateAAL(tc.authMap)
+			_, factorSet := generator.extractUniqueAuthenticators(tc.authenticators, logger)
+			result := generator.calculateAAL(factorSet, logger)
 			suite.Equal(tc.expectedAAL, result)
-		})
-	}
-}
-
-func (suite *GeneratorTestSuite) TestMatchesCombination() {
-	generator := &authAssertGenerator{}
-
-	testCases := []struct {
-		name         string
-		actualMap    map[string]bool
-		requiredList []string
-		expected     bool
-	}{
-		{
-			name: "Exact match",
-			actualMap: map[string]bool{authncm.AuthenticatorCredentials: true,
-				authncm.AuthenticatorSMSOTP: true},
-			requiredList: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
-			expected:     true,
-		},
-		{
-			name: "Exact match - different order",
-			actualMap: map[string]bool{authncm.AuthenticatorSMSOTP: true,
-				authncm.AuthenticatorCredentials: true},
-			requiredList: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
-			expected:     true,
-		},
-		{
-			name:         "Missing authenticator",
-			actualMap:    map[string]bool{authncm.AuthenticatorCredentials: true},
-			requiredList: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
-			expected:     false,
-		},
-		{
-			name: "Extra authenticator",
-			actualMap: map[string]bool{authncm.AuthenticatorCredentials: true,
-				authncm.AuthenticatorSMSOTP: true, authncm.AuthenticatorGoogle: true},
-			requiredList: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
-			expected:     false,
-		},
-		{
-			name: "Different authenticators",
-			actualMap: map[string]bool{authncm.AuthenticatorGoogle: true,
-				authncm.AuthenticatorGithub: true},
-			requiredList: []string{authncm.AuthenticatorCredentials, authncm.AuthenticatorSMSOTP},
-			expected:     false,
-		},
-		{
-			name:         "Empty actual map",
-			actualMap:    map[string]bool{},
-			requiredList: []string{authncm.AuthenticatorCredentials},
-			expected:     false,
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.Run(tc.name, func() {
-			result := generator.matchesCombination(tc.actualMap, tc.requiredList)
-			suite.Equal(tc.expected, result)
 		})
 	}
 }

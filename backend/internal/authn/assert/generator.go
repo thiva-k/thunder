@@ -35,7 +35,8 @@ type AuthAssertGeneratorInterface interface {
 	GenerateAssertion(authenticators []authncm.AuthenticatorReference) (*AssertionResult, *serviceerror.ServiceError)
 	UpdateAssertion(context *AssuranceContext, authenticator authncm.AuthenticatorReference) (
 		*AssertionResult, *serviceerror.ServiceError)
-	VerifyAssurance(context *AssuranceContext, requiredAAL AssuranceLevel, requiredIAL AssuranceLevel) bool
+	VerifyAssurance(context *AssuranceContext, requiredAAL AssuranceLevel, requiredIAL AssuranceLevel) (
+		bool, *serviceerror.ServiceError)
 }
 
 // authAssertGenerator implements the AuthAssertGeneratorInterface.
@@ -57,8 +58,8 @@ func (ag *authAssertGenerator) GenerateAssertion(
 		return nil, &ErrorNoAuthenticators
 	}
 
-	uniqueAuthenticatorsMap := ag.extractUniqueAuthenticators(authenticators)
-	aal := ag.calculateAAL(uniqueAuthenticatorsMap)
+	_, factorSet := ag.extractUniqueAuthenticators(authenticators, logger)
+	aal := ag.calculateAAL(factorSet, logger)
 	ial := ag.calculateIAL()
 
 	return &AssertionResult{
@@ -98,97 +99,92 @@ func (ag *authAssertGenerator) UpdateAssertion(context *AssuranceContext,
 
 // VerifyAssurance verifies if actual assurance meets the required assurance level.
 func (ag *authAssertGenerator) VerifyAssurance(context *AssuranceContext, requiredAAL AssuranceLevel,
-	requiredIAL AssuranceLevel) bool {
+	requiredIAL AssuranceLevel) (bool, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 	logger.Debug("Verifying assurance levels")
 
 	if context == nil {
-		return false
+		logger.Debug("Nil assurance context provided")
+		return false, &ErrorNilAssuranceContext
 	}
 	if requiredAAL == "" && requiredIAL == "" {
-		logger.Debug("No required assurance levels specified, considering verification as successful")
-		return true
+		logger.Debug("No assurance levels specified for verification")
+		return false, &ErrorNoAssuranceRequirements
 	}
 
 	// Check AAL level
-	if !ag.meetsAssuranceLevel(context.AAL, requiredAAL) {
+	if requiredAAL != "" && !ag.meetsAssuranceLevel(context.AAL, requiredAAL) {
 		logger.Debug("Actual AAL does not meet required AAL", log.String("actualAAL", string(context.AAL)),
 			log.String("requiredAAL", string(requiredAAL)))
-		return false
+		return false, nil
 	}
 
 	// Check IAL level
-	if !ag.meetsAssuranceLevel(context.IAL, requiredIAL) {
+	if requiredIAL != "" && !ag.meetsAssuranceLevel(context.IAL, requiredIAL) {
 		logger.Debug("Actual IAL does not meet required IAL", log.String("actualIAL", string(context.IAL)),
 			log.String("requiredIAL", string(requiredIAL)))
-		return false
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }
 
-// extractUniqueAuthenticators extracts unique authenticator names from authenticator references.
-func (ag *authAssertGenerator) extractUniqueAuthenticators(
-	authenticators []authncm.AuthenticatorReference) map[string]bool {
+// extractUniqueAuthenticators extracts unique authenticators and factors from authenticator references.
+// returns a map of unique authenticator names and a set of unique authentication factors.
+func (ag *authAssertGenerator) extractUniqueAuthenticators(authenticators []authncm.AuthenticatorReference,
+	logger *log.Logger) (map[string]bool, map[authncm.AuthenticationFactor]bool) {
 	authenticatorsMap := make(map[string]bool)
+	factorSet := make(map[authncm.AuthenticationFactor]bool)
+
 	for _, auth := range authenticators {
 		authenticatorsMap[auth.Authenticator] = true
+
+		factors := authncm.GetAuthenticatorFactors(auth.Authenticator)
+		if len(factors) == 0 {
+			logger.Debug("No factors found for authenticator. Skipping",
+				log.String("authenticator", auth.Authenticator))
+			continue
+		}
+
+		for _, factor := range factors {
+			factorSet[factor] = true
+		}
 	}
 
-	return authenticatorsMap
+	return authenticatorsMap, factorSet
 }
 
-// calculateAAL calculates the AAL based on the unique authenticators used.
-// For single authenticators, uses individual AAL weight from authenticatorRegistry.
-// For multiple authenticators, checks against defined valid combinations.
-func (ag *authAssertGenerator) calculateAAL(uniqueAuthenticatorsMap map[string]bool) AssuranceLevel {
-	authenticatorCount := len(uniqueAuthenticatorsMap)
+// calculateAAL calculates the AAL based on the authentication factors.
+// - UNKNOWN: No valid authentication factors found
+// - AAL1: Single-factor authentication (any one factor)
+// - AAL2: Two-factor authentication (two different factors)
+// - AAL3: Multi-factor authentication with hardware-based cryptographic authenticator
+func (ag *authAssertGenerator) calculateAAL(factorSet map[authncm.AuthenticationFactor]bool,
+	logger *log.Logger) AssuranceLevel {
+	var aal AssuranceLevel
+	factorCount := len(factorSet)
 
-	// Single authenticator - use individual AAL weight
-	if authenticatorCount == 1 {
-		authenticator := ""
-		for auth := range uniqueAuthenticatorsMap {
-			authenticator = auth
-			break
-		}
-
-		weight := authncm.GetAuthenticatorWeight(authenticator)
-		switch weight {
-		case 3:
-			return AALLevel3
-		case 2:
-			return AALLevel2
-		default:
-			return AALLevel1
-		}
+	switch factorCount {
+	case 0:
+		aal = AALUnknown
+	case 1:
+		aal = AALLevel1
+	case 2:
+		aal = AALLevel2
+	default:
+		aal = AALLevel3
 	}
 
-	// Multiple authenticators - check against valid combinations
-	for _, combination := range validAALCombinations {
-		if ag.matchesCombination(uniqueAuthenticatorsMap, combination.Authenticators) {
-			return combination.AAL
+	if logger.IsDebugEnabled() {
+		factorNames := make([]string, 0, len(factorSet))
+		for factor := range factorSet {
+			factorNames = append(factorNames, string(factor))
 		}
+		logger.Debug("Calculated AAL from authentication factors", log.Any("factors", factorNames),
+			log.String("aal", string(aal)))
 	}
 
-	// No valid combination found - default to AAL1
-	return AALLevel1
-}
-
-// matchesCombination checks if the provided authenticators exactly match a defined combination.
-// Order doesn't matter, but all authenticators in the combination must be present.
-func (ag *authAssertGenerator) matchesCombination(actualAuthenticatorsMap map[string]bool,
-	requiredAuthenticators []string) bool {
-	if len(actualAuthenticatorsMap) != len(requiredAuthenticators) {
-		return false
-	}
-
-	for _, required := range requiredAuthenticators {
-		if !actualAuthenticatorsMap[required] {
-			return false
-		}
-	}
-
-	return true
+	return aal
 }
 
 // calculateIAL calculates the IAL based on authenticators.
@@ -201,8 +197,5 @@ func (ag *authAssertGenerator) calculateIAL() AssuranceLevel {
 
 // meetsAssuranceLevel checks if actual assurance level meets or exceeds the required level.
 func (ag *authAssertGenerator) meetsAssuranceLevel(actual, required AssuranceLevel) bool {
-	actualLevel := assuranceLevelOrder[actual]
-	requiredLevel := assuranceLevelOrder[required]
-
-	return actualLevel >= requiredLevel
+	return actual.Level() >= required.Level()
 }

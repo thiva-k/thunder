@@ -105,69 +105,69 @@ func (suite *AuthenticatorTestSuite) TestGetAuthenticatorMetaData() {
 			} else {
 				suite.NotNil(result)
 				suite.Equal(tc.expectedName, result.Name)
-				suite.Equal(tc.expectedAALWeight, result.AALWeight)
+				suite.NotEmpty(result.Factors)
 			}
 		})
 	}
 }
 
-func (suite *AuthenticatorTestSuite) TestGetAuthenticatorWeight() {
+func (suite *AuthenticatorTestSuite) TestGetAuthenticatorFactors() {
 	testCases := []struct {
-		name           string
-		authenticator  string
-		expectedWeight int
+		name            string
+		authenticator   string
+		expectedFactors []AuthenticationFactor
 	}{
 		{
-			name:           "Credentials authenticator",
-			authenticator:  AuthenticatorCredentials,
-			expectedWeight: 1,
+			name:            "Credentials authenticator",
+			authenticator:   AuthenticatorCredentials,
+			expectedFactors: []AuthenticationFactor{FactorKnowledge},
 		},
 		{
-			name:           "SMS OTP authenticator",
-			authenticator:  AuthenticatorSMSOTP,
-			expectedWeight: 1,
+			name:            "SMS OTP authenticator",
+			authenticator:   AuthenticatorSMSOTP,
+			expectedFactors: []AuthenticationFactor{FactorPossession},
 		},
 		{
-			name:           "Google authenticator",
-			authenticator:  AuthenticatorGoogle,
-			expectedWeight: 1,
+			name:            "Google authenticator",
+			authenticator:   AuthenticatorGoogle,
+			expectedFactors: []AuthenticationFactor{FactorKnowledge},
 		},
 		{
-			name:           "GitHub authenticator",
-			authenticator:  AuthenticatorGithub,
-			expectedWeight: 1,
+			name:            "GitHub authenticator",
+			authenticator:   AuthenticatorGithub,
+			expectedFactors: []AuthenticationFactor{FactorKnowledge},
 		},
 		{
-			name:           "OAuth authenticator",
-			authenticator:  AuthenticatorOAuth,
-			expectedWeight: 1,
+			name:            "OAuth authenticator",
+			authenticator:   AuthenticatorOAuth,
+			expectedFactors: []AuthenticationFactor{FactorKnowledge},
 		},
 		{
-			name:           "OIDC authenticator",
-			authenticator:  AuthenticatorOIDC,
-			expectedWeight: 1,
+			name:            "OIDC authenticator",
+			authenticator:   AuthenticatorOIDC,
+			expectedFactors: []AuthenticationFactor{FactorKnowledge},
 		},
 		{
-			name:           "Unknown authenticator returns 0",
-			authenticator:  "UnknownAuthenticator",
-			expectedWeight: 0,
+			name:            "Unknown authenticator returns nil",
+			authenticator:   "UnknownAuthenticator",
+			expectedFactors: []AuthenticationFactor{},
 		},
 		{
-			name:           "Empty authenticator name returns 0",
-			authenticator:  "",
-			expectedWeight: 0,
+			name:            "Empty authenticator name returns nil",
+			authenticator:   "",
+			expectedFactors: []AuthenticationFactor{},
 		},
 		{
-			name:           "Random string returns 0",
-			authenticator:  "RandomString123",
-			expectedWeight: 0,
+			name:            "Random string returns nil",
+			authenticator:   "RandomString123",
+			expectedFactors: []AuthenticationFactor{},
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			result := GetAuthenticatorWeight(tc.authenticator)
-			suite.Equal(tc.expectedWeight, result)
+			result := GetAuthenticatorFactors(tc.authenticator)
+			suite.Equal(tc.expectedFactors, result)
 		})
 	}
 }
@@ -235,7 +235,7 @@ func (suite *AuthenticatorTestSuite) TestAuthenticatorRegistry() {
 			meta, exists := authenticatorRegistry[auth]
 			suite.True(exists, "Authenticator %s should exist in registry", auth)
 			suite.Equal(auth, meta.Name)
-			suite.Equal(1, meta.AALWeight)
+			suite.NotEmpty(meta.Factors, "Authenticator %s should have factors", auth)
 		}
 	})
 }
@@ -243,12 +243,14 @@ func (suite *AuthenticatorTestSuite) TestAuthenticatorRegistry() {
 func (suite *AuthenticatorTestSuite) TestAuthenticatorMetaStructure() {
 	suite.Run("AuthenticatorMeta has correct fields", func() {
 		meta := AuthenticatorMeta{
-			Name:      "TestAuthenticator",
-			AALWeight: 2,
+			Name:    "TestAuthenticator",
+			Factors: []AuthenticationFactor{FactorKnowledge, FactorPossession},
 		}
 
 		suite.Equal("TestAuthenticator", meta.Name)
-		suite.Equal(2, meta.AALWeight)
+		suite.Len(meta.Factors, 2)
+		suite.Contains(meta.Factors, FactorKnowledge)
+		suite.Contains(meta.Factors, FactorPossession)
 	})
 }
 
@@ -308,35 +310,4 @@ func (suite *AuthenticatorTestSuite) TestAuthenticatorConstants() {
 			suite.Equal(tc.expected, tc.constant)
 		})
 	}
-}
-
-func (suite *AuthenticatorTestSuite) TestRegistryManipulation() {
-	suite.Run("Directly modify and restore registry for testing", func() {
-		// Save original registry
-		originalRegistry := make(map[string]AuthenticatorMeta, len(authenticatorRegistry))
-		for k, v := range authenticatorRegistry {
-			originalRegistry[k] = v
-		}
-		suite.Equal(6, len(originalRegistry))
-
-		// Add a test authenticator directly
-		authenticatorRegistry["TestAuthenticator"] = AuthenticatorMeta{
-			Name:      "TestAuthenticator",
-			AALWeight: 2,
-		}
-
-		// Verify it was added
-		weight := GetAuthenticatorWeight("TestAuthenticator")
-		suite.Equal(2, weight)
-
-		// Restore original registry
-		authenticatorRegistry = originalRegistry
-
-		// Verify test authenticator is removed
-		weight = GetAuthenticatorWeight("TestAuthenticator")
-		suite.Equal(0, weight)
-
-		// Verify original authenticators still exist
-		suite.Equal(1, GetAuthenticatorWeight(AuthenticatorCredentials))
-	})
 }

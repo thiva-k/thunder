@@ -20,6 +20,25 @@ package assert
 
 import authncm "github.com/asgardeo/thunder/internal/authn/common"
 
+// AssuranceLevel represents the level of assurance for authentication.
+type AssuranceLevel string
+
+// Level returns the hierarchical level value for comparison purposes.
+// AAL and IAL share the same numeric scale (0-3) where higher numbers indicate stronger assurance.
+// Level 0 represents unknown or no authentication.
+func (al AssuranceLevel) Level() int {
+	switch al {
+	case AALLevel1, IALLevel1:
+		return 1
+	case AALLevel2, IALLevel2:
+		return 2
+	case AALLevel3, IALLevel3:
+		return 3
+	default:
+		return 0
+	}
+}
+
 // AssuranceContext contains authentication assurance information.
 type AssuranceContext struct {
 	AAL            AssuranceLevel                   `json:"aal"`

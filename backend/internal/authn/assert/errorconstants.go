@@ -38,15 +38,18 @@ var (
 		Error:            "Invalid authenticator",
 		ErrorDescription: "Authenticator name cannot be empty",
 	}
-)
-
-// Server errors for authentication assertion operations.
-var (
-	// ErrorInternalServerError is the error returned when an internal server error occurs.
-	ErrorInternalServerError = serviceerror.ServiceError{
-		Type:             serviceerror.ServerErrorType,
-		Code:             "AST-5000",
-		Error:            "Internal server error",
-		ErrorDescription: "An unexpected error occurred while processing the request",
+	// ErrorNilAssuranceContext is the error returned when assurance context is nil.
+	ErrorNilAssuranceContext = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "AST-1003",
+		Error:            "Nil assurance context",
+		ErrorDescription: "Assurance context cannot be nil for verification",
+	}
+	// ErrorNoAssuranceRequirements is the error returned when no assurance requirements are specified.
+	ErrorNoAssuranceRequirements = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "AST-1004",
+		Error:            "No assurance requirements",
+		ErrorDescription: "At least one assurance level (AAL or IAL) must be specified for verification",
 	}
 )

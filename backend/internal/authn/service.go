@@ -279,7 +279,7 @@ func (as *authenticationService) validateAndAppendAuthAssertion(authResponse *co
 
 	authenticatorRef := &common.AuthenticatorReference{
 		Authenticator: authenticator,
-		Timestamp:     time.Now(),
+		Timestamp:     time.Now().Unix(),
 	}
 
 	// Extract existing assurance if provided and set appropriate step number

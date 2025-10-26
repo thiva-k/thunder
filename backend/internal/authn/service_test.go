@@ -1207,7 +1207,7 @@ func (suite *AuthenticationServiceTestSuite) createTestAssertion(subject string,
 			{
 				"authenticator": common.AuthenticatorCredentials,
 				"step":          1,
-				"timestamp":     "2025-01-01T00:00:00Z",
+				"timestamp":     int64(1735689600), // 2025-01-01T00:00:00Z in Unix epoch
 			},
 		},
 	}
@@ -1240,7 +1240,7 @@ func (suite *AuthenticationServiceTestSuite) createTestAssertionWithoutSubject()
 			{
 				"authenticator": common.AuthenticatorCredentials,
 				"step":          1,
-				"timestamp":     "2025-01-01T00:00:00Z",
+				"timestamp":     int64(1735689600), // 2025-01-01T00:00:00Z in Unix epoch
 			},
 		},
 	}

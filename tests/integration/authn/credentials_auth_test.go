@@ -21,6 +21,7 @@ package authn
 import (
 	"bytes"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"log"
@@ -661,19 +662,11 @@ func extractAssuranceLevelFromAssertion(assertion string, levelType string) stri
 		return ""
 	}
 
-	// Decode payload (second part)
-	payload := parts[1]
-	// Add padding if necessary for base64 decoding
-	paddingLength := (4 - len(payload)%4) % 4
-	payload = append(payload, bytes.Repeat([]byte("="), paddingLength)...)
-
-	// Decode base64
-	decoded := make([]byte, len(payload))
-	n, err := decodeBase64URL(payload, decoded)
+	// Decode payload (second part) using standard base64 URL encoding
+	decoded, err := base64.RawURLEncoding.DecodeString(string(parts[1]))
 	if err != nil {
 		return ""
 	}
-	decoded = decoded[:n]
 
 	// Unmarshal JWT claims
 	var claims map[string]interface{}
@@ -694,61 +687,4 @@ func extractAssuranceLevelFromAssertion(assertion string, levelType string) stri
 	}
 
 	return ""
-}
-
-// decodeBase64URL decodes a base64url string
-func decodeBase64URL(src []byte, dst []byte) (int, error) {
-	// Replace base64url characters with standard base64 characters
-	for i := 0; i < len(src); i++ {
-		switch src[i] {
-		case '-':
-			src[i] = '+'
-		case '_':
-			src[i] = '/'
-		}
-	}
-
-	n := base64StdDecoder(src, dst)
-	return n, nil
-}
-
-// base64StdDecoder decodes base64 string (simplified for testing)
-func base64StdDecoder(src []byte, dst []byte) int {
-	// Standard base64 decoding - for testing purposes
-	// In production, use encoding/base64.StdEncoding.DecodeString
-	const base64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-
-	charIndex := func(b byte) int {
-		for i, c := range []byte(base64chars) {
-			if b == c {
-				return i
-			}
-		}
-		return -1
-	}
-
-	j := 0
-	for i := 0; i < len(src); i += 4 {
-		if i+2 < len(src) {
-			a := charIndex(src[i])
-			b := charIndex(src[i+1])
-			c := charIndex(src[i+2])
-			d := charIndex(src[i+3])
-
-			if a >= 0 && b >= 0 {
-				dst[j] = byte((a << 2) | (b >> 4))
-				j++
-			}
-			if c < 64 && j < len(dst) {
-				dst[j] = byte((b << 4) | (c >> 2))
-				j++
-			}
-			if d < 64 && j < len(dst) {
-				dst[j] = byte((c << 6) | d)
-				j++
-			}
-		}
-	}
-
-	return j
 }
