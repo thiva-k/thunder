@@ -34,6 +34,39 @@ func TestAuthenticatorTestSuite(t *testing.T) {
 	suite.Run(t, new(AuthenticatorTestSuite))
 }
 
+// SetupTest runs before each test to initialize the registry with test data
+func (suite *AuthenticatorTestSuite) SetupTest() {
+	// Register all authenticators for testing
+	RegisterAuthenticator(AuthenticatorMeta{
+		Name:    AuthenticatorCredentials,
+		Factors: []AuthenticationFactor{FactorKnowledge},
+	})
+	RegisterAuthenticator(AuthenticatorMeta{
+		Name:    AuthenticatorSMSOTP,
+		Factors: []AuthenticationFactor{FactorPossession},
+	})
+	RegisterAuthenticator(AuthenticatorMeta{
+		Name:          AuthenticatorGoogle,
+		Factors:       []AuthenticationFactor{FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeGoogle,
+	})
+	RegisterAuthenticator(AuthenticatorMeta{
+		Name:          AuthenticatorGithub,
+		Factors:       []AuthenticationFactor{FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeGitHub,
+	})
+	RegisterAuthenticator(AuthenticatorMeta{
+		Name:          AuthenticatorOAuth,
+		Factors:       []AuthenticationFactor{FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeOAuth,
+	})
+	RegisterAuthenticator(AuthenticatorMeta{
+		Name:          AuthenticatorOIDC,
+		Factors:       []AuthenticationFactor{FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeOIDC,
+	})
+}
+
 func (suite *AuthenticatorTestSuite) TestGetAuthenticatorMetaData() {
 	testCases := []struct {
 		name              string
@@ -229,11 +262,15 @@ func (suite *AuthenticatorTestSuite) TestAuthenticatorRegistry() {
 			AuthenticatorOIDC,
 		}
 
-		suite.Equal(len(expectedAuthenticators), len(authenticatorRegistry))
+		registryMu.RLock()
+		registrySize := len(authenticatorRegistry)
+		registryMu.RUnlock()
+
+		suite.Equal(len(expectedAuthenticators), registrySize)
 
 		for _, auth := range expectedAuthenticators {
-			meta, exists := authenticatorRegistry[auth]
-			suite.True(exists, "Authenticator %s should exist in registry", auth)
+			meta := getAuthenticatorMetaData(auth)
+			suite.NotNil(meta, "Authenticator %s should exist in registry", auth)
 			suite.Equal(auth, meta.Name)
 			suite.NotEmpty(meta.Factors, "Authenticator %s should have factors", auth)
 		}

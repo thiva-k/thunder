@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
+	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
@@ -40,6 +41,36 @@ func TestGeneratorTestSuite(t *testing.T) {
 
 func (suite *GeneratorTestSuite) SetupTest() {
 	suite.generator = NewAuthAssertGenerator()
+
+	// Register all authenticators
+	authncm.RegisterAuthenticator(authncm.AuthenticatorMeta{
+		Name:    authncm.AuthenticatorCredentials,
+		Factors: []authncm.AuthenticationFactor{authncm.FactorKnowledge},
+	})
+	authncm.RegisterAuthenticator(authncm.AuthenticatorMeta{
+		Name:    authncm.AuthenticatorSMSOTP,
+		Factors: []authncm.AuthenticationFactor{authncm.FactorPossession},
+	})
+	authncm.RegisterAuthenticator(authncm.AuthenticatorMeta{
+		Name:          authncm.AuthenticatorGoogle,
+		Factors:       []authncm.AuthenticationFactor{authncm.FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeGoogle,
+	})
+	authncm.RegisterAuthenticator(authncm.AuthenticatorMeta{
+		Name:          authncm.AuthenticatorGithub,
+		Factors:       []authncm.AuthenticationFactor{authncm.FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeGitHub,
+	})
+	authncm.RegisterAuthenticator(authncm.AuthenticatorMeta{
+		Name:          authncm.AuthenticatorOAuth,
+		Factors:       []authncm.AuthenticationFactor{authncm.FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeOAuth,
+	})
+	authncm.RegisterAuthenticator(authncm.AuthenticatorMeta{
+		Name:          authncm.AuthenticatorOIDC,
+		Factors:       []authncm.AuthenticationFactor{authncm.FactorKnowledge},
+		AssociatedIDP: idp.IDPTypeOIDC,
+	})
 }
 
 func (suite *GeneratorTestSuite) TestGenerateAssertionSingleAuthenticator() {
@@ -539,7 +570,7 @@ func (suite *GeneratorTestSuite) TestExtractUniqueFactors() {
 	}
 }
 
-func (suite *GeneratorTestSuite) TestDeriveAAL() {
+func (suite *GeneratorTestSuite) TestCalculateAAL() {
 	generator := &authAssertGenerator{}
 
 	testCases := []struct {
