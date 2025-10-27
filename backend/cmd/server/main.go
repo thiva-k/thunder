@@ -70,7 +70,7 @@ func main() {
 	var server *http.Server
 	if cfg.Server.HTTPOnly {
 		logger.Info("TLS is not enabled, starting server without TLS")
-		server = startHTTPServer(logger, cfg, mux)
+		server = startHTTPServer(logger, cfg, mux, thunderHome)
 	} else {
 		server = startTLSServer(logger, cfg, mux, thunderHome)
 	}
@@ -171,8 +171,28 @@ func startTLSServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux, 
 }
 
 // startHTTPServer starts the HTTP server without TLS.
-func startHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux) *http.Server {
+func startHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux, thunderHome string) *http.Server {
 	server, serverAddr := createHTTPServer(logger, cfg, mux)
+
+	// TODO: Remove after configuring separate certificates for JWT generation
+	// Get TLS configuration from the certificate and key files.
+	sysCertSvc := cert.NewSystemCertificateService()
+	tlsConfig, err := sysCertSvc.GetTLSConfig(cfg, thunderHome)
+	if err != nil {
+		logger.Fatal("Failed to load TLS configuration", log.Error(err))
+	}
+
+	// Extract and set the certificate Key ID (kid).
+	kid, err := sysCertSvc.GetCertificateKid(tlsConfig)
+	if err != nil {
+		logger.Fatal("Failed to extract certificate kid", log.Error(err))
+	}
+
+	certConfig := config.CertConfig{
+		TLSConfig: tlsConfig,
+		CertKid:   kid,
+	}
+	config.GetThunderRuntime().SetCertConfig(certConfig)
 
 	logger.Info("WSO2 Thunder server started (HTTP)...", log.String("address", serverAddr))
 
