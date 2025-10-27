@@ -25,16 +25,16 @@ Before you begin, ensure you have the following installed on your system:
 
 ## Development Setup
 
-1.**Fork the Repository**: Start by forking the WSO2 Thunder repository to your GitHub account.
+1. **Fork the Repository**: Start by forking the WSO2 Thunder repository to your GitHub account.
 
-2.**Clone the Repository**: Clone your forked repository to your local machine.
+2. **Clone the Repository**: Clone your forked repository to your local machine.
 
 ```bash
 git clone https://github.com/<your-username>/thunder.git
 cd thunder
 ```
 
-3.**Run the Project**: Start the Thunder server.
+3. **Run the Project**: Start the Thunder server.
 
 ```bash
 make run
@@ -47,13 +47,13 @@ If you want to run the frontend applications as well, follow the instructions in
 
 ### Installing Dependencies
 
-1.Navigate to the Thunder frontend directory.
+1. Navigate to the Thunder frontend directory.
 
 ```bash
 cd frontend
 ```
 
-2.Install the dependencies using `pnpm`.
+2. Install the dependencies using `pnpm`.
 
 ```bash
 pnpm install
@@ -69,7 +69,7 @@ pnpm build
 
 ### Setting up the Thunder Gate Application
 
-1.Point the `gate_client` in `thunder-home/config/deployment.yaml` to the local Thunder Gate application.
+1. Point the `gate_client` in `thunder-home/config/deployment.yaml` to the local Thunder Gate application.
 
 ```yaml
 gate_client:
@@ -78,7 +78,7 @@ gate_client:
   login_path: "/signin"
 ```
 
-2.Run the Thunder Gate application.
+2. Run the Thunder Gate application.
 
 ```bash
 pnpm --filter @thunder/gate dev
@@ -86,13 +86,13 @@ pnpm --filter @thunder/gate dev
 
 ### Setting up the Thunder Develop Application
 
-1.Navigate to the Thunder frontend directory.
+1. Navigate to the Thunder frontend directory.
 
 ```bash
 cd frontend
 ```
 
-2.Run the Thunder Gate application.
+2. Run the Thunder Gate application.
 
 ```bash
 pnpm --filter @thunder/develop dev
