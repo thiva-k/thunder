@@ -96,7 +96,6 @@ Follow these steps to run WSO2 Thunder using Docker.
     ```bash
     docker run --rm \
       -p 8090:8090 \
-      -p 9090:9090 \
       ghcr.io/asgardeo/thunder:latest
     ```
 
@@ -119,6 +118,47 @@ Follow these steps to run WSO2 Thunder using Docker.
       -v $(pwd)/certs/server.key:/opt/thunder/repository/resources/security/server.key \
       ghcr.io/asgardeo/thunder:latest
     ```
+
+#### Initial Data Setup
+
+To get started quickly, you can set up initial data including an admin user and the Develop application using the `--setup` flag when starting Thunder:
+
+**Linux/macOS:**
+
+```bash
+bash start.sh --setup
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\start.ps1 --setup
+```
+
+This will:
+
+- Create an OIDC user schema
+- Create an admin user with credentials: `admin` / `admin`
+- Create the Develop application for accessing the admin console
+
+After setup is complete, you can access:
+
+- **Gate (Login/Register)**: `https://localhost:8090/signin`
+- **Develop (Admin Console)**: `https://localhost:8090/develop`
+
+You can also run the setup script manually at any time:
+
+**Linux/macOS:**
+
+```bash
+bash scripts/setup_initial_data.sh
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\scripts\setup_initial_data.ps1
+```
 
 ### Try Out the Product
 
@@ -1834,8 +1874,22 @@ export PATH=$PATH:$(go env GOPATH)/bin
 
 From the distribution directory:
 
+**Linux/macOS:**
+
 ```bash
 ./start.sh --debug
+```
+
+**Windows (PowerShell):**
+
+```powershell
+.\start.ps1 --debug
+```
+
+**Windows (Command Prompt):**
+
+```cmd
+start.bat --debug
 ```
 
 The debugger will listen on `localhost:2345` by default.
@@ -1967,6 +2021,10 @@ The product will now use the PostgreSQL database for its operations.
 ## Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=asgardeo/thunder&type=date&legend=top-left)](https://www.star-history.com/#asgardeo/thunder&type=date&legend=top-left)
+
+## 🤝 Contributing
+
+Please refer to the [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on how to contribute to this project.
 
 ## License
 
