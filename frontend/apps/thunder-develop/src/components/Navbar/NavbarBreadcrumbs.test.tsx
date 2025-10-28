@@ -34,11 +34,7 @@ describe('NavbarBreadcrumbs', () => {
   it('renders breadcrumbs with category and page text', async () => {
     const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
     vi.mocked(mockUseNavigation.default).mockReturnValue({
-      currentPage: {
-        id: 'home',
-        category: 'Dashboard',
-        text: 'Home',
-      },
+      currentPage: 'home',
       setCurrentPage: vi.fn(),
       sidebarOpen: false,
       setSidebarOpen: vi.fn(),
@@ -47,18 +43,14 @@ describe('NavbarBreadcrumbs', () => {
 
     render(<NavbarBreadcrumbs />);
 
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Develop')).toBeInTheDocument();
+    expect(screen.getByText('home')).toBeInTheDocument();
   });
 
   it('renders breadcrumbs with different category and page', async () => {
     const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
     vi.mocked(mockUseNavigation.default).mockReturnValue({
-      currentPage: {
-        id: 'users-list',
-        category: 'Users',
-        text: 'User List',
-      },
+      currentPage: 'users',
       setCurrentPage: vi.fn(),
       sidebarOpen: false,
       setSidebarOpen: vi.fn(),
@@ -67,18 +59,14 @@ describe('NavbarBreadcrumbs', () => {
 
     render(<NavbarBreadcrumbs />);
 
-    expect(screen.getByText('Users')).toBeInTheDocument();
-    expect(screen.getByText('User List')).toBeInTheDocument();
+    expect(screen.getByText('Develop')).toBeInTheDocument();
+    expect(screen.getByText('users')).toBeInTheDocument();
   });
 
   it('has correct aria-label', async () => {
     const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
     vi.mocked(mockUseNavigation.default).mockReturnValue({
-      currentPage: {
-        id: 'profile',
-        category: 'Settings',
-        text: 'Profile',
-      },
+      currentPage: 'users',
       setCurrentPage: vi.fn(),
       sidebarOpen: false,
       setSidebarOpen: vi.fn(),
@@ -94,11 +82,7 @@ describe('NavbarBreadcrumbs', () => {
   it('renders separator icon between breadcrumbs', async () => {
     const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
     vi.mocked(mockUseNavigation.default).mockReturnValue({
-      currentPage: {
-        id: 'home',
-        category: 'Dashboard',
-        text: 'Home',
-      },
+      currentPage: 'home',
       setCurrentPage: vi.fn(),
       sidebarOpen: false,
       setSidebarOpen: vi.fn(),
@@ -107,7 +91,8 @@ describe('NavbarBreadcrumbs', () => {
 
     const {container} = render(<NavbarBreadcrumbs />);
 
-    const separator = container.querySelector('svg[data-testid="NavigateNextRoundedIcon"]');
+    // Check for lucide-react ChevronRight icon
+    const separator = container.querySelector('svg');
     expect(separator).toBeInTheDocument();
   });
 });

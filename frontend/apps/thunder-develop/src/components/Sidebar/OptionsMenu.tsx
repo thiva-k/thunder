@@ -24,10 +24,9 @@ import {paperClasses} from '@mui/material/Paper';
 import {listClasses} from '@mui/material/List';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon, {listItemIconClasses} from '@mui/material/ListItemIcon';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import MoreVertRoundedIcon from '@mui/icons-material/MoreVertRounded';
 import {SignOutButton, useAsgardeo} from '@asgardeo/react';
 import {useState, type JSX, type MouseEvent} from 'react';
+import {EllipsisVertical, LogOut} from 'lucide-react';
 import MenuButton from './MenuButton';
 
 const MenuItem = styled(MuiMenuItem)({
@@ -50,7 +49,7 @@ export default function OptionsMenu(): JSX.Element {
   return (
     <>
       <MenuButton aria-label="Open menu" onClick={handleClick} sx={{borderColor: 'transparent'}}>
-        <MoreVertRoundedIcon />
+        <EllipsisVertical size={16} />
       </MenuButton>
       <Menu
         anchorEl={anchorEl}
@@ -97,7 +96,7 @@ export default function OptionsMenu(): JSX.Element {
             >
               <ListItemText>Sign Out</ListItemText>
               <ListItemIcon>
-                <LogoutRoundedIcon fontSize="small" />
+                <LogOut size={16} />
               </ListItemIcon>
             </MenuItem>
           )}

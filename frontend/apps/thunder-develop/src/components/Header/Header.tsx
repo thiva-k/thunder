@@ -17,9 +17,9 @@
  */
 
 import Stack from '@mui/material/Stack';
-import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
 import {ColorModeIconDropdown} from '@thunder/ui';
 import type {JSX} from 'react';
+import {Bell} from 'lucide-react';
 import NavbarBreadcrumbs from '../Navbar/NavbarBreadcrumbs';
 import MenuButton from '../Sidebar/MenuButton';
 import Search from './Search';
@@ -43,7 +43,7 @@ export default function Header(): JSX.Element {
       <Stack direction="row" sx={{gap: 1}}>
         <Search />
         <MenuButton showBadge aria-label="Open notifications">
-          <NotificationsRoundedIcon />
+          <Bell size={16} />
         </MenuButton>
         <ColorModeIconDropdown />
       </Stack>

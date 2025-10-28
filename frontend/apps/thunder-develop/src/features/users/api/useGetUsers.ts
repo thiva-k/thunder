@@ -16,28 +16,22 @@
  * under the License.
  */
 
-import {useState, useEffect, useCallback, useTransition} from 'react';
-import type {UserListResponse, ApiError, UserListParams} from '../types/users';
+import {useState, useCallback, useEffect} from 'react';
+import type {ApiError, UserListParams, UserListResponse} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
 
-/**
- * Hook to fetch users from the API
- * GET https://localhost:8090/users
- *
- * Uses React's useTransition for non-blocking loading states
- */
 export default function useGetUsers(params?: UserListParams) {
   const [data, setData] = useState<UserListResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
-  const [isPending, startFetchTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchUsers = useCallback(
     async (queryParams?: UserListParams) => {
-      try {
-        setError(null);
+      setIsLoading(true);
+      setError(null);
 
-        // Build query string
+      try {
         const searchParams = new URLSearchParams();
         const finalParams = queryParams ?? params;
 
@@ -62,18 +56,17 @@ export default function useGetUsers(params?: UserListParams) {
         });
 
         if (!response.ok) {
-          // Handle error response
           const contentType = response.headers.get('content-type');
           if (contentType?.includes('application/json')) {
             const errorData = (await response.json()) as ApiError;
             setError(errorData);
-            throw new Error(errorData.message || 'Failed to fetch users');
+            throw new Error(errorData.message ?? 'Failed to fetch users');
           } else {
             const errorText = await response.text();
             const apiError: ApiError = {
               code: `HTTP_${response.status}`,
               message: response.statusText,
-              description: errorText || 'Failed to fetch users',
+              description: errorText ?? 'Failed to fetch users',
             };
             setError(apiError);
             throw new Error(apiError.message);
@@ -81,12 +74,7 @@ export default function useGetUsers(params?: UserListParams) {
         }
 
         const result = (await response.json()) as UserListResponse;
-
-        // Use startFetchTransition to update state without blocking
-        startFetchTransition(() => {
-          setData(result);
-        });
-
+        setData(result);
         return result;
       } catch (err) {
         if (err instanceof Error) {
@@ -97,33 +85,24 @@ export default function useGetUsers(params?: UserListParams) {
           });
         }
         throw err;
+      } finally {
+        setIsLoading(false);
       }
     },
     [params],
   );
 
   useEffect(() => {
-    startFetchTransition(() => {
-      fetchUsers().catch(() => {
-        // Error is already handled in fetchUsers
-      });
+    fetchUsers().catch(() => {
+      // Error already handled
     });
   }, [fetchUsers]);
 
-  const refetch = useCallback(
-    (newParams?: UserListParams) => {
-      startFetchTransition(() => {
-        fetchUsers(newParams).catch(() => {
-          // Error is already handled in fetchUsers
-        });
-      });
-    },
-    [fetchUsers],
-  );
+  const refetch = useCallback((newParams?: UserListParams) => fetchUsers(newParams), [fetchUsers]);
 
   return {
     data,
-    loading: isPending,
+    loading: isLoading,
     error,
     refetch,
   };

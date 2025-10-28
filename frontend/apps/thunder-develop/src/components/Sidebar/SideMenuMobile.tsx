@@ -22,8 +22,7 @@ import Divider from '@mui/material/Divider';
 import Drawer, {drawerClasses} from '@mui/material/Drawer';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import LogoutRoundedIcon from '@mui/icons-material/LogoutRounded';
-import NotificationsRoundedIcon from '@mui/icons-material/NotificationsRounded';
+import {Bell, LogOut} from 'lucide-react';
 import type {JSX} from 'react';
 import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';
@@ -69,7 +68,7 @@ export default function SideMenuMobile({open, toggleDrawer}: SideMenuMobileProps
             </Typography>
           </Stack>
           <MenuButton showBadge>
-            <NotificationsRoundedIcon />
+            <Bell size={16} />
           </MenuButton>
         </Stack>
         <Divider />
@@ -78,7 +77,7 @@ export default function SideMenuMobile({open, toggleDrawer}: SideMenuMobileProps
           <Divider />
         </Stack>
         <Stack sx={{p: 2}}>
-          <Button variant="outlined" fullWidth startIcon={<LogoutRoundedIcon />}>
+          <Button variant="outlined" fullWidth startIcon={<LogOut size={16} />}>
             Logout
           </Button>
         </Stack>

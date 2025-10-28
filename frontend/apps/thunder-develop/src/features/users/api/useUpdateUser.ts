@@ -16,34 +16,45 @@
  * under the License.
  */
 
-import {useState, useEffect, useCallback, useRef} from 'react';
-import type {ApiUserSchema, ApiError} from '../types/users';
+import {useState, useCallback} from 'react';
+import type {ApiError, ApiUser} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
 
 /**
- * Hook to fetch a single user schema by ID from the API
- * GET https://localhost:8090/user-schemas/{id}
+ * Request body for updating a user
+ * All fields are required as per PUT semantics
  */
-export default function useGetUserSchema(id?: string) {
-  const [data, setData] = useState<ApiUserSchema | null>(null);
+export interface UpdateUserRequest {
+  organizationUnit: string;
+  type: string;
+  groups?: string[];
+  attributes: Record<string, any>;
+}
+
+/**
+ * Hook to update an existing user
+ * PUT https://localhost:8090/users/{userId}
+ */
+export default function useUpdateUser() {
+  const [data, setData] = useState<ApiUser | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
-  const hasFetchedRef = useRef(false);
-  const lastIdRef = useRef<string | undefined>(undefined);
 
-  const fetchUserSchema = useCallback(async (schemaId: string) => {
+  const updateUser = useCallback(async (userId: string, userData: UpdateUserRequest) => {
     try {
       setLoading(true);
       setError(null);
+      setData(null);
 
-      const url = `${API_BASE_URL}/user-schemas/${schemaId}`;
+      const url = `${API_BASE_URL}/users/${userId}`;
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
+        body: JSON.stringify(userData),
       });
 
       if (!response.ok) {
@@ -52,30 +63,32 @@ export default function useGetUserSchema(id?: string) {
         if (contentType?.includes('application/json')) {
           const errorData = (await response.json()) as ApiError;
           setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to fetch user schema');
+          throw new Error(errorData.message ?? 'Failed to update user');
         } else {
           const errorText = await response.text();
           const apiError: ApiError = {
             code: `HTTP_${response.status}`,
             message: response.statusText,
-            description: errorText ?? 'Failed to fetch user schema',
+            description: errorText ?? 'Failed to update user',
           };
           setError(apiError);
           throw new Error(apiError.message);
         }
       }
 
-      const result = (await response.json()) as ApiUserSchema;
+      const result = (await response.json()) as ApiUser;
       setData(result);
 
       return result;
     } catch (err) {
       if (err instanceof Error) {
-        setError({
-          code: 'FETCH_ERROR',
+        const apiError: ApiError = {
+          code: 'UPDATE_USER_ERROR',
           message: err.message,
-          description: 'An error occurred while fetching user schema',
-        });
+          description: 'An error occurred while updating the user',
+        };
+        setError(apiError);
+        throw err;
       }
       throw err;
     } finally {
@@ -83,46 +96,16 @@ export default function useGetUserSchema(id?: string) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!id) {
-      return;
-    }
-
-    // Prevent double fetch in React Strict Mode and check if ID changed
-    if (hasFetchedRef.current && lastIdRef.current === id) {
-      return;
-    }
-    hasFetchedRef.current = true;
-    lastIdRef.current = id;
-
-    fetchUserSchema(id).catch(() => {
-      // Error is already handled in fetchUserSchema
-    });
-  }, [id, fetchUserSchema]);
-
-  const refetch = useCallback(
-    (newId?: string) => {
-      const schemaId = newId ?? id;
-      if (!schemaId) {
-        setError({
-          code: 'INVALID_ID',
-          message: 'Invalid schema ID',
-          description: 'Schema ID is required',
-        });
-        return;
-      }
-
-      fetchUserSchema(schemaId).catch(() => {
-        // Error is already handled in fetchUserSchema
-      });
-    },
-    [id, fetchUserSchema],
-  );
+  const reset = useCallback(() => {
+    setData(null);
+    setError(null);
+  }, []);
 
   return {
+    updateUser,
     data,
     loading,
     error,
-    refetch,
+    reset,
   };
 }

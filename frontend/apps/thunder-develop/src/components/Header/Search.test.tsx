@@ -40,7 +40,7 @@ describe('Search', () => {
   it('renders search icon', () => {
     const {container} = render(<Search />);
 
-    const searchIcon = container.querySelector('svg[data-testid="SearchRoundedIcon"]');
+    const searchIcon = container.querySelector('svg.lucide-search');
     expect(searchIcon).toBeInTheDocument();
   });
 

@@ -18,43 +18,27 @@
 
 import {useCallback, useEffect, useMemo, useState, type ReactNode} from 'react';
 import {useLocation} from 'react-router';
-import type {NavigationItem} from '../models/layouts';
-import LayoutContext from '../contexts/NavigationContext';
+import NavigationContext from './NavigationContext';
 
-export default function LayoutProvider({children}: {children: ReactNode}) {
+export default function NavigationProvider({children}: {children: ReactNode}) {
   const location = useLocation();
-
-  const [currentPage, setCurrentPage] = useState<NavigationItem>({
-    id: 'home',
-    text: 'Home',
-    category: 'Dashboard',
-  });
+  const [currentPage, setCurrentPage] = useState<string>('home');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     const path = location.pathname;
 
     // Parse the pathname to determine the current page
-    // This is a basic implementation - you may want to customize this logic
     const pathSegments = path.split('/').filter(Boolean);
 
     if (pathSegments.length === 0 || path === '/') {
-      setCurrentPage({
-        id: 'home',
-        text: 'Home',
-        category: 'Dashboard',
-      });
+      setCurrentPage('home');
     } else {
       const pageId = pathSegments[0];
-      const pageText = pageId.charAt(0).toUpperCase() + pageId.slice(1);
 
-      setCurrentPage({
-        id: pageId,
-        text: pageText,
-        category: 'Dashboard',
-      });
+      setCurrentPage(pageId);
     }
-  }, [location]);
+  }, [location.pathname]);
 
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev);
@@ -71,5 +55,5 @@ export default function LayoutProvider({children}: {children: ReactNode}) {
     [currentPage, sidebarOpen, toggleSidebar],
   );
 
-  return <LayoutContext.Provider value={value}>{children}</LayoutContext.Provider>;
+  return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }

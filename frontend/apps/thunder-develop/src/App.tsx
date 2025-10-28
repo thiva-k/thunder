@@ -21,7 +21,14 @@ import type {JSX} from 'react';
 import {ProtectedRoute} from '@asgardeo/react-router';
 import HomePage from './features/home/pages/HomePage';
 import UsersListPage from './features/users/pages/UsersListPage';
-import Dashboard from './Dashboard';
+import CreateUserPage from './features/users/pages/CreateUserPage';
+import ViewUserPage from './features/users/pages/ViewUserPage';
+import UserTypesListPage from './features/user-types/pages/UserTypesListPage';
+import CreateUserTypePage from './features/user-types/pages/CreateUserTypePage';
+import ViewUserTypePage from './features/user-types/pages/ViewUserTypePage';
+import IntegrationsPage from './features/integrations/pages/IntegrationsPage';
+import ApplicationsPage from './features/applications/pages/ApplicationsPage';
+import DashboardLayout from './layouts/DashboardLayout';
 
 export default function App(): JSX.Element {
   return (
@@ -31,12 +38,19 @@ export default function App(): JSX.Element {
           path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <DashboardLayout />
             </ProtectedRoute>
           }
         >
           <Route index element={<HomePage />} />
           <Route path="users" element={<UsersListPage />} />
+          <Route path="users/create" element={<CreateUserPage />} />
+          <Route path="users/:userId" element={<ViewUserPage />} />
+          <Route path="user-types" element={<UserTypesListPage />} />
+          <Route path="user-types/create" element={<CreateUserTypePage />} />
+          <Route path="user-types/:id" element={<ViewUserTypePage />} />
+          <Route path="integrations" element={<IntegrationsPage />} />
+          <Route path="applications" element={<ApplicationsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
