@@ -132,6 +132,9 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		URL:                       app.URL,
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
+		TosURI:                    app.TosURI,
+		PolicyURI:                 app.PolicyURI,
+		Contacts:                  app.Contacts,
 	}
 	if inboundAuthConfig != nil {
 		// Wrap the finalOAuthAccessToken and finalOAuthIDToken in OAuthTokenConfig structure
@@ -154,6 +157,7 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 				Token:                   oAuthTokenConfig,
+				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
 		processedDTO.InboundAuthConfig = []model.InboundAuthConfigProcessedDTO{processedInboundAuthConfig}
@@ -192,6 +196,9 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
 		Certificate:               returnCert,
+		TosURI:                    app.TosURI,
+		PolicyURI:                 app.PolicyURI,
+		Contacts:                  app.Contacts,
 	}
 	if inboundAuthConfig != nil {
 		// Construct the return DTO with processed token configuration
@@ -214,6 +221,7 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 				Token:                   returnTokenConfig,
+				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
 		returnApp.InboundAuthConfig = []model.InboundAuthConfigDTO{returnInboundAuthConfig}
@@ -404,6 +412,9 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		URL:                       app.URL,
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
+		TosURI:                    app.TosURI,
+		PolicyURI:                 app.PolicyURI,
+		Contacts:                  app.Contacts,
 	}
 	if inboundAuthConfig != nil {
 		// Wrap the finalOAuthAccessToken and finalOAuthIDToken in OAuthTokenConfig structure
@@ -426,6 +437,7 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 				Token:                   oAuthTokenConfig,
+				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
 		processedDTO.InboundAuthConfig = []model.InboundAuthConfigProcessedDTO{processedInboundAuthConfig}
@@ -454,6 +466,9 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
 		Certificate:               returnCert,
+		TosURI:                    app.TosURI,
+		PolicyURI:                 app.PolicyURI,
+		Contacts:                  app.Contacts,
 	}
 	if inboundAuthConfig != nil {
 		// Construct the return DTO with processed token configuration
@@ -474,7 +489,9 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 				ResponseTypes:           inboundAuthConfig.OAuthAppConfig.ResponseTypes,
 				TokenEndpointAuthMethod: inboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod,
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
+				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 				Token:                   returnTokenConfig,
+				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
 		returnApp.InboundAuthConfig = []model.InboundAuthConfigDTO{returnInboundAuthConfig}
@@ -548,7 +565,6 @@ func validateRegistrationFlowGraphID(app *model.ApplicationDTO) *serviceerror.Se
 // validateOAuthParamsForCreateAndUpdate validates the OAuth parameters for creating or updating an application.
 func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*model.InboundAuthConfigDTO,
 	*serviceerror.ServiceError) {
-	// TODO: Validate the logic here whether it is okay to generate client id/ secret or set empty.
 	if len(app.InboundAuthConfig) == 0 {
 		return nil, nil
 	}
@@ -563,45 +579,33 @@ func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*model.In
 	}
 
 	oauthAppConfig := inboundAuthConfig.OAuthAppConfig
-	if len(oauthAppConfig.RedirectURIs) == 0 {
-		return nil, &ErrorInvalidRedirectURIs
-	}
 
-	// Validate the redirect URIs.
-	for _, redirectURI := range oauthAppConfig.RedirectURIs {
-		if !sysutils.IsValidURI(redirectURI) {
-			return nil, &ErrorInvalidRedirectURI
-		}
-	}
-
-	// Apply DCR-compliant defaults for OAuth configuration if not specified.
+	// Apply defaults for OAuth configuration if not specified.
 	if len(oauthAppConfig.GrantTypes) == 0 {
 		oauthAppConfig.GrantTypes = []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode}
 	}
 	if len(oauthAppConfig.ResponseTypes) == 0 {
-		oauthAppConfig.ResponseTypes = []oauth2const.ResponseType{oauth2const.ResponseTypeCode}
+		if slices.Contains(oauthAppConfig.GrantTypes, oauth2const.GrantTypeAuthorizationCode) {
+			oauthAppConfig.ResponseTypes = []oauth2const.ResponseType{oauth2const.ResponseTypeCode}
+		}
 	}
 	if oauthAppConfig.TokenEndpointAuthMethod == "" {
 		oauthAppConfig.TokenEndpointAuthMethod = oauth2const.TokenEndpointAuthMethodClientSecretBasic
 	}
 
-	// Validate the grant types.
-	for _, grantType := range oauthAppConfig.GrantTypes {
-		if !grantType.IsValid() {
-			return nil, &ErrorInvalidGrantType
-		}
+	// Validate redirect URIs
+	if err := validateRedirectURIs(oauthAppConfig); err != nil {
+		return nil, err
 	}
 
-	// Validate the response types.
-	for _, responseType := range oauthAppConfig.ResponseTypes {
-		if !responseType.IsValid() {
-			return nil, &ErrorInvalidResponseType
-		}
+	// Validate grant types and response types
+	if err := validateGrantTypesAndResponseTypes(oauthAppConfig); err != nil {
+		return nil, err
 	}
 
-	// Validate the token endpoint authentication method.
-	if !oauthAppConfig.TokenEndpointAuthMethod.IsValid() {
-		return nil, &ErrorInvalidTokenEndpointAuthMethod
+	// Validate token endpoint authentication method
+	if err := validateTokenEndpointAuthMethod(oauthAppConfig); err != nil {
+		return nil, err
 	}
 
 	// Validate public client configurations
@@ -1094,21 +1098,112 @@ func processTokenConfiguration(app *model.ApplicationDTO) (
 	return rootToken, oauthAccessToken, oauthIDToken, tokenIssuer
 }
 
+// validateRedirectURIs validates redirect URIs format and requirements.
+func validateRedirectURIs(oauthConfig *model.OAuthAppConfigDTO) *serviceerror.ServiceError {
+	for _, redirectURI := range oauthConfig.RedirectURIs {
+		parsedURI, err := sysutils.ParseURL(redirectURI)
+		if err != nil {
+			return &ErrorInvalidRedirectURI
+		}
+
+		if parsedURI.Scheme == "" || parsedURI.Host == "" {
+			return &ErrorInvalidRedirectURI
+		}
+
+		if parsedURI.Fragment != "" {
+			return serviceerror.CustomServiceError(
+				ErrorInvalidRedirectURI,
+				"Redirect URIs must not contain a fragment component",
+			)
+		}
+	}
+
+	if slices.Contains(oauthConfig.GrantTypes, oauth2const.GrantTypeAuthorizationCode) &&
+		len(oauthConfig.RedirectURIs) == 0 {
+		return serviceerror.CustomServiceError(
+			ErrorInvalidOAuthConfiguration,
+			"authorization_code grant type requires redirect URIs",
+		)
+	}
+
+	return nil
+}
+
+// validateGrantTypesAndResponseTypes validates grant types, response types, and their compatibility.
+func validateGrantTypesAndResponseTypes(oauthConfig *model.OAuthAppConfigDTO) *serviceerror.ServiceError {
+	for _, grantType := range oauthConfig.GrantTypes {
+		if !grantType.IsValid() {
+			return &ErrorInvalidGrantType
+		}
+	}
+
+	for _, responseType := range oauthConfig.ResponseTypes {
+		if !responseType.IsValid() {
+			return &ErrorInvalidResponseType
+		}
+	}
+
+	if len(oauthConfig.GrantTypes) == 1 &&
+		slices.Contains(oauthConfig.GrantTypes, oauth2const.GrantTypeClientCredentials) &&
+		len(oauthConfig.ResponseTypes) > 0 {
+		return serviceerror.CustomServiceError(
+			ErrorInvalidOAuthConfiguration,
+			"client_credentials grant type cannot be used with response types",
+		)
+	}
+
+	if slices.Contains(oauthConfig.GrantTypes, oauth2const.GrantTypeAuthorizationCode) {
+		if len(oauthConfig.ResponseTypes) == 0 ||
+			!slices.Contains(oauthConfig.ResponseTypes, oauth2const.ResponseTypeCode) {
+			return serviceerror.CustomServiceError(
+				ErrorInvalidOAuthConfiguration,
+				"authorization_code grant type requires 'code' response type",
+			)
+		}
+	}
+
+	return nil
+}
+
+// validateTokenEndpointAuthMethod validates the token endpoint authentication method
+// and its compatibility with grant types.
+func validateTokenEndpointAuthMethod(oauthConfig *model.OAuthAppConfigDTO) *serviceerror.ServiceError {
+	if !oauthConfig.TokenEndpointAuthMethod.IsValid() {
+		return &ErrorInvalidTokenEndpointAuthMethod
+	}
+
+	if slices.Contains(oauthConfig.GrantTypes, oauth2const.GrantTypeClientCredentials) &&
+		oauthConfig.TokenEndpointAuthMethod == oauth2const.TokenEndpointAuthMethodNone {
+		return serviceerror.CustomServiceError(
+			ErrorInvalidOAuthConfiguration,
+			"client_credentials grant type cannot use 'none' authentication method",
+		)
+	}
+
+	return nil
+}
+
 // validatePublicClientConfiguration validates that public client configurations are correct.
 func validatePublicClientConfiguration(oauthConfig *model.OAuthAppConfigDTO) *serviceerror.ServiceError {
 	if oauthConfig.TokenEndpointAuthMethod != oauth2const.TokenEndpointAuthMethodNone {
-		return serviceerror.CustomServiceError(ErrorPublicClientInvalidConfiguration,
-			"Public clients must use only 'none' as token endpoint authentication method")
+		return serviceerror.CustomServiceError(
+			ErrorInvalidPublicClientConfiguration,
+			"Public clients must use 'none' as token endpoint authentication method",
+		)
 	}
 
 	if slices.Contains(oauthConfig.GrantTypes, oauth2const.GrantTypeClientCredentials) {
-		return serviceerror.CustomServiceError(ErrorPublicClientInvalidConfiguration,
-			"Public clients cannot use the client_credentials grant type")
+		return serviceerror.CustomServiceError(
+			ErrorInvalidPublicClientConfiguration,
+			"Public clients cannot use the client_credentials grant type",
+		)
 	}
 
 	if oauthConfig.ClientSecret != "" {
-		return serviceerror.CustomServiceError(ErrorPublicClientInvalidConfiguration,
-			"Public clients cannot have client secrets")
+		return serviceerror.CustomServiceError(
+			ErrorInvalidPublicClientConfiguration,
+			"Public clients cannot have client secrets",
+		)
 	}
 
 	return nil

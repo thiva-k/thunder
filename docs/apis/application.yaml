@@ -94,6 +94,9 @@ paths:
               is_registration_flow_enabled: true
               url: "https://myapp.example.com"
               logo_url: "https://myapp.example.com/logo.png"
+              tos_uri: "https://myapp.example.com/terms"
+              policy_uri: "https://myapp.example.com/privacy"
+              contacts: ["admin@myapp.example.com", "support@myapp.example.com"]
               token:
                 issuer: "thunder"
                 validity_period: 3600
@@ -117,6 +120,10 @@ paths:
                     token_endpoint_auth_method: "client_secret_basic"
                     pkce_required: false
                     public_client: false
+                    scopes:
+                      - "openid"
+                      - "profile"
+                      - "email"
                     token:
                       issuer: "thunder-oauth"
                       access_token:
@@ -145,6 +152,9 @@ paths:
                 is_registration_flow_enabled: true
                 url: "https://myapp.example.com"
                 logo_url: "https://myapp.example.com/logo.png"
+                tos_uri: "https://myapp.example.com/terms"
+                policy_uri: "https://myapp.example.com/privacy"
+                contacts: ["admin@myapp.example.com", "support@myapp.example.com"]
                 token:
                   issuer: "thunder"
                   validity_period: 3600
@@ -168,6 +178,10 @@ paths:
                       token_endpoint_auth_method: "client_secret_basic"
                       pkce_required: false
                       public_client: false
+                      scopes:
+                        - "openid"
+                        - "profile"
+                        - "email"
                       token:
                         issuer: "thunder-oauth"
                         access_token:
@@ -247,6 +261,9 @@ paths:
                 is_registration_flow_enabled: true
                 url: "https://myapp.example.com"
                 logo_url: "https://myapp.example.com/logo.png"
+                tos_uri: "https://myapp.example.com/terms"
+                policy_uri: "https://myapp.example.com/privacy"
+                contacts: ["admin@myapp.example.com", "support@myapp.example.com"]
                 token:
                   issuer: "thunder"
                   validity_period: 3600
@@ -269,6 +286,10 @@ paths:
                       token_endpoint_auth_method: "client_secret_basic"
                       pkce_required: false
                       public_client: false
+                      scopes:
+                        - "openid"
+                        - "profile"
+                        - "email"
                       token:
                         issuer: "thunder-oauth"
                         access_token:
@@ -339,6 +360,9 @@ paths:
               is_registration_flow_enabled: true
               url: "https://myapp.example.com"
               logo_url: "https://myapp.example.com/updated-logo.png"
+              tos_uri: "https://myapp.example.com/terms"
+              policy_uri: "https://myapp.example.com/privacy"
+              contacts: ["admin@myapp.example.com", "support@myapp.example.com"]
               token:
                 issuer: "thunder"
                 validity_period: 3600
@@ -364,6 +388,10 @@ paths:
                     token_endpoint_auth_method: "client_secret_basic"
                     pkce_required: false
                     public_client: false
+                    scopes:
+                      - "openid"
+                      - "profile"
+                      - "email"
                     token:
                       access_token:
                         issuer: "thunder"
@@ -393,6 +421,9 @@ paths:
                 is_registration_flow_enabled: true
                 url: "https://myapp.example.com"
                 logo_url: "https://myapp.example.com/updated-logo.png"
+                tos_uri: "https://myapp.example.com/terms"
+                policy_uri: "https://myapp.example.com/privacy"
+                contacts: ["admin@myapp.example.com", "support@myapp.example.com"]
                 token:
                   issuer: "thunder"
                   validity_period: 3600
@@ -418,6 +449,10 @@ paths:
                       token_endpoint_auth_method: "client_secret_basic"
                       pkce_required: false
                       public_client: false
+                      scopes:
+                        - "openid"
+                        - "profile"
+                        - "email"
                       token:
                         issuer: "thunder-oauth"
                         access_token:
@@ -574,6 +609,23 @@ components:
           items:
             $ref: '#/components/schemas/InboundAuthConfigComplete'
           description: Inbound authentication configuration for the application.
+        tos_uri:
+          type: string
+          format: uri
+          description: URL pointing to the Terms of Service for the application.
+          example: "https://myapp.example.com/terms"
+        policy_uri:
+          type: string
+          format: uri
+          description: URL pointing to the Privacy Policy for the application.
+          example: "https://myapp.example.com/privacy"
+        contacts:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Array of email addresses of people responsible for the application.
+          example: ["admin@myapp.example.com", "support@myapp.example.com"]
 
     ApplicationCompleteResponse:
       type: object
@@ -626,6 +678,23 @@ components:
           items:
             $ref: '#/components/schemas/InboundAuthConfigComplete'
           description: Inbound authentication configuration for the application.
+        tos_uri:
+          type: string
+          format: uri
+          description: URL pointing to the Terms of Service for the application.
+          example: "https://myapp.example.com/terms"
+        policy_uri:
+          type: string
+          format: uri
+          description: URL pointing to the Privacy Policy for the application.
+          example: "https://myapp.example.com/privacy"
+        contacts:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Array of email addresses of people responsible for the application.
+          example: ["admin@myapp.example.com", "support@myapp.example.com"]
 
     ApplicationGetResponse:
       type: object
@@ -678,6 +747,23 @@ components:
           items:
             $ref: '#/components/schemas/InboundAuthConfig'
           description: Inbound authentication configuration for the application.
+        tos_uri:
+          type: string
+          format: uri
+          description: URL pointing to the Terms of Service for the application.
+          example: "https://myapp.example.com/terms"
+        policy_uri:
+          type: string
+          format: uri
+          description: URL pointing to the Privacy Policy for the application.
+          example: "https://myapp.example.com/privacy"
+        contacts:
+          type: array
+          items:
+            type: string
+            format: email
+          description: Array of email addresses of people responsible for the application.
+          example: ["admin@myapp.example.com", "support@myapp.example.com"]
 
     BasicApplicationResponse:
       type: object
@@ -853,6 +939,12 @@ components:
           description: Whether the application is a public client (Mobile apps, SPAs, etc.), which cannot store secrets securely.
           example: false
           default: false
+        scopes:
+          type: array
+          items:
+            type: string
+          description: List of scopes that the client can request.
+          example: ["openid", "profile", "email"]
         token:
           type: object
           properties:
@@ -913,6 +1005,12 @@ components:
           description: Whether the application is a public client (Mobile apps, SPAs, etc.), which cannot store secrets securely.
           example: false
           default: false
+        scopes:
+          type: array
+          items:
+            type: string
+          description: List of scopes that the client can request.
+          example: ["openid", "profile", "email"]
         token:
           type: object
           properties:
