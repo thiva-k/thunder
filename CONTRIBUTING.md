@@ -89,15 +89,14 @@ pnpm --filter @thunder/gate dev
 1. First, get the current **Develop** application configuration:
 
 ```bash
-curl -k -X GET "https://localhost:8090/applications/<develop-application-id>" \
-  -H "Content-Type: application/json" > develop-app.json
+curl -k -X GET "https://localhost:8090/applications/<develop-application-id>"
 ```
 
-> **Note**:
+> [!Note]
 > - Replace `<develop-application-id>` with the actual application ID (e.g., `6100bc91-ba99-4ce9-87dd-6d4d80178c38`).
 > - The `-k` flag allows curl to work with self-signed SSL certificates in development.
 
-This will be saved to a file named `develop-app.json` and it will look similar to the following:
+The response will look similar to the following:
 
 ```json
 {
@@ -170,7 +169,7 @@ This will be saved to a file named `develop-app.json` and it will look similar t
 }
 ```
 
-2. Update the `redirect_uris` in the `develop-app.json` file to include the local development URL (ex: https://localhost:5191/develop). Locate the `inbound_auth_config` section and modify the `redirect_uris` array:
+2. Copy the response from step 1 and update the `redirect_uris` in the JSON object to include the local development URL (ex: https://localhost:5191/develop). Locate the `inbound_auth_config > config` section and modify the `redirect_uris` array:
 
 ```json
 "redirect_uris": [
@@ -179,12 +178,12 @@ This will be saved to a file named `develop-app.json` and it will look similar t
 ]
 ```
 
-3. Update the **Develop** application with the modified configuration:
+3. Update the **Develop** application with the modified configuration by passing the updated JSON directly:
 
 ```bash
 curl -k -X PUT "https://localhost:8090/applications/<develop-application-id>" \
   -H "Content-Type: application/json" \
-  -d @develop-app.json
+  -d '<paste-the-modified-json-here>'
 ```
 
 4. Run the Thunder Develop application.
