@@ -560,11 +560,11 @@ func (suite *GeneratorTestSuite) TestExtractUniqueFactors() {
 			suite.Equal(tc.expectedUniqueFactors, len(factorSet))
 
 			for _, expected := range tc.expectedAuthContains {
-				suite.True(authMap[expected])
+				suite.Contains(authMap, expected)
 			}
 
 			for _, expected := range tc.expectedFactorsContains {
-				suite.True(factorSet[expected])
+				suite.Contains(factorSet, expected)
 			}
 		})
 	}

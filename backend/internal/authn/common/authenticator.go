@@ -19,6 +19,7 @@
 package common
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/asgardeo/thunder/internal/idp"
@@ -61,17 +62,17 @@ func GetAuthenticatorFactors(name string) []AuthenticationFactor {
 }
 
 // GetAuthenticatorNameForIDPType returns the authenticator name for a given IDP type.
-func GetAuthenticatorNameForIDPType(idpType idp.IDPType) string {
+func GetAuthenticatorNameForIDPType(idpType idp.IDPType) (string, error) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
 
-	// Search for an authenticator with matching IDP type
-	for _, meta := range authenticatorRegistry {
-		if meta.AssociatedIDP != "" && meta.AssociatedIDP == idpType {
-			return meta.Name
+	if idpType != "" {
+		for _, meta := range authenticatorRegistry {
+			if meta.AssociatedIDP == idpType {
+				return meta.Name, nil
+			}
 		}
 	}
 
-	// Default to OAuth authenticator if no match found
-	return AuthenticatorOAuth
+	return "", errors.New("no authenticator found for the given IDP type")
 }

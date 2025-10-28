@@ -62,7 +62,13 @@ func (ah *AuthenticationHandler) HandleCredentialsAuthRequest(w http.ResponseWri
 	}
 	delete(authRequest, "skip_assertion")
 
-	authResponse, svcErr := ah.authService.AuthenticateWithCredentials(authRequest, skipAssertion)
+	// Check for assertion field
+	assertion, ok := authRequest["assertion"].(string)
+	if ok {
+		delete(authRequest, "assertion")
+	}
+
+	authResponse, svcErr := ah.authService.AuthenticateWithCredentials(authRequest, skipAssertion, assertion)
 	if svcErr != nil {
 		ah.handleServiceError(w, svcErr)
 		return

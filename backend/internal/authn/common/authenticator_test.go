@@ -210,43 +210,55 @@ func (suite *AuthenticatorTestSuite) TestGetAuthenticatorNameForIDPType() {
 		name             string
 		idpType          idp.IDPType
 		expectedAuthName string
+		expectError      bool
 	}{
 		{
 			name:             "Google IDP type",
 			idpType:          idp.IDPTypeGoogle,
 			expectedAuthName: AuthenticatorGoogle,
+			expectError:      false,
 		},
 		{
 			name:             "GitHub IDP type",
 			idpType:          idp.IDPTypeGitHub,
 			expectedAuthName: AuthenticatorGithub,
+			expectError:      false,
 		},
 		{
 			name:             "OAuth IDP type",
 			idpType:          idp.IDPTypeOAuth,
 			expectedAuthName: AuthenticatorOAuth,
+			expectError:      false,
 		},
 		{
 			name:             "OIDC IDP type",
 			idpType:          idp.IDPTypeOIDC,
 			expectedAuthName: AuthenticatorOIDC,
+			expectError:      false,
 		},
 		{
 			name:             "Unknown IDP type defaults to OAuth",
 			idpType:          "UnknownIDPType",
-			expectedAuthName: AuthenticatorOAuth,
+			expectedAuthName: "",
+			expectError:      true,
 		},
 		{
 			name:             "Empty IDP type defaults to OAuth",
 			idpType:          "",
-			expectedAuthName: AuthenticatorOAuth,
+			expectedAuthName: "",
+			expectError:      true,
 		},
 	}
 
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
-			result := GetAuthenticatorNameForIDPType(tc.idpType)
-			suite.Equal(tc.expectedAuthName, result)
+			result, err := GetAuthenticatorNameForIDPType(tc.idpType)
+			if tc.expectError {
+				suite.Error(err)
+			} else {
+				suite.NoError(err)
+				suite.Equal(tc.expectedAuthName, result)
+			}
 		})
 	}
 }

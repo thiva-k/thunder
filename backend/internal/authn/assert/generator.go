@@ -130,9 +130,9 @@ func (ag *authAssertGenerator) VerifyAssurance(context *AssuranceContext, requir
 }
 
 // extractUniqueAuthenticators extracts unique authenticators and factors from authenticator references.
-// returns a map of unique authenticator names and a set of unique authentication factors.
+// Returns slices of unique authenticator names and authentication factors.
 func (ag *authAssertGenerator) extractUniqueAuthenticators(authenticators []authncm.AuthenticatorReference,
-	logger *log.Logger) (map[string]bool, map[authncm.AuthenticationFactor]bool) {
+	logger *log.Logger) ([]string, []authncm.AuthenticationFactor) {
 	authenticatorsMap := make(map[string]bool)
 	factorSet := make(map[authncm.AuthenticationFactor]bool)
 
@@ -151,7 +151,18 @@ func (ag *authAssertGenerator) extractUniqueAuthenticators(authenticators []auth
 		}
 	}
 
-	return authenticatorsMap, factorSet
+	// Convert maps to slices
+	uniqueAuthenticators := make([]string, 0, len(authenticatorsMap))
+	for authName := range authenticatorsMap {
+		uniqueAuthenticators = append(uniqueAuthenticators, authName)
+	}
+
+	uniqueFactors := make([]authncm.AuthenticationFactor, 0, len(factorSet))
+	for factor := range factorSet {
+		uniqueFactors = append(uniqueFactors, factor)
+	}
+
+	return uniqueAuthenticators, uniqueFactors
 }
 
 // calculateAAL calculates the AAL based on the authentication factors.
@@ -159,7 +170,7 @@ func (ag *authAssertGenerator) extractUniqueAuthenticators(authenticators []auth
 // - AAL1: Single-factor authentication (any one factor)
 // - AAL2: Two-factor authentication (two different factors)
 // - AAL3: Multi-factor authentication with hardware-based cryptographic authenticator
-func (ag *authAssertGenerator) calculateAAL(factorSet map[authncm.AuthenticationFactor]bool,
+func (ag *authAssertGenerator) calculateAAL(factorSet []authncm.AuthenticationFactor,
 	logger *log.Logger) AssuranceLevel {
 	var aal AssuranceLevel
 	factorCount := len(factorSet)
@@ -175,14 +186,8 @@ func (ag *authAssertGenerator) calculateAAL(factorSet map[authncm.Authentication
 		aal = AALLevel3
 	}
 
-	if logger.IsDebugEnabled() {
-		factorNames := make([]string, 0, len(factorSet))
-		for factor := range factorSet {
-			factorNames = append(factorNames, string(factor))
-		}
-		logger.Debug("Calculated AAL from authentication factors", log.Any("factors", factorNames),
-			log.String("aal", string(aal)))
-	}
+	logger.Debug("Calculated AAL from authentication factors", log.Any("factors", factorSet),
+		log.String("aal", string(aal)))
 
 	return aal
 }

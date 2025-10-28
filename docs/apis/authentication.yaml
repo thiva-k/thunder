@@ -409,6 +409,10 @@ components:
           description: Skip generating assertion token in the response
           default: false
           example: false
+        assertion:
+          type: string
+          description: Optional existing JWT assertion token to enrich with new authentication
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       additionalProperties: true
       example:
         email: "jane.doe@example.com"

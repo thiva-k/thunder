@@ -51,7 +51,7 @@ var crossAllowedIDPTypes = []idp.IDPType{idp.IDPTypeOAuth, idp.IDPTypeOIDC}
 
 // AuthenticationServiceInterface defines the interface for the authentication service.
 type AuthenticationServiceInterface interface {
-	AuthenticateWithCredentials(attributes map[string]interface{}, skipAssertion bool) (
+	AuthenticateWithCredentials(attributes map[string]interface{}, skipAssertion bool, existingAssertion string) (
 		*common.AuthenticationResponse, *serviceerror.ServiceError)
 	SendOTP(senderID string, channel notifcommon.ChannelType, recipient string) (
 		string, *serviceerror.ServiceError)
@@ -92,7 +92,8 @@ func NewAuthenticationService() AuthenticationServiceInterface {
 }
 
 // AuthenticateWithCredentials authenticates a user using credentials.
-func (as *authenticationService) AuthenticateWithCredentials(attributes map[string]interface{}, skipAssertion bool) (
+func (as *authenticationService) AuthenticateWithCredentials(attributes map[string]interface{},
+	skipAssertion bool, existingAssertion string) (
 	*common.AuthenticationResponse, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, svcLoggerComponentName))
 	logger.Debug("Authenticating with credentials")
@@ -111,7 +112,7 @@ func (as *authenticationService) AuthenticateWithCredentials(attributes map[stri
 	// Generate assertion if not skipped
 	if !skipAssertion {
 		svcErr = as.validateAndAppendAuthAssertion(authResponse, user, common.AuthenticatorCredentials,
-			"", logger)
+			existingAssertion, logger)
 		if svcErr != nil {
 			return nil, svcErr
 		}
@@ -260,7 +261,13 @@ func (as *authenticationService) FinishIDPAuthentication(requestedType idp.IDPTy
 
 	// Generate assertion if not skipped
 	if !skipAssertion {
-		authenticatorName := common.GetAuthenticatorNameForIDPType(sessionData.IDPType)
+		authenticatorName, err := common.GetAuthenticatorNameForIDPType(sessionData.IDPType)
+		if err != nil {
+			logger.Error("Failed to get authenticator name for IDP type",
+				log.String("idpType", string(sessionData.IDPType)), log.Error(err))
+			return nil, &common.ErrorInternalServerError
+		}
+
 		svcErr = as.validateAndAppendAuthAssertion(authResponse, user, authenticatorName,
 			existingAssertion, logger)
 		if svcErr != nil {
