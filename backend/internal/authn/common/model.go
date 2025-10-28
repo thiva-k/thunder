@@ -22,6 +22,8 @@ package common
 import (
 	"context"
 	"time"
+
+	"github.com/asgardeo/thunder/internal/idp"
 )
 
 // AuthenticatedUser represents the user information of an authenticated user.
@@ -46,4 +48,24 @@ type AuthenticationResponse struct {
 	Type             string
 	OrganizationUnit string
 	Assertion        string
+}
+
+// AuthenticatorMeta represents an authenticator's metadata including authentication factors.
+type AuthenticatorMeta struct {
+	// Name is the unique identifier for the authenticator (used in individual authentication APIs)
+	Name string
+	// Factors represents the authentication factors this authenticator validates
+	Factors []AuthenticationFactor
+	// AssociatedIDP is the optional identity provider type this authenticator is associated with.
+	AssociatedIDP idp.IDPType
+}
+
+// AuthenticatorReference represents an engaged authenticator in the authentication flow.
+type AuthenticatorReference struct {
+	// Authenticator is the name of the authenticator
+	Authenticator string `json:"authenticator"`
+	// Step is the step number in the flow where this authenticator was engaged
+	Step int `json:"step"`
+	// Timestamp is the authenticator engaged time (Unix epoch time in seconds)
+	Timestamp int64 `json:"timestamp"`
 }
