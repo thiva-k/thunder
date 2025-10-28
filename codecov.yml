@@ -40,5 +40,4 @@ ignore:
   - "**/*_test.go"
   - "tests/**"
   - "samples/**"
-  - "frontend/**"
   - "docs/**"
