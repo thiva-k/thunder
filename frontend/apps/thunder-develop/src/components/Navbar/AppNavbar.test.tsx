@@ -65,7 +65,7 @@ describe('AppNavbar', () => {
   it('renders menu icon', () => {
     const {container} = render(<AppNavbar />);
 
-    const menuIcon = container.querySelector('svg[data-testid="MenuRoundedIcon"]');
+    const menuIcon = container.querySelector('svg.lucide-menu');
     expect(menuIcon).toBeInTheDocument();
   });
 
@@ -135,7 +135,7 @@ describe('CustomIcon', () => {
   it('renders dashboard icon inside custom icon', () => {
     const {container} = render(<CustomIcon />);
 
-    const dashboardIcon = container.querySelector('svg[data-testid="DashboardRoundedIcon"]');
+    const dashboardIcon = container.querySelector('svg.lucide-layout-dashboard');
     expect(dashboardIcon).toBeInTheDocument();
   });
 });

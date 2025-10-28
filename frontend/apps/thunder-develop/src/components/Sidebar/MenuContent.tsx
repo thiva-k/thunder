@@ -23,13 +23,7 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
-import HomeRoundedIcon from '@mui/icons-material/HomeRounded';
-import AnalyticsRoundedIcon from '@mui/icons-material/AnalyticsRounded';
-import PeopleRoundedIcon from '@mui/icons-material/PeopleRounded';
-import AssignmentRoundedIcon from '@mui/icons-material/AssignmentRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import InfoRoundedIcon from '@mui/icons-material/InfoRounded';
-import HelpRoundedIcon from '@mui/icons-material/HelpRounded';
+import {Blocks, House, LayoutGrid, Settings, User, UsersRound} from 'lucide-react';
 import type {JSX} from 'react';
 import useNavigation from '@/layouts/contexts/useNavigation';
 
@@ -37,30 +31,37 @@ const mainListItems = [
   {
     id: 'home',
     text: 'Home',
-    icon: <HomeRoundedIcon />,
+    icon: <House size={16} />,
     category: 'Dashboard',
     path: '/',
   },
   {
     id: 'users',
     text: 'Users',
-    icon: <PeopleRoundedIcon />,
+    icon: <UsersRound size={16} />,
     category: 'Dashboard',
     path: '/users',
   },
   {
-    id: 'analytics',
-    text: 'Integrations',
-    icon: <AnalyticsRoundedIcon />,
+    id: 'user-types',
+    text: 'User Types',
+    icon: <User size={16} />,
     category: 'Dashboard',
-    path: '/',
+    path: '/user-types',
   },
   {
-    id: 'tasks',
-    text: 'Applications',
-    icon: <AssignmentRoundedIcon />,
+    id: 'integrations',
+    text: 'Integrations',
+    icon: <Blocks size={16} />,
     category: 'Dashboard',
-    path: '/',
+    path: '/integrations',
+  },
+  {
+    id: 'applications',
+    text: 'Applications',
+    icon: <LayoutGrid size={16} />,
+    category: 'Dashboard',
+    path: '/applications',
   },
 ];
 
@@ -68,23 +69,9 @@ const secondaryListItems = [
   {
     id: 'settings',
     text: 'Settings',
-    icon: <SettingsRoundedIcon />,
+    icon: <Settings size={14} />,
     category: 'Settings',
     path: '/settings',
-  },
-  {
-    id: 'about',
-    text: 'About',
-    icon: <InfoRoundedIcon />,
-    category: 'Settings',
-    path: '/about',
-  },
-  {
-    id: 'feedback',
-    text: 'Feedback',
-    icon: <HelpRoundedIcon />,
-    category: 'Settings',
-    path: '/feedback',
   },
 ];
 
@@ -92,11 +79,7 @@ export default function MenuContent(): JSX.Element {
   const {currentPage, setCurrentPage} = useNavigation();
 
   const handleListItemClick = (item: {id: string; text: string; category: string}) => {
-    setCurrentPage({
-      id: item.id,
-      text: item.text,
-      category: item.category,
-    });
+    setCurrentPage(item.id);
   };
 
   return (
@@ -107,7 +90,7 @@ export default function MenuContent(): JSX.Element {
             <ListItemButton
               component={NavLink}
               to={item.path}
-              selected={currentPage.id === item.id}
+              selected={currentPage === item.id}
               onClick={() => handleListItemClick(item)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>
@@ -122,7 +105,7 @@ export default function MenuContent(): JSX.Element {
             <ListItemButton
               component={NavLink}
               to={item.path}
-              selected={currentPage.id === item.id}
+              selected={currentPage === item.id}
               onClick={() => handleListItemClick(item)}
             >
               <ListItemIcon>{item.icon}</ListItemIcon>

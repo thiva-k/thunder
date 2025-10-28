@@ -19,7 +19,7 @@
 import FormControl from '@mui/material/FormControl';
 import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import {SearchIcon} from 'lucide-react';
 import type {JSX} from 'react';
 
 export default function Search(): JSX.Element {
@@ -32,7 +32,7 @@ export default function Search(): JSX.Element {
         sx={{flexGrow: 1}}
         startAdornment={
           <InputAdornment position="start" sx={{color: 'text.primary'}}>
-            <SearchRoundedIcon fontSize="small" />
+            <SearchIcon size={16} />
           </InputAdornment>
         }
         inputProps={{

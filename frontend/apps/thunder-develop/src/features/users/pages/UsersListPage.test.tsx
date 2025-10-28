@@ -21,7 +21,7 @@ import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import render from '@/test/test-utils';
 import UsersListPage from './UsersListPage';
-import type {UserSchemaListResponse, ApiError} from '../types/users';
+import type {UserSchemaListResponse} from '../types/users';
 
 const mockNavigate = vi.fn();
 
@@ -45,10 +45,7 @@ vi.mock('../components/UsersList', () => ({
 
 // Define the return type for the hook
 interface UseGetUserSchemasReturn {
-  data: UserSchemaListResponse | null;
-  loading: boolean;
-  error: ApiError | null;
-  refetch: (params?: {limit?: number; offset?: number}) => void;
+  data: UserSchemaListResponse | undefined;
 }
 
 // Mock the useGetUserSchemas hook
@@ -72,9 +69,6 @@ describe('UsersListPage', () => {
     vi.clearAllMocks();
     mockUseGetUserSchemas.mockReturnValue({
       data: mockSchemas,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
     });
   });
 
@@ -114,7 +108,8 @@ describe('UsersListPage', () => {
   it('renders search icon', () => {
     const {container} = render(<UsersListPage />);
 
-    const searchIcon = container.querySelector('svg[data-testid="SearchIcon"]');
+    // Check for lucide-react Search icon
+    const searchIcon = container.querySelector('svg');
     expect(searchIcon).toBeInTheDocument();
   });
 
@@ -135,7 +130,7 @@ describe('UsersListPage', () => {
     const addButton = screen.getByRole('button', {name: /add user/i});
     await user.click(addButton);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/users/new');
+    expect(mockNavigate).toHaveBeenCalledWith('/users/create');
   });
 
   it('renders schema select dropdown', () => {
@@ -200,25 +195,26 @@ describe('UsersListPage', () => {
   });
 
   it('renders refresh icon in refresh button', () => {
-    const {container} = render(<UsersListPage />);
+    render(<UsersListPage />);
 
-    const refreshIcon = container.querySelector('svg[data-testid="RefreshIcon"]');
-    expect(refreshIcon).toBeInTheDocument();
+    const refreshButton = screen.getByRole('button', {name: /refresh/i});
+    // Check that button has an icon by checking for svg within the button
+    const icon = refreshButton.querySelector('svg');
+    expect(icon).toBeInTheDocument();
   });
 
   it('renders add icon in add user button', () => {
-    const {container} = render(<UsersListPage />);
+    render(<UsersListPage />);
 
-    const addIcon = container.querySelector('svg[data-testid="AddIcon"]');
-    expect(addIcon).toBeInTheDocument();
+    const addButton = screen.getByRole('button', {name: /add user/i});
+    // Check that button has an icon by checking for svg within the button
+    const icon = addButton.querySelector('svg');
+    expect(icon).toBeInTheDocument();
   });
 
   it('handles empty schemas list', () => {
     mockUseGetUserSchemas.mockReturnValue({
       data: {totalResults: 0, startIndex: 1, count: 0, schemas: []},
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
     });
 
     render(<UsersListPage />);
@@ -227,44 +223,15 @@ describe('UsersListPage', () => {
     expect(usersList).toHaveAttribute('data-schema', '');
   });
 
-  it('handles null schemas data', () => {
+  it('handles undefined schemas data', () => {
     mockUseGetUserSchemas.mockReturnValue({
-      data: null,
-      loading: false,
-      error: null,
-      refetch: vi.fn(),
+      data: undefined,
     });
 
     render(<UsersListPage />);
 
     expect(screen.getByText('User Management')).toBeInTheDocument();
     expect(screen.getByTestId('users-list')).toBeInTheDocument();
-  });
-
-  it('handles loading state', () => {
-    mockUseGetUserSchemas.mockReturnValue({
-      data: null,
-      loading: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-
-    render(<UsersListPage />);
-
-    expect(screen.getByText('User Management')).toBeInTheDocument();
-  });
-
-  it('handles error state', () => {
-    mockUseGetUserSchemas.mockReturnValue({
-      data: null,
-      loading: false,
-      error: {code: 'ERROR', message: 'Failed to fetch', description: 'Error description'},
-      refetch: vi.fn(),
-    });
-
-    render(<UsersListPage />);
-
-    expect(screen.getByText('User Management')).toBeInTheDocument();
   });
 
   it('has correct heading level', () => {

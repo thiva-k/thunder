@@ -16,15 +16,9 @@
  * under the License.
  */
 
-export interface NavigationItem {
-  id: string;
-  text: string;
-  category?: string;
-}
-
 export interface NavigationContextType {
-  currentPage: NavigationItem;
-  setCurrentPage: (page: NavigationItem) => void;
+  currentPage: string;
+  setCurrentPage: (page: string) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;

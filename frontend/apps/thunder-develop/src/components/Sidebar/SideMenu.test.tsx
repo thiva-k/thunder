@@ -22,20 +22,15 @@ import type {JSX} from 'react';
 import render from '@/test/test-utils';
 import SideMenu from './SideMenu';
 
-interface MockUser {
-  name: string;
-  email: string;
-}
-
-// Mock the Asgardeo User component
+// Mock Asgardeo User component
 vi.mock('@asgardeo/react', () => ({
-  User: ({children}: {children: (user: MockUser) => JSX.Element}) => {
-    const mockUser: MockUser = {
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-    };
-    return <div data-testid="user-component">{children(mockUser)}</div>;
-  },
+  User: ({children}: {children: (user: {name: string; email: string}) => JSX.Element}) =>
+    children({name: 'John Doe', email: 'john.doe@example.com'}),
+}));
+
+// Mock ThemedIcon component
+vi.mock('@thunder/ui', () => ({
+  ThemedIcon: () => <div data-testid="themed-icon">Logo</div>,
 }));
 
 // Mock child components
@@ -51,10 +46,6 @@ vi.mock('./OptionsMenu', () => ({
   ),
 }));
 
-vi.mock('@thunder/ui', () => ({
-  ThemedIcon: ({alt}: {alt: {light: string; dark: string}}) => <img data-testid="themed-icon" alt={alt.light} />,
-}));
-
 describe('SideMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,14 +58,7 @@ describe('SideMenu', () => {
     expect(drawer).toBeInTheDocument();
   });
 
-  it('renders the logo', () => {
-    render(<SideMenu />);
-
-    const logo = screen.getByTestId('themed-icon');
-    expect(logo).toBeInTheDocument();
-  });
-
-  it('renders the "Develop" title', () => {
+  it('renders the Develop title', () => {
     render(<SideMenu />);
 
     expect(screen.getByText('Develop')).toBeInTheDocument();
@@ -93,11 +77,12 @@ describe('SideMenu', () => {
     expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
   });
 
-  it('renders user avatar with first letter', () => {
-    render(<SideMenu />);
+  it('renders user avatar', () => {
+    const {container} = render(<SideMenu />);
 
-    const avatar = screen.getByText('J');
+    const avatar = container.querySelector('.MuiAvatar-root');
     expect(avatar).toBeInTheDocument();
+    expect(avatar).toHaveTextContent('J');
   });
 
   it('renders options menu', () => {

@@ -27,11 +27,7 @@ const mockSetCurrentPage = vi.fn();
 // Mock useNavigation hook
 vi.mock('@/layouts/contexts/useNavigation', () => ({
   default: vi.fn(() => ({
-    currentPage: {
-      id: 'home',
-      text: 'Home',
-      category: 'Dashboard',
-    },
+    currentPage: 'home',
     setCurrentPage: mockSetCurrentPage,
     sidebarOpen: false,
     setSidebarOpen: vi.fn(),
@@ -49,6 +45,7 @@ describe('MenuContent', () => {
 
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Users')).toBeInTheDocument();
+    expect(screen.getByText('User Types')).toBeInTheDocument();
     expect(screen.getByText('Integrations')).toBeInTheDocument();
     expect(screen.getByText('Applications')).toBeInTheDocument();
   });
@@ -57,25 +54,22 @@ describe('MenuContent', () => {
     render(<MenuContent />);
 
     expect(screen.getByText('Settings')).toBeInTheDocument();
-    expect(screen.getByText('About')).toBeInTheDocument();
-    expect(screen.getByText('Feedback')).toBeInTheDocument();
   });
 
   it('renders icons for main menu items', () => {
     const {container} = render(<MenuContent />);
 
-    expect(container.querySelector('svg[data-testid="HomeRoundedIcon"]')).toBeInTheDocument();
-    expect(container.querySelector('svg[data-testid="PeopleRoundedIcon"]')).toBeInTheDocument();
-    expect(container.querySelector('svg[data-testid="AnalyticsRoundedIcon"]')).toBeInTheDocument();
-    expect(container.querySelector('svg[data-testid="AssignmentRoundedIcon"]')).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-house')).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-users-round')).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-user')).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-blocks')).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-layout-grid')).toBeInTheDocument();
   });
 
   it('renders icons for secondary menu items', () => {
     const {container} = render(<MenuContent />);
 
-    expect(container.querySelector('svg[data-testid="SettingsRoundedIcon"]')).toBeInTheDocument();
-    expect(container.querySelector('svg[data-testid="InfoRoundedIcon"]')).toBeInTheDocument();
-    expect(container.querySelector('svg[data-testid="HelpRoundedIcon"]')).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-settings')).toBeInTheDocument();
   });
 
   it('calls setCurrentPage when a menu item is clicked', async () => {
@@ -85,11 +79,7 @@ describe('MenuContent', () => {
     const usersLink = screen.getByText('Users');
     await user.click(usersLink);
 
-    expect(mockSetCurrentPage).toHaveBeenCalledWith({
-      id: 'users',
-      text: 'Users',
-      category: 'Dashboard',
-    });
+    expect(mockSetCurrentPage).toHaveBeenCalledWith('users');
   });
 
   it('calls setCurrentPage with correct data for secondary items', async () => {
@@ -99,11 +89,7 @@ describe('MenuContent', () => {
     const settingsLink = screen.getByText('Settings');
     await user.click(settingsLink);
 
-    expect(mockSetCurrentPage).toHaveBeenCalledWith({
-      id: 'settings',
-      text: 'Settings',
-      category: 'Settings',
-    });
+    expect(mockSetCurrentPage).toHaveBeenCalledWith('settings');
   });
 
   it('renders NavLink components with correct paths', () => {

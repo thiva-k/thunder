@@ -23,7 +23,7 @@ import Box from '@mui/material/Box';
 import {Layout} from '@thunder/ui';
 import SideMenu from '../components/Sidebar/SideMenu';
 import Header from '../components/Header/Header';
-import NavigationProvider from './NavigationProvider';
+import NavigationProvider from './contexts/NavigationProvider';
 
 export default function DashboardLayout(): ReactNode {
   return (

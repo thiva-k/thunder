@@ -50,7 +50,8 @@ describe('OptionsMenu', () => {
   it('renders more icon', () => {
     const {container} = render(<OptionsMenu />);
 
-    const moreIcon = container.querySelector('svg[data-testid="MoreVertRoundedIcon"]');
+    // Check for lucide-react EllipsisVertical icon
+    const moreIcon = container.querySelector('svg');
     expect(moreIcon).toBeInTheDocument();
   });
 

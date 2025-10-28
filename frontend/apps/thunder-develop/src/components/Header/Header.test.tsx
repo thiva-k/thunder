@@ -68,7 +68,7 @@ describe('Header', () => {
   it('renders notifications icon', () => {
     const {container} = render(<Header />);
 
-    const notificationIcon = container.querySelector('svg[data-testid="NotificationsRoundedIcon"]');
+    const notificationIcon = container.querySelector('svg.lucide-bell');
     expect(notificationIcon).toBeInTheDocument();
   });
 

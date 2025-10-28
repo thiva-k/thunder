@@ -86,14 +86,110 @@ pnpm --filter @thunder/gate dev
 
 ### Setting up the Thunder Develop Application
 
-1. Navigate to the Thunder frontend directory.
+1. First, get the current **Develop** application configuration:
 
 ```bash
-cd frontend
+curl -k -X GET "https://localhost:8090/applications/<develop-application-id>"
 ```
 
-2. Run the Thunder Gate application.
+> [!Note]
+> - Replace `<develop-application-id>` with the actual application ID (e.g., `6100bc91-ba99-4ce9-87dd-6d4d80178c38`).
+> - The `-k` flag allows curl to work with self-signed SSL certificates in development.
+
+The response will look similar to the following:
+
+```json
+{
+    "id": "6100bc91-ba99-4ce9-87dd-6d4d80178c38",
+    "name": "Develop",
+    "description": "Developer application for Thunder",
+    "client_id": "DEVELOP",
+    "auth_flow_graph_id": "auth_flow_config_basic",
+    "registration_flow_graph_id": "registration_flow_config_basic",
+    "is_registration_flow_enabled": true,
+    "url": "https://localhost:8090/develop",
+    "logo_url": "https://localhost:8090/develop/assets/images/asgardeo-trifacta.svg",
+    "token": {
+        "issuer": "thunder",
+        "validity_period": 3600,
+        "user_attributes": null
+    },
+    "certificate": { "type": "NONE", "value": "" },
+    "inbound_auth_config": [
+        {
+            "type": "oauth2",
+            "config": {
+                "client_id": "DEVELOP",
+                "redirect_uris": [
+                    "https://localhost:8090/develop"
+                ],
+                "grant_types": ["authorization_code"],
+                "response_types": ["code"],
+                "token_endpoint_auth_method": "none",
+                "pkce_required": false,
+                "public_client": true,
+                "token": {
+                    "issuer": "https://localhost:8090/oauth2/token",
+                    "access_token": {
+                        "issuer": "",
+                        "validity_period": 3600,
+                        "user_attributes": [
+                            "given_name",
+                            "family_name",
+                            "email",
+                            "groups",
+                            "name"
+                        ]
+                    },
+                    "id_token": {
+                        "validity_period": 3600,
+                        "user_attributes": [
+                            "given_name",
+                            "family_name",
+                            "email",
+                            "groups",
+                            "name"
+                        ],
+                        "scope_claims": {
+                            "email": ["email", "email_verified"],
+                            "group": ["groups"],
+                            "phone": ["phone_number", "phone_number_verified"],
+                            "profile": [
+                                "name",
+                                "given_name",
+                                "family_name",
+                                "picture"
+                            ]
+                        }
+                    }
+                }
+            }
+        }
+    ]
+}
+```
+
+2. Copy the response from step 1 and update the `redirect_uris` in the JSON object to include the local development URL (ex: https://localhost:5191/develop). Locate the `inbound_auth_config > config` section and modify the `redirect_uris` array:
+
+```json
+"redirect_uris": [
+  "https://localhost:8090/develop",
+  "https://localhost:5191/develop"
+]
+```
+
+3. Update the **Develop** application with the modified configuration by passing the updated JSON directly:
+
+```bash
+curl -k -X PUT "https://localhost:8090/applications/<develop-application-id>" \
+  -H "Content-Type: application/json" \
+  -d '<paste-the-modified-json-here>'
+```
+
+4. Run the Thunder Develop application.
 
 ```bash
 pnpm --filter @thunder/develop dev
 ```
+
+This will run the Thunder Develop application on `https://localhost:5191/develop`.
