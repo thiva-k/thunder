@@ -1,4 +1,4 @@
-# Authentication Flow Customization Guide
+# Customizing Authentication Flows
 
 This guide explains how to customize authentication flows in WSO2 Thunder using the flow graph system. Thunder uses a flexible graph-based approach to define authentication flows, allowing you to create tailored login experiences.
 
