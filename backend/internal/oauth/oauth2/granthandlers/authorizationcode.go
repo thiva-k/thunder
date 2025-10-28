@@ -134,7 +134,7 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 
 	// Build access token claims and attributes
 	jwtClaims, accessTokenAttributes := buildAccessTokenClaimsAndAttributes(
-		authorizedScopesStr, attrs, userGroups, oauthApp)
+		authorizedScopesStr, attrs, userGroups, oauthApp, authCode.Resource)
 
 	// Generate access token
 	iss, validityPeriod := resolveTokenConfig(oauthApp)
@@ -278,6 +278,7 @@ func buildAccessTokenClaimsAndAttributes(
 	attrs map[string]interface{},
 	userGroups []string,
 	oauthApp *appmodel.OAuthAppConfigProcessedDTO,
+	resource string,
 ) (map[string]interface{}, map[string]interface{}) {
 	jwtClaims := make(map[string]interface{})
 	accessTokenAttributes := make(map[string]interface{})
@@ -285,6 +286,11 @@ func buildAccessTokenClaimsAndAttributes(
 	// Add scope to JWT claims
 	if authorizedScopesStr != "" {
 		jwtClaims["scope"] = authorizedScopesStr
+	}
+
+	// Add audience claim based on resource parameter (RFC 8707)
+	if resource != "" {
+		jwtClaims["aud"] = resource
 	}
 
 	// Add user attributes to claims and access token attributes
@@ -340,7 +346,12 @@ func updateContextAttributes(ctx *model.TokenContext, authCode *authz.Authorizat
 		ctx.TokenAttributes = make(map[string]interface{})
 	}
 	ctx.TokenAttributes["sub"] = authCode.AuthorizedUserID
-	ctx.TokenAttributes["aud"] = authCode.ClientID
+	// Set audience to resource if provided, otherwise use client ID
+	if authCode.Resource != "" {
+		ctx.TokenAttributes["aud"] = authCode.Resource
+	} else {
+		ctx.TokenAttributes["aud"] = authCode.ClientID
+	}
 }
 
 // buildTokenResponse builds the token response with access token details.
@@ -380,6 +391,14 @@ func validateAuthorizationCode(tokenRequest *model.TokenRequest,
 		return &model.ErrorResponse{
 			Error:            constants.ErrorInvalidGrant,
 			ErrorDescription: "Invalid redirect URI",
+		}
+	}
+
+	// Validate resource parameter consistency with authorization code
+	if code.Resource != "" && code.Resource != tokenRequest.Resource {
+		return &model.ErrorResponse{
+			Error:            constants.ErrorInvalidTarget,
+			ErrorDescription: "Resource parameter mismatch",
 		}
 	}
 

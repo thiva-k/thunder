@@ -861,3 +861,108 @@ func (ts *AuthzTestSuite) TestAuthorizationCodeErrorScenarios() {
 		})
 	}
 }
+
+// TestAuthorizationCodeFlowWithResourceParameter tests RFC 8707 resource parameter implementation
+func (ts *AuthzTestSuite) TestAuthorizationCodeFlowWithResourceParameter() {
+	// Test that resource parameter is properly stored and used as audience in access token
+	resourceURL := "https://mcp.example.com/mcp"
+
+	// Create test user
+	user := testutils.User{
+		OrganizationUnit: testOUID,
+		Type:             "person",
+		Attributes: json.RawMessage(`{
+			"username": "resourcetest",
+			"password": "testpass123",
+			"email": "resourcetest@example.com",
+			"firstName": "Resource",
+			"lastName": "Test"
+		}`),
+	}
+	userID, err := testutils.CreateUser(user)
+	ts.NoError(err, "Failed to create test user")
+	defer func() {
+		if err := testutils.DeleteUser(userID); err != nil {
+			ts.T().Logf("Warning: Failed to delete test user: %v", err)
+		}
+	}()
+
+	// Start authorization flow with resource parameter
+	resp, err := initiateAuthorizationFlowWithResource(
+		clientID,
+		redirectURI,
+		"code",
+		"openid",
+		"test_resource_state",
+		resourceURL,
+	)
+	ts.NoError(err, "Failed to initiate authorization flow with resource")
+	defer resp.Body.Close()
+
+	ts.Equal(http.StatusFound, resp.StatusCode, "Expected redirect status")
+	location := resp.Header.Get("Location")
+	ts.NotEmpty(location, "Expected redirect location header")
+
+	sessionDataKey, _, err := extractSessionData(location)
+	ts.NoError(err, "Failed to extract session data")
+
+	// Execute authentication flow
+	flowStep, err := ExecuteAuthenticationFlow(ts.applicationID, map[string]string{
+		"username": "resourcetest",
+		"password": "testpass123",
+	})
+	ts.NoError(err, "Failed to execute authentication flow")
+	ts.Equal("COMPLETE", flowStep.FlowStatus, "Expected flow status COMPLETE")
+
+	// Complete authorization
+	authzResponse, err := completeAuthorization(sessionDataKey, flowStep.Assertion)
+	ts.NoError(err, "Failed to complete authorization")
+
+	// Extract authorization code
+	authzCode, err := extractAuthorizationCode(authzResponse.RedirectURI)
+	ts.NoError(err, "Failed to extract authorization code")
+
+	// Request token with resource parameter
+	tokenReq := url.Values{}
+	tokenReq.Set("grant_type", "authorization_code")
+	tokenReq.Set("code", authzCode)
+	tokenReq.Set("redirect_uri", redirectURI)
+	tokenReq.Set("resource", resourceURL)
+
+	req, err := http.NewRequest("POST", testServerURL+"/oauth2/token", bytes.NewBufferString(tokenReq.Encode()))
+	ts.NoError(err, "Failed to create token request")
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(clientID, clientSecret)
+
+	tokenResp, err := ts.client.Do(req)
+	ts.NoError(err, "Failed to send token request")
+	defer tokenResp.Body.Close()
+
+	ts.Equal(http.StatusOK, tokenResp.StatusCode, "Token request should succeed")
+
+	var tokenResponse map[string]interface{}
+	err = json.NewDecoder(tokenResp.Body).Decode(&tokenResponse)
+	ts.NoError(err, "Failed to decode token response")
+
+	// Extract and decode the access token
+	accessToken, ok := tokenResponse["access_token"].(string)
+	ts.True(ok, "Access token should be present")
+
+	// Decode JWT to verify audience claim
+	parts := strings.Split(accessToken, ".")
+	ts.Len(parts, 3, "Access token should be a JWT")
+
+	// Decode the payload (second part)
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	ts.NoError(err, "Failed to decode JWT payload")
+
+	var claims map[string]interface{}
+	err = json.Unmarshal(payload, &claims)
+	ts.NoError(err, "Failed to unmarshal JWT claims")
+
+	// Verify the audience claim matches the resource parameter
+	aud, ok := claims["aud"]
+	ts.True(ok, "Audience claim should be present in access token")
+	ts.Equal(resourceURL, aud, "Audience should match the resource parameter")
+}

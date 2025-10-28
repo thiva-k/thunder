@@ -34,6 +34,11 @@ const (
 
 // initiateAuthorizationFlow starts the OAuth2 authorization flow
 func initiateAuthorizationFlow(clientID, redirectURI, responseType, scope, state string) (*http.Response, error) {
+	return initiateAuthorizationFlowWithResource(clientID, redirectURI, responseType, scope, state, "")
+}
+
+// initiateAuthorizationFlowWithResource starts the OAuth2 authorization flow with resource parameter
+func initiateAuthorizationFlowWithResource(clientID, redirectURI, responseType, scope, state, resource string) (*http.Response, error) {
 	authURL := testServerURL + "/oauth2/authorize"
 	params := url.Values{}
 	params.Set("client_id", clientID)
@@ -41,6 +46,9 @@ func initiateAuthorizationFlow(clientID, redirectURI, responseType, scope, state
 	params.Set("response_type", responseType)
 	params.Set("scope", scope)
 	params.Set("state", state)
+	if resource != "" {
+		params.Set("resource", resource)
+	}
 
 	req, err := http.NewRequest("GET", authURL+"?"+params.Encode(), nil)
 	if err != nil {
