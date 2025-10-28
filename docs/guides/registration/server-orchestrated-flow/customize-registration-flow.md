@@ -1,4 +1,4 @@
-# Registration Flow Customization Guide
+# Customizing Registration Flows
 
 This guide explains how to customize registration flows in WSO2 Thunder using the flow graph system. Thunder uses a flexible graph-based approach to define registration flows, allowing you to create tailored user registration experiences.
 

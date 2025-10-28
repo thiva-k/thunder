@@ -1,10 +1,10 @@
-# Message Provider Configuration Guide
+# Configuring Message Senders
 
-This guide provides instructions on how to configure message providers for sending OTPs and notifications in WSO2 Thunder. You can manage message notification senders through the REST API, allowing you to create, update, retrieve, and delete message providers.
+This guide provides instructions on how to configure message senders for sending OTPs and notifications in WSO2 Thunder. You can manage message notification senders through the REST API, allowing you to create, update, retrieve, and delete message senders.
 
 ---
 
-## Managing Message Providers
+## Managing Message Senders
 
 You can manage message notification senders using the following REST API endpoints.
 
@@ -18,14 +18,14 @@ curl -kL -H 'Accept: application/json' https://localhost:8090/notification-sende
 
 ### Create a Message Notification Sender
 
-Create a new message notification sender. See provider-specific examples below for the request body.
+Create a new message notification sender. See sender-specific examples below for the request body.
 
 ```bash
 curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
 -d '{ ... }'
 ```
 
-Refer [Message Provider Configuration](#message-provider-configuration) for details on the supported providers and their required properties.
+Refer [Message Sender Configuration](#message-sender-configuration) for details on the supported senders and their required properties.
 
 ### Get a Message Notification Sender by ID
 
@@ -54,9 +54,9 @@ curl -kL -X DELETE https://localhost:8090/notification-senders/message/<sender_i
 
 ---
 
-## Message Provider Configuration
+## Message Sender Configuration
 
-To configure a message provider, you need to specify the `provider` type and the required properties for that provider. The `provider` can be one of the following: `twilio`, `vonage`, or `custom`. Each provider has its own set of required properties.
+To configure a message sender, you need to specify the `provider` type and the required properties for that provider. The `provider` can be one of the following: `twilio`, `vonage`, or `custom`. Each provider has its own set of required properties.
 
 ### Twilio
 
@@ -132,7 +132,7 @@ curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https
 }'
 ```
 
-### Custom HTTP Provider
+### Custom HTTP Notification Sender
 
 **Required Properties:**
 
@@ -174,4 +174,4 @@ curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https
 
 ---
 
-For more details on the API, refer to the [OpenAPI specification](../apis/notification-sender.yaml).
+For more details on the API, refer to the [OpenAPI specification](../../../api/notification-sender.yaml).

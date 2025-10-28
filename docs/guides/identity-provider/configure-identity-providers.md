@@ -1,4 +1,4 @@
-# Identity Provider Configuration Guide
+# Configuring Identity Providers
 
 This guide provides instructions on how to configure and manage identity providers (IDPs) in WSO2 Thunder. You can manage IDPs through the REST API, allowing you to create, update, retrieve, and delete identity providers.
 
