@@ -208,10 +208,6 @@ To quickly get started with Thunder, you can use the sample app provided with th
                 "token_endpoint_auth_method": "client_secret_basic",
                 "pkce_required": false,
                 "public_client": false,
-                "certificate": {
-                    "type": "JWKS_URI",
-                    "value": "https://localhost:3000/.well-known/jwks"
-                },
                 "scopes": ["openid", "profile", "email"],
                 "token": {
                     "issuer": "thunder",
@@ -310,10 +306,6 @@ To try out the Client Credentials flow, follow these steps:
                     "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false,
-                    "certificate": {
-                        "type": "JWKS_URI",
-                        "value": "https://localhost:3000/.well-known/jwks"
-                    },
                     "scopes": ["api:read", "api:write"]
                 }
             }
@@ -375,10 +367,6 @@ To try out the Client Credentials flow, follow these steps:
                     "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false,
-                    "certificate": {
-                        "type": "JWKS_URI",
-                        "value": "https://localhost:3000/.well-known/jwks"
-                    },
                     "scopes": ["api:read", "api:write"]
                 }
             }
@@ -457,10 +445,6 @@ To try out the Client Credentials flow, follow these steps:
                     "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false,
-                    "certificate": {
-                        "type": "JWKS_URI",
-                        "value": "https://localhost:3000/.well-known/jwks"
-                    },
                     "scopes": ["openid", "profile", "email"],
                     "token": {
                         "issuer": "thunder",
@@ -623,10 +607,6 @@ To try out the Client Credentials flow, follow these steps:
                     "token_endpoint_auth_method": "client_secret_basic",
                     "pkce_required": false,
                     "public_client": false,
-                    "certificate": {
-                        "type": "JWKS_URI",
-                        "value": "https://localhost:3000/.well-known/jwks"
-                    },
                     "scopes": ["openid", "profile", "email"]
                 }
             }

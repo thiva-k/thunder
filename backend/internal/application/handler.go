@@ -260,7 +260,6 @@ func (ah *applicationHandler) HandleApplicationGetRequest(w http.ResponseWriter,
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
-				Certificate:             config.OAuthAppConfig.Certificate,
 				Scopes:                  config.OAuthAppConfig.Scopes,
 			}
 			returnInboundAuthConfigs = append(returnInboundAuthConfigs, model.InboundAuthConfig{
@@ -463,7 +462,6 @@ func (ah *applicationHandler) processInboundAuthConfig(logger *log.Logger, appDT
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
-				Certificate:             config.OAuthAppConfig.Certificate,
 				Scopes:                  config.OAuthAppConfig.Scopes,
 			}
 			returnInboundAuthConfigs = append(returnInboundAuthConfigs, model.InboundAuthConfigComplete{
@@ -530,7 +528,6 @@ func (ah *applicationHandler) processInboundAuthConfigFromRequest(
 				PKCERequired:            config.OAuthAppConfig.PKCERequired,
 				PublicClient:            config.OAuthAppConfig.PublicClient,
 				Token:                   config.OAuthAppConfig.Token,
-				Certificate:             config.OAuthAppConfig.Certificate,
 				Scopes:                  config.OAuthAppConfig.Scopes,
 			},
 		}

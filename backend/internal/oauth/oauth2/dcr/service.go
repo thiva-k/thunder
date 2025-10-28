@@ -61,7 +61,7 @@ func (ds *dcrService) RegisterClient(request *DCRRegistrationRequest) (
 		return nil, &ErrorJWKSConfigurationConflict
 	}
 
-	appDTO, err := ds.convertDCRToApplicationDTO(request)
+	appDTO, err := ds.convertDCRToApplication(request)
 	if err != nil {
 		logger.Error("Failed to convert DCR request to application DTO", log.String("error", err.Error))
 		return nil, &ErrorServerError
@@ -82,21 +82,22 @@ func (ds *dcrService) RegisterClient(request *DCRRegistrationRequest) (
 	return response, nil
 }
 
-// convertDCRToApplicationDTO converts DCR registration request to Application DTO.
-func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest) (
+// convertDCRToApplication converts DCR registration request to Application DTO.
+func (ds *dcrService) convertDCRToApplication(request *DCRRegistrationRequest) (
 	*model.ApplicationDTO, *serviceerror.ServiceError) {
 	isPublicClient := request.TokenEndpointAuthMethod == oauth2const.TokenEndpointAuthMethodNone
 
-	var oauthCertificate *model.OAuthAppCertificate
+	// Map JWKS/JWKS_URI to application-level certificate
+	var appCertificate *model.ApplicationCertificate
 	if request.JWKSUri != "" {
-		oauthCertificate = &model.OAuthAppCertificate{
+		appCertificate = &model.ApplicationCertificate{
 			Type:  cert.CertificateTypeJWKSURI,
 			Value: request.JWKSUri,
 		}
 	} else if len(request.JWKS) > 0 {
 		jwksBytes, err := json.Marshal(request.JWKS)
 		if err == nil {
-			oauthCertificate = &model.OAuthAppCertificate{
+			appCertificate = &model.ApplicationCertificate{
 				Type:  cert.CertificateTypeJWKS,
 				Value: string(jwksBytes),
 			}
@@ -127,7 +128,6 @@ func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest
 		ResponseTypes:           request.ResponseTypes,
 		TokenEndpointAuthMethod: request.TokenEndpointAuthMethod,
 		PublicClient:            isPublicClient,
-		Certificate:             oauthCertificate,
 		Scopes:                  scopes,
 	}
 
@@ -146,6 +146,7 @@ func (ds *dcrService) convertDCRToApplicationDTO(request *DCRRegistrationRequest
 		TosURI:            request.TosURI,
 		PolicyURI:         request.PolicyURI,
 		Contacts:          request.Contacts,
+		Certificate:       appCertificate,
 	}
 
 	return appDTO, nil
@@ -167,12 +168,12 @@ func (ds *dcrService) convertApplicationToDCRResponse(appDTO *model.ApplicationD
 
 	var jwksURI string
 	var jwks map[string]interface{}
-	if oauthConfig.Certificate != nil {
-		switch oauthConfig.Certificate.Type {
+	if appDTO.Certificate != nil {
+		switch appDTO.Certificate.Type {
 		case cert.CertificateTypeJWKSURI:
-			jwksURI = oauthConfig.Certificate.Value
+			jwksURI = appDTO.Certificate.Value
 		case cert.CertificateTypeJWKS:
-			if err := json.Unmarshal([]byte(oauthConfig.Certificate.Value), &jwks); err != nil {
+			if err := json.Unmarshal([]byte(appDTO.Certificate.Value), &jwks); err != nil {
 				return nil, &ErrorServerError
 			}
 		}

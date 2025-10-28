@@ -746,10 +746,6 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithJWKSURICertificate() {
 		Name:        "JWKS URI Certificate Test App",
 		Description: "Test application with JWKS_URI certificate",
 		URL:         "https://jwksuri.example.com",
-		Certificate: &ApplicationCert{
-			Type:  "NONE",
-			Value: "",
-		},
 		InboundAuthConfig: []InboundAuthConfig{
 			{
 				Type: "oauth2",
@@ -758,13 +754,13 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithJWKSURICertificate() {
 					GrantTypes:              []string{"authorization_code"},
 					ResponseTypes:           []string{"code"},
 					TokenEndpointAuthMethod: "client_secret_basic",
-					Certificate: &OAuthAppCert{
-						Type:  "JWKS_URI",
-						Value: "https://jwksuri.example.com/.well-known/jwks.json",
-					},
-					Scopes: []string{"openid", "profile", "email"},
+					Scopes:                  []string{"openid", "profile", "email"},
 				},
 			},
+		},
+		Certificate: &ApplicationCert{
+			Type:  "JWKS_URI",
+			Value: "https://jwksuri.example.com/.well-known/jwks.json",
 		},
 	}
 
@@ -774,9 +770,9 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithJWKSURICertificate() {
 
 	retrievedApp, err := getApplicationByID(appID)
 	ts.Require().NoError(err)
-	ts.Require().NotNil(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Certificate)
-	ts.Assert().Equal("JWKS_URI", retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Certificate.Type)
-	ts.Assert().Equal("https://jwksuri.example.com/.well-known/jwks.json", retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Certificate.Value)
+	ts.Require().NotNil(retrievedApp.Certificate)
+	ts.Assert().Equal("JWKS_URI", retrievedApp.Certificate.Type)
+	ts.Assert().Equal("https://jwksuri.example.com/.well-known/jwks.json", retrievedApp.Certificate.Value)
 
 	err = deleteApplication(appID)
 	if err != nil {
@@ -792,10 +788,6 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithJWKSCertificate() {
 		Name:        "JWKS Inline Certificate Test App",
 		Description: "Test application with inline JWKS certificate",
 		URL:         "https://jwks.example.com",
-		Certificate: &ApplicationCert{
-			Type:  "NONE",
-			Value: "",
-		},
 		InboundAuthConfig: []InboundAuthConfig{
 			{
 				Type: "oauth2",
@@ -804,13 +796,13 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithJWKSCertificate() {
 					GrantTypes:              []string{"authorization_code"},
 					ResponseTypes:           []string{"code"},
 					TokenEndpointAuthMethod: "client_secret_basic",
-					Certificate: &OAuthAppCert{
-						Type:  "JWKS",
-						Value: jwksJSON,
-					},
-					Scopes: []string{"openid", "profile"},
+					Scopes:                  []string{"openid", "profile"},
 				},
 			},
+		},
+		Certificate: &ApplicationCert{
+			Type:  "JWKS",
+			Value: jwksJSON,
 		},
 	}
 
@@ -820,9 +812,9 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithJWKSCertificate() {
 
 	retrievedApp, err := getApplicationByID(appID)
 	ts.Require().NoError(err)
-	ts.Require().NotNil(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Certificate)
-	ts.Assert().Equal("JWKS", retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Certificate.Type)
-	ts.Assert().Equal(jwksJSON, retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Certificate.Value)
+	ts.Require().NotNil(retrievedApp.Certificate)
+	ts.Assert().Equal("JWKS", retrievedApp.Certificate.Type)
+	ts.Assert().Equal(jwksJSON, retrievedApp.Certificate.Value)
 
 	err = deleteApplication(appID)
 	if err != nil {
@@ -877,11 +869,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithMultipleScopesAndCertifica
 					GrantTypes:              []string{"authorization_code"},
 					ResponseTypes:           []string{"code"},
 					TokenEndpointAuthMethod: "client_secret_basic",
-					Certificate: &OAuthAppCert{
-						Type:  "JWKS_URI",
-						Value: "https://multi.example.com/.well-known/jwks.json",
-					},
-					Scopes: []string{"openid", "profile", "email", "custom:scope"},
+					Scopes:                  []string{"openid", "profile", "email", "custom:scope"},
 				},
 			},
 		},
@@ -1035,8 +1023,8 @@ func (ts *ApplicationAPITestSuite) TestOAuthAppCertificateUpdate() {
 	ts.Require().NoError(err)
 	defer deleteApplication(appID)
 
-	// Update to add OAuth JWKS_URI certificate
-	app.InboundAuthConfig[0].OAuthAppConfig.Certificate = &OAuthAppCert{
+	// Update to add JWKS_URI certificate at application level
+	app.Certificate = &ApplicationCert{
 		Type:  "JWKS_URI",
 		Value: "https://oauthcertupdate.example.com/.well-known/jwks.json",
 	}
@@ -1502,7 +1490,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateCompleteOAuthConfig() {
 		"openid", "profile", "email", "address", "phone",
 	}
 	app.InboundAuthConfig[0].OAuthAppConfig.PKCERequired = true
-	app.InboundAuthConfig[0].OAuthAppConfig.Certificate = &OAuthAppCert{
+	app.Certificate = &ApplicationCert{
 		Type:  "JWKS_URI",
 		Value: "https://completeoauth.example.com/.well-known/jwks.json",
 	}
@@ -1997,7 +1985,6 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithOAuthCertificateEmptyJWKSU
 		Name:        "OAuth Empty JWKS URI Test",
 		Description: "Test OAuth certificate with empty JWKS_URI",
 		URL:         "https://oauthemptyjwksuri.example.com",
-		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
 		InboundAuthConfig: []InboundAuthConfig{
 			{
 				Type: "oauth2",
@@ -2007,12 +1994,12 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithOAuthCertificateEmptyJWKSU
 					ResponseTypes:           []string{"code"},
 					TokenEndpointAuthMethod: "client_secret_basic",
 					Scopes:                  []string{"openid"},
-					Certificate: &OAuthAppCert{
-						Type:  "JWKS_URI",
-						Value: "",
-					},
 				},
 			},
+		},
+		Certificate: &ApplicationCert{
+			Type:  "JWKS_URI",
+			Value: "",
 		},
 	}
 

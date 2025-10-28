@@ -117,19 +117,9 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 	rootToken, finalOAuthAccessToken, finalOAuthIDToken, finalOAuthTokenIssuer := processTokenConfiguration(app)
 
 	// Validate and prepare the certificate if provided.
-	appCert, svcErr := as.getValidatedCertificateForCreate(appID, app)
+	cert, svcErr := as.getValidatedCertificateForCreate(appID, app)
 	if svcErr != nil {
 		return nil, svcErr
-	}
-
-	// Validate and prepare the OAuth app certificate if provided.
-	var oauthCert *cert.Certificate
-	if inboundAuthConfig != nil {
-		oauthCert, svcErr = as.getValidatedOAuthAppCertificateForCreate(
-			inboundAuthConfig.OAuthAppConfig.ClientID, inboundAuthConfig.OAuthAppConfig)
-		if svcErr != nil {
-			return nil, svcErr
-		}
 	}
 
 	processedDTO := &model.ApplicationProcessedDTO{
@@ -174,24 +164,9 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 	}
 
 	// Create the application certificate if provided.
-	returnCert, svcErr := as.createApplicationCertificate(appCert)
+	returnCert, svcErr := as.createApplicationCertificate(cert)
 	if svcErr != nil {
 		return nil, svcErr
-	}
-
-	// Create the OAuth app certificate if provided.
-	var returnOAuthCert *model.OAuthAppCertificate
-	if oauthCert != nil {
-		returnOAuthCert, svcErr = as.createOAuthAppCertificate(oauthCert)
-		if svcErr != nil {
-			if appCert != nil {
-				deleteErr := as.rollbackAppCertificateCreation(appID)
-				if deleteErr != nil {
-					return nil, deleteErr
-				}
-			}
-			return nil, svcErr
-		}
 	}
 
 	// Create the application.
@@ -200,16 +175,8 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		logger.Error("Failed to create application", log.Error(storeErr), log.String("appID", appID))
 
 		// Rollback the certificate creation if it was successful.
-		if appCert != nil {
+		if cert != nil {
 			deleteErr := as.rollbackAppCertificateCreation(appID)
-			if deleteErr != nil {
-				return nil, deleteErr
-			}
-		}
-
-		// Rollback the OAuth app certificate creation if it was successful.
-		if oauthCert != nil {
-			deleteErr := as.rollbackOAuthAppCertificateCreation(inboundAuthConfig.OAuthAppConfig.ClientID)
 			if deleteErr != nil {
 				return nil, deleteErr
 			}
@@ -254,7 +221,6 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 				Token:                   returnTokenConfig,
-				Certificate:             returnOAuthCert,
 				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
@@ -329,12 +295,6 @@ func (as *applicationService) GetOAuthApplication(clientID string) (*model.OAuth
 		return nil, &ErrorApplicationNotFound
 	}
 
-	cert, certErr := as.getOAuthAppCertificate(clientID)
-	if certErr != nil {
-		return nil, certErr
-	}
-	oauthApp.Certificate = cert
-
 	return oauthApp, nil
 }
 
@@ -370,18 +330,6 @@ func (as *applicationService) enrichApplicationWithCertificate(application *mode
 		return nil, certErr
 	}
 	application.Certificate = cert
-
-	if len(application.InboundAuthConfig) > 0 {
-		for i := range application.InboundAuthConfig {
-			if application.InboundAuthConfig[i].OAuthAppConfig != nil {
-				oauthCert, oauthCertErr := as.getOAuthAppCertificate(application.InboundAuthConfig[i].OAuthAppConfig.ClientID)
-				if oauthCertErr != nil {
-					return nil, oauthCertErr
-				}
-				application.InboundAuthConfig[i].OAuthAppConfig.Certificate = oauthCert
-			}
-		}
-	}
 
 	return application, nil
 }
@@ -451,20 +399,6 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		return nil, svcErr
 	}
 
-	var existingOAuthCert, updatedOAuthCert *cert.Certificate
-	var returnOAuthCert *model.OAuthAppCertificate
-	if inboundAuthConfig != nil {
-		existingOAuthCert, updatedOAuthCert, returnOAuthCert, svcErr = as.updateOAuthAppCertificate(
-			inboundAuthConfig.OAuthAppConfig)
-		if svcErr != nil {
-			rollbackErr := as.rollbackApplicationCertificateUpdate(appID, existingCert, updatedCert)
-			if rollbackErr != nil {
-				return nil, rollbackErr
-			}
-			return nil, svcErr
-		}
-	}
-
 	// Process token configuration
 	rootToken, finalOAuthAccessToken, finalOAuthIDToken, finalOAuthTokenIssuer := processTokenConfiguration(app)
 
@@ -518,14 +452,6 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 			return nil, rollbackErr
 		}
 
-		if inboundAuthConfig != nil {
-			rollbackErr := as.rollbackOAuthAppCertificateUpdate(
-				inboundAuthConfig.OAuthAppConfig.ClientID, existingOAuthCert, updatedOAuthCert)
-			if rollbackErr != nil {
-				return nil, rollbackErr
-			}
-		}
-
 		return nil, &ErrorInternalServerError
 	}
 
@@ -565,7 +491,6 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
 				Token:                   returnTokenConfig,
-				Certificate:             returnOAuthCert,
 				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
@@ -582,19 +507,8 @@ func (as *applicationService) DeleteApplication(appID string) *serviceerror.Serv
 	}
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
 
-	// Get the application to retrieve OAuth client ID before deletion
-	app, appErr := as.appStore.GetApplicationByID(appID)
-	if appErr != nil {
-		if errors.Is(appErr, model.ApplicationNotFoundError) {
-			logger.Debug("Application not found for the deletion", log.String("appID", appID))
-			return nil
-		}
-		logger.Error("Error while getting the application for deletion", log.Error(appErr), log.String("appID", appID))
-		return &ErrorInternalServerError
-	}
-
 	// Delete the application from the store
-	appErr = as.appStore.DeleteApplication(appID)
+	appErr := as.appStore.DeleteApplication(appID)
 	if appErr != nil {
 		if errors.Is(appErr, model.ApplicationNotFoundError) {
 			logger.Debug("Application not found for the deletion", log.String("appID", appID))
@@ -608,15 +522,6 @@ func (as *applicationService) DeleteApplication(appID string) *serviceerror.Serv
 	svcErr := as.deleteApplicationCertificate(appID)
 	if svcErr != nil {
 		return svcErr
-	}
-
-	// Delete the OAuth app certificate if OAuth app exists
-	if app != nil && len(app.InboundAuthConfig) > 0 && app.InboundAuthConfig[0].OAuthAppConfig != nil {
-		clientID := app.InboundAuthConfig[0].OAuthAppConfig.ClientID
-		svcErr := as.deleteOAuthAppCertificate(clientID)
-		if svcErr != nil {
-			return svcErr
-		}
 	}
 
 	return nil
@@ -700,11 +605,6 @@ func validateOAuthParamsForCreateAndUpdate(app *model.ApplicationDTO) (*model.In
 
 	// Validate token endpoint authentication method
 	if err := validateTokenEndpointAuthMethod(oauthAppConfig); err != nil {
-		return nil, err
-	}
-
-	// Validate JWKS configuration
-	if err := validateJWKSConfiguration(oauthAppConfig); err != nil {
 		return nil, err
 	}
 
@@ -817,103 +717,84 @@ func (as *applicationService) getValidatedCertificateForUpdate(certID string, ap
 	return getValidatedCertificateInput(app.ID, certID, app)
 }
 
-// validateAndBuildCertificate validates certificate input and builds a cert.Certificate object.
-func validateAndBuildCertificate(
-	refType cert.CertificateReferenceType,
-	refID, certID string,
-	certType cert.CertificateType,
-	certValue string,
-) (*cert.Certificate, *serviceerror.ServiceError) {
-	switch certType {
+// getValidatedCertificateInput is a helper method that validates and returns the certificate.
+func getValidatedCertificateInput(appID, certID string, app *model.ApplicationDTO) (*cert.Certificate,
+	*serviceerror.ServiceError) {
+	switch app.Certificate.Type {
 	case cert.CertificateTypeJWKS:
-		if certValue == "" {
+		if app.Certificate.Value == "" {
 			return nil, &ErrorInvalidCertificateValue
 		}
 		return &cert.Certificate{
 			ID:      certID,
-			RefType: refType,
-			RefID:   refID,
+			RefType: cert.CertificateReferenceTypeApplication,
+			RefID:   appID,
 			Type:    cert.CertificateTypeJWKS,
-			Value:   certValue,
+			Value:   app.Certificate.Value,
 		}, nil
 	case cert.CertificateTypeJWKSURI:
-		if !sysutils.IsValidURI(certValue) {
+		if !sysutils.IsValidURI(app.Certificate.Value) {
 			return nil, &ErrorInvalidJWKSURI
 		}
 		return &cert.Certificate{
 			ID:      certID,
-			RefType: refType,
-			RefID:   refID,
+			RefType: cert.CertificateReferenceTypeApplication,
+			RefID:   appID,
 			Type:    cert.CertificateTypeJWKSURI,
-			Value:   certValue,
+			Value:   app.Certificate.Value,
 		}, nil
 	default:
 		return nil, &ErrorInvalidCertificateType
 	}
 }
 
-// getValidatedCertificateInput is a helper method that validates and returns the certificate.
-func getValidatedCertificateInput(appID, certID string, app *model.ApplicationDTO) (*cert.Certificate,
-	*serviceerror.ServiceError) {
-	return validateAndBuildCertificate(
-		cert.CertificateReferenceTypeApplication,
-		appID,
-		certID,
-		app.Certificate.Type,
-		app.Certificate.Value,
-	)
-}
-
-// createCertificateInternal is a generic helper for creating certificates.
-func (as *applicationService) createCertificateInternal(
-	certificate *cert.Certificate,
-) *serviceerror.ServiceError {
-	if certificate == nil {
-		return nil
-	}
-
-	_, svcErr := as.certService.CreateCertificate(certificate)
-	if svcErr != nil {
-		if svcErr.Type == serviceerror.ClientErrorType {
-			errorDescription := "Failed to create " + string(certificate.RefType) + " certificate: " + svcErr.ErrorDescription
-			return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
-		}
-		logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
-		logger.Error("Failed to create "+string(certificate.RefType)+" certificate", log.Any("serviceError", svcErr))
-		return &ErrorCertificateServerError
-	}
-	return nil
-}
-
 // createApplicationCertificate creates a certificate for the application.
 func (as *applicationService) createApplicationCertificate(certificate *cert.Certificate) (
 	*model.ApplicationCertificate, *serviceerror.ServiceError) {
-	if err := as.createCertificateInternal(certificate); err != nil {
-		return nil, err
-	}
-	return buildApplicationCertificate(certificate), nil
-}
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
 
-// rollbackCertificateCreation is a generic helper for rolling back certificate creation.
-func (as *applicationService) rollbackCertificateCreation(
-	refType cert.CertificateReferenceType,
-	refID string,
-) *serviceerror.ServiceError {
-	deleteErr := as.certService.DeleteCertificateByReference(refType, refID)
-	if deleteErr != nil {
-		if deleteErr.Type == serviceerror.ClientErrorType {
-			errorDescription := "Failed to rollback " + string(refType) + " certificate creation: " + deleteErr.ErrorDescription
-			return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
+	var returnCert *model.ApplicationCertificate
+	if certificate != nil {
+		_, svcErr := as.certService.CreateCertificate(certificate)
+		if svcErr != nil {
+			if svcErr.Type == serviceerror.ClientErrorType {
+				errorDescription := "Failed to create application certificate: " +
+					svcErr.ErrorDescription
+				return nil, serviceerror.CustomServiceError(
+					ErrorCertificateClientError, errorDescription)
+			}
+			logger.Error("Failed to create application certificate", log.Any("serviceError", svcErr))
+			return nil, &ErrorCertificateServerError
 		}
-		return &ErrorCertificateServerError
+
+		returnCert = &model.ApplicationCertificate{
+			Type:  certificate.Type,
+			Value: certificate.Value,
+		}
+	} else {
+		returnCert = &model.ApplicationCertificate{
+			Type:  cert.CertificateTypeNone,
+			Value: "",
+		}
 	}
-	return nil
+
+	return returnCert, nil
 }
 
 // rollbackAppCertificateCreation rolls back the application certificate creation in case of an error during
 // application creation.
 func (as *applicationService) rollbackAppCertificateCreation(appID string) *serviceerror.ServiceError {
-	return as.rollbackCertificateCreation(cert.CertificateReferenceTypeApplication, appID)
+	deleteErr := as.certService.DeleteCertificateByReference(cert.CertificateReferenceTypeApplication, appID)
+	if deleteErr != nil {
+		if deleteErr.Type == serviceerror.ClientErrorType {
+			errorDescription := "Failed to rollback application certificate creation: " +
+				deleteErr.ErrorDescription
+			return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
+		}
+		return &ErrorCertificateServerError
+	}
+
+	return nil
 }
 
 // deleteApplicationCertificate deletes the certificate associated with the application.
@@ -935,97 +816,31 @@ func (as *applicationService) deleteApplicationCertificate(appID string) *servic
 	return nil
 }
 
-// getCertificateByReference is a generic helper to retrieve certificates.
-func (as *applicationService) getCertificateByReference(
-	refType cert.CertificateReferenceType, refID string) (*cert.Certificate, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
-
-	certificate, certErr := as.certService.GetCertificateByReference(refType, refID)
-
-	if certErr != nil {
-		if certErr.Code == cert.ErrorCertificateNotFound.Code {
-			return nil, nil // Return nil certificate (not an error)
-		}
-
-		if certErr.Type == serviceerror.ClientErrorType {
-			errorDescription := "Failed to retrieve " + string(refType) + " certificate: " + certErr.ErrorDescription
-			return nil, serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
-		}
-		logger.Error("Failed to retrieve "+string(refType)+" certificate", log.Any("serviceError", certErr),
-			log.String("referenceType", string(refType)), log.String("referenceID", refID))
-		return nil, &ErrorCertificateServerError
-	}
-
-	return certificate, nil
-}
-
-// handleCertificateError handles certificate operation errors with appropriate logging and error wrapping.
-func (as *applicationService) handleCertificateError(
-	svcErr *serviceerror.ServiceError, operation, refType, refID string) *serviceerror.ServiceError {
-	if svcErr.Type == serviceerror.ClientErrorType {
-		errorDescription := operation + " " + refType + " certificate: " + svcErr.ErrorDescription
-		return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
-	}
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
-	logger.Error(operation+" "+refType+" certificate", log.Any("serviceError", svcErr),
-		log.String("referenceType", refType), log.String("referenceID", refID))
-	return &ErrorCertificateServerError
-}
-
-// updateCertificateByReference is a generic helper to update or create certificates.
-func (as *applicationService) updateCertificateByReference(
-	refType cert.CertificateReferenceType, refID string,
-	existingCert, updatedCert *cert.Certificate) *serviceerror.ServiceError {
-	if updatedCert != nil {
-		if existingCert != nil {
-			if _, svcErr := as.certService.UpdateCertificateByID(existingCert.ID, updatedCert); svcErr != nil {
-				return as.handleCertificateError(svcErr, "Failed to update", string(refType), refID)
-			}
-		} else {
-			if _, svcErr := as.certService.CreateCertificate(updatedCert); svcErr != nil {
-				return as.handleCertificateError(svcErr, "Failed to create", string(refType), refID)
-			}
-		}
-	} else if existingCert != nil {
-		if deleteErr := as.certService.DeleteCertificateByReference(refType, refID); deleteErr != nil {
-			return as.handleCertificateError(deleteErr, "Failed to delete", string(refType), refID)
-		}
-	}
-
-	return nil
-}
-
-// rollbackCertificateUpdate is a generic helper to rollback certificate updates.
-func (as *applicationService) rollbackCertificateUpdate(
-	refType cert.CertificateReferenceType, refID string,
-	existingCert, updatedCert *cert.Certificate) *serviceerror.ServiceError {
-	if updatedCert != nil {
-		if existingCert != nil {
-			if _, svcErr := as.certService.UpdateCertificateByID(existingCert.ID, existingCert); svcErr != nil {
-				return as.handleCertificateError(svcErr, "Failed to revert", string(refType), refID)
-			}
-		} else {
-			if deleteErr := as.certService.DeleteCertificateByReference(refType, refID); deleteErr != nil {
-				operation := "Failed to delete " + string(refType) + " certificate after update failure"
-				return as.handleCertificateError(deleteErr, operation, "", refID)
-			}
-		}
-	} else if existingCert != nil {
-		if _, svcErr := as.certService.CreateCertificate(existingCert); svcErr != nil {
-			operation := "Failed to revert " + string(refType) + " certificate creation"
-			return as.handleCertificateError(svcErr, operation, "", refID)
-		}
-	}
-
-	return nil
-}
-
 // getApplicationCertificate retrieves the certificate associated with the application.
 func (as *applicationService) getApplicationCertificate(appID string) (*model.ApplicationCertificate,
 	*serviceerror.ServiceError) {
-	certificate, certErr := as.getCertificateByReference(cert.CertificateReferenceTypeApplication, appID)
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
+
+	certificate, certErr := as.certService.GetCertificateByReference(
+		cert.CertificateReferenceTypeApplication, appID)
+
 	if certErr != nil {
-		return nil, certErr
+		if certErr.Code == cert.ErrorCertificateNotFound.Code {
+			return &model.ApplicationCertificate{
+				Type:  cert.CertificateTypeNone,
+				Value: "",
+			}, nil
+		}
+
+		if certErr.Type == serviceerror.ClientErrorType {
+			errorDescription := "Failed to retrieve application certificate: " +
+				certErr.ErrorDescription
+			return nil, serviceerror.CustomServiceError(
+				ErrorCertificateClientError, errorDescription)
+		}
+		logger.Error("Failed to retrieve application certificate", log.Any("serviceError", certErr),
+			log.String("appID", appID))
+		return nil, &ErrorCertificateServerError
 	}
 
 	if certificate == nil {
@@ -1042,193 +857,148 @@ func (as *applicationService) getApplicationCertificate(appID string) (*model.Ap
 }
 
 // updateApplicationCertificate updates the certificate for the application.
+// It returns the existing certificate, the updated certificate, and the return application certificate details.
 func (as *applicationService) updateApplicationCertificate(app *model.ApplicationDTO) (
 	*cert.Certificate, *cert.Certificate, *model.ApplicationCertificate, *serviceerror.ServiceError) {
-	existingCert, updatedCert, err := as.performCertificateUpdate(
-		cert.CertificateReferenceTypeApplication,
-		app.ID,
-		func(certID string) (*cert.Certificate, *serviceerror.ServiceError) {
-			return as.getValidatedCertificateForUpdate(certID, app)
-		},
-	)
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
+	appID := app.ID
+
+	existingCert, certErr := as.certService.GetCertificateByReference(
+		cert.CertificateReferenceTypeApplication, appID)
+	if certErr != nil && certErr.Code != cert.ErrorCertificateNotFound.Code {
+		if certErr.Type == serviceerror.ClientErrorType {
+			errorDescription := "Failed to retrieve application certificate: " +
+				certErr.ErrorDescription
+			return nil, nil, nil, serviceerror.CustomServiceError(
+				ErrorCertificateClientError, errorDescription)
+		}
+		logger.Error("Failed to retrieve application certificate", log.Any("serviceError", certErr),
+			log.String("appID", appID))
+		return nil, nil, nil, &ErrorCertificateServerError
+	}
+
+	var updatedCert *cert.Certificate
+	var err *serviceerror.ServiceError
+	if existingCert != nil {
+		updatedCert, err = as.getValidatedCertificateForUpdate(existingCert.ID, app)
+	} else {
+		updatedCert, err = as.getValidatedCertificateForUpdate("", app)
+	}
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	returnCert := buildApplicationCertificate(updatedCert)
-	return existingCert, updatedCert, returnCert, nil
-}
-
-// buildCertificateResponse constructs a certificate response with Type and Value fields.
-func buildCertificateResponse(updatedCert *cert.Certificate) (cert.CertificateType, string) {
+	// Update the certificate if provided.
+	var returnCert *model.ApplicationCertificate
 	if updatedCert != nil {
-		return updatedCert.Type, updatedCert.Value
-	}
-	return cert.CertificateTypeNone, ""
-}
+		if existingCert != nil {
+			_, svcErr := as.certService.UpdateCertificateByID(existingCert.ID, updatedCert)
+			if svcErr != nil {
+				if svcErr.Type == serviceerror.ClientErrorType {
+					errorDescription := "Failed to update application certificate: " +
+						svcErr.ErrorDescription
+					return nil, nil, nil, serviceerror.CustomServiceError(
+						ErrorCertificateClientError, errorDescription)
+				}
+				logger.Error("Failed to update application certificate", log.Any("serviceError", svcErr),
+					log.String("appID", appID))
+				return nil, nil, nil, &ErrorCertificateServerError
+			}
+		} else {
+			_, svcErr := as.certService.CreateCertificate(updatedCert)
+			if svcErr != nil {
+				if svcErr.Type == serviceerror.ClientErrorType {
+					errorDescription := "Failed to create application certificate: " +
+						svcErr.ErrorDescription
+					return nil, nil, nil, serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
+				}
+				logger.Error("Failed to create application certificate", log.Any("serviceError", svcErr),
+					log.String("appID", appID))
+				return nil, nil, nil, &ErrorCertificateServerError
+			}
+		}
 
-// buildApplicationCertificate constructs an ApplicationCertificate from a cert.Certificate.
-func buildApplicationCertificate(updatedCert *cert.Certificate) *model.ApplicationCertificate {
-	certType, certValue := buildCertificateResponse(updatedCert)
-	return &model.ApplicationCertificate{
-		Type:  certType,
-		Value: certValue,
-	}
-}
+		returnCert = &model.ApplicationCertificate{
+			Type:  updatedCert.Type,
+			Value: updatedCert.Value,
+		}
+	} else {
+		if existingCert != nil {
+			// If no new certificate is provided, delete the existing certificate.
+			deleteErr := as.certService.DeleteCertificateByReference(
+				cert.CertificateReferenceTypeApplication, appID)
+			if deleteErr != nil {
+				if deleteErr.Type == serviceerror.ClientErrorType {
+					errorDescription := "Failed to delete application certificate: " + deleteErr.ErrorDescription
+					return nil, nil, nil, serviceerror.CustomServiceError(
+						ErrorCertificateClientError, errorDescription)
+				}
+				logger.Error("Failed to delete application certificate", log.Any("serviceError", deleteErr),
+					log.String("appID", appID))
+				return nil, nil, nil, &ErrorCertificateServerError
+			}
+		}
 
-// performCertificateUpdate is a generic helper for certificate update operations.
-func (as *applicationService) performCertificateUpdate(
-	refType cert.CertificateReferenceType,
-	refID string,
-	validateFn func(certID string) (*cert.Certificate, *serviceerror.ServiceError),
-) (*cert.Certificate, *cert.Certificate, *serviceerror.ServiceError) {
-	// Retrieve existing certificate
-	existingCert, certErr := as.getCertificateByReference(refType, refID)
-	if certErr != nil {
-		return nil, nil, certErr
-	}
-
-	// Get validated updated certificate
-	certID := ""
-	if existingCert != nil {
-		certID = existingCert.ID
-	}
-	updatedCert, err := validateFn(certID)
-	if err != nil {
-		return nil, nil, err
+		returnCert = &model.ApplicationCertificate{
+			Type:  cert.CertificateTypeNone,
+			Value: "",
+		}
 	}
 
-	// Perform the update/create/delete operation
-	if svcErr := as.updateCertificateByReference(refType, refID, existingCert, updatedCert); svcErr != nil {
-		return nil, nil, svcErr
-	}
-
-	return existingCert, updatedCert, nil
+	return existingCert, updatedCert, returnCert, nil
 }
 
 // rollbackApplicationCertificateUpdate rolls back the certificate update for the application in case of an error.
 func (as *applicationService) rollbackApplicationCertificateUpdate(appID string,
 	existingCert, updatedCert *cert.Certificate) *serviceerror.ServiceError {
-	return as.rollbackCertificateUpdate(cert.CertificateReferenceTypeApplication, appID, existingCert, updatedCert)
-}
-
-// getValidatedOAuthAppCertificateForCreate validates and returns the OAuth app certificate during creation.
-func (as *applicationService) getValidatedOAuthAppCertificateForCreate(clientID string,
-	oauthApp *model.OAuthAppConfigDTO) (*cert.Certificate, *serviceerror.ServiceError) {
-	if oauthApp.Certificate == nil || oauthApp.Certificate.Type == "" ||
-		oauthApp.Certificate.Type == cert.CertificateTypeNone {
-		return nil, nil
-	}
-	return getValidatedOAuthAppCertificateInput(clientID, "", oauthApp)
-}
-
-// getValidatedOAuthAppCertificateForUpdate validates and returns the OAuth app certificate during update.
-func (as *applicationService) getValidatedOAuthAppCertificateForUpdate(certID string,
-	oauthApp *model.OAuthAppConfigDTO) (*cert.Certificate, *serviceerror.ServiceError) {
-	if oauthApp.Certificate == nil || oauthApp.Certificate.Type == "" ||
-		oauthApp.Certificate.Type == cert.CertificateTypeNone {
-		return nil, nil
-	}
-	return getValidatedOAuthAppCertificateInput(oauthApp.ClientID, certID, oauthApp)
-}
-
-// getValidatedOAuthAppCertificateInput is a helper method that validates and returns the OAuth app certificate.
-func getValidatedOAuthAppCertificateInput(clientID, certID string,
-	oauthApp *model.OAuthAppConfigDTO) (*cert.Certificate, *serviceerror.ServiceError) {
-	return validateAndBuildCertificate(
-		cert.CertificateReferenceTypeOAuthApp,
-		clientID,
-		certID,
-		oauthApp.Certificate.Type,
-		oauthApp.Certificate.Value,
-	)
-}
-
-// createOAuthAppCertificate creates a certificate for the OAuth application.
-func (as *applicationService) createOAuthAppCertificate(certificate *cert.Certificate) (
-	*model.OAuthAppCertificate, *serviceerror.ServiceError) {
-	if err := as.createCertificateInternal(certificate); err != nil {
-		return nil, err
-	}
-	return buildOAuthAppCertificate(certificate), nil
-}
-
-// rollbackOAuthAppCertificateCreation rolls back the OAuth app certificate creation in case of an error.
-func (as *applicationService) rollbackOAuthAppCertificateCreation(clientID string) *serviceerror.ServiceError {
-	return as.rollbackCertificateCreation(cert.CertificateReferenceTypeOAuthApp, clientID)
-}
-
-// deleteOAuthAppCertificate deletes the certificate associated with the OAuth application.
-func (as *applicationService) deleteOAuthAppCertificate(clientID string) *serviceerror.ServiceError {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
 
-	if certErr := as.certService.DeleteCertificateByReference(
-		cert.CertificateReferenceTypeOAuthApp, clientID); certErr != nil {
-		if certErr.Type == serviceerror.ClientErrorType {
-			errorDescription := "Failed to delete OAuth app certificate: " +
-				certErr.ErrorDescription
-			return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
+	if updatedCert != nil {
+		if existingCert != nil {
+			// Update to the previously existed certificate.
+			_, svcErr := as.certService.UpdateCertificateByID(existingCert.ID, existingCert)
+			if svcErr != nil {
+				if svcErr.Type == serviceerror.ClientErrorType {
+					errorDescription := "Failed to revert application certificate update: " +
+						svcErr.ErrorDescription
+					return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
+				}
+				logger.Error("Failed to revert application certificate update", log.Any("serviceError", svcErr),
+					log.String("appID", appID))
+				return &ErrorCertificateServerError
+			}
+		} else { // Delete the newly created certificate.
+			deleteErr := as.certService.DeleteCertificateByReference(
+				cert.CertificateReferenceTypeApplication, appID)
+			if deleteErr != nil {
+				if deleteErr.Type == serviceerror.ClientErrorType {
+					errorDescription := "Failed to delete application certificate " +
+						"after update failure: " + deleteErr.ErrorDescription
+					return serviceerror.CustomServiceError(ErrorCertificateClientError, errorDescription)
+				}
+				logger.Error("Failed to delete application certificate after update failure",
+					log.Any("serviceError", deleteErr), log.String("appID", appID))
+				return &ErrorCertificateServerError
+			}
 		}
-		logger.Error("Failed to delete OAuth app certificate", log.String("clientID", clientID),
-			log.Any("serviceError", certErr))
-		return &ErrorCertificateServerError
+	} else {
+		if existingCert != nil { // Create the previously existed certificate.
+			_, svcErr := as.certService.CreateCertificate(existingCert)
+			if svcErr != nil {
+				if svcErr.Type == serviceerror.ClientErrorType {
+					errorDescription := "Failed to revert application certificate creation: " +
+						svcErr.ErrorDescription
+					return serviceerror.CustomServiceError(ErrorCertificateClientError,
+						errorDescription)
+				}
+				logger.Error("Failed to revert application certificate creation", log.Any("serviceError", svcErr),
+					log.String("appID", appID))
+				return &ErrorCertificateServerError
+			}
+		}
 	}
 
 	return nil
-}
-
-// getOAuthAppCertificate retrieves the certificate associated with the OAuth application.
-func (as *applicationService) getOAuthAppCertificate(clientID string) (*model.OAuthAppCertificate,
-	*serviceerror.ServiceError) {
-	certificate, certErr := as.getCertificateByReference(cert.CertificateReferenceTypeOAuthApp, clientID)
-	if certErr != nil {
-		return nil, certErr
-	}
-
-	if certificate == nil {
-		return &model.OAuthAppCertificate{
-			Type:  cert.CertificateTypeNone,
-			Value: "",
-		}, nil
-	}
-
-	return &model.OAuthAppCertificate{
-		Type:  certificate.Type,
-		Value: certificate.Value,
-	}, nil
-}
-
-// updateOAuthAppCertificate updates the certificate for the OAuth application.
-func (as *applicationService) updateOAuthAppCertificate(oauthApp *model.OAuthAppConfigDTO) (
-	*cert.Certificate, *cert.Certificate, *model.OAuthAppCertificate, *serviceerror.ServiceError) {
-	existingCert, updatedCert, err := as.performCertificateUpdate(
-		cert.CertificateReferenceTypeOAuthApp,
-		oauthApp.ClientID,
-		func(certID string) (*cert.Certificate, *serviceerror.ServiceError) {
-			return as.getValidatedOAuthAppCertificateForUpdate(certID, oauthApp)
-		},
-	)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	returnCert := buildOAuthAppCertificate(updatedCert)
-	return existingCert, updatedCert, returnCert, nil
-}
-
-// buildOAuthAppCertificate constructs an OAuthAppCertificate from a cert.Certificate.
-func buildOAuthAppCertificate(updatedCert *cert.Certificate) *model.OAuthAppCertificate {
-	certType, certValue := buildCertificateResponse(updatedCert)
-	return &model.OAuthAppCertificate{
-		Type:  certType,
-		Value: certValue,
-	}
-}
-
-// rollbackOAuthAppCertificateUpdate rolls back the certificate update for the OAuth app in case of an error.
-func (as *applicationService) rollbackOAuthAppCertificateUpdate(clientID string,
-	existingCert, updatedCert *cert.Certificate) *serviceerror.ServiceError {
-	return as.rollbackCertificateUpdate(cert.CertificateReferenceTypeOAuthApp, clientID, existingCert, updatedCert)
 }
 
 // getDefaultTokenConfigFromDeployment creates a default token configuration from deployment settings.
@@ -1408,28 +1178,6 @@ func validateTokenEndpointAuthMethod(oauthConfig *model.OAuthAppConfigDTO) *serv
 			ErrorInvalidOAuthConfiguration,
 			"client_credentials grant type cannot use 'none' authentication method",
 		)
-	}
-
-	return nil
-}
-
-// validateJWKSConfiguration validates JWKS certificate configuration according to RFC 7591.
-func validateJWKSConfiguration(oauthConfig *model.OAuthAppConfigDTO) *serviceerror.ServiceError {
-	if oauthConfig.Certificate == nil {
-		return nil
-	}
-
-	// Validate certificate type and value
-	if oauthConfig.Certificate.Type == cert.CertificateTypeJWKSURI {
-		if oauthConfig.Certificate.Value != "" {
-			if !strings.HasPrefix(oauthConfig.Certificate.Value, "https://") {
-				return &ErrorJWKSUriNotHTTPS
-			}
-			// Validate that the URI is well-formed
-			if _, err := sysutils.ParseURL(oauthConfig.Certificate.Value); err != nil {
-				return &ErrorInvalidJWKSURI
-			}
-		}
 	}
 
 	return nil

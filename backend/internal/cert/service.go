@@ -281,7 +281,7 @@ func (s *certificateService) DeleteCertificateByReference(refType CertificateRef
 // isValidReferenceType checks if the provided reference type is valid.
 func isValidReferenceType(refType CertificateReferenceType) bool {
 	switch refType {
-	case CertificateReferenceTypeApplication, CertificateReferenceTypeIDP, CertificateReferenceTypeOAuthApp:
+	case CertificateReferenceTypeApplication, CertificateReferenceTypeIDP:
 		return true
 	default:
 		return false

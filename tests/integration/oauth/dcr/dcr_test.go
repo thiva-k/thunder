@@ -634,17 +634,9 @@ func (ts *DCRTestSuite) TestDCRRegistrationWithJWKSURIAndRetrieve() {
 	err = json.NewDecoder(getResp.Body).Decode(&retrievedApp)
 	ts.Require().NoError(err, "Failed to decode application response")
 
-	// Verify the OAuth config contains the certificate
-	inboundAuthConfig, ok := retrievedApp["inbound_auth_config"].([]interface{})
-	ts.Assert().True(ok, "inbound_auth_config should be an array")
-	ts.Assert().NotEmpty(inboundAuthConfig, "inbound_auth_config should not be empty")
-
-	oauthConfig, ok := inboundAuthConfig[0].(map[string]interface{})["config"].(map[string]interface{})
-	ts.Assert().True(ok, "config should be present")
-
-	// Verify the certificate is present and has the correct JWKS URI
-	certificate, ok := oauthConfig["certificate"].(map[string]interface{})
-	ts.Assert().True(ok, "certificate should be present")
+	// Verify the application-level certificate contains the JWKS URI
+	certificate, ok := retrievedApp["certificate"].(map[string]interface{})
+	ts.Assert().True(ok, "certificate should be present at application level")
 	ts.Assert().NotNil(certificate, "certificate should not be nil")
 	ts.Assert().Equal("JWKS_URI", certificate["type"], "certificate type should be JWKS_URI")
 	ts.Assert().Equal(request.JWKSUri, certificate["value"], "certificate value should match the JWKS URI")

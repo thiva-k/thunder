@@ -23,17 +23,10 @@ import (
 	"net/url"
 	"slices"
 
-	"github.com/asgardeo/thunder/internal/cert"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 )
-
-// OAuthAppCertificate represents the certificate structure for an OAuth application.
-type OAuthAppCertificate struct {
-	Type  cert.CertificateType `json:"type"`
-	Value string               `json:"value"`
-}
 
 // OAuthAppConfig represents the structure for OAuth application configuration.
 type OAuthAppConfig struct {
@@ -45,7 +38,6 @@ type OAuthAppConfig struct {
 	PKCERequired            bool                                `json:"pkce_required"`
 	PublicClient            bool                                `json:"public_client"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty"`
-	Certificate             *OAuthAppCertificate                `json:"certificate,omitempty"`
 	Scopes                  []string                            `json:"scopes,omitempty"`
 }
 
@@ -60,7 +52,6 @@ type OAuthAppConfigComplete struct {
 	PKCERequired            bool                                `json:"pkce_required"`
 	PublicClient            bool                                `json:"public_client"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty"`
-	Certificate             *OAuthAppCertificate                `json:"certificate,omitempty"`
 	Scopes                  []string                            `json:"scopes,omitempty"`
 }
 
@@ -76,7 +67,6 @@ type OAuthAppConfigDTO struct {
 	PKCERequired            bool
 	PublicClient            bool
 	Token                   *OAuthTokenConfig
-	Certificate             *OAuthAppCertificate
 	Scopes                  []string
 }
 
@@ -112,7 +102,6 @@ type OAuthAppConfigProcessedDTO struct {
 	PKCERequired            bool
 	PublicClient            bool
 	Token                   *OAuthTokenConfig
-	Certificate             *OAuthAppCertificate
 	Scopes                  []string
 }
 

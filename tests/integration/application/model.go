@@ -60,15 +60,8 @@ type OAuthAppConfig struct {
 	TokenEndpointAuthMethod string            `json:"token_endpoint_auth_method"`
 	PKCERequired            bool              `json:"pkce_required"`
 	PublicClient            bool              `json:"public_client"`
-	Certificate             *OAuthAppCert     `json:"certificate,omitempty"`
 	Scopes                  []string          `json:"scopes,omitempty"`
 	Token                   *OAuthTokenConfig `json:"token,omitempty"`
-}
-
-// OAuthAppCert represents the OAuth application certificate.
-type OAuthAppCert struct {
-	Type  string `json:"type"`
-	Value string `json:"value"`
 }
 
 // OAuthTokenConfig represents the OAuth token configuration.
