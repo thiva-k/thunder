@@ -400,7 +400,7 @@ func (o *OIDCAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.Nod
 	if len(idTokenClaims) != 0 {
 		// Filter non-user claims from the ID token claims.
 		for attr, val := range idTokenClaims {
-			if !slices.Contains(idTokenNonUserAttributes, attr) {
+			if !slices.Contains(IDTokenNonUserAttributes, attr) {
 				userClaims[attr] = val
 			}
 		}
@@ -465,7 +465,7 @@ func (o *OIDCAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.Nod
 	return &authenticatedUser, nil
 }
 
-// resolveUser resolves the user based on the sub claim from user info.
+// resolveUser resolves the internal user based on the sub claim.
 func (o *OIDCAuthExecutor) resolveUser(sub string, ctx *flowmodel.NodeContext,
 	execResp *flowmodel.ExecutorResponse) (string, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
