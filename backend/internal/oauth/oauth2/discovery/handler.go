@@ -23,7 +23,6 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/system/log"
-	"github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // DiscoveryHandlerInterface defines the interface for discovery handlers
@@ -48,12 +47,6 @@ func newDiscoveryHandler(discoveryService DiscoveryServiceInterface) discoveryHa
 func (dh *discoveryHandler) HandleOAuth2AuthorizationServerMetadata(w http.ResponseWriter, r *http.Request) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "DiscoveryHandler"))
 
-	if r.Method != http.MethodGet {
-		utils.WriteJSONError(w, "method_not_allowed",
-			"Only GET method is allowed", http.StatusMethodNotAllowed, nil)
-		return
-	}
-
 	metadata := dh.discoveryService.GetOAuth2AuthorizationServerMetadata()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -61,8 +54,7 @@ func (dh *discoveryHandler) HandleOAuth2AuthorizationServerMetadata(w http.Respo
 
 	if err := json.NewEncoder(w).Encode(metadata); err != nil {
 		logger.Error("Failed to encode OAuth 2.0 Authorization Server Metadata response", log.Error(err))
-		utils.WriteJSONError(w, "server_error",
-			"Failed to generate discovery response", http.StatusInternalServerError, nil)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }
@@ -71,12 +63,6 @@ func (dh *discoveryHandler) HandleOAuth2AuthorizationServerMetadata(w http.Respo
 func (dh *discoveryHandler) HandleOIDCDiscovery(w http.ResponseWriter, r *http.Request) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "DiscoveryHandler"))
 
-	if r.Method != http.MethodGet {
-		utils.WriteJSONError(w, "method_not_allowed",
-			"Only GET method is allowed", http.StatusMethodNotAllowed, nil)
-		return
-	}
-
 	metadata := dh.discoveryService.GetOIDCMetadata()
 
 	w.Header().Set("Content-Type", "application/json")
@@ -84,8 +70,7 @@ func (dh *discoveryHandler) HandleOIDCDiscovery(w http.ResponseWriter, r *http.R
 
 	if err := json.NewEncoder(w).Encode(metadata); err != nil {
 		logger.Error("Failed to encode OIDC discovery response", log.Error(err))
-		utils.WriteJSONError(w, "server_error",
-			"Failed to generate discovery response", http.StatusInternalServerError, nil)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 }
