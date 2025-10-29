@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -46,7 +47,7 @@ func (suite *DiscoveryTestSuite) SetupTest() {
 func (suite *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata() {
 	req := httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil)
 	w := httptest.NewRecorder()
-	
+
 	suite.handler.HandleOAuth2AuthorizationServerMetadata(w, req)
 
 	assert.Equal(suite.T(), http.StatusOK, w.Code)
@@ -94,18 +95,137 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery() {
 	assert.NotEmpty(suite.T(), metadata.IDTokenSigningAlgValuesSupported)
 
 	// Verify OIDC-specific fields
-	assert.Contains(suite.T(), metadata.SubjectTypesSupported, "public")
-	assert.Contains(suite.T(), metadata.IDTokenSigningAlgValuesSupported, "RS256")
-	assert.Contains(suite.T(), metadata.ClaimsSupported, "sub")
-	assert.Contains(suite.T(), metadata.ClaimsSupported, "iss")
-	assert.Contains(suite.T(), metadata.ClaimsSupported, "aud")
+	assert.Contains(suite.T(), metadata.SubjectTypesSupported, constants.SubjectTypePublic)
+	assert.Contains(suite.T(), metadata.IDTokenSigningAlgValuesSupported, constants.SigningAlgorithmRS256)
+	assert.Contains(suite.T(), metadata.ClaimsSupported, constants.ClaimSub)
+	assert.Contains(suite.T(), metadata.ClaimsSupported, constants.ClaimIss)
+	assert.Contains(suite.T(), metadata.ClaimsSupported, constants.ClaimAud)
 }
 
 func (suite *DiscoveryTestSuite) TestMethodNotAllowed() {
 	req := httptest.NewRequest("POST", "/.well-known/oauth-authorization-server", nil)
 	w := httptest.NewRecorder()
-	
+
 	suite.handler.HandleOAuth2AuthorizationServerMetadata(w, req)
 
 	assert.Equal(suite.T(), http.StatusMethodNotAllowed, w.Code)
+}
+
+// TestGrantTypeIsValid tests the GrantType.IsValid() method
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGrantTypeIsValid(t *testing.T) {
+	// Test valid grant types
+	assert.True(t, constants.GrantTypeAuthorizationCode.IsValid())
+	assert.True(t, constants.GrantTypeClientCredentials.IsValid())
+	assert.True(t, constants.GrantTypeRefreshToken.IsValid())
+
+	// Test invalid grant types
+	assert.False(t, constants.GrantType("invalid").IsValid())
+	assert.False(t, constants.GrantType("password").IsValid())
+	assert.False(t, constants.GrantType("").IsValid())
+	assert.False(t, constants.GrantType("implicit").IsValid())
+}
+
+// TestResponseTypeIsValid tests the ResponseType.IsValid() method
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestResponseTypeIsValid(t *testing.T) {
+	// Test valid response types
+	assert.True(t, constants.ResponseTypeCode.IsValid())
+
+	// Test invalid response types
+	assert.False(t, constants.ResponseType("invalid").IsValid())
+	assert.False(t, constants.ResponseType("token").IsValid())
+	assert.False(t, constants.ResponseType("id_token").IsValid())
+	assert.False(t, constants.ResponseType("").IsValid())
+}
+
+// TestTokenEndpointAuthMethodIsValid tests the TokenEndpointAuthMethod.IsValid() method
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestTokenEndpointAuthMethodIsValid(t *testing.T) {
+	// Test valid authentication methods
+	assert.True(t, constants.TokenEndpointAuthMethodClientSecretBasic.IsValid())
+	assert.True(t, constants.TokenEndpointAuthMethodClientSecretPost.IsValid())
+	assert.True(t, constants.TokenEndpointAuthMethodNone.IsValid())
+
+	// Test invalid authentication methods
+	assert.False(t, constants.TokenEndpointAuthMethod("invalid").IsValid())
+	assert.False(t, constants.TokenEndpointAuthMethod("client_secret_jwt").IsValid())
+	assert.False(t, constants.TokenEndpointAuthMethod("private_key_jwt").IsValid())
+	assert.False(t, constants.TokenEndpointAuthMethod("").IsValid())
+}
+
+// TestGetSupportedResponseTypes tests the GetSupportedResponseTypes function
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGetSupportedResponseTypes(t *testing.T) {
+	supported := constants.GetSupportedResponseTypes()
+
+	assert.NotNil(t, supported)
+	assert.Equal(t, 1, len(supported))
+	assert.Contains(t, supported, "code")
+	assert.Equal(t, []string{"code"}, supported)
+}
+
+// TestGetSupportedGrantTypes tests the GetSupportedGrantTypes function
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGetSupportedGrantTypes(t *testing.T) {
+	supported := constants.GetSupportedGrantTypes()
+
+	assert.NotNil(t, supported)
+	assert.Equal(t, 3, len(supported))
+	assert.Contains(t, supported, "authorization_code")
+	assert.Contains(t, supported, "client_credentials")
+	assert.Contains(t, supported, "refresh_token")
+	assert.NotContains(t, supported, "password")
+	assert.NotContains(t, supported, "implicit")
+}
+
+// TestGetSupportedTokenEndpointAuthMethods tests the GetSupportedTokenEndpointAuthMethods function
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGetSupportedTokenEndpointAuthMethods(t *testing.T) {
+	supported := constants.GetSupportedTokenEndpointAuthMethods()
+
+	assert.NotNil(t, supported)
+	assert.Equal(t, 3, len(supported))
+	assert.Contains(t, supported, "client_secret_basic")
+	assert.Contains(t, supported, "client_secret_post")
+	assert.Contains(t, supported, "none")
+	assert.NotContains(t, supported, "client_secret_jwt")
+	assert.NotContains(t, supported, "private_key_jwt")
+}
+
+// TestGetSupportedSubjectTypes tests the GetSupportedSubjectTypes function
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGetSupportedSubjectTypes(t *testing.T) {
+	supported := constants.GetSupportedSubjectTypes()
+
+	assert.NotNil(t, supported)
+	assert.Equal(t, 1, len(supported))
+	assert.Contains(t, supported, constants.SubjectTypePublic)
+	assert.Equal(t, []string{"public"}, supported)
+}
+
+// TestGetSupportedIDTokenSigningAlgorithms tests the GetSupportedIDTokenSigningAlgorithms function
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGetSupportedIDTokenSigningAlgorithms(t *testing.T) {
+	supported := constants.GetSupportedIDTokenSigningAlgorithms()
+
+	assert.NotNil(t, supported)
+	assert.Equal(t, 1, len(supported))
+	assert.Contains(t, supported, constants.SigningAlgorithmRS256)
+	assert.Equal(t, []string{"RS256"}, supported)
+}
+
+// TestGetStandardClaims tests the GetStandardClaims function
+// This is a standalone test for constants - doesn't require discovery service setup
+func TestGetStandardClaims(t *testing.T) {
+	claims := constants.GetStandardClaims()
+
+	assert.NotNil(t, claims)
+	assert.GreaterOrEqual(t, len(claims), 6)
+	assert.Contains(t, claims, constants.ClaimSub)
+	assert.Contains(t, claims, constants.ClaimIss)
+	assert.Contains(t, claims, constants.ClaimAud)
+	assert.Contains(t, claims, constants.ClaimExp)
+	assert.Contains(t, claims, constants.ClaimIat)
+	assert.Contains(t, claims, constants.ClaimAuthTime)
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/pkce"
 	"github.com/asgardeo/thunder/internal/system/config"
 )
 
@@ -117,45 +118,33 @@ func (ds *discoveryService) getSupportedScopes() []string {
 }
 
 func (ds *discoveryService) getSupportedResponseTypes() []string {
-	return []string{string(constants.ResponseTypeCode)}
+	return constants.GetSupportedResponseTypes()
 }
 
 func (ds *discoveryService) getSupportedGrantTypes() []string {
-	return []string{
-		string(constants.GrantTypeAuthorizationCode),
-		string(constants.GrantTypeClientCredentials),
-		string(constants.GrantTypeRefreshToken),
-	}
+	return constants.GetSupportedGrantTypes()
 }
 
 func (ds *discoveryService) getSupportedTokenEndpointAuthMethods() []string {
-	// Extract from token endpoint auth methods in constants - these are implemented
-	return []string{
-		string(constants.TokenEndpointAuthMethodClientSecretBasic),
-		string(constants.TokenEndpointAuthMethodClientSecretPost),
-		string(constants.TokenEndpointAuthMethodNone),
-	}
+	return constants.GetSupportedTokenEndpointAuthMethods()
 }
 
 func (ds *discoveryService) getSupportedCodeChallengeMethods() []string {
-	// PKCE is supported in Thunder (seen in authorization code handler)
-	return []string{"S256", "plain"}
+	return pkce.GetSupportedCodeChallengeMethods()
 }
 
 func (ds *discoveryService) getSupportedSubjectTypes() []string {
-	// Thunder supports public subject types (based on OIDC implementation)
-	return []string{"public"}
+	return constants.GetSupportedSubjectTypes()
 }
 
 func (ds *discoveryService) getSupportedIDTokenSigningAlgorithms() []string {
-	// Thunder uses RS256 for JWT signing (based on JWT service implementation)
-	return []string{"RS256"}
+	return constants.GetSupportedIDTokenSigningAlgorithms()
 }
 
 func (ds *discoveryService) getSupportedClaims() []string {
-	// Extract claims from OIDC scopes that are actually implemented
+	// Extract claims from OIDC scopes
 	var claims []string
-	claims = append(claims, "sub", "iss", "aud", "exp", "iat", "auth_time")
+	claims = append(claims, constants.GetStandardClaims()...)
 
 	for _, scope := range constants.StandardOIDCScopes {
 		claims = append(claims, scope.Claims...)
