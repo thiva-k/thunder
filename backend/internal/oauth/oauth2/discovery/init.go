@@ -26,18 +26,18 @@ import (
 
 // Initialize initializes the discovery service and registers its routes
 func Initialize(mux *http.ServeMux) DiscoveryServiceInterface {
-	discoveryService := NewDiscoveryService()
-	discoveryHandler := NewDiscoveryHandler(discoveryService)
+	discoveryService := newDiscoveryService()
+	discoveryHandler := newDiscoveryHandler(discoveryService)
 	registerRoutes(mux, discoveryHandler)
 	return discoveryService
 }
 
 // registerRoutes registers the routes for discovery endpoints
-func registerRoutes(mux *http.ServeMux, handler DiscoveryHandlerInterface) {
+func registerRoutes(mux *http.ServeMux, handler discoveryHandlerInterface) {
 	opts := middleware.CORSOptions{
 		AllowedMethods:   "GET, OPTIONS",
 		AllowedHeaders:   "Content-Type",
-		AllowCredentials: false, // Discovery endpoints don't need credentials
+		AllowCredentials: false,
 	}
 
 	mux.HandleFunc(middleware.WithCORS("GET /.well-known/oauth-authorization-server",

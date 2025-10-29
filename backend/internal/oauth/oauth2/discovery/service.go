@@ -38,7 +38,7 @@ type discoveryService struct {
 }
 
 // NewDiscoveryService creates a new discovery service instance
-func NewDiscoveryService() DiscoveryServiceInterface {
+func newDiscoveryService() DiscoveryServiceInterface {
 	ds := &discoveryService{}
 	ds.baseURL = ds.getBaseURL()
 	return ds

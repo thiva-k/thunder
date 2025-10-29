@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -32,7 +33,7 @@ import (
 type DiscoveryTestSuite struct {
 	suite.Suite
 	discoveryService DiscoveryServiceInterface
-	handler          DiscoveryHandlerInterface
+	handler          discoveryHandlerInterface
 }
 
 func TestDiscoverySuite(t *testing.T) {
@@ -40,8 +41,26 @@ func TestDiscoverySuite(t *testing.T) {
 }
 
 func (suite *DiscoveryTestSuite) SetupTest() {
-	suite.discoveryService = NewDiscoveryService()
-	suite.handler = NewDiscoveryHandler(suite.discoveryService)
+	// Initialize Thunder Runtime config with basic test config
+	testConfig := &config.Config{
+		Server: config.ServerConfig{
+			Hostname: "localhost",
+			Port:     8080,
+			HTTPOnly: false,
+		},
+		JWT: config.JWTConfig{
+			Issuer:         "https://test.thunder.io",
+			ValidityPeriod: 3600,
+		},
+	}
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	suite.discoveryService = newDiscoveryService()
+	suite.handler = newDiscoveryHandler(suite.discoveryService)
+}
+
+func (suite *DiscoveryTestSuite) TearDownTest() {
+	config.ResetThunderRuntime()
 }
 
 func (suite *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata() {

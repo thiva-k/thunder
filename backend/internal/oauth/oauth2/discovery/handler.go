@@ -27,7 +27,7 @@ import (
 )
 
 // DiscoveryHandlerInterface defines the interface for discovery handlers
-type DiscoveryHandlerInterface interface {
+type discoveryHandlerInterface interface {
 	HandleOAuth2AuthorizationServerMetadata(w http.ResponseWriter, r *http.Request)
 	HandleOIDCDiscovery(w http.ResponseWriter, r *http.Request)
 }
@@ -38,7 +38,7 @@ type discoveryHandler struct {
 }
 
 // NewDiscoveryHandler creates a new discovery handler
-func NewDiscoveryHandler(discoveryService DiscoveryServiceInterface) DiscoveryHandlerInterface {
+func newDiscoveryHandler(discoveryService DiscoveryServiceInterface) discoveryHandlerInterface {
 	return &discoveryHandler{
 		discoveryService: discoveryService,
 	}
