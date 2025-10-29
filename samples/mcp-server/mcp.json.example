@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "thunder-mcp-server": {
+      "url": "http://localhost:3000",
+      "type": "http"
+    }
+  }
+}
+

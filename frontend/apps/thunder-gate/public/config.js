@@ -23,6 +23,6 @@ window.__THUNDER_RUNTIME_CONFIG__ = {
   server: {
     hostname: 'localhost',
     port: 8090,
-    http_only: false,
+    http_only: true,
   },
 };

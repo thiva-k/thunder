@@ -55,7 +55,7 @@
     "properties": []
   },
   "jwt": {
-    "issuer": "thunder",
+    "issuer": "http://localhost:8090",
     "validity_period": 3600
   },
   "oauth": {
