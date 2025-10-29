@@ -21,11 +21,24 @@ codecov:
   notify:
     wait_for_ci: true
 
+flags:
+  frontend-apps-develop-unit:
+    paths:
+      - frontend/apps/thunder-develop/src/**/*.ts
+      - frontend/apps/thunder-develop/src/**/*.tsx
+    carryforward: false
+
 coverage:
   status:
     project:
       default:
         enabled: true
+        target: auto
+        threshold: 1%
+        informational: false
+      frontend-apps-develop-unit:
+        flags:
+          - frontend-apps-develop-unit
         target: auto
         threshold: 1%
         informational: false
