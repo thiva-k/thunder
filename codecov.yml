@@ -23,9 +23,6 @@ codecov:
 
 flags:
   frontend-apps-develop-unit:
-    paths:
-      - frontend/apps/thunder-develop/src/**/*.ts
-      - frontend/apps/thunder-develop/src/**/*.tsx
     carryforward: false
 
 coverage:
