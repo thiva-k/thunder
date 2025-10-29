@@ -135,6 +135,7 @@ export default function UserTypesList() {
       renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => (
         <IconButton
           size="small"
+          aria-label="Open actions menu"
           onClick={(e) => {
             handleMenuOpen(e, params.row.id);
           }}

@@ -319,6 +319,7 @@ export default function UsersList(props: UsersListProps) {
       renderCell: (params: GridRenderCellParams<UserWithDetails>) => (
         <IconButton
           size="small"
+          aria-label="Open actions menu"
           onClick={(e) => {
             handleMenuOpen(e, params.row.id);
           }}
