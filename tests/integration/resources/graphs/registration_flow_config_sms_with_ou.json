@@ -1,12 +1,42 @@
 {
-    "id": "registration_flow_config_basic",
+    "id": "registration_flow_config_sms_with_ou",
     "type": "REGISTRATION",
     "nodes": [
         {
-            "id": "basic_auth",
+            "id": "sms_auth",
             "type": "TASK_EXECUTION",
             "executor": {
-                "name": "BasicAuthExecutor"
+                "name": "SMSOTPAuthExecutor",
+                "properties": {
+                    "senderId": "test-sms-sender-id"
+                }
+            },
+            "next": [
+                "ou_creation"
+            ]
+        },
+        {
+            "id": "ou_creation",
+            "type": "TASK_EXECUTION",
+            "inputData": [
+                {
+                    "name": "ouName",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "ouHandle",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "ouDescription",
+                    "type": "string",
+                    "required": false
+                }
+            ],
+            "executor": {
+                "name": "OUExecutor"
             },
             "next": [
                 "provisioning"
@@ -17,12 +47,7 @@
             "type": "TASK_EXECUTION",
             "inputData": [
                 {
-                    "name": "username",
-                    "type": "string",
-                    "required": true
-                },
-                {
-                    "name": "password",
+                    "name": "mobileNumber",
                     "type": "string",
                     "required": true
                 },
@@ -45,8 +70,8 @@
             "executor": {
                 "name": "ProvisioningExecutor",
                 "properties": {
-                    "ouId": "<default-ou-id>",
-                    "userType": "<default-user-type>"
+                    "ouId": "ouId",
+                    "userType": "dynamic-user-type"
                 }
             },
             "next": [

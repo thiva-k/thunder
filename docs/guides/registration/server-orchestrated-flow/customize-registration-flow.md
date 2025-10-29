@@ -41,13 +41,14 @@ Registration flows support the same node types as authentication flows:
 
 Registration flows can use most authentication executors plus specific registration executors:
 
-| Executor | Description | Input Parameters | Notes |
-|----------|-------------|------------------|-------|
-| `BasicAuthExecutor` | Validates username and password for password-based registration | `username`, `password` |
-| `GoogleOIDCAuthExecutor` | Authenticates users with Google for social registration | `code` (authorization code) |
-| `GithubOAuthExecutor` | Authenticates users with GitHub for social registration | `code` (authorization code) |
-| `SMSOTPAuthExecutor` | Validates SMS OTP for OTP-based registration | `username`, `otp` |
-| `ProvisioningExecutor` | Creates the user account | Various attributes |
+| Executor | Description | Input Parameters | Properties |
+|----------|-------------|------------------|----------|
+| `BasicAuthExecutor` | Validates username and password for password-based registration | `username`, `password` | |
+| `GoogleOIDCAuthExecutor` | Authenticates users with Google for social registration | `code` (authorization code) | `idpName` (Identity Provider name) |
+| `GithubOAuthExecutor` | Authenticates users with GitHub for social registration | `code` (authorization code) | `idpName` (Identity Provider name) |
+| `SMSOTPAuthExecutor` | Validates SMS OTP for OTP-based registration | `username`, `otp` | `senderId` (SMS sender ID) |
+| `OUExecutor` | Creates an organizational unit for the registering user. This should be used before the `ProvisioningExecutor` if needed | `ouName`, `ouHandle`, `ouDescription` |
+| `ProvisioningExecutor` | Creates the user account | Various attributes | `ouId` (default OU ID), `userType` (default user type) |
 
 ## Creating a Custom Registration Flow
 
@@ -56,9 +57,10 @@ To create a custom registration flow:
 1. Create a new JSON file in your graphs directory with the flow definition
 2. Use the `registration_flow_config_` prefix for automatic detection or any custom name
 3. Define the flow nodes, their executors, and connections
-4. Include a `ProvisioningExecutor` node to create user accounts
-5. Add an `AUTHENTICATION_SUCCESS` node at the end if you need to automatically login the user after registration
-6. Restart the server to register the flow in Thunder
+4. Include a `OUExecutor` node if you want to create an organizational unit during registration
+5. Include a `ProvisioningExecutor` node to create user accounts
+6. Add an `AUTHENTICATION_SUCCESS` node at the end if you need to automatically login the user after registration
+7. Restart the server to register the flow in Thunder
 
 ### Flow Definition Structure
 
@@ -98,7 +100,11 @@ To create a custom registration flow:
         }
       ],
       "executor": {
-        "name": "ProvisioningExecutor"
+        "name": "ProvisioningExecutor",
+        "properties": {
+            "ouId": "<default-ou-id>",
+            "userType": "<default-user-type>"
+        }
       },
       "next": ["authenticated"]
     },
@@ -111,6 +117,7 @@ To create a custom registration flow:
 ```
 
 > * Make sure to use type `REGISTRATION` for the top-level flow object. The `ProvisioningExecutor` should be placed after all authentication and data collection nodes.
+> * Define the expected `ouId` and `userType` in the `ProvisioningExecutor` properties to specify where and how the user should be created by default. If the `ouId` or `userType` is set to context from any other executor, flow will use that value.
 > * By default `ProvisioningExecutor` will provision all previously collected attributes. If you want to provision only specific attributes, define the `inputData` in the `ProvisioningExecutor` node.
 > * `AUTHENTICATION_SUCCESS` node is optional but recommended if you want to authenticate the user immediately after registration.
 
@@ -201,7 +208,11 @@ Here's an example of a basic registration flow that collects additional user att
         }
       ],
       "executor": {
-        "name": "ProvisioningExecutor"
+        "name": "ProvisioningExecutor",
+        "properties": {
+            "ouId": "<default-ou-id>",
+            "userType": "<default-user-type>"
+        }
       },
       "next": ["authenticated"]
     },
@@ -264,7 +275,11 @@ Here's an example of a registration flow using Google OAuth:
       "id": "provisioning",
       "type": "TASK_EXECUTION",
       "executor": {
-        "name": "ProvisioningExecutor"
+        "name": "ProvisioningExecutor",
+        "properties": {
+            "ouId": "<default-ou-id>",
+            "userType": "<default-user-type>"
+        }
       },
       "next": ["authenticated"]
     },

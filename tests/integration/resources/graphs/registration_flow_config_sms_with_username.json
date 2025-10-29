@@ -1,13 +1,13 @@
 {
-    "id": "registration_flow_config_sms",
+    "id": "registration_flow_config_sms_with_username",
     "type": "REGISTRATION",
     "nodes": [
         {
-            "id": "prompt_mobile",
+            "id": "mobile_prompt_username",
             "type": "PROMPT_ONLY",
             "inputData": [
                 {
-                    "name": "mobileNumber",
+                    "name": "username",
                     "type": "string",
                     "required": true
                 }
@@ -22,7 +22,7 @@
             "executor": {
                 "name": "SMSOTPAuthExecutor",
                 "properties": {
-                    "senderId": "<your-sender-id>"
+                    "senderId": "test-sms-sender-id"
                 }
             },
             "next": [
@@ -32,33 +32,11 @@
         {
             "id": "provisioning",
             "type": "TASK_EXECUTION",
-            "inputData": [
-                {
-                    "name": "firstName",
-                    "type": "string",
-                    "required": false
-                },
-                {
-                    "name": "lastName",
-                    "type": "string",
-                    "required": false
-                },
-                {
-                    "name": "email",
-                    "type": "string",
-                    "required": true
-                },
-                {
-                    "name": "mobileNumber",
-                    "type": "string",
-                    "required": true
-                }
-            ],
             "executor": {
                 "name": "ProvisioningExecutor",
                 "properties": {
-                    "ouId": "<default-ou-id>",
-                    "userType": "<default-user-type>"
+                    "ouId": "test-ou-id",
+                    "userType": "test-user-type"
                 }
             },
             "next": [

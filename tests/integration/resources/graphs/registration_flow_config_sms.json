@@ -55,7 +55,11 @@
                 }
             ],
             "executor": {
-                "name": "ProvisioningExecutor"
+                "name": "ProvisioningExecutor",
+                "properties": {
+                    "ouId": "test-ou-id",
+                    "userType": "test-user-type"
+                }
             },
             "next": [
                 "authenticated"

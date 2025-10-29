@@ -77,6 +77,12 @@ func newOrganizationUnitService() OrganizationUnitServiceInterface {
 	}
 }
 
+// NewOrganizationUnitService creates and returns a new OrganizationUnitServiceInterface.
+// TODO: Remove this when the flow executors are migrated to the di pattern.
+func NewOrganizationUnitService() OrganizationUnitServiceInterface {
+	return newOrganizationUnitService()
+}
+
 // GetOrganizationUnitList retrieves a list of organization units.
 // limit should be a positive integer and offset should be non-negative.
 func (ous *organizationUnitService) GetOrganizationUnitList(limit, offset int) (
