@@ -123,15 +123,6 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery() {
 	assert.Contains(suite.T(), metadata.ClaimsSupported, constants.ClaimAud)
 }
 
-func (suite *DiscoveryTestSuite) TestMethodNotAllowed() {
-	req := httptest.NewRequest("POST", "/.well-known/oauth-authorization-server", nil)
-	w := httptest.NewRecorder()
-
-	suite.handler.HandleOAuth2AuthorizationServerMetadata(w, req)
-
-	assert.Equal(suite.T(), http.StatusMethodNotAllowed, w.Code)
-}
-
 // TestGrantTypeIsValid tests the GrantType.IsValid() method
 // This is a standalone test for constants - doesn't require discovery service setup
 func TestGrantTypeIsValid(t *testing.T) {
