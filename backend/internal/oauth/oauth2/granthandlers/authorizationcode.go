@@ -346,7 +346,11 @@ func updateContextAttributes(ctx *model.TokenContext, authCode *authz.Authorizat
 		ctx.TokenAttributes = make(map[string]interface{})
 	}
 	ctx.TokenAttributes[constants.ClaimSub] = authCode.AuthorizedUserID
-	ctx.TokenAttributes[constants.ClaimAud] = authCode.ClientID
+	if authCode.Resource != "" {
+		ctx.TokenAttributes[constants.ClaimAud] = authCode.Resource
+	} else {
+		ctx.TokenAttributes[constants.ClaimAud] = authCode.ClientID
+	}
 }
 
 // buildTokenResponse builds the token response with access token details.
