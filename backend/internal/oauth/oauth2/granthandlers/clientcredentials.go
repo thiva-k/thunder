@@ -78,6 +78,11 @@ func (h *clientCredentialsGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 		jwtClaims["scope"] = scopeString
 	}
 
+	// Add audience claim based on resource parameter (RFC 8707)
+	if tokenRequest.Resource != "" {
+		jwtClaims["aud"] = tokenRequest.Resource
+	}
+
 	// Get token configuration from OAuth app
 	iss := ""
 	validityPeriod := int64(0)
@@ -106,7 +111,12 @@ func (h *clientCredentialsGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 		ctx.TokenAttributes = make(map[string]interface{})
 	}
 	ctx.TokenAttributes["sub"] = tokenRequest.ClientID
-	ctx.TokenAttributes["aud"] = tokenRequest.ClientID
+	// Set audience to resource if provided, otherwise use client ID
+	if tokenRequest.Resource != "" {
+		ctx.TokenAttributes["aud"] = tokenRequest.Resource
+	} else {
+		ctx.TokenAttributes["aud"] = tokenRequest.ClientID
+	}
 
 	// Prepare the token response.
 	accessToken := &model.TokenDTO{
