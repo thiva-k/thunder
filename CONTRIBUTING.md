@@ -69,7 +69,7 @@ pnpm build
 
 ### Setting up the Thunder Gate Application
 
-1. Point the `gate_client` in `thunder-home/config/deployment.yaml` to the local Thunder Gate application.
+1. Point the `gate_client` in `thunder-home/repository/conf/deployment.yaml` to the local Thunder Gate application.
 
 ```yaml
 gate_client:
@@ -81,19 +81,26 @@ gate_client:
 2. Run the Thunder Gate application.
 
 ```bash
+cd thunder-home/frontend
 pnpm --filter @thunder/gate dev
 ```
 
 ### Setting up the Thunder Develop Application
 
-1. First, get the current **Develop** application configuration:
+1. First, retrieve the application ID of the **Develop** application from the Thunder server. This will be the application with the `client_id` **DEVELOP**.
+
+```bash
+curl -k -X GET "https://localhost:8090/applications"
+```
+
+2. Then, get the current **Develop** application configuration:
 
 ```bash
 curl -k -X GET "https://localhost:8090/applications/<develop-application-id>"
 ```
 
 > [!Note]
-> - Replace `<develop-application-id>` with the actual application ID (e.g., `6100bc91-ba99-4ce9-87dd-6d4d80178c38`).
+> - Replace `<develop-application-id>` with the actual application ID (e.g., `6100bc91-ba99-4ce9-87dd-6d4d80178c38`) obtained from the previous step.
 > - The `-k` flag allows curl to work with self-signed SSL certificates in development.
 
 The response will look similar to the following:
@@ -186,7 +193,16 @@ curl -k -X PUT "https://localhost:8090/applications/<develop-application-id>" \
   -d '<paste-the-modified-json-here>'
 ```
 
-4. Run the Thunder Develop application.
+4. Add the local development origin of the thunder-develop application (https://localhost:5191) to the CORS allowed origins in `thunder-home/repository/conf/deployment.yaml`.
+
+```yaml
+cors:
+  allowed_origins:
+    - "https://localhost:3000"
+    - "https://localhost:5191"
+```
+
+5. Run the Thunder Develop application.
 
 ```bash
 pnpm --filter @thunder/develop dev
