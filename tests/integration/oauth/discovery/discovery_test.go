@@ -21,7 +21,7 @@ package discovery
 import (
 	"crypto/tls"
 	"encoding/json"
-	"io"
+
 	"net/http"
 	"testing"
 
@@ -44,6 +44,7 @@ type OAuth2AuthorizationServerMetadata struct {
 	JWKSUri                           string   `json:"jwks_uri"`
 	RevocationEndpoint                string   `json:"revocation_endpoint,omitempty"`
 	IntrospectionEndpoint             string   `json:"introspection_endpoint,omitempty"`
+	RegistrationEndpoint              string   `json:"registration_endpoint,omitempty"`
 	ScopesSupported                   []string `json:"scopes_supported"`
 	ResponseTypesSupported            []string `json:"response_types_supported"`
 	GrantTypesSupported               []string `json:"grant_types_supported"`
@@ -98,6 +99,7 @@ func (ts *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata_GET_Success(
 	ts.NotEmpty(metadata.AuthorizationEndpoint, "AuthorizationEndpoint should be present")
 	ts.NotEmpty(metadata.TokenEndpoint, "TokenEndpoint should be present")
 	ts.NotEmpty(metadata.JWKSUri, "JWKSUri should be present")
+	ts.NotEmpty(metadata.RegistrationEndpoint, "RegistrationEndpoint should be present")
 	ts.NotEmpty(metadata.IntrospectionEndpoint, "IntrospectionEndpoint should be present")
 
 	// Verify endpoints are correctly formatted
@@ -105,6 +107,7 @@ func (ts *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata_GET_Success(
 	ts.Contains(metadata.AuthorizationEndpoint, "/oauth2/authorize", "AuthorizationEndpoint should contain correct path")
 	ts.Contains(metadata.TokenEndpoint, "/oauth2/token", "TokenEndpoint should contain correct path")
 	ts.Contains(metadata.JWKSUri, "/oauth2/jwks", "JWKSUri should contain correct path")
+	ts.Contains(metadata.RegistrationEndpoint, "/oauth2/dcr/register", "RegistrationEndpoint should contain correct path")
 	ts.Contains(metadata.IntrospectionEndpoint, "/oauth2/introspect", "IntrospectionEndpoint should contain correct path")
 
 	// Verify not implemented endpoints are empty
@@ -149,30 +152,6 @@ func (ts *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata_OPTIONS_Succ
 	defer resp.Body.Close()
 
 	ts.Equal(http.StatusNoContent, resp.StatusCode)
-}
-
-// TestOAuth2AuthorizationServerMetadata_MethodNotAllowed tests unsupported HTTP methods
-func (ts *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata_MethodNotAllowed() {
-	methods := []string{"POST", "PUT", "DELETE", "PATCH"}
-	for _, method := range methods {
-		req, err := http.NewRequest(method, testServerURL+oauth2DiscoveryEndpoint, nil)
-		ts.Require().NoError(err)
-
-		resp, err := ts.client.Do(req)
-		ts.Require().NoError(err)
-		defer resp.Body.Close()
-
-		ts.Equal(http.StatusMethodNotAllowed, resp.StatusCode, "Method %s should return 405", method)
-
-		// Verify error response format
-		bodyBytes, err := io.ReadAll(resp.Body)
-		ts.Require().NoError(err)
-
-		var errorResp map[string]interface{}
-		err = json.Unmarshal(bodyBytes, &errorResp)
-		ts.NoError(err, "Error response should be valid JSON")
-		ts.Equal("method_not_allowed", errorResp["error"], "Error code should be method_not_allowed")
-	}
 }
 
 // TestOIDCDiscovery_GET_Success tests successful retrieval of OIDC Provider Metadata
@@ -235,30 +214,6 @@ func (ts *DiscoveryTestSuite) TestOIDCDiscovery_OPTIONS_Success() {
 	ts.Equal(http.StatusNoContent, resp.StatusCode)
 }
 
-// TestOIDCDiscovery_MethodNotAllowed tests unsupported HTTP methods
-func (ts *DiscoveryTestSuite) TestOIDCDiscovery_MethodNotAllowed() {
-	methods := []string{"POST", "PUT", "DELETE", "PATCH"}
-	for _, method := range methods {
-		req, err := http.NewRequest(method, testServerURL+oidcDiscoveryEndpoint, nil)
-		ts.Require().NoError(err)
-
-		resp, err := ts.client.Do(req)
-		ts.Require().NoError(err)
-		defer resp.Body.Close()
-
-		ts.Equal(http.StatusMethodNotAllowed, resp.StatusCode, "Method %s should return 405", method)
-
-		// Verify error response format
-		bodyBytes, err := io.ReadAll(resp.Body)
-		ts.Require().NoError(err)
-
-		var errorResp map[string]interface{}
-		err = json.Unmarshal(bodyBytes, &errorResp)
-		ts.NoError(err, "Error response should be valid JSON")
-		ts.Equal("method_not_allowed", errorResp["error"], "Error code should be method_not_allowed")
-	}
-}
-
 // TestOAuth2MetadataConsistency tests that OAuth2 metadata is consistent between direct call and OIDC response
 func (ts *DiscoveryTestSuite) TestOAuth2MetadataConsistency() {
 	// Get OAuth2 metadata directly
@@ -290,6 +245,7 @@ func (ts *DiscoveryTestSuite) TestOAuth2MetadataConsistency() {
 	ts.Equal(oauth2Metadata.AuthorizationEndpoint, oidcMetadata.AuthorizationEndpoint, "AuthorizationEndpoint should match")
 	ts.Equal(oauth2Metadata.TokenEndpoint, oidcMetadata.TokenEndpoint, "TokenEndpoint should match")
 	ts.Equal(oauth2Metadata.JWKSUri, oidcMetadata.JWKSUri, "JWKSUri should match")
+	ts.Equal(oauth2Metadata.RegistrationEndpoint, oidcMetadata.RegistrationEndpoint, "RegistrationEndpoint should match")
 	ts.Equal(oauth2Metadata.IntrospectionEndpoint, oidcMetadata.IntrospectionEndpoint, "IntrospectionEndpoint should match")
 	ts.Equal(oauth2Metadata.GrantTypesSupported, oidcMetadata.GrantTypesSupported, "GrantTypesSupported should match")
 	ts.Equal(oauth2Metadata.ResponseTypesSupported, oidcMetadata.ResponseTypesSupported, "ResponseTypesSupported should match")

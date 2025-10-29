@@ -73,6 +73,7 @@ const (
 	OAuth2UserInfoEndpoint      string = "/oauth2/userinfo"
 	OAuth2JWKSEndpoint          string = "/oauth2/jwks"
 	OAuth2LogoutEndpoint        string = "/oauth2/logout"
+	OAuth2DCREndpoint           string = "/oauth2/dcr/register"
 )
 
 // GrantType defines a type for OAuth2 grant types.

@@ -25,6 +25,7 @@ type OAuth2AuthorizationServerMetadata struct {
 	TokenEndpoint                     string   `json:"token_endpoint"`
 	UserInfoEndpoint                  string   `json:"userinfo_endpoint,omitempty"`
 	JWKSUri                           string   `json:"jwks_uri"`
+	RegistrationEndpoint              string   `json:"registration_endpoint,omitempty"`
 	RevocationEndpoint                string   `json:"revocation_endpoint,omitempty"`
 	IntrospectionEndpoint             string   `json:"introspection_endpoint,omitempty"`
 	ScopesSupported                   []string `json:"scopes_supported"`

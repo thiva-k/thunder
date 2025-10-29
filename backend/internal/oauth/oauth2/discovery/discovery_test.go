@@ -81,6 +81,7 @@ func (suite *DiscoveryTestSuite) TestOAuth2AuthorizationServerMetadata() {
 	assert.NotEmpty(suite.T(), metadata.AuthorizationEndpoint)
 	assert.NotEmpty(suite.T(), metadata.TokenEndpoint)
 	assert.NotEmpty(suite.T(), metadata.JWKSUri)
+	assert.NotEmpty(suite.T(), metadata.RegistrationEndpoint)
 	assert.NotEmpty(suite.T(), metadata.IntrospectionEndpoint)
 
 	// Verify only implemented endpoints are present
