@@ -139,7 +139,8 @@ const (
 	TokenEndpointAuthMethodNone TokenEndpointAuthMethod = "none"
 )
 
-// supportedTokenEndpointAuthMethods is the single source of truth for all supported token endpoint authentication methods.
+// supportedTokenEndpointAuthMethods is the single source of truth for all supported token endpoint
+// authentication methods.
 var supportedTokenEndpointAuthMethods = []TokenEndpointAuthMethod{
 	TokenEndpointAuthMethodClientSecretBasic,
 	TokenEndpointAuthMethodClientSecretPost,

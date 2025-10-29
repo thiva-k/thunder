@@ -42,4 +42,3 @@ type OIDCProviderMetadata struct {
 	ClaimsSupported                  []string `json:"claims_supported"`
 	EndSessionEndpoint               string   `json:"end_session_endpoint,omitempty"`
 }
-

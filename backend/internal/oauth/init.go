@@ -24,8 +24,8 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/oauth/jwks"
-	"github.com/asgardeo/thunder/internal/oauth/oauth2/discovery"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/dcr"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/discovery"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/introspect"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/token"

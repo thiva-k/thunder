@@ -16,6 +16,7 @@
  * under the License.
  */
 
+// Package discovery provides tests for the OAuth2 and OIDC discovery endpoints.
 package discovery
 
 import (
@@ -24,10 +25,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
-	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/asgardeo/thunder/internal/system/config"
 )
 
 type DiscoveryTestSuite struct {

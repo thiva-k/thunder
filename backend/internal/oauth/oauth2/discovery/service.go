@@ -110,7 +110,7 @@ func (ds *discoveryService) getIntrospectionEndpoint() string {
 }
 
 func (ds *discoveryService) getSupportedScopes() []string {
-	var scopes []string
+	scopes := make([]string, 0, len(constants.StandardOIDCScopes))
 	for scope := range constants.StandardOIDCScopes {
 		scopes = append(scopes, scope)
 	}
