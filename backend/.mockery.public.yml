@@ -276,3 +276,27 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: groupmock
       filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/authz:
+    config:
+      all: true
+      dir: tests/mocks/authzmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: authzmock
+      filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/authz/engine:
+    config:
+      all: true
+      dir: tests/mocks/authz/engine
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: enginemock
+      filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/role:
+    config:
+      all: true
+      dir: tests/mocks/rolemock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: rolemock
+      filename: "{{.InterfaceName}}_mock.go"
