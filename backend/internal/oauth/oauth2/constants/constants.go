@@ -73,6 +73,7 @@ const (
 	OAuth2UserInfoEndpoint      string = "/oauth2/userinfo"
 	OAuth2JWKSEndpoint          string = "/oauth2/jwks"
 	OAuth2LogoutEndpoint        string = "/oauth2/logout"
+	OAuth2DCREndpoint           string = "/oauth2/dcr/register"
 )
 
 // GrantType defines a type for OAuth2 grant types.
@@ -87,16 +88,21 @@ const (
 	GrantTypeRefreshToken GrantType = "refresh_token"
 )
 
+// supportedGrantTypes is the single source of truth for all supported grant types.
+var supportedGrantTypes = []GrantType{
+	GrantTypeAuthorizationCode,
+	GrantTypeClientCredentials,
+	GrantTypeRefreshToken,
+}
+
 // IsValid checks if the GrantType is valid.
 func (gt GrantType) IsValid() bool {
-	switch gt {
-	case GrantTypeAuthorizationCode,
-		GrantTypeClientCredentials,
-		GrantTypeRefreshToken:
-		return true
-	default:
-		return false
+	for _, valid := range supportedGrantTypes {
+		if gt == valid {
+			return true
+		}
 	}
+	return false
 }
 
 // ResponseType defines a type for OAuth2 response types.
@@ -107,14 +113,19 @@ const (
 	ResponseTypeCode ResponseType = "code"
 )
 
+// supportedResponseTypes is the single source of truth for all supported response types.
+var supportedResponseTypes = []ResponseType{
+	ResponseTypeCode,
+}
+
 // IsValid checks if the ResponseType is valid.
 func (rt ResponseType) IsValid() bool {
-	switch rt {
-	case ResponseTypeCode:
-		return true
-	default:
-		return false
+	for _, valid := range supportedResponseTypes {
+		if rt == valid {
+			return true
+		}
 	}
+	return false
 }
 
 // TokenEndpointAuthMethod defines a type for token endpoint authentication methods.
@@ -129,16 +140,22 @@ const (
 	TokenEndpointAuthMethodNone TokenEndpointAuthMethod = "none"
 )
 
+// supportedTokenEndpointAuthMethods is the single source of truth for all supported token endpoint
+// authentication methods.
+var supportedTokenEndpointAuthMethods = []TokenEndpointAuthMethod{
+	TokenEndpointAuthMethodClientSecretBasic,
+	TokenEndpointAuthMethodClientSecretPost,
+	TokenEndpointAuthMethodNone,
+}
+
 // IsValid checks if the TokenEndpointAuthMethod is valid.
 func (tam TokenEndpointAuthMethod) IsValid() bool {
-	switch tam {
-	case TokenEndpointAuthMethodClientSecretBasic,
-		TokenEndpointAuthMethodClientSecretPost,
-		TokenEndpointAuthMethodNone:
-		return true
-	default:
-		return false
+	for _, valid := range supportedTokenEndpointAuthMethods {
+		if tam == valid {
+			return true
+		}
 	}
+	return false
 }
 
 // OAuth2 token types.
@@ -195,4 +212,73 @@ var StandardOIDCScopes = map[string]model.OIDCScope{
 		Description: "Requests access to address claim",
 		Claims:      []string{"address"},
 	},
+}
+
+// Standard JWT claim names.
+const (
+	ClaimSub      string = "sub"
+	ClaimIss      string = "iss"
+	ClaimAud      string = "aud"
+	ClaimExp      string = "exp"
+	ClaimIat      string = "iat"
+	ClaimAuthTime string = "auth_time"
+)
+
+// JWT signing algorithms.
+const (
+	SigningAlgorithmRS256 string = "RS256"
+)
+
+// OIDC subject types.
+const (
+	SubjectTypePublic string = "public"
+)
+
+// GetSupportedResponseTypes returns all supported OAuth2 response types.
+func GetSupportedResponseTypes() []string {
+	result := make([]string, len(supportedResponseTypes))
+	for i, rt := range supportedResponseTypes {
+		result[i] = string(rt)
+	}
+	return result
+}
+
+// GetSupportedGrantTypes returns all supported OAuth2 grant types.
+func GetSupportedGrantTypes() []string {
+	result := make([]string, len(supportedGrantTypes))
+	for i, gt := range supportedGrantTypes {
+		result[i] = string(gt)
+	}
+	return result
+}
+
+// GetSupportedTokenEndpointAuthMethods returns all supported token endpoint authentication methods.
+func GetSupportedTokenEndpointAuthMethods() []string {
+	result := make([]string, len(supportedTokenEndpointAuthMethods))
+	for i, tam := range supportedTokenEndpointAuthMethods {
+		result[i] = string(tam)
+	}
+	return result
+}
+
+// GetSupportedSubjectTypes returns all supported OIDC subject types.
+func GetSupportedSubjectTypes() []string {
+	return []string{SubjectTypePublic}
+}
+
+// GetSupportedIDTokenSigningAlgorithms returns all supported ID token signing algorithms.
+func GetSupportedIDTokenSigningAlgorithms() []string {
+	return []string{SigningAlgorithmRS256}
+}
+
+// GetStandardClaims returns all standard JWT claims that are always included in tokens.
+func GetStandardClaims() []string {
+	return []string{
+		ClaimSub,
+		ClaimIss,
+		ClaimAud,
+		ClaimExp,
+		ClaimIat,
+		ClaimAuthTime,
+	}
 }
