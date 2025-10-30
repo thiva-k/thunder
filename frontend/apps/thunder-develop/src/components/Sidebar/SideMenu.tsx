@@ -72,7 +72,7 @@ export default function SideMenu(): JSX.Element {
           width="auto"
           alignItems="center"
         />
-        <Typography variant="h6" sx={{ml: 1, alignSelf: 'center', fontWeight: 400}}>
+        <Typography variant="h6" sx={{mt: '4px', ml: 1, alignSelf: 'center', fontWeight: 400}}>
           Develop
         </Typography>
       </Box>

@@ -23,18 +23,11 @@ import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import Stack from '@mui/material/Stack';
-import {Blocks, House, LayoutGrid, Settings, User, UsersRound} from 'lucide-react';
+import {Blocks, LayoutGrid, User, UsersRound} from 'lucide-react';
 import type {JSX} from 'react';
 import useNavigation from '@/layouts/contexts/useNavigation';
 
 const mainListItems = [
-  {
-    id: 'home',
-    text: 'Home',
-    icon: <House size={16} />,
-    category: 'Dashboard',
-    path: '/',
-  },
   {
     id: 'users',
     text: 'Users',
@@ -65,16 +58,6 @@ const mainListItems = [
   },
 ];
 
-const secondaryListItems = [
-  {
-    id: 'settings',
-    text: 'Settings',
-    icon: <Settings size={14} />,
-    category: 'Settings',
-    path: '/settings',
-  },
-];
-
 export default function MenuContent(): JSX.Element {
   const {currentPage, setCurrentPage} = useNavigation();
 
@@ -86,21 +69,6 @@ export default function MenuContent(): JSX.Element {
     <Stack sx={{flexGrow: 1, p: 1, justifyContent: 'space-between'}}>
       <List dense>
         {mainListItems.map((item) => (
-          <ListItem key={item.id} disablePadding sx={{display: 'block'}}>
-            <ListItemButton
-              component={NavLink}
-              to={item.path}
-              selected={currentPage === item.id}
-              onClick={() => handleListItemClick(item)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-      <List dense>
-        {secondaryListItems.map((item) => (
           <ListItem key={item.id} disablePadding sx={{display: 'block'}}>
             <ListItemButton
               component={NavLink}

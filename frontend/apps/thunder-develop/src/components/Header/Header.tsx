@@ -17,6 +17,7 @@
  */
 
 import Stack from '@mui/material/Stack';
+import Tooltip from '@mui/material/Tooltip';
 import {ColorModeIconDropdown} from '@thunder/ui';
 import type {JSX} from 'react';
 import {Bell} from 'lucide-react';
@@ -42,9 +43,11 @@ export default function Header(): JSX.Element {
       <NavbarBreadcrumbs />
       <Stack direction="row" sx={{gap: 1}}>
         <Search />
-        <MenuButton showBadge aria-label="Open notifications">
-          <Bell size={16} />
-        </MenuButton>
+        <Tooltip title="Coming soon">
+          <MenuButton showBadge aria-label="Open notifications">
+            <Bell size={16} />
+          </MenuButton>
+        </Tooltip>
         <ColorModeIconDropdown />
       </Stack>
     </Stack>

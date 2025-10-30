@@ -18,7 +18,7 @@
 
 import {useNavigate, useParams} from 'react-router';
 import {useForm} from 'react-hook-form';
-import {useState, useEffect} from 'react';
+import {useState, useEffect, useMemo} from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -34,6 +34,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogActions from '@mui/material/DialogActions';
 import {ArrowLeft, Edit, Save, X, Trash2} from 'lucide-react';
 import useGetUser from '../api/useGetUser';
+import useGetUserSchemas from '../api/useGetUserSchemas';
 import useGetUserSchema from '../api/useGetUserSchema';
 import useUpdateUser from '../api/useUpdateUser';
 import useDeleteUser from '../api/useDeleteUser';
@@ -52,7 +53,17 @@ export default function ViewUserPage() {
   const {updateUser, error: updateUserError, reset: resetUpdateError} = useUpdateUser();
   const {deleteUser, loading: isDeleting, error: deleteUserError} = useDeleteUser();
 
-  const {data: userSchema, loading: isSchemaLoading, error: schemaError} = useGetUserSchema(user?.type);
+  // Get all schemas to find the schema ID from the schema name
+  const {data: userSchemas} = useGetUserSchemas();
+
+  // Find the schema ID based on the user's type (which is the schema name)
+  const schemaId = useMemo(() => {
+    if (!user?.type || !userSchemas?.schemas) return undefined;
+    const schema = userSchemas.schemas.find((s) => s.name === user.type);
+    return schema?.id;
+  }, [user?.type, userSchemas?.schemas]);
+
+  const {data: userSchema, loading: isSchemaLoading, error: schemaError} = useGetUserSchema(schemaId);
 
   const {
     control,

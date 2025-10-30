@@ -42,7 +42,7 @@ interface CreateUserFormData {
 
 export default function CreateUserPage() {
   const navigate = useNavigate();
-  const [selectedSchema, setSelectedSchema] = useState<string>('');
+  const [selectedSchema, setSelectedSchema] = useState<SchemaInterface>();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {data: originalUserSchemas} = useGetUserSchemas();
@@ -52,16 +52,15 @@ export default function CreateUserPage() {
     data: defaultUserSchema,
     loading: isDefaultUserSchemaRequestLoading,
     error: defaultUserSchemaRequestError,
-  } = useGetUserSchema(selectedSchema);
+  } = useGetUserSchema(selectedSchema?.id);
 
   const userSchemas: SchemaInterface[] = useMemo(() => {
     if (!originalUserSchemas?.schemas) {
       return [];
     }
 
-    const firstSchemaId = originalUserSchemas.schemas[0]?.id;
-    if (firstSchemaId && !selectedSchema) {
-      setSelectedSchema(firstSchemaId);
+    if (originalUserSchemas.schemas.length > 0 && !selectedSchema) {
+      setSelectedSchema(originalUserSchemas.schemas[0]);
     }
 
     return originalUserSchemas?.schemas;
@@ -81,7 +80,7 @@ export default function CreateUserPage() {
   // Set default schema when schemas are loaded
   useEffect(() => {
     if (selectedSchema) {
-      setValue('schema', selectedSchema);
+      setValue('schema', selectedSchema.name);
     }
   }, [selectedSchema, setValue]);
 
@@ -89,7 +88,7 @@ export default function CreateUserPage() {
     try {
       setIsSubmitting(true);
 
-      // Extract schema from form data
+      // Extract schema from form data (schema already contains the schema name)
       const {schema, ...attributes} = data;
 
       // Prepare the request body according to the API spec
@@ -192,10 +191,11 @@ export default function CreateUserPage() {
                     <Select
                       {...field}
                       id="schema"
-                      value={field.value ?? selectedSchema}
+                      value={field.value ?? selectedSchema?.name}
                       onChange={(e) => {
                         field.onChange(e);
-                        setSelectedSchema(e.target.value);
+                        const schema = userSchemas.find((s) => s.name === e.target.value);
+                        setSelectedSchema(schema);
                       }}
                       required
                       error={!!errors.schema}
@@ -207,7 +207,7 @@ export default function CreateUserPage() {
                         </MenuItem>
                       ) : (
                         userSchemas.map((schema) => (
-                          <MenuItem key={schema.id} value={schema.id}>
+                          <MenuItem key={schema.name} value={schema.name}>
                             {schema.name}
                           </MenuItem>
                         ))

@@ -266,10 +266,9 @@ export default function CreateUserTypePage() {
             Schema Properties
           </Typography>
 
-          {properties.map((property, index) => (
+          {properties.map((property) => (
             <Paper key={property.id} variant="outlined" sx={{p: 2, mb: 2}}>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="subtitle1">Property {index + 1}</Typography>
                 {properties.length > 1 && (
                   <IconButton size="small" color="error" onClick={() => handleRemoveProperty(property.id)}>
                     <X size={16} />

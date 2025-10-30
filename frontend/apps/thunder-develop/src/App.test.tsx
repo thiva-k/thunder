@@ -26,10 +26,6 @@ vi.mock('@asgardeo/react-router', () => ({
 }));
 
 // Mock all the page components
-vi.mock('./features/home/pages/HomePage', () => ({
-  default: () => <div data-testid="home-page">Home Page</div>,
-}));
-
 vi.mock('./features/users/pages/UsersListPage', () => ({
   default: () => <div data-testid="users-list-page">Users List Page</div>,
 }));
