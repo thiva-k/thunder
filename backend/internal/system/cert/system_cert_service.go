@@ -16,6 +16,7 @@
  * under the License.
  */
 
+// Package cert provides functionality for managing system certificates.
 package cert
 
 import (
@@ -40,10 +41,6 @@ type systemCertificateService struct{}
 
 // NewSystemCertificateService creates a new instance of SystemCertificateService.
 func NewSystemCertificateService() SystemCertificateServiceInterface {
-	return &systemCertificateService{}
-}
-
-func newSystemCertificateService() SystemCertificateServiceInterface {
 	return &systemCertificateService{}
 }
 
