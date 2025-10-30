@@ -153,9 +153,11 @@ func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.E
 	}
 
 	authenticatedUser := authncm.AuthenticatedUser{
-		IsAuthenticated: true,
-		UserID:          createdUser.ID,
-		Attributes:      retAttributes,
+		IsAuthenticated:    true,
+		UserID:             createdUser.ID,
+		OrganizationUnitID: createdUser.OrganizationUnit,
+		UserType:           createdUser.Type,
+		Attributes:         retAttributes,
 	}
 	execResp.AuthenticatedUser = authenticatedUser
 	execResp.Status = flowconst.ExecComplete
@@ -309,7 +311,7 @@ func (p *ProvisioningExecutor) createUserInStore(flowID string,
 		newUser.Type = userType.(string)
 	} else {
 		// TODO: Use a hard coded type for the moment. This needs to be resolved accordingly.
-		newUser.Type = "human"
+		newUser.Type = "person"
 	}
 
 	// Convert the user attributes to JSON.

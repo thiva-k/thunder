@@ -132,13 +132,11 @@ func (b *BasicAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Exec
 	execResp.Status = flowconst.ExecComplete
 
 	// Add execution record for successful authentication
-	if authenticatedUser.IsAuthenticated {
-		execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
-			ExecutorName: authncm.AuthenticatorCredentials,
-			ExecutorType: flowconst.ExecutorTypeAuthentication,
-			Timestamp:    time.Now().Unix(),
-			Status:       flowconst.FlowStatusComplete,
-		}
+	execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
+		ExecutorName: authncm.AuthenticatorCredentials,
+		ExecutorType: flowconst.ExecutorTypeAuthentication,
+		Timestamp:    time.Now().Unix(),
+		Status:       flowconst.FlowStatusComplete,
 	}
 
 	logger.Debug("Basic authentication executor execution completed",
@@ -245,9 +243,11 @@ func (b *BasicAuthExecutor) getAuthenticatedUser(ctx *flowmodel.NodeContext,
 	}
 
 	authenticatedUser := authncm.AuthenticatedUser{
-		IsAuthenticated: true,
-		UserID:          user.ID,
-		Attributes:      attrs,
+		IsAuthenticated:    true,
+		UserID:             user.ID,
+		OrganizationUnitID: user.OrganizationUnit,
+		UserType:           user.Type,
+		Attributes:         attrs,
 	}
 	return &authenticatedUser, nil
 }
