@@ -263,17 +263,18 @@ func (o *OAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext,
 
 	if execResp.AuthenticatedUser.IsAuthenticated {
 		execResp.Status = flowconst.ExecComplete
-
-		// Add execution record for successful OAuth authentication
-		execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
-			ExecutorName: authncm.AuthenticatorOAuth,
-			ExecutorType: flowconst.ExecutorTypeAuthentication,
-			Timestamp:    time.Now().Unix(),
-			Status:       flowconst.FlowStatusComplete,
-		}
 	} else if ctx.FlowType != flowconst.FlowTypeRegistration {
 		execResp.Status = flowconst.ExecFailure
 		execResp.FailureReason = "Authentication failed. Authorization code not provided or invalid."
+		return nil
+	}
+
+	// Add execution record for successful OAuth authentication
+	execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
+		ExecutorName: authncm.AuthenticatorOAuth,
+		ExecutorType: flowconst.ExecutorTypeAuthentication,
+		Timestamp:    time.Now().Unix(),
+		Status:       flowconst.FlowStatusComplete,
 	}
 
 	return nil
@@ -443,9 +444,11 @@ func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeCo
 	}
 
 	authenticatedUser := authncm.AuthenticatedUser{
-		IsAuthenticated: true,
-		UserID:          userID,
-		Attributes:      getUserAttributes(userInfo, userID),
+		IsAuthenticated:    true,
+		UserID:             userID,
+		OrganizationUnitID: user.OrganizationUnit,
+		UserType:           user.Type,
+		Attributes:         getUserAttributes(userInfo, userID),
 	}
 
 	return &authenticatedUser, nil

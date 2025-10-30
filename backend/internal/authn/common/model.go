@@ -28,9 +28,11 @@ import (
 
 // AuthenticatedUser represents the user information of an authenticated user.
 type AuthenticatedUser struct {
-	IsAuthenticated bool
-	UserID          string
-	Attributes      map[string]interface{}
+	IsAuthenticated    bool
+	UserID             string
+	OrganizationUnitID string
+	UserType           string
+	Attributes         map[string]interface{}
 }
 
 // AuthenticationContext represents the context of an authentication session.

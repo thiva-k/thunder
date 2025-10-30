@@ -663,9 +663,11 @@ func (s *SMSOTPAuthExecutor) getAuthenticatedUser(ctx *flowmodel.NodeContext,
 	}
 
 	authenticatedUser := &authncm.AuthenticatedUser{
-		IsAuthenticated: true,
-		UserID:          user.ID,
-		Attributes:      attrs,
+		IsAuthenticated:    true,
+		UserID:             user.ID,
+		OrganizationUnitID: user.OrganizationUnit,
+		UserType:           user.Type,
+		Attributes:         attrs,
 	}
 
 	return authenticatedUser, nil

@@ -204,6 +204,14 @@ func (a *AuthAssertExecutor) generateAuthAssertion(ctx *flowmodel.NodeContext, l
 		}
 	}
 
+	// Add user type and ou to the jwt claims
+	if ctx.AuthenticatedUser.UserType != "" {
+		jwtClaims["userType"] = ctx.AuthenticatedUser.UserType
+	}
+	if ctx.AuthenticatedUser.OrganizationUnitID != "" {
+		jwtClaims["ouId"] = ctx.AuthenticatedUser.OrganizationUnitID
+	}
+
 	token, _, err := a.JWTService.GenerateJWT(tokenSub, ctx.AppID, iss, validityPeriod, jwtClaims)
 	if err != nil {
 		logger.Error("Failed to generate JWT token", log.Error(err))
