@@ -29,6 +29,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/pkce"
+	"github.com/asgardeo/thunder/internal/oauth/oidc/claims"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -426,46 +427,13 @@ func validateAuthorizationCode(tokenRequest *model.TokenRequest,
 	return nil
 }
 
-// getIDTokenClaims generates ID token claims based on scopes and application configuration
+// getIDTokenClaims generates ID token claims based on scopes and application configuration.
+// This function delegates to the shared claims.BuildUserClaims utility to ensure consistency
+// between ID token claims and UserInfo endpoint claims.
 func getIDTokenClaims(scopes []string, userAttributes map[string]interface{},
 	oauthApp *appmodel.OAuthAppConfigProcessedDTO) map[string]interface{} {
-	claims := make(map[string]interface{})
-	now := time.Now().Unix()
-	claims["auth_time"] = now
-
-	var idTokenUserAttributes []string
-	if oauthApp.Token != nil && oauthApp.Token.IDToken != nil {
-		idTokenUserAttributes = oauthApp.Token.IDToken.UserAttributes
-	}
-
-	if len(idTokenUserAttributes) == 0 {
-		return claims
-	}
-
-	for _, scope := range scopes {
-		var scopeClaims []string
-
-		if oauthApp.Token != nil && oauthApp.Token.IDToken != nil &&
-			oauthApp.Token.IDToken.ScopeClaims != nil {
-			if appClaims, exists := oauthApp.Token.IDToken.ScopeClaims[scope]; exists {
-				scopeClaims = appClaims
-			}
-		}
-
-		if scopeClaims == nil {
-			if scope, exists := constants.StandardOIDCScopes[scope]; exists {
-				scopeClaims = scope.Claims
-			}
-		}
-
-		for _, claim := range scopeClaims {
-			if slices.Contains(idTokenUserAttributes, claim) && userAttributes[claim] != nil {
-				claims[claim] = userAttributes[claim]
-			}
-		}
-	}
-
-	return claims
+	// Use shared claims builder with auth_time included for ID tokens
+	return claims.BuildUserClaims(scopes, userAttributes, oauthApp, true)
 }
 
 // generateIDToken generates an ID token for the given authorization code and scopes

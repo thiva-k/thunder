@@ -28,6 +28,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/introspect"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/token"
+	"github.com/asgardeo/thunder/internal/oauth/oidc/userinfo"
 	"github.com/asgardeo/thunder/internal/oauth/scope"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/user"
@@ -46,4 +47,5 @@ func Initialize(
 	token.Initialize(mux, applicationService, grantHandlerProvider, scopeValidator)
 	introspect.Initialize(mux, jwtService)
 	dcr.Initialize(mux, applicationService)
+	userinfo.Initialize(mux, jwtService, userService, applicationService)
 }
