@@ -32,9 +32,10 @@ import (
 
 // ServerConfig holds the server configuration details.
 type ServerConfig struct {
-	Hostname string `yaml:"hostname" json:"hostname"`
-	Port     int    `yaml:"port" json:"port"`
-	HTTPOnly bool   `yaml:"http_only" json:"http_only"`
+	Hostname       string `yaml:"hostname" json:"hostname"`
+	Port           int    `yaml:"port" json:"port"`
+	HTTPOnly       bool   `yaml:"http_only" json:"http_only"`
+	PublicHostname string `yaml:"public_hostname" json:"public_hostname"`
 }
 
 // GateClientConfig holds the client configuration details.

@@ -76,6 +76,9 @@ func (ds *discoveryService) GetOIDCMetadata() *OIDCProviderMetadata {
 // Helper methods for building URLs and discovering capabilities
 func getBaseURL() string {
 	runtime := config.GetThunderRuntime()
+	if runtime.Config.Server.PublicHostname != "" {
+		return runtime.Config.Server.PublicHostname
+	}
 	scheme := "https"
 	if runtime.Config.Server.HTTPOnly {
 		scheme = "http"
