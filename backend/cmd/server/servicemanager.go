@@ -62,10 +62,10 @@ func registerServices(mux *http.ServeMux) {
 	certservice := cert.Initialize()
 	applicationService := application.Initialize(mux, certservice)
 
-	_ = flowexec.Initialize(mux, flowMgtService, applicationService)
+	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService)
 
 	// Initialize OAuth services.
-	oauth.Initialize(mux, applicationService, userService, jwtService)
+	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService)
 
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.

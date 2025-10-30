@@ -36,6 +36,7 @@ import (
 type FlowExecServiceInterface interface {
 	Execute(appID, flowID, actionID, flowType string, inputData map[string]string) (
 		*model.FlowStep, *serviceerror.ServiceError)
+	InitiateFlow(initContext *model.FlowInitContext) (string, *serviceerror.ServiceError)
 }
 
 // flowExecService is the implementation of FlowExecServiceInterface
@@ -364,4 +365,44 @@ func prepareContext(ctx *model.EngineContext, actionID string, inputData map[str
 	if actionID != "" {
 		ctx.CurrentActionID = actionID
 	}
+}
+
+// InitiateFlow initiates a new flow with the provided context and returns the flowID without executing the flow.
+// This allows external components to pre-initialize a flow with runtime data before actual execution begins.
+func (s *flowExecService) InitiateFlow(initContext *model.FlowInitContext) (string, *serviceerror.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowExecService"))
+
+	if initContext == nil || initContext.ApplicationID == "" || initContext.FlowType == "" {
+		return "", &constants.ErrorInvalidFlowInitContext
+	}
+
+	// Validate flow type
+	flowType, err := validateFlowType(initContext.FlowType)
+	if err != nil {
+		return "", err
+	}
+
+	// Initialize the engine context
+	ctx, err := s.initContext(initContext.ApplicationID, flowType)
+	if err != nil {
+		logger.Error("Failed to initialize flow context",
+			log.String("appID", initContext.ApplicationID),
+			log.String("flowType", initContext.FlowType),
+			log.String("error", err.Error))
+		return "", err
+	}
+
+	// Replace the RuntimeData with initContext RuntimeData
+	ctx.RuntimeData = initContext.RuntimeData
+
+	// Store the context without executing the flow
+	if storeErr := s.storeContext(ctx, logger); storeErr != nil {
+		logger.Error("Failed to store initial flow context",
+			log.String("flowID", ctx.FlowID),
+			log.Error(storeErr))
+		return "", &constants.ErrorUpdatingContextInStore
+	}
+
+	logger.Debug("Flow initiated successfully", log.String("flowID", ctx.FlowID))
+	return ctx.FlowID, nil
 }

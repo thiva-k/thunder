@@ -53,7 +53,7 @@ const (
 	SessionDataKey        string = "sessionDataKey"
 	SessionDataKeyConsent string = "sessionDataKeyConsent"
 	ShowInsecureWarning   string = "showInsecureWarning"
-	AppID                 string = "applicationId"
+	FlowID                string = "flowId"
 	Assertion             string = "assertion"
 )
 

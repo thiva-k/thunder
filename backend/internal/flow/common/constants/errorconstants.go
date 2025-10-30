@@ -80,6 +80,14 @@ var ErrorApplicationRetrievalClientError = serviceerror.ServiceError{
 	ErrorDescription: "Error while retrieving application details",
 }
 
+// ErrorInvalidFlowInitContext defines the error response for invalid flow init context.
+var ErrorInvalidFlowInitContext = serviceerror.ServiceError{
+	Code:             "FES-1008",
+	Type:             serviceerror.ClientErrorType,
+	Error:            "Invalid request",
+	ErrorDescription: "Invalid flow initialization context provided",
+}
+
 // Server error structs
 
 // ErrorFlowGraphNotInitialized defines the error response for uninitialized flow graph errors.

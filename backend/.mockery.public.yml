@@ -244,3 +244,19 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: oumock
       filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/flow/flowexec:
+    config:
+      all: true
+      dir: tests/mocks/flowexecmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: flowexecmock
+      filename: "{{.InterfaceName}}_mock.go"
+  
+  github.com/asgardeo/thunder/internal/flow/flowmgt:
+    config:
+      all: true
+      dir: tests/mocks/flowmgtmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: flowmgtmock
+      filename: "{{.InterfaceName}}_mock.go"

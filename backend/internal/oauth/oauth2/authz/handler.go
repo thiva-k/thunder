@@ -27,6 +27,9 @@ import (
 	"time"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common/model"
+	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2model "github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	oauth2utils "github.com/asgardeo/thunder/internal/oauth/oauth2/utils"
@@ -48,11 +51,12 @@ type AuthorizeHandlerInterface interface {
 
 // authorizeHandler implements the AuthorizeHandlerInterface for handling OAuth2 authorization requests.
 type authorizeHandler struct {
-	appService     application.ApplicationServiceInterface
-	authZValidator AuthorizationValidatorInterface
-	authZStore     AuthorizationCodeStoreInterface
-	sessionStore   sessionDataStoreInterface
-	jwtService     jwt.JWTServiceInterface
+	appService      application.ApplicationServiceInterface
+	authZValidator  AuthorizationValidatorInterface
+	authZStore      AuthorizationCodeStoreInterface
+	sessionStore    sessionDataStoreInterface
+	jwtService      jwt.JWTServiceInterface
+	flowExecService flowexec.FlowExecServiceInterface
 }
 
 // newAuthorizeHandler creates a new instance of authorizeHandler with injected dependencies.
@@ -60,13 +64,15 @@ func newAuthorizeHandler(
 	appService application.ApplicationServiceInterface,
 	jwtService jwt.JWTServiceInterface,
 	authZStore AuthorizationCodeStoreInterface,
+	flowExecService flowexec.FlowExecServiceInterface,
 ) AuthorizeHandlerInterface {
 	return &authorizeHandler{
-		appService:     appService,
-		authZValidator: newAuthorizationValidator(),
-		authZStore:     authZStore,
-		sessionStore:   newSessionDataStore(),
-		jwtService:     jwtService,
+		appService:      appService,
+		authZValidator:  newAuthorizationValidator(),
+		authZStore:      authZStore,
+		sessionStore:    newSessionDataStore(),
+		jwtService:      jwtService,
+		flowExecService: flowExecService,
 	}
 }
 
@@ -172,6 +178,18 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 		oauthParams.RedirectURI = app.RedirectURIs[0]
 	}
 
+	// Initiate flow with OAuth context
+	flowInitCtx := &model.FlowInitContext{
+		ApplicationID: app.AppID,
+		FlowType:      string(constants.FlowTypeAuthentication),
+	}
+
+	flowID, flowErr := ah.flowExecService.InitiateFlow(flowInitCtx)
+	if flowErr != nil {
+		ah.redirectToErrorPage(w, r, oauth2const.ErrorServerError, "Failed to initiate authentication flow")
+		return
+	}
+
 	sessionData := SessionData{
 		OAuthParameters: oauthParams,
 		AuthTime:        time.Now(),
@@ -183,7 +201,7 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 	// Add required query parameters.
 	queryParams := make(map[string]string)
 	queryParams[oauth2const.SessionDataKey] = identifier
-	queryParams[oauth2const.AppID] = app.AppID
+	queryParams[oauth2const.FlowID] = flowID
 
 	// Add insecure warning if the redirect URI is not using TLS.
 	// TODO: May require another redirection to a warn consent page when it directly goes to a federated IDP.
