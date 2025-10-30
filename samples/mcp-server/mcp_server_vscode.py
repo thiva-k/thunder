@@ -41,6 +41,43 @@ MCP_SERVER_PORT = int(os.getenv("MCP_SERVER_PORT", "3000"))
 sessions = {}
 
 
+def set_session_headers(response, session_id):
+    """Set multiple session header variants for broad client compatibility"""
+    try:
+        response.headers["mcp-session-id"] = session_id
+        response.headers["MCP-Session-Id"] = session_id
+        response.headers["X-MCP-Session-Id"] = session_id
+        response.headers["MCP-Session"] = session_id
+    except Exception:
+        pass
+    return response
+
+
+@app.after_request
+def add_cors_headers(response):
+    """Add CORS headers to all responses for browser-based MCP clients"""
+    # Use permissive wildcards for non-credentialed requests from the Inspector
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS, HEAD"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Expose-Headers"] = "*"
+    response.headers["Access-Control-Max-Age"] = "600"
+    return response
+
+
+# Explicit CORS preflight handler for the MCP root endpoint
+@app.route("/", methods=["OPTIONS"])
+def handle_cors_preflight():
+    # Log preflight details to help diagnose CORS issues
+    try:
+        print("[CORS] Preflight Origin:", request.headers.get("Origin"))
+        print("[CORS] Preflight Request-Method:", request.headers.get("Access-Control-Request-Method"))
+        print("[CORS] Preflight Request-Headers:", request.headers.get("Access-Control-Request-Headers"))
+    except Exception:
+        pass
+    return ("", 204)
+
+
 def get_jwks_uri():
     """Get JWKS URI from Thunder authorization server metadata"""
     try:
@@ -98,7 +135,16 @@ def require_auth(f):
     """Decorator to require valid Bearer token"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # Accept tokens from multiple headers used by MCP proxies/clients
         auth_header = request.headers.get("Authorization")
+        proxy_auth = request.headers.get("Proxy-Authorization")
+        proxy_token = request.headers.get("x-mcp-proxy-token")
+
+        # Normalize into standard Bearer format if needed
+        if not auth_header and proxy_auth:
+            auth_header = proxy_auth
+        if not auth_header and proxy_token:
+            auth_header = f"Bearer {proxy_token}"
         
         if not auth_header:
             print(f"❌ [AUTH] Missing Authorization header for {request.method} {request.path}")
@@ -178,16 +224,22 @@ def handle_initialize(params):
         "client_info": params.get("clientInfo", {})
     }
     
-    # Return capabilities matching what client requested
+    # Return capabilities; advertise core ones and echo back optional ones the client asked for
     client_capabilities = params.get("capabilities", {})
+    capabilities = {
+        # Always advertise basic capability objects even if the client didn't request
+        "tools": {},
+        "prompts": {},
+        "resources": {}
+    }
+    # Echo back additional capability namespaces the client mentioned
+    for extra_key in ["sampling", "elicitation", "roots"]:
+        if client_capabilities.get(extra_key) is not None:
+            capabilities[extra_key] = {}
     
     return {
-        "protocolVersion": client_protocol_version,  # Match client's version
-        "capabilities": {
-            "tools": {} if client_capabilities.get("tools") else None,  # Support tools if client requests it
-            "prompts": {} if client_capabilities.get("prompts") else None,
-            "resources": {} if client_capabilities.get("resources") else None
-        },
+        "protocolVersion": client_protocol_version,
+        "capabilities": capabilities,
         "serverInfo": {
             "name": "thunder-mcp-server",
             "version": "1.0.0"
@@ -272,7 +324,13 @@ def handle_mcp_request():
     Main MCP protocol endpoint
     Handles JSON-RPC 2.0 requests
     """
-    session_id = request.headers.get("mcp-session-id")
+    # Accept multiple possible header casings/names for session id used by clients
+    session_id = (
+        request.headers.get("mcp-session-id")
+        or request.headers.get("MCP-Session-Id")
+        or request.headers.get("X-MCP-Session-Id")
+        or request.headers.get("MCP-Session")
+    )
     
     if not request.is_json:
         return jsonify({
@@ -328,7 +386,7 @@ def handle_mcp_request():
                 "result": result,
                 "id": request_id
             })
-            response.headers["mcp-session-id"] = new_session_id
+            response = set_session_headers(response, new_session_id)
             return response
         
         # For other methods, require existing session
@@ -369,7 +427,7 @@ def handle_mcp_request():
             "result": result,
             "id": request_id
         })
-        response.headers["mcp-session-id"] = session_id
+        response = set_session_headers(response, session_id)
         return response
         
     except Exception as e:
