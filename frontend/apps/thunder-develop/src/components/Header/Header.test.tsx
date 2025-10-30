@@ -40,7 +40,7 @@ vi.mock('@thunder/ui', () => ({
 
 vi.mock('@/layouts/contexts/useNavigation', () => ({
   default: vi.fn(() => ({
-    currentPage: {category: 'Dashboard', text: 'Home'},
+    currentPage: {category: 'Dashboard', text: 'Users'},
     navigate: vi.fn(),
   })),
 }));

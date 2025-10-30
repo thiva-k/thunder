@@ -301,7 +301,6 @@ describe('ViewUserTypePage', () => {
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/user type name/i)).toBeInTheDocument();
-        expect(screen.getByText('Property 1')).toBeInTheDocument();
       });
     });
 
@@ -565,9 +564,7 @@ describe('ViewUserTypePage', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Delete User Type')).toBeInTheDocument();
-        expect(
-          screen.getByText(/are you sure you want to delete this user type/i),
-        ).toBeInTheDocument();
+        expect(screen.getByText(/are you sure you want to delete this user type/i)).toBeInTheDocument();
       });
     });
 

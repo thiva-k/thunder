@@ -279,7 +279,7 @@ describe('CreateUserPage', () => {
     const mockResponse: CreateUserResponse = {
       id: 'user123',
       organizationUnit: 'test-ou',
-      type: 'schema1',
+      type: 'Employee',
       attributes: {
         username: 'john_doe',
         age: 30,
@@ -301,7 +301,7 @@ describe('CreateUserPage', () => {
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalledWith({
         organizationUnit: 'test-ou',
-        type: 'schema1',
+        type: 'Employee',
         attributes: {
           username: 'john_doe',
           age: 30,
@@ -363,7 +363,7 @@ describe('CreateUserPage', () => {
       resolveCreateUser({
         id: 'user123',
         organizationUnit: 'test-ou',
-        type: 'schema1',
+        type: 'Employee',
         attributes: {username: 'john_doe'},
       });
     }
@@ -485,7 +485,7 @@ describe('CreateUserPage', () => {
     const mockResponse: CreateUserResponse = {
       id: 'user123',
       organizationUnit: 'test-ou',
-      type: 'schema1',
+      type: 'Employee',
       attributes: {
         email: 'john@example.com',
         salary: 50000,
@@ -511,7 +511,7 @@ describe('CreateUserPage', () => {
     await waitFor(() => {
       expect(mockCreateUser).toHaveBeenCalledWith({
         organizationUnit: 'test-ou',
-        type: 'schema1',
+        type: 'Employee',
         attributes: {
           email: 'john@example.com',
           salary: 50000,
@@ -527,7 +527,7 @@ describe('CreateUserPage', () => {
     const mockResponse: CreateUserResponse = {
       id: 'user123',
       organizationUnit: 'test-ou',
-      type: 'schema1',
+      type: 'Employee',
       attributes: {
         username: 'john_doe',
       },

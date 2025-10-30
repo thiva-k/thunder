@@ -27,7 +27,7 @@ const mockSetCurrentPage = vi.fn();
 // Mock useNavigation hook
 vi.mock('@/layouts/contexts/useNavigation', () => ({
   default: vi.fn(() => ({
-    currentPage: 'home',
+    currentPage: 'users',
     setCurrentPage: mockSetCurrentPage,
     sidebarOpen: false,
     setSidebarOpen: vi.fn(),
@@ -43,33 +43,19 @@ describe('MenuContent', () => {
   it('renders main menu items', () => {
     render(<MenuContent />);
 
-    expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Users')).toBeInTheDocument();
     expect(screen.getByText('User Types')).toBeInTheDocument();
     expect(screen.getByText('Integrations')).toBeInTheDocument();
     expect(screen.getByText('Applications')).toBeInTheDocument();
   });
 
-  it('renders secondary menu items', () => {
-    render(<MenuContent />);
-
-    expect(screen.getByText('Settings')).toBeInTheDocument();
-  });
-
   it('renders icons for main menu items', () => {
     const {container} = render(<MenuContent />);
 
-    expect(container.querySelector('svg.lucide-house')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-users-round')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-user')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-blocks')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-layout-grid')).toBeInTheDocument();
-  });
-
-  it('renders icons for secondary menu items', () => {
-    const {container} = render(<MenuContent />);
-
-    expect(container.querySelector('svg.lucide-settings')).toBeInTheDocument();
   });
 
   it('calls setCurrentPage when a menu item is clicked', async () => {
@@ -82,51 +68,37 @@ describe('MenuContent', () => {
     expect(mockSetCurrentPage).toHaveBeenCalledWith('users');
   });
 
-  it('calls setCurrentPage with correct data for secondary items', async () => {
-    const user = userEvent.setup();
-    render(<MenuContent />);
-
-    const settingsLink = screen.getByText('Settings');
-    await user.click(settingsLink);
-
-    expect(mockSetCurrentPage).toHaveBeenCalledWith('settings');
-  });
-
   it('renders NavLink components with correct paths', () => {
     const {container} = render(<MenuContent />);
-
-    const homeLink = container.querySelector('a[href="/"]');
-    expect(homeLink).toBeInTheDocument();
 
     const usersLink = container.querySelector('a[href="/users"]');
     expect(usersLink).toBeInTheDocument();
 
-    const settingsLink = container.querySelector('a[href="/settings"]');
-    expect(settingsLink).toBeInTheDocument();
+    const userTypesLink = container.querySelector('a[href="/user-types"]');
+    expect(userTypesLink).toBeInTheDocument();
   });
 
   it('marks current page as selected', () => {
     render(<MenuContent />);
 
-    // Home should be selected based on mock
-    const homeButton = screen.getByText('Home').closest('a');
-    expect(homeButton).toHaveClass('Mui-selected');
-  });
-
-  it('renders two separate lists', () => {
-    const {container} = render(<MenuContent />);
-
-    const lists = container.querySelectorAll('.MuiList-root');
-    expect(lists.length).toBe(2);
+    // Users should be selected based on mock
+    const usersButton = screen.getByText('Users').closest('a');
+    expect(usersButton).toHaveClass('Mui-selected');
   });
 
   it('all menu items are clickable links', () => {
     render(<MenuContent />);
 
-    const homeLink = screen.getByText('Home').closest('a');
-    expect(homeLink).toBeInTheDocument();
-
     const usersLink = screen.getByText('Users').closest('a');
     expect(usersLink).toBeInTheDocument();
+
+    const userTypesLink = screen.getByText('User Types').closest('a');
+    expect(userTypesLink).toBeInTheDocument();
+
+    const integrationsLink = screen.getByText('Integrations').closest('a');
+    expect(integrationsLink).toBeInTheDocument();
+
+    const applicationsLink = screen.getByText('Applications').closest('a');
+    expect(applicationsLink).toBeInTheDocument();
   });
 });

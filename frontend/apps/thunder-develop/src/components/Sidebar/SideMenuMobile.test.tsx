@@ -30,7 +30,7 @@ vi.mock('./MenuContent', () => ({
 // Mock useNavigation
 vi.mock('@/layouts/contexts/useNavigation', () => ({
   default: vi.fn(() => ({
-    currentPage: {id: 'home', text: 'Home', category: 'Dashboard'},
+    currentPage: {id: 'users', text: 'Users', category: 'Dashboard'},
     setCurrentPage: vi.fn(),
     sidebarOpen: false,
     setSidebarOpen: vi.fn(),

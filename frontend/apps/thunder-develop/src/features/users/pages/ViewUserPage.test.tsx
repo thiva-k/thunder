@@ -21,7 +21,7 @@ import {screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import render from '@/test/test-utils';
 import ViewUserPage from './ViewUserPage';
-import type {ApiError, ApiUser, ApiUserSchema} from '../types/users';
+import type {ApiError, ApiUser, ApiUserSchema, UserSchemaListResponse} from '../types/users';
 
 const mockNavigate = vi.fn();
 const mockUpdateUser = vi.fn();
@@ -44,6 +44,13 @@ vi.mock('react-router', async () => {
 // Mock hooks
 interface UseGetUserReturn {
   data: ApiUser | null;
+  loading: boolean;
+  error: ApiError | null;
+  refetch: () => void;
+}
+
+interface UseGetUserSchemasReturn {
+  data: UserSchemaListResponse | null;
   loading: boolean;
   error: ApiError | null;
   refetch: () => void;
@@ -72,12 +79,17 @@ interface UseDeleteUserReturn {
 }
 
 const mockUseGetUser = vi.fn<() => UseGetUserReturn>();
+const mockUseGetUserSchemas = vi.fn<() => UseGetUserSchemasReturn>();
 const mockUseGetUserSchema = vi.fn<() => UseGetUserSchemaReturn>();
 const mockUseUpdateUser = vi.fn<() => UseUpdateUserReturn>();
 const mockUseDeleteUser = vi.fn<() => UseDeleteUserReturn>();
 
 vi.mock('../api/useGetUser', () => ({
   default: () => mockUseGetUser(),
+}));
+
+vi.mock('../api/useGetUserSchemas', () => ({
+  default: () => mockUseGetUserSchemas(),
 }));
 
 vi.mock('../api/useGetUserSchema', () => ({
@@ -96,13 +108,22 @@ describe('ViewUserPage', () => {
   const mockUserData: ApiUser = {
     id: 'user123',
     organizationUnit: 'test-ou',
-    type: 'employee',
+    type: 'Employee',
     attributes: {
       username: 'john_doe',
       email: 'john@example.com',
       age: 30,
       active: true,
     },
+  };
+
+  const mockSchemasData: UserSchemaListResponse = {
+    totalResults: 1,
+    startIndex: 1,
+    count: 1,
+    schemas: [
+      {id: 'employee', name: 'Employee'},
+    ],
   };
 
   const mockSchemaData: ApiUserSchema = {
@@ -135,6 +156,12 @@ describe('ViewUserPage', () => {
       loading: false,
       error: null,
       refetch: mockRefetchUser,
+    });
+    mockUseGetUserSchemas.mockReturnValue({
+      data: mockSchemasData,
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
     });
     mockUseGetUserSchema.mockReturnValue({
       data: mockSchemaData,
@@ -255,7 +282,7 @@ describe('ViewUserPage', () => {
       expect(screen.getByText('test-ou')).toBeInTheDocument();
 
       expect(screen.getByText('User Type')).toBeInTheDocument();
-      expect(screen.getByText('employee')).toBeInTheDocument();
+      expect(screen.getByText('Employee')).toBeInTheDocument();
     });
 
     it('displays user attributes in view mode', () => {
@@ -415,7 +442,7 @@ describe('ViewUserPage', () => {
       await waitFor(() => {
         expect(mockUpdateUser).toHaveBeenCalledWith('user123', {
           organizationUnit: 'test-ou',
-          type: 'employee',
+          type: 'Employee',
           attributes: {
             username: 'john_doe',
             email: 'updated@example.com',

@@ -19,7 +19,6 @@
 import {BrowserRouter, Route, Routes} from 'react-router';
 import type {JSX} from 'react';
 import {ProtectedRoute} from '@asgardeo/react-router';
-import HomePage from './features/home/pages/HomePage';
 import UsersListPage from './features/users/pages/UsersListPage';
 import CreateUserPage from './features/users/pages/CreateUserPage';
 import ViewUserPage from './features/users/pages/ViewUserPage';
@@ -42,7 +41,7 @@ export default function App(): JSX.Element {
             </ProtectedRoute>
           }
         >
-          <Route index element={<HomePage />} />
+          <Route index element={<UsersListPage />} />
           <Route path="users" element={<UsersListPage />} />
           <Route path="users/create" element={<CreateUserPage />} />
           <Route path="users/:userId" element={<ViewUserPage />} />

@@ -465,12 +465,8 @@ export default function ViewUserTypePage() {
           ) : (
             // Edit Mode - Display form fields
             <Box>
-              {properties.map((property, index) => (
+              {properties.map((property) => (
                 <Paper key={property.id} variant="outlined" sx={{p: 3, mb: 2}}>
-                  <Typography variant="subtitle1" fontWeight="600" sx={{mb: 2}}>
-                    Property {index + 1}
-                  </Typography>
-
                   <Stack spacing={2}>
                     <Box sx={{display: 'grid', gridTemplateColumns: {xs: '1fr', md: '1fr 1fr'}, gap: 2}}>
                       <FormControl fullWidth>
