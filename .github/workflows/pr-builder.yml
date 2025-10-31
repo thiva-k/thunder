@@ -130,6 +130,11 @@ jobs:
           cd frontend
           pnpm build
 
+      - name: 🧪 Run Frontend Tests with Coverage
+        run: |
+          cd frontend/apps/thunder-develop
+          pnpm test:coverage
+
       - name: 📦 Upload Built Distribution
         uses: actions/upload-artifact@v4
         with:
