@@ -54,17 +54,6 @@ type applicationService struct {
 	certService cert.CertificateServiceInterface
 }
 
-// TODO: this needs to be removed once all the dependencies are refactored to use DI.
-
-// GetApplicationService creates a new instance of ApplicationService.
-func GetApplicationService() ApplicationServiceInterface {
-	store := newApplicationStore()
-	return &applicationService{
-		appStore:    newCachedBackedApplicationStore(store),
-		certService: cert.NewCertificateService(),
-	}
-}
-
 func newApplicationService(appStore applicationStoreInterface,
 	certService cert.CertificateServiceInterface) ApplicationServiceInterface {
 	return &applicationService{
