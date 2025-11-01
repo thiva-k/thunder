@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 
+	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
@@ -313,7 +314,7 @@ func (us *userSchemaService) getCompiledSchemaForUserType(
 
 // validatePaginationParams validates the limit and offset parameters.
 func validatePaginationParams(limit, offset int) *serviceerror.ServiceError {
-	if limit < 0 {
+	if limit < 1 || limit > serverconst.MaxPageSize {
 		return &ErrorInvalidLimit
 	}
 	if offset < 0 {
