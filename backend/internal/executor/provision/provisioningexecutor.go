@@ -130,7 +130,7 @@ func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.E
 
 	// Create the user in the store.
 	p.appendNonIdentifyingAttributes(ctx, &userAttributes)
-	createdUser, err := p.createUserInStore(ctx.FlowID, userAttributes)
+	createdUser, err := p.createUserInStore(ctx, userAttributes)
 	if err != nil {
 		logger.Error("Failed to create user in the store", log.Error(err))
 		execResp.Status = flowconst.ExecFailure
@@ -293,25 +293,25 @@ func (p *ProvisioningExecutor) appendNonIdentifyingAttributes(ctx *flowmodel.Nod
 }
 
 // createUserInStore creates a new user in the user store with the provided attributes.
-func (p *ProvisioningExecutor) createUserInStore(flowID string,
+func (p *ProvisioningExecutor) createUserInStore(ctx *flowmodel.NodeContext,
 	userAttributes map[string]interface{}) (*user.User, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
 		log.String(log.LoggerKeyExecutorID, p.GetID()),
-		log.String(log.LoggerKeyFlowID, flowID))
+		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Creating the user account")
 
-	// TODO: Use a hard coded ou for the moment. This needs to be resolved properly
-	//  when the support is implemented.
-	newUser := user.User{
-		OrganizationUnit: "00000000-0000-0000-0000-000000000000", // This should be configurable
+	ouID := p.getOuID(ctx)
+	if ouID == "" {
+		return nil, fmt.Errorf("organization unit ID not found")
+	}
+	userType := p.getUserType(ctx)
+	if userType == "" {
+		return nil, fmt.Errorf("user type not found")
 	}
 
-	// Takes the user type from the context, if available.
-	if userType, exists := userAttributes["type"]; exists {
-		newUser.Type = userType.(string)
-	} else {
-		// TODO: Use a hard coded type for the moment. This needs to be resolved accordingly.
-		newUser.Type = "person"
+	newUser := user.User{
+		OrganizationUnit: ouID,
+		Type:             userType,
 	}
 
 	// Convert the user attributes to JSON.
@@ -328,4 +328,34 @@ func (p *ProvisioningExecutor) createUserInStore(flowID string,
 	logger.Debug("User account created successfully", log.String("userID", retUser.ID))
 
 	return retUser, nil
+}
+
+// getOuID retrieves the organization unit ID from the context or executor properties.
+func (p *ProvisioningExecutor) getOuID(ctx *flowmodel.NodeContext) string {
+	ouID := ""
+	if val, ok := ctx.RuntimeData["ouId"]; ok {
+		ouID = val
+	}
+	if ouID == "" {
+		if val, ok := p.GetProperties().Properties["ouId"]; ok {
+			ouID = val
+		}
+	}
+
+	return ouID
+}
+
+// getUserType retrieves the user type from the context or executor properties.
+func (p *ProvisioningExecutor) getUserType(ctx *flowmodel.NodeContext) string {
+	userType := ""
+	if val, ok := ctx.RuntimeData["userType"]; ok {
+		userType = val
+	}
+	if userType == "" {
+		if val, ok := p.GetProperties().Properties["userType"]; ok {
+			userType = val
+		}
+	}
+
+	return userType
 }

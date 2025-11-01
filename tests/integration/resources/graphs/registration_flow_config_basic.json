@@ -1,29 +1,12 @@
 {
-    "id": "registration_flow_config_sms",
+    "id": "registration_flow_config_basic",
     "type": "REGISTRATION",
     "nodes": [
         {
-            "id": "prompt_mobile",
-            "type": "PROMPT_ONLY",
-            "inputData": [
-                {
-                    "name": "mobileNumber",
-                    "type": "string",
-                    "required": true
-                }
-            ],
-            "next": [
-                "sms_otp_auth"
-            ]
-        },
-        {
-            "id": "sms_otp_auth",
+            "id": "basic_auth",
             "type": "TASK_EXECUTION",
             "executor": {
-                "name": "SMSOTPAuthExecutor",
-                "properties": {
-                    "senderId": "<your-sender-id>"
-                }
+                "name": "BasicAuthExecutor"
             },
             "next": [
                 "provisioning"
@@ -34,22 +17,27 @@
             "type": "TASK_EXECUTION",
             "inputData": [
                 {
-                    "name": "firstName",
-                    "type": "string",
-                    "required": false
-                },
-                {
-                    "name": "lastName",
-                    "type": "string",
-                    "required": false
-                },
-                {
-                    "name": "email",
+                    "name": "username",
                     "type": "string",
                     "required": true
                 },
                 {
-                    "name": "mobileNumber",
+                    "name": "password",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "firstName",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "lastName",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "email",
                     "type": "string",
                     "required": true
                 }
@@ -57,8 +45,8 @@
             "executor": {
                 "name": "ProvisioningExecutor",
                 "properties": {
-                    "ouId": "<default-ou-id>",
-                    "userType": "<default-user-type>"
+                    "ouId": "test-ou-id",
+                    "userType": "test-user-type"
                 }
             },
             "next": [

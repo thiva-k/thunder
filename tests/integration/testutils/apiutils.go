@@ -277,6 +277,34 @@ func DeleteOrganizationUnit(ouID string) error {
 	return nil
 }
 
+// GetOrganizationUnit retrieves an organization unit by ID
+func GetOrganizationUnit(ouID string) (*OrganizationUnit, error) {
+	req, err := http.NewRequest("GET", TestServerURL+"/organization-units/"+ouID, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	client := getHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("expected status 200, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
+
+	var ou OrganizationUnit
+	err = json.NewDecoder(resp.Body).Decode(&ou)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse response body: %w", err)
+	}
+
+	return &ou, nil
+}
+
 // CreateIDP creates an identity provider via API and returns the IDP ID
 func CreateIDP(idp IDP) (string, error) {
 	idpJSON, err := json.Marshal(idp)

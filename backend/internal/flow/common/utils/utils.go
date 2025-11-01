@@ -27,6 +27,7 @@ import (
 	"github.com/asgardeo/thunder/internal/executor/basicauth"
 	"github.com/asgardeo/thunder/internal/executor/githubauth"
 	"github.com/asgardeo/thunder/internal/executor/googleauth"
+	"github.com/asgardeo/thunder/internal/executor/ouexec"
 	"github.com/asgardeo/thunder/internal/executor/provision"
 	"github.com/asgardeo/thunder/internal/executor/smsauth"
 	"github.com/asgardeo/thunder/internal/flow/common/constants"
@@ -192,6 +193,11 @@ func getExecutorConfigByName(execDef jsonmodel.ExecutorDefinition) (*model.Execu
 			Name:       "ProvisioningExecutor",
 			Properties: execDef.Properties,
 		}
+	case "OUExecutor":
+		executor = model.ExecutorConfig{
+			Name:       "OUExecutor",
+			Properties: execDef.Properties,
+		}
 	case "AuthAssertExecutor":
 		executor = model.ExecutorConfig{
 			Name: "AuthAssertExecutor",
@@ -263,6 +269,8 @@ func GetExecutorByName(execConfig *model.ExecutorConfig) (model.ExecutorInterfac
 	case "ProvisioningExecutor":
 		executor = provision.NewProvisioningExecutor("provisioning-executor", "ProvisioningExecutor",
 			execConfig.Properties)
+	case "OUExecutor":
+		executor = ouexec.NewOUExecutor("ou-executor", "OUExecutor", execConfig.Properties)
 	case "AuthAssertExecutor":
 		executor = authassert.NewAuthAssertExecutor("auth-assert-executor", "AuthAssertExecutor",
 			execConfig.Properties)

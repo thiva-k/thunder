@@ -47,7 +47,11 @@
             "id": "provisioning",
             "type": "TASK_EXECUTION",
             "executor": {
-                "name": "ProvisioningExecutor"
+                "name": "ProvisioningExecutor",
+                "properties": {
+                    "ouId": "<default-ou-id>",
+                    "userType": "<default-user-type>"
+                }
             },
             "next": [
                 "authenticated"
