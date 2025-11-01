@@ -552,3 +552,142 @@ func DeleteGroup(groupID string) error {
 	}
 	return nil
 }
+
+// CreateRole creates a role via API and returns the role ID
+func CreateRole(role Role) (string, error) {
+	roleJSON, err := json.Marshal(role)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal role: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", TestServerURL+"/roles", bytes.NewReader(roleJSON))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := getHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to create role: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusCreated {
+		var errResp ErrorResponse
+		_ = json.Unmarshal(respBody, &errResp)
+		return "", fmt.Errorf("failed to create role, status %d: %s - %s", resp.StatusCode, errResp.Code, errResp.Message)
+	}
+
+	var createdRole Role
+	if err := json.Unmarshal(respBody, &createdRole); err != nil {
+		return "", fmt.Errorf("failed to unmarshal role response: %w", err)
+	}
+
+	return createdRole.ID, nil
+}
+
+// DeleteRole deletes a role by ID
+func DeleteRole(roleID string) error {
+	client := getHTTPClient()
+
+	// Step 1: Get all assignments for this role
+	assignmentsResp, err := getRoleAssignments(roleID, client)
+	if err != nil {
+		return fmt.Errorf("failed to get role assignments: %w", err)
+	}
+
+	// Step 2: Remove all assignments if any exist
+	if assignmentsResp != nil && len(assignmentsResp.Assignments) > 0 {
+		if err := removeRoleAssignments(roleID, assignmentsResp.Assignments, client); err != nil {
+			return fmt.Errorf("failed to remove role assignments: %w", err)
+		}
+	}
+
+	// Step 3: Delete the role
+	req, err := http.NewRequest("DELETE", TestServerURL+"/roles/"+roleID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete role: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204 or 200, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+	return nil
+}
+
+// AssignmentListResponse represents the paginated list of assignments
+type AssignmentListResponse struct {
+	TotalResults int          `json:"totalResults"`
+	StartIndex   int          `json:"startIndex"`
+	Count        int          `json:"count"`
+	Assignments  []Assignment `json:"assignments"`
+}
+
+// getRoleAssignments fetches all assignments for a role
+func getRoleAssignments(roleID string, client *http.Client) (*AssignmentListResponse, error) {
+	url := fmt.Sprintf("%s/roles/%s/assignments?offset=0&limit=100", TestServerURL, roleID)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get assignments, status: %d", resp.StatusCode)
+	}
+
+	var assignmentsResp AssignmentListResponse
+	if err := json.NewDecoder(resp.Body).Decode(&assignmentsResp); err != nil {
+		return nil, err
+	}
+
+	return &assignmentsResp, nil
+}
+
+// removeRoleAssignments removes all assignments from a role
+func removeRoleAssignments(roleID string, assignments []Assignment, client *http.Client) error {
+	removeRequest := map[string]interface{}{
+		"assignments": assignments,
+	}
+
+	body, err := json.Marshal(removeRequest)
+	if err != nil {
+		return err
+	}
+
+	url := fmt.Sprintf("%s/roles/%s/assignments/remove", TestServerURL, roleID)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to remove assignments, status %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	return nil
+}
