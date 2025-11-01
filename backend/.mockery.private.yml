@@ -52,3 +52,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: authn
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/flow/flowexec:
+    config:
+      all: true
+      dir: internal/flow/flowexec
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: flowexec
+      filename: "{{.InterfaceName}}_mock_test.go"

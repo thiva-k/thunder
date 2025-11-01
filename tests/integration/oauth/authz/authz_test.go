@@ -296,9 +296,10 @@ func (ts *AuthzTestSuite) TestBasicAuthorizationRequest() {
 					err := validateOAuth2ErrorRedirect(location, tc.ExpectedError, "")
 					ts.NoError(err, "OAuth2 error redirect validation failed")
 				} else {
-					sessionDataKey, _, err := extractSessionData(location)
+					sessionDataKey, flowId, err := extractSessionData(location)
 					ts.NoError(err, "Failed to extract session data")
 					ts.NotEmpty(sessionDataKey, "sessionDataKey should be present")
+					ts.NotEmpty(flowId, "flowId should be present")
 				}
 			} else {
 				bodyBytes, _ := io.ReadAll(resp.Body)
@@ -524,11 +525,11 @@ func initiateAuthorizeFlowAndRetrieveAuthzCode(ts *AuthzTestSuite, username stri
 
 	ts.Equal(http.StatusFound, resp.StatusCode, "Expected redirect status")
 	location := resp.Header.Get("Location")
-	sessionDataKey, _, err := extractSessionData(location)
+	sessionDataKey, flowId, err := extractSessionData(location)
 	ts.NoError(err, "Failed to extract session data")
 
 	// Execute authentication flow
-	flowStep, err := ExecuteAuthenticationFlow(ts.applicationID, map[string]string{
+	flowStep, err := ExecuteAuthenticationFlow(flowId, map[string]string{
 		"username": username,
 		"password": password,
 	})
@@ -641,9 +642,10 @@ func (ts *AuthzTestSuite) TestRedirectURIValidation() {
 					ts.NoError(err, "OAuth2 error redirect validation failed")
 
 				} else {
-					sessionDataKey, _, err := extractSessionData(location)
+					sessionDataKey, flowId, err := extractSessionData(location)
 					ts.NoError(err, "Failed to extract session data")
 					ts.NotEmpty(sessionDataKey, "sessionDataKey should be present")
+					ts.NotEmpty(flowId, "flowId should be present")
 				}
 			}
 		})
@@ -703,7 +705,7 @@ func (ts *AuthzTestSuite) TestCompleteAuthorizationCodeFlow() {
 			ts.NotEmpty(location, "Expected redirect location header")
 
 			// Extract session data
-			sessionDataKey, _, err := extractSessionData(location)
+			sessionDataKey, flowId, err := extractSessionData(location)
 			if err != nil {
 				ts.T().Fatalf("Failed to extract session data: %v", err)
 			}
@@ -712,7 +714,7 @@ func (ts *AuthzTestSuite) TestCompleteAuthorizationCodeFlow() {
 			}
 
 			// Execute authentication flow
-			flowStep, err := ExecuteAuthenticationFlow(ts.applicationID, map[string]string{
+			flowStep, err := ExecuteAuthenticationFlow(flowId, map[string]string{
 				"username": tc.Username,
 				"password": tc.Password,
 			})
@@ -818,11 +820,11 @@ func (ts *AuthzTestSuite) TestAuthorizationCodeErrorScenarios() {
 			location := resp.Header.Get("Location")
 			ts.NotEmpty(location, "Expected redirect location header")
 
-			sessionDataKey, _, err := extractSessionData(location)
+			sessionDataKey, flowId, err := extractSessionData(location)
 			ts.NoError(err, "Failed to extract session data")
 
 			// Execute authentication flow
-			flowStep, err := ExecuteAuthenticationFlow(ts.applicationID, map[string]string{
+			flowStep, err := ExecuteAuthenticationFlow(flowId, map[string]string{
 				"username": tc.Username,
 				"password": tc.Password,
 			})
@@ -903,11 +905,11 @@ func (ts *AuthzTestSuite) TestAuthorizationCodeFlowWithResourceParameter() {
 	location := resp.Header.Get("Location")
 	ts.NotEmpty(location, "Expected redirect location header")
 
-	sessionDataKey, _, err := extractSessionData(location)
+	sessionDataKey, flowId, err := extractSessionData(location)
 	ts.NoError(err, "Failed to extract session data")
 
 	// Execute authentication flow
-	flowStep, err := ExecuteAuthenticationFlow(ts.applicationID, map[string]string{
+	flowStep, err := ExecuteAuthenticationFlow(flowId, map[string]string{
 		"username": "resourcetest",
 		"password": "testpass123",
 	})

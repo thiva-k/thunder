@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	"github.com/asgardeo/thunder/internal/oauth/jwks"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/dcr"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/discovery"
@@ -40,9 +41,10 @@ func Initialize(
 	applicationService application.ApplicationServiceInterface,
 	userService user.UserServiceInterface,
 	jwtService jwt.JWTServiceInterface,
+	flowExecService flowexec.FlowExecServiceInterface,
 ) {
 	jwks.Initialize(mux)
-	grantHandlerProvider := granthandlers.Initialize(mux, jwtService, userService, applicationService)
+	grantHandlerProvider := granthandlers.Initialize(mux, jwtService, userService, applicationService, flowExecService)
 	scopeValidator := scope.Initialize()
 	token.Initialize(mux, applicationService, grantHandlerProvider, scopeValidator)
 	introspect.Initialize(mux, jwtService)

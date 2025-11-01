@@ -128,3 +128,10 @@ type FlowResponse struct {
 	Assertion     string   `json:"assertion,omitempty"`
 	FailureReason string   `json:"failureReason,omitempty"`
 }
+
+// FlowInitContext represents the context for initiating a new flow with runtime data
+type FlowInitContext struct {
+	ApplicationID string
+	FlowType      string
+	RuntimeData   map[string]string
+}
