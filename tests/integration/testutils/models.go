@@ -22,6 +22,13 @@ import (
 	"encoding/json"
 )
 
+// UserSchema represents a user schema (user type) definition
+type UserSchema struct {
+	ID     string                 `json:"id,omitempty"`
+	Name   string                 `json:"name"`
+	Schema map[string]interface{} `json:"schema"`
+}
+
 // User represents a user in the system
 type User struct {
 	ID               string          `json:"id"`

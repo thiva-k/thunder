@@ -40,6 +40,48 @@ func getHTTPClient() *http.Client {
 	}
 }
 
+// CreateUserType creates a user type via API and returns the schema ID
+func CreateUserType(schema UserSchema) (string, error) {
+	payload, err := json.Marshal(schema)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal user schema: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", TestServerURL+"/user-schemas", bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := getHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var createdSchema map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &createdSchema)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
+	}
+
+	schemaID, ok := createdSchema["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
+	}
+	return schemaID, nil
+}
+
 // CreateUser creates a user via API and returns the user ID
 func CreateUser(user User) (string, error) {
 	userJSON, err := json.Marshal(user)
@@ -60,22 +102,48 @@ func CreateUser(user User) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusCreated {
-		bodyBytes, _ := io.ReadAll(resp.Body)
 		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var createdUser map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&createdUser)
+	err = json.Unmarshal(bodyBytes, &createdUser)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse response body: %w", err)
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
 	}
 
 	userID, ok := createdUser["id"].(string)
 	if !ok {
-		return "", fmt.Errorf("response does not contain id")
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
 	}
 	return userID, nil
+}
+
+// DeleteUserType deletes a user type by ID
+func DeleteUserType(schemaID string) error {
+	req, err := http.NewRequest("DELETE", fmt.Sprintf("%s/user-schemas/%s", TestServerURL, schemaID), nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	client := getHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete user schema: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204, got %d. Response: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
 }
 
 // DeleteUser deletes a user by ID
@@ -93,7 +161,8 @@ func DeleteUser(userID string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusNoContent {
-		return fmt.Errorf("expected status 204, got %d", resp.StatusCode)
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204, got %d. Response: %s", resp.StatusCode, string(body))
 	}
 	return nil
 }
@@ -179,20 +248,24 @@ func CreateApplication(app Application) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusCreated {
-		responseBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(responseBody))
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var createdApp map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&createdApp)
+	err = json.Unmarshal(bodyBytes, &createdApp)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse response body: %w", err)
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
 	}
 
 	appID, ok := createdApp["id"].(string)
 	if !ok {
-		return "", fmt.Errorf("response does not contain id")
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
 	}
 	return appID, nil
 }
@@ -238,20 +311,24 @@ func CreateOrganizationUnit(ou OrganizationUnit) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusCreated {
-		responseBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(responseBody))
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var createdOU map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&createdOU)
+	err = json.Unmarshal(bodyBytes, &createdOU)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse response body: %w", err)
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
 	}
 
 	ouID, ok := createdOU["id"].(string)
 	if !ok {
-		return "", fmt.Errorf("response does not contain id")
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
 	}
 	return ouID, nil
 }
@@ -325,20 +402,24 @@ func CreateIDP(idp IDP) (string, error) {
 	}
 	defer resp.Body.Close()
 
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
 	if resp.StatusCode != http.StatusCreated {
-		responseBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(responseBody))
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var createdIDP map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&createdIDP)
+	err = json.Unmarshal(bodyBytes, &createdIDP)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse response body: %w", err)
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
 	}
 
 	idpID, ok := createdIDP["id"].(string)
 	if !ok {
-		return "", fmt.Errorf("response does not contain id")
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
 	}
 	return idpID, nil
 }
