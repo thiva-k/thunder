@@ -85,7 +85,6 @@ jobs:
         with:
           version: '9.x'
           run_install: false
-          cache: true
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: 🗄️ Cache Go Modules
