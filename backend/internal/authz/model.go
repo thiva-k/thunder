@@ -16,17 +16,16 @@
  * under the License.
  */
 
-package model
+package authz
 
-// OAuthParameters represents the parameters required for OAuth2 authorization.
-type OAuthParameters struct {
-	State               string
-	ClientID            string
-	RedirectURI         string
-	ResponseType        string
-	StandardScopes      []string
-	PermissionScopes    []string
-	CodeChallenge       string
-	CodeChallengeMethod string
-	Resource            string
+// GetAuthorizedPermissionsRequest represents the request for getting authorized permissions.
+type GetAuthorizedPermissionsRequest struct {
+	UserID               string   `json:"userId,omitempty"`
+	GroupIDs             []string `json:"groupIds,omitempty"`
+	RequestedPermissions []string `json:"requestedPermissions"`
+}
+
+// GetAuthorizedPermissionsResponse represents the response with authorized permissions.
+type GetAuthorizedPermissionsResponse struct {
+	AuthorizedPermissions []string `json:"authorizedPermissions"`
 }

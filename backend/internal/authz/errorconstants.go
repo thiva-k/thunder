@@ -16,17 +16,17 @@
  * under the License.
  */
 
-package model
+package authz
 
-// OAuthParameters represents the parameters required for OAuth2 authorization.
-type OAuthParameters struct {
-	State               string
-	ClientID            string
-	RedirectURI         string
-	ResponseType        string
-	StandardScopes      []string
-	PermissionScopes    []string
-	CodeChallenge       string
-	CodeChallengeMethod string
-	Resource            string
-}
+import "github.com/asgardeo/thunder/internal/system/error/serviceerror"
+
+// Server errors for authorization operations.
+var (
+	// ErrorAuthorizationFailed is the error returned when authorization evaluation fails.
+	ErrorAuthorizationFailed = serviceerror.ServiceError{
+		Type:             serviceerror.ServerErrorType,
+		Code:             "AZ-5000",
+		Error:            "Authorization failed",
+		ErrorDescription: "An unexpected error occurred while evaluating authorization",
+	}
+)

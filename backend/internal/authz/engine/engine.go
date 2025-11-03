@@ -16,17 +16,17 @@
  * under the License.
  */
 
-package model
+package engine
 
-// OAuthParameters represents the parameters required for OAuth2 authorization.
-type OAuthParameters struct {
-	State               string
-	ClientID            string
-	RedirectURI         string
-	ResponseType        string
-	StandardScopes      []string
-	PermissionScopes    []string
-	CodeChallenge       string
-	CodeChallengeMethod string
-	Resource            string
+// AuthorizationEngine is the internal interface for authorization engines.
+// This interface is NOT exported and is used internally by the authorization service.
+// Different engines can be plugged in (RBAC, ABAC, ReBAC, Custom) by implementing this interface.
+type AuthorizationEngine interface {
+	// GetAuthorizedPermissions returns the subset of requested permissions
+	// that the user (directly or through groups) is authorized for.
+	GetAuthorizedPermissions(
+		userID string,
+		groupIDs []string,
+		requestedPermissions []string,
+	) ([]string, error)
 }

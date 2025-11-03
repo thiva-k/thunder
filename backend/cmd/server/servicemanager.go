@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/authz"
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
@@ -53,7 +54,8 @@ func registerServices(mux *http.ServeMux) {
 	userSchemaService := userschema.Initialize(mux)
 	userService := user.Initialize(mux, ouService, userSchemaService)
 	groupService := group.Initialize(mux, ouService, userService)
-	_ = role.Initialize(mux, userService, groupService, ouService)
+	roleService := role.Initialize(mux, userService, groupService, ouService)
+	_ = authz.Initialize(roleService)
 
 	_ = idp.Initialize(mux)
 	_ = notification.Initialize(mux, jwtService)
