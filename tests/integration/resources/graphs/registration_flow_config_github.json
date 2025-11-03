@@ -1,0 +1,37 @@
+{
+    "id": "registration_flow_config_github",
+    "type": "REGISTRATION",
+    "nodes": [
+        {
+            "id": "github_auth",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "GithubOAuthExecutor",
+                "properties": {
+                    "idpId": "test-github-idp-id"
+                }
+            },
+            "next": [
+                "provisioning"
+            ]
+        },
+        {
+            "id": "provisioning",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "ProvisioningExecutor",
+                "properties": {
+                    "ouId": "test-ou-id",
+                    "userType": "github_reg_flow_user"
+                }
+            },
+            "next": [
+                "authenticated"
+            ]
+        },
+        {
+            "id": "authenticated",
+            "type": "AUTHENTICATION_SUCCESS"
+        }
+    ]
+}

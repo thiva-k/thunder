@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package flowauthn
+package flowregistration
 
 import (
 	"encoding/json"
@@ -30,36 +30,36 @@ import (
 )
 
 var (
-	googleAuthTestApp = testutils.Application{
-		Name:                      "Google Auth Flow Test Application",
-		Description:               "Application for testing Google authentication flows",
-		IsRegistrationFlowEnabled: false,
+	googleRegTestApp = testutils.Application{
+		Name:                      "Google Registration Flow Test Application",
+		Description:               "Application for testing Google registration flows",
+		IsRegistrationFlowEnabled: true,
 		AuthFlowGraphID:           "auth_flow_config_google",
-		RegistrationFlowGraphID:   "registration_flow_config_basic",
-		ClientID:                  "google_auth_flow_test_client",
-		ClientSecret:              "google_auth_flow_test_secret",
+		RegistrationFlowGraphID:   "registration_flow_config_google",
+		ClientID:                  "google_reg_flow_test_client",
+		ClientSecret:              "google_reg_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
 	}
 
-	googleAuthTestOU = testutils.OrganizationUnit{
-		Handle:      "google-auth-flow-test-ou",
-		Name:        "Google Auth Flow Test Organization Unit",
-		Description: "Organization unit for Google authentication flow testing",
+	googleRegTestOU = testutils.OrganizationUnit{
+		Handle:      "google-reg-flow-test-ou",
+		Name:        "Google Registration Flow Test Organization Unit",
+		Description: "Organization unit for Google registration flow testing",
 		Parent:      nil,
 	}
 )
 
 var (
-	googleAuthTestAppID string
-	googleAuthTestOUID  string
+	googleRegTestAppID string
+	googleRegTestOUID  string
 )
 
 const (
-	mockGoogleFlowPort = 8093
+	mockGoogleRegFlowPort = 8093
 )
 
-var googleUserSchema = testutils.UserSchema{
-	Name: "google_flow_user",
+var googleRegUserSchema = testutils.UserSchema{
+	Name: "google_reg_flow_user",
 	Schema: map[string]interface{}{
 		"username": map[string]interface{}{
 			"type": "string",
@@ -82,33 +82,35 @@ var googleUserSchema = testutils.UserSchema{
 	},
 }
 
-type GoogleAuthFlowTestSuite struct {
+type GoogleRegistrationFlowTestSuite struct {
 	suite.Suite
 	mockGoogleServer *testutils.MockGoogleOIDCServer
 	idpID            string
-	userID           string
 	userSchemaID     string
+	config           *TestSuiteConfig
 }
 
-func TestGoogleAuthFlowTestSuite(t *testing.T) {
-	suite.Run(t, new(GoogleAuthFlowTestSuite))
+func TestGoogleRegistrationFlowTestSuite(t *testing.T) {
+	suite.Run(t, new(GoogleRegistrationFlowTestSuite))
 }
 
-func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
+func (ts *GoogleRegistrationFlowTestSuite) SetupSuite() {
+	ts.config = &TestSuiteConfig{}
+
 	// Start mock Google server
-	mockServer, err := testutils.NewMockGoogleOIDCServer(mockGoogleFlowPort,
+	mockServer, err := testutils.NewMockGoogleOIDCServer(mockGoogleRegFlowPort,
 		"test_google_client", "test_google_secret")
 	ts.Require().NoError(err, "Failed to create mock Google server")
 	ts.mockGoogleServer = mockServer
 
 	ts.mockGoogleServer.AddUser(&testutils.GoogleUserInfo{
-		Sub:           "google-test-user-123",
-		Email:         "testuser@gmail.com",
+		Sub:           "google-reg-user-456",
+		Email:         "reguser@gmail.com",
 		EmailVerified: true,
-		Name:          "Test User",
-		GivenName:     "Test",
+		Name:          "Registration User",
+		GivenName:     "Registration",
 		FamilyName:    "User",
-		Picture:       "https://example.com/picture.jpg",
+		Picture:       "https://example.com/regpicture.jpg",
 		Locale:        "en",
 	})
 
@@ -119,66 +121,56 @@ func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
 	ts.idpID = "test-google-idp-id"
 
 	// Create user schema
-	schemaID, err := testutils.CreateUserType(googleUserSchema)
+	schemaID, err := testutils.CreateUserType(googleRegUserSchema)
 	ts.Require().NoError(err, "Failed to create Google user schema")
 	ts.userSchemaID = schemaID
 
-	// Create user
-	userAttributes := map[string]interface{}{
-		"username":   "googleflowuser",
-		"password":   "Test@1234",
-		"sub":        "google-test-user-123",
-		"email":      "testuser@gmail.com",
-		"givenName":  "Test",
-		"familyName": "User",
-	}
-
-	attributesJSON, err := json.Marshal(userAttributes)
-	ts.Require().NoError(err)
-
-	user := testutils.User{
-		Type:             googleUserSchema.Name,
-		OrganizationUnit: "root",
-		Attributes:       json.RawMessage(attributesJSON),
-	}
-
-	userID, err := testutils.CreateUser(user)
-	ts.Require().NoError(err, "Failed to create test user")
-	ts.userID = userID
-
-	// Create test organization unit for Google auth tests
-	ouID, err := testutils.CreateOrganizationUnit(googleAuthTestOU)
+	// Create test organization unit for Google registration tests
+	ouID, err := testutils.CreateOrganizationUnit(googleRegTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
-	googleAuthTestOUID = ouID
+	googleRegTestOUID = ouID
 
-	// Create test application for Google auth tests
-	appID, err := testutils.CreateApplication(googleAuthTestApp)
+	// Create test application for Google registration tests
+	appID, err := testutils.CreateApplication(googleRegTestApp)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)
 	}
-	googleAuthTestAppID = appID
+	googleRegTestAppID = appID
 }
 
-func (ts *GoogleAuthFlowTestSuite) TearDownSuite() {
+func (ts *GoogleRegistrationFlowTestSuite) TearDownTest() {
+	// Clean up users created during each test
+	if len(ts.config.CreatedUserIDs) > 0 {
+		if err := testutils.CleanupUsers(ts.config.CreatedUserIDs); err != nil {
+			ts.T().Logf("Failed to cleanup users after test: %v", err)
+		}
+		// Reset the list for the next test
+		ts.config.CreatedUserIDs = []string{}
+	}
+}
+
+func (ts *GoogleRegistrationFlowTestSuite) TearDownSuite() {
 	// Delete test application
-	if googleAuthTestAppID != "" {
-		if err := testutils.DeleteApplication(googleAuthTestAppID); err != nil {
+	if googleRegTestAppID != "" {
+		if err := testutils.DeleteApplication(googleRegTestAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
 		}
 	}
 
 	// Delete test organization unit
-	if googleAuthTestOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(googleAuthTestOUID); err != nil {
+	if googleRegTestOUID != "" {
+		if err := testutils.DeleteOrganizationUnit(googleRegTestOUID); err != nil {
 			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
 
-	// Clean up user
-	if ts.userID != "" {
-		_ = testutils.DeleteUser(ts.userID)
+	// Clean up any remaining users
+	if len(ts.config.CreatedUserIDs) > 0 {
+		if err := testutils.CleanupUsers(ts.config.CreatedUserIDs); err != nil {
+			ts.T().Logf("Failed to cleanup users during teardown: %v", err)
+		}
 	}
 
 	if ts.userSchemaID != "" {
@@ -193,11 +185,11 @@ func (ts *GoogleAuthFlowTestSuite) TearDownSuite() {
 	}
 }
 
-func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowInitiation() {
+func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowInitiation() {
 	// Initialize the flow by calling the flow execution API
-	flowStep, err := initiateAuthFlow(googleAuthTestAppID, nil)
+	flowStep, err := initiateRegistrationFlow(googleRegTestAppID, nil)
 	if err != nil {
-		ts.T().Fatalf("Failed to initiate Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to initiate Google registration flow: %v", err)
 	}
 
 	// Verify flow status and type
@@ -232,23 +224,11 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowInitiation() {
 	ts.Require().True(scopesPresent, "scope should include expected scopes")
 }
 
-func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowInvalidAppID() {
-	errorResp, err := initiateAuthFlowWithError("invalid-google-app-id", nil)
-	if err != nil {
-		ts.T().Fatalf("Failed to initiate authentication flow with invalid app ID: %v", err)
-	}
-
-	ts.Require().Equal("FES-1003", errorResp.Code, "Expected error code for invalid app ID")
-	ts.Require().Equal("Invalid request", errorResp.Message, "Expected error message for invalid request")
-	ts.Require().Equal("Invalid app ID provided in the request", errorResp.Description,
-		"Expected error description for invalid app ID")
-}
-
-func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteSuccess() {
+func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowCompleteSuccess() {
 	// Step 1: Initialize the flow by calling the flow execution API
-	flowStep, err := initiateAuthFlow(googleAuthTestAppID, nil)
+	flowStep, err := initiateRegistrationFlow(googleRegTestAppID, nil)
 	if err != nil {
-		ts.T().Fatalf("Failed to initiate Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to initiate Google registration flow: %v", err)
 	}
 
 	// Verify flow status and type
@@ -272,9 +252,9 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteSuccess() {
 		"code": authCode,
 	}
 
-	completeFlowStep, err := completeAuthFlow(flowID, "", inputs)
+	completeFlowStep, err := completeRegistrationFlow(flowID, "", inputs)
 	if err != nil {
-		ts.T().Fatalf("Failed to complete Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to complete Google registration flow: %v", err)
 	}
 
 	// Verify flow completion
@@ -283,31 +263,60 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteSuccess() {
 
 	// Verify the assertion token contains expected information
 	ts.Require().Contains(completeFlowStep.Assertion, ".", "Assertion should be a JWT token")
+
+	// Decode and validate JWT claims
+	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
+	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
+
+	// Validate JWT contains expected user type and OU ID
+	ts.Require().Equal(googleRegUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
+	ts.Require().NotEmpty(jwtClaims.OuID, "Expected ouId to be present")
+	ts.Require().Equal(googleRegTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
+
+	// Verify the user was created by searching via the user API
+	user, err := testutils.FindUserByAttribute("sub", "google-reg-user-456")
+	if err != nil {
+		ts.T().Fatalf("Failed to retrieve user by sub: %v", err)
+	}
+	ts.Require().NotNil(user, "User should be found in user list after registration")
+
+	// Store the created user for cleanup
+	if user != nil {
+		ts.config.CreatedUserIDs = append(ts.config.CreatedUserIDs, user.ID)
+
+		// Verify user attributes
+		var attributes map[string]interface{}
+		err = json.Unmarshal(user.Attributes, &attributes)
+		ts.Require().NoError(err, "Should be able to unmarshal user attributes")
+		ts.Require().Equal("google-reg-user-456", attributes["sub"], "User sub should match")
+	}
 }
 
-func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteWithInvalidCode() {
+func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowCompleteWithInvalidCode() {
 	// Step 1: Initialize the flow
-	flowStep, err := initiateAuthFlow(googleAuthTestAppID, nil)
+	flowStep, err := initiateRegistrationFlow(googleRegTestAppID, nil)
 	if err != nil {
-		ts.T().Fatalf("Failed to initiate Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to initiate Google registration flow: %v", err)
 	}
 
 	flowID := flowStep.FlowID
 
 	// Step 2: Try to complete with invalid authorization code
 	inputs := map[string]string{
-		"code": "invalid-auth-code-12345",
+		"code": "invalid-reg-auth-code-12345",
 	}
 
-	_, err = completeAuthFlow(flowID, "", inputs)
+	_, err = completeRegistrationFlow(flowID, "", inputs)
 	ts.Require().Error(err, "Should fail with invalid authorization code")
 }
 
-func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteWithMissingCode() {
+func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowCompleteWithMissingCode() {
 	// Step 1: Initialize the flow
-	flowStep, err := initiateAuthFlow(googleAuthTestAppID, nil)
+	flowStep, err := initiateRegistrationFlow(googleRegTestAppID, nil)
 	if err != nil {
-		ts.T().Fatalf("Failed to initiate Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to initiate Google registration flow: %v", err)
 	}
 
 	flowID := flowStep.FlowID
@@ -317,7 +326,7 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteWithMissingCode() {
 
 	// When required inputs are missing, the flow returns INCOMPLETE status (not an error)
 	// and asks for the missing inputs again
-	flowStep, err = completeAuthFlow(flowID, "", inputs)
+	flowStep, err = completeRegistrationFlow(flowID, "", inputs)
 	ts.Require().NoError(err, "Should not return error when inputs are missing")
 	ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus,
 		"Flow should remain INCOMPLETE when required inputs are missing")
@@ -335,36 +344,59 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteWithMissingCode() {
 	ts.Require().True(hasCodeInput, "Code input should still be required")
 }
 
-func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowMultipleUsersSuccess() {
-	// This test verifies that the flow works correctly when the IDP is configured
-	// with multiple users, and one of them authenticates successfully
-
-	// Step 1: Initialize the flow
-	flowStep, err := initiateAuthFlow(googleAuthTestAppID, nil)
+func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowDuplicateUser() {
+	// Step 1: First, create a user through registration
+	flowStep, err := initiateRegistrationFlow(googleRegTestAppID, nil)
 	if err != nil {
-		ts.T().Fatalf("Failed to initiate Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to initiate first Google registration flow: %v", err)
 	}
 
-	flowID := flowStep.FlowID
 	redirectURLStr := flowStep.Data.RedirectURL
-
-	// Step 2: Simulate user authorization at Google
 	authCode, err := testutils.SimulateFederatedOAuthFlow(redirectURLStr)
 	if err != nil {
-		ts.T().Fatalf("Failed to simulate Google authorization: %v", err)
+		ts.T().Fatalf("Failed to simulate first Google authorization: %v", err)
 	}
 
-	// Step 3: Complete the flow with the authorization code
 	inputs := map[string]string{
 		"code": authCode,
 	}
 
-	completeFlowStep, err := completeAuthFlow(flowID, "", inputs)
+	completeFlowStep, err := completeRegistrationFlow(flowStep.FlowID, "", inputs)
 	if err != nil {
-		ts.T().Fatalf("Failed to complete Google authentication flow: %v", err)
+		ts.T().Fatalf("Failed to complete first Google registration flow: %v", err)
 	}
 
-	// Verify flow completion
-	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be COMPLETE")
-	ts.Require().NotEmpty(completeFlowStep.Assertion, "Assertion token should be present")
+	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "First registration should complete successfully")
+
+	// Store created user for cleanup
+	user, err := testutils.FindUserByAttribute("sub", "google-reg-user-456")
+	if err == nil && user != nil {
+		ts.config.CreatedUserIDs = append(ts.config.CreatedUserIDs, user.ID)
+	}
+
+	// Step 2: Try to register again with the same Google user
+	flowStep2, err := initiateRegistrationFlow(googleRegTestAppID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to initiate second Google registration flow: %v", err)
+	}
+
+	redirectURLStr2 := flowStep2.Data.RedirectURL
+	authCode2, err := testutils.SimulateFederatedOAuthFlow(redirectURLStr2)
+	if err != nil {
+		ts.T().Fatalf("Failed to simulate second Google authorization: %v", err)
+	}
+
+	inputs2 := map[string]string{
+		"code": authCode2,
+	}
+
+	completeFlowStep2, err := completeRegistrationFlow(flowStep2.FlowID, "", inputs2)
+	if err != nil {
+		ts.T().Fatalf("Failed to complete second Google registration flow: %v", err)
+	}
+
+	// Step 3: Verify registration failure due to duplicate user
+	ts.Require().Equal("ERROR", completeFlowStep2.FlowStatus, "Expected flow status to be ERROR for duplicate user")
+	ts.Require().Empty(completeFlowStep2.Assertion, "No JWT assertion should be returned for failed registration")
+	ts.Require().NotEmpty(completeFlowStep2.FailureReason, "Failure reason should be provided for duplicate user")
 }

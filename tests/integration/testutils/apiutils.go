@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 )
 
 const (
@@ -445,6 +446,73 @@ func DeleteIDP(idpID string) error {
 	return nil
 }
 
+// GetIDP retrieves an identity provider by ID
+func GetIDP(idpID string) (*IDP, error) {
+	req, err := http.NewRequest(
+		"GET",
+		fmt.Sprintf("%s/identity-providers/%s", TestServerURL, idpID),
+		nil,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create get request: %w", err)
+	}
+
+	req.Header.Set("Accept", "application/json")
+
+	client := getHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("IDP get request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("IDP get failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var idp IDP
+	if err := json.NewDecoder(resp.Body).Decode(&idp); err != nil {
+		return nil, fmt.Errorf("failed to decode IDP response: %w", err)
+	}
+
+	return &idp, nil
+}
+
+// UpdateIDP updates an existing identity provider
+func UpdateIDP(idpID string, idp IDP) error {
+	idpJSON, err := json.Marshal(idp)
+	if err != nil {
+		return fmt.Errorf("failed to marshal IDP: %w", err)
+	}
+
+	req, err := http.NewRequest(
+		"PUT",
+		fmt.Sprintf("%s/identity-providers/%s", TestServerURL, idpID),
+		bytes.NewReader(idpJSON),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create update request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	client := getHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("IDP update request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("IDP update failed with status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return nil
+}
+
 // GetUserAttributes extracts user attributes from JSON into a map
 func GetUserAttributes(user User) (map[string]interface{}, error) {
 	var userAttrs map[string]interface{}
@@ -690,4 +758,53 @@ func removeRoleAssignments(roleID string, assignments []Assignment, client *http
 	}
 
 	return nil
+}
+
+// SimulateFederatedOAuthFlow simulates a federated OAuth flow (Google, GitHub, etc.) by
+// following the redirect URL and extracting the authorization code.
+func SimulateFederatedOAuthFlow(redirectURL string) (string, error) {
+	// Create HTTP client that doesn't follow redirects automatically
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse // Don't follow redirects
+		},
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	// Make request to the authorization endpoint
+	resp, err := client.Get(redirectURL)
+	if err != nil {
+		return "", fmt.Errorf("failed to make authorization request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Check if we got a redirect response
+	if resp.StatusCode != http.StatusFound && resp.StatusCode != http.StatusSeeOther &&
+		resp.StatusCode != http.StatusTemporaryRedirect {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("expected redirect response, got status %d: %s",
+			resp.StatusCode, string(bodyBytes))
+	}
+
+	// Extract the Location header which contains the callback URL with the code
+	location := resp.Header.Get("Location")
+	if location == "" {
+		return "", fmt.Errorf("no Location header in redirect response")
+	}
+
+	// Parse the location URL to extract the authorization code
+	locationURL, err := url.Parse(location)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse location URL: %w", err)
+	}
+
+	// Extract the code parameter
+	code := locationURL.Query().Get("code")
+	if code == "" {
+		return "", fmt.Errorf("no authorization code found in callback URL")
+	}
+
+	return code, nil
 }
