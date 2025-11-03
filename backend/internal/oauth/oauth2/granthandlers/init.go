@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/authz"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/user"
@@ -33,8 +34,9 @@ func Initialize(
 	jwtService jwt.JWTServiceInterface,
 	userService user.UserServiceInterface,
 	applicationService application.ApplicationServiceInterface,
+	flowExecService flowexec.FlowExecServiceInterface,
 ) GrantHandlerProviderInterface {
-	authzService := authz.Initialize(mux, applicationService, jwtService)
+	authzService := authz.Initialize(mux, applicationService, jwtService, flowExecService)
 	grantHandlerProvider := newGrantHandlerProvider(jwtService, userService, authzService)
 	return grantHandlerProvider
 }

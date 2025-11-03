@@ -1,0 +1,86 @@
+{
+    "id": "registration_flow_config_sms_with_ou",
+    "type": "REGISTRATION",
+    "nodes": [
+        {
+            "id": "sms_auth",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "SMSOTPAuthExecutor",
+                "properties": {
+                    "senderId": "test-sms-sender-id"
+                }
+            },
+            "next": [
+                "ou_creation"
+            ]
+        },
+        {
+            "id": "ou_creation",
+            "type": "TASK_EXECUTION",
+            "inputData": [
+                {
+                    "name": "ouName",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "ouHandle",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "ouDescription",
+                    "type": "string",
+                    "required": false
+                }
+            ],
+            "executor": {
+                "name": "OUExecutor"
+            },
+            "next": [
+                "provisioning"
+            ]
+        },
+        {
+            "id": "provisioning",
+            "type": "TASK_EXECUTION",
+            "inputData": [
+                {
+                    "name": "mobileNumber",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "firstName",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "lastName",
+                    "type": "string",
+                    "required": true
+                },
+                {
+                    "name": "email",
+                    "type": "string",
+                    "required": true
+                }
+            ],
+            "executor": {
+                "name": "ProvisioningExecutor",
+                "properties": {
+                    "ouId": "ouId",
+                    "userType": "dynamic-user-type"
+                }
+            },
+            "next": [
+                "authenticated"
+            ]
+        },
+        {
+            "id": "authenticated",
+            "type": "AUTHENTICATION_SUCCESS"
+        }
+    ]
+}

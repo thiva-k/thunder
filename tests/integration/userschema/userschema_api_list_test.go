@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -174,6 +175,68 @@ func (ts *ListUserSchemasTestSuite) TestListUserSchemasWithInvalidPagination() {
 			// Should handle invalid parameters gracefully (either 400 or use defaults)
 			ts.Assert().True(resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusOK,
 				"Should handle invalid pagination parameters appropriately for case: %s", tc.name)
+		})
+	}
+}
+
+// TestListUserSchemasLimitValidation verifies limit boundary enforcement from commit 26d2841.
+func (ts *ListUserSchemasTestSuite) TestListUserSchemasLimitValidation() {
+	const maxPageSize = 100 // Keep in sync with serverconst.MaxPageSize.
+
+	testCases := []struct {
+		name           string
+		limit          string
+		expectedStatus int
+	}{
+		{
+			name:           "limit at max page size",
+			limit:          strconv.Itoa(maxPageSize),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "limit exceeding max page size",
+			limit:          strconv.Itoa(maxPageSize + 1),
+			expectedStatus: http.StatusBadRequest,
+		},
+	}
+
+	for _, tc := range testCases {
+		ts.T().Run(tc.name, func(t *testing.T) {
+			params := url.Values{}
+			params.Add("limit", tc.limit)
+			params.Add("offset", "0")
+
+			req, err := http.NewRequest("GET", testServerURL+"/user-schemas?"+params.Encode(), nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+
+			resp, err := ts.client.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to send request: %v", err)
+			}
+			defer resp.Body.Close()
+
+			bodyBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("Failed to read response body: %v", err)
+			}
+
+			if resp.StatusCode != tc.expectedStatus {
+				t.Fatalf("Expected status %d but got %d for limit=%s. Body: %s",
+					tc.expectedStatus, resp.StatusCode, tc.limit, string(bodyBytes))
+			}
+
+			if resp.StatusCode == http.StatusOK {
+				var listResponse UserSchemaListResponse
+				if err := json.Unmarshal(bodyBytes, &listResponse); err != nil {
+					t.Fatalf("Failed to unmarshal response: %v", err)
+				}
+
+				if listResponse.Count > maxPageSize {
+					t.Fatalf("Expected at most %d results but got %d", maxPageSize, listResponse.Count)
+				}
+			}
 		})
 	}
 }

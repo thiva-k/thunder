@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/authz"
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
@@ -31,6 +32,7 @@ import (
 	"github.com/asgardeo/thunder/internal/notification"
 	"github.com/asgardeo/thunder/internal/oauth"
 	"github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/role"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/services"
@@ -51,7 +53,9 @@ func registerServices(mux *http.ServeMux) {
 	ouService := ou.Initialize(mux)
 	userSchemaService := userschema.Initialize(mux)
 	userService := user.Initialize(mux, ouService, userSchemaService)
-	_ = group.Initialize(mux, ouService, userService)
+	groupService := group.Initialize(mux, ouService, userService)
+	roleService := role.Initialize(mux, userService, groupService, ouService)
+	_ = authz.Initialize(roleService)
 
 	_ = idp.Initialize(mux)
 	_ = notification.Initialize(mux, jwtService)
@@ -59,13 +63,13 @@ func registerServices(mux *http.ServeMux) {
 	if err != nil {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
-	certservice, _ := cert.Initialize()
+	certservice := cert.Initialize()
 	applicationService := application.Initialize(mux, certservice)
 
-	_ = flowexec.Initialize(mux, flowMgtService, applicationService)
+	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService)
 
 	// Initialize OAuth services.
-	oauth.Initialize(mux, applicationService, userService, jwtService)
+	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService)
 
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.

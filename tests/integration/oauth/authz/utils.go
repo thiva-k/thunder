@@ -73,10 +73,9 @@ func initiateAuthorizationFlowWithResource(clientID, redirectURI, responseType, 
 }
 
 // ExecuteAuthenticationFlow executes an authentication flow and returns the flow step
-func ExecuteAuthenticationFlow(applicationId string, inputs map[string]string) (*FlowStep, error) {
+func ExecuteAuthenticationFlow(flowId string, inputs map[string]string) (*FlowStep, error) {
 	flowData := map[string]interface{}{
-		"applicationId": applicationId,
-		"flowType":      "AUTHENTICATION",
+		"flowId": flowId,
 	}
 	if len(inputs) > 0 {
 		flowData["inputs"] = inputs
@@ -244,12 +243,12 @@ func extractSessionData(location string) (string, string, error) {
 		return "", "", fmt.Errorf("sessionDataKey not found in redirect")
 	}
 
-	applicationId := redirectURL.Query().Get("applicationId")
-	if applicationId == "" {
-		return "", "", fmt.Errorf("applicationId not found in redirect")
+	flowId := redirectURL.Query().Get("flowId")
+	if flowId == "" {
+		return "", "", fmt.Errorf("flowId not found in redirect")
 	}
 
-	return sessionDataKey, applicationId, nil
+	return sessionDataKey, flowId, nil
 }
 
 // validateOAuth2ErrorRedirect validates OAuth2 error redirect responses

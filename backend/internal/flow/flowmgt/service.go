@@ -39,7 +39,6 @@ import (
 
 // FlowMgtServiceInterface defines the interface for the flow management service.
 type FlowMgtServiceInterface interface {
-	init() error
 	RegisterGraph(graphID string, g model.GraphInterface)
 	GetGraph(graphID string) (model.GraphInterface, bool)
 	IsValidGraphID(graphID string) bool

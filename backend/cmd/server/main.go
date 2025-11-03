@@ -31,8 +31,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/system/cache"
+	"github.com/asgardeo/thunder/internal/system/cert"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/database/provider"
 	"github.com/asgardeo/thunder/internal/system/log"

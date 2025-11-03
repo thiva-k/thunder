@@ -29,7 +29,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	appmodel "github.com/asgardeo/thunder/internal/application/model"
+	flowconstants "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
+	"github.com/asgardeo/thunder/tests/mocks/flowexecmock"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
@@ -39,10 +43,11 @@ import (
 
 type AuthorizeHandlerTestSuite struct {
 	suite.Suite
-	handler            *authorizeHandler
-	mockAppService     *applicationmock.ApplicationServiceInterfaceMock
-	mockJWTService     *jwtmock.JWTServiceInterfaceMock
-	mockAuthzCodeStore *AuthorizationCodeStoreInterfaceMock
+	handler             *authorizeHandler
+	mockAppService      *applicationmock.ApplicationServiceInterfaceMock
+	mockJWTService      *jwtmock.JWTServiceInterfaceMock
+	mockAuthzCodeStore  *AuthorizationCodeStoreInterfaceMock
+	mockFlowExecService *flowexecmock.FlowExecServiceInterfaceMock
 }
 
 func TestAuthorizeHandlerTestSuite(t *testing.T) {
@@ -66,14 +71,16 @@ func (suite *AuthorizeHandlerTestSuite) SetupTest() {
 	suite.mockAppService = applicationmock.NewApplicationServiceInterfaceMock(suite.T())
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockAuthzCodeStore = NewAuthorizationCodeStoreInterfaceMock(suite.T())
+	suite.mockFlowExecService = flowexecmock.NewFlowExecServiceInterfaceMock(suite.T())
 
 	suite.handler = newAuthorizeHandler(
-		suite.mockAppService, suite.mockJWTService, suite.mockAuthzCodeStore).(*authorizeHandler)
+		suite.mockAppService, suite.mockJWTService, suite.mockAuthzCodeStore, suite.mockFlowExecService).(*authorizeHandler)
 }
 
 func (suite *AuthorizeHandlerTestSuite) TestnewAuthorizeHandler() {
 	mockStore := NewAuthorizationCodeStoreInterfaceMock(suite.T())
-	handler := newAuthorizeHandler(suite.mockAppService, suite.mockJWTService, mockStore)
+	mockFlowExec := flowexecmock.NewFlowExecServiceInterfaceMock(suite.T())
+	handler := newAuthorizeHandler(suite.mockAppService, suite.mockJWTService, mockStore, mockFlowExec)
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*AuthorizeHandlerInterface)(nil), handler)
 }
@@ -168,9 +175,10 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_Success() {
 	// Create a valid OAuth message with session data
 	sessionData := &SessionData{
 		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
-			RedirectURI: "https://client.example.com/callback",
-			Scopes:      "read write",
+			ClientID:         "test-client",
+			RedirectURI:      "https://client.example.com/callback",
+			StandardScopes:   []string{"openid", "profile"},
+			PermissionScopes: []string{"read", "write"},
 		},
 		AuthTime: time.Now(),
 	}
@@ -183,7 +191,7 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_Success() {
 	assert.Equal(suite.T(), "test-client", result.ClientID)
 	assert.Equal(suite.T(), "https://client.example.com/callback", result.RedirectURI)
 	assert.Equal(suite.T(), "test-user", result.AuthorizedUserID)
-	assert.Equal(suite.T(), "read write", result.Scopes)
+	assert.Equal(suite.T(), "openid profile read write", result.Scopes)
 	assert.Equal(suite.T(), AuthCodeStateActive, result.State)
 	assert.NotZero(suite.T(), result.TimeCreated)
 	assert.True(suite.T(), result.ExpiryTime.After(result.TimeCreated))
@@ -270,4 +278,182 @@ func (suite *AuthorizeHandlerTestSuite) TestGetErrorPageRedirectURL_Success() {
 	assert.NoError(suite.T(), err)
 	assert.Contains(suite.T(), redirectURI, "errorCode=invalid_request")
 	assert.Contains(suite.T(), redirectURI, "errorMessage=Missing+parameter")
+}
+
+// Helper function to create a valid OAuth application for testing
+func (suite *AuthorizeHandlerTestSuite) createTestOAuthApp() *appmodel.OAuthAppConfigProcessedDTO {
+	return &appmodel.OAuthAppConfigProcessedDTO{
+		AppID:         "test-app-id",
+		ClientID:      "test-client-id",
+		RedirectURIs:  []string{"https://client.example.com/callback"},
+		GrantTypes:    []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode},
+		ResponseTypes: []oauth2const.ResponseType{oauth2const.ResponseTypeCode},
+		PKCERequired:  false, // Disable PKCE to simplify test
+	}
+}
+
+// Helper function to create a test OAuth message
+func (suite *AuthorizeHandlerTestSuite) createTestOAuthMessage() *OAuthMessage {
+	return &OAuthMessage{
+		RequestType: oauth2const.TypeInitialAuthorizationRequest,
+		RequestQueryParams: map[string]string{
+			"client_id":     "test-client-id",
+			"redirect_uri":  "https://client.example.com/callback",
+			"response_type": "code",
+			"scope":         "read write",
+			"state":         "test-state",
+		},
+	}
+}
+
+func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_InitiateFlowSuccess() {
+	// Create a valid OAuth application with proper grant types and response types
+	app := suite.createTestOAuthApp()
+	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
+
+	// Mock flow exec service to return success
+	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+		ApplicationID: "test-app-id",
+		FlowType:      string(flowconstants.FlowTypeAuthentication),
+		RuntimeData: map[string]string{
+			"requested_permissions": "read write",
+		},
+	}
+	suite.mockFlowExecService.EXPECT().InitiateFlow(expectedFlowInitCtx).Return("test-session-key", nil)
+
+	// Create OAuth message for initial authorization request
+	msg := suite.createTestOAuthMessage()
+
+	// Create HTTP request and response recorder
+	req := httptest.NewRequest(http.MethodGet, "/auth", nil)
+	rr := httptest.NewRecorder()
+
+	// Execute the method under test
+	suite.handler.handleInitialAuthorizationRequest(msg, rr, req)
+
+	// Assert that it redirects to login page
+	assert.Equal(suite.T(), http.StatusFound, rr.Code)
+
+	// Check the redirect location contains login page and flow information
+	location := rr.Header().Get("Location")
+	assert.Contains(suite.T(), location, "/login")
+	assert.Contains(suite.T(), location, "flowId=test-session-key")
+	assert.Contains(suite.T(), location, "sessionDataKey=")
+}
+
+func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_InitiateFlowError() {
+	// Create a valid OAuth application with proper grant types and response types
+	app := suite.createTestOAuthApp()
+	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
+
+	// Mock flow exec service to return an error
+	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+		ApplicationID: "test-app-id",
+		FlowType:      string(flowconstants.FlowTypeAuthentication),
+		RuntimeData: map[string]string{
+			"requested_permissions": "read write",
+		},
+	}
+	mockError := &flowconstants.ErrorUpdatingContextInStore
+	suite.mockFlowExecService.EXPECT().InitiateFlow(expectedFlowInitCtx).Return("", mockError)
+
+	// Create OAuth message for initial authorization request
+	msg := suite.createTestOAuthMessage()
+
+	// Create HTTP request and response recorder
+	req := httptest.NewRequest(http.MethodGet, "/auth", nil)
+	rr := httptest.NewRecorder()
+
+	// Execute the method under test
+	suite.handler.handleInitialAuthorizationRequest(msg, rr, req)
+
+	// Assert that it redirects to error page
+	assert.Equal(suite.T(), http.StatusFound, rr.Code)
+
+	// Check the redirect location contains error information
+	location := rr.Header().Get("Location")
+	assert.Contains(suite.T(), location, "/error")
+	assert.Contains(suite.T(), location, "errorCode=server_error")
+	assert.Contains(suite.T(), location, "errorMessage=Failed+to+initiate+authentication+flow")
+}
+
+func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_WithOIDCAndNonOIDCScopes() {
+	// Create a valid OAuth application
+	app := suite.createTestOAuthApp()
+	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
+
+	// Mock flow exec service - only non-OIDC scopes should be in RuntimeData
+	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+		ApplicationID: "test-app-id",
+		FlowType:      string(flowconstants.FlowTypeAuthentication),
+		RuntimeData: map[string]string{
+			"requested_permissions": "read write", // Only non-OIDC scopes
+		},
+	}
+	suite.mockFlowExecService.EXPECT().InitiateFlow(expectedFlowInitCtx).Return("test-session-key", nil)
+
+	// Create OAuth message with both OIDC (openid, profile) and non-OIDC scopes (read, write)
+	msg := &OAuthMessage{
+		RequestType: oauth2const.TypeInitialAuthorizationRequest,
+		RequestQueryParams: map[string]string{
+			"client_id":     "test-client-id",
+			"redirect_uri":  "https://client.example.com/callback",
+			"response_type": "code",
+			"scope":         "openid profile read write", // Mixed scopes
+			"state":         "test-state",
+		},
+	}
+
+	// Create HTTP request and response recorder
+	req := httptest.NewRequest(http.MethodGet, "/auth", nil)
+	rr := httptest.NewRecorder()
+
+	// Execute the method under test
+	suite.handler.handleInitialAuthorizationRequest(msg, rr, req)
+
+	// Assert that it redirects to login page
+	assert.Equal(suite.T(), http.StatusFound, rr.Code)
+
+	// Check the redirect location
+	location := rr.Header().Get("Location")
+	assert.Contains(suite.T(), location, "/login")
+	assert.Contains(suite.T(), location, "flowId=test-session-key")
+}
+
+func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_OnlyOIDCScopes() {
+	// Create a valid OAuth application
+	app := suite.createTestOAuthApp()
+	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
+
+	// Mock flow exec service - empty RuntimeData since no non-OIDC scopes
+	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+		ApplicationID: "test-app-id",
+		FlowType:      string(flowconstants.FlowTypeAuthentication),
+		RuntimeData: map[string]string{
+			"requested_permissions": "", // Empty, only OIDC scopes
+		},
+	}
+	suite.mockFlowExecService.EXPECT().InitiateFlow(expectedFlowInitCtx).Return("test-session-key", nil)
+
+	// Create OAuth message with only OIDC scopes
+	msg := &OAuthMessage{
+		RequestType: oauth2const.TypeInitialAuthorizationRequest,
+		RequestQueryParams: map[string]string{
+			"client_id":     "test-client-id",
+			"redirect_uri":  "https://client.example.com/callback",
+			"response_type": "code",
+			"scope":         "openid profile email", // Only OIDC scopes
+			"state":         "test-state",
+		},
+	}
+
+	// Create HTTP request and response recorder
+	req := httptest.NewRequest(http.MethodGet, "/auth", nil)
+	rr := httptest.NewRecorder()
+
+	// Execute the method under test
+	suite.handler.handleInitialAuthorizationRequest(msg, rr, req)
+
+	// Assert that it redirects to login page
+	assert.Equal(suite.T(), http.StatusFound, rr.Code)
 }
