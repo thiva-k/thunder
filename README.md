@@ -332,7 +332,7 @@ To try out the Client Credentials flow, follow these steps:
 ### Prerequisites
 
 - Go 1.25+
-- Node.js 20+
+- Node.js 24+
 
 ---
 
@@ -352,7 +352,7 @@ To try out the Client Credentials flow, follow these steps:
 ### Prerequisites
 
 - Go 1.24+
-- Node.js 20+
+- Node.js 24+
 
 ### Start Thunder in Development Mode
 
