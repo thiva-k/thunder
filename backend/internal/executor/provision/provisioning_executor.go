@@ -26,13 +26,14 @@ import (
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	"github.com/asgardeo/thunder/internal/executor/identify"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/user"
 )
 
 const (
+	executorName          = "ProvisioningExecutor"
 	loggerComponentName   = "ProvisioningExecutor"
 	passwordAttributeName = "password"
 )
@@ -42,43 +43,31 @@ var nonUserAttributes = []string{"userID", "code", "nonce", "state", "flowID",
 
 // ProvisioningExecutor implements the ExecutorInterface for user provisioning in a flow.
 type ProvisioningExecutor struct {
-	*identify.IdentifyingExecutor
-	internal    flowmodel.Executor
+	flowmodel.ExecutorInterface
+	identify.IdentifyingExecutorInterface
 	userService user.UserServiceInterface
 }
 
 var _ flowmodel.ExecutorInterface = (*ProvisioningExecutor)(nil)
+var _ identify.IdentifyingExecutorInterface = (*ProvisioningExecutor)(nil)
 
 // NewProvisioningExecutor creates a new instance of ProvisioningExecutor.
-func NewProvisioningExecutor(id, name string, properties map[string]string) *ProvisioningExecutor {
+func NewProvisioningExecutor() *ProvisioningExecutor {
+	identifyingExec := identify.NewIdentifyingExecutor()
+	base := flowmodel.NewExecutor(executorName, flowcm.ExecutorTypeRegistration,
+		[]flowmodel.InputData{}, []flowmodel.InputData{})
+
 	return &ProvisioningExecutor{
-		IdentifyingExecutor: identify.NewIdentifyingExecutor(id, name, properties),
-		internal: *flowmodel.NewExecutor(id, name, flowconst.ExecutorTypeRegistration,
-			[]flowmodel.InputData{}, []flowmodel.InputData{},
-			properties),
-		userService: user.GetUserService(),
+		ExecutorInterface:            base,
+		IdentifyingExecutorInterface: identifyingExec,
+		userService:                  user.GetUserService(),
 	}
-}
-
-// GetID returns the ID of the ProvisioningExecutor.
-func (p *ProvisioningExecutor) GetID() string {
-	return p.internal.GetID()
-}
-
-// GetName returns the name of the ProvisioningExecutor.
-func (p *ProvisioningExecutor) GetName() string {
-	return p.internal.GetName()
-}
-
-// GetProperties returns the properties of the ProvisioningExecutor.
-func (p *ProvisioningExecutor) GetProperties() flowmodel.ExecutorProperties {
-	return p.internal.GetProperties()
 }
 
 // Execute executes the user provisioning logic based on the inputs provided.
 func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, p.GetID()),
+		log.String(log.LoggerKeyExecutorName, p.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing user provisioning executor")
 
@@ -87,26 +76,26 @@ func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.E
 		RuntimeData:    make(map[string]string),
 	}
 
-	if ctx.FlowType != flowconst.FlowTypeRegistration {
+	if ctx.FlowType != flowcm.FlowTypeRegistration {
 		logger.Warn("ProvisioningExecutor is only applicable for registration flows, skipping execution")
-		execResp.Status = flowconst.ExecComplete
+		execResp.Status = flowcm.ExecComplete
 		return execResp, nil
 	}
 
 	if p.CheckInputData(ctx, execResp) {
-		if execResp.Status == flowconst.ExecFailure {
+		if execResp.Status == flowcm.ExecFailure {
 			return execResp, nil
 		}
 
 		logger.Debug("Required input data for provisioning executor is not provided")
-		execResp.Status = flowconst.ExecUserInputRequired
+		execResp.Status = flowcm.ExecUserInputRequired
 		return execResp, nil
 	}
 
 	userAttributes := p.getInputAttributes(ctx)
 	if len(userAttributes) == 0 {
 		logger.Debug("No user attributes provided for provisioning")
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "No user attributes provided for provisioning"
 		return execResp, nil
 	}
@@ -114,16 +103,16 @@ func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.E
 	userID, err := p.IdentifyUser(userAttributes, execResp)
 	if err != nil {
 		logger.Error("Failed to identify user", log.Error(err))
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Failed to identify user"
 		return execResp, nil
 	}
-	if execResp.Status == flowconst.ExecFailure && execResp.FailureReason != "User not found" {
+	if execResp.Status == flowcm.ExecFailure && execResp.FailureReason != "User not found" {
 		return execResp, nil
 	}
 	if userID != nil && *userID != "" {
 		logger.Debug("User already exists", log.String("userID", *userID))
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User already exists"
 		return execResp, nil
 	}
@@ -133,13 +122,13 @@ func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.E
 	createdUser, err := p.createUserInStore(ctx, userAttributes)
 	if err != nil {
 		logger.Error("Failed to create user in the store", log.Error(err))
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Failed to create user"
 		return execResp, nil
 	}
 	if createdUser == nil || createdUser.ID == "" {
 		logger.Error("Created user is nil or has no ID")
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Something went wrong while creating the user"
 		return execResp, nil
 	}
@@ -160,30 +149,20 @@ func (p *ProvisioningExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.E
 		Attributes:         retAttributes,
 	}
 	execResp.AuthenticatedUser = authenticatedUser
-	execResp.Status = flowconst.ExecComplete
+	execResp.Status = flowcm.ExecComplete
 
 	return execResp, nil
-}
-
-// GetDefaultExecutorInputs returns the default inputs for the ProvisioningExecutor.
-func (p *ProvisioningExecutor) GetDefaultExecutorInputs() []flowmodel.InputData {
-	return p.internal.GetDefaultExecutorInputs()
-}
-
-// GetPrerequisites returns the prerequisites for the ProvisioningExecutor.
-func (p *ProvisioningExecutor) GetPrerequisites() []flowmodel.InputData {
-	return p.internal.GetPrerequisites()
 }
 
 // CheckInputData checks if the required input data is provided in the context.
 // If the attributes are not found, it adds the required data to the executor response.
 func (p *ProvisioningExecutor) CheckInputData(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) bool {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, p.GetID()),
+		log.String(log.LoggerKeyExecutorName, p.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Checking input data for the provisioning executor")
 
-	inputRequired := p.internal.CheckInputData(ctx, execResp)
+	inputRequired := p.ExecutorInterface.CheckInputData(ctx, execResp)
 	if !inputRequired {
 		return false
 	}
@@ -227,22 +206,6 @@ func (p *ProvisioningExecutor) CheckInputData(ctx *flowmodel.NodeContext, execRe
 	}
 
 	return true
-}
-
-// ValidatePrerequisites validates the prerequisites for the ProvisioningExecutor.
-func (p *ProvisioningExecutor) ValidatePrerequisites(ctx *flowmodel.NodeContext,
-	execResp *flowmodel.ExecutorResponse) bool {
-	return p.internal.ValidatePrerequisites(ctx, execResp)
-}
-
-// GetUserIDFromContext retrieves the user ID from the context.
-func (p *ProvisioningExecutor) GetUserIDFromContext(ctx *flowmodel.NodeContext) (string, error) {
-	return p.internal.GetUserIDFromContext(ctx)
-}
-
-// GetRequiredData returns the required input data for the AttributeCollector.
-func (p *ProvisioningExecutor) GetRequiredData(ctx *flowmodel.NodeContext) []flowmodel.InputData {
-	return p.internal.GetRequiredData(ctx)
 }
 
 // getInputAttributes retrieves the input attributes from the context to be stored in user profile.
@@ -296,7 +259,7 @@ func (p *ProvisioningExecutor) appendNonIdentifyingAttributes(ctx *flowmodel.Nod
 func (p *ProvisioningExecutor) createUserInStore(ctx *flowmodel.NodeContext,
 	userAttributes map[string]interface{}) (*user.User, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, p.GetID()),
+		log.String(log.LoggerKeyExecutorName, p.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Creating the user account")
 
@@ -337,8 +300,10 @@ func (p *ProvisioningExecutor) getOuID(ctx *flowmodel.NodeContext) string {
 		ouID = val
 	}
 	if ouID == "" {
-		if val, ok := p.GetProperties().Properties["ouId"]; ok {
-			ouID = val
+		if len(ctx.NodeProperties) > 0 {
+			if val, ok := ctx.NodeProperties["ouId"]; ok {
+				ouID = val
+			}
 		}
 	}
 
@@ -352,8 +317,10 @@ func (p *ProvisioningExecutor) getUserType(ctx *flowmodel.NodeContext) string {
 		userType = val
 	}
 	if userType == "" {
-		if val, ok := p.GetProperties().Properties["userType"]; ok {
-			userType = val
+		if len(ctx.NodeProperties) > 0 {
+			if val, ok := ctx.NodeProperties["userType"]; ok {
+				userType = val
+			}
 		}
 	}
 

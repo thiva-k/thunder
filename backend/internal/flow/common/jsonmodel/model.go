@@ -28,11 +28,12 @@ type GraphDefinition struct {
 
 // NodeDefinition represents a node in the graph definition
 type NodeDefinition struct {
-	ID        string             `json:"id"`
-	Type      string             `json:"type"`
-	InputData []InputDefinition  `json:"inputData"`
-	Executor  ExecutorDefinition `json:"executor"`
-	Next      []string           `json:"next,omitempty"`
+	ID         string             `json:"id"`
+	Type       string             `json:"type"`
+	Properties map[string]string  `json:"properties,omitempty"`
+	InputData  []InputDefinition  `json:"inputData"`
+	Executor   ExecutorDefinition `json:"executor"`
+	Next       []string           `json:"next,omitempty"`
 }
 
 // InputDefinition represents an input parameter for a node
@@ -44,6 +45,5 @@ type InputDefinition struct {
 
 // ExecutorDefinition represents the executor configuration for a node
 type ExecutorDefinition struct {
-	Name       string            `json:"name"`
-	Properties map[string]string `json:"properties,omitempty"`
+	Name string `json:"name"`
 }

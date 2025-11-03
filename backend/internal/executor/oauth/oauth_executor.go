@@ -22,12 +22,10 @@ package oauth
 import (
 	"errors"
 	"fmt"
-	"time"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
-	"github.com/asgardeo/thunder/internal/executor/oauth/model"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -37,64 +35,51 @@ import (
 	"github.com/asgardeo/thunder/internal/user"
 )
 
-const loggerComponentName = "OAuthExecutor"
+const (
+	executorName        = authncm.AuthenticatorOAuth
+	loggerComponentName = "OAuthExecutor"
+)
 
 // OAuthExecutorInterface defines the interface for OAuth authentication executors.
 type OAuthExecutorInterface interface {
 	flowmodel.ExecutorInterface
 	BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) error
 	ProcessAuthFlowResponse(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) error
-	GetOAuthProperties() model.OAuthExecProperties
-	GetCallBackURL() string
-	GetAuthorizationEndpoint() string
-	GetTokenEndpoint() string
-	GetUserInfoEndpoint() string
-	GetLogoutEndpoint() string
-	GetJWKSEndpoint() string
 	ExchangeCodeForToken(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse,
-		code string) (*model.TokenResponse, error)
+		code string) (*TokenResponse, error)
 	GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse,
 		accessToken string) (map[string]string, error)
-	GetIdpID() (string, error)
-	GetIDPName() (string, error)
+	GetIdpID(ctx *flowmodel.NodeContext) (string, error)
 }
 
 // OAuthExecutor implements the OAuthExecutorInterface for handling generic OAuth authentication flows.
 type OAuthExecutor struct {
-	internal        flowmodel.Executor
-	oAuthProperties model.OAuthExecProperties
-	authService     authnoauth.OAuthAuthnServiceInterface
+	flowmodel.ExecutorInterface
+	authService authnoauth.OAuthAuthnCoreServiceInterface
+	idpService  idp.IDPServiceInterface
 }
 
 var _ flowmodel.ExecutorInterface = (*OAuthExecutor)(nil)
 
 // NewOAuthExecutor creates a new instance of OAuthExecutor.
-func NewOAuthExecutor(id, name string, defaultInputs []flowmodel.InputData, properties map[string]string,
-	oAuthProps *model.OAuthExecProperties) OAuthExecutorInterface {
-	endpoints := authnoauth.OAuthEndpoints{
-		AuthorizationEndpoint: oAuthProps.AuthorizationEndpoint,
-		TokenEndpoint:         oAuthProps.TokenEndpoint,
-		UserInfoEndpoint:      oAuthProps.UserInfoEndpoint,
-		LogoutEndpoint:        oAuthProps.LogoutEndpoint,
-		JwksEndpoint:          oAuthProps.JwksEndpoint,
-	}
-
+func NewOAuthExecutor() OAuthExecutorInterface {
 	// TODO: Should be injected when moving executors to di pattern.
-	httpClient := httpservice.NewHTTPClientWithTimeout(flowconst.DefaultHTTPTimeout)
+	httpClient := httpservice.NewHTTPClientWithTimeout(flowcm.DefaultHTTPTimeout)
 	idpSvc := idp.NewIDPService()
 	userSvc := user.GetUserService()
-	authService := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc, endpoints)
+	authSvc := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc, authnoauth.OAuthEndpoints{})
 
-	return NewOAuthExecutorWithAuthService(id, name, defaultInputs, properties, oAuthProps, authService)
+	return NewOAuthExecutorWithServices(executorName, []flowmodel.InputData{}, []flowmodel.InputData{},
+		authSvc, idpSvc)
 }
 
-// NewOAuthExecutorWithAuthService creates a new instance of OAuthExecutor with a provided
-// OAuth authentication service.
-// Use this function instead of NewOAuthExecutor when you need to supply a custom OAuth authentication service,
-// such as for testing, dependency injection, or when using a specialized implementation.
-func NewOAuthExecutorWithAuthService(id, name string, defaultInputs []flowmodel.InputData,
-	properties map[string]string, oAuthProps *model.OAuthExecProperties,
-	authService authnoauth.OAuthAuthnServiceInterface) OAuthExecutorInterface {
+// NewOAuthExecutorWithServices creates a new instance of OAuthExecutor with the provided services.
+func NewOAuthExecutorWithServices(name string, defaultInputs []flowmodel.InputData,
+	prerequisites []flowmodel.InputData, authService authnoauth.OAuthAuthnCoreServiceInterface,
+	idpService idp.IDPServiceInterface) OAuthExecutorInterface {
+	if name == "" {
+		name = executorName
+	}
 	if len(defaultInputs) == 0 {
 		defaultInputs = []flowmodel.InputData{
 			{
@@ -105,101 +90,20 @@ func NewOAuthExecutorWithAuthService(id, name string, defaultInputs []flowmodel.
 		}
 	}
 
+	base := flowmodel.NewExecutor(name, flowcm.ExecutorTypeAuthentication,
+		defaultInputs, prerequisites)
+
 	return &OAuthExecutor{
-		internal: *flowmodel.NewExecutor(id, name, flowconst.ExecutorTypeAuthentication,
-			defaultInputs, []flowmodel.InputData{}, properties),
-		oAuthProperties: *oAuthProps,
-		authService:     authService,
+		ExecutorInterface: base,
+		authService:       authService,
+		idpService:        idpService,
 	}
-}
-
-// GetID returns the ID of the OAuthExecutor.
-func (o *OAuthExecutor) GetID() string {
-	return o.internal.GetID()
-}
-
-// GetName returns the name of the OAuthExecutor.
-func (o *OAuthExecutor) GetName() string {
-	return o.internal.GetName()
-}
-
-// GetProperties returns the properties of the OAuthExecutor.
-func (o *OAuthExecutor) GetProperties() flowmodel.ExecutorProperties {
-	return o.internal.Properties
-}
-
-// GetOAuthProperties returns the OAuth properties of the executor.
-func (o *OAuthExecutor) GetOAuthProperties() model.OAuthExecProperties {
-	return o.oAuthProperties
-}
-
-// GetCallBackURL returns the callback URL for the OAuth authentication.
-func (o *OAuthExecutor) GetCallBackURL() string {
-	return o.oAuthProperties.RedirectURI
-}
-
-// GetAuthorizationEndpoint returns the authorization endpoint of the OAuth authentication.
-func (o *OAuthExecutor) GetAuthorizationEndpoint() string {
-	return o.oAuthProperties.AuthorizationEndpoint
-}
-
-// GetTokenEndpoint returns the token endpoint of the OAuth authentication.
-func (o *OAuthExecutor) GetTokenEndpoint() string {
-	return o.oAuthProperties.TokenEndpoint
-}
-
-// GetUserInfoEndpoint returns the user info endpoint of the OAuth authentication.
-func (o *OAuthExecutor) GetUserInfoEndpoint() string {
-	return o.oAuthProperties.UserInfoEndpoint
-}
-
-// GetLogoutEndpoint returns the logout endpoint of the OAuth authentication.
-func (o *OAuthExecutor) GetLogoutEndpoint() string {
-	return o.oAuthProperties.LogoutEndpoint
-}
-
-// GetJWKSEndpoint returns the JWKs endpoint of the OAuth authentication.
-func (o *OAuthExecutor) GetJWKSEndpoint() string {
-	return o.oAuthProperties.JwksEndpoint
-}
-
-// GetIdpID retrieves the identity provider ID from executor properties.
-func (o *OAuthExecutor) GetIdpID() (string, error) {
-	props, err := o.getProperties()
-	if err != nil {
-		return "", err
-	}
-	if idpID, exists := props["idpId"]; exists {
-		return idpID, nil
-	}
-	return "", errors.New("idpId not found in executor properties")
-}
-
-// GetIDPName returns the idpName from the executor properties.
-func (o *OAuthExecutor) GetIDPName() (string, error) {
-	props, err := o.getProperties()
-	if err != nil {
-		return "", err
-	}
-	if idpName, exists := props["idpName"]; exists {
-		return idpName, nil
-	}
-	return "", errors.New("idpName not found in executor properties")
-}
-
-// getProperties retrieves the executor properties.
-func (o *OAuthExecutor) getProperties() (map[string]string, error) {
-	props := o.GetProperties().Properties
-	if props == nil {
-		return nil, errors.New("executor properties are nil")
-	}
-	return props, nil
 }
 
 // Execute executes the OAuth authentication flow.
 func (o *OAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing OAuth authentication executor")
 
@@ -233,11 +137,11 @@ func (o *OAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Executor
 // BuildAuthorizeFlow constructs the redirection to the external OAuth provider for user authentication.
 func (o *OAuthExecutor) BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Initiating OAuth authentication flow")
 
-	idpID, err := o.GetIdpID()
+	idpID, err := o.GetIdpID(ctx)
 	if err != nil {
 		return err
 	}
@@ -245,7 +149,7 @@ func (o *OAuthExecutor) BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp 
 	authorizeURL, svcErr := o.authService.BuildAuthorizeURL(idpID)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = svcErr.ErrorDescription
 			return nil
 		}
@@ -256,16 +160,16 @@ func (o *OAuthExecutor) BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp 
 	}
 
 	// Get the idp name for additional data
-	idpName, err := o.GetIDPName()
+	idpName, err := o.getIDPName(idpID)
 	if err != nil {
 		return fmt.Errorf("failed to get idp name: %w", err)
 	}
 
 	// Set the response to redirect the user to the authorization URL.
-	execResp.Status = flowconst.ExecExternalRedirection
+	execResp.Status = flowcm.ExecExternalRedirection
 	execResp.RedirectURL = authorizeURL
 	execResp.AdditionalData = map[string]string{
-		flowconst.DataIDPName: idpName,
+		flowcm.DataIDPName: idpName,
 	}
 
 	return nil
@@ -275,7 +179,7 @@ func (o *OAuthExecutor) BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp 
 func (o *OAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext,
 	execResp *flowmodel.ExecutorResponse) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Processing OAuth authentication response")
 
@@ -285,7 +189,7 @@ func (o *OAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext,
 		if err != nil {
 			return err
 		}
-		if execResp.Status == flowconst.ExecFailure {
+		if execResp.Status == flowcm.ExecFailure {
 			return nil
 		}
 
@@ -311,27 +215,14 @@ func (o *OAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext,
 	}
 
 	if execResp.AuthenticatedUser.IsAuthenticated {
-		execResp.Status = flowconst.ExecComplete
-	} else if ctx.FlowType != flowconst.FlowTypeRegistration {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecComplete
+	} else if ctx.FlowType != flowcm.FlowTypeRegistration {
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Authentication failed. Authorization code not provided or invalid."
 		return nil
 	}
 
-	// Add execution record for successful OAuth authentication
-	execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
-		ExecutorName: authncm.AuthenticatorOAuth,
-		ExecutorType: flowconst.ExecutorTypeAuthentication,
-		Timestamp:    time.Now().Unix(),
-		Status:       flowconst.FlowStatusComplete,
-	}
-
 	return nil
-}
-
-// GetDefaultExecutorInputs returns the default required input data for the OAuthExecutor.
-func (o *OAuthExecutor) GetDefaultExecutorInputs() []flowmodel.InputData {
-	return o.internal.GetDefaultExecutorInputs()
 }
 
 // CheckInputData checks if the required input data is provided in the context.
@@ -339,38 +230,19 @@ func (o *OAuthExecutor) CheckInputData(ctx *flowmodel.NodeContext, execResp *flo
 	if code, ok := ctx.UserInputData["code"]; ok && code != "" {
 		return false
 	}
-	return o.internal.CheckInputData(ctx, execResp)
-}
 
-// GetPrerequisites returns the prerequisites for the OAuthExecutor.
-func (o *OAuthExecutor) GetPrerequisites() []flowmodel.InputData {
-	return o.internal.GetPrerequisites()
-}
-
-// ValidatePrerequisites validates whether the prerequisites for the OAuthExecutor are met.
-func (o *OAuthExecutor) ValidatePrerequisites(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) bool {
-	return o.internal.ValidatePrerequisites(ctx, execResp)
-}
-
-// GetUserIDFromContext retrieves the user ID from the context.
-func (o *OAuthExecutor) GetUserIDFromContext(ctx *flowmodel.NodeContext) (string, error) {
-	return o.internal.GetUserIDFromContext(ctx)
-}
-
-// GetRequiredData returns the required input data for the OAuthExecutor.
-func (o *OAuthExecutor) GetRequiredData(ctx *flowmodel.NodeContext) []flowmodel.InputData {
-	return o.internal.GetRequiredData(ctx)
+	return o.ExecutorInterface.CheckInputData(ctx, execResp)
 }
 
 // ExchangeCodeForToken exchanges the authorization code for an access token.
 func (o *OAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse,
-	code string) (*model.TokenResponse, error) {
+	code string) (*TokenResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
-	logger.Debug("Exchanging authorization code for a token", log.String("tokenEndpoint", o.GetTokenEndpoint()))
+	logger.Debug("Exchanging authorization code for a token")
 
-	idpID, err := o.GetIdpID()
+	idpID, err := o.GetIdpID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -378,7 +250,7 @@ func (o *OAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext, execRes
 	tokenResp, svcErr := o.authService.ExchangeCodeForToken(idpID, code, true)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = svcErr.ErrorDescription
 			return nil, nil
 		}
@@ -388,7 +260,7 @@ func (o *OAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext, execRes
 		return nil, errors.New("failed to exchange code for token")
 	}
 
-	return &model.TokenResponse{
+	return &TokenResponse{
 		AccessToken:  tokenResp.AccessToken,
 		TokenType:    tokenResp.TokenType,
 		Scope:        tokenResp.Scope,
@@ -402,11 +274,11 @@ func (o *OAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext, execRes
 func (o *OAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse,
 	accessToken string) (map[string]string, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
-	logger.Debug("Fetching user info from OAuth provider", log.String("userInfoEndpoint", o.GetUserInfoEndpoint()))
+	logger.Debug("Fetching user info from OAuth provider")
 
-	idpID, err := o.GetIdpID()
+	idpID, err := o.GetIdpID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -414,7 +286,7 @@ func (o *OAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmo
 	userInfo, svcErr := o.authService.FetchUserInfo(idpID, accessToken)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = svcErr.ErrorDescription
 			return nil, nil
 		}
@@ -427,12 +299,42 @@ func (o *OAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmo
 	return systemutils.ConvertInterfaceMapToStringMap(userInfo), nil
 }
 
+// GetIdpID retrieves the identity provider ID from the node properties.
+func (o *OAuthExecutor) GetIdpID(ctx *flowmodel.NodeContext) (string, error) {
+	if len(ctx.NodeProperties) > 0 {
+		if val, ok := ctx.NodeProperties["idpId"]; ok {
+			return val, nil
+		}
+	}
+	return "", errors.New("idpId is not configured in node properties")
+}
+
+// getIDPName retrieves the name of the identity provider using its ID.
+func (o *OAuthExecutor) getIDPName(idpID string) (string, error) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
+		log.String(log.LoggerKeyExecutorName, o.GetName()))
+	logger.Debug("Retrieving IDP name for the given IDP ID")
+
+	idp, svcErr := o.idpService.GetIdentityProvider(idpID)
+	if svcErr != nil {
+		if svcErr.Type == serviceerror.ClientErrorType {
+			return "", fmt.Errorf("failed to get identity provider: %s", svcErr.ErrorDescription)
+		}
+
+		logger.Error("Error while retrieving identity provider", log.String("errorCode", svcErr.Code),
+			log.String("errorDescription", svcErr.ErrorDescription))
+		return "", errors.New("error while retrieving identity provider")
+	}
+
+	return idp.Name, nil
+}
+
 // getAuthenticatedUserWithAttributes retrieves the authenticated user information with additional attributes
 // from the OAuth provider using the access token.
 func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeContext,
 	execResp *flowmodel.ExecutorResponse, accessToken string) (*authncm.AuthenticatedUser, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	// Get user info using the access token
@@ -440,14 +342,14 @@ func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeCo
 	if err != nil {
 		return nil, err
 	}
-	if execResp.Status == flowconst.ExecFailure {
+	if execResp.Status == flowcm.ExecFailure {
 		return nil, nil
 	}
 
 	// Resolve user with the sub claim.
 	sub, ok := userInfo["sub"]
 	if !ok || sub == "" {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "sub claim not found in the response."
 		return nil, nil
 	}
@@ -455,9 +357,9 @@ func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeCo
 	user, svcErr := o.authService.GetInternalUser(sub)
 	if svcErr != nil {
 		if svcErr.Code == authncm.ErrorUserNotFound.Code {
-			if ctx.FlowType == flowconst.FlowTypeRegistration {
+			if ctx.FlowType == flowcm.FlowTypeRegistration {
 				logger.Debug("User not found for the provided sub claim. Proceeding with registration flow.")
-				execResp.Status = flowconst.ExecComplete
+				execResp.Status = flowcm.ExecComplete
 				execResp.FailureReason = ""
 
 				if execResp.RuntimeData == nil {
@@ -470,13 +372,13 @@ func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeCo
 					Attributes:      getUserAttributes(userInfo, ""),
 				}, nil
 			} else {
-				execResp.Status = flowconst.ExecFailure
+				execResp.Status = flowcm.ExecFailure
 				execResp.FailureReason = "User not found"
 				return nil, nil
 			}
 		} else {
 			if svcErr.Type == serviceerror.ClientErrorType {
-				execResp.Status = flowconst.ExecFailure
+				execResp.Status = flowcm.ExecFailure
 				execResp.FailureReason = svcErr.ErrorDescription
 				return nil, nil
 			}
@@ -486,9 +388,9 @@ func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeCo
 		}
 	}
 
-	if ctx.FlowType == flowconst.FlowTypeRegistration {
+	if ctx.FlowType == flowcm.FlowTypeRegistration {
 		// At this point, a unique user is found in the system. Hence fail the execution.
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User already exists with the provided sub claim."
 		return nil, nil
 	}
@@ -498,7 +400,7 @@ func (o *OAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeCo
 	}
 	userID := user.ID
 
-	if execResp.Status == flowconst.ExecFailure {
+	if execResp.Status == flowcm.ExecFailure {
 		return nil, nil
 	}
 

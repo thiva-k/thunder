@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package constants
+package common
 
 import (
 	"github.com/asgardeo/thunder/internal/system/error/apierror"

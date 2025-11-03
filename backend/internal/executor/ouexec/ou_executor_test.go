@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -64,15 +64,13 @@ func (suite *OUExecutorTestSuite) SetupTest() {
 	}
 
 	suite.executor = &OUExecutor{
-		internal: *flowmodel.NewExecutor("test-executor-id", "Test OU Executor", flowconst.ExecutorTypeUtility,
-			defaultInputs, []flowmodel.InputData{}, map[string]string{}),
+		ExecutorInterface: flowmodel.NewExecutor("TestOUExecutor", flowcm.ExecutorTypeUtility,
+			defaultInputs, []flowmodel.InputData{}),
 		ouService: suite.mockOUService,
 	}
 }
 
 func (suite *OUExecutorTestSuite) TestNewOUExecutor() {
-	properties := map[string]string{"key": "value"}
-
 	defaultInputs := []flowmodel.InputData{
 		{
 			Name:     userInputOuName,
@@ -92,16 +90,13 @@ func (suite *OUExecutorTestSuite) TestNewOUExecutor() {
 	}
 
 	executor := &OUExecutor{
-		internal: *flowmodel.NewExecutor("executor-id", "OU Executor", flowconst.ExecutorTypeUtility,
-			defaultInputs, []flowmodel.InputData{}, properties),
+		ExecutorInterface: flowmodel.NewExecutor("OUExecutor", flowcm.ExecutorTypeUtility,
+			defaultInputs, []flowmodel.InputData{}),
 		ouService: suite.mockOUService,
 	}
 
 	assert.NotNil(suite.T(), executor)
-	assert.Equal(suite.T(), "executor-id", executor.GetID())
-	assert.Equal(suite.T(), "OU Executor", executor.GetName())
-	assert.Equal(suite.T(), properties, executor.GetProperties().Properties)
-	assert.Equal(suite.T(), flowconst.ExecutorTypeUtility, executor.GetProperties().Type)
+	assert.Equal(suite.T(), "OUExecutor", executor.GetName())
 
 	defaultInputsResult := executor.GetDefaultExecutorInputs()
 	assert.Len(suite.T(), defaultInputsResult, 3)
@@ -119,24 +114,9 @@ func (suite *OUExecutorTestSuite) TestExecutorMetadata() {
 		testFunc func()
 	}{
 		{
-			name: "GetID returns correct executor ID",
-			testFunc: func() {
-				assert.Equal(suite.T(), "test-executor-id", suite.executor.GetID())
-			},
-		},
-		{
 			name: "GetName returns correct executor name",
 			testFunc: func() {
-				assert.Equal(suite.T(), "Test OU Executor", suite.executor.GetName())
-			},
-		},
-		{
-			name: "GetProperties returns correct properties",
-			testFunc: func() {
-				props := suite.executor.GetProperties()
-				assert.Equal(suite.T(), "test-executor-id", props.ID)
-				assert.Equal(suite.T(), "Test OU Executor", props.Name)
-				assert.Equal(suite.T(), flowconst.ExecutorTypeUtility, props.Type)
+				assert.Equal(suite.T(), "TestOUExecutor", suite.executor.GetName())
 			},
 		},
 		{
@@ -217,7 +197,7 @@ func (suite *OUExecutorTestSuite) TestExecute_Success() {
 
 			ctx := &flowmodel.NodeContext{
 				FlowID:        "flow-123",
-				FlowType:      flowconst.FlowTypeRegistration,
+				FlowType:      flowcm.FlowTypeRegistration,
 				UserInputData: tc.userInputData,
 				RuntimeData:   map[string]string{},
 			}
@@ -229,7 +209,7 @@ func (suite *OUExecutorTestSuite) TestExecute_Success() {
 
 			assert.NoError(suite.T(), err)
 			assert.NotNil(suite.T(), result)
-			assert.Equal(suite.T(), flowconst.ExecComplete, result.Status)
+			assert.Equal(suite.T(), flowcm.ExecComplete, result.Status)
 			assert.Equal(suite.T(), tc.expectedOUID, result.RuntimeData[ouIDKey])
 			suite.mockOUService.AssertExpectations(suite.T())
 		})
@@ -238,14 +218,14 @@ func (suite *OUExecutorTestSuite) TestExecute_Success() {
 
 type ExecuteNonRegistrationFlowTestCase struct {
 	name     string
-	flowType flowconst.FlowType
+	flowType flowcm.FlowType
 }
 
 func (suite *OUExecutorTestSuite) TestExecute_NonRegistrationFlow() {
 	testCases := []ExecuteNonRegistrationFlowTestCase{
 		{
 			name:     "Authentication flow",
-			flowType: flowconst.FlowTypeAuthentication,
+			flowType: flowcm.FlowTypeAuthentication,
 		},
 	}
 
@@ -262,7 +242,7 @@ func (suite *OUExecutorTestSuite) TestExecute_NonRegistrationFlow() {
 
 			assert.NoError(suite.T(), err)
 			assert.NotNil(suite.T(), result)
-			assert.Equal(suite.T(), flowconst.ExecComplete, result.Status)
+			assert.Equal(suite.T(), flowcm.ExecComplete, result.Status)
 			assert.Empty(suite.T(), result.RuntimeData[ouIDKey])
 			suite.mockOUService.AssertNotCalled(suite.T(), "CreateOrganizationUnit", mock.Anything)
 		})
@@ -295,10 +275,8 @@ func (suite *OUExecutorTestSuite) TestExecute_PrerequisitesFailure() {
 	}
 
 	prerequisitesExecutor := &OUExecutor{
-		internal: *flowmodel.NewExecutor("test-id", "Test", flowconst.ExecutorTypeUtility,
-			defaultInputs, []flowmodel.InputData{
-				{Name: "requiredField", Required: true, Type: "string"},
-			}, map[string]string{}),
+		ExecutorInterface: flowmodel.NewExecutor("Test", flowcm.ExecutorTypeUtility,
+			defaultInputs, []flowmodel.InputData{{Name: "requiredField", Required: true, Type: "string"}}),
 		ouService: suite.mockOUService,
 	}
 
@@ -307,7 +285,7 @@ func (suite *OUExecutorTestSuite) TestExecute_PrerequisitesFailure() {
 			name: "Missing prerequisite field",
 			ctx: &flowmodel.NodeContext{
 				FlowID:        "flow-123",
-				FlowType:      flowconst.FlowTypeRegistration,
+				FlowType:      flowcm.FlowTypeRegistration,
 				UserInputData: map[string]string{},
 				RuntimeData:   map[string]string{},
 			},
@@ -321,7 +299,7 @@ func (suite *OUExecutorTestSuite) TestExecute_PrerequisitesFailure() {
 
 			assert.NoError(suite.T(), err)
 			assert.NotNil(suite.T(), result)
-			assert.Equal(suite.T(), flowconst.ExecFailure, result.Status)
+			assert.Equal(suite.T(), flowcm.ExecFailure, result.Status)
 			assert.Equal(suite.T(), tc.expectedMsg, result.FailureReason)
 			suite.mockOUService.AssertNotCalled(suite.T(), "CreateOrganizationUnit", mock.Anything)
 		})
@@ -359,7 +337,7 @@ func (suite *OUExecutorTestSuite) TestExecute_UserInputRequired() {
 
 			ctx := &flowmodel.NodeContext{
 				FlowID:        "flow-123",
-				FlowType:      flowconst.FlowTypeRegistration,
+				FlowType:      flowcm.FlowTypeRegistration,
 				UserInputData: tc.userInputData,
 			}
 
@@ -367,7 +345,7 @@ func (suite *OUExecutorTestSuite) TestExecute_UserInputRequired() {
 
 			assert.NoError(suite.T(), err)
 			assert.NotNil(suite.T(), result)
-			assert.Equal(suite.T(), flowconst.ExecUserInputRequired, result.Status)
+			assert.Equal(suite.T(), flowcm.ExecUserInputRequired, result.Status)
 			assert.NotEmpty(suite.T(), result.RequiredData)
 			suite.mockOUService.AssertNotCalled(suite.T(), "CreateOrganizationUnit", mock.Anything)
 		})
@@ -465,7 +443,7 @@ func (suite *OUExecutorTestSuite) TestExecute_ErrorScenarios() {
 
 			ctx := &flowmodel.NodeContext{
 				FlowID:        "flow-123",
-				FlowType:      flowconst.FlowTypeRegistration,
+				FlowType:      flowcm.FlowTypeRegistration,
 				UserInputData: tc.userInputData,
 				RuntimeData:   map[string]string{},
 			}
@@ -480,7 +458,7 @@ func (suite *OUExecutorTestSuite) TestExecute_ErrorScenarios() {
 				assert.Equal(suite.T(), tc.expectedFailure, err.Error())
 			} else {
 				assert.NoError(suite.T(), err)
-				assert.Equal(suite.T(), flowconst.ExecFailure, result.Status)
+				assert.Equal(suite.T(), flowcm.ExecFailure, result.Status)
 				assert.Equal(suite.T(), tc.expectedFailure, result.FailureReason)
 			}
 
@@ -500,7 +478,7 @@ func (suite *OUExecutorTestSuite) TestExecute_EmptyOUID() {
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "flow-123",
-		FlowType: flowconst.FlowTypeRegistration,
+		FlowType: flowcm.FlowTypeRegistration,
 		UserInputData: map[string]string{
 			userInputOuName:   "Engineering",
 			userInputOuHandle: "engineering",

@@ -19,7 +19,7 @@
 package model
 
 import (
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
@@ -32,11 +32,12 @@ type PromptOnlyNode struct {
 }
 
 // NewPromptOnlyNode creates a new PromptOnlyNode with the given details.
-func NewPromptOnlyNode(id string, isStartNode bool, isFinalNode bool) NodeInterface {
+func NewPromptOnlyNode(id string, properties map[string]string, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &PromptOnlyNode{
 		Node: &Node{
 			id:               id,
-			_type:            constants.NodeTypePromptOnly,
+			_type:            common.NodeTypePromptOnly,
+			properties:       properties,
 			isStartNode:      isStartNode,
 			isFinalNode:      isFinalNode,
 			nextNodeList:     []string{},
@@ -64,13 +65,13 @@ func (n *PromptOnlyNode) Execute(ctx *NodeContext) (*NodeResponse, *serviceerror
 	if n.checkInputData(ctx, nodeResp) {
 		logger.Debug("Required input data is not available in the context, returning incomplete response",
 			log.Any("requiredData", nodeResp.RequiredData))
-		nodeResp.Status = constants.NodeStatusIncomplete
-		nodeResp.Type = constants.NodeResponseTypeView
+		nodeResp.Status = common.NodeStatusIncomplete
+		nodeResp.Type = common.NodeResponseTypeView
 		return nodeResp, nil
 	}
 
 	logger.Debug("All required input data is available in the context, proceeding with next steps")
-	nodeResp.Status = constants.NodeStatusComplete
+	nodeResp.Status = common.NodeStatusComplete
 	nodeResp.Type = ""
 	return nodeResp, nil
 }

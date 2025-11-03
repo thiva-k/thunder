@@ -66,7 +66,7 @@ func registerServices(mux *http.ServeMux) {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
 	certservice := cert.Initialize()
-	applicationService := application.Initialize(mux, certservice)
+	applicationService := application.Initialize(mux, certservice, flowMgtService)
 
 	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService)
 

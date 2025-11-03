@@ -16,11 +16,10 @@
  * under the License.
  */
 
-// Package model provides the data structures for OIDC authentication properties and responses.
-package model
+package oauth
 
-// OIDCTokenResponse represents the response from the OIDC token endpoint.
-type OIDCTokenResponse struct {
+// TokenResponse represents the response from the token endpoint.
+type TokenResponse struct {
 	AccessToken  string `json:"access_token"`
 	TokenType    string `json:"token_type"`
 	Scope        string `json:"scope"`

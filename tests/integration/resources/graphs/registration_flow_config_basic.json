@@ -42,12 +42,12 @@
                     "required": true
                 }
             ],
+            "properties": {
+                "ouId": "test-ou-id",
+                "userType": "test-user-type"
+            },
             "executor": {
-                "name": "ProvisioningExecutor",
-                "properties": {
-                    "ouId": "test-ou-id",
-                    "userType": "test-user-type"
-                }
+                "name": "ProvisioningExecutor"
             },
             "next": [
                 "authenticated"

@@ -19,7 +19,7 @@
 package model
 
 import (
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
@@ -29,11 +29,12 @@ type TaskExecutionNode struct {
 }
 
 // NewTaskExecutionNode creates a new TaskExecutionNode with the given details.
-func NewTaskExecutionNode(id string, isStartNode bool, isFinalNode bool) NodeInterface {
+func NewTaskExecutionNode(id string, properties map[string]string, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &TaskExecutionNode{
 		Node: &Node{
 			id:               id,
-			_type:            constants.NodeTypeTaskExecution,
+			_type:            common.NodeTypeTaskExecution,
+			properties:       properties,
 			isStartNode:      isStartNode,
 			isFinalNode:      isFinalNode,
 			nextNodeList:     []string{},
@@ -47,7 +48,14 @@ func NewTaskExecutionNode(id string, isStartNode bool, isFinalNode bool) NodeInt
 // Execute executes the node's executor.
 func (n *TaskExecutionNode) Execute(ctx *NodeContext) (*NodeResponse, *serviceerror.ServiceError) {
 	if n.executorConfig == nil || n.executorConfig.Executor == nil {
-		return nil, &constants.ErrorNodeExecutorNotFound
+		return nil, &common.ErrorNodeExecutorNotFound
+	}
+
+	// Set node properties in context
+	if len(n.GetProperties()) > 0 {
+		ctx.NodeProperties = n.GetProperties()
+	} else {
+		ctx.NodeProperties = make(map[string]string)
 	}
 
 	execResp, svcErr := n.triggerExecutor(ctx)
@@ -62,12 +70,12 @@ func (n *TaskExecutionNode) Execute(ctx *NodeContext) (*NodeResponse, *serviceer
 func (n *TaskExecutionNode) triggerExecutor(ctx *NodeContext) (*ExecutorResponse, *serviceerror.ServiceError) {
 	execResp, err := n.executorConfig.Executor.Execute(ctx)
 	if err != nil {
-		svcErr := constants.ErrorNodeExecutorExecError
+		svcErr := common.ErrorNodeExecutorExecError
 		svcErr.ErrorDescription = "Error executing node executor: " + err.Error()
 		return nil, &svcErr
 	}
 	if execResp == nil {
-		return nil, &constants.ErrorNilResponseFromExecutor
+		return nil, &common.ErrorNilResponseFromExecutor
 	}
 
 	return execResp, nil
@@ -83,7 +91,6 @@ func buildNodeResponse(execResp *ExecutorResponse) *NodeResponse {
 		RuntimeData:       execResp.RuntimeData,
 		AuthenticatedUser: execResp.AuthenticatedUser,
 		Assertion:         execResp.Assertion,
-		ExecutionRecord:   execResp.ExecutionRecord,
 	}
 	if nodeResp.AdditionalData == nil {
 		nodeResp.AdditionalData = make(map[string]string)
@@ -98,23 +105,23 @@ func buildNodeResponse(execResp *ExecutorResponse) *NodeResponse {
 		nodeResp.Actions = make([]Action, 0)
 	}
 
-	if execResp.Status == constants.ExecComplete {
-		nodeResp.Status = constants.NodeStatusComplete
+	if execResp.Status == common.ExecComplete {
+		nodeResp.Status = common.NodeStatusComplete
 		nodeResp.Type = ""
-	} else if execResp.Status == constants.ExecUserInputRequired {
-		nodeResp.Status = constants.NodeStatusIncomplete
-		nodeResp.Type = constants.NodeResponseTypeView
-	} else if execResp.Status == constants.ExecExternalRedirection {
-		nodeResp.Status = constants.NodeStatusIncomplete
-		nodeResp.Type = constants.NodeResponseTypeRedirection
-	} else if execResp.Status == constants.ExecRetry {
-		nodeResp.Status = constants.NodeStatusIncomplete
-		nodeResp.Type = constants.NodeResponseTypeRetry
-	} else if execResp.Status == constants.ExecFailure {
-		nodeResp.Status = constants.NodeStatusFailure
+	} else if execResp.Status == common.ExecUserInputRequired {
+		nodeResp.Status = common.NodeStatusIncomplete
+		nodeResp.Type = common.NodeResponseTypeView
+	} else if execResp.Status == common.ExecExternalRedirection {
+		nodeResp.Status = common.NodeStatusIncomplete
+		nodeResp.Type = common.NodeResponseTypeRedirection
+	} else if execResp.Status == common.ExecRetry {
+		nodeResp.Status = common.NodeStatusIncomplete
+		nodeResp.Type = common.NodeResponseTypeRetry
+	} else if execResp.Status == common.ExecFailure {
+		nodeResp.Status = common.NodeStatusFailure
 		nodeResp.Type = ""
 	} else {
-		nodeResp.Status = constants.NodeStatusIncomplete
+		nodeResp.Status = common.NodeStatusIncomplete
 		nodeResp.Type = ""
 	}
 

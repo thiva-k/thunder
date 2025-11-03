@@ -19,11 +19,11 @@
         {
             "id": "sms_otp_auth",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "senderId": "<your-sender-id>"
+            },
             "executor": {
-                "name": "SMSOTPAuthExecutor",
-                "properties": {
-                    "senderId": "<your-sender-id>"
-                }
+                "name": "SMSOTPAuthExecutor"
             },
             "next": [
                 "authenticated"

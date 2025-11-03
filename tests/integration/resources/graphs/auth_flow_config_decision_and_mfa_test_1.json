@@ -73,11 +73,11 @@
                     "required": true
                 }
             ],
+            "properties": {
+                "senderId": "test-sms-sender-id"
+            },
             "executor": {
-                "name": "SMSOTPAuthExecutor",
-                "properties": {
-                    "senderId": "test-sms-sender-id"
-                }
+                "name": "SMSOTPAuthExecutor"
             },
             "next": [
                 "authenticated"

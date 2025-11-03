@@ -21,70 +21,51 @@ package githubauth
 
 import (
 	"errors"
-	"time"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authngithub "github.com/asgardeo/thunder/internal/authn/github"
 	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
 	"github.com/asgardeo/thunder/internal/executor/oauth"
-	"github.com/asgardeo/thunder/internal/executor/oauth/model"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
-	httpservice "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/log"
 	systemutils "github.com/asgardeo/thunder/internal/system/utils"
 	"github.com/asgardeo/thunder/internal/user"
 )
 
-const loggerComponentName = "GithubOAuthExecutor"
+const (
+	executorName        = authncm.AuthenticatorGithub
+	loggerComponentName = "GithubOAuthExecutor"
+)
 
 // GithubOAuthExecutor implements the OAuth authentication executor for GitHub.
 type GithubOAuthExecutor struct {
-	*oauth.OAuthExecutor
+	oauth.OAuthExecutorInterface
 	githubAuthService authngithub.GithubOAuthAuthnServiceInterface
 }
 
 var _ flowmodel.ExecutorInterface = (*GithubOAuthExecutor)(nil)
 
 // NewGithubOAuthExecutor creates a new instance of GithubOAuthExecutor with the provided details.
-func NewGithubOAuthExecutor(id, name string, properties map[string]string,
-	clientID, clientSecret, redirectURI string, scopes []string,
-	additionalParams map[string]string) oauth.OAuthExecutorInterface {
-	oAuthProps := &model.OAuthExecProperties{
-		AuthorizationEndpoint: authngithub.AuthorizeEndpoint,
-		TokenEndpoint:         authngithub.TokenEndpoint,
-		UserInfoEndpoint:      authngithub.UserInfoEndpoint,
-		ClientID:              clientID,
-		ClientSecret:          clientSecret,
-		RedirectURI:           redirectURI,
-		Scopes:                scopes,
-		AdditionalParams:      additionalParams,
-	}
-	endpoints := authnoauth.OAuthEndpoints{
-		AuthorizationEndpoint: oAuthProps.AuthorizationEndpoint,
-		TokenEndpoint:         oAuthProps.TokenEndpoint,
-		UserInfoEndpoint:      oAuthProps.UserInfoEndpoint,
-	}
-
+func NewGithubOAuthExecutor() oauth.OAuthExecutorInterface {
 	// TODO: Should be injected when moving executors to di pattern.
-	httpClient := httpservice.NewHTTPClientWithTimeout(flowconst.DefaultHTTPTimeout)
 	idpSvc := idp.NewIDPService()
 	userSvc := user.GetUserService()
-	authNService := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc, endpoints)
-	githubAuthService := authngithub.NewGithubOAuthAuthnService(idpSvc, userSvc)
+	githubAuthSvc := authngithub.NewGithubOAuthAuthnService(idpSvc, userSvc)
 
-	base := oauth.NewOAuthExecutorWithAuthService(id, name, []flowmodel.InputData{},
-		properties, oAuthProps, authNService)
-	exec, ok := base.(*oauth.OAuthExecutor)
+	oauthSvcCast, ok := githubAuthSvc.(authnoauth.OAuthAuthnCoreServiceInterface)
 	if !ok {
-		panic("failed to cast GithubOAuthExecutor to OAuthExecutor")
+		panic("failed to cast GithubOAuthAuthnService to OAuthAuthnCoreServiceInterface")
 	}
 
+	base := oauth.NewOAuthExecutorWithServices(executorName, []flowmodel.InputData{}, []flowmodel.InputData{},
+		oauthSvcCast, idpSvc)
+
 	return &GithubOAuthExecutor{
-		OAuthExecutor:     exec,
-		githubAuthService: githubAuthService,
+		OAuthExecutorInterface: base,
+		githubAuthService:      githubAuthSvc,
 	}
 }
 
@@ -92,7 +73,7 @@ func NewGithubOAuthExecutor(id, name string, properties map[string]string,
 func (g *GithubOAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 	logger.Debug("Executing GitHub OAuth executor",
-		log.String("executorID", g.GetID()), log.String("flowID", ctx.FlowID))
+		log.String(log.LoggerKeyExecutorName, g.GetName()), log.String("flowID", ctx.FlowID))
 
 	execResp := &flowmodel.ExecutorResponse{
 		AdditionalData: make(map[string]string),
@@ -129,7 +110,7 @@ func (g *GithubOAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Ex
 func (o *GithubOAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext,
 	execResp *flowmodel.ExecutorResponse) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String("executorID", o.GetID()), log.String("flowID", ctx.FlowID))
+		log.String(log.LoggerKeyExecutorName, o.GetName()), log.String("flowID", ctx.FlowID))
 	logger.Debug("Processing GitHub OAuth flow response")
 
 	code, ok := ctx.UserInputData["code"]
@@ -138,7 +119,7 @@ func (o *GithubOAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext
 		if err != nil {
 			return err
 		}
-		if execResp.Status == flowconst.ExecFailure {
+		if execResp.Status == flowcm.ExecFailure {
 			return nil
 		}
 
@@ -164,19 +145,11 @@ func (o *GithubOAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext
 	}
 
 	if execResp.AuthenticatedUser.IsAuthenticated {
-		execResp.Status = flowconst.ExecComplete
-	} else if ctx.FlowType != flowconst.FlowTypeRegistration {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecComplete
+	} else if ctx.FlowType != flowcm.FlowTypeRegistration {
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Authentication failed. Authorization code not provided or invalid."
 		return nil
-	}
-
-	// Add execution record for successful GitHub OAuth authentication
-	execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
-		ExecutorName: authncm.AuthenticatorGithub,
-		ExecutorType: flowconst.ExecutorTypeAuthentication,
-		Timestamp:    time.Now().Unix(),
-		Status:       flowconst.FlowStatusComplete,
 	}
 
 	return nil
@@ -186,12 +159,11 @@ func (o *GithubOAuthExecutor) ProcessAuthFlowResponse(ctx *flowmodel.NodeContext
 func (o *GithubOAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse,
 	accessToken string) (map[string]string, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
-	logger.Debug("Fetching user info from GitHub OAuth provider",
-		log.String("userInfoEndpoint", o.GetUserInfoEndpoint()))
+	logger.Debug("Fetching user info from GitHub OAuth provider")
 
-	idpID, err := o.GetIdpID()
+	idpID, err := o.GetIdpID(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +171,7 @@ func (o *GithubOAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *
 	userInfo, svcErr := o.githubAuthService.FetchUserInfo(idpID, accessToken)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = svcErr.ErrorDescription
 			return nil, nil
 		}
@@ -216,21 +188,21 @@ func (o *GithubOAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *
 func (o *GithubOAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.NodeContext,
 	execResp *flowmodel.ExecutorResponse, accessToken string) (*authncm.AuthenticatedUser, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, o.GetID()),
+		log.String(log.LoggerKeyExecutorName, o.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	userInfo, err := o.GetUserInfo(ctx, execResp, accessToken)
 	if err != nil {
 		return nil, err
 	}
-	if execResp.Status == flowconst.ExecFailure {
+	if execResp.Status == flowcm.ExecFailure {
 		return nil, nil
 	}
 
 	// Resolve user with the sub claim.
 	sub, ok := userInfo["sub"]
 	if !ok || sub == "" {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "sub claim not found in the response."
 		return nil, nil
 	}
@@ -238,9 +210,9 @@ func (o *GithubOAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.
 	user, svcErr := o.githubAuthService.GetInternalUser(sub)
 	if svcErr != nil {
 		if svcErr.Code == authncm.ErrorUserNotFound.Code {
-			if ctx.FlowType == flowconst.FlowTypeRegistration {
+			if ctx.FlowType == flowcm.FlowTypeRegistration {
 				logger.Debug("User not found for the provided sub claim. Proceeding with registration flow.")
-				execResp.Status = flowconst.ExecComplete
+				execResp.Status = flowcm.ExecComplete
 				execResp.FailureReason = ""
 
 				if execResp.RuntimeData == nil {
@@ -253,13 +225,13 @@ func (o *GithubOAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.
 					Attributes:      getUserAttributes(userInfo, ""),
 				}, nil
 			} else {
-				execResp.Status = flowconst.ExecFailure
+				execResp.Status = flowcm.ExecFailure
 				execResp.FailureReason = "User not found"
 				return nil, nil
 			}
 		} else {
 			if svcErr.Type == serviceerror.ClientErrorType {
-				execResp.Status = flowconst.ExecFailure
+				execResp.Status = flowcm.ExecFailure
 				execResp.FailureReason = svcErr.ErrorDescription
 				return nil, nil
 			}
@@ -269,9 +241,9 @@ func (o *GithubOAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.
 		}
 	}
 
-	if ctx.FlowType == flowconst.FlowTypeRegistration {
+	if ctx.FlowType == flowcm.FlowTypeRegistration {
 		// At this point, a unique user is found in the system. Hence fail the execution.
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User already exists with the provided sub claim."
 		return nil, nil
 	}
@@ -281,7 +253,7 @@ func (o *GithubOAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowmodel.
 	}
 	userID := user.ID
 
-	if execResp.Status == flowconst.ExecFailure {
+	if execResp.Status == flowcm.ExecFailure {
 		return nil, nil
 	}
 

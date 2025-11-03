@@ -19,11 +19,11 @@
         {
             "id": "sms_otp_auth",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "senderId": "<your-sender-id>"
+            },
             "executor": {
-                "name": "SMSOTPAuthExecutor",
-                "properties": {
-                    "senderId": "<your-sender-id>"
-                }
+                "name": "SMSOTPAuthExecutor"
             },
             "next": [
                 "provisioning"
@@ -54,12 +54,12 @@
                     "required": true
                 }
             ],
+            "properties": {
+                "ouId": "<default-ou-id>",
+                "userType": "<default-user-type>"
+            },
             "executor": {
-                "name": "ProvisioningExecutor",
-                "properties": {
-                    "ouId": "<default-ou-id>",
-                    "userType": "<default-user-type>"
-                }
+                "name": "ProvisioningExecutor"
             },
             "next": [
                 "authenticated"

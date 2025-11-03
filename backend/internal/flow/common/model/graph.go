@@ -22,14 +22,14 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // GraphInterface defines the graph structure
 type GraphInterface interface {
 	GetID() string
-	GetType() constants.FlowType
+	GetType() common.FlowType
 	AddNode(node NodeInterface) error
 	GetNode(nodeID string) (NodeInterface, bool)
 	AddEdge(fromNodeID, toNodeID string) error
@@ -47,19 +47,19 @@ type GraphInterface interface {
 // Graph implements the GraphInterface for the flow execution
 type Graph struct {
 	id          string
-	_type       constants.FlowType
+	_type       common.FlowType
 	nodes       map[string]NodeInterface
 	edges       map[string][]string
 	startNodeID string
 }
 
 // NewGraph creates a new Graph with a unique ID
-func NewGraph(id string, _type constants.FlowType) GraphInterface {
+func NewGraph(id string, _type common.FlowType) GraphInterface {
 	if id == "" {
 		id = sysutils.GenerateUUID()
 	}
 	if _type == "" {
-		_type = constants.FlowTypeAuthentication
+		_type = common.FlowTypeAuthentication
 	}
 
 	return &Graph{
@@ -76,7 +76,7 @@ func (g *Graph) GetID() string {
 }
 
 // GetType returns the type of the graph
-func (g *Graph) GetType() constants.FlowType {
+func (g *Graph) GetType() common.FlowType {
 	return g._type
 }
 

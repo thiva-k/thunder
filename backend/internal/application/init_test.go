@@ -28,6 +28,7 @@ import (
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/tests/mocks/certmock"
+	"github.com/asgardeo/thunder/tests/mocks/flowmgtmock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -41,11 +42,13 @@ import (
 // - Error handling scenarios for configuration parsing and validation
 type InitTestSuite struct {
 	suite.Suite
-	mockCertService *certmock.CertificateServiceInterfaceMock
+	mockCertService    *certmock.CertificateServiceInterfaceMock
+	mockFlowMgtService *flowmgtmock.FlowMgtServiceInterfaceMock
 }
 
 func (suite *InitTestSuite) SetupTest() {
 	suite.mockCertService = certmock.NewCertificateServiceInterfaceMock(suite.T())
+	suite.mockFlowMgtService = flowmgtmock.NewFlowMgtServiceInterfaceMock(suite.T())
 	// Note: We'll handle config initialization in individual tests as needed
 }
 
@@ -73,7 +76,7 @@ func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesDisabled() {
 	mux := http.NewServeMux()
 
 	// Execute
-	service := Initialize(mux, suite.mockCertService)
+	service := Initialize(mux, suite.mockCertService, suite.mockFlowMgtService)
 
 	// Assert
 	assert.NotNil(suite.T(), service)
@@ -486,9 +489,10 @@ func TestInitialize_Standalone(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mockCertService := certmock.NewCertificateServiceInterfaceMock(t)
+	mockFlowMgtService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
 
 	// Execute
-	service := Initialize(mux, mockCertService)
+	service := Initialize(mux, mockCertService, mockFlowMgtService)
 
 	// Assert
 	assert.NotNil(t, service)
@@ -522,9 +526,10 @@ func TestInitialize_WithImmutableResources_Standalone(t *testing.T) {
 
 	mux := http.NewServeMux()
 	mockCertService := certmock.NewCertificateServiceInterfaceMock(t)
+	mockFlowMgtService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
 
 	// Execute
-	service := Initialize(mux, mockCertService)
+	service := Initialize(mux, mockCertService, mockFlowMgtService)
 
 	// Assert
 	assert.NotNil(t, service)

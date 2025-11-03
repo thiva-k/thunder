@@ -22,7 +22,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/common/model"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/apierror"
@@ -51,7 +51,7 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
 
-		if err := json.NewEncoder(w).Encode(constants.APIErrorFlowRequestJSONDecodeError); err != nil {
+		if err := json.NewEncoder(w).Encode(common.APIErrorFlowRequestJSONDecodeError); err != nil {
 			logger.Error("Error encoding error response", log.Error(err))
 			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
 		}

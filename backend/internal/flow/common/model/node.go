@@ -23,25 +23,24 @@ import (
 	"fmt"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // NodeResponse represents the response from a node execution
 type NodeResponse struct {
-	Status            constants.NodeStatus       `json:"status"`
-	Type              constants.NodeResponseType `json:"type"`
-	FailureReason     string                     `json:"failure_reason,omitempty"`
-	RequiredData      []InputData                `json:"required_data,omitempty"`
-	AdditionalData    map[string]string          `json:"additional_data,omitempty"`
-	RedirectURL       string                     `json:"redirect_url,omitempty"`
-	Actions           []Action                   `json:"actions,omitempty"`
-	NextNodeID        string                     `json:"next_node_id,omitempty"`
-	RuntimeData       map[string]string          `json:"runtime_data,omitempty"`
-	AuthenticatedUser authncm.AuthenticatedUser  `json:"authenticated_user,omitempty"`
-	Assertion         string                     `json:"assertion,omitempty"`
-	ExecutionRecord   *NodeExecutionRecord       `json:"execution_record,omitempty"`
+	Status            common.NodeStatus         `json:"status"`
+	Type              common.NodeResponseType   `json:"type"`
+	FailureReason     string                    `json:"failure_reason,omitempty"`
+	RequiredData      []InputData               `json:"required_data,omitempty"`
+	AdditionalData    map[string]string         `json:"additional_data,omitempty"`
+	RedirectURL       string                    `json:"redirect_url,omitempty"`
+	Actions           []Action                  `json:"actions,omitempty"`
+	NextNodeID        string                    `json:"next_node_id,omitempty"`
+	RuntimeData       map[string]string         `json:"runtime_data,omitempty"`
+	AuthenticatedUser authncm.AuthenticatedUser `json:"authenticated_user,omitempty"`
+	Assertion         string                    `json:"assertion,omitempty"`
 }
 
 // NodeInterface defines the interface for nodes in the graph
@@ -49,7 +48,8 @@ type NodeInterface interface {
 	sysutils.ClonableInterface
 	Execute(ctx *NodeContext) (*NodeResponse, *serviceerror.ServiceError)
 	GetID() string
-	GetType() constants.NodeType
+	GetType() common.NodeType
+	GetProperties() map[string]string
 	IsStartNode() bool
 	SetAsStartNode()
 	IsFinalNode() bool
@@ -73,7 +73,8 @@ type NodeInterface interface {
 // Node implements the NodeInterface
 type Node struct {
 	id               string
-	_type            constants.NodeType
+	_type            common.NodeType
+	properties       map[string]string
 	isStartNode      bool
 	isFinalNode      bool
 	nextNodeList     []string
@@ -85,23 +86,27 @@ type Node struct {
 var _ NodeInterface = (*Node)(nil)
 
 // NewNode creates a new Node with the given type and properties.
-func NewNode(id string, _type string, isStartNode bool, isFinalNode bool) (NodeInterface, error) {
-	var nodeType constants.NodeType
+func NewNode(id string, _type string, properties map[string]string,
+	isStartNode bool, isFinalNode bool) (NodeInterface, error) {
+	var nodeType common.NodeType
 	if _type == "" {
 		return nil, errors.New("node type cannot be empty")
 	} else {
-		nodeType = constants.NodeType(_type)
+		nodeType = common.NodeType(_type)
+	}
+	if properties == nil {
+		properties = make(map[string]string)
 	}
 
 	switch nodeType {
-	case constants.NodeTypeTaskExecution:
-		return NewTaskExecutionNode(id, isStartNode, isFinalNode), nil
-	case constants.NodeTypeDecision:
-		return NewDecisionNode(id, isStartNode, isFinalNode), nil
-	case constants.NodeTypePromptOnly:
-		return NewPromptOnlyNode(id, isStartNode, isFinalNode), nil
-	case constants.NodeTypeAuthSuccess:
-		return NewTaskExecutionNode(id, isStartNode, isFinalNode), nil
+	case common.NodeTypeTaskExecution:
+		return NewTaskExecutionNode(id, properties, isStartNode, isFinalNode), nil
+	case common.NodeTypeDecision:
+		return NewDecisionNode(id, properties, isStartNode, isFinalNode), nil
+	case common.NodeTypePromptOnly:
+		return NewPromptOnlyNode(id, properties, isStartNode, isFinalNode), nil
+	case common.NodeTypeAuthSuccess:
+		return NewTaskExecutionNode(id, properties, isStartNode, isFinalNode), nil
 	default:
 		return nil, errors.New("unsupported node type: " + _type)
 	}
@@ -118,8 +123,13 @@ func (n *Node) GetID() string {
 }
 
 // GetType returns the node's type
-func (n *Node) GetType() constants.NodeType {
+func (n *Node) GetType() common.NodeType {
 	return n._type
+}
+
+// GetProperties returns the node's properties
+func (n *Node) GetProperties() map[string]string {
+	return n.properties
 }
 
 // IsStartNode checks if the node is a start node
@@ -284,13 +294,19 @@ func (n *Node) Clone() (sysutils.ClonableInterface, error) {
 	var execConfigCopy *ExecutorConfig
 	if n.executorConfig != nil {
 		execConfigCopy = &ExecutorConfig{
-			Name:       n.executorConfig.Name,
-			Properties: sysutils.DeepCopyMapOfStrings(n.executorConfig.Properties),
-			Executor:   n.executorConfig.Executor,
+			Name:     n.executorConfig.Name,
+			Executor: n.executorConfig.Executor,
 		}
 	}
 
-	nodeCopy, err := NewNode(n.id, string(n._type), n.isStartNode, n.isFinalNode)
+	var propertiesCopy map[string]string
+	if n.properties != nil {
+		propertiesCopy = sysutils.DeepCopyMapOfStrings(n.properties)
+	} else {
+		propertiesCopy = make(map[string]string)
+	}
+
+	nodeCopy, err := NewNode(n.id, string(n._type), propertiesCopy, n.isStartNode, n.isFinalNode)
 	if err != nil {
 		return nil, fmt.Errorf("failed to clone node: %w", err)
 	}

@@ -22,29 +22,42 @@ package identify
 import (
 	"slices"
 
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/log"
 
 	"github.com/asgardeo/thunder/internal/user"
 )
 
-const loggerComponentName = "IdentifyingExecutor"
+const (
+	executorName        = "IdentifyingExecutor"
+	loggerComponentName = "IdentifyingExecutor"
+)
 
 var nonSearchableAttributes = []string{"password", "code", "nonce", "otp"}
 
+// IdentifyingExecutorInterface defines the interface for identifying executors.
+type IdentifyingExecutorInterface interface {
+	IdentifyUser(filters map[string]interface{},
+		execResp *flowmodel.ExecutorResponse) (*string, error)
+}
+
 // IdentifyingExecutor implements the ExecutorInterface for identifying users based on provided attributes.
 type IdentifyingExecutor struct {
-	internal    flowmodel.Executor
+	flowmodel.ExecutorInterface
 	userService user.UserServiceInterface
 }
 
+var _ flowmodel.ExecutorInterface = (*IdentifyingExecutor)(nil)
+var _ IdentifyingExecutorInterface = (*IdentifyingExecutor)(nil)
+
 // NewIdentifyingExecutor creates a new instance of IdentifyingExecutor.
-func NewIdentifyingExecutor(id, name string, properties map[string]string) *IdentifyingExecutor {
+func NewIdentifyingExecutor() *IdentifyingExecutor {
+	base := flowmodel.NewExecutor(executorName, flowcm.ExecutorTypeUtility,
+		[]flowmodel.InputData{}, []flowmodel.InputData{})
 	return &IdentifyingExecutor{
-		internal: *flowmodel.NewExecutor(id, name, flowconst.ExecutorTypeUtility,
-			[]flowmodel.InputData{}, []flowmodel.InputData{}, properties),
-		userService: user.GetUserService(),
+		ExecutorInterface: base,
+		userService:       user.GetUserService(),
 	}
 }
 
@@ -66,12 +79,12 @@ func (i *IdentifyingExecutor) IdentifyUser(filters map[string]interface{},
 	if svcErr != nil {
 		if svcErr.Code == user.ErrorUserNotFound.Code {
 			logger.Debug("User not found for the provided filters")
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = "User not found"
 			return nil, nil
 		} else {
 			logger.Debug("Failed to identify user due to error: " + svcErr.Error)
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = "Failed to identify user"
 			return nil, nil
 		}
@@ -79,7 +92,7 @@ func (i *IdentifyingExecutor) IdentifyUser(filters map[string]interface{},
 
 	if userID == nil || *userID == "" {
 		logger.Debug("User not found for the provided filter")
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User not found"
 		return nil, nil
 	}
