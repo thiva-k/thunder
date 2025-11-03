@@ -60,3 +60,19 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: flowexec
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/user:
+    config:
+      all: true
+      dir: internal/user
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: user
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/userschema:
+    config:
+      all: true
+      dir: internal/userschema
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: userschema
+      filename: "{{.InterfaceName}}_mock_test.go"
