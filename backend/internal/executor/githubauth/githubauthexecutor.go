@@ -194,7 +194,12 @@ func (o *GithubOAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *
 	logger.Debug("Fetching user info from GitHub OAuth provider",
 		log.String("userInfoEndpoint", o.GetUserInfoEndpoint()))
 
-	userInfo, svcErr := o.githubAuthService.FetchUserInfo(o.GetID(), accessToken)
+	idpID, err := o.GetIdpID()
+	if err != nil {
+		return nil, err
+	}
+
+	userInfo, svcErr := o.githubAuthService.FetchUserInfo(idpID, accessToken)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure

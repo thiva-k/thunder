@@ -21,6 +21,7 @@ package oauth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
@@ -53,6 +54,8 @@ type OAuthExecutorInterface interface {
 		code string) (*model.TokenResponse, error)
 	GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse,
 		accessToken string) (map[string]string, error)
+	GetIdpID() (string, error)
+	GetIDPName() (string, error)
 }
 
 // OAuthExecutor implements the OAuthExecutorInterface for handling generic OAuth authentication flows.
@@ -158,6 +161,39 @@ func (o *OAuthExecutor) GetJWKSEndpoint() string {
 	return o.oAuthProperties.JwksEndpoint
 }
 
+// GetIdpID retrieves the identity provider ID from executor properties.
+func (o *OAuthExecutor) GetIdpID() (string, error) {
+	props, err := o.getProperties()
+	if err != nil {
+		return "", err
+	}
+	if idpID, exists := props["idpId"]; exists {
+		return idpID, nil
+	}
+	return "", errors.New("idpId not found in executor properties")
+}
+
+// GetIDPName returns the idpName from the executor properties.
+func (o *OAuthExecutor) GetIDPName() (string, error) {
+	props, err := o.getProperties()
+	if err != nil {
+		return "", err
+	}
+	if idpName, exists := props["idpName"]; exists {
+		return idpName, nil
+	}
+	return "", errors.New("idpName not found in executor properties")
+}
+
+// getProperties retrieves the executor properties.
+func (o *OAuthExecutor) getProperties() (map[string]string, error) {
+	props := o.GetProperties().Properties
+	if props == nil {
+		return nil, errors.New("executor properties are nil")
+	}
+	return props, nil
+}
+
 // Execute executes the OAuth authentication flow.
 func (o *OAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
@@ -199,7 +235,12 @@ func (o *OAuthExecutor) BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp 
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Initiating OAuth authentication flow")
 
-	authorizeURL, svcErr := o.authService.BuildAuthorizeURL(o.GetID())
+	idpID, err := o.GetIdpID()
+	if err != nil {
+		return err
+	}
+
+	authorizeURL, svcErr := o.authService.BuildAuthorizeURL(idpID)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure
@@ -212,11 +253,17 @@ func (o *OAuthExecutor) BuildAuthorizeFlow(ctx *flowmodel.NodeContext, execResp 
 		return errors.New("failed to build authorize URL")
 	}
 
+	// Get the idp name for additional data
+	idpName, err := o.GetIDPName()
+	if err != nil {
+		return fmt.Errorf("failed to get idp name: %w", err)
+	}
+
 	// Set the response to redirect the user to the authorization URL.
 	execResp.Status = flowconst.ExecExternalRedirection
 	execResp.RedirectURL = authorizeURL
 	execResp.AdditionalData = map[string]string{
-		flowconst.DataIDPName: o.GetName(),
+		flowconst.DataIDPName: idpName,
 	}
 
 	return nil
@@ -321,7 +368,12 @@ func (o *OAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext, execRes
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Exchanging authorization code for a token", log.String("tokenEndpoint", o.GetTokenEndpoint()))
 
-	tokenResp, svcErr := o.authService.ExchangeCodeForToken(o.GetID(), code, true)
+	idpID, err := o.GetIdpID()
+	if err != nil {
+		return nil, err
+	}
+
+	tokenResp, svcErr := o.authService.ExchangeCodeForToken(idpID, code, true)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure
@@ -352,7 +404,12 @@ func (o *OAuthExecutor) GetUserInfo(ctx *flowmodel.NodeContext, execResp *flowmo
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Fetching user info from OAuth provider", log.String("userInfoEndpoint", o.GetUserInfoEndpoint()))
 
-	userInfo, svcErr := o.authService.FetchUserInfo(o.GetID(), accessToken)
+	idpID, err := o.GetIdpID()
+	if err != nil {
+		return nil, err
+	}
+
+	userInfo, svcErr := o.authService.FetchUserInfo(idpID, accessToken)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure

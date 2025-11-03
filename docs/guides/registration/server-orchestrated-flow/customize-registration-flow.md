@@ -44,8 +44,8 @@ Registration flows can use most authentication executors plus specific registrat
 | Executor | Description | Input Parameters | Properties |
 |----------|-------------|------------------|----------|
 | `BasicAuthExecutor` | Validates username and password for password-based registration | `username`, `password` | |
-| `GoogleOIDCAuthExecutor` | Authenticates users with Google for social registration | `code` (authorization code) | `idpName` (Identity Provider name) |
-| `GithubOAuthExecutor` | Authenticates users with GitHub for social registration | `code` (authorization code) | `idpName` (Identity Provider name) |
+| `GoogleOIDCAuthExecutor` | Authenticates users with Google for social registration | `code` (authorization code) | `idpId` (Identity Provider id) |
+| `GithubOAuthExecutor` | Authenticates users with GitHub for social registration | `code` (authorization code) | `idpId` (Identity Provider id) |
 | `SMSOTPAuthExecutor` | Validates SMS OTP for OTP-based registration | `username`, `otp` | `senderId` (SMS sender ID) |
 | `OUExecutor` | Creates an organizational unit for the registering user. This should be used before the `ProvisioningExecutor` if needed | `ouName`, `ouHandle`, `ouDescription` |
 | `ProvisioningExecutor` | Creates the user account | Various attributes | `ouId` (default OU ID), `userType` (default user type) |
@@ -250,7 +250,9 @@ Here's an example of a registration flow using Google OAuth:
       ],
       "executor": {
         "name": "GoogleOIDCAuthExecutor",
-        "idpName": "Google"
+        "properties": {
+            "idpId": "<google-idp-id>"
+        }
       },
       "next": ["collect_additional_info"]
     },

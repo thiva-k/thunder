@@ -170,3 +170,12 @@ CREATE TABLE CERTIFICATE (
 INSERT INTO NOTIFICATION_SENDER (NAME, SENDER_ID, DESCRIPTION, TYPE, PROVIDER, PROPERTIES) VALUES
 ('Custom SMS Sender', 'test-sms-sender-id', 'Custom SMS sender for integration tests', 'MESSAGE', 'custom', 
 '[{"name":"url","value":"http://localhost:8098/send-sms","is_secret":false},{"name":"http_method","value":"POST","is_secret":false},{"name":"content_type","value":"JSON","is_secret":false}]'::jsonb);
+
+-- Insert pre-configured IDPs for flow authentication tests
+INSERT INTO IDP (IDP_ID, NAME, DESCRIPTION, TYPE, PROPERTIES) VALUES
+('test-google-idp-id', 'Google', 'Google Identity Provider for integration tests', 'GOOGLE',
+'[{"name":"client_id","value":"test_google_client","is_secret":false},{"name":"client_secret","value":"test_google_secret","is_secret":false},{"name":"redirect_uri","value":"https://localhost:3000/google/callback","is_secret":false},{"name":"scopes","value":"openid,email,profile","is_secret":false}]'::jsonb);
+
+INSERT INTO IDP (IDP_ID, NAME, DESCRIPTION, TYPE, PROPERTIES) VALUES
+('test-github-idp-id', 'Github', 'GitHub Identity Provider for integration tests', 'GITHUB',
+'[{"name":"client_id","value":"test_github_client","is_secret":false},{"name":"client_secret","value":"test_github_secret","is_secret":false},{"name":"redirect_uri","value":"https://localhost:3000/github/callback","is_secret":false},{"name":"scopes","value":"user:email,read:user","is_secret":false}]'::jsonb);

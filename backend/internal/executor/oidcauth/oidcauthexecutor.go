@@ -152,6 +152,16 @@ func (o *OIDCAuthExecutor) GetJWKSEndpoint() string {
 	return o.internal.GetJWKSEndpoint()
 }
 
+// GetIdpID retrieves the identity provider ID from executor properties.
+func (o *OIDCAuthExecutor) GetIdpID() (string, error) {
+	return o.internal.GetIdpID()
+}
+
+// GetIDPName returns the idpName from the executor properties.
+func (o *OIDCAuthExecutor) GetIDPName() (string, error) {
+	return o.internal.GetIDPName()
+}
+
 // Execute executes the OIDC authentication logic.
 func (o *OIDCAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
@@ -323,7 +333,12 @@ func (o *OIDCAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext, exec
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Exchanging authorization code for a token", log.String("tokenEndpoint", o.GetTokenEndpoint()))
 
-	tokenResp, svcErr := o.authService.ExchangeCodeForToken(o.GetID(), code, true)
+	idpID, err := o.GetIdpID()
+	if err != nil {
+		return nil, err
+	}
+
+	tokenResp, svcErr := o.authService.ExchangeCodeForToken(idpID, code, true)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure
@@ -358,7 +373,12 @@ func (o *OIDCAuthExecutor) ValidateIDToken(execResp *flowmodel.ExecutorResponse,
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 	logger.Debug("Validating the ID token")
 
-	svcErr := o.authService.ValidateIDToken(o.GetID(), idToken)
+	idpID, err := o.GetIdpID()
+	if err != nil {
+		return err
+	}
+
+	svcErr := o.authService.ValidateIDToken(idpID, idToken)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure

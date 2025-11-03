@@ -34,7 +34,9 @@
             ],
             "executor": {
                 "name": "GoogleOIDCAuthExecutor",
-                "idpName": "Google"
+                "properties": {
+                    "idpId": "<google-idp-id>"
+                }
             },
             "next": [
                 "authenticated"
@@ -45,7 +47,9 @@
             "type": "TASK_EXECUTION",
             "executor": {
                 "name": "GithubOAuthExecutor",
-                "idpName": "Github"
+                "properties": {
+                    "idpId": "<github-idp-id>"
+                }
             },
             "next": [
                 "authenticated"

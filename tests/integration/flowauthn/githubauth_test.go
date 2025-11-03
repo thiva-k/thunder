@@ -50,7 +50,6 @@ var (
 var (
 	githubAuthTestAppID string
 	githubAuthTestOUID  string
-	githubAuthTestIDPID string
 )
 
 type GithubAuthFlowTestSuite struct {
@@ -69,41 +68,6 @@ func (ts *GithubAuthFlowTestSuite) SetupSuite() {
 	}
 	githubAuthTestOUID = ouID
 
-	// Create GitHub IDP for GitHub auth tests
-	githubIDP := testutils.IDP{
-		Name:        "Github",
-		Description: "GitHub Identity Provider for authentication flow testing",
-		Type:        "GITHUB",
-		Properties: []testutils.IDPProperty{
-			{
-				Name:     "client_id",
-				Value:    "test_github_client",
-				IsSecret: false,
-			},
-			{
-				Name:     "client_secret",
-				Value:    "test_github_secret",
-				IsSecret: true,
-			},
-			{
-				Name:     "redirect_uri",
-				Value:    "https://localhost:3000/github/callback",
-				IsSecret: false,
-			},
-			{
-				Name:     "scopes",
-				Value:    "user:email,read:user",
-				IsSecret: false,
-			},
-		},
-	}
-
-	idpID, err := testutils.CreateIDP(githubIDP)
-	if err != nil {
-		ts.T().Fatalf("Failed to create GitHub IDP during setup: %v", err)
-	}
-	githubAuthTestIDPID = idpID
-
 	// Create test application for GitHub auth tests
 	appID, err := testutils.CreateApplication(githubAuthTestApp)
 	if err != nil {
@@ -117,13 +81,6 @@ func (ts *GithubAuthFlowTestSuite) TearDownSuite() {
 	if githubAuthTestAppID != "" {
 		if err := testutils.DeleteApplication(githubAuthTestAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
-		}
-	}
-
-	// Delete GitHub IDP
-	if githubAuthTestIDPID != "" {
-		if err := testutils.DeleteIDP(githubAuthTestIDPID); err != nil {
-			ts.T().Logf("Failed to delete GitHub IDP during teardown: %v", err)
 		}
 	}
 

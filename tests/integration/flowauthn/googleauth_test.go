@@ -50,7 +50,6 @@ var (
 var (
 	googleAuthTestAppID string
 	googleAuthTestOUID  string
-	googleAuthTestIDPID string
 )
 
 type GoogleAuthFlowTestSuite struct {
@@ -69,41 +68,6 @@ func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
 	}
 	googleAuthTestOUID = ouID
 
-	// Create Google IDP for Google auth tests
-	googleIDP := testutils.IDP{
-		Name:        "Google",
-		Description: "Google Identity Provider for authentication flow testing",
-		Type:        "GOOGLE",
-		Properties: []testutils.IDPProperty{
-			{
-				Name:     "client_id",
-				Value:    "test_google_client",
-				IsSecret: false,
-			},
-			{
-				Name:     "client_secret",
-				Value:    "test_google_secret",
-				IsSecret: true,
-			},
-			{
-				Name:     "redirect_uri",
-				Value:    "https://localhost:3000/google/callback",
-				IsSecret: false,
-			},
-			{
-				Name:     "scopes",
-				Value:    "openid,email,profile",
-				IsSecret: false,
-			},
-		},
-	}
-
-	idpID, err := testutils.CreateIDP(googleIDP)
-	if err != nil {
-		ts.T().Fatalf("Failed to create Google IDP during setup: %v", err)
-	}
-	googleAuthTestIDPID = idpID
-
 	// Create test application for Google auth tests
 	appID, err := testutils.CreateApplication(googleAuthTestApp)
 	if err != nil {
@@ -117,13 +81,6 @@ func (ts *GoogleAuthFlowTestSuite) TearDownSuite() {
 	if googleAuthTestAppID != "" {
 		if err := testutils.DeleteApplication(googleAuthTestAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
-		}
-	}
-
-	// Delete Google IDP
-	if googleAuthTestIDPID != "" {
-		if err := testutils.DeleteIDP(googleAuthTestIDPID); err != nil {
-			ts.T().Logf("Failed to delete Google IDP during teardown: %v", err)
 		}
 	}
 
