@@ -165,6 +165,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 🏷️ Update Product Version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "$VERSION" > version.txt
+
       - name: ⚙️ Set up Go Environment
         uses: ./.github/actions/setup-go
 
