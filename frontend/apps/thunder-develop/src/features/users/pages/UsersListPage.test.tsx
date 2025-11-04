@@ -84,18 +84,11 @@ describe('UsersListPage', () => {
     expect(screen.getByText('Manage users, roles, and permissions across your organization')).toBeInTheDocument();
   });
 
-  it('renders refresh button', () => {
+  it('renders create user button', () => {
     render(<UsersListPage />);
 
-    const refreshButton = screen.getByRole('button', {name: /refresh/i});
-    expect(refreshButton).toBeInTheDocument();
-  });
-
-  it('renders add user button', () => {
-    render(<UsersListPage />);
-
-    const addButton = screen.getByRole('button', {name: /add user/i});
-    expect(addButton).toBeInTheDocument();
+    const createButton = screen.getByRole('button', {name: /create user/i});
+    expect(createButton).toBeInTheDocument();
   });
 
   it('renders search input', () => {
@@ -123,12 +116,12 @@ describe('UsersListPage', () => {
     expect(searchInput).toHaveValue('john doe');
   });
 
-  it('navigates to add user page when add button is clicked', async () => {
+  it('navigates to create user page when create button is clicked', async () => {
     const user = userEvent.setup();
     render(<UsersListPage />);
 
-    const addButton = screen.getByRole('button', {name: /add user/i});
-    await user.click(addButton);
+    const createButton = screen.getByRole('button', {name: /create user/i});
+    await user.click(createButton);
 
     expect(mockNavigate).toHaveBeenCalledWith('/users/create');
   });
@@ -194,21 +187,12 @@ describe('UsersListPage', () => {
     expect(usersList).toHaveAttribute('data-schema');
   });
 
-  it('renders refresh icon in refresh button', () => {
+  it('renders plus icon in create user button', () => {
     render(<UsersListPage />);
 
-    const refreshButton = screen.getByRole('button', {name: /refresh/i});
+    const createButton = screen.getByRole('button', {name: /create user/i});
     // Check that button has an icon by checking for svg within the button
-    const icon = refreshButton.querySelector('svg');
-    expect(icon).toBeInTheDocument();
-  });
-
-  it('renders add icon in add user button', () => {
-    render(<UsersListPage />);
-
-    const addButton = screen.getByRole('button', {name: /add user/i});
-    // Check that button has an icon by checking for svg within the button
-    const icon = addButton.querySelector('svg');
+    const icon = createButton.querySelector('svg');
     expect(icon).toBeInTheDocument();
   });
 
@@ -241,17 +225,10 @@ describe('UsersListPage', () => {
     expect(heading).toBeInTheDocument();
   });
 
-  it('refresh button has outlined variant', () => {
+  it('create user button has contained variant', () => {
     render(<UsersListPage />);
 
-    const refreshButton = screen.getByRole('button', {name: /refresh/i});
-    expect(refreshButton).toHaveClass('MuiButton-outlined');
-  });
-
-  it('add user button has contained variant', () => {
-    render(<UsersListPage />);
-
-    const addButton = screen.getByRole('button', {name: /add user/i});
-    expect(addButton).toHaveClass('MuiButton-contained');
+    const createButton = screen.getByRole('button', {name: /create user/i});
+    expect(createButton).toHaveClass('MuiButton-contained');
   });
 });

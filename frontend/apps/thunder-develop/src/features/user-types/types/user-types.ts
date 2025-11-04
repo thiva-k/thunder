@@ -171,12 +171,17 @@ export interface ApiError {
 export type PropertyType = 'string' | 'number' | 'boolean' | 'array' | 'object';
 
 /**
+ * UI property type including 'enum' as a separate option (maps to string with enum values)
+ */
+export type UIPropertyType = PropertyType | 'enum';
+
+/**
  * Schema property input type for create/edit forms
  */
 export interface SchemaPropertyInput {
   id: string;
   name: string;
-  type: PropertyType;
+  type: UIPropertyType;
   required: boolean;
   unique: boolean;
   enum: string[];

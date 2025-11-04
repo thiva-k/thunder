@@ -158,18 +158,21 @@ export default function ViewUserTypePage() {
       // Convert properties to schema definition
       const schema: UserSchemaDefinition = {};
       validProperties.forEach((prop) => {
+        // Convert UI type to actual PropertyType (enum -> string)
+        const actualType: PropertyType = prop.type === 'enum' ? 'string' : prop.type;
+
         const propDef: Partial<PropertyDefinition> = {
-          type: prop.type,
+          type: actualType,
           required: prop.required,
         };
 
-        if (prop.type === 'string' || prop.type === 'number') {
+        if (prop.type === 'string' || prop.type === 'number' || prop.type === 'enum') {
           if (prop.unique) {
             (propDef as {unique?: boolean}).unique = true;
           }
         }
 
-        if (prop.type === 'string') {
+        if (prop.type === 'string' || prop.type === 'enum') {
           if (prop.enum.length > 0) {
             (propDef as {enum?: string[]}).enum = prop.enum;
           }

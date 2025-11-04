@@ -37,7 +37,7 @@ import {
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Plus, Save, X} from 'lucide-react';
 import useCreateUserType from '../api/useCreateUserType';
-import type {PropertyDefinition, UserSchemaDefinition, PropertyType, SchemaPropertyInput} from '../types/user-types';
+import type {PropertyDefinition, UserSchemaDefinition, UIPropertyType, SchemaPropertyInput} from '../types/user-types';
 
 export default function CreateUserTypePage() {
   const navigate = useNavigate();
@@ -96,10 +96,14 @@ export default function CreateUserTypePage() {
               [field]: value,
               // Reset type-specific fields when type changes
               ...(field === 'type' && {
-                enum: [],
+                enum: (value as UIPropertyType) === 'enum' ? prop.enum : [],
                 regex: '',
                 unique:
-                  (value as PropertyType) === 'string' || (value as PropertyType) === 'number' ? prop.unique : false,
+                  (value as UIPropertyType) === 'string' ||
+                  (value as UIPropertyType) === 'number' ||
+                  (value as UIPropertyType) === 'enum'
+                    ? prop.unique
+                    : false,
               }),
             }
           : prop,
@@ -156,20 +160,24 @@ export default function CreateUserTypePage() {
     // Convert properties to schema definition
     const schema: UserSchemaDefinition = {};
     validProperties.forEach((prop) => {
+      // Convert enum type to string type with enum values
+      const actualType = prop.type === 'enum' ? 'string' : prop.type;
+
       const propDef: Partial<PropertyDefinition> = {
-        type: prop.type,
+        type: actualType,
         required: prop.required,
       };
 
       // Add type-specific fields
-      if (prop.type === 'string' || prop.type === 'number') {
+      if (actualType === 'string' || actualType === 'number') {
         if (prop.unique) {
           (propDef as {unique?: boolean}).unique = true;
         }
       }
 
-      if (prop.type === 'string') {
-        if (prop.enum.length > 0) {
+      if (actualType === 'string') {
+        // For enum type or string with enum values, add enum array
+        if (prop.type === 'enum' || prop.enum.length > 0) {
           (propDef as {enum?: string[]}).enum = prop.enum;
         }
         if (prop.regex.trim()) {
@@ -178,9 +186,9 @@ export default function CreateUserTypePage() {
       }
 
       // For array and object types, we'll use basic definitions for now
-      if (prop.type === 'array') {
+      if (actualType === 'array') {
         (propDef as {items?: {type: string}}).items = {type: 'string'};
-      } else if (prop.type === 'object') {
+      } else if (actualType === 'object') {
         (propDef as {properties?: Record<string, PropertyDefinition>}).properties = {};
       }
 
@@ -234,7 +242,7 @@ export default function CreateUserTypePage() {
             Create User Type
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Define a new user type schema for your organization
+            Define a new user type for your organization
           </Typography>
         </Box>
       </Stack>
@@ -264,22 +272,21 @@ export default function CreateUserTypePage() {
           </FormControl>
 
           <Typography variant="h6" gutterBottom sx={{mt: 4, mb: 2}}>
-            Schema Properties
+            User Type Attributes
           </Typography>
 
           {properties.map((property) => (
-            <Paper key={property.id} variant="outlined" sx={{p: 2, mb: 2}}>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                {properties.length > 1 && (
+            <Paper key={property.id} variant="outlined" sx={{px: 2, pt: 2, pb: 4, mb: 2}}>
+              {properties.length > 1 && (
+                <Stack direction="row" justifyContent="flex-end" alignItems="center">
                   <IconButton size="small" color="error" onClick={() => handleRemoveProperty(property.id)}>
                     <X size={16} />
                   </IconButton>
-                )}
-              </Stack>
-
+                </Stack>
+              )}
               <Box sx={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2}}>
                 <FormControl>
-                  <FormLabel>Property Name</FormLabel>
+                  <FormLabel>Attribute Name</FormLabel>
                   <TextField
                     value={property.name}
                     onChange={(e) => handlePropertyChange(property.id, 'name', e.target.value)}
@@ -292,12 +299,13 @@ export default function CreateUserTypePage() {
                   <FormLabel>Type</FormLabel>
                   <Select
                     value={property.type}
-                    onChange={(e) => handlePropertyChange(property.id, 'type', e.target.value as PropertyType)}
+                    onChange={(e) => handlePropertyChange(property.id, 'type', e.target.value as UIPropertyType)}
                     size="small"
                   >
                     <MenuItem value="string">String</MenuItem>
                     <MenuItem value="number">Number</MenuItem>
                     <MenuItem value="boolean">Boolean</MenuItem>
+                    <MenuItem value="enum">Enum</MenuItem>
                     <MenuItem value="array">Array</MenuItem>
                     <MenuItem value="object">Object</MenuItem>
                   </Select>
@@ -314,7 +322,7 @@ export default function CreateUserTypePage() {
                   }
                   label="Required"
                 />
-                {(property.type === 'string' || property.type === 'number') && (
+                {(property.type === 'string' || property.type === 'number' || property.type === 'enum') && (
                   <FormControlLabel
                     control={
                       <Checkbox
@@ -328,71 +336,75 @@ export default function CreateUserTypePage() {
               </Box>
 
               {property.type === 'string' && (
-                <>
-                  <FormControl fullWidth sx={{mt: 2}}>
-                    <FormLabel>Regular Expression Pattern (Optional)</FormLabel>
-                    <TextField
-                      value={property.regex}
-                      onChange={(e) => handlePropertyChange(property.id, 'regex', e.target.value)}
-                      placeholder="e.g., ^[a-zA-Z0-9]+$"
-                      size="small"
-                    />
-                  </FormControl>
+                <FormControl fullWidth sx={{mt: 2}}>
+                  <FormLabel>Regular Expression Pattern (Optional)</FormLabel>
+                  <TextField
+                    value={property.regex}
+                    onChange={(e) => handlePropertyChange(property.id, 'regex', e.target.value)}
+                    placeholder="e.g., ^[a-zA-Z0-9]+$"
+                    size="small"
+                  />
+                </FormControl>
+              )}
 
-                  <FormControl fullWidth sx={{mt: 2}}>
-                    <FormLabel>Allowed Values (Enum) - Optional</FormLabel>
-                    <Box sx={{display: 'flex', gap: 1}}>
-                      <TextField
-                        value={enumInput[property.id] ?? ''}
-                        onChange={(e) => setEnumInput({...enumInput, [property.id]: e.target.value})}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddEnumValue(property.id);
-                          }
-                        }}
-                        placeholder="Add value and press Enter"
-                        size="small"
-                        fullWidth
-                      />
-                      <Button variant="outlined" size="small" onClick={() => handleAddEnumValue(property.id)}>
-                        Add
-                      </Button>
-                    </Box>
-                    {property.enum.length > 0 && (
-                      <Box sx={{mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1}}>
-                        {property.enum.map((val) => (
-                          <Box
-                            key={val}
+              {property.type === 'enum' && (
+                <FormControl fullWidth sx={{mt: 2}}>
+                  <FormLabel>Enum Values</FormLabel>
+                  <Box sx={{display: 'flex', gap: 1}}>
+                    <TextField
+                      value={enumInput[property.id] ?? ''}
+                      onChange={(e) => setEnumInput({...enumInput, [property.id]: e.target.value})}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddEnumValue(property.id);
+                        }
+                      }}
+                      placeholder="Add value and press Enter"
+                      size="small"
+                      fullWidth
+                    />
+                    <Button variant="outlined" size="small" onClick={() => handleAddEnumValue(property.id)}>
+                      Add
+                    </Button>
+                  </Box>
+                  {property.enum.length > 0 && (
+                    <Box sx={{mt: 1, display: 'flex', flexWrap: 'wrap', gap: 1}}>
+                      {property.enum.map((val) => (
+                        <Box
+                          key={val}
+                          sx={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            px: 1.5,
+                            py: 0.5,
+                          }}
+                        >
+                          <Typography variant="body2">{val}</Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleRemoveEnumValue(property.id, val)}
                             sx={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              border: '1px solid #ccc',
-                              borderRadius: 1,
-                              px: 1,
-                              py: 0.5,
+                              ml: 0.5,
+                              border: 'none',
                             }}
                           >
-                            <Typography variant="body2">{val}</Typography>
-                            <IconButton
-                              size="small"
-                              onClick={() => handleRemoveEnumValue(property.id, val)}
-                              sx={{ml: 0.5}}
-                            >
-                              <X size={14} />
-                            </IconButton>
-                          </Box>
-                        ))}
-                      </Box>
-                    )}
-                  </FormControl>
-                </>
+                            <X size={14} />
+                          </IconButton>
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </FormControl>
               )}
             </Paper>
           ))}
 
           <Button variant="outlined" startIcon={<Plus size={16} />} onClick={handleAddProperty} sx={{mb: 3}}>
-            Add Property
+            Add Attribute
           </Button>
 
           {createError && (

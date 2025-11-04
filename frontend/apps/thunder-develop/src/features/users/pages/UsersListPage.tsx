@@ -19,7 +19,7 @@
 import {useNavigate} from 'react-router';
 import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem} from '@wso2/oxygen-ui';
 import {useMemo, useState} from 'react';
-import {Plus, RefreshCw, Search} from 'lucide-react';
+import {Plus, Search} from 'lucide-react';
 import UsersList from '../components/UsersList';
 import useGetUserSchemas from '../api/useGetUserSchemas';
 import type {SchemaInterface} from '../types/users';
@@ -53,9 +53,6 @@ export default function UsersListPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={2}>
-          <Button variant="outlined" startIcon={<RefreshCw size={16} />} onClick={() => window.location.reload()}>
-            Refresh
-          </Button>
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
@@ -68,7 +65,7 @@ export default function UsersListPage() {
               });
             }}
           >
-            Add User
+            Create User
           </Button>
         </Stack>
       </Stack>
@@ -88,8 +85,8 @@ export default function UsersListPage() {
           }}
         />
         <Select
-          id="user-schema-select"
-          label="User Schema"
+          id="user-type-select"
+          label="User Type"
           value={selectedSchema ?? ''}
           size="small"
           sx={{minWidth: 200}}

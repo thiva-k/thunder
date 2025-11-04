@@ -62,7 +62,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     expect(screen.getByRole('heading', {name: 'Create User Type'})).toBeInTheDocument();
-    expect(screen.getByText('Define a new user type schema for your organization')).toBeInTheDocument();
+    expect(screen.getByText('Define a new user type for your organization')).toBeInTheDocument();
     expect(screen.getByLabelText(/User Type Name/i)).toBeInTheDocument();
   });
 
@@ -104,7 +104,7 @@ describe('CreateUserTypePage', () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
 
-    const addButton = screen.getByRole('button', {name: /add property/i});
+    const addButton = screen.getByRole('button', {name: /add attribute/i});
     await user.click(addButton);
   });
 
@@ -113,7 +113,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     // Add a second property first
-    const addButton = screen.getByRole('button', {name: /add property/i});
+    const addButton = screen.getByRole('button', {name: /add attribute/i});
     await user.click(addButton);
 
     // Now remove the second property - find the X icon button
@@ -192,7 +192,7 @@ describe('CreateUserTypePage', () => {
     await user.type(firstPropertyInput, 'email');
 
     // Add second property
-    const addButton = screen.getByRole('button', {name: /add property/i});
+    const addButton = screen.getByRole('button', {name: /add attribute/i});
     await user.click(addButton);
 
     // Set same name for second property
@@ -264,9 +264,15 @@ describe('CreateUserTypePage', () => {
     expect(regexInput).toHaveValue('^[a-z]+$');
   });
 
-  it('allows adding enum values for string type', async () => {
+  it('allows adding enum values for enum type', async () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
+
+    // Change type to enum
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const enumOption = await screen.findByText('Enum');
+    await user.click(enumOption);
 
     const enumInput = screen.getByPlaceholderText(/Add value and press Enter/i);
     await user.type(enumInput, 'admin');
@@ -285,6 +291,12 @@ describe('CreateUserTypePage', () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
 
+    // Change type to enum
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const enumOption = await screen.findByText('Enum');
+    await user.click(enumOption);
+
     const enumInput = screen.getByPlaceholderText(/Add value and press Enter/i);
     await user.type(enumInput, 'user{Enter}');
 
@@ -298,6 +310,12 @@ describe('CreateUserTypePage', () => {
   it('allows removing enum values', async () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
+
+    // Change type to enum
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const enumOption = await screen.findByText('Enum');
+    await user.click(enumOption);
 
     const enumInput = screen.getByPlaceholderText(/Add value and press Enter/i);
     await user.type(enumInput, 'admin{Enter}');
@@ -411,7 +429,7 @@ describe('CreateUserTypePage', () => {
     });
   });
 
-  it('creates schema with all property types correctly', async () => {
+  it('creates schema with enum property correctly', async () => {
     const user = userEvent.setup();
     mockCreateUserType.mockResolvedValue(undefined);
 
@@ -421,7 +439,13 @@ describe('CreateUserTypePage', () => {
     const nameInput = screen.getByLabelText(/User Type Name/i);
     await user.type(nameInput, 'Complex Type');
 
-    // Add string property with all features
+    // Change type to enum
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const enumOption = await screen.findByText('Enum');
+    await user.click(enumOption);
+
+    // Add enum property with all features
     const firstPropertyInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
     await user.type(firstPropertyInput, 'status');
 
@@ -430,10 +454,6 @@ describe('CreateUserTypePage', () => {
 
     const uniqueCheckbox = screen.getByRole('checkbox', {name: /unique/i});
     await user.click(uniqueCheckbox);
-
-    const regexInput = screen.getByPlaceholderText(/e.g., \^/i);
-    await user.click(regexInput);
-    await user.paste('^[A-Z]+$');
 
     const enumInput = screen.getByPlaceholderText(/Add value and press Enter/i);
     await user.type(enumInput, 'ACTIVE{Enter}');
@@ -451,7 +471,6 @@ describe('CreateUserTypePage', () => {
             type: 'string',
             required: true,
             unique: true,
-            regex: '^[A-Z]+$',
             enum: ['ACTIVE', 'INACTIVE'],
           },
         },
@@ -463,7 +482,13 @@ describe('CreateUserTypePage', () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
 
-    // Add enum value for string type
+    // Change type to enum first
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const enumTypeOption = await screen.findByText('Enum');
+    await user.click(enumTypeOption);
+
+    // Add enum value for enum type
     const enumInput = screen.getByPlaceholderText(/Add value and press Enter/i);
     await user.type(enumInput, 'test{Enter}');
 
@@ -472,7 +497,6 @@ describe('CreateUserTypePage', () => {
     });
 
     // Change type to number
-    const typeSelect = screen.getByRole('combobox');
     await user.click(typeSelect);
 
     const numberOption = await screen.findByText('Number');
