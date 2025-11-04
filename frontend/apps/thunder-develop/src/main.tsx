@@ -19,18 +19,23 @@
 import * as ReactDOM from 'react-dom/client';
 import {StrictMode} from 'react';
 import {ConfigProvider} from '@thunder/commons-contexts';
-import {initI18n} from '@thunder/i18n';
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
+import i18n from 'i18next';
+import {initReactI18next} from 'react-i18next';
+import enUS from '@thunder/i18n/locales/en-US';
 import AppWithConfig from './AppWithConfig';
 
 // Initialize i18n before rendering the app
-await initI18n({
-  translations: {en, si},
-  options: {
-    defaultLanguage: 'si',
-    debug: import.meta.env.DEV,
+await i18n.use(initReactI18next).init({
+  resources: {
+    'en-US': enUS,
   },
+  lng: 'en-US',
+  fallbackLng: 'en-US',
+  defaultNS: 'common',
+  interpolation: {
+    escapeValue: false, // React already escapes by default
+  },
+  debug: import.meta.env.DEV,
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -47,6 +47,7 @@
     "@wso2/oxygen-ui": "workspace:^",
     "clsx": "catalog:",
     "dayjs": "catalog:",
+    "i18next": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -69,6 +70,7 @@
     "babel-plugin-react-compiler": "catalog:",
     "eslint": "catalog:",
     "jsdom": "catalog:",
+    "rollup-plugin-visualizer": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:"

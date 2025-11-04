@@ -1,7 +1,7 @@
 {
   "name": "@thunder/i18n",
   "version": "0.1.0",
-  "description": "Internationalization package for Thunder applications using react-i18next",
+  "description": "Translation resources for Thunder applications",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -12,61 +12,24 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
-    "./locales/en": {
-      "types": "./dist/locales/en/index.d.ts",
-      "import": "./dist/locales/en/index.js",
-      "require": "./dist/locales/en/index.cjs"
-    },
-    "./locales/si": {
-      "types": "./dist/locales/si/index.d.ts",
-      "import": "./dist/locales/si/index.js",
-      "require": "./dist/locales/si/index.cjs"
-    },
-    "./locales/en/namespaces/common": {
-      "types": "./dist/locales/en/namespaces/common.d.ts",
-      "import": "./dist/locales/en/namespaces/common.js",
-      "require": "./dist/locales/en/namespaces/common.cjs"
-    },
-    "./locales/en/namespaces/develop": {
-      "types": "./dist/locales/en/namespaces/develop.d.ts",
-      "import": "./dist/locales/en/namespaces/develop.js",
-      "require": "./dist/locales/en/namespaces/develop.cjs"
-    },
-    "./locales/en/namespaces/gate": {
-      "types": "./dist/locales/en/namespaces/gate.d.ts",
-      "import": "./dist/locales/en/namespaces/gate.js",
-      "require": "./dist/locales/en/namespaces/gate.cjs"
-    },
-    "./locales/si/namespaces/common": {
-      "types": "./dist/locales/si/namespaces/common.d.ts",
-      "import": "./dist/locales/si/namespaces/common.js",
-      "require": "./dist/locales/si/namespaces/common.cjs"
-    },
-    "./locales/si/namespaces/develop": {
-      "types": "./dist/locales/si/namespaces/develop.d.ts",
-      "import": "./dist/locales/si/namespaces/develop.js",
-      "require": "./dist/locales/si/namespaces/develop.cjs"
-    },
-    "./locales/si/namespaces/gate": {
-      "types": "./dist/locales/si/namespaces/gate.d.ts",
-      "import": "./dist/locales/si/namespaces/gate.js",
-      "require": "./dist/locales/si/namespaces/gate.cjs"
+    "./locales/en-US": {
+      "types": "./dist/locales/en-US.d.ts",
+      "import": "./dist/locales/en-US.js",
+      "require": "./dist/locales/en-US.cjs"
     }
   },
   "sideEffects": false,
   "scripts": {
-    "build": "rolldown --config rolldown.config.js",
+    "build": "tsc -p tsconfig.lib.json --emitDeclarationOnly && rolldown --config rolldown.config.js",
     "dev": "rolldown --config rolldown.config.js --watch",
-    "lint": "eslint src --ext .ts,.tsx",
+    "lint": "eslint src",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": {
-    "i18next": "catalog:",
-    "react-i18next": "catalog:"
-  },
   "peerDependencies": {
+    "i18next": "catalog:",
     "react": "catalog:",
-    "react-dom": "catalog:"
+    "react-dom": "catalog:",
+    "react-i18next": "catalog:"
   },
   "devDependencies": {
     "@thunder/eslint-plugin-thunder": "workspace:^",

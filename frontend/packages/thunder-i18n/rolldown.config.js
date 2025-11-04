@@ -21,22 +21,15 @@ import {readFileSync} from 'fs';
 import {join, dirname} from 'path';
 import {fileURLToPath} from 'url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const pkg = JSON.parse(readFileSync(join(__dirname, 'package.json'), 'utf8'));
+const currentDir = dirname(fileURLToPath(import.meta.url));
+const pkg = JSON.parse(readFileSync(join(currentDir, 'package.json'), 'utf8'));
 
-const external = [
-  ...Object.keys(pkg.dependencies || {}),
-  ...Object.keys(pkg.peerDependencies || {}),
-  'react/jsx-runtime',
-  // Needed to avoid hook ordering issues.
-  /^@mui\//,
-];
+const external = [...Object.keys(pkg.dependencies || {}), ...Object.keys(pkg.peerDependencies || {})];
 
 const commonOptions = {
   input: {
     index: join('src', 'index.ts'),
-    'locales/en/index': join('src', 'locales', 'en', 'index.ts'),
-    'locales/si/index': join('src', 'locales', 'si', 'index.ts'),
+    'locales/en-US': join('src', 'locales', 'en-US.ts'),
   },
   external,
   target: 'es2020',

@@ -36,7 +36,7 @@ import {
   Snackbar,
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Plus, Save, X} from 'lucide-react';
-import {useTranslation} from '@thunder/i18n';
+import {useTranslation} from 'react-i18next';
 import useCreateUserType from '../api/useCreateUserType';
 import type {PropertyDefinition, UserSchemaDefinition, UIPropertyType, SchemaPropertyInput} from '../types/user-types';
 
@@ -138,14 +138,14 @@ export default function CreateUserTypePage() {
 
     // Validate
     if (!name.trim()) {
-      setValidationError(t('develop:userTypes.validationErrors.nameRequired'));
+      setValidationError(t('userTypes:validationErrors.nameRequired'));
       setSnackbarOpen(true);
       return;
     }
 
     const validProperties = properties.filter((prop) => prop.name.trim());
     if (validProperties.length === 0) {
-      setValidationError(t('develop:userTypes.validationErrors.propertiesRequired'));
+      setValidationError(t('userTypes:validationErrors.propertiesRequired'));
       setSnackbarOpen(true);
       return;
     }
@@ -154,7 +154,7 @@ export default function CreateUserTypePage() {
     const propertyNames = validProperties.map((prop) => prop.name.trim());
     const duplicates = propertyNames.filter((propName, index) => propertyNames.indexOf(propName) !== index);
     if (duplicates.length > 0) {
-      setValidationError(t('develop:userTypes.validationErrors.duplicateProperties', {duplicates: duplicates.join(', ')}));
+      setValidationError(t('userTypes:validationErrors.duplicateProperties', {duplicates: duplicates.join(', ')}));
       setSnackbarOpen(true);
       return;
     }
@@ -241,10 +241,10 @@ export default function CreateUserTypePage() {
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={4} gap={2}>
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
-            {t('develop:userTypes.addUserType')}
+            {t('userTypes:addUserType')}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {t('develop:userTypes.createDescription')}
+            {t('userTypes:createDescription')}
           </Typography>
         </Box>
       </Stack>
@@ -261,20 +261,20 @@ export default function CreateUserTypePage() {
         >
           <FormControl fullWidth sx={{mb: 3}}>
             <FormLabel htmlFor="name">
-              {t('develop:userTypes.typeName')} <span style={{color: 'red'}}>*</span>
+              {t('userTypes:typeName')} <span style={{color: 'red'}}>*</span>
             </FormLabel>
             <TextField
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder={t('develop:userTypes.typeNamePlaceholder')}
+              placeholder={t('userTypes:typeNamePlaceholder')}
               required
               variant="outlined"
             />
           </FormControl>
 
           <Typography variant="h6" gutterBottom sx={{mt: 4, mb: 2}}>
-            {t('develop:userTypes.schemaProperties')}
+            {t('userTypes:schemaProperties')}
           </Typography>
 
           {properties.map((property) => (
@@ -288,28 +288,28 @@ export default function CreateUserTypePage() {
               )}
               <Box sx={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2}}>
                 <FormControl>
-                  <FormLabel>{t('develop:userTypes.propertyName')}</FormLabel>
+                  <FormLabel>{t('userTypes:propertyName')}</FormLabel>
                   <TextField
                     value={property.name}
                     onChange={(e) => handlePropertyChange(property.id, 'name', e.target.value)}
-                    placeholder={t('develop:userTypes.propertyNamePlaceholder')}
+                    placeholder={t('userTypes:propertyNamePlaceholder')}
                     size="small"
                   />
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel>{t('develop:userTypes.propertyType')}</FormLabel>
+                  <FormLabel>{t('userTypes:propertyType')}</FormLabel>
                   <Select
                     value={property.type}
                     onChange={(e) => handlePropertyChange(property.id, 'type', e.target.value as UIPropertyType)}
                     size="small"
                   >
-                    <MenuItem value="string">{t('develop:userTypes.types.string')}</MenuItem>
-                    <MenuItem value="number">{t('develop:userTypes.types.number')}</MenuItem>
-                    <MenuItem value="boolean">{t('develop:userTypes.types.boolean')}</MenuItem>
-                    <MenuItem value="enum">{t('develop:userTypes.types.enum')}</MenuItem>
-                    <MenuItem value="array">{t('develop:userTypes.types.array')}</MenuItem>
-                    <MenuItem value="object">{t('develop:userTypes.types.object')}</MenuItem>
+                    <MenuItem value="string">{t('userTypes:types.string')}</MenuItem>
+                    <MenuItem value="number">{t('userTypes:types.number')}</MenuItem>
+                    <MenuItem value="boolean">{t('userTypes:types.boolean')}</MenuItem>
+                    <MenuItem value="enum">{t('userTypes:types.enum')}</MenuItem>
+                    <MenuItem value="array">{t('userTypes:types.array')}</MenuItem>
+                    <MenuItem value="object">{t('userTypes:types.object')}</MenuItem>
                   </Select>
                 </FormControl>
               </Box>
@@ -332,18 +332,18 @@ export default function CreateUserTypePage() {
                         onChange={(e) => handlePropertyChange(property.id, 'unique', e.target.checked)}
                       />
                     }
-                    label={t('develop:userTypes.unique')}
+                    label={t('userTypes:unique')}
                   />
                 )}
               </Box>
 
               {property.type === 'string' && (
                 <FormControl fullWidth sx={{mt: 2}}>
-                  <FormLabel>{t('develop:userTypes.regexPattern')}</FormLabel>
+                  <FormLabel>{t('userTypes:regexPattern')}</FormLabel>
                   <TextField
                     value={property.regex}
                     onChange={(e) => handlePropertyChange(property.id, 'regex', e.target.value)}
-                    placeholder={t('develop:userTypes.regexPlaceholder')}
+                    placeholder={t('userTypes:regexPlaceholder')}
                     size="small"
                   />
                 </FormControl>
@@ -351,7 +351,7 @@ export default function CreateUserTypePage() {
 
               {property.type === 'enum' && (
                 <FormControl fullWidth sx={{mt: 2}}>
-                  <FormLabel>{t('develop:userTypes.enumValues')}</FormLabel>
+                  <FormLabel>{t('userTypes:enumValues')}</FormLabel>
                   <Box sx={{display: 'flex', gap: 1}}>
                     <TextField
                       value={enumInput[property.id] ?? ''}
@@ -362,7 +362,7 @@ export default function CreateUserTypePage() {
                           handleAddEnumValue(property.id);
                         }
                       }}
-                      placeholder={t('develop:userTypes.enumPlaceholder')}
+                      placeholder={t('userTypes:enumPlaceholder')}
                       size="small"
                       fullWidth
                     />
@@ -406,7 +406,7 @@ export default function CreateUserTypePage() {
           ))}
 
           <Button variant="outlined" startIcon={<Plus size={16} />} onClick={handleAddProperty} sx={{mb: 3}}>
-            {t('develop:userTypes.addProperty')}
+            {t('userTypes:addProperty')}
           </Button>
 
           {createError && (
@@ -432,7 +432,7 @@ export default function CreateUserTypePage() {
               {t('common:actions.cancel')}
             </Button>
             <Button type="submit" variant="contained" disabled={loading} startIcon={<Save size={16} />}>
-              {loading ? t('common:status.saving') : t('develop:userTypes.createUserType')}
+              {loading ? t('common:status.saving') : t('userTypes:createUserType')}
             </Button>
           </Stack>
         </Box>

@@ -17,81 +17,57 @@
  */
 
 /**
- * Thunder i18n - Internationalization package for Thunder applications
+ * Thunder i18n - Translation resources for Thunder applications
  *
- * This package provides a complete i18n solution using react-i18next with:
- * - Tree-shakable translation files
- * - TypeScript support with type-safe translation keys
- * - Language detection and persistence
- * - React hooks for easy integration
- * - Formatting utilities for dates, numbers, and currency
+ * This package provides translation resources organized by language and namespace.
+ * Applications should use react-i18next directly for i18n functionality.
  *
- * @example Basic usage in an app
+ * @example Using translations with react-i18next
  * ```tsx
- * import { initI18n } from '@thunder/i18n';
- * import en from '@thunder/i18n/locales/en';
- * import si from '@thunder/i18n/locales/si';
+ * import i18n from 'i18next';
+ * import { initReactI18next } from 'react-i18next';
+ * import enUS from '@thunder/i18n/locales/en-US';
  *
- * // Initialize i18n
- * await initI18n({
- *   translations: { en, si },
- *   options: {
- *     defaultLanguage: 'en',
- *     debug: process.env.NODE_ENV === 'development'
- *   }
- * });
+ * i18n
+ *   .use(initReactI18next)
+ *   .init({
+ *     resources: {
+ *       'en-US': {
+ *         common: enUS.common,
+ *         develop: enUS.develop,
+ *         gate: enUS.gate,
+ *       },
+ *     },
+ *     lng: 'en-US',
+ *     fallbackLng: 'en-US',
+ *     defaultNS: 'common',
+ *     interpolation: {
+ *       escapeValue: false,
+ *     },
+ *   });
  * ```
  *
- * @example Using in components
+ * @example Using in components with react-i18next
  * ```tsx
  * import { useTranslation } from 'react-i18next';
- * import { useLanguage } from '@thunder/i18n';
  *
  * function MyComponent() {
- *   const { t } = useTranslation();
- *   const { currentLanguage, setLanguage } = useLanguage();
- *
- *   return (
- *     <div>
- *       <h1>{t('common.navigation.home')}</h1>
- *       <button onClick={() => setLanguage('si')}>සිංහල</button>
- *     </div>
- *   );
+ *   const { t } = useTranslation('common');
+ *   return <h1>{t('actions.save')}</h1>;
  * }
  * ```
- *
- * @packageDocumentation
  */
 
-// Core initialization and utilities
-export {
-  initI18n,
-  changeLanguage,
-  getCurrentLanguage,
-  getAvailableLanguages,
-  detectLanguage,
-  saveLanguage,
-  formatDate,
-  formatNumber,
-  formatCurrency,
-} from './utils/i18n';
+// Export translation resources
+export {default as enUS} from './locales/en-US';
 
-// React hooks
-export {useLanguage} from './hooks';
-
-// TypeScript types
+// Export types and models
 export type {
-  SupportedLanguage,
   TranslationResources,
-  TranslationKey,
-  TranslationNamespace,
-  I18nOptions,
+  SupportedLanguage,
   LanguageConfig,
-  Translations,
-} from './types';
+  ResourceValue,
+  NamespaceResources,
+} from './models';
 
-export {LANGUAGE_CONFIGS, isSupportedLanguage} from './types';
-
-// Re-export commonly used react-i18next hooks and components
-export {useTranslation, Trans, Translation} from 'react-i18next';
-export type {TFunction} from 'i18next';
+export {LANGUAGE_CONFIGS, isSupportedLanguage} from './models';

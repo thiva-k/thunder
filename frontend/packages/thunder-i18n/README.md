@@ -1,15 +1,12 @@
 # @thunder/i18n
 
-Internationalization (i18n) package for Thunder applications using react-i18next with full TypeScript support and tree-shaking capabilities.
+Internationalization (i18n) package for Thunder applications using react-i18next with full TypeScript support.
 
 ## Features
 
-- **Tree-shakable translations** - Import only the languages you need
 - **Type-safe translations** - Full TypeScript support with autocomplete
-- **React hooks** - Easy-to-use hooks for language switching
-- **Language persistence** - Automatically saves user's language preference
-- **Browser detection** - Detects user's preferred language from browser settings
-- **Formatting utilities** - Built-in date, number, and currency formatting
+- **React hooks** - Easy-to-use hooks for translations
+- **Namespace organization** - Organized by app and feature for better maintainability
 - **Multiple apps support** - Shared translations for develop, gate, and other Thunder apps
 
 ## Installation
@@ -20,41 +17,59 @@ Since this is a workspace package, install dependencies from the root:
 pnpm install
 ```
 
-## Usage
+## Quick Start
 
-### 1. Initialize i18n in your app
+### 1. Add Package Dependency
+
+Add the package to your app's `package.json`:
+
+```json
+{
+  "dependencies": {
+    "@thunder/i18n": "workspace:^"
+  }
+}
+```
+
+### 2. Initialize i18n in Your App
 
 In your app's entry point (e.g., `main.tsx`):
 
 ```tsx
-import { initI18n } from '@thunder/i18n';
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enUS from '@thunder/i18n/locales/en-US';
 
 // Initialize i18n before rendering your app
-await initI18n({
-  translations: { en, si },
-  options: {
-    defaultLanguage: 'en',
-    debug: process.env.NODE_ENV === 'development',
+await i18n.use(initReactI18next).init({
+  resources: {
+    'en-US': enUS,
   },
+  lng: 'en-US',
+  fallbackLng: 'en-US',
+  defaultNS: 'common',
+  interpolation: {
+    escapeValue: false, // React already escapes by default
+  },
+  debug: import.meta.env.DEV,
 });
 
 // Then render your app
 root.render(<App />);
 ```
 
-### 2. Use translations in components
+
+### 3. Use Translations in Components
 
 ```tsx
-import { useTranslation } from '@thunder/i18n';
+import { useTranslation } from 'react-i18next';
 
 function MyComponent() {
   const { t } = useTranslation();
 
   return (
     <div>
-      <h1>{t('common.navigation.home')}</h1>
+      <h1>{t('navigation.home')}</h1>
       <p>{t('common.messages.welcomeMessage')}</p>
       <button>{t('common.actions.save')}</button>
     </div>
@@ -62,164 +77,205 @@ function MyComponent() {
 }
 ```
 
-### 3. Language switching
+### 4. Using Translation Namespaces
 
-```tsx
-import { useLanguage } from '@thunder/i18n';
-
-function LanguageSwitcher() {
-  const { currentLanguage, availableLanguages, setLanguage } = useLanguage();
-
-  return (
-    <select
-      value={currentLanguage}
-      onChange={(e) => setLanguage(e.target.value as 'en' | 'si')}
-    >
-      {availableLanguages.map((lang) => (
-        <option key={lang.code} value={lang.code}>
-          {lang.nativeName}
-        </option>
-      ))}
-    </select>
-  );
-}
-```
-
-### 4. Using translation namespaces
-
-The translations are organized by app and feature:
+The translations are organized by namespace for better modularity:
 
 ```tsx
 // Common translations (shared across all apps)
+const { t } = useTranslation('common');
+t('actions.save')
+t('status.loading')
+t('form.email')
+
+// Navigation translations
+const { t } = useTranslation('navigation');
+t('home')
+t('users')
+t('applications')
+
+// Users translations
+const { t } = useTranslation('users');
+t('title')
+t('addUser')
+t('firstName')
+
+// Or use the default namespace and specify the full path
+const { t } = useTranslation();
 t('common.actions.save')
-t('common.status.loading')
-t('common.form.email')
-
-// Thunder Develop app
-t('develop.users.title')
-t('develop.applications.addApplication')
-t('develop.dashboard.welcomeMessage')
-
-// Thunder Gate app
-t('gate.auth.signIn')
-t('gate.mfa.setupMfa')
-t('gate.consent.title')
-```
-
-### 5. Formatting utilities
-
-```tsx
-import { formatDate, formatNumber, formatCurrency } from '@thunder/i18n';
-
-// Format dates
-const date = formatDate(new Date(), { dateStyle: 'long' });
-
-// Format numbers
-const number = formatNumber(1234567.89);
-
-// Format currency
-const price = formatCurrency(99.99, 'USD');
-```
-
-### 6. Advanced: Using Trans component for complex translations
-
-```tsx
-import { Trans } from '@thunder/i18n';
-
-function Component() {
-  return (
-    <Trans i18nKey="common.messages.welcome">
-      Welcome <strong>{{ name: user.name }}</strong>!
-    </Trans>
-  );
-}
+t('navigation.home')
+t('users.title')
 ```
 
 ## Translation Structure
 
-Translations are organized into **namespaces** for better modularity and tree-shaking:
-
-### Namespace Organization
+All translations are organized into a single file per locale with **namespaces** for better modularity:
 
 ```
 src/locales/
-├── en/
-│   ├── index.ts                  # Main export (combines all namespaces)
-│   └── namespaces/
-│       ├── common.ts             # Shared across all apps
-│       ├── develop.ts            # Thunder Develop app
-│       └── gate.ts               # Thunder Gate app
-└── si/
-    ├── index.ts                  # Main export (combines all namespaces)
-    └── namespaces/
-        ├── common.ts             # Shared across all apps
-        ├── develop.ts            # Thunder Develop app
-        └── gate.ts               # Thunder Gate app
+└── en-US.ts                    # English (US) translations with all namespaces
+```
+
+### Current Locale Structure
+
+The `en-US.ts` file contains all namespaces organized by feature:
+
+```typescript
+const translations = {
+  common: { /* Common shared translations */ },
+  navigation: { /* Navigation items */ },
+  users: { /* User management */ },
+  userTypes: { /* User type management */ },
+  integrations: { /* Integration management */ },
+  applications: { /* Application management */ },
+  dashboard: { /* Dashboard content */ },
+  auth: { /* Authentication flows */ },
+  mfa: { /* Multi-factor authentication */ },
+  social: { /* Social login */ },
+  consent: { /* Consent management */ },
+  errors: { /* Error messages */ },
+};
 ```
 
 ### Namespace Details
 
-**`common` namespace** - Shared across all Thunder applications:
-- `actions` - Action buttons (save, cancel, etc.)
-- `status` - Status messages (loading, error, etc.)
-- `form` - Form labels and validation
+**`common`** - Shared translations across all Thunder applications:
+- `actions` - Action buttons (save, cancel, delete, etc.)
+- `status` - Status messages (loading, success, error, etc.)
+- `form` - Form labels and placeholders
 - `messages` - Common messages
-- `navigation` - Navigation items
+- `validation` - Form validation messages
+- `time` - Time-related labels
 
-**`develop` namespace** - Thunder Develop application:
-- `pages` - Page titles
-- `users` - User management
-- `userTypes` - User type management
-- `integrations` - Integration management
-- `applications` - Application management
-- `dashboard` - Dashboard content
+**`navigation`** - Navigation menu items:
+- Dashboard, Users, Applications, Integrations, etc.
 
-**`gate` namespace** - Thunder Gate application:
-- `auth` - Authentication flows
-- `mfa` - Multi-factor authentication
-- `social` - Social login
-- `consent` - Consent management
-- `errors` - Error messages
+**`users`** - User management features:
+- User listing, creation, editing
+- User attributes and properties
 
-### Selective Namespace Imports
+**`userTypes`** - User type management features
 
-You can import individual namespaces for better tree-shaking:
+**`integrations`** - Integration management features
 
-```tsx
-// Import only the common namespace for English
-import { common as commonEn } from '@thunder/i18n/locales/en/namespaces/common';
-import { common as commonSi } from '@thunder/i18n/locales/si/namespaces/common';
+**`applications`** - Application management features
 
-// Import only develop namespace
-import { develop as developEn } from '@thunder/i18n/locales/en/namespaces/develop';
-import { develop as developSi } from '@thunder/i18n/locales/si/namespaces/develop';
+**`dashboard`** - Dashboard-specific content
 
-// Use them in initialization
-await initI18n({
-  translations: {
-    en: { common: commonEn, develop: developEn },
-    si: { common: commonSi, develop: developSi },
-  },
-});
-```
+**`auth`** - Authentication flows (for Thunder Gate):
+- Sign in, sign up, password flows
 
-This approach allows apps to only bundle the translations they actually use!
+**`mfa`** - Multi-factor authentication (for Thunder Gate)
+
+**`social`** - Social login providers (for Thunder Gate)
+
+**`consent`** - Consent management (for Thunder Gate)
+
+**`errors`** - Error messages and error states
 
 ## Supported Languages
 
-- **English (en)** - Default language
-- **Sinhala (si)** - සිංහල
+- **English (en-US)** - Default language
 
-## Configuration Options
+> **Note**: Additional language support (such as Sinhala, Spanish, etc.) can be added in the future by creating new locale files following the same namespace structure.
+
+## Usage Examples
+
+### Example: Thunder Develop - Users Page
 
 ```tsx
-interface I18nOptions {
-  defaultLanguage?: 'en' | 'si';        // Default: 'en'
-  fallbackLanguage?: 'en' | 'si';       // Default: 'en'
-  debug?: boolean;                       // Default: false
-  namespace?: string;                    // Default: 'translation'
-  detectLanguage?: boolean;              // Default: true
-  storageKey?: string;                   // Default: 'thunder-language'
+import { useTranslation } from 'react-i18next';
+import { Button, Typography } from '@mui/material';
+
+export function UsersPage() {
+  const { t } = useTranslation('users');
+
+  return (
+    <div>
+      <Typography variant="h4">{t('title')}</Typography>
+      <Button variant="contained">{t('addUser')}</Button>
+
+      {/* Table with translated headers */}
+      <table>
+        <thead>
+          <tr>
+            <th>{t('firstName')}</th>
+            <th>{t('lastName')}</th>
+            <th>{t('email')}</th>
+            <th>{t('role')}</th>
+            <th>{t('status')}</th>
+            <th>{t('actions')}</th>
+          </tr>
+        </thead>
+      </table>
+    </div>
+  );
+}
+```
+
+### Example: Thunder Gate - Sign In Page
+
+```tsx
+import { useTranslation } from 'react-i18next';
+import { Button, TextField, Typography } from '@mui/material';
+
+export function SignInPage() {
+  const { t } = useTranslation('auth');
+
+  return (
+    <div>
+      <Typography variant="h4">{t('welcomeBack')}</Typography>
+      <Typography variant="h5">{t('signIn')}</Typography>
+
+      <TextField
+        label={t('common:form.email')}
+        placeholder={t('enterEmail')}
+        required
+      />
+      <TextField
+        type="password"
+        label={t('common:form.password')}
+        placeholder={t('enterPassword')}
+        required
+      />
+
+      <Button variant="contained">{t('signIn')}</Button>
+      <Button variant="text">{t('forgotPassword')}</Button>
+    </div>
+  );
+}
+```
+
+### Example: Form Validation
+
+```tsx
+import { useTranslation } from 'react-i18next';
+import { useForm } from 'react-hook-form';
+
+export function UserForm() {
+  const { t } = useTranslation('common');
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  return (
+    <form>
+      <input
+        {...register('email', {
+          required: t('validation.required'),
+          pattern: {
+            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+            message: t('validation.invalidEmail'),
+          },
+        })}
+      />
+      {errors.email && <span>{errors.email.message}</span>}
+
+      <button type="submit">{t('actions.submit')}</button>
+    </form>
+  );
 }
 ```
 
@@ -230,83 +286,104 @@ This package is fully typed. You'll get autocomplete for all translation keys:
 ```tsx
 // ✅ TypeScript will autocomplete these
 t('common.actions.save')
-t('develop.users.title')
-t('gate.auth.signIn')
+t('users.title')
+t('auth.signIn')
 
 // ❌ TypeScript will error on invalid keys
 t('common.invalid.key')  // Error: Key does not exist
 ```
 
-## Tree Shaking
-
-Import only the languages you need to reduce bundle size:
-
-```tsx
-// Import only English
-import en from '@thunder/i18n/locales/en';
-
-await initI18n({
-  translations: { en },
-});
-
-// Or import specific languages as needed
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
-
-await initI18n({
-  translations: { en, si },
-});
-```
-
 ## Adding New Translations
 
-Translations are now organized by namespaces. To add new translations:
+To add new translations:
 
-### 1. Choose the appropriate namespace
+### 1. Edit the locale file
 
-- Add to `common` namespace if the translation is shared across multiple apps
-- Add to `develop` namespace for Thunder Develop-specific features
-- Add to `gate` namespace for Thunder Gate-specific features
-
-### 2. Add translations to both languages
-
-Edit the namespace files for both English and Sinhala:
+Edit `src/locales/en-US.ts` and add your new translations to the appropriate namespace:
 
 ```tsx
-// src/locales/en/namespaces/common.ts
-export const common = {
-  // ... existing translations
-  newFeature: {
-    title: 'New Feature',
-    description: 'This is a new feature',
+const translations = {
+  common: {
+    // ... existing translations
+    newFeature: {
+      title: 'New Feature',
+      description: 'This is a new feature',
+    },
   },
-} as const;
-
-// src/locales/si/namespaces/common.ts
-export const common = {
-  // ... existing translations
-  newFeature: {
-    title: 'නව විශේෂාංගය',
-    description: 'මෙය නව විශේෂාංගයකි',
-  },
+  // ... other namespaces
 } as const;
 ```
 
-### 3. Rebuild the package
+### 2. Rebuild the package
 
 ```bash
 cd packages/thunder-i18n
 pnpm build
-pnpm tsc -p tsconfig.lib.json --emitDeclarationOnly
 ```
 
 TypeScript will automatically pick up the new keys and provide autocomplete!
 
-### 4. Use the new translation
+### 3. Use the new translation
 
 ```tsx
-const { t } = useTranslation();
-<h1>{t('common.newFeature.title')}</h1>
+const { t } = useTranslation('common');
+<h1>{t('newFeature.title')}</h1>
+```
+
+## Adding New Languages (Future)
+
+To add support for additional languages:
+
+### 1. Create a new locale file
+
+Create a new file in `src/locales/` (e.g., `si-LK.ts` for Sinhala):
+
+```tsx
+const translations = {
+  common: {
+    actions: {
+      add: 'එකතු කරන්න',
+      edit: 'සංස්කරණය කරන්න',
+      delete: 'මකන්න',
+      // ... translate all keys
+    },
+  },
+  // ... translate all namespaces
+} as const;
+
+export default translations;
+```
+
+### 2. Update package.json exports
+
+Add the new locale to `package.json`:
+
+```json
+{
+  "exports": {
+    "./locales/si-LK": {
+      "types": "./dist/locales/si-LK.d.ts",
+      "import": "./dist/locales/si-LK.js",
+      "require": "./dist/locales/si-LK.cjs"
+    }
+  }
+}
+```
+
+### 3. Use in your app
+
+```tsx
+import enUS from '@thunder/i18n/locales/en-US';
+import siLK from '@thunder/i18n/locales/si-LK';
+
+await i18n.use(initReactI18next).init({
+  resources: {
+    'en-US': enUS,
+    'si-LK': siLK,
+  },
+  lng: 'en-US',
+  // ... rest of config
+});
 ```
 
 ## Development
@@ -325,68 +402,233 @@ pnpm typecheck
 pnpm lint
 ```
 
-## Integration with Thunder Apps
+## Integration Guide
 
 ### Thunder Develop App
 
-Example integration in `apps/thunder-develop/src/main.tsx`:
+Complete integration example for `apps/thunder-develop/src/main.tsx`:
 
 ```tsx
-import { initI18n } from '@thunder/i18n';
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
+import * as ReactDOM from 'react-dom/client';
+import { StrictMode } from 'react';
+import { ConfigProvider } from '@thunder/commons-contexts';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enUS from '@thunder/i18n/locales/en-US';
+import AppWithConfig from './AppWithConfig';
 
-await initI18n({
-  translations: { en, si },
-  options: {
-    defaultLanguage: 'en',
-    debug: import.meta.env.DEV,
+// Initialize i18n before rendering the app
+await i18n.use(initReactI18next).init({
+  resources: {
+    'en-US': enUS,
   },
+  lng: 'en-US',
+  fallbackLng: 'en-US',
+  defaultNS: 'common',
+  interpolation: {
+    escapeValue: false, // React already escapes by default
+  },
+  debug: import.meta.env.DEV,
 });
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <ConfigProvider>
+      <AppWithConfig />
+    </ConfigProvider>
+  </StrictMode>,
+);
 ```
 
 ### Thunder Gate App
 
-Example integration in `apps/thunder-gate/src/main.tsx`:
+Similar integration for `apps/thunder-gate/src/main.tsx`:
 
 ```tsx
-import { initI18n } from '@thunder/i18n';
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import enUS from '@thunder/i18n/locales/en-US';
+import App from './App';
+import './index.css';
 
-await initI18n({
-  translations: { en, si },
-  options: {
-    defaultLanguage: 'en',
-    detectLanguage: true,
+// Initialize i18n before rendering
+await i18n.use(initReactI18next).init({
+  resources: {
+    'en-US': enUS,
   },
+  lng: 'en-US',
+  fallbackLng: 'en-US',
+  defaultNS: 'common',
+  interpolation: {
+    escapeValue: false,
+  },
+  debug: import.meta.env.DEV,
 });
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);
 ```
 
-## API Reference
+## Advanced Features
 
-### Functions
+### Using Trans Component for Complex Translations
 
-- `initI18n(config)` - Initialize i18n with translations
-- `changeLanguage(lang)` - Change current language
-- `getCurrentLanguage()` - Get current language
-- `getAvailableLanguages()` - Get all available languages
-- `formatDate(date, options)` - Format date according to current locale
-- `formatNumber(num, options)` - Format number according to current locale
-- `formatCurrency(num, currency, options)` - Format currency
+```tsx
+import { Trans } from 'react-i18next';
 
-### Hooks
+function Component() {
+  return (
+    <Trans i18nKey="common.messages.welcome">
+      Welcome <strong>{{ name: user.name }}</strong>!
+    </Trans>
+  );
+}
+```
 
-- `useLanguage()` - Hook for language management
-- `useTranslation()` - React-i18next hook for translations
+### Interpolation
 
-### Types
+```tsx
+// Translation
+{
+  "welcome": "Welcome, {{name}}!"
+}
 
-- `SupportedLanguage` - Union type of supported languages
-- `TranslationKey` - All available translation keys
-- `I18nOptions` - Configuration options
-- `LanguageConfig` - Language metadata
+// Usage
+const { t } = useTranslation('common');
+<p>{t('welcome', { name: user.name })}</p>
+```
+
+### Pluralization
+
+```tsx
+// Add to translations
+{
+  "users": {
+    "count_one": "{{count}} user",
+    "count_other": "{{count}} users"
+  }
+}
+
+// Use in component
+const { t } = useTranslation('users');
+<p>{t('count', { count: userCount })}</p>
+```
+
+### Context-specific Translations
+
+```tsx
+// Different translations based on context
+const { t } = useTranslation('users');
+<button>{t('actions.add', { context: 'male' })}</button>
+<button>{t('actions.add', { context: 'female' })}</button>
+```
+
+## Best Practices
+
+### 1. Use Specific Namespaces
+
+```tsx
+// ✅ Good - Specific namespace
+const { t } = useTranslation('users');
+t('title');
+
+// ❌ Avoid - Always using full paths
+const { t } = useTranslation();
+t('users.title');
+```
+
+### 2. Organize by Feature
+
+Keep related translations in the same namespace for better maintainability.
+
+### 3. Consistent Naming
+
+Use consistent naming conventions:
+- Actions: `add`, `edit`, `delete`, `save`, etc.
+- Labels: descriptive names like `firstName`, `email`, etc.
+- Messages: `success`, `error`, `warning`, etc.
+
+### 4. Avoid Hardcoded Strings
+
+```tsx
+// ✅ Good
+<button>{t('common.actions.save')}</button>
+
+// ❌ Bad
+<button>Save</button>
+```
+
+
+## Troubleshooting
+
+### Translations Not Loading
+
+1. Make sure i18n is initialized before rendering the app
+2. Check that the language file is properly imported
+3. Verify the translation keys exist in the locale file
+4. Check the browser console for any i18n errors
+
+### TypeScript Errors
+
+1. Rebuild the i18n package: `pnpm build --filter @thunder/i18n`
+2. Restart your TypeScript server in VSCode
+3. Ensure the package is listed in dependencies
+4. Check that types are being exported correctly
+
+### Missing Translation Keys
+
+If you see translation keys instead of translated text:
+1. Verify the key exists in the locale file
+2. Check that you're using the correct namespace
+3. Ensure the namespace is loaded in your i18n config
+4. Check for typos in the translation key
+
+## Contributing
+
+When adding new translations:
+
+1. Add translations to all existing locale files (currently only `en-US.ts`)
+2. Use the `as const` assertion for type safety
+3. Follow the existing namespace structure
+4. Rebuild the package and test in the consuming app
+5. Document any new namespaces in this README
 
 ## License
 
 Apache-2.0
+
+---
+
+## Migration Notes
+
+### From Manual i18n Setup
+
+If migrating from a manual i18n setup:
+
+1. Install the `@thunder/i18n` package
+2. Remove local translation files
+3. Import translations from `@thunder/i18n/locales/en-US`
+4. Update all `useTranslation()` calls to use the correct namespaces
+5. Update translation keys to match the new structure
+
+### Adding Future Languages
+
+When adding support for additional languages:
+
+1. Create a new locale file in `src/locales/` (e.g., `si-LK.ts`)
+2. Translate all namespaces
+3. Update `package.json` exports
+4. Update this README with the new language
+5. Test in all Thunder applications
+
+## Resources
+
+- [react-i18next Documentation](https://react.i18next.com/)
+- [i18next Documentation](https://www.i18next.com/)
+- [TypeScript with i18next](https://www.i18next.com/overview/typescript)
+
