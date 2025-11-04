@@ -57,21 +57,14 @@ describe('UserTypesListPage', () => {
   it('renders page description', () => {
     render(<UserTypesListPage />);
 
-    expect(screen.getByText('Define and manage user type schemas for your organization')).toBeInTheDocument();
+    expect(screen.getByText('Define and manage user types for your organization')).toBeInTheDocument();
   });
 
-  it('renders refresh button', () => {
+  it('renders create user type button', () => {
     render(<UserTypesListPage />);
 
-    const refreshButton = screen.getByRole('button', {name: /refresh/i});
-    expect(refreshButton).toBeInTheDocument();
-  });
-
-  it('renders add user type button', () => {
-    render(<UserTypesListPage />);
-
-    const addButton = screen.getByRole('button', {name: /add user type/i});
-    expect(addButton).toBeInTheDocument();
+    const createButton = screen.getByRole('button', {name: /create user type/i});
+    expect(createButton).toBeInTheDocument();
   });
 
   it('renders UserTypesList component', () => {
@@ -80,22 +73,12 @@ describe('UserTypesListPage', () => {
     expect(screen.getByTestId('user-types-list')).toBeInTheDocument();
   });
 
-  it('calls window.location.reload when refresh button is clicked', async () => {
+  it('navigates to create page when create button is clicked', async () => {
     const user = userEvent.setup();
     render(<UserTypesListPage />);
 
-    const refreshButton = screen.getByRole('button', {name: /refresh/i});
-    await user.click(refreshButton);
-
-    expect(mockReload).toHaveBeenCalled();
-  });
-
-  it('navigates to create page when add button is clicked', async () => {
-    const user = userEvent.setup();
-    render(<UserTypesListPage />);
-
-    const addButton = screen.getByRole('button', {name: /add user type/i});
-    await user.click(addButton);
+    const createButton = screen.getByRole('button', {name: /create user type/i});
+    await user.click(createButton);
 
     expect(mockNavigate).toHaveBeenCalledWith('/user-types/create');
   });

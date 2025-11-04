@@ -147,7 +147,7 @@ export default function CreateUserPage() {
       <Stack direction="row" alignItems="flex-start" mb={4} gap={2}>
         <Box>
           <Typography variant="h4" component="h1" gutterBottom>
-            Create New User
+            Create User
           </Typography>
           <Typography variant="body2" color="text.secondary">
             Add a new user to your organization

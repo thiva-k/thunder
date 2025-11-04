@@ -18,7 +18,7 @@
 
 import {useNavigate} from 'react-router';
 import {Box, Stack, Typography, Button} from '@wso2/oxygen-ui';
-import {Plus, RefreshCw} from 'lucide-react';
+import {Plus} from 'lucide-react';
 import UserTypesList from '../components/UserTypesList';
 
 export default function UserTypesListPage() {
@@ -32,13 +32,10 @@ export default function UserTypesListPage() {
             User Type Management
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Define and manage user type schemas for your organization
+            Define and manage user types for your organization
           </Typography>
         </Box>
         <Stack direction="row" spacing={2}>
-          <Button variant="outlined" startIcon={<RefreshCw size={16} />} onClick={() => window.location.reload()}>
-            Refresh
-          </Button>
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
@@ -53,7 +50,7 @@ export default function UserTypesListPage() {
               });
             }}
           >
-            Add User Type
+            Create User Type
           </Button>
         </Stack>
       </Stack>

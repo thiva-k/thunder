@@ -130,7 +130,7 @@ describe('CreateUserPage', () => {
   it('renders the page with title and description', () => {
     render(<CreateUserPage />);
 
-    expect(screen.getByRole('heading', {name: 'Create New User'})).toBeInTheDocument();
+    expect(screen.getByRole('heading', {name: 'Create User'})).toBeInTheDocument();
     expect(screen.getByText('Add a new user to your organization')).toBeInTheDocument();
   });
 
