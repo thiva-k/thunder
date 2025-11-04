@@ -295,7 +295,12 @@ func (g *GoogleOIDCAuthExecutor) ExchangeCodeForToken(ctx *flowmodel.NodeContext
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Exchanging authorization code for a token", log.String("tokenEndpoint", g.GetTokenEndpoint()))
 
-	tokenResp, svcErr := g.googleAuthService.ExchangeCodeForToken(g.GetID(), code, true)
+	idpID, err := g.GetIdpID()
+	if err != nil {
+		return nil, err
+	}
+
+	tokenResp, svcErr := g.googleAuthService.ExchangeCodeForToken(idpID, code, true)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure
@@ -324,7 +329,12 @@ func (g *GoogleOIDCAuthExecutor) ValidateIDToken(execResp *flowmodel.ExecutorRes
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 	logger.Debug("Validating ID token")
 
-	svcErr := g.googleAuthService.ValidateIDToken(g.GetID(), idToken)
+	idpID, err := g.GetIdpID()
+	if err != nil {
+		return err
+	}
+
+	svcErr := g.googleAuthService.ValidateIDToken(idpID, idToken)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			execResp.Status = flowconst.ExecFailure

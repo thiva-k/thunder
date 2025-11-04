@@ -1,14 +1,14 @@
 {
-    "id": "auth_flow_config_google",
+    "id": "auth_flow_config_github",
     "type": "AUTHENTICATION",
     "nodes": [
         {
-            "id": "google_auth",
+            "id": "github_auth",
             "type": "TASK_EXECUTION",
             "executor": {
-                "name": "GoogleOIDCAuthExecutor",
+                "name": "GithubOAuthExecutor",
                 "properties": {
-                    "idpId": "<google-idp-id>"
+                    "idpId": "test-github-idp-id"
                 }
             },
             "next": [

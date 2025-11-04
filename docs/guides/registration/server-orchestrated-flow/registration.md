@@ -340,9 +340,9 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
 3. **Update the Registration Flow Graph**
 
-    Update the registration flow graph to use the configured identity provider. To do so, open the `registration_flow_config_google.json` file in the `repository/resources/graph/` directory and update the `idpName` with the name of the identity provider you configured in the previous step.
+    Update the registration flow graph to use the configured identity provider. To do so, open the `registration_flow_config_google.json` file in the `repository/resources/graph/` directory and update the `idpId` with the unique identifier of the identity provider you configured in the previous step.
 
-    If the file doesn't exist, that means the registration flow graph is automatically constructed from the equivalent authentication flow graph. In that case, you can update the `idpName` property in the `auth_flow_config_google.json` file or create a new `registration_flow_config_google.json` file and define the registration flow.
+    If the file doesn't exist, that means the registration flow graph is automatically constructed from the equivalent authentication flow graph. In that case, you can update the `idpId` property in the `auth_flow_config_google.json` file or create a new `registration_flow_config_google.json` file and define the registration flow.
 
     > Note: Refer [Customizing Registration Flows](./customize-registration-flow.md) for more details on automatic registration flow creation.
     
@@ -476,9 +476,9 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
 3. **Update the Registration Flow Graph**
 
-    Update the registration flow graph to use the configured identity provider. To do so, open the `registration_flow_config_github.json` file in the `repository/resources/graph/` directory and update the `idpName` with the name of the identity provider you configured in the previous step.
+    Update the registration flow graph to use the configured identity provider. To do so, open the `registration_flow_config_github.json` file in the `repository/resources/graph/` directory and update the `idpId` with the unique identifier of the identity provider you configured in the previous step.
 
-    If the file doesn't exist, that means the registration flow graph is automatically constructed from the equivalent authentication flow graph. In that case, you can update the `idpName` property in the `auth_flow_config_github.json` file or create a new `registration_flow_config_github.json` file and define the registration flow.
+    If the file doesn't exist, that means the registration flow graph is automatically constructed from the equivalent authentication flow graph. In that case, you can update the `idpId` property in the `auth_flow_config_github.json` file or create a new `registration_flow_config_github.json` file and define the registration flow.
 
     > Note: Refer [Customizing Registration Flows](./customize-registration-flow.md) for more details on automatic registration flow creation.
     

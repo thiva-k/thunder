@@ -45,6 +45,5 @@ type InputDefinition struct {
 // ExecutorDefinition represents the executor configuration for a node
 type ExecutorDefinition struct {
 	Name       string            `json:"name"`
-	IdpName    string            `json:"idpName,omitempty"`
 	Properties map[string]string `json:"properties,omitempty"`
 }

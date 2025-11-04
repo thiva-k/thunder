@@ -292,7 +292,7 @@ Follow the steps below to configure and execute a login flow using Google OAuth 
 
 3. **Update the Authentication Flow Graph**
 
-    Update the authentication flow graph to use the configured identity provider. To do so, open the `auth_flow_config_github.json` file in the `repository/resources/graph/` directory and update the `idpName` with the name of the identity provider you configured in the previous step. Make sure to restart the server after making this change.
+    Update the authentication flow graph to use the configured identity provider. To do so, open the `auth_flow_config_github.json` file in the `repository/resources/graph/` directory and update the `idpId` with the unique identifier of the identity provider you configured in the previous step. Make sure to restart the server after making this change.
 
 4. **Configure an Application with Google Login**
 
@@ -422,7 +422,7 @@ Follow the steps below to configure and execute a login flow using GitHub OAuth 
 
 3. **Update the Authentication Flow Graph**
 
-    Update the authentication flow graph to use the configured identity provider. To do so, open the `auth_flow_config_github.json` file in the `repository/resources/graph/` directory and update the `idpName` with the name of the identity provider you configured in the previous step. Make sure to restart the server after making this change.
+    Update the authentication flow graph to use the configured identity provider. To do so, open the `auth_flow_config_github.json` file in the `repository/resources/graph/` directory and update the `idpId` with the unique identifier of the identity provider you configured in the previous step. Make sure to restart the server after making this change.
 
 4. **Configure an Application with GitHub Login**
 

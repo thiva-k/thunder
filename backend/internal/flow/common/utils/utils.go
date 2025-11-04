@@ -163,25 +163,21 @@ func getExecutorConfigByName(execDef jsonmodel.ExecutorDefinition) (*model.Execu
 	switch execDef.Name {
 	case "BasicAuthExecutor":
 		executor = model.ExecutorConfig{
-			Name:    "BasicAuthExecutor",
-			IdpName: "Local",
+			Name: "BasicAuthExecutor",
 		}
 	case "SMSOTPAuthExecutor":
 		executor = model.ExecutorConfig{
 			Name:       "SMSOTPAuthExecutor",
-			IdpName:    "Local",
 			Properties: execDef.Properties,
 		}
 	case "GithubOAuthExecutor":
 		executor = model.ExecutorConfig{
 			Name:       "GithubOAuthExecutor",
-			IdpName:    execDef.IdpName,
 			Properties: execDef.Properties,
 		}
 	case "GoogleOIDCAuthExecutor":
 		executor = model.ExecutorConfig{
 			Name:       "GoogleOIDCAuthExecutor",
-			IdpName:    execDef.IdpName,
 			Properties: execDef.Properties,
 		}
 	case "AttributeCollector":
@@ -242,32 +238,20 @@ func GetExecutorByName(execConfig *model.ExecutorConfig) (model.ExecutorInterfac
 		}
 		executor = smsauth.NewSMSOTPAuthExecutor("local", "Local", execConfig.Properties)
 	case "GithubOAuthExecutor":
-		idp, err := getIDP(execConfig.IdpName)
+		idp, clientID, clientSecret, redirectURI, scopes,
+			additionalParams, extendedProperties, err := getIDPWithConfigs(execConfig)
 		if err != nil {
 			return nil, fmt.Errorf("error while getting IDP for GithubOAuthExecutor: %w", err)
 		}
-
-		clientID, clientSecret, redirectURI, scopes, additionalParams, err := getIDPConfigs(
-			idp.Properties, execConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		executor = githubauth.NewGithubOAuthExecutor(idp.ID, idp.Name, execConfig.Properties,
+		executor = githubauth.NewGithubOAuthExecutor(idp.ID, idp.Name, extendedProperties,
 			clientID, clientSecret, redirectURI, scopes, additionalParams)
 	case "GoogleOIDCAuthExecutor":
-		idp, err := getIDP(execConfig.IdpName)
+		idp, clientID, clientSecret, redirectURI, scopes,
+			additionalParams, extendedProperties, err := getIDPWithConfigs(execConfig)
 		if err != nil {
 			return nil, fmt.Errorf("error while getting IDP for GoogleOIDCAuthExecutor: %w", err)
 		}
-
-		clientID, clientSecret, redirectURI, scopes, additionalParams, err := getIDPConfigs(
-			idp.Properties, execConfig)
-		if err != nil {
-			return nil, err
-		}
-
-		executor = googleauth.NewGoogleOIDCAuthExecutor(idp.ID, idp.Name, execConfig.Properties,
+		executor = googleauth.NewGoogleOIDCAuthExecutor(idp.ID, idp.Name, extendedProperties,
 			clientID, clientSecret, redirectURI, scopes, additionalParams)
 	case "AttributeCollector":
 		executor = attributecollect.NewAttributeCollector("attribute-collector", "AttributeCollector",
@@ -293,35 +277,70 @@ func GetExecutorByName(execConfig *model.ExecutorConfig) (model.ExecutorInterfac
 	return executor, nil
 }
 
-// getIDP retrieves the IDP by its name. Returns an error if the IDP does not exist or if the name is empty.
-func getIDP(idpName string) (*idp.IDPDTO, error) {
-	if idpName == "" {
-		return nil, fmt.Errorf("IDP name cannot be empty")
+// getIDPWithConfigs retrieves the IDP and its configurations for OAuth/OIDC executors.
+// This function validates the executor configuration, retrieves the IDP by ID from properties,
+// and extracts the required OAuth/OIDC configurations.
+func getIDPWithConfigs(execConfig *model.ExecutorConfig) (*idp.IDPDTO, string, string, string,
+	[]string, map[string]string, map[string]string, error) {
+	if len(execConfig.Properties) == 0 {
+		return nil, "", "", "", nil, nil, nil, fmt.Errorf("properties for %s cannot be empty", execConfig.Name)
+	}
+
+	idpID, exists := execConfig.Properties["idpId"]
+	if !exists || idpID == "" {
+		return nil, "", "", "", nil, nil, nil, fmt.Errorf("idpId property is required for %s", execConfig.Name)
+	}
+
+	identityProvider, err := getIDP(idpID)
+	if err != nil {
+		return nil, "", "", "", nil, nil, nil, err
+	}
+
+	clientID, clientSecret, redirectURI, scopes, additionalParams, err := getIDPConfigs(
+		identityProvider.Properties)
+	if err != nil {
+		return nil, "", "", "", nil, nil, nil, err
+	}
+
+	// Create extended properties map with idpName added
+	extendedProperties := make(map[string]string)
+	for k, v := range execConfig.Properties {
+		extendedProperties[k] = v
+	}
+	extendedProperties["idpName"] = identityProvider.Name
+
+	return identityProvider, clientID, clientSecret, redirectURI, scopes, additionalParams, extendedProperties, nil
+}
+
+// getIDP retrieves an identity provider by its ID.
+func getIDP(idpID string) (*idp.IDPDTO, error) {
+	if idpID == "" {
+		return nil, fmt.Errorf("IDP ID cannot be empty")
 	}
 
 	idpSvc := idp.NewIDPService()
-	identityProvider, svcErr := idpSvc.GetIdentityProviderByName(idpName)
+	identityProvider, svcErr := idpSvc.GetIdentityProvider(idpID)
 	if svcErr != nil {
 		if svcErr.Code == idp.ErrorIDPNotFound.Code {
-			return nil, fmt.Errorf("IDP with name %s does not exist", idpName)
+			return nil, fmt.Errorf("IDP with ID %s does not exist", idpID)
 		}
-		return nil, fmt.Errorf("error while getting IDP with the name %s: code: %s, error: %s",
-			idpName, svcErr.Code, svcErr.ErrorDescription)
+		return nil, fmt.Errorf("error while getting IDP with the ID %s: code: %s, error: %s",
+			idpID, svcErr.Code, svcErr.ErrorDescription)
 	}
 	if identityProvider == nil {
-		return nil, fmt.Errorf("IDP with name %s does not exist", idpName)
+		return nil, fmt.Errorf("IDP with ID %s does not exist", idpID)
 	}
 
 	return identityProvider, nil
 }
 
-// getIDPConfigs retrieves the IDP configurations for a given executor configuration.
-func getIDPConfigs(idpProperties []cmodels.Property, execConfig *model.ExecutorConfig) (string,
+// getIDPConfigs process the IDP properties to extract OAuth/OIDC configurations.
+func getIDPConfigs(idpProperties []cmodels.Property) (string,
 	string, string, []string, map[string]string, error) {
 	if len(idpProperties) == 0 {
-		return "", "", "", nil, nil, fmt.Errorf("IDP properties not found for executor with IDP name %s",
-			execConfig.IdpName)
+		return "", "", "", nil, nil, fmt.Errorf("IDP properties not found")
 	}
+
 	var clientID, clientSecret, redirectURI, scopesStr string
 	additionalParams := map[string]string{}
 	for _, prop := range idpProperties {
@@ -343,9 +362,9 @@ func getIDPConfigs(idpProperties []cmodels.Property, execConfig *model.ExecutorC
 			additionalParams[prop.GetName()] = value
 		}
 	}
+
 	if clientID == "" || clientSecret == "" || redirectURI == "" || scopesStr == "" {
-		return "", "", "", nil, nil, fmt.Errorf("missing required properties for executor with IDP name %s",
-			execConfig.IdpName)
+		return "", "", "", nil, nil, fmt.Errorf("missing required IDP properties")
 	}
 	scopes := sysutils.ParseStringArray(scopesStr, ",")
 

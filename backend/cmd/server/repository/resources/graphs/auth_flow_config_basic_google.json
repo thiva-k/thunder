@@ -25,7 +25,9 @@
             "type": "TASK_EXECUTION",
             "executor": {
                 "name": "GoogleOIDCAuthExecutor",
-                "idpName": "Google"
+                "properties": {
+                    "idpId": "<google-idp-id>"
+                }
             },
             "next": [
                 "authenticated"

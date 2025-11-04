@@ -285,7 +285,6 @@ func (n *Node) Clone() (sysutils.ClonableInterface, error) {
 	if n.executorConfig != nil {
 		execConfigCopy = &ExecutorConfig{
 			Name:       n.executorConfig.Name,
-			IdpName:    n.executorConfig.IdpName,
 			Properties: sysutils.DeepCopyMapOfStrings(n.executorConfig.Properties),
 			Executor:   n.executorConfig.Executor,
 		}

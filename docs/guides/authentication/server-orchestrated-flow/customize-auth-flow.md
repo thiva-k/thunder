@@ -50,8 +50,8 @@ Thunder provides several executor implementations:
 | Executor | Description | Input Parameters | Properties |
 |----------|-------------|------------------|----------|
 | `BasicAuthExecutor` | Authenticates users with username and password | `username`, `password` | |
-| `GoogleOAuthExecutor` | Authenticates users with Google | `code` (authorization code) | `idpName` (Identity Provider name) |
-| `GithubOAuthExecutor` | Authenticates users with GitHub | `code` (authorization code) | `idpName` (Identity Provider name) |
+| `GoogleOAuthExecutor` | Authenticates users with Google | `code` (authorization code) | `idpId` (Identity Provider id) |
+| `GithubOAuthExecutor` | Authenticates users with GitHub | `code` (authorization code) | `idpId` (Identity Provider id) |
 | `SMSOTPAuthExecutor` | Authenticates users with SMS OTP | `username`, `otp` | `senderId` (SMS sender ID) |
 | `AttributeCollector` | Collects additional user attributes. Can only be used when there's a authenticated user | `email`, `mobileNumber`, etc |
 | `AuthAssertExecutor` | Creates the auth assertion | None |

@@ -19,9 +19,11 @@
 package flowauthn
 
 import (
+	"encoding/json"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
@@ -50,11 +52,42 @@ var (
 var (
 	githubAuthTestAppID string
 	githubAuthTestOUID  string
-	githubAuthTestIDPID string
 )
+
+const (
+	mockGithubFlowPort = 8092
+)
+
+var githubUserSchema = testutils.UserSchema{
+	Name: "github_flow_user",
+	Schema: map[string]interface{}{
+		"username": map[string]interface{}{
+			"type": "string",
+		},
+		"password": map[string]interface{}{
+			"type": "string",
+		},
+		"sub": map[string]interface{}{
+			"type": "string",
+		},
+		"email": map[string]interface{}{
+			"type": "string",
+		},
+		"givenName": map[string]interface{}{
+			"type": "string",
+		},
+		"familyName": map[string]interface{}{
+			"type": "string",
+		},
+	},
+}
 
 type GithubAuthFlowTestSuite struct {
 	suite.Suite
+	mockGithubServer *testutils.MockGithubOAuthServer
+	idpID            string
+	userID           string
+	userSchemaID     string
 }
 
 func TestGithubAuthFlowTestSuite(t *testing.T) {
@@ -62,47 +95,69 @@ func TestGithubAuthFlowTestSuite(t *testing.T) {
 }
 
 func (ts *GithubAuthFlowTestSuite) SetupSuite() {
+	// Start mock GitHub server
+	ts.mockGithubServer = testutils.NewMockGithubOAuthServer(mockGithubFlowPort,
+		"test_github_client", "test_github_secret")
+
+	email := "testuser@github.com"
+	ts.mockGithubServer.AddUser(&testutils.GithubUserInfo{
+		Login:     "testuser",
+		ID:        12345,
+		NodeID:    "MDQ6VXNlcjEyMzQ1",
+		Email:     &email,
+		Name:      "Test User",
+		AvatarURL: "https://avatars.githubusercontent.com/u/12345",
+		Type:      "User",
+		CreatedAt: "2020-01-01T00:00:00Z",
+		UpdatedAt: "2024-01-01T00:00:00Z",
+	}, []*testutils.GithubEmail{
+		{
+			Email:    email,
+			Primary:  true,
+			Verified: true,
+		},
+	})
+
+	err := ts.mockGithubServer.Start()
+	ts.Require().NoError(err, "Failed to start mock GitHub server")
+
+	// Use the IDP created by database scripts
+	ts.idpID = "test-github-idp-id"
+
+	// Create user schema
+	schemaID, err := testutils.CreateUserType(githubUserSchema)
+	ts.Require().NoError(err, "Failed to create GitHub user schema")
+	ts.userSchemaID = schemaID
+
+	// Create user
+	userAttributes := map[string]interface{}{
+		"username":   "githubflowuser",
+		"password":   "Test@1234",
+		"sub":        "12345",
+		"email":      "testuser@github.com",
+		"givenName":  "Test",
+		"familyName": "User",
+	}
+
+	attributesJSON, err := json.Marshal(userAttributes)
+	ts.Require().NoError(err)
+
+	user := testutils.User{
+		Type:             githubUserSchema.Name,
+		OrganizationUnit: "root",
+		Attributes:       json.RawMessage(attributesJSON),
+	}
+
+	userID, err := testutils.CreateUser(user)
+	ts.Require().NoError(err, "Failed to create test user")
+	ts.userID = userID
+
 	// Create test organization unit for GitHub auth tests
 	ouID, err := testutils.CreateOrganizationUnit(githubAuthTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	githubAuthTestOUID = ouID
-
-	// Create GitHub IDP for GitHub auth tests
-	githubIDP := testutils.IDP{
-		Name:        "Github",
-		Description: "GitHub Identity Provider for authentication flow testing",
-		Type:        "GITHUB",
-		Properties: []testutils.IDPProperty{
-			{
-				Name:     "client_id",
-				Value:    "test_github_client",
-				IsSecret: false,
-			},
-			{
-				Name:     "client_secret",
-				Value:    "test_github_secret",
-				IsSecret: true,
-			},
-			{
-				Name:     "redirect_uri",
-				Value:    "https://localhost:3000/github/callback",
-				IsSecret: false,
-			},
-			{
-				Name:     "scopes",
-				Value:    "user:email,read:user",
-				IsSecret: false,
-			},
-		},
-	}
-
-	idpID, err := testutils.CreateIDP(githubIDP)
-	if err != nil {
-		ts.T().Fatalf("Failed to create GitHub IDP during setup: %v", err)
-	}
-	githubAuthTestIDPID = idpID
 
 	// Create test application for GitHub auth tests
 	appID, err := testutils.CreateApplication(githubAuthTestApp)
@@ -120,18 +175,27 @@ func (ts *GithubAuthFlowTestSuite) TearDownSuite() {
 		}
 	}
 
-	// Delete GitHub IDP
-	if githubAuthTestIDPID != "" {
-		if err := testutils.DeleteIDP(githubAuthTestIDPID); err != nil {
-			ts.T().Logf("Failed to delete GitHub IDP during teardown: %v", err)
-		}
-	}
-
 	// Delete test organization unit
 	if githubAuthTestOUID != "" {
 		if err := testutils.DeleteOrganizationUnit(githubAuthTestOUID); err != nil {
 			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
+	}
+
+	// Clean up user
+	if ts.userID != "" {
+		_ = testutils.DeleteUser(ts.userID)
+	}
+
+	if ts.userSchemaID != "" {
+		_ = testutils.DeleteUserType(ts.userSchemaID)
+	}
+
+	// Stop mock server
+	if ts.mockGithubServer != nil {
+		_ = ts.mockGithubServer.Stop()
+		// Wait for port to be released
+		time.Sleep(200 * time.Millisecond)
 	}
 }
 
@@ -151,8 +215,8 @@ func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowInitiation() {
 	ts.Require().NotEmpty(flowStep.Data, "Flow data should not be empty")
 	ts.Require().NotEmpty(flowStep.Data.RedirectURL, "Redirect URL should not be empty")
 	redirectURLStr := flowStep.Data.RedirectURL
-	ts.Require().True(strings.HasPrefix(redirectURLStr, "https://github.com/login/oauth/authorize"),
-		"Redirect URL should point to GitHub authentication")
+	ts.Require().True(strings.HasPrefix(redirectURLStr, "http://localhost:8092/login/oauth/authorize"),
+		"Redirect URL should point to mock GitHub server")
 
 	// Parse and validate the redirect URL
 	redirectURL, err := url.Parse(redirectURLStr)
@@ -181,4 +245,95 @@ func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowInvalidAppID() {
 	ts.Require().Equal("Invalid request", errorResp.Message, "Expected error message for invalid request")
 	ts.Require().Equal("Invalid app ID provided in the request", errorResp.Description,
 		"Expected error description for invalid app ID")
+}
+
+func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowCompleteSuccess() {
+	// Step 1: Initialize the flow by calling the flow execution API
+	flowStep, err := initiateAuthFlow(githubAuthTestAppID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to initiate GitHub authentication flow: %v", err)
+	}
+
+	// Verify flow status and type
+	ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus, "Expected flow status to be INCOMPLETE")
+	ts.Require().Equal("REDIRECTION", flowStep.Type, "Expected flow type to be REDIRECT")
+	ts.Require().NotEmpty(flowStep.FlowID, "Flow ID should not be empty")
+
+	flowID := flowStep.FlowID
+	redirectURLStr := flowStep.Data.RedirectURL
+	ts.Require().NotEmpty(redirectURLStr, "Redirect URL should not be empty")
+
+	// Step 2: Simulate user authorization at GitHub (get authorization code)
+	authCode, err := testutils.SimulateFederatedOAuthFlow(redirectURLStr)
+	if err != nil {
+		ts.T().Fatalf("Failed to simulate GitHub authorization: %v", err)
+	}
+	ts.Require().NotEmpty(authCode, "Authorization code should not be empty")
+
+	// Step 3: Complete the flow with the authorization code
+	inputs := map[string]string{
+		"code": authCode,
+	}
+
+	completeFlowStep, err := completeAuthFlow(flowID, "", inputs)
+	if err != nil {
+		ts.T().Fatalf("Failed to complete GitHub authentication flow: %v", err)
+	}
+
+	// Verify flow completion
+	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be COMPLETE")
+	ts.Require().NotEmpty(completeFlowStep.Assertion, "Assertion token should be present")
+
+	// Verify the assertion token contains expected information
+	ts.Require().Contains(completeFlowStep.Assertion, ".", "Assertion should be a JWT token")
+}
+
+func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowCompleteWithInvalidCode() {
+	// Step 1: Initialize the flow
+	flowStep, err := initiateAuthFlow(githubAuthTestAppID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to initiate GitHub authentication flow: %v", err)
+	}
+
+	flowID := flowStep.FlowID
+
+	// Step 2: Try to complete with invalid authorization code
+	inputs := map[string]string{
+		"code": "invalid-auth-code-12345",
+	}
+
+	_, err = completeAuthFlow(flowID, "", inputs)
+	ts.Require().Error(err, "Should fail with invalid authorization code")
+}
+
+func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowCompleteWithMissingCode() {
+	// Step 1: Initialize the flow
+	flowStep, err := initiateAuthFlow(githubAuthTestAppID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to initiate GitHub authentication flow: %v", err)
+	}
+
+	flowID := flowStep.FlowID
+
+	// Step 2: Try to complete without providing authorization code
+	inputs := map[string]string{}
+
+	// When required inputs are missing, the flow returns INCOMPLETE status (not an error)
+	// and asks for the missing inputs again
+	flowStep, err = completeAuthFlow(flowID, "", inputs)
+	ts.Require().NoError(err, "Should not return error when inputs are missing")
+	ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus,
+		"Flow should remain INCOMPLETE when required inputs are missing")
+	ts.Require().Equal("REDIRECTION", flowStep.Type, "Flow should still be REDIRECTION type")
+
+	// Verify that code input is still required
+	ts.Require().NotEmpty(flowStep.Data.Inputs, "Should still require inputs")
+	hasCodeInput := false
+	for _, input := range flowStep.Data.Inputs {
+		if input.Name == "code" && input.Required {
+			hasCodeInput = true
+			break
+		}
+	}
+	ts.Require().True(hasCodeInput, "Code input should still be required")
 }
