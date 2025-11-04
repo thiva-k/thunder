@@ -16,27 +16,19 @@
  * under the License.
  */
 
-import * as ReactDOM from 'react-dom/client';
-import {StrictMode} from 'react';
-import {ConfigProvider} from '@thunder/commons-contexts';
-import {initI18n} from '@thunder/i18n';
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
-import AppWithConfig from './AppWithConfig';
+/**
+ * Type augmentation for react-i18next
+ * This enables type-safe translation keys throughout the application
+ */
 
-// Initialize i18n before rendering the app
-await initI18n({
-  translations: {en, si},
-  options: {
-    defaultLanguage: 'si',
-    debug: import.meta.env.DEV,
-  },
-});
+import 'react-i18next';
+import type {TranslationResources} from './index';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ConfigProvider>
-      <AppWithConfig />
-    </ConfigProvider>
-  </StrictMode>,
-);
+declare module 'react-i18next' {
+  interface CustomTypeOptions {
+    defaultNS: 'translation';
+    resources: {
+      translation: TranslationResources;
+    };
+  }
+}

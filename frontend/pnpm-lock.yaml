@@ -78,6 +78,9 @@ catalogs:
     glob:
       specifier: ^11.0.3
       version: 11.0.3
+    i18next:
+      specifier: ^25.6.0
+      version: 25.6.0
     jsdom:
       specifier: ^27.0.1
       version: 27.0.1
@@ -197,6 +200,9 @@ importers:
       '@thunder/commons-contexts':
         specifier: workspace:^
         version: link:../../packages/thunder-commons-contexts
+      '@thunder/i18n':
+        specifier: workspace:^
+        version: link:../../packages/thunder-i18n
       '@thunder/ui':
         specifier: workspace:^
         version: link:../../packages/thunder-ui
@@ -580,6 +586,46 @@ importers:
       rimraf:
         specifier: 'catalog:'
         version: 6.0.1
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.45
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
+
+  packages/thunder-i18n:
+    dependencies:
+      i18next:
+        specifier: 'catalog:'
+        version: 25.6.0(typescript@5.9.3)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.0
+      react-i18next:
+        specifier: 'catalog:'
+        version: 16.2.1(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+    devDependencies:
+      '@thunder/eslint-plugin-thunder':
+        specifier: workspace:^
+        version: link:../thunder-eslint-plugin
+      '@thunder/prettier-config':
+        specifier: workspace:^
+        version: link:../thunder-prettier-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.7.2
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.2
+      eslint:
+        specifier: 'catalog:'
+        version: 8.57.1
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
       rolldown:
         specifier: 'catalog:'
         version: 1.0.0-beta.45

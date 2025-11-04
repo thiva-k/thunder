@@ -42,6 +42,7 @@
     "@mui/x-date-pickers": "catalog:",
     "@mui/x-tree-view": "catalog:",
     "@thunder/commons-contexts": "workspace:^",
+    "@thunder/i18n": "workspace:^",
     "@thunder/ui": "workspace:^",
     "@wso2/oxygen-ui": "workspace:^",
     "clsx": "catalog:",

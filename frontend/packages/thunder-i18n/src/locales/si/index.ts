@@ -16,27 +16,24 @@
  * under the License.
  */
 
-import * as ReactDOM from 'react-dom/client';
-import {StrictMode} from 'react';
-import {ConfigProvider} from '@thunder/commons-contexts';
-import {initI18n} from '@thunder/i18n';
-import en from '@thunder/i18n/locales/en';
-import si from '@thunder/i18n/locales/si';
-import AppWithConfig from './AppWithConfig';
+/**
+ * Sinhala translations for Thunder applications
+ * Organized by namespaces for better tree-shaking and modularity
+ */
 
-// Initialize i18n before rendering the app
-await initI18n({
-  translations: {en, si},
-  options: {
-    defaultLanguage: 'si',
-    debug: import.meta.env.DEV,
-  },
-});
+import {common} from './namespaces/common';
+import {develop} from './namespaces/develop';
+import {gate} from './namespaces/gate';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ConfigProvider>
-      <AppWithConfig />
-    </ConfigProvider>
-  </StrictMode>,
-);
+export const si = {
+  common,
+  develop,
+  gate,
+} as const;
+
+export default si;
+
+// Export individual namespaces for selective imports
+export {common} from './namespaces/common';
+export {develop} from './namespaces/develop';
+export {gate} from './namespaces/gate';
