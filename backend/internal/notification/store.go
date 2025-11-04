@@ -28,6 +28,11 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
+var (
+	serializePropertiesToJSONArray = cmodels.SerializePropertiesToJSONArray
+	deserializePropertiesFromJSON  = cmodels.DeserializePropertiesFromJSON
+)
+
 // notificationStoreInterface defines the interface for notification sender storage operations.
 type notificationStoreInterface interface {
 	createSender(sender common.NotificationSenderDTO) error
@@ -60,7 +65,7 @@ func (s *notificationStore) createSender(sender common.NotificationSenderDTO) er
 	// Serialize properties to JSON
 	var propertiesJSON string
 	if len(sender.Properties) > 0 {
-		propertiesJSON, err = cmodels.SerializePropertiesToJSONArray(sender.Properties)
+		propertiesJSON, err = serializePropertiesToJSONArray(sender.Properties)
 		if err != nil {
 			return fmt.Errorf("failed to serialize properties to JSON: %w", err)
 		}
@@ -104,7 +109,7 @@ func (s *notificationStore) listSenders() ([]common.NotificationSenderDTO, error
 		}
 
 		if propertiesJSON != "" {
-			properties, err := cmodels.DeserializePropertiesFromJSON(propertiesJSON)
+			properties, err := deserializePropertiesFromJSON(propertiesJSON)
 			if err != nil {
 				return nil, fmt.Errorf("failed to deserialize properties from JSON: %w", err)
 			}
@@ -164,7 +169,7 @@ func (s *notificationStore) getSender(query dbmodel.DBQuery,
 	}
 
 	if propertiesJSON != "" {
-		properties, err := cmodels.DeserializePropertiesFromJSON(propertiesJSON)
+		properties, err := deserializePropertiesFromJSON(propertiesJSON)
 		if err != nil {
 			return nil, fmt.Errorf("failed to deserialize properties from JSON: %w", err)
 		}
@@ -184,7 +189,7 @@ func (s *notificationStore) updateSender(id string, sender common.NotificationSe
 	// Serialize properties to JSON
 	var propertiesJSON string
 	if len(sender.Properties) > 0 {
-		propertiesJSON, err = cmodels.SerializePropertiesToJSONArray(sender.Properties)
+		propertiesJSON, err = serializePropertiesToJSONArray(sender.Properties)
 		if err != nil {
 			return fmt.Errorf("failed to serialize properties to JSON: %w", err)
 		}

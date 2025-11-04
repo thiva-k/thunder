@@ -220,6 +220,14 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: notificationmock
       filename: "{{.InterfaceName}}_mock.go"
+  
+  github.com/asgardeo/thunder/internal/notification/message:
+    config:
+      all: true
+      dir: tests/mocks/notification/messagemock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: messagemock
+      filename: "{{.InterfaceName}}_mock.go"
 
   github.com/asgardeo/thunder/internal/system/http:
     config:
