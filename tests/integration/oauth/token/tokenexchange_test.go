@@ -668,7 +668,7 @@ func (ts *TokenExchangeTestSuite) TestTokenExchange_SubjectTokenMissingIssClaim(
 	ts.Require().NoError(err)
 	ts.Equal(http.StatusBadRequest, statusCode)
 	ts.Equal("invalid_grant", resp.Error)
-	ts.Contains(resp.ErrorDescription, "missing 'iss' claim")
+	ts.Contains(resp.ErrorDescription, "Invalid subject_token")
 }
 
 // TestTokenExchange_SubjectTokenUnsupportedIssuer tests error when subject token has unsupported issuer
@@ -686,6 +686,5 @@ func (ts *TokenExchangeTestSuite) TestTokenExchange_SubjectTokenUnsupportedIssue
 	ts.Require().NoError(err)
 	ts.Equal(http.StatusBadRequest, statusCode)
 	ts.Equal("invalid_grant", resp.Error)
-	ts.Contains(resp.ErrorDescription, "token issuer")
-	ts.Contains(resp.ErrorDescription, "is not supported")
+	ts.Contains(resp.ErrorDescription, "Invalid subject_token")
 }

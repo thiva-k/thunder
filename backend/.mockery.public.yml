@@ -125,6 +125,14 @@ packages:
       pkgname: tokenmock
       filename: "{{.InterfaceName}}_mock.go"
 
+  github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice:
+    config:
+      all: true
+      dir: tests/mocks/oauth/oauth2/tokenservicemock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: tokenservicemock
+      filename: "{{.InterfaceName}}_mock.go"
+
   github.com/asgardeo/thunder/internal/oauth/oauth2/introspect:
     config:
       all: true

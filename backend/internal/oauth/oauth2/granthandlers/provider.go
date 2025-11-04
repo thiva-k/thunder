@@ -21,6 +21,7 @@ package granthandlers
 import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/authz"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/user"
 )
@@ -43,12 +44,14 @@ func newGrantHandlerProvider(
 	jwtService jwt.JWTServiceInterface,
 	userService user.UserServiceInterface,
 	authzService authz.AuthorizeServiceInterface,
+	tokenBuilder tokenservice.TokenBuilderInterface,
+	tokenValidator tokenservice.TokenValidatorInterface,
 ) GrantHandlerProviderInterface {
 	return &GrantHandlerProvider{
-		clientCredentialsGrantHandler: newClientCredentialsGrantHandler(jwtService),
-		authorizationCodeGrantHandler: newAuthorizationCodeGrantHandler(jwtService, userService, authzService),
-		refreshTokenGrantHandler:      newRefreshTokenGrantHandler(jwtService, userService),
-		tokenExchangeGrantHandler:     newTokenExchangeGrantHandler(jwtService),
+		clientCredentialsGrantHandler: newClientCredentialsGrantHandler(tokenBuilder),
+		authorizationCodeGrantHandler: newAuthorizationCodeGrantHandler(userService, authzService, tokenBuilder),
+		refreshTokenGrantHandler:      newRefreshTokenGrantHandler(jwtService, userService, tokenBuilder, tokenValidator),
+		tokenExchangeGrantHandler:     newTokenExchangeGrantHandler(tokenBuilder, tokenValidator),
 	}
 }
 

@@ -181,10 +181,7 @@ func (th *tokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 	tokenRequest.Scope = validScopes
 
 	// Delegate to the grant handler.
-	ctx := &model.TokenContext{
-		TokenAttributes: make(map[string]interface{}),
-	}
-	tokenRespDTO, tokenError := grantHandler.HandleGrant(tokenRequest, oauthApp, ctx)
+	tokenRespDTO, tokenError := grantHandler.HandleGrant(tokenRequest, oauthApp)
 	if tokenError != nil && tokenError.Error != "" {
 		utils.WriteJSONError(w, tokenError.Error, tokenError.ErrorDescription, http.StatusBadRequest, nil)
 		return
@@ -212,7 +209,8 @@ func (th *tokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		refreshTokenError := refreshGrantHandlerTyped.IssueRefreshToken(tokenRespDTO, oauthApp, ctx,
+		refreshTokenError := refreshGrantHandlerTyped.IssueRefreshToken(tokenRespDTO, oauthApp,
+			tokenRespDTO.AccessToken.Subject, tokenRespDTO.AccessToken.Audience,
 			grantTypeStr, tokenRespDTO.AccessToken.Scopes)
 		if refreshTokenError != nil && refreshTokenError.Error != "" {
 			utils.WriteJSONError(w, refreshTokenError.Error, refreshTokenError.ErrorDescription,
@@ -231,10 +229,13 @@ func (th *tokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 		IDToken:      tokenRespDTO.IDToken.Token,
 	}
 
-	// For token exchange, set the issued_token_type from context
+	// For token exchange, determine the issued_token_type from the request
 	if grantType == constants.GrantTypeTokenExchange {
-		if val, ok := ctx.TokenAttributes["issued_token_type"].(string); ok {
-			tokenResponse.IssuedTokenType = val
+		requestedTokenType := tokenRequest.RequestedTokenType
+		if requestedTokenType == "" || requestedTokenType == string(constants.TokenTypeIdentifierAccessToken) {
+			tokenResponse.IssuedTokenType = string(constants.TokenTypeIdentifierAccessToken)
+		} else {
+			tokenResponse.IssuedTokenType = string(constants.TokenTypeIdentifierJWT)
 		}
 	}
 

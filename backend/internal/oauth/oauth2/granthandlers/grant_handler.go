@@ -27,13 +27,13 @@ import (
 // GrantHandlerInterface defines the interface for handling OAuth 2.0 grants.
 type GrantHandlerInterface interface {
 	ValidateGrant(tokenRequest *model.TokenRequest, oauthApp *appmodel.OAuthAppConfigProcessedDTO) *model.ErrorResponse
-	HandleGrant(tokenRequest *model.TokenRequest, oauthApp *appmodel.OAuthAppConfigProcessedDTO,
-		ctx *model.TokenContext) (*model.TokenResponseDTO, *model.ErrorResponse)
+	HandleGrant(tokenRequest *model.TokenRequest, oauthApp *appmodel.OAuthAppConfigProcessedDTO) (
+		*model.TokenResponseDTO, *model.ErrorResponse)
 }
 
 // RefreshTokenGrantHandlerInterface defines the interface for handling refresh token grants.
 type RefreshTokenGrantHandlerInterface interface {
 	GrantHandlerInterface
 	IssueRefreshToken(tokenResponse *model.TokenResponseDTO, oauthApp *appmodel.OAuthAppConfigProcessedDTO,
-		ctx *model.TokenContext, grantType string, scopes []string) *model.ErrorResponse
+		subject string, audience string, grantType string, scopes []string) *model.ErrorResponse
 }
