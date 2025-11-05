@@ -1,6 +1,6 @@
 {
   "name": "@thunder/i18n",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Translation resources for Thunder applications",
   "type": "module",
   "main": "./dist/index.cjs",
