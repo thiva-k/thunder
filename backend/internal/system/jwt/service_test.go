@@ -19,12 +19,10 @@
 package jwt
 
 import (
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -41,6 +39,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/crypto/sign"
 )
 
 const (
@@ -1094,8 +1093,7 @@ func (suite *JWTServiceTestSuite) TestVerifyJWTClaimsEdgeCases() {
 				payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
 				signingInput := headerBase64 + "." + payloadBase64
-				hashed := sha256.Sum256([]byte(signingInput))
-				signature, _ := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+				signature, _ := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 				signatureBase64 := base64.RawURLEncoding.EncodeToString(signature)
 
 				return headerBase64 + "." + payloadBase64 + "." + signatureBase64
@@ -1130,8 +1128,7 @@ func (suite *JWTServiceTestSuite) TestVerifyJWTClaimsEdgeCases() {
 				payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
 				signingInput := headerBase64 + "." + payloadBase64
-				hashed := sha256.Sum256([]byte(signingInput))
-				signature, _ := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+				signature, _ := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 				signatureBase64 := base64.RawURLEncoding.EncodeToString(signature)
 
 				return headerBase64 + "." + payloadBase64 + "." + signatureBase64
@@ -1202,8 +1199,7 @@ func (suite *JWTServiceTestSuite) TestVerifyJWTClaimsEdgeCases() {
 				payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
 				signingInput := headerBase64 + "." + payloadBase64
-				hashed := sha256.Sum256([]byte(signingInput))
-				signature, _ := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+				signature, _ := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 				signatureBase64 := base64.RawURLEncoding.EncodeToString(signature)
 
 				return headerBase64 + "." + payloadBase64 + "." + signatureBase64
@@ -1238,8 +1234,7 @@ func (suite *JWTServiceTestSuite) TestVerifyJWTClaimsEdgeCases() {
 				payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
 				signingInput := headerBase64 + "." + payloadBase64
-				hashed := sha256.Sum256([]byte(signingInput))
-				signature, _ := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+				signature, _ := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 				signatureBase64 := base64.RawURLEncoding.EncodeToString(signature)
 
 				return headerBase64 + "." + payloadBase64 + "." + signatureBase64
@@ -1685,8 +1680,7 @@ func (suite *JWTServiceTestSuite) createJWTWithCustomHeader(header map[string]in
 	signingInput := headerBase64 + "." + payloadBase64
 
 	// Sign
-	hashed := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+	signature, err := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 	if err != nil {
 		suite.T().Fatalf("Failed to sign JWT: %v", err)
 	}
@@ -1775,8 +1769,7 @@ func (suite *JWTServiceTestSuite) createJWTWithClaims(sub, aud, iss string, exp 
 	signingInput := headerBase64 + "." + payloadBase64
 
 	// Sign
-	hashed := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+	signature, err := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 	if err != nil {
 		suite.T().Fatalf("Failed to sign JWT: %v", err)
 	}
@@ -1808,8 +1801,7 @@ func (suite *JWTServiceTestSuite) createJWTWithCustomPayload(payload map[string]
 	payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
 	signingInput := headerBase64 + "." + payloadBase64
-	hashed := sha256.Sum256([]byte(signingInput))
-	signature, _ := rsa.SignPKCS1v15(rand.Reader, suite.testPrivateKey, crypto.SHA256, hashed[:])
+	signature, _ := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.testPrivateKey)
 	signatureBase64 := base64.RawURLEncoding.EncodeToString(signature)
 
 	return headerBase64 + "." + payloadBase64 + "." + signatureBase64

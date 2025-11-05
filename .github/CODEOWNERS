@@ -30,7 +30,6 @@
 /backend/internal/system/crypto/ @hwupathum
 /backend/internal/system/database/ @ThaminduDilshan @darshanasbg
 /backend/internal/system/error/ @ThaminduDilshan
-/backend/internal/system/hash/ @hwupathum
 /backend/internal/system/healthcheck/ @darshanasbg
 /backend/internal/system/http/ @ThaminduDilshan
 /backend/internal/system/jwt/ @ThaminduDilshan

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package crypto
+package encrypt
 
 import (
 	"encoding/base64"
@@ -35,7 +35,7 @@ type MockThunderRuntime struct {
 	}
 }
 
-func TestCryptoService(t *testing.T) {
+func TestEncryptionService(t *testing.T) {
 	// Generate a random key
 	key, err := generateRandomKey(defaultKeySize)
 	if err != nil {
@@ -45,7 +45,7 @@ func TestCryptoService(t *testing.T) {
 	t.Logf("Generated random key: %x", key)
 
 	// Create crypto service
-	service, err := NewCryptoService(key)
+	service, err := NewEncryptionService(key)
 	if err != nil {
 		t.Fatalf("Failed to create crypto service: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestCryptoService(t *testing.T) {
 func TestTampering(t *testing.T) {
 	// Generate a random key
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	// Encrypt some data
 	original := "Protected data"
@@ -114,7 +114,7 @@ func TestTampering(t *testing.T) {
 func TestEncryptedObjectFormat(t *testing.T) {
 	// Generate a random key
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	// Encrypt some data
 	original := "Data to encrypt"
@@ -128,8 +128,8 @@ func TestEncryptedObjectFormat(t *testing.T) {
 	}
 
 	// Verify the structure
-	if encData.Algorithm != aesgcmAlgorithm {
-		t.Errorf("Expected algorithm %s, got %s", aesgcmAlgorithm, encData.Algorithm)
+	if encData.Algorithm != AESGCM {
+		t.Errorf("Expected algorithm %s, got %s", AESGCM, encData.Algorithm)
 	}
 	if encData.Ciphertext == "" {
 		t.Error("Ciphertext should not be empty")
@@ -142,7 +142,7 @@ func TestEncryptedObjectFormat(t *testing.T) {
 func TestEncryptDecryptCycle(t *testing.T) {
 	// Generate a key
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	// Test various data types
 	testCases := []string{
@@ -178,8 +178,8 @@ func TestDifferentKeysEncryption(t *testing.T) {
 	key1, _ := generateRandomKey(defaultKeySize)
 	key2, _ := generateRandomKey(defaultKeySize)
 
-	service1, _ := NewCryptoService(key1)
-	service2, _ := NewCryptoService(key2)
+	service1, _ := NewEncryptionService(key1)
+	service2, _ := NewEncryptionService(key2)
 
 	// Encrypt with first service
 	original := "Secret message"
@@ -196,7 +196,7 @@ func TestDifferentKeysEncryption(t *testing.T) {
 }
 
 func TestEncryptWithInvalidKey(t *testing.T) {
-	service := &CryptoService{
+	service := &EncryptionService{
 		Key: []byte("short"),
 		Kid: "kid",
 	}
@@ -207,7 +207,7 @@ func TestEncryptWithInvalidKey(t *testing.T) {
 
 func TestDecryptInvalidJSON(t *testing.T) {
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	_, err := service.Decrypt("not-json")
 	require.Error(t, err)
@@ -216,7 +216,7 @@ func TestDecryptInvalidJSON(t *testing.T) {
 
 func TestDecryptUnsupportedAlgorithm(t *testing.T) {
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	payload := EncryptedData{
 		Algorithm:  "RSA",
@@ -232,10 +232,10 @@ func TestDecryptUnsupportedAlgorithm(t *testing.T) {
 
 func TestDecryptInvalidBase64(t *testing.T) {
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	payload := EncryptedData{
-		Algorithm:  aesgcmAlgorithm,
+		Algorithm:  AESGCM,
 		Ciphertext: "###invalid###",
 		KeyID:      service.Kid,
 	}
@@ -248,10 +248,10 @@ func TestDecryptInvalidBase64(t *testing.T) {
 
 func TestDecryptCiphertextTooShort(t *testing.T) {
 	key, _ := generateRandomKey(defaultKeySize)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 
 	payload := EncryptedData{
-		Algorithm:  aesgcmAlgorithm,
+		Algorithm:  AESGCM,
 		Ciphertext: base64.StdEncoding.EncodeToString([]byte("short")),
 		KeyID:      service.Kid,
 	}
@@ -263,13 +263,13 @@ func TestDecryptCiphertextTooShort(t *testing.T) {
 }
 
 func TestDecryptWithInvalidKeyLength(t *testing.T) {
-	service := &CryptoService{
+	service := &EncryptionService{
 		Key: []byte("short"),
 		Kid: "kid",
 	}
 
 	payload := EncryptedData{
-		Algorithm:  aesgcmAlgorithm,
+		Algorithm:  AESGCM,
 		Ciphertext: base64.StdEncoding.EncodeToString([]byte("ciphertext-with-nonce")),
 		KeyID:      "kid",
 	}
@@ -286,7 +286,7 @@ func TestNondefaultKeySize(t *testing.T) {
 	original := "This is a secret message that needs encryption!"
 	for _, size := range testCases {
 		key, _ := generateRandomKey(size)
-		service, _ := NewCryptoService(key)
+		service, _ := NewEncryptionService(key)
 
 		encrypted, err := service.EncryptString(original)
 		if err != nil {
@@ -310,9 +310,9 @@ func TestNondefaultKeySize(t *testing.T) {
 func TestWrongKeySize(t *testing.T) {
 	// Generate a key of incorrect size
 	key, _ := generateRandomKey(30)
-	service, _ := NewCryptoService(key)
+	service, _ := NewEncryptionService(key)
 	_, err := service.EncryptString("Test data")
 	if err == nil {
-		t.Error("Expected error when creating CryptoService with short key, but got none")
+		t.Error("Expected error when creating EncryptionService with short key, but got none")
 	}
 }

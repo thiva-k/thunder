@@ -16,8 +16,8 @@
  * under the License.
  */
 
-// Package crypto provides cryptographic functionality with algorithm agility.
-package crypto
+// Package encrypt provides cryptographic functionality with algorithm agility.
+package encrypt
 
 import (
 	"crypto/aes"
@@ -31,46 +31,44 @@ import (
 	"sync"
 
 	"github.com/asgardeo/thunder/internal/system/config"
-	"github.com/asgardeo/thunder/internal/system/hash"
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 const (
-	// aesgcmAlgorithm represents AES-GCM algorithm
-	aesgcmAlgorithm = "AES-GCM"
 	// defaultKeySize defines the default key size for AES-GCM
 	defaultKeySize = 32
 )
 
-// CryptoService provides cryptographic operations.
-type CryptoService struct {
+// EncryptionService provides cryptographic operations.
+type EncryptionService struct {
 	Key []byte
 	Kid string
 }
 
 var (
-	// instance is the singleton instance of CryptoService
-	instance *CryptoService
+	// instance is the singleton instance of EncryptionService
+	instance *EncryptionService
 	// once ensures the singleton is initialized only once
 	once sync.Once
 )
 
-// GetCryptoService creates and returns a singleton instance of the CryptoService.
-func GetCryptoService() *CryptoService {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "CryptoService"))
+// GetEncryptionService creates and returns a singleton instance of the EncryptionService.
+func GetEncryptionService() *EncryptionService {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "EncryptionService"))
 	once.Do(func() {
 		var err error
-		instance, err = initCryptoService()
+		instance, err = initEncryptionService()
 		if err != nil {
-			logger.Error("Failed to initialize CryptoService: %v", log.Error(err))
+			logger.Error("Failed to initialize EncryptionService: %v", log.Error(err))
 		}
 	})
 	return instance
 }
 
-// initCryptoService initializes the CryptoService from configuration sources.
-func initCryptoService() (*CryptoService, error) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "CryptoService"))
+// initEncryptionService initializes the EncryptionService from configuration sources.
+func initEncryptionService() (*EncryptionService, error) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "EncryptionService"))
 	// Try to get key from the application configuration
 	config := config.GetThunderRuntime().Config.Crypto.Key // Use the correct config getter
 
@@ -79,7 +77,7 @@ func initCryptoService() (*CryptoService, error) {
 		key, err := hex.DecodeString(config)
 		if err == nil {
 			logger.Debug("Using crypto key from configuration")
-			return NewCryptoService(key)
+			return NewEncryptionService(key)
 		}
 		logger.Warn("Invalid crypto key in configuration, generating a new key")
 	}
@@ -96,14 +94,14 @@ func initCryptoService() (*CryptoService, error) {
 	encodedKey := hex.EncodeToString(key)
 	logger.Debug("Generated new crypto key (hex): %s", log.String("logKey", encodedKey))
 
-	return NewCryptoService(key)
+	return NewEncryptionService(key)
 }
 
-// NewCryptoService creates a new instance of CryptoService with the provided key.
-func NewCryptoService(key []byte) (*CryptoService, error) {
+// NewEncryptionService creates a new instance of EncryptionService with the provided key.
+func NewEncryptionService(key []byte) (*EncryptionService, error) {
 	// Check key size for algorithm
 
-	return &CryptoService{
+	return &EncryptionService{
 		Key: key,
 		Kid: getKeyID(key), // Generate a unique key ID
 	}, nil
@@ -111,23 +109,23 @@ func NewCryptoService(key []byte) (*CryptoService, error) {
 
 // Encrypt encrypts the given plaintext and returns a JSON string
 // containing the encrypted data.
-func (cs *CryptoService) Encrypt(plaintext []byte) (string, error) {
+func (cs *EncryptionService) Encrypt(plaintext []byte) (string, error) {
 	// Create AES cipher
 	block, err := aes.NewCipher(cs.Key)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	// Create GCM mode
 	aesgcm, err := cipher.NewGCM(block)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create GCM mode: %w", err)
 	}
 
 	// Create a nonce
 	nonce := make([]byte, aesgcm.NonceSize())
 	if _, err = rand.Read(nonce); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate nonce: %w", err)
 	}
 
 	// Encrypt and authenticate plaintext, prepend nonce
@@ -135,7 +133,7 @@ func (cs *CryptoService) Encrypt(plaintext []byte) (string, error) {
 
 	// Create metadata structure
 	encData := EncryptedData{
-		Algorithm:  aesgcmAlgorithm,
+		Algorithm:  AESGCM,
 		Ciphertext: base64.StdEncoding.EncodeToString(ciphertext),
 		KeyID:      cs.Kid, // Unique identifier for the key
 	}
@@ -143,7 +141,7 @@ func (cs *CryptoService) Encrypt(plaintext []byte) (string, error) {
 	// Serialize to JSON
 	jsonData, err := json.Marshal(encData)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to serialize encrypted data: %w", err)
 	}
 
 	return string(jsonData), nil
@@ -151,7 +149,7 @@ func (cs *CryptoService) Encrypt(plaintext []byte) (string, error) {
 
 // Decrypt decrypts the given JSON string produced by Encrypt
 // and returns the original plaintext.
-func (cs *CryptoService) Decrypt(encodedData string) ([]byte, error) {
+func (cs *EncryptionService) Decrypt(encodedData string) ([]byte, error) {
 	// Deserialize JSON
 	var encData EncryptedData
 	if err := json.Unmarshal([]byte(encodedData), &encData); err != nil {
@@ -159,7 +157,7 @@ func (cs *CryptoService) Decrypt(encodedData string) ([]byte, error) {
 	}
 
 	// Verify algorithm
-	if encData.Algorithm != aesgcmAlgorithm {
+	if encData.Algorithm != AESGCM {
 		return nil, fmt.Errorf("unsupported algorithm: %s", encData.Algorithm)
 	}
 
@@ -172,13 +170,13 @@ func (cs *CryptoService) Decrypt(encodedData string) ([]byte, error) {
 	// Create AES cipher
 	block, err := aes.NewCipher(cs.Key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create cipher: %w", err)
 	}
 
 	// Create GCM mode
 	aesGCM, err := cipher.NewGCM(block)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create GCM mode: %w", err)
 	}
 
 	// Verify ciphertext length
@@ -199,13 +197,13 @@ func (cs *CryptoService) Decrypt(encodedData string) ([]byte, error) {
 
 // EncryptString encrypts the given plaintext string and returns a
 // JSON string containing the encrypted data.
-func (cs *CryptoService) EncryptString(plaintext string) (string, error) {
+func (cs *EncryptionService) EncryptString(plaintext string) (string, error) {
 	return cs.Encrypt([]byte(plaintext))
 }
 
 // DecryptString decrypts the given JSON string produced by Encrypt
 // and returns the original plaintext string.
-func (cs *CryptoService) DecryptString(ciphertext string) (string, error) {
+func (cs *EncryptionService) DecryptString(ciphertext string) (string, error) {
 	plaintext, err := cs.Decrypt(ciphertext)
 	if err != nil {
 		return "", err

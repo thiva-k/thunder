@@ -20,6 +20,8 @@ package user
 
 import (
 	"encoding/json"
+
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 )
 
 // User represents a user in the system.
@@ -32,11 +34,11 @@ type User struct {
 
 // Credential represents the credentials of a user.
 type Credential struct {
-	CredentialType string `json:"credentialType"`
-	StorageType    string `json:"storageType"`
-	StorageAlgo    string `json:"storageAlgo"`
-	Value          string `json:"value"`
-	Salt           string `json:"salt"`
+	CredentialType string             `json:"credentialType"`
+	StorageType    string             `json:"storageType"`
+	StorageAlgo    hash.CredAlgorithm `json:"storageAlgo"`
+	Value          string             `json:"value"`
+	Salt           string             `json:"salt"`
 }
 
 // Link represents a pagination link.

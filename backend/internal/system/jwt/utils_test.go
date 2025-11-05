@@ -19,10 +19,8 @@
 package jwt
 
 import (
-	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"net/http/httptest"
@@ -33,6 +31,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/crypto/sign"
 )
 
 type JWTUtilsTestSuite struct {
@@ -97,8 +96,7 @@ func (suite *JWTUtilsTestSuite) createValidJWT() string {
 	payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 	signingInput := headerBase64 + "." + payloadBase64
 
-	hashed := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, suite.rsaPrivateKey, crypto.SHA256, hashed[:])
+	signature, err := sign.Generate([]byte(signingInput), sign.RSASHA256, suite.rsaPrivateKey)
 	if err != nil {
 		suite.T().Fatalf("Failed to sign JWT: %v", err)
 	}

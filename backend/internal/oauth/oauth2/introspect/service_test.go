@@ -19,10 +19,8 @@
 package introspect
 
 import (
-	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -30,6 +28,7 @@ import (
 	"time"
 
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/asgardeo/thunder/internal/system/crypto/sign"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 
 	"github.com/stretchr/testify/assert"
@@ -106,8 +105,7 @@ func (s *TokenIntrospectionServiceTestSuite) TestIntrospectToken_InvalidSignatur
 	claimsEncoded := base64.RawURLEncoding.EncodeToString(claimsBytes)
 
 	signingInput := headerEncoded + "." + claimsEncoded
-	hashed := sha256.Sum256([]byte(signingInput))
-	signature, _ := rsa.SignPKCS1v15(rand.Reader, differentKey, crypto.SHA256, hashed[:])
+	signature, _ := sign.Generate([]byte(signingInput), sign.RSASHA256, differentKey)
 	signatureEncoded := base64.RawURLEncoding.EncodeToString(signature)
 
 	invalidToken := signingInput + "." + signatureEncoded
@@ -298,8 +296,7 @@ func (s *TokenIntrospectionServiceTestSuite) createToken(claims map[string]inter
 	claimsEncoded := base64.RawURLEncoding.EncodeToString(claimsBytes)
 
 	signingInput := headerEncoded + "." + claimsEncoded
-	hashed := sha256.Sum256([]byte(signingInput))
-	signature, err := rsa.SignPKCS1v15(rand.Reader, s.privateKey, crypto.SHA256, hashed[:])
+	signature, err := sign.Generate([]byte(signingInput), sign.RSASHA256, s.privateKey)
 	if err != nil {
 		s.T().Fatal("Error signing token:", err)
 	}
