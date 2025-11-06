@@ -17,15 +17,17 @@
  */
 
 import {NavLink} from 'react-router';
-import {List, ListItem, ListItemButton, ListItemIcon, ListItemText, Stack} from '@wso2/oxygen-ui';
+import {List, ListItem, ListItemButton, ListItemIcon, ListItemText, Stack, Tooltip} from '@wso2/oxygen-ui';
 import {Blocks, LayoutGrid, User, UsersRound} from 'lucide-react';
-import {useMemo, type JSX} from 'react';
+import {useContext, useMemo, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useNavigation from '@/layouts/contexts/useNavigation';
+import SidebarContext from './context/SidebarContext';
 
 export default function MenuContent(): JSX.Element {
   const {currentPage, setCurrentPage} = useNavigation();
   const {t} = useTranslation();
+  const {mini} = useContext(SidebarContext);
 
   const mainListItems = useMemo(
     () => [
@@ -70,15 +72,36 @@ export default function MenuContent(): JSX.Element {
       <List dense>
         {mainListItems.map((item) => (
           <ListItem key={item.id} disablePadding sx={{display: 'block'}}>
-            <ListItemButton
-              component={NavLink}
-              to={item.path}
-              selected={currentPage === item.id}
-              onClick={() => handleListItemClick(item)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
+            <Tooltip title={mini ? item.text : ''} placement="right" arrow>
+              <ListItemButton
+                component={NavLink}
+                to={item.path}
+                selected={currentPage === item.id}
+                onClick={() => handleListItemClick(item)}
+                sx={{
+                  minHeight: 48,
+                  justifyContent: mini ? 'center' : 'initial',
+                  px: 2.5,
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    mr: mini ? 'auto' : 3,
+                    justifyContent: 'center',
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.text}
+                  sx={{
+                    opacity: mini ? 0 : 1,
+                    display: mini ? 'none' : 'block',
+                  }}
+                />
+              </ListItemButton>
+            </Tooltip>
           </ListItem>
         ))}
       </List>
