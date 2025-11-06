@@ -33,21 +33,21 @@ const StyledBreadcrumbs = styled(Breadcrumbs)(({theme}) => ({
   },
 }));
 
+// Map page IDs to translation keys
+const PAGE_TRANSLATION_KEY_MAP: Record<string, string> = {
+  users: 'navigation:pages.users',
+  'user-types': 'navigation:pages.userTypes',
+  integrations: 'navigation:pages.integrations',
+  applications: 'navigation:pages.applications',
+  dashboard: 'navigation:pages.dashboard',
+};
+
 export default function NavbarBreadcrumbs(): JSX.Element {
   const {t} = useTranslation();
   const {currentPage} = useNavigation();
 
-  // Map page IDs to translation keys
-  const pageTranslationKeyMap: Record<string, string> = {
-    users: 'navigation:pages.users',
-    'user-types': 'navigation:pages.userTypes',
-    integrations: 'navigation:pages.integrations',
-    applications: 'navigation:pages.applications',
-    dashboard: 'navigation:pages.dashboard',
-  };
-
   // Get the translation key for the current page, fallback to the page ID if not found
-  const currentPageTranslationKey = pageTranslationKeyMap[currentPage] || currentPage;
+  const currentPageTranslationKey = PAGE_TRANSLATION_KEY_MAP[currentPage] ?? currentPage;
 
   return (
     <StyledBreadcrumbs

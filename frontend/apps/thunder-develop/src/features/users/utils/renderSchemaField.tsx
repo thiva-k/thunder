@@ -115,6 +115,7 @@ const renderSchemaField = <T extends Record<string, unknown>>(
           render={({field}) => (
             <TextField
               {...field}
+              value={field.value ?? ''}
               id={fieldName}
               type="text"
               placeholder={`Enter ${fieldLabel.toLowerCase()}`}
@@ -148,6 +149,7 @@ const renderSchemaField = <T extends Record<string, unknown>>(
           render={({field}) => (
             <TextField
               {...field}
+              value={field.value ?? ''}
               id={fieldName}
               type="number"
               placeholder={`Enter ${fieldLabel.toLowerCase()}`}
