@@ -49,7 +49,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_AuthorizationCod
 			oauth2const.GrantTypeRefreshToken,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_ClientCredentials() {
@@ -58,7 +59,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_ClientCredential
 			oauth2const.GrantTypeClientCredentials,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_RefreshToken() {
@@ -67,7 +69,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_RefreshToken() {
 			oauth2const.GrantTypeRefreshToken,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_TokenExchange() {
@@ -76,7 +79,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_TokenExchange() 
 			oauth2const.GrantTypeTokenExchange,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_NotAllowed() {
@@ -85,7 +89,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_NotAllowed() {
 			oauth2const.GrantTypeAuthorizationCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
+
+	suite.False(config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_EmptyGrantType() {
@@ -94,21 +99,24 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_EmptyGrantType()
 			oauth2const.GrantTypeAuthorizationCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(""))
+
+	suite.False(config.IsAllowedGrantType(""))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_EmptyGrantTypesList() {
 	config := &OAuthAppConfigDTO{
 		GrantTypes: []oauth2const.GrantType{},
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+
+	suite.False(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_NilGrantTypesList() {
 	config := &OAuthAppConfigDTO{
 		GrantTypes: nil,
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+
+	suite.False(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_MultipleGrantTypes() {
@@ -120,10 +128,11 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedGrantType_MultipleGrantTyp
 			oauth2const.GrantTypeTokenExchange,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_Code() {
@@ -132,7 +141,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_Code() {
 			oauth2const.ResponseTypeCode,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedResponseType("code"))
+
+	suite.True(config.IsAllowedResponseType("code"))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_NotAllowed() {
@@ -141,7 +151,8 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_NotAllowed() 
 			oauth2const.ResponseTypeCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType("token"))
+
+	suite.False(config.IsAllowedResponseType("token"))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_EmptyResponseType() {
@@ -150,21 +161,24 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_EmptyResponse
 			oauth2const.ResponseTypeCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType(""))
+
+	suite.False(config.IsAllowedResponseType(""))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_EmptyResponseTypesList() {
 	config := &OAuthAppConfigDTO{
 		ResponseTypes: []oauth2const.ResponseType{},
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType("code"))
+
+	suite.False(config.IsAllowedResponseType("code"))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_NilResponseTypesList() {
 	config := &OAuthAppConfigDTO{
 		ResponseTypes: nil,
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType("code"))
+
+	suite.False(config.IsAllowedResponseType("code"))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_MultipleResponseTypes() {
@@ -175,110 +189,124 @@ func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedResponseType_MultipleRespo
 			"id_token",
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedResponseType("code"))
-	assert.True(suite.T(), config.IsAllowedResponseType("token"))
-	assert.True(suite.T(), config.IsAllowedResponseType("id_token"))
+
+	suite.True(config.IsAllowedResponseType("code"))
+	suite.True(config.IsAllowedResponseType("token"))
+	suite.True(config.IsAllowedResponseType("id_token"))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_ClientSecretBasic() {
 	config := &OAuthAppConfigDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretBasic,
 	}
-	assert.True(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretBasic))
+
+	suite.True(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretBasic))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_ClientSecretPost() {
 	config := &OAuthAppConfigDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretPost,
 	}
-	assert.True(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
+
+	suite.True(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_None() {
 	config := &OAuthAppConfigDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodNone,
 	}
-	assert.True(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodNone))
+
+	suite.True(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodNone))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_NotAllowed() {
 	config := &OAuthAppConfigDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretBasic,
 	}
-	assert.False(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
+
+	suite.False(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_Empty() {
 	config := &OAuthAppConfigDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretBasic,
 	}
-	assert.False(suite.T(), config.IsAllowedTokenEndpointAuthMethod(""))
+
+	suite.False(config.IsAllowedTokenEndpointAuthMethod(""))
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_ValidWithSingleRegisteredURI() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"https://example.com/callback"},
 	}
+
 	err := config.ValidateRedirectURI("https://example.com/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_ValidHTTPLocalhostWithPort() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"http://localhost:3000/callback"},
 	}
+
 	err := config.ValidateRedirectURI("http://localhost:3000/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_ValidHTTPSWithPath() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"https://app.example.com/oauth/callback"},
 	}
+
 	err := config.ValidateRedirectURI("https://app.example.com/oauth/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_ValidCustomScheme() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"myapp://callback"},
 	}
+
 	err := config.ValidateRedirectURI("myapp://callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_ValidWithQueryParameters() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"https://example.com/callback?param=value"},
 	}
+
 	err := config.ValidateRedirectURI("https://example.com/callback?param=value")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_InvalidWithFragment() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"https://example.com/callback#fragment"},
 	}
+
 	err := config.ValidateRedirectURI("https://example.com/callback#fragment")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIFragment, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIFragment, err.Error())
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_NotRegistered() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"https://example.com/callback"},
 	}
+
 	err := config.ValidateRedirectURI("https://different.com/callback")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotRegistered, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotRegistered, err.Error())
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_EmptyWithSingleFullyQualifiedURI() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"https://example.com/callback"},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_EmptyWithMultipleURIs() {
@@ -288,45 +316,50 @@ func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_EmptyWithMultip
 			"https://example.com/callback2",
 		},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_EmptyWithPartialRegisteredURI() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"/callback"},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_EmptyWithInvalidRegisteredURI() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{"://invalid"},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_EmptyRedirectURIsList() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: []string{},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
 func (suite *OAuthAppConfigDTOTestSuite) TestValidateRedirectURI_NilRedirectURIsList() {
 	config := &OAuthAppConfigDTO{
 		RedirectURIs: nil,
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
 type OAuthAppConfigProcessedDTOTestSuite struct {
@@ -344,7 +377,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_Authori
 			oauth2const.GrantTypeRefreshToken,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_ClientCredentials() {
@@ -353,7 +387,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_ClientC
 			oauth2const.GrantTypeClientCredentials,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_RefreshToken() {
@@ -362,7 +397,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_Refresh
 			oauth2const.GrantTypeRefreshToken,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_TokenExchange() {
@@ -371,7 +407,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_TokenEx
 			oauth2const.GrantTypeTokenExchange,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_NotAllowed() {
@@ -380,7 +417,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_NotAllo
 			oauth2const.GrantTypeAuthorizationCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
+
+	suite.False(config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_EmptyGrantType() {
@@ -389,21 +427,24 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_EmptyGr
 			oauth2const.GrantTypeAuthorizationCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(""))
+
+	suite.False(config.IsAllowedGrantType(""))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_EmptyGrantTypesList() {
 	config := &OAuthAppConfigProcessedDTO{
 		GrantTypes: []oauth2const.GrantType{},
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+
+	suite.False(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_NilGrantTypesList() {
 	config := &OAuthAppConfigProcessedDTO{
 		GrantTypes: nil,
 	}
-	assert.False(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+
+	suite.False(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_MultipleGrantTypes() {
@@ -415,10 +456,11 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedGrantType_Multipl
 			oauth2const.GrantTypeTokenExchange,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
-	assert.True(suite.T(), config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
+
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeAuthorizationCode))
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeClientCredentials))
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeRefreshToken))
+	suite.True(config.IsAllowedGrantType(oauth2const.GrantTypeTokenExchange))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_Code() {
@@ -427,7 +469,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_Code
 			oauth2const.ResponseTypeCode,
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedResponseType("code"))
+
+	suite.True(config.IsAllowedResponseType("code"))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_NotAllowed() {
@@ -436,7 +479,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_NotA
 			oauth2const.ResponseTypeCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType("token"))
+
+	suite.False(config.IsAllowedResponseType("token"))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_EmptyResponseType() {
@@ -445,21 +489,24 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_Empt
 			oauth2const.ResponseTypeCode,
 		},
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType(""))
+
+	suite.False(config.IsAllowedResponseType(""))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_EmptyResponseTypesList() {
 	config := &OAuthAppConfigProcessedDTO{
 		ResponseTypes: []oauth2const.ResponseType{},
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType("code"))
+
+	suite.False(config.IsAllowedResponseType("code"))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_NilResponseTypesList() {
 	config := &OAuthAppConfigProcessedDTO{
 		ResponseTypes: nil,
 	}
-	assert.False(suite.T(), config.IsAllowedResponseType("code"))
+
+	suite.False(config.IsAllowedResponseType("code"))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_MultipleResponseTypes() {
@@ -470,110 +517,124 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedResponseType_Mult
 			"id_token",
 		},
 	}
-	assert.True(suite.T(), config.IsAllowedResponseType("code"))
-	assert.True(suite.T(), config.IsAllowedResponseType("token"))
-	assert.True(suite.T(), config.IsAllowedResponseType("id_token"))
+
+	suite.True(config.IsAllowedResponseType("code"))
+	suite.True(config.IsAllowedResponseType("token"))
+	suite.True(config.IsAllowedResponseType("id_token"))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_ClientSecretBasic() {
 	config := &OAuthAppConfigProcessedDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretBasic,
 	}
-	assert.True(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretBasic))
+
+	suite.True(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretBasic))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_ClientSecretPost() {
 	config := &OAuthAppConfigProcessedDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretPost,
 	}
-	assert.True(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
+
+	suite.True(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_None() {
 	config := &OAuthAppConfigProcessedDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodNone,
 	}
-	assert.True(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodNone))
+
+	suite.True(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodNone))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_NotAllowed() {
 	config := &OAuthAppConfigProcessedDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretBasic,
 	}
-	assert.False(suite.T(), config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
+
+	suite.False(config.IsAllowedTokenEndpointAuthMethod(oauth2const.TokenEndpointAuthMethodClientSecretPost))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestIsAllowedTokenEndpointAuthMethod_Empty() {
 	config := &OAuthAppConfigProcessedDTO{
 		TokenEndpointAuthMethod: oauth2const.TokenEndpointAuthMethodClientSecretBasic,
 	}
-	assert.False(suite.T(), config.IsAllowedTokenEndpointAuthMethod(""))
+
+	suite.False(config.IsAllowedTokenEndpointAuthMethod(""))
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_ValidWithSingleRegisteredURI() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"https://example.com/callback"},
 	}
+
 	err := config.ValidateRedirectURI("https://example.com/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_ValidHTTPLocalhostWithPort() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"http://localhost:3000/callback"},
 	}
+
 	err := config.ValidateRedirectURI("http://localhost:3000/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_ValidHTTPSWithPath() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"https://app.example.com/oauth/callback"},
 	}
+
 	err := config.ValidateRedirectURI("https://app.example.com/oauth/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_ValidCustomScheme() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"myapp://callback"},
 	}
+
 	err := config.ValidateRedirectURI("myapp://callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_ValidWithQueryParameters() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"https://example.com/callback?param=value"},
 	}
+
 	err := config.ValidateRedirectURI("https://example.com/callback?param=value")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_InvalidWithFragment() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"https://example.com/callback#fragment"},
 	}
+
 	err := config.ValidateRedirectURI("https://example.com/callback#fragment")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIFragment, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIFragment, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_NotRegistered() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"https://example.com/callback"},
 	}
+
 	err := config.ValidateRedirectURI("https://different.com/callback")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotRegistered, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotRegistered, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_EmptyWithSingleFullyQualifiedURI() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"https://example.com/callback"},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_EmptyWithMultipleURIs() {
@@ -583,45 +644,50 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_EmptyW
 			"https://example.com/callback2",
 		},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_EmptyWithPartialRegisteredURI() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"/callback"},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_EmptyWithInvalidRegisteredURI() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{"://invalid"},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_EmptyRedirectURIsList() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: []string{},
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestValidateRedirectURI_NilRedirectURIsList() {
 	config := &OAuthAppConfigProcessedDTO{
 		RedirectURIs: nil,
 	}
+
 	err := config.ValidateRedirectURI("")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_PKCERequiredTrue() {
@@ -629,7 +695,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_PKCERequiredT
 		PKCERequired: true,
 		PublicClient: false,
 	}
-	assert.True(suite.T(), config.RequiresPKCE())
+
+	suite.True(config.RequiresPKCE())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_PublicClientTrue() {
@@ -637,7 +704,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_PublicClientT
 		PKCERequired: false,
 		PublicClient: true,
 	}
-	assert.True(suite.T(), config.RequiresPKCE())
+
+	suite.True(config.RequiresPKCE())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_BothTrue() {
@@ -645,7 +713,8 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_BothTrue() {
 		PKCERequired: true,
 		PublicClient: true,
 	}
-	assert.True(suite.T(), config.RequiresPKCE())
+
+	suite.True(config.RequiresPKCE())
 }
 
 func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_BothFalse() {
@@ -653,191 +722,216 @@ func (suite *OAuthAppConfigProcessedDTOTestSuite) TestRequiresPKCE_BothFalse() {
 		PKCERequired: false,
 		PublicClient: false,
 	}
-	assert.False(suite.T(), config.RequiresPKCE())
+
+	suite.False(config.RequiresPKCE())
 }
 
-type HelperFunctionsTestSuite struct {
+type OAuthAppHelperTestSuite struct {
 	suite.Suite
 }
 
-func TestHelperFunctionsTestSuite(t *testing.T) {
-	suite.Run(t, new(HelperFunctionsTestSuite))
+func TestOAuthAppHelperTestSuite(t *testing.T) {
+	suite.Run(t, new(OAuthAppHelperTestSuite))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedGrantType_ValidGrantType() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedGrantType_ValidGrantType() {
 	grantTypes := []oauth2const.GrantType{
 		oauth2const.GrantTypeAuthorizationCode,
 		oauth2const.GrantTypeRefreshToken,
 	}
-	assert.True(suite.T(), isAllowedGrantType(grantTypes, oauth2const.GrantTypeAuthorizationCode))
+
+	suite.True(isAllowedGrantType(grantTypes, oauth2const.GrantTypeAuthorizationCode))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedGrantType_InvalidGrantType() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedGrantType_InvalidGrantType() {
 	grantTypes := []oauth2const.GrantType{
 		oauth2const.GrantTypeAuthorizationCode,
 	}
-	assert.False(suite.T(), isAllowedGrantType(grantTypes, oauth2const.GrantTypeClientCredentials))
+
+	suite.False(isAllowedGrantType(grantTypes, oauth2const.GrantTypeClientCredentials))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedGrantType_EmptyGrantType() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedGrantType_EmptyGrantType() {
 	grantTypes := []oauth2const.GrantType{
 		oauth2const.GrantTypeAuthorizationCode,
 	}
-	assert.False(suite.T(), isAllowedGrantType(grantTypes, ""))
+
+	suite.False(isAllowedGrantType(grantTypes, ""))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedGrantType_EmptyList() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedGrantType_EmptyList() {
 	grantTypes := []oauth2const.GrantType{}
-	assert.False(suite.T(), isAllowedGrantType(grantTypes, oauth2const.GrantTypeAuthorizationCode))
+
+	suite.False(isAllowedGrantType(grantTypes, oauth2const.GrantTypeAuthorizationCode))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedGrantType_NilList() {
-	assert.False(suite.T(), isAllowedGrantType(nil, oauth2const.GrantTypeAuthorizationCode))
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedGrantType_NilList() {
+	suite.False(isAllowedGrantType(nil, oauth2const.GrantTypeAuthorizationCode))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedResponseType_ValidResponseType() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedResponseType_ValidResponseType() {
 	responseTypes := []oauth2const.ResponseType{
 		oauth2const.ResponseTypeCode,
 		"token",
 	}
-	assert.True(suite.T(), isAllowedResponseType(responseTypes, "code"))
+
+	suite.True(isAllowedResponseType(responseTypes, "code"))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedResponseType_InvalidResponseType() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedResponseType_InvalidResponseType() {
 	responseTypes := []oauth2const.ResponseType{
 		oauth2const.ResponseTypeCode,
 	}
-	assert.False(suite.T(), isAllowedResponseType(responseTypes, "token"))
+
+	suite.False(isAllowedResponseType(responseTypes, "token"))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedResponseType_EmptyResponseType() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedResponseType_EmptyResponseType() {
 	responseTypes := []oauth2const.ResponseType{
 		oauth2const.ResponseTypeCode,
 	}
-	assert.False(suite.T(), isAllowedResponseType(responseTypes, ""))
+
+	suite.False(isAllowedResponseType(responseTypes, ""))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedResponseType_EmptyList() {
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedResponseType_EmptyList() {
 	responseTypes := []oauth2const.ResponseType{}
-	assert.False(suite.T(), isAllowedResponseType(responseTypes, "code"))
+
+	suite.False(isAllowedResponseType(responseTypes, "code"))
 }
 
-func (suite *HelperFunctionsTestSuite) TestIsAllowedResponseType_NilList() {
-	assert.False(suite.T(), isAllowedResponseType(nil, "code"))
+func (suite *OAuthAppHelperTestSuite) TestIsAllowedResponseType_NilList() {
+	suite.False(isAllowedResponseType(nil, "code"))
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_ValidSingleURI() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_ValidSingleURI() {
 	redirectURIs := []string{"https://example.com/callback"}
+
 	err := validateRedirectURI(redirectURIs, "https://example.com/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_ValidMultipleURIs() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_ValidMultipleURIs() {
 	redirectURIs := []string{
 		"https://example.com/callback",
 		"https://example.com/callback2",
 	}
+
 	err := validateRedirectURI(redirectURIs, "https://example.com/callback2")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_InvalidNotRegistered() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_InvalidNotRegistered() {
 	redirectURIs := []string{"https://example.com/callback"}
+
 	err := validateRedirectURI(redirectURIs, "https://different.com/callback")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotRegistered, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotRegistered, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_InvalidWithFragment() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_InvalidWithFragment() {
 	redirectURIs := []string{"https://example.com/callback#fragment"}
+
 	err := validateRedirectURI(redirectURIs, "https://example.com/callback#fragment")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIFragment, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIFragment, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_EmptyURIWithSingleFullyQualified() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_EmptyURIWithSingleFullyQualified() {
 	redirectURIs := []string{"https://example.com/callback"}
+
 	err := validateRedirectURI(redirectURIs, "")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_EmptyURIWithMultiple() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_EmptyURIWithMultiple() {
 	redirectURIs := []string{
 		"https://example.com/callback",
 		"https://example.com/callback2",
 	}
+
 	err := validateRedirectURI(redirectURIs, "")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_EmptyURIWithPartialRegistered() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_EmptyURIWithPartialRegistered() {
 	redirectURIs := []string{"/callback"}
+
 	err := validateRedirectURI(redirectURIs, "")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_EmptyURIWithNoScheme() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_EmptyURIWithNoScheme() {
 	redirectURIs := []string{"example.com/callback"}
+
 	err := validateRedirectURI(redirectURIs, "")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_EmptyURIWithNoHost() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_EmptyURIWithNoHost() {
 	redirectURIs := []string{"https:///callback"}
+
 	err := validateRedirectURI(redirectURIs, "")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURINotFullyQualified, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURINotFullyQualified, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_EmptyURIList() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_EmptyURIList() {
 	redirectURIs := []string{}
+
 	err := validateRedirectURI(redirectURIs, "")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_NilList() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_NilList() {
 	err := validateRedirectURI(nil, "")
-	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), errRedirectURIRequired, err.Error())
+	suite.Error(err)
+	suite.Equal(errRedirectURIRequired, err.Error())
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_CustomScheme() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_CustomScheme() {
 	redirectURIs := []string{"myapp://callback"}
+
 	err := validateRedirectURI(redirectURIs, "myapp://callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_LocalhostHTTP() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_LocalhostHTTP() {
 	redirectURIs := []string{"http://localhost:3000/callback"}
+
 	err := validateRedirectURI(redirectURIs, "http://localhost:3000/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_WithQueryParams() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_WithQueryParams() {
 	redirectURIs := []string{"https://example.com/callback?foo=bar"}
+
 	err := validateRedirectURI(redirectURIs, "https://example.com/callback?foo=bar")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_IPAddress() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_IPAddress() {
 	redirectURIs := []string{"https://192.168.1.1/callback"}
+
 	err := validateRedirectURI(redirectURIs, "https://192.168.1.1/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_Localhost127() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_Localhost127() {
 	redirectURIs := []string{"http://127.0.0.1:8080/callback"}
+
 	err := validateRedirectURI(redirectURIs, "http://127.0.0.1:8080/callback")
-	assert.NoError(suite.T(), err)
+	suite.NoError(err)
 }
 
-func (suite *HelperFunctionsTestSuite) TestValidateRedirectURI_InvalidURLFormat() {
+func (suite *OAuthAppHelperTestSuite) TestValidateRedirectURI_InvalidURLFormat() {
 	redirectURIs := []string{"http://example.com/callback\x00invalid"}
+
 	err := validateRedirectURI(redirectURIs, "http://example.com/callback\x00invalid")
-	assert.Error(suite.T(), err)
+	suite.Error(err)
 	assert.Contains(suite.T(), err.Error(), "invalid redirect URI")
 }
