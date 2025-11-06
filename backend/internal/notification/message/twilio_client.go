@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/notification/common"
-	httpservice "github.com/asgardeo/thunder/internal/system/http"
+	syshttp "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
@@ -43,6 +43,7 @@ type TwilioClient struct {
 	accountSID string
 	authToken  string
 	senderID   string
+	httpClient syshttp.HTTPClientInterface
 }
 
 // NewTwilioClient creates a new instance of TwilioClient.
@@ -70,6 +71,7 @@ func NewTwilioClient(sender common.NotificationSenderDTO) (MessageClientInterfac
 		}
 	}
 	client.url = fmt.Sprintf(twilioURL, client.accountSID)
+	client.httpClient = syshttp.NewHTTPClientWithTimeout(httpClientTimeout)
 
 	return client, nil
 }
@@ -98,8 +100,7 @@ func (c *TwilioClient) SendSMS(sms common.SMSData) error {
 	req.SetBasicAuth(c.accountSID, c.authToken)
 
 	// Send the request
-	client := httpservice.NewHTTPClientWithTimeout(httpClientTimeout)
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}

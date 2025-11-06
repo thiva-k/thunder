@@ -27,7 +27,6 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/notification/common"
-	"github.com/asgardeo/thunder/internal/notification/message"
 	"github.com/asgardeo/thunder/internal/system/cmodels"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
@@ -185,27 +184,4 @@ func validateSenderProperties(properties []cmodels.Property, requiredProperties 
 		}
 	}
 	return nil
-}
-
-// getMessageClient retrieves the message client based on the sender's provider type.
-func getMessageClient(sender common.NotificationSenderDTO) (message.MessageClientInterface,
-	*serviceerror.ServiceError) {
-	var _client message.MessageClientInterface
-	var err error
-	switch sender.Provider {
-	case common.MessageProviderTypeVonage:
-		_client, err = message.NewVonageClient(sender)
-	case common.MessageProviderTypeTwilio:
-		_client, err = message.NewTwilioClient(sender)
-	case common.MessageProviderTypeCustom:
-		_client, err = message.NewCustomClient(sender)
-	default:
-		return nil, &ErrorInvalidProvider
-	}
-
-	if err != nil {
-		return nil, &ErrorInternalServerError
-	}
-
-	return _client, nil
 }

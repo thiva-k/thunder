@@ -31,6 +31,7 @@ import (
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/notification"
 	notifcommon "github.com/asgardeo/thunder/internal/notification/common"
+	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/user"
 )
@@ -50,8 +51,8 @@ const (
 type SMSOTPAuthExecutor struct {
 	flowmodel.ExecutorInterface
 	identify.IdentifyingExecutorInterface
-	userService             user.UserServiceInterface
-	notificationSvcProvider notification.NotificationServiceProviderInterface
+	userService user.UserServiceInterface
+	otpService  notification.OTPServiceInterface
 }
 
 var _ flowmodel.ExecutorInterface = (*SMSOTPAuthExecutor)(nil)
@@ -78,11 +79,16 @@ func NewSMSOTPAuthExecutor() *SMSOTPAuthExecutor {
 	base := flowmodel.NewExecutor(executorName, flowcm.ExecutorTypeAuthentication,
 		defaultInputs, prerequisites)
 
+	// TODO: Should be injected when moving executors to di pattern.
+	notifSenderMgtSvc := notification.NewNotificationSenderMgtService()
+	jwtSvc := jwt.GetJWTService()
+	otpSvc := notification.NewOTPService(notifSenderMgtSvc, jwtSvc)
+
 	return &SMSOTPAuthExecutor{
 		ExecutorInterface:            base,
 		IdentifyingExecutorInterface: identifyExec,
 		userService:                  user.GetUserService(),
-		notificationSvcProvider:      notification.NewNotificationSenderServiceProvider(),
+		otpService:                   otpSvc,
 	}
 }
 
@@ -478,14 +484,13 @@ func (s *SMSOTPAuthExecutor) generateAndSendOTP(mobileNumber string, ctx *flowmo
 	}
 
 	// Send the OTP
-	otpService := s.notificationSvcProvider.GetOTPService()
 	sendOTPRequest := notifcommon.SendOTPDTO{
 		Recipient: mobileNumber,
 		SenderID:  senderID,
 		Channel:   string(notifcommon.ChannelTypeSMS),
 	}
 
-	sendResult, svcErr := otpService.SendOTP(sendOTPRequest)
+	sendResult, svcErr := s.otpService.SendOTP(sendOTPRequest)
 	if svcErr != nil {
 		return fmt.Errorf("failed to send OTP: %s", svcErr.ErrorDescription)
 	}
@@ -555,13 +560,12 @@ func (s *SMSOTPAuthExecutor) validateOTP(ctx *flowmodel.NodeContext, execResp *f
 	}
 
 	// Use the OTP service to verify the OTP
-	otpService := s.notificationSvcProvider.GetOTPService()
 	verifyOTPRequest := notifcommon.VerifyOTPDTO{
 		SessionToken: sessionToken,
 		OTPCode:      providedOTP,
 	}
 
-	verifyResult, svcErr := otpService.VerifyOTP(verifyOTPRequest)
+	verifyResult, svcErr := s.otpService.VerifyOTP(verifyOTPRequest)
 	if svcErr != nil {
 		logger.Error("Failed to verify OTP", log.String("userID", userID), log.Any("serviceError", svcErr))
 		return fmt.Errorf("failed to verify OTP: %s", svcErr.ErrorDescription)

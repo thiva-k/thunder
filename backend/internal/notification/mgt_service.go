@@ -16,6 +16,7 @@
  * under the License.
  */
 
+// Package notification contains the implementation of notification and otp sender services.
 package notification
 
 import (
@@ -47,6 +48,13 @@ func newNotificationSenderMgtService() NotificationSenderMgtSvcInterface {
 	return &notificationSenderMgtService{
 		notificationStore: newNotificationStore(),
 	}
+}
+
+// NewNotificationSenderMgtService creates a new instance of NotificationSenderMgtSvcInterface.
+// [Deprecated: use dependency injection to get the instance instead].
+// TODO: Remove this when the flow executors are migrated to the di pattern.
+func NewNotificationSenderMgtService() NotificationSenderMgtSvcInterface {
+	return newNotificationSenderMgtService()
 }
 
 // CreateSender creates a new notification sender.

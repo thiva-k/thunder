@@ -16,7 +16,6 @@
  * under the License.
  */
 
-// Package notification handles the initialization of notification services.
 package notification
 
 import (

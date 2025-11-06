@@ -26,7 +26,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/notification/common"
-	httpservice "github.com/asgardeo/thunder/internal/system/http"
+	syshttp "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
@@ -37,11 +37,12 @@ const (
 
 // VonageClient implements the MessageClientInterface for sending messages via Vonage API.
 type VonageClient struct {
-	name      string
-	url       string
-	apiKey    string
-	apiSecret string
-	senderID  string
+	name       string
+	url        string
+	apiKey     string
+	apiSecret  string
+	senderID   string
+	httpClient syshttp.HTTPClientInterface
 }
 
 // NewVonageClient creates a new instance of VonageClient.
@@ -69,6 +70,7 @@ func NewVonageClient(sender common.NotificationSenderDTO) (MessageClientInterfac
 			logger.Warn("Unknown property for Vonage client", log.String("property", prop.GetName()))
 		}
 	}
+	client.httpClient = syshttp.NewHTTPClientWithTimeout(httpClientTimeout)
 
 	return client, nil
 }
@@ -112,8 +114,7 @@ func (v *VonageClient) SendSMS(sms common.SMSData) error {
 	req.SetBasicAuth(v.apiKey, v.apiSecret)
 
 	// Send the HTTP request
-	client := httpservice.NewHTTPClientWithTimeout(httpClientTimeout)
-	resp, err := client.Do(req)
+	resp, err := v.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
