@@ -5,11 +5,11 @@
         {
             "id": "github_auth",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "idpId": "<github-idp-id>"
+            },
             "executor": {
-                "name": "GithubOAuthExecutor",
-                "properties": {
-                    "idpId": "<github-idp-id>"
-                }
+                "name": "GithubOAuthExecutor"
             },
             "next": [
                 "authenticated"

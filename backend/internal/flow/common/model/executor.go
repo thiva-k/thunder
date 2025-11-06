@@ -20,7 +20,7 @@ package model
 
 import (
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
@@ -30,7 +30,7 @@ const (
 
 // ExecutorResponse represents the response from an executor
 type ExecutorResponse struct {
-	Status            constants.ExecutorStatus  `json:"status"`
+	Status            common.ExecutorStatus     `json:"status"`
 	RequiredData      []InputData               `json:"required_data,omitempty"`
 	AdditionalData    map[string]string         `json:"additional_data,omitempty"`
 	RedirectURL       string                    `json:"redirect_url,omitempty"`
@@ -38,31 +38,19 @@ type ExecutorResponse struct {
 	AuthenticatedUser authncm.AuthenticatedUser `json:"authenticated_user,omitempty"`
 	Assertion         string                    `json:"assertion,omitempty"`
 	FailureReason     string                    `json:"failure_reason,omitempty"`
-	ExecutionRecord   *NodeExecutionRecord      `json:"execution_record,omitempty"`
-}
-
-// ExecutorProperties holds the properties of an executor.
-type ExecutorProperties struct {
-	ID          string                 `json:"id"`
-	Name        string                 `json:"name"`
-	Type        constants.ExecutorType `json:"type,omitempty"`
-	DisplayName string                 `json:"display_name"`
-	Properties  map[string]string      `json:"properties,omitempty"`
 }
 
 // ExecutorConfig holds the configuration for an executor.
 type ExecutorConfig struct {
-	Name       string            `json:"name"`
-	Properties map[string]string `json:"properties,omitempty"`
-	Executor   ExecutorInterface
+	Name     string `json:"name"`
+	Executor ExecutorInterface
 }
 
 // ExecutorInterface defines the interface for executors.
 type ExecutorInterface interface {
 	Execute(ctx *NodeContext) (*ExecutorResponse, error)
-	GetID() string
 	GetName() string
-	GetProperties() ExecutorProperties
+	GetType() common.ExecutorType
 	GetDefaultExecutorInputs() []InputData
 	GetPrerequisites() []InputData
 	CheckInputData(ctx *NodeContext, execResp *ExecutorResponse) bool
@@ -75,39 +63,31 @@ var _ ExecutorInterface = (*Executor)(nil)
 
 // Executor represents the basic implementation of an executor.
 type Executor struct {
-	Properties            ExecutorProperties
+	Name                  string
+	Type                  common.ExecutorType
 	DefaultExecutorInputs []InputData
 	Prerequisites         []InputData
 }
 
 // NewExecutor creates a new instance of Executor with the given properties.
-func NewExecutor(id, name string, executorType constants.ExecutorType, defaultInputs []InputData,
-	prerequisites []InputData, properties map[string]string) *Executor {
+func NewExecutor(name string, executorType common.ExecutorType, defaultInputs []InputData,
+	prerequisites []InputData) *Executor {
 	return &Executor{
-		Properties: ExecutorProperties{
-			ID:         id,
-			Name:       name,
-			Type:       executorType,
-			Properties: properties,
-		},
+		Name:                  name,
+		Type:                  executorType,
 		DefaultExecutorInputs: defaultInputs,
 		Prerequisites:         prerequisites,
 	}
 }
 
-// GetID returns the ID of the executor.
-func (e *Executor) GetID() string {
-	return e.Properties.ID
-}
-
 // GetName returns the name of the executor.
 func (e *Executor) GetName() string {
-	return e.Properties.Name
+	return e.Name
 }
 
-// GetProperties returns the properties of the executor.
-func (e *Executor) GetProperties() ExecutorProperties {
-	return e.Properties
+// GetType returns the type of the executor.
+func (e *Executor) GetType() common.ExecutorType {
+	return e.Type
 }
 
 // Execute executes the executor logic.
@@ -147,7 +127,7 @@ func (e *Executor) CheckInputData(ctx *NodeContext, execResp *ExecutorResponse) 
 // Returns true if all prerequisites are met, otherwise returns false and updates the executor response.
 func (e *Executor) ValidatePrerequisites(ctx *NodeContext, execResp *ExecutorResponse) bool {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "Executor"),
-		log.String(log.LoggerKeyExecutorID, e.GetID()),
+		log.String(log.LoggerKeyExecutorName, e.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	prerequisites := e.GetPrerequisites()
@@ -167,7 +147,7 @@ func (e *Executor) ValidatePrerequisites(ctx *NodeContext, execResp *ExecutorRes
 		if _, ok := ctx.UserInputData[prerequisite.Name]; !ok {
 			if _, ok := ctx.RuntimeData[prerequisite.Name]; !ok {
 				logger.Debug("Prerequisite not met for the executor", log.String("name", prerequisite.Name))
-				execResp.Status = constants.ExecFailure
+				execResp.Status = common.ExecFailure
 				execResp.FailureReason = "Prerequisite not met: " + prerequisite.Name
 				return false
 			}
@@ -222,7 +202,7 @@ func (e *Executor) GetRequiredData(ctx *NodeContext) []InputData {
 // returns true if any required data is missing, false otherwise.
 func (e *Executor) appendRequiredData(ctx *NodeContext, execResp *ExecutorResponse, requiredData []InputData) bool {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "Executor"),
-		log.String(log.LoggerKeyExecutorID, e.GetID()),
+		log.String(log.LoggerKeyExecutorName, e.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	requireData := false

@@ -86,13 +86,13 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) 
 	}
 
 	// Parse execution history
-	var executionHistory []model.NodeExecutionRecord
+	var executionHistory map[string]*model.NodeExecutionRecord
 	if f.ExecutionHistory != nil {
 		if err := json.Unmarshal([]byte(*f.ExecutionHistory), &executionHistory); err != nil {
 			return model.EngineContext{}, err
 		}
 	} else {
-		executionHistory = make([]model.NodeExecutionRecord, 0)
+		executionHistory = make(map[string]*model.NodeExecutionRecord)
 	}
 
 	// Get current node from graph if available

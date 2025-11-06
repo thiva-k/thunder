@@ -26,22 +26,17 @@ import (
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authzsvc "github.com/asgardeo/thunder/internal/authz"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/tests/mocks/authzmock"
 )
 
 func TestNewAuthorizationExecutor(t *testing.T) {
-	executor := NewAuthorizationExecutor("test-id", "test-name", map[string]string{})
+	executor := NewAuthorizationExecutor()
 
 	assert.NotNil(t, executor)
-	assert.Equal(t, "test-id", executor.GetID())
-	assert.Equal(t, "test-name", executor.GetName())
-	// Note: authzService may be nil if Initialize() hasn't been called globally
-	// In tests, we inject a mock service
-
-	// Verify no prerequisites (simplified version doesn't check userID in prerequisites)
+	assert.Equal(t, "AuthorizationExecutor", executor.GetName())
 	prerequisites := executor.GetPrerequisites()
 	assert.Empty(t, prerequisites)
 }
@@ -49,12 +44,12 @@ func TestNewAuthorizationExecutor(t *testing.T) {
 func TestAuthorizationExecutor_Execute_Success(t *testing.T) {
 	// Setup
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: true,
 			UserID:          "user123",
@@ -88,7 +83,7 @@ func TestAuthorizationExecutor_Execute_Success(t *testing.T) {
 	// Assert
 	assert.NoError(t, err)
 	assert.NotNil(t, resp)
-	assert.Equal(t, flowconst.ExecComplete, resp.Status)
+	assert.Equal(t, flowcm.ExecComplete, resp.Status)
 	assert.Equal(t, "read:documents write:documents", resp.RuntimeData[authorizedPermissionsKey])
 
 	mockAuthzService.AssertExpectations(t)
@@ -97,12 +92,12 @@ func TestAuthorizationExecutor_Execute_Success(t *testing.T) {
 func TestAuthorizationExecutor_Execute_PartialPermissions(t *testing.T) {
 	// Setup - user requests multiple permissions but only gets some
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: true,
 			UserID:          "user123",
@@ -123,7 +118,7 @@ func TestAuthorizationExecutor_Execute_PartialPermissions(t *testing.T) {
 
 	// Assert - should succeed with partial permissions
 	assert.NoError(t, err)
-	assert.Equal(t, flowconst.ExecComplete, resp.Status)
+	assert.Equal(t, flowcm.ExecComplete, resp.Status)
 	assert.Equal(t, "read:documents", resp.RuntimeData[authorizedPermissionsKey])
 
 	mockAuthzService.AssertExpectations(t)
@@ -132,12 +127,12 @@ func TestAuthorizationExecutor_Execute_PartialPermissions(t *testing.T) {
 func TestAuthorizationExecutor_Execute_NoPermissions(t *testing.T) {
 	// Setup - user has no permissions at all
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: true,
 			UserID:          "user123",
@@ -157,7 +152,7 @@ func TestAuthorizationExecutor_Execute_NoPermissions(t *testing.T) {
 
 	// Assert - should succeed with empty permissions
 	assert.NoError(t, err)
-	assert.Equal(t, flowconst.ExecComplete, resp.Status)
+	assert.Equal(t, flowcm.ExecComplete, resp.Status)
 	assert.Equal(t, "", resp.RuntimeData[authorizedPermissionsKey])
 
 	mockAuthzService.AssertExpectations(t)
@@ -166,12 +161,12 @@ func TestAuthorizationExecutor_Execute_NoPermissions(t *testing.T) {
 func TestAuthorizationExecutor_Execute_NotAuthenticated(t *testing.T) {
 	// Setup - user not authenticated
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: false,
 		},
@@ -183,7 +178,7 @@ func TestAuthorizationExecutor_Execute_NotAuthenticated(t *testing.T) {
 
 	// Assert - should FAIL (changed behavior from original design)
 	assert.NoError(t, err)
-	assert.Equal(t, flowconst.ExecFailure, resp.Status)
+	assert.Equal(t, flowcm.ExecFailure, resp.Status)
 	assert.Equal(t, "User is not authenticated", resp.FailureReason)
 
 	// Service should NOT be called
@@ -193,12 +188,12 @@ func TestAuthorizationExecutor_Execute_NotAuthenticated(t *testing.T) {
 func TestAuthorizationExecutor_Execute_ServiceError(t *testing.T) {
 	// Setup - service returns error
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: true,
 			UserID:          "user123",
@@ -216,7 +211,7 @@ func TestAuthorizationExecutor_Execute_ServiceError(t *testing.T) {
 
 	// Assert - should fail the flow
 	assert.NoError(t, err)
-	assert.Equal(t, flowconst.ExecFailure, resp.Status)
+	assert.Equal(t, flowcm.ExecFailure, resp.Status)
 
 	mockAuthzService.AssertExpectations(t)
 }
@@ -226,12 +221,12 @@ func TestAuthorizationExecutor_Execute_NoRequestedPermissions(t *testing.T) {
 	// The service should NOT be called, and should return early with ExecComplete
 
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: true,
 			UserID:          "user123",
@@ -244,7 +239,7 @@ func TestAuthorizationExecutor_Execute_NoRequestedPermissions(t *testing.T) {
 
 	// Assert - should return early without calling service
 	assert.NoError(t, err)
-	assert.Equal(t, flowconst.ExecComplete, resp.Status)
+	assert.Equal(t, flowcm.ExecComplete, resp.Status)
 	assert.Empty(t, resp.RuntimeData[authorizedPermissionsKey])
 
 	// Service should NOT be called
@@ -252,7 +247,7 @@ func TestAuthorizationExecutor_Execute_NoRequestedPermissions(t *testing.T) {
 }
 
 func TestAuthorizationExecutor_ExtractGroupIDs_FromAttributes(t *testing.T) {
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 
 	tests := []struct {
 		name       string
@@ -303,7 +298,7 @@ func TestAuthorizationExecutor_ExtractGroupIDs_FromAttributes(t *testing.T) {
 }
 
 func TestAuthorizationExecutor_ExtractGroupIDs_FromRuntimeData(t *testing.T) {
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 
 	ctx := &flowmodel.NodeContext{
 		AuthenticatedUser: authncm.AuthenticatedUser{
@@ -373,7 +368,7 @@ func TestExtractRequestedPermissions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := &flowmodel.NodeContext{
-				FlowType:      flowconst.FlowTypeAuthentication,
+				FlowType:      flowcm.FlowTypeAuthentication,
 				RuntimeData:   tt.runtimeData,
 				UserInputData: tt.UserInputData,
 			}
@@ -385,7 +380,7 @@ func TestExtractRequestedPermissions(t *testing.T) {
 }
 
 func TestAuthorizationExecutor_ExtractGroupIDs_WithNoGroups(t *testing.T) {
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 
 	ctx := &flowmodel.NodeContext{
 		AuthenticatedUser: authncm.AuthenticatedUser{
@@ -402,12 +397,12 @@ func TestAuthorizationExecutor_ExtractGroupIDs_WithNoGroups(t *testing.T) {
 
 func TestAuthorizationExecutor_Execute_WithMultipleGroups(t *testing.T) {
 	mockAuthzService := new(authzmock.AuthorizationServiceInterfaceMock)
-	executor := NewAuthorizationExecutor("authz-exec", "AuthorizationExecutor", map[string]string{})
+	executor := NewAuthorizationExecutor()
 	executor.authzService = mockAuthzService
 
 	ctx := &flowmodel.NodeContext{
 		FlowID:   "test-flow",
-		FlowType: flowconst.FlowTypeAuthentication,
+		FlowType: flowcm.FlowTypeAuthentication,
 		AuthenticatedUser: authncm.AuthenticatedUser{
 			IsAuthenticated: true,
 			UserID:          "user123",
@@ -436,7 +431,7 @@ func TestAuthorizationExecutor_Execute_WithMultipleGroups(t *testing.T) {
 
 	// Assert
 	assert.NoError(t, err)
-	assert.Equal(t, flowconst.ExecComplete, resp.Status)
+	assert.Equal(t, flowcm.ExecComplete, resp.Status)
 	assert.Equal(t, "read:documents write:documents delete:documents", resp.RuntimeData[authorizedPermissionsKey])
 
 	mockAuthzService.AssertExpectations(t)

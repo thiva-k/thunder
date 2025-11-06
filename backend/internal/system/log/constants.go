@@ -21,8 +21,8 @@ package log
 const (
 	// LoggerKeyComponentName is the key used to identify the component name in the logger.
 	LoggerKeyComponentName = "component"
-	// LoggerKeyExecutorID is the key used to identify the executor ID in the logger.
-	LoggerKeyExecutorID = "executorId"
+	// LoggerKeyExecutorName is the key used to identify the executor ID in the logger.
+	LoggerKeyExecutorName = "executorName"
 	// LoggerKeyFlowID is the key used to identify the flow ID in the logger.
 	LoggerKeyFlowID = "flowId"
 	// LoggerKeyNodeID is the key used to identify the node ID in the logger.

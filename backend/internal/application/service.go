@@ -50,15 +50,18 @@ type ApplicationServiceInterface interface {
 
 // ApplicationService is the default implementation of the ApplicationServiceInterface.
 type applicationService struct {
-	appStore    applicationStoreInterface
-	certService cert.CertificateServiceInterface
+	appStore       applicationStoreInterface
+	certService    cert.CertificateServiceInterface
+	flowMgtService flowmgt.FlowMgtServiceInterface
 }
 
-func newApplicationService(appStore applicationStoreInterface,
-	certService cert.CertificateServiceInterface) ApplicationServiceInterface {
+// newApplicationService creates a new instance of ApplicationService.
+func newApplicationService(appStore applicationStoreInterface, certService cert.CertificateServiceInterface,
+	flowMgtService flowmgt.FlowMgtServiceInterface) ApplicationServiceInterface {
 	return &applicationService{
-		appStore:    appStore,
-		certService: certService,
+		appStore:       appStore,
+		certService:    certService,
+		flowMgtService: flowMgtService,
 	}
 }
 
@@ -170,10 +173,10 @@ func (as *applicationService) ValidateApplication(app *model.ApplicationDTO) (
 		return nil, nil, svcErr
 	}
 
-	if svcErr := validateAuthFlowGraphID(app); svcErr != nil {
+	if svcErr := as.validateAuthFlowGraphID(app); svcErr != nil {
 		return nil, nil, svcErr
 	}
-	if svcErr := validateRegistrationFlowGraphID(app); svcErr != nil {
+	if svcErr := as.validateRegistrationFlowGraphID(app); svcErr != nil {
 		return nil, nil, svcErr
 	}
 
@@ -383,10 +386,10 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		return nil, svcErr
 	}
 
-	if svcErr := validateAuthFlowGraphID(app); svcErr != nil {
+	if svcErr := as.validateAuthFlowGraphID(app); svcErr != nil {
 		return nil, svcErr
 	}
-	if svcErr := validateRegistrationFlowGraphID(app); svcErr != nil {
+	if svcErr := as.validateRegistrationFlowGraphID(app); svcErr != nil {
 		return nil, svcErr
 	}
 
@@ -535,9 +538,9 @@ func (as *applicationService) DeleteApplication(appID string) *serviceerror.Serv
 
 // validateAuthFlowGraphID validates the auth flow graph ID for the application.
 // If the graph ID is not provided, it sets the default authentication flow graph ID.
-func validateAuthFlowGraphID(app *model.ApplicationDTO) *serviceerror.ServiceError {
+func (as *applicationService) validateAuthFlowGraphID(app *model.ApplicationDTO) *serviceerror.ServiceError {
 	if app.AuthFlowGraphID != "" {
-		isValidFlowGraphID := flowmgt.GetFlowMgtService().IsValidGraphID(app.AuthFlowGraphID)
+		isValidFlowGraphID := as.flowMgtService.IsValidGraphID(app.AuthFlowGraphID)
 		if !isValidFlowGraphID {
 			return &ErrorInvalidAuthFlowGraphID
 		}
@@ -550,9 +553,9 @@ func validateAuthFlowGraphID(app *model.ApplicationDTO) *serviceerror.ServiceErr
 
 // validateRegistrationFlowGraphID validates the registration flow graph ID for the application.
 // If the graph ID is not provided, it attempts to infer it from the auth flow graph ID.
-func validateRegistrationFlowGraphID(app *model.ApplicationDTO) *serviceerror.ServiceError {
+func (as *applicationService) validateRegistrationFlowGraphID(app *model.ApplicationDTO) *serviceerror.ServiceError {
 	if app.RegistrationFlowGraphID != "" {
-		isValidFlowGraphID := flowmgt.GetFlowMgtService().IsValidGraphID(app.RegistrationFlowGraphID)
+		isValidFlowGraphID := as.flowMgtService.IsValidGraphID(app.RegistrationFlowGraphID)
 		if !isValidFlowGraphID {
 			return &ErrorInvalidRegistrationFlowGraphID
 		}

@@ -52,12 +52,12 @@
                     "required": true
                 }
             ],
+            "properties": {
+                "ouId": "ouId",
+                "userType": "dynamic-user-type"
+            },
             "executor": {
-                "name": "ProvisioningExecutor",
-                "properties": {
-                    "ouId": "ouId",
-                    "userType": "dynamic-user-type"
-                }
+                "name": "ProvisioningExecutor"
             },
             "next": [
                 "authenticated"

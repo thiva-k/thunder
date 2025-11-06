@@ -31,12 +31,9 @@ import (
 	"github.com/asgardeo/thunder/internal/executor/ouexec"
 	"github.com/asgardeo/thunder/internal/executor/provision"
 	"github.com/asgardeo/thunder/internal/executor/smsauth"
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/common/jsonmodel"
 	"github.com/asgardeo/thunder/internal/flow/common/model"
-	"github.com/asgardeo/thunder/internal/idp"
-	"github.com/asgardeo/thunder/internal/system/cmodels"
-	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // BuildGraphFromDefinition builds a graph from a graph definition json.
@@ -58,7 +55,7 @@ func BuildGraphFromDefinition(definition *jsonmodel.GraphDefinition) (model.Grap
 		isFinalNode := len(nodeDef.Next) == 0
 
 		// Construct a new node. Here we set isStartNode to false by default.
-		node, err := model.NewNode(nodeDef.ID, nodeDef.Type, false, isFinalNode)
+		node, err := model.NewNode(nodeDef.ID, nodeDef.Type, nodeDef.Properties, false, isFinalNode)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create node %s: %w", nodeDef.ID, err)
 		}
@@ -93,7 +90,7 @@ func BuildGraphFromDefinition(definition *jsonmodel.GraphDefinition) (model.Grap
 				return nil, fmt.Errorf("error while getting executor %s: %w", nodeDef.Executor, err)
 			}
 			node.SetExecutorConfig(executor)
-		} else if nodeDef.Type == string(constants.NodeTypeAuthSuccess) {
+		} else if nodeDef.Type == string(common.NodeTypeAuthSuccess) {
 			executor, err := getExecutorConfigByName(jsonmodel.ExecutorDefinition{
 				Name: "AuthAssertExecutor",
 			})
@@ -140,12 +137,12 @@ func BuildGraphFromDefinition(definition *jsonmodel.GraphDefinition) (model.Grap
 }
 
 // getGraphType retrieves the graph type from a string representation.
-func getGraphType(graphType string) (constants.FlowType, error) {
+func getGraphType(graphType string) (common.FlowType, error) {
 	switch graphType {
-	case string(constants.FlowTypeAuthentication):
-		return constants.FlowTypeAuthentication, nil
-	case string(constants.FlowTypeRegistration):
-		return constants.FlowTypeRegistration, nil
+	case string(common.FlowTypeAuthentication):
+		return common.FlowTypeAuthentication, nil
+	case string(common.FlowTypeRegistration):
+		return common.FlowTypeRegistration, nil
 	default:
 		return "", fmt.Errorf("unsupported graph type: %s", graphType)
 	}
@@ -167,33 +164,27 @@ func getExecutorConfigByName(execDef jsonmodel.ExecutorDefinition) (*model.Execu
 		}
 	case "SMSOTPAuthExecutor":
 		executor = model.ExecutorConfig{
-			Name:       "SMSOTPAuthExecutor",
-			Properties: execDef.Properties,
+			Name: "SMSOTPAuthExecutor",
 		}
 	case "GithubOAuthExecutor":
 		executor = model.ExecutorConfig{
-			Name:       "GithubOAuthExecutor",
-			Properties: execDef.Properties,
+			Name: "GithubOAuthExecutor",
 		}
 	case "GoogleOIDCAuthExecutor":
 		executor = model.ExecutorConfig{
-			Name:       "GoogleOIDCAuthExecutor",
-			Properties: execDef.Properties,
+			Name: "GoogleOIDCAuthExecutor",
 		}
 	case "AttributeCollector":
 		executor = model.ExecutorConfig{
-			Name:       "AttributeCollector",
-			Properties: execDef.Properties,
+			Name: "AttributeCollector",
 		}
 	case "ProvisioningExecutor":
 		executor = model.ExecutorConfig{
-			Name:       "ProvisioningExecutor",
-			Properties: execDef.Properties,
+			Name: "ProvisioningExecutor",
 		}
 	case "OUExecutor":
 		executor = model.ExecutorConfig{
-			Name:       "OUExecutor",
-			Properties: execDef.Properties,
+			Name: "OUExecutor",
 		}
 	case "AuthAssertExecutor":
 		executor = model.ExecutorConfig{
@@ -201,8 +192,7 @@ func getExecutorConfigByName(execDef jsonmodel.ExecutorDefinition) (*model.Execu
 		}
 	case "AuthorizationExecutor":
 		executor = model.ExecutorConfig{
-			Name:       "AuthorizationExecutor",
-			Properties: execDef.Properties,
+			Name: "AuthorizationExecutor",
 		}
 	default:
 		return nil, fmt.Errorf("executor with name %s not found", execDef.Name)
@@ -227,46 +217,23 @@ func GetExecutorByName(execConfig *model.ExecutorConfig) (model.ExecutorInterfac
 	var executor model.ExecutorInterface
 	switch execConfig.Name {
 	case "BasicAuthExecutor":
-		executor = basicauth.NewBasicAuthExecutor("local", "Local", execConfig.Properties)
+		executor = basicauth.NewBasicAuthExecutor()
 	case "SMSOTPAuthExecutor":
-		if len(execConfig.Properties) == 0 {
-			return nil, fmt.Errorf("properties for SMSOTPAuthExecutor cannot be empty")
-		}
-		senderID, exists := execConfig.Properties["senderId"]
-		if !exists || senderID == "" {
-			return nil, fmt.Errorf("senderId property is required for SMSOTPAuthExecutor")
-		}
-		executor = smsauth.NewSMSOTPAuthExecutor("local", "Local", execConfig.Properties)
+		executor = smsauth.NewSMSOTPAuthExecutor()
 	case "GithubOAuthExecutor":
-		idp, clientID, clientSecret, redirectURI, scopes,
-			additionalParams, extendedProperties, err := getIDPWithConfigs(execConfig)
-		if err != nil {
-			return nil, fmt.Errorf("error while getting IDP for GithubOAuthExecutor: %w", err)
-		}
-		executor = githubauth.NewGithubOAuthExecutor(idp.ID, idp.Name, extendedProperties,
-			clientID, clientSecret, redirectURI, scopes, additionalParams)
+		executor = githubauth.NewGithubOAuthExecutor()
 	case "GoogleOIDCAuthExecutor":
-		idp, clientID, clientSecret, redirectURI, scopes,
-			additionalParams, extendedProperties, err := getIDPWithConfigs(execConfig)
-		if err != nil {
-			return nil, fmt.Errorf("error while getting IDP for GoogleOIDCAuthExecutor: %w", err)
-		}
-		executor = googleauth.NewGoogleOIDCAuthExecutor(idp.ID, idp.Name, extendedProperties,
-			clientID, clientSecret, redirectURI, scopes, additionalParams)
+		executor = googleauth.NewGoogleOIDCAuthExecutor()
 	case "AttributeCollector":
-		executor = attributecollect.NewAttributeCollector("attribute-collector", "AttributeCollector",
-			execConfig.Properties)
+		executor = attributecollect.NewAttributeCollector()
 	case "ProvisioningExecutor":
-		executor = provision.NewProvisioningExecutor("provisioning-executor", "ProvisioningExecutor",
-			execConfig.Properties)
+		executor = provision.NewProvisioningExecutor()
 	case "OUExecutor":
-		executor = ouexec.NewOUExecutor("ou-executor", "OUExecutor", execConfig.Properties)
+		executor = ouexec.NewOUExecutor()
 	case "AuthAssertExecutor":
-		executor = authassert.NewAuthAssertExecutor("auth-assert-executor", "AuthAssertExecutor",
-			execConfig.Properties)
+		executor = authassert.NewAuthAssertExecutor()
 	case "AuthorizationExecutor":
-		executor = authzexec.NewAuthorizationExecutor("authorization-executor", "AuthorizationExecutor",
-			execConfig.Properties)
+		executor = authzexec.NewAuthorizationExecutor()
 	default:
 		return nil, fmt.Errorf("executor with name %s not found", execConfig.Name)
 	}
@@ -275,98 +242,4 @@ func GetExecutorByName(execConfig *model.ExecutorConfig) (model.ExecutorInterfac
 		return nil, fmt.Errorf("executor with name %s could not be created", execConfig.Name)
 	}
 	return executor, nil
-}
-
-// getIDPWithConfigs retrieves the IDP and its configurations for OAuth/OIDC executors.
-// This function validates the executor configuration, retrieves the IDP by ID from properties,
-// and extracts the required OAuth/OIDC configurations.
-func getIDPWithConfigs(execConfig *model.ExecutorConfig) (*idp.IDPDTO, string, string, string,
-	[]string, map[string]string, map[string]string, error) {
-	if len(execConfig.Properties) == 0 {
-		return nil, "", "", "", nil, nil, nil, fmt.Errorf("properties for %s cannot be empty", execConfig.Name)
-	}
-
-	idpID, exists := execConfig.Properties["idpId"]
-	if !exists || idpID == "" {
-		return nil, "", "", "", nil, nil, nil, fmt.Errorf("idpId property is required for %s", execConfig.Name)
-	}
-
-	identityProvider, err := getIDP(idpID)
-	if err != nil {
-		return nil, "", "", "", nil, nil, nil, err
-	}
-
-	clientID, clientSecret, redirectURI, scopes, additionalParams, err := getIDPConfigs(
-		identityProvider.Properties)
-	if err != nil {
-		return nil, "", "", "", nil, nil, nil, err
-	}
-
-	// Create extended properties map with idpName added
-	extendedProperties := make(map[string]string)
-	for k, v := range execConfig.Properties {
-		extendedProperties[k] = v
-	}
-	extendedProperties["idpName"] = identityProvider.Name
-
-	return identityProvider, clientID, clientSecret, redirectURI, scopes, additionalParams, extendedProperties, nil
-}
-
-// getIDP retrieves an identity provider by its ID.
-func getIDP(idpID string) (*idp.IDPDTO, error) {
-	if idpID == "" {
-		return nil, fmt.Errorf("IDP ID cannot be empty")
-	}
-
-	idpSvc := idp.NewIDPService()
-	identityProvider, svcErr := idpSvc.GetIdentityProvider(idpID)
-	if svcErr != nil {
-		if svcErr.Code == idp.ErrorIDPNotFound.Code {
-			return nil, fmt.Errorf("IDP with ID %s does not exist", idpID)
-		}
-		return nil, fmt.Errorf("error while getting IDP with the ID %s: code: %s, error: %s",
-			idpID, svcErr.Code, svcErr.ErrorDescription)
-	}
-	if identityProvider == nil {
-		return nil, fmt.Errorf("IDP with ID %s does not exist", idpID)
-	}
-
-	return identityProvider, nil
-}
-
-// getIDPConfigs process the IDP properties to extract OAuth/OIDC configurations.
-func getIDPConfigs(idpProperties []cmodels.Property) (string,
-	string, string, []string, map[string]string, error) {
-	if len(idpProperties) == 0 {
-		return "", "", "", nil, nil, fmt.Errorf("IDP properties not found")
-	}
-
-	var clientID, clientSecret, redirectURI, scopesStr string
-	additionalParams := map[string]string{}
-	for _, prop := range idpProperties {
-		value, err := prop.GetValue()
-		if err != nil {
-			return "", "", "", nil, nil, err
-		}
-
-		switch prop.GetName() {
-		case "client_id":
-			clientID = value
-		case "client_secret":
-			clientSecret = value
-		case "redirect_uri":
-			redirectURI = value
-		case "scopes":
-			scopesStr = value
-		default:
-			additionalParams[prop.GetName()] = value
-		}
-	}
-
-	if clientID == "" || clientSecret == "" || redirectURI == "" || scopesStr == "" {
-		return "", "", "", nil, nil, fmt.Errorf("missing required IDP properties")
-	}
-	scopes := sysutils.ParseStringArray(scopesStr, ",")
-
-	return clientID, clientSecret, redirectURI, scopes, additionalParams, nil
 }

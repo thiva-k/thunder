@@ -22,10 +22,11 @@ package authassert
 import (
 	"encoding/json"
 	"errors"
+	"sort"
 
 	"github.com/asgardeo/thunder/internal/authn/assert"
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -34,11 +35,14 @@ import (
 	"github.com/asgardeo/thunder/internal/user"
 )
 
-const loggerComponentName = "AuthAssertExecutor"
+const (
+	executorName        = "AuthAssertExecutor"
+	loggerComponentName = "AuthAssertExecutor"
+)
 
 // AuthAssertExecutor is an executor that handles authentication assertions in the flow.
 type AuthAssertExecutor struct {
-	internal            flowmodel.Executor
+	flowmodel.ExecutorInterface
 	JWTService          jwt.JWTServiceInterface
 	UserService         user.UserServiceInterface
 	AuthAssertGenerator assert.AuthAssertGeneratorInterface
@@ -47,35 +51,22 @@ type AuthAssertExecutor struct {
 var _ flowmodel.ExecutorInterface = (*AuthAssertExecutor)(nil)
 
 // NewAuthAssertExecutor creates a new instance of AuthAssertExecutor.
-func NewAuthAssertExecutor(id, name string, properties map[string]string) *AuthAssertExecutor {
+func NewAuthAssertExecutor() *AuthAssertExecutor {
+	base := flowmodel.NewExecutor(executorName, flowcm.ExecutorTypeUtility,
+		[]flowmodel.InputData{}, []flowmodel.InputData{})
+
 	return &AuthAssertExecutor{
-		internal: *flowmodel.NewExecutor(id, name, flowconst.ExecutorTypeUtility,
-			[]flowmodel.InputData{}, []flowmodel.InputData{}, properties),
+		ExecutorInterface:   base,
 		JWTService:          jwt.GetJWTService(),
 		UserService:         user.GetUserService(),
 		AuthAssertGenerator: assert.NewAuthAssertGenerator(),
 	}
 }
 
-// GetID returns the ID of the AuthAssertExecutor.
-func (a *AuthAssertExecutor) GetID() string {
-	return a.internal.GetID()
-}
-
-// GetName returns the name of the AuthAssertExecutor.
-func (a *AuthAssertExecutor) GetName() string {
-	return a.internal.GetName()
-}
-
-// GetProperties returns the properties of the AuthAssertExecutor.
-func (a *AuthAssertExecutor) GetProperties() flowmodel.ExecutorProperties {
-	return a.internal.Properties
-}
-
 // Execute executes the authentication assertion logic.
 func (a *AuthAssertExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, a.GetID()),
+		log.String(log.LoggerKeyExecutorName, a.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing authentication assertion executor")
 
@@ -92,10 +83,10 @@ func (a *AuthAssertExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Exe
 
 		logger.Debug("Generated JWT token for authentication assertion")
 
-		execResp.Status = flowconst.ExecComplete
+		execResp.Status = flowcm.ExecComplete
 		execResp.Assertion = token
 	} else {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User is not authenticated"
 	}
 
@@ -103,37 +94,6 @@ func (a *AuthAssertExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Exe
 		log.String("status", string(execResp.Status)))
 
 	return execResp, nil
-}
-
-// GetDefaultExecutorInputs returns the default required input data for the AuthAssertExecutor.
-func (a *AuthAssertExecutor) GetDefaultExecutorInputs() []flowmodel.InputData {
-	return a.internal.GetDefaultExecutorInputs()
-}
-
-// GetPrerequisites returns the prerequisites for the AuthAssertExecutor.
-func (a *AuthAssertExecutor) GetPrerequisites() []flowmodel.InputData {
-	return a.internal.GetPrerequisites()
-}
-
-// CheckInputData checks if the required input data is provided in the context.
-func (a *AuthAssertExecutor) CheckInputData(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) bool {
-	return a.internal.CheckInputData(ctx, execResp)
-}
-
-// ValidatePrerequisites validates whether the prerequisites for the AuthAssertExecutor are met.
-func (a *AuthAssertExecutor) ValidatePrerequisites(ctx *flowmodel.NodeContext,
-	execResp *flowmodel.ExecutorResponse) bool {
-	return a.internal.ValidatePrerequisites(ctx, execResp)
-}
-
-// GetUserIDFromContext retrieves the user ID from the context.
-func (a *AuthAssertExecutor) GetUserIDFromContext(ctx *flowmodel.NodeContext) (string, error) {
-	return a.internal.GetUserIDFromContext(ctx)
-}
-
-// GetRequiredData returns the required input data for the AuthAssertExecutor.
-func (a *AuthAssertExecutor) GetRequiredData(ctx *flowmodel.NodeContext) []flowmodel.InputData {
-	return a.internal.GetRequiredData(ctx)
 }
 
 // generateAuthAssertion generates the authentication assertion token.
@@ -230,21 +190,33 @@ func (a *AuthAssertExecutor) generateAuthAssertion(ctx *flowmodel.NodeContext, l
 }
 
 // extractAuthenticatorReferences extracts authenticator references from execution history.
-func extractAuthenticatorReferences(history []flowmodel.NodeExecutionRecord) []authncm.AuthenticatorReference {
+func extractAuthenticatorReferences(
+	history map[string]*flowmodel.NodeExecutionRecord) []authncm.AuthenticatorReference {
 	refs := make([]authncm.AuthenticatorReference, 0)
+
 	for _, record := range history {
-		if record.ExecutorType != flowconst.ExecutorTypeAuthentication {
+		if record.ExecutorType != flowcm.ExecutorTypeAuthentication {
 			continue
 		}
-		if record.Status != flowconst.FlowStatusComplete {
+		if record.Status != flowcm.FlowStatusComplete {
 			continue
 		}
 
 		refs = append(refs, authncm.AuthenticatorReference{
 			Authenticator: record.ExecutorName,
 			Step:          record.Step,
-			Timestamp:     record.Timestamp,
+			Timestamp:     record.EndTime,
 		})
+	}
+
+	// Sort by step field
+	sort.Slice(refs, func(i, j int) bool {
+		return refs[i].Step < refs[j].Step
+	})
+
+	// Renumber Step field to be auth step
+	for i := range refs {
+		refs[i].Step = i + 1
 	}
 
 	return refs

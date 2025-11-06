@@ -24,6 +24,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application/model"
 	"github.com/asgardeo/thunder/internal/cert"
+	"github.com/asgardeo/thunder/internal/flow/flowmgt"
 	"github.com/asgardeo/thunder/internal/system/config"
 	filebasedruntime "github.com/asgardeo/thunder/internal/system/file_based_runtime"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -33,7 +34,8 @@ import (
 )
 
 // Initialize initializes the application service and registers its routes.
-func Initialize(mux *http.ServeMux, certService cert.CertificateServiceInterface) ApplicationServiceInterface {
+func Initialize(mux *http.ServeMux, certService cert.CertificateServiceInterface,
+	flowMgtService flowmgt.FlowMgtServiceInterface) ApplicationServiceInterface {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationInit"))
 	var appStore applicationStoreInterface
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
@@ -43,7 +45,7 @@ func Initialize(mux *http.ServeMux, certService cert.CertificateServiceInterface
 		appStore = newCachedBackedApplicationStore(store)
 	}
 
-	appService := newApplicationService(appStore, certService)
+	appService := newApplicationService(appStore, certService, flowMgtService)
 
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
 		configs, err := filebasedruntime.GetConfigs("applications")

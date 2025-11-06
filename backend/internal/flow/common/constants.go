@@ -16,8 +16,8 @@
  * under the License.
  */
 
-// Package constants defines the constants used in the flow execution service and engine.
-package constants
+// Package common defines common constants and models used across the flow components.
+package common
 
 import "time"
 

@@ -23,13 +23,14 @@ import (
 	"encoding/json"
 
 	authzsvc "github.com/asgardeo/thunder/internal/authz"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 )
 
 const (
+	executorName             = "AuthorizationExecutor"
 	loggerComponentName      = "AuthorizationExecutor"
 	userAttributeGroups      = "groups"
 	authorizedPermissionsKey = "authorized_permissions"
@@ -39,20 +40,20 @@ const (
 // AuthorizationExecutor implements the ExecutorInterface for performing authorization checks
 // during flow execution. It enriches the flow context with authorized permissions.
 type AuthorizationExecutor struct {
-	internal     flowmodel.Executor
+	flowmodel.ExecutorInterface
 	authzService authzsvc.AuthorizationServiceInterface
 }
 
 var _ flowmodel.ExecutorInterface = (*AuthorizationExecutor)(nil)
 
 // NewAuthorizationExecutor creates a new instance of AuthorizationExecutor.
-func NewAuthorizationExecutor(id, name string, properties map[string]string) *AuthorizationExecutor {
+func NewAuthorizationExecutor() *AuthorizationExecutor {
+	base := flowmodel.NewExecutor(executorName, flowcm.ExecutorTypeUtility,
+		[]flowmodel.InputData{}, []flowmodel.InputData{})
+
 	return &AuthorizationExecutor{
-		internal: *flowmodel.NewExecutor(
-			id, name, flowconst.ExecutorTypeUtility,
-			[]flowmodel.InputData{}, []flowmodel.InputData{}, properties,
-		),
-		authzService: authzsvc.GetAuthorizationService(),
+		ExecutorInterface: base,
+		authzService:      authzsvc.GetAuthorizationService(),
 	}
 }
 
@@ -61,7 +62,7 @@ func NewAuthorizationExecutor(id, name string, properties map[string]string) *Au
 func (a *AuthorizationExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(
 		log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, a.GetID()),
+		log.String(log.LoggerKeyExecutorName, a.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing authorization executor")
 
@@ -70,7 +71,7 @@ func (a *AuthorizationExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.
 	}
 
 	if !ctx.AuthenticatedUser.IsAuthenticated {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User is not authenticated"
 		return execResp, nil
 	}
@@ -80,7 +81,7 @@ func (a *AuthorizationExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.
 
 	if len(requestedPerms) == 0 {
 		logger.Debug("No permissions to check, returning empty permissions")
-		execResp.Status = flowconst.ExecComplete
+		execResp.Status = flowcm.ExecComplete
 		return execResp, nil
 	}
 
@@ -105,7 +106,7 @@ func (a *AuthorizationExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.
 	authzResp, svcErr := a.authzService.GetAuthorizedPermissions(authzReq)
 	if svcErr != nil {
 		logger.Error("Authorization service call failed", log.String("error", svcErr.Error))
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Authorization validation failure"
 		return execResp, nil
 	}
@@ -114,7 +115,7 @@ func (a *AuthorizationExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.
 	logger.Debug("Authorization completed successfully",
 		log.Int("authorizedCount", len(authzResp.AuthorizedPermissions)))
 
-	execResp.Status = flowconst.ExecComplete
+	execResp.Status = flowcm.ExecComplete
 	return execResp, nil
 }
 
@@ -163,52 +164,4 @@ func (a *AuthorizationExecutor) extractGroupIDs(ctx *flowmodel.NodeContext) []st
 
 	// No groups found
 	return []string{}
-}
-
-// GetID returns the ID of the executor.
-func (a *AuthorizationExecutor) GetID() string {
-	return a.internal.GetID()
-}
-
-// GetName returns the name of the executor.
-func (a *AuthorizationExecutor) GetName() string {
-	return a.internal.GetName()
-}
-
-// GetProperties returns the properties of the executor.
-func (a *AuthorizationExecutor) GetProperties() flowmodel.ExecutorProperties {
-	return a.internal.Properties
-}
-
-// GetDefaultExecutorInputs returns the default executor inputs.
-func (a *AuthorizationExecutor) GetDefaultExecutorInputs() []flowmodel.InputData {
-	return a.internal.GetDefaultExecutorInputs()
-}
-
-// GetPrerequisites returns the prerequisites for the executor.
-func (a *AuthorizationExecutor) GetPrerequisites() []flowmodel.InputData {
-	return a.internal.GetPrerequisites()
-}
-
-// CheckInputData checks if required input data is available.
-func (a *AuthorizationExecutor) CheckInputData(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) bool {
-	return a.internal.CheckInputData(ctx, execResp)
-}
-
-// ValidatePrerequisites validates whether prerequisites are met.
-func (a *AuthorizationExecutor) ValidatePrerequisites(
-	ctx *flowmodel.NodeContext,
-	execResp *flowmodel.ExecutorResponse,
-) bool {
-	return a.internal.ValidatePrerequisites(ctx, execResp)
-}
-
-// GetUserIDFromContext retrieves the user ID from context.
-func (a *AuthorizationExecutor) GetUserIDFromContext(ctx *flowmodel.NodeContext) (string, error) {
-	return a.internal.GetUserIDFromContext(ctx)
-}
-
-// GetRequiredData returns the required input data.
-func (a *AuthorizationExecutor) GetRequiredData(ctx *flowmodel.NodeContext) []flowmodel.InputData {
-	return a.internal.GetRequiredData(ctx)
 }

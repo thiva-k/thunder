@@ -16,8 +16,7 @@
  * under the License.
  */
 
-// Package utils provides utility functions for OAuth flow executors.
-package utils
+package oauth
 
 import (
 	"errors"

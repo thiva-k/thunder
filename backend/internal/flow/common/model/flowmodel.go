@@ -22,24 +22,53 @@ package model
 import (
 	"github.com/asgardeo/thunder/internal/application/model"
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 )
 
 // NodeExecutionRecord represents a record of a node execution in the flow.
 type NodeExecutionRecord struct {
-	NodeID       string                 `json:"node_id"`
-	NodeType     string                 `json:"node_type"`
-	ExecutorName string                 `json:"executor_name,omitempty"`
-	ExecutorType constants.ExecutorType `json:"executor_type,omitempty"`
-	Step         int                    `json:"step"`
-	Timestamp    int64                  `json:"timestamp"`
-	Status       constants.FlowStatus   `json:"status"`
+	NodeID       string              `json:"node_id"`
+	NodeType     string              `json:"node_type"`
+	ExecutorName string              `json:"executor_name,omitempty"`
+	ExecutorType common.ExecutorType `json:"executor_type,omitempty"`
+	Step         int                 `json:"step"`
+	Status       common.FlowStatus   `json:"status"`
+	Executions   []ExecutionAttempt  `json:"executions"`
+	StartTime    int64               `json:"start_time,omitempty"`
+	EndTime      int64               `json:"end_time,omitempty"`
+}
+
+// GetDuration calculates the duration of the execution in milliseconds.
+func (n *NodeExecutionRecord) GetDuration() int64 {
+	return getDuration(n.StartTime, n.EndTime)
+}
+
+// ExecutionAttempt represents a single execution attempt of a node.
+type ExecutionAttempt struct {
+	Attempt   int               `json:"attempt"`
+	Timestamp int64             `json:"timestamp"`
+	Status    common.FlowStatus `json:"status"`
+	StartTime int64             `json:"start_time"`
+	EndTime   int64             `json:"end_time"`
+}
+
+// GetDuration calculates the duration of the execution attempt in milliseconds.
+func (e *ExecutionAttempt) GetDuration() int64 {
+	return getDuration(e.StartTime, e.EndTime)
+}
+
+// getDuration calculates the duration between startTime and endTime in milliseconds.
+func getDuration(startTime int64, endTime int64) int64 {
+	if startTime == 0 || endTime == 0 {
+		return 0
+	}
+	return (endTime - startTime) * 1000
 }
 
 // EngineContext holds the overall context used by the flow engine during execution.
 type EngineContext struct {
 	FlowID        string
-	FlowType      constants.FlowType
+	FlowType      common.FlowType
 	AppID         string
 	UserInputData map[string]string
 	RuntimeData   map[string]string
@@ -52,31 +81,32 @@ type EngineContext struct {
 	Application model.ApplicationProcessedDTO
 
 	AuthenticatedUser authncm.AuthenticatedUser
-	ExecutionHistory  []NodeExecutionRecord
+	ExecutionHistory  map[string]*NodeExecutionRecord
 }
 
 // NodeContext holds the context for a specific node in the flow execution.
 type NodeContext struct {
 	FlowID          string
-	FlowType        constants.FlowType
+	FlowType        common.FlowType
 	AppID           string
 	CurrentActionID string
 
-	NodeInputData []InputData
-	UserInputData map[string]string
-	RuntimeData   map[string]string
+	NodeProperties map[string]string
+	NodeInputData  []InputData
+	UserInputData  map[string]string
+	RuntimeData    map[string]string
 
 	Application       model.ApplicationProcessedDTO
 	AuthenticatedUser authncm.AuthenticatedUser
-	ExecutionHistory  []NodeExecutionRecord
+	ExecutionHistory  map[string]*NodeExecutionRecord
 }
 
 // FlowStep represents the outcome of a individual flow step
 type FlowStep struct {
 	FlowID        string
 	StepID        string
-	Type          constants.FlowStepType
-	Status        constants.FlowStatus
+	Type          common.FlowStepType
+	Status        common.FlowStatus
 	Data          FlowData
 	Assertion     string
 	FailureReason string
@@ -99,8 +129,8 @@ type InputData struct {
 
 // Action represents an action to be executed in a flow step
 type Action struct {
-	Type constants.ActionType `json:"type"`
-	ID   string               `json:"id"`
+	Type common.ActionType `json:"type"`
+	ID   string            `json:"id"`
 	// Executor *ExecutorModel `json:"executor,omitempty"`
 }
 

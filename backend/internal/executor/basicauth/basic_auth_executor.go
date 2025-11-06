@@ -22,18 +22,18 @@ package basicauth
 import (
 	"encoding/json"
 	"errors"
-	"time"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authncreds "github.com/asgardeo/thunder/internal/authn/credentials"
 	"github.com/asgardeo/thunder/internal/executor/identify"
-	flowconst "github.com/asgardeo/thunder/internal/flow/common/constants"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 const (
+	executorName          = authncm.AuthenticatorCredentials
 	loggerComponentName   = "BasicAuthExecutor"
 	userAttributeUsername = "username"
 	userAttributePassword = "password"
@@ -41,15 +41,16 @@ const (
 
 // BasicAuthExecutor implements the ExecutorInterface for basic authentication.
 type BasicAuthExecutor struct {
-	*identify.IdentifyingExecutor
-	internal     flowmodel.Executor
+	flowmodel.ExecutorInterface
+	identify.IdentifyingExecutorInterface
 	credsAuthSvc authncreds.CredentialsAuthnServiceInterface
 }
 
 var _ flowmodel.ExecutorInterface = (*BasicAuthExecutor)(nil)
+var _ identify.IdentifyingExecutorInterface = (*BasicAuthExecutor)(nil)
 
 // NewBasicAuthExecutor creates a new instance of BasicAuthExecutor.
-func NewBasicAuthExecutor(id, name string, properties map[string]string) *BasicAuthExecutor {
+func NewBasicAuthExecutor() *BasicAuthExecutor {
 	defaultInputs := []flowmodel.InputData{
 		{
 			Name:     userAttributeUsername,
@@ -62,33 +63,22 @@ func NewBasicAuthExecutor(id, name string, properties map[string]string) *BasicA
 			Required: true,
 		},
 	}
+
+	identifyExec := identify.NewIdentifyingExecutor()
+	base := flowmodel.NewExecutor(executorName, flowcm.ExecutorTypeAuthentication,
+		defaultInputs, []flowmodel.InputData{})
+
 	return &BasicAuthExecutor{
-		IdentifyingExecutor: identify.NewIdentifyingExecutor(id, name, properties),
-		internal: *flowmodel.NewExecutor(id, name, flowconst.ExecutorTypeAuthentication,
-			defaultInputs, []flowmodel.InputData{}, properties),
-		credsAuthSvc: authncreds.NewCredentialsAuthnService(nil),
+		ExecutorInterface:            base,
+		IdentifyingExecutorInterface: identifyExec,
+		credsAuthSvc:                 authncreds.NewCredentialsAuthnService(nil),
 	}
-}
-
-// GetID returns the ID of the BasicAuthExecutor.
-func (b *BasicAuthExecutor) GetID() string {
-	return b.internal.GetID()
-}
-
-// GetName returns the name of the BasicAuthExecutor.
-func (b *BasicAuthExecutor) GetName() string {
-	return b.internal.GetName()
-}
-
-// GetProperties returns the properties of the BasicAuthExecutor.
-func (b *BasicAuthExecutor) GetProperties() flowmodel.ExecutorProperties {
-	return b.internal.Properties
 }
 
 // Execute executes the basic authentication logic.
 func (b *BasicAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.ExecutorResponse, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, b.GetID()),
+		log.String(log.LoggerKeyExecutorName, b.GetName()),
 		log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing basic authentication executor")
 
@@ -101,7 +91,7 @@ func (b *BasicAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Exec
 	if b.CheckInputData(ctx, execResp) {
 		// If required input data is not provided, return incomplete status.
 		logger.Debug("Required input data for basic authentication executor is not provided")
-		execResp.Status = flowconst.ExecUserInputRequired
+		execResp.Status = flowcm.ExecUserInputRequired
 		return execResp, nil
 	}
 
@@ -110,34 +100,26 @@ func (b *BasicAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Exec
 	//  For the moment handling returned error as a authentication failure.
 	authenticatedUser, err := b.getAuthenticatedUser(ctx, execResp)
 	if err != nil {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Failed to authenticate user: " + err.Error()
 		return execResp, nil
 	}
-	if execResp.Status == flowconst.ExecFailure {
+	if execResp.Status == flowcm.ExecFailure {
 		return execResp, nil
 	}
 	if authenticatedUser == nil {
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "Authenticated user not found."
 		return execResp, nil
 	}
-	if !authenticatedUser.IsAuthenticated && ctx.FlowType != flowconst.FlowTypeRegistration {
-		execResp.Status = flowconst.ExecFailure
+	if !authenticatedUser.IsAuthenticated && ctx.FlowType != flowcm.FlowTypeRegistration {
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User authentication failed."
 		return execResp, nil
 	}
 
 	execResp.AuthenticatedUser = *authenticatedUser
-	execResp.Status = flowconst.ExecComplete
-
-	// Add execution record for successful authentication
-	execResp.ExecutionRecord = &flowmodel.NodeExecutionRecord{
-		ExecutorName: authncm.AuthenticatorCredentials,
-		ExecutorType: flowconst.ExecutorTypeAuthentication,
-		Timestamp:    time.Now().Unix(),
-		Status:       flowconst.FlowStatusComplete,
-	}
+	execResp.Status = flowcm.ExecComplete
 
 	logger.Debug("Basic authentication executor execution completed",
 		log.String("status", string(execResp.Status)),
@@ -146,43 +128,12 @@ func (b *BasicAuthExecutor) Execute(ctx *flowmodel.NodeContext) (*flowmodel.Exec
 	return execResp, nil
 }
 
-// GetDefaultExecutorInputs returns the default required input data for the BasicAuthExecutor.
-func (b *BasicAuthExecutor) GetDefaultExecutorInputs() []flowmodel.InputData {
-	return b.internal.DefaultExecutorInputs
-}
-
-// GetPrerequisites returns the prerequisites for the BasicAuthExecutor.
-func (b *BasicAuthExecutor) GetPrerequisites() []flowmodel.InputData {
-	return b.internal.Prerequisites
-}
-
-// CheckInputData checks if the required input data is provided in the context.
-func (b *BasicAuthExecutor) CheckInputData(ctx *flowmodel.NodeContext, execResp *flowmodel.ExecutorResponse) bool {
-	return b.internal.CheckInputData(ctx, execResp)
-}
-
-// ValidatePrerequisites validates whether the prerequisites for the BasicAuthExecutor are met.
-func (b *BasicAuthExecutor) ValidatePrerequisites(ctx *flowmodel.NodeContext,
-	execResp *flowmodel.ExecutorResponse) bool {
-	return b.internal.ValidatePrerequisites(ctx, execResp)
-}
-
-// GetUserIDFromContext retrieves the user ID from the context.
-func (b *BasicAuthExecutor) GetUserIDFromContext(ctx *flowmodel.NodeContext) (string, error) {
-	return b.internal.GetUserIDFromContext(ctx)
-}
-
-// GetRequiredData returns the required input data for the BasicAuthExecutor.
-func (b *BasicAuthExecutor) GetRequiredData(ctx *flowmodel.NodeContext) []flowmodel.InputData {
-	return b.internal.GetRequiredData(ctx)
-}
-
 // getAuthenticatedUser perform authentication based on the provided username and password and return
 // authenticated user details.
 func (b *BasicAuthExecutor) getAuthenticatedUser(ctx *flowmodel.NodeContext,
 	execResp *flowmodel.ExecutorResponse) (*authncm.AuthenticatedUser, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String(log.LoggerKeyExecutorID, b.GetID()))
+		log.String(log.LoggerKeyExecutorName, b.GetName()))
 
 	username := ctx.UserInputData[userAttributeUsername]
 	filters := map[string]interface{}{userAttributeUsername: username}
@@ -192,11 +143,11 @@ func (b *BasicAuthExecutor) getAuthenticatedUser(ctx *flowmodel.NodeContext,
 	}
 
 	// Handle registration flows.
-	if ctx.FlowType == flowconst.FlowTypeRegistration {
-		if execResp.Status == flowconst.ExecFailure {
+	if ctx.FlowType == flowcm.FlowTypeRegistration {
+		if execResp.Status == flowcm.ExecFailure {
 			if execResp.FailureReason == "User not found" {
 				logger.Debug("User not found for the provided username. Proceeding with registration flow.")
-				execResp.Status = flowconst.ExecComplete
+				execResp.Status = flowcm.ExecComplete
 
 				return &authncm.AuthenticatedUser{
 					IsAuthenticated: false,
@@ -209,12 +160,12 @@ func (b *BasicAuthExecutor) getAuthenticatedUser(ctx *flowmodel.NodeContext,
 		}
 
 		// At this point, a unique user is found in the system. Hence fail the execution.
-		execResp.Status = flowconst.ExecFailure
+		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User already exists with the provided username."
 		return nil, nil
 	}
 
-	if execResp.Status == flowconst.ExecFailure {
+	if execResp.Status == flowcm.ExecFailure {
 		return nil, nil
 	}
 
@@ -227,7 +178,7 @@ func (b *BasicAuthExecutor) getAuthenticatedUser(ctx *flowmodel.NodeContext,
 	user, svcErr := b.credsAuthSvc.Authenticate(authAttributes)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			execResp.Status = flowconst.ExecFailure
+			execResp.Status = flowcm.ExecFailure
 			execResp.FailureReason = "Failed to authenticate user: " + svcErr.ErrorDescription
 			return nil, nil
 		}

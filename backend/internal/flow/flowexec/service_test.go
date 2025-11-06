@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
@@ -110,7 +110,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 		ID:              "app-id-123",
 		AuthFlowGraphID: "auth-graph-1",
 	}
-	testGraph := model.NewGraph("auth-graph-1", constants.FlowTypeAuthentication)
+	testGraph := model.NewGraph("auth-graph-1", common.FlowTypeAuthentication)
 
 	tests := []struct {
 		name                     string
@@ -204,7 +204,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 				if ctx.AppID != appID {
 					return false
 				}
-				if ctx.FlowType != constants.FlowTypeAuthentication {
+				if ctx.FlowType != common.FlowTypeAuthentication {
 					return false
 				}
 				return true
@@ -262,7 +262,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
 				// Mock application service to return a different client error
-				mockAppService.EXPECT().GetApplication(appID).Return(nil, &constants.ErrorApplicationRetrievalClientError)
+				mockAppService.EXPECT().GetApplication(appID).Return(nil, &common.ErrorApplicationRetrievalClientError)
 				// No other mocks needed as it fails early
 			},
 			expectedErrorCode: "FES-1007", // ErrorApplicationRetrievalClientError
@@ -302,7 +302,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				mockAppService.EXPECT().GetApplication(appID).Return(mockApp, nil)
 
 				// Mock flow management service to return valid graph
-				testGraph := model.NewGraph("auth-graph-1", constants.FlowTypeAuthentication)
+				testGraph := model.NewGraph("auth-graph-1", common.FlowTypeAuthentication)
 				mockFlowMgtSvc.EXPECT().GetGraph("auth-graph-1").Return(testGraph, true)
 
 				// Mock store to return error

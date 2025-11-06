@@ -19,7 +19,7 @@
 package model
 
 import (
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
@@ -29,11 +29,12 @@ type DecisionNode struct {
 }
 
 // NewDecisionNode creates a new DecisionNode with the given details.
-func NewDecisionNode(id string, isStartNode bool, isFinalNode bool) NodeInterface {
+func NewDecisionNode(id string, properties map[string]string, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &DecisionNode{
 		Node: &Node{
 			id:               id,
-			_type:            constants.NodeTypeDecision,
+			_type:            common.NodeTypeDecision,
+			properties:       properties,
 			isStartNode:      isStartNode,
 			isFinalNode:      isFinalNode,
 			nextNodeList:     []string{},
@@ -60,7 +61,7 @@ func (n *DecisionNode) TriggerAction(ctx *NodeContext, actionID string) (*NodeRe
 	nextNodeIDs := n.GetNextNodeList()
 	if len(nextNodeIDs) == 0 {
 		return &NodeResponse{
-			Status:        constants.NodeStatusFailure,
+			Status:        common.NodeStatusFailure,
 			Type:          "",
 			FailureReason: "No next nodes defined for the decision node.",
 		}, nil
@@ -75,14 +76,14 @@ func (n *DecisionNode) TriggerAction(ctx *NodeContext, actionID string) (*NodeRe
 	}
 	if nextNodeID == "" {
 		return &NodeResponse{
-			Status:        constants.NodeStatusFailure,
+			Status:        common.NodeStatusFailure,
 			Type:          "",
 			FailureReason: "No matching next node found for the triggered action ID.",
 		}, nil
 	}
 
 	return &NodeResponse{
-		Status:     constants.NodeStatusComplete,
+		Status:     common.NodeStatusComplete,
 		Type:       "",
 		NextNodeID: nextNodeID,
 	}, nil
@@ -93,14 +94,14 @@ func (n *DecisionNode) PrepareActionInput(ctx *NodeContext, actionID string) (*N
 	*serviceerror.ServiceError) {
 	actions := n.getActionsList()
 	if len(actions) == 0 {
-		svcErr := constants.ErrorNoActionsDefinedForNode
+		svcErr := common.ErrorNoActionsDefinedForNode
 		svcErr.ErrorDescription = "No outgoing edges defined for the decision node."
 		return nil, &svcErr
 	}
 
 	return &NodeResponse{
-		Status:         constants.NodeStatusIncomplete,
-		Type:           constants.NodeResponseTypeView,
+		Status:         common.NodeStatusIncomplete,
+		Type:           common.NodeResponseTypeView,
 		Actions:        actions,
 		FailureReason:  "",
 		RequiredData:   make([]InputData, 0),
@@ -114,7 +115,7 @@ func (n *DecisionNode) getActionsList() []Action {
 	actions := []Action{}
 	for _, nextNodeID := range n.GetNextNodeList() {
 		action := Action{
-			Type: constants.ActionTypeView,
+			Type: common.ActionTypeView,
 			ID:   nextNodeID,
 		}
 		actions = append(actions, action)

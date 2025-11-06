@@ -28,7 +28,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/asgardeo/thunder/internal/flow/common/constants"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/common/jsonmodel"
 	"github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/flow/common/utils"
@@ -65,17 +65,6 @@ func newFlowMgtService() (FlowMgtServiceInterface, error) {
 		return nil, errors.New("failed to validate default flow configurations: " + err.Error())
 	}
 	return flowMgtInstance, nil
-}
-
-// GetFlowMgtService returns a singleton instance of FlowMgtServiceInterface.
-// [Deprecated: use dependency injection to get the instance instead.]
-// Remove this once the application service is refactored to use DI.
-func GetFlowMgtService() FlowMgtServiceInterface {
-	flowMgtService, err := newFlowMgtService()
-	if err != nil {
-		log.GetLogger().Fatal("Failed to initialize FlowMgtService", log.Error(err))
-	}
-	return flowMgtService
 }
 
 // Init initializes the FlowMgtService by loading graph configurations into runtime.
@@ -165,7 +154,7 @@ func (s *flowMgtService) init() error {
 		// Create and register the equivalent registration graph if not found already.
 		registrationGraphID := s.getRegistrationGraphID(graphID)
 		_, exists := s.graphs[registrationGraphID]
-		if !exists && graph.GetType() == constants.FlowTypeAuthentication {
+		if !exists && graph.GetType() == common.FlowTypeAuthentication {
 			if err := s.createAndRegisterRegistrationGraph(registrationGraphID, graph, logger); err != nil {
 				logger.Error("Failed creating registration graph", log.String("graphID", graphID), log.Error(err))
 				continue
@@ -206,7 +195,7 @@ func (s *flowMgtService) IsValidGraphID(graphID string) bool {
 
 // getRegistrationGraphID constructs the registration graph ID from the auth graph ID.
 func (s *flowMgtService) getRegistrationGraphID(authGraphID string) string {
-	return constants.RegistrationFlowGraphPrefix + strings.TrimPrefix(authGraphID, constants.AuthFlowGraphPrefix)
+	return common.RegistrationFlowGraphPrefix + strings.TrimPrefix(authGraphID, common.AuthFlowGraphPrefix)
 }
 
 // createAndRegisterRegistrationGraph creates a registration graph from an authentication graph and registers it.
@@ -237,7 +226,7 @@ func (s *flowMgtService) createAndRegisterRegistrationGraph(registrationGraphID 
 func (s *flowMgtService) createRegistrationGraph(registrationGraphID string,
 	authGraph model.GraphInterface) (model.GraphInterface, error) {
 	// Create a new graph from the authentication graph
-	registrationGraph := model.NewGraph(registrationGraphID, constants.FlowTypeRegistration)
+	registrationGraph := model.NewGraph(registrationGraphID, common.FlowTypeRegistration)
 
 	nodesCopy, err := sysutils.DeepCopyMapOfClonables(authGraph.GetNodes())
 	if err != nil {
@@ -304,7 +293,8 @@ func (s *flowMgtService) createRegistrationGraph(registrationGraphID string,
 func (s *flowMgtService) createProvisioningNode() (model.NodeInterface, error) {
 	provisioningNode, err := model.NewNode(
 		"provisioning",
-		string(constants.NodeTypeTaskExecution),
+		string(common.NodeTypeTaskExecution),
+		map[string]string{},
 		false,
 		false,
 	)
@@ -313,8 +303,7 @@ func (s *flowMgtService) createProvisioningNode() (model.NodeInterface, error) {
 	}
 
 	execConfig := &model.ExecutorConfig{
-		Name:       "ProvisioningExecutor",
-		Properties: make(map[string]string),
+		Name: "ProvisioningExecutor",
 	}
 	provisioningNode.SetExecutorConfig(execConfig)
 
