@@ -25,7 +25,7 @@ export default function Search(): JSX.Element {
   const {t} = useTranslation();
 
   return (
-    <FormControl sx={{width: {xs: '100%', md: '25ch'}}} variant="outlined">
+    <FormControl sx={{display: { xs: 'none', sm: 'block' }, width: {xs: '100%', md: '25ch'}}} variant="outlined">
       <OutlinedInput
         size="small"
         id="search"

@@ -19,7 +19,7 @@
 import {Stack, Tooltip} from '@wso2/oxygen-ui';
 import {ColorModeToggle} from '@wso2/oxygen-ui/ColorModeToggle';
 import type {JSX} from 'react';
-import {Bell, Monitor, Moon, Sun} from 'lucide-react';
+import {Bell, Menu, Monitor, Moon, Sun} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import NavbarBreadcrumbs from '../Navbar/NavbarBreadcrumbs';
 import MenuButton from '../Sidebar/MenuButton';
@@ -32,7 +32,7 @@ export default function Header(): JSX.Element {
     <Stack
       direction="row"
       sx={{
-        display: {xs: 'none', md: 'flex'},
+        display: 'flex',
         width: '100%',
         alignItems: {xs: 'flex-start', md: 'center'},
         justifyContent: 'space-between',
@@ -42,7 +42,12 @@ export default function Header(): JSX.Element {
       }}
       spacing={2}
     >
-      <NavbarBreadcrumbs />
+      <Stack direction="row">
+        <MenuButton aria-label="menu" sx={{ display: { md: 'none' }}}>
+          <Menu />
+        </MenuButton>
+        <NavbarBreadcrumbs />
+      </Stack>
       <Stack direction="row" sx={{gap: 1}}>
         <Search />
         <Tooltip title={t('common:header.notifications')}>

@@ -57,6 +57,6 @@ describe('IntegrationsPage', () => {
     render(<IntegrationsPage />);
 
     const comingSoon = screen.getByText('Coming Soon');
-    expect(comingSoon.tagName).toBe('H2');
+    expect(comingSoon.tagName).toBe('H4');
   });
 });

@@ -247,7 +247,7 @@ export default function ViewUserTypePage() {
   // Error state
   if (userTypeError) {
     return (
-      <Box sx={{maxWidth: 800, mx: 'auto', pt: 6}}>
+      <Box sx={{maxWidth: 1000, mx: 'auto', pt: 6}}>
         <Alert severity="error" sx={{mb: 2}}>
           {userTypeError.message ?? 'Failed to load user type information'}
         </Alert>
@@ -268,7 +268,7 @@ export default function ViewUserTypePage() {
   // No user type found
   if (!userType) {
     return (
-      <Box sx={{maxWidth: 800, mx: 'auto', pt: 6}}>
+      <Box sx={{maxWidth: 1000, mx: 'auto', pt: 6}}>
         <Alert severity="warning" sx={{mb: 2}}>
           User type not found
         </Alert>
@@ -287,21 +287,15 @@ export default function ViewUserTypePage() {
   }
 
   return (
-    <Box sx={{maxWidth: 1200, mx: 'auto', position: 'relative', pt: 6}}>
+    <Box sx={{maxWidth: 1000, mx: 'auto', position: 'relative'}}>
       <Button
         onClick={() => {
           handleBack().catch(() => {
             // Handle navigation error
           });
         }}
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: 10,
-          bgcolor: 'background.paper',
-          p: 2,
-        }}
+        variant="text"
+        sx={{mb: 3}}
         aria-label="Go back"
         startIcon={<ArrowLeft size={16} />}
       >

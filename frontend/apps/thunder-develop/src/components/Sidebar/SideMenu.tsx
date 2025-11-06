@@ -163,11 +163,8 @@ export default function SideMenu({
                 alignItems="center"
                 marginBottom="4px"
               />
-              <Typography
-                variant="h6"
-                sx={{ml: 1, alignSelf: 'center', fontSize: 14, fontWeight: 400, whiteSpace: 'nowrap'}}
-              >
-                Develop
+              <Typography variant="subtitle1" sx={{mt: '4px', ml: 1, alignSelf: 'center', fontWeight: 400}}>
+                Developer
               </Typography>
             </Box>
           )}

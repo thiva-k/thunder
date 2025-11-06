@@ -37,7 +37,7 @@ export default function SignInSide(): JSX.Element {
       ]}
     >
       <Stack
-        direction={{xs: 'column-reverse', md: 'row'}}
+        direction={{xs: 'row-reverse', md: 'row'}}
         sx={{
           justifyContent: 'center',
           gap: {xs: 6, sm: 12},
@@ -46,10 +46,10 @@ export default function SignInSide(): JSX.Element {
         }}
       >
         <Stack
-          direction={{xs: 'column-reverse', md: 'row'}}
+          direction={{xs: 'column', md: 'row'}}
           sx={{
             justifyContent: 'center',
-            gap: {xs: 6, sm: 12},
+            gap: {xs: 4, sm: 4},
             p: {xs: 2, sm: 4},
             m: 'auto',
           }}
