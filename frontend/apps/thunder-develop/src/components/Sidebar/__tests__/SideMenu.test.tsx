@@ -16,8 +16,9 @@
  * under the License.
  */
 
-import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {screen} from '@testing-library/react';
+import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
+import {screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type {JSX} from 'react';
 import render from '@/test/test-utils';
 import SideMenu from '../SideMenu';
@@ -49,59 +50,270 @@ vi.mock('../OptionsMenu', () => ({
 describe('SideMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
   });
 
-  it('renders the drawer component', () => {
-    const {container} = render(<SideMenu />);
-
-    const drawer = container.querySelector('.MuiDrawer-root');
-    expect(drawer).toBeInTheDocument();
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
   });
 
-  it('renders the Develop title', () => {
-    render(<SideMenu />);
+  describe('Basic rendering', () => {
+    it('renders the drawer component', () => {
+      const {container} = render(<SideMenu />);
 
-    expect(screen.getByText('Develop')).toBeInTheDocument();
+      const drawer = container.querySelector('.MuiDrawer-root');
+      expect(drawer).toBeInTheDocument();
+    });
+
+    it('renders the Develop title when expanded', () => {
+      render(<SideMenu />);
+
+      expect(screen.getByText('Develop')).toBeInTheDocument();
+    });
+
+    it('renders menu content', () => {
+      render(<SideMenu />);
+
+      expect(screen.getByTestId('menu-content')).toBeInTheDocument();
+    });
+
+    it('renders user information when expanded', () => {
+      render(<SideMenu />);
+
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+      expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
+    });
+
+    it('renders user avatar', () => {
+      const {container} = render(<SideMenu />);
+
+      const avatar = container.querySelector('.MuiAvatar-root');
+      expect(avatar).toBeInTheDocument();
+      expect(avatar).toHaveTextContent('J');
+    });
+
+    it('renders options menu when expanded', () => {
+      render(<SideMenu />);
+
+      expect(screen.getByTestId('options-menu')).toBeInTheDocument();
+    });
+
+    it('has permanent variant', () => {
+      const {container} = render(<SideMenu />);
+
+      const drawer = container.querySelector('.MuiDrawer-root');
+      expect(drawer).toHaveClass('MuiDrawer-docked');
+    });
+
+    it('renders divider after logo section', () => {
+      const {container} = render(<SideMenu />);
+
+      const dividers = container.querySelectorAll('.MuiDivider-root');
+      expect(dividers.length).toBeGreaterThan(0);
+    });
   });
 
-  it('renders menu content', () => {
-    render(<SideMenu />);
+  describe('Collapsible functionality', () => {
+    it('renders collapse button when expanded', () => {
+      render(<SideMenu />);
 
-    expect(screen.getByTestId('menu-content')).toBeInTheDocument();
+      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      expect(collapseButton).toBeInTheDocument();
+    });
+
+    it('renders expand button when collapsed', () => {
+      render(<SideMenu expanded={false} />);
+
+      const expandButton = screen.getByLabelText('Expand sidebar');
+      expect(expandButton).toBeInTheDocument();
+    });
+
+    it('calls onExpandedChange when collapse button is clicked', async () => {
+      vi.useRealTimers(); // Use real timers for user events
+      const user = userEvent.setup();
+      const handleExpandedChange = vi.fn();
+      render(<SideMenu expanded onExpandedChange={handleExpandedChange} />);
+
+      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      await user.click(collapseButton);
+
+      expect(handleExpandedChange).toHaveBeenCalledWith(false);
+      vi.useFakeTimers(); // Restore fake timers
+    });
+
+    it('calls onExpandedChange when expand button is clicked', async () => {
+      vi.useRealTimers(); // Use real timers for user events
+      const user = userEvent.setup();
+      const handleExpandedChange = vi.fn();
+      render(<SideMenu expanded={false} onExpandedChange={handleExpandedChange} />);
+
+      const expandButton = screen.getByLabelText('Expand sidebar');
+      await user.click(expandButton);
+
+      expect(handleExpandedChange).toHaveBeenCalledWith(true);
+      vi.useFakeTimers(); // Restore fake timers
+    });
+
+    it('toggles expanded state when used in uncontrolled mode', async () => {
+      vi.useRealTimers(); // Use real timers for user events
+      const user = userEvent.setup();
+      render(<SideMenu />);
+
+      // Initially expanded
+      expect(screen.getByText('Develop')).toBeInTheDocument();
+      expect(screen.getByLabelText('Collapse sidebar')).toBeInTheDocument();
+
+      // Click to collapse
+      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      await user.click(collapseButton);
+
+      // Should now show expand button
+      await waitFor(() => {
+        expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument();
+      });
+      vi.useFakeTimers(); // Restore fake timers
+    });
+
+    it('hides logo and title when collapsed', () => {
+      render(<SideMenu expanded={false} />);
+
+      expect(screen.queryByText('Develop')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('themed-icon')).not.toBeInTheDocument();
+    });
+
+    it('hides user information when collapsed', () => {
+      render(<SideMenu expanded={false} />);
+
+      expect(screen.queryByText('John Doe')).not.toBeInTheDocument();
+      expect(screen.queryByText('john.doe@example.com')).not.toBeInTheDocument();
+    });
+
+    it('hides options menu when collapsed', () => {
+      render(<SideMenu expanded={false} />);
+
+      expect(screen.queryByTestId('options-menu')).not.toBeInTheDocument();
+    });
+
+    it('still shows user avatar when collapsed', () => {
+      const {container} = render(<SideMenu expanded={false} />);
+
+      const avatar = container.querySelector('.MuiAvatar-root');
+      expect(avatar).toBeInTheDocument();
+    });
+
+    it('does not render collapse button when disableCollapsible is true', () => {
+      render(<SideMenu disableCollapsible />);
+
+      expect(screen.queryByLabelText('Collapse sidebar')).not.toBeInTheDocument();
+    });
+
+    it('does not render expand button when disableCollapsible is true and collapsed', () => {
+      render(<SideMenu expanded={false} disableCollapsible />);
+
+      expect(screen.queryByLabelText('Expand sidebar')).not.toBeInTheDocument();
+    });
+
+    it('shows logo and title when disableCollapsible is true', () => {
+      render(<SideMenu expanded={false} disableCollapsible />);
+
+      // When collapsible is disabled, it should still show content even if expanded is false
+      expect(screen.getByText('Develop')).toBeInTheDocument();
+    });
   });
 
-  it('renders user information', () => {
-    render(<SideMenu />);
+  describe('Drawer width', () => {
+    it('has correct width when expanded', () => {
+      const {container} = render(<SideMenu expanded />);
 
-    expect(screen.getByText('John Doe')).toBeInTheDocument();
-    expect(screen.getByText('john.doe@example.com')).toBeInTheDocument();
+      const drawer = container.querySelector('.MuiDrawer-root');
+      const style = window.getComputedStyle(drawer!);
+      expect(style.width).toBe('240px');
+    });
+
+    it('has correct width when collapsed', () => {
+      const {container} = render(<SideMenu expanded={false} />);
+
+      const drawer = container.querySelector('.MuiDrawer-root');
+      const style = window.getComputedStyle(drawer!);
+      expect(style.width).toBe('64px');
+    });
   });
 
-  it('renders user avatar', () => {
-    const {container} = render(<SideMenu />);
+  describe('Controlled vs Uncontrolled mode', () => {
+    it('works as controlled component when expanded prop is provided', async () => {
+      vi.useRealTimers(); // Use real timers for user events
+      const user = userEvent.setup();
+      const handleExpandedChange = vi.fn();
+      const {rerender} = render(<SideMenu expanded onExpandedChange={handleExpandedChange} />);
 
-    const avatar = container.querySelector('.MuiAvatar-root');
-    expect(avatar).toBeInTheDocument();
-    expect(avatar).toHaveTextContent('J');
+      expect(screen.getByText('Develop')).toBeInTheDocument();
+
+      // Click collapse button
+      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      await user.click(collapseButton);
+
+      // Should call handler but not change state (controlled)
+      expect(handleExpandedChange).toHaveBeenCalledWith(false);
+      expect(screen.getByText('Develop')).toBeInTheDocument();
+
+      // Parent updates the prop
+      rerender(<SideMenu expanded={false} onExpandedChange={handleExpandedChange} />);
+
+      // Now it should be collapsed
+      expect(screen.queryByText('Develop')).not.toBeInTheDocument();
+      vi.useFakeTimers(); // Restore fake timers
+    });
+
+    it('works as uncontrolled component when expanded prop is not provided', async () => {
+      vi.useRealTimers(); // Use real timers for user events
+      const user = userEvent.setup();
+      render(<SideMenu />);
+
+      // Initially expanded
+      expect(screen.getByText('Develop')).toBeInTheDocument();
+
+      // Click to collapse
+      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      await user.click(collapseButton);
+
+      // Should update internal state and collapse
+      await waitFor(() => {
+        expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument();
+      });
+      vi.useFakeTimers(); // Restore fake timers
+    });
   });
 
-  it('renders options menu', () => {
-    render(<SideMenu />);
+  describe('Accessibility', () => {
+    it('has proper aria-label for collapse button', () => {
+      render(<SideMenu expanded />);
 
-    expect(screen.getByTestId('options-menu')).toBeInTheDocument();
+      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      expect(collapseButton).toHaveAccessibleName('Collapse sidebar');
+    });
+
+    it('has proper aria-label for expand button', () => {
+      render(<SideMenu expanded={false} />);
+
+      const expandButton = screen.getByLabelText('Expand sidebar');
+      expect(expandButton).toHaveAccessibleName('Expand sidebar');
+    });
   });
 
-  it('has permanent variant', () => {
-    const {container} = render(<SideMenu />);
+  describe('SidebarContext', () => {
+    it('provides correct context values when expanded', () => {
+      // We can verify context is provided by checking if MenuContent renders
+      // (MenuContent depends on SidebarContext)
+      render(<SideMenu expanded />);
 
-    const drawer = container.querySelector('.MuiDrawer-root');
-    expect(drawer).toHaveClass('MuiDrawer-docked');
-  });
+      expect(screen.getByTestId('menu-content')).toBeInTheDocument();
+    });
 
-  it('renders divider after logo section', () => {
-    const {container} = render(<SideMenu />);
+    it('provides correct context values when collapsed', () => {
+      render(<SideMenu expanded={false} />);
 
-    const dividers = container.querySelectorAll('.MuiDivider-root');
-    expect(dividers.length).toBeGreaterThan(0);
+      expect(screen.getByTestId('menu-content')).toBeInTheDocument();
+    });
   });
 });
