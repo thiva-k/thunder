@@ -64,21 +64,6 @@ func newOTPAuthnService(otpSvc notification.OTPServiceInterface,
 	return service
 }
 
-// NewOTPAuthnService creates a new instance of OTPAuthnService.
-// [Deprecated: use dependency injection to get the instance instead].
-// TODO: Should be removed when executors are migrated to di pattern.
-func NewOTPAuthnService(otpSvc notification.OTPServiceInterface,
-	userSvc user.UserServiceInterface) OTPAuthnServiceInterface {
-	if otpSvc == nil {
-		otpSvc = notification.NewNotificationSenderServiceProvider().GetOTPService()
-	}
-	if userSvc == nil {
-		userSvc = user.GetUserService()
-	}
-
-	return newOTPAuthnService(otpSvc, userSvc)
-}
-
 // SendOTP sends an OTP to the specified recipient using the provided sender.
 func (s *otpAuthnService) SendOTP(senderID string, channel notifcommon.ChannelType,
 	recipient string) (string, *serviceerror.ServiceError) {

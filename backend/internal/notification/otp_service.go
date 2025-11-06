@@ -41,17 +41,27 @@ type OTPServiceInterface interface {
 
 // otpService implements the OTPServiceInterface.
 type otpService struct {
-	jwtSvc         jwt.JWTServiceInterface
-	notifSenderSvc NotificationSenderMgtSvcInterface
+	jwtService       jwt.JWTServiceInterface
+	senderMgtService NotificationSenderMgtSvcInterface
+	clientProvider   notificationClientProviderInterface
 }
 
 // newOTPService returns a new instance of OTPServiceInterface.
-func newOTPService(
-	notifSenderSvc NotificationSenderMgtSvcInterface, jwtSvc jwt.JWTServiceInterface) OTPServiceInterface {
+func newOTPService(notifSenderSvc NotificationSenderMgtSvcInterface,
+	jwtSvc jwt.JWTServiceInterface) OTPServiceInterface {
 	return &otpService{
-		jwtSvc:         jwtSvc,
-		notifSenderSvc: notifSenderSvc,
+		jwtService:       jwtSvc,
+		senderMgtService: notifSenderSvc,
+		clientProvider:   newNotificationClientProvider(),
 	}
+}
+
+// NewOTPService creates a new instance of OTPServiceInterface.
+// [Deprecated: use dependency injection to get the instance instead].
+// TODO: Remove this when the flow executors are migrated to the di pattern.
+func NewOTPService(notifSenderSvc NotificationSenderMgtSvcInterface,
+	jwtSvc jwt.JWTServiceInterface) OTPServiceInterface {
+	return newOTPService(notifSenderSvc, jwtSvc)
 }
 
 // SendOTP sends an OTP to the specified recipient using the provided sender.
@@ -64,7 +74,7 @@ func (s *otpService) SendOTP(otpDTO common.SendOTPDTO) (*common.SendOTPResultDTO
 		return nil, err
 	}
 
-	sender, svcErr := s.notifSenderSvc.GetSender(otpDTO.SenderID)
+	sender, svcErr := s.senderMgtService.GetSender(otpDTO.SenderID)
 	if svcErr != nil {
 		if svcErr.Code == ErrorSenderNotFound.Code {
 			return nil, &ErrorSenderNotFound
@@ -251,7 +261,7 @@ func (s *otpService) sendSMSOTP(recipient, otp string, sender common.Notificatio
 	}
 
 	// Get message client using existing pattern
-	client, svcErr := getMessageClient(sender)
+	client, svcErr := s.clientProvider.GetMessageClient(sender)
 	if svcErr != nil {
 		return svcErr
 	}
@@ -279,7 +289,7 @@ func (s *otpService) createSessionToken(sessionData common.OTPSessionData) (stri
 	validityPeriod := (sessionData.ExpiryTime - time.Now().UnixMilli()) / 1000
 	jwtConfig := config.GetThunderRuntime().Config.JWT
 
-	token, _, err := s.jwtSvc.GenerateJWT("otp-svc", "otp-svc", jwtConfig.Issuer, validityPeriod, claims)
+	token, _, err := s.jwtService.GenerateJWT("otp-svc", "otp-svc", jwtConfig.Issuer, validityPeriod, claims)
 	if err != nil {
 		return "", fmt.Errorf("failed to generate JWT token: %w", err)
 	}
@@ -292,7 +302,7 @@ func (s *otpService) verifyAndDecodeSessionToken(token string, logger *log.Logge
 	*common.OTPSessionData, *serviceerror.ServiceError) {
 	// Verify JWT signature
 	jwtConfig := config.GetThunderRuntime().Config.JWT
-	err := s.jwtSvc.VerifyJWT(token, "otp-svc", jwtConfig.Issuer)
+	err := s.jwtService.VerifyJWT(token, "otp-svc", jwtConfig.Issuer)
 	if err != nil {
 		logger.Debug("Invalid session token", log.Error(err))
 		return nil, &ErrorInvalidSessionToken

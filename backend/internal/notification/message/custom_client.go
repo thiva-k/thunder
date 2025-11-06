@@ -28,7 +28,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/notification/common"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
-	httpservice "github.com/asgardeo/thunder/internal/system/http"
+	syshttp "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
@@ -43,6 +43,7 @@ type CustomClient struct {
 	httpMethod  string
 	httpHeaders map[string]string
 	contentType string
+	httpClient  syshttp.HTTPClientInterface
 }
 
 // NewCustomClient creates a new instance of CustomClient.
@@ -75,6 +76,7 @@ func NewCustomClient(sender common.NotificationSenderDTO) (MessageClientInterfac
 			logger.Warn("Unknown property for Custom client", log.String("property", prop.GetName()))
 		}
 	}
+	client.httpClient = syshttp.NewHTTPClientWithTimeout(httpClientTimeout)
 
 	return client, nil
 }
@@ -123,8 +125,7 @@ func (c *CustomClient) SendSMS(sms common.SMSData) error {
 	}
 
 	// Send the HTTP request
-	client := httpservice.NewHTTPClientWithTimeout(httpClientTimeout)
-	resp, err := client.Do(req)
+	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send HTTP request: %w", err)
 	}
