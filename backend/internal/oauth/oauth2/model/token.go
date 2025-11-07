@@ -51,25 +51,22 @@ type TokenResponse struct {
 	IssuedTokenType string `json:"issued_token_type,omitempty"`
 }
 
-// TokenContext holds context data for the token issuance.
-type TokenContext struct {
-	TokenAttributes map[string]interface{} `json:"token_attributes,omitempty"`
-}
-
 // TokenDTO represents the data transfer object for tokens.
 type TokenDTO struct {
-	Token          string                 `json:"token"`
-	TokenType      string                 `json:"token_type"`
-	IssuedAt       int64                  `json:"issued_at"`
-	ExpiresIn      int64                  `json:"expires_in"`
-	Scopes         []string               `json:"scopes,omitempty"`
-	ClientID       string                 `json:"client_id"`
-	UserAttributes map[string]interface{} `json:"user_attributes,omitempty"`
+	Token          string
+	TokenType      string
+	IssuedAt       int64
+	ExpiresIn      int64
+	Scopes         []string
+	ClientID       string
+	UserAttributes map[string]interface{}
+	Subject        string
+	Audience       string
 }
 
 // TokenResponseDTO represents the data transfer object for token responses.
 type TokenResponseDTO struct {
-	AccessToken  TokenDTO `json:"access_token"`
-	RefreshToken TokenDTO `json:"refresh_token,omitempty"`
-	IDToken      TokenDTO `json:"id_token,omitempty"`
+	AccessToken  TokenDTO
+	RefreshToken TokenDTO
+	IDToken      TokenDTO
 }
