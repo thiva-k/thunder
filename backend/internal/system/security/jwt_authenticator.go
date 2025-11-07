@@ -1,0 +1,166 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package security
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/asgardeo/thunder/internal/system/constants"
+	sysContext "github.com/asgardeo/thunder/internal/system/context"
+	"github.com/asgardeo/thunder/internal/system/jwt"
+)
+
+// jwtAuthenticator handles authentication and authorization using JWT Bearer tokens.
+type jwtAuthenticator struct {
+	jwtService jwt.JWTServiceInterface
+}
+
+// newJWTAuthenticator creates a new JWT authenticator.
+func newJWTAuthenticator(jwtService jwt.JWTServiceInterface) *jwtAuthenticator {
+	return &jwtAuthenticator{
+		jwtService: jwtService,
+	}
+}
+
+// CanHandle checks if the request contains a Bearer token in the Authorization header.
+func (h *jwtAuthenticator) CanHandle(r *http.Request) bool {
+	authHeader := r.Header.Get("Authorization")
+	return strings.HasPrefix(authHeader, "Bearer ")
+}
+
+// Authenticate performs both authentication and authorization in a single operation.
+// It validates the JWT token and checks if the user has required scopes for the route.
+// Returns AuthenticationContext on success, or an error for auth (401) or authz (403) failures.
+func (h *jwtAuthenticator) Authenticate(r *http.Request) (*sysContext.AuthenticationContext, error) {
+	// Step 1: Extract Bearer token
+	authHeader := r.Header.Get(constants.AuthorizationHeaderName)
+	token, err := extractToken(authHeader)
+	if err != nil {
+		return nil, err
+	}
+
+	if token == "" {
+		return nil, errInvalidToken
+	}
+
+	// Step 2: Verify JWT signature
+	if err := h.jwtService.VerifyJWTSignature(token); err != nil {
+		return nil, errInvalidToken
+	}
+
+	// Step 3: Decode JWT payload to extract claims
+	claims, err := jwt.DecodeJWTPayload(token)
+	if err != nil {
+		return nil, errInvalidToken
+	}
+
+	// Step 4: Extract scopes and check authorization
+	scopes := extractScopes(claims)
+	requiredScopes := h.getRequiredScopes()
+
+	// If specific scopes are required, check if user has them
+	if len(requiredScopes) > 0 {
+		if !hasAnyScope(scopes, requiredScopes) {
+			return nil, errInsufficientScopes // 403 Forbidden
+		}
+	}
+
+	// Step 5: Extract user information and build AuthenticationContext
+	userID := ""
+	if sub, ok := claims["sub"].(string); ok && sub != "" {
+		userID = sub
+	}
+
+	ouID := extractClaim(claims, "ou_id")
+	appID := extractClaim(claims, "app_id")
+
+	// Create immutable AuthenticationContext
+	return sysContext.NewAuthenticationContext(userID, ouID, appID, token, claims), nil
+}
+
+// extractToken extracts the Bearer token from the Authorization header.
+func extractToken(authHeader string) (string, error) {
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", errMissingAuthHeader
+	}
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+	token = strings.TrimSpace(token)
+	return token, nil
+}
+
+// extractScopes extracts OAuth2 scopes from JWT claims.
+// Scopes can be in "scope" (string with space-separated values) or "scopes" (array) claim.
+func extractScopes(claims map[string]interface{}) []string {
+	// Try "scope" claim (OAuth2 standard - space-separated string)
+	if scopeStr, ok := claims["scope"].(string); ok && scopeStr != "" {
+		return strings.Fields(scopeStr)
+	}
+
+	// Try "scopes" claim (array format)
+	if scopesRaw, ok := claims["scopes"]; ok {
+		switch scopes := scopesRaw.(type) {
+		case []interface{}:
+			result := make([]string, 0, len(scopes))
+			for _, s := range scopes {
+				if str, ok := s.(string); ok {
+					result = append(result, str)
+				}
+			}
+			return result
+		case []string:
+			return scopes
+		}
+	}
+
+	return []string{}
+}
+
+// extractClaim extracts a string claim from JWT claims map.
+func extractClaim(claims map[string]interface{}, key string) string {
+	if value, ok := claims[key].(string); ok {
+		return value
+	}
+	return ""
+}
+
+// getRequiredScopes returns the required scopes for a given route path.
+func (h *jwtAuthenticator) getRequiredScopes() []string {
+	return []string{"system"}
+}
+
+// hasAnyScope checks if the user has at least one of the required scopes.
+func hasAnyScope(userScopes, requiredScopes []string) bool {
+	if len(requiredScopes) == 0 {
+		return true
+	}
+
+	scopeMap := make(map[string]bool, len(userScopes))
+	for _, scope := range userScopes {
+		scopeMap[scope] = true
+	}
+
+	for _, required := range requiredScopes {
+		if scopeMap[required] {
+			return true
+		}
+	}
+
+	return false
+}

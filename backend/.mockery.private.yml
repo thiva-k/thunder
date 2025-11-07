@@ -131,3 +131,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: ou
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/system/security:
+    config:
+      all: true
+      dir: internal/system/security
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: security
+      filename: "{{.InterfaceName}}_mock_test.go"

@@ -44,14 +44,8 @@ import (
 )
 
 // registerServices registers all the services with the provided HTTP multiplexer.
-func registerServices(mux *http.ServeMux) {
+func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 	logger := log.GetLogger()
-
-	// Load the server's private key for signing JWTs.
-	jwtService := jwt.GetJWTService()
-	if err := jwtService.Init(); err != nil { // TODO: Two-Phase Initialization is anti-pattern. Refactor this.
-		logger.Fatal("Failed to load private key", log.Error(err))
-	}
 
 	ouService := ou.Initialize(mux)
 	userSchemaService := userschema.Initialize(mux)

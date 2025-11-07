@@ -36,8 +36,10 @@ import (
 	"github.com/asgardeo/thunder/internal/system/cert"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/database/provider"
+	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/middleware"
+	"github.com/asgardeo/thunder/internal/system/security"
 )
 
 // shutdownTimeout defines the timeout duration for graceful shutdown.
@@ -65,8 +67,14 @@ func main() {
 		logger.Fatal("Failed to initialize multiplexer")
 	}
 
+	// Load the server's private key for signing JWTs.
+	jwtService := jwt.GetJWTService()
+	if err := jwtService.Init(); err != nil { // TODO: Two-Phase Initialization is anti-pattern. Refactor this.
+		logger.Fatal("Failed to load private key", log.Error(err))
+	}
+
 	// Register the services.
-	registerServices(mux)
+	registerServices(mux, jwtService)
 
 	// Register static file handlers for frontend applications.
 	registerStaticFileHandlers(logger, mux, thunderHome)
@@ -78,12 +86,14 @@ func main() {
 	// Load the certificate configuration.
 	tlsConfig := loadCertConfig(logger, cfg, thunderHome)
 
-	var server *http.Server
+	// Create the HTTP server.
+	server := createHTTPServer(logger, cfg, mux, jwtService)
+	// Start the server with or without TLS based on configuration.
 	if cfg.Server.HTTPOnly {
 		logger.Info("TLS is not enabled, starting server without TLS")
-		server = startHTTPServer(logger, cfg, mux)
+		startHTTPServer(logger, server)
 	} else {
-		server = startTLSServer(logger, cfg, mux, tlsConfig)
+		startTLSServer(logger, server, tlsConfig)
 	}
 
 	// Wait for shutdown signal
@@ -198,15 +208,13 @@ func loadCertConfig(logger *log.Logger, cfg *config.Config, thunderHome string) 
 }
 
 // startTLSServer starts the HTTPS server with TLS configuration.
-func startTLSServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux, tlsConfig *tls.Config) *http.Server {
-	server, serverAddr := createHTTPServer(logger, cfg, mux)
-
-	ln, err := tls.Listen("tcp", serverAddr, tlsConfig)
+func startTLSServer(logger *log.Logger, server *http.Server, tlsConfig *tls.Config) {
+	ln, err := tls.Listen("tcp", server.Addr, tlsConfig)
 	if err != nil {
 		logger.Fatal("Failed to start TLS listener", log.Error(err))
 	}
 
-	logger.Info("WSO2 Thunder server started (HTTPS)...", log.String("address", serverAddr))
+	logger.Info("WSO2 Thunder server started (HTTPS)...", log.String("address", server.Addr))
 
 	// Start server in a goroutine
 	go func() {
@@ -214,15 +222,11 @@ func startTLSServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux, 
 			logger.Fatal("Failed to serve requests", log.Error(err))
 		}
 	}()
-
-	return server
 }
 
 // startHTTPServer starts the HTTP server without TLS.
-func startHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux) *http.Server {
-	server, serverAddr := createHTTPServer(logger, cfg, mux)
-
-	logger.Info("WSO2 Thunder server started (HTTP)...", log.String("address", serverAddr))
+func startHTTPServer(logger *log.Logger, server *http.Server) {
+	logger.Info("WSO2 Thunder server started (HTTP)...", log.String("address", server.Addr))
 
 	// Start server in a goroutine
 	go func() {
@@ -230,14 +234,32 @@ func startHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux)
 			logger.Fatal("Failed to serve HTTP requests", log.Error(err))
 		}
 	}()
-
-	return server
 }
 
 // createHTTPServer creates and configures an HTTP server with common settings.
-func createHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux) (*http.Server, string) {
+func createHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux,
+	jwtService jwt.JWTServiceInterface) *http.Server {
 	handler := middleware.CorrelationIDMiddleware(mux)
 	handler = log.AccessLogHandler(logger, handler)
+
+	// Check if security should be skipped via environment variable
+	skipSecurity := os.Getenv("THUNDER_SKIP_SECURITY")
+	if skipSecurity == "true" {
+		logger.Warn("******************************************************************")
+		logger.Warn("***         WARNING: SECURITY MIDDLEWARE DISABLED              ***")
+		logger.Warn("***                                                            ***")
+		logger.Warn("***  THUNDER_SKIP_SECURITY is set to 'true'                    ***")
+		logger.Warn("***  This is NOT RECOMMENDED for production environments!      ***")
+		logger.Warn("***  All endpoints will be accessible without authentication.  ***")
+		logger.Warn("***                                                            ***")
+		logger.Warn("******************************************************************")
+	} else {
+		middlewareFunc, err := security.Initialize(jwtService)
+		if err != nil {
+			logger.Fatal("Failed to initialize security middleware", log.Error(err))
+		}
+		handler = middlewareFunc(handler)
+	}
 
 	// Build the server address using hostname and port from the configurations.
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Hostname, cfg.Server.Port)
@@ -250,7 +272,7 @@ func createHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux
 		IdleTimeout:       120 * time.Second,
 	}
 
-	return server, serverAddr
+	return server
 }
 
 // gracefulShutdown handles the graceful shutdown of all components.
