@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/asgardeo/thunder/internal/flow/common"
-	"github.com/asgardeo/thunder/internal/flow/common/model"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/apierror"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -46,12 +44,12 @@ func newFlowExecutionHandler(flowExecService FlowExecServiceInterface) *flowExec
 func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter, r *http.Request) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowExecutionHandler"))
 
-	flowR, err := sysutils.DecodeJSONBody[model.FlowRequest](r)
+	flowR, err := sysutils.DecodeJSONBody[FlowRequest](r)
 	if err != nil {
 		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
 
-		if err := json.NewEncoder(w).Encode(common.APIErrorFlowRequestJSONDecodeError); err != nil {
+		if err := json.NewEncoder(w).Encode(APIErrorFlowRequestJSONDecodeError); err != nil {
 			logger.Error("Error encoding error response", log.Error(err))
 			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
 		}
@@ -73,7 +71,7 @@ func (h *flowExecutionHandler) HandleFlowExecutionRequest(w http.ResponseWriter,
 		return
 	}
 
-	flowResp := model.FlowResponse{
+	flowResp := FlowResponse{
 		FlowID:        flowStep.FlowID,
 		StepID:        flowStep.StepID,
 		FlowStatus:    string(flowStep.Status),

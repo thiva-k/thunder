@@ -53,7 +53,15 @@ func CustomServiceError(svcError ServiceError, errorDesc string) *ServiceError {
 
 // Server errors
 var (
+	// InternalServerError is the error returned for unexpected server errors.
+	InternalServerError = ServiceError{
+		Type:             ServerErrorType,
+		Code:             "SSE-5000",
+		Error:            "Internal server error",
+		ErrorDescription: "An unexpected error occurred while processing the request",
+	}
+
 	// EncodingError is the error returned when encoding the response.
-	ErrorEncodingError = "{Code: \"ENC-5000\",Error: \"Encoding error\"," +
+	ErrorEncodingError = "{Code: \"SSE-5001\",Error: \"Encoding error\"," +
 		"ErrorDescription: \"An error occurred while encoding the response\"}"
 )

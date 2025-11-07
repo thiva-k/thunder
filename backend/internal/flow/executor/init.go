@@ -1,0 +1,68 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package executor
+
+import (
+	"github.com/asgardeo/thunder/internal/authn"
+	"github.com/asgardeo/thunder/internal/authz"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
+	flowcore "github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/idp"
+	"github.com/asgardeo/thunder/internal/notification"
+	"github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/system/jwt"
+	"github.com/asgardeo/thunder/internal/user"
+)
+
+// Initialize registers available executors and returns the executor registry.
+func Initialize(
+	flowFactory flowcore.FlowFactoryInterface,
+	userService user.UserServiceInterface,
+	ouService ou.OrganizationUnitServiceInterface,
+	idpService idp.IDPServiceInterface,
+	otpService notification.OTPServiceInterface,
+	jwtService jwt.JWTServiceInterface,
+	authRegistry *authn.AuthServiceRegistry,
+	authZService authz.AuthorizationServiceInterface,
+) ExecutorRegistryInterface {
+	reg := newExecutorRegistry()
+	reg.RegisterExecutor(ExecutorNameBasicAuth, newBasicAuthExecutor(
+		flowFactory, userService, authRegistry.CredentialsAuthnService))
+	reg.RegisterExecutor(ExecutorNameSMSAuth, newSMSOTPAuthExecutor(
+		flowFactory, userService, otpService))
+
+	reg.RegisterExecutor(ExecutorNameOAuth, newOAuthExecutor(
+		"", []flowcm.InputData{}, []flowcm.InputData{}, flowFactory, idpService, authRegistry.OAuthAuthnService))
+	reg.RegisterExecutor(ExecutorNameOIDCAuth, newOIDCAuthExecutor(
+		"", []flowcm.InputData{}, []flowcm.InputData{}, flowFactory, idpService, authRegistry.OIDCAuthnService))
+	reg.RegisterExecutor(ExecutorNameGitHubAuth, newGithubOAuthExecutor(
+		flowFactory, idpService, authRegistry.GithubOAuthAuthnService))
+	reg.RegisterExecutor(ExecutorNameGoogleAuth, newGoogleOIDCAuthExecutor(
+		flowFactory, idpService, authRegistry.GoogleOIDCAuthnService))
+
+	reg.RegisterExecutor(ExecutorNameProvisioning, newProvisioningExecutor(flowFactory, userService))
+	reg.RegisterExecutor(ExecutorNameOUCreation, newOUExecutor(flowFactory, ouService))
+
+	reg.RegisterExecutor(ExecutorNameAttributeCollect, newAttributeCollector(flowFactory, userService))
+	reg.RegisterExecutor(ExecutorNameAuthAssert, newAuthAssertExecutor(flowFactory, jwtService,
+		userService, authRegistry.AuthAssertGenerator))
+	reg.RegisterExecutor(ExecutorNameAuthorization, newAuthorizationExecutor(flowFactory, authZService))
+
+	return reg
+}

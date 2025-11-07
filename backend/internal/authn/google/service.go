@@ -69,24 +69,6 @@ func newGoogleOIDCAuthnService(idpSvc idp.IDPServiceInterface, userSvc user.User
 	return service
 }
 
-// NewGoogleOIDCAuthnService creates a new instance of Google OIDC authenticator service.
-// [Deprecated: use dependency injection to get the instance instead].
-// TODO: Should be removed when executors are migrated to di pattern.
-func NewGoogleOIDCAuthnService(idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
-	jwtSvc jwt.JWTServiceInterface) GoogleOIDCAuthnServiceInterface {
-	if idpSvc == nil {
-		idpSvc = idp.NewIDPService()
-	}
-	if userSvc == nil {
-		userSvc = user.GetUserService()
-	}
-	if jwtSvc == nil {
-		jwtSvc = jwt.GetJWTService()
-	}
-
-	return newGoogleOIDCAuthnService(idpSvc, userSvc, jwtSvc)
-}
-
 // BuildAuthorizeURL constructs the authorization request URL for Google OIDC authentication.
 func (g *googleOIDCAuthnService) BuildAuthorizeURL(idpID string) (string, *serviceerror.ServiceError) {
 	return g.internal.BuildAuthorizeURL(idpID)

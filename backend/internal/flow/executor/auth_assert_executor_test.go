@@ -1,0 +1,452 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package executor
+
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+
+	appmodel "github.com/asgardeo/thunder/internal/application/model"
+	authnassert "github.com/asgardeo/thunder/internal/authn/assert"
+	authncm "github.com/asgardeo/thunder/internal/authn/common"
+	flowcm "github.com/asgardeo/thunder/internal/flow/common"
+	flowcore "github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/user"
+	"github.com/asgardeo/thunder/tests/mocks/authn/assertmock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
+	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
+	"github.com/asgardeo/thunder/tests/mocks/usermock"
+)
+
+type AuthAssertExecutorTestSuite struct {
+	suite.Suite
+	mockJWTService      *jwtmock.JWTServiceInterfaceMock
+	mockUserService     *usermock.UserServiceInterfaceMock
+	mockAssertGenerator *assertmock.AuthAssertGeneratorInterfaceMock
+	mockFlowFactory     *coremock.FlowFactoryInterfaceMock
+	executor            *authAssertExecutor
+}
+
+func TestAuthAssertExecutorSuite(t *testing.T) {
+	suite.Run(t, new(AuthAssertExecutorTestSuite))
+}
+
+func (suite *AuthAssertExecutorTestSuite) SetupTest() {
+	// Initialize Thunder runtime for JWT config access
+	_ = initializeTestRuntime()
+
+	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
+	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
+	suite.mockAssertGenerator = assertmock.NewAuthAssertGeneratorInterfaceMock(suite.T())
+	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
+
+	mockExec := createMockExecutorSimple(suite.T(), ExecutorNameAuthAssert, flowcm.ExecutorTypeUtility)
+	suite.mockFlowFactory.On("CreateExecutor", ExecutorNameAuthAssert, flowcm.ExecutorTypeUtility,
+		[]flowcm.InputData{}, []flowcm.InputData{}).Return(mockExec)
+
+	suite.executor = newAuthAssertExecutor(suite.mockFlowFactory, suite.mockJWTService,
+		suite.mockUserService, suite.mockAssertGenerator)
+}
+
+func createMockExecutorSimple(t *testing.T, name string,
+	executorType flowcm.ExecutorType) flowcore.ExecutorInterface {
+	mockExec := coremock.NewExecutorInterfaceMock(t)
+	mockExec.On("GetName").Return(name).Maybe()
+	mockExec.On("GetType").Return(executorType).Maybe()
+	mockExec.On("GetDefaultExecutorInputs").Return([]flowcm.InputData{}).Maybe()
+	mockExec.On("GetPrerequisites").Return([]flowcm.InputData{}).Maybe()
+	return mockExec
+}
+
+func initializeTestRuntime() error {
+	testConfig := &config.Config{
+		JWT: config.JWTConfig{
+			Issuer:         "https://test.thunder.io",
+			ValidityPeriod: 3600,
+		},
+	}
+	return config.InitializeThunderRuntime("/tmp/test", testConfig)
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestNewAuthAssertExecutor() {
+	assert.NotNil(suite.T(), suite.executor)
+	assert.NotNil(suite.T(), suite.executor.jwtService)
+	assert.NotNil(suite.T(), suite.executor.userService)
+	assert.NotNil(suite.T(), suite.executor.authAssertGenerator)
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_UserAuthenticated_Success() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated:    true,
+			UserID:             "user-123",
+			OrganizationUnitID: "ou-123",
+			UserType:           "INTERNAL",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{
+			"node1": {
+				ExecutorName: ExecutorNameBasicAuth,
+				ExecutorType: flowcm.ExecutorTypeAuthentication,
+				Status:       flowcm.FlowStatusComplete,
+				Step:         1,
+				EndTime:      1234567890,
+			},
+		},
+		Application: appmodel.ApplicationProcessedDTO{},
+	}
+
+	suite.mockAssertGenerator.On("GenerateAssertion", mock.MatchedBy(func(refs []authncm.AuthenticatorReference) bool {
+		return len(refs) == 1 && refs[0].Authenticator == authncm.AuthenticatorCredentials
+	})).Return(&authnassert.AssertionResult{
+		Context: &authnassert.AssuranceContext{},
+	}, nil)
+
+	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
+		mock.Anything).Return("jwt-token", int64(3600), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	assert.Equal(suite.T(), "jwt-token", resp.Assertion)
+	suite.mockAssertGenerator.AssertExpectations(suite.T())
+	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_UserNotAuthenticated() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated: false,
+		},
+	}
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), failureReasonUserNotAuthenticated, resp.FailureReason)
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_WithAuthorizedPermissions() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated: true,
+			UserID:          "user-123",
+		},
+		RuntimeData: map[string]string{
+			"authorized_permissions": "read:documents write:documents",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
+		Application:      appmodel.ApplicationProcessedDTO{},
+	}
+
+	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(claims map[string]interface{}) bool {
+			perms, ok := claims["authorized_permissions"]
+			return ok && perms == "read:documents write:documents"
+		})).Return("jwt-token", int64(3600), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	assert.Equal(suite.T(), "jwt-token", resp.Assertion)
+	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_WithUserAttributes() {
+	attrs := map[string]interface{}{"email": "test@example.com", "phone": "1234567890"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated: true,
+			UserID:          "user-123",
+			Attributes:      map[string]interface{}{"email": "test@example.com"},
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
+		Application: appmodel.ApplicationProcessedDTO{
+			Token: &appmodel.TokenConfig{
+				UserAttributes: []string{"email", "phone"},
+			},
+		},
+	}
+
+	existingUser := &user.User{
+		ID:         "user-123",
+		Attributes: attrsJSON,
+	}
+
+	suite.mockUserService.On("GetUser", "user-123").Return(existingUser, nil)
+	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(claims map[string]interface{}) bool {
+			return claims["email"] == "test@example.com" && claims["phone"] == "1234567890"
+		})).Return("jwt-token", int64(3600), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	suite.mockUserService.AssertExpectations(suite.T())
+	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_JWTGenerationFails() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated: true,
+			UserID:          "user-123",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
+		Application:      appmodel.ApplicationProcessedDTO{},
+	}
+
+	suite.mockJWTService.On("GenerateJWT", mock.Anything, mock.Anything, mock.Anything,
+		mock.Anything, mock.Anything).Return("", int64(0), assert.AnError)
+
+	_, err := suite.executor.Execute(ctx)
+
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "failed to generate JWT token")
+	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_AssertionGenerationFails_ServerError() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated: true,
+			UserID:          "user-123",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{
+			"node1": {
+				ExecutorName: ExecutorNameBasicAuth,
+				ExecutorType: flowcm.ExecutorTypeAuthentication,
+				Status:       flowcm.FlowStatusComplete,
+				Step:         1,
+			},
+		},
+		Application: appmodel.ApplicationProcessedDTO{},
+	}
+
+	suite.mockAssertGenerator.On("GenerateAssertion", mock.Anything).
+		Return(nil, &serviceerror.ServiceError{
+			Type:  serviceerror.ServerErrorType,
+			Error: "internal error",
+		})
+
+	_, err := suite.executor.Execute(ctx)
+
+	assert.Error(suite.T(), err)
+	suite.mockAssertGenerator.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExtractAuthenticatorReferences() {
+	history := map[string]*flowcm.NodeExecutionRecord{
+		"node1": {
+			ExecutorName: ExecutorNameBasicAuth,
+			ExecutorType: flowcm.ExecutorTypeAuthentication,
+			Status:       flowcm.FlowStatusComplete,
+			Step:         3,
+			EndTime:      1000,
+		},
+		"node2": {
+			ExecutorName: ExecutorNameSMSAuth,
+			ExecutorType: flowcm.ExecutorTypeAuthentication,
+			Status:       flowcm.FlowStatusComplete,
+			Step:         1,
+			EndTime:      2000,
+		},
+		"node3": {
+			ExecutorName: ExecutorNameProvisioning,
+			ExecutorType: flowcm.ExecutorTypeRegistration,
+			Status:       flowcm.FlowStatusComplete,
+			Step:         2,
+		},
+		"node4": {
+			ExecutorName: ExecutorNameOAuth,
+			ExecutorType: flowcm.ExecutorTypeAuthentication,
+			Status:       flowcm.FlowStatusError,
+			Step:         4,
+		},
+	}
+
+	refs := suite.executor.extractAuthenticatorReferences(history)
+
+	assert.Len(suite.T(), refs, 2)
+	assert.Equal(suite.T(), authncm.AuthenticatorSMSOTP, refs[0].Authenticator)
+	assert.Equal(suite.T(), 1, refs[0].Step)
+	assert.Equal(suite.T(), authncm.AuthenticatorCredentials, refs[1].Authenticator)
+	assert.Equal(suite.T(), 2, refs[1].Step)
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExtractAuthenticatorReferences_EmptyHistory() {
+	history := map[string]*flowcm.NodeExecutionRecord{}
+
+	refs := suite.executor.extractAuthenticatorReferences(history)
+
+	assert.Empty(suite.T(), refs)
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExtractAuthenticatorReferences_UnknownExecutor() {
+	history := map[string]*flowcm.NodeExecutionRecord{
+		"node1": {
+			ExecutorName: "UnknownExecutor",
+			ExecutorType: flowcm.ExecutorTypeAuthentication,
+			Status:       flowcm.FlowStatusComplete,
+			Step:         1,
+		},
+	}
+
+	refs := suite.executor.extractAuthenticatorReferences(history)
+
+	assert.Empty(suite.T(), refs)
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestGetUserAttributes_Success() {
+	attrs := map[string]interface{}{"email": "test@example.com", "name": "Test User"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	existingUser := &user.User{
+		ID:         "user-123",
+		Attributes: attrsJSON,
+	}
+
+	suite.mockUserService.On("GetUser", "user-123").Return(existingUser, nil)
+
+	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123", suite.executor.logger)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resultUser)
+	assert.NotNil(suite.T(), resultAttrs)
+	assert.Equal(suite.T(), "test@example.com", resultAttrs["email"])
+	assert.Equal(suite.T(), "Test User", resultAttrs["name"])
+	suite.mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestGetUserAttributes_ServiceError() {
+	suite.mockUserService.On("GetUser", "user-123").
+		Return(nil, &serviceerror.ServiceError{Error: "user not found"})
+
+	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123", suite.executor.logger)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), resultUser)
+	assert.Nil(suite.T(), resultAttrs)
+	suite.mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestGetUserAttributes_InvalidJSON() {
+	existingUser := &user.User{
+		ID:         "user-123",
+		Attributes: json.RawMessage(`invalid json`),
+	}
+
+	suite.mockUserService.On("GetUser", "user-123").Return(existingUser, nil)
+
+	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123", suite.executor.logger)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), resultUser)
+	assert.Nil(suite.T(), resultAttrs)
+	suite.mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_WithUserTypeAndOU() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated:    true,
+			UserID:             "user-123",
+			UserType:           "EXTERNAL",
+			OrganizationUnitID: "ou-456",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
+		Application:      appmodel.ApplicationProcessedDTO{},
+	}
+
+	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(claims map[string]interface{}) bool {
+			return claims["userType"] == "EXTERNAL" && claims["ouId"] == "ou-456"
+		})).Return("jwt-token", int64(3600), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_WithCustomTokenConfig() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated: true,
+			UserID:          "user-123",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
+		Application: appmodel.ApplicationProcessedDTO{
+			Token: &appmodel.TokenConfig{
+				Issuer:         "custom-issuer",
+				ValidityPeriod: 7200,
+			},
+		},
+	}
+
+	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", "custom-issuer", int64(7200),
+		mock.Anything).Return("jwt-token", int64(7200), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	suite.mockJWTService.AssertExpectations(suite.T())
+}

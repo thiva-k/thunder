@@ -47,13 +47,6 @@ func newAuthAssertGenerator() AuthAssertGeneratorInterface {
 	return &authAssertGenerator{}
 }
 
-// NewAuthAssertGenerator creates a new instance of AuthAssertGeneratorInterface.
-// [Deprecated: use dependency injection to get the instance instead].
-// TODO: Should be removed when executors are migrated to di pattern.
-func NewAuthAssertGenerator() AuthAssertGeneratorInterface {
-	return newAuthAssertGenerator()
-}
-
 // GenerateAssertion generates authenticator assertion based on the provided authenticators.
 func (ag *authAssertGenerator) GenerateAssertion(
 	authenticators []authncm.AuthenticatorReference) (*AssertionResult, *serviceerror.ServiceError) {

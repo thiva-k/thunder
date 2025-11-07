@@ -20,11 +20,12 @@ package flowexec
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/asgardeo/thunder/internal/flow/common"
-	"github.com/asgardeo/thunder/internal/flow/common/model"
-	"github.com/asgardeo/thunder/internal/flow/common/utils"
+	"github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
@@ -32,26 +33,30 @@ import (
 
 // flowEngineInterface defines the interface for the flow engine.
 type flowEngineInterface interface {
-	Execute(ctx *model.EngineContext) (model.FlowStep, *serviceerror.ServiceError)
+	Execute(ctx *EngineContext) (FlowStep, *serviceerror.ServiceError)
 }
 
 // FlowEngine is the main engine implementation for orchestrating flow executions.
-type flowEngine struct{}
+type flowEngine struct {
+	executorRegistry executor.ExecutorRegistryInterface
+}
 
 // GetFlowEngine returns a singleton instance of FlowEngine.
-func newFlowEngine() flowEngineInterface {
-	return &flowEngine{}
+func newFlowEngine(executorRegistry executor.ExecutorRegistryInterface) flowEngineInterface {
+	return &flowEngine{
+		executorRegistry: executorRegistry,
+	}
 }
 
 // Execute executes a step in the flow
-func (fe *flowEngine) Execute(ctx *model.EngineContext) (model.FlowStep, *serviceerror.ServiceError) {
+func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowEngine"))
 
-	flowStep := model.FlowStep{
+	flowStep := FlowStep{
 		FlowID: ctx.FlowID,
 	}
 
-	currentNode, err := setCurrentExecutionNode(ctx, logger)
+	currentNode, err := fe.setCurrentExecutionNode(ctx, logger)
 	if err != nil {
 		return flowStep, err
 	}
@@ -61,12 +66,12 @@ func (fe *flowEngine) Execute(ctx *model.EngineContext) (model.FlowStep, *servic
 		logger.Debug("Executing node", log.String("nodeID", currentNode.GetID()),
 			log.String("nodeType", string(currentNode.GetType())))
 
-		svcErr := setNodeExecutor(currentNode, logger)
+		svcErr := fe.setNodeExecutor(currentNode, logger)
 		if svcErr != nil {
 			return flowStep, svcErr
 		}
 
-		nodeCtx := &model.NodeContext{
+		nodeCtx := &core.NodeContext{
 			FlowID:            ctx.FlowID,
 			FlowType:          ctx.FlowType,
 			AppID:             ctx.AppID,
@@ -79,7 +84,7 @@ func (fe *flowEngine) Execute(ctx *model.EngineContext) (model.FlowStep, *servic
 			ExecutionHistory:  ctx.ExecutionHistory,
 		}
 		if nodeCtx.NodeInputData == nil {
-			nodeCtx.NodeInputData = make([]model.InputData, 0)
+			nodeCtx.NodeInputData = make([]common.InputData, 0)
 		}
 		if nodeCtx.UserInputData == nil {
 			nodeCtx.UserInputData = make(map[string]string)
@@ -98,9 +103,10 @@ func (fe *flowEngine) Execute(ctx *model.EngineContext) (model.FlowStep, *servic
 			return flowStep, nodeErr
 		}
 
-		updateContextWithNodeResponse(ctx, nodeResp)
+		fe.updateContextWithNodeResponse(ctx, nodeResp)
 
-		nextNode, continueExecution, svcErr := fe.processNodeResponse(ctx, currentNode, nodeResp, &flowStep)
+		nextNode, continueExecution, svcErr := fe.processNodeResponse(ctx, currentNode, nodeResp,
+			&flowStep, logger)
 		if svcErr != nil {
 			return flowStep, svcErr
 		}
@@ -120,11 +126,12 @@ func (fe *flowEngine) Execute(ctx *model.EngineContext) (model.FlowStep, *servic
 }
 
 // setCurrentExecutionNode sets the current execution node in the context and returns it.
-func setCurrentExecutionNode(ctx *model.EngineContext, logger *log.Logger) (model.NodeInterface,
-	*serviceerror.ServiceError) {
+func (fe *flowEngine) setCurrentExecutionNode(ctx *EngineContext, logger *log.Logger) (
+	core.NodeInterface, *serviceerror.ServiceError) {
 	graph := ctx.Graph
 	if graph == nil {
-		return nil, &common.ErrorFlowGraphNotInitialized
+		logger.Error("Flow graph is not initialized in the context")
+		return nil, &serviceerror.InternalServerError
 	}
 
 	currentNode := ctx.CurrentNode
@@ -133,42 +140,68 @@ func setCurrentExecutionNode(ctx *model.EngineContext, logger *log.Logger) (mode
 		var err error
 		currentNode, err = graph.GetStartNode()
 		if err != nil {
-			return nil, &common.ErrorStartNodeNotFoundInGraph
+			logger.Error("Start node not found in the flow graph", log.Error(err))
+			return nil, &serviceerror.InternalServerError
 		}
 		ctx.CurrentNode = currentNode
 	}
 
 	// Initialize execution history map if needed
 	if ctx.ExecutionHistory == nil {
-		ctx.ExecutionHistory = make(map[string]*model.NodeExecutionRecord)
+		ctx.ExecutionHistory = make(map[string]*common.NodeExecutionRecord)
 	}
 
 	return currentNode, nil
 }
 
 // setNodeExecutor sets the executor for the given node if it is not already set.
-func setNodeExecutor(node model.NodeInterface, logger *log.Logger) *serviceerror.ServiceError {
+func (fe *flowEngine) setNodeExecutor(node core.NodeInterface, logger *log.Logger) *serviceerror.ServiceError {
 	if node.GetType() != common.NodeTypeTaskExecution {
 		return nil
 	}
-
-	if node.GetExecutor() == nil {
-		logger.Debug("Executor not set for the node. Constructing executor.", log.String("nodeID", node.GetID()))
-
-		executor, err := utils.GetExecutorByName(node.GetExecutorConfig())
-		if err != nil {
-			logger.Error("Error constructing executor for node", log.String("nodeID", node.GetID()),
-				log.String("executorName", node.GetExecutorConfig().Name), log.Error(err))
-			return &common.ErrorConstructingNodeExecutor
-		}
-		node.SetExecutor(executor)
+	executableNode, ok := node.(core.ExecutorBackedNodeInterface)
+	if !ok {
+		logger.Error("Task execution node does not implement ExecutorBackedNodeInterface",
+			log.String("nodeID", node.GetID()))
+		return &serviceerror.InternalServerError
 	}
 
+	// Return if executor is already set
+	if executableNode.GetExecutor() != nil {
+		return nil
+	}
+
+	logger.Debug("Executor not set for the node. Constructing executor.", log.String("nodeID", node.GetID()))
+
+	executorName := executableNode.GetExecutorName()
+	if executorName == "" {
+		logger.Error("Executor name not configured for executable node", log.String("nodeID", node.GetID()))
+		return &serviceerror.InternalServerError
+	}
+
+	executor, err := fe.getExecutorByName(executorName)
+	if err != nil {
+		logger.Error("Error constructing executor for node", log.String("nodeID", node.GetID()),
+			log.String("executorName", executorName), log.Error(err))
+		return &serviceerror.InternalServerError
+	}
+
+	executableNode.SetExecutor(executor)
 	return nil
 }
 
+// getExecutorByName retrieves executor instance from the executor registry.
+func (fe *flowEngine) getExecutorByName(executorName string) (core.ExecutorInterface, error) {
+	exec, err := fe.executorRegistry.GetExecutor(executorName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get executor '%s': %w", executorName, err)
+	}
+
+	return exec, nil
+}
+
 // updateContextWithNodeResponse updates the engine context with the node response and authenticated user.
-func updateContextWithNodeResponse(engineCtx *model.EngineContext, nodeResp *model.NodeResponse) {
+func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, nodeResp *common.NodeResponse) {
 	engineCtx.CurrentNodeResponse = nodeResp
 	engineCtx.CurrentActionID = ""
 
@@ -214,42 +247,46 @@ func updateContextWithNodeResponse(engineCtx *model.EngineContext, nodeResp *mod
 // - The next node to execute.
 // - Whether to continue execution.
 // - Any service error.
-func (fe *flowEngine) processNodeResponse(ctx *model.EngineContext, currentNode model.NodeInterface,
-	nodeResp *model.NodeResponse, flowStep *model.FlowStep) (model.NodeInterface, bool, *serviceerror.ServiceError) {
+func (fe *flowEngine) processNodeResponse(ctx *EngineContext, currentNode core.NodeInterface,
+	nodeResp *common.NodeResponse, flowStep *FlowStep, logger *log.Logger) (
+	core.NodeInterface, bool, *serviceerror.ServiceError) {
 	if nodeResp.Status == "" {
-		return nil, false, &common.ErrorNodeResponseStatusNotFound
+		logger.Error("Node response status not found in the flow graph")
+		return nil, false, &serviceerror.InternalServerError
 	}
-	if nodeResp.Status == common.NodeStatusComplete {
-		nextNode, svcErr := fe.handleCompletedResponse(ctx, currentNode, nodeResp)
+
+	switch nodeResp.Status {
+	case common.NodeStatusComplete:
+		nextNode, svcErr := fe.handleCompletedResponse(ctx, currentNode, nodeResp, logger)
 		if svcErr != nil {
 			return nil, false, svcErr
 		}
 		return nextNode, true, nil
-	} else if nodeResp.Status == common.NodeStatusIncomplete {
-		svcErr := fe.handleIncompleteResponse(nodeResp, flowStep)
+	case common.NodeStatusIncomplete:
+		svcErr := fe.handleIncompleteResponse(nodeResp, flowStep, logger)
 		if svcErr != nil {
 			return nil, false, svcErr
 		}
 		return nil, false, nil
-	} else if nodeResp.Status == common.NodeStatusFailure {
+	case common.NodeStatusFailure:
 		flowStep.Status = common.FlowStatusError
 		flowStep.FailureReason = nodeResp.FailureReason
 		return nil, false, nil
-	} else {
-		svcErr := common.ErrorUnsupportedNodeResponseStatus
-		svcErr.ErrorDescription = "unsupported status returned from the node: " + string(nodeResp.Status)
-		return nil, false, &svcErr
+	default:
+		logger.Error("Unsupported response status returned from the node",
+			log.String("status", string(nodeResp.Status)))
+		return nil, false, &serviceerror.InternalServerError
 	}
 }
 
 // handleCompletedResponse handles the completed node and returns the next node to execute.
-func (fe *flowEngine) handleCompletedResponse(ctx *model.EngineContext, currentNode model.NodeInterface,
-	nodeResp *model.NodeResponse) (model.NodeInterface, *serviceerror.ServiceError) {
+func (fe *flowEngine) handleCompletedResponse(ctx *EngineContext,
+	currentNode core.NodeInterface, nodeResp *common.NodeResponse, logger *log.Logger) (
+	core.NodeInterface, *serviceerror.ServiceError) {
 	nextNode, err := fe.resolveToNextNode(ctx.Graph, currentNode, nodeResp)
 	if err != nil {
-		svcErr := common.ErrorMovingToNextNode
-		svcErr.ErrorDescription = "error moving to next node: " + err.Error()
-		return nil, &svcErr
+		logger.Error("Error moving to the next node", log.Error(err))
+		return nil, &serviceerror.InternalServerError
 	}
 	ctx.CurrentNode = nextNode
 	return nextNode, nil
@@ -258,35 +295,34 @@ func (fe *flowEngine) handleCompletedResponse(ctx *model.EngineContext, currentN
 // handleIncompleteResponse handles the node response when the status is incomplete.
 // It resolves the flow step details based on the type of node response. The same node will be executed again
 // in the next request with the required data.
-func (fe *flowEngine) handleIncompleteResponse(nodeResp *model.NodeResponse,
-	flowStep *model.FlowStep) *serviceerror.ServiceError {
-	if nodeResp.Type == common.NodeResponseTypeRedirection {
+func (fe *flowEngine) handleIncompleteResponse(nodeResp *common.NodeResponse, flowStep *FlowStep,
+	logger *log.Logger) *serviceerror.ServiceError {
+	switch nodeResp.Type {
+	case common.NodeResponseTypeRedirection:
 		err := fe.resolveStepForRedirection(nodeResp, flowStep)
 		if err != nil {
-			svcErr := common.ErrorResolvingStepForRedirection
-			svcErr.ErrorDescription = "error resolving step for redirection: " + err.Error()
-			return &svcErr
+			logger.Error("Error while resolving step for redirection", log.Error(err))
+			return &serviceerror.InternalServerError
 		}
 		return nil
-	} else if nodeResp.Type == common.NodeResponseTypeView {
+	case common.NodeResponseTypeView:
 		err := fe.resolveStepDetailsForPrompt(nodeResp, flowStep)
 		if err != nil {
-			svcErr := common.ErrorResolvingStepForPrompt
-			svcErr.ErrorDescription = "error resolving step for prompt: " + err.Error()
-			return &svcErr
+			logger.Error("Error while resolving step details for prompt", log.Error(err))
+			return &serviceerror.InternalServerError
 		}
 		return nil
-	} else {
-		svcErr := common.ErrorUnsupportedNodeResponseType
-		svcErr.ErrorDescription = "unsupported node response type: " + string(nodeResp.Type)
-		return &svcErr
+	default:
+		logger.Error("Unsupported response type returned from the node",
+			log.String("responseType", string(nodeResp.Type)))
+		return &serviceerror.InternalServerError
 	}
 	// TODO: Handle retry scenarios with nodeResp.Type == common.NodeResponseTypeRetry
 }
 
 // resolveToNextNode resolves the next node to execute based on the current node.
-func (fe *flowEngine) resolveToNextNode(graph model.GraphInterface, currentNode model.NodeInterface,
-	nodeResp *model.NodeResponse) (model.NodeInterface, error) {
+func (fe *flowEngine) resolveToNextNode(graph core.GraphInterface, currentNode core.NodeInterface,
+	nodeResp *common.NodeResponse) (core.NodeInterface, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowEngine"))
 
 	nextNodeID := ""
@@ -320,7 +356,7 @@ func (fe *flowEngine) resolveToNextNode(graph model.GraphInterface, currentNode 
 }
 
 // resolveStepForRedirection resolves the flow step details for a redirection response.
-func (fe *flowEngine) resolveStepForRedirection(nodeResp *model.NodeResponse, flowStep *model.FlowStep) error {
+func (fe *flowEngine) resolveStepForRedirection(nodeResp *common.NodeResponse, flowStep *FlowStep) error {
 	if nodeResp == nil {
 		return errors.New("node response is nil")
 	}
@@ -341,7 +377,7 @@ func (fe *flowEngine) resolveStepForRedirection(nodeResp *model.NodeResponse, fl
 	flowStep.Data.RedirectURL = nodeResp.RedirectURL
 
 	if flowStep.Data.Inputs == nil {
-		flowStep.Data.Inputs = make([]model.InputData, 0)
+		flowStep.Data.Inputs = make([]common.InputData, 0)
 		flowStep.Data.Inputs = nodeResp.RequiredData
 	} else {
 		// Append to the existing input data
@@ -354,7 +390,7 @@ func (fe *flowEngine) resolveStepForRedirection(nodeResp *model.NodeResponse, fl
 }
 
 // resolveStepDetailsForPrompt resolves the step details for a user prompt response.
-func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *model.NodeResponse, flowStep *model.FlowStep) error {
+func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *common.NodeResponse, flowStep *FlowStep) error {
 	if nodeResp == nil {
 		return errors.New("node response is nil")
 	}
@@ -364,7 +400,7 @@ func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *model.NodeResponse, 
 
 	if len(nodeResp.RequiredData) > 0 {
 		if flowStep.Data.Inputs == nil {
-			flowStep.Data.Inputs = make([]model.InputData, 0)
+			flowStep.Data.Inputs = make([]common.InputData, 0)
 			flowStep.Data.Inputs = nodeResp.RequiredData
 		} else {
 			// Append to the existing input data
@@ -374,7 +410,7 @@ func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *model.NodeResponse, 
 
 	if len(nodeResp.Actions) > 0 {
 		if flowStep.Data.Actions == nil {
-			flowStep.Data.Actions = make([]model.Action, 0)
+			flowStep.Data.Actions = make([]common.Action, 0)
 		}
 		flowStep.Data.Actions = nodeResp.Actions
 	}
@@ -385,7 +421,7 @@ func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *model.NodeResponse, 
 }
 
 // recordNodeExecution adds or updates execution record for the node.
-func recordNodeExecution(ctx *model.EngineContext, node model.NodeInterface, nodeResp *model.NodeResponse,
+func recordNodeExecution(ctx *EngineContext, node core.NodeInterface, nodeResp *common.NodeResponse,
 	nodeErr *serviceerror.ServiceError, executionStartTime int64, executionEndTime int64) {
 	nodeID := node.GetID()
 	record := ctx.ExecutionHistory[nodeID]
@@ -406,30 +442,34 @@ func recordNodeExecution(ctx *model.EngineContext, node model.NodeInterface, nod
 }
 
 // createExecutionRecord creates a new node execution record.
-func createExecutionRecord(node model.NodeInterface, step int) model.NodeExecutionRecord {
-	record := model.NodeExecutionRecord{
+func createExecutionRecord(node core.NodeInterface, step int) common.NodeExecutionRecord {
+	record := common.NodeExecutionRecord{
 		NodeID:     node.GetID(),
 		NodeType:   string(node.GetType()),
 		Step:       step,
 		Status:     common.FlowStatusIncomplete,
-		Executions: make([]model.ExecutionAttempt, 0),
+		Executions: make([]common.ExecutionAttempt, 0),
 		StartTime:  time.Now().Unix(),
 	}
 
-	// Set executor details if applicable
-	if node.GetType() == common.NodeTypeTaskExecution && node.GetExecutor() != nil {
-		executor := node.GetExecutor()
-		record.ExecutorName = executor.GetName()
-		record.ExecutorType = executor.GetType()
+	// Set executor details if applicable (only for executor-backed nodes)
+	if node.GetType() == common.NodeTypeTaskExecution {
+		if executableNode, ok := node.(core.ExecutorBackedNodeInterface); ok {
+			executor := executableNode.GetExecutor()
+			if executor != nil {
+				record.ExecutorName = executor.GetName()
+				record.ExecutorType = executor.GetType()
+			}
+		}
 	}
 
 	return record
 }
 
 // createExecutionAttempt creates a new execution attempt.
-func createExecutionAttempt(nodeRecord *model.NodeExecutionRecord, nodeResp *model.NodeResponse,
-	nodeErr *serviceerror.ServiceError, executionStartTime int64, executionEndTime int64) model.ExecutionAttempt {
-	attempt := model.ExecutionAttempt{
+func createExecutionAttempt(nodeRecord *common.NodeExecutionRecord, nodeResp *common.NodeResponse,
+	nodeErr *serviceerror.ServiceError, executionStartTime int64, executionEndTime int64) common.ExecutionAttempt {
+	attempt := common.ExecutionAttempt{
 		Attempt:   len(nodeRecord.Executions) + 1,
 		Timestamp: executionEndTime,
 		StartTime: executionStartTime,

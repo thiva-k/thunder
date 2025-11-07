@@ -28,7 +28,6 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
-	"github.com/asgardeo/thunder/internal/flow/common/model"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2model "github.com/asgardeo/thunder/internal/oauth/oauth2/model"
@@ -182,7 +181,7 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 	}
 
 	// Initiate flow with OAuth context
-	flowInitCtx := &model.FlowInitContext{
+	flowInitCtx := &flowexec.FlowInitContext{
 		ApplicationID: app.AppID,
 		FlowType:      string(flowcm.FlowTypeAuthentication),
 		RuntimeData: map[string]string{

@@ -261,10 +261,18 @@ packages:
       pkgname: oumock
       filename: "{{.InterfaceName}}_mock.go"
 
+  github.com/asgardeo/thunder/internal/flow/core:
+    config:
+      all: true
+      dir: tests/mocks/flow/coremock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: coremock
+      filename: "{{.InterfaceName}}_mock.go"
+
   github.com/asgardeo/thunder/internal/flow/flowexec:
     config:
       all: true
-      dir: tests/mocks/flowexecmock
+      dir: tests/mocks/flow/flowexecmock
       structname: '{{.InterfaceName}}Mock'
       pkgname: flowexecmock
       filename: "{{.InterfaceName}}_mock.go"
@@ -272,9 +280,17 @@ packages:
   github.com/asgardeo/thunder/internal/flow/flowmgt:
     config:
       all: true
-      dir: tests/mocks/flowmgtmock
+      dir: tests/mocks/flow/flowmgtmock
       structname: '{{.InterfaceName}}Mock'
       pkgname: flowmgtmock
+      filename: "{{.InterfaceName}}_mock.go"
+  
+  github.com/asgardeo/thunder/internal/flow/executor:
+    config:
+      all: true
+      dir: tests/mocks/flow/executormock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: executormock
       filename: "{{.InterfaceName}}_mock.go"
 
   github.com/asgardeo/thunder/internal/userschema:

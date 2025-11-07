@@ -28,7 +28,7 @@ import (
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/tests/mocks/certmock"
-	"github.com/asgardeo/thunder/tests/mocks/flowmgtmock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/flowmgtmock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"

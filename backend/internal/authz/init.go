@@ -31,9 +31,3 @@ func Initialize(roleService role.RoleServiceInterface) AuthorizationServiceInter
 	authzServiceInstance = newAuthorizationService(rbacEngine)
 	return authzServiceInstance
 }
-
-// GetAuthorizationService returns the singleton instance of the authorization service.
-// This should be called after Initialize() has been invoked.
-func GetAuthorizationService() AuthorizationServiceInterface {
-	return authzServiceInstance
-}
