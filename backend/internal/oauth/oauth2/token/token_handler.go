@@ -26,9 +26,9 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/application"
-	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/utils"
 
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
@@ -100,42 +100,18 @@ func (th *tokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	clientID, clientSecret, tokenAuthMethod, ok := extractClientIDAndSecret(r, w)
-	if !ok {
+	// Get authenticated client from context
+	clientInfo := clientauth.GetOAuthClient(r.Context())
+	if clientInfo == nil {
+		logger.Error("OAuth client not found in context - ClientAuthMiddleware must be applied")
+		utils.WriteJSONError(w, constants.ErrorServerError,
+			"Internal server error: authentication context not available", http.StatusInternalServerError, nil)
 		return
 	}
 
-	// Retrieve the OAuth application based on the client id.
-	oauthApp, err := th.appService.GetOAuthApplication(clientID)
-	if err != nil || oauthApp == nil {
-		utils.WriteJSONError(w, constants.ErrorInvalidClient,
-			"Invalid client credentials", http.StatusUnauthorized, nil)
-		return
-	}
-
-	// Validate the token endpoint authentication method.
-	if !oauthApp.IsAllowedTokenEndpointAuthMethod(tokenAuthMethod) {
-		if tokenAuthMethod == constants.TokenEndpointAuthMethodNone {
-			utils.WriteJSONError(w, constants.ErrorInvalidClient,
-				"Missing client_secret parameter",
-				http.StatusUnauthorized, nil)
-			return
-		}
-		utils.WriteJSONError(w, constants.ErrorUnauthorizedClient,
-			"Client is not allowed to use the specified token endpoint authentication method",
-			http.StatusUnauthorized, nil)
-		return
-	}
-
-	// Validate the client credentials.
-	hashedClientSecret := hash.GenerateThumbprintFromString(clientSecret)
-	if tokenAuthMethod != constants.TokenEndpointAuthMethodNone {
-		if clientID != oauthApp.ClientID || hashedClientSecret != oauthApp.HashedClientSecret {
-			utils.WriteJSONError(w, constants.ErrorInvalidClient,
-				"Invalid client credentials", http.StatusUnauthorized, nil)
-			return
-		}
-	}
+	oauthApp := clientInfo.OAuthApp
+	clientID := clientInfo.ClientID
+	clientSecret := clientInfo.ClientSecret
 
 	// Validate grant type against the application.
 	if !oauthApp.IsAllowedGrantType(grantType) {
@@ -256,69 +232,4 @@ func (th *tokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	logger.Debug("Token response sent", log.String("client_id", clientID), log.String("grant_type", grantTypeStr))
-}
-
-// extractClientIDAndSecret extracts the client ID and secret from the request.
-// It returns the client ID, client secret, token authentication method, and a boolean indicating success.
-func extractClientIDAndSecret(r *http.Request, w http.ResponseWriter) (
-	string, string, constants.TokenEndpointAuthMethod, bool) {
-	var clientID string
-	var clientSecret string
-	var tokenAuthMethod constants.TokenEndpointAuthMethod
-
-	if r.Header.Get("Authorization") != "" {
-		var err error
-		clientID, clientSecret, err = utils.ExtractBasicAuthCredentials(r)
-		if err != nil {
-			if err.Error() == "invalid authorization header" {
-				responseHeaders := []map[string]string{
-					{"WWW-Authenticate": "Basic"},
-				}
-				utils.WriteJSONError(w, constants.ErrorInvalidClient,
-					"Invalid client credentials", http.StatusUnauthorized, responseHeaders)
-				return "", "", "", false
-			}
-			utils.WriteJSONError(w, constants.ErrorInvalidClient,
-				"Invalid client credentials", http.StatusUnauthorized, nil)
-			return "", "", "", false
-		}
-	}
-
-	// Check for client credentials in the request body.
-	clientIDFromBody := r.FormValue(constants.RequestParamClientID)
-	clientSecretFromBody := r.FormValue(constants.RequestParamClientSecret)
-
-	if (clientID != "" || clientSecret != "") && (clientIDFromBody != "" || clientSecretFromBody != "") {
-		utils.WriteJSONError(w, constants.ErrorInvalidRequest,
-			"Authorization information is provided in both header and body", http.StatusBadRequest, nil)
-		return "", "", "", false
-	}
-
-	if clientID != "" && clientSecret != "" {
-		tokenAuthMethod = constants.TokenEndpointAuthMethodClientSecretBasic
-	}
-
-	if clientIDFromBody != "" {
-		clientID = clientIDFromBody
-		if clientSecretFromBody != "" {
-			clientSecret = clientSecretFromBody
-			tokenAuthMethod = constants.TokenEndpointAuthMethodClientSecretPost
-		} else {
-			tokenAuthMethod = constants.TokenEndpointAuthMethodNone
-		}
-	}
-
-	if clientID == "" {
-		utils.WriteJSONError(w, constants.ErrorInvalidClient, "Missing client_id parameter",
-			http.StatusUnauthorized, nil)
-		return "", "", "", false
-	}
-
-	if clientSecret == "" && tokenAuthMethod != constants.TokenEndpointAuthMethodNone {
-		utils.WriteJSONError(w, constants.ErrorInvalidClient, "Missing client_secret parameter",
-			http.StatusUnauthorized, nil)
-		return "", "", "", false
-	}
-
-	return clientID, clientSecret, tokenAuthMethod, true
 }

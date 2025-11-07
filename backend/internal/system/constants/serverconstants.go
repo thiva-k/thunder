@@ -38,6 +38,9 @@ const ContentTypeHeaderName = "Content-Type"
 // TokenTypeBearer is the token type used in bearer authentication.
 const TokenTypeBearer = "Bearer"
 
+// AuthSchemeBasic is the authentication scheme prefix used in HTTP Basic authentication.
+const AuthSchemeBasic = "Basic "
+
 // ContentTypeJSON is the content type for JSON data.
 const ContentTypeJSON = "application/json"
 

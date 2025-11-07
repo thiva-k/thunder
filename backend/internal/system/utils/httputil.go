@@ -19,7 +19,6 @@
 package utils
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"html"
@@ -30,28 +29,6 @@ import (
 
 	"github.com/asgardeo/thunder/internal/system/log"
 )
-
-// ExtractBasicAuthCredentials extracts the basic authentication credentials from the request header.
-func ExtractBasicAuthCredentials(r *http.Request) (string, string, error) {
-	authHeader := r.Header.Get("Authorization")
-	if !strings.HasPrefix(authHeader, "Basic ") {
-		return "", "", errors.New("invalid authorization header")
-	}
-
-	// Decode the base64 encoded credentials.
-	encodedCredentials := strings.TrimPrefix(authHeader, "Basic ")
-	decodedCredentials, err := base64.StdEncoding.DecodeString(encodedCredentials)
-	if err != nil {
-		return "", "", errors.New("failed to decode authorization header")
-	}
-
-	credentials := strings.SplitN(string(decodedCredentials), ":", 2)
-	if len(credentials) != 2 {
-		return "", "", errors.New("invalid authorization header format")
-	}
-
-	return credentials[0], credentials[1], nil
-}
 
 // WriteJSONError writes a JSON error response with the given details.
 func WriteJSONError(w http.ResponseWriter, code, desc string, statusCode int, respHeaders []map[string]string) {
