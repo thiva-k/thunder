@@ -33,6 +33,9 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
+// otpUseOnlyNumericChars indicates whether to use only numeric characters for OTP generation.
+var otpUseOnlyNumericChars = true
+
 // OTPServiceInterface defines the interface for OTP operations.
 type OTPServiceInterface interface {
 	SendOTP(request common.SendOTPDTO) (*common.SendOTPResultDTO, *serviceerror.ServiceError)
@@ -240,7 +243,7 @@ func (s *otpService) getOTPLength() int {
 // useOnlyNumericChars determines whether to use only numeric characters.
 func (s *otpService) useOnlyNumericChars() bool {
 	// TODO: This needs to be configured as a property
-	return true
+	return otpUseOnlyNumericChars
 }
 
 // getOTPValidityPeriodInMillis returns the validity period of the OTP in milliseconds.

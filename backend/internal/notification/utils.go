@@ -31,6 +31,8 @@ import (
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
+var matchString = regexp.MatchString
+
 // validateNotificationSender validates the notification sender data.
 func validateNotificationSender(sender common.NotificationSenderDTO) *serviceerror.ServiceError {
 	if sender.Name == "" {
@@ -107,7 +109,7 @@ func validateTwilioProperties(properties []cmodels.Property) error {
 			break
 		}
 	}
-	matched, err := regexp.MatchString(sIDRegex, sid)
+	matched, err := matchString(sIDRegex, sid)
 	if err != nil {
 		return fmt.Errorf("failed to validate Twilio account SID: %w", err)
 	}
