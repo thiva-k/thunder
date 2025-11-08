@@ -83,13 +83,6 @@ func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesDisabled() {
 	assert.Implements(suite.T(), (*ApplicationServiceInterface)(nil), service)
 }
 
-// TestInitialize_WithImmutableResourcesEnabled tests the Initialize function when immutable resources are enabled
-func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled() {
-	// This test is commented out as it requires complex file system setup
-	// The standalone version TestInitialize_WithImmutableResources_Standalone covers this scenario
-	suite.T().Skip("Skipping suite-based test as it requires complex file system setup. Use standalone version.")
-}
-
 // TestParseToApplicationDTO_ValidYAML tests parsing a valid YAML configuration
 func (suite *InitTestSuite) TestParseToApplicationDTO_ValidYAML() {
 	yamlData := `
@@ -268,20 +261,6 @@ invalid_yaml_structure: [
 	assert.Nil(suite.T(), appDTO)
 }
 
-// TestRegisterRoutes tests the route registration function
-func (suite *InitTestSuite) TestRegisterRoutes() {
-	// This test is skipped because route registration requires config initialization
-	// and has potential for route conflicts. Use standalone version.
-	suite.T().Skip("Skipping suite-based route test. Use standalone version.")
-}
-
-// TestRegisterRoutes_OptionsHandlers tests the OPTIONS handlers specifically
-func (suite *InitTestSuite) TestRegisterRoutes_OptionsHandlers() {
-	// This test is skipped because route registration requires config initialization
-	// and has potential for route conflicts. Use standalone version.
-	suite.T().Skip("Skipping suite-based route test. Use standalone version.")
-}
-
 // TestParseToApplicationDTO_EmptyInboundAuthConfig tests parsing with empty inbound auth config
 func (suite *InitTestSuite) TestParseToApplicationDTO_EmptyInboundAuthConfig() {
 	yamlData := `
@@ -378,12 +357,6 @@ inbound_auth_config:
 			b.Fatal(err)
 		}
 	}
-}
-
-// Test for ensuring the route registration doesn't panic with nil handler
-func (suite *InitTestSuite) TestRegisterRoutes_WithNilHandler() {
-	// This test is skipped to avoid route conflicts and config issues
-	suite.T().Skip("Skipping nil handler test to avoid route conflicts.")
 }
 
 // Test YAML parsing with special characters and edge cases
