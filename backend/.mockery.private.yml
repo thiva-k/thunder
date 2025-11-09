@@ -147,3 +147,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: branding
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/oauth/oauth2/userinfo:
+    config:
+      all: true
+      dir: internal/oauth/oauth2/userinfo
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: userinfo
+      filename: "{{.InterfaceName}}_mock_test.go"

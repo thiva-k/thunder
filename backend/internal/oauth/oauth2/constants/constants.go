@@ -273,6 +273,14 @@ const (
 	SubjectTypePublic string = "public"
 )
 
+// User attribute constants.
+const (
+	// UserAttributeGroups is the constant for user's groups attribute.
+	UserAttributeGroups = "groups"
+	// DefaultGroupListLimit is the default limit for group list retrieval.
+	DefaultGroupListLimit = 20
+)
+
 // GetSupportedResponseTypes returns all supported OAuth2 response types.
 func GetSupportedResponseTypes() []string {
 	result := make([]string, len(supportedResponseTypes))

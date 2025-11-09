@@ -27,6 +27,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
@@ -143,4 +144,25 @@ func SanitizeStringMap(inputs map[string]string) map[string]string {
 		sanitized[key] = SanitizeString(value)
 	}
 	return sanitized
+}
+
+// ExtractBearerToken extracts the Bearer token from the Authorization header value.
+// It validates that the header is not empty, starts with "Bearer" (case-insensitive),
+// and contains a non-empty token. Returns the token and an error if validation fails.
+func ExtractBearerToken(authHeader string) (string, error) {
+	if authHeader == "" {
+		return "", errors.New("missing Authorization header")
+	}
+
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || !strings.EqualFold(parts[0], constants.TokenTypeBearer) {
+		return "", errors.New("invalid Authorization header format. Expected: Bearer <token>")
+	}
+
+	token := strings.TrimSpace(parts[1])
+	if token == "" {
+		return "", errors.New("missing access token")
+	}
+
+	return token, nil
 }

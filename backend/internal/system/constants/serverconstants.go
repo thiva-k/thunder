@@ -47,6 +47,18 @@ const ContentTypeJSON = "application/json"
 // ContentTypeFormURLEncoded is the content type for form-urlencoded data.
 const ContentTypeFormURLEncoded = "application/x-www-form-urlencoded"
 
+// CacheControlHeaderName is the name of the cache-control header used in HTTP responses.
+const CacheControlHeaderName = "Cache-Control"
+
+// CacheControlNoStore is the cache-control value to prevent caching.
+const CacheControlNoStore = "no-store"
+
+// PragmaHeaderName is the name of the pragma header used in HTTP responses.
+const PragmaHeaderName = "Pragma"
+
+// PragmaNoCache is the pragma value to prevent caching.
+const PragmaNoCache = "no-cache"
+
 // DefaultPageSize is the default limit for pagination when not specified.
 const DefaultPageSize = 30
 
