@@ -99,3 +99,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: notification
       filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/ou:
+    config:
+      all: true
+      dir: internal/ou
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: ou
+      filename: "{{.InterfaceName}}_mock_test.go"
