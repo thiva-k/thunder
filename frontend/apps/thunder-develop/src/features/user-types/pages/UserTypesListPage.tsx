@@ -17,7 +17,7 @@
  */
 
 import {useNavigate} from 'react-router';
-import {Box, Stack, Typography, Button} from '@wso2/oxygen-ui';
+import {Box, Stack, Typography, Button, Paper} from '@wso2/oxygen-ui';
 import {Plus} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
 import UserTypesList from '../components/UserTypesList';
@@ -56,8 +56,9 @@ export default function UserTypesListPage() {
           </Button>
         </Stack>
       </Stack>
-
-      <UserTypesList />
+      <Paper sx={{p: 4}}>
+        <UserTypesList />
+      </Paper>
     </Box>
   );
 }

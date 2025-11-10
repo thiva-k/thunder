@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Box, Stack, Typography} from '@wso2/oxygen-ui';
+import {Stack, Typography} from '@wso2/oxygen-ui';
 import {Cloud, ShieldCheck, Zap, TerminalSquare} from 'lucide-react';
 import type {JSX} from 'react';
 import {ThemedIcon} from '@thunder/ui';
@@ -51,32 +51,32 @@ const items: {
 export default function SignInSlogan(): JSX.Element {
   return (
     <Stack sx={{flexDirection: 'column', alignSelf: 'center', gap: 4, maxWidth: 450}}>
-      <Box sx={{display: {xs: 'none', md: 'flex'}}}>
-        <Typography variant="h2">
-          <ThemedIcon
-            src={{
-              light: `${import.meta.env.BASE_URL}/assets/images/logo.svg`,
-              dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,
-            }}
-            alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}}
-            height={30}
-            width="auto"
-          />
-        </Typography>
-      </Box>
-      {items.map((item) => (
-        <Stack key={item.title} direction="row" sx={{gap: 2}}>
-          {item.icon}
-          <div>
-            <Typography gutterBottom sx={{fontWeight: 'medium'}}>
-              {item.title}
-            </Typography>
-            <Typography variant="body2" sx={{color: 'text.secondary'}}>
-              {item.description}
-            </Typography>
-          </div>
-        </Stack>
-      ))}
+      <Typography variant="h2">
+        <ThemedIcon
+          src={{
+            light: `${import.meta.env.BASE_URL}/assets/images/logo.svg`,
+            dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,
+          }}
+          alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}}
+          height={30}
+          width="auto"
+        />
+      </Typography>
+      <Stack sx={{display: {xs: 'none', md: 'flex'}, flexDirection: 'column', alignSelf: 'center', gap: 4}}>
+        {items.map((item) => (
+          <Stack key={item.title} direction="row" sx={{gap: 2}}>
+            {item.icon}
+            <div>
+              <Typography gutterBottom sx={{fontWeight: 'medium'}}>
+                {item.title}
+              </Typography>
+              <Typography variant="body2" sx={{color: 'text.secondary'}}>
+                {item.description}
+              </Typography>
+            </div>
+          </Stack>
+        ))}
+      </Stack>
     </Stack>
   );
 }

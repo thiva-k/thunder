@@ -20,7 +20,6 @@ import type {JSX} from 'react';
 import {
   Box,
   Button,
-  Card as MuiCard,
   Checkbox,
   Divider,
   FormLabel,
@@ -30,31 +29,24 @@ import {
   TextField,
   Typography,
   styled,
-  AlertTitle
+  AlertTitle,
+  Paper,
 } from '@wso2/oxygen-ui';
 import {useState} from 'react';
 import {SignIn} from '@asgardeo/react';
 import {Smartphone} from 'lucide-react';
 import {Google, Facebook, GitHub} from '@thunder/ui';
 
-const Card = styled(MuiCard)(({theme}) => ({
+const LoginBox = styled(Paper)(({theme}) => ({
   display: 'flex',
   flexDirection: 'column',
   alignSelf: 'center',
   width: '100%',
   padding: theme.spacing(4),
   gap: theme.spacing(2),
-  backdropFilter: 'blur(10px)',
-  WebkitBackdropFilter: 'blur(10px)',
-  border: '1px solid rgba(255, 255, 255, 0.1) !important',
-  background: 'rgba(215, 215, 215, 0.04)',
-  boxShadow: '0 5px 10px 0 rgba(6, 6, 14, 0.1), 0 0 0 0 rgba(199, 211, 234, 0.01) inset, 0 0 0 0 rgba(199, 211, 234, 0.12) inset',
   [theme.breakpoints.up('sm')]: {
     width: '450px',
   },
-  ...theme.applyStyles('dark', {
-    boxShadow: 'hsla(220, 30%, 5%, 0.5) 0px 5px 15px 0px, hsla(220, 25%, 10%, 0.08) 0px 15px 35px -5px',
-  }),
 }));
 
 export default function SignInBox(): JSX.Element {
@@ -90,7 +82,7 @@ export default function SignInBox(): JSX.Element {
   };
 
   return (
-    <Card variant="outlined">
+    <LoginBox variant="outlined">
       <SignIn
         onError={(error) => {
           setEmailError(true);
@@ -99,7 +91,7 @@ export default function SignInBox(): JSX.Element {
       >
         {({onSubmit, isLoading, components, error, isInitialized}) => (
           <>
-            <Typography component="h1" variant="h5" sx={{width: '100%'}}>
+            <Typography component="h1" variant="h5" sx={{width: '100%', mb: 2}}>
               Sign in
             </Typography>
 
@@ -189,7 +181,7 @@ export default function SignInBox(): JSX.Element {
                               control={<Checkbox value="remember" color="primary" disabled={isLoading} />}
                               label="Remember me"
                             />
-                            <Button type="submit" fullWidth variant="contained" disabled={isLoading}>
+                            <Button type="submit" fullWidth variant="contained" disabled={isLoading} sx={{mt: 2}}>
                               {isLoading ? 'Signing in...' : 'Sign in'}
                             </Button>
                           </Box>
@@ -324,6 +316,7 @@ export default function SignInBox(): JSX.Element {
                                       fullWidth
                                       variant={component.variant === 'PRIMARY' ? 'contained' : 'outlined'}
                                       disabled={isLoading}
+                                       sx={{mt: 2}}
                                     >
                                       {isLoading ? 'Submitting...' : (component.config?.text as string)}
                                     </Button>
@@ -337,13 +330,19 @@ export default function SignInBox(): JSX.Element {
                     );
                   }
 
-                  return null;
+                  // SignInBox fallback error
+                  return (
+                    <Alert severity="error" sx={{mb: 2}}>
+                      <AlertTitle>Oops, that didn&apos;t work</AlertTitle>
+                      We&apos;re sorry, we ran into a problem. Please try again!
+                    </Alert>
+                  );
                 })()}
               </>
             )}
           </>
         )}
       </SignIn>
-    </Card>
+    </LoginBox>
   );
 }

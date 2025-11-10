@@ -216,22 +216,15 @@ export default function CreateUserTypePage() {
   };
 
   return (
-    <Box sx={{maxWidth: 1200, mx: 'auto', px: 2, position: 'relative', pt: 6}}>
+    <Box sx={{maxWidth: 1000, mx: 'auto', px: 2, position: 'relative'}}>
       <Button
         onClick={() => {
           handleBack().catch(() => {
             // Handle navigation error
           });
         }}
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: 10,
-          bgcolor: 'background.paper',
-          ml: 2,
-          p: 2,
-        }}
+        variant="text"
+        sx={{mb: 2}}
         aria-label="Go back"
         startIcon={<ArrowLeft size={16} />}
       >

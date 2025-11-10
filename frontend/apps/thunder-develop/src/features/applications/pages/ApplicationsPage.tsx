@@ -44,7 +44,7 @@ export default function ApplicationsPage() {
         }}
       >
         <Box>
-          <Typography variant="h3" component="h2" gutterBottom color="text.secondary" fontWeight={500}>
+          <Typography variant="h4" component="h4" gutterBottom color="text.secondary" fontWeight={500}>
             {t('applications:comingSoon')}
           </Typography>
           <Typography variant="body1" color="text.secondary">

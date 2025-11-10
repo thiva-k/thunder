@@ -392,7 +392,9 @@ describe('useUpdateUser', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.data).toEqual(mockResponse);
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockResponse);
+    });
     expect(result.current.error).toBeNull();
   });
 });

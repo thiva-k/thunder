@@ -17,7 +17,7 @@
  */
 
 import {useNavigate} from 'react-router';
-import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem} from '@wso2/oxygen-ui';
+import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem, Paper} from '@wso2/oxygen-ui';
 import {useMemo, useState} from 'react';
 import {Plus, Search} from 'lucide-react';
 import {useTranslation} from 'react-i18next';
@@ -101,7 +101,9 @@ export default function UsersListPage() {
           ))}
         </Select>
       </Stack>
-      <UsersList selectedSchema={selectedSchema ?? ''} />
+      <Paper sx={{p: 4}}>
+        <UsersList selectedSchema={selectedSchema ?? ''} />
+      </Paper>
     </Box>
   );
 }

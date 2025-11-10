@@ -165,7 +165,7 @@ export default function ViewUserPage() {
   // Error state
   if (userError ?? schemaError) {
     return (
-      <Box sx={{maxWidth: 800, mx: 'auto', px: 2, pt: 6}}>
+      <Box sx={{maxWidth: 1000, mx: 'auto', px: 2, pt: 6}}>
         <Alert severity="error" sx={{mb: 2}}>
           {userError?.message ?? schemaError?.message ?? 'Failed to load user information'}
         </Alert>
@@ -186,7 +186,7 @@ export default function ViewUserPage() {
   // No user found
   if (!user) {
     return (
-      <Box sx={{maxWidth: 800, mx: 'auto', px: 2, pt: 6}}>
+      <Box sx={{maxWidth: 1000, mx: 'auto', px: 2, pt: 6}}>
         <Alert severity="warning" sx={{mb: 2}}>
           User not found
         </Alert>
@@ -205,22 +205,15 @@ export default function ViewUserPage() {
   }
 
   return (
-    <Box sx={{maxWidth: 800, mx: 'auto', px: 2, position: 'relative', pt: 6}}>
+    <Box sx={{maxWidth: 1000, mx: 'auto', px: 2, position: 'relative'}}>
       <Button
         onClick={() => {
           handleBack().catch(() => {
             // Handle navigation error
           });
         }}
-        sx={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          zIndex: 10,
-          bgcolor: 'background.paper',
-          ml: 2,
-          p: 2,
-        }}
+        variant="text"
+        sx={{mb: 3}}
         aria-label="Go back"
         startIcon={<ArrowLeft size={16} />}
       >

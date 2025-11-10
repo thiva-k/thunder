@@ -18,8 +18,7 @@
 
 import {Outlet} from 'react-router';
 import type {ReactNode} from 'react';
-import {Box} from '@wso2/oxygen-ui';
-import {Layout} from '@thunder/ui';
+import {Box, Layout} from '@wso2/oxygen-ui';
 import SideMenu from '../components/Sidebar/SideMenu';
 import Header from '../components/Header/Header';
 import NavigationProvider from './contexts/NavigationProvider';
@@ -27,21 +26,19 @@ import NavigationProvider from './contexts/NavigationProvider';
 export default function DashboardLayout(): ReactNode {
   return (
     <NavigationProvider>
-      <Layout.Provider>
-        <Layout.Root sx={{ minHeight: "100vh" }}>
-          <Layout.Sidebar>
-            <SideMenu />
-          </Layout.Sidebar>
-          <Layout.Content>
-            <Layout.Header>
-              <Header />
-            </Layout.Header>
-            <Box sx={{p: 3}}>
-              <Outlet />
-            </Box>
-          </Layout.Content>
-        </Layout.Root>
-      </Layout.Provider>
+      <Layout sx={{ minHeight: "100vh" }}>
+        <Layout.Sidebar>
+          <SideMenu />
+        </Layout.Sidebar>
+        <Layout.Content>
+          <Layout.Header>
+            <Header />
+          </Layout.Header>
+          <Box sx={{p: 3}}>
+            <Outlet />
+          </Box>
+        </Layout.Content>
+      </Layout>
     </NavigationProvider>
   );
 }

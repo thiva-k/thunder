@@ -43,16 +43,21 @@ vi.mock('react-router', async () => {
   };
 });
 
-// Mock @thunder/ui Layout
-vi.mock('@thunder/ui', () => ({
-  Layout: {
-    Provider: ({children}: {children: React.ReactNode}) => <div data-testid="layout-provider">{children}</div>,
-    Root: ({children}: {children: React.ReactNode}) => <div data-testid="layout-root">{children}</div>,
-    Sidebar: ({children}: {children: React.ReactNode}) => <div data-testid="layout-sidebar">{children}</div>,
-    Content: ({children}: {children: React.ReactNode}) => <div data-testid="layout-content">{children}</div>,
-    Header: ({children}: {children: React.ReactNode}) => <div data-testid="layout-header">{children}</div>,
-  },
-}));
+// Mock @wso2/oxygen-ui Layout
+vi.mock('@wso2/oxygen-ui', async () => {
+  const actual = await vi.importActual<typeof import('@wso2/oxygen-ui')>('@wso2/oxygen-ui');
+  return {
+    ...actual,
+    Layout: Object.assign(
+      ({children, ...props}: {children: React.ReactNode}) => <div data-testid="layout-root" {...props}>{children}</div>,
+      {
+        Sidebar: ({children}: {children: React.ReactNode}) => <div data-testid="layout-sidebar">{children}</div>,
+        Content: ({children}: {children: React.ReactNode}) => <div data-testid="layout-content">{children}</div>,
+        Header: ({children}: {children: React.ReactNode}) => <div data-testid="layout-header">{children}</div>,
+      }
+    ),
+  };
+});
 
 describe('DashboardLayout', () => {
   it('renders NavigationProvider', () => {
@@ -61,13 +66,7 @@ describe('DashboardLayout', () => {
     expect(screen.getByTestId('navigation-provider')).toBeInTheDocument();
   });
 
-  it('renders Layout.Provider', () => {
-    render(<DashboardLayout />);
-
-    expect(screen.getByTestId('layout-provider')).toBeInTheDocument();
-  });
-
-  it('renders Layout.Root', () => {
+  it('renders Layout component', () => {
     render(<DashboardLayout />);
 
     expect(screen.getByTestId('layout-root')).toBeInTheDocument();
@@ -103,7 +102,6 @@ describe('DashboardLayout', () => {
     render(<DashboardLayout />);
 
     expect(screen.getByTestId('navigation-provider')).toBeInTheDocument();
-    expect(screen.getByTestId('layout-provider')).toBeInTheDocument();
     expect(screen.getByTestId('layout-root')).toBeInTheDocument();
     expect(screen.getByTestId('layout-sidebar')).toBeInTheDocument();
     expect(screen.getByTestId('layout-content')).toBeInTheDocument();

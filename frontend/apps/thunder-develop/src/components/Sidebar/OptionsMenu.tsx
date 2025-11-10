@@ -19,14 +19,12 @@
 import {
   styled,
   Divider,
-  dividerClasses,
   Menu,
   MenuItem as MuiMenuItem,
-  paperClasses,
-  listClasses,
   ListItemText,
   ListItemIcon,
   listItemIconClasses,
+  Typography,
 } from '@wso2/oxygen-ui';
 import {SignOutButton, useAsgardeo} from '@asgardeo/react';
 import {useState, type JSX, type MouseEvent} from 'react';
@@ -65,23 +63,20 @@ export default function OptionsMenu(): JSX.Element {
         onClick={handleClose}
         transformOrigin={{horizontal: 'right', vertical: 'top'}}
         anchorOrigin={{horizontal: 'right', vertical: 'bottom'}}
-        sx={{
-          [`& .${listClasses.root}`]: {
-            padding: '4px',
-          },
-          [`& .${paperClasses.root}`]: {
-            padding: 0,
-          },
-          [`& .${dividerClasses.root}`]: {
-            margin: '4px -4px',
-          },
-        }}
       >
-        <MenuItem onClick={handleClose}>{t('common:userMenu.profile')}</MenuItem>
-        <MenuItem onClick={handleClose}>{t('common:userMenu.myAccount')}</MenuItem>
+        <MenuItem onClick={handleClose}>
+          <Typography variant="body2">{t('common:userMenu.profile')}</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleClose}>
+          <Typography variant="body2">{t('common:userMenu.myAccount')}</Typography>
+        </MenuItem>
         <Divider />
-        <MenuItem onClick={handleClose}>{t('common:userMenu.addAnotherAccount')}</MenuItem>
-        <MenuItem onClick={handleClose}>{t('common:userMenu.settings')}</MenuItem>
+        <MenuItem onClick={handleClose}>
+          <Typography variant="body2">{t('common:userMenu.addAnotherAccount')}</Typography>
+        </MenuItem>
+        <MenuItem onClick={handleClose}>
+          <Typography variant="body2">{t('common:userMenu.settings')}</Typography>
+        </MenuItem>
         <Divider />
         <SignOutButton>
           {({signOut, isLoading}) => (
@@ -100,7 +95,9 @@ export default function OptionsMenu(): JSX.Element {
                 },
               }}
             >
-              <ListItemText>{t('common:userMenu.signOut')}</ListItemText>
+              <ListItemText>
+                <Typography variant="body2">{t('common:userMenu.signOut')}</Typography>
+              </ListItemText>
               <ListItemIcon>
                 <LogOut size={16} />
               </ListItemIcon>
