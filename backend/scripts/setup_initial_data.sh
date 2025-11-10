@@ -273,11 +273,9 @@ create_user_schema() {
   fi
 }
 
-# Organization unit is not needed - removed get_default_ou function
-
 create_admin_user() {
   log_info "Creating admin user..."
-  
+
   local response
   response=$(curl -k -s -w "%{http_code}" -X POST \
     "${BASE_URL}/users" \
@@ -298,20 +296,180 @@ create_admin_user() {
         \"phone_number_verified\": true
       }
     }")
-  
+
   local http_code="${response: -3}"
   local body="${response%???}"
-  
+
   if [[ "$http_code" == "201" ]] || [[ "$http_code" == "200" ]]; then
     log_success "Admin user created successfully"
     log_info "Username: admin"
     log_info "Password: admin"
+    # Extract and store the user ID for role assignment
+    ADMIN_USER_ID=$(echo "$body" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    if [[ -z "$ADMIN_USER_ID" ]]; then
+      log_warning "Could not extract admin user ID from response"
+    else
+      log_info "Admin user ID: $ADMIN_USER_ID"
+    fi
     return 0
   elif [[ "$http_code" == "409" ]]; then
-    log_warning "Admin user already exists, skipping creation"
+    log_warning "Admin user already exists, retrieving user ID..."
+    # Get existing admin user ID
+    get_admin_user_id
     return 0
   else
     log_error "Failed to create admin user. HTTP status: $http_code"
+    echo "Response: $body"
+    return 1
+  fi
+}
+
+get_admin_user_id() {
+  log_info "Fetching admin user ID..."
+
+  local response
+  response=$(curl -k -s -w "%{http_code}" -X GET \
+    "${BASE_URL}/users" \
+    -H "Content-Type: application/json")
+
+  local http_code="${response: -3}"
+  local body="${response%???}"
+
+  if [[ "$http_code" == "200" ]]; then
+    # Parse JSON response and find user with username "admin"
+    # Using grep and sed to extract the user ID where username is "admin"
+    ADMIN_USER_ID=$(echo "$body" | grep -o '"id":"[^"]*","[^"]*":"[^"]*","attributes":{[^}]*"username":"admin"' | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+
+    # Fallback: try different JSON structure
+    if [[ -z "$ADMIN_USER_ID" ]]; then
+      # Alternative parsing: find any user object containing username:admin and extract its id
+      ADMIN_USER_ID=$(echo "$body" | sed 's/},{/}\n{/g' | grep '"username":"admin"' | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    fi
+
+    if [[ -n "$ADMIN_USER_ID" ]]; then
+      log_success "Found admin user ID: $ADMIN_USER_ID"
+      return 0
+    else
+      log_error "Could not find admin user with username 'admin' in response"
+      return 1
+    fi
+  else
+    log_error "Failed to fetch admin user. HTTP status: $http_code"
+    echo "Response: $body"
+    return 1
+  fi
+}
+
+create_default_ou() {
+  log_info "Creating default organization unit..."
+
+  local response
+  response=$(curl -k -s -w "%{http_code}" -X POST \
+    "${BASE_URL}/organization-units" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "handle": "default",
+      "name": "Default Organization",
+      "description": "Default organization unit"
+    }')
+
+  local http_code="${response: -3}"
+  local body="${response%???}"
+
+  if [[ "$http_code" == "201" ]] || [[ "$http_code" == "200" ]]; then
+    log_success "Organization unit created successfully"
+    DEFAULT_OU_ID=$(echo "$body" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    if [[ -n "$DEFAULT_OU_ID" ]]; then
+      log_info "Default OU ID: $DEFAULT_OU_ID"
+      return 0
+    else
+      log_error "Could not extract OU ID from response"
+      return 1
+    fi
+  elif [[ "$http_code" == "409" ]]; then
+    log_warning "Organization unit already exists, retrieving OU ID..."
+    # Get existing OU ID
+    get_existing_ou_id
+    return 0
+  else
+    log_error "Failed to create organization unit. HTTP status: $http_code"
+    echo "Response: $body"
+    return 1
+  fi
+}
+
+get_existing_ou_id() {
+  log_info "Fetching existing organization unit..."
+
+  local response
+  response=$(curl -k -s -w "%{http_code}" -X GET \
+    "${BASE_URL}/organization-units" \
+    -H "Content-Type: application/json")
+
+  local http_code="${response: -3}"
+  local body="${response%???}"
+
+  if [[ "$http_code" == "200" ]]; then
+    DEFAULT_OU_ID=$(echo "$body" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    if [[ -n "$DEFAULT_OU_ID" ]]; then
+      log_success "Found OU ID: $DEFAULT_OU_ID"
+      return 0
+    else
+      log_error "Could not find OU ID in response"
+      return 1
+    fi
+  else
+    log_error "Failed to fetch organization units. HTTP status: $http_code"
+    echo "Response: $body"
+    return 1
+  fi
+}
+
+create_admin_role() {
+  log_info "Creating admin role with 'system' permission and assigning to admin user..."
+
+  if [[ -z "$ADMIN_USER_ID" ]]; then
+    log_error "Admin user ID is not available. Cannot create role with assignment."
+    return 1
+  fi
+
+  if [[ -z "$DEFAULT_OU_ID" ]]; then
+    log_error "Default OU ID is not available. Cannot create role."
+    return 1
+  fi
+
+  local response
+  response=$(curl -k -s -w "%{http_code}" -X POST \
+    "${BASE_URL}/roles" \
+    -H "Content-Type: application/json" \
+    -d "{
+      \"name\": \"Administrator\",
+      \"description\": \"System administrator role with full permissions\",
+      \"ouId\": \"${DEFAULT_OU_ID}\",
+      \"permissions\": [\"system\"],
+      \"assignments\": [
+        {
+          \"id\": \"${ADMIN_USER_ID}\",
+          \"type\": \"user\"
+        }
+      ]
+    }")
+
+  local http_code="${response: -3}"
+  local body="${response%???}"
+
+  if [[ "$http_code" == "201" ]] || [[ "$http_code" == "200" ]]; then
+    log_success "Admin role created and assigned to admin user successfully"
+    ADMIN_ROLE_ID=$(echo "$body" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+    if [[ -n "$ADMIN_ROLE_ID" ]]; then
+      log_info "Admin role ID: $ADMIN_ROLE_ID"
+    fi
+    return 0
+  elif [[ "$http_code" == "409" ]]; then
+    log_warning "Admin role already exists"
+    return 0
+  else
+    log_error "Failed to create admin role. HTTP status: $http_code"
     echo "Response: $body"
     return 1
   fi
@@ -410,25 +568,33 @@ main() {
   echo "🚀 Thunder Initial Data Setup Script"
   echo "===================================="
   echo ""
-  
+
   parse_args "$@"
-  
+
   # Construct base URL dynamically from configuration
   BASE_URL=$(construct_base_url)
-  
+
   log_info "Using Thunder server at: ${BASE_URL}"
-  
+
   # Show configuration source
   if [ -n "${BACKEND_PORT}" ] && [ "${BACKEND_PORT}" != "8090" ]; then
     log_info "Port override detected: ${BACKEND_PORT}"
   fi
-  
+
   echo ""
-  
+
   # Wait for server to be ready
   wait_for_server
   echo ""
-  
+
+  # Create default organization unit
+  create_default_ou
+  if [ $? -ne 0 ]; then
+    log_error "Failed to create organization unit. Aborting."
+    exit 1
+  fi
+  echo ""
+
   # Create user schema
   create_user_schema
   if [ $? -ne 0 ]; then
@@ -436,7 +602,7 @@ main() {
     exit 1
   fi
   echo ""
-  
+
   # Create admin user
   create_admin_user
   if [ $? -ne 0 ]; then
@@ -444,7 +610,15 @@ main() {
     exit 1
   fi
   echo ""
-  
+
+  # Create admin role with 'system' permission and assign to admin user
+  create_admin_role
+  if [ $? -ne 0 ]; then
+    log_error "Failed to create admin role. Aborting."
+    exit 1
+  fi
+  echo ""
+
   # Create DEVELOP application
   create_develop_app
   if [ $? -ne 0 ]; then
@@ -452,12 +626,13 @@ main() {
     exit 1
   fi
   echo ""
-  
+
   log_success "Initial data setup completed successfully!"
   echo ""
   echo "👤 Admin credentials:"
   echo "   Username: admin"
   echo "   Password: admin"
+  echo "   Role: Administrator (system permission)"
   echo ""
 }
 

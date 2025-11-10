@@ -71,10 +71,13 @@ function Show-Help {
     Write-Host "  - Command line arguments (-Port)"
     Write-Host "  - Environment variables (BACKEND_PORT)"
     Write-Host ""
+    Write-Host "Note:"
+    Write-Host "  This script expects the Thunder server to be already running."
+    Write-Host "  Use start.ps1 --setup to automatically manage server lifecycle."
+    Write-Host ""
     Write-Host "Examples:"
     Write-Host "  .\setup_initial_data.ps1 -Port 8090"
     Write-Host "  .\setup_initial_data.ps1 -DevelopRedirectUris 'https://localhost:5191/develop,https://localhost:8090/develop'"
-    Write-Host "  .\setup_initial_data.ps1 -Port 8090 -DevelopRedirectUris 'https://localhost:5191/develop'"
     Write-Host ""
 }
 
@@ -314,9 +317,9 @@ function New-UserSchema {
 
 function New-AdminUser {
     param([string]$BaseUrl)
-    
+
     Write-Info "Creating admin user..."
-    
+
     $body = @{
         type = "person"
         attributes = @{
@@ -333,22 +336,32 @@ function New-AdminUser {
             phone_number_verified = $true
         }
     } | ConvertTo-Json -Depth 10
-    
+
     try {
         $response = Invoke-WebRequest -Uri "${BaseUrl}/users" -Method Post -Body $body -ContentType "application/json" -SkipCertificateCheck -ErrorAction Stop
-        
+
         if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
             Write-Success "Admin user created successfully"
             Write-Info "Username: admin"
             Write-Info "Password: admin"
+
+            # Extract and store the user ID for role assignment
+            $responseBody = $response.Content | ConvertFrom-Json
+            $script:ADMIN_USER_ID = $responseBody.id
+            if ($script:ADMIN_USER_ID) {
+                Write-Info "Admin user ID: $script:ADMIN_USER_ID"
+            }
+            else {
+                Write-Warning "Could not extract admin user ID from response"
+            }
             return $true
         }
     }
     catch {
         $statusCode = $_.Exception.Response.StatusCode.value__
         if ($statusCode -eq 409) {
-            Write-Warning "Admin user already exists, skipping creation"
-            return $true
+            Write-Warning "Admin user already exists, retrieving user ID..."
+            return Get-AdminUserId -BaseUrl $BaseUrl
         }
         else {
             Write-Error "Failed to create admin user. HTTP status: $statusCode"
@@ -356,7 +369,172 @@ function New-AdminUser {
             return $false
         }
     }
-    
+
+    return $false
+}
+
+function Get-AdminUserId {
+    param([string]$BaseUrl)
+
+    Write-Info "Fetching admin user ID..."
+
+    try {
+        $response = Invoke-WebRequest -Uri "${BaseUrl}/users" -Method Get -SkipCertificateCheck -ErrorAction Stop
+
+        if ($response.StatusCode -eq 200) {
+            $responseBody = $response.Content | ConvertFrom-Json
+
+            # Loop through users to find the one with username "admin"
+            $adminUser = $responseBody.users | Where-Object { $_.attributes.username -eq "admin" } | Select-Object -First 1
+
+            if ($adminUser) {
+                $script:ADMIN_USER_ID = $adminUser.id
+                Write-Success "Found admin user ID: $script:ADMIN_USER_ID"
+                return $true
+            }
+            else {
+                Write-Error "Could not find admin user with username 'admin' in response"
+                return $false
+            }
+        }
+    }
+    catch {
+        Write-Error "Failed to fetch admin user. HTTP status: $($_.Exception.Response.StatusCode.value__)"
+        Write-Host "Response: $($_.Exception.Message)"
+        return $false
+    }
+
+    return $false
+}
+
+function New-DefaultOu {
+    param([string]$BaseUrl)
+
+    Write-Info "Creating default organization unit..."
+
+    $body = @{
+        handle = "default"
+        name = "Default Organization"
+        description = "Default organization unit"
+    } | ConvertTo-Json -Depth 10
+
+    try {
+        $response = Invoke-WebRequest -Uri "${BaseUrl}/organization-units" -Method Post -Body $body -ContentType "application/json" -SkipCertificateCheck -ErrorAction Stop
+
+        if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
+            Write-Success "Organization unit created successfully"
+            $responseBody = $response.Content | ConvertFrom-Json
+            $script:DEFAULT_OU_ID = $responseBody.id
+            if ($script:DEFAULT_OU_ID) {
+                Write-Info "Default OU ID: $script:DEFAULT_OU_ID"
+                return $true
+            }
+            else {
+                Write-Error "Could not extract OU ID from response"
+                return $false
+            }
+        }
+    }
+    catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        if ($statusCode -eq 409) {
+            Write-Warning "Organization unit already exists, retrieving OU ID..."
+            return Get-ExistingOuId -BaseUrl $BaseUrl
+        }
+        else {
+            Write-Error "Failed to create organization unit. HTTP status: $statusCode"
+            Write-Host "Response: $($_.Exception.Message)"
+            return $false
+        }
+    }
+
+    return $false
+}
+
+function Get-ExistingOuId {
+    param([string]$BaseUrl)
+
+    Write-Info "Fetching existing organization unit..."
+
+    try {
+        $response = Invoke-WebRequest -Uri "${BaseUrl}/organization-units" -Method Get -SkipCertificateCheck -ErrorAction Stop
+
+        if ($response.StatusCode -eq 200) {
+            $responseBody = $response.Content | ConvertFrom-Json
+            $script:DEFAULT_OU_ID = $responseBody.organizationUnits[0].id
+            if ($script:DEFAULT_OU_ID) {
+                Write-Success "Found OU ID: $script:DEFAULT_OU_ID"
+                return $true
+            }
+            else {
+                Write-Error "Could not find OU ID in response"
+                return $false
+            }
+        }
+    }
+    catch {
+        Write-Error "Failed to fetch organization units. HTTP status: $($_.Exception.Response.StatusCode.value__)"
+        Write-Host "Response: $($_.Exception.Message)"
+        return $false
+    }
+
+    return $false
+}
+
+function New-AdminRole {
+    param([string]$BaseUrl)
+
+    Write-Info "Creating admin role with 'system' permission and assigning to admin user..."
+
+    if (-not $script:ADMIN_USER_ID) {
+        Write-Error "Admin user ID is not available. Cannot create role with assignment."
+        return $false
+    }
+
+    if (-not $script:DEFAULT_OU_ID) {
+        Write-Error "Default OU ID is not available. Cannot create role."
+        return $false
+    }
+
+    $body = @{
+        name = "Administrator"
+        description = "System administrator role with full permissions"
+        ouId = $script:DEFAULT_OU_ID
+        permissions = @("system")
+        assignments = @(
+            @{
+                id = $script:ADMIN_USER_ID
+                type = "user"
+            }
+        )
+    } | ConvertTo-Json -Depth 10
+
+    try {
+        $response = Invoke-WebRequest -Uri "${BaseUrl}/roles" -Method Post -Body $body -ContentType "application/json" -SkipCertificateCheck -ErrorAction Stop
+
+        if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
+            Write-Success "Admin role created and assigned to admin user successfully"
+            $responseBody = $response.Content | ConvertFrom-Json
+            $script:ADMIN_ROLE_ID = $responseBody.id
+            if ($script:ADMIN_ROLE_ID) {
+                Write-Info "Admin role ID: $script:ADMIN_ROLE_ID"
+            }
+            return $true
+        }
+    }
+    catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        if ($statusCode -eq 409) {
+            Write-Warning "Admin role already exists"
+            return $true
+        }
+        else {
+            Write-Error "Failed to create admin role. HTTP status: $statusCode"
+            Write-Host "Response: $($_.Exception.Message)"
+            return $false
+        }
+    }
+
     return $false
 }
 
@@ -474,7 +652,15 @@ function Main {
     # Wait for server to be ready
     Wait-ForServer -BaseUrl $BASE_URL
     Write-Host ""
-    
+
+    # Create default organization unit
+    $success = New-DefaultOu -BaseUrl $BASE_URL
+    if (-not $success) {
+        Write-Error "Failed to create organization unit. Aborting."
+        exit 1
+    }
+    Write-Host ""
+
     # Create user schema
     $success = New-UserSchema -BaseUrl $BASE_URL
     if (-not $success) {
@@ -482,7 +668,7 @@ function Main {
         exit 1
     }
     Write-Host ""
-    
+
     # Create admin user
     $success = New-AdminUser -BaseUrl $BASE_URL
     if (-not $success) {
@@ -490,7 +676,15 @@ function Main {
         exit 1
     }
     Write-Host ""
-    
+
+    # Create admin role with 'system' permission and assign to admin user
+    $success = New-AdminRole -BaseUrl $BASE_URL
+    if (-not $success) {
+        Write-Error "Failed to create admin role. Aborting."
+        exit 1
+    }
+    Write-Host ""
+
     # Create DEVELOP application
     $success = New-DevelopApp -BaseUrl $BASE_URL
     if (-not $success) {
@@ -498,12 +692,13 @@ function Main {
         exit 1
     }
     Write-Host ""
-    
+
     Write-Success "Initial data setup completed successfully!"
     Write-Host ""
     Write-Host "👤 Admin credentials:"
     Write-Host "   Username: admin"
     Write-Host "   Password: admin"
+    Write-Host "   Role: Administrator (system permission)"
     Write-Host ""
 }
 
