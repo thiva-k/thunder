@@ -455,20 +455,7 @@ func (ous *organizationUnitService) GetOrganizationUnitUsers(
 	if svcErr != nil {
 		return nil, svcErr
 	}
-
-	users, ok := items.([]User)
-	if !ok {
-		return nil, &ErrorInternalServerError
-	}
-	response := &UserListResponse{
-		TotalResults: totalCount,
-		Users:        users,
-		StartIndex:   offset + 1,
-		Count:        len(users),
-		Links:        buildPaginationLinks(limit, offset, totalCount),
-	}
-
-	return response, nil
+	return buildUserListResponse(items, totalCount, limit, offset)
 }
 
 // GetOrganizationUnitGroups retrieves a list of groups for a given organization unit ID.
@@ -485,20 +472,7 @@ func (ous *organizationUnitService) GetOrganizationUnitGroups(
 	if svcErr != nil {
 		return nil, svcErr
 	}
-
-	groups, ok := items.([]Group)
-	if !ok {
-		return nil, &ErrorInternalServerError
-	}
-	response := &GroupListResponse{
-		TotalResults: totalCount,
-		Groups:       groups,
-		StartIndex:   offset + 1,
-		Count:        len(groups),
-		Links:        buildPaginationLinks(limit, offset, totalCount),
-	}
-
-	return response, nil
+	return buildGroupListResponse(items, totalCount, limit, offset)
 }
 
 // GetOrganizationUnitChildren retrieves a list of child organization units for a given organization unit ID.
@@ -515,21 +489,7 @@ func (ous *organizationUnitService) GetOrganizationUnitChildren(
 	if svcErr != nil {
 		return nil, svcErr
 	}
-
-	children, ok := items.([]OrganizationUnitBasic)
-	if !ok {
-		return nil, &ErrorInternalServerError
-	}
-
-	response := &OrganizationUnitListResponse{
-		TotalResults:      totalCount,
-		OrganizationUnits: children,
-		StartIndex:        offset + 1,
-		Count:             len(children),
-		Links:             buildPaginationLinks(limit, offset, totalCount),
-	}
-
-	return response, nil
+	return buildOrganizationUnitListResponse(items, totalCount, limit, offset)
 }
 
 // GetOrganizationUnitChildrenByPath retrieves a list of child organization units by hierarchical handle path.
@@ -657,11 +617,12 @@ func validateAndProcessHandlePath(handlePath string) ([]string, *serviceerror.Se
 		return nil, &ErrorInvalidHandlePath
 	}
 
-	handles := strings.Split(strings.Trim(handlePath, "/"), "/")
-	if len(handles) == 0 {
+	trimmed := strings.Trim(handlePath, "/")
+	if trimmed == "" {
 		return nil, &ErrorInvalidHandlePath
 	}
 
+	handles := strings.Split(trimmed, "/")
 	var validHandles []string
 	for _, handle := range handles {
 		if strings.TrimSpace(handle) != "" {
@@ -759,4 +720,55 @@ func (ous *organizationUnitService) getResourceListWithExistenceCheck(
 	}
 
 	return items, totalCount, nil
+}
+
+func buildUserListResponse(items interface{}, totalCount, limit, offset int) (
+	*UserListResponse, *serviceerror.ServiceError,
+) {
+	users, ok := items.([]User)
+	if !ok {
+		return nil, &ErrorInternalServerError
+	}
+	response := &UserListResponse{
+		TotalResults: totalCount,
+		Users:        users,
+		StartIndex:   offset + 1,
+		Count:        len(users),
+		Links:        buildPaginationLinks(limit, offset, totalCount),
+	}
+	return response, nil
+}
+
+func buildGroupListResponse(items interface{}, totalCount, limit, offset int) (
+	*GroupListResponse, *serviceerror.ServiceError,
+) {
+	groups, ok := items.([]Group)
+	if !ok {
+		return nil, &ErrorInternalServerError
+	}
+	response := &GroupListResponse{
+		TotalResults: totalCount,
+		Groups:       groups,
+		StartIndex:   offset + 1,
+		Count:        len(groups),
+		Links:        buildPaginationLinks(limit, offset, totalCount),
+	}
+	return response, nil
+}
+
+func buildOrganizationUnitListResponse(items interface{}, totalCount, limit, offset int) (
+	*OrganizationUnitListResponse, *serviceerror.ServiceError,
+) {
+	children, ok := items.([]OrganizationUnitBasic)
+	if !ok {
+		return nil, &ErrorInternalServerError
+	}
+	response := &OrganizationUnitListResponse{
+		TotalResults:      totalCount,
+		OrganizationUnits: children,
+		StartIndex:        offset + 1,
+		Count:             len(children),
+		Links:             buildPaginationLinks(limit, offset, totalCount),
+	}
+	return response, nil
 }
