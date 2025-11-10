@@ -24,6 +24,7 @@ import AppWithConfig from '../AppWithConfig';
 const mockGetClientId = vi.fn();
 const mockGetServerUrl = vi.fn();
 const mockGetClientUrl = vi.fn();
+const mockGetScopes = vi.fn();
 
 // Mock the useConfig hook
 vi.mock('@thunder/commons-contexts', () => ({
@@ -31,6 +32,7 @@ vi.mock('@thunder/commons-contexts', () => ({
     getClientId: mockGetClientId,
     getServerUrl: mockGetServerUrl,
     getClientUrl: mockGetClientUrl,
+    getScopes: mockGetScopes,
   }),
 }));
 
@@ -40,15 +42,17 @@ interface MockAsgardeoProviderProps {
   baseUrl?: string | null;
   clientId?: string | null;
   afterSignInUrl?: string | null;
+  scopes?: string[];
 }
 
 vi.mock('@asgardeo/react', () => ({
-  AsgardeoProvider: ({children, baseUrl = null, clientId = null, afterSignInUrl = null}: MockAsgardeoProviderProps) => (
+  AsgardeoProvider: ({children, baseUrl = null, clientId = null, afterSignInUrl = null, scopes = undefined}: MockAsgardeoProviderProps) => (
     <div
       data-testid="asgardeo-provider"
       data-base-url={baseUrl}
       data-client-id={clientId}
       data-after-sign-in-url={afterSignInUrl}
+      data-scopes={scopes ? JSON.stringify(scopes) : undefined}
     >
       {children}
     </div>
@@ -79,6 +83,8 @@ describe('AppWithConfig', () => {
     import.meta.env.VITE_ASGARDEO_BASE_URL = 'https://default-base.example.com';
     import.meta.env.VITE_ASGARDEO_CLIENT_ID = 'default-client-id';
     import.meta.env.VITE_ASGARDEO_AFTER_SIGN_IN_URL = 'https://default-signin.example.com';
+    // Default to empty scopes
+    mockGetScopes.mockReturnValue([]);
   });
 
   it('renders AsgardeoProvider with config values', () => {
@@ -187,5 +193,56 @@ describe('AppWithConfig', () => {
     expect(provider).toHaveAttribute('data-base-url', 'https://default-base.example.com');
     expect(provider).toHaveAttribute('data-client-id', 'config-client-id');
     expect(provider).toHaveAttribute('data-after-sign-in-url', 'https://default-signin.example.com');
+  });
+
+  it('uses config value for scopes when available', () => {
+    mockGetClientId.mockReturnValue('test-client-id');
+    mockGetServerUrl.mockReturnValue('https://test-server.example.com');
+    mockGetClientUrl.mockReturnValue('https://test-client.example.com');
+    mockGetScopes.mockReturnValue(['openid', 'profile', 'email', 'system']);
+
+    render(<AppWithConfig />);
+
+    const provider = screen.getByTestId('asgardeo-provider');
+    expect(provider).toHaveAttribute('data-scopes', '["openid","profile","email","system"]');
+  });
+
+  it('does not pass scopes prop when config returns empty array', () => {
+    mockGetClientId.mockReturnValue('test-client-id');
+    mockGetServerUrl.mockReturnValue('https://test-server.example.com');
+    mockGetClientUrl.mockReturnValue('https://test-client.example.com');
+    mockGetScopes.mockReturnValue([]);
+
+    render(<AppWithConfig />);
+
+    const provider = screen.getByTestId('asgardeo-provider');
+    expect(provider).not.toHaveAttribute('data-scopes');
+  });
+
+  it('passes scopes when config has scopes', () => {
+    mockGetClientId.mockReturnValue('test-client-id');
+    mockGetServerUrl.mockReturnValue('https://test-server.example.com');
+    mockGetClientUrl.mockReturnValue('https://test-client.example.com');
+    mockGetScopes.mockReturnValue(['openid', 'profile']);
+
+    render(<AppWithConfig />);
+
+    const provider = screen.getByTestId('asgardeo-provider');
+    expect(provider).toHaveAttribute('data-scopes', '["openid","profile"]');
+  });
+
+  it('handles scopes from config with other fallbacks', () => {
+    mockGetClientId.mockReturnValue(null);
+    mockGetServerUrl.mockReturnValue(null);
+    mockGetClientUrl.mockReturnValue(null);
+    mockGetScopes.mockReturnValue(['openid', 'profile', 'email']);
+
+    render(<AppWithConfig />);
+
+    const provider = screen.getByTestId('asgardeo-provider');
+    expect(provider).toHaveAttribute('data-base-url', 'https://default-base.example.com');
+    expect(provider).toHaveAttribute('data-client-id', 'default-client-id');
+    expect(provider).toHaveAttribute('data-after-sign-in-url', 'https://default-signin.example.com');
+    expect(provider).toHaveAttribute('data-scopes', '["openid","profile","email"]');
   });
 });

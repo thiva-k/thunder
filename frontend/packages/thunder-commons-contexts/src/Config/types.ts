@@ -62,6 +62,12 @@ export interface ClientConfig {
   client_id: string;
 
   /**
+   * OAuth2/OIDC scopes requested during authentication.
+   * @example ["openid", "profile", "email", "system"]
+   */
+  scopes?: string[];
+
+  /**
    * Server hostname or IP address
    * @example "localhost", "api.example.com", "192.168.1.100"
    */
