@@ -33,7 +33,7 @@ export default function SignInSide(): JSX.Element {
           justifyContent: 'center',
           height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
           minHeight: '100%',
-        }
+        },
       ]}
     >
       <Stack
