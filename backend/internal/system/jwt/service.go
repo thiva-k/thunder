@@ -20,9 +20,7 @@
 package jwt
 
 import (
-	"crypto"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -39,6 +37,7 @@ import (
 	"time"
 
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/crypto/sign"
 	httpservice "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
@@ -195,12 +194,9 @@ func (js *JWTService) GenerateJWT(sub, aud, iss string, validityPeriod int64, cl
 	headerBase64 := base64.RawURLEncoding.EncodeToString(headerJSON)
 	payloadBase64 := base64.RawURLEncoding.EncodeToString(payloadJSON)
 
-	// Create the signing input and hash it.
+	// Create the signing input and sign it with the private key.
 	signingInput := headerBase64 + "." + payloadBase64
-	hashed := sha256.Sum256([]byte(signingInput))
-
-	// Sign the hashed input with the private key.
-	signature, err := rsa.SignPKCS1v15(nil, js.privateKey, crypto.SHA256, hashed[:])
+	signature, err := sign.Generate([]byte(signingInput), sign.RSASHA256, js.privateKey)
 	if err != nil {
 		return "", 0, err
 	}
@@ -274,11 +270,8 @@ func (js *JWTService) VerifyJWTSignatureWithPublicKey(jwtToken string, jwtPublic
 	// Create the signing input
 	signingInput := parts[0] + "." + parts[1]
 
-	// Hash the signing input
-	hashed := sha256.Sum256([]byte(signingInput))
-
 	// Verify the signature
-	return rsa.VerifyPKCS1v15(jwtPublicKey, crypto.SHA256, hashed[:], signature)
+	return sign.Verify([]byte(signingInput), signature, sign.RSASHA256, jwtPublicKey)
 }
 
 // VerifyJWTSignatureWithJWKS verifies the signature of a JWT token using a JWK Set (JWKS) endpoint.

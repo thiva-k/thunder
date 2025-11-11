@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/asgardeo/thunder/internal/system/crypto"
+	"github.com/asgardeo/thunder/internal/system/crypto/encrypt"
 )
 
 // Property represents a generic property with name, value, and isSecret fields.
@@ -74,7 +74,7 @@ func (p *Property) GetValue() (string, error) {
 		return p.value, nil
 	}
 
-	cryptoService := crypto.GetCryptoService()
+	cryptoService := encrypt.GetEncryptionService()
 	decryptedValue, err := cryptoService.DecryptString(p.value)
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt secret property %s: %w", p.GetName(), err)
@@ -89,7 +89,7 @@ func (p *Property) Encrypt() error {
 		return nil
 	}
 
-	cryptoService := crypto.GetCryptoService()
+	cryptoService := encrypt.GetEncryptionService()
 	encryptedValue, err := cryptoService.EncryptString(p.value)
 	if err != nil {
 		return fmt.Errorf("failed to encrypt secret property %s: %w", p.GetName(), err)

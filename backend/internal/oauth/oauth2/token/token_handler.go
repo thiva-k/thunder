@@ -26,7 +26,7 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/application"
-	"github.com/asgardeo/thunder/internal/system/hash"
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/utils"
 
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"

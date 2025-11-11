@@ -16,25 +16,51 @@
  * under the License.
  */
 
-// Package hash provides generic hashing utilities for sensitive data.
 package hash
 
 import (
 	"testing"
 
+	"github.com/asgardeo/thunder/internal/system/config"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
 
-type HashUtilTestSuite struct {
+type HashUtilsTestSuite struct {
 	suite.Suite
+	input []byte
 }
 
-func TestHashSuite(t *testing.T) {
-	suite.Run(t, new(HashUtilTestSuite))
+func TestHashUtilsSuite(t *testing.T) {
+	suite.Run(t, new(HashUtilsTestSuite))
 }
 
-func (suite *HashUtilTestSuite) TestVerifySha256() {
+func (suite *HashUtilsTestSuite) SetupSuite() {
+	suite.input = []byte("secretPassword123")
+}
+
+func (suite *HashUtilsTestSuite) TearDownSuite() {
+	config.ResetThunderRuntime()
+}
+
+func (suite *HashUtilsTestSuite) TestGenerateSha256() {
+	// Set runtime config to SHA256
+	testConfig := &config.Config{
+		Hash: config.HashConfig{
+			Algorithm: string(SHA256),
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("/test/thunder/home", testConfig)
+
+	cred := Generate(suite.input)
+
+	assert.Equal(suite.T(), SHA256, cred.Algorithm, "Algorithm should be SHA256")
+	assert.NotEmpty(suite.T(), cred.Hash, "Hash should not be empty")
+}
+
+func (suite *HashUtilsTestSuite) TestVerifySha256() {
 	testCases := []struct {
 		name     string
 		input    string
@@ -71,39 +97,47 @@ func (suite *HashUtilTestSuite) TestVerifySha256() {
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			hash := verifySHA256Credential([]byte(tc.input), tc.expected)
+			hash := Verify([]byte(tc.input), tc.expected)
 
 			assert.True(t, hash)
 		})
 	}
 }
 
-func (suite *HashUtilTestSuite) TestSha256HashAndVerify() {
+func (suite *HashUtilsTestSuite) TestSha256HashAndVerify() {
+	// Set runtime config to SHA256
+	testConfig := &config.Config{
+		Hash: config.HashConfig{
+			Algorithm: string(SHA256),
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("/test/thunder/home", testConfig)
+
 	input := "test-input"
-	cred := newSHA256Credential([]byte(input))
+	cred := Generate([]byte(input))
 
 	assert.True(suite.T(), Verify([]byte(input), cred),
 		"Hash verification should succeed for the same input")
 }
 
-func (suite *HashUtilTestSuite) TestSha256HashWithDifferentInputs() {
-	input1 := "input-one"
-	input2 := "input-two"
-	cred1 := newSHA256Credential([]byte(input1))
-	cred2 := newSHA256Credential([]byte(input2))
+func (suite *HashUtilsTestSuite) TestGeneratePBKDF2() {
+	// Set runtime config to PBKDF2
+	testConfig := &config.Config{
+		Hash: config.HashConfig{
+			Algorithm: string(PBKDF2),
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("/test/thunder/home", testConfig)
 
-	assert.NotEqual(suite.T(), cred1.Hash, cred2.Hash, "Different inputs should produce different hashes")
+	cred := Generate(suite.input)
+
+	assert.Equal(suite.T(), PBKDF2, cred.Algorithm, "Algorithm should be PBKDF2")
+	assert.NotEmpty(suite.T(), cred.Hash, "Hash should not be empty")
 }
 
-func (suite *HashUtilTestSuite) TestSha256HashWithDifferentSalts() {
-	input := "common-input"
-	cred1 := newSHA256Credential([]byte(input))
-	cred2 := newSHA256Credential([]byte(input))
-
-	assert.NotEqual(suite.T(), cred1.Hash, cred2.Hash, "Different salts should produce different hashes")
-}
-
-func (suite *HashUtilTestSuite) TestVerifyBKDF2() {
+func (suite *HashUtilsTestSuite) TestVerifyBKDF2() {
 	testCases := []struct {
 		name     string
 		input    string
@@ -140,38 +174,57 @@ func (suite *HashUtilTestSuite) TestVerifyBKDF2() {
 
 	for _, tc := range testCases {
 		suite.T().Run(tc.name, func(t *testing.T) {
-			hash := verifyPBKDF2Credential([]byte(tc.input), tc.expected)
+			hash := Verify([]byte(tc.input), tc.expected)
 
 			assert.True(t, hash)
 		})
 	}
 }
 
-func (suite *HashUtilTestSuite) TestPBKDF2HashWithAndVerify() {
+func (suite *HashUtilsTestSuite) TestPBKDF2HashWithAndVerify() {
+	// Set runtime config to PBKDF2
+	testConfig := &config.Config{
+		Hash: config.HashConfig{
+			Algorithm: string(PBKDF2),
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("/test/thunder/home", testConfig)
+
 	input := "test-input"
-	cred := newPBKDF2Credential([]byte(input))
+	cred := Generate([]byte(input))
 
 	assert.True(suite.T(), Verify([]byte(input), cred),
 		"Hash verification should succeed for the same input")
 }
 
-func (suite *HashUtilTestSuite) TestPBKDF2HashWithDifferentInputs() {
-	input1 := "input-one"
-	input2 := "input-two"
-	hash1 := newPBKDF2Credential([]byte(input1))
-	hash2 := newPBKDF2Credential([]byte(input2))
+func (suite *HashUtilsTestSuite) TestUnsupportedAlgorithmGenerateDefaultsToPBKDF2() {
+	testConfig := &config.Config{
+		Hash: config.HashConfig{
+			Algorithm: "UNSUPPORTED",
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("/test/thunder/home", testConfig)
 
-	assert.NotEqual(suite.T(), hash1, hash2, "Different inputs should produce different hashes")
+	cred := Generate(suite.input)
+
+	assert.Equal(suite.T(), PBKDF2, cred.Algorithm,
+		"Algorithm should default to PBKDF2 on unsupported config")
 }
 
-func (suite *HashUtilTestSuite) TestPBKDF2HashWithDifferentSalts() {
-	input := "common-input"
-	hash1 := newPBKDF2Credential([]byte(input))
-	hash2 := newPBKDF2Credential([]byte(input))
-	assert.NotEqual(suite.T(), hash1, hash2, "Different salts should produce different hashes")
+func (suite *HashUtilsTestSuite) TestUnsupportedAlgorithmVerify() {
+	referenceCredential := Credential{
+		Algorithm: "UNSUPPORTED",
+		Hash:      "somehash",
+		Salt:      "somesalt",
+	}
+	result := Verify(suite.input, referenceCredential)
+
+	assert.False(suite.T(), result, "Verification should fail for unsupported algorithm")
 }
 
-func (suite *HashUtilTestSuite) TestThumbprint() {
+func (suite *HashUtilsTestSuite) TestThumbprint() {
 	testCases := []struct {
 		name     string
 		input    []byte
@@ -197,7 +250,7 @@ func (suite *HashUtilTestSuite) TestThumbprint() {
 	}
 }
 
-func (suite *HashUtilTestSuite) TestThumbprintString() {
+func (suite *HashUtilsTestSuite) TestThumbprintString() {
 	testCases := []struct {
 		name     string
 		input    string
@@ -223,13 +276,13 @@ func (suite *HashUtilTestSuite) TestThumbprintString() {
 	}
 }
 
-func (suite *HashUtilTestSuite) TestGenerateSalt() {
+func (suite *HashUtilsTestSuite) TestGenerateSalt() {
 	salt, err := generateSalt()
 	assert.NoError(suite.T(), err)
 	assert.NotEmpty(suite.T(), salt)
 }
 
-func (suite *HashUtilTestSuite) TestGenerateSaltUniqueness() {
+func (suite *HashUtilsTestSuite) TestGenerateSaltUniqueness() {
 	salt1, err1 := generateSalt()
 	salt2, err2 := generateSalt()
 
@@ -238,7 +291,7 @@ func (suite *HashUtilTestSuite) TestGenerateSaltUniqueness() {
 	assert.NotEqual(suite.T(), salt1, salt2, "Generated salts should be different")
 }
 
-func (suite *HashUtilTestSuite) TestGenerateSaltLength() {
+func (suite *HashUtilsTestSuite) TestGenerateSaltLength() {
 	salt, err := generateSalt()
 
 	assert.NoError(suite.T(), err)

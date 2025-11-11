@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -16,11 +16,21 @@
  * under the License.
  */
 
-package crypto
+package hash
 
-// EncryptedData represents the structure of encrypted data with metadata
-type EncryptedData struct {
-	Algorithm  string `json:"alg"` // Use full name for clarity
-	Ciphertext string `json:"ct"`  // Base64 encoded ciphertext (nonce + ciphertext for GCM)
-	KeyID      string `json:"kid"` // Key identifier for key rotation
+// CredAlgorithm represents the supported credential hashing algorithms
+type CredAlgorithm string
+
+const (
+	// SHA256 represents SHA-256 hashing algorithm
+	SHA256 CredAlgorithm = "SHA256"
+	// PBKDF2 represents PBKDF2 key derivation function
+	PBKDF2 CredAlgorithm = "PBKDF2"
+)
+
+// Credential represents the credentials of a hashed value.
+type Credential struct {
+	Algorithm CredAlgorithm
+	Hash      string
+	Salt      string
 }
