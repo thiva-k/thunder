@@ -31,14 +31,15 @@ import (
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
-	flowmodel "github.com/asgardeo/thunder/internal/flow/common/model"
+	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
-	"github.com/asgardeo/thunder/tests/mocks/flowexecmock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/flowexecmock"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2model "github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
 type AuthorizeHandlerTestSuite struct {
@@ -74,7 +75,8 @@ func (suite *AuthorizeHandlerTestSuite) SetupTest() {
 	suite.mockFlowExecService = flowexecmock.NewFlowExecServiceInterfaceMock(suite.T())
 
 	suite.handler = newAuthorizeHandler(
-		suite.mockAppService, suite.mockJWTService, suite.mockAuthzCodeStore, suite.mockFlowExecService).(*authorizeHandler)
+		suite.mockAppService, suite.mockJWTService, suite.mockAuthzCodeStore,
+		suite.mockFlowExecService).(*authorizeHandler)
 }
 
 func (suite *AuthorizeHandlerTestSuite) TestnewAuthorizeHandler() {
@@ -312,7 +314,7 @@ func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_In
 	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
 
 	// Mock flow exec service to return success
-	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+	expectedFlowInitCtx := &flowexec.FlowInitContext{
 		ApplicationID: "test-app-id",
 		FlowType:      string(flowcm.FlowTypeAuthentication),
 		RuntimeData: map[string]string{
@@ -347,14 +349,14 @@ func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_In
 	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
 
 	// Mock flow exec service to return an error
-	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+	expectedFlowInitCtx := &flowexec.FlowInitContext{
 		ApplicationID: "test-app-id",
 		FlowType:      string(flowcm.FlowTypeAuthentication),
 		RuntimeData: map[string]string{
 			"requested_permissions": "read write",
 		},
 	}
-	mockError := &flowcm.ErrorUpdatingContextInStore
+	mockError := &serviceerror.InternalServerError
 	suite.mockFlowExecService.EXPECT().InitiateFlow(expectedFlowInitCtx).Return("", mockError)
 
 	// Create OAuth message for initial authorization request
@@ -383,7 +385,7 @@ func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_Wi
 	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
 
 	// Mock flow exec service - only non-OIDC scopes should be in RuntimeData
-	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+	expectedFlowInitCtx := &flowexec.FlowInitContext{
 		ApplicationID: "test-app-id",
 		FlowType:      string(flowcm.FlowTypeAuthentication),
 		RuntimeData: map[string]string{
@@ -426,7 +428,7 @@ func (suite *AuthorizeHandlerTestSuite) TestHandleInitialAuthorizationRequest_On
 	suite.mockAppService.EXPECT().GetOAuthApplication("test-client-id").Return(app, nil)
 
 	// Mock flow exec service - empty RuntimeData since no non-OIDC scopes
-	expectedFlowInitCtx := &flowmodel.FlowInitContext{
+	expectedFlowInitCtx := &flowexec.FlowInitContext{
 		ApplicationID: "test-app-id",
 		FlowType:      string(flowcm.FlowTypeAuthentication),
 		RuntimeData: map[string]string{

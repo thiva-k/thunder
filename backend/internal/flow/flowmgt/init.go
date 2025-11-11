@@ -18,7 +18,16 @@
 
 package flowmgt
 
+import (
+	"github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/flow/executor"
+)
+
 // Initialize initializes the FlowMgtService by loading graph configurations into runtime.
-func Initialize() (FlowMgtServiceInterface, error) {
-	return newFlowMgtService()
+// executorRegistry is used to validate that executors referenced in graphs are registered.
+func Initialize(
+	flowFactory core.FlowFactoryInterface,
+	executorRegistry executor.ExecutorRegistryInterface,
+) (FlowMgtServiceInterface, error) {
+	return newFlowMgtService(flowFactory, executorRegistry)
 }

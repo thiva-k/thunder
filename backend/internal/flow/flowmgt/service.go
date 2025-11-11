@@ -29,9 +29,8 @@ import (
 	"sync"
 
 	"github.com/asgardeo/thunder/internal/flow/common"
-	"github.com/asgardeo/thunder/internal/flow/common/jsonmodel"
-	"github.com/asgardeo/thunder/internal/flow/common/model"
-	"github.com/asgardeo/thunder/internal/flow/common/utils"
+	"github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/log"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
@@ -39,21 +38,26 @@ import (
 
 // FlowMgtServiceInterface defines the interface for the flow management service.
 type FlowMgtServiceInterface interface {
-	RegisterGraph(graphID string, g model.GraphInterface)
-	GetGraph(graphID string) (model.GraphInterface, bool)
+	RegisterGraph(graphID string, g core.GraphInterface)
+	GetGraph(graphID string) (core.GraphInterface, bool)
 	IsValidGraphID(graphID string) bool
 }
 
 // flowMgtService is the implementation of FlowMgtServiceInterface.
 type flowMgtService struct {
-	graphs map[string]model.GraphInterface
-	mu     sync.Mutex
+	graphs           map[string]core.GraphInterface
+	mu               sync.Mutex
+	flowFactory      core.FlowFactoryInterface
+	executorRegistry executor.ExecutorRegistryInterface
 }
 
-func newFlowMgtService() (FlowMgtServiceInterface, error) {
+func newFlowMgtService(flowFactory core.FlowFactoryInterface,
+	executorRegistry executor.ExecutorRegistryInterface) (FlowMgtServiceInterface, error) {
 	flowMgtInstance := &flowMgtService{
-		graphs: make(map[string]model.GraphInterface),
-		mu:     sync.Mutex{},
+		graphs:           make(map[string]core.GraphInterface),
+		mu:               sync.Mutex{},
+		flowFactory:      flowFactory,
+		executorRegistry: executorRegistry,
 	}
 	err := flowMgtInstance.init()
 	if err != nil {
@@ -100,7 +104,7 @@ func (s *flowMgtService) init() error {
 	logger.Debug("Found graph definition files in the graph directory", log.Int("fileCount", len(files)))
 
 	// Process each JSON file in the directory
-	flowGraphs := make(map[string]model.GraphInterface)
+	flowGraphs := make(map[string]core.GraphInterface)
 	for _, file := range files {
 		// Skip directories and non-JSON files
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
@@ -119,14 +123,14 @@ func (s *flowMgtService) init() error {
 		}
 
 		// Parse the JSON into the flow model
-		var jsonGraph jsonmodel.GraphDefinition
+		var jsonGraph graphDefinition
 		if err := json.Unmarshal(fileContent, &jsonGraph); err != nil {
 			logger.Warn("Failed to parse JSON in file", log.String("filePath", filePath), log.Error(err))
 			continue
 		}
 
 		// Convert the JSON graph definition to the graph model
-		graphModel, err := utils.BuildGraphFromDefinition(&jsonGraph)
+		graphModel, err := s.buildGraphFromDefinition(&jsonGraph)
 		if err != nil {
 			logger.Warn("Failed to convert graph definition to graph model",
 				log.String("filePath", filePath), log.Error(err))
@@ -174,12 +178,12 @@ func (s *flowMgtService) init() error {
 }
 
 // RegisterGraph registers a graph with the FlowMgtService by its ID.
-func (s *flowMgtService) RegisterGraph(graphID string, g model.GraphInterface) {
+func (s *flowMgtService) RegisterGraph(graphID string, g core.GraphInterface) {
 	s.graphs[graphID] = g
 }
 
 // GetGraph retrieves a graph by its ID
-func (s *flowMgtService) GetGraph(graphID string) (model.GraphInterface, bool) {
+func (s *flowMgtService) GetGraph(graphID string) (core.GraphInterface, bool) {
 	g, ok := s.graphs[graphID]
 	return g, ok
 }
@@ -193,13 +197,131 @@ func (s *flowMgtService) IsValidGraphID(graphID string) bool {
 	return exists
 }
 
+// buildGraphFromDefinition builds a graph from a graph definition json.
+func (s *flowMgtService) buildGraphFromDefinition(definition *graphDefinition) (core.GraphInterface, error) {
+	if definition == nil || len(definition.Nodes) == 0 {
+		return nil, fmt.Errorf("graph definition is nil or has no nodes")
+	}
+
+	// Create a graph
+	_type, err := getGraphType(definition.Type)
+	if err != nil {
+		return nil, fmt.Errorf("error while retrieving graph type: %w", err)
+	}
+	g := s.flowFactory.CreateGraph(definition.ID, _type)
+
+	// Add all nodes to the graph
+	edges := make(map[string][]string)
+	for _, nodeDef := range definition.Nodes {
+		isFinalNode := len(nodeDef.Next) == 0
+
+		// Construct a new node. Here we set isStartNode to false by default.
+		node, err := s.flowFactory.CreateNode(nodeDef.ID, nodeDef.Type, nodeDef.Properties,
+			false, isFinalNode)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create node %s: %w", nodeDef.ID, err)
+		}
+
+		// Set next nodes if defined
+		if len(nodeDef.Next) > 0 {
+			node.SetNextNodeList(nodeDef.Next)
+
+			// Store edges based on the node definition
+			_, exists := edges[nodeDef.ID]
+			if !exists {
+				edges[nodeDef.ID] = []string{}
+			}
+			edges[nodeDef.ID] = append(edges[nodeDef.ID], nodeDef.Next...)
+		}
+
+		// Convert and set input data from definition
+		inputData := make([]common.InputData, len(nodeDef.InputData))
+		for i, input := range nodeDef.InputData {
+			inputData[i] = common.InputData{
+				Name:     input.Name,
+				Type:     input.Type,
+				Required: input.Required,
+			}
+		}
+		node.SetInputData(inputData)
+
+		// Set the executor name if defined, otherwise check for special node types
+		executorName := nodeDef.Executor.Name
+		if executorName == "" {
+			// Check if it is the auth assert node
+			if nodeDef.Type == string(common.NodeTypeAuthSuccess) {
+				executorName = executor.ExecutorNameAuthAssert
+			}
+		}
+
+		// Set node executor if defined
+		if executorName != "" {
+			err := s.validateExecutorName(executorName)
+			if err != nil {
+				return nil, fmt.Errorf("error while validating executor %s: %w", executorName, err)
+			}
+			if executableNode, ok := node.(core.ExecutorBackedNodeInterface); ok {
+				executableNode.SetExecutorName(executorName)
+			} else {
+				return nil, fmt.Errorf("node %s of type %s does not support executors", nodeDef.ID, nodeDef.Type)
+			}
+		}
+
+		err = g.AddNode(node)
+		if err != nil {
+			return nil, fmt.Errorf("failed to add node %s to the graph: %w", nodeDef.ID, err)
+		}
+	}
+
+	// Set edges in the graph
+	for sourceID, targetIDs := range edges {
+		for _, targetID := range targetIDs {
+			err := g.AddEdge(sourceID, targetID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to add edge from %s to %s: %w", sourceID, targetID, err)
+			}
+		}
+	}
+
+	// Determine the start node and set it in the graph
+	startNodeID := ""
+	for _, node := range g.GetNodes() {
+		if len(node.GetPreviousNodeList()) == 0 {
+			startNodeID = node.GetID()
+			break
+		}
+	}
+	if startNodeID == "" {
+		return nil, fmt.Errorf("no start node found in the graph definition")
+	}
+
+	err = g.SetStartNode(startNodeID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to set start node ID: %w", err)
+	}
+
+	return g, nil
+}
+
+// validateExecutorName validates that an executor with the given name is registered.
+func (s *flowMgtService) validateExecutorName(executorName string) error {
+	if executorName == "" {
+		return fmt.Errorf("executor name cannot be empty")
+	}
+	if !s.executorRegistry.IsRegistered(executorName) {
+		return fmt.Errorf("executor with name %s not registered", executorName)
+	}
+
+	return nil
+}
+
 // getRegistrationGraphID constructs the registration graph ID from the auth graph ID.
 func (s *flowMgtService) getRegistrationGraphID(authGraphID string) string {
 	return common.RegistrationFlowGraphPrefix + strings.TrimPrefix(authGraphID, common.AuthFlowGraphPrefix)
 }
 
 // createAndRegisterRegistrationGraph creates a registration graph from an authentication graph and registers it.
-func (s *flowMgtService) createAndRegisterRegistrationGraph(registrationGraphID string, authGraph model.GraphInterface,
+func (s *flowMgtService) createAndRegisterRegistrationGraph(registrationGraphID string, authGraph core.GraphInterface,
 	logger *log.Logger) error {
 	registrationGraph, err := s.createRegistrationGraph(registrationGraphID, authGraph)
 	if err != nil {
@@ -224,13 +346,12 @@ func (s *flowMgtService) createAndRegisterRegistrationGraph(registrationGraphID 
 
 // createRegistrationGraph creates a registration graph from an authentication graph.
 func (s *flowMgtService) createRegistrationGraph(registrationGraphID string,
-	authGraph model.GraphInterface) (model.GraphInterface, error) {
+	authGraph core.GraphInterface) (core.GraphInterface, error) {
 	// Create a new graph from the authentication graph
-	registrationGraph := model.NewGraph(registrationGraphID, common.FlowTypeRegistration)
-
-	nodesCopy, err := sysutils.DeepCopyMapOfClonables(authGraph.GetNodes())
+	registrationGraph := s.flowFactory.CreateGraph(registrationGraphID, common.FlowTypeRegistration)
+	nodesCopy, err := s.flowFactory.CloneNodes(authGraph.GetNodes())
 	if err != nil {
-		return nil, fmt.Errorf("failed to deep copy nodes from auth graph: %w", err)
+		return nil, fmt.Errorf("failed to clone nodes from auth graph: %w", err)
 	}
 	registrationGraph.SetNodes(nodesCopy)
 	registrationGraph.SetEdges(sysutils.DeepCopyMapOfStringSlices(authGraph.GetEdges()))
@@ -290,8 +411,8 @@ func (s *flowMgtService) createRegistrationGraph(registrationGraphID string,
 }
 
 // createProvisioningNode creates a provisioning node that leads to the specified auth success node
-func (s *flowMgtService) createProvisioningNode() (model.NodeInterface, error) {
-	provisioningNode, err := model.NewNode(
+func (s *flowMgtService) createProvisioningNode() (core.NodeInterface, error) {
+	provisioningNode, err := s.flowFactory.CreateNode(
 		"provisioning",
 		string(common.NodeTypeTaskExecution),
 		map[string]string{},
@@ -302,10 +423,12 @@ func (s *flowMgtService) createProvisioningNode() (model.NodeInterface, error) {
 		return nil, fmt.Errorf("failed to create provisioning node: %w", err)
 	}
 
-	execConfig := &model.ExecutorConfig{
-		Name: "ProvisioningExecutor",
+	// Set executor name for the provisioning node
+	if executableNode, ok := provisioningNode.(core.ExecutorBackedNodeInterface); ok {
+		executableNode.SetExecutorName(executor.ExecutorNameProvisioning)
+	} else {
+		return nil, fmt.Errorf("provisioning node does not implement ExecutorBackedNodeInterface")
 	}
-	provisioningNode.SetExecutorConfig(execConfig)
 
 	return provisioningNode, nil
 }

@@ -1,0 +1,311 @@
+/*
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package core
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+
+	"github.com/asgardeo/thunder/internal/flow/common"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+)
+
+type FlowFactoryTestSuite struct {
+	suite.Suite
+	factory FlowFactoryInterface
+}
+
+func TestFlowFactoryTestSuite(t *testing.T) {
+	suite.Run(t, new(FlowFactoryTestSuite))
+}
+
+func (s *FlowFactoryTestSuite) SetupTest() {
+	s.factory = newFlowFactory()
+}
+
+func (s *FlowFactoryTestSuite) TestNewFlowFactory() {
+	s.NotNil(s.factory)
+}
+
+func (s *FlowFactoryTestSuite) TestCreateNodeSuccess() {
+	tests := []struct {
+		name         string
+		nodeID       string
+		nodeType     string
+		properties   map[string]string
+		isStartNode  bool
+		isFinalNode  bool
+		expectedType common.NodeType
+	}{
+		{"Create task execution node", "node-1", string(common.NodeTypeTaskExecution),
+			map[string]string{"key": "value"}, true, false, common.NodeTypeTaskExecution},
+		{"Create decision node", "node-2", string(common.NodeTypeDecision),
+			map[string]string{}, false, false, common.NodeTypeDecision},
+		{"Create prompt only node", "node-3", string(common.NodeTypePromptOnly),
+			nil, false, true, common.NodeTypePromptOnly},
+		{"Create auth success node", "node-4", string(common.NodeTypeAuthSuccess),
+			map[string]string{}, false, true, common.NodeTypeTaskExecution},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			node, err := s.factory.CreateNode(tt.nodeID, tt.nodeType, tt.properties, tt.isStartNode,
+				tt.isFinalNode)
+
+			s.NoError(err)
+			s.NotNil(node)
+			s.Equal(tt.nodeID, node.GetID())
+			s.Equal(tt.expectedType, node.GetType())
+			s.Equal(tt.isStartNode, node.IsStartNode())
+			s.Equal(tt.isFinalNode, node.IsFinalNode())
+			if tt.properties != nil {
+				s.NotNil(node.GetProperties())
+			}
+		})
+	}
+}
+
+func (s *FlowFactoryTestSuite) TestCreateNodeFailure() {
+	tests := []struct {
+		name     string
+		nodeType string
+	}{
+		{"Empty node type", ""},
+		{"Unsupported node type", "UNSUPPORTED_TYPE"},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			node, err := s.factory.CreateNode("node-1", tt.nodeType, map[string]string{}, false, false)
+
+			s.Error(err)
+			s.Nil(node)
+		})
+	}
+}
+
+func (s *FlowFactoryTestSuite) TestCreateGraph() {
+	tests := []struct {
+		name         string
+		graphID      string
+		flowType     common.FlowType
+		expectUUID   bool
+		expectedType common.FlowType
+	}{
+		{"Create graph with ID and type", "graph-1", common.FlowTypeAuthentication,
+			false, common.FlowTypeAuthentication},
+		{"Create graph with registration flow type", "graph-2", common.FlowTypeRegistration,
+			false, common.FlowTypeRegistration},
+		{"Empty graph ID generates UUID", "", common.FlowTypeAuthentication,
+			true, common.FlowTypeAuthentication},
+		{"Empty flow type defaults to authentication", "graph-3", "",
+			false, common.FlowTypeAuthentication},
+	}
+
+	for _, tt := range tests {
+		s.Run(tt.name, func() {
+			graph := s.factory.CreateGraph(tt.graphID, tt.flowType)
+
+			s.NotNil(graph)
+			if tt.expectUUID {
+				s.NotEmpty(graph.GetID())
+			} else {
+				s.Equal(tt.graphID, graph.GetID())
+			}
+			s.Equal(tt.expectedType, graph.GetType())
+			s.NotNil(graph.GetNodes())
+			s.NotNil(graph.GetEdges())
+		})
+	}
+}
+
+func (s *FlowFactoryTestSuite) TestCreateExecutor() {
+	defaultInputs := []common.InputData{{Name: "input1", Required: true}}
+	prerequisites := []common.InputData{{Name: "prereq1", Required: true}}
+
+	executor := s.factory.CreateExecutor("test-executor", common.ExecutorTypeAuthentication,
+		defaultInputs, prerequisites)
+
+	s.NotNil(executor)
+	s.Equal("test-executor", executor.GetName())
+	s.Equal(common.ExecutorTypeAuthentication, executor.GetType())
+	s.Equal(defaultInputs, executor.GetDefaultExecutorInputs())
+	s.Equal(prerequisites, executor.GetPrerequisites())
+}
+
+func (s *FlowFactoryTestSuite) TestCloneNodeSuccess() {
+	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
+		map[string]string{"key": "value"}, true, false)
+	node.SetInputData([]common.InputData{{Name: "input1", Required: true}})
+	node.AddNextNodeID("next-1")
+	node.AddPreviousNodeID("prev-1")
+	if execNode, ok := node.(ExecutorBackedNodeInterface); ok {
+		execNode.SetExecutorName("test-executor")
+	}
+
+	clonedNode, err := s.factory.CloneNode(node)
+
+	s.NoError(err)
+	s.NotNil(clonedNode)
+	s.Equal(node.GetID(), clonedNode.GetID())
+	s.Equal(node.GetType(), clonedNode.GetType())
+	s.Equal(node.IsStartNode(), clonedNode.IsStartNode())
+	s.Equal(node.IsFinalNode(), clonedNode.IsFinalNode())
+	s.Equal(node.GetNextNodeList(), clonedNode.GetNextNodeList())
+	s.Equal(node.GetPreviousNodeList(), clonedNode.GetPreviousNodeList())
+	s.Len(clonedNode.GetInputData(), len(node.GetInputData()))
+
+	if sourceExecNode, ok := node.(ExecutorBackedNodeInterface); ok {
+		if clonedExecNode, ok := clonedNode.(ExecutorBackedNodeInterface); ok {
+			s.Equal(sourceExecNode.GetExecutorName(), clonedExecNode.GetExecutorName())
+		}
+	}
+
+	clonedNode.AddNextNodeID("new-next")
+	s.NotEqual(len(node.GetNextNodeList()), len(clonedNode.GetNextNodeList()))
+}
+
+func (s *FlowFactoryTestSuite) TestCloneNodeNil() {
+	clonedNode, err := s.factory.CloneNode(nil)
+
+	s.Error(err)
+	s.Nil(clonedNode)
+	s.Contains(err.Error(), "source node cannot be nil")
+}
+
+func (s *FlowFactoryTestSuite) TestCloneNodesSuccess() {
+	nodes := make(map[string]NodeInterface)
+	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
+		map[string]string{}, true, false)
+	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
+		map[string]string{}, false, false)
+	nodes["node-1"] = node1
+	nodes["node-2"] = node2
+
+	clonedNodes, err := s.factory.CloneNodes(nodes)
+
+	s.NoError(err)
+	s.NotNil(clonedNodes)
+	s.Len(clonedNodes, len(nodes))
+
+	for id, sourceNode := range nodes {
+		clonedNode, exists := clonedNodes[id]
+		s.True(exists)
+		s.Equal(sourceNode.GetID(), clonedNode.GetID())
+		s.Equal(sourceNode.GetType(), clonedNode.GetType())
+	}
+}
+
+func (s *FlowFactoryTestSuite) TestCloneNodesNilOrEmpty() {
+	clonedNodes, err := s.factory.CloneNodes(nil)
+	s.NoError(err)
+	s.Nil(clonedNodes)
+
+	clonedNodes, err = s.factory.CloneNodes(make(map[string]NodeInterface))
+	s.NoError(err)
+	s.NotNil(clonedNodes)
+	s.Empty(clonedNodes)
+}
+
+// fakeExecutorBackedNode implements ExecutorBackedNodeInterface but will report a
+// NodeType that CreateNode maps to a non-executor-backed node. This allows
+// exercising the defensive mismatch branch in CloneNode.
+type fakeExecutorBackedNode struct {
+	id string
+}
+
+func (f *fakeExecutorBackedNode) Execute(ctx *NodeContext) (*common.NodeResponse, *serviceerror.ServiceError) {
+	return nil, nil
+}
+
+func (f *fakeExecutorBackedNode) GetID() string {
+	return f.id
+}
+
+func (f *fakeExecutorBackedNode) GetType() common.NodeType {
+	return common.NodeTypeDecision
+}
+
+func (f *fakeExecutorBackedNode) GetProperties() map[string]string {
+	return nil
+}
+
+func (f *fakeExecutorBackedNode) IsStartNode() bool {
+	return false
+}
+
+func (f *fakeExecutorBackedNode) SetAsStartNode() {}
+
+func (f *fakeExecutorBackedNode) IsFinalNode() bool {
+	return false
+}
+
+func (f *fakeExecutorBackedNode) SetAsFinalNode() {}
+
+func (f *fakeExecutorBackedNode) GetNextNodeList() []string {
+	return []string{}
+}
+
+func (f *fakeExecutorBackedNode) SetNextNodeList(nextNodeIDList []string) {}
+
+func (f *fakeExecutorBackedNode) AddNextNodeID(nextNodeID string) {}
+
+func (f *fakeExecutorBackedNode) RemoveNextNodeID(nextNodeID string) {}
+
+func (f *fakeExecutorBackedNode) GetPreviousNodeList() []string {
+	return []string{}
+}
+
+func (f *fakeExecutorBackedNode) SetPreviousNodeList(previousNodeIDList []string) {}
+
+func (f *fakeExecutorBackedNode) AddPreviousNodeID(previousNodeID string) {}
+
+func (f *fakeExecutorBackedNode) RemovePreviousNodeID(previousNodeID string) {}
+
+func (f *fakeExecutorBackedNode) GetInputData() []common.InputData {
+	return nil
+}
+
+func (f *fakeExecutorBackedNode) SetInputData(inputData []common.InputData) {}
+
+func (f *fakeExecutorBackedNode) GetExecutorName() string {
+	return "fake-exec"
+}
+
+func (f *fakeExecutorBackedNode) SetExecutorName(name string) {}
+
+func (f *fakeExecutorBackedNode) GetExecutor() ExecutorInterface {
+	return nil
+}
+
+func (f *fakeExecutorBackedNode) SetExecutor(executor ExecutorInterface) {}
+
+func (s *FlowFactoryTestSuite) TestCloneNodeMismatchExecutorBacked() {
+	// source claims to be executor-backed but GetType returns Decision which
+	// CreateNode maps to a non-executor-backed node. This should trigger the
+	// mismatch error in CloneNode.
+	src := &fakeExecutorBackedNode{id: "fake-1"}
+
+	cloned, err := s.factory.CloneNode(src)
+
+	s.Error(err)
+	s.Nil(cloned)
+	s.Contains(err.Error(), "mismatch in node types during cloning. copy is not executor-backed")
+}

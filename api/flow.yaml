@@ -296,12 +296,12 @@ components:
         code:
           type: string
           description: Error code
-          example: "FES-5001"
+          example: "SSE-5000"
         message:
           type: string
           description: Error message
-          example: "Something went wrong"
+          example: "Internal server error"
         description:
           type: string
           description: Detailed error description
-          example: "Flow graph is not initialized or is nil"
+          example: "An unexpected error occurred while processing the request"

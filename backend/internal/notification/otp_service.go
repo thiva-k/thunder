@@ -59,14 +59,6 @@ func newOTPService(notifSenderSvc NotificationSenderMgtSvcInterface,
 	}
 }
 
-// NewOTPService creates a new instance of OTPServiceInterface.
-// [Deprecated: use dependency injection to get the instance instead].
-// TODO: Remove this when the flow executors are migrated to the di pattern.
-func NewOTPService(notifSenderSvc NotificationSenderMgtSvcInterface,
-	jwtSvc jwt.JWTServiceInterface) OTPServiceInterface {
-	return newOTPService(notifSenderSvc, jwtSvc)
-}
-
 // SendOTP sends an OTP to the specified recipient using the provided sender.
 func (s *otpService) SendOTP(otpDTO common.SendOTPDTO) (*common.SendOTPResultDTO, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "OTPService"))

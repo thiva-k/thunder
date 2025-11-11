@@ -22,17 +22,27 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
+	dbprovider "github.com/asgardeo/thunder/internal/system/database/provider"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 )
 
 // Initialize creates and configures the flow execution service components.
-func Initialize(mux *http.ServeMux, flowMgtService flowmgt.FlowMgtServiceInterface,
-	applicationService application.ApplicationServiceInterface) FlowExecServiceInterface {
-	flowEngine := newFlowEngine()
-	flowExecService := newFlowExecService(flowMgtService, applicationService, flowEngine)
+func Initialize(
+	mux *http.ServeMux,
+	flowMgtService flowmgt.FlowMgtServiceInterface,
+	applicationService application.ApplicationServiceInterface,
+	executorRegistry executor.ExecutorRegistryInterface,
+) FlowExecServiceInterface {
+	dbProvider := dbprovider.GetDBProvider()
+	flowStore := newFlowStore(dbProvider)
+	flowEngine := newFlowEngine(executorRegistry)
+	flowExecService := newFlowExecService(flowMgtService, flowStore, flowEngine, applicationService)
+
 	handler := newFlowExecutionHandler(flowExecService)
 	registerRoutes(mux, handler)
+
 	return flowExecService
 }
 

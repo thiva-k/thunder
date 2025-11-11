@@ -580,8 +580,6 @@ func (suite *OTPServiceTestSuite) TestVerifyOTP_UnmarshalError() {
 func (suite *OTPServiceTestSuite) TestNewOTPService_Constructors() {
 	svc := newOTPService(suite.mockSenderService, suite.mockJWTService)
 	suite.NotNil(svc)
-	svc2 := NewOTPService(suite.mockSenderService, suite.mockJWTService)
-	suite.NotNil(svc2)
 }
 
 func (suite *OTPServiceTestSuite) TestVerifyAndDecode_Success() {

@@ -65,21 +65,6 @@ func newGithubOAuthAuthnService(idpSvc idp.IDPServiceInterface,
 	return service
 }
 
-// NewGithubOAuthAuthnService returns an OAuth authenticator service for GitHub.
-// [Deprecated: use dependency injection to get the instance instead].
-// TODO: Should be removed when executors are migrated to di pattern.
-func NewGithubOAuthAuthnService(idpSvc idp.IDPServiceInterface,
-	userSvc user.UserServiceInterface) GithubOAuthAuthnServiceInterface {
-	if idpSvc == nil {
-		idpSvc = idp.NewIDPService()
-	}
-	if userSvc == nil {
-		userSvc = user.GetUserService()
-	}
-
-	return newGithubOAuthAuthnService(idpSvc, userSvc)
-}
-
 // BuildAuthorizeURL constructs the authorization request URL for GitHub OAuth authentication.
 func (g *githubOAuthAuthnService) BuildAuthorizeURL(idpID string) (string, *serviceerror.ServiceError) {
 	return g.internal.BuildAuthorizeURL(idpID)

@@ -26,10 +26,10 @@ import (
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	"github.com/asgardeo/thunder/internal/flow/common"
-	"github.com/asgardeo/thunder/internal/flow/common/model"
+	"github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
-	"github.com/asgardeo/thunder/tests/mocks/flowmgtmock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/flowmgtmock"
 )
 
 func TestInitiateFlowNilContext(t *testing.T) {
@@ -49,7 +49,7 @@ func TestInitiateFlowEmptyApplicationID(t *testing.T) {
 	// Setup
 	service := &flowExecService{}
 
-	initContext := &model.FlowInitContext{
+	initContext := &FlowInitContext{
 		ApplicationID: "",
 		FlowType:      "AUTHENTICATION",
 		RuntimeData:   map[string]string{},
@@ -68,7 +68,7 @@ func TestInitiateFlowEmptyFlowType(t *testing.T) {
 	// Setup
 	service := &flowExecService{}
 
-	initContext := &model.FlowInitContext{
+	initContext := &FlowInitContext{
 		ApplicationID: "test-app",
 		FlowType:      "",
 		RuntimeData:   map[string]string{},
@@ -87,7 +87,7 @@ func TestInitiateFlowInvalidFlowType(t *testing.T) {
 	// Setup
 	service := &flowExecService{}
 
-	initContext := &model.FlowInitContext{
+	initContext := &FlowInitContext{
 		ApplicationID: "test-app",
 		FlowType:      "INVALID_TYPE",
 		RuntimeData:   map[string]string{},
@@ -110,13 +110,14 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 		ID:              "app-id-123",
 		AuthFlowGraphID: "auth-graph-1",
 	}
-	testGraph := model.NewGraph("auth-graph-1", common.FlowTypeAuthentication)
+	flowFactory := core.Initialize()
+	testGraph := flowFactory.CreateGraph("auth-graph-1", common.FlowTypeAuthentication)
 
 	tests := []struct {
 		name                     string
 		runtimeData              map[string]string
 		setRuntimeDataField      bool // whether to explicitly set the RuntimeData field
-		expectedRuntimeDataCheck func(ctx model.EngineContext) bool
+		expectedRuntimeDataCheck func(ctx EngineContext) bool
 	}{
 		{
 			name: "with runtime data",
@@ -126,7 +127,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 				"type":        "code",
 			},
 			setRuntimeDataField: true,
-			expectedRuntimeDataCheck: func(ctx model.EngineContext) bool {
+			expectedRuntimeDataCheck: func(ctx EngineContext) bool {
 				// Verify RuntimeData is preserved
 				return ctx.RuntimeData != nil &&
 					ctx.RuntimeData["permissions"] == "perm1 perm2 perm3" &&
@@ -138,7 +139,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 			name:                "with nil runtime data",
 			runtimeData:         nil,
 			setRuntimeDataField: true,
-			expectedRuntimeDataCheck: func(ctx model.EngineContext) bool {
+			expectedRuntimeDataCheck: func(ctx EngineContext) bool {
 				// Verify RuntimeData is nil (since initContext.RuntimeData is nil and len > 0 check fails)
 				return ctx.RuntimeData == nil
 			},
@@ -147,7 +148,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 			name:                "with empty runtime data",
 			runtimeData:         map[string]string{},
 			setRuntimeDataField: true,
-			expectedRuntimeDataCheck: func(ctx model.EngineContext) bool {
+			expectedRuntimeDataCheck: func(ctx EngineContext) bool {
 				// Verify RuntimeData is not nil and empty
 				return ctx.RuntimeData != nil && len(ctx.RuntimeData) == 0
 			},
@@ -156,7 +157,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 			name:                "without runtime data field",
 			runtimeData:         nil, // This won't be used since setRuntimeDataField is false
 			setRuntimeDataField: false,
-			expectedRuntimeDataCheck: func(ctx model.EngineContext) bool {
+			expectedRuntimeDataCheck: func(ctx EngineContext) bool {
 				// Verify RuntimeData is nil (since initContext.RuntimeData is nil and len > 0 check fails)
 				return ctx.RuntimeData == nil
 			},
@@ -166,7 +167,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup mocks
-			mockStore := NewFlowStoreInterfaceMock(t)
+			mockStore := newFlowStoreInterfaceMock(t)
 			mockAppService := applicationmock.NewApplicationServiceInterfaceMock(t)
 			mockFlowMgtSvc := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
 
@@ -178,7 +179,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 				flowEngine:     nil,
 			}
 
-			initContext := &model.FlowInitContext{
+			initContext := &FlowInitContext{
 				ApplicationID: appID,
 				FlowType:      "AUTHENTICATION",
 			}
@@ -191,7 +192,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 			// Setup expectations
 			mockAppService.EXPECT().GetApplication(appID).Return(mockApp, nil)
 			mockFlowMgtSvc.EXPECT().GetGraph("auth-graph-1").Return(testGraph, true)
-			mockStore.EXPECT().StoreFlowContext(mock.MatchedBy(func(ctx model.EngineContext) bool {
+			mockStore.EXPECT().StoreFlowContext(mock.MatchedBy(func(ctx EngineContext) bool {
 				// Verify flowID is generated
 				if ctx.FlowID == "" {
 					return false
@@ -224,11 +225,12 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 
 func TestInitiateFlowErrorScenarios(t *testing.T) {
 	appID := "test-app-123"
+	flowFactory := core.Initialize()
 
 	tests := []struct {
 		name       string
 		setupMocks func(
-			*FlowStoreInterfaceMock,
+			*flowStoreInterfaceMock,
 			*applicationmock.ApplicationServiceInterfaceMock,
 			*flowmgtmock.FlowMgtServiceInterfaceMock,
 		)
@@ -238,7 +240,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 		{
 			name: "error from getApplication - application not found",
 			setupMocks: func(
-				mockStore *FlowStoreInterfaceMock,
+				mockStore *flowStoreInterfaceMock,
 				mockAppService *applicationmock.ApplicationServiceInterfaceMock,
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
@@ -257,12 +259,12 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 		{
 			name: "error from getApplication - other client error",
 			setupMocks: func(
-				mockStore *FlowStoreInterfaceMock,
+				mockStore *flowStoreInterfaceMock,
 				mockAppService *applicationmock.ApplicationServiceInterfaceMock,
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
 				// Mock application service to return a different client error
-				mockAppService.EXPECT().GetApplication(appID).Return(nil, &common.ErrorApplicationRetrievalClientError)
+				mockAppService.EXPECT().GetApplication(appID).Return(nil, &ErrorApplicationRetrievalClientError)
 				// No other mocks needed as it fails early
 			},
 			expectedErrorCode: "FES-1007", // ErrorApplicationRetrievalClientError
@@ -270,7 +272,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 		{
 			name: "error from flowMgtService.GetGraph - graph not found",
 			setupMocks: func(
-				mockStore *FlowStoreInterfaceMock,
+				mockStore *flowStoreInterfaceMock,
 				mockAppService *applicationmock.ApplicationServiceInterfaceMock,
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
@@ -285,12 +287,12 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				mockFlowMgtSvc.EXPECT().GetGraph("auth-graph-1").Return(nil, false)
 				// No store mock needed as it fails before storing
 			},
-			expectedErrorCode: "FES-5002", // ErrorFlowGraphNotFound
+			expectedErrorCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "error from storeContext - store failure",
 			setupMocks: func(
-				mockStore *FlowStoreInterfaceMock,
+				mockStore *flowStoreInterfaceMock,
 				mockAppService *applicationmock.ApplicationServiceInterfaceMock,
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
@@ -302,20 +304,20 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				mockAppService.EXPECT().GetApplication(appID).Return(mockApp, nil)
 
 				// Mock flow management service to return valid graph
-				testGraph := model.NewGraph("auth-graph-1", common.FlowTypeAuthentication)
+				testGraph := flowFactory.CreateGraph("auth-graph-1", common.FlowTypeAuthentication)
 				mockFlowMgtSvc.EXPECT().GetGraph("auth-graph-1").Return(testGraph, true)
 
 				// Mock store to return error
-				mockStore.EXPECT().StoreFlowContext(mock.AnythingOfType("model.EngineContext")).Return(assert.AnError)
+				mockStore.EXPECT().StoreFlowContext(mock.AnythingOfType("EngineContext")).Return(assert.AnError)
 			},
-			expectedErrorCode: "FES-5014", // ErrorUpdatingContextInStore
+			expectedErrorCode: serviceerror.InternalServerError.Code,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup mocks
-			mockStore := NewFlowStoreInterfaceMock(t)
+			mockStore := newFlowStoreInterfaceMock(t)
 			mockAppService := applicationmock.NewApplicationServiceInterfaceMock(t)
 			mockFlowMgtSvc := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
 
@@ -327,7 +329,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				flowEngine:     nil,
 			}
 
-			initContext := &model.FlowInitContext{
+			initContext := &FlowInitContext{
 				ApplicationID: appID,
 				FlowType:      "AUTHENTICATION",
 				RuntimeData: map[string]string{

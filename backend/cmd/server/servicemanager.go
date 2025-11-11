@@ -26,6 +26,8 @@ import (
 	"github.com/asgardeo/thunder/internal/authn"
 	"github.com/asgardeo/thunder/internal/authz"
 	"github.com/asgardeo/thunder/internal/cert"
+	flowcore "github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
 	"github.com/asgardeo/thunder/internal/group"
@@ -56,25 +58,30 @@ func registerServices(mux *http.ServeMux) {
 	userService := user.Initialize(mux, ouService, userSchemaService)
 	groupService := group.Initialize(mux, ouService, userService)
 	roleService := role.Initialize(mux, userService, groupService, ouService)
-	_ = authz.Initialize(roleService)
+	authZService := authz.Initialize(roleService)
 
 	idpService := idp.Initialize(mux)
 	_, otpService := notification.Initialize(mux, jwtService)
 
-	flowMgtService, err := flowmgt.Initialize()
+	// Initialize authentication services.
+	_, authSvcRegistry := authn.Initialize(mux, idpService, jwtService, userService, otpService)
+
+	// Initialize flow and executor services.
+	flowFactory := flowcore.Initialize()
+	execRegistry := executor.Initialize(flowFactory, userService, ouService,
+		idpService, otpService, jwtService, authSvcRegistry, authZService)
+
+	flowMgtService, err := flowmgt.Initialize(flowFactory, execRegistry)
 	if err != nil {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
 	certservice := cert.Initialize()
 	applicationService := application.Initialize(mux, certservice, flowMgtService)
 
-	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService)
+	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry)
 
 	// Initialize OAuth services.
 	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService)
-
-	// Initialize authentication services.
-	_, _ = authn.Initialize(mux, idpService, jwtService, userService, otpService)
 
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.

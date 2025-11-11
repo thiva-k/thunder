@@ -22,9 +22,76 @@ import (
 	"encoding/json"
 	"time"
 
+	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
-	"github.com/asgardeo/thunder/internal/flow/common/model"
+	"github.com/asgardeo/thunder/internal/flow/common"
+	"github.com/asgardeo/thunder/internal/flow/core"
 )
+
+// EngineContext holds the overall context used by the flow engine during execution.
+type EngineContext struct {
+	FlowID        string
+	FlowType      common.FlowType
+	AppID         string
+	UserInputData map[string]string
+	RuntimeData   map[string]string
+
+	CurrentNode         core.NodeInterface
+	CurrentNodeResponse *common.NodeResponse
+	CurrentActionID     string
+
+	Graph       core.GraphInterface
+	Application appmodel.ApplicationProcessedDTO
+
+	AuthenticatedUser authncm.AuthenticatedUser
+	ExecutionHistory  map[string]*common.NodeExecutionRecord
+}
+
+// FlowStep represents the outcome of a individual flow step
+type FlowStep struct {
+	FlowID        string
+	StepID        string
+	Type          common.FlowStepType
+	Status        common.FlowStatus
+	Data          FlowData
+	Assertion     string
+	FailureReason string
+}
+
+// FlowData holds the data returned by a flow execution step
+type FlowData struct {
+	Inputs         []common.InputData `json:"inputs,omitempty"`
+	RedirectURL    string             `json:"redirectURL,omitempty"`
+	Actions        []common.Action    `json:"actions,omitempty"`
+	AdditionalData map[string]string  `json:"additionalData,omitempty"`
+}
+
+// FlowResponse represents the flow execution API response body
+type FlowResponse struct {
+	FlowID        string   `json:"flowId"`
+	StepID        string   `json:"stepId,omitempty"`
+	FlowStatus    string   `json:"flowStatus"`
+	Type          string   `json:"type,omitempty"`
+	Data          FlowData `json:"data,omitempty"`
+	Assertion     string   `json:"assertion,omitempty"`
+	FailureReason string   `json:"failureReason,omitempty"`
+}
+
+// FlowRequest represents the flow execution API request body
+type FlowRequest struct {
+	ApplicationID string            `json:"applicationId"`
+	FlowType      string            `json:"flowType"`
+	FlowID        string            `json:"flowId"`
+	ActionID      string            `json:"actionId"`
+	Inputs        map[string]string `json:"inputs"`
+}
+
+// FlowInitContext represents the context for initiating a new flow with runtime data
+type FlowInitContext struct {
+	ApplicationID string
+	FlowType      string
+	RuntimeData   map[string]string
+}
 
 // FlowContextWithUserDataDB represents the combined flow context and user data.
 type FlowContextWithUserDataDB struct {
@@ -44,12 +111,12 @@ type FlowContextWithUserDataDB struct {
 }
 
 // ToEngineContext converts the database model to the flow engine context.
-func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) (model.EngineContext, error) {
+func (f *FlowContextWithUserDataDB) ToEngineContext(graph core.GraphInterface) (EngineContext, error) {
 	// Parse user input data
 	var userInputData map[string]string
 	if f.UserInputs != nil {
 		if err := json.Unmarshal([]byte(*f.UserInputs), &userInputData); err != nil {
-			return model.EngineContext{}, err
+			return EngineContext{}, err
 		}
 	} else {
 		userInputData = make(map[string]string)
@@ -59,7 +126,7 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) 
 	var runtimeData map[string]string
 	if f.RuntimeData != nil {
 		if err := json.Unmarshal([]byte(*f.RuntimeData), &runtimeData); err != nil {
-			return model.EngineContext{}, err
+			return EngineContext{}, err
 		}
 	} else {
 		runtimeData = make(map[string]string)
@@ -69,7 +136,7 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) 
 	var userAttributes map[string]interface{}
 	if f.UserAttributes != nil {
 		if err := json.Unmarshal([]byte(*f.UserAttributes), &userAttributes); err != nil {
-			return model.EngineContext{}, err
+			return EngineContext{}, err
 		}
 	} else {
 		userAttributes = make(map[string]interface{})
@@ -86,17 +153,17 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) 
 	}
 
 	// Parse execution history
-	var executionHistory map[string]*model.NodeExecutionRecord
+	var executionHistory map[string]*common.NodeExecutionRecord
 	if f.ExecutionHistory != nil {
 		if err := json.Unmarshal([]byte(*f.ExecutionHistory), &executionHistory); err != nil {
-			return model.EngineContext{}, err
+			return EngineContext{}, err
 		}
 	} else {
-		executionHistory = make(map[string]*model.NodeExecutionRecord)
+		executionHistory = make(map[string]*common.NodeExecutionRecord)
 	}
 
 	// Get current node from graph if available
-	var currentNode model.NodeInterface
+	var currentNode core.NodeInterface
 	if f.CurrentNodeID != nil && graph != nil {
 		if node, exists := graph.GetNode(*f.CurrentNodeID); exists {
 			currentNode = node
@@ -109,7 +176,7 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) 
 		currentActionID = *f.CurrentActionID
 	}
 
-	return model.EngineContext{
+	return EngineContext{
 		FlowID:            f.FlowID,
 		FlowType:          graph.GetType(),
 		AppID:             f.AppID,
@@ -124,7 +191,7 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph model.GraphInterface) 
 }
 
 // FromEngineContext creates a database model from the flow engine context.
-func FromEngineContext(ctx model.EngineContext) (*FlowContextWithUserDataDB, error) {
+func FromEngineContext(ctx EngineContext) (*FlowContextWithUserDataDB, error) {
 	// Serialize user input data
 	userInputDataJSON, err := json.Marshal(ctx.UserInputData)
 	if err != nil {
