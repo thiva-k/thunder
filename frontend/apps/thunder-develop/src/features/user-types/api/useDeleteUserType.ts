@@ -16,7 +16,9 @@
  * under the License.
  */
 
-import {useState} from 'react';
+import {useState, useMemo} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 
 import type {ApiError} from '../types/user-types';
 
@@ -25,32 +27,25 @@ import type {ApiError} from '../types/user-types';
  * @returns Object containing deleteUserType function, loading state, error, and reset function
  */
 export default function useDeleteUserType() {
+  const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
 
   const deleteUserType = async (userTypeId: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`https://localhost:8090/user-schemas/${userTypeId}`, {
+      await http.request({
+        url: `${API_BASE_URL}/user-schemas/${userTypeId}`,
         method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        let errorData: ApiError;
-        try {
-          errorData = (await response.json()) as ApiError;
-        } catch {
-          errorData = {
-            code: 'DELETE_USER_TYPE_ERROR',
-            message: `HTTP error! status: ${response.status}`,
-            description: await response.text(),
-          };
-        }
-        setError(errorData);
-        throw new Error(errorData.message);
-      }
+      } as unknown as Parameters<typeof http.request>[0]);
 
       setError(null);
       return true;

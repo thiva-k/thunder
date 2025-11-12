@@ -22,6 +22,22 @@ import {renderHook, waitFor} from '@testing-library/react';
 import useCreateUserType from '../useCreateUserType';
 import type {ApiUserSchema, CreateUserSchemaRequest} from '../../types/user-types';
 
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
+
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useCreateUserType', () => {
   const mockUserSchema: ApiUserSchema = {
     id: '123',
@@ -45,11 +61,11 @@ describe('useCreateUserType', () => {
   };
 
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with default state', () => {
@@ -63,10 +79,7 @@ describe('useCreateUserType', () => {
   });
 
   it('should successfully create a user type', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result} = renderHook(() => useCreateUserType());
 
@@ -78,27 +91,20 @@ describe('useCreateUserType', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('https://localhost:8090/user-schemas', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(mockRequest),
-    });
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas',
+        method: 'POST',
+        data: mockRequest,
+      }),
+    );
   });
 
   it('should set loading state during creation', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+    mockHttpRequest.mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                ok: true,
-                json: async () => mockUserSchema,
-              }),
-            100,
-          );
+          setTimeout(() => resolve({data: mockUserSchema}), 100);
         }),
     );
 
@@ -117,18 +123,8 @@ describe('useCreateUserType', () => {
     });
   });
 
-  it('should handle API error with JSON response', async () => {
-    const apiErrorResponse = {
-      code: 'VALIDATION_ERROR',
-      message: 'Validation failed',
-      description: 'User type name already exists',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => apiErrorResponse,
-    });
+  it('should handle API error', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('Validation failed'));
 
     const {result} = renderHook(() => useCreateUserType());
 
@@ -145,33 +141,8 @@ describe('useCreateUserType', () => {
     });
   });
 
-  it('should handle API error without JSON response', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => {
-        throw new Error('Not JSON');
-      },
-      text: async () => 'Internal Server Error',
-    });
-
-    const {result} = renderHook(() => useCreateUserType());
-
-    await expect(result.current.createUserType(mockRequest)).rejects.toThrow('HTTP error! status: 500');
-
-    await waitFor(() => {
-      expect(result.current.error).toEqual({
-        code: 'CREATE_USER_TYPE_ERROR',
-        message: 'HTTP error! status: 500',
-        description: 'Failed to create user type',
-      });
-      expect(result.current.data).toBeNull();
-      expect(result.current.loading).toBe(false);
-    });
-  });
-
   it('should handle network error', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValueOnce(new Error('Network error'));
 
     const {result} = renderHook(() => useCreateUserType());
 
@@ -189,10 +160,7 @@ describe('useCreateUserType', () => {
   });
 
   it('should reset state when reset is called', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result} = renderHook(() => useCreateUserType());
 
@@ -202,9 +170,7 @@ describe('useCreateUserType', () => {
       expect(result.current.data).toEqual(mockUserSchema);
     });
 
-    await waitFor(() => {
-      result.current.reset();
-    });
+    result.current.reset();
 
     await waitFor(() => {
       expect(result.current.data).toBeNull();
@@ -213,10 +179,9 @@ describe('useCreateUserType', () => {
   });
 
   it('should clear previous data and error when starting new request', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest
+      .mockResolvedValueOnce({data: mockUserSchema})
+      .mockResolvedValueOnce({data: {...mockUserSchema, id: '456'}});
 
     const {result} = renderHook(() => useCreateUserType());
 
@@ -226,17 +191,11 @@ describe('useCreateUserType', () => {
       expect(result.current.data).toEqual(mockUserSchema);
     });
 
-    const newUserSchema = {...mockUserSchema, id: '456'};
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => newUserSchema,
-    });
-
     await result.current.createUserType(mockRequest);
 
     await waitFor(() => {
-      expect(result.current.data).toEqual(newUserSchema);
+      expect(result.current.data).toEqual({...mockUserSchema, id: '456'});
+      expect(result.current.error).toBeNull();
     });
   });
 });

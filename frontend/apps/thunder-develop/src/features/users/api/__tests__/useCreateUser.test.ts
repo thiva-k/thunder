@@ -22,13 +22,30 @@ import {renderHook, waitFor} from '@testing-library/react';
 import useCreateUser, {type CreateUserRequest} from '../useCreateUser';
 import type {ApiUser} from '../../types/users';
 
+// Mock useAsgardeo
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
+
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useCreateUser', () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with correct default values', () => {
@@ -61,11 +78,7 @@ describe('useCreateUser', () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockResponse});
 
     const {result} = renderHook(() => useCreateUser());
 
@@ -76,13 +89,13 @@ describe('useCreateUser', () => {
       expect(result.current.data).toEqual(mockResponse);
       expect(result.current.error).toBeNull();
     });
-    expect(global.fetch).toHaveBeenCalledWith('https://localhost:8090/users', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(mockRequest),
-    });
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/users',
+        method: 'POST',
+        data: mockRequest,
+      }),
+    );
   });
 
   it('should handle API error with JSON response', async () => {
@@ -95,18 +108,7 @@ describe('useCreateUser', () => {
       },
     };
 
-    const apiErrorResponse = {
-      code: 'VALIDATION_ERROR',
-      message: 'Validation failed',
-      description: 'Email already exists',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => apiErrorResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('Validation failed'));
 
     const {result} = renderHook(() => useCreateUser());
 
@@ -118,7 +120,7 @@ describe('useCreateUser', () => {
       expect(result.current.error).toEqual({
         code: 'CREATE_USER_ERROR',
         message: 'Validation failed',
-        description: 'An error occurred while creating the user',
+        description: 'Failed to create user',
       });
       expect(result.current.data).toBeNull();
     });
@@ -134,13 +136,7 @@ describe('useCreateUser', () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: async () => 'Server error occurred',
-      headers: new Headers({'content-type': 'text/plain'}),
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('Internal Server Error'));
 
     const {result} = renderHook(() => useCreateUser());
 
@@ -155,7 +151,7 @@ describe('useCreateUser', () => {
       expect(result.current.error).toEqual({
         code: 'CREATE_USER_ERROR',
         message: 'Internal Server Error',
-        description: 'An error occurred while creating the user',
+        description: 'Failed to create user',
       });
       expect(result.current.data).toBeNull();
     });
@@ -171,7 +167,7 @@ describe('useCreateUser', () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValueOnce(new Error('Network error'));
 
     const {result} = renderHook(() => useCreateUser());
 
@@ -182,7 +178,7 @@ describe('useCreateUser', () => {
       expect(result.current.error).toEqual({
         code: 'CREATE_USER_ERROR',
         message: 'Network error',
-        description: 'An error occurred while creating the user',
+        description: 'Failed to create user',
       });
     });
   });
@@ -207,16 +203,14 @@ describe('useCreateUser', () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(
+    mockHttpRequest.mockImplementationOnce(
       () =>
         new Promise((resolve) => {
           setTimeout(
             () =>
               resolve({
-                ok: true,
-                json: async () => mockResponse,
-                headers: new Headers({'content-type': 'application/json'}),
-              } as Response),
+                data: mockResponse,
+              }),
             50,
           );
         }),
@@ -261,11 +255,7 @@ describe('useCreateUser', () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockResponse});
 
     const {result} = renderHook(() => useCreateUser());
 
@@ -324,17 +314,9 @@ describe('useCreateUser', () => {
       },
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse1,
-        headers: new Headers({'content-type': 'application/json'}),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse2,
-        headers: new Headers({'content-type': 'application/json'}),
-      });
+    mockHttpRequest
+      .mockResolvedValueOnce({data: mockResponse1})
+      .mockResolvedValueOnce({data: mockResponse2});
 
     const {result} = renderHook(() => useCreateUser());
 

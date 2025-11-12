@@ -16,83 +16,103 @@
  * under the License.
  */
 
-import {useState, useCallback, useEffect} from 'react';
+import {useState, useEffect, useMemo} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 import type {ApiUser, ApiError} from '../types/users';
 
-const API_BASE_URL = 'https://localhost:8090';
-
 /**
- * Hook to fetch a single user by ID
- * GET https://localhost:8090/users/{userId}
+ * Custom hook to fetch a single user by ID
+ * @param userId - The ID of the user to fetch
+ * @returns Object containing data, loading state, error, and refetch function
  */
 export default function useGetUser(userId: string | undefined) {
+  const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<ApiUser | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const fetchUser = useCallback(async () => {
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
+
+  useEffect(() => {
     if (!userId) {
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
+    const fetchUser = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await http.request({
+          url: `${API_BASE_URL}/users/${userId}`,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        } as unknown as Parameters<typeof http.request>[0]);
+
+        const jsonData = response.data as ApiUser;
+        setData(jsonData);
+        setError(null);
+      } catch (err) {
+        const apiError: ApiError = {
+          code: 'FETCH_ERROR',
+          message: err instanceof Error ? err.message : 'An unknown error occurred',
+          description: 'Failed to fetch user',
+        };
+        setError(apiError);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser().catch(() => {
+      // Error already handled
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const refetch = async (): Promise<void> => {
+    if (!userId) {
+      return;
+    }
 
     try {
-      const url = `${API_BASE_URL}/users/${userId}`;
+      setLoading(true);
+      setError(null);
 
-      const response = await fetch(url, {
+      const response = await http.request({
+        url: `${API_BASE_URL}/users/${userId}`,
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-      });
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const errorData = (await response.json()) as ApiError;
-          setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to fetch user');
-        } else {
-          const errorText = await response.text();
-          const apiError: ApiError = {
-            code: `HTTP_${response.status}`,
-            message: response.statusText,
-            description: errorText ?? 'Failed to fetch user',
-          };
-          setError(apiError);
-          throw new Error(apiError.message);
-        }
-      }
-
-      const result = (await response.json()) as ApiUser;
-      setData(result);
+      const jsonData = response.data as ApiUser;
+      setData(jsonData);
+      setError(null);
     } catch (err) {
-      if (err instanceof Error) {
-        setError({
-          code: 'FETCH_ERROR',
-          message: err.message,
-          description: 'An error occurred while fetching user',
-        });
-      }
+      const apiError: ApiError = {
+        code: 'FETCH_ERROR',
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: 'Failed to fetch user',
+      };
+      setError(apiError);
       throw err;
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
-  }, [userId]);
-
-  useEffect(() => {
-    fetchUser().catch(() => {
-      // Error already handled
-    });
-  }, [fetchUser]);
-
-  const refetch = useCallback(() => fetchUser(), [fetchUser]);
+  };
 
   return {
     data,
-    loading: isLoading,
+    loading,
     error,
     refetch,
   };

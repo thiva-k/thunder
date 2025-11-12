@@ -16,72 +16,29 @@
  * under the License.
  */
 
-import {useState, useEffect, useCallback, useRef} from 'react';
+import {useState, useEffect, useRef, useMemo} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 import type {ApiUserSchema, ApiError} from '../types/users';
 
-const API_BASE_URL = 'https://localhost:8090';
-
 /**
- * Hook to fetch a single user schema by ID from the API
- * GET https://localhost:8090/user-schemas/{id}
+ * Custom hook to fetch a single user schema by ID
+ * @param id - The ID of the user schema to fetch
+ * @returns Object containing data, loading state, error, and refetch function
  */
 export default function useGetUserSchema(id?: string) {
+  const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<ApiUserSchema | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
   const hasFetchedRef = useRef(false);
   const lastIdRef = useRef<string | undefined>(undefined);
 
-  const fetchUserSchema = useCallback(async (schemaId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const url = `${API_BASE_URL}/user-schemas/${schemaId}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        // Handle error response
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const errorData = (await response.json()) as ApiError;
-          setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to fetch user schema');
-        } else {
-          const errorText = await response.text();
-          const apiError: ApiError = {
-            code: `HTTP_${response.status}`,
-            message: response.statusText,
-            description: errorText ?? 'Failed to fetch user schema',
-          };
-          setError(apiError);
-          throw new Error(apiError.message);
-        }
-      }
-
-      const result = (await response.json()) as ApiUserSchema;
-      setData(result);
-
-      return result;
-    } catch (err) {
-      if (err instanceof Error) {
-        setError({
-          code: 'FETCH_ERROR',
-          message: err.message,
-          description: 'An error occurred while fetching user schema',
-        });
-      }
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
 
   useEffect(() => {
     if (!id) {
@@ -95,29 +52,78 @@ export default function useGetUserSchema(id?: string) {
     hasFetchedRef.current = true;
     lastIdRef.current = id;
 
-    fetchUserSchema(id).catch(() => {
-      // Error is already handled in fetchUserSchema
-    });
-  }, [id, fetchUserSchema]);
+    const fetchUserSchema = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
 
-  const refetch = useCallback(
-    (newId?: string) => {
-      const schemaId = newId ?? id;
-      if (!schemaId) {
-        setError({
-          code: 'INVALID_ID',
-          message: 'Invalid schema ID',
-          description: 'Schema ID is required',
-        });
-        return;
+        const response = await http.request({
+          url: `${API_BASE_URL}/user-schemas/${id}`,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        } as unknown as Parameters<typeof http.request>[0]);
+
+        const jsonData = response.data as ApiUserSchema;
+        setData(jsonData);
+        setError(null);
+      } catch (err) {
+        const apiError: ApiError = {
+          code: 'FETCH_ERROR',
+          message: err instanceof Error ? err.message : 'An unknown error occurred',
+          description: 'Failed to fetch user schema',
+        };
+        setError(apiError);
+      } finally {
+        setLoading(false);
       }
+    };
 
-      fetchUserSchema(schemaId).catch(() => {
-        // Error is already handled in fetchUserSchema
+    fetchUserSchema().catch(() => {
+      // Error already handled
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const refetch = async (newId?: string): Promise<void> => {
+    const schemaId = newId ?? id;
+    if (!schemaId) {
+      setError({
+        code: 'INVALID_ID',
+        message: 'Invalid schema ID',
+        description: 'Schema ID is required',
       });
-    },
-    [id, fetchUserSchema],
-  );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await http.request({
+        url: `${API_BASE_URL}/user-schemas/${schemaId}`,
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      } as unknown as Parameters<typeof http.request>[0]);
+
+      const jsonData = response.data as ApiUserSchema;
+      setData(jsonData);
+      setError(null);
+    } catch (err) {
+      const apiError: ApiError = {
+        code: 'FETCH_ERROR',
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: 'Failed to fetch user schema',
+      };
+      setError(apiError);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return {
     data,

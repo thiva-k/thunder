@@ -16,7 +16,9 @@
  * under the License.
  */
 
-import {useEffect, useRef, useState, useCallback} from 'react';
+import {useEffect, useRef, useState, useMemo} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 
 import type {ApiError, ApiUserSchema} from '../types/user-types';
 
@@ -27,6 +29,8 @@ import type {ApiError, ApiUserSchema} from '../types/user-types';
  * @returns Object containing data, loading state, error, and refetch function
  */
 export default function useGetUserType(id?: string) {
+  const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<ApiUserSchema | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,62 +39,9 @@ export default function useGetUserType(id?: string) {
   const hasFetchedRef = useRef(false);
   const lastIdRef = useRef<string | undefined>(undefined);
 
-  const fetchUserType = useCallback(async (userTypeId: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch(`https://localhost:8090/user-schemas/${userTypeId}`);
-
-      if (!response.ok) {
-        let errorData: ApiError;
-        try {
-          errorData = (await response.json()) as ApiError;
-        } catch {
-          errorData = {
-            code: 'FETCH_USER_TYPE_ERROR',
-            message: `HTTP error! status: ${response.status}`,
-            description: await response.text(),
-          };
-        }
-        setError(errorData);
-        setData(null);
-        throw new Error(errorData.message);
-      }
-
-      const jsonData = (await response.json()) as ApiUserSchema;
-      setData(jsonData);
-      setError(null);
-    } catch (err) {
-      const apiError: ApiError = {
-        code: 'FETCH_USER_TYPE_ERROR',
-        message: err instanceof Error ? err.message : 'An unknown error occurred',
-        description: 'Failed to fetch user type',
-      };
-      setError(apiError);
-      setData(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const refetch = useCallback(
-    async (newId?: string) => {
-      const idToFetch = newId ?? id;
-      if (!idToFetch) return;
-
-      // Reset the hasFetched flag when explicitly refetching
-      hasFetchedRef.current = false;
-      lastIdRef.current = idToFetch;
-
-      (async () => {
-        await fetchUserType(idToFetch);
-      })().catch(() => {
-        // TODO: Log the errors
-        // Tracker: https://github.com/asgardeo/thunder/issues/618
-      });
-    },
-    [id, fetchUserType],
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
   );
 
   useEffect(() => {
@@ -109,13 +60,79 @@ export default function useGetUserType(id?: string) {
     hasFetchedRef.current = true;
     lastIdRef.current = id;
 
-    (async () => {
-      await fetchUserType(id);
-    })().catch(() => {
+    const fetchUserType = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await http.request({
+          url: `${API_BASE_URL}/user-schemas/${id}`,
+          method: 'GET',
+        } as unknown as Parameters<typeof http.request>[0]);
+
+        const jsonData = response.data as ApiUserSchema;
+        setData(jsonData);
+        setError(null);
+      } catch (err) {
+        const apiError: ApiError = {
+          code: 'FETCH_USER_TYPE_ERROR',
+          message: err instanceof Error ? err.message : 'An unknown error occurred',
+          description: 'Failed to fetch user type',
+        };
+        setError(apiError);
+        setData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserType().catch(() => {
       // TODO: Log the errors
       // Tracker: https://github.com/asgardeo/thunder/issues/618
     });
-  }, [id, fetchUserType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const refetch = async (newId?: string): Promise<void> => {
+    const schemaId = newId ?? id;
+    if (!schemaId) {
+      setError({
+        code: 'INVALID_ID',
+        message: 'Invalid schema ID',
+        description: 'Schema ID is required',
+      });
+      return;
+    }
+
+    // Reset the hasFetched flag when explicitly refetching
+    hasFetchedRef.current = false;
+    lastIdRef.current = schemaId;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await http.request({
+        url: `${API_BASE_URL}/user-schemas/${schemaId}`,
+        method: 'GET',
+      } as unknown as Parameters<typeof http.request>[0]);
+
+      const jsonData = response.data as ApiUserSchema;
+      setData(jsonData);
+      setError(null);
+    } catch (err) {
+      const apiError: ApiError = {
+        code: 'FETCH_USER_TYPE_ERROR',
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: 'Failed to fetch user type',
+      };
+      setError(apiError);
+      setData(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return {
     data,
