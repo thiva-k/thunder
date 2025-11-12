@@ -83,7 +83,7 @@ var (
 	ErrorInvalidInboundAuthConfig = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
 		Code:             "APP-1009",
-		Error:            "Invalid inbound authentication configuration",
+		Error:            "Invalid inbound auth config",
 		ErrorDescription: "The provided inbound authentication configuration is invalid",
 	}
 	// ErrorInvalidGrantType is the error returned when an invalid grant type is provided.
@@ -200,6 +200,13 @@ var (
 		Code:             "APP-1025",
 		Error:            "Invalid user type",
 		ErrorDescription: "One or more user types in allowed_user_types do not exist in the system",
+	}
+	// ErrorBrandingNotFound is the error returned when branding is not found.
+	ErrorBrandingNotFound = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "APP-1026",
+		Error:            "Branding not found",
+		ErrorDescription: "The specified branding configuration does not exist",
 	}
 )
 

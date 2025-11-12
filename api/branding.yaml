@@ -60,13 +60,13 @@ paths:
                 invalid-limit:
                   summary: Invalid limit parameter
                   value:
-                    code: "BRD-1011"
+                    code: "BRD-1008"
                     message: "Invalid limit parameter"
                     description: "The limit parameter must be a positive integer"
                 invalid-offset:
                   summary: Invalid offset parameter
                   value:
-                    code: "BRD-1012"
+                    code: "BRD-1009"
                     message: "Invalid offset parameter"
                     description: "The offset parameter must be a non-negative integer"
         "500":
@@ -155,19 +155,19 @@ paths:
                 missing-display-name:
                   summary: Missing display name field
                   value:
-                    code: "BRD-1009"
+                    code: "BRD-1005"
                     message: "Invalid request format"
                     description: "The 'displayName' field is required"
                 missing-preferences:
                   summary: Missing preferences field
                   value:
-                    code: "BRD-1007"
+                    code: "BRD-1006"
                     message: "Invalid request format"
                     description: "The 'preferences' field is required"
                 invalid-preferences:
                   summary: Invalid preferences structure
                   value:
-                    code: "BRD-1008"
+                    code: "BRD-1007"
                     message: "Invalid preferences structure"
                     description: "The preferences must be a valid JSON object"
         "500":
@@ -247,7 +247,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                code: "BRD-1004"
+                code: "BRD-1003"
                 message: "Branding configuration not found"
                 description: "The branding configuration with the specified id does not exist"
         "500":
@@ -363,19 +363,19 @@ paths:
                 missing-display-name:
                   summary: Missing display name field
                   value:
-                    code: "BRD-1009"
+                    code: "BRD-1005"
                     message: "Invalid request format"
                     description: "The 'displayName' field is required"
                 missing-preferences:
                   summary: Missing preferences field
                   value:
-                    code: "BRD-1007"
+                    code: "BRD-1006"
                     message: "Invalid request format"
                     description: "The 'preferences' field is required"
                 invalid-preferences:
                   summary: Invalid preferences structure
                   value:
-                    code: "BRD-1008"
+                    code: "BRD-1007"
                     message: "Invalid preferences structure"
                     description: "The preferences must be a valid JSON object"
         "404":
@@ -385,7 +385,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                code: "BRD-1004"
+                code: "BRD-1003"
                 message: "Branding configuration not found"
                 description: "The branding configuration with the specified id does not exist"
         "500":
@@ -436,7 +436,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                code: "BRD-1006"
+                code: "BRD-1004"
                 message: "Cannot delete branding"
                 description: "Cannot delete branding configuration that is currently associated with one or more applications"
         "500":

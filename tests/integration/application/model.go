@@ -28,6 +28,7 @@ type Application struct {
 	AuthFlowGraphID           string              `json:"auth_flow_graph_id,omitempty"`
 	RegistrationFlowGraphID   string              `json:"registration_flow_graph_id,omitempty"`
 	IsRegistrationFlowEnabled bool                `json:"is_registration_flow_enabled"`
+	BrandingID                string              `json:"branding_id,omitempty"`
 	URL                       string              `json:"url,omitempty"`
 	LogoURL                   string              `json:"logo_url,omitempty"`
 	Certificate               *ApplicationCert    `json:"certificate,omitempty"`
@@ -122,6 +123,11 @@ func (app *Application) equals(expectedApp Application) bool {
 	if app.AuthFlowGraphID != expectedApp.AuthFlowGraphID ||
 		app.RegistrationFlowGraphID != expectedApp.RegistrationFlowGraphID ||
 		app.IsRegistrationFlowEnabled != expectedApp.IsRegistrationFlowEnabled {
+		return false
+	}
+
+	// Branding ID
+	if app.BrandingID != expectedApp.BrandingID {
 		return false
 	}
 

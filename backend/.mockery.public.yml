@@ -332,3 +332,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: rolemock
       filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/branding:
+    config:
+      all: true
+      dir: tests/mocks/brandingmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: brandingmock
+      filename: "{{.InterfaceName}}_mock.go"
