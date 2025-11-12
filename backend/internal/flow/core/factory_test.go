@@ -49,19 +49,19 @@ func (s *FlowFactoryTestSuite) TestCreateNodeSuccess() {
 		name         string
 		nodeID       string
 		nodeType     string
-		properties   map[string]string
+		properties   map[string]interface{}
 		isStartNode  bool
 		isFinalNode  bool
 		expectedType common.NodeType
 	}{
 		{"Create task execution node", "node-1", string(common.NodeTypeTaskExecution),
-			map[string]string{"key": "value"}, true, false, common.NodeTypeTaskExecution},
+			map[string]interface{}{"key": "value"}, true, false, common.NodeTypeTaskExecution},
 		{"Create decision node", "node-2", string(common.NodeTypeDecision),
-			map[string]string{}, false, false, common.NodeTypeDecision},
+			map[string]interface{}{}, false, false, common.NodeTypeDecision},
 		{"Create prompt only node", "node-3", string(common.NodeTypePromptOnly),
 			nil, false, true, common.NodeTypePromptOnly},
 		{"Create auth success node", "node-4", string(common.NodeTypeAuthSuccess),
-			map[string]string{}, false, true, common.NodeTypeTaskExecution},
+			map[string]interface{}{}, false, true, common.NodeTypeTaskExecution},
 	}
 
 	for _, tt := range tests {
@@ -93,8 +93,7 @@ func (s *FlowFactoryTestSuite) TestCreateNodeFailure() {
 
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			node, err := s.factory.CreateNode("node-1", tt.nodeType, map[string]string{}, false, false)
-
+			node, err := s.factory.CreateNode("node-1", tt.nodeType, map[string]interface{}{}, false, false)
 			s.Error(err)
 			s.Nil(node)
 		})
@@ -152,7 +151,7 @@ func (s *FlowFactoryTestSuite) TestCreateExecutor() {
 
 func (s *FlowFactoryTestSuite) TestCloneNodeSuccess() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{"key": "value"}, true, false)
+		map[string]interface{}{"key": "value"}, true, false)
 	node.SetInputData([]common.InputData{{Name: "input1", Required: true}})
 	node.AddNextNodeID("next-1")
 	node.AddPreviousNodeID("prev-1")
@@ -193,9 +192,9 @@ func (s *FlowFactoryTestSuite) TestCloneNodeNil() {
 func (s *FlowFactoryTestSuite) TestCloneNodesSuccess() {
 	nodes := make(map[string]NodeInterface)
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	nodes["node-1"] = node1
 	nodes["node-2"] = node2
 
@@ -243,7 +242,7 @@ func (f *fakeExecutorBackedNode) GetType() common.NodeType {
 	return common.NodeTypeDecision
 }
 
-func (f *fakeExecutorBackedNode) GetProperties() map[string]string {
+func (f *fakeExecutorBackedNode) GetProperties() map[string]interface{} {
 	return nil
 }
 

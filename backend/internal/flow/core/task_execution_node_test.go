@@ -43,7 +43,7 @@ func (s *TaskExecutionNodeTestSuite) SetupTest() {
 }
 
 func (s *TaskExecutionNodeTestSuite) TestNewTaskExecutionNode() {
-	node := newTaskExecutionNode("task-1", map[string]string{"key": "value"}, true, false)
+	node := newTaskExecutionNode("task-1", map[string]interface{}{"key": "value"}, true, false)
 
 	s.NotNil(node)
 	s.Equal("task-1", node.GetID())
@@ -53,7 +53,7 @@ func (s *TaskExecutionNodeTestSuite) TestNewTaskExecutionNode() {
 }
 
 func (s *TaskExecutionNodeTestSuite) TestExecutorMethods() {
-	node := newTaskExecutionNode("task-1", map[string]string{}, false, false)
+	node := newTaskExecutionNode("task-1", map[string]interface{}{}, false, false)
 	execNode, ok := node.(ExecutorBackedNodeInterface)
 	s.True(ok)
 
@@ -70,7 +70,7 @@ func (s *TaskExecutionNodeTestSuite) TestExecutorMethods() {
 }
 
 func (s *TaskExecutionNodeTestSuite) TestExecuteNoExecutor() {
-	node := newTaskExecutionNode("task-1", map[string]string{}, false, false)
+	node := newTaskExecutionNode("task-1", map[string]interface{}{}, false, false)
 	ctx := &NodeContext{FlowID: "test-flow"}
 
 	resp, err := node.Execute(ctx)
@@ -149,7 +149,7 @@ func (s *TaskExecutionNodeTestSuite) TestExecuteSuccess() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			mockExec := NewExecutorInterfaceMock(s.T())
-			node := newTaskExecutionNode("task-1", map[string]string{}, false, false)
+			node := newTaskExecutionNode("task-1", map[string]interface{}{}, false, false)
 			execNode, _ := node.(ExecutorBackedNodeInterface)
 			tt.setupMock(mockExec)
 			execNode.SetExecutor(mockExec)
@@ -172,7 +172,7 @@ func (s *TaskExecutionNodeTestSuite) TestExecuteFailure() {
 		nil,
 	).Once()
 
-	node := newTaskExecutionNode("task-1", map[string]string{}, false, false)
+	node := newTaskExecutionNode("task-1", map[string]interface{}{}, false, false)
 	execNode, _ := node.(ExecutorBackedNodeInterface)
 	execNode.SetExecutor(s.mockExecutor)
 
@@ -189,7 +189,7 @@ func (s *TaskExecutionNodeTestSuite) TestExecuteExecutorError() {
 	s.mockExecutor.On("GetName").Return("test-executor").Once()
 	s.mockExecutor.On("Execute", mock.Anything).Return(nil, assert.AnError).Once()
 
-	node := newTaskExecutionNode("task-1", map[string]string{}, false, false)
+	node := newTaskExecutionNode("task-1", map[string]interface{}{}, false, false)
 	execNode, _ := node.(ExecutorBackedNodeInterface)
 	execNode.SetExecutor(s.mockExecutor)
 
@@ -201,7 +201,7 @@ func (s *TaskExecutionNodeTestSuite) TestExecuteExecutorError() {
 }
 
 func (s *TaskExecutionNodeTestSuite) TestExecuteNilExecutorResponse() {
-	node := newTaskExecutionNode("task-1", map[string]string{}, false, false)
+	node := newTaskExecutionNode("task-1", map[string]interface{}{}, false, false)
 	execNode, _ := node.(ExecutorBackedNodeInterface)
 
 	s.mockExecutor.On("GetName").Return("test-executor").Once()
@@ -218,7 +218,7 @@ func (s *TaskExecutionNodeTestSuite) TestExecuteNilExecutorResponse() {
 func (s *TaskExecutionNodeTestSuite) TestExecutePopulatedNodeProperties() {
 	mockExec := NewExecutorInterfaceMock(s.T())
 
-	props := map[string]string{"k": "v"}
+	props := map[string]interface{}{"k": "v"}
 	node := newTaskExecutionNode("task-props", props, false, false)
 	execNode, _ := node.(ExecutorBackedNodeInterface)
 

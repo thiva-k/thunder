@@ -28,7 +28,7 @@ type NodeInterface interface {
 	Execute(ctx *NodeContext) (*common.NodeResponse, *serviceerror.ServiceError)
 	GetID() string
 	GetType() common.NodeType
-	GetProperties() map[string]string
+	GetProperties() map[string]interface{}
 	IsStartNode() bool
 	SetAsStartNode()
 	IsFinalNode() bool
@@ -59,7 +59,7 @@ type ExecutorBackedNodeInterface interface {
 type node struct {
 	id               string
 	_type            common.NodeType
-	properties       map[string]string
+	properties       map[string]interface{}
 	isStartNode      bool
 	isFinalNode      bool
 	nextNodeList     []string
@@ -85,7 +85,7 @@ func (n *node) GetType() common.NodeType {
 }
 
 // GetProperties returns the node's properties
-func (n *node) GetProperties() map[string]string {
+func (n *node) GetProperties() map[string]interface{} {
 	return n.properties
 }
 

@@ -123,7 +123,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Success() {
 			{Name: "username", Type: "string", Required: true},
 			{Name: "email", Type: "string", Required: true},
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"ouId":     "ou-123",
 			"userType": "INTERNAL",
 		},
@@ -203,7 +203,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_CreateUserFails() {
 			"username": "newuser",
 		},
 		NodeInputData: []flowcm.InputData{{Name: "username", Type: "string", Required: true}},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"ouId":     "ou-123",
 			"userType": "INTERNAL",
 		},

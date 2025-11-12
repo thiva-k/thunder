@@ -459,8 +459,14 @@ func (s *smsOTPAuthExecutor) generateAndSendOTP(mobileNumber string, ctx *flowco
 	if len(ctx.NodeProperties) == 0 {
 		return errors.New("message sender id is not configured in node properties")
 	}
-	senderID, ok := ctx.NodeProperties["senderId"]
-	if !ok || senderID == "" {
+
+	senderID := ""
+	if senderIDVal, ok := ctx.NodeProperties["senderId"]; ok {
+		if sid, valid := senderIDVal.(string); valid && sid != "" {
+			senderID = sid
+		}
+	}
+	if senderID == "" {
 		return errors.New("senderId is not configured in node properties")
 	}
 

@@ -31,7 +31,7 @@ type NodeContext struct {
 	AppID           string
 	CurrentActionID string
 
-	NodeProperties map[string]string
+	NodeProperties map[string]interface{}
 	NodeInputData  []common.InputData
 	UserInputData  map[string]string
 	RuntimeData    map[string]string

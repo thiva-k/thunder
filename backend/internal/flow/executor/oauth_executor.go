@@ -295,7 +295,9 @@ func (o *oAuthExecutor) GetUserInfo(ctx *flowcore.NodeContext, execResp *flowcm.
 func (o *oAuthExecutor) GetIdpID(ctx *flowcore.NodeContext) (string, error) {
 	if len(ctx.NodeProperties) > 0 {
 		if val, ok := ctx.NodeProperties["idpId"]; ok {
-			return val, nil
+			if idpID, valid := val.(string); valid && idpID != "" {
+				return idpID, nil
+			}
 		}
 	}
 	return "", errors.New("idpId is not configured in node properties")

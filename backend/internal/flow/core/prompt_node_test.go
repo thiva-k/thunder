@@ -35,7 +35,7 @@ func TestPromptOnlyNodeTestSuite(t *testing.T) {
 }
 
 func (s *PromptOnlyNodeTestSuite) TestNewPromptOnlyNode() {
-	node := newPromptOnlyNode("prompt-1", map[string]string{"key": "value"}, true, false)
+	node := newPromptOnlyNode("prompt-1", map[string]interface{}{"key": "value"}, true, false)
 
 	s.NotNil(node)
 	s.Equal("prompt-1", node.GetID())
@@ -45,7 +45,7 @@ func (s *PromptOnlyNodeTestSuite) TestNewPromptOnlyNode() {
 }
 
 func (s *PromptOnlyNodeTestSuite) TestExecuteNoInputData() {
-	node := newPromptOnlyNode("prompt-1", map[string]string{}, false, false)
+	node := newPromptOnlyNode("prompt-1", map[string]interface{}{}, false, false)
 	ctx := &NodeContext{FlowID: "test-flow", UserInputData: map[string]string{}}
 
 	resp, err := node.Execute(ctx)
@@ -75,7 +75,7 @@ func (s *PromptOnlyNodeTestSuite) TestExecuteWithRequiredData() {
 
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			node := newPromptOnlyNode("prompt-1", map[string]string{}, false, false)
+			node := newPromptOnlyNode("prompt-1", map[string]interface{}{}, false, false)
 			node.SetInputData([]common.InputData{
 				{Name: "username", Required: true},
 				{Name: "email", Required: true},
@@ -100,7 +100,7 @@ func (s *PromptOnlyNodeTestSuite) TestExecuteWithRequiredData() {
 }
 
 func (s *PromptOnlyNodeTestSuite) TestExecuteWithOptionalData() {
-	node := newPromptOnlyNode("prompt-1", map[string]string{}, false, false)
+	node := newPromptOnlyNode("prompt-1", map[string]interface{}{}, false, false)
 	node.SetInputData([]common.InputData{
 		{Name: "username", Required: true},
 		{Name: "nickname", Required: false},
@@ -116,7 +116,7 @@ func (s *PromptOnlyNodeTestSuite) TestExecuteWithOptionalData() {
 }
 
 func (s *PromptOnlyNodeTestSuite) TestExecuteMissingRequiredOnly() {
-	node := newPromptOnlyNode("prompt-1", map[string]string{}, false, false)
+	node := newPromptOnlyNode("prompt-1", map[string]interface{}{}, false, false)
 	node.SetInputData([]common.InputData{
 		{Name: "username", Required: true},
 		{Name: "nickname", Required: false},

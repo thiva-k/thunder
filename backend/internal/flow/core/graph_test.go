@@ -52,7 +52,7 @@ func (s *GraphTestSuite) TestGetType() {
 
 func (s *GraphTestSuite) TestAddNodeSuccess() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 
 	err := s.graph.AddNode(node)
 
@@ -69,7 +69,7 @@ func (s *GraphTestSuite) TestAddNodeNil() {
 
 func (s *GraphTestSuite) TestGetNode() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	_ = s.graph.AddNode(node)
 
 	tests := []struct {
@@ -97,9 +97,9 @@ func (s *GraphTestSuite) TestGetNode() {
 
 func (s *GraphTestSuite) TestAddEdgeSuccess() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node1)
 	_ = s.graph.AddNode(node2)
 
@@ -112,9 +112,9 @@ func (s *GraphTestSuite) TestAddEdgeSuccess() {
 
 func (s *GraphTestSuite) TestAddEdgeFailure() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node1)
 	_ = s.graph.AddNode(node2)
 
@@ -141,9 +141,9 @@ func (s *GraphTestSuite) TestAddEdgeFailure() {
 
 func (s *GraphTestSuite) TestRemoveEdgeSuccess() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node1)
 	_ = s.graph.AddNode(node2)
 	_ = s.graph.AddEdge("node-1", "node-2")
@@ -155,7 +155,7 @@ func (s *GraphTestSuite) TestRemoveEdgeSuccess() {
 
 func (s *GraphTestSuite) TestRemoveEdgeFailure() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	_ = s.graph.AddNode(node1)
 
 	tests := []struct {
@@ -179,9 +179,9 @@ func (s *GraphTestSuite) TestRemoveEdgeFailure() {
 
 func (s *GraphTestSuite) TestGetNodes() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node1)
 	_ = s.graph.AddNode(node2)
 
@@ -195,7 +195,7 @@ func (s *GraphTestSuite) TestGetNodes() {
 
 func (s *GraphTestSuite) TestSetNodes() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	nodes := map[string]NodeInterface{"node-1": node1}
 
 	s.graph.SetNodes(nodes)
@@ -212,9 +212,9 @@ func (s *GraphTestSuite) TestSetNodes() {
 
 func (s *GraphTestSuite) TestGetEdges() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, true, false)
+		map[string]interface{}{}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node1)
 	_ = s.graph.AddNode(node2)
 	_ = s.graph.AddEdge("node-1", "node-2")
@@ -243,7 +243,7 @@ func (s *GraphTestSuite) TestSetEdges() {
 
 func (s *GraphTestSuite) TestSetStartNodeSuccess() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node)
 
 	err := s.graph.SetStartNode("node-1")
@@ -262,7 +262,7 @@ func (s *GraphTestSuite) TestSetStartNodeFailure() {
 
 func (s *GraphTestSuite) TestGetStartNodeID() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node)
 	_ = s.graph.SetStartNode("node-1")
 
@@ -272,7 +272,7 @@ func (s *GraphTestSuite) TestGetStartNodeID() {
 
 func (s *GraphTestSuite) TestGetStartNodeSuccess() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{}, false, false)
+		map[string]interface{}{}, false, false)
 	_ = s.graph.AddNode(node)
 	_ = s.graph.SetStartNode("node-1")
 
@@ -293,9 +293,9 @@ func (s *GraphTestSuite) TestGetStartNodeFailure() {
 
 func (s *GraphTestSuite) TestToJSON() {
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
-		map[string]string{"key": "value"}, true, false)
+		map[string]interface{}{"key": "value"}, true, false)
 	node2, _ := s.factory.CreateNode("node-2", string(common.NodeTypeDecision),
-		map[string]string{}, false, true)
+		map[string]interface{}{}, false, true)
 
 	if execNode, ok := node1.(ExecutorBackedNodeInterface); ok {
 		execNode.SetExecutorName("test-executor")

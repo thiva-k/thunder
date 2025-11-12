@@ -454,19 +454,19 @@ func (_c *ExecutorBackedNodeInterfaceMock_GetPreviousNodeList_Call) RunAndReturn
 }
 
 // GetProperties provides a mock function for the type ExecutorBackedNodeInterfaceMock
-func (_mock *ExecutorBackedNodeInterfaceMock) GetProperties() map[string]string {
+func (_mock *ExecutorBackedNodeInterfaceMock) GetProperties() map[string]interface{} {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetProperties")
 	}
 
-	var r0 map[string]string
-	if returnFunc, ok := ret.Get(0).(func() map[string]string); ok {
+	var r0 map[string]interface{}
+	if returnFunc, ok := ret.Get(0).(func() map[string]interface{}); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]string)
+			r0 = ret.Get(0).(map[string]interface{})
 		}
 	}
 	return r0
@@ -489,12 +489,12 @@ func (_c *ExecutorBackedNodeInterfaceMock_GetProperties_Call) Run(run func()) *E
 	return _c
 }
 
-func (_c *ExecutorBackedNodeInterfaceMock_GetProperties_Call) Return(stringToString map[string]string) *ExecutorBackedNodeInterfaceMock_GetProperties_Call {
-	_c.Call.Return(stringToString)
+func (_c *ExecutorBackedNodeInterfaceMock_GetProperties_Call) Return(stringToIfaceVal map[string]interface{}) *ExecutorBackedNodeInterfaceMock_GetProperties_Call {
+	_c.Call.Return(stringToIfaceVal)
 	return _c
 }
 
-func (_c *ExecutorBackedNodeInterfaceMock_GetProperties_Call) RunAndReturn(run func() map[string]string) *ExecutorBackedNodeInterfaceMock_GetProperties_Call {
+func (_c *ExecutorBackedNodeInterfaceMock_GetProperties_Call) RunAndReturn(run func() map[string]interface{}) *ExecutorBackedNodeInterfaceMock_GetProperties_Call {
 	_c.Call.Return(run)
 	return _c
 }

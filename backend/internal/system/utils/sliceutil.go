@@ -69,6 +69,42 @@ func DeepCopyMapOfClonables[T ClonableInterface](src map[string]T) (map[string]T
 	return dst, nil
 }
 
+// DeepCopyMap creates a deep copy of a map with interface{} values.
+// It recursively copies nested maps and slices.
+func DeepCopyMap(src map[string]interface{}) map[string]interface{} {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]interface{}, len(src))
+	for k, v := range src {
+		dst[k] = deepCopyValue(v)
+	}
+	return dst
+}
+
+// deepCopyValue creates a deep copy of interface{} values.
+func deepCopyValue(v interface{}) interface{} {
+	if v == nil {
+		return nil
+	}
+
+	switch val := v.(type) {
+	case map[string]interface{}:
+		return DeepCopyMap(val)
+	case []interface{}:
+		copied := make([]interface{}, len(val))
+		for i, item := range val {
+			copied[i] = deepCopyValue(item)
+		}
+		return copied
+	case []string:
+		return append([]string(nil), val...)
+	default:
+		// For primitive types (string, int, float, bool, etc.), direct assignment is sufficient
+		return v
+	}
+}
+
 // MergeInterfaceMaps merges two maps of interface{} and returns the result.
 func MergeInterfaceMaps(dst, src map[string]interface{}) map[string]interface{} {
 	if dst == nil {

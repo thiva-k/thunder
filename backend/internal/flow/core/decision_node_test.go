@@ -35,7 +35,7 @@ func TestDecisionNodeTestSuite(t *testing.T) {
 }
 
 func (s *DecisionNodeTestSuite) TestNewDecisionNode() {
-	node := newDecisionNode("decision-1", map[string]string{"key": "value"}, true, false)
+	node := newDecisionNode("decision-1", map[string]interface{}{"key": "value"}, true, false)
 
 	s.NotNil(node)
 	s.Equal("decision-1", node.GetID())
@@ -56,7 +56,7 @@ func (s *DecisionNodeTestSuite) TestExecuteWithValidActionID() {
 
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			node := newDecisionNode("decision-1", map[string]string{}, false, false)
+			node := newDecisionNode("decision-1", map[string]interface{}{}, false, false)
 			node.AddNextNodeID("next-1")
 			node.AddNextNodeID("next-2")
 
@@ -72,7 +72,7 @@ func (s *DecisionNodeTestSuite) TestExecuteWithValidActionID() {
 }
 
 func (s *DecisionNodeTestSuite) TestExecuteWithInvalidActionID() {
-	node := newDecisionNode("decision-1", map[string]string{}, false, false)
+	node := newDecisionNode("decision-1", map[string]interface{}{}, false, false)
 	node.AddNextNodeID("next-1")
 	node.AddNextNodeID("next-2")
 
@@ -87,7 +87,7 @@ func (s *DecisionNodeTestSuite) TestExecuteWithInvalidActionID() {
 }
 
 func (s *DecisionNodeTestSuite) TestExecuteWithoutActionID() {
-	node := newDecisionNode("decision-1", map[string]string{}, false, false)
+	node := newDecisionNode("decision-1", map[string]interface{}{}, false, false)
 	node.AddNextNodeID("next-1")
 	node.AddNextNodeID("next-2")
 
@@ -111,7 +111,7 @@ func (s *DecisionNodeTestSuite) TestExecuteWithoutActionID() {
 }
 
 func (s *DecisionNodeTestSuite) TestExecuteNoNextNodesWithActionIDFailure() {
-	node := newDecisionNode("decision-1", map[string]string{}, false, false)
+	node := newDecisionNode("decision-1", map[string]interface{}{}, false, false)
 	ctx := &NodeContext{FlowID: "test-flow", CurrentActionID: "some-action"}
 
 	resp, err := node.Execute(ctx)
@@ -123,7 +123,7 @@ func (s *DecisionNodeTestSuite) TestExecuteNoNextNodesWithActionIDFailure() {
 }
 
 func (s *DecisionNodeTestSuite) TestExecuteNoNextNodesWithoutActionIDError() {
-	node := newDecisionNode("decision-1", map[string]string{}, false, false)
+	node := newDecisionNode("decision-1", map[string]interface{}{}, false, false)
 	ctx := &NodeContext{FlowID: "test-flow", CurrentActionID: ""}
 
 	resp, err := node.Execute(ctx)

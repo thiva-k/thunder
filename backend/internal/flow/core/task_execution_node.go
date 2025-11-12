@@ -37,7 +37,7 @@ type taskExecutionNode struct {
 var _ ExecutorBackedNodeInterface = (*taskExecutionNode)(nil)
 
 // newTaskExecutionNode creates a new TaskExecutionNode with the given details.
-func newTaskExecutionNode(id string, properties map[string]string, isStartNode bool,
+func newTaskExecutionNode(id string, properties map[string]interface{}, isStartNode bool,
 	isFinalNode bool) NodeInterface {
 	return &taskExecutionNode{
 		node: &node{
@@ -71,7 +71,7 @@ func (n *taskExecutionNode) Execute(ctx *NodeContext) (*common.NodeResponse, *se
 	if len(n.GetProperties()) > 0 {
 		ctx.NodeProperties = n.GetProperties()
 	} else {
-		ctx.NodeProperties = make(map[string]string)
+		ctx.NodeProperties = make(map[string]interface{})
 	}
 
 	execResp, svcErr := n.triggerExecutor(ctx, logger)
