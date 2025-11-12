@@ -17,6 +17,7 @@
  */
 
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 
 import type {ApiError, UserSchemaListParams, UserSchemaListResponse} from '../types/user-types';
 
@@ -26,6 +27,7 @@ import type {ApiError, UserSchemaListParams, UserSchemaListResponse} from '../ty
  * @returns Object containing data, loading state, error, and refetch function
  */
 export default function useGetUserTypes(params?: UserSchemaListParams) {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<UserSchemaListResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -56,27 +58,13 @@ export default function useGetUserTypes(params?: UserSchemaListParams) {
       const queryString = queryParams.toString();
       const url = `https://localhost:8090/user-schemas${queryString ? `?${queryString}` : ''}`;
 
-      const response = await fetch(url, {
+      const response = await http.request({
+        url,
+        method: 'GET',
         signal: abortControllerRef.current.signal,
-      });
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        let errorData: ApiError;
-        try {
-          errorData = (await response.json()) as ApiError;
-        } catch {
-          errorData = {
-            code: 'FETCH_USER_TYPES_ERROR',
-            message: `HTTP error! status: ${response.status}`,
-            description: await response.text(),
-          };
-        }
-        setError(errorData);
-        setData(null);
-        return;
-      }
-
-      const jsonData = (await response.json()) as UserSchemaListResponse;
+      const jsonData = response.data as UserSchemaListResponse;
       setData(jsonData);
       setError(null);
     } catch (err) {
@@ -95,7 +83,7 @@ export default function useGetUserTypes(params?: UserSchemaListParams) {
     } finally {
       setIsLoading(false);
     }
-  }, [params]);
+  }, [params, http]);
 
   useEffect(() => {
     (async () => {

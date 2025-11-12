@@ -17,6 +17,7 @@
  */
 
 import {useEffect, useRef, useState, useCallback} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 
 import type {ApiError, ApiUserSchema} from '../types/user-types';
 
@@ -27,6 +28,7 @@ import type {ApiError, ApiUserSchema} from '../types/user-types';
  * @returns Object containing data, loading state, error, and refetch function
  */
 export default function useGetUserType(id?: string) {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<ApiUserSchema | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,25 +42,12 @@ export default function useGetUserType(id?: string) {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`https://localhost:8090/user-schemas/${userTypeId}`);
+      const response = await http.request({
+        url: `https://localhost:8090/user-schemas/${userTypeId}`,
+        method: 'GET',
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        let errorData: ApiError;
-        try {
-          errorData = (await response.json()) as ApiError;
-        } catch {
-          errorData = {
-            code: 'FETCH_USER_TYPE_ERROR',
-            message: `HTTP error! status: ${response.status}`,
-            description: await response.text(),
-          };
-        }
-        setError(errorData);
-        setData(null);
-        throw new Error(errorData.message);
-      }
-
-      const jsonData = (await response.json()) as ApiUserSchema;
+      const jsonData = response.data as ApiUserSchema;
       setData(jsonData);
       setError(null);
     } catch (err) {
@@ -72,7 +61,7 @@ export default function useGetUserType(id?: string) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [http]);
 
   const refetch = useCallback(
     async (newId?: string) => {

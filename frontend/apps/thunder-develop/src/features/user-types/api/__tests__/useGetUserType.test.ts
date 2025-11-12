@@ -22,6 +22,16 @@ import {renderHook, waitFor} from '@testing-library/react';
 import useGetUserType from '../useGetUserType';
 import type {ApiUserSchema} from '../../types/user-types';
 
+// Mock useAsgardeo
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
+
 describe('useGetUserType', () => {
   const mockUserSchema: ApiUserSchema = {
     id: '123',
@@ -39,11 +49,11 @@ describe('useGetUserType', () => {
   };
 
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with default state when no id is provided', () => {
@@ -56,10 +66,7 @@ describe('useGetUserType', () => {
   });
 
   it('should fetch user type when id is provided', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result} = renderHook(() => useGetUserType('123'));
 
@@ -69,18 +76,17 @@ describe('useGetUserType', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('https://localhost:8090/user-schemas/123');
+    expect(mockHttpRequest).toHaveBeenCalledWith(expect.objectContaining({url: 'https://localhost:8090/user-schemas/123', method: 'GET'}));
   });
 
   it('should set loading state during fetch', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+    mockHttpRequest.mockImplementation(
       () =>
         new Promise((resolve) => {
           setTimeout(
             () =>
               resolve({
-                ok: true,
-                json: async () => mockUserSchema,
+                data: mockUserSchema,
               }),
             100,
           );
@@ -99,17 +105,7 @@ describe('useGetUserType', () => {
   });
 
   it('should handle API error with JSON response', async () => {
-    const apiErrorResponse = {
-      code: 'NOT_FOUND',
-      message: 'User type not found',
-      description: 'The specified user type does not exist',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: async () => apiErrorResponse,
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('User type not found'));
 
     const {result} = renderHook(() => useGetUserType('123'));
 
@@ -125,21 +121,14 @@ describe('useGetUserType', () => {
   });
 
   it('should handle API error without JSON response', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => {
-        throw new Error('Not JSON');
-      },
-      text: async () => 'Internal Server Error',
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('Internal Server Error'));
 
     const {result} = renderHook(() => useGetUserType('123'));
 
     await waitFor(() => {
       expect(result.current.error).toEqual({
         code: 'FETCH_USER_TYPE_ERROR',
-        message: 'HTTP error! status: 500',
+        message: 'Internal Server Error',
         description: 'Failed to fetch user type',
       });
       expect(result.current.data).toBeNull();
@@ -148,7 +137,7 @@ describe('useGetUserType', () => {
   });
 
   it('should handle network error', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValueOnce(new Error('Network error'));
 
     const {result} = renderHook(() => useGetUserType('123'));
 
@@ -164,10 +153,7 @@ describe('useGetUserType', () => {
   });
 
   it('should refetch when refetch is called', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result} = renderHook(() => useGetUserType('123'));
 
@@ -175,10 +161,10 @@ describe('useGetUserType', () => {
       expect(result.current.data).toEqual(mockUserSchema);
     });
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({...mockUserSchema, name: 'UpdatedUserType'}),
-    });
+    const callsBeforeRefetch = mockHttpRequest.mock.calls.length;
+    mockHttpRequest
+      .mockResolvedValueOnce({data: {...mockUserSchema, name: 'UpdatedUserType'}})
+      .mockResolvedValueOnce({data: {...mockUserSchema, name: 'UpdatedUserType'}});
 
     await result.current.refetch();
 
@@ -186,14 +172,11 @@ describe('useGetUserType', () => {
       expect(result.current.data).toEqual({...mockUserSchema, name: 'UpdatedUserType'});
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(mockHttpRequest.mock.calls.length).toBeGreaterThan(callsBeforeRefetch);
   });
 
   it('should refetch with new id when provided to refetch', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result} = renderHook(() => useGetUserType('123'));
 
@@ -203,10 +186,7 @@ describe('useGetUserType', () => {
 
     const newMockUserSchema = {...mockUserSchema, id: '456', name: 'NewUserType'};
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => newMockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: newMockUserSchema}).mockResolvedValueOnce({data: newMockUserSchema});
 
     await result.current.refetch('456');
 
@@ -214,7 +194,9 @@ describe('useGetUserType', () => {
       expect(result.current.data).toEqual(newMockUserSchema);
     });
 
-    expect(global.fetch).toHaveBeenCalledWith('https://localhost:8090/user-schemas/456');
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({url: 'https://localhost:8090/user-schemas/456', method: 'GET'}),
+    );
   });
 
   it('should not fetch if refetch is called without id when no id is provided', async () => {
@@ -222,14 +204,11 @@ describe('useGetUserType', () => {
 
     await result.current.refetch();
 
-    expect(global.fetch).not.toHaveBeenCalled();
+    expect(mockHttpRequest).not.toHaveBeenCalled();
   });
 
   it('should prevent double-fetch in React Strict Mode', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockUserSchema});
 
     const {result, rerender} = renderHook(() => useGetUserType('123'));
 
@@ -242,15 +221,12 @@ describe('useGetUserType', () => {
 
     await waitFor(() => {
       // Should only fetch once, not twice
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(mockHttpRequest).toHaveBeenCalledTimes(1);
     });
   });
 
   it('should fetch again when id changes', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result, rerender} = renderHook(({id}) => useGetUserType(id), {
       initialProps: {id: '123'},
@@ -262,10 +238,7 @@ describe('useGetUserType', () => {
 
     const newMockUserSchema = {...mockUserSchema, id: '456', name: 'NewUserType'};
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => newMockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: newMockUserSchema});
 
     rerender({id: '456'});
 
@@ -273,16 +246,19 @@ describe('useGetUserType', () => {
       expect(result.current.data).toEqual(newMockUserSchema);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(2);
-    expect(global.fetch).toHaveBeenNthCalledWith(1, 'https://localhost:8090/user-schemas/123');
-    expect(global.fetch).toHaveBeenNthCalledWith(2, 'https://localhost:8090/user-schemas/456');
+    expect(mockHttpRequest).toHaveBeenCalledTimes(2);
+    expect(mockHttpRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({url: 'https://localhost:8090/user-schemas/123', method: 'GET'}),
+    );
+    expect(mockHttpRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({url: 'https://localhost:8090/user-schemas/456', method: 'GET'}),
+    );
   });
 
   it('should clear data when id changes to undefined', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockUserSchema,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
 
     const {result, rerender} = renderHook(({id}) => useGetUserType(id), {
       initialProps: {id: '123' as string | undefined},

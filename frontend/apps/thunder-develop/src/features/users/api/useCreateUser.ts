@@ -17,6 +17,7 @@
  */
 
 import {useState, useCallback} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 import type {ApiError} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
@@ -46,6 +47,7 @@ export interface CreateUserResponse {
  * POST https://localhost:8090/users
  */
 export default function useCreateUser() {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<CreateUserResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -58,34 +60,16 @@ export default function useCreateUser() {
 
       const url = `${API_BASE_URL}/users`;
 
-      const response = await fetch(url, {
+      const response = await http.request({
+        url,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
-      });
+        data: userData,
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        // Handle error response
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const errorData = (await response.json()) as ApiError;
-          setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to create user');
-        } else {
-          const errorText = await response.text();
-          const apiError: ApiError = {
-            code: `HTTP_${response.status}`,
-            message: response.statusText,
-            description: errorText ?? 'Failed to create user',
-          };
-          setError(apiError);
-          throw new Error(apiError.message);
-        }
-      }
-
-      const result = (await response.json()) as CreateUserResponse;
+      const result = response.data as CreateUserResponse;
       setData(result);
 
       return result;
@@ -103,7 +87,7 @@ export default function useCreateUser() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [http]);
 
   const reset = useCallback(() => {
     setData(null);

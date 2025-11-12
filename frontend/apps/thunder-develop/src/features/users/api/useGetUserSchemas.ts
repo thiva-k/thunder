@@ -17,11 +17,13 @@
  */
 
 import {useState, useEffect, useCallback, useRef} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 import type {UserSchemaListResponse, SchemaListParams, ApiError} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
 
 export default function useGetUserSchemas(params?: SchemaListParams) {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<UserSchemaListResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,33 +52,16 @@ export default function useGetUserSchemas(params?: SchemaListParams) {
         const queryString = searchParams.toString();
         const url = `${API_BASE_URL}/user-schemas${queryString ? `?${queryString}` : ''}`;
 
-        const response = await fetch(url, {
+        const response = await http.request({
+          url,
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
           },
           signal: abortControllerRef.current.signal,
-        });
+        } as unknown as Parameters<typeof http.request>[0]);
 
-        if (!response.ok) {
-          const contentType = response.headers.get('content-type');
-          if (contentType?.includes('application/json')) {
-            const errorData = (await response.json()) as ApiError;
-            setError(errorData);
-            throw new Error(errorData.message ?? 'Failed to fetch user schemas');
-          } else {
-            const errorText = await response.text();
-            const apiError: ApiError = {
-              code: `HTTP_${response.status}`,
-              message: response.statusText,
-              description: errorText ?? 'Failed to fetch user schemas',
-            };
-            setError(apiError);
-            throw new Error(apiError.message);
-          }
-        }
-
-        const result = (await response.json()) as UserSchemaListResponse;
+        const result = response.data as UserSchemaListResponse;
         setData(result);
         return result;
       } catch (err) {
@@ -97,7 +82,7 @@ export default function useGetUserSchemas(params?: SchemaListParams) {
         setIsLoading(false);
       }
     },
-    [params],
+    [params, http],
   );
 
   useEffect(() => {

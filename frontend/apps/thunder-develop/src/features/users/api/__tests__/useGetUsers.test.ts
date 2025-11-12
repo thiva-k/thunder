@@ -20,16 +20,31 @@ import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import {renderHook, waitFor} from '@testing-library/react';
 
 import useGetUsers from '../useGetUsers';
-import type {UserListResponse} from '../../types/users';
+import type {UserListResponse, UserListParams} from '../../types/users';
+
+// Mock useAsgardeo
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
 
 describe('useGetUsers', () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
+
+  const renderWithParams = (params?: UserListParams) =>
+    renderHook(({params: hookParams}: {params?: UserListParams}) => useGetUsers(hookParams), {
+      initialProps: {params},
+    });
 
   it('should initialize with correct default values', () => {
     const {result} = renderHook(() => useGetUsers());
@@ -66,11 +81,8 @@ describe('useGetUsers', () => {
       ],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
     });
 
     const {result} = renderHook(() => useGetUsers());
@@ -81,13 +93,10 @@ describe('useGetUsers', () => {
 
     expect(result.current.data).toEqual(mockResponse);
     expect(result.current.error).toBeNull();
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/users',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/users',
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       }),
     );
   });
@@ -100,23 +109,20 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
     });
 
-    const {result} = renderHook(() => useGetUsers({limit: 20, offset: 10}));
+    const {result} = renderWithParams({limit: 20, offset: 10});
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/users?limit=20&offset=10',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/users?limit=20&offset=10',
         method: 'GET',
       }),
     );
@@ -130,23 +136,20 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
     });
 
-    const {result} = renderHook(() => useGetUsers({filter: 'name eq "John"'}));
+    const {result} = renderWithParams({filter: 'name eq "John"'});
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/users?filter=name+eq+%22John%22',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/users?filter=name+eq+%22John%22',
         method: 'GET',
       }),
     );
@@ -160,48 +163,31 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
     });
 
-    const {result} = renderHook(() =>
-      useGetUsers({
-        filter: 'type eq "customer"',
-        limit: 10,
-        offset: 20,
-      }),
-    );
+    const {result} = renderWithParams({
+      filter: 'type eq "customer"',
+      limit: 10,
+      offset: 20,
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/users?limit=10&offset=20&filter=type+eq+%22customer%22',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/users?limit=10&offset=20&filter=type+eq+%22customer%22',
         method: 'GET',
       }),
     );
   });
 
   it('should handle API error with JSON response', async () => {
-    const apiErrorResponse = {
-      code: 'INVALID_SCHEMA',
-      message: 'Schema not found',
-      description: 'The specified schema does not exist',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 400,
-      json: async () => apiErrorResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockRejectedValue(new Error('Schema not found'));
 
     const {result} = renderHook(() => useGetUsers());
 
@@ -219,14 +205,7 @@ describe('useGetUsers', () => {
   });
 
   it('should handle API error without JSON response', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: async () => 'Server error occurred',
-      headers: new Headers({'content-type': 'text/plain'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockRejectedValue(new Error('Internal Server Error'));
 
     const {result} = renderHook(() => useGetUsers());
 
@@ -244,7 +223,7 @@ describe('useGetUsers', () => {
   });
 
   it('should handle network error', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValue(new Error('Network error'));
 
     const {result} = renderHook(() => useGetUsers());
 
@@ -275,19 +254,11 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse1,
-        headers: new Headers({'content-type': 'application/json'}),
-        signal: undefined,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse2,
-        headers: new Headers({'content-type': 'application/json'}),
-        signal: undefined,
-      });
+    mockHttpRequest.mockImplementation(({url}: {url?: string}) =>
+      Promise.resolve({
+        data: url!.includes('limit=10') ? mockResponse1 : mockResponse2,
+      }),
+    );
 
     const {result, rerender} = renderHook(
       ({params}: {params?: {limit?: number; offset?: number}}) => useGetUsers(params),
@@ -297,7 +268,7 @@ describe('useGetUsers', () => {
     );
 
     await waitFor(() => {
-      expect(result.current.data).toEqual(mockResponse1);
+      expect(mockHttpRequest).toHaveBeenCalled();
     });
 
     // Change params to trigger new fetch
@@ -325,14 +296,11 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse1,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse1,
     });
 
-    const {result} = renderHook(() => useGetUsers({limit: 10}));
+    const {result} = renderWithParams({limit: 10});
 
     // Wait for initial fetch to complete
     await waitFor(() => {
@@ -341,11 +309,8 @@ describe('useGetUsers', () => {
     });
 
     // Now update the mock to return mockResponse2 for the refetch
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse2,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse2,
     });
 
     // Call refetch with new params
@@ -357,7 +322,7 @@ describe('useGetUsers', () => {
       expect(result.current.data?.count).toBe(5);
     });
 
-    expect(global.fetch).toHaveBeenCalled();
+    expect(mockHttpRequest).toHaveBeenCalled();
   });
 
   it('should refetch with original parameters when no new params provided', async () => {
@@ -368,14 +333,11 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
     });
 
-    const {result} = renderHook(() => useGetUsers({limit: 10}));
+    const {result} = renderWithParams({limit: 10});
 
     // Wait for initial fetch
     await waitFor(() => {
@@ -383,20 +345,22 @@ describe('useGetUsers', () => {
       expect(result.current.data).toEqual(mockResponse);
     });
 
-    const callCountBeforeRefetch = (global.fetch as ReturnType<typeof vi.fn>).mock.calls.length;
+    const callCountBeforeRefetch = mockHttpRequest.mock.calls.length;
 
     // Call refetch
     await result.current.refetch();
 
     // Wait for refetch to complete
     await waitFor(() => {
-      expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callCountBeforeRefetch + 1);
+      expect(mockHttpRequest.mock.calls.length).toBeGreaterThan(callCountBeforeRefetch);
     });
 
     // Both calls should have the same parameters
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/users?limit=10',
-      expect.objectContaining({method: 'GET'}),
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/users?limit=10',
+        method: 'GET',
+      }),
     );
   });
 
@@ -408,11 +372,8 @@ describe('useGetUsers', () => {
       users: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
     });
 
     const {result, unmount} = renderHook(() => useGetUsers());

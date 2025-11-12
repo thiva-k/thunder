@@ -17,6 +17,7 @@
  */
 
 import {useState, useEffect, useCallback, useRef} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 import type {ApiUserSchema, ApiError} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
@@ -26,6 +27,7 @@ const API_BASE_URL = 'https://localhost:8090';
  * GET https://localhost:8090/user-schemas/{id}
  */
 export default function useGetUserSchema(id?: string) {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<ApiUserSchema | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,33 +41,15 @@ export default function useGetUserSchema(id?: string) {
 
       const url = `${API_BASE_URL}/user-schemas/${schemaId}`;
 
-      const response = await fetch(url, {
+      const response = await http.request({
+        url,
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-      });
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        // Handle error response
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const errorData = (await response.json()) as ApiError;
-          setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to fetch user schema');
-        } else {
-          const errorText = await response.text();
-          const apiError: ApiError = {
-            code: `HTTP_${response.status}`,
-            message: response.statusText,
-            description: errorText ?? 'Failed to fetch user schema',
-          };
-          setError(apiError);
-          throw new Error(apiError.message);
-        }
-      }
-
-      const result = (await response.json()) as ApiUserSchema;
+      const result = response.data as ApiUserSchema;
       setData(result);
 
       return result;
@@ -81,7 +65,7 @@ export default function useGetUserSchema(id?: string) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [http]);
 
   useEffect(() => {
     if (!id) {

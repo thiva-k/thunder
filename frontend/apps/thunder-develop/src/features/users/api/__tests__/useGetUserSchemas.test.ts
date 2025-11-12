@@ -22,13 +22,23 @@ import {renderHook, waitFor} from '@testing-library/react';
 import useGetUserSchemas from '../useGetUserSchemas';
 import type {UserSchemaListResponse} from '../../types/users';
 
+// Mock useAsgardeo
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
+
 describe('useGetUserSchemas', () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with correct default values', () => {
@@ -56,12 +66,7 @@ describe('useGetUserSchemas', () => {
       ],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas());
 
@@ -71,13 +76,10 @@ describe('useGetUserSchemas', () => {
 
     expect(result.current.data).toEqual(mockResponse);
     expect(result.current.error).toBeNull();
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/user-schemas',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas',
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
       }),
     );
   });
@@ -90,12 +92,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas({limit: 20, offset: 10}));
 
@@ -104,9 +101,9 @@ describe('useGetUserSchemas', () => {
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/user-schemas?limit=20&offset=10',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas?limit=20&offset=10',
         method: 'GET',
       }),
     );
@@ -120,12 +117,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas({limit: 10}));
 
@@ -134,9 +126,9 @@ describe('useGetUserSchemas', () => {
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/user-schemas?limit=10',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas?limit=10',
         method: 'GET',
       }),
     );
@@ -150,12 +142,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas({offset: 20}));
 
@@ -164,28 +151,16 @@ describe('useGetUserSchemas', () => {
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/user-schemas?offset=20',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas?offset=20',
         method: 'GET',
       }),
     );
   });
 
   it('should handle API error with JSON response', async () => {
-    const apiErrorResponse = {
-      code: 'UNAUTHORIZED',
-      message: 'Unauthorized access',
-      description: 'You do not have permission to access this resource',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 401,
-      json: async () => apiErrorResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockRejectedValue(new Error('Unauthorized access'));
 
     const {result} = renderHook(() => useGetUserSchemas());
 
@@ -193,23 +168,16 @@ describe('useGetUserSchemas', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toEqual({
-      code: 'FETCH_ERROR',
-      message: 'Unauthorized access',
-      description: 'An error occurred while fetching user schemas',
-    });
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Unauthorized access',
+        description: 'An error occurred while fetching user schemas',
+      });
     expect(result.current.data).toBeNull();
   });
 
   it('should handle API error without JSON response', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: async () => 'Server error occurred',
-      headers: new Headers({'content-type': 'text/plain'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockRejectedValue(new Error('Internal Server Error'));
 
     const {result} = renderHook(() => useGetUserSchemas());
 
@@ -217,16 +185,16 @@ describe('useGetUserSchemas', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.error).toEqual({
-      code: 'FETCH_ERROR',
-      message: 'Internal Server Error',
-      description: 'An error occurred while fetching user schemas',
-    });
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Internal Server Error',
+        description: 'An error occurred while fetching user schemas',
+      });
     expect(result.current.data).toBeNull();
   });
 
   it('should handle network error', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValue(new Error('Network error'));
 
     const {result} = renderHook(() => useGetUserSchemas());
 
@@ -253,12 +221,9 @@ describe('useGetUserSchemas', () => {
     const abortError = new Error('Aborted');
     abortError.name = 'AbortError';
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(abortError).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse2,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockImplementation(({url}: {url?: string}) =>
+      url!.includes('limit=10') ? Promise.reject(abortError) : Promise.resolve({data: mockResponse2}),
+    );
 
     const {result, rerender} = renderHook(
       ({params}: {params?: {limit?: number; offset?: number}}) => useGetUserSchemas(params),
@@ -295,12 +260,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse1,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse1});
 
     const {result} = renderHook(() => useGetUserSchemas({limit: 10}));
 
@@ -311,12 +271,7 @@ describe('useGetUserSchemas', () => {
     });
 
     // Now update the mock to return mockResponse2 for the refetch
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse2,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse2});
 
     // Call refetch with new parameters
     await result.current.refetch({limit: 5});
@@ -327,7 +282,7 @@ describe('useGetUserSchemas', () => {
       expect(result.current.data?.count).toBe(5);
     });
 
-    expect(global.fetch).toHaveBeenCalled();
+    expect(mockHttpRequest).toHaveBeenCalled();
   });
 
   it('should refetch with original parameters when no new params provided', async () => {
@@ -338,12 +293,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas({limit: 10}));
 
@@ -355,25 +305,22 @@ describe('useGetUserSchemas', () => {
 
     // Clear mock calls from initial fetch
     vi.clearAllMocks();
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     // Call refetch without parameters
     await result.current.refetch();
 
     // Wait for refetch to complete
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(mockHttpRequest).toHaveBeenCalledTimes(1);
     });
 
     // Should use the same parameters as initial call
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/user-schemas?limit=10',
-      expect.objectContaining({method: 'GET'}),
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas?limit=10',
+        method: 'GET',
+      }),
     );
   });
 
@@ -385,12 +332,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result, unmount} = renderHook(() => useGetUserSchemas());
 
@@ -413,12 +355,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas());
 
@@ -439,12 +376,7 @@ describe('useGetUserSchemas', () => {
       schemas: [],
     };
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      json: async () => mockResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-      signal: undefined,
-    });
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
 
     const {result} = renderHook(() => useGetUserSchemas({limit: 50, offset: 900}));
 
@@ -453,9 +385,9 @@ describe('useGetUserSchemas', () => {
     });
 
     expect(result.current.data).toEqual(mockResponse);
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://localhost:8090/user-schemas?limit=50&offset=900',
+    expect(mockHttpRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas?limit=50&offset=900',
         method: 'GET',
       }),
     );

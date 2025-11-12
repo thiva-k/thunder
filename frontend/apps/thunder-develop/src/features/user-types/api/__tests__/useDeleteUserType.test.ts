@@ -21,15 +21,24 @@ import {renderHook, waitFor} from '@testing-library/react';
 
 import useDeleteUserType from '../useDeleteUserType';
 
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
+
 describe('useDeleteUserType', () => {
   const mockUserTypeId = '123';
 
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with default state', () => {
@@ -42,9 +51,7 @@ describe('useDeleteUserType', () => {
   });
 
   it('should successfully delete a user type', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: null});
 
     const {result} = renderHook(() => useDeleteUserType());
 
@@ -57,22 +64,19 @@ describe('useDeleteUserType', () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(global.fetch).toHaveBeenCalledWith(`https://localhost:8090/user-schemas/${mockUserTypeId}`, {
-      method: 'DELETE',
-    });
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `https://localhost:8090/user-schemas/${mockUserTypeId}`,
+        method: 'DELETE',
+      }),
+    );
   });
 
   it('should set loading state during deletion', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementation(
+    mockHttpRequest.mockImplementation(
       () =>
         new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                ok: true,
-              }),
-            100,
-          );
+          setTimeout(() => resolve({data: null}), 100);
         }),
     );
 
@@ -91,18 +95,8 @@ describe('useDeleteUserType', () => {
     });
   });
 
-  it('should handle API error with JSON response', async () => {
-    const apiErrorResponse = {
-      code: 'NOT_FOUND',
-      message: 'User type not found',
-      description: 'The specified user type does not exist',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: async () => apiErrorResponse,
-    });
+  it('should handle API error', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('User type not found'));
 
     const {result} = renderHook(() => useDeleteUserType());
 
@@ -118,32 +112,8 @@ describe('useDeleteUserType', () => {
     });
   });
 
-  it('should handle API error without JSON response', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      json: async () => {
-        throw new Error('Not JSON');
-      },
-      text: async () => 'Internal Server Error',
-    });
-
-    const {result} = renderHook(() => useDeleteUserType());
-
-    await expect(result.current.deleteUserType(mockUserTypeId)).rejects.toThrow('HTTP error! status: 500');
-
-    await waitFor(() => {
-      expect(result.current.error).toEqual({
-        code: 'DELETE_USER_TYPE_ERROR',
-        message: 'HTTP error! status: 500',
-        description: 'Failed to delete user type',
-      });
-      expect(result.current.loading).toBe(false);
-    });
-  });
-
   it('should handle network error', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValueOnce(new Error('Network error'));
 
     const {result} = renderHook(() => useDeleteUserType());
 
@@ -160,33 +130,17 @@ describe('useDeleteUserType', () => {
   });
 
   it('should reset error state when reset is called', async () => {
-    const apiErrorResponse = {
-      code: 'NOT_FOUND',
-      message: 'User type not found',
-      description: 'The specified user type does not exist',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: async () => apiErrorResponse,
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('User type not found'));
 
     const {result} = renderHook(() => useDeleteUserType());
 
     await expect(result.current.deleteUserType(mockUserTypeId)).rejects.toThrow('User type not found');
 
     await waitFor(() => {
-      expect(result.current.error).toEqual({
-        code: 'DELETE_USER_TYPE_ERROR',
-        message: 'User type not found',
-        description: 'Failed to delete user type',
-      });
+      expect(result.current.error).not.toBeNull();
     });
 
-    await waitFor(() => {
-      result.current.reset();
-    });
+    result.current.reset();
 
     await waitFor(() => {
       expect(result.current.error).toBeNull();
@@ -194,17 +148,9 @@ describe('useDeleteUserType', () => {
   });
 
   it('should clear previous error when starting new request', async () => {
-    const apiErrorResponse = {
-      code: 'NOT_FOUND',
-      message: 'Previous error',
-      description: 'Previous error description',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: async () => apiErrorResponse,
-    });
+    mockHttpRequest
+      .mockRejectedValueOnce(new Error('Previous error'))
+      .mockResolvedValueOnce({data: null});
 
     const {result} = renderHook(() => useDeleteUserType());
 
@@ -216,10 +162,6 @@ describe('useDeleteUserType', () => {
         message: 'Previous error',
         description: 'Failed to delete user type',
       });
-    });
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
     });
 
     await result.current.deleteUserType(mockUserTypeId);

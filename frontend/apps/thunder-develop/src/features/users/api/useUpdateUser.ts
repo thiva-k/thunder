@@ -17,6 +17,7 @@
  */
 
 import {useState, useCallback} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 import type {ApiError, ApiUser} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
@@ -37,6 +38,7 @@ export interface UpdateUserRequest {
  * PUT https://localhost:8090/users/{userId}
  */
 export default function useUpdateUser() {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<ApiUser | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,34 +51,16 @@ export default function useUpdateUser() {
 
       const url = `${API_BASE_URL}/users/${userId}`;
 
-      const response = await fetch(url, {
+      const response = await http.request({
+        url,
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(userData),
-      });
+        data: userData,
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        // Handle error response
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const errorData = (await response.json()) as ApiError;
-          setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to update user');
-        } else {
-          const errorText = await response.text();
-          const apiError: ApiError = {
-            code: `HTTP_${response.status}`,
-            message: response.statusText,
-            description: errorText ?? 'Failed to update user',
-          };
-          setError(apiError);
-          throw new Error(apiError.message);
-        }
-      }
-
-      const result = (await response.json()) as ApiUser;
+      const result = response.data as ApiUser;
       setData(result);
 
       return result;
@@ -94,7 +78,7 @@ export default function useUpdateUser() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [http]);
 
   const reset = useCallback(() => {
     setData(null);

@@ -17,6 +17,7 @@
  */
 
 import {useState, useCallback} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 import type {ApiError} from '../types/users';
 
 const API_BASE_URL = 'https://localhost:8090';
@@ -26,6 +27,7 @@ const API_BASE_URL = 'https://localhost:8090';
  * DELETE https://localhost:8090/users/{userId}
  */
 export default function useDeleteUser() {
+  const {http} = useAsgardeo();
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,31 +38,13 @@ export default function useDeleteUser() {
 
       const url = `${API_BASE_URL}/users/${userId}`;
 
-      const response = await fetch(url, {
+      await http.request({
+        url,
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-      });
-
-      if (!response.ok) {
-        // Handle error response
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          const errorData = (await response.json()) as ApiError;
-          setError(errorData);
-          throw new Error(errorData.message ?? 'Failed to delete user');
-        } else {
-          const errorText = await response.text();
-          const apiError: ApiError = {
-            code: `HTTP_${response.status}`,
-            message: response.statusText,
-            description: errorText ?? 'Failed to delete user',
-          };
-          setError(apiError);
-          throw new Error(apiError.message);
-        }
-      }
+      } as unknown as Parameters<typeof http.request>[0]);
 
       // 204 No Content - successful deletion
       return true;
@@ -78,7 +62,7 @@ export default function useDeleteUser() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [http]);
 
   const reset = useCallback(() => {
     setError(null);

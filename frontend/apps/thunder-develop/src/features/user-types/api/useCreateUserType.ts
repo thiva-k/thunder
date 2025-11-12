@@ -17,6 +17,7 @@
  */
 
 import {useState} from 'react';
+import {useAsgardeo} from '@asgardeo/react';
 
 import type {ApiError, ApiUserSchema, CreateUserSchemaRequest} from '../types/user-types';
 
@@ -25,6 +26,7 @@ import type {ApiError, ApiUserSchema, CreateUserSchemaRequest} from '../types/us
  * @returns Object containing createUserType function, data, loading state, error, and reset function
  */
 export default function useCreateUserType() {
+  const {http} = useAsgardeo();
   const [data, setData] = useState<ApiUserSchema | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -35,30 +37,16 @@ export default function useCreateUserType() {
       setError(null);
       setData(null);
 
-      const response = await fetch('https://localhost:8090/user-schemas', {
+      const response = await http.request({
+        url: 'https://localhost:8090/user-schemas',
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestData),
-      });
+        data: requestData,
+      } as unknown as Parameters<typeof http.request>[0]);
 
-      if (!response.ok) {
-        let errorData: ApiError;
-        try {
-          errorData = (await response.json()) as ApiError;
-        } catch {
-          errorData = {
-            code: 'CREATE_USER_TYPE_ERROR',
-            message: `HTTP error! status: ${response.status}`,
-            description: await response.text(),
-          };
-        }
-        setError(errorData);
-        throw new Error(errorData.message);
-      }
-
-      const jsonData = (await response.json()) as ApiUserSchema;
+      const jsonData = response.data as ApiUserSchema;
       setData(jsonData);
       setError(null);
     } catch (err) {

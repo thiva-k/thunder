@@ -21,13 +21,23 @@ import {renderHook, waitFor} from '@testing-library/react';
 
 import useDeleteUser from '../useDeleteUser';
 
+// Mock useAsgardeo
+const mockHttpRequest = vi.fn();
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: () => ({
+    http: {
+      request: mockHttpRequest,
+    },
+  }),
+}));
+
 describe('useDeleteUser', () => {
   beforeEach(() => {
-    global.fetch = vi.fn();
+    mockHttpRequest.mockReset();
   });
 
   afterEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should initialize with correct default values', () => {
@@ -39,10 +49,7 @@ describe('useDeleteUser', () => {
   });
 
   it('should delete a user successfully', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: true,
-      status: 204,
-    });
+    mockHttpRequest.mockResolvedValueOnce({data: null});
 
     const {result} = renderHook(() => useDeleteUser());
 
@@ -54,27 +61,16 @@ describe('useDeleteUser', () => {
 
     expect(deleteResult).toBe(true);
     expect(result.current.error).toBeNull();
-    expect(global.fetch).toHaveBeenCalledWith('https://localhost:8090/users/user-123', {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/users/user-123',
+        method: 'DELETE',
+      }),
+    );
   });
 
   it('should handle API error with JSON response', async () => {
-    const apiErrorResponse = {
-      code: 'NOT_FOUND',
-      message: 'User not found',
-      description: 'The user with the given ID does not exist',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      json: async () => apiErrorResponse,
-      headers: new Headers({'content-type': 'application/json'}),
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('User not found'));
 
     const {result} = renderHook(() => useDeleteUser());
 
@@ -95,13 +91,7 @@ describe('useDeleteUser', () => {
   });
 
   it('should handle API error without JSON response', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
-      ok: false,
-      status: 500,
-      statusText: 'Internal Server Error',
-      text: async () => 'Server error occurred',
-      headers: new Headers({'content-type': 'text/plain'}),
-    });
+    mockHttpRequest.mockRejectedValueOnce(new Error('Internal Server Error'));
 
     const {result} = renderHook(() => useDeleteUser());
 
@@ -122,7 +112,7 @@ describe('useDeleteUser', () => {
   });
 
   it('should handle network error', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Network error'));
+    mockHttpRequest.mockRejectedValueOnce(new Error('Network error'));
 
     const {result} = renderHook(() => useDeleteUser());
 
@@ -148,11 +138,8 @@ describe('useDeleteUser', () => {
       resolveRequest = resolve;
     });
 
-    (global.fetch as ReturnType<typeof vi.fn>).mockImplementationOnce(() =>
-      requestPromise.then(() => ({
-        ok: true,
-        status: 204,
-      })),
+    mockHttpRequest.mockImplementationOnce(() =>
+      requestPromise.then(() => ({data: null})),
     );
 
     const {result} = renderHook(() => useDeleteUser());
@@ -172,23 +159,9 @@ describe('useDeleteUser', () => {
   });
 
   it('should clear previous error on new delete attempt', async () => {
-    const apiErrorResponse = {
-      code: 'NOT_FOUND',
-      message: 'User not found',
-      description: 'The user with the given ID does not exist',
-    };
-
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 404,
-        json: async () => apiErrorResponse,
-        headers: new Headers({'content-type': 'application/json'}),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 204,
-      });
+    mockHttpRequest
+      .mockRejectedValueOnce(new Error('User not found'))
+      .mockResolvedValueOnce({data: null});
 
     const {result} = renderHook(() => useDeleteUser());
 
@@ -214,15 +187,9 @@ describe('useDeleteUser', () => {
   });
 
   it('should handle multiple delete operations', async () => {
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 204,
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 204,
-      });
+    mockHttpRequest
+      .mockResolvedValueOnce({data: null})
+      .mockResolvedValueOnce({data: null});
 
     const {result} = renderHook(() => useDeleteUser());
 
@@ -238,6 +205,6 @@ describe('useDeleteUser', () => {
     });
     expect(deleteResult2).toBe(true);
 
-    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(mockHttpRequest).toHaveBeenCalledTimes(2);
   });
 });
