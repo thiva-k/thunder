@@ -95,6 +95,7 @@ export default function ConfigProvider({children}: ConfigProviderProps) {
       getServerPort: () => config.server.port,
       isHttpOnly: () => config.server.http_only,
       getClientId: () => config.client.client_id,
+      getScopes: () => config.client.scopes ?? [],
       getClientUrl: () => {
         const {hostname, port, http_only: httpOnly, base} = config.client;
 

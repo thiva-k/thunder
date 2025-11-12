@@ -63,6 +63,12 @@ export interface ConfigContextType {
   getClientId: () => string;
 
   /**
+   * Gets the OAuth2/OIDC scopes from the configuration
+   * @returns The scopes array (e.g., ["openid", "profile", "email", "system"])
+   */
+  getScopes: () => string[];
+
+  /**
    * Gets the complete client URL including protocol, hostname, port, and base path
    * @returns The full client URL (e.g., "https://localhost:8090/develop")
    */
