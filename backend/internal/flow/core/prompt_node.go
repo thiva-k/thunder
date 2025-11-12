@@ -32,7 +32,7 @@ type promptOnlyNode struct {
 }
 
 // newPromptOnlyNode creates a new PromptOnlyNode with the given details.
-func newPromptOnlyNode(id string, properties map[string]string, isStartNode bool, isFinalNode bool) NodeInterface {
+func newPromptOnlyNode(id string, properties map[string]interface{}, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &promptOnlyNode{
 		node: &node{
 			id:               id,

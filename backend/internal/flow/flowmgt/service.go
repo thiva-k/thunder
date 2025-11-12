@@ -415,7 +415,7 @@ func (s *flowMgtService) createProvisioningNode() (core.NodeInterface, error) {
 	provisioningNode, err := s.flowFactory.CreateNode(
 		"provisioning",
 		string(common.NodeTypeTaskExecution),
-		map[string]string{},
+		map[string]interface{}{},
 		false,
 		false,
 	)

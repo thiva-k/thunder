@@ -32,7 +32,7 @@ type decisionNode struct {
 }
 
 // newDecisionNode creates a new DecisionNode with the given details.
-func newDecisionNode(id string, properties map[string]string, isStartNode bool, isFinalNode bool) NodeInterface {
+func newDecisionNode(id string, properties map[string]interface{}, isStartNode bool, isFinalNode bool) NodeInterface {
 	return &decisionNode{
 		node: &node{
 			id:               id,

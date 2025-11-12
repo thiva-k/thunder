@@ -72,7 +72,7 @@ func (suite *OAuthExecutorTestSuite) TestExecute_CodeNotProvided_BuildsAuthorize
 		FlowType:      flowcm.FlowTypeAuthentication,
 		UserInputData: map[string]string{},
 		NodeInputData: []flowcm.InputData{{Name: "code", Type: "string", Required: true}},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -101,7 +101,7 @@ func (suite *OAuthExecutorTestSuite) TestExecute_CodeProvided_AuthenticatesUser(
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -147,7 +147,7 @@ func (suite *OAuthExecutorTestSuite) TestBuildAuthorizeFlow_Success() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -176,7 +176,7 @@ func (suite *OAuthExecutorTestSuite) TestBuildAuthorizeFlow_IDPNotConfigured() {
 	ctx := &flowcore.NodeContext{
 		FlowID:         "flow-123",
 		FlowType:       flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{},
+		NodeProperties: map[string]interface{}{},
 	}
 
 	execResp := &flowcm.ExecutorResponse{
@@ -194,7 +194,7 @@ func (suite *OAuthExecutorTestSuite) TestBuildAuthorizeFlow_BuildURLClientError(
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -222,7 +222,7 @@ func (suite *OAuthExecutorTestSuite) TestBuildAuthorizeFlow_BuildURLServerError(
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -250,7 +250,7 @@ func (suite *OAuthExecutorTestSuite) TestExchangeCodeForToken_Success() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -287,7 +287,7 @@ func (suite *OAuthExecutorTestSuite) TestExchangeCodeForToken_ClientError() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -316,7 +316,7 @@ func (suite *OAuthExecutorTestSuite) TestExchangeCodeForToken_ServerError() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -345,7 +345,7 @@ func (suite *OAuthExecutorTestSuite) TestGetUserInfo_Success() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -378,7 +378,7 @@ func (suite *OAuthExecutorTestSuite) TestGetUserInfo_ClientError() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -407,7 +407,7 @@ func (suite *OAuthExecutorTestSuite) TestGetUserInfo_ServerError() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -436,7 +436,7 @@ func (suite *OAuthExecutorTestSuite) TestGetIdpID_Success() {
 	ctx := &flowcore.NodeContext{
 		FlowID:   "flow-123",
 		FlowType: flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -451,7 +451,7 @@ func (suite *OAuthExecutorTestSuite) TestGetIdpID_NotConfigured() {
 	ctx := &flowcore.NodeContext{
 		FlowID:         "flow-123",
 		FlowType:       flowcm.FlowTypeAuthentication,
-		NodeProperties: map[string]string{},
+		NodeProperties: map[string]interface{}{},
 	}
 
 	idpID, err := suite.executor.GetIdpID(ctx)
@@ -468,7 +468,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_RegistrationFlo
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -518,7 +518,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNo
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -565,7 +565,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_UserAlreadyExis
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -612,7 +612,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_NoCodeProvided(
 		FlowID:        "flow-123",
 		FlowType:      flowcm.FlowTypeAuthentication,
 		UserInputData: map[string]string{},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -636,7 +636,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_EmptyScope() {
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -671,7 +671,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_NoSubClaim() {
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}

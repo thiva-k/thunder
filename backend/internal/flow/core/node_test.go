@@ -111,7 +111,7 @@ func (s *NodeTestSuite) TestNextAndPreviousNodeListBehavior() {
 }
 
 func (s *NodeTestSuite) TestInputDataAndProperties() {
-	props := map[string]string{"k": "v"}
+	props := map[string]interface{}{"k": "v"}
 	node := newTaskExecutionNode("t1", props, false, false)
 
 	s.Equal(props, node.GetProperties())

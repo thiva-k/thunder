@@ -292,7 +292,7 @@ func (_c *FlowFactoryInterfaceMock_CreateGraph_Call) RunAndReturn(run func(id st
 }
 
 // CreateNode provides a mock function for the type FlowFactoryInterfaceMock
-func (_mock *FlowFactoryInterfaceMock) CreateNode(id string, _type string, properties map[string]string, isStartNode bool, isFinalNode bool) (core.NodeInterface, error) {
+func (_mock *FlowFactoryInterfaceMock) CreateNode(id string, _type string, properties map[string]interface{}, isStartNode bool, isFinalNode bool) (core.NodeInterface, error) {
 	ret := _mock.Called(id, _type, properties, isStartNode, isFinalNode)
 
 	if len(ret) == 0 {
@@ -301,17 +301,17 @@ func (_mock *FlowFactoryInterfaceMock) CreateNode(id string, _type string, prope
 
 	var r0 core.NodeInterface
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string, map[string]string, bool, bool) (core.NodeInterface, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, map[string]interface{}, bool, bool) (core.NodeInterface, error)); ok {
 		return returnFunc(id, _type, properties, isStartNode, isFinalNode)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string, map[string]string, bool, bool) core.NodeInterface); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string, map[string]interface{}, bool, bool) core.NodeInterface); ok {
 		r0 = returnFunc(id, _type, properties, isStartNode, isFinalNode)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(core.NodeInterface)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, string, map[string]string, bool, bool) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, string, map[string]interface{}, bool, bool) error); ok {
 		r1 = returnFunc(id, _type, properties, isStartNode, isFinalNode)
 	} else {
 		r1 = ret.Error(1)
@@ -327,14 +327,14 @@ type FlowFactoryInterfaceMock_CreateNode_Call struct {
 // CreateNode is a helper method to define mock.On call
 //   - id string
 //   - _type string
-//   - properties map[string]string
+//   - properties map[string]interface{}
 //   - isStartNode bool
 //   - isFinalNode bool
 func (_e *FlowFactoryInterfaceMock_Expecter) CreateNode(id interface{}, _type interface{}, properties interface{}, isStartNode interface{}, isFinalNode interface{}) *FlowFactoryInterfaceMock_CreateNode_Call {
 	return &FlowFactoryInterfaceMock_CreateNode_Call{Call: _e.mock.On("CreateNode", id, _type, properties, isStartNode, isFinalNode)}
 }
 
-func (_c *FlowFactoryInterfaceMock_CreateNode_Call) Run(run func(id string, _type string, properties map[string]string, isStartNode bool, isFinalNode bool)) *FlowFactoryInterfaceMock_CreateNode_Call {
+func (_c *FlowFactoryInterfaceMock_CreateNode_Call) Run(run func(id string, _type string, properties map[string]interface{}, isStartNode bool, isFinalNode bool)) *FlowFactoryInterfaceMock_CreateNode_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -344,9 +344,9 @@ func (_c *FlowFactoryInterfaceMock_CreateNode_Call) Run(run func(id string, _typ
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 map[string]string
+		var arg2 map[string]interface{}
 		if args[2] != nil {
-			arg2 = args[2].(map[string]string)
+			arg2 = args[2].(map[string]interface{})
 		}
 		var arg3 bool
 		if args[3] != nil {
@@ -372,7 +372,7 @@ func (_c *FlowFactoryInterfaceMock_CreateNode_Call) Return(nodeInterface core.No
 	return _c
 }
 
-func (_c *FlowFactoryInterfaceMock_CreateNode_Call) RunAndReturn(run func(id string, _type string, properties map[string]string, isStartNode bool, isFinalNode bool) (core.NodeInterface, error)) *FlowFactoryInterfaceMock_CreateNode_Call {
+func (_c *FlowFactoryInterfaceMock_CreateNode_Call) RunAndReturn(run func(id string, _type string, properties map[string]interface{}, isStartNode bool, isFinalNode bool) (core.NodeInterface, error)) *FlowFactoryInterfaceMock_CreateNode_Call {
 	_c.Call.Return(run)
 	return _c
 }

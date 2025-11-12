@@ -72,7 +72,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestExecute_CodeNotProvided_BuildsAuthor
 		FlowType:      flowcm.FlowTypeAuthentication,
 		UserInputData: map[string]string{},
 		NodeInputData: []flowcm.InputData{{Name: "code", Type: "string", Required: true}},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -101,7 +101,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestExecute_CodeProvided_ValidIDToken_Au
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -161,7 +161,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_ValidIDToken
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -221,7 +221,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_InvalidNonce
 			"code":  "auth_code_123",
 			"nonce": "expected_nonce_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -264,7 +264,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_NoSubClaim()
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -307,7 +307,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_Registration
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -363,7 +363,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_Use
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -410,7 +410,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_UserAlreadyE
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -527,7 +527,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_WithAddition
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -592,7 +592,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_NoCodeProvid
 		FlowID:        "flow-123",
 		FlowType:      flowcm.FlowTypeAuthentication,
 		UserInputData: map[string]string{},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}
@@ -616,7 +616,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_FiltersNonUs
 		UserInputData: map[string]string{
 			"code": "auth_code_123",
 		},
-		NodeProperties: map[string]string{
+		NodeProperties: map[string]interface{}{
 			"idpId": "idp-123",
 		},
 	}

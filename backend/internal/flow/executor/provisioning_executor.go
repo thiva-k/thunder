@@ -299,7 +299,9 @@ func (p *provisioningExecutor) getOuID(ctx *flowcore.NodeContext) string {
 	if ouID == "" {
 		if len(ctx.NodeProperties) > 0 {
 			if val, ok := ctx.NodeProperties["ouId"]; ok {
-				ouID = val
+				if valStr, valid := val.(string); valid && valStr != "" {
+					ouID = valStr
+				}
 			}
 		}
 	}
@@ -316,7 +318,9 @@ func (p *provisioningExecutor) getUserType(ctx *flowcore.NodeContext) string {
 	if userType == "" {
 		if len(ctx.NodeProperties) > 0 {
 			if val, ok := ctx.NodeProperties["userType"]; ok {
-				userType = val
+				if valStr, valid := val.(string); valid && valStr != "" {
+					userType = valStr
+				}
 			}
 		}
 	}

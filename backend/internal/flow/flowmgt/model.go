@@ -27,12 +27,12 @@ type graphDefinition struct {
 
 // nodeDefinition represents a node in the graph definition
 type nodeDefinition struct {
-	ID         string             `json:"id"`
-	Type       string             `json:"type"`
-	Properties map[string]string  `json:"properties,omitempty"`
-	InputData  []inputDefinition  `json:"inputData"`
-	Executor   executorDefinition `json:"executor"`
-	Next       []string           `json:"next,omitempty"`
+	ID         string                 `json:"id"`
+	Type       string                 `json:"type"`
+	Properties map[string]interface{} `json:"properties,omitempty"`
+	InputData  []inputDefinition      `json:"inputData"`
+	Executor   executorDefinition     `json:"executor"`
+	Next       []string               `json:"next,omitempty"`
 }
 
 // inputDefinition represents an input parameter for a node

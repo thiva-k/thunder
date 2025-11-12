@@ -28,7 +28,7 @@ import (
 
 // FlowFactoryInterface defines the interface for creating flow graph components.
 type FlowFactoryInterface interface {
-	CreateNode(id, _type string, properties map[string]string, isStartNode, isFinalNode bool) (
+	CreateNode(id, _type string, properties map[string]interface{}, isStartNode, isFinalNode bool) (
 		NodeInterface, error)
 	CreateGraph(id string, _type common.FlowType) GraphInterface
 	CreateExecutor(name string, executorType common.ExecutorType,
@@ -45,7 +45,7 @@ func newFlowFactory() FlowFactoryInterface {
 }
 
 // CreateNode creates a new node based on the provided type and properties
-func (f *flowFactory) CreateNode(id, _type string, properties map[string]string,
+func (f *flowFactory) CreateNode(id, _type string, properties map[string]interface{},
 	isStartNode, isFinalNode bool) (NodeInterface, error) {
 	var nodeType common.NodeType
 	if _type == "" {
@@ -54,7 +54,7 @@ func (f *flowFactory) CreateNode(id, _type string, properties map[string]string,
 		nodeType = common.NodeType(_type)
 	}
 	if properties == nil {
-		properties = make(map[string]string)
+		properties = make(map[string]interface{})
 	}
 
 	switch nodeType {
@@ -101,11 +101,11 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 	}
 
 	// Deep copy properties
-	var propertiesCopy map[string]string
+	var propertiesCopy map[string]interface{}
 	if source.GetProperties() != nil {
-		propertiesCopy = sysutils.DeepCopyMapOfStrings(source.GetProperties())
+		propertiesCopy = sysutils.DeepCopyMap(source.GetProperties())
 	} else {
-		propertiesCopy = make(map[string]string)
+		propertiesCopy = make(map[string]interface{})
 	}
 
 	// Create new node
