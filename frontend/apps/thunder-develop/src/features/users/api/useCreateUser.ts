@@ -16,11 +16,10 @@
  * under the License.
  */
 
-import {useState, useCallback} from 'react';
+import {useState, useMemo} from 'react';
 import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 import type {ApiError} from '../types/users';
-
-const API_BASE_URL = 'https://localhost:8090';
 
 /**
  * Request body for creating a new user
@@ -43,25 +42,29 @@ export interface CreateUserResponse {
 }
 
 /**
- * Hook to create a new user
- * POST https://localhost:8090/users
+ * Custom hook to create a new user
+ * @returns Object containing createUser function, data, loading state, error, and reset function
  */
 export default function useCreateUser() {
   const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<CreateUserResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const createUser = useCallback(async (userData: CreateUserRequest) => {
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
+
+  const createUser = async (userData: CreateUserRequest): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
       setData(null);
 
-      const url = `${API_BASE_URL}/users`;
-
       const response = await http.request({
-        url,
+        url: `${API_BASE_URL}/users`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,30 +72,26 @@ export default function useCreateUser() {
         data: userData,
       } as unknown as Parameters<typeof http.request>[0]);
 
-      const result = response.data as CreateUserResponse;
-      setData(result);
-
-      return result;
+      const jsonData = response.data as CreateUserResponse;
+      setData(jsonData);
+      setError(null);
     } catch (err) {
-      if (err instanceof Error) {
-        const apiError: ApiError = {
-          code: 'CREATE_USER_ERROR',
-          message: err.message,
-          description: 'An error occurred while creating the user',
-        };
-        setError(apiError);
-        throw err;
-      }
+      const apiError: ApiError = {
+        code: 'CREATE_USER_ERROR',
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: 'Failed to create user',
+      };
+      setError(apiError);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [http]);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setData(null);
     setError(null);
-  }, []);
+  };
 
   return {
     createUser,

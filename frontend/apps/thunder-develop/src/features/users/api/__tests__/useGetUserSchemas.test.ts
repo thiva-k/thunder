@@ -32,6 +32,13 @@ vi.mock('@asgardeo/react', () => ({
   }),
 }));
 
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useGetUserSchemas', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
@@ -168,11 +175,11 @@ describe('useGetUserSchemas', () => {
       expect(result.current.loading).toBe(false);
     });
 
-      expect(result.current.error).toEqual({
-        code: 'FETCH_ERROR',
-        message: 'Unauthorized access',
-        description: 'An error occurred while fetching user schemas',
-      });
+    expect(result.current.error).toEqual({
+      code: 'FETCH_ERROR',
+      message: 'Unauthorized access',
+      description: 'Failed to fetch user schemas',
+    });
     expect(result.current.data).toBeNull();
   });
 
@@ -185,11 +192,12 @@ describe('useGetUserSchemas', () => {
       expect(result.current.loading).toBe(false);
     });
 
-      expect(result.current.error).toEqual({
-        code: 'FETCH_ERROR',
-        message: 'Internal Server Error',
-        description: 'An error occurred while fetching user schemas',
-      });
+    expect(result.current.error).toEqual({
+      code: 'FETCH_ERROR',
+      message: 'Internal Server Error',
+      description: 'Failed to fetch user schemas',
+    });
+
     expect(result.current.data).toBeNull();
   });
 
@@ -205,7 +213,7 @@ describe('useGetUserSchemas', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'Network error',
-      description: 'An error occurred while fetching user schemas',
+      description: 'Failed to fetch user schemas',
     });
     expect(result.current.data).toBeNull();
   });

@@ -16,57 +16,57 @@
  * under the License.
  */
 
-import {useState, useCallback} from 'react';
+import {useState, useMemo} from 'react';
 import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 import type {ApiError} from '../types/users';
 
-const API_BASE_URL = 'https://localhost:8090';
-
 /**
- * Hook to delete a user by ID
- * DELETE https://localhost:8090/users/{userId}
+ * Custom hook to delete a user by ID
+ * @returns Object containing deleteUser function, loading state, error, and reset function
  */
 export default function useDeleteUser() {
   const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const deleteUser = useCallback(async (userId: string) => {
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
+
+  const deleteUser = async (userId: string): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
 
-      const url = `${API_BASE_URL}/users/${userId}`;
-
       await http.request({
-        url,
+        url: `${API_BASE_URL}/users/${userId}`,
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
       } as unknown as Parameters<typeof http.request>[0]);
 
-      // 204 No Content - successful deletion
+      setError(null);
       return true;
     } catch (err) {
-      if (err instanceof Error) {
-        const apiError: ApiError = {
-          code: 'DELETE_USER_ERROR',
-          message: err.message,
-          description: 'An error occurred while deleting the user',
-        };
-        setError(apiError);
-        throw err;
-      }
+      const apiError: ApiError = {
+        code: 'DELETE_USER_ERROR',
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: 'Failed to delete user',
+      };
+      setError(apiError);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [http]);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setError(null);
-  }, []);
+  };
 
   return {
     deleteUser,

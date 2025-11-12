@@ -251,7 +251,7 @@ export default function UserTypesList() {
         open={snackbarOpen}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{vertical: 'top', horizontal: 'right'}}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
       >
         <Alert onClose={handleCloseSnackbar} severity="error" sx={{width: '100%'}}>
           {error?.message ?? t('common:messages.saveError')}

@@ -16,11 +16,10 @@
  * under the License.
  */
 
-import {useState, useCallback} from 'react';
+import {useState, useMemo} from 'react';
 import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 import type {ApiError, ApiUser} from '../types/users';
-
-const API_BASE_URL = 'https://localhost:8090';
 
 /**
  * Request body for updating a user
@@ -34,25 +33,29 @@ export interface UpdateUserRequest {
 }
 
 /**
- * Hook to update an existing user
- * PUT https://localhost:8090/users/{userId}
+ * Custom hook to update an existing user
+ * @returns Object containing updateUser function, data, loading state, error, and reset function
  */
 export default function useUpdateUser() {
   const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<ApiUser | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const updateUser = useCallback(async (userId: string, userData: UpdateUserRequest) => {
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
+
+  const updateUser = async (userId: string, userData: UpdateUserRequest): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
       setData(null);
 
-      const url = `${API_BASE_URL}/users/${userId}`;
-
       const response = await http.request({
-        url,
+        url: `${API_BASE_URL}/users/${userId}`,
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -60,30 +63,26 @@ export default function useUpdateUser() {
         data: userData,
       } as unknown as Parameters<typeof http.request>[0]);
 
-      const result = response.data as ApiUser;
-      setData(result);
-
-      return result;
+      const jsonData = response.data as ApiUser;
+      setData(jsonData);
+      setError(null);
     } catch (err) {
-      if (err instanceof Error) {
-        const apiError: ApiError = {
-          code: 'UPDATE_USER_ERROR',
-          message: err.message,
-          description: 'An error occurred while updating the user',
-        };
-        setError(apiError);
-        throw err;
-      }
+      const apiError: ApiError = {
+        code: 'UPDATE_USER_ERROR',
+        message: err instanceof Error ? err.message : 'An unknown error occurred',
+        description: 'Failed to update user',
+      };
+      setError(apiError);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [http]);
+  };
 
-  const reset = useCallback(() => {
+  const reset = () => {
     setData(null);
     setError(null);
-  }, []);
+  };
 
   return {
     updateUser,

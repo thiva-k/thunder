@@ -32,6 +32,13 @@ vi.mock('@asgardeo/react', () => ({
   }),
 }));
 
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useGetUser', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
@@ -100,7 +107,7 @@ describe('useGetUser', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'User not found',
-      description: 'An error occurred while fetching user',
+      description: 'Failed to fetch user',
     });
     expect(result.current.data).toBeNull();
   });
@@ -117,7 +124,7 @@ describe('useGetUser', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'Internal Server Error',
-      description: 'An error occurred while fetching user',
+      description: 'Failed to fetch user',
     });
     expect(result.current.data).toBeNull();
   });
@@ -134,7 +141,7 @@ describe('useGetUser', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'Network error',
-      description: 'An error occurred while fetching user',
+      description: 'Failed to fetch user',
     });
     expect(result.current.data).toBeNull();
   });

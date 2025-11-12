@@ -16,9 +16,9 @@
  * under the License.
  */
 
-import {useState} from 'react';
+import {useState, useMemo} from 'react';
 import {useAsgardeo} from '@asgardeo/react';
-
+import {useConfig} from '@thunder/commons-contexts';
 import type {ApiError, ApiUserSchema, CreateUserSchemaRequest} from '../types/user-types';
 
 /**
@@ -27,9 +27,15 @@ import type {ApiError, ApiUserSchema, CreateUserSchemaRequest} from '../types/us
  */
 export default function useCreateUserType() {
   const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<ApiUserSchema | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
 
   const createUserType = async (requestData: CreateUserSchemaRequest): Promise<void> => {
     try {
@@ -38,7 +44,7 @@ export default function useCreateUserType() {
       setData(null);
 
       const response = await http.request({
-        url: 'https://localhost:8090/user-schemas',
+        url: `${API_BASE_URL}/user-schemas`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -32,6 +32,13 @@ vi.mock('@asgardeo/react', () => ({
   }),
 }));
 
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useGetUserSchema', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
@@ -105,7 +112,7 @@ describe('useGetUserSchema', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'Schema not found',
-      description: 'An error occurred while fetching user schema',
+      description: 'Failed to fetch user schema',
     });
     expect(result.current.data).toBeNull();
   });
@@ -122,7 +129,7 @@ describe('useGetUserSchema', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'Internal Server Error',
-      description: 'An error occurred while fetching user schema',
+      description: 'Failed to fetch user schema',
     });
     expect(result.current.data).toBeNull();
   });
@@ -139,7 +146,7 @@ describe('useGetUserSchema', () => {
     expect(result.current.error).toEqual({
       code: 'FETCH_ERROR',
       message: 'Network error',
-      description: 'An error occurred while fetching user schema',
+      description: 'Failed to fetch user schema',
     });
     expect(result.current.data).toBeNull();
   });
@@ -164,7 +171,7 @@ describe('useGetUserSchema', () => {
       expect(result.current.data).toEqual(mockSchema);
     });
 
-    result.current.refetch();
+    await result.current.refetch();
 
     await waitFor(() => {
       expect(mockHttpRequest).toHaveBeenCalledTimes(2);
@@ -194,9 +201,7 @@ describe('useGetUserSchema', () => {
       },
     };
 
-    mockHttpRequest
-      .mockResolvedValueOnce({data: mockSchema1})
-      .mockResolvedValueOnce({data: mockSchema2});
+    mockHttpRequest.mockResolvedValueOnce({data: mockSchema1}).mockResolvedValueOnce({data: mockSchema2});
 
     const {result} = renderHook(() => useGetUserSchema('schema-123'));
 
@@ -204,7 +209,7 @@ describe('useGetUserSchema', () => {
       expect(result.current.data).toEqual(mockSchema1);
     });
 
-    result.current.refetch('schema-456');
+    await result.current.refetch('schema-456');
 
     await waitFor(() => {
       expect(result.current.data).toEqual(mockSchema2);
@@ -214,7 +219,7 @@ describe('useGetUserSchema', () => {
   it('should set error when refetch is called without id', async () => {
     const {result} = renderHook(() => useGetUserSchema());
 
-    result.current.refetch();
+    await result.current.refetch();
 
     await waitFor(() => {
       expect(result.current.error).toEqual({
@@ -272,9 +277,7 @@ describe('useGetUserSchema', () => {
       },
     };
 
-    mockHttpRequest
-      .mockResolvedValueOnce({data: mockSchema1})
-      .mockResolvedValueOnce({data: mockSchema2});
+    mockHttpRequest.mockResolvedValueOnce({data: mockSchema1}).mockResolvedValueOnce({data: mockSchema2});
 
     const {result, rerender} = renderHook(({id}: {id?: string}) => useGetUserSchema(id), {
       initialProps: {id: 'schema-123'},

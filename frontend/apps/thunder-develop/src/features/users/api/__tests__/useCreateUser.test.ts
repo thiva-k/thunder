@@ -32,6 +32,13 @@ vi.mock('@asgardeo/react', () => ({
   }),
 }));
 
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useCreateUser', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
@@ -113,7 +120,7 @@ describe('useCreateUser', () => {
       expect(result.current.error).toEqual({
         code: 'CREATE_USER_ERROR',
         message: 'Validation failed',
-        description: 'An error occurred while creating the user',
+        description: 'Failed to create user',
       });
       expect(result.current.data).toBeNull();
     });
@@ -144,7 +151,7 @@ describe('useCreateUser', () => {
       expect(result.current.error).toEqual({
         code: 'CREATE_USER_ERROR',
         message: 'Internal Server Error',
-        description: 'An error occurred while creating the user',
+        description: 'Failed to create user',
       });
       expect(result.current.data).toBeNull();
     });
@@ -171,7 +178,7 @@ describe('useCreateUser', () => {
       expect(result.current.error).toEqual({
         code: 'CREATE_USER_ERROR',
         message: 'Network error',
-        description: 'An error occurred while creating the user',
+        description: 'Failed to create user',
       });
     });
   });

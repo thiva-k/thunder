@@ -31,6 +31,13 @@ vi.mock('@asgardeo/react', () => ({
   }),
 }));
 
+// Mock useConfig
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: () => ({
+    getServerUrl: () => 'https://localhost:8090',
+  }),
+}));
+
 describe('useDeleteUser', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
@@ -85,7 +92,7 @@ describe('useDeleteUser', () => {
       expect(result.current.error).toEqual({
         code: 'DELETE_USER_ERROR',
         message: 'User not found',
-        description: 'An error occurred while deleting the user',
+        description: 'Failed to delete user',
       });
     });
   });
@@ -106,7 +113,7 @@ describe('useDeleteUser', () => {
       expect(result.current.error).toEqual({
         code: 'DELETE_USER_ERROR',
         message: 'Internal Server Error',
-        description: 'An error occurred while deleting the user',
+        description: 'Failed to delete user',
       });
     });
   });
@@ -127,7 +134,7 @@ describe('useDeleteUser', () => {
       expect(result.current.error).toEqual({
         code: 'DELETE_USER_ERROR',
         message: 'Network error',
-        description: 'An error occurred while deleting the user',
+        description: 'Failed to delete user',
       });
     });
   });
@@ -175,7 +182,7 @@ describe('useDeleteUser', () => {
       expect(result.current.error).toEqual({
         code: 'DELETE_USER_ERROR',
         message: 'User not found',
-        description: 'An error occurred while deleting the user',
+        description: 'Failed to delete user',
       });
     });
 

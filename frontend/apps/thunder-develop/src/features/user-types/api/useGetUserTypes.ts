@@ -16,8 +16,9 @@
  * under the License.
  */
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useEffect, useRef, useState, useMemo} from 'react';
 import {useAsgardeo} from '@asgardeo/react';
+import {useConfig} from '@thunder/commons-contexts';
 
 import type {ApiError, UserSchemaListParams, UserSchemaListResponse} from '../types/user-types';
 
@@ -28,18 +29,81 @@ import type {ApiError, UserSchemaListParams, UserSchemaListResponse} from '../ty
  */
 export default function useGetUserTypes(params?: UserSchemaListParams) {
   const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
   const [data, setData] = useState<UserSchemaListResponse | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchUserTypes = useCallback(async () => {
-    // Cancel previous request if it exists
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+  const API_BASE_URL: string = useMemo(
+    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
+    [getServerUrl],
+  );
 
-    // Create new abort controller for this request
+  useEffect(() => {
+    // Cancel previous request if it exists
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = new AbortController();
+
+    const fetchUserTypes = async (): Promise<void> => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        if (params?.limit !== undefined) {
+          queryParams.append('limit', params.limit.toString());
+        }
+        if (params?.offset !== undefined) {
+          queryParams.append('offset', params.offset.toString());
+        }
+
+        const queryString = queryParams.toString();
+        const url = `${API_BASE_URL}/user-schemas${queryString ? `?${queryString}` : ''}`;
+
+        const response = await http.request({
+          url,
+          method: 'GET',
+          signal: abortControllerRef.current?.signal,
+        } as unknown as Parameters<typeof http.request>[0]);
+
+        const jsonData = response.data as UserSchemaListResponse;
+        setData(jsonData);
+        setError(null);
+      } catch (err) {
+        // Don't set error if request was aborted
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+
+        const apiError: ApiError = {
+          code: 'FETCH_USER_TYPES_ERROR',
+          message: err instanceof Error ? err.message : 'An unknown error occurred',
+          description: 'Failed to fetch user types',
+        };
+        setError(apiError);
+        setData(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserTypes().catch(() => {
+      // TODO: Log the errors
+      // Tracker: https://github.com/asgardeo/thunder/issues/618
+    });
+
+    // Cleanup: abort request on unmount
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
+
+  const refetch = async (newParams?: UserSchemaListParams): Promise<void> => {
+    // Cancel previous request
+    abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
     setIsLoading(true);
@@ -48,15 +112,17 @@ export default function useGetUserTypes(params?: UserSchemaListParams) {
     try {
       // Build query parameters
       const queryParams = new URLSearchParams();
-      if (params?.limit !== undefined) {
-        queryParams.append('limit', params.limit.toString());
+      const finalParams = newParams ?? params;
+
+      if (finalParams?.limit !== undefined) {
+        queryParams.append('limit', finalParams.limit.toString());
       }
-      if (params?.offset !== undefined) {
-        queryParams.append('offset', params.offset.toString());
+      if (finalParams?.offset !== undefined) {
+        queryParams.append('offset', finalParams.offset.toString());
       }
 
       const queryString = queryParams.toString();
-      const url = `https://localhost:8090/user-schemas${queryString ? `?${queryString}` : ''}`;
+      const url = `${API_BASE_URL}/user-schemas${queryString ? `?${queryString}` : ''}`;
 
       const response = await http.request({
         url,
@@ -80,31 +146,16 @@ export default function useGetUserTypes(params?: UserSchemaListParams) {
       };
       setError(apiError);
       setData(null);
+      throw err;
     } finally {
       setIsLoading(false);
     }
-  }, [params, http]);
-
-  useEffect(() => {
-    (async () => {
-      await fetchUserTypes();
-    })().catch(() => {
-      // TODO: Log the errors
-      // Tracker: https://github.com/asgardeo/thunder/issues/618
-    });
-
-    // Cleanup: abort request on unmount
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchUserTypes]);
+  };
 
   return {
     data,
     loading: isLoading,
     error,
-    refetch: fetchUserTypes,
+    refetch,
   };
 }

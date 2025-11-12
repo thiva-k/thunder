@@ -21,6 +21,7 @@ import type {ReactElement, ReactNode} from 'react';
 import {render, type RenderOptions} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
 import OxygenUIThemeProvider from '@wso2/oxygen-ui/OxygenUIThemeProvider';
+import {ConfigProvider} from '@thunder/commons-contexts';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -28,9 +29,28 @@ interface ProvidersProps {
 
 // Wrapper component with common providers
 function Providers({children}: ProvidersProps) {
+  // Setup window.__THUNDER_RUNTIME_CONFIG__ for tests
+  // eslint-disable-next-line no-underscore-dangle
+  if (typeof window !== 'undefined' && !window.__THUNDER_RUNTIME_CONFIG__) {
+    // eslint-disable-next-line no-underscore-dangle
+    window.__THUNDER_RUNTIME_CONFIG__ = {
+      client: {
+        base: '/develop',
+        client_id: 'DEVELOP',
+      },
+      server: {
+        hostname: 'localhost',
+        port: 8090,
+        http_only: false,
+      },
+    };
+  }
+
   return (
     <MemoryRouter>
-      <OxygenUIThemeProvider>{children}</OxygenUIThemeProvider>
+      <ConfigProvider>
+        <OxygenUIThemeProvider>{children}</OxygenUIThemeProvider>
+      </ConfigProvider>
     </MemoryRouter>
   );
 }
