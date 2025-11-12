@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers"
 	"github.com/asgardeo/thunder/internal/oauth/scope"
 	"github.com/asgardeo/thunder/internal/system/middleware"
@@ -35,16 +36,30 @@ func Initialize(
 	scopeValidator scope.ScopeValidatorInterface,
 ) TokenHandlerInterface {
 	tokenHandler := newTokenHandler(appService, grantHandlerProvider, scopeValidator)
-	registerRoutes(mux, tokenHandler)
+	registerRoutes(mux, tokenHandler, appService)
 	return tokenHandler
 }
 
 // registerRoutes registers the routes for the TokenService.
-func registerRoutes(mux *http.ServeMux, tokenHandler TokenHandlerInterface) {
-	opts := middleware.CORSOptions{
+func registerRoutes(
+	mux *http.ServeMux,
+	tokenHandler TokenHandlerInterface,
+	appService application.ApplicationServiceInterface,
+) {
+	corsOpts := middleware.CORSOptions{
 		AllowedMethods:   "POST",
 		AllowedHeaders:   "Content-Type, Authorization",
 		AllowCredentials: true,
 	}
-	mux.HandleFunc(middleware.WithCORS("POST /oauth2/token", tokenHandler.HandleTokenRequest, opts))
+
+	clientAuthMiddleware := clientauth.ClientAuthMiddleware(appService)
+	handler := clientAuthMiddleware(http.HandlerFunc(tokenHandler.HandleTokenRequest))
+
+	pattern, wrappedHandler := middleware.WithCORS(
+		"POST /oauth2/token",
+		handler.ServeHTTP,
+		corsOpts,
+	)
+
+	mux.HandleFunc(pattern, wrappedHandler)
 }

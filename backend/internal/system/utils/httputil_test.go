@@ -20,7 +20,6 @@ package utils
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -37,74 +36,6 @@ type HTTPUtilTestSuite struct {
 
 func TestHTTPUtilSuite(t *testing.T) {
 	suite.Run(t, new(HTTPUtilTestSuite))
-}
-
-func (suite *HTTPUtilTestSuite) TestExtractBasicAuthCredentials() {
-	testCases := []struct {
-		name           string
-		authHeader     string
-		expectedUser   string
-		expectedPass   string
-		expectedErrMsg string
-	}{
-		{
-			name:           "ValidBasicAuth",
-			authHeader:     "Basic " + base64.StdEncoding.EncodeToString([]byte("user:pass")),
-			expectedUser:   "user",
-			expectedPass:   "pass",
-			expectedErrMsg: "",
-		},
-		{
-			name:           "MissingBasicPrefix",
-			authHeader:     base64.StdEncoding.EncodeToString([]byte("user:pass")),
-			expectedUser:   "",
-			expectedPass:   "",
-			expectedErrMsg: "invalid authorization header",
-		},
-		{
-			name:           "InvalidBase64",
-			authHeader:     "Basic invalid-base64",
-			expectedUser:   "",
-			expectedPass:   "",
-			expectedErrMsg: "failed to decode authorization header",
-		},
-		{
-			name:           "NoColonSeparator",
-			authHeader:     "Basic " + base64.StdEncoding.EncodeToString([]byte("userpass")),
-			expectedUser:   "",
-			expectedPass:   "",
-			expectedErrMsg: "invalid authorization header format",
-		},
-		{
-			name:           "EmptyHeader",
-			authHeader:     "",
-			expectedUser:   "",
-			expectedPass:   "",
-			expectedErrMsg: "invalid authorization header",
-		},
-	}
-
-	for _, tc := range testCases {
-		suite.T().Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			if tc.authHeader != "" {
-				req.Header.Set("Authorization", tc.authHeader)
-			}
-
-			user, pass, err := ExtractBasicAuthCredentials(req)
-
-			if tc.expectedErrMsg != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedErrMsg)
-				assert.Empty(t, user)
-				assert.Empty(t, pass)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tc.expectedUser, user)
-				assert.Equal(t, tc.expectedPass, pass)
-			}
-		})
-	}
 }
 
 func (suite *HTTPUtilTestSuite) TestWriteJSONError() {

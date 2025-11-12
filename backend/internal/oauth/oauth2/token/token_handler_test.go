@@ -19,6 +19,7 @@
 package token
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +31,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	applicationmodel "github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
@@ -115,6 +117,21 @@ func (suite *TokenHandlerTestSuite) testTokenRequestError(formData url.Values,
 	req, _ := http.NewRequest("POST", "/token", strings.NewReader(formData.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
+	// Set up OAuth client in context (simulating middleware)
+	mockApp := &applicationmodel.OAuthAppConfigProcessedDTO{
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+	}
+	clientInfo := &clientauth.OAuthClientInfo{
+		ClientID:     "test-client-id",
+		ClientSecret: "test-secret",
+		OAuthApp:     mockApp,
+	}
+	ctx := context.WithValue(req.Context(), clientauth.OAuthClientKey, clientInfo)
+	req = req.WithContext(ctx)
+
 	rr := httptest.NewRecorder()
 
 	handler.HandleTokenRequest(rr, req)
@@ -139,28 +156,9 @@ func (suite *TokenHandlerTestSuite) TestHandleTokenRequest_InvalidGrantType() {
 }
 
 func (suite *TokenHandlerTestSuite) TestHandleTokenRequest_MissingClientID() {
-	formData := url.Values{}
-	formData.Set("grant_type", "authorization_code")
-	formData.Set("client_secret", "test-secret")
-
-	suite.testTokenRequestError(formData, http.StatusUnauthorized, "invalid_client",
-		"Missing client_id parameter")
-}
-
-func (suite *TokenHandlerTestSuite) TestHandleTokenRequest_MissingClientSecret() {
 	handler := newTokenHandler(suite.mockAppService, suite.mockGrantProvider, suite.mockScopeValidator)
 	formData := url.Values{}
 	formData.Set("grant_type", "authorization_code")
-	formData.Set("client_id", "test-client-id")
-
-	// Mock GetOAuthApplication to return a valid app that requires client_secret_post
-	mockApp := &applicationmodel.OAuthAppConfigProcessedDTO{
-		ClientID:                "test-client-id",
-		HashedClientSecret:      "hashed-secret",
-		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
-		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
-	}
-	suite.mockAppService.On("GetOAuthApplication", "test-client-id").Return(mockApp, nil).Once()
 
 	req, _ := http.NewRequest("POST", "/token", strings.NewReader(formData.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -169,58 +167,11 @@ func (suite *TokenHandlerTestSuite) TestHandleTokenRequest_MissingClientSecret()
 
 	handler.HandleTokenRequest(rr, req)
 
-	assert.Equal(suite.T(), http.StatusUnauthorized, rr.Code)
+	// Handler should return server error when context is missing
+	assert.Equal(suite.T(), http.StatusInternalServerError, rr.Code)
 
 	var response map[string]interface{}
 	err := json.Unmarshal(rr.Body.Bytes(), &response)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), "invalid_client", response["error"])
-	// The error message should mention client_secret or be about missing credentials
-	assert.Contains(suite.T(), response["error_description"], "client_secret")
-}
-
-func (suite *TokenHandlerTestSuite) TestHandleTokenRequest_InvalidClient() {
-	// Mock GetOAuthApplication to return nil for invalid client
-	suite.mockAppService.On("GetOAuthApplication", "invalid-client").Return(nil, nil).Once()
-
-	formData := url.Values{}
-	formData.Set("grant_type", "authorization_code")
-	formData.Set("client_id", "invalid-client")
-	formData.Set("client_secret", "test-secret")
-
-	suite.testTokenRequestError(formData, http.StatusUnauthorized, "invalid_client", "Invalid client credentials")
-}
-
-// Helper functions tested independently
-func (suite *TokenHandlerTestSuite) TestExtractClientIDAndSecret_Success() {
-	formData := url.Values{}
-	formData.Set("client_id", "test-client")
-	formData.Set("client_secret", "test-secret")
-
-	req, _ := http.NewRequest("POST", "/token", strings.NewReader(formData.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	_ = req.ParseForm()
-
-	rr := httptest.NewRecorder()
-
-	clientID, clientSecret, authMethod, ok := extractClientIDAndSecret(req, rr)
-
-	assert.True(suite.T(), ok)
-	assert.Equal(suite.T(), "test-client", clientID)
-	assert.Equal(suite.T(), "test-secret", clientSecret)
-	assert.Equal(suite.T(), "client_secret_post", string(authMethod))
-}
-
-func (suite *TokenHandlerTestSuite) TestExtractClientIDAndSecret_NoClientID() {
-	req, _ := http.NewRequest("POST", "/token", nil)
-	_ = req.ParseForm()
-
-	rr := httptest.NewRecorder()
-
-	clientID, clientSecret, _, ok := extractClientIDAndSecret(req, rr)
-
-	assert.False(suite.T(), ok)
-	assert.Equal(suite.T(), "", clientID)
-	assert.Equal(suite.T(), "", clientSecret)
-	// Don't test auth method when extraction fails
+	assert.Equal(suite.T(), "server_error", response["error"])
 }

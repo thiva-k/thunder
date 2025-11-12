@@ -19,11 +19,13 @@
 package model
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"net/url"
 	"slices"
 
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 )
@@ -130,6 +132,18 @@ func (o *OAuthAppConfigProcessedDTO) ValidateRedirectURI(redirectURI string) err
 // RequiresPKCE checks if PKCE is required for this application.
 func (o *OAuthAppConfigProcessedDTO) RequiresPKCE() bool {
 	return o.PKCERequired || o.PublicClient
+}
+
+// ValidateCredentials validates the provided client ID and client secret against the stored values.
+func (o *OAuthAppConfigProcessedDTO) ValidateCredentials(clientID, clientSecret string) bool {
+	// Validate client ID
+	if clientID != o.ClientID {
+		return false
+	}
+
+	// Hash the provided client secret and compare with stored hashed secret using constant-time comparison
+	hashedClientSecret := hash.GenerateThumbprintFromString(clientSecret)
+	return subtle.ConstantTimeCompare([]byte(hashedClientSecret), []byte(o.HashedClientSecret)) == 1
 }
 
 // isAllowedGrantType checks if the provided grant type is in the allowed list.
