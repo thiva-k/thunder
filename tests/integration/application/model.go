@@ -35,6 +35,7 @@ type Application struct {
 	TosURI                    string              `json:"tos_uri,omitempty"`
 	PolicyURI                 string              `json:"policy_uri,omitempty"`
 	Contacts                  []string            `json:"contacts,omitempty"`
+	AllowedUserTypes          []string            `json:"allowed_user_types,omitempty"`
 	InboundAuthConfig         []InboundAuthConfig `json:"inbound_auth_config,omitempty"`
 }
 
@@ -138,6 +139,11 @@ func (app *Application) equals(expectedApp Application) bool {
 
 	// Contacts
 	if !compareStringSlices(app.Contacts, expectedApp.Contacts) {
+		return false
+	}
+
+	// AllowedUserTypes
+	if !compareStringSlices(app.AllowedUserTypes, expectedApp.AllowedUserTypes) {
 		return false
 	}
 

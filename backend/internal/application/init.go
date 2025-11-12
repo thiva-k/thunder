@@ -29,13 +29,18 @@ import (
 	filebasedruntime "github.com/asgardeo/thunder/internal/system/file_based_runtime"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/middleware"
+	"github.com/asgardeo/thunder/internal/userschema"
 
 	"gopkg.in/yaml.v3"
 )
 
 // Initialize initializes the application service and registers its routes.
-func Initialize(mux *http.ServeMux, certService cert.CertificateServiceInterface,
-	flowMgtService flowmgt.FlowMgtServiceInterface) ApplicationServiceInterface {
+func Initialize(
+	mux *http.ServeMux,
+	certService cert.CertificateServiceInterface,
+	flowMgtService flowmgt.FlowMgtServiceInterface,
+	userSchemaService userschema.UserSchemaServiceInterface,
+) ApplicationServiceInterface {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationInit"))
 	var appStore applicationStoreInterface
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
@@ -45,7 +50,7 @@ func Initialize(mux *http.ServeMux, certService cert.CertificateServiceInterface
 		appStore = newCachedBackedApplicationStore(store)
 	}
 
-	appService := newApplicationService(appStore, certService, flowMgtService)
+	appService := newApplicationService(appStore, certService, flowMgtService, userSchemaService)
 
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
 		configs, err := filebasedruntime.GetConfigs("applications")
@@ -92,6 +97,7 @@ func parseToApplicationDTO(data []byte) (*model.ApplicationDTO, error) {
 		LogoURL:                   appRequest.LogoURL,
 		Token:                     appRequest.Token,
 		Certificate:               appRequest.Certificate,
+		AllowedUserTypes:          appRequest.AllowedUserTypes,
 	}
 	if len(appRequest.InboundAuthConfig) > 0 {
 		inboundAuthConfigDTOs := make([]model.InboundAuthConfigDTO, 0)

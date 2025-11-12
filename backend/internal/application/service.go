@@ -29,11 +29,13 @@ import (
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauthutils "github.com/asgardeo/thunder/internal/oauth/oauth2/utils"
 	"github.com/asgardeo/thunder/internal/system/config"
+	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	filebasedruntime "github.com/asgardeo/thunder/internal/system/file_based_runtime"
 	"github.com/asgardeo/thunder/internal/system/log"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
+	"github.com/asgardeo/thunder/internal/userschema"
 )
 
 // ApplicationServiceInterface defines the interface for the application service.
@@ -50,18 +52,24 @@ type ApplicationServiceInterface interface {
 
 // ApplicationService is the default implementation of the ApplicationServiceInterface.
 type applicationService struct {
-	appStore       applicationStoreInterface
-	certService    cert.CertificateServiceInterface
-	flowMgtService flowmgt.FlowMgtServiceInterface
+	appStore          applicationStoreInterface
+	certService       cert.CertificateServiceInterface
+	flowMgtService    flowmgt.FlowMgtServiceInterface
+	userSchemaService userschema.UserSchemaServiceInterface
 }
 
 // newApplicationService creates a new instance of ApplicationService.
-func newApplicationService(appStore applicationStoreInterface, certService cert.CertificateServiceInterface,
-	flowMgtService flowmgt.FlowMgtServiceInterface) ApplicationServiceInterface {
+func newApplicationService(
+	appStore applicationStoreInterface,
+	certService cert.CertificateServiceInterface,
+	flowMgtService flowmgt.FlowMgtServiceInterface,
+	userSchemaService userschema.UserSchemaServiceInterface,
+) ApplicationServiceInterface {
 	return &applicationService{
-		appStore:       appStore,
-		certService:    certService,
-		flowMgtService: flowMgtService,
+		appStore:          appStore,
+		certService:       certService,
+		flowMgtService:    flowMgtService,
+		userSchemaService: userSchemaService,
 	}
 }
 
@@ -123,6 +131,7 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		TosURI:                    app.TosURI,
 		PolicyURI:                 app.PolicyURI,
 		Contacts:                  app.Contacts,
+		AllowedUserTypes:          app.AllowedUserTypes,
 	}
 	if inboundAuthConfig != nil {
 		returnInboundAuthConfig := model.InboundAuthConfigDTO{
@@ -187,6 +196,10 @@ func (as *applicationService) ValidateApplication(app *model.ApplicationDTO) (
 		return nil, nil, &ErrorInvalidLogoURL
 	}
 
+	if svcErr := as.validateAllowedUserTypes(app.AllowedUserTypes); svcErr != nil {
+		return nil, nil, svcErr
+	}
+
 	appID := sysutils.GenerateUUID()
 	rootToken, finalOAuthAccessToken, finalOAuthIDToken, finalOAuthTokenIssuer := processTokenConfiguration(app)
 
@@ -203,6 +216,7 @@ func (as *applicationService) ValidateApplication(app *model.ApplicationDTO) (
 		TosURI:                    app.TosURI,
 		PolicyURI:                 app.PolicyURI,
 		Contacts:                  app.Contacts,
+		AllowedUserTypes:          app.AllowedUserTypes,
 	}
 	if inboundAuthConfig != nil {
 		// Construct the return DTO with processed token configuration
@@ -400,6 +414,10 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		return nil, &ErrorInvalidLogoURL
 	}
 
+	if svcErr := as.validateAllowedUserTypes(app.AllowedUserTypes); svcErr != nil {
+		return nil, svcErr
+	}
+
 	existingCert, updatedCert, returnCert, svcErr := as.updateApplicationCertificate(app)
 	if svcErr != nil {
 		return nil, svcErr
@@ -421,6 +439,7 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		TosURI:                    app.TosURI,
 		PolicyURI:                 app.PolicyURI,
 		Contacts:                  app.Contacts,
+		AllowedUserTypes:          app.AllowedUserTypes,
 	}
 	if inboundAuthConfig != nil {
 		// Wrap the finalOAuthAccessToken and finalOAuthIDToken in OAuthTokenConfig structure
@@ -475,6 +494,7 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		TosURI:                    app.TosURI,
 		PolicyURI:                 app.PolicyURI,
 		Contacts:                  app.Contacts,
+		AllowedUserTypes:          app.AllowedUserTypes,
 	}
 	if inboundAuthConfig != nil {
 		// Construct the return DTO with processed token configuration
@@ -566,6 +586,60 @@ func (as *applicationService) validateRegistrationFlowGraphID(app *model.Applica
 		} else {
 			return &ErrorInvalidRegistrationFlowGraphID
 		}
+	}
+
+	return nil
+}
+
+// validateAllowedUserTypes validates that all user types in allowed_user_types exist in the system.
+// TODO: Refine validation logic from user schema service.
+func (as *applicationService) validateAllowedUserTypes(allowedUserTypes []string) *serviceerror.ServiceError {
+	if len(allowedUserTypes) == 0 {
+		return nil
+	}
+
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
+
+	// Get all user schemas to check if the provided user types exist
+	existingUserTypes := make(map[string]bool)
+	limit := serverconst.MaxPageSize
+	offset := 0
+
+	for {
+		userSchemaList, svcErr := as.userSchemaService.GetUserSchemaList(limit, offset)
+		if svcErr != nil {
+			logger.Error("Failed to retrieve user schema list for validation",
+				log.String("error", svcErr.Error), log.String("code", svcErr.Code))
+			return &ErrorInternalServerError
+		}
+
+		for _, schema := range userSchemaList.Schemas {
+			existingUserTypes[schema.Name] = true
+		}
+
+		if len(userSchemaList.Schemas) == 0 || offset+len(userSchemaList.Schemas) >= userSchemaList.TotalResults {
+			break
+		}
+
+		offset += limit
+	}
+
+	// Check each provided user type
+	var invalidUserTypes []string
+	for _, userType := range allowedUserTypes {
+		if userType == "" {
+			// Empty strings are invalid user types
+			invalidUserTypes = append(invalidUserTypes, userType)
+			continue
+		}
+		if !existingUserTypes[userType] {
+			invalidUserTypes = append(invalidUserTypes, userType)
+		}
+	}
+
+	if len(invalidUserTypes) > 0 {
+		logger.Info("Invalid user types found", log.Any("invalidTypes", invalidUserTypes))
+		return &ErrorInvalidUserType
 	}
 
 	return nil
@@ -927,7 +1001,6 @@ func (as *applicationService) updateApplicationCertificate(app *model.Applicatio
 				return nil, nil, nil, &ErrorCertificateServerError
 			}
 		}
-
 		returnCert = &model.ApplicationCertificate{
 			Type:  updatedCert.Type,
 			Value: updatedCert.Value,
