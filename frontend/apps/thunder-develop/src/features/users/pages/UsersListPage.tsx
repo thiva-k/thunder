@@ -88,7 +88,6 @@ export default function UsersListPage() {
         />
         <Select
           id="user-type-select"
-          label={t('userTypes:typeName')}
           value={selectedSchema ?? ''}
           size="small"
           sx={{minWidth: 200}}

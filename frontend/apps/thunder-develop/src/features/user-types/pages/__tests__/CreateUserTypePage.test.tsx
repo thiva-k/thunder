@@ -307,6 +307,34 @@ describe('CreateUserTypePage', () => {
     expect(enumInput).toHaveValue('');
   });
 
+  it('does not add enum value when input is empty or whitespace', async () => {
+    const user = userEvent.setup();
+    render(<CreateUserTypePage />);
+
+    // Change type to enum
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const enumOption = await screen.findByText('Enum');
+    await user.click(enumOption);
+
+    const enumInput = screen.getByPlaceholderText(/Add value and press Enter/i);
+
+    // Try to add empty value by clicking button
+    const addEnumButton = screen.getByRole('button', {name: /^Add$/i});
+    await user.click(addEnumButton);
+
+    // Should not add any enum values
+    const enumContainer = enumInput.closest('div')?.querySelector('.MuiBox-root');
+    expect(enumContainer).not.toBeInTheDocument();
+
+    // Try to add whitespace value
+    await user.type(enumInput, '   ');
+    await user.click(addEnumButton);
+
+    // Should still not add any enum values
+    expect(enumContainer).not.toBeInTheDocument();
+  });
+
   it('allows removing enum values', async () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
@@ -510,5 +538,162 @@ describe('CreateUserTypePage', () => {
     // Regex and enum inputs should not be visible for number type
     expect(screen.queryByPlaceholderText(/userTypes:enumPlaceholder/i)).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText(/userTypes:regexPlaceholder/i)).not.toBeInTheDocument();
+  });
+
+  it('creates schema with string property containing regex pattern', async () => {
+    const user = userEvent.setup();
+    mockCreateUserType.mockResolvedValue(undefined);
+
+    render(<CreateUserTypePage />);
+
+    // Set user type name
+    const nameInput = screen.getByLabelText(/Type Name/i);
+    await user.type(nameInput, 'RegexTest');
+
+    // Add property name
+    const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
+    await user.type(propertyNameInput, 'code');
+
+    // Add regex pattern using paste to avoid special character parsing issues
+    const regexInput = screen.getByPlaceholderText('e.g., ^[a-zA-Z0-9]+$');
+    await user.click(regexInput);
+    await user.paste('^[A-Z]{3}$');
+
+    // Submit
+    const submitButton = screen.getByRole('button', {name: /Create User Type/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateUserType).toHaveBeenCalledWith({
+        name: 'RegexTest',
+        schema: {
+          code: {
+            type: 'string',
+            required: false,
+            regex: '^[A-Z]{3}$',
+          },
+        },
+      });
+    });
+  });
+
+  it('creates schema with array type property', async () => {
+    const user = userEvent.setup();
+    mockCreateUserType.mockResolvedValue(undefined);
+
+    render(<CreateUserTypePage />);
+
+    // Set user type name
+    const nameInput = screen.getByLabelText(/Type Name/i);
+    await user.type(nameInput, 'ArrayTest');
+
+    // Add property name
+    const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
+    await user.type(propertyNameInput, 'tags');
+
+    // Change type to array
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const arrayOption = await screen.findByText('Array');
+    await user.click(arrayOption);
+
+    // Submit
+    const submitButton = screen.getByRole('button', {name: /Create User Type/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateUserType).toHaveBeenCalledWith({
+        name: 'ArrayTest',
+        schema: {
+          tags: {
+            type: 'array',
+            required: false,
+            items: {
+              type: 'string',
+            },
+          },
+        },
+      });
+    });
+  });
+
+  it('creates schema with object type property', async () => {
+    const user = userEvent.setup();
+    mockCreateUserType.mockResolvedValue(undefined);
+
+    render(<CreateUserTypePage />);
+
+    // Set user type name
+    const nameInput = screen.getByLabelText(/Type Name/i);
+    await user.type(nameInput, 'ObjectTest');
+
+    // Add property name
+    const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
+    await user.type(propertyNameInput, 'metadata');
+
+    // Change type to object
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const objectOption = await screen.findByText('Object');
+    await user.click(objectOption);
+
+    // Submit
+    const submitButton = screen.getByRole('button', {name: /Create User Type/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateUserType).toHaveBeenCalledWith({
+        name: 'ObjectTest',
+        schema: {
+          metadata: {
+            type: 'object',
+            required: false,
+            properties: {},
+          },
+        },
+      });
+    });
+  });
+
+  it('creates schema with number property that is unique', async () => {
+    const user = userEvent.setup();
+    mockCreateUserType.mockResolvedValue(undefined);
+
+    render(<CreateUserTypePage />);
+
+    // Set user type name
+    const nameInput = screen.getByLabelText(/Type Name/i);
+    await user.type(nameInput, 'NumberTest');
+
+    // Add property name
+    const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
+    await user.type(propertyNameInput, 'employeeId');
+
+    // Change type to number
+    const typeSelect = screen.getByRole('combobox');
+    await user.click(typeSelect);
+    const numberOption = await screen.findByText('Number');
+    await user.click(numberOption);
+
+    // Mark as unique
+    const uniqueCheckbox = screen.getByRole('checkbox', {name: /Unique/i});
+    await user.click(uniqueCheckbox);
+
+    // Submit
+    const submitButton = screen.getByRole('button', {name: /Create User Type/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateUserType).toHaveBeenCalledWith({
+        name: 'NumberTest',
+        schema: {
+          employeeId: {
+            type: 'number',
+            required: false,
+            unique: true,
+          },
+        },
+      });
+    });
   });
 });

@@ -395,4 +395,158 @@ describe('useGetUsers', () => {
     // This is difficult to assert directly, but we can verify no errors occur
     expect(true).toBe(true);
   });
+
+  it('should refetch with filter parameter', async () => {
+    const mockResponse: UserListResponse = {
+      totalResults: 5,
+      startIndex: 0,
+      count: 5,
+      users: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
+    });
+
+    const {result} = renderWithParams({limit: 10});
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Call refetch with filter parameter
+    await result.current.refetch({filter: 'name eq "Test"'});
+
+    // Wait for refetch to complete
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Verify the last call included the filter parameter
+    expect(mockHttpRequest).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/users?filter=name+eq+%22Test%22',
+        method: 'GET',
+      }),
+    );
+  });
+
+  it('should refetch with all parameters including filter', async () => {
+    const mockResponse: UserListResponse = {
+      totalResults: 5,
+      startIndex: 0,
+      count: 5,
+      users: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
+    });
+
+    const {result} = renderWithParams();
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Call refetch with all parameters including filter
+    await result.current.refetch({limit: 5, offset: 10, filter: 'type eq "admin"'});
+
+    // Wait for refetch to complete
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Verify the call included all parameters
+    expect(mockHttpRequest).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/users?limit=5&offset=10&filter=type+eq+%22admin%22',
+        method: 'GET',
+      }),
+    );
+  });
+
+  it('should handle refetch error and throw', async () => {
+    const mockResponse: UserListResponse = {
+      totalResults: 10,
+      startIndex: 0,
+      count: 10,
+      users: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
+    });
+
+    const {result} = renderWithParams({limit: 10});
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.data).toEqual(mockResponse);
+    });
+
+    // Mock error for refetch
+    mockHttpRequest.mockRejectedValue(new Error('Refetch failed'));
+
+    // Call refetch and expect it to throw
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
+
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Refetch failed',
+        description: 'Failed to fetch users',
+      });
+    });
+  });
+
+  it('should handle non-Error object in refetch catch block', async () => {
+    const mockResponse: UserListResponse = {
+      totalResults: 10,
+      startIndex: 0,
+      count: 10,
+      users: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({
+      data: mockResponse,
+    });
+
+    const {result} = renderWithParams({limit: 10});
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.data).toEqual(mockResponse);
+    });
+
+    // Mock non-Error rejection for refetch
+    mockHttpRequest.mockRejectedValue('String error');
+
+    // Call refetch and expect it to throw
+    let refetchError;
+    try {
+      await result.current.refetch();
+    } catch (err) {
+      refetchError = err;
+    }
+
+    // Verify the error was thrown
+    expect(refetchError).toEqual('String error');
+
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch users',
+      });
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
 });

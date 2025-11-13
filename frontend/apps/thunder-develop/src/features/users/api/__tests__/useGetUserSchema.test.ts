@@ -348,4 +348,88 @@ describe('useGetUserSchema', () => {
     expect(result.current.data).toEqual(mockSchema);
     expect(result.current.error).toBeNull();
   });
+
+  it('should handle refetch error and throw', async () => {
+    const mockSchema: ApiUserSchema = {
+      id: 'schema-123',
+      name: 'Customer',
+      schema: {
+        name: {
+          type: 'string',
+          required: true,
+        },
+      },
+    };
+
+    mockHttpRequest.mockResolvedValue({data: mockSchema});
+
+    const {result} = renderHook(() => useGetUserSchema('schema-123'));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockSchema);
+    });
+
+    // Mock error for refetch
+    mockHttpRequest.mockRejectedValue(new Error('Refetch failed'));
+
+    // Call refetch and expect it to throw
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
+
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Refetch failed',
+        description: 'Failed to fetch user schema',
+      });
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('should handle non-Error object in refetch catch block', async () => {
+    const mockSchema: ApiUserSchema = {
+      id: 'schema-123',
+      name: 'Customer',
+      schema: {
+        name: {
+          type: 'string',
+          required: true,
+        },
+      },
+    };
+
+    mockHttpRequest.mockResolvedValue({data: mockSchema});
+
+    const {result} = renderHook(() => useGetUserSchema('schema-123'));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockSchema);
+    });
+
+    // Mock non-Error rejection for refetch
+    mockHttpRequest.mockRejectedValue('String error');
+
+    // Call refetch and expect it to throw
+    let refetchError;
+    try {
+      await result.current.refetch();
+    } catch (err) {
+      refetchError = err;
+    }
+
+    // Verify the error was thrown
+    expect(refetchError).toEqual('String error');
+
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch user schema',
+      });
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
 });

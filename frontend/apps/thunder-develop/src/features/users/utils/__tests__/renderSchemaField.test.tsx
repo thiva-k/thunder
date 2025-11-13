@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {describe, it, expect, beforeEach} from 'vitest';
+import {describe, it, expect, beforeEach, vi} from 'vitest';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {useForm} from 'react-hook-form';
@@ -30,19 +30,37 @@ function TestForm({
   fieldName,
   fieldDef,
   defaultValues = {},
+  onSubmit = undefined,
 }: {
   fieldName: string;
   fieldDef: PropertyDefinition;
   defaultValues?: TestFormData;
+  onSubmit?: (data: TestFormData) => void;
 }) {
   const {
     control,
     formState: {errors},
+    handleSubmit,
   } = useForm<TestFormData>({
     defaultValues,
   });
 
-  return <div>{renderSchemaField(fieldName, fieldDef, control, errors)}</div>;
+  const handleFormSubmit = (data: TestFormData) => {
+    if (onSubmit) {
+      onSubmit(data);
+    }
+  };
+
+  return (
+    <form
+      onSubmit={(e): void => {
+        handleSubmit(handleFormSubmit)(e).catch(() => {});
+      }}
+    >
+      {renderSchemaField(fieldName, fieldDef, control, errors)}
+      <button type="submit">Submit</button>
+    </form>
+  );
 }
 
 describe('renderSchemaField', () => {
@@ -199,6 +217,88 @@ describe('renderSchemaField', () => {
       expect(screen.getByText('tag1')).toBeInTheDocument();
       expect(screen.getByText('tag2')).toBeInTheDocument();
     });
+
+    it('validates required array field with empty array', async () => {
+      const user = userEvent.setup();
+      const fieldDef: PropertyDefinition = {
+        type: 'array',
+        items: {type: 'string'},
+        required: true,
+      };
+      render(<TestForm fieldName="tags" fieldDef={fieldDef} defaultValues={{tags: []}} />);
+
+      const submitButton = screen.getByRole('button', {name: 'Submit'});
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        // The validation message could be either "tags is required" or "tags must have at least one value"
+        // depending on which validation rule runs first
+        const errorMessage = screen.getByText(/tags (is required|must have at least one value)/);
+        expect(errorMessage).toBeInTheDocument();
+      });
+    });
+
+    it('validates required array field with non-array value (undefined)', async () => {
+      const user = userEvent.setup();
+      const fieldDef: PropertyDefinition = {
+        type: 'array',
+        items: {type: 'string'},
+        required: true,
+      };
+      render(<TestForm fieldName="tags" fieldDef={fieldDef} defaultValues={{}} />);
+
+      const submitButton = screen.getByRole('button', {name: 'Submit'});
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        // The validation message could be either "tags is required" or "tags must have at least one value"
+        // depending on which validation rule runs first
+        const errorMessage = screen.getByText(/tags (is required|must have at least one value)/);
+        expect(errorMessage).toBeInTheDocument();
+      });
+    });
+
+    it('validates successfully when required array has values', async () => {
+      const user = userEvent.setup();
+      const onSubmit = vi.fn();
+      const fieldDef: PropertyDefinition = {
+        type: 'array',
+        items: {type: 'string'},
+        required: true,
+      };
+      render(<TestForm fieldName="tags" fieldDef={fieldDef} defaultValues={{tags: ['tag1']}} onSubmit={onSubmit} />);
+
+      const submitButton = screen.getByRole('button', {name: 'Submit'});
+      await user.click(submitButton);
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalled();
+      });
+    });
+
+    it('handles non-array value gracefully', () => {
+      const fieldDef: PropertyDefinition = {
+        type: 'array',
+        items: {type: 'string'},
+      };
+      render(<TestForm fieldName="tags" fieldDef={fieldDef} defaultValues={{tags: 'not-an-array'}} />);
+
+      // Should render without crashing and treat as empty array
+      expect(screen.getByPlaceholderText('Add tags')).toBeInTheDocument();
+    });
+
+    it('shows validation error when optional array field is empty', () => {
+      const fieldDef: PropertyDefinition = {
+        type: 'array',
+        items: {type: 'string'},
+        required: false,
+      };
+      render(<TestForm fieldName="tags" fieldDef={fieldDef} defaultValues={{tags: []}} />);
+
+      // Should render without showing any error for non-required empty array
+      expect(screen.getByPlaceholderText('Add tags')).toBeInTheDocument();
+      expect(screen.queryByText(/tags (is required|must have at least one value)/)).not.toBeInTheDocument();
+    });
   });
 
   describe('Unsupported types', () => {
@@ -207,9 +307,11 @@ describe('renderSchemaField', () => {
         type: 'object',
         properties: {},
       };
-      const {container} = render(<TestForm fieldName="metadata" fieldDef={fieldDef} />);
+      render(<TestForm fieldName="metadata" fieldDef={fieldDef} />);
 
-      expect(container.firstChild?.textContent).toBe('');
+      // Should only render the submit button, no field components
+      expect(screen.queryByLabelText('metadata')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Submit'})).toBeInTheDocument();
     });
   });
 

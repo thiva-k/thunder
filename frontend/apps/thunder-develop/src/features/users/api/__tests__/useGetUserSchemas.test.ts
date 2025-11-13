@@ -400,4 +400,152 @@ describe('useGetUserSchemas', () => {
       }),
     );
   });
+
+  it('should refetch with only offset parameter', async () => {
+    const mockResponse: UserSchemaListResponse = {
+      totalResults: 100,
+      startIndex: 0,
+      count: 10,
+      schemas: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
+
+    const {result} = renderHook(() => useGetUserSchemas());
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Call refetch with only offset parameter
+    await result.current.refetch({offset: 30});
+
+    // Wait for refetch to complete
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Verify the last call included only the offset parameter
+    expect(mockHttpRequest).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        url: 'https://localhost:8090/user-schemas?offset=30',
+        method: 'GET',
+      }),
+    );
+  });
+
+  it('should handle AbortError in refetch and not set error', async () => {
+    const mockResponse: UserSchemaListResponse = {
+      totalResults: 10,
+      startIndex: 0,
+      count: 10,
+      schemas: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
+
+    const {result} = renderHook(() => useGetUserSchemas());
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Mock AbortError for refetch
+    const abortError = new Error('Request aborted');
+    abortError.name = 'AbortError';
+    mockHttpRequest.mockRejectedValue(abortError);
+
+    // Call refetch - it should not throw
+    await result.current.refetch();
+
+    // Wait for loading to complete
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Error should still be null since AbortError is ignored
+    expect(result.current.error).toBeNull();
+  });
+
+  it('should handle refetch error and throw', async () => {
+    const mockResponse: UserSchemaListResponse = {
+      totalResults: 10,
+      startIndex: 0,
+      count: 10,
+      schemas: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
+
+    const {result} = renderHook(() => useGetUserSchemas());
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.data).toEqual(mockResponse);
+    });
+
+    // Mock error for refetch
+    mockHttpRequest.mockRejectedValue(new Error('Refetch failed'));
+
+    // Call refetch and expect it to throw
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
+
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Refetch failed',
+        description: 'Failed to fetch user schemas',
+      });
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
+
+  it('should handle non-Error object in refetch catch block', async () => {
+    const mockResponse: UserSchemaListResponse = {
+      totalResults: 10,
+      startIndex: 0,
+      count: 10,
+      schemas: [],
+    };
+
+    mockHttpRequest.mockResolvedValue({data: mockResponse});
+
+    const {result} = renderHook(() => useGetUserSchemas());
+
+    // Wait for initial fetch
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+      expect(result.current.data).toEqual(mockResponse);
+    });
+
+    // Mock non-Error rejection for refetch
+    mockHttpRequest.mockRejectedValue('String error');
+
+    // Call refetch and expect it to throw
+    let refetchError;
+    try {
+      await result.current.refetch();
+    } catch (err) {
+      refetchError = err;
+    }
+
+    // Verify the error was thrown
+    expect(refetchError).toEqual('String error');
+
+    // Wait for error state to be set
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch user schemas',
+      });
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
 });
