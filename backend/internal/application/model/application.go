@@ -52,6 +52,7 @@ type ApplicationDTO struct {
 	AuthFlowGraphID           string
 	RegistrationFlowGraphID   string
 	IsRegistrationFlowEnabled bool
+	BrandingID                string
 
 	URL       string
 	LogoURL   string
@@ -73,6 +74,7 @@ type BasicApplicationDTO struct {
 	AuthFlowGraphID           string
 	RegistrationFlowGraphID   string
 	IsRegistrationFlowEnabled bool
+	BrandingID                string
 	ClientID                  string
 }
 
@@ -84,6 +86,7 @@ type ApplicationProcessedDTO struct {
 	AuthFlowGraphID           string
 	RegistrationFlowGraphID   string
 	IsRegistrationFlowEnabled bool
+	BrandingID                string
 
 	URL       string
 	LogoURL   string
@@ -126,6 +129,7 @@ type ApplicationRequest struct {
 	AuthFlowGraphID           string                      `json:"auth_flow_graph_id,omitempty" yaml:"auth_flow_graph_id,omitempty"`
 	RegistrationFlowGraphID   string                      `json:"registration_flow_graph_id,omitempty" yaml:"registration_flow_graph_id,omitempty"`
 	IsRegistrationFlowEnabled bool                        `json:"is_registration_flow_enabled" yaml:"is_registration_flow_enabled"`
+	BrandingID                string                      `json:"branding_id,omitempty" yaml:"branding_id,omitempty"`
 	URL                       string                      `json:"url,omitempty" yaml:"url,omitempty"`
 	LogoURL                   string                      `json:"logo_url,omitempty" yaml:"logo_url,omitempty"`
 	Token                     *TokenConfig                `json:"token,omitempty" yaml:"token,omitempty"`
@@ -146,6 +150,7 @@ type ApplicationCompleteResponse struct {
 	AuthFlowGraphID           string                      `json:"auth_flow_graph_id,omitempty"`
 	RegistrationFlowGraphID   string                      `json:"registration_flow_graph_id,omitempty"`
 	IsRegistrationFlowEnabled bool                        `json:"is_registration_flow_enabled"`
+	BrandingID                string                      `json:"branding_id,omitempty"`
 	URL                       string                      `json:"url,omitempty"`
 	LogoURL                   string                      `json:"logo_url,omitempty"`
 	Token                     *TokenConfig                `json:"token,omitempty"`
@@ -166,6 +171,7 @@ type ApplicationGetResponse struct {
 	AuthFlowGraphID           string                  `json:"auth_flow_graph_id,omitempty"`
 	RegistrationFlowGraphID   string                  `json:"registration_flow_graph_id,omitempty"`
 	IsRegistrationFlowEnabled bool                    `json:"is_registration_flow_enabled"`
+	BrandingID                string                  `json:"branding_id,omitempty"`
 	URL                       string                  `json:"url,omitempty"`
 	LogoURL                   string                  `json:"logo_url,omitempty"`
 	Token                     *TokenConfig            `json:"token,omitempty"`
@@ -186,6 +192,7 @@ type BasicApplicationResponse struct {
 	AuthFlowGraphID           string `json:"auth_flow_graph_id,omitempty"`
 	RegistrationFlowGraphID   string `json:"registration_flow_graph_id,omitempty"`
 	IsRegistrationFlowEnabled bool   `json:"is_registration_flow_enabled"`
+	BrandingID                string `json:"branding_id,omitempty"`
 }
 
 // ApplicationListResponse represents the response structure for listing applications.

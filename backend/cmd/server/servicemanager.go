@@ -25,6 +25,7 @@ import (
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/authn"
 	"github.com/asgardeo/thunder/internal/authz"
+	"github.com/asgardeo/thunder/internal/branding"
 	"github.com/asgardeo/thunder/internal/cert"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/flow/executor"
@@ -70,7 +71,8 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
 	certservice := cert.Initialize()
-	applicationService := application.Initialize(mux, certservice, flowMgtService, userSchemaService)
+	brandingService := branding.Initialize(mux)
+	applicationService := application.Initialize(mux, certservice, flowMgtService, brandingService, userSchemaService)
 
 	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry)
 

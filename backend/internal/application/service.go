@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/branding"
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
@@ -55,6 +56,7 @@ type applicationService struct {
 	appStore          applicationStoreInterface
 	certService       cert.CertificateServiceInterface
 	flowMgtService    flowmgt.FlowMgtServiceInterface
+	brandingService   branding.BrandingServiceInterface
 	userSchemaService userschema.UserSchemaServiceInterface
 }
 
@@ -63,12 +65,14 @@ func newApplicationService(
 	appStore applicationStoreInterface,
 	certService cert.CertificateServiceInterface,
 	flowMgtService flowmgt.FlowMgtServiceInterface,
+	brandingService branding.BrandingServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
 ) ApplicationServiceInterface {
 	return &applicationService{
 		appStore:          appStore,
 		certService:       certService,
 		flowMgtService:    flowMgtService,
+		brandingService:   brandingService,
 		userSchemaService: userSchemaService,
 	}
 }
@@ -124,6 +128,7 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		AuthFlowGraphID:           app.AuthFlowGraphID,
 		RegistrationFlowGraphID:   app.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: app.IsRegistrationFlowEnabled,
+		BrandingID:                app.BrandingID,
 		URL:                       app.URL,
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
@@ -189,6 +194,10 @@ func (as *applicationService) ValidateApplication(app *model.ApplicationDTO) (
 		return nil, nil, svcErr
 	}
 
+	if svcErr := as.validateBrandingID(app.BrandingID); svcErr != nil {
+		return nil, nil, svcErr
+	}
+
 	if app.URL != "" && !sysutils.IsValidURI(app.URL) {
 		return nil, nil, &ErrorInvalidApplicationURL
 	}
@@ -210,6 +219,7 @@ func (as *applicationService) ValidateApplication(app *model.ApplicationDTO) (
 		AuthFlowGraphID:           app.AuthFlowGraphID,
 		RegistrationFlowGraphID:   app.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: app.IsRegistrationFlowEnabled,
+		BrandingID:                app.BrandingID,
 		URL:                       app.URL,
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
@@ -287,6 +297,7 @@ func buildBasicApplicationResponse(app model.BasicApplicationDTO) model.BasicApp
 		AuthFlowGraphID:           app.AuthFlowGraphID,
 		RegistrationFlowGraphID:   app.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: app.IsRegistrationFlowEnabled,
+		BrandingID:                app.BrandingID,
 	}
 }
 
@@ -407,6 +418,10 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		return nil, svcErr
 	}
 
+	if svcErr := as.validateBrandingID(app.BrandingID); svcErr != nil {
+		return nil, svcErr
+	}
+
 	if app.URL != "" && !sysutils.IsValidURI(app.URL) {
 		return nil, &ErrorInvalidApplicationURL
 	}
@@ -433,6 +448,7 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		AuthFlowGraphID:           app.AuthFlowGraphID,
 		RegistrationFlowGraphID:   app.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: app.IsRegistrationFlowEnabled,
+		BrandingID:                app.BrandingID,
 		URL:                       app.URL,
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
@@ -487,6 +503,7 @@ func (as *applicationService) UpdateApplication(appID string, app *model.Applica
 		AuthFlowGraphID:           app.AuthFlowGraphID,
 		RegistrationFlowGraphID:   app.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: app.IsRegistrationFlowEnabled,
+		BrandingID:                app.BrandingID,
 		URL:                       app.URL,
 		LogoURL:                   app.LogoURL,
 		Token:                     rootToken,
@@ -586,6 +603,23 @@ func (as *applicationService) validateRegistrationFlowGraphID(app *model.Applica
 		} else {
 			return &ErrorInvalidRegistrationFlowGraphID
 		}
+	}
+
+	return nil
+}
+
+// validateBrandingID validates the branding ID for the application.
+func (as *applicationService) validateBrandingID(brandingID string) *serviceerror.ServiceError {
+	if brandingID == "" {
+		return nil
+	}
+
+	exists, svcErr := as.brandingService.IsBrandingExist(brandingID)
+	if svcErr != nil {
+		return svcErr
+	}
+	if !exists {
+		return &ErrorBrandingNotFound
 	}
 
 	return nil

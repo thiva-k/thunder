@@ -2627,6 +2627,386 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithMultipleRedirectURIsAndSco
 	ts.Assert().Contains(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Scopes, "phone")
 }
 
+// Helper function to create a branding configuration for testing
+func createBrandingForTest(preferences []byte) (string, error) {
+	payload, err := json.Marshal(map[string]interface{}{
+		"displayName": "Test Application Branding",
+		"preferences": json.RawMessage(preferences),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal branding request: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", testServerURL+"/branding", bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusCreated {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
+
+	var brandingResponse map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&brandingResponse)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse response body: %w", err)
+	}
+
+	brandingID, ok := brandingResponse["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("response does not contain id or id is not a string")
+	}
+	return brandingID, nil
+}
+
+// Helper function to delete a branding configuration for testing
+func deleteBrandingForTest(brandingID string) error {
+	req, err := http.NewRequest("DELETE", testServerURL+"/branding/"+brandingID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send delete request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204 or 404, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
+	return nil
+}
+
+// TestApplicationWithBrandingID tests creating an application with a valid branding ID
+func (ts *ApplicationAPITestSuite) TestApplicationWithBrandingID() {
+	// Create a branding configuration first
+	brandingPreferences := []byte(`{
+		"theme": {
+			"activeColorScheme": "dark",
+			"colorSchemes": {
+				"dark": {
+					"colors": {
+						"primary": {
+							"main": "#1976d2",
+							"dark": "#0d47a1",
+							"contrastText": "#ffffff"
+						}
+					}
+				}
+			}
+		}
+	}`)
+	brandingID, err := createBrandingForTest(brandingPreferences)
+	ts.Require().NoError(err, "Failed to create branding for test")
+	defer deleteBrandingForTest(brandingID)
+
+	// Create application with branding ID
+	app := Application{
+		Name:        "App With Branding",
+		Description: "Application with branding configuration",
+		BrandingID:  brandingID,
+		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					RedirectURIs:            []string{"https://branding-app.example.com/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err)
+	defer deleteApplication(appID)
+
+	// Verify the branding ID is stored
+	retrievedApp, err := getApplicationByID(appID)
+	ts.Require().NoError(err)
+	ts.Assert().Equal(brandingID, retrievedApp.BrandingID)
+}
+
+// TestApplicationWithInvalidBrandingID tests creating an application with an invalid branding ID
+func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidBrandingID() {
+	app := Application{
+		Name:        "App With Invalid Branding",
+		Description: "Application with invalid branding ID",
+		BrandingID:  "00000000-0000-0000-0000-000000000000",
+		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					RedirectURIs:            []string{"https://invalid-branding.example.com/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+				},
+			},
+		},
+	}
+
+	appJSON, err := json.Marshal(app)
+	ts.Require().NoError(err)
+
+	req, err := http.NewRequest("POST", testServerURL+"/applications", bytes.NewReader(appJSON))
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	ts.Require().NoError(err)
+
+	var errResp map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &errResp)
+	ts.Require().NoError(err)
+	ts.Assert().Equal("APP-1026", errResp["code"])
+}
+
+// TestApplicationUpdateWithBrandingID tests updating an application with a branding ID
+func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithBrandingID() {
+	// Create a branding configuration first
+	brandingPreferences := []byte(`{
+		"theme": {
+			"activeColorScheme": "light",
+			"colorSchemes": {
+				"light": {
+					"colors": {
+						"primary": {
+							"main": "#2196f3",
+							"dark": "#1976d2",
+							"contrastText": "#ffffff"
+						}
+					}
+				}
+			}
+		}
+	}`)
+	brandingID, err := createBrandingForTest(brandingPreferences)
+	ts.Require().NoError(err, "Failed to create branding for test")
+	defer deleteBrandingForTest(brandingID)
+
+	// Create application without branding
+	app := Application{
+		Name:        "App To Update Branding",
+		Description: "Application to update with branding",
+		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					RedirectURIs:            []string{"https://update-branding.example.com/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err)
+	defer deleteApplication(appID)
+
+	// Update application with branding ID
+	app.BrandingID = brandingID
+	appJSON, err := json.Marshal(app)
+	ts.Require().NoError(err)
+
+	req, err := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusOK, resp.StatusCode)
+
+	// Verify the branding ID is updated
+	retrievedApp, err := getApplicationByID(appID)
+	ts.Require().NoError(err)
+	ts.Assert().Equal(brandingID, retrievedApp.BrandingID)
+}
+
+// TestApplicationUpdateWithInvalidBrandingID tests updating an application with an invalid branding ID
+func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithInvalidBrandingID() {
+	// Create application without branding
+	app := Application{
+		Name:        "App To Update Invalid Branding",
+		Description: "Application to update with invalid branding",
+		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					RedirectURIs:            []string{"https://invalid-update.example.com/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err)
+	defer deleteApplication(appID)
+
+	// Update application with invalid branding ID
+	app.BrandingID = "00000000-0000-0000-0000-000000000000"
+	appJSON, err := json.Marshal(app)
+	ts.Require().NoError(err)
+
+	req, err := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusBadRequest, resp.StatusCode)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	ts.Require().NoError(err)
+
+	var errResp map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &errResp)
+	ts.Require().NoError(err)
+	ts.Assert().Equal("APP-1026", errResp["code"])
+}
+
+// TestBrandingCannotDeleteWhenAssociatedWithApplication tests that branding cannot be deleted when associated with an application
+func (ts *ApplicationAPITestSuite) TestBrandingCannotDeleteWhenAssociatedWithApplication() {
+	// Create a branding configuration
+	brandingPreferences := []byte(`{
+		"theme": {
+			"activeColorScheme": "dark",
+			"colorSchemes": {
+				"dark": {
+					"colors": {
+						"primary": {
+							"main": "#1976d2",
+							"dark": "#0d47a1",
+							"contrastText": "#ffffff"
+						}
+					}
+				}
+			}
+		}
+	}`)
+	brandingID, err := createBrandingForTest(brandingPreferences)
+	ts.Require().NoError(err, "Failed to create branding for test")
+	defer deleteBrandingForTest(brandingID)
+
+	// Create application with branding ID
+	app := Application{
+		Name:        "App Preventing Branding Delete",
+		Description: "Application that prevents branding deletion",
+		BrandingID:  brandingID,
+		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					RedirectURIs:            []string{"https://prevent-delete.example.com/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err)
+	defer deleteApplication(appID)
+
+	// Try to delete the branding - should fail
+	req, err := http.NewRequest("DELETE", testServerURL+"/branding/"+brandingID, nil)
+	ts.Require().NoError(err)
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusConflict, resp.StatusCode)
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	ts.Require().NoError(err)
+
+	var errResp map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &errResp)
+	ts.Require().NoError(err)
+	ts.Assert().Equal("BRD-1004", errResp["code"])
+
+	// Delete the application first
+	err = deleteApplication(appID)
+	ts.Require().NoError(err)
+
+	// Now the branding should be deletable
+	resp, err = client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusNoContent, resp.StatusCode)
+}
+
 // TestApplicationWithAllowedUserTypes tests creating an application with valid allowed_user_types
 func (ts *ApplicationAPITestSuite) TestApplicationWithAllowedUserTypes() {
 	// Create test user schemas first

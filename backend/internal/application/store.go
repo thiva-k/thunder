@@ -94,8 +94,14 @@ func (st *applicationStore) CreateApplication(app model.ApplicationProcessedDTO)
 	queries := []func(tx dbmodel.TxInterface) error{
 		func(tx dbmodel.TxInterface) error {
 			isRegistrationEnabledStr := utils.BoolToNumString(app.IsRegistrationFlowEnabled)
+			var brandingID interface{}
+			if app.BrandingID != "" {
+				brandingID = app.BrandingID
+			} else {
+				brandingID = nil
+			}
 			_, err := tx.Exec(QueryCreateApplication.Query, app.ID, app.Name, app.Description,
-				app.AuthFlowGraphID, app.RegistrationFlowGraphID, isRegistrationEnabledStr, jsonDataBytes)
+				app.AuthFlowGraphID, app.RegistrationFlowGraphID, isRegistrationEnabledStr, brandingID, jsonDataBytes)
 			return err
 		},
 	}
@@ -313,9 +319,15 @@ func (st *applicationStore) UpdateApplication(existingApp, updatedApp *model.App
 	queries := []func(tx dbmodel.TxInterface) error{
 		func(tx dbmodel.TxInterface) error {
 			isRegistrationEnabledStr := utils.BoolToNumString(updatedApp.IsRegistrationFlowEnabled)
+			var brandingID interface{}
+			if updatedApp.BrandingID != "" {
+				brandingID = updatedApp.BrandingID
+			} else {
+				brandingID = nil
+			}
 			_, err := tx.Exec(QueryUpdateApplicationByAppID.Query, updatedApp.ID, updatedApp.Name,
 				updatedApp.Description, updatedApp.AuthFlowGraphID, updatedApp.RegistrationFlowGraphID,
-				isRegistrationEnabledStr, jsonDataBytes)
+				isRegistrationEnabledStr, brandingID, jsonDataBytes)
 			return err
 		},
 	}
@@ -509,6 +521,13 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 	}
 	isRegistrationFlowEnabled := utils.NumStringToBool(isRegistrationFlowEnabledStr)
 
+	var brandingID string
+	if row["branding_id"] != nil {
+		if bid, ok := row["branding_id"].(string); ok {
+			brandingID = bid
+		}
+	}
+
 	application := model.BasicApplicationDTO{
 		ID:                        appID,
 		Name:                      appName,
@@ -516,6 +535,7 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 		AuthFlowGraphID:           authFlowGraphID,
 		RegistrationFlowGraphID:   regisFlowGraphID,
 		IsRegistrationFlowEnabled: isRegistrationFlowEnabled,
+		BrandingID:                brandingID,
 	}
 
 	if row["consumer_key"] != nil {
@@ -654,6 +674,7 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 		AuthFlowGraphID:           basicApp.AuthFlowGraphID,
 		RegistrationFlowGraphID:   basicApp.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: basicApp.IsRegistrationFlowEnabled,
+		BrandingID:                basicApp.BrandingID,
 		URL:                       url,
 		LogoURL:                   logoURL,
 		Token:                     rootTokenConfig,

@@ -25,7 +25,7 @@ var (
 	QueryCreateApplication = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-01",
 		Query: "INSERT INTO SP_APP (APP_ID, APP_NAME, DESCRIPTION, AUTH_FLOW_GRAPH_ID, REGISTRATION_FLOW_GRAPH_ID, " +
-			"IS_REGISTRATION_FLOW_ENABLED, APP_JSON) VALUES ($1, $2, $3, $4, $5, $6, $7)",
+			"IS_REGISTRATION_FLOW_ENABLED, BRANDING_ID, APP_JSON) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
 	}
 	// QueryCreateOAuthApplication is the query to create a new OAuth application.
 	QueryCreateOAuthApplication = dbmodel.DBQuery{
@@ -37,7 +37,7 @@ var (
 	QueryGetApplicationByAppID = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-03",
 		Query: "SELECT sp.APP_ID, sp.APP_NAME, sp.DESCRIPTION, sp.AUTH_FLOW_GRAPH_ID, " +
-			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.APP_JSON, " +
+			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, sp.APP_JSON, " +
 			"oauth.CONSUMER_KEY, oauth.CONSUMER_SECRET, oauth.OAUTH_CONFIG_JSON " +
 			"FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth ON sp.APP_ID = oauth.APP_ID " +
 			"WHERE sp.APP_ID = $1",
@@ -46,7 +46,7 @@ var (
 	QueryGetApplicationByName = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-04",
 		Query: "SELECT sp.APP_ID, sp.APP_NAME, sp.DESCRIPTION, sp.AUTH_FLOW_GRAPH_ID, " +
-			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.APP_JSON, " +
+			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, sp.APP_JSON, " +
 			"oauth.CONSUMER_KEY, oauth.CONSUMER_SECRET, oauth.OAUTH_CONFIG_JSON " +
 			"FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth ON sp.APP_ID = oauth.APP_ID " +
 			"WHERE sp.APP_NAME = $1",
@@ -61,14 +61,14 @@ var (
 	QueryGetApplicationList = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-06",
 		Query: "SELECT sp.APP_ID, sp.APP_NAME, sp.DESCRIPTION, sp.AUTH_FLOW_GRAPH_ID, " +
-			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, " +
+			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, " +
 			"oauth.CONSUMER_KEY FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth ON sp.APP_ID = oauth.APP_ID",
 	}
 	// QueryUpdateApplicationByAppID is the query to update application details by app ID.
 	QueryUpdateApplicationByAppID = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-07",
 		Query: "UPDATE SP_APP SET APP_NAME=$2, DESCRIPTION=$3, AUTH_FLOW_GRAPH_ID=$4, " +
-			"REGISTRATION_FLOW_GRAPH_ID=$5, IS_REGISTRATION_FLOW_ENABLED=$6, APP_JSON=$7 " +
+			"REGISTRATION_FLOW_GRAPH_ID=$5, IS_REGISTRATION_FLOW_ENABLED=$6, BRANDING_ID=$7, APP_JSON=$8 " +
 			"WHERE APP_ID = $1",
 	}
 	// QueryUpdateOAuthApplicationByAppID is the query to update OAuth application details by app ID.

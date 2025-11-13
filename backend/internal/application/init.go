@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/branding"
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
 	"github.com/asgardeo/thunder/internal/system/config"
@@ -39,6 +40,7 @@ func Initialize(
 	mux *http.ServeMux,
 	certService cert.CertificateServiceInterface,
 	flowMgtService flowmgt.FlowMgtServiceInterface,
+	brandingService branding.BrandingServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
 ) ApplicationServiceInterface {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationInit"))
@@ -50,7 +52,7 @@ func Initialize(
 		appStore = newCachedBackedApplicationStore(store)
 	}
 
-	appService := newApplicationService(appStore, certService, flowMgtService, userSchemaService)
+	appService := newApplicationService(appStore, certService, flowMgtService, brandingService, userSchemaService)
 
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
 		configs, err := filebasedruntime.GetConfigs("applications")

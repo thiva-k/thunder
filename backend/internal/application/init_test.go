@@ -27,6 +27,7 @@ import (
 	"github.com/asgardeo/thunder/internal/cert"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/tests/mocks/brandingmock"
 	"github.com/asgardeo/thunder/tests/mocks/certmock"
 	"github.com/asgardeo/thunder/tests/mocks/flow/flowmgtmock"
 	"github.com/asgardeo/thunder/tests/mocks/userschemamock"
@@ -45,12 +46,14 @@ type InitTestSuite struct {
 	suite.Suite
 	mockCertService       *certmock.CertificateServiceInterfaceMock
 	mockFlowMgtService    *flowmgtmock.FlowMgtServiceInterfaceMock
+	mockBrandingService   *brandingmock.BrandingServiceInterfaceMock
 	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
 }
 
 func (suite *InitTestSuite) SetupTest() {
 	suite.mockCertService = certmock.NewCertificateServiceInterfaceMock(suite.T())
 	suite.mockFlowMgtService = flowmgtmock.NewFlowMgtServiceInterfaceMock(suite.T())
+	suite.mockBrandingService = brandingmock.NewBrandingServiceInterfaceMock(suite.T())
 	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 }
 
@@ -78,7 +81,13 @@ func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesDisabled() {
 	mux := http.NewServeMux()
 
 	// Execute
-	service := Initialize(mux, suite.mockCertService, suite.mockFlowMgtService, suite.mockUserSchemaService)
+	service := Initialize(
+		mux,
+		suite.mockCertService,
+		suite.mockFlowMgtService,
+		suite.mockBrandingService,
+		suite.mockUserSchemaService,
+	)
 
 	// Assert
 	assert.NotNil(suite.T(), service)
@@ -465,10 +474,11 @@ func TestInitialize_Standalone(t *testing.T) {
 	mux := http.NewServeMux()
 	mockCertService := certmock.NewCertificateServiceInterfaceMock(t)
 	mockFlowMgtService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
+	mockBrandingService := brandingmock.NewBrandingServiceInterfaceMock(t)
 	mockUserSchemaService := userschemamock.NewUserSchemaServiceInterfaceMock(t)
 
 	// Execute
-	service := Initialize(mux, mockCertService, mockFlowMgtService, mockUserSchemaService)
+	service := Initialize(mux, mockCertService, mockFlowMgtService, mockBrandingService, mockUserSchemaService)
 
 	// Assert
 	assert.NotNil(t, service)
@@ -503,10 +513,11 @@ func TestInitialize_WithImmutableResources_Standalone(t *testing.T) {
 	mux := http.NewServeMux()
 	mockCertService := certmock.NewCertificateServiceInterfaceMock(t)
 	mockFlowMgtService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
+	mockBrandingService := brandingmock.NewBrandingServiceInterfaceMock(t)
 	mockUserSchemaService := userschemamock.NewUserSchemaServiceInterfaceMock(t)
 
 	// Execute
-	service := Initialize(mux, mockCertService, mockFlowMgtService, mockUserSchemaService)
+	service := Initialize(mux, mockCertService, mockFlowMgtService, mockBrandingService, mockUserSchemaService)
 
 	// Assert
 	assert.NotNil(t, service)
