@@ -206,6 +206,7 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 	// Add required query parameters.
 	queryParams := make(map[string]string)
 	queryParams[oauth2const.SessionDataKey] = identifier
+	queryParams[oauth2const.AppID] = app.AppID
 	queryParams[oauth2const.FlowID] = flowID
 
 	// Add insecure warning if the redirect URI is not using TLS.
