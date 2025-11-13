@@ -32,6 +32,7 @@ const (
 	ExecutorNameAttributeCollect = "AttributeCollector"
 	ExecutorNameAuthorization    = "AuthorizationExecutor"
 	ExecutorNameOUCreation       = "OUExecutor"
+	ExecutorNameHTTPRequest      = "HTTPRequestExecutor"
 )
 
 // User attribute and input constants

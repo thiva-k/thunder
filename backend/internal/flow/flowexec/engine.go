@@ -214,7 +214,7 @@ func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, no
 	}
 
 	// Handle authenticated user from the node response
-	if nodeResp.AuthenticatedUser.IsAuthenticated || engineCtx.FlowType == common.FlowTypeRegistration {
+	if fe.shouldUpdateAuthenticatedUser(engineCtx) {
 		prevAuthnUserAttrs := engineCtx.AuthenticatedUser.Attributes
 		engineCtx.AuthenticatedUser = nodeResp.AuthenticatedUser
 
@@ -240,6 +240,38 @@ func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, no
 			}
 		}
 	}
+}
+
+// shouldUpdateAuthenticatedUser determines if the authenticated user should be updated in the context.
+func (fe *flowEngine) shouldUpdateAuthenticatedUser(engineCtx *EngineContext) bool {
+	currentNode := engineCtx.CurrentNode
+	if currentNode == nil {
+		return false
+	}
+	if currentNode.GetType() != common.NodeTypeTaskExecution {
+		return false
+	}
+
+	executableNode, ok := currentNode.(core.ExecutorBackedNodeInterface)
+	if !ok {
+		return false
+	}
+	executorInst := executableNode.GetExecutor()
+	if executorInst == nil {
+		return false
+	}
+
+	// For authentication flows, only update from authentication executors
+	if engineCtx.FlowType == common.FlowTypeAuthentication {
+		return executorInst.GetType() == common.ExecutorTypeAuthentication
+	}
+
+	// For registration flows, only update from provisioning executor
+	if engineCtx.FlowType == common.FlowTypeRegistration {
+		return executorInst.GetName() == executor.ExecutorNameProvisioning
+	}
+
+	return false
 }
 
 // processNodeResponse processes the node response and determines the next action.
