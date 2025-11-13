@@ -58,7 +58,6 @@ await i18n.use(initReactI18next).init({
 root.render(<App />);
 ```
 
-
 ### 3. Use Translations in Components
 
 ```tsx
@@ -140,6 +139,7 @@ const translations = {
 ### Namespace Details
 
 **`common`** - Shared translations across all Thunder applications:
+
 - `actions` - Action buttons (save, cancel, delete, etc.)
 - `status` - Status messages (loading, success, error, etc.)
 - `form` - Form labels and placeholders
@@ -148,9 +148,11 @@ const translations = {
 - `time` - Time-related labels
 
 **`navigation`** - Navigation menu items:
+
 - Dashboard, Users, Applications, Integrations, etc.
 
 **`users`** - User management features:
+
 - User listing, creation, editing
 - User attributes and properties
 
@@ -163,6 +165,7 @@ const translations = {
 **`dashboard`** - Dashboard-specific content
 
 **`auth`** - Authentication flows (for Thunder Gate):
+
 - Sign in, sign up, password flows
 
 **`mfa`** - Multi-factor authentication (for Thunder Gate)
@@ -185,7 +188,7 @@ const translations = {
 
 ```tsx
 import { useTranslation } from 'react-i18next';
-import { Button, Typography } from '@mui/material';
+import { Button, Typography } from '@wso2/oxygen-ui';
 
 export function UsersPage() {
   const { t } = useTranslation('users');
@@ -217,7 +220,7 @@ export function UsersPage() {
 
 ```tsx
 import { useTranslation } from 'react-i18next';
-import { Button, TextField, Typography } from '@mui/material';
+import { Button, TextField, Typography } from '@wso2/oxygen-ui';
 
 export function SignInPage() {
   const { t } = useTranslation('auth');
@@ -549,6 +552,7 @@ Keep related translations in the same namespace for better maintainability.
 ### 3. Consistent Naming
 
 Use consistent naming conventions:
+
 - Actions: `add`, `edit`, `delete`, `save`, etc.
 - Labels: descriptive names like `firstName`, `email`, etc.
 - Messages: `success`, `error`, `warning`, etc.
@@ -562,7 +566,6 @@ Use consistent naming conventions:
 // ❌ Bad
 <button>Save</button>
 ```
-
 
 ## Troubleshooting
 
@@ -583,6 +586,7 @@ Use consistent naming conventions:
 ### Missing Translation Keys
 
 If you see translation keys instead of translated text:
+
 1. Verify the key exists in the locale file
 2. Check that you're using the correct namespace
 3. Ensure the namespace is loaded in your i18n config
@@ -631,4 +635,3 @@ When adding support for additional languages:
 - [react-i18next Documentation](https://react.i18next.com/)
 - [i18next Documentation](https://www.i18next.com/)
 - [TypeScript with i18next](https://www.i18next.com/overview/typescript)
-

@@ -49,7 +49,7 @@ export default function SignInSide(): JSX.Element {
           direction={{xs: 'column', md: 'row'}}
           sx={{
             justifyContent: 'center',
-            gap: {xs: 4, sm: 4},
+            gap: {xs: 4, sm: 16},
             p: {xs: 2, sm: 4},
             m: 'auto',
           }}

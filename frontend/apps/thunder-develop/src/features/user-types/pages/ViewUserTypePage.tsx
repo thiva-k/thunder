@@ -47,7 +47,7 @@ import {
   TableHead,
   TableRow,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Edit, Save, X, Trash2, Check} from 'lucide-react';
+import {ArrowLeft, Edit, Save, X, Trash2, Check} from '@wso2/oxygen-ui-icons-react';
 import useGetUserType from '../api/useGetUserType';
 import useUpdateUserType from '../api/useUpdateUserType';
 import useDeleteUserType from '../api/useDeleteUserType';

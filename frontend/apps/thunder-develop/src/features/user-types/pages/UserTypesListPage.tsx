@@ -18,7 +18,7 @@
 
 import {useNavigate} from 'react-router';
 import {Box, Stack, Typography, Button, Paper} from '@wso2/oxygen-ui';
-import {Plus} from 'lucide-react';
+import {Plus} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import UserTypesList from '../components/UserTypesList';
 

@@ -34,14 +34,18 @@ import {
   DialogContentText,
   DialogActions,
   Button,
+  DataGrid,
 } from '@wso2/oxygen-ui';
-import {DataGrid, type GridColDef, type GridRenderCellParams} from '@mui/x-data-grid';
-import {EllipsisVertical, Trash2, Eye} from 'lucide-react';
+import {EllipsisVertical, Trash2, Eye} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useDataGridLocaleText from '../../../hooks/useDataGridLocaleText';
 import useGetUserTypes from '../api/useGetUserTypes';
 import useDeleteUserType from '../api/useDeleteUserType';
 import type {UserSchemaListItem} from '../types/user-types';
+
+type GridColDef<R extends DataGrid.GridValidRowModel = DataGrid.GridValidRowModel> = DataGrid.GridColDef<R>;
+type GridRenderCellParams<R extends DataGrid.GridValidRowModel = DataGrid.GridValidRowModel> =
+  DataGrid.GridRenderCellParams<R>;
 
 export default function UserTypesList() {
   const navigate = useNavigate();
@@ -163,7 +167,7 @@ export default function UserTypesList() {
   return (
     <>
       <Box sx={{height: 600, width: '100%'}}>
-        <DataGrid
+        <DataGrid.DataGrid
           rows={userTypesData?.schemas ?? []}
           columns={columns}
           loading={isLoading}

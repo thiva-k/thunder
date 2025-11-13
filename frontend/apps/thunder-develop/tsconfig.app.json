@@ -27,7 +27,8 @@
       "@/lib/*": ["./src/lib/*"],
       "@/hooks/*": ["./src/hooks/*"],
       "@/types/*": ["./src/types/*"],
-      "@wso2/oxygen-ui/*": ["../../node_modules/@wso2/oxygen-ui/dist/*"]
+      "@wso2/oxygen-ui": ["../../../oxygen-ui/packages/oxygen-ui/dist/*"],
+      "@wso2/oxygen-ui-icons-react": ["../../../oxygen-ui/packages/oxygen-ui-icons-react/dist/*"]
     },
 
     /* Linting */

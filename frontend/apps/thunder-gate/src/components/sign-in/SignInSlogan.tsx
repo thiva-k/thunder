@@ -16,10 +16,9 @@
  * under the License.
  */
 
-import {Stack, Typography} from '@wso2/oxygen-ui';
-import {Cloud, ShieldCheck, Zap, TerminalSquare} from 'lucide-react';
+import {ColorSchemeImage, Stack, Typography} from '@wso2/oxygen-ui';
+import {Cloud, ShieldCheck, Zap, TerminalSquare} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
-import {ThemedIcon} from '@thunder/ui';
 
 const items: {
   icon: JSX.Element;
@@ -52,7 +51,7 @@ export default function SignInSlogan(): JSX.Element {
   return (
     <Stack sx={{flexDirection: 'column', alignSelf: 'center', gap: 4, maxWidth: 450}}>
       <Typography variant="h2">
-        <ThemedIcon
+        <ColorSchemeImage
           src={{
             light: `${import.meta.env.BASE_URL}/assets/images/logo.svg`,
             dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,

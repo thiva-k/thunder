@@ -17,7 +17,7 @@
  */
 
 import {styled, Typography, Breadcrumbs, breadcrumbsClasses, Box} from '@wso2/oxygen-ui';
-import {ChevronRightIcon} from 'lucide-react';
+import {ChevronRightIcon} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useNavigation from '@/layouts/contexts/useNavigation';

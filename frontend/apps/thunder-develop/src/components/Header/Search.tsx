@@ -17,7 +17,7 @@
  */
 
 import {FormControl, InputAdornment, OutlinedInput} from '@wso2/oxygen-ui';
-import {SearchIcon} from 'lucide-react';
+import {SearchIcon} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 

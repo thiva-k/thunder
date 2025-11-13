@@ -17,7 +17,7 @@
  */
 
 import {useMemo} from 'react';
-import type {GridLocaleText} from '@mui/x-data-grid';
+import type {DataGrid} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
 
 /**
@@ -67,7 +67,7 @@ function getTranslationFunction<T>(dataTable: Record<string, unknown>, key: stri
  * Custom hook to get localized text for MUI DataGrid
  * @returns Localized text object for DataGrid
  */
-export default function useDataGridLocaleText(): Partial<GridLocaleText> {
+export default function useDataGridLocaleText(): Partial<DataGrid.GridLocaleText> {
   const {t, i18n} = useTranslation();
 
   return useMemo(() => {

@@ -1,5 +1,0 @@
-*.js
-*.cjs
-*.mjs
-!eslint.config.js
-!rolldown.config.js

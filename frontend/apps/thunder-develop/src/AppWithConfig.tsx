@@ -17,7 +17,7 @@
  */
 
 import type {JSX} from 'react';
-import OxygenUIThemeProvider from '@wso2/oxygen-ui/OxygenUIThemeProvider';
+import {OxygenUIThemeProvider} from '@wso2/oxygen-ui';
 import {AsgardeoProvider} from '@asgardeo/react';
 import {useConfig} from '@thunder/commons-contexts';
 import App from './App';

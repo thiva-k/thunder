@@ -16,10 +16,20 @@
  * under the License.
  */
 
-import {Avatar, Drawer, drawerClasses, Box, Divider, Stack, Typography, IconButton, useTheme} from '@wso2/oxygen-ui';
+import {
+  Avatar,
+  ColorSchemeImage,
+  Drawer,
+  drawerClasses,
+  Box,
+  Divider,
+  Stack,
+  Typography,
+  IconButton,
+  useTheme
+} from '@wso2/oxygen-ui';
 import {User} from '@asgardeo/react';
-import {ThemedIcon} from '@thunder/ui';
-import {Menu} from 'lucide-react';
+import {Menu} from '@wso2/oxygen-ui-icons-react';
 import {useState, useEffect, useMemo, type JSX} from 'react';
 import MenuContent from './MenuContent';
 import OptionsMenu from './OptionsMenu';
@@ -145,7 +155,7 @@ export default function SideMenu({
                 alignItems: 'center',
               }}
             >
-              <ThemedIcon
+              <ColorSchemeImage
                 src={{
                   light: `${import.meta.env.BASE_URL}/assets/images/logo.svg`,
                   dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,

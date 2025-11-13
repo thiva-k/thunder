@@ -36,9 +36,9 @@ import {
   DialogContentText,
   DialogActions,
   Button,
+  DataGrid,
 } from '@wso2/oxygen-ui';
-import {DataGrid, type GridColDef, type GridRenderCellParams} from '@mui/x-data-grid';
-import {EllipsisVertical, Trash2, Eye} from 'lucide-react';
+import {EllipsisVertical, Trash2, Eye} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useDataGridLocaleText from '../../../hooks/useDataGridLocaleText';
 import useGetUsers from '../api/useGetUsers';
@@ -141,13 +141,13 @@ export default function UsersList(props: UsersListProps) {
       .slice(0, 2);
   };
 
-  const columns: GridColDef<UserWithDetails>[] = useMemo(() => {
+  const columns: DataGrid.GridColDef<UserWithDetails>[] = useMemo(() => {
     if (!defaultUserSchema) {
       // Return basic columns if schema is not loaded yet
       return [];
     }
 
-    const schemaColumns: GridColDef<UserWithDetails>[] = [];
+    const schemaColumns: DataGrid.GridColDef<UserWithDetails>[] = [];
     const schemaEntries = Object.entries(defaultUserSchema.schema);
 
     // Helper function to format field names
@@ -167,7 +167,7 @@ export default function UsersList(props: UsersListProps) {
         width: 70,
         sortable: false,
         filterable: false,
-        renderCell: (params: GridRenderCellParams<UserWithDetails>) => {
+        renderCell: (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
           const firstname = params.row.attributes?.firstname as string | undefined;
           const lastname = params.row.attributes?.lastname as string | undefined;
           const username = params.row.attributes?.username as string | undefined;
@@ -206,7 +206,7 @@ export default function UsersList(props: UsersListProps) {
           headerName: formatHeaderName(fieldName),
           flex: 1,
           minWidth: 150,
-          renderCell: (params: GridRenderCellParams<UserWithDetails>) => {
+          renderCell: (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
             const username = (params.row.attributes?.username as string | undefined) ?? '-';
             const firstname = params.row.attributes?.firstname as string | undefined;
             const lastname = params.row.attributes?.lastname as string | undefined;
@@ -248,7 +248,7 @@ export default function UsersList(props: UsersListProps) {
           field: fieldName,
           headerName: formatHeaderName(fieldName),
           width: 120,
-          renderCell: (params: GridRenderCellParams<UserWithDetails>) => {
+          renderCell: (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
             const value = params.row.attributes?.[fieldName] as boolean | string | undefined;
             if (value === undefined || value === null) return null;
 
@@ -266,7 +266,7 @@ export default function UsersList(props: UsersListProps) {
       }
 
       // Handle different field types
-      const columnDef: GridColDef<UserWithDetails> = {
+      const columnDef: DataGrid.GridColDef<UserWithDetails> = {
         field: fieldName,
         headerName: formatHeaderName(fieldName),
         flex: 1,
@@ -277,7 +277,7 @@ export default function UsersList(props: UsersListProps) {
       switch (fieldDef.type) {
         case 'boolean':
           columnDef.type = 'boolean';
-          columnDef.renderCell = (params: GridRenderCellParams<UserWithDetails>) => {
+          columnDef.renderCell = (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
             const value = params.row.attributes?.[fieldName] as boolean | undefined;
             if (value === undefined || value === null) return '-';
             return value ? t('common:actions.yes') : t('common:actions.no');
@@ -286,7 +286,7 @@ export default function UsersList(props: UsersListProps) {
 
         case 'number':
           columnDef.type = 'number';
-          columnDef.valueGetter = (_value, row) => {
+          columnDef.valueGetter = (_value: unknown, row: UserWithDetails) => {
             const value = row.attributes?.[fieldName] as number | undefined;
             return value ?? null;
           };
@@ -294,7 +294,7 @@ export default function UsersList(props: UsersListProps) {
 
         case 'array':
           columnDef.sortable = false;
-          columnDef.renderCell = (params: GridRenderCellParams<UserWithDetails>) => {
+          columnDef.renderCell = (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
             const value = params.row.attributes?.[fieldName] as unknown[] | undefined;
             if (!value || !Array.isArray(value) || value.length === 0) return '-';
             return value.join(', ');
@@ -303,7 +303,7 @@ export default function UsersList(props: UsersListProps) {
 
         case 'object':
           columnDef.sortable = false;
-          columnDef.renderCell = (params: GridRenderCellParams<UserWithDetails>) => {
+          columnDef.renderCell = (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
             const value = params.row.attributes?.[fieldName] as Record<string, unknown> | undefined;
             if (!value || typeof value !== 'object') return '-';
             return JSON.stringify(value);
@@ -312,7 +312,7 @@ export default function UsersList(props: UsersListProps) {
 
         default:
           // String and other types
-          columnDef.valueGetter = (_value, row) => {
+          columnDef.valueGetter = (_value: unknown, row: UserWithDetails) => {
             const value = row.attributes?.[fieldName] as string | number | undefined;
             return value ?? null;
           };
@@ -329,7 +329,7 @@ export default function UsersList(props: UsersListProps) {
       sortable: false,
       filterable: false,
       hideable: false,
-      renderCell: (params: GridRenderCellParams<UserWithDetails>) => (
+      renderCell: (params: DataGrid.GridRenderCellParams<UserWithDetails>) => (
         <IconButton
           size="small"
           aria-label="Open actions menu"
@@ -372,7 +372,7 @@ export default function UsersList(props: UsersListProps) {
   return (
     <>
       <Box sx={{height: 600, width: '100%'}}>
-        <DataGrid
+        <DataGrid.DataGrid
           rows={userData?.users}
           columns={columns}
           loading={isLoading}

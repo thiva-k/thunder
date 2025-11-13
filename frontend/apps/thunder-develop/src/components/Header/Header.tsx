@@ -16,10 +16,9 @@
  * under the License.
  */
 
-import {Stack, Tooltip} from '@wso2/oxygen-ui';
-import {ColorModeToggle} from '@wso2/oxygen-ui/ColorModeToggle';
+import {ColorSchemeToggle, Stack, Tooltip} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
-import {Bell, Menu, Monitor, Moon, Sun} from 'lucide-react';
+import {Bell, Menu} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import NavbarBreadcrumbs from '../Navbar/NavbarBreadcrumbs';
 import MenuButton from '../Sidebar/MenuButton';
@@ -56,11 +55,8 @@ export default function Header(): JSX.Element {
           </MenuButton>
         </Tooltip>
         <LanguageSwitcher />
-        <ColorModeToggle
+        <ColorSchemeToggle
           data-testid="theme-toggle"
-          darkModeIcon={<Moon strokeWidth={1} />}
-          lightModeIcon={<Sun strokeWidth={1} />}
-          systemModeIcon={<Monitor strokeWidth={1} />}
         />
       </Stack>
     </Stack>

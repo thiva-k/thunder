@@ -17,10 +17,8 @@
  */
 
 import type {JSX} from 'react';
-import OxygenUIThemeProvider from '@wso2/oxygen-ui/OxygenUIThemeProvider';
-import { ColorModeToggle } from '@wso2/oxygen-ui/ColorModeToggle';
+import { OxygenUIThemeProvider, ColorSchemeToggle } from '@wso2/oxygen-ui';
 import {AsgardeoProvider} from '@asgardeo/react';
-import {Monitor, Moon, Sun} from 'lucide-react';
 import {useConfig} from '@thunder/commons-contexts';
 import App from './App';
 
@@ -33,16 +31,13 @@ export default function AppWithConfig(): JSX.Element {
       platform="AsgardeoV2"
     >
       <OxygenUIThemeProvider>
-          <ColorModeToggle
+          <ColorSchemeToggle
             sx={{
               position: 'fixed',
               top: '2.3rem',
               right: '3rem',
               zIndex: 2
             }}
-            darkModeIcon={<Moon strokeWidth={1} />}
-            lightModeIcon={<Sun strokeWidth={1} />}
-            systemModeIcon={<Monitor strokeWidth={1} />}
           />
           <App />
       </OxygenUIThemeProvider>
