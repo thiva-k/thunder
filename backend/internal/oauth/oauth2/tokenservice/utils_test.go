@@ -83,66 +83,42 @@ func (suite *UtilsTestSuite) TestGetValidIssuers_WithCustomTokenIssuer() {
 	validIssuers := getValidIssuers(oauthApp)
 
 	assert.NotNil(suite.T(), validIssuers)
-	assert.Len(suite.T(), validIssuers, 2)
-	assert.Contains(suite.T(), validIssuers, "https://thunder.io")
+	// Only the OAuth-level issuer is returned (resolved from Token.Issuer)
+	assert.Len(suite.T(), validIssuers, 1)
 	assert.Contains(suite.T(), validIssuers, "https://custom.thunder.io")
 }
 
-func (suite *UtilsTestSuite) TestGetValidIssuers_WithAccessTokenIssuer() {
+func (suite *UtilsTestSuite) TestGetValidIssuers_WithOAuthLevelIssuer() {
 	oauthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://access.thunder.io",
-			},
+			Issuer: "https://oauth.thunder.io",
 		},
 	}
 
 	validIssuers := getValidIssuers(oauthApp)
 
 	assert.NotNil(suite.T(), validIssuers)
-	// ResolveTokenConfig returns the custom issuer, so only that issuer is in the map
+	// ResolveTokenConfig returns the OAuth-level issuer
 	assert.Len(suite.T(), validIssuers, 1)
-	assert.Contains(suite.T(), validIssuers, "https://access.thunder.io")
+	assert.Contains(suite.T(), validIssuers, "https://oauth.thunder.io")
 }
 
-func (suite *UtilsTestSuite) TestGetValidIssuers_WithAllIssuers() {
+func (suite *UtilsTestSuite) TestGetValidIssuers_WithOAuthLevelIssuerOnly() {
 	oauthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
 			Issuer: "https://custom.thunder.io",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://access.thunder.io",
-			},
+			// AccessToken should not have its own issuer - it uses OAuth-level issuer
 		},
 	}
 
 	validIssuers := getValidIssuers(oauthApp)
 
 	assert.NotNil(suite.T(), validIssuers)
-	// ResolveTokenConfig returns AccessToken issuer, plus Token.Issuer and AccessToken.Issuer are added
-	assert.Len(suite.T(), validIssuers, 2)
+	// ResolveTokenConfig returns OAuth-level issuer
+	assert.Len(suite.T(), validIssuers, 1)
 	assert.Contains(suite.T(), validIssuers, "https://custom.thunder.io")
-	assert.Contains(suite.T(), validIssuers, "https://access.thunder.io")
-}
-
-func (suite *UtilsTestSuite) TestGetValidIssuers_WithDuplicateIssuers() {
-	// Same issuer in multiple places should only appear once
-	oauthApp := &appmodel.OAuthAppConfigProcessedDTO{
-		ClientID: "test-client",
-		Token: &appmodel.OAuthTokenConfig{
-			Issuer: "https://thunder.io",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://thunder.io",
-			},
-		},
-	}
-
-	validIssuers := getValidIssuers(oauthApp)
-
-	assert.NotNil(suite.T(), validIssuers)
-	// Should still work with map deduplication
-	assert.True(suite.T(), validIssuers["https://thunder.io"])
 }
 
 func (suite *UtilsTestSuite) TestGetValidIssuers_WithEmptyIssuerStrings() {
@@ -150,10 +126,8 @@ func (suite *UtilsTestSuite) TestGetValidIssuers_WithEmptyIssuerStrings() {
 	oauthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			Issuer: "",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "",
-			},
+			Issuer:      "",
+			AccessToken: &appmodel.AccessTokenConfig{},
 		},
 	}
 
@@ -192,17 +166,16 @@ func (suite *UtilsTestSuite) TestvalidateIssuer_WithValidCustomIssuer() {
 	assert.NoError(suite.T(), err)
 }
 
-func (suite *UtilsTestSuite) TestvalidateIssuer_WithValidAccessTokenIssuer() {
+func (suite *UtilsTestSuite) TestvalidateIssuer_WithValidOAuthLevelIssuer() {
 	oauthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://access.thunder.io",
-			},
+			Issuer: "https://oauth.thunder.io",
+			// AccessToken should not have its own issuer - it uses OAuth-level issuer
 		},
 	}
 
-	err := validateIssuer("https://access.thunder.io", oauthApp)
+	err := validateIssuer("https://oauth.thunder.io", oauthApp)
 
 	assert.NoError(suite.T(), err)
 }
@@ -252,24 +225,23 @@ func (suite *UtilsTestSuite) TestFederationScenario_MultipleThunderIssuers() {
 	oauthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			Issuer: "https://thunder-prod.company.com",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://thunder-staging.company.com",
+			Issuer:      "https://thunder-prod.company.com",
+			AccessToken: &appmodel.AccessTokenConfig{
+				// AccessToken uses OAuth-level issuer
 			},
 		},
 	}
 
 	validIssuers := getValidIssuers(oauthApp)
 
-	// Should accept tokens from all configured Thunder instances
+	// Only the OAuth-level issuer is returned (resolved from Token.Issuer)
 	assert.Contains(suite.T(), validIssuers, "https://thunder-prod.company.com")
-	assert.Contains(suite.T(), validIssuers, "https://thunder-staging.company.com")
 
-	// Validate each configured issuer
+	// Validate the configured issuer
 	assert.NoError(suite.T(), validateIssuer("https://thunder-prod.company.com", oauthApp))
-	assert.NoError(suite.T(), validateIssuer("https://thunder-staging.company.com", oauthApp))
 
 	// Should reject unknown issuers
+	assert.Error(suite.T(), validateIssuer("https://thunder-staging.company.com", oauthApp))
 	assert.Error(suite.T(), validateIssuer("https://unknown.company.com", oauthApp))
 }
 

@@ -68,14 +68,20 @@ type OAuthAppConfig struct {
 
 // OAuthTokenConfig represents the OAuth token configuration.
 type OAuthTokenConfig struct {
-	Issuer      string         `json:"issuer,omitempty"`
-	AccessToken *TokenConfig   `json:"access_token,omitempty"`
-	IDToken     *IDTokenConfig `json:"id_token,omitempty"`
+	Issuer      string             `json:"issuer,omitempty"`
+	AccessToken *AccessTokenConfig `json:"access_token,omitempty"`
+	IDToken     *IDTokenConfig     `json:"id_token,omitempty"`
 }
 
-// TokenConfig represents the token configuration.
+// TokenConfig represents the token configuration (used for application-level token config).
 type TokenConfig struct {
 	Issuer         string   `json:"issuer,omitempty"`
+	ValidityPeriod int64    `json:"validity_period,omitempty"`
+	UserAttributes []string `json:"user_attributes,omitempty"`
+}
+
+// AccessTokenConfig represents the access token configuration.
+type AccessTokenConfig struct {
 	ValidityPeriod int64    `json:"validity_period,omitempty"`
 	UserAttributes []string `json:"user_attributes,omitempty"`
 }
