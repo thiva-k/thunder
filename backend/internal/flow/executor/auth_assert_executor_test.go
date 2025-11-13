@@ -31,12 +31,14 @@ import (
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/authn/assertmock"
 	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
+	"github.com/asgardeo/thunder/tests/mocks/oumock"
 	"github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
@@ -44,6 +46,7 @@ type AuthAssertExecutorTestSuite struct {
 	suite.Suite
 	mockJWTService      *jwtmock.JWTServiceInterfaceMock
 	mockUserService     *usermock.UserServiceInterfaceMock
+	mockOUService       *oumock.OrganizationUnitServiceInterfaceMock
 	mockAssertGenerator *assertmock.AuthAssertGeneratorInterfaceMock
 	mockFlowFactory     *coremock.FlowFactoryInterfaceMock
 	executor            *authAssertExecutor
@@ -59,6 +62,7 @@ func (suite *AuthAssertExecutorTestSuite) SetupTest() {
 
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
+	suite.mockOUService = oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
 	suite.mockAssertGenerator = assertmock.NewAuthAssertGeneratorInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 
@@ -67,7 +71,7 @@ func (suite *AuthAssertExecutorTestSuite) SetupTest() {
 		[]flowcm.InputData{}, []flowcm.InputData{}).Return(mockExec)
 
 	suite.executor = newAuthAssertExecutor(suite.mockFlowFactory, suite.mockJWTService,
-		suite.mockUserService, suite.mockAssertGenerator)
+		suite.mockUserService, suite.mockOUService, suite.mockAssertGenerator)
 }
 
 func createMockExecutorSimple(t *testing.T, name string,
@@ -128,6 +132,8 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_UserAuthenticated_Success(
 
 	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
 		mock.Anything).Return("jwt-token", int64(3600), nil)
+
+	suite.mockOUService.On("GetOrganizationUnit", "ou-123").Return(ou.OrganizationUnit{ID: "ou-123"}, nil)
 
 	resp, err := suite.executor.Execute(ctx)
 
@@ -356,7 +362,7 @@ func (suite *AuthAssertExecutorTestSuite) TestGetUserAttributes_Success() {
 
 	suite.mockUserService.On("GetUser", "user-123").Return(existingUser, nil)
 
-	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123", suite.executor.logger)
+	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123")
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), resultUser)
@@ -370,7 +376,7 @@ func (suite *AuthAssertExecutorTestSuite) TestGetUserAttributes_ServiceError() {
 	suite.mockUserService.On("GetUser", "user-123").
 		Return(nil, &serviceerror.ServiceError{Error: "user not found"})
 
-	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123", suite.executor.logger)
+	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123")
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), resultUser)
@@ -386,7 +392,7 @@ func (suite *AuthAssertExecutorTestSuite) TestGetUserAttributes_InvalidJSON() {
 
 	suite.mockUserService.On("GetUser", "user-123").Return(existingUser, nil)
 
-	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123", suite.executor.logger)
+	resultUser, resultAttrs, err := suite.executor.getUserAttributes("user-123")
 
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), resultUser)
@@ -413,6 +419,8 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithUserTypeAndOU() {
 		mock.MatchedBy(func(claims map[string]interface{}) bool {
 			return claims["userType"] == "EXTERNAL" && claims["ouId"] == "ou-456"
 		})).Return("jwt-token", int64(3600), nil)
+
+	suite.mockOUService.On("GetOrganizationUnit", "ou-456").Return(ou.OrganizationUnit{ID: "ou-456"}, nil)
 
 	resp, err := suite.executor.Execute(ctx)
 
@@ -448,5 +456,42 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithCustomTokenConfig() {
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), resp)
 	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthAssertExecutorTestSuite) TestExecute_WithOUNameAndHandle() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		AppID:    "app-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			IsAuthenticated:    true,
+			UserID:             "user-123",
+			OrganizationUnitID: "ou-789",
+		},
+		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
+		Application:      appmodel.ApplicationProcessedDTO{},
+	}
+
+	suite.mockOUService.On("GetOrganizationUnit", "ou-789").Return(ou.OrganizationUnit{
+		ID:     "ou-789",
+		Name:   "Engineering",
+		Handle: "eng",
+	}, nil)
+
+	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(claims map[string]interface{}) bool {
+			return claims["ouId"] == "ou-789" &&
+				claims["ouName"] == "Engineering" &&
+				claims["ouHandle"] == "eng"
+		})).Return("jwt-token", int64(3600), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
+	assert.Equal(suite.T(), "jwt-token", resp.Assertion)
+	suite.mockOUService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
 }

@@ -181,6 +181,10 @@ CREATE TABLE CERTIFICATE (
     UNIQUE (REF_TYPE, REF_ID)
 );
 
+-- Insert a pre-configured organization unit for integration tests
+INSERT INTO ORGANIZATION_UNIT (OU_ID, PARENT_ID, HANDLE, NAME, DESCRIPTION) VALUES
+('test-ou-id', NULL, 'test-ou', 'Test Organization Unit', 'Organization unit for integration tests');
+
 -- Insert a pre-configured notification sender for SMS OTP tests
 INSERT INTO NOTIFICATION_SENDER (NAME, SENDER_ID, DESCRIPTION, TYPE, PROVIDER, PROPERTIES) VALUES
 ('Custom SMS Sender', 'test-sms-sender-id', 'Custom SMS sender for integration tests', 'MESSAGE', 'custom', 

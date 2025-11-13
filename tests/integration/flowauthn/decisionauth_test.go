@@ -298,16 +298,17 @@ func (ts *DecisionAndMFAFlowTestSuite) TestBasicAuthWithMobileUserSMSOTP() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		decisionTestAppID,
+		decisionUserSchema.Name,
+		decisionTestOUID,
+		decisionTestOU.Name,
+		decisionTestOU.Handle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(decisionUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(decisionTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(decisionTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *DecisionAndMFAFlowTestSuite) TestBasicAuthWithoutMobileUserSMSOTP() {
@@ -419,16 +420,17 @@ func (ts *DecisionAndMFAFlowTestSuite) TestBasicAuthWithoutMobileUserSMSOTP() {
 		ts.Require().Empty(completeFlowStep.FailureReason,
 			"Failure reason should be empty for successful authentication")
 
-		// Decode and validate JWT claims
-		jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-		ts.Require().NoError(err, "Failed to decode JWT assertion")
+		// Validate JWT assertion fields using common utility
+		jwtClaims, err := testutils.ValidateJWTAssertionFields(
+			completeFlowStep.Assertion,
+			decisionTestAppID,
+			decisionUserSchema.Name,
+			decisionTestOUID,
+			decisionTestOU.Name,
+			decisionTestOU.Handle,
+		)
+		ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 		ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-		// Validate JWT contains expected user type and OU ID
-		ts.Require().Equal(decisionUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-		ts.Require().Equal(decisionTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-		ts.Require().Equal(decisionTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-		ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 	})
 
 	// Test case 2: Retry auth flow for same user - should not prompt for mobile again
@@ -528,16 +530,17 @@ func (ts *DecisionAndMFAFlowTestSuite) TestBasicAuthWithoutMobileUserSMSOTP() {
 		ts.Require().Empty(completeFlowStep.FailureReason,
 			"Failure reason should be empty for successful authentication")
 
-		// Decode and validate JWT claims
-		jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-		ts.Require().NoError(err, "Failed to decode JWT assertion")
+		// Validate JWT assertion fields using common utility
+		jwtClaims, err := testutils.ValidateJWTAssertionFields(
+			completeFlowStep.Assertion,
+			decisionTestAppID,
+			decisionUserSchema.Name,
+			decisionTestOUID,
+			decisionTestOU.Name,
+			decisionTestOU.Handle,
+		)
+		ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 		ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-		// Validate JWT contains expected user type and OU ID
-		ts.Require().Equal(decisionUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-		ts.Require().Equal(decisionTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-		ts.Require().Equal(decisionTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-		ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 	})
 }
 
@@ -635,16 +638,17 @@ func (ts *DecisionAndMFAFlowTestSuite) TestSMSOTPAuthWithValidMobile() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		decisionTestAppID,
+		decisionUserSchema.Name,
+		decisionTestOUID,
+		decisionTestOU.Name,
+		decisionTestOU.Handle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(decisionUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(decisionTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(decisionTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *DecisionAndMFAFlowTestSuite) TestSMSOTPAuthWithInvalidMobile() {

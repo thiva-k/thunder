@@ -34,6 +34,8 @@ type JWTClaims struct {
 	Iat       float64                `json:"iat"`
 	UserType  string                 `json:"userType,omitempty"`
 	OuID      string                 `json:"ouId,omitempty"`
+	OuName    string                 `json:"ouName,omitempty"`
+	OuHandle  string                 `json:"ouHandle,omitempty"`
 	Assurance map[string]interface{} `json:"assurance,omitempty"`
 	// Additional claims can be accessed via the map
 	Additional map[string]interface{} `json:"-"`
@@ -87,4 +89,51 @@ func ValidateJWTClaims(claims *JWTClaims, expectedSub, expectedAud, expectedUser
 		return fmt.Errorf("expected ouId '%s', got '%s'", expectedOuID, claims.OuID)
 	}
 	return nil
+}
+
+// ValidateJWTAssertionFields validates common JWT assertion fields including OU details.
+// This is a helper function that can be used across integration tests to validate JWT assertions.
+func ValidateJWTAssertionFields(assertion, expectedAudience, expectedUserType,
+	expectedOuID, expectedOuName, expectedOuHandle string) (*JWTClaims, error) {
+	// Decode JWT
+	jwtClaims, err := DecodeJWT(assertion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode JWT assertion: %w", err)
+	}
+
+	if jwtClaims == nil {
+		return nil, fmt.Errorf("JWT claims should not be nil")
+	}
+
+	// Validate audience
+	if jwtClaims.Aud != expectedAudience {
+		return nil, fmt.Errorf("expected aud to be '%s', got '%s'", expectedAudience, jwtClaims.Aud)
+	}
+
+	// Validate subject is not empty
+	if jwtClaims.Sub == "" {
+		return nil, fmt.Errorf("JWT subject should not be empty")
+	}
+
+	// Validate user type if provided
+	if expectedUserType != "" && jwtClaims.UserType != expectedUserType {
+		return nil, fmt.Errorf("expected userType to be '%s', got '%s'", expectedUserType, jwtClaims.UserType)
+	}
+
+	// Validate OU ID if provided
+	if expectedOuID != "" && jwtClaims.OuID != expectedOuID {
+		return nil, fmt.Errorf("expected ouId to be '%s', got '%s'", expectedOuID, jwtClaims.OuID)
+	}
+
+	// Validate OU name if provided
+	if expectedOuName != "" && jwtClaims.OuName != expectedOuName {
+		return nil, fmt.Errorf("expected ouName to be '%s', got '%s'", expectedOuName, jwtClaims.OuName)
+	}
+
+	// Validate OU handle if provided
+	if expectedOuHandle != "" && jwtClaims.OuHandle != expectedOuHandle {
+		return nil, fmt.Errorf("expected ouHandle to be '%s', got '%s'", expectedOuHandle, jwtClaims.OuHandle)
+	}
+
+	return jwtClaims, nil
 }

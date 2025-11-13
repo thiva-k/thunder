@@ -61,7 +61,7 @@ func Initialize(
 
 	reg.RegisterExecutor(ExecutorNameAttributeCollect, newAttributeCollector(flowFactory, userService))
 	reg.RegisterExecutor(ExecutorNameAuthAssert, newAuthAssertExecutor(flowFactory, jwtService,
-		userService, authRegistry.AuthAssertGenerator))
+		userService, ouService, authRegistry.AuthAssertGenerator))
 	reg.RegisterExecutor(ExecutorNameAuthorization, newAuthorizationExecutor(flowFactory, authZService))
 	reg.RegisterExecutor(ExecutorNameHTTPRequest, newHTTPRequestExecutor(flowFactory))
 

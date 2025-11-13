@@ -29,6 +29,11 @@ import (
 
 const (
 	testServerURL = "https://localhost:8095"
+
+	// Pre-configured OU from database scripts
+	testOUID     = "test-ou-id"
+	testOUName   = "Test Organization Unit"
+	testOUHandle = "test-ou"
 )
 
 // Helper function to initiate the authentication flow

@@ -40,18 +40,10 @@ var (
 		ClientSecret:              "github_auth_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
 	}
-
-	githubAuthTestOU = testutils.OrganizationUnit{
-		Handle:      "github-auth-flow-test-ou",
-		Name:        "GitHub Auth Flow Test Organization Unit",
-		Description: "Organization unit for GitHub authentication flow testing",
-		Parent:      nil,
-	}
 )
 
 var (
 	githubAuthTestAppID string
-	githubAuthTestOUID  string
 )
 
 const (
@@ -142,22 +134,16 @@ func (ts *GithubAuthFlowTestSuite) SetupSuite() {
 	attributesJSON, err := json.Marshal(userAttributes)
 	ts.Require().NoError(err)
 
+	// Create user in the pre-configured OU from database scripts
 	user := testutils.User{
 		Type:             githubUserSchema.Name,
-		OrganizationUnit: "root",
+		OrganizationUnit: testOUID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
 	userID, err := testutils.CreateUser(user)
 	ts.Require().NoError(err, "Failed to create test user")
 	ts.userID = userID
-
-	// Create test organization unit for GitHub auth tests
-	ouID, err := testutils.CreateOrganizationUnit(githubAuthTestOU)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
-	}
-	githubAuthTestOUID = ouID
 
 	// Create test application for GitHub auth tests
 	appID, err := testutils.CreateApplication(githubAuthTestApp)
@@ -172,13 +158,6 @@ func (ts *GithubAuthFlowTestSuite) TearDownSuite() {
 	if githubAuthTestAppID != "" {
 		if err := testutils.DeleteApplication(githubAuthTestAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
-		}
-	}
-
-	// Delete test organization unit
-	if githubAuthTestOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(githubAuthTestOUID); err != nil {
-			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
 
@@ -284,8 +263,17 @@ func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowCompleteSuccess() {
 	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be COMPLETE")
 	ts.Require().NotEmpty(completeFlowStep.Assertion, "Assertion token should be present")
 
-	// Verify the assertion token contains expected information
-	ts.Require().Contains(completeFlowStep.Assertion, ".", "Assertion should be a JWT token")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		githubAuthTestAppID,
+		githubUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
+	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
 }
 
 func (ts *GithubAuthFlowTestSuite) TestGithubAuthFlowCompleteWithInvalidCode() {

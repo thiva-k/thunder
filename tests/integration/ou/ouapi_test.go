@@ -37,8 +37,8 @@ const (
 
 var (
 	ouToCreate = CreateOURequest{
-		Name:        "Test Organization Unit",
-		Handle:      "test-org-unit",
+		Name:        "OU API Test Organization Unit",
+		Handle:      "ou-api-test-org-unit",
 		Description: "Test OU for integration testing",
 		Parent:      nil,
 	}
