@@ -53,7 +53,8 @@
     "clean:node_modules": "rimraf node_modules",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.lib.json"
   },
   "devDependencies": {

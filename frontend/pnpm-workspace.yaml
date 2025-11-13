@@ -1,15 +1,12 @@
 packages:
   - apps/*
   - packages/*
-  - '!packages/oxygen-ui'
-  - packages/oxygen-ui/packages/oxygen-ui
 
 catalog:
   '@asgardeo/react': 0.6.2
   '@asgardeo/react-router': 1.0.2
   '@emotion/react': ^11.14.0
   '@emotion/styled': ^11.14.1
-  '@mui/icons-material': ^7.3.4
   '@mui/material': ^7.3.4
   '@mui/x-charts': ^8.14.0
   '@mui/x-data-grid': ^8.14.0
@@ -24,6 +21,8 @@ catalog:
   '@vitejs/plugin-basic-ssl': ^2.1.0
   '@vitejs/plugin-react': ^5.0.4
   '@vitest/coverage-istanbul': ^3.2.4
+  '@wso2/oxygen-ui': 0.0.1-alpha.1
+  '@wso2/oxygen-ui-icons-react': 0.0.1-alpha.1
   babel-plugin-react-compiler: ^19.1.0-rc.3
   clsx: ^2.1.1
   dayjs: ^1.11.18

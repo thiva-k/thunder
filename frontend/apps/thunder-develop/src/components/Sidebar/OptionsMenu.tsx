@@ -28,7 +28,7 @@ import {
 } from '@wso2/oxygen-ui';
 import {SignOutButton, useAsgardeo} from '@asgardeo/react';
 import {useState, type JSX, type MouseEvent} from 'react';
-import {EllipsisVertical, LogOut} from 'lucide-react';
+import {EllipsisVertical, LogOut} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import MenuButton from './MenuButton';
 

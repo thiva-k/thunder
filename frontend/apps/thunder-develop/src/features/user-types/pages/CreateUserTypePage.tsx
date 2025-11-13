@@ -35,7 +35,7 @@ import {
   Alert,
   Snackbar,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Plus, Save, X} from 'lucide-react';
+import {ArrowLeft, Plus, Save, X} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useCreateUserType from '../api/useCreateUserType';
 import type {PropertyDefinition, UserSchemaDefinition, UIPropertyType, SchemaPropertyInput} from '../types/user-types';

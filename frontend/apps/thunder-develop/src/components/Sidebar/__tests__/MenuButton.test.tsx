@@ -18,7 +18,7 @@
 
 import {describe, it, expect, vi} from 'vitest';
 import userEvent from '@testing-library/user-event';
-import {Bell} from 'lucide-react';
+import {Bell} from '@wso2/oxygen-ui-icons-react';
 import {screen} from '@testing-library/react';
 import render from '@/test/test-utils';
 import MenuButton from '../MenuButton';

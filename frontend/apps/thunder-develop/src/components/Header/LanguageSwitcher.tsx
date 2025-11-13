@@ -19,7 +19,7 @@
 import {Menu, MenuItem, ListItemText, Tooltip} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useState} from 'react';
-import {Languages} from 'lucide-react';
+import {Languages} from '@wso2/oxygen-ui-icons-react';
 import type {SupportedLanguage} from '@thunder/i18n';
 import {useLanguage} from '@/hooks/useLanguage';
 import MenuButton from '../Sidebar/MenuButton';

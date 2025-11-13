@@ -34,7 +34,7 @@ import {
   DialogContentText,
   DialogActions,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Edit, Save, X, Trash2} from 'lucide-react';
+import {ArrowLeft, Edit, Save, X, Trash2} from '@wso2/oxygen-ui-icons-react';
 import useGetUser from '../api/useGetUser';
 import useGetUserSchemas from '../api/useGetUserSchemas';
 import useGetUserSchema from '../api/useGetUserSchema';

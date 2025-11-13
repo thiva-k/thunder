@@ -20,10 +20,13 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
-import type {DataGridProps} from '@mui/x-data-grid';
+import type * as OxygenUI from '@wso2/oxygen-ui';
+import {DataGrid} from '@wso2/oxygen-ui';
 import render from '@/test/test-utils';
 import UsersList from '../UsersList';
 import type {UserListResponse, ApiUserSchema, ApiError} from '../../types/users';
+
+type DataGridProps = DataGrid.DataGridProps;
 
 const mockNavigate = vi.fn();
 const mockRefetch = vi.fn();
@@ -36,85 +39,92 @@ interface MockRow {
   [key: string]: unknown;
 }
 
-vi.mock('@mui/x-data-grid', () => ({
-  DataGrid: (props: DataGridProps) => {
-    const {rows = [], columns = [], loading, onRowClick} = props;
+vi.mock('@wso2/oxygen-ui', async () => {
+  const actual = await vi.importActual<typeof OxygenUI>('@wso2/oxygen-ui');
+  return {
+    ...actual,
+    DataGrid: {
+      ...(actual.DataGrid ?? {}),
+      DataGrid: (props: DataGridProps) => {
+        const {rows = [], columns = [], loading, onRowClick} = props;
 
-    return (
-      <div data-testid="data-grid" data-loading={loading}>
-        {rows.map((row) => {
-          const mockRow = row as MockRow;
-          const username = mockRow.attributes?.username;
-          const displayText = typeof username === 'string' ? username : mockRow.id;
+        return (
+          <div data-testid="data-grid" data-loading={loading}>
+            {rows.map((row) => {
+              const mockRow = row as MockRow;
+              const username = mockRow.attributes?.username;
+              const displayText = typeof username === 'string' ? username : mockRow.id;
 
-          return (
-            <div key={mockRow.id} className="MuiDataGrid-row-container">
-              <button
-                type="button"
-                className="MuiDataGrid-row"
-                onClick={() => {
-                  if (onRowClick) {
-                    onRowClick({row: mockRow} as never, {} as never, {} as never);
-                  }
-                }}
-                data-testid={`row-${mockRow.id}`}
-              >
-                {displayText}
-              </button>
-              {columns?.map((column) => {
-                if (column?.field === undefined) return null;
+              return (
+                <div key={mockRow.id} className="MuiDataGrid-row-container">
+                  <button
+                    type="button"
+                    className="MuiDataGrid-row"
+                    onClick={() => {
+                      if (onRowClick) {
+                        onRowClick({row: mockRow} as never, {} as never, {} as never);
+                      }
+                    }}
+                    data-testid={`row-${mockRow.id}`}
+                  >
+                    {displayText}
+                  </button>
+                  {columns?.map((column) => {
+                    if (column?.field === undefined) return null;
 
-                let value: unknown;
-                if (typeof column.valueGetter === 'function') {
-                  value = column.valueGetter({} as never, mockRow as never, column as never, {} as never);
-                } else if (column.field in mockRow) {
-                  value = mockRow[column.field];
-                } else {
-                  value = mockRow.attributes?.[column.field];
-                }
+                    let value: unknown;
+                    if (typeof column.valueGetter === 'function') {
+                      value = column.valueGetter({} as never, mockRow as never, column as never, {} as never);
+                    } else if (column.field in mockRow) {
+                      value = mockRow[column.field];
+                    } else {
+                      value = mockRow.attributes?.[column.field];
+                    }
 
-                const params = {
-                  row: mockRow,
-                  field: column.field,
-                  value,
-                  id: mockRow.id,
-                };
+                    const params = {
+                      row: mockRow,
+                      field: column.field,
+                      value,
+                      id: mockRow.id,
+                    };
 
-                const content = typeof column.renderCell === 'function' ? column.renderCell(params as never) : value;
+                    const content = typeof column.renderCell === 'function' ? column.renderCell(params as never) : value;
 
-                if (content === null || content === undefined) {
-                  return null;
-                }
+                    if (content === null || content === undefined) {
+                      return null;
+                    }
 
-                // Convert content to a renderable format
-                let renderableContent: React.ReactNode;
-                if (typeof content === 'string' || typeof content === 'number' || typeof content === 'boolean') {
-                  renderableContent = String(content);
-                } else if (React.isValidElement(content)) {
-                  renderableContent = content;
-                } else if (Array.isArray(content)) {
-                  renderableContent = JSON.stringify(content);
-                } else if (typeof content === 'object') {
-                  renderableContent = JSON.stringify(content);
-                } else {
-                  renderableContent = '';
-                }
+                    // Convert content to a renderable format
+                    let renderableContent: React.ReactNode;
+                    if (typeof content === 'string' || typeof content === 'number' || typeof content === 'boolean') {
+                      renderableContent = String(content);
+                    } else if (React.isValidElement(content)) {
+                      renderableContent = content;
+                    } else if (Array.isArray(content)) {
+                      renderableContent = JSON.stringify(content);
+                    } else if (typeof content === 'object') {
+                      renderableContent = JSON.stringify(content);
+                    } else {
+                      renderableContent = '';
+                    }
 
-                return (
-                  <span key={`${mockRow.id}-${column.field}`} className="MuiDataGrid-cell">
-                    {renderableContent}
-                  </span>
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
-    );
-  },
-  GridColDef: {} as never,
-  GridRenderCellParams: {} as never,
-}));
+                    return (
+                      <span key={`${mockRow.id}-${column.field}`} className="MuiDataGrid-cell">
+                        {renderableContent}
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        );
+      },
+      GridColDef: {} as never,
+      GridRenderCellParams: {} as never,
+    },
+  };
+});
 
 // Mock react-router
 vi.mock('react-router', async () => {

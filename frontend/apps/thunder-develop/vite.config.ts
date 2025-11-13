@@ -60,12 +60,31 @@ export default defineConfig({
       '@/lib': resolve(currentDir, 'src', 'lib'),
       '@/hooks': resolve(currentDir, 'src', 'hooks'),
       '@/types': resolve(currentDir, 'src', 'types'),
+      // Force using the same React instance to avoid "Invalid hook call" errors
+      // when using linked packages
+      react: resolve(__dirname, './node_modules/react'),
+      'react-dom': resolve(__dirname, './node_modules/react-dom'),
+      '@emotion/react': resolve(__dirname, './node_modules/@emotion/react'),
+      '@emotion/styled': resolve(__dirname, './node_modules/@emotion/styled'),
     },
   },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: resolve(currentDir, 'src', 'test', 'setup.ts'),
+    // Added to fix test failures dues to css imports from oxygen-ui. Need to check if can fix from oxygen-ui library.
+    server: {
+      deps: {
+        inline: [
+          '@wso2/oxygen-ui',
+          '@wso2/oxygen-ui-icons-react',
+          '@mui/x-data-grid',
+          '@mui/x-date-pickers',
+          '@mui/x-tree-view',
+          '@mui/x-charts',
+        ],
+      },
+    },
     css: true,
     coverage: {
       provider: 'istanbul',

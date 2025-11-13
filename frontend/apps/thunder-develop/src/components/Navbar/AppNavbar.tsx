@@ -17,9 +17,17 @@
  */
 
 import * as React from 'react';
-import {AppBar, styled, Box, Stack, Toolbar as MuiToolbar, tabsClasses, Typography} from '@wso2/oxygen-ui';
-import {ColorModeIconDropdown} from '@thunder/ui';
-import {LayoutDashboard, Menu} from 'lucide-react';
+import {
+  AppBar,
+  ColorSchemeToggle,
+  styled,
+  Box,
+  Stack,
+  Toolbar as MuiToolbar,
+  tabsClasses,
+  Typography
+} from '@wso2/oxygen-ui';
+import {LayoutDashboard, Menu} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import SideMenuMobile from '../Sidebar/SideMenuMobile';
 import MenuButton from '../Sidebar/MenuButton';
@@ -76,7 +84,7 @@ export default function AppNavbar(): JSX.Element {
               Dashboard
             </Typography>
           </Stack>
-          <ColorModeIconDropdown />
+          <ColorSchemeToggle />
           <MenuButton aria-label="menu" onClick={toggleDrawer(true)}>
             <Menu />
           </MenuButton>

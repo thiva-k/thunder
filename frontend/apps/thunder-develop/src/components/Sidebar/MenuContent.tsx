@@ -18,7 +18,7 @@
 
 import {NavLink} from 'react-router';
 import {List, ListItem, ListItemButton, ListItemIcon, ListItemText, Stack, Tooltip} from '@wso2/oxygen-ui';
-import {Blocks, LayoutGrid, User, UsersRound} from 'lucide-react';
+import {Blocks, LayoutGrid, User, UsersRound} from '@wso2/oxygen-ui-icons-react';
 import {useContext, useMemo, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useNavigation from '@/layouts/contexts/useNavigation';

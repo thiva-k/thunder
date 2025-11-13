@@ -64,6 +64,9 @@ function hello() {
   invalid: [
     {
       code: `export const foo = 'bar';`,
+      output: `${VALID_COPYRIGHT}
+
+export const foo = 'bar';`,
       errors: [
         {
           messageId: 'missingHeader',
@@ -76,6 +79,9 @@ function hello() {
  */
 
 export const foo = 'bar';`,
+      output: `${VALID_COPYRIGHT}
+
+export const foo = 'bar';`,
       errors: [
         {
           messageId: 'incorrectHeader',
@@ -84,6 +90,11 @@ export const foo = 'bar';`,
     },
     {
       code: `// Single line comment
+
+export const foo = 'bar';`,
+      output: `// Single line comment
+
+${VALID_COPYRIGHT}
 
 export const foo = 'bar';`,
       errors: [

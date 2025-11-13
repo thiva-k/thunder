@@ -20,6 +20,7 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {type ReactNode} from 'react';
+import type * as OxygenUI from '@wso2/oxygen-ui';
 import render from '@/test/test-utils';
 import UserTypesList from '../UserTypesList';
 import type useGetUserTypesHook from '../../api/useGetUserTypes';
@@ -50,57 +51,64 @@ interface MockDataGridProps {
 }
 
 // Mock DataGrid to avoid CSS import issues
-vi.mock('@mui/x-data-grid', () => ({
-  DataGrid: ({rows = [], columns = [], loading = false, onRowClick = () => undefined}: MockDataGridProps) => (
-    <div data-testid="data-grid" data-loading={loading}>
-      {rows.map((row: MockDataGridRow) => {
-        const rowId = String(row.id ?? '');
-        return (
-          <div key={row.id} className="MuiDataGrid-row-container">
-            <button
-              type="button"
-              className="MuiDataGrid-row"
-              onClick={() => onRowClick?.({row}, {} as unknown, {} as unknown)}
-              data-testid={`row-${rowId}`}
-            >
-              {row.name}
-            </button>
-            {columns.map((column) => {
-              if (!column?.field) return null;
+vi.mock('@wso2/oxygen-ui', async () => {
+  const actual = await vi.importActual<typeof OxygenUI>('@wso2/oxygen-ui');
+  return {
+    ...actual,
+    DataGrid: {
+      ...(actual.DataGrid ?? {}),
+      DataGrid: ({rows = [], columns = [], loading = false, onRowClick = () => undefined}: MockDataGridProps) => (
+        <div data-testid="data-grid" data-loading={loading}>
+          {rows.map((row: MockDataGridRow) => {
+            const rowId = String(row.id ?? '');
+            return (
+              <div key={row.id} className="MuiDataGrid-row-container">
+                <button
+                  type="button"
+                  className="MuiDataGrid-row"
+                  onClick={() => onRowClick?.({row}, {} as unknown, {} as unknown)}
+                  data-testid={`row-${rowId}`}
+                >
+                  {row.name}
+                </button>
+                {columns.map((column) => {
+                  if (!column?.field) return null;
 
-              const fallbackValue = (row as Record<string, unknown>)[column.field];
-              const value =
-                typeof column.valueGetter === 'function' ? column.valueGetter(undefined, row) : fallbackValue;
+                  const fallbackValue = (row as Record<string, unknown>)[column.field];
+                  const value =
+                    typeof column.valueGetter === 'function' ? column.valueGetter(undefined, row) : fallbackValue;
 
-              const params = {
-                row,
-                field: column.field,
-                value,
-                id: rowId,
-              };
+                  const params = {
+                    row,
+                    field: column.field,
+                    value,
+                    id: rowId,
+                  };
 
-              const content = (typeof column.renderCell === 'function' ? column.renderCell(params) : value) as
-                | ReactNode
-                | null
-                | undefined;
+                  const content = (typeof column.renderCell === 'function' ? column.renderCell(params) : value) as
+                    | ReactNode
+                    | null
+                    | undefined;
 
-              if (content === null || content === undefined) {
-                return null;
-              }
+                  if (content === null || content === undefined) {
+                    return null;
+                  }
 
-              return (
-                <span key={`${rowId}-${column.field}`} className="MuiDataGrid-cell">
-                  {content}
-                </span>
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
-  ),
-  GridColDef: {},
-}));
+                  return (
+                    <span key={`${rowId}-${column.field}`} className="MuiDataGrid-cell">
+                      {content}
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      ),
+      GridColDef: {},
+    },
+  };
+});
 /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-return, react/destructuring-assignment */
 
 // Mock react-router

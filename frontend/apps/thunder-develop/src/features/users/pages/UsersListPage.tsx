@@ -19,7 +19,7 @@
 import {useNavigate} from 'react-router';
 import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem, Paper} from '@wso2/oxygen-ui';
 import {useMemo, useState} from 'react';
-import {Plus, Search} from 'lucide-react';
+import {Plus, Search} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import UsersList from '../components/UsersList';
 import useGetUserSchemas from '../api/useGetUserSchemas';

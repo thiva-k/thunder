@@ -17,7 +17,7 @@
  */
 
 import {Avatar, Button, Divider, Drawer, Stack, Typography} from '@wso2/oxygen-ui';
-import {Bell, LogOut} from 'lucide-react';
+import {Bell, LogOut} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import MenuButton from './MenuButton';
 import MenuContent from './MenuContent';

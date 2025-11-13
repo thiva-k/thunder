@@ -33,13 +33,17 @@ vi.mock('../../Sidebar/SideMenuMobile', () => ({
   ),
 }));
 
-vi.mock('@thunder/ui', () => ({
-  ColorModeIconDropdown: () => (
-    <button type="button" data-testid="theme-toggle">
-      Theme
-    </button>
-  ),
-}));
+vi.mock('@wso2/oxygen-ui', async () => {
+  const actual = await vi.importActual('@wso2/oxygen-ui');
+  return {
+    ...actual,
+    ColorSchemeToggle: () => (
+      <button type="button" data-testid="theme-toggle">
+        Theme
+      </button>
+    ),
+  };
+});
 
 describe('AppNavbar', () => {
   beforeEach(() => {

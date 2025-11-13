@@ -18,7 +18,7 @@
 
 import {useState} from 'react';
 import {Box, TextField, Chip, IconButton} from '@wso2/oxygen-ui';
-import {Plus} from 'lucide-react';
+import {Plus} from '@wso2/oxygen-ui-icons-react';
 
 /**
  * Array input component for adding multiple values as chips

@@ -34,8 +34,7 @@ import {
 } from '@wso2/oxygen-ui';
 import {useState} from 'react';
 import {SignIn} from '@asgardeo/react';
-import {Smartphone} from 'lucide-react';
-import {Google, Facebook, GitHub} from '@thunder/ui';
+import {Smartphone, Google, Facebook, GitHub} from '@wso2/oxygen-ui-icons-react';
 
 const LoginBox = styled(Paper)(({theme}) => ({
   display: 'flex',

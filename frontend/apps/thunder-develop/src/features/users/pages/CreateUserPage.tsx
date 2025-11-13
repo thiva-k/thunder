@@ -20,7 +20,7 @@ import {useNavigate} from 'react-router';
 import {useForm, Controller} from 'react-hook-form';
 import {useMemo, useState, useEffect} from 'react';
 import {Box, Stack, Typography, Button, Paper, FormLabel, FormControl, Select, MenuItem} from '@wso2/oxygen-ui';
-import {ArrowLeft, Plus, Save} from 'lucide-react';
+import {ArrowLeft, Plus, Save} from '@wso2/oxygen-ui-icons-react';
 import useGetUserSchemas from '../api/useGetUserSchemas';
 import type {SchemaInterface} from '../types/users';
 import useGetUserSchema from '../api/useGetUserSchema';

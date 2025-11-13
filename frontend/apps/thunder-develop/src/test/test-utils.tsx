@@ -20,7 +20,7 @@
 import type {ReactElement, ReactNode} from 'react';
 import {render, type RenderOptions} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
-import OxygenUIThemeProvider from '@wso2/oxygen-ui/OxygenUIThemeProvider';
+import {OxygenUIThemeProvider} from '@wso2/oxygen-ui';
 import {ConfigProvider} from '@thunder/commons-contexts';
 
 interface ProvidersProps {

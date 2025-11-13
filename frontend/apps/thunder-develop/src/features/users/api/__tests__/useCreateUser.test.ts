@@ -220,23 +220,20 @@ describe('useCreateUser', () => {
 
     expect(result.current.loading).toBe(false);
 
-    const promise = result.current.createUser(mockRequest);
-
-    // Yield to allow React to process the state update
-    await new Promise<void>((resolve) => {
-      setTimeout(resolve, 0);
+    // Start the request without awaiting
+    result.current.createUser(mockRequest).catch(() => {
+      // Handle any errors
     });
 
-    // Loading should become true
+    // Loading should become true immediately after calling createUser
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
 
-    await promise;
-
     // Loading should become false after completion
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
+      expect(result.current.data).toEqual(mockResponse);
     });
   });
 

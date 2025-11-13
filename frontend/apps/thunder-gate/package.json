@@ -28,18 +28,18 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.app.json"
   },
   "dependencies": {
     "@asgardeo/react": "catalog:",
     "@emotion/react": "catalog:",
     "@emotion/styled": "catalog:",
-    "@mui/material": "catalog:",
+    "@fontsource-variable/inter": "^5.2.8",
     "@thunder/commons-contexts": "workspace:^",
-    "@thunder/ui": "workspace:^",
-    "@wso2/oxygen-ui": "workspace:^",
-    "lucide-react": "catalog:",
+    "@wso2/oxygen-ui": "catalog:",
+    "@wso2/oxygen-ui-icons-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "catalog:"
@@ -55,6 +55,7 @@
     "babel-plugin-react-compiler": "catalog:",
     "eslint": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }
