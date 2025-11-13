@@ -43,13 +43,6 @@ var (
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
 	}
 
-	smsAuthTestOU = testutils.OrganizationUnit{
-		Handle:      "sms-auth-flow-test-ou",
-		Name:        "SMS Auth Flow Test Organization Unit",
-		Description: "Organization unit for SMS authentication flow testing",
-		Parent:      nil,
-	}
-
 	smsAuthUserSchema = testutils.UserSchema{
 		Name: "sms_auth_user",
 		Schema: map[string]interface{}{
@@ -89,7 +82,6 @@ var (
 
 var (
 	smsAuthTestAppID    string
-	smsAuthTestOUID     string
 	smsAuthUserSchemaID string
 )
 
@@ -131,12 +123,7 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	// Create test organization unit for SMS auth tests
-	ouID, err := testutils.CreateOrganizationUnit(smsAuthTestOU)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
-	}
-	smsAuthTestOUID = ouID
+	// Note: OU is pre-configured in DB scripts
 
 	// Create test application for SMS auth tests
 	appID, err := testutils.CreateApplication(smsAuthTestApp)
@@ -162,7 +149,7 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 
 	// Create test user with mobile number using the created OU
 	testUserWithMobile := testUserWithMobile
-	testUserWithMobile.OrganizationUnit = smsAuthTestOUID
+	testUserWithMobile.OrganizationUnit = testOUID
 	userIDs, err := testutils.CreateMultipleUsers(testUserWithMobile)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user during setup: %v", err)
@@ -198,12 +185,7 @@ func (ts *SMSAuthFlowTestSuite) TearDownSuite() {
 		}
 	}
 
-	// Delete test organization unit
-	if smsAuthTestOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(smsAuthTestOUID); err != nil {
-			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
-		}
-	}
+	// Note: OU is pre-configured in DB scripts, no need to delete
 
 	if smsAuthUserSchemaID != "" {
 		if err := testutils.DeleteUserType(smsAuthUserSchemaID); err != nil {
@@ -286,16 +268,17 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithMobileNumber() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		smsAuthTestAppID,
+		smsAuthUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(smsAuthUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(smsAuthTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(smsAuthTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithUsername() {
@@ -382,16 +365,17 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithUsername() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		smsAuthTestAppID,
+		smsAuthUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(smsAuthUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(smsAuthTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(smsAuthTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowInvalidOTP() {
@@ -498,14 +482,15 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowSingleRequestWithMobileNumber() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		smsAuthTestAppID,
+		smsAuthUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(smsAuthUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(smsAuthTestOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(smsAuthTestAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }

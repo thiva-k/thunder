@@ -27,6 +27,7 @@ import (
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/jwt"
@@ -43,6 +44,7 @@ type authAssertExecutor struct {
 	flowcore.ExecutorInterface
 	jwtService          jwt.JWTServiceInterface
 	userService         user.UserServiceInterface
+	ouService           ou.OrganizationUnitServiceInterface
 	authAssertGenerator assert.AuthAssertGeneratorInterface
 	logger              *log.Logger
 }
@@ -54,6 +56,7 @@ func newAuthAssertExecutor(
 	flowFactory flowcore.FlowFactoryInterface,
 	jwtService jwt.JWTServiceInterface,
 	userService user.UserServiceInterface,
+	ouService ou.OrganizationUnitServiceInterface,
 	assertGenerator assert.AuthAssertGeneratorInterface,
 ) *authAssertExecutor {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, authAssertLoggerComponentName),
@@ -66,6 +69,7 @@ func newAuthAssertExecutor(
 		ExecutorInterface:   base,
 		jwtService:          jwtService,
 		userService:         userService,
+		ouService:           ouService,
 		authAssertGenerator: assertGenerator,
 		logger:              logger,
 	}
@@ -150,40 +154,19 @@ func (a *authAssertExecutor) generateAuthAssertion(ctx *flowcore.NodeContext, lo
 		jwtClaims["authorized_permissions"] = permissions
 	}
 
-	if ctx.Application.Token != nil && len(ctx.Application.Token.UserAttributes) > 0 &&
-		ctx.AuthenticatedUser.UserID != "" {
-		var user *user.User
-		var attrs map[string]interface{}
-
-		for _, attr := range ctx.Application.Token.UserAttributes {
-			// check for the attribute in authenticated user attributes
-			if val, ok := ctx.AuthenticatedUser.Attributes[attr]; ok {
-				jwtClaims[attr] = val
-				continue
-			}
-
-			// fetch user details only once
-			if user == nil {
-				var err error
-				user, attrs, err = a.getUserAttributes(ctx.AuthenticatedUser.UserID, logger)
-				if err != nil {
-					return "", err
-				}
-			}
-
-			// check for the attribute in user store attributes
-			if val, ok := attrs[attr]; ok {
-				jwtClaims[attr] = val
-			}
-		}
+	if err := a.appendUserDetailsToClaims(ctx, jwtClaims); err != nil {
+		return "", err
 	}
 
-	// Add user type and ou to the jwt claims
+	// Add user type to the claims
 	if ctx.AuthenticatedUser.UserType != "" {
 		jwtClaims["userType"] = ctx.AuthenticatedUser.UserType
 	}
+
 	if ctx.AuthenticatedUser.OrganizationUnitID != "" {
-		jwtClaims["ouId"] = ctx.AuthenticatedUser.OrganizationUnitID
+		if err := a.appendOUDetailsToClaims(ctx.AuthenticatedUser.OrganizationUnitID, jwtClaims); err != nil {
+			return "", err
+		}
 	}
 
 	token, _, err := a.jwtService.GenerateJWT(tokenSub, ctx.AppID, iss, validityPeriod, jwtClaims)
@@ -234,9 +217,44 @@ func (a *authAssertExecutor) extractAuthenticatorReferences(
 	return refs
 }
 
+// appendUserDetailsToClaims appends user details to the JWT claims.
+func (a *authAssertExecutor) appendUserDetailsToClaims(ctx *flowcore.NodeContext,
+	jwtClaims map[string]interface{}) error {
+	if ctx.Application.Token != nil && len(ctx.Application.Token.UserAttributes) > 0 &&
+		ctx.AuthenticatedUser.UserID != "" {
+		var user *user.User
+		var attrs map[string]interface{}
+
+		for _, attr := range ctx.Application.Token.UserAttributes {
+			// check for the attribute in authenticated user attributes
+			if val, ok := ctx.AuthenticatedUser.Attributes[attr]; ok {
+				jwtClaims[attr] = val
+				continue
+			}
+
+			// fetch user details only once
+			if user == nil {
+				var err error
+				user, attrs, err = a.getUserAttributes(ctx.AuthenticatedUser.UserID)
+				if err != nil {
+					return err
+				}
+			}
+
+			// check for the attribute in user store attributes
+			if val, ok := attrs[attr]; ok {
+				jwtClaims[attr] = val
+			}
+		}
+	}
+
+	return nil
+}
+
 // getUserAttributes retrieves user details and unmarshal the attributes.
-func (a *authAssertExecutor) getUserAttributes(userID string, logger *log.Logger) (
-	*user.User, map[string]interface{}, error) {
+func (a *authAssertExecutor) getUserAttributes(userID string) (*user.User, map[string]interface{}, error) {
+	logger := a.logger.With(log.String("userID", userID))
+
 	var svcErr *serviceerror.ServiceError
 	user, svcErr := a.userService.GetUser(userID)
 	if svcErr != nil {
@@ -254,4 +272,26 @@ func (a *authAssertExecutor) getUserAttributes(userID string, logger *log.Logger
 	}
 
 	return user, attrs, nil
+}
+
+// appendOUDetailsToClaims appends organization unit details to the JWT claims.
+func (a *authAssertExecutor) appendOUDetailsToClaims(ouID string, jwtClaims map[string]interface{}) error {
+	logger := a.logger.With(log.String("ouID", ouID))
+
+	organizationUnit, svcErr := a.ouService.GetOrganizationUnit(ouID)
+	if svcErr != nil {
+		logger.Error("Failed to fetch organization unit details",
+			log.String("ouID", ouID), log.Any("error", svcErr))
+		return errors.New("something went wrong while fetching organization unit: " + svcErr.ErrorDescription)
+	}
+
+	jwtClaims["ouId"] = organizationUnit.ID
+	if organizationUnit.Name != "" {
+		jwtClaims["ouName"] = organizationUnit.Name
+	}
+	if organizationUnit.Handle != "" {
+		jwtClaims["ouHandle"] = organizationUnit.Handle
+	}
+
+	return nil
 }

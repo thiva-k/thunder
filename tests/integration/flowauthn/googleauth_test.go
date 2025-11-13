@@ -40,18 +40,10 @@ var (
 		ClientSecret:              "google_auth_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
 	}
-
-	googleAuthTestOU = testutils.OrganizationUnit{
-		Handle:      "google-auth-flow-test-ou",
-		Name:        "Google Auth Flow Test Organization Unit",
-		Description: "Organization unit for Google authentication flow testing",
-		Parent:      nil,
-	}
 )
 
 var (
 	googleAuthTestAppID string
-	googleAuthTestOUID  string
 )
 
 const (
@@ -136,22 +128,16 @@ func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
 	attributesJSON, err := json.Marshal(userAttributes)
 	ts.Require().NoError(err)
 
+	// Create user in the pre-configured OU from database scripts
 	user := testutils.User{
 		Type:             googleUserSchema.Name,
-		OrganizationUnit: "root",
+		OrganizationUnit: testOUID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
 	userID, err := testutils.CreateUser(user)
 	ts.Require().NoError(err, "Failed to create test user")
 	ts.userID = userID
-
-	// Create test organization unit for Google auth tests
-	ouID, err := testutils.CreateOrganizationUnit(googleAuthTestOU)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
-	}
-	googleAuthTestOUID = ouID
 
 	// Create test application for Google auth tests
 	appID, err := testutils.CreateApplication(googleAuthTestApp)
@@ -166,13 +152,6 @@ func (ts *GoogleAuthFlowTestSuite) TearDownSuite() {
 	if googleAuthTestAppID != "" {
 		if err := testutils.DeleteApplication(googleAuthTestAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
-		}
-	}
-
-	// Delete test organization unit
-	if googleAuthTestOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(googleAuthTestOUID); err != nil {
-			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
 
@@ -281,8 +260,17 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteSuccess() {
 	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be COMPLETE")
 	ts.Require().NotEmpty(completeFlowStep.Assertion, "Assertion token should be present")
 
-	// Verify the assertion token contains expected information
-	ts.Require().Contains(completeFlowStep.Assertion, ".", "Assertion should be a JWT token")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		googleAuthTestAppID,
+		googleUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
+	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
 }
 
 func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteWithInvalidCode() {
@@ -367,4 +355,16 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowMultipleUsersSuccess() {
 	// Verify flow completion
 	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be COMPLETE")
 	ts.Require().NotEmpty(completeFlowStep.Assertion, "Assertion token should be present")
+
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		googleAuthTestAppID,
+		googleUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
+	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
 }

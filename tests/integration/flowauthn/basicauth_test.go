@@ -38,13 +38,6 @@ var (
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
 	}
 
-	testOU = testutils.OrganizationUnit{
-		Handle:      "flow-test-ou",
-		Name:        "Flow Test Organization Unit",
-		Description: "Organization unit for flow testing",
-		Parent:      nil,
-	}
-
 	testUserSchema = testutils.UserSchema{
 		Name: "basic_auth_user",
 		Schema: map[string]interface{}{
@@ -80,7 +73,6 @@ var (
 
 var (
 	testAppID    string
-	testOUID     string
 	userSchemaID string
 )
 
@@ -96,13 +88,6 @@ func TestBasicAuthFlowTestSuite(t *testing.T) {
 func (ts *BasicAuthFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
-
-	// Create test organization unit
-	ouID, err := testutils.CreateOrganizationUnit(testOU)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
-	}
-	testOUID = ouID
 
 	// Create test application
 	appID, err := testutils.CreateApplication(testApp)
@@ -140,12 +125,7 @@ func (ts *BasicAuthFlowTestSuite) TearDownSuite() {
 		}
 	}
 
-	// Delete test organization unit
-	if testOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(testOUID); err != nil {
-			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
-		}
-	}
+	// Note: OU is pre-configured in DB scripts, no need to delete
 
 	if userSchemaID != "" {
 		if err := testutils.DeleteUserType(userSchemaID); err != nil {
@@ -197,16 +177,17 @@ func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowSuccess() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		testAppID,
+		testUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowSuccessWithSingleRequest() {
@@ -232,16 +213,17 @@ func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowSuccessWithSingleRequest() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(flowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(flowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		flowStep.Assertion,
+		testAppID,
+		testUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowWithTwoStepInput() {
@@ -294,16 +276,17 @@ func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowWithTwoStepInput() {
 		"JWT assertion should be returned after successful authentication")
 	ts.Require().Empty(completeFlowStep.FailureReason, "Failure reason should be empty for successful authentication")
 
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	// Validate JWT assertion fields using common utility
+	jwtClaims, err := testutils.ValidateJWTAssertionFields(
+		completeFlowStep.Assertion,
+		testAppID,
+		testUserSchema.Name,
+		testOUID,
+		testOUName,
+		testOUHandle,
+	)
+	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 }
 
 func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowInvalidCredentials() {
