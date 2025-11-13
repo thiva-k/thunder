@@ -194,6 +194,13 @@ var (
 		Error:            "Invalid OAuth configuration",
 		ErrorDescription: "The OAuth configuration is invalid",
 	}
+	// ErrorInvalidUserType is the error returned when an invalid user type is provided in allowed_user_types.
+	ErrorInvalidUserType = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "APP-1025",
+		Error:            "Invalid user type",
+		ErrorDescription: "One or more user types in allowed_user_types do not exist in the system",
+	}
 )
 
 // Server errors for application operations.

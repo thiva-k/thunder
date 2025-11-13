@@ -62,6 +62,7 @@ type ApplicationDTO struct {
 	Token             *TokenConfig
 	Certificate       *ApplicationCertificate
 	InboundAuthConfig []InboundAuthConfigDTO
+	AllowedUserTypes  []string
 }
 
 // BasicApplicationDTO represents a simplified data transfer object for application service operations.
@@ -93,6 +94,7 @@ type ApplicationProcessedDTO struct {
 	Token             *TokenConfig
 	Certificate       *ApplicationCertificate
 	InboundAuthConfig []InboundAuthConfigProcessedDTO
+	AllowedUserTypes  []string
 }
 
 // InboundAuthConfigDTO represents the data transfer object for inbound authentication configuration.
@@ -132,6 +134,7 @@ type ApplicationRequest struct {
 	PolicyURI                 string                      `json:"policy_uri,omitempty" yaml:"policy_uri,omitempty"`
 	Contacts                  []string                    `json:"contacts,omitempty" yaml:"contacts,omitempty"`
 	InboundAuthConfig         []InboundAuthConfigComplete `json:"inbound_auth_config,omitempty" yaml:"inbound_auth_config,omitempty"`
+	AllowedUserTypes          []string                    `json:"allowed_user_types,omitempty" yaml:"allowed_user_types,omitempty"`
 }
 
 // ApplicationCompleteResponse represents the complete response structure for an application.
@@ -151,6 +154,7 @@ type ApplicationCompleteResponse struct {
 	PolicyURI                 string                      `json:"policy_uri,omitempty"`
 	Contacts                  []string                    `json:"contacts,omitempty"`
 	InboundAuthConfig         []InboundAuthConfigComplete `json:"inbound_auth_config,omitempty"`
+	AllowedUserTypes          []string                    `json:"allowed_user_types,omitempty"`
 }
 
 // ApplicationGetResponse represents the response structure for getting an application.
@@ -170,6 +174,7 @@ type ApplicationGetResponse struct {
 	PolicyURI                 string                  `json:"policy_uri,omitempty"`
 	Contacts                  []string                `json:"contacts,omitempty"`
 	InboundAuthConfig         []InboundAuthConfig     `json:"inbound_auth_config,omitempty"`
+	AllowedUserTypes          []string                `json:"allowed_user_types,omitempty"`
 }
 
 // BasicApplicationResponse represents a simplified response structure for an application.

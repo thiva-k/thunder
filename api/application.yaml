@@ -626,6 +626,12 @@ components:
             format: email
           description: Array of email addresses of people responsible for the application.
           example: ["admin@myapp.example.com", "support@myapp.example.com"]
+        allowed_user_types:
+          type: array
+          items:
+            type: string
+          description: Array of allowed user types for this application.
+          example: ["employee", "customer", "partner"]
 
     ApplicationCompleteResponse:
       type: object
@@ -695,6 +701,12 @@ components:
             format: email
           description: Array of email addresses of people responsible for the application.
           example: ["admin@myapp.example.com", "support@myapp.example.com"]
+        allowed_user_types:
+          type: array
+          items:
+            type: string
+          description: Array of allowed user types for this application.
+          example: ["employee", "customer", "partner"]
 
     ApplicationGetResponse:
       type: object
@@ -764,6 +776,12 @@ components:
             format: email
           description: Array of email addresses of people responsible for the application.
           example: ["admin@myapp.example.com", "support@myapp.example.com"]
+        allowed_user_types:
+          type: array
+          items:
+            type: string
+          description: Array of allowed user types for this application.
+          example: ["employee", "customer", "partner"]
 
     BasicApplicationResponse:
       type: object

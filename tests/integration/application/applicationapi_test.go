@@ -29,6 +29,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -2624,4 +2625,456 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithMultipleRedirectURIsAndSco
 	ts.Assert().Len(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Scopes, 5)
 	ts.Assert().Contains(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Scopes, "address")
 	ts.Assert().Contains(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.Scopes, "phone")
+}
+
+// TestApplicationWithAllowedUserTypes tests creating an application with valid allowed_user_types
+func (ts *ApplicationAPITestSuite) TestApplicationWithAllowedUserTypes() {
+	// Create test user schemas first
+	employeeSchema := testutils.UserSchema{
+		Name: "employee",
+		Schema: map[string]interface{}{
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+			"name": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+	customerSchema := testutils.UserSchema{
+		Name: "customer",
+		Schema: map[string]interface{}{
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
+	employeeSchemaID, err := testutils.CreateUserType(employeeSchema)
+	ts.Require().NoError(err, "Failed to create employee user schema")
+	defer func() {
+		if err := testutils.DeleteUserType(employeeSchemaID); err != nil {
+			ts.T().Logf("Failed to delete employee schema: %v", err)
+		}
+	}()
+
+	customerSchemaID, err := testutils.CreateUserType(customerSchema)
+	ts.Require().NoError(err, "Failed to create customer user schema")
+	defer func() {
+		if err := testutils.DeleteUserType(customerSchemaID); err != nil {
+			ts.T().Logf("Failed to delete customer schema: %v", err)
+		}
+	}()
+
+	// Create application with allowed_user_types
+	app := Application{
+		Name:                      "App With Allowed User Types",
+		Description:               "Application with allowed user types",
+		IsRegistrationFlowEnabled: false,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		AllowedUserTypes:          []string{"employee", "customer"},
+		Certificate: &ApplicationCert{
+			Type:  "NONE",
+			Value: "",
+		},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					ClientID:                "allowed_types_client",
+					ClientSecret:            "allowed_types_secret",
+					RedirectURIs:            []string{"http://localhost/allowedtypes/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+					PKCERequired:            false,
+					PublicClient:            false,
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err, "Failed to create application with allowed_user_types")
+	defer func() {
+		if err := deleteApplication(appID); err != nil {
+			ts.T().Logf("Failed to delete application: %v", err)
+		}
+	}()
+
+	// Verify the application was created with allowed_user_types
+	retrievedApp, err := getApplicationByID(appID)
+	ts.Require().NoError(err)
+	ts.Assert().Equal([]string{"employee", "customer"}, retrievedApp.AllowedUserTypes)
+}
+
+// TestApplicationWithInvalidAllowedUserTypes tests creating an application with invalid allowed_user_types
+func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidAllowedUserTypes() {
+	// Create application with non-existent user types
+	app := Application{
+		Name:                      "App With Invalid User Types",
+		Description:               "Application with invalid user types",
+		IsRegistrationFlowEnabled: false,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		AllowedUserTypes:          []string{"nonexistent_type_1", "nonexistent_type_2"},
+		Certificate: &ApplicationCert{
+			Type:  "NONE",
+			Value: "",
+		},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					ClientID:                "invalid_types_client",
+					ClientSecret:            "invalid_types_secret",
+					RedirectURIs:            []string{"http://localhost/invalidtypes/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+					PKCERequired:            false,
+					PublicClient:            false,
+				},
+			},
+		},
+	}
+
+	appJSON, err := json.Marshal(app)
+	ts.Require().NoError(err)
+
+	reqBody := bytes.NewReader(appJSON)
+	req, err := http.NewRequest("POST", testServerURL+"/applications", reqBody)
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	// Should fail with 400 Bad Request
+	ts.Assert().Equal(http.StatusBadRequest, resp.StatusCode, "Should return 400 for invalid user types")
+
+	// Verify error response
+	var errorResp struct {
+		Code        string `json:"code"`
+		Message     string `json:"message"`
+		Description string `json:"description"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&errorResp)
+	ts.Require().NoError(err)
+	ts.Assert().Equal("APP-1025", errorResp.Code, "Error code should be APP-1025")
+	ts.Assert().Contains(errorResp.Message, "Invalid user type", "Error message should mention invalid user type")
+}
+
+// TestApplicationUpdateWithAllowedUserTypes tests updating an application with allowed_user_types
+func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithAllowedUserTypes() {
+	// Create test user schemas
+	employeeSchema := testutils.UserSchema{
+		Name: "employee_update",
+		Schema: map[string]interface{}{
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+	partnerSchema := testutils.UserSchema{
+		Name: "partner",
+		Schema: map[string]interface{}{
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
+	employeeSchemaID, err := testutils.CreateUserType(employeeSchema)
+	ts.Require().NoError(err)
+	defer func() {
+		if err := testutils.DeleteUserType(employeeSchemaID); err != nil {
+			ts.T().Logf("Failed to delete employee schema: %v", err)
+		}
+	}()
+
+	partnerSchemaID, err := testutils.CreateUserType(partnerSchema)
+	ts.Require().NoError(err)
+	defer func() {
+		if err := testutils.DeleteUserType(partnerSchemaID); err != nil {
+			ts.T().Logf("Failed to delete partner schema: %v", err)
+		}
+	}()
+
+	// Create application without allowed_user_types
+	app := Application{
+		Name:                      "App To Update With User Types",
+		Description:               "Application to update",
+		IsRegistrationFlowEnabled: false,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		Certificate: &ApplicationCert{
+			Type:  "NONE",
+			Value: "",
+		},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					ClientID:                "update_types_client",
+					ClientSecret:            "update_types_secret",
+					RedirectURIs:            []string{"http://localhost/updatetypes/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+					PKCERequired:            false,
+					PublicClient:            false,
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err)
+	defer func() {
+		if err := deleteApplication(appID); err != nil {
+			ts.T().Logf("Failed to delete application: %v", err)
+		}
+	}()
+
+	// Update application with allowed_user_types
+	appToUpdate := app
+	appToUpdate.ID = appID
+	appToUpdate.AllowedUserTypes = []string{"employee_update", "partner"}
+
+	appJSON, err := json.Marshal(appToUpdate)
+	ts.Require().NoError(err)
+
+	reqBody := bytes.NewReader(appJSON)
+	req, err := http.NewRequest("PUT", testServerURL+"/applications/"+appID, reqBody)
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusOK, resp.StatusCode, "Update should succeed")
+
+	// Verify the update
+	retrievedApp, err := getApplicationByID(appID)
+	ts.Require().NoError(err)
+	ts.Assert().Equal([]string{"employee_update", "partner"}, retrievedApp.AllowedUserTypes)
+}
+
+// TestApplicationUpdateWithInvalidAllowedUserTypes tests updating an application with invalid allowed_user_types
+func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithInvalidAllowedUserTypes() {
+	// Create application first
+	app := Application{
+		Name:                      "App To Update With Invalid Types",
+		Description:               "Application to update",
+		IsRegistrationFlowEnabled: false,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		Certificate: &ApplicationCert{
+			Type:  "NONE",
+			Value: "",
+		},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					ClientID:                "update_invalid_client",
+					ClientSecret:            "update_invalid_secret",
+					RedirectURIs:            []string{"http://localhost/updateinvalid/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+					PKCERequired:            false,
+					PublicClient:            false,
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err)
+	defer func() {
+		if err := deleteApplication(appID); err != nil {
+			ts.T().Logf("Failed to delete application: %v", err)
+		}
+	}()
+
+	// Try to update with invalid user types
+	appToUpdate := app
+	appToUpdate.ID = appID
+	appToUpdate.AllowedUserTypes = []string{"invalid_type_1", "invalid_type_2"}
+
+	appJSON, err := json.Marshal(appToUpdate)
+	ts.Require().NoError(err)
+
+	reqBody := bytes.NewReader(appJSON)
+	req, err := http.NewRequest("PUT", testServerURL+"/applications/"+appID, reqBody)
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	// Should fail with 400 Bad Request
+	ts.Assert().Equal(http.StatusBadRequest, resp.StatusCode, "Should return 400 for invalid user types")
+
+	// Verify error response
+	var errorResp struct {
+		Code        string `json:"code"`
+		Message     string `json:"message"`
+		Description string `json:"description"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&errorResp)
+	ts.Require().NoError(err)
+	ts.Assert().Equal("APP-1025", errorResp.Code, "Error code should be APP-1025")
+}
+
+// TestApplicationWithEmptyAllowedUserTypes tests creating an application with empty allowed_user_types array
+func (ts *ApplicationAPITestSuite) TestApplicationWithEmptyAllowedUserTypes() {
+	app := Application{
+		Name:                      "App With Empty Allowed User Types",
+		Description:               "Application with empty allowed user types",
+		IsRegistrationFlowEnabled: false,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		AllowedUserTypes:          []string{},
+		Certificate: &ApplicationCert{
+			Type:  "NONE",
+			Value: "",
+		},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					ClientID:                "empty_types_client",
+					ClientSecret:            "empty_types_secret",
+					RedirectURIs:            []string{"http://localhost/emptytypes/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+					PKCERequired:            false,
+					PublicClient:            false,
+				},
+			},
+		},
+	}
+
+	appID, err := createApplication(app)
+	ts.Require().NoError(err, "Empty allowed_user_types should be allowed")
+	defer func() {
+		if err := deleteApplication(appID); err != nil {
+			ts.T().Logf("Failed to delete application: %v", err)
+		}
+	}()
+
+	// Verify empty array is stored (or nil, both are acceptable as they mean "no restrictions")
+	retrievedApp, err := getApplicationByID(appID)
+	ts.Require().NoError(err)
+	// Empty array or nil both mean "no restrictions", both are acceptable
+	if retrievedApp.AllowedUserTypes != nil {
+		ts.Assert().Len(retrievedApp.AllowedUserTypes, 0, "If not nil, AllowedUserTypes should be an empty array")
+	}
+}
+
+// TestApplicationWithPartialInvalidAllowedUserTypes tests creating an application with mix of valid and invalid user types
+func (ts *ApplicationAPITestSuite) TestApplicationWithPartialInvalidAllowedUserTypes() {
+	// Create one valid user schema
+	validSchema := testutils.UserSchema{
+		Name: "valid_user_type",
+		Schema: map[string]interface{}{
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
+	validSchemaID, err := testutils.CreateUserType(validSchema)
+	ts.Require().NoError(err)
+	defer func() {
+		if err := testutils.DeleteUserType(validSchemaID); err != nil {
+			ts.T().Logf("Failed to delete valid schema: %v", err)
+		}
+	}()
+
+	// Create application with mix of valid and invalid user types
+	app := Application{
+		Name:                      "App With Partial Invalid User Types",
+		Description:               "Application with mix of valid and invalid user types",
+		IsRegistrationFlowEnabled: false,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		AllowedUserTypes:          []string{"valid_user_type", "invalid_user_type"},
+		Certificate: &ApplicationCert{
+			Type:  "NONE",
+			Value: "",
+		},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					ClientID:                "partial_invalid_client",
+					ClientSecret:            "partial_invalid_secret",
+					RedirectURIs:            []string{"http://localhost/partialinvalid/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "client_secret_basic",
+					PKCERequired:            false,
+					PublicClient:            false,
+				},
+			},
+		},
+	}
+
+	appJSON, err := json.Marshal(app)
+	ts.Require().NoError(err)
+
+	reqBody := bytes.NewReader(appJSON)
+	req, err := http.NewRequest("POST", testServerURL+"/applications", reqBody)
+	ts.Require().NoError(err)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	resp, err := client.Do(req)
+	ts.Require().NoError(err)
+	defer resp.Body.Close()
+
+	// Should fail with 400 Bad Request because one user type is invalid
+	ts.Assert().Equal(http.StatusBadRequest, resp.StatusCode, "Should return 400 when any user type is invalid")
+
+	// Verify error response
+	var errorResp struct {
+		Code        string `json:"code"`
+		Message     string `json:"message"`
+		Description string `json:"description"`
+	}
+	err = json.NewDecoder(resp.Body).Decode(&errorResp)
+	ts.Require().NoError(err)
+	ts.Assert().Equal("APP-1025", errorResp.Code, "Error code should be APP-1025")
 }

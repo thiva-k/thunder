@@ -364,6 +364,11 @@ func getAppJSONDataBytes(app *model.ApplicationProcessedDTO) ([]byte, error) {
 		"contacts":   app.Contacts,
 	}
 
+	// Include allowed_user_types if present (include even if empty to preserve the field)
+	if app.AllowedUserTypes != nil {
+		jsonData["allowed_user_types"] = app.AllowedUserTypes
+	}
+
 	// Include token config if present
 	if app.Token != nil {
 		tokenData := map[string]interface{}{}
@@ -524,6 +529,66 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 	return application, nil
 }
 
+// extractStringFromJSON extracts a string value from JSON data, returns empty string if not found or invalid.
+func extractStringFromJSON(data map[string]interface{}, key string) (string, error) {
+	if data[key] == nil {
+		return "", nil
+	}
+	if str, ok := data[key].(string); ok {
+		return str, nil
+	}
+	return "", fmt.Errorf("failed to parse %s from app JSON", key)
+}
+
+// extractStringArrayFromJSON extracts a string array from JSON data.
+func extractStringArrayFromJSON(data map[string]interface{}, key string) ([]string, error) {
+	if data[key] == nil {
+		return []string{}, nil
+	}
+	if arr, ok := data[key].([]interface{}); ok {
+		result := make([]string, 0, len(arr))
+		for i, item := range arr {
+			if str, ok := item.(string); ok {
+				result = append(result, str)
+			} else {
+				return nil, fmt.Errorf(
+					"failed to parse %s from app JSON: item at index %d is not a string (type: %T, value: %v)",
+					key, i, item, item)
+			}
+		}
+		return result, nil
+	}
+	return nil, fmt.Errorf("failed to parse %s from app JSON", key)
+}
+
+// extractTokenConfigFromJSON extracts token configuration from JSON data.
+func extractTokenConfigFromJSON(data map[string]interface{}) *model.TokenConfig {
+	tokenData, exists := data["token"]
+	if !exists || tokenData == nil {
+		return nil
+	}
+	tokenMap, ok := tokenData.(map[string]interface{})
+	if !ok {
+		return nil
+	}
+
+	config := &model.TokenConfig{}
+	if issuer, ok := tokenMap["issuer"].(string); ok {
+		config.Issuer = issuer
+	}
+	if validityPeriod, ok := tokenMap["validity_period"].(float64); ok {
+		config.ValidityPeriod = int64(validityPeriod)
+	}
+	if userAttrs, ok := tokenMap["user_attributes"].([]interface{}); ok {
+		for _, attr := range userAttrs {
+			if attrStr, ok := attr.(string); ok {
+				config.UserAttributes = append(config.UserAttributes, attrStr)
+			}
+		}
+	}
+	return config
+}
+
 // buildApplicationFromResultRow constructs an Application object from a database result row.
 func buildApplicationFromResultRow(row map[string]interface{}) (model.ApplicationProcessedDTO, error) {
 	basicApp, err := buildBasicApplicationFromResultRow(row)
@@ -548,77 +613,39 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 		return model.ApplicationProcessedDTO{}, fmt.Errorf("failed to unmarshal app JSON: %w", err)
 	}
 
-	// Extract URL and LogoURL from the app JSON data.
-	var url string
-	if appJSONData["url"] == nil {
-		url = ""
-	} else if u, ok := appJSONData["url"].(string); ok {
-		url = u
-	} else {
-		return model.ApplicationProcessedDTO{}, fmt.Errorf("failed to parse url from app JSON")
+	// Extract fields from JSON data using helper functions.
+	url, err := extractStringFromJSON(appJSONData, "url")
+	if err != nil {
+		return model.ApplicationProcessedDTO{}, err
 	}
 
-	var logoURL string
-	if appJSONData["logo_url"] == nil {
-		logoURL = ""
-	} else if lu, ok := appJSONData["logo_url"].(string); ok {
-		logoURL = lu
-	} else {
-		return model.ApplicationProcessedDTO{}, fmt.Errorf("failed to parse logo_url from app JSON")
+	logoURL, err := extractStringFromJSON(appJSONData, "logo_url")
+	if err != nil {
+		return model.ApplicationProcessedDTO{}, err
 	}
 
-	var tosURI string
-	if appJSONData["tos_uri"] == nil {
-		tosURI = ""
-	} else if tos, ok := appJSONData["tos_uri"].(string); ok {
-		tosURI = tos
-	} else {
-		return model.ApplicationProcessedDTO{}, fmt.Errorf("failed to parse tos_uri from app JSON")
+	tosURI, err := extractStringFromJSON(appJSONData, "tos_uri")
+	if err != nil {
+		return model.ApplicationProcessedDTO{}, err
 	}
 
-	var policyURI string
-	if appJSONData["policy_uri"] == nil {
-		policyURI = ""
-	} else if policy, ok := appJSONData["policy_uri"].(string); ok {
-		policyURI = policy
-	} else {
-		return model.ApplicationProcessedDTO{}, fmt.Errorf("failed to parse policy_uri from app JSON")
+	policyURI, err := extractStringFromJSON(appJSONData, "policy_uri")
+	if err != nil {
+		return model.ApplicationProcessedDTO{}, err
 	}
 
-	var contacts []string
-	if appJSONData["contacts"] == nil {
-		contacts = []string{}
-	} else if contactsData, ok := appJSONData["contacts"].([]interface{}); ok {
-		for _, contact := range contactsData {
-			if contactStr, ok := contact.(string); ok {
-				contacts = append(contacts, contactStr)
-			}
-		}
-	} else {
-		return model.ApplicationProcessedDTO{}, fmt.Errorf("failed to parse contacts from app JSON")
+	contacts, err := extractStringArrayFromJSON(appJSONData, "contacts")
+	if err != nil {
+		return model.ApplicationProcessedDTO{}, err
 	}
 
-	// Extract token config from app JSON if present
-	var rootTokenConfig *model.TokenConfig
-	if tokenData, exists := appJSONData["token"]; exists && tokenData != nil {
-		if tokenMap, ok := tokenData.(map[string]interface{}); ok {
-			rootTokenConfig = &model.TokenConfig{}
-			if issuer, ok := tokenMap["issuer"].(string); ok {
-				rootTokenConfig.Issuer = issuer
-			}
-			if validityPeriod, ok := tokenMap["validity_period"].(float64); ok {
-				vp := int64(validityPeriod)
-				rootTokenConfig.ValidityPeriod = vp
-			}
-			if userAttrs, ok := tokenMap["user_attributes"].([]interface{}); ok {
-				for _, attr := range userAttrs {
-					if attrStr, ok := attr.(string); ok {
-						rootTokenConfig.UserAttributes = append(rootTokenConfig.UserAttributes, attrStr)
-					}
-				}
-			}
-		}
+	// Extract allowed_user_types from app JSON if present
+	allowedUserTypes, err := extractStringArrayFromJSON(appJSONData, "allowed_user_types")
+	if err != nil {
+		return model.ApplicationProcessedDTO{}, err
 	}
+
+	rootTokenConfig := extractTokenConfigFromJSON(appJSONData)
 
 	application := model.ApplicationProcessedDTO{
 		ID:                        basicApp.ID,
@@ -633,6 +660,7 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 		TosURI:                    tosURI,
 		PolicyURI:                 policyURI,
 		Contacts:                  contacts,
+		AllowedUserTypes:          allowedUserTypes,
 	}
 
 	if basicApp.ClientID != "" {

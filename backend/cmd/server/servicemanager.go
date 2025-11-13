@@ -70,7 +70,7 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
 	certservice := cert.Initialize()
-	applicationService := application.Initialize(mux, certservice, flowMgtService)
+	applicationService := application.Initialize(mux, certservice, flowMgtService, userSchemaService)
 
 	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry)
 
