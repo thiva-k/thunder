@@ -123,7 +123,16 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	// Note: OU is pre-configured in DB scripts
+	// Create test organization unit for SMS auth tests
+	smsAuthTestOU := testutils.OrganizationUnit{
+		Handle:      "sms-auth-flow-test-ou",
+		Name:        "SMS Auth Flow Test OU",
+		Description: "Organization unit for SMS authentication flow tests",
+	}
+	ouID, err := testutils.CreateOrganizationUnit(smsAuthTestOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
 
 	// Create test application for SMS auth tests
 	appID, err := testutils.CreateApplication(smsAuthTestApp)
@@ -132,6 +141,7 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 	}
 	smsAuthTestAppID = appID
 
+	smsAuthUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(smsAuthUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)

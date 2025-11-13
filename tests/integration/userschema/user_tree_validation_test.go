@@ -42,6 +42,13 @@ type UserTreeValidationTestSuite struct {
 	ou2ID          string   // ID of ou2 (child of ou1)
 }
 
+var testUserTreeValidationOU = testutils.OrganizationUnit{
+	Handle:      "test-user-tree-validation-ou",
+	Name:        "Test Organization Unit for User Tree Validation",
+	Description: "Organization unit created for user tree validation testing",
+	Parent:      nil,
+}
+
 func TestUserTreeValidationTestSuite(t *testing.T) {
 	suite.Run(t, new(UserTreeValidationTestSuite))
 }
@@ -71,7 +78,9 @@ func (ts *UserTreeValidationTestSuite) TearDownSuite() {
 	}
 	// Finally clean up created organization units in reverse order (children first)
 	for i := len(ts.createdOUs) - 1; i >= 0; i-- {
-		ts.deleteOrganizationUnit(ts.createdOUs[i])
+		if err := testutils.DeleteOrganizationUnit(ts.createdOUs[i]); err != nil {
+			ts.T().Logf("Failed to delete OU %s: %v", ts.createdOUs[i], err)
+		}
 	}
 }
 
@@ -179,6 +188,7 @@ func (ts *UserTreeValidationTestSuite) createEmployeeSchema() (string, string) {
 			"isManager": {"type": "boolean"}
 		}`),
 	}
+	schema.OrganizationUnitID = ts.ou1ID
 
 	schemaID := ts.createSchema(schema)
 	return schemaID, schemaName
@@ -213,6 +223,7 @@ func (ts *UserTreeValidationTestSuite) createComplexSchema() (string, string) {
 			}
 		}`),
 	}
+	schema.OrganizationUnitID = ts.ou1ID
 
 	schemaID := ts.createSchema(schema)
 	return schemaID, schemaName
@@ -334,71 +345,26 @@ func (ts *UserTreeValidationTestSuite) deleteSchema(schemaID string) {
 }
 
 func (ts *UserTreeValidationTestSuite) createOrganizationUnits() {
-	// Create parent OU (ou1)
-	ou1Request := CreateOURequest{
+	parentOU := testutils.OrganizationUnit{
 		Handle:      "ou1",
 		Name:        "Organization Unit 1",
 		Description: "Test OU 1 for schema validation",
 	}
 
-	ts.ou1ID = ts.createOrganizationUnit(ou1Request)
-	ts.createdOUs = append(ts.createdOUs, ts.ou1ID)
+	ou1ID, err := testutils.CreateOrganizationUnit(parentOU)
+	ts.Require().NoError(err, "Failed to create parent organization unit")
+	ts.ou1ID = ou1ID
+	ts.createdOUs = append(ts.createdOUs, ou1ID)
 
-	// Create child OU (ou2) under ou1
-	ou2Request := CreateOURequest{
+	childOU := testutils.OrganizationUnit{
 		Handle:      "ou2",
 		Name:        "Organization Unit 2",
 		Description: "Test OU 2 for schema validation",
 		Parent:      &ts.ou1ID,
 	}
 
-	ts.ou2ID = ts.createOrganizationUnit(ou2Request)
-	ts.createdOUs = append(ts.createdOUs, ts.ou2ID)
-}
-
-func (ts *UserTreeValidationTestSuite) createOrganizationUnit(ouRequest CreateOURequest) string {
-	jsonData, err := json.Marshal(ouRequest)
-	ts.Require().NoError(err, "Failed to marshal OU request")
-
-	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
-	ts.Require().NoError(err, "Failed to create OU request")
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := ts.client.Do(req)
-	ts.Require().NoError(err, "Failed to send OU request")
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	ts.Require().NoError(err, "Failed to read OU response body")
-
-	if resp.StatusCode != 201 {
-		ts.T().Logf("OU creation failed with status %d: %s", resp.StatusCode, string(body))
-	}
-	ts.Require().Equal(201, resp.StatusCode, "OU creation should succeed")
-
-	var createdOU OrganizationUnit
-	err = json.Unmarshal(body, &createdOU)
-	ts.Require().NoError(err, "Failed to unmarshal OU response")
-
-	return createdOU.ID
-}
-
-func (ts *UserTreeValidationTestSuite) deleteOrganizationUnit(ouID string) {
-	req, err := http.NewRequest("DELETE", testServerURL+"/organization-units/"+ouID, nil)
-	if err != nil {
-		ts.T().Logf("Failed to create delete OU request: %v", err)
-		return
-	}
-
-	resp, err := ts.client.Do(req)
-	if err != nil {
-		ts.T().Logf("Failed to send delete OU request: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 204 && resp.StatusCode != 404 {
-		body, _ := io.ReadAll(resp.Body)
-		ts.T().Logf("Failed to delete OU %s: status %d, body: %s", ouID, resp.StatusCode, string(body))
-	}
+	ou2ID, err := testutils.CreateOrganizationUnit(childOU)
+	ts.Require().NoError(err, "Failed to create child organization unit")
+	ts.ou2ID = ou2ID
+	ts.createdOUs = append(ts.createdOUs, ou2ID)
 }

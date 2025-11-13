@@ -95,17 +95,19 @@ func (ts *OURegistrationFlowTestSuite) SetupSuite() {
 	ts.config = &TestSuiteConfig{}
 	ts.createdOUs = []string{}
 
-	schemaID, err := testutils.CreateUserType(dynamicUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create dynamic user schema during setup: %v", err)
-	}
-	ts.userSchemaID = schemaID
-
 	ouID, err := testutils.CreateOrganizationUnit(ouRegTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	ts.basicFlowTestOUID = ouID
+
+	// Create dynamic user schema
+	dynamicUserSchema.OrganizationUnitId = ts.basicFlowTestOUID
+	schemaID, err := testutils.CreateUserType(dynamicUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create dynamic user schema during setup: %v", err)
+	}
+	ts.userSchemaID = schemaID
 
 	appID, err := testutils.CreateApplication(ouRegTestApp)
 	if err != nil {

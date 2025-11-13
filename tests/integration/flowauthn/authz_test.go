@@ -97,12 +97,12 @@ var (
 )
 
 var (
-	authzTestOUID       string
-	authzTestAppID      string
-	authzTestRoleID     string
-	authzUserWithRole   string
-	authzUserNoRole     string
-	authzUserSchemaID   string
+	authzTestOUID     string
+	authzTestAppID    string
+	authzTestRoleID   string
+	authzUserWithRole string
+	authzUserNoRole   string
+	authzUserSchemaID string
 )
 
 type FlowAuthzTestSuite struct {
@@ -116,16 +116,17 @@ func TestFlowAuthzTestSuite(t *testing.T) {
 func (ts *FlowAuthzTestSuite) SetupSuite() {
 	var err error
 
-	// Create user schema
-	authzUserSchemaID, err = testutils.CreateUserType(authzTestUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create user schema during setup: %v", err)
-	}
-
 	// Create test organization unit
 	authzTestOUID, err = testutils.CreateOrganizationUnit(authzTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
+
+	// Create user schema within the test organization unit
+	authzTestUserSchema.OrganizationUnitId = authzTestOUID
+	authzUserSchemaID, err = testutils.CreateUserType(authzTestUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create user schema during setup: %v", err)
 	}
 
 	// Create test application

@@ -27,6 +27,13 @@ import (
 )
 
 var (
+	testOU = testutils.OrganizationUnit{
+		Handle:      "basicauth_flow_test_ou",
+		Name:        "Test Organization Unit for BasicAuth Flow",
+		Description: "Organization unit created for BasicAuth flow testing",
+		Parent:      nil,
+	}
+
 	testApp = testutils.Application{
 		Name:                      "Flow Test Application",
 		Description:               "Application for testing authentication flows",
@@ -79,6 +86,7 @@ var (
 type BasicAuthFlowTestSuite struct {
 	suite.Suite
 	config *TestSuiteConfig
+	ouID   string
 }
 
 func TestBasicAuthFlowTestSuite(t *testing.T) {
@@ -89,6 +97,11 @@ func (ts *BasicAuthFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
+	// Create test organization unit
+	ouID, err := testutils.CreateOrganizationUnit(testOU)
+	ts.Require().NoError(err, "Failed to create test organization unit")
+	ts.ouID = ouID
+
 	// Create test application
 	appID, err := testutils.CreateApplication(testApp)
 	if err != nil {
@@ -96,6 +109,8 @@ func (ts *BasicAuthFlowTestSuite) SetupSuite() {
 	}
 	testAppID = appID
 
+	// Create test user schema
+	testUserSchema.OrganizationUnitId = ts.ouID
 	schemaID, err := testutils.CreateUserType(testUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
@@ -104,7 +119,7 @@ func (ts *BasicAuthFlowTestSuite) SetupSuite() {
 
 	// Create test user with the created OU
 	testUser := testUser
-	testUser.OrganizationUnit = testOUID
+	testUser.OrganizationUnit = ts.ouID
 	userIDs, err := testutils.CreateMultipleUsers(testUser)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user during setup: %v", err)
@@ -125,11 +140,17 @@ func (ts *BasicAuthFlowTestSuite) TearDownSuite() {
 		}
 	}
 
-	// Note: OU is pre-configured in DB scripts, no need to delete
-
 	if userSchemaID != "" {
 		if err := testutils.DeleteUserType(userSchemaID); err != nil {
 			ts.T().Logf("Failed to delete test user schema during teardown: %v", err)
+		}
+	}
+
+	// Delete the test organization unit
+	if ts.ouID != "" {
+		err := testutils.DeleteOrganizationUnit(ts.ouID)
+		if err != nil {
+			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
 
@@ -182,9 +203,9 @@ func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowSuccess() {
 		completeFlowStep.Assertion,
 		testAppID,
 		testUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		ts.ouID,
+		testOU.Name,
+		testOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
@@ -218,9 +239,9 @@ func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowSuccessWithSingleRequest() {
 		flowStep.Assertion,
 		testAppID,
 		testUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		ts.ouID,
+		testOU.Name,
+		testOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
@@ -281,9 +302,9 @@ func (ts *BasicAuthFlowTestSuite) TestBasicAuthFlowWithTwoStepInput() {
 		completeFlowStep.Assertion,
 		testAppID,
 		testUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		ts.ouID,
+		testOU.Name,
+		testOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")

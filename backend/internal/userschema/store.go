@@ -21,6 +21,7 @@ package userschema
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/asgardeo/thunder/internal/system/database/provider"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -107,7 +108,14 @@ func (s *userSchemaStore) CreateUserSchema(userSchema UserSchema) error {
 		return fmt.Errorf("failed to get database client: %w", err)
 	}
 
-	_, err = dbClient.Query(queryCreateUserSchema, userSchema.ID, userSchema.Name, string(userSchema.Schema))
+	_, err = dbClient.Query(
+		queryCreateUserSchema,
+		userSchema.ID,
+		userSchema.Name,
+		userSchema.OrganizationUnitID,
+		userSchema.AllowSelfRegistration,
+		string(userSchema.Schema),
+	)
 	if err != nil {
 		return fmt.Errorf("failed to create user schema: %w", err)
 	}
@@ -160,7 +168,14 @@ func (s *userSchemaStore) UpdateUserSchemaByID(schemaID string, userSchema UserS
 		return fmt.Errorf("failed to get database client: %w", err)
 	}
 
-	_, err = dbClient.Query(queryUpdateUserSchemaByID, userSchema.Name, string(userSchema.Schema), schemaID)
+	_, err = dbClient.Query(
+		queryUpdateUserSchemaByID,
+		userSchema.Name,
+		userSchema.OrganizationUnitID,
+		userSchema.AllowSelfRegistration,
+		string(userSchema.Schema),
+		schemaID,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to update user schema: %w", err)
 	}
@@ -201,6 +216,16 @@ func parseUserSchemaFromRow(row map[string]interface{}) (UserSchema, error) {
 		return UserSchema{}, fmt.Errorf("failed to parse name as string")
 	}
 
+	organizationUnitID, ok := row["ou_id"].(string)
+	if !ok {
+		return UserSchema{}, fmt.Errorf("failed to parse ou_id as string")
+	}
+
+	allowSelfRegistration, err := parseBool(row["allow_self_registration"], "allow_self_registration")
+	if err != nil {
+		return UserSchema{}, err
+	}
+
 	var schemaDef string
 	switch v := row["schema_def"].(type) {
 	case string:
@@ -212,9 +237,11 @@ func parseUserSchemaFromRow(row map[string]interface{}) (UserSchema, error) {
 	}
 
 	userSchema := UserSchema{
-		ID:     schemaID,
-		Name:   name,
-		Schema: json.RawMessage(schemaDef),
+		ID:                    schemaID,
+		Name:                  name,
+		OrganizationUnitID:    organizationUnitID,
+		AllowSelfRegistration: allowSelfRegistration,
+		Schema:                json.RawMessage(schemaDef),
 	}
 
 	return userSchema, nil
@@ -232,10 +259,42 @@ func parseUserSchemaListItemFromRow(row map[string]interface{}) (UserSchemaListI
 		return UserSchemaListItem{}, fmt.Errorf("failed to parse name as string")
 	}
 
+	organizationUnitID, ok := row["ou_id"].(string)
+	if !ok {
+		return UserSchemaListItem{}, fmt.Errorf("failed to parse ou_id as string")
+	}
+
+	allowSelfRegistration, err := parseBool(row["allow_self_registration"], "allow_self_registration")
+	if err != nil {
+		return UserSchemaListItem{}, err
+	}
+
 	userSchemaListItem := UserSchemaListItem{
-		ID:   schemaID,
-		Name: name,
+		ID:                    schemaID,
+		Name:                  name,
+		OrganizationUnitID:    organizationUnitID,
+		AllowSelfRegistration: allowSelfRegistration,
 	}
 
 	return userSchemaListItem, nil
+}
+
+func parseBool(value interface{}, fieldName string) (bool, error) {
+	switch v := value.(type) {
+	case nil:
+		return false, fmt.Errorf("required boolean field '%s' is nil", fieldName)
+	case bool:
+		return v, nil
+	case int64:
+		return v != 0, nil
+	case float64:
+		return v != 0, nil
+	case string:
+		return strings.EqualFold(v, "true") || v == "1", nil
+	case []byte:
+		strVal := string(v)
+		return strings.EqualFold(strVal, "true") || strVal == "1", nil
+	default:
+		return false, fmt.Errorf("failed to parse %s as bool", fieldName)
+	}
 }

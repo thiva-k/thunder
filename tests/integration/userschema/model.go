@@ -30,27 +30,35 @@ const (
 
 // UserSchema represents the user schema model for tests
 type UserSchema struct {
-	ID     string          `json:"id,omitempty"`
-	Name   string          `json:"name"`
-	Schema json.RawMessage `json:"schema"`
+	ID                    string          `json:"id,omitempty"`
+	Name                  string          `json:"name"`
+	OrganizationUnitID    string          `json:"ouId"`
+	AllowSelfRegistration bool            `json:"allowSelfRegistration,omitempty"`
+	Schema                json.RawMessage `json:"schema"`
 }
 
 // CreateUserSchemaRequest represents the request to create a user schema
 type CreateUserSchemaRequest struct {
-	Name   string          `json:"name"`
-	Schema json.RawMessage `json:"schema"`
+	Name                  string          `json:"name"`
+	OrganizationUnitID    string          `json:"ouId"`
+	AllowSelfRegistration bool            `json:"allowSelfRegistration,omitempty"`
+	Schema                json.RawMessage `json:"schema"`
 }
 
 // UpdateUserSchemaRequest represents the request to update a user schema
 type UpdateUserSchemaRequest struct {
-	Name   string          `json:"name"`
-	Schema json.RawMessage `json:"schema"`
+	Name                  string          `json:"name"`
+	OrganizationUnitID    string          `json:"ouId"`
+	AllowSelfRegistration bool            `json:"allowSelfRegistration,omitempty"`
+	Schema                json.RawMessage `json:"schema"`
 }
 
 // UserSchemaListItem represents a simplified user schema for listing operations in tests
 type UserSchemaListItem struct {
-	ID   string `json:"id,omitempty"`
-	Name string `json:"name,omitempty"`
+	ID                    string `json:"id,omitempty"`
+	Name                  string `json:"name,omitempty"`
+	OrganizationUnitID    string `json:"ouId"`
+	AllowSelfRegistration bool   `json:"allowSelfRegistration,omitempty"`
 }
 
 // UserSchemaListResponse represents the response from listing user schemas

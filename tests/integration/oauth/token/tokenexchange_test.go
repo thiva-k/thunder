@@ -83,13 +83,14 @@ func (ts *TokenExchangeTestSuite) SetupSuite() {
 		},
 	}
 
+	// Create test organization unit for user creation
+	ts.organizationUnitID = ts.createTestOrganizationUnit()
+
 	// Create user schema for person type
+	testUserSchema.OrganizationUnitId = ts.organizationUnitID
 	schemaID, err := testutils.CreateUserType(testUserSchema)
 	ts.Require().NoError(err, "Failed to create test user schema")
 	ts.userSchemaID = schemaID
-
-	// Create test organization unit for user creation
-	ts.organizationUnitID = ts.createTestOrganizationUnit()
 
 	// Create test user
 	ts.userID = ts.createTestUser()

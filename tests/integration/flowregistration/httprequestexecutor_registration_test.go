@@ -87,19 +87,20 @@ func (ts *HTTPRequestRegistrationFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	// Create test user schema
-	schemaID, err := testutils.CreateUserType(httpRequestRegTestUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
-	}
-	httpRequestRegUserSchemaID = schemaID
-
 	// Create test organization unit
 	ouID, err := testutils.CreateOrganizationUnit(httpRequestRegTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	httpRequestRegTestOUID = ouID
+
+	// Create test user schema within the test OU
+	httpRequestRegTestUserSchema.OrganizationUnitId = httpRequestRegTestOUID
+	schemaID, err := testutils.CreateUserType(httpRequestRegTestUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
+	}
+	httpRequestRegUserSchemaID = schemaID
 
 	// Create test application
 	appID, err := testutils.CreateApplication(httpRequestRegTestApp)

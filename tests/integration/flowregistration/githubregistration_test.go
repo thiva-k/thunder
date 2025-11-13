@@ -126,17 +126,18 @@ func (ts *GithubRegistrationFlowTestSuite) SetupSuite() {
 	// Use the IDP created by database scripts
 	ts.idpID = "test-github-idp-id"
 
-	// Create user schema
-	schemaID, err := testutils.CreateUserType(githubRegUserSchema)
-	ts.Require().NoError(err, "Failed to create GitHub user schema")
-	ts.userSchemaID = schemaID
-
 	// Create test organization unit for GitHub registration tests
 	ouID, err := testutils.CreateOrganizationUnit(githubRegTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	githubRegTestOUID = ouID
+
+	// Create user schema
+	githubRegUserSchema.OrganizationUnitId = githubRegTestOUID
+	schemaID, err := testutils.CreateUserType(githubRegUserSchema)
+	ts.Require().NoError(err, "Failed to create GitHub user schema")
+	ts.userSchemaID = schemaID
 
 	// Create test application for GitHub registration tests
 	appID, err := testutils.CreateApplication(githubRegTestApp)

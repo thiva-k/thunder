@@ -68,6 +68,8 @@ var (
 			},
 		},
 	}
+
+	regUserOUID = "test-ou-id"
 )
 
 var (
@@ -77,8 +79,8 @@ var (
 
 type BasicRegistrationFlowTestSuite struct {
 	suite.Suite
-	config         *TestSuiteConfig
-	userSchemaID   string
+	config       *TestSuiteConfig
+	userSchemaID string
 }
 
 func TestBasicRegistrationFlowTestSuite(t *testing.T) {
@@ -89,18 +91,20 @@ func (ts *BasicRegistrationFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	schemaID, err := testutils.CreateUserType(testUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
-	}
-	ts.userSchemaID = schemaID
-
 	// Create test organization unit
 	ouID, err := testutils.CreateOrganizationUnit(testOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	testOUID = ouID
+
+	// Create test user schema
+	testUserSchema.OrganizationUnitId = testOUID
+	schemaID, err := testutils.CreateUserType(testUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
+	}
+	ts.userSchemaID = schemaID
 
 	// Create test application
 	appID, err := testutils.CreateApplication(testApp)
@@ -215,7 +219,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSuccess() {
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(registrationOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
@@ -342,7 +346,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowInitialInvali
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(registrationOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
@@ -390,7 +394,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSingleRequest
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(registrationOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
