@@ -17,7 +17,7 @@
  */
 
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
-import {screen, waitFor} from '@testing-library/react';
+import {screen, waitFor, cleanup} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type {JSX} from 'react';
 import render from '@/test/test-utils';
@@ -54,6 +54,7 @@ describe('SideMenu', () => {
   });
 
   afterEach(() => {
+    cleanup();
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
   });
@@ -118,14 +119,14 @@ describe('SideMenu', () => {
     it('renders collapse button when expanded', () => {
       render(<SideMenu />);
 
-      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      const collapseButton = screen.getByLabelText('Expand/Collapse sidebar');
       expect(collapseButton).toBeInTheDocument();
     });
 
     it('renders expand button when collapsed', () => {
       render(<SideMenu expanded={false} />);
 
-      const expandButton = screen.getByLabelText('Expand sidebar');
+      const expandButton = screen.getByLabelText('Expand/Collapse sidebar');
       expect(expandButton).toBeInTheDocument();
     });
 
@@ -135,7 +136,7 @@ describe('SideMenu', () => {
       const handleExpandedChange = vi.fn();
       render(<SideMenu expanded onExpandedChange={handleExpandedChange} />);
 
-      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      const collapseButton = screen.getByLabelText('Expand/Collapse sidebar');
       await user.click(collapseButton);
 
       expect(handleExpandedChange).toHaveBeenCalledWith(false);
@@ -148,7 +149,7 @@ describe('SideMenu', () => {
       const handleExpandedChange = vi.fn();
       render(<SideMenu expanded={false} onExpandedChange={handleExpandedChange} />);
 
-      const expandButton = screen.getByLabelText('Expand sidebar');
+      const expandButton = screen.getByLabelText('Expand/Collapse sidebar');
       await user.click(expandButton);
 
       expect(handleExpandedChange).toHaveBeenCalledWith(true);
@@ -162,15 +163,15 @@ describe('SideMenu', () => {
 
       // Initially expanded
       expect(screen.getByText('Developer')).toBeInTheDocument();
-      expect(screen.getByLabelText('Collapse sidebar')).toBeInTheDocument();
+      expect(screen.getByLabelText('Expand/Collapse sidebar')).toBeInTheDocument();
 
       // Click to collapse
-      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      const collapseButton = screen.getByLabelText('Expand/Collapse sidebar');
       await user.click(collapseButton);
 
-      // Should now show expand button
+      // Should still have toggle button
       await waitFor(() => {
-        expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument();
+        expect(screen.getByLabelText('Expand/Collapse sidebar')).toBeInTheDocument();
       });
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -202,16 +203,18 @@ describe('SideMenu', () => {
       expect(avatar).toBeInTheDocument();
     });
 
-    it('does not render collapse button when disableCollapsible is true', () => {
+    it('renders toggle button even when disableCollapsible is true', () => {
       render(<SideMenu disableCollapsible />);
 
-      expect(screen.queryByLabelText('Collapse sidebar')).not.toBeInTheDocument();
+      // The toggle button is always rendered
+      expect(screen.getByLabelText('Expand/Collapse sidebar')).toBeInTheDocument();
     });
 
-    it('does not render expand button when disableCollapsible is true and collapsed', () => {
+    it('renders toggle button when disableCollapsible is true and collapsed', () => {
       render(<SideMenu expanded={false} disableCollapsible />);
 
-      expect(screen.queryByLabelText('Expand sidebar')).not.toBeInTheDocument();
+      // The toggle button is always rendered
+      expect(screen.getByLabelText('Expand/Collapse sidebar')).toBeInTheDocument();
     });
 
     it('shows logo and title when disableCollapsible is true', () => {
@@ -228,7 +231,7 @@ describe('SideMenu', () => {
 
       const drawer = container.querySelector('.MuiDrawer-root');
       const style = window.getComputedStyle(drawer!);
-      expect(style.width).toBe('240px');
+      expect(style.width).toBe('250px');
     });
 
     it('has correct width when collapsed', () => {
@@ -250,7 +253,7 @@ describe('SideMenu', () => {
       expect(screen.getByText('Developer')).toBeInTheDocument();
 
       // Click collapse button
-      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      const collapseButton = screen.getByLabelText('Expand/Collapse sidebar');
       await user.click(collapseButton);
 
       // Should call handler but not change state (controlled)
@@ -262,6 +265,7 @@ describe('SideMenu', () => {
 
       // Now it should be collapsed
       expect(screen.queryByText('Developer')).not.toBeInTheDocument();
+
       vi.useFakeTimers(); // Restore fake timers
     });
 
@@ -274,30 +278,15 @@ describe('SideMenu', () => {
       expect(screen.getByText('Developer')).toBeInTheDocument();
 
       // Click to collapse
-      const collapseButton = screen.getByLabelText('Collapse sidebar');
+      const collapseButton = screen.getByLabelText('Expand/Collapse sidebar');
       await user.click(collapseButton);
 
       // Should update internal state and collapse
       await waitFor(() => {
-        expect(screen.getByLabelText('Expand sidebar')).toBeInTheDocument();
+        expect(screen.queryByText('Developer')).not.toBeInTheDocument();
       });
+
       vi.useFakeTimers(); // Restore fake timers
-    });
-  });
-
-  describe('Accessibility', () => {
-    it('has proper aria-label for collapse button', () => {
-      render(<SideMenu expanded />);
-
-      const collapseButtons = screen.getAllByLabelText('Collapse sidebar');
-      expect(collapseButtons[0]).toHaveAccessibleName('Collapse sidebar');
-    });
-
-    it('has proper aria-label for expand button', () => {
-      render(<SideMenu expanded={false} />);
-
-      const expandButton = screen.getByLabelText('Expand sidebar');
-      expect(expandButton).toHaveAccessibleName('Expand sidebar');
     });
   });
 
@@ -314,6 +303,60 @@ describe('SideMenu', () => {
       render(<SideMenu expanded={false} />);
 
       expect(screen.getByTestId('menu-content')).toBeInTheDocument();
+    });
+  });
+
+  describe('Transition timing', () => {
+    it('sets isFullyExpanded to true after transition when expanding', () => {
+      const {rerender} = render(<SideMenu expanded={false} />);
+
+      // Expand the sidebar
+      rerender(<SideMenu expanded />);
+
+      // Fast-forward time to trigger the setTimeout
+      vi.advanceTimersByTime(300); // Default enteringScreen duration
+
+      // The component should have completed its expansion transition
+      expect(screen.getByText('Developer')).toBeInTheDocument();
+    });
+
+    it('sets isFullyCollapsed to true after transition when collapsing', () => {
+      const {rerender} = render(<SideMenu expanded />);
+
+      // Collapse the sidebar
+      rerender(<SideMenu expanded={false} />);
+
+      // Fast-forward time to trigger the setTimeout
+      vi.advanceTimersByTime(300); // Default leavingScreen duration
+
+      // The component should have completed its collapse transition
+      expect(screen.queryByText('Developer')).not.toBeInTheDocument();
+    });
+
+    it('cleans up timeout when component unmounts during expansion', () => {
+      const {rerender, unmount} = render(<SideMenu expanded={false} />);
+
+      // Start expanding
+      rerender(<SideMenu expanded />);
+
+      // Unmount before timeout completes
+      unmount();
+
+      // Advance timers - should not throw error
+      vi.advanceTimersByTime(300);
+    });
+
+    it('cleans up timeout when component unmounts during collapse', () => {
+      const {rerender, unmount} = render(<SideMenu expanded />);
+
+      // Start collapsing
+      rerender(<SideMenu expanded={false} />);
+
+      // Unmount before timeout completes
+      unmount();
+
+      // Advance timers - should not throw error
+      vi.advanceTimersByTime(300);
     });
   });
 });

@@ -296,4 +296,71 @@ describe('useGetUser', () => {
       expect(result.current.data).toEqual(mockUser2);
     });
   });
+
+  it('should handle error when refetch is called and throw error', async () => {
+    const mockUser: ApiUser = {
+      id: 'user-123',
+      organizationUnit: '/sales',
+      type: 'customer',
+      attributes: {
+        name: 'John Doe',
+        email: 'john@example.com',
+      },
+    };
+
+    mockHttpRequest.mockResolvedValueOnce({data: mockUser});
+
+    const {result} = renderHook(() => useGetUser('user-123'));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUser);
+    });
+
+    const refetchError = new Error('Refetch failed');
+    mockHttpRequest.mockRejectedValueOnce(refetchError);
+
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Refetch failed',
+        description: 'Failed to fetch user',
+      });
+    });
+  });
+
+  it('should handle non-Error object when refetch fails', async () => {
+    const mockUser: ApiUser = {
+      id: 'user-123',
+      organizationUnit: '/sales',
+      type: 'customer',
+      attributes: {
+        name: 'John Doe',
+        email: 'john@example.com',
+      },
+    };
+
+    mockHttpRequest.mockResolvedValueOnce({data: mockUser});
+
+    const {result} = renderHook(() => useGetUser('user-123'));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUser);
+    });
+
+    mockHttpRequest.mockRejectedValueOnce('Unknown error');
+
+    await expect(result.current.refetch()).rejects.toEqual('Unknown error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch user',
+      });
+    });
+
+    expect(result.current.loading).toBe(false);
+  });
 });

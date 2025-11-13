@@ -19,7 +19,7 @@
 import {Avatar, Drawer, drawerClasses, Box, Divider, Stack, Typography, IconButton, useTheme} from '@wso2/oxygen-ui';
 import {User} from '@asgardeo/react';
 import {ThemedIcon} from '@thunder/ui';
-import {List, ListCollapse} from 'lucide-react';
+import {Menu} from 'lucide-react';
 import {useState, useEffect, useMemo, type JSX} from 'react';
 import MenuContent from './MenuContent';
 import OptionsMenu from './OptionsMenu';
@@ -128,42 +128,35 @@ export default function SideMenu({
           sx={{
             display: 'flex',
             mt: 'calc(var(--template-frame-height, 0px) + 4px)',
-            p: 1.5,
+            py: 1.5,
+            px: 2,
             justifyContent: mini ? 'center' : 'space-between',
             alignItems: 'center',
             overflow: 'hidden',
           }}
         >
-          {mini ? (
-            !disableCollapsible && (
-              <IconButton onClick={handleToggle} size="small" aria-label="Expand sidebar">
-                <List size={20} />
-              </IconButton>
-            )
-          ) : (
+          <IconButton onClick={handleToggle} size="small" aria-label="Expand/Collapse sidebar">
+            <Menu size={20} />
+          </IconButton>
+          {!mini && (
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
               }}
             >
-              {!disableCollapsible && (
-                <IconButton onClick={handleToggle} size="small" aria-label="Collapse sidebar" sx={{mr: 1}}>
-                  <ListCollapse size={20} />
-                </IconButton>
-              )}
               <ThemedIcon
                 src={{
                   light: `${import.meta.env.BASE_URL}/assets/images/logo.svg`,
                   dark: `${import.meta.env.BASE_URL}/assets/images/logo-inverted.svg`,
                 }}
                 alt={{light: 'Logo (Light)', dark: 'Logo (Dark)'}}
-                height={16}
+                height={14}
                 width="auto"
                 alignItems="center"
-                marginBottom="4px"
+                marginBottom="3px"
               />
-              <Typography variant="subtitle1" sx={{mt: '4px', ml: 1, alignSelf: 'center', fontWeight: 400}}>
+              <Typography variant="subtitle1" sx={{ml: 1, alignSelf: 'center', fontWeight: 400}}>
                 Developer
               </Typography>
             </Box>

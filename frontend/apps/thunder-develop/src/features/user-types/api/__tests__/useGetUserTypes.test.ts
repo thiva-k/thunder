@@ -326,4 +326,145 @@ describe('useGetUserTypes', () => {
       ).toBe(true);
     });
   });
+
+  it('should refetch with new params when provided to refetch', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    const {result} = renderHook(() => useGetUserTypes({limit: 10}));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchemaList);
+    });
+
+    const updatedList = {...mockUserSchemaList, totalResults: 5};
+    mockHttpRequest.mockResolvedValue({data: updatedList});
+
+    await result.current.refetch({limit: 20, offset: 10});
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(updatedList);
+    });
+
+    expect(
+      mockHttpRequest.mock.calls.some(
+        (call: unknown[]) => ((call[0] as {url?: string})?.url === 'https://localhost:8090/user-schemas?limit=20&offset=10'),
+      ),
+    ).toBe(true);
+  });
+
+  it('should refetch with only limit param', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    const {result} = renderHook(() => useGetUserTypes());
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchemaList);
+    });
+
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    await result.current.refetch({limit: 15});
+
+    await waitFor(() => {
+      expect(
+        mockHttpRequest.mock.calls.some(
+          (call: unknown[]) => ((call[0] as {url?: string})?.url === 'https://localhost:8090/user-schemas?limit=15'),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it('should refetch with only offset param', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    const {result} = renderHook(() => useGetUserTypes());
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchemaList);
+    });
+
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    await result.current.refetch({offset: 5});
+
+    await waitFor(() => {
+      expect(
+        mockHttpRequest.mock.calls.some(
+          (call: unknown[]) => ((call[0] as {url?: string})?.url === 'https://localhost:8090/user-schemas?offset=5'),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  it('should throw error when refetch fails', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    const {result} = renderHook(() => useGetUserTypes());
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchemaList);
+    });
+
+    const error = new Error('Refetch failed');
+    mockHttpRequest.mockRejectedValue(error);
+
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_USER_TYPES_ERROR',
+        message: 'Refetch failed',
+        description: 'Failed to fetch user types',
+      });
+      expect(result.current.data).toBeNull();
+    });
+  });
+
+  it('should handle non-Error thrown in refetch', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    const {result} = renderHook(() => useGetUserTypes());
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchemaList);
+    });
+
+    mockHttpRequest.mockRejectedValue('String error');
+
+    await expect(result.current.refetch()).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_USER_TYPES_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch user types',
+      });
+      expect(result.current.data).toBeNull();
+    });
+  });
+
+  it('should not set error for aborted requests in refetch', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockUserSchemaList});
+
+    const {result} = renderHook(() => useGetUserTypes());
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchemaList);
+    });
+
+    const abortError = new Error('Aborted');
+    abortError.name = 'AbortError';
+    mockHttpRequest.mockRejectedValue(abortError);
+
+    await result.current.refetch();
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Error should remain null for aborted requests
+    expect(result.current.error).toBeNull();
+    // Data should remain from previous successful fetch
+    expect(result.current.data).toEqual(mockUserSchemaList);
+  });
 });

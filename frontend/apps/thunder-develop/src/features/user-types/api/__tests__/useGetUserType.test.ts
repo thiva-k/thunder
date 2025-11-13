@@ -280,4 +280,67 @@ describe('useGetUserType', () => {
     expect(result.current.data).toBeNull();
     expect(result.current.error).toBeNull();
   });
+
+  it('should handle error in refetch without id', async () => {
+    const {result} = renderHook(() => useGetUserType());
+
+    await result.current.refetch();
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'INVALID_ID',
+        message: 'Invalid schema ID',
+        description: 'Schema ID is required',
+      });
+    });
+
+    expect(mockHttpRequest).not.toHaveBeenCalled();
+  });
+
+  it('should throw error when refetch fails', async () => {
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
+
+    const {result} = renderHook(() => useGetUserType('123'));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchema);
+    });
+
+    const error = new Error('Refetch failed');
+    mockHttpRequest.mockRejectedValueOnce(error);
+
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_USER_TYPE_ERROR',
+        message: 'Refetch failed',
+        description: 'Failed to fetch user type',
+      });
+      expect(result.current.data).toBeNull();
+    });
+  });
+
+  it('should handle non-Error thrown in refetch', async () => {
+    mockHttpRequest.mockResolvedValueOnce({data: mockUserSchema});
+
+    const {result} = renderHook(() => useGetUserType('123'));
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockUserSchema);
+    });
+
+    mockHttpRequest.mockRejectedValueOnce('String error');
+
+    await expect(result.current.refetch()).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_USER_TYPE_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch user type',
+      });
+      expect(result.current.data).toBeNull();
+    });
+  });
 });

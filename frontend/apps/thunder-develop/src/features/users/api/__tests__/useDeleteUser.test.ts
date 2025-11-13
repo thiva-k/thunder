@@ -214,4 +214,30 @@ describe('useDeleteUser', () => {
 
     expect(mockHttpRequest).toHaveBeenCalledTimes(2);
   });
+
+  it('should reset error state when reset is called', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('User not found'));
+
+    const {result} = renderHook(() => useDeleteUser());
+
+    try {
+      await result.current.deleteUser('user-123');
+    } catch {
+      // Expected to throw
+    }
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'DELETE_USER_ERROR',
+        message: 'User not found',
+        description: 'Failed to delete user',
+      });
+    });
+
+    result.current.reset?.();
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+    });
+  });
 });

@@ -417,6 +417,19 @@ describe('CreateUserPage', () => {
     expect(screen.getByText('Loading schemas...')).toBeInTheDocument();
   });
 
+  it('handles null schemas data', () => {
+    mockUseGetUserSchemas.mockReturnValue({
+      data: null,
+      loading: false,
+      error: null,
+      refetch: mockRefetchSchemas,
+    });
+
+    render(<CreateUserPage />);
+
+    expect(screen.getByText('Loading schemas...')).toBeInTheDocument();
+  });
+
   it('sets first schema as default when schemas load', () => {
     render(<CreateUserPage />);
 
@@ -531,5 +544,33 @@ describe('CreateUserPage', () => {
         },
       });
     });
+  });
+
+  it('handles exception during user creation and logs error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    const error = new Error('Network error');
+    mockCreateUser.mockRejectedValue(error);
+
+    render(<CreateUserPage />);
+
+    const usernameInput = screen.getByPlaceholderText(/Enter username/i);
+    await user.type(usernameInput, 'john_doe');
+
+    const submitButton = screen.getByRole('button', {name: /create user/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateUser).toHaveBeenCalled();
+    });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to create user:', error);
+    });
+
+    // Should reset submitting state
+    expect(screen.getByRole('button', {name: /create user/i})).not.toBeDisabled();
+
+    consoleSpy.mockRestore();
   });
 });

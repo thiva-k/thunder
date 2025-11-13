@@ -222,6 +222,11 @@ describe('useCreateUser', () => {
 
     const promise = result.current.createUser(mockRequest);
 
+    // Yield to allow React to process the state update
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, 0);
+    });
+
     // Loading should become true
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
@@ -314,9 +319,7 @@ describe('useCreateUser', () => {
       },
     };
 
-    mockHttpRequest
-      .mockResolvedValueOnce({data: mockResponse1})
-      .mockResolvedValueOnce({data: mockResponse2});
+    mockHttpRequest.mockResolvedValueOnce({data: mockResponse1}).mockResolvedValueOnce({data: mockResponse2});
 
     const {result} = renderHook(() => useCreateUser());
 

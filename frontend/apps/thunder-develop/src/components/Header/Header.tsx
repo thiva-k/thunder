@@ -37,13 +37,13 @@ export default function Header(): JSX.Element {
         alignItems: {xs: 'flex-start', md: 'center'},
         justifyContent: 'space-between',
         maxWidth: {sm: '100%'},
-        pt: 1.5,
+        pt: '10px',
         px: 3,
       }}
       spacing={2}
     >
       <Stack direction="row">
-        <MenuButton aria-label="menu" sx={{ display: { md: 'none' }}}>
+        <MenuButton aria-label="menu" sx={{display: {md: 'none'}}}>
           <Menu />
         </MenuButton>
         <NavbarBreadcrumbs />
