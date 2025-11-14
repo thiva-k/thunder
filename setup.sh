@@ -345,19 +345,21 @@ else
 
     # Find scripts in main bootstrap directory (exclude common.sh)
     if [ -d "$BOOTSTRAP_DIR" ]; then
-        while IFS= read -r -d '' script; do
-            # Skip common.sh as it's a library, not a script to execute
-            if [[ "$(basename "$script")" != "common.sh" ]]; then
-                SCRIPTS+=("$script")
+        for script in "$BOOTSTRAP_DIR"/*.sh "$BOOTSTRAP_DIR"/*.bash; do
+            [ ! -e "$script" ] && continue
+            if [[ "$(basename "$script")" == "common.sh" ]]; then
+                continue
             fi
-        done < <(find -L "$BOOTSTRAP_DIR" -maxdepth 1 -type f \( -name "*.sh" -o -name "*.bash" \) -print0 2>/dev/null)
+            SCRIPTS+=("$script")
+        done
     fi
 
     # Find scripts in custom directory
     if [ -d "$BOOTSTRAP_DIR/custom" ]; then
-        while IFS= read -r -d '' script; do
+        for script in "$BOOTSTRAP_DIR/custom"/*.sh "$BOOTSTRAP_DIR/custom"/*.bash; do
+            [ ! -e "$script" ] && continue
             SCRIPTS+=("$script")
-        done < <(find -L "$BOOTSTRAP_DIR/custom" -maxdepth 1 -type f \( -name "*.sh" -o -name "*.bash" \) -print0 2>/dev/null)
+        done
     fi
 
     # Sort scripts by filename (numeric prefix determines order)

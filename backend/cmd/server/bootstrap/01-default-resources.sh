@@ -102,6 +102,7 @@ log_info "Creating default user schema (person)..."
 
 RESPONSE=$(thunder_api_call POST "/user-schemas" '{
   "name": "person",
+  "ouId": "'${DEFAULT_OU_ID}'",
   "schema": {
     "sub": {
       "type": "string",
