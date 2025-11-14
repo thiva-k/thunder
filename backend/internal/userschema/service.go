@@ -38,6 +38,7 @@ type UserSchemaServiceInterface interface {
 	GetUserSchemaList(limit, offset int) (*UserSchemaListResponse, *serviceerror.ServiceError)
 	CreateUserSchema(request CreateUserSchemaRequest) (*UserSchema, *serviceerror.ServiceError)
 	GetUserSchema(schemaID string) (*UserSchema, *serviceerror.ServiceError)
+	GetUserSchemaByName(schemaName string) (*UserSchema, *serviceerror.ServiceError)
 	UpdateUserSchema(schemaID string, request UpdateUserSchemaRequest) (
 		*UserSchema, *serviceerror.ServiceError)
 	DeleteUserSchema(schemaID string) *serviceerror.ServiceError
@@ -153,6 +154,25 @@ func (us *userSchemaService) GetUserSchema(schemaID string) (*UserSchema, *servi
 			return nil, &ErrorUserSchemaNotFound
 		}
 		return nil, logAndReturnServerError(logger, "Failed to get user schema", err)
+	}
+
+	return &userSchema, nil
+}
+
+// GetUserSchemaByName retrieves a user schema by its name.
+func (us *userSchemaService) GetUserSchemaByName(schemaName string) (*UserSchema, *serviceerror.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, userSchemaLoggerComponentName))
+
+	if schemaName == "" {
+		return nil, invalidSchemaRequestError("schema name must not be empty")
+	}
+
+	userSchema, err := us.userSchemaStore.GetUserSchemaByName(schemaName)
+	if err != nil {
+		if errors.Is(err, ErrUserSchemaNotFound) {
+			return nil, &ErrorUserSchemaNotFound
+		}
+		return nil, logAndReturnServerError(logger, "Failed to get user schema by name", err)
 	}
 
 	return &userSchema, nil
