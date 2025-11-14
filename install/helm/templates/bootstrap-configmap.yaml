@@ -14,15 +14,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
+{{- if and .Values.bootstrap.scripts (not .Values.bootstrap.existingConfigMap) }}
 apiVersion: v1
-kind: ServiceAccount
+kind: ConfigMap
 metadata:
-  name: {{ include "thunder.serviceAccountName" . }}
+  name: {{ include "thunder.fullname" . }}-bootstrap
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "thunder.labels" . | nindent 4 }}
+    app.kubernetes.io/component: bootstrap
   {{- if .Values.setup.enabled }}
   annotations:
     "helm.sh/hook": pre-install
     "helm.sh/hook-weight": "-10"
   {{- end }}
+data:
+  {{- range $filename, $content := .Values.bootstrap.scripts }}
+  {{ $filename }}: |
+{{ $content | indent 4 }}
+  {{- end }}
+{{- end }}

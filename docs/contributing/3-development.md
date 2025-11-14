@@ -295,8 +295,9 @@ pnpm build
 If you have not already created the `Develop` application and the default admin user, you can do so by running the following command:
 
 ```bash
-cd backend/scripts
-sh ./setup_initial_data.sh $BACKEND_PORT --develop-redirect-uris "https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop"
+THUNDER_API_BASE="https://localhost:8090" \
+  backend/cmd/server/bootstrap/01-default-resources.sh \
+  --develop-redirect-uris "https://localhost:5191/develop"
 ```
 
 ### Setting up the Thunder Gate Application

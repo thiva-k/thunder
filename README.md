@@ -66,28 +66,37 @@ Follow these steps to download the latest release of WSO2 Thunder and run it loc
     cd thunder-<version>-<os>-<arch>/
     ```
 
-3. **Start the product**
+3. **Setup the product**
 
-    Start the product using the following command:
+    You need to setup the server with the initial configurations and data before starting the server for the first time.
 
     If you are using a Linux or macOS machine:
 
     ```bash
-    bash start.sh --setup
+    ./setup.sh
     ```
 
     If you are using a Windows machine:
 
     ```powershell
-    .\start.ps1 --setup
+    .\setup.ps1
     ```
 
-> [!TIP]
-> The `--setup` flag initializes the product with default configurations, including creating an admin user and the Develop application.
-> You can omit this flag if you have already set up the initial data.
-> You can also run the setup manually later using the script located at:
->   - **Linux/macOS**: `<THUNDER_HOME>/scripts/setup_initial_data.sh`
->   - **Windows**: `<THUNDER_HOME>\scripts\setup_initial_data.ps1`
+4. **Start the product**
+
+    If you are using a Linux or macOS machine:
+
+    ```bash
+    ./start.sh
+    ```
+
+    If you are using a Windows machine:
+
+    ```powershell
+    .\start.ps1
+    ```
+
+    The product will start on `https://localhost:8090`.
 
 #### Option 2: Run with Docker
 
@@ -99,7 +108,20 @@ Follow these steps to run WSO2 Thunder using Docker.
     docker pull ghcr.io/asgardeo/thunder:latest
     ```
 
-2. **Run the container**
+2. **Setup the product**
+
+    You need to setup the server with the initial configurations and data before starting the server for the first time.
+
+    ```bash
+        docker run -it --rm \
+            ghcr.io/asgardeo/thunder:latest \
+            ./setup.sh
+    ```
+
+    > [!NOTE]
+    > This will shut down the container after the setup is complete. You need to start the container again using the command in step 3. If you are using sqlite as the database, then you need to mount a volume to persist the database file and share it between the setup and server run containers.
+
+3. **Run the container**
 
     ```bash
     docker run --rm \
@@ -126,23 +148,6 @@ Follow these steps to run WSO2 Thunder using Docker.
       -v $(pwd)/certs/server.key:/opt/thunder/repository/resources/security/server.key \
       ghcr.io/asgardeo/thunder:latest
     ```
-
-3. **Initialize with default data (Required for first-time setup)**
-
-    To use the Developer Console and sample applications, you need to set up initial data including the default admin user. Run this command after starting the container:
-
-    ```bash
-    docker exec -it $(docker ps -q --filter ancestor=ghcr.io/asgardeo/thunder:latest) \
-      /opt/thunder/scripts/setup_initial_data.sh
-    ```
-
-    This creates:
-    - Default admin user (`admin` / `admin`)  
-    - Developer Console application
-    - Basic authentication and registration flows
-
-    > [!NOTE]
-    > Replace the container selection with your specific container name if running multiple Thunder containers.
 
 ### Try Out the Product
 
