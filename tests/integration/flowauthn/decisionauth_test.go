@@ -132,6 +132,7 @@ func (ts *DecisionAndMFAFlowTestSuite) SetupSuite() {
 	}
 	decisionTestAppID = appID
 
+	decisionUserSchema.OrganizationUnitId = decisionTestOUID
 	schemaID, err := testutils.CreateUserType(decisionUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)

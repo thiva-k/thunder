@@ -303,10 +303,13 @@ func (h *userSchemaHandler) sanitizeCreateUserSchemaRequest(
 	request CreateUserSchemaRequest,
 ) CreateUserSchemaRequest {
 	sanitizedName := sysutils.SanitizeString(request.Name)
+	sanitizedOrganizationUnitID := sysutils.SanitizeString(request.OrganizationUnitID)
 
 	return CreateUserSchemaRequest{
-		Name:   sanitizedName,
-		Schema: request.Schema,
+		Name:                  sanitizedName,
+		OrganizationUnitID:    sanitizedOrganizationUnitID,
+		AllowSelfRegistration: request.AllowSelfRegistration,
+		Schema:                request.Schema,
 	}
 }
 
@@ -318,6 +321,7 @@ func (h *userSchemaHandler) sanitizeUpdateUserSchemaRequest(
 
 	originalName := request.Name
 	sanitizedName := sysutils.SanitizeString(request.Name)
+	sanitizedOrganizationUnitID := sysutils.SanitizeString(request.OrganizationUnitID)
 
 	if originalName != sanitizedName {
 		logger.Debug("Sanitized user schema name in update request",
@@ -326,7 +330,9 @@ func (h *userSchemaHandler) sanitizeUpdateUserSchemaRequest(
 	}
 
 	return UpdateUserSchemaRequest{
-		Name:   sanitizedName,
-		Schema: request.Schema,
+		Name:                  sanitizedName,
+		OrganizationUnitID:    sanitizedOrganizationUnitID,
+		AllowSelfRegistration: request.AllowSelfRegistration,
+		Schema:                request.Schema,
 	}
 }

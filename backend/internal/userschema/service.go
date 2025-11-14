@@ -97,6 +97,14 @@ func (us *userSchemaService) CreateUserSchema(request CreateUserSchemaRequest) (
 		return nil, invalidSchemaRequestError("user schema name must not be empty")
 	}
 
+	if request.OrganizationUnitID == "" {
+		return nil, invalidSchemaRequestError("organization unit id must not be empty")
+	}
+
+	if !utils.IsValidUUID(request.OrganizationUnitID) {
+		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
 	if len(request.Schema) == 0 {
 		return nil, invalidSchemaRequestError("schema definition must not be empty")
 	}
@@ -117,9 +125,11 @@ func (us *userSchemaService) CreateUserSchema(request CreateUserSchemaRequest) (
 	schemaID := utils.GenerateUUID()
 
 	userSchema := UserSchema{
-		ID:     schemaID,
-		Name:   request.Name,
-		Schema: request.Schema,
+		ID:                    schemaID,
+		Name:                  request.Name,
+		OrganizationUnitID:    request.OrganizationUnitID,
+		AllowSelfRegistration: request.AllowSelfRegistration,
+		Schema:                request.Schema,
 	}
 
 	if err := us.userSchemaStore.CreateUserSchema(userSchema); err != nil {
@@ -161,6 +171,14 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 		return nil, invalidSchemaRequestError("user schema name must not be empty")
 	}
 
+	if request.OrganizationUnitID == "" {
+		return nil, invalidSchemaRequestError("organization unit id must not be empty")
+	}
+
+	if !utils.IsValidUUID(request.OrganizationUnitID) {
+		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
 	if len(request.Schema) == 0 {
 		return nil, invalidSchemaRequestError("schema definition must not be empty")
 	}
@@ -189,9 +207,11 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 	}
 
 	userSchema := UserSchema{
-		ID:     schemaID,
-		Name:   request.Name,
-		Schema: request.Schema,
+		ID:                    schemaID,
+		Name:                  request.Name,
+		OrganizationUnitID:    request.OrganizationUnitID,
+		AllowSelfRegistration: request.AllowSelfRegistration,
+		Schema:                request.Schema,
 	}
 
 	if err := us.userSchemaStore.UpdateUserSchemaByID(schemaID, userSchema); err != nil {

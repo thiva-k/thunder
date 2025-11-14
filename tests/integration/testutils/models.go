@@ -24,9 +24,11 @@ import (
 
 // UserSchema represents a user schema (user type) definition
 type UserSchema struct {
-	ID     string                 `json:"id,omitempty"`
-	Name   string                 `json:"name"`
-	Schema map[string]interface{} `json:"schema"`
+	ID                    string                 `json:"id,omitempty"`
+	Name                  string                 `json:"name"`
+	OrganizationUnitId    string                 `json:"ouId"`
+	AllowSelfRegistration bool                   `json:"allowSelfRegistration,omitempty"`
+	Schema                map[string]interface{} `json:"schema"`
 }
 
 // User represents a user in the system

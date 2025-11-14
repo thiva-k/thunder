@@ -92,6 +92,7 @@ func (suite *GroupAPITestSuite) SetupSuite() {
 		suite.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	testOUID = ouID
+	testUserSchema.OrganizationUnitId = testOUID
 
 	// Create test user type
 	schemaID, err := testutils.CreateUserType(testUserSchema)

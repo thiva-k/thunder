@@ -79,6 +79,7 @@ func (suite *UserTreeAPITestSuite) SetupSuite() {
 		suite.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 
+	testUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(testUserSchema)
 	if err != nil {
 		suite.T().Fatalf("Failed to create employee user type during setup: %v", err)

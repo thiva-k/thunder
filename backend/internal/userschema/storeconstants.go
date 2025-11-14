@@ -30,31 +30,34 @@ var (
 	// queryGetUserSchemaList retrieves a paginated list of user schemas.
 	queryGetUserSchemaList = dbmodel.DBQuery{
 		ID:    "ASQ-USER_SCHEMA-002",
-		Query: `SELECT SCHEMA_ID, NAME FROM USER_SCHEMAS ORDER BY NAME LIMIT $1 OFFSET $2`,
+		Query: `SELECT SCHEMA_ID, NAME, OU_ID, ALLOW_SELF_REGISTRATION FROM USER_SCHEMAS ORDER BY NAME LIMIT $1 OFFSET $2`,
 	}
 
 	// queryCreateUserSchema creates a new user schema.
 	queryCreateUserSchema = dbmodel.DBQuery{
-		ID:    "ASQ-USER_SCHEMA-003",
-		Query: `INSERT INTO USER_SCHEMAS (SCHEMA_ID, NAME, SCHEMA_DEF) VALUES ($1, $2, $3)`,
+		ID: "ASQ-USER_SCHEMA-003",
+		Query: `INSERT INTO USER_SCHEMAS (SCHEMA_ID, NAME, OU_ID, ALLOW_SELF_REGISTRATION, SCHEMA_DEF)
+			VALUES ($1, $2, $3, $4, $5)`,
 	}
 
 	// queryGetUserSchemaByID retrieves a user schema by its ID.
 	queryGetUserSchemaByID = dbmodel.DBQuery{
 		ID:    "ASQ-USER_SCHEMA-004",
-		Query: `SELECT SCHEMA_ID, NAME, SCHEMA_DEF FROM USER_SCHEMAS WHERE SCHEMA_ID = $1`,
+		Query: `SELECT SCHEMA_ID, NAME, OU_ID, ALLOW_SELF_REGISTRATION, SCHEMA_DEF FROM USER_SCHEMAS WHERE SCHEMA_ID = $1`,
 	}
 
 	// queryGetUserSchemaByName retrieves a user schema by its name.
 	queryGetUserSchemaByName = dbmodel.DBQuery{
 		ID:    "ASQ-USER_SCHEMA-005",
-		Query: `SELECT SCHEMA_ID, NAME, SCHEMA_DEF FROM USER_SCHEMAS WHERE NAME = $1`,
+		Query: `SELECT SCHEMA_ID, NAME, OU_ID, ALLOW_SELF_REGISTRATION, SCHEMA_DEF FROM USER_SCHEMAS WHERE NAME = $1`,
 	}
 
 	// queryUpdateUserSchemaByID updates a user schema by its ID.
 	queryUpdateUserSchemaByID = dbmodel.DBQuery{
-		ID:    "ASQ-USER_SCHEMA-006",
-		Query: `UPDATE USER_SCHEMAS SET NAME = $1, SCHEMA_DEF = $2 WHERE SCHEMA_ID = $3`,
+		ID: "ASQ-USER_SCHEMA-006",
+		Query: `UPDATE USER_SCHEMAS
+			SET NAME = $1, OU_ID = $2, ALLOW_SELF_REGISTRATION = $3, SCHEMA_DEF = $4
+			WHERE SCHEMA_ID = $5`,
 	}
 
 	// queryDeleteUserSchemaByID deletes a user schema by its ID.

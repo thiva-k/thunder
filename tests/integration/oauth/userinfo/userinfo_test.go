@@ -89,11 +89,6 @@ func (ts *UserInfoTestSuite) SetupSuite() {
 		},
 	}
 
-	// Create user schema
-	schemaID, err := testutils.CreateUserType(testUserSchema)
-	ts.Require().NoError(err, "Failed to create test user schema")
-	ts.userSchemaID = schemaID
-
 	// Create test organization unit
 	ou := testutils.OrganizationUnit{
 		Handle:      "userinfo-test-ou",
@@ -101,8 +96,14 @@ func (ts *UserInfoTestSuite) SetupSuite() {
 		Description: "Organization unit for UserInfo integration testing",
 		Parent:      nil,
 	}
-	testOUID, err = testutils.CreateOrganizationUnit(ou)
+	testOUID, err := testutils.CreateOrganizationUnit(ou)
 	ts.Require().NoError(err, "Failed to create test organization unit")
+
+	// Create user schema
+	testUserSchema.OrganizationUnitId = testOUID
+	schemaID, err := testutils.CreateUserType(testUserSchema)
+	ts.Require().NoError(err, "Failed to create test user schema")
+	ts.userSchemaID = schemaID
 
 	// Create test user
 	ts.userID = ts.createTestUser()

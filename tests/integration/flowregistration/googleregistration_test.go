@@ -120,17 +120,18 @@ func (ts *GoogleRegistrationFlowTestSuite) SetupSuite() {
 	// Use the IDP created by database scripts
 	ts.idpID = "test-google-idp-id"
 
-	// Create user schema
-	schemaID, err := testutils.CreateUserType(googleRegUserSchema)
-	ts.Require().NoError(err, "Failed to create Google user schema")
-	ts.userSchemaID = schemaID
-
 	// Create test organization unit for Google registration tests
 	ouID, err := testutils.CreateOrganizationUnit(googleRegTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	googleRegTestOUID = ouID
+
+	// Create user schema
+	googleRegUserSchema.OrganizationUnitId = googleRegTestOUID
+	schemaID, err := testutils.CreateUserType(googleRegUserSchema)
+	ts.Require().NoError(err, "Failed to create Google user schema")
+	ts.userSchemaID = schemaID
 
 	// Create test application for Google registration tests
 	appID, err := testutils.CreateApplication(googleRegTestApp)

@@ -116,7 +116,19 @@ func (ts *GithubAuthFlowTestSuite) SetupSuite() {
 	// Use the IDP created by database scripts
 	ts.idpID = "test-github-idp-id"
 
+	// Create test organization unit for GitHub auth tests
+	githubAuthTestOU := testutils.OrganizationUnit{
+		Handle:      "github-auth-flow-test-ou",
+		Name:        "GitHub Auth Flow Test OU",
+		Description: "Organization unit for GitHub authentication flow tests",
+	}
+	ouID, err := testutils.CreateOrganizationUnit(githubAuthTestOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
+
 	// Create user schema
+	githubUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(githubUserSchema)
 	ts.Require().NoError(err, "Failed to create GitHub user schema")
 	ts.userSchemaID = schemaID

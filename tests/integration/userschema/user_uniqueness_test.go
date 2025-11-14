@@ -33,9 +33,17 @@ import (
 // UserUniquenessTestSuite contains tests for user uniqueness validation
 type UserUniquenessTestSuite struct {
 	suite.Suite
-	client         *http.Client
-	createdSchemas []string // Track schemas for cleanup
-	createdUsers   []string // Track users for cleanup
+	client             *http.Client
+	createdSchemas     []string // Track schemas for cleanup
+	createdUsers       []string // Track users for cleanup
+	organizationUnitID string
+}
+
+var testUserUniquenessValidationOU = testutils.OrganizationUnit{
+	Handle:      "test-user-uniqueness-validation-ou",
+	Name:        "Test Organization Unit for User Uniqueness Validation",
+	Description: "Organization unit created for user uniqueness validation testing",
+	Parent:      nil,
 }
 
 func TestUserUniquenessTestSuite(t *testing.T) {
@@ -50,6 +58,13 @@ func (ts *UserUniquenessTestSuite) SetupSuite() {
 	}
 	ts.createdSchemas = []string{}
 	ts.createdUsers = []string{}
+
+	// Create organization unit for tests
+	ouID, err := testutils.CreateOrganizationUnit(testUserUniquenessValidationOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	ts.organizationUnitID = ouID
 }
 
 func (ts *UserUniquenessTestSuite) TearDownSuite() {
@@ -61,6 +76,12 @@ func (ts *UserUniquenessTestSuite) TearDownSuite() {
 	for _, schemaID := range ts.createdSchemas {
 		ts.deleteSchema(schemaID)
 	}
+	// Finally clean up created organization unit
+	if ts.organizationUnitID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.organizationUnitID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit %s: %v", ts.organizationUnitID, err)
+		}
+	}
 }
 
 // TestCreateUserWithUniqueConstraintViolation tests that creating a user with duplicate unique fields fails
@@ -71,7 +92,7 @@ func (ts *UserUniquenessTestSuite) TestCreateUserWithUniqueConstraintViolation()
 
 	// Create first user - should succeed
 	createUserReq1 := CreateUserRequest{
-		OrganizationUnit: "456e8400-e29b-41d4-a716-446655440001",
+		OrganizationUnit: ts.organizationUnitID,
 		Type:             "unique-employee",
 		Attributes: json.RawMessage(`{
 			"username": "john_doe",
@@ -86,7 +107,7 @@ func (ts *UserUniquenessTestSuite) TestCreateUserWithUniqueConstraintViolation()
 
 	// Try to create second user with same username (unique field) - should fail
 	createUserReq2 := CreateUserRequest{
-		OrganizationUnit: "456e8400-e29b-41d4-a716-446655440001",
+		OrganizationUnit: ts.organizationUnitID,
 		Type:             "unique-employee",
 		Attributes: json.RawMessage(`{
 			"username": "john_doe",
@@ -100,7 +121,7 @@ func (ts *UserUniquenessTestSuite) TestCreateUserWithUniqueConstraintViolation()
 
 	// Try to create third user with same email (unique field) - should fail
 	createUserReq3 := CreateUserRequest{
-		OrganizationUnit: "456e8400-e29b-41d4-a716-446655440001",
+		OrganizationUnit: ts.organizationUnitID,
 		Type:             "unique-employee",
 		Attributes: json.RawMessage(`{
 			"username": "alice_brown",
@@ -114,7 +135,7 @@ func (ts *UserUniquenessTestSuite) TestCreateUserWithUniqueConstraintViolation()
 
 	// Try to create fourth user with same employeeId (unique field) - should fail
 	createUserReq4 := CreateUserRequest{
-		OrganizationUnit: "456e8400-e29b-41d4-a716-446655440001",
+		OrganizationUnit: ts.organizationUnitID,
 		Type:             "unique-employee",
 		Attributes: json.RawMessage(`{
 			"username": "bob_wilson",
@@ -128,7 +149,7 @@ func (ts *UserUniquenessTestSuite) TestCreateUserWithUniqueConstraintViolation()
 
 	// Create user with all different unique values - should succeed
 	createUserReq5 := CreateUserRequest{
-		OrganizationUnit: "456e8400-e29b-41d4-a716-446655440001",
+		OrganizationUnit: ts.organizationUnitID,
 		Type:             "unique-employee",
 		Attributes: json.RawMessage(`{
 			"username": "charlie_davis",
@@ -146,7 +167,8 @@ func (ts *UserUniquenessTestSuite) TestCreateUserWithUniqueConstraintViolation()
 
 func (ts *UserUniquenessTestSuite) createSchemaWithUniqueFields() string {
 	schema := CreateUserSchemaRequest{
-		Name: "unique-employee",
+		Name:               "unique-employee",
+		OrganizationUnitID: ts.organizationUnitID,
 		Schema: json.RawMessage(`{
 			"username": {"type": "string", "unique": true},
 			"email": {"type": "string", "unique": true},

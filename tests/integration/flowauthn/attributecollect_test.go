@@ -155,6 +155,7 @@ func (ts *AttributeCollectFlowTestSuite) SetupSuite() {
 	}
 	attrCollectTestAppID = appID
 
+	attrCollectUserSchema.OrganizationUnitId = attrCollectTestOUID
 	schemaID, err := testutils.CreateUserType(attrCollectUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)

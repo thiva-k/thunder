@@ -63,6 +63,12 @@ var (
 			},
 		},
 	}
+	testOU = testutils.OrganizationUnit{
+		Handle:      "oauth2-authz-test-ou",
+		Name:        "OAuth2 Authorization Test OU",
+		Description: "Organization unit for OAuth2 authorization testing",
+		Parent:      nil,
+	}
 )
 
 type AuthzTestSuite struct {
@@ -84,6 +90,14 @@ func (ts *AuthzTestSuite) SetupSuite() {
 		},
 	}
 
+	// Create organization unit for tests
+	ouID, err := testutils.CreateOrganizationUnit(testOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	testOUID = ouID
+
+	testUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(testUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user type: %v", err)
@@ -148,45 +162,6 @@ func (ts *AuthzTestSuite) SetupSuite() {
 	ts.applicationID = respData["id"].(string)
 	ts.T().Logf("Created test application with ID: %s", ts.applicationID)
 
-	// Create test organization unit for user creation
-	ouData := map[string]interface{}{
-		"handle":      "oauth2-authz-test-ou",
-		"name":        "OAuth2 Authorization Test OU",
-		"description": "Organization unit for OAuth2 authorization testing",
-		"parent":      nil,
-	}
-
-	// TODO: Use testutils.CreateOrganizationUnit
-	ouJSON, err := json.Marshal(ouData)
-	if err != nil {
-		ts.T().Fatalf("Failed to marshal OU data: %v", err)
-	}
-
-	ouReqBody := bytes.NewReader(ouJSON)
-	ouReq, err := http.NewRequest("POST", testServerURL+"/organization-units", ouReqBody)
-	if err != nil {
-		ts.T().Fatalf("Failed to create OU request: %v", err)
-	}
-	ouReq.Header.Set("Content-Type", "application/json")
-
-	ouResp, err := ts.client.Do(ouReq)
-	if err != nil {
-		ts.T().Fatalf("Failed to send OU request: %v", err)
-	}
-	defer ouResp.Body.Close()
-
-	if ouResp.StatusCode != http.StatusCreated {
-		bodyBytes, _ := io.ReadAll(ouResp.Body)
-		ts.T().Fatalf("Failed to create OU. Status: %d, Response: %s", ouResp.StatusCode, string(bodyBytes))
-	}
-
-	var ouRespData map[string]interface{}
-	if err := json.NewDecoder(ouResp.Body).Decode(&ouRespData); err != nil {
-		ts.T().Fatalf("Failed to parse OU response: %v", err)
-	}
-
-	testOUID = ouRespData["id"].(string)
-	ts.T().Logf("Created test organization unit with ID: %s", testOUID)
 }
 
 func (ts *AuthzTestSuite) TearDownSuite() {
@@ -214,23 +189,8 @@ func (ts *AuthzTestSuite) TearDownSuite() {
 
 	// Delete test organization unit
 	if testOUID != "" {
-		ouReq, err := http.NewRequest("DELETE", fmt.Sprintf("%s/organization-units/%s", testServerURL, testOUID), nil)
-		if err != nil {
-			ts.T().Errorf("Failed to create OU delete request: %v", err)
-			return
-		}
-
-		ouResp, err := ts.client.Do(ouReq)
-		if err != nil {
-			ts.T().Errorf("Failed to delete organization unit: %v", err)
-			return
-		}
-		defer ouResp.Body.Close()
-
-		if ouResp.StatusCode != http.StatusNoContent {
-			ts.T().Errorf("Failed to delete organization unit. Status: %d", ouResp.StatusCode)
-		} else {
-			ts.T().Logf("Successfully deleted test organization unit with ID: %s", testOUID)
+		if err := testutils.DeleteOrganizationUnit(testOUID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit %s: %v", testOUID, err)
 		}
 	}
 

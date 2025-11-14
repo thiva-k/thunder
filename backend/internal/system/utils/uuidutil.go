@@ -21,7 +21,10 @@ package utils
 import (
 	"crypto/rand"
 	"fmt"
+	"regexp"
 )
+
+var uuidRegex = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 
 // GenerateUUID returns a UUID string in lowercase hexadecimal, following the canonical textual representation
 // as specified in RFC 9562.
@@ -42,4 +45,9 @@ func GenerateUUID() string {
 		uuid[8:10],
 		uuid[10:],
 	)
+}
+
+// IsValidUUID checks if the input string is a valid UUID.
+func IsValidUUID(input string) bool {
+	return uuidRegex.MatchString(input)
 }

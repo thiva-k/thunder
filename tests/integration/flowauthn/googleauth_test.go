@@ -110,7 +110,19 @@ func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
 	// Use the IDP created by database scripts
 	ts.idpID = "test-google-idp-id"
 
+	// Create test organization unit for Google auth tests
+	googleAuthTestOU := testutils.OrganizationUnit{
+		Handle:      "google-auth-flow-test-ou",
+		Name:        "Google Auth Flow Test OU",
+		Description: "Organization unit for Google authentication flow tests",
+	}
+	ouID, err := testutils.CreateOrganizationUnit(googleAuthTestOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
+
 	// Create user schema
+	googleUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(googleUserSchema)
 	ts.Require().NoError(err, "Failed to create Google user schema")
 	ts.userSchemaID = schemaID

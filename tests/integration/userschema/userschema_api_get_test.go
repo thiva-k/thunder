@@ -28,15 +28,24 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
 type GetUserSchemaTestSuite struct {
 	suite.Suite
-	client         *http.Client
-	testSchemaID   string
-	testSchemaName string
-	testSchemaData json.RawMessage
+	client             *http.Client
+	testSchemaID       string
+	testSchemaName     string
+	testSchemaData     json.RawMessage
+	organizationUnitID string
+}
+
+var testUserSchemaAPIGetOU = testutils.OrganizationUnit{
+	Handle:      "test-user-schema-api-get-ou",
+	Name:        "Test Organization Unit for User Schema API Get",
+	Description: "Organization unit created for user schema API get testing",
+	Parent:      nil,
 }
 
 func TestGetUserSchemaTestSuite(t *testing.T) {
@@ -50,9 +59,16 @@ func (ts *GetUserSchemaTestSuite) SetupSuite() {
 		},
 	}
 
-    // Create a test schema for retrieval tests
-    ts.testSchemaName = "retrieval-test-schema"
-    ts.testSchemaData = json.RawMessage(`{
+	// Create organization unit for tests
+	ouID, err := testutils.CreateOrganizationUnit(testUserSchemaAPIGetOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	ts.organizationUnitID = ouID
+
+	// Create a test schema for retrieval tests
+	ts.testSchemaName = "retrieval-test-schema"
+	ts.testSchemaData = json.RawMessage(`{
         "username": {"type": "string", "required": true},
         "email": {"type": "string", "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"},
         "profile": {
@@ -77,6 +93,13 @@ func (ts *GetUserSchemaTestSuite) TearDownSuite() {
 	// Clean up test schema
 	if ts.testSchemaID != "" {
 		ts.deleteTestSchema(ts.testSchemaID)
+	}
+
+	// Clean up created organization units
+	if ts.organizationUnitID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.organizationUnitID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit %s: %v", ts.organizationUnitID, err)
+		}
 	}
 }
 
@@ -250,6 +273,10 @@ func (ts *GetUserSchemaTestSuite) TestGetUserSchemaResponseHeaders() {
 
 // Helper function to create a test schema
 func (ts *GetUserSchemaTestSuite) createTestSchema(schema CreateUserSchemaRequest) string {
+	if schema.OrganizationUnitID == "" {
+		schema.OrganizationUnitID = ts.organizationUnitID
+	}
+
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
 		ts.T().Fatalf("Failed to marshal request: %v", err)

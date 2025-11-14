@@ -26,10 +26,17 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 const (
 	TestServerURL = "https://localhost:8095"
+)
+
+var (
+	defaultOuID    string
+	defaultOuOnce  sync.Once
+	defaultOuIDErr error
 )
 
 // getHTTPClient returns a configured HTTP client for test requests

@@ -38,6 +38,13 @@ const (
 )
 
 var (
+	testOU = testutils.OrganizationUnit{
+		Handle:      "test_application_ou",
+		Name:        "Test Organization Unit for Applications",
+		Description: "Organization unit created for application API testing",
+		Parent:      nil,
+	}
+
 	testApp = Application{
 		Name:                      "Test App",
 		Description:               "Test application for API testing",
@@ -127,6 +134,7 @@ var (
 )
 
 var (
+	testOUID        string
 	testAppID       string
 	testAppInstance Application
 )
@@ -142,6 +150,11 @@ func TestApplicationAPITestSuite(t *testing.T) {
 
 // SetupSuite creates test applications for the test suite
 func (ts *ApplicationAPITestSuite) SetupSuite() {
+	// Create test organization unit
+	ouID, err := testutils.CreateOrganizationUnit(testOU)
+	ts.Require().NoError(err, "Failed to create test organization unit")
+	testOUID = ouID
+
 	// Create test application
 	app1ID, err := createApplication(testApp)
 	if err != nil {
@@ -164,6 +177,14 @@ func (ts *ApplicationAPITestSuite) TearDownSuite() {
 		err := deleteApplication(testAppID)
 		if err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
+		}
+	}
+
+	// Delete the test organization unit
+	if testOUID != "" {
+		err := testutils.DeleteOrganizationUnit(testOUID)
+		if err != nil {
+			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
 }
@@ -3147,7 +3168,8 @@ func (ts *ApplicationAPITestSuite) TestBrandingCannotDeleteWhenAssociatedWithApp
 func (ts *ApplicationAPITestSuite) TestApplicationWithAllowedUserTypes() {
 	// Create test user schemas first
 	employeeSchema := testutils.UserSchema{
-		Name: "employee",
+		Name:               "employee",
+		OrganizationUnitId: testOUID,
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
@@ -3158,7 +3180,8 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithAllowedUserTypes() {
 		},
 	}
 	customerSchema := testutils.UserSchema{
-		Name: "customer",
+		Name:               "customer",
+		OrganizationUnitId: testOUID,
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
@@ -3293,7 +3316,8 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidAllowedUserTypes() 
 func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithAllowedUserTypes() {
 	// Create test user schemas
 	employeeSchema := testutils.UserSchema{
-		Name: "employee_update",
+		Name:               "employee_update",
+		OrganizationUnitId: testOUID,
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
@@ -3301,7 +3325,8 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithAllowedUserTypes() {
 		},
 	}
 	partnerSchema := testutils.UserSchema{
-		Name: "partner",
+		Name:               "partner",
+		OrganizationUnitId: testOUID,
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
@@ -3518,7 +3543,8 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithEmptyAllowedUserTypes() {
 func (ts *ApplicationAPITestSuite) TestApplicationWithPartialInvalidAllowedUserTypes() {
 	// Create one valid user schema
 	validSchema := testutils.UserSchema{
-		Name: "valid_user_type",
+		Name:               "valid_user_type",
+		OrganizationUnitId: testOUID,
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
