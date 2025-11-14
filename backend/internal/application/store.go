@@ -555,6 +555,29 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 		application.ClientID = clientID
 	}
 
+	// Extract logo_url from app_json if present.
+	if row["app_json"] != nil {
+		var appJSON string
+		if v, ok := row["app_json"].(string); ok {
+			appJSON = v
+		} else if v, ok := row["app_json"].([]byte); ok {
+			appJSON = string(v)
+		}
+
+		if appJSON != "" && appJSON != "{}" {
+			var appJSONData map[string]interface{}
+			if err := json.Unmarshal([]byte(appJSON), &appJSONData); err != nil {
+				return model.BasicApplicationDTO{}, fmt.Errorf("failed to unmarshal app JSON: %w", err)
+			}
+
+			logoURL, err := extractStringFromJSON(appJSONData, "logo_url")
+			if err != nil {
+				return model.BasicApplicationDTO{}, err
+			}
+			application.LogoURL = logoURL
+		}
+	}
+
 	return application, nil
 }
 

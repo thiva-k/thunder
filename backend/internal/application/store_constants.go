@@ -61,7 +61,7 @@ var (
 	QueryGetApplicationList = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-06",
 		Query: "SELECT sp.APP_ID, sp.APP_NAME, sp.DESCRIPTION, sp.AUTH_FLOW_GRAPH_ID, " +
-			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, " +
+			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, sp.APP_JSON, " +
 			"oauth.CONSUMER_KEY FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth ON sp.APP_ID = oauth.APP_ID",
 	}
 	// QueryUpdateApplicationByAppID is the query to update application details by app ID.

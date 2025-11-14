@@ -83,6 +83,7 @@ type BasicApplicationDTO struct {
 	IsRegistrationFlowEnabled bool
 	BrandingID                string
 	ClientID                  string
+	LogoURL                   string
 }
 
 // ApplicationProcessedDTO represents the processed data transfer object for application service operations.
@@ -196,6 +197,7 @@ type BasicApplicationResponse struct {
 	Name                      string `json:"name"`
 	Description               string `json:"description,omitempty"`
 	ClientID                  string `json:"client_id,omitempty"`
+	LogoURL                   string `json:"logo_url,omitempty"`
 	AuthFlowGraphID           string `json:"auth_flow_graph_id,omitempty"`
 	RegistrationFlowGraphID   string `json:"registration_flow_graph_id,omitempty"`
 	IsRegistrationFlowEnabled bool   `json:"is_registration_flow_enabled"`
