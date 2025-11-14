@@ -46,7 +46,7 @@ type ApplicationServiceInterface interface {
 		*model.ApplicationProcessedDTO, *model.InboundAuthConfigDTO, *serviceerror.ServiceError)
 	GetApplicationList() (*model.ApplicationListResponse, *serviceerror.ServiceError)
 	GetOAuthApplication(clientID string) (*model.OAuthAppConfigProcessedDTO, *serviceerror.ServiceError)
-	GetApplication(appID string) (*model.ApplicationProcessedDTO, *serviceerror.ServiceError)
+	GetApplication(appID string) (*model.Application, *serviceerror.ServiceError)
 	UpdateApplication(appID string, app *model.ApplicationDTO) (*model.ApplicationDTO, *serviceerror.ServiceError)
 	DeleteApplication(appID string) *serviceerror.ServiceError
 }
@@ -211,7 +211,10 @@ func (as *applicationService) ValidateApplication(app *model.ApplicationDTO) (
 		return nil, nil, svcErr
 	}
 
-	appID := sysutils.GenerateUUID()
+	appID := app.ID
+	if appID == "" {
+		appID = sysutils.GenerateUUID()
+	}
 	rootToken, finalOAuthAccessToken, finalOAuthIDToken, finalOAuthTokenIssuer := processTokenConfiguration(app)
 
 	processedDTO := &model.ApplicationProcessedDTO{
@@ -330,15 +333,57 @@ func (as *applicationService) GetOAuthApplication(clientID string) (*model.OAuth
 }
 
 // GetApplication get the application for given app id.
-func (as *applicationService) GetApplication(appID string) (*model.ApplicationProcessedDTO,
+func (as *applicationService) GetApplication(appID string) (*model.Application,
 	*serviceerror.ServiceError) {
 	if appID == "" {
 		return nil, &ErrorInvalidApplicationID
 	}
 
-	application, err := as.appStore.GetApplicationByID(appID)
+	applicationDTO, err := as.appStore.GetApplicationByID(appID)
 	if err != nil {
 		return nil, as.handleApplicationRetrievalError(err)
+	}
+
+	application := &model.Application{
+		ID:                        applicationDTO.ID,
+		Name:                      applicationDTO.Name,
+		Description:               applicationDTO.Description,
+		AuthFlowGraphID:           applicationDTO.AuthFlowGraphID,
+		RegistrationFlowGraphID:   applicationDTO.RegistrationFlowGraphID,
+		IsRegistrationFlowEnabled: applicationDTO.IsRegistrationFlowEnabled,
+		BrandingID:                applicationDTO.BrandingID,
+		URL:                       applicationDTO.URL,
+		LogoURL:                   applicationDTO.LogoURL,
+		TosURI:                    applicationDTO.TosURI,
+		PolicyURI:                 applicationDTO.PolicyURI,
+		Token:                     applicationDTO.Token,
+		Contacts:                  applicationDTO.Contacts,
+		Certificate:               applicationDTO.Certificate,
+		AllowedUserTypes:          applicationDTO.AllowedUserTypes,
+	}
+
+	if len(applicationDTO.InboundAuthConfig) > 0 {
+		inboundAuthConfigs := make([]model.InboundAuthConfigComplete, 0, len(applicationDTO.InboundAuthConfig))
+		for _, inboundAuthConfigDTO := range applicationDTO.InboundAuthConfig {
+			if inboundAuthConfigDTO.Type == model.OAuthInboundAuthType && inboundAuthConfigDTO.OAuthAppConfig != nil {
+				oauthAppConfig := inboundAuthConfigDTO.OAuthAppConfig
+				inboundAuthConfigs = append(inboundAuthConfigs, model.InboundAuthConfigComplete{
+					Type: model.OAuthInboundAuthType,
+					OAuthAppConfig: &model.OAuthAppConfigComplete{
+						ClientID:                oauthAppConfig.ClientID,
+						RedirectURIs:            oauthAppConfig.RedirectURIs,
+						GrantTypes:              oauthAppConfig.GrantTypes,
+						ResponseTypes:           oauthAppConfig.ResponseTypes,
+						TokenEndpointAuthMethod: oauthAppConfig.TokenEndpointAuthMethod,
+						PKCERequired:            oauthAppConfig.PKCERequired,
+						PublicClient:            oauthAppConfig.PublicClient,
+						Token:                   oauthAppConfig.Token,
+						Scopes:                  oauthAppConfig.Scopes,
+					},
+				})
+			}
+		}
+		application.InboundAuthConfig = inboundAuthConfigs
 	}
 
 	return as.enrichApplicationWithCertificate(application)
@@ -354,8 +399,8 @@ func (as *applicationService) handleApplicationRetrievalError(err error) *servic
 }
 
 // enrichApplicationWithCertificate retrieves and adds the certificate to the application.
-func (as *applicationService) enrichApplicationWithCertificate(application *model.ApplicationProcessedDTO) (
-	*model.ApplicationProcessedDTO, *serviceerror.ServiceError) {
+func (as *applicationService) enrichApplicationWithCertificate(application *model.Application) (
+	*model.Application, *serviceerror.ServiceError) {
 	cert, certErr := as.getApplicationCertificate(application.ID)
 	if certErr != nil {
 		return nil, certErr

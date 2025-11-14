@@ -48,7 +48,7 @@ type OAuthAppConfig struct {
 //nolint:lll
 type OAuthAppConfigComplete struct {
 	ClientID                string                              `json:"client_id" yaml:"client_id"`
-	ClientSecret            string                              `json:"client_secret,omitempty" yaml:"client_secret,omitempty"`
+	ClientSecret            string                              `json:"client_secret,omitempty" yaml:"client_secret"`
 	RedirectURIs            []string                            `json:"redirect_uris" yaml:"redirect_uris"`
 	GrantTypes              []oauth2const.GrantType             `json:"grant_types" yaml:"grant_types"`
 	ResponseTypes           []oauth2const.ResponseType          `json:"response_types" yaml:"response_types"`
@@ -96,17 +96,17 @@ func (o *OAuthAppConfigDTO) ValidateRedirectURI(redirectURI string) error {
 
 // OAuthAppConfigProcessedDTO represents the processed data transfer object for OAuth application configuration.
 type OAuthAppConfigProcessedDTO struct {
-	AppID                   string
-	ClientID                string
-	HashedClientSecret      string
-	RedirectURIs            []string
-	GrantTypes              []oauth2const.GrantType
-	ResponseTypes           []oauth2const.ResponseType
-	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod
-	PKCERequired            bool
-	PublicClient            bool
-	Token                   *OAuthTokenConfig
-	Scopes                  []string
+	AppID                   string                              `yaml:"app_id,omitempty"`
+	ClientID                string                              `yaml:"client_id,omitempty"`
+	HashedClientSecret      string                              `yaml:"hashed_client_secret,omitempty"`
+	RedirectURIs            []string                            `yaml:"redirect_uris,omitempty"`
+	GrantTypes              []oauth2const.GrantType             `yaml:"grant_types,omitempty"`
+	ResponseTypes           []oauth2const.ResponseType          `yaml:"response_types,omitempty"`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `yaml:"token_endpoint_auth_method,omitempty"`
+	PKCERequired            bool                                `yaml:"pkce_required,omitempty"`
+	PublicClient            bool                                `yaml:"public_client,omitempty"`
+	Token                   *OAuthTokenConfig                   `yaml:"token,omitempty"`
+	Scopes                  []string                            `yaml:"scopes,omitempty"`
 }
 
 // IsAllowedGrantType checks if the provided grant type is allowed.

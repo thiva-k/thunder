@@ -13,10 +13,12 @@ user_attributes:
 inbound_auth_config:
   - type: "oauth2"
     config:
-      client_id: "${{CLIENT_ID}}"
-      client_secret: "${{CLIENT_SECRET}}"
+      client_id: "{{ .CLIENT_ID }}"
+      client_secret: "{{ .CLIENT_SECRET }}"
       redirect_uris:
-        - "$REDIRECT_URI"
+        {{- range .REDIRECT_URIS}}
+          - {{.}}
+        {{- end}}
       grant_types:
         - "authorization_code"
         - "client_credentials"
