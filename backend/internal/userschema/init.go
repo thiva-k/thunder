@@ -21,12 +21,16 @@ package userschema
 import (
 	"net/http"
 
+	oupkg "github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 )
 
 // Initialize initializes the user schema service and registers its routes.
-func Initialize(mux *http.ServeMux) UserSchemaServiceInterface {
-	userSchemaService := newUserSchemaService()
+func Initialize(
+	mux *http.ServeMux,
+	ouService oupkg.OrganizationUnitServiceInterface,
+) UserSchemaServiceInterface {
+	userSchemaService := newUserSchemaService(ouService)
 	userSchemaHandler := newUserSchemaHandler(userSchemaService)
 	registerRoutes(mux, userSchemaHandler)
 	return userSchemaService

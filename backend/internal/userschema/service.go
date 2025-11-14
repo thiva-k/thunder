@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 
+	oupkg "github.com/asgardeo/thunder/internal/ou"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -50,12 +51,14 @@ type UserSchemaServiceInterface interface {
 // userSchemaService is the default implementation of the UserSchemaServiceInterface.
 type userSchemaService struct {
 	userSchemaStore userSchemaStoreInterface
+	ouService       oupkg.OrganizationUnitServiceInterface
 }
 
 // newUserSchemaService creates a new instance of userSchemaService.
-func newUserSchemaService() UserSchemaServiceInterface {
+func newUserSchemaService(ouService oupkg.OrganizationUnitServiceInterface) UserSchemaServiceInterface {
 	return &userSchemaService{
 		userSchemaStore: newUserSchemaStore(),
+		ouService:       ouService,
 	}
 }
 
@@ -104,6 +107,10 @@ func (us *userSchemaService) CreateUserSchema(request CreateUserSchemaRequest) (
 
 	if !utils.IsValidUUID(request.OrganizationUnitID) {
 		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
+	if svcErr := us.ensureOrganizationUnitExists(request.OrganizationUnitID, logger); svcErr != nil {
+		return nil, svcErr
 	}
 
 	if len(request.Schema) == 0 {
@@ -197,6 +204,10 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 
 	if !utils.IsValidUUID(request.OrganizationUnitID) {
 		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
+	if svcErr := us.ensureOrganizationUnitExists(request.OrganizationUnitID, logger); svcErr != nil {
+		return nil, svcErr
 	}
 
 	if len(request.Schema) == 0 {
@@ -340,6 +351,32 @@ func (us *userSchemaService) getCompiledSchemaForUserType(
 	}
 
 	return compiled, nil
+}
+
+// ensureOrganizationUnitExists validates that the provided organization unit exists using the OU service.
+func (us *userSchemaService) ensureOrganizationUnitExists(
+	organizationUnitID string,
+	logger *log.Logger,
+) *serviceerror.ServiceError {
+	if us.ouService == nil {
+		logger.Error("Organization unit service is not configured for user schema operations")
+		return &ErrorInternalServerError
+	}
+
+	exists, svcErr := us.ouService.IsOrganizationUnitExists(organizationUnitID)
+	if svcErr != nil {
+		logger.Error("Failed to verify organization unit existence",
+			log.String("organizationUnitID", organizationUnitID), log.Any("error", svcErr))
+		return &ErrorInternalServerError
+	}
+
+	if !exists {
+		logger.Debug("Organization unit does not exist",
+			log.String("organizationUnitID", organizationUnitID))
+		return invalidSchemaRequestError("organization unit id does not exist")
+	}
+
+	return nil
 }
 
 // validatePaginationParams validates the limit and offset parameters.

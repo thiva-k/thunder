@@ -24,7 +24,89 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/tests/mocks/oumock"
 )
+
+func TestCreateUserSchemaReturnsErrorWhenOrganizationUnitMissing(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
+
+	ouID := "00000000-0000-0000-0000-000000000001"
+	ouServiceMock.On("IsOrganizationUnitExists", ouID).Return(false, (*serviceerror.ServiceError)(nil)).Once()
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+		ouService:       ouServiceMock,
+	}
+
+	request := CreateUserSchemaRequest{
+		Name:               "test-schema",
+		OrganizationUnitID: ouID,
+		Schema:             json.RawMessage(`{"email":{"type":"string"}}`),
+	}
+
+	createdSchema, svcErr := service.CreateUserSchema(request)
+
+	require.Nil(t, createdSchema)
+	require.NotNil(t, svcErr)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, svcErr.Code)
+	require.Contains(t, svcErr.ErrorDescription, "organization unit id does not exist")
+}
+
+func TestCreateUserSchemaReturnsInternalErrorWhenOUValidationFails(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
+
+	ouID := "00000000-0000-0000-0000-000000000002"
+	ouServiceMock.
+		On("IsOrganizationUnitExists", ouID).
+		Return(false, &serviceerror.ServiceError{Code: "OUS-5000"}).
+		Once()
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+		ouService:       ouServiceMock,
+	}
+
+	request := CreateUserSchemaRequest{
+		Name:               "test-schema",
+		OrganizationUnitID: ouID,
+		Schema:             json.RawMessage(`{"email":{"type":"string"}}`),
+	}
+
+	createdSchema, svcErr := service.CreateUserSchema(request)
+
+	require.Nil(t, createdSchema)
+	require.NotNil(t, svcErr)
+	require.Equal(t, ErrorInternalServerError, *svcErr)
+}
+
+func TestUpdateUserSchemaReturnsErrorWhenOrganizationUnitMissing(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
+
+	ouID := "00000000-0000-0000-0000-000000000003"
+	ouServiceMock.On("IsOrganizationUnitExists", ouID).Return(false, (*serviceerror.ServiceError)(nil)).Once()
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+		ouService:       ouServiceMock,
+	}
+
+	request := UpdateUserSchemaRequest{
+		Name:               "test-schema",
+		OrganizationUnitID: ouID,
+		Schema:             json.RawMessage(`{"email":{"type":"string"}}`),
+	}
+
+	updatedSchema, svcErr := service.UpdateUserSchema("schema-id", request)
+
+	require.Nil(t, updatedSchema)
+	require.NotNil(t, svcErr)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, svcErr.Code)
+}
 
 func TestGetUserSchemaByNameReturnsSchema(t *testing.T) {
 	storeMock := newUserSchemaStoreInterfaceMock(t)
