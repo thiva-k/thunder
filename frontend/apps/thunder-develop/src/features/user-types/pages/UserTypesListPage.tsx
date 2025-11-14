@@ -56,7 +56,7 @@ export default function UserTypesListPage() {
           </Button>
         </Stack>
       </Stack>
-      <Paper sx={{p: 4}}>
+      <Paper>
         <UserTypesList />
       </Paper>
     </Box>

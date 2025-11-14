@@ -26,8 +26,10 @@ import UserTypesListPage from './features/user-types/pages/UserTypesListPage';
 import CreateUserTypePage from './features/user-types/pages/CreateUserTypePage';
 import ViewUserTypePage from './features/user-types/pages/ViewUserTypePage';
 import IntegrationsPage from './features/integrations/pages/IntegrationsPage';
-import ApplicationsPage from './features/applications/pages/ApplicationsPage';
+import ApplicationsListPage from './features/applications/pages/ApplicationsListPage';
+import ApplicationCreatePage from './features/applications/pages/ApplicationCreatePage';
 import DashboardLayout from './layouts/DashboardLayout';
+import FullScreenLayout from './layouts/FullScreenLayout';
 
 export default function App(): JSX.Element {
   return (
@@ -49,7 +51,17 @@ export default function App(): JSX.Element {
           <Route path="user-types/create" element={<CreateUserTypePage />} />
           <Route path="user-types/:id" element={<ViewUserTypePage />} />
           <Route path="integrations" element={<IntegrationsPage />} />
-          <Route path="applications" element={<ApplicationsPage />} />
+          <Route path="applications" element={<ApplicationsListPage />} />
+        </Route>
+        <Route
+          path="/applications/create"
+          element={
+            <ProtectedRoute>
+              <FullScreenLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<ApplicationCreatePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

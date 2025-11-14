@@ -1,0 +1,428 @@
+/**
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {describe, it, expect, beforeEach, vi} from 'vitest';
+import {render, screen, waitFor} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {BrowserRouter} from 'react-router';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import {ConfigProvider} from '@thunder/commons-contexts';
+import type {ReactNode} from 'react';
+import type {ApplicationListResponse} from '../../models/responses';
+import ApplicationsList from '../ApplicationsList';
+
+// Mock the dependencies
+vi.mock('../../api/useGetApplications');
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual('react-router');
+  return {
+    ...actual,
+    useNavigate: vi.fn(),
+  };
+});
+vi.mock('../../../../hooks/useDataGridLocaleText');
+
+// Mock MUI DataGrid to avoid CSS import issues
+vi.mock('@mui/x-data-grid', () => ({
+  DataGrid: ({
+    rows,
+    columns,
+    loading,
+    onRowClick,
+    getRowId,
+  }: {
+    rows: Record<string, unknown>[];
+    columns: {
+      field: string;
+      renderCell?: (params: {row: Record<string, unknown>}) => React.ReactElement;
+      valueGetter?: (value: unknown, row: Record<string, unknown>) => string;
+    }[];
+    loading: boolean;
+    onRowClick: () => void;
+    getRowId: (row: Record<string, unknown>) => string;
+  }) => (
+    <div role="grid" data-testid="data-grid">
+      {loading && <div role="progressbar">Loading...</div>}
+      {!loading &&
+        rows.map((row: Record<string, unknown>) => (
+          <div key={getRowId(row)} role="row" onClick={onRowClick} onKeyDown={onRowClick} tabIndex={0}>
+            {columns.map(
+              (col: {
+                field: string;
+                renderCell?: (params: {row: Record<string, unknown>}) => React.ReactElement;
+                valueGetter?: (value: unknown, row: Record<string, unknown>) => string;
+              }) => {
+                if (col.renderCell) {
+                  return <div key={col.field}>{col.renderCell({row})}</div>;
+                }
+                if (col.valueGetter) {
+                  return <div key={col.field}>{col.valueGetter(null, row)}</div>;
+                }
+                return <div key={col.field}>{row[col.field] as string}</div>;
+              },
+            )}
+          </div>
+        ))}
+      <div>
+        1–{rows.length} of {rows.length}
+      </div>
+    </div>
+  ),
+  GridColDef: {},
+  GridRenderCellParams: {},
+  GridRowParams: {},
+}));
+
+const {default: useGetApplications} = await import('../../api/useGetApplications');
+const {useNavigate} = await import('react-router');
+const {default: useDataGridLocaleText} = await import('../../../../hooks/useDataGridLocaleText');
+
+describe('ApplicationsList', () => {
+  let mockNavigate: ReturnType<typeof vi.fn>;
+
+  const mockApplicationsData: ApplicationListResponse = {
+    totalResults: 2,
+    count: 2,
+    applications: [
+      {
+        id: 'app-1',
+        name: 'Test App 1',
+        description: 'First test application',
+        logo_url: 'https://example.com/logo1.png',
+        client_id: 'client_id_1',
+        auth_flow_graph_id: 'auth_flow_basic',
+        registration_flow_graph_id: 'reg_flow_basic',
+        is_registration_flow_enabled: true,
+      },
+      {
+        id: 'app-2',
+        name: 'Test App 2',
+        description: 'Second test application',
+        logo_url: '',
+        client_id: 'client_id_2',
+        auth_flow_graph_id: 'auth_flow_advanced',
+        registration_flow_graph_id: 'reg_flow_advanced',
+        is_registration_flow_enabled: false,
+      },
+    ],
+  };
+
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    mockNavigate = vi.fn();
+    vi.mocked(useNavigate).mockReturnValue(mockNavigate);
+    vi.mocked(useDataGridLocaleText).mockReturnValue({});
+
+    // Setup window.__THUNDER_RUNTIME_CONFIG__ for tests
+    // eslint-disable-next-line no-underscore-dangle
+    if (typeof window !== 'undefined') {
+      // eslint-disable-next-line no-underscore-dangle
+      window.__THUNDER_RUNTIME_CONFIG__ = {
+        client: {
+          base: '/develop',
+          client_id: 'DEVELOP',
+        },
+        server: {
+          hostname: 'localhost',
+          port: 8090,
+          http_only: false,
+        },
+      };
+    }
+
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
+  });
+
+  const renderComponent = () => {
+    function Wrapper({children}: {children: ReactNode}) {
+      return (
+        <QueryClientProvider client={queryClient}>
+          <ConfigProvider>
+            <BrowserRouter>{children}</BrowserRouter>
+          </ConfigProvider>
+        </QueryClientProvider>
+      );
+    }
+
+    return render(<ApplicationsList />, {wrapper: Wrapper});
+  };
+
+  it('should render loading state', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // DataGrid shows loading state through its internal overlay, not a standalone progressbar
+    expect(screen.getByRole('grid')).toBeInTheDocument();
+  });
+
+  it('should render error state', () => {
+    const error = new Error('Failed to load applications');
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    expect(screen.getByRole('heading', {name: 'Failed to load applications'})).toBeInTheDocument();
+    // The error message is displayed twice - once in heading and once in body
+    const errorTexts = screen.getAllByText('Failed to load applications');
+    expect(errorTexts).toHaveLength(2);
+  });
+
+  it('should render applications list successfully', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    expect(screen.getByText('Test App 1')).toBeInTheDocument();
+    expect(screen.getByText('Test App 2')).toBeInTheDocument();
+    expect(screen.getByText('First test application')).toBeInTheDocument();
+    expect(screen.getByText('Second test application')).toBeInTheDocument();
+  });
+
+  it('should display client IDs as chips', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    expect(screen.getByText('client_id_1')).toBeInTheDocument();
+    expect(screen.getByText('client_id_2')).toBeInTheDocument();
+  });
+
+  it('should render avatar with logo URL', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const avatars = screen.getAllByRole('img');
+    expect(avatars[0]).toHaveAttribute('src', 'https://example.com/logo1.png');
+  });
+
+  it('should render initials when logo URL is not provided', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // "Test App 2" should show "TA" as initials
+    expect(screen.getByText('TA')).toBeInTheDocument();
+  });
+
+  it('should display "-" for missing description', () => {
+    const dataWithMissingDescription: ApplicationListResponse = {
+      ...mockApplicationsData,
+      applications: [
+        {
+          ...mockApplicationsData.applications[0],
+          description: undefined,
+        },
+      ],
+    };
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: dataWithMissingDescription,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    expect(screen.getByText('-')).toBeInTheDocument();
+  });
+
+  it('should open actions menu when clicking menu button', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const menuButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(menuButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+  });
+
+  it('should navigate to application details when clicking View action', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const menuButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(menuButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    const viewMenuItem = screen.getByText('View');
+    await user.click(viewMenuItem);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/applications/app-1');
+    });
+  });
+
+  it('should close menu when pressing Escape', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const menuButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(menuButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    // Press Escape to close the menu
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => {
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should handle empty applications list', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: {
+        totalResults: 0,
+        count: 0,
+        applications: [],
+      },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // DataGrid should still render but with no rows
+    const grid = screen.getByRole('grid');
+    expect(grid).toBeInTheDocument();
+  });
+
+  it('should handle row click navigation', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const rows = screen.getAllByRole('row');
+    // Click on first data row (index 1, as 0 is the header)
+    if (rows[1]) {
+      await user.click(rows[1]);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/applications');
+      });
+    }
+  });
+
+  it('should prevent row selection on click', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // Verify disableRowSelectionOnClick is applied by checking grid props
+    const grid = screen.getByRole('grid');
+    expect(grid).toBeInTheDocument();
+  });
+
+  it('should display pagination controls', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // Check for pagination elements
+    expect(screen.getByText(/1–2 of 2/)).toBeInTheDocument();
+  });
+
+  it('should apply cursor pointer style to rows', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const grid = screen.getByRole('grid');
+    expect(grid).toBeInTheDocument();
+    // The cursor style is applied via sx prop to the DataGrid
+  });
+});

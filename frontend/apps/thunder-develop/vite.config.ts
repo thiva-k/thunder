@@ -67,15 +67,23 @@ export default defineConfig({
       '@emotion/react': resolve(__dirname, './node_modules/@emotion/react'),
       '@emotion/styled': resolve(__dirname, './node_modules/@emotion/styled'),
     },
+    conditions: ['browser', 'module', 'import', 'default'],
   },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: resolve(currentDir, 'src', 'test', 'setup.ts'),
+    css: {
+      modules: {
+        classNameStrategy: 'non-scoped',
+      },
+    },
     // Added to fix test failures dues to css imports from oxygen-ui. Need to check if can fix from oxygen-ui library.
     server: {
       deps: {
         inline: [
+          '@asgardeo/browser',
+          '@asgardeo/react',
           '@wso2/oxygen-ui',
           '@wso2/oxygen-ui-icons-react',
           '@mui/x-data-grid',
@@ -85,7 +93,6 @@ export default defineConfig({
         ],
       },
     },
-    css: true,
     coverage: {
       provider: 'istanbul',
       reporter: ['text', 'json', 'html', ['lcov', {projectRoot: resolve(currentDir, '..', '..', '..')}]],

@@ -54,12 +54,20 @@ vi.mock('../features/integrations/pages/IntegrationsPage', () => ({
   default: () => <div data-testid="integrations-page">Integrations Page</div>,
 }));
 
-vi.mock('../features/applications/pages/ApplicationsPage', () => ({
-  default: () => <div data-testid="applications-page">Applications Page</div>,
+vi.mock('../features/applications/pages/ApplicationsListPage', () => ({
+  default: () => <div data-testid="applications-list-page">Applications List Page</div>,
+}));
+
+vi.mock('../features/applications/pages/ApplicationCreatePage', () => ({
+  default: () => <div data-testid="application-create-page">Application Create Page</div>,
 }));
 
 vi.mock('../layouts/DashboardLayout', () => ({
   default: () => <div data-testid="dashboard-layout">Dashboard Layout</div>,
+}));
+
+vi.mock('../layouts/FullScreenLayout', () => ({
+  default: () => <div data-testid="full-screen-layout">Full Screen Layout</div>,
 }));
 
 describe('App', () => {

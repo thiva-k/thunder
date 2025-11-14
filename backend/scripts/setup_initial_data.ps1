@@ -565,7 +565,7 @@ function New-DevelopApp {
         name = "Develop"
         description = "Developer application for Thunder"
         url = "${BaseUrl}/develop"
-        logo_url = "${BaseUrl}/develop/assets/images/asgardeo-trifacta.svg"
+        logo_url = "${BaseUrl}/develop/assets/images/trifacta.svg"
         auth_flow_graph_id = "auth_flow_config_basic"
         registration_flow_graph_id = "registration_flow_config_basic"
         is_registration_flow_enabled = $true
