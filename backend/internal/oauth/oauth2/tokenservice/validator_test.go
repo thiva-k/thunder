@@ -367,9 +367,8 @@ func (suite *TokenValidatorTestSuite) TestVerifyTokenSignatureByIssuer_Success_C
 	customApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://custom-thunder.io",
-			},
+			Issuer:      "https://custom-thunder.io",
+			AccessToken: &appmodel.AccessTokenConfig{},
 		},
 	}
 	token := testJWTTokenString
@@ -452,16 +451,14 @@ func (suite *TokenValidatorTestSuite) TestFederationScenario_MultipleThunderIssu
 	multiIssuerApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			Issuer: "https://thunder-prod.company.com",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://thunder-staging.company.com",
-			},
+			Issuer:      "https://thunder-prod.company.com",
+			AccessToken: &appmodel.AccessTokenConfig{},
 		},
 	}
 
 	now := time.Now().Unix()
 
-	// Test token from prod issuer
+	// Test token from prod issuer (matches OAuth-level issuer)
 	claimsProd := map[string]interface{}{
 		"sub": "user123",
 		"iss": "https://thunder-prod.company.com",
@@ -474,18 +471,18 @@ func (suite *TokenValidatorTestSuite) TestFederationScenario_MultipleThunderIssu
 	assert.NoError(suite.T(), errProd)
 	assert.NotNil(suite.T(), resultProd)
 
-	// Test token from staging issuer
+	// Test token from staging issuer (not in valid issuers - should fail)
 	claimsStaging := map[string]interface{}{
 		"sub": "user456",
 		"iss": "https://thunder-staging.company.com",
 		"exp": float64(now + 3600),
 	}
 	tokenStaging := suite.createTestJWT(claimsStaging)
-	suite.mockJWTService.On("VerifyJWTSignature", tokenStaging).Return(nil)
 
 	resultStaging, errStaging := suite.validator.ValidateSubjectToken(tokenStaging, multiIssuerApp)
-	assert.NoError(suite.T(), errStaging)
-	assert.NotNil(suite.T(), resultStaging)
+	assert.Error(suite.T(), errStaging)
+	assert.Nil(suite.T(), resultStaging)
+	assert.Contains(suite.T(), errStaging.Error(), "not supported")
 
 	suite.mockJWTService.AssertExpectations(suite.T())
 }

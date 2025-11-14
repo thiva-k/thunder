@@ -50,6 +50,7 @@ func JoinScopes(scopes []string) string {
 }
 
 // resolveTokenConfig resolves the token configuration from the OAuth app or falls back to global config.
+// Both access and ID tokens use the same OAuth-level issuer.
 func resolveTokenConfig(oauthApp *appmodel.OAuthAppConfigProcessedDTO, tokenType TokenType) *TokenConfig {
 	conf := config.GetThunderRuntime().Config
 
@@ -62,21 +63,17 @@ func resolveTokenConfig(oauthApp *appmodel.OAuthAppConfigProcessedDTO, tokenType
 		return tokenConfig
 	}
 
-	// Override with app-specific configuration if available
+	// Use OAuth-level issuer for all token types
+	if oauthApp.Token.Issuer != "" {
+		tokenConfig.Issuer = oauthApp.Token.Issuer
+	}
+
+	// Override with token-type specific configuration if available
 	switch tokenType {
 	case TokenTypeAccess:
 		if oauthApp.Token.AccessToken != nil {
-			if oauthApp.Token.AccessToken.Issuer != "" {
-				tokenConfig.Issuer = oauthApp.Token.AccessToken.Issuer
-			}
 			if oauthApp.Token.AccessToken.ValidityPeriod > 0 {
 				tokenConfig.ValidityPeriod = oauthApp.Token.AccessToken.ValidityPeriod
-			}
-		}
-	case TokenTypeRefresh:
-		if oauthApp.Token.AccessToken != nil {
-			if oauthApp.Token.AccessToken.Issuer != "" {
-				tokenConfig.Issuer = oauthApp.Token.AccessToken.Issuer
 			}
 		}
 	case TokenTypeID:
@@ -190,10 +187,6 @@ func getValidIssuers(oauthApp *appmodel.OAuthAppConfigProcessedDTO) map[string]b
 
 	tokenConfig := resolveTokenConfig(oauthApp, TokenTypeAccess)
 	validIssuers[tokenConfig.Issuer] = true
-
-	if oauthApp != nil && oauthApp.Token != nil && oauthApp.Token.Issuer != "" {
-		validIssuers[oauthApp.Token.Issuer] = true
-	}
 
 	// TODO: Add support for external issuers
 	return validIssuers

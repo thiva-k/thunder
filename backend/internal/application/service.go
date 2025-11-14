@@ -138,7 +138,9 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 		Contacts:                  app.Contacts,
 		AllowedUserTypes:          app.AllowedUserTypes,
 	}
-	if inboundAuthConfig != nil {
+	if inboundAuthConfig != nil && len(processedDTO.InboundAuthConfig) > 0 {
+		processedTokenConfig := processedDTO.InboundAuthConfig[0].OAuthAppConfig.Token
+
 		returnInboundAuthConfig := model.InboundAuthConfigDTO{
 			Type: model.OAuthInboundAuthType,
 			OAuthAppConfig: &model.OAuthAppConfigDTO{
@@ -151,7 +153,7 @@ func (as *applicationService) CreateApplication(app *model.ApplicationDTO) (*mod
 				TokenEndpointAuthMethod: inboundAuthConfig.OAuthAppConfig.TokenEndpointAuthMethod,
 				PKCERequired:            inboundAuthConfig.OAuthAppConfig.PKCERequired,
 				PublicClient:            inboundAuthConfig.OAuthAppConfig.PublicClient,
-				Token:                   inboundAuthConfig.OAuthAppConfig.Token,
+				Token:                   processedTokenConfig,
 				Scopes:                  inboundAuthConfig.OAuthAppConfig.Scopes,
 			},
 		}
@@ -1131,7 +1133,7 @@ func getDefaultTokenConfigFromDeployment() *model.TokenConfig {
 
 // processTokenConfiguration processes token configuration for an application, applying defaults where necessary.
 func processTokenConfiguration(app *model.ApplicationDTO) (
-	*model.TokenConfig, *model.TokenConfig, *model.IDTokenConfig, string) {
+	*model.TokenConfig, *model.AccessTokenConfig, *model.IDTokenConfig, string) {
 	// Resolve root token config
 	var rootToken *model.TokenConfig
 	if app.Token != nil {
@@ -1156,11 +1158,14 @@ func processTokenConfiguration(app *model.ApplicationDTO) (
 	}
 
 	// Resolve OAuth access token config
-	var oauthAccessToken *model.TokenConfig
+	var oauthAccessToken *model.AccessTokenConfig
 	if len(app.InboundAuthConfig) > 0 && app.InboundAuthConfig[0].OAuthAppConfig != nil &&
 		app.InboundAuthConfig[0].OAuthAppConfig.Token != nil &&
 		app.InboundAuthConfig[0].OAuthAppConfig.Token.AccessToken != nil {
-		oauthAccessToken = app.InboundAuthConfig[0].OAuthAppConfig.Token.AccessToken
+		oauthAccessToken = &model.AccessTokenConfig{
+			ValidityPeriod: app.InboundAuthConfig[0].OAuthAppConfig.Token.AccessToken.ValidityPeriod,
+			UserAttributes: app.InboundAuthConfig[0].OAuthAppConfig.Token.AccessToken.UserAttributes,
+		}
 	}
 
 	if oauthAccessToken != nil {
@@ -1171,7 +1176,7 @@ func processTokenConfiguration(app *model.ApplicationDTO) (
 			oauthAccessToken.UserAttributes = make([]string, 0)
 		}
 	} else {
-		oauthAccessToken = &model.TokenConfig{
+		oauthAccessToken = &model.AccessTokenConfig{
 			ValidityPeriod: rootToken.ValidityPeriod,
 			UserAttributes: rootToken.UserAttributes,
 		}
@@ -1182,7 +1187,11 @@ func processTokenConfiguration(app *model.ApplicationDTO) (
 	if len(app.InboundAuthConfig) > 0 && app.InboundAuthConfig[0].OAuthAppConfig != nil &&
 		app.InboundAuthConfig[0].OAuthAppConfig.Token != nil &&
 		app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken != nil {
-		oauthIDToken = app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken
+		oauthIDToken = &model.IDTokenConfig{
+			ValidityPeriod: app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken.ValidityPeriod,
+			UserAttributes: app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken.UserAttributes,
+			ScopeClaims:    app.InboundAuthConfig[0].OAuthAppConfig.Token.IDToken.ScopeClaims,
+		}
 	}
 
 	if oauthIDToken != nil {

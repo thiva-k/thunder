@@ -86,7 +86,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
 		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
+			AccessToken: &appmodel.AccessTokenConfig{
 				UserAttributes: []string{"email", "username"},
 			},
 		},
@@ -525,7 +525,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 				ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
 				TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 				Token: &appmodel.OAuthTokenConfig{
-					AccessToken: &appmodel.TokenConfig{
+					AccessToken: &appmodel.AccessTokenConfig{
 						UserAttributes: accessTokenAttrs,
 					},
 					IDToken: idTokenConfig,
@@ -716,7 +716,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 				ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
 				TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
 				Token: &appmodel.OAuthTokenConfig{
-					AccessToken: &appmodel.TokenConfig{
+					AccessToken: &appmodel.AccessTokenConfig{
 						UserAttributes: accessTokenAttrs,
 					},
 					IDToken: idTokenConfig,

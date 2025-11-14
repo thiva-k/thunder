@@ -23,9 +23,15 @@ import (
 	"github.com/asgardeo/thunder/internal/cert"
 )
 
-// TokenConfig represents the token configuration structure.
+// TokenConfig represents the token configuration structure for application-level (root) token configs.
 type TokenConfig struct {
 	Issuer         string   `json:"issuer"`
+	ValidityPeriod int64    `json:"validity_period"`
+	UserAttributes []string `json:"user_attributes"`
+}
+
+// AccessTokenConfig represents the access token configuration structure.
+type AccessTokenConfig struct {
 	ValidityPeriod int64    `json:"validity_period"`
 	UserAttributes []string `json:"user_attributes"`
 }
@@ -34,14 +40,15 @@ type TokenConfig struct {
 type IDTokenConfig struct {
 	ValidityPeriod int64               `json:"validity_period"`
 	UserAttributes []string            `json:"user_attributes"`
-	ScopeClaims    map[string][]string `json:"scope_claims,omitempty"`
+	ScopeClaims    map[string][]string `json:"scope_claims"`
 }
 
 // OAuthTokenConfig represents the OAuth token configuration structure with access_token and id_token wrappers.
+// The Issuer field at this level is used by both access and ID tokens.
 type OAuthTokenConfig struct {
-	Issuer      string         `json:"issuer,omitempty"`
-	AccessToken *TokenConfig   `json:"access_token,omitempty"`
-	IDToken     *IDTokenConfig `json:"id_token,omitempty"`
+	Issuer      string             `json:"issuer,omitempty"`
+	AccessToken *AccessTokenConfig `json:"access_token,omitempty"`
+	IDToken     *IDTokenConfig     `json:"id_token,omitempty"`
 }
 
 // ApplicationDTO represents the data transfer object for application service operations.

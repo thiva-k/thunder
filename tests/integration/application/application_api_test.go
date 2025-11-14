@@ -1215,8 +1215,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithTokenConfiguration() {
 					Scopes:                  []string{"openid", "profile"},
 					Token: &OAuthTokenConfig{
 						Issuer: "https://tokenconfig.example.com",
-						AccessToken: &TokenConfig{
-							Issuer:         "https://tokenconfig.example.com",
+						AccessToken: &AccessTokenConfig{
 							ValidityPeriod: 3600,
 							UserAttributes: []string{"email", "username"},
 						},
@@ -1311,7 +1310,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithTokenConfigChanges()
 					TokenEndpointAuthMethod: "client_secret_basic",
 					Scopes:                  []string{"openid"},
 					Token: &OAuthTokenConfig{
-						AccessToken: &TokenConfig{
+						AccessToken: &AccessTokenConfig{
 							ValidityPeriod: 1800,
 						},
 					},
@@ -1327,8 +1326,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithTokenConfigChanges()
 	// Update with more complex token config
 	app.InboundAuthConfig[0].OAuthAppConfig.Token = &OAuthTokenConfig{
 		Issuer: "https://tokenconfigupdate.example.com",
-		AccessToken: &TokenConfig{
-			Issuer:         "https://tokenconfigupdate.example.com",
+		AccessToken: &AccessTokenConfig{
 			ValidityPeriod: 7200,
 			UserAttributes: []string{"email", "username", "role"},
 		},
@@ -1569,8 +1567,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithOnlyAccessToken() {
 					Scopes:                  []string{"api.read", "api.write"},
 					Token: &OAuthTokenConfig{
 						Issuer: "https://accesstokenonly.example.com",
-						AccessToken: &TokenConfig{
-							Issuer:         "https://accesstokenonly.example.com",
+						AccessToken: &AccessTokenConfig{
 							ValidityPeriod: 7200,
 							UserAttributes: []string{"email", "username", "role", "department"},
 						},
@@ -1657,8 +1654,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithBothTokenTypes() {
 					Scopes:                  []string{"openid", "profile", "email"},
 					Token: &OAuthTokenConfig{
 						Issuer: "https://bothtokens.example.com",
-						AccessToken: &TokenConfig{
-							Issuer:         "https://bothtokens.example.com",
+						AccessToken: &AccessTokenConfig{
 							ValidityPeriod: 5400,
 							UserAttributes: []string{"email", "username"},
 						},
@@ -1800,7 +1796,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithEmptyTokenIssuer() {
 					Scopes:                  []string{"openid"},
 					Token: &OAuthTokenConfig{
 						// Empty Issuer
-						AccessToken: &TokenConfig{
+						AccessToken: &AccessTokenConfig{
 							ValidityPeriod: 3600,
 						},
 					},
@@ -2193,8 +2189,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithCompleteMetadata() {
 					Scopes:                  []string{"openid", "profile", "email"},
 					Token: &OAuthTokenConfig{
 						Issuer: "https://oauth-issuer.example.com",
-						AccessToken: &TokenConfig{
-							Issuer:         "https://oauth-issuer.example.com",
+						AccessToken: &AccessTokenConfig{
 							ValidityPeriod: 3600,
 							UserAttributes: []string{"sub", "email"},
 						},

@@ -89,8 +89,7 @@ func (suite *TokenExchangeGrantHandlerTestSuite) SetupTest() {
 		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
 		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretBasic,
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
-				Issuer:         testCustomIssuer,
+			AccessToken: &appmodel.AccessTokenConfig{
 				ValidityPeriod: 7200,
 			},
 		},

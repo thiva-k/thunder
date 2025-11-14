@@ -70,8 +70,7 @@ func (suite *TokenBuilderTestSuite) SetupTest() {
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
 			Issuer: "https://thunder.io",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer:         "https://thunder.io",
+			AccessToken: &appmodel.AccessTokenConfig{
 				ValidityPeriod: 3600,
 			},
 		},
@@ -311,8 +310,8 @@ func (suite *TokenBuilderTestSuite) TestBuildAccessToken_Success_CustomIssuer() 
 	customOAuthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
-				Issuer:         "https://custom.thunder.io",
+			Issuer: "https://custom.thunder.io", // OAuth-level issuer used for all tokens
+			AccessToken: &appmodel.AccessTokenConfig{
 				ValidityPeriod: 7200,
 			},
 		},
@@ -334,7 +333,7 @@ func (suite *TokenBuilderTestSuite) TestBuildAccessToken_Success_CustomIssuer() 
 	suite.mockJWTService.On("GenerateJWT",
 		"user123",
 		"app123",
-		"https://custom.thunder.io",
+		"https://custom.thunder.io", // OAuth-level issuer
 		int64(7200),
 		mock.Anything,
 	).Return(expectedToken, expectedIat, nil)
@@ -388,8 +387,7 @@ func (suite *TokenBuilderTestSuite) TestBuildRefreshToken_Success_Basic() {
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
 			Issuer: "https://thunder.io",
-			AccessToken: &appmodel.TokenConfig{
-				Issuer:         "https://thunder.io",
+			AccessToken: &appmodel.AccessTokenConfig{
 				ValidityPeriod: 3600,
 				UserAttributes: []string{"name"}, // Configure user attributes
 			},
@@ -535,8 +533,9 @@ func (suite *TokenBuilderTestSuite) TestBuildRefreshToken_Success_CustomIssuer()
 	customOAuthApp := &appmodel.OAuthAppConfigProcessedDTO{
 		ClientID: "test-client",
 		Token: &appmodel.OAuthTokenConfig{
-			AccessToken: &appmodel.TokenConfig{
-				Issuer: "https://custom.thunder.io",
+			Issuer:      "https://custom.thunder.io",
+			AccessToken: &appmodel.AccessTokenConfig{
+				// AccessToken uses OAuth-level issuer
 			},
 		},
 	}
