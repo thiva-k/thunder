@@ -7,11 +7,11 @@ settings:
 catalogs:
   default:
     '@asgardeo/react':
-      specifier: 0.6.5
-      version: 0.6.5
+      specifier: 0.6.6
+      version: 0.6.6
     '@asgardeo/react-router':
-      specifier: 1.0.5
-      version: 1.0.5
+      specifier: 1.0.6
+      version: 1.0.6
     '@emotion/react':
       specifier: ^11.14.0
       version: 11.14.0
@@ -169,10 +169,10 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.5(@types/react@19.2.2)(react@19.2.0)
+        version: 0.6.6(@types/react@19.2.2)(react@19.2.0)
       '@asgardeo/react-router':
         specifier: 'catalog:'
-        version: 1.0.5(@asgardeo/react@0.6.5(@types/react@19.2.2)(react@19.2.0))(react-router@7.9.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
+        version: 1.0.6(@asgardeo/react@0.6.6(@types/react@19.2.2)(react@19.2.0))(react-router@7.9.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.2.2)(react@19.2.0)
@@ -287,7 +287,7 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.5(@types/react@19.2.2)(react@19.2.0)
+        version: 0.6.6(@types/react@19.2.2)(react@19.2.0)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.2.2)(react@19.2.0)
@@ -636,15 +636,15 @@ packages:
   '@asgardeo/javascript@0.2.2':
     resolution: {integrity: sha512-g0Xgc0KCHUXlffz5bZcMzadXCbwccPCDdM2kHXo1F2/ArR20SYPeYWyQZPD7fREOkjTY2Kud3xsILpAKSUOM0Q==}
 
-  '@asgardeo/react-router@1.0.5':
-    resolution: {integrity: sha512-Q0Vh2X4Fbtze/CatfaFzLr4xKrGDc0vEhSCrMQgoRPSU7HyNE/sNbD2kip6oovRpc7fbjRbbPuI/WRb5wXLxpA==}
+  '@asgardeo/react-router@1.0.6':
+    resolution: {integrity: sha512-BMypL+NeLIthuDPXuQMY+Bpq69UAaaSbBEaPubVzd+lp5SFqBOQURN7ECGoairGkjCLf2LcF8m9AAi3qZGPToA==}
     peerDependencies:
-      '@asgardeo/react': ^0.6.5
+      '@asgardeo/react': ^0.6.6
       react: '>=16.8.0'
       react-router: '>=6.0.0'
 
-  '@asgardeo/react@0.6.5':
-    resolution: {integrity: sha512-wno3YmKwymTInAy/XMmoluIsE+coePdcJiF+/OzTmiZ08dGnuzMyisBQjx4JiZ5YOJYRxH+zXKbbusO1Jn1KmQ==}
+  '@asgardeo/react@0.6.6':
+    resolution: {integrity: sha512-tkxFJXljzSDjky6MAq88F/i4I9zBfXsA4DjxRhkkOSJU8HAkgtHLbYzww1JZp4bcEecDwzWtaEZUi8Cj3nOKMg==}
     peerDependencies:
       '@types/react': '>=16.8.0'
       react: '>=16.8.0'
@@ -5223,14 +5223,14 @@ snapshots:
       '@asgardeo/i18n': 0.3.3
       tslib: 2.8.1
 
-  '@asgardeo/react-router@1.0.5(@asgardeo/react@0.6.5(@types/react@19.2.2)(react@19.2.0))(react-router@7.9.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)':
+  '@asgardeo/react-router@1.0.6(@asgardeo/react@0.6.6(@types/react@19.2.2)(react@19.2.0))(react-router@7.9.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)':
     dependencies:
-      '@asgardeo/react': 0.6.5(@types/react@19.2.2)(react@19.2.0)
+      '@asgardeo/react': 0.6.6(@types/react@19.2.2)(react@19.2.0)
       react: 19.2.0
       react-router: 7.9.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       tslib: 2.8.1
 
-  '@asgardeo/react@0.6.5(@types/react@19.2.2)(react@19.2.0)':
+  '@asgardeo/react@0.6.6(@types/react@19.2.2)(react@19.2.0)':
     dependencies:
       '@asgardeo/browser': 0.1.27(esbuild@0.25.12)
       '@asgardeo/i18n': 0.3.3
