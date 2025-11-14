@@ -171,10 +171,12 @@ read_config() {
         HOSTNAME=$(yq eval '.server.hostname // "localhost"' "$config_file" 2>/dev/null)
         PORT=$(yq eval '.server.port // 8090' "$config_file" 2>/dev/null)
         HTTP_ONLY=$(yq eval '.server.http_only // false' "$config_file" 2>/dev/null)
+        PUBLIC_HOSTNAME=$(yq eval '.server.public_hostname // ""' "$config_file" 2>/dev/null)
     else
         # Fallback: basic parsing with grep/awk
         HOSTNAME=$(grep -E '^\s*hostname:' "$config_file" | awk -F':' '{gsub(/[[:space:]"'\'']/,"",$2); print $2}' | head -1)
         PORT=$(grep -E '^\s*port:' "$config_file" | awk -F':' '{gsub(/[[:space:]]/,"",$2); print $2}' | head -1)
+        PUBLIC_HOSTNAME=$(grep -E '^\s*public_hostname:' "$config_file" | grep -o '"[^"]*"' | tr -d '"' | head -1)
 
         # Check for http_only
         if grep -q 'http_only.*true' "$config_file" 2>/dev/null; then
@@ -200,8 +202,15 @@ read_config() {
 # Read configuration
 read_config
 
-# Construct base URL
+# Construct base URL (internal API endpoint)
 BASE_URL="${PROTOCOL}://${HOSTNAME}:${PORT}"
+
+# Construct public URL (external/redirect URLs)
+if [ -n "$PUBLIC_HOSTNAME" ]; then
+    PUBLIC_URL="$PUBLIC_HOSTNAME"
+else
+    PUBLIC_URL="$BASE_URL"
+fi
 
 echo ""
 echo "========================================="
@@ -209,6 +218,7 @@ echo "   Thunder Setup"
 echo "========================================="
 echo ""
 echo -e "${BLUE}Server URL:${NC} $BASE_URL"
+echo -e "${BLUE}Public URL:${NC} $PUBLIC_URL"
 if [ "$DEBUG_MODE" = "true" ]; then
     echo -e "${BLUE}Debug:${NC} Enabled (port $DEBUG_PORT)"
 fi
@@ -315,6 +325,7 @@ fi
 
 # Export variables to be used in scripts
 export THUNDER_API_BASE="${BASE_URL}"
+export THUNDER_PUBLIC_URL="${PUBLIC_URL}"
 
 # Check if bootstrap directory exists
 if [ ! -d "$BOOTSTRAP_DIR" ]; then
