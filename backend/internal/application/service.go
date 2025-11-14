@@ -296,6 +296,7 @@ func buildBasicApplicationResponse(app model.BasicApplicationDTO) model.BasicApp
 		Name:                      app.Name,
 		Description:               app.Description,
 		ClientID:                  app.ClientID,
+		LogoURL:                   app.LogoURL,
 		AuthFlowGraphID:           app.AuthFlowGraphID,
 		RegistrationFlowGraphID:   app.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: app.IsRegistrationFlowEnabled,
