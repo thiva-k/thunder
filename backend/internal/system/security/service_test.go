@@ -83,7 +83,9 @@ func (suite *SecurityServiceTestSuite) TestProcess_PublicPaths() {
 		{"OAuth2 well-known", "/oauth2/.well-known/openid_configuration"},
 		{"OAuth2 JWKS", "/oauth2/jwks"},
 		{"OAuth2 register", "/oauth2/register"},
-		{"Health check", "/healthcheck"},
+		{"Health check liveness", "/health/liveness"},
+		{"Health check readiness", "/health/readiness"},
+		{"Signin path", "/signin/verify"},
 		{"Signin path", "/signin/login"},
 		{"Signin path with subpath", "/signin/forgot-password"},
 		{"Develop path", "/develop/dashboard"},
@@ -255,7 +257,7 @@ func (suite *SecurityServiceTestSuite) TestIsPublicPath() {
 		{"OAuth2 well-known", "/.well-known/openid-configuration", true},
 		{"OAuth2 JWKS", "/oauth2/jwks", true},
 		{"OAuth2 register", "/oauth2/register", true},
-		{"Health check", "/healthcheck", true},
+		{"Health check", "/health/liveness", true},
 		{"Signin root", "/signin/", true},
 		{"Signin logo", "/signin/logo/123", true},
 		{"Develop root", "/develop/", true},
@@ -275,7 +277,6 @@ func (suite *SecurityServiceTestSuite) TestIsPublicPath() {
 		{"Random path", "/random/path", false},
 		{"Similar but not exact", "/authentication", false},
 		{"Similar prefix", "/oauth", false},
-		{"Similar prefix", "/health", false},
 		{"Not allowed sub prefix", "/flow", false},
 
 		// Edge cases
@@ -368,7 +369,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_PublicPathVariations() {
 		{"Well-known with path", "/oauth2/.well-known/openid_configuration"},
 		{"Nested signin path", "/signin/forgot-password/confirm"},
 		{"Deep develop path", "/develop/api/v1/test"},
-		{"Health check with query", "/healthcheck?detailed=true"},
+		{"Health check with query", "/health/liveness?detailed=true"},
 	}
 
 	for _, tc := range testCases {
