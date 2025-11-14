@@ -71,6 +71,7 @@ type IDTokenBuildContext struct {
 	Audience       string
 	Scopes         []string
 	UserAttributes map[string]interface{}
+	UserGroups     []string
 	AuthTime       int64
 	OAuthApp       *appmodel.OAuthAppConfigProcessedDTO
 }

@@ -374,3 +374,102 @@ func (suite *HTTPUtilTestSuite) TestSanitizeStringMap() {
 		})
 	}
 }
+
+func (suite *HTTPUtilTestSuite) TestExtractBearerToken() {
+	testCases := []struct {
+		name        string
+		authHeader  string
+		expected    string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "ValidBearerToken",
+			authHeader:  "Bearer token123",
+			expected:    "token123",
+			expectError: false,
+		},
+		{
+			name:        "ValidBearerTokenWithSpaces",
+			authHeader:  "Bearer  token123  ",
+			expected:    "token123",
+			expectError: false,
+		},
+		{
+			name:        "CaseInsensitiveBearer",
+			authHeader:  "bearer token123",
+			expected:    "token123",
+			expectError: false,
+		},
+		{
+			name:        "UpperCaseBearer",
+			authHeader:  "BEARER token123",
+			expected:    "token123",
+			expectError: false,
+		},
+		{
+			name:        "MixedCaseBearer",
+			authHeader:  "BeArEr token123",
+			expected:    "token123",
+			expectError: false,
+		},
+		{
+			name:        "EmptyHeader",
+			authHeader:  "",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "missing Authorization header",
+		},
+		{
+			name:        "MissingBearer",
+			authHeader:  "token123",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "invalid Authorization header format. Expected: Bearer <token>",
+		},
+		{
+			name:        "InvalidFormat",
+			authHeader:  "Basic token123",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "invalid Authorization header format. Expected: Bearer <token>",
+		},
+		{
+			name:        "MissingToken",
+			authHeader:  "Bearer ",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "missing access token",
+		},
+		{
+			name:        "OnlyBearer",
+			authHeader:  "Bearer",
+			expected:    "",
+			expectError: true,
+			errorMsg:    "invalid Authorization header format. Expected: Bearer <token>",
+		},
+		{
+			name:        "TokenWithSpaces",
+			authHeader:  "Bearer token with spaces",
+			expected:    "token with spaces",
+			expectError: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			result, err := ExtractBearerToken(tc.authHeader)
+
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Empty(t, result)
+				if tc.errorMsg != "" {
+					assert.Contains(t, err.Error(), tc.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expected, result)
+			}
+		})
+	}
+}

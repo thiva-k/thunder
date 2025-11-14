@@ -498,16 +498,16 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 
 			accessTokenAttrs := []string{"email", "username"}
 			if tc.includeInAccessToken {
-				accessTokenAttrs = append(accessTokenAttrs, "groups")
+				accessTokenAttrs = append(accessTokenAttrs, constants.UserAttributeGroups)
 			}
 			var idTokenConfig *appmodel.IDTokenConfig
 			if tc.includeInIDToken {
 				if tc.scopeClaimsForGroups {
 					// Include groups in ID token config with scope claims mapping
 					idTokenConfig = &appmodel.IDTokenConfig{
-						UserAttributes: []string{"email", "username", "groups"},
+						UserAttributes: []string{"email", "username", constants.UserAttributeGroups},
 						ScopeClaims: map[string][]string{
-							"openid": {"email", "username", "groups"},
+							"openid": {"email", "username", constants.UserAttributeGroups},
 						},
 					}
 				} else {
@@ -552,7 +552,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 				Count:        len(tc.mockGroups),
 				Groups:       tc.mockGroups,
 			}
-			suite.mockUserService.On("GetUserGroups", testUserID, DefaultGroupListLimit, 0).
+			suite.mockUserService.On("GetUserGroups", testUserID, constants.DefaultGroupListLimit, 0).
 				Return(mockGroups, nil)
 
 			var capturedAccessTokenClaims map[string]interface{}
@@ -566,8 +566,9 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 					capturedAccessTokenClaims[k] = v
 				}
 				// Add groups if configured in app (simulate BuildAccessToken filtering)
-				if len(ctx.UserGroups) > 0 && slices.Contains(ctx.OAuthApp.Token.AccessToken.UserAttributes, "groups") {
-					capturedAccessTokenClaims["groups"] = ctx.UserGroups
+				if len(ctx.UserGroups) > 0 &&
+					slices.Contains(ctx.OAuthApp.Token.AccessToken.UserAttributes, constants.UserAttributeGroups) {
+					capturedAccessTokenClaims[constants.UserAttributeGroups] = ctx.UserGroups
 				}
 				// Verify GrantType is authorization_code
 				return ctx.GrantType == string(constants.GrantTypeAuthorizationCode)
@@ -578,8 +579,9 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 					userAttrs[k] = v
 				}
 				// Add groups if configured in app
-				if len(ctx.UserGroups) > 0 && slices.Contains(ctx.OAuthApp.Token.AccessToken.UserAttributes, "groups") {
-					userAttrs["groups"] = ctx.UserGroups
+				if len(ctx.UserGroups) > 0 &&
+					slices.Contains(ctx.OAuthApp.Token.AccessToken.UserAttributes, constants.UserAttributeGroups) {
+					userAttrs[constants.UserAttributeGroups] = ctx.UserGroups
 				}
 				return &model.TokenDTO{
 					Token:          "test-jwt-token",
@@ -595,8 +597,18 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 			// Mock ID token generation if openid scope is present
 			if tc.includeOpenIDScope {
 				suite.mockTokenBuilder.On("BuildIDToken", mock.MatchedBy(func(ctx *tokenservice.IDTokenBuildContext) bool {
-					// Capture ID token claims from user attributes
-					capturedIDTokenClaims = ctx.UserAttributes
+					// Capture ID token claims
+					capturedIDTokenClaims = make(map[string]interface{})
+					for k, v := range ctx.UserAttributes {
+						capturedIDTokenClaims[k] = v
+					}
+					// Add groups if configured in ID token user attributes
+					if ctx.OAuthApp != nil && ctx.OAuthApp.Token != nil && ctx.OAuthApp.Token.IDToken != nil {
+						idTokenUserAttributes := ctx.OAuthApp.Token.IDToken.UserAttributes
+						if len(ctx.UserGroups) > 0 && slices.Contains(idTokenUserAttributes, constants.UserAttributeGroups) {
+							capturedIDTokenClaims[constants.UserAttributeGroups] = ctx.UserGroups
+						}
+					}
 					return true
 				})).Return(&model.TokenDTO{
 					Token:     "test-id-token",
@@ -615,25 +627,25 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 
 			// Verify access token groups
 			if tc.includeInAccessToken {
-				assert.NotNil(suite.T(), capturedAccessTokenClaims["groups"], tc.description)
-				groupsInClaims, ok := capturedAccessTokenClaims["groups"].([]string)
+				assert.NotNil(suite.T(), capturedAccessTokenClaims[constants.UserAttributeGroups], tc.description)
+				groupsInClaims, ok := capturedAccessTokenClaims[constants.UserAttributeGroups].([]string)
 				assert.True(suite.T(), ok, tc.description)
 				assert.Equal(suite.T(), tc.expectedGroups, groupsInClaims, tc.description)
 
-				assert.NotNil(suite.T(), result.AccessToken.UserAttributes["groups"], tc.description)
-				groupsInAttrs, ok := result.AccessToken.UserAttributes["groups"].([]string)
+				assert.NotNil(suite.T(), result.AccessToken.UserAttributes[constants.UserAttributeGroups], tc.description)
+				groupsInAttrs, ok := result.AccessToken.UserAttributes[constants.UserAttributeGroups].([]string)
 				assert.True(suite.T(), ok, tc.description)
 				assert.Equal(suite.T(), tc.expectedGroups, groupsInAttrs, tc.description)
 			} else {
-				assert.Nil(suite.T(), capturedAccessTokenClaims["groups"], tc.description)
-				assert.Nil(suite.T(), result.AccessToken.UserAttributes["groups"], tc.description)
+				assert.Nil(suite.T(), capturedAccessTokenClaims[constants.UserAttributeGroups], tc.description)
+				assert.Nil(suite.T(), result.AccessToken.UserAttributes[constants.UserAttributeGroups], tc.description)
 			}
 
 			// Verify ID token groups
 			if tc.includeInIDToken && tc.includeOpenIDScope && tc.scopeClaimsForGroups {
 				assert.NotNil(suite.T(), result.IDToken.Token, tc.description)
-				assert.NotNil(suite.T(), capturedIDTokenClaims["groups"], tc.description)
-				groupsInIDToken, ok := capturedIDTokenClaims["groups"].([]string)
+				assert.NotNil(suite.T(), capturedIDTokenClaims[constants.UserAttributeGroups], tc.description)
+				groupsInIDToken, ok := capturedIDTokenClaims[constants.UserAttributeGroups].([]string)
 				assert.True(suite.T(), ok, tc.description)
 				assert.Equal(suite.T(), tc.expectedGroups, groupsInIDToken, tc.description)
 			} else if tc.includeOpenIDScope {
@@ -690,15 +702,15 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 
 			accessTokenAttrs := []string{"email", "username"}
 			if tc.includeInAccessToken {
-				accessTokenAttrs = append(accessTokenAttrs, "groups")
+				accessTokenAttrs = append(accessTokenAttrs, constants.UserAttributeGroups)
 			}
 			var idTokenConfig *appmodel.IDTokenConfig
 			if tc.includeInIDToken {
 				if tc.scopeClaimsForGroups {
 					idTokenConfig = &appmodel.IDTokenConfig{
-						UserAttributes: []string{"email", "username", "groups"},
+						UserAttributes: []string{"email", "username", constants.UserAttributeGroups},
 						ScopeClaims: map[string][]string{
-							"openid": {"email", "username", "groups"},
+							"openid": {"email", "username", constants.UserAttributeGroups},
 						},
 					}
 				} else {
@@ -743,7 +755,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 				Count:        0,
 				Groups:       []user.UserGroup{}, // Empty groups
 			}
-			suite.mockUserService.On("GetUserGroups", testUserID, DefaultGroupListLimit, 0).
+			suite.mockUserService.On("GetUserGroups", testUserID, constants.DefaultGroupListLimit, 0).
 				Return(mockGroups, nil)
 
 			var capturedAccessTokenClaims map[string]interface{}
@@ -796,13 +808,13 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 			assert.Nil(suite.T(), err, tc.description)
 			assert.NotNil(suite.T(), result, tc.description)
 
-			assert.Nil(suite.T(), capturedAccessTokenClaims["groups"], tc.description)
-			assert.Nil(suite.T(), result.AccessToken.UserAttributes["groups"], tc.description)
+			assert.Nil(suite.T(), capturedAccessTokenClaims[constants.UserAttributeGroups], tc.description)
+			assert.Nil(suite.T(), result.AccessToken.UserAttributes[constants.UserAttributeGroups], tc.description)
 
 			// Verify ID token
 			if tc.includeOpenIDScope {
 				assert.NotNil(suite.T(), result.IDToken.Token, tc.description)
-				assert.Nil(suite.T(), capturedIDTokenClaims["groups"], tc.description)
+				assert.Nil(suite.T(), capturedIDTokenClaims[constants.UserAttributeGroups], tc.description)
 			} else {
 				assert.Empty(suite.T(), result.IDToken.Token, tc.description)
 			}

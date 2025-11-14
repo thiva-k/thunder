@@ -19,7 +19,6 @@
 package granthandlers
 
 import (
-	"encoding/json"
 	"net/url"
 	"slices"
 	"time"
@@ -33,14 +32,6 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 	"github.com/asgardeo/thunder/internal/user"
-)
-
-// TODO: Temporary constant, move to a common place/ use a different strategy.
-const (
-	// UserAttributeGroups is the constant for user's groups.
-	UserAttributeGroups = "groups"
-	// DefaultGroupListLimit is the default limit for group list retrieval.
-	DefaultGroupListLimit = 20
 )
 
 // authorizationCodeGrantHandler handles the authorization code grant type.
@@ -135,10 +126,27 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 	// Parse authorized scopes
 	authorizedScopes := tokenservice.ParseScopes(authCode.Scopes)
 
+	// Check if groups attribute is needed
+	includeGroups := (oauthApp != nil &&
+		oauthApp.Token != nil &&
+		((oauthApp.Token.AccessToken != nil &&
+			slices.Contains(oauthApp.Token.AccessToken.UserAttributes, constants.UserAttributeGroups)) ||
+			(oauthApp.Token.IDToken != nil &&
+				slices.Contains(oauthApp.Token.IDToken.UserAttributes, constants.UserAttributeGroups))))
+
 	// Fetch user attributes and groups
-	attrs, userGroups, errResponse := h.fetchUserAttributesAndGroups(authCode.AuthorizedUserID, oauthApp, logger)
-	if errResponse != nil {
-		return nil, errResponse
+	attrs, userGroups, err := tokenservice.FetchUserAttributesAndGroups(
+		h.userService,
+		authCode.AuthorizedUserID,
+		includeGroups,
+	)
+	if err != nil {
+		logger.Error("Failed to fetch user attributes and groups",
+			log.String("userID", authCode.AuthorizedUserID), log.Error(err))
+		return nil, &model.ErrorResponse{
+			Error:            constants.ErrorServerError,
+			ErrorDescription: "Something went wrong while fetching user attributes and groups",
+		}
 	}
 
 	audience := tokenservice.DetermineAudience("", authCode.Resource, "", authCode.ClientID)
@@ -168,18 +176,21 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 
 	// Generate ID token if 'openid' scope is present
 	if slices.Contains(authorizedScopes, "openid") {
-		// Add groups to attrs for ID token if needed
-		if len(userGroups) > 0 &&
-			oauthApp.Token.IDToken != nil &&
-			slices.Contains(oauthApp.Token.IDToken.UserAttributes, UserAttributeGroups) {
-			if attrs == nil {
-				attrs = make(map[string]interface{})
+		idToken, err := h.tokenBuilder.BuildIDToken(&tokenservice.IDTokenBuildContext{
+			Subject:        authCode.AuthorizedUserID,
+			Audience:       tokenRequest.ClientID,
+			Scopes:         authorizedScopes,
+			UserAttributes: attrs,
+			UserGroups:     userGroups,
+			AuthTime:       time.Now().Unix(),
+			OAuthApp:       oauthApp,
+		})
+		if err != nil {
+			logger.Error("Failed to generate ID token", log.Error(err))
+			return nil, &model.ErrorResponse{
+				Error:            constants.ErrorServerError,
+				ErrorDescription: "Failed to generate ID token",
 			}
-			attrs[UserAttributeGroups] = userGroups
-		}
-		idToken, errResponse := h.generateIDToken(authCode, tokenRequest, authorizedScopes, attrs, oauthApp)
-		if errResponse != nil {
-			return nil, errResponse
 		}
 		tokenResponse.IDToken = *idToken
 	}
@@ -227,61 +238,6 @@ func (h *authorizationCodeGrantHandler) retrieveAndValidateAuthCode(
 		}
 	}
 	return authCode, nil
-}
-
-// fetchUserAttributesAndGroups fetches user attributes and groups if required.
-func (h *authorizationCodeGrantHandler) fetchUserAttributesAndGroups(
-	userID string,
-	oauthApp *appmodel.OAuthAppConfigProcessedDTO,
-	logger *log.Logger,
-) (map[string]interface{}, []string, *model.ErrorResponse) {
-	var attrs map[string]interface{}
-	userGroups := make([]string, 0)
-
-	// Check if user attributes or groups are required
-	if len(oauthApp.Token.AccessToken.UserAttributes) == 0 &&
-		(oauthApp.Token.IDToken == nil || len(oauthApp.Token.IDToken.UserAttributes) == 0) {
-		return attrs, userGroups, nil
-	}
-
-	// Fetch user attributes
-	user, svcErr := h.userService.GetUser(userID)
-	if svcErr != nil {
-		logger.Error("Failed to fetch user attributes", log.String("userID", userID), log.Any("error", svcErr))
-		return nil, nil, &model.ErrorResponse{
-			Error:            constants.ErrorServerError,
-			ErrorDescription: "Something went wrong",
-		}
-	}
-
-	if err := json.Unmarshal(user.Attributes, &attrs); err != nil {
-		logger.Error("Failed to unmarshal user attributes", log.String("userID", userID), log.Error(err))
-		return nil, nil, &model.ErrorResponse{
-			Error:            constants.ErrorServerError,
-			ErrorDescription: "Something went wrong",
-		}
-	}
-
-	// Fetch user groups if required
-	needsGroups := slices.Contains(oauthApp.Token.AccessToken.UserAttributes, UserAttributeGroups) ||
-		(oauthApp.Token.IDToken != nil && slices.Contains(oauthApp.Token.IDToken.UserAttributes, UserAttributeGroups))
-
-	if needsGroups {
-		groups, svcErr := h.userService.GetUserGroups(userID, DefaultGroupListLimit, 0)
-		if svcErr != nil {
-			logger.Error("Failed to fetch user groups", log.String("userID", userID), log.Any("error", svcErr))
-			return nil, nil, &model.ErrorResponse{
-				Error:            constants.ErrorServerError,
-				ErrorDescription: "Something went wrong",
-			}
-		}
-
-		for _, group := range groups.Groups {
-			userGroups = append(userGroups, group.Name)
-		}
-	}
-
-	return attrs, userGroups, nil
 }
 
 // validateAuthorizationCode validates the authorization code against the token request.
@@ -332,30 +288,4 @@ func validateAuthorizationCode(tokenRequest *model.TokenRequest,
 	}
 
 	return nil
-}
-
-// generateIDToken generates an ID token for the given authorization code and scopes using tokenBuilder.
-func (h *authorizationCodeGrantHandler) generateIDToken(
-	authCode *authz.AuthorizationCode,
-	tokenRequest *model.TokenRequest,
-	authorizedScopes []string,
-	attrs map[string]interface{},
-	oauthApp *appmodel.OAuthAppConfigProcessedDTO,
-) (*model.TokenDTO, *model.ErrorResponse) {
-	idToken, err := h.tokenBuilder.BuildIDToken(&tokenservice.IDTokenBuildContext{
-		Subject:        authCode.AuthorizedUserID,
-		Audience:       tokenRequest.ClientID,
-		Scopes:         authorizedScopes,
-		UserAttributes: attrs,
-		AuthTime:       time.Now().Unix(),
-		OAuthApp:       oauthApp,
-	})
-	if err != nil {
-		return nil, &model.ErrorResponse{
-			Error:            constants.ErrorServerError,
-			ErrorDescription: "Failed to generate ID token",
-		}
-	}
-
-	return idToken, nil
 }

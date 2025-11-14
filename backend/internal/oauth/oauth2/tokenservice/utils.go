@@ -19,11 +19,15 @@
 package tokenservice
 
 import (
+	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/user"
 )
 
 // ParseScopes parses a space-separated scope string into a slice of scope strings.
@@ -199,4 +203,91 @@ func validateIssuer(issuer string, oauthApp *appmodel.OAuthAppConfigProcessedDTO
 		return fmt.Errorf("token issuer '%s' is not supported", issuer)
 	}
 	return nil
+}
+
+// BuildOIDCClaimsFromScopes builds OIDC claims based on scopes, user attributes, and app configuration.
+func BuildOIDCClaimsFromScopes(
+	scopes []string,
+	userAttributes map[string]interface{},
+	oauthApp *appmodel.OAuthAppConfigProcessedDTO,
+) map[string]interface{} {
+	claims := make(map[string]interface{})
+
+	// Extract allowed user attributes and scope-to-claims mapping from ID token config
+	var allowedUserAttributes []string
+	var scopeClaimsMapping map[string][]string
+	if oauthApp != nil && oauthApp.Token != nil && oauthApp.Token.IDToken != nil {
+		allowedUserAttributes = oauthApp.Token.IDToken.UserAttributes
+		scopeClaimsMapping = oauthApp.Token.IDToken.ScopeClaims
+	}
+
+	if len(allowedUserAttributes) == 0 || userAttributes == nil || len(scopes) == 0 {
+		return claims
+	}
+
+	// For each scope, get the claims associated with that scope
+	for _, scope := range scopes {
+		var scopeClaims []string
+
+		// Check app-specific scope claims first
+		if scopeClaimsMapping != nil {
+			if appClaims, exists := scopeClaimsMapping[scope]; exists {
+				scopeClaims = appClaims
+			}
+		}
+
+		// Fall back to standard OIDC scopes if no app-specific mapping
+		if scopeClaims == nil {
+			if standardScope, exists := constants.StandardOIDCScopes[scope]; exists {
+				scopeClaims = standardScope.Claims
+			}
+		}
+
+		// Add claims if they're in user attributes and allowed in config
+		for _, claim := range scopeClaims {
+			if slices.Contains(allowedUserAttributes, claim) {
+				if value, ok := userAttributes[claim]; ok && value != nil {
+					claims[claim] = value
+				}
+			}
+		}
+	}
+
+	return claims
+}
+
+// FetchUserAttributesAndGroups fetches user attributes and groups from the user service.
+// It returns errors that callers should log with their own context.
+func FetchUserAttributesAndGroups(
+	userService user.UserServiceInterface,
+	userID string,
+	includeGroups bool,
+) (map[string]interface{}, []string, error) {
+	user, svcErr := userService.GetUser(userID)
+	if svcErr != nil {
+		return nil, nil, fmt.Errorf("failed to fetch user: %s", svcErr.Error)
+	}
+
+	var attrs map[string]interface{}
+	if user.Attributes != nil {
+		if err := json.Unmarshal(user.Attributes, &attrs); err != nil {
+			return nil, nil, fmt.Errorf("failed to unmarshal user attributes: %w", err)
+		}
+	}
+
+	if !includeGroups {
+		return attrs, []string{}, nil
+	}
+
+	groups, svcErr := userService.GetUserGroups(userID, constants.DefaultGroupListLimit, 0)
+	if svcErr != nil {
+		return nil, nil, fmt.Errorf("failed to fetch user groups: %s", svcErr.Error)
+	}
+
+	userGroups := make([]string, 0, len(groups.Groups))
+	for _, group := range groups.Groups {
+		userGroups = append(userGroups, group.Name)
+	}
+
+	return attrs, userGroups, nil
 }

@@ -147,9 +147,8 @@ func (tb *tokenBuilder) buildAccessTokenUserAttributes(
 	}
 
 	// Handle user groups
-	const userAttributeGroups = "groups"
-	if len(userGroups) > 0 && slices.Contains(accessTokenUserAttributes, userAttributeGroups) {
-		accessTokenAttributes[userAttributeGroups] = userGroups
+	if len(userGroups) > 0 && slices.Contains(accessTokenUserAttributes, constants.UserAttributeGroups) {
+		accessTokenAttributes[constants.UserAttributeGroups] = userGroups
 	}
 
 	return accessTokenAttributes
@@ -272,38 +271,24 @@ func (tb *tokenBuilder) buildIDTokenClaims(ctx *IDTokenBuildContext) map[string]
 		idTokenUserAttributes = ctx.OAuthApp.Token.IDToken.UserAttributes
 	}
 
-	if len(idTokenUserAttributes) == 0 || ctx.UserAttributes == nil {
-		return claims
+	userAttributes := ctx.UserAttributes
+	if userAttributes == nil {
+		userAttributes = make(map[string]interface{})
 	}
 
-	// For each scope, get the claims associated with that scope
-	for _, scope := range ctx.Scopes {
-		var scopeClaims []string
+	// Add groups to user attributes if needed
+	if len(ctx.UserGroups) > 0 && slices.Contains(idTokenUserAttributes, constants.UserAttributeGroups) {
+		userAttributes[constants.UserAttributeGroups] = ctx.UserGroups
+	}
 
-		// Check app-specific scope claims first
-		if ctx.OAuthApp != nil && ctx.OAuthApp.Token != nil &&
-			ctx.OAuthApp.Token.IDToken != nil &&
-			ctx.OAuthApp.Token.IDToken.ScopeClaims != nil {
-			if appClaims, exists := ctx.OAuthApp.Token.IDToken.ScopeClaims[scope]; exists {
-				scopeClaims = appClaims
-			}
-		}
+	scopeClaims := BuildOIDCClaimsFromScopes(
+		ctx.Scopes,
+		userAttributes,
+		ctx.OAuthApp,
+	)
 
-		// Fall back to standard OIDC scopes if no app-specific mapping
-		if scopeClaims == nil {
-			if standardScope, exists := constants.StandardOIDCScopes[scope]; exists {
-				scopeClaims = standardScope.Claims
-			}
-		}
-
-		// Add claims to ID token if they're in user attributes and allowed in config
-		for _, claim := range scopeClaims {
-			if slices.Contains(idTokenUserAttributes, claim) {
-				if value, ok := ctx.UserAttributes[claim]; ok && value != nil {
-					claims[claim] = value
-				}
-			}
-		}
+	for key, value := range scopeClaims {
+		claims[key] = value
 	}
 
 	return claims
