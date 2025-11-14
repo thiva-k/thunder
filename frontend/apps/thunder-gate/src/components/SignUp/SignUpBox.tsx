@@ -35,6 +35,8 @@ import {
   ColorSchemeImage,
   IconButton,
   InputAdornment,
+  Select,
+  MenuItem,
 } from '@wso2/oxygen-ui';
 import {SignUp} from '@asgardeo/react';
 import {Smartphone, Google, Facebook, GitHub, Eye, EyeClosed} from '@wso2/oxygen-ui-icons-react';
@@ -128,7 +130,7 @@ export default function SignUpBox(): JSX.Element {
                                   const inputs: Record<string, string> = {};
 
                                   form.components
-                                    ?.filter((c: {type: string}) => c.type === 'INPUT')
+                                    ?.filter((c: {type: string}) => c.type === 'INPUT' || c.type === 'SELECT')
                                     .forEach((input: {config: {identifier: string}}) => {
                                       if (input.config?.identifier) {
                                         inputs[input.config.identifier] = data.get(input.config.identifier) as string;
@@ -154,9 +156,50 @@ export default function SignUpBox(): JSX.Element {
                                       required: boolean;
                                       hint: string;
                                       text: string;
+                                      options?: string[];
                                     };
                                     variant: string;
                                   }) => {
+                                    if (component.type === 'SELECT' && component.config?.options) {
+                                      return (
+                                        <FormControl key={component.id} fullWidth>
+                                          <FormLabel htmlFor={component.config?.identifier}>
+                                            {component.config?.label}
+                                          </FormLabel>
+                                          <Select
+                                            displayEmpty
+                                            size="small"
+                                            id={component.config?.identifier}
+                                            name={component.config?.identifier}
+                                            required={component.config?.required}
+                                            fullWidth
+                                            disabled={isLoading}
+                                            error={!!errors[component.config?.identifier]}
+                                            defaultValue=""
+                                          >
+                                            <MenuItem value="" disabled>
+                                              {component.config?.placeholder || 'Select an option'}
+                                            </MenuItem>
+                                            {component.config.options.map((option: string) => (
+                                              <MenuItem key={option} value={option}>
+                                                {option}
+                                              </MenuItem>
+                                            ))}
+                                          </Select>
+                                          {errors[component.config?.identifier] && (
+                                            <Typography variant="caption" color="error.main" sx={{mt: 0.5}}>
+                                              {errors[component.config?.identifier]}
+                                            </Typography>
+                                          )}
+                                          {component.config?.hint && (
+                                            <Typography variant="caption" color="text.secondary">
+                                              {component.config.hint}
+                                            </Typography>
+                                          )}
+                                        </FormControl>
+                                      );
+                                    }
+
                                     if (component.type === 'INPUT') {
                                       const isPasswordField: boolean = component.config?.type === 'password';
                                       const showPassword: boolean =
