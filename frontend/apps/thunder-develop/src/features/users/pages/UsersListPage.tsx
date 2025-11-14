@@ -100,7 +100,7 @@ export default function UsersListPage() {
           ))}
         </Select>
       </Stack>
-      <Paper sx={{p: 4}}>
+      <Paper>
         <UsersList selectedSchema={selectedSchema ?? ''} />
       </Paper>
     </Box>

@@ -20,7 +20,7 @@
 
 import '@testing-library/jest-dom';
 import {cleanup} from '@testing-library/react';
-import {afterEach, beforeAll} from 'vitest';
+import {afterEach, beforeAll, vi} from 'vitest';
 import i18n from 'i18next';
 import {initReactI18next} from 'react-i18next';
 import enUS from '@thunder/i18n/locales/en-US';
@@ -117,3 +117,25 @@ global.ResizeObserver = class ResizeObserver {
     return this;
   }
 } as unknown as typeof ResizeObserver;
+
+// Mock global for Node.js built-ins used by @asgardeo packages
+if (typeof window !== 'undefined') {
+  (window as unknown as {global: Window}).global = window;
+}
+
+// Mock @asgardeo/react to avoid buffer import issues in tests
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: vi.fn(() => ({
+    http: {
+      request: vi.fn(),
+    },
+    signIn: vi.fn(),
+    signOut: vi.fn(),
+    getAccessToken: vi.fn(),
+    getIDToken: vi.fn(),
+    getDecodedIDToken: vi.fn(),
+    isAuthenticated: false,
+    isLoading: false,
+  })),
+  AsgardeoProvider: ({children}: {children: React.ReactNode}) => children,
+}));

@@ -1,0 +1,507 @@
+/**
+ * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
+import {renderHook, waitFor} from '@testing-library/react';
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import type {ReactNode} from 'react';
+import useDeleteApplication from '../useDeleteApplication';
+import type {ApplicationListResponse} from '../../models/responses';
+import ApplicationQueryKeys from '../../constants/application-query-keys';
+
+// Mock the dependencies
+vi.mock('@asgardeo/react', () => ({
+  useAsgardeo: vi.fn(),
+}));
+
+vi.mock('@thunder/commons-contexts', () => ({
+  useConfig: vi.fn(),
+}));
+
+const {useAsgardeo} = await import('@asgardeo/react');
+const {useConfig} = await import('@thunder/commons-contexts');
+
+describe('useDeleteApplication', () => {
+  let queryClient: QueryClient;
+  let mockHttpRequest: ReturnType<typeof vi.fn>;
+  let mockGetServerUrl: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+        mutations: {
+          retry: false,
+        },
+      },
+    });
+
+    mockHttpRequest = vi.fn();
+    mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
+
+    vi.mocked(useAsgardeo).mockReturnValue({
+      http: {
+        request: mockHttpRequest,
+      },
+    } as unknown as ReturnType<typeof useAsgardeo>);
+
+    vi.mocked(useConfig).mockReturnValue({
+      getServerUrl: mockGetServerUrl,
+    } as unknown as ReturnType<typeof useConfig>);
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+    vi.clearAllMocks();
+  });
+
+  const createWrapper = () =>
+    function Wrapper({children}: {children: ReactNode}) {
+      return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+    };
+
+  it('should initialize with idle state', () => {
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toBeNull();
+    expect(result.current.isPending).toBe(false);
+    expect(result.current.isIdle).toBe(true);
+    expect(result.current.isSuccess).toBe(false);
+    expect(result.current.isError).toBe(false);
+    expect(typeof result.current.mutate).toBe('function');
+    expect(typeof result.current.mutateAsync).toBe('function');
+  });
+
+  it('should successfully delete an application', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toBeNull();
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it('should make correct API call with application ID', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `https://api.test.com/applications/${applicationId}`,
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }),
+    );
+  });
+
+  it('should set pending state during deletion', async () => {
+    mockHttpRequest.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(undefined), 100);
+        }),
+    );
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isPending).toBe(true);
+    });
+
+    await waitFor(
+      () => {
+        expect(result.current.isSuccess).toBe(true);
+      },
+      {timeout: 200},
+    );
+
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it('should handle API error', async () => {
+    const apiError = new Error('Failed to delete application');
+    mockHttpRequest.mockRejectedValueOnce(apiError);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toEqual(apiError);
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it('should handle network error', async () => {
+    const networkError = new Error('Network request failed');
+    mockHttpRequest.mockRejectedValueOnce(networkError);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toEqual(networkError);
+    expect(result.current.isPending).toBe(false);
+  });
+
+  it('should handle 404 Not Found error', async () => {
+    const notFoundError = new Error('Application not found');
+    mockHttpRequest.mockRejectedValueOnce(notFoundError);
+
+    const applicationId = 'non-existent-id';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toEqual(notFoundError);
+  });
+
+  it('should remove application from cache on successful deletion', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+
+    // Pre-populate cache with application
+    queryClient.setQueryData([ApplicationQueryKeys.APPLICATION, applicationId], {
+      id: applicationId,
+      name: 'App to Delete',
+    });
+
+    const removeQueriesSpy = vi.spyOn(queryClient, 'removeQueries');
+
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Verify that removeQueries was called for the specific application
+    expect(removeQueriesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [ApplicationQueryKeys.APPLICATION, applicationId],
+      }),
+    );
+  });
+
+  it('should invalidate applications list on successful deletion', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+
+    // Pre-populate cache with applications list
+    const mockApplicationsList: ApplicationListResponse = {
+      applications: [
+        {
+          id: applicationId,
+          name: 'App to Delete',
+          description: 'Description',
+          logo_url: 'https://test.com/logo.png',
+          auth_flow_graph_id: 'auth_flow_config_basic',
+          registration_flow_graph_id: 'registration_flow_config_basic',
+          is_registration_flow_enabled: false,
+        },
+      ],
+      totalResults: 1,
+      count: 1,
+    };
+
+    queryClient.setQueryData([ApplicationQueryKeys.APPLICATIONS], mockApplicationsList);
+
+    const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Verify that invalidateQueries was called for the applications list
+    expect(invalidateQueriesSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: [ApplicationQueryKeys.APPLICATIONS],
+      }),
+    );
+  });
+
+  it('should handle multiple sequential deletions', async () => {
+    mockHttpRequest.mockResolvedValue(undefined);
+
+    const app1Id = 'app-1';
+    const app2Id = 'app-2';
+
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    // Delete first application
+    result.current.mutate(app1Id);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Delete second application
+    result.current.mutate(app2Id);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(mockHttpRequest).toHaveBeenCalledTimes(2);
+    expect(mockHttpRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        url: `https://api.test.com/applications/${app1Id}`,
+      }),
+    );
+    expect(mockHttpRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        url: `https://api.test.com/applications/${app2Id}`,
+      }),
+    );
+  });
+
+  it('should handle permission error (403 Forbidden)', async () => {
+    const forbiddenError = new Error('Permission denied');
+    mockHttpRequest.mockRejectedValueOnce(forbiddenError);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toEqual(forbiddenError);
+  });
+
+  it('should use mutateAsync for promise-based deletion', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    const deletePromise = result.current.mutateAsync(applicationId);
+
+    await expect(deletePromise).resolves.toBeUndefined();
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
+
+  it('should reject mutateAsync on error', async () => {
+    const apiError = new Error('Deletion failed');
+    mockHttpRequest.mockRejectedValueOnce(apiError);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    const deletePromise = result.current.mutateAsync(applicationId);
+
+    await expect(deletePromise).rejects.toEqual(apiError);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+
+  it('should not affect other cached applications on deletion', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const app1Id = 'app-1';
+    const app2Id = 'app-2';
+
+    // Pre-populate cache with two applications
+    const app1Data = {id: app1Id, name: 'App 1'};
+    const app2Data = {id: app2Id, name: 'App 2'};
+
+    queryClient.setQueryData([ApplicationQueryKeys.APPLICATION, app1Id], app1Data);
+    queryClient.setQueryData([ApplicationQueryKeys.APPLICATION, app2Id], app2Data);
+
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    // Delete first application
+    result.current.mutate(app1Id);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Verify that app2 is still in the cache
+    const app2InCache = queryClient.getQueryData([ApplicationQueryKeys.APPLICATION, app2Id]);
+    expect(app2InCache).toEqual(app2Data);
+  });
+
+  it('should handle concurrent deletion attempts', async () => {
+    mockHttpRequest.mockResolvedValue(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    // Trigger multiple deletions concurrently
+    result.current.mutate(applicationId);
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    // Note: TanStack Query will handle the concurrent mutations
+    // The second mutation will override the first one's state
+    expect(mockHttpRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it('should clear error state on successful retry', async () => {
+    const apiError = new Error('Temporary error');
+    mockHttpRequest.mockRejectedValueOnce(apiError).mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    // First attempt - should fail
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toEqual(apiError);
+
+    // Second attempt - should succeed
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(mockHttpRequest).toHaveBeenCalledTimes(2);
+  });
+
+  it('should handle server returning 204 No Content', async () => {
+    // 204 No Content is the typical response for successful DELETE
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toBeUndefined();
+  });
+
+  it('should pass through server error messages', async () => {
+    const serverError = new Error('Application has active users and cannot be deleted');
+    mockHttpRequest.mockRejectedValueOnce(serverError);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error).toEqual(serverError);
+    expect(result.current.error?.message).toBe('Application has active users and cannot be deleted');
+  });
+});

@@ -63,10 +63,14 @@ const translations = {
       login: 'Login',
     },
 
+    // Dictionary
+    'dictionary.unknown': 'Unknown',
+
     // Status messages
     status: {
       loading: 'Loading...',
       saving: 'Saving...',
+      deleting: 'Deleting...',
       success: 'Success',
       error: 'Error',
       warning: 'Warning',
@@ -401,27 +405,6 @@ const translations = {
   },
 
   // ============================================================================
-  // Applications namespace - Applications feature translations
-  // ============================================================================
-  applications: {
-    title: 'Applications',
-    subtitle: 'Manage your applications and services',
-    addApplication: 'Add Application',
-    editApplication: 'Edit Application',
-    deleteApplication: 'Delete Application',
-    applicationDetails: 'Application Details',
-    appName: 'Application Name',
-    appType: 'Application Type',
-    clientId: 'Client ID',
-    clientSecret: 'Client Secret',
-    redirectUri: 'Redirect URI',
-    allowedOrigins: 'Allowed Origins',
-    noApplications: 'No applications found',
-    comingSoon: 'Coming Soon',
-    comingSoonDescription: 'Applications management functionality will be available soon.',
-  },
-
-  // ============================================================================
   // Dashboard namespace - Dashboard feature translations
   // ============================================================================
   dashboard: {
@@ -515,6 +498,51 @@ const translations = {
     serverError: 'Server error occurred',
     networkError: 'Network error. Please check your connection.',
     redirectFailed: 'Redirect failed',
+  },
+
+  // ============================================================================
+  // Applications - Applications feature translations
+  // ============================================================================
+  applications: {
+    'listing.title': 'Applications',
+    'listing.subtitle': 'Manage your applications and services',
+    'listing.addApplication': 'Add Application',
+    'listing.columns.name': 'Name',
+    'listing.columns.clientId': 'Client ID',
+    'listing.columns.actions': 'Actions',
+    'listing.search.placeholder': 'Search ..',
+    'delete.title': 'Delete Application',
+    'delete.message': 'Are you sure you want to delete this application? This action cannot be undone.',
+    'delete.disclaimer': 'Warning: All associated data, configurations, and access tokens will be permanently removed.',
+    'onboarding.preview.title': 'Preview',
+    'onboarding.preview.signInTo': 'Sign in to {{appName}}',
+    'onboarding.preview.welcomeMessage': 'Welcome back! Please sign in to continue.',
+    'onboarding.preview.username': 'Username',
+    'onboarding.preview.usernamePlaceholder': 'Enter your Username',
+    'onboarding.preview.password': 'Password',
+    'onboarding.preview.passwordPlaceholder': 'Enter your Password',
+    'onboarding.preview.signInButton': 'Sign In',
+    'onboarding.preview.divider': 'or',
+    'onboarding.preview.continueWith': 'Continue with {{providerName}}',
+    'onboarding.configure.name.title': "Let's give a name to your application",
+    'onboarding.configure.name.fieldLabel': 'Application Name',
+    'onboarding.configure.name.placeholder': 'Enter your application name',
+    'onboarding.configure.name.suggestions.label': 'In a hurry? Pick a random name:',
+    'onboarding.configure.design.title': 'Design Your Application',
+    'onboarding.configure.design.subtitle': 'Customize the appearance of your application',
+    'onboarding.configure.design.logo.title': 'Application Logo',
+    'onboarding.configure.design.logo.shuffle': 'Shuffle',
+    'onboarding.configure.design.color.title': 'Brand Color',
+    'onboarding.configure.design.color.customLabel': 'Custom',
+    'onboarding.configure.SignInOptions.title': 'Sign In Options',
+    'onboarding.configure.SignInOptions.subtitle': 'Choose how users will sign-in to your application',
+    'onboarding.configure.SignInOptions.usernamePassword': 'Username & Password',
+    'onboarding.configure.SignInOptions.noIntegrations':
+      'No social login integrations available. Please configure an integration first.',
+    'onboarding.configure.SignInOptions.hint':
+      'You can always change these settings later in the application settings.',
+    'onboarding.configure.SignInOptions.loading': 'Loading...',
+    'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
   },
 } as const;
 

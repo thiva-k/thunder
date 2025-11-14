@@ -510,7 +510,7 @@ create_develop_app() {
       \"name\": \"Develop\",
       \"description\": \"Developer application for Thunder\",
       \"url\": \"${BASE_URL}/develop\",
-      \"logo_url\": \"${BASE_URL}/develop/assets/images/asgardeo-trifacta.svg\",
+      \"logo_url\": \"${BASE_URL}/develop/assets/images/trifacta.svg\",
       \"auth_flow_graph_id\": \"auth_flow_config_basic\",
       \"registration_flow_graph_id\": \"registration_flow_config_basic\",
       \"is_registration_flow_enabled\": true,
