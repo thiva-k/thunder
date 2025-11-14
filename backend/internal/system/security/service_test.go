@@ -327,7 +327,6 @@ func (suite *SecurityServiceTestSuite) TestProcess_DifferentHTTPMethods() {
 		http.MethodPut,
 		http.MethodDelete,
 		http.MethodPatch,
-		http.MethodOptions,
 		http.MethodHead,
 	}
 
@@ -381,4 +380,18 @@ func (suite *SecurityServiceTestSuite) TestProcess_PublicPathVariations() {
 			assert.Equal(suite.T(), req.Context(), ctx)
 		})
 	}
+}
+
+// Test OPTIONS method bypasses authentication
+func (suite *SecurityServiceTestSuite) TestProcess_OptionsMethod() {
+	req := httptest.NewRequest(http.MethodOptions, "/api/protected", nil)
+
+	ctx, err := suite.service.Process(req)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), req.Context(), ctx)
+
+	// Verify no authenticators were called for OPTIONS method
+	suite.mockAuth1.AssertNotCalled(suite.T(), "CanHandle")
+	suite.mockAuth2.AssertNotCalled(suite.T(), "CanHandle")
 }
