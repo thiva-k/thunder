@@ -85,7 +85,7 @@ cors:
 gate_client:
   port: 5190
   scheme: "https"
-  login_path: "/signin"
+  login_path: "/gate/signin"
 ```
 
 > [!TIP]
@@ -110,7 +110,7 @@ make run
 > **Services that start:**
 >
 > - **Backend server**: [https://localhost:8090](https://localhost:8090)
-> - **Thunder Gate** (Login/Register): [https://localhost:5190/signin](https://localhost:5190/signin)
+> - **Thunder Gate** (Login/Register): [https://localhost:5190/gate](https://localhost:5190/gate)
 > - **Thunder Develop** (Admin Console): [https://localhost:5191/develop](https://localhost:5191/develop)
 
 💡 **Alternatively**, if you would rather run the backend and frontend servers separately, run the following commands in separate terminal windows:
@@ -311,7 +311,7 @@ THUNDER_API_BASE="https://localhost:8090" \
 gate_client:
   port: 5190
   scheme: "https"
-  login_path: "/signin"
+  login_path: "/gate/signin"
 ```
 
 2. Add the local development origin of the Thunder Gate application (https://localhost:5190) to the CORS allowed origins in `<THUNDER_HOME>/repository/conf/deployment.yaml`.

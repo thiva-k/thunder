@@ -80,7 +80,7 @@ func (s *securityService) isPublicPath(path string) bool {
 		"/oauth2/",
 		"/.well-known/openid-configuration",
 		"/.well-known/oauth-authorization-server",
-		"/signin/",  // Gate application (login UI)
+		"/gate/",    // Gate application (login UI)
 		"/develop/", // Develop application
 	}
 

@@ -20,7 +20,7 @@
 
 window.__THUNDER_RUNTIME_CONFIG__ = {
   client: {
-    base: '/signin',
+    base: '/gate',
   },
   server: {
     hostname: 'localhost',

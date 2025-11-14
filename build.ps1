@@ -1057,7 +1057,7 @@ function Run {
     Write-Host "🚀 Servers running:"
     Write-Host "  👉 Backend : https://localhost:$BACKEND_PORT"
     Write-Host "  📱 Frontend :"
-    Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/signin"
+    Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/gate"
     Write-Host "      🛠️  Develop (Admin Console): https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
     Write-Host ""
 
