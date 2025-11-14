@@ -31,6 +31,8 @@ import OutlinedInput from '@mui/material/OutlinedInput';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
+import MenuItem from '@mui/material/MenuItem';
+import Select from '@mui/material/Select';
 import GoogleIcon from '@mui/icons-material/Google';
 import GitHubIcon from '@mui/icons-material/GitHub';
 import Visibility from '@mui/icons-material/Visibility';
@@ -53,6 +55,7 @@ interface AuthInput {
     name: string;
     type: string;
     required: boolean;
+    options?: string[];
 }
 
 interface ActionPrompt {
@@ -217,6 +220,11 @@ const LoginPage = () => {
     // Single handler for all input changes
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = event.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Handler for select/dropdown changes
+    const handleSelectChange = (name: string, value: string) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -592,6 +600,7 @@ const LoginPage = () => {
             const inputId = input.name || `input-${index}`;
             const isPassword = input.type === "password" || input.name === "password";
             const isOTP = input.type === "otp" || input.name === "otp";
+            const isDropdown = input.type === "dropdown";
             const isRequired = input.required;
             
             // Determine appropriate label
@@ -608,7 +617,31 @@ const LoginPage = () => {
 
             const placeholder = `Enter your ${label.toLowerCase()}`;
 
-            if (isPassword) {
+            if (isDropdown && input.options) {
+                return (
+                    <Box key={inputId} display="flex" flexDirection="column" gap={0.5}>
+                        <InputLabel htmlFor={inputId} sx={{ mb: 1 }}>{label}</InputLabel>
+                        <Select
+                            id={inputId}
+                            name={input.name}
+                            size="small"
+                            value={formData[input.name] || ''}
+                            onChange={(e) => handleSelectChange(input.name, e.target.value)}
+                            required={isRequired}
+                            displayEmpty
+                        >
+                            <MenuItem value="" disabled sx={{ color: 'text.secondary' }}>
+                                Select {label.toLowerCase()}
+                            </MenuItem>
+                            {input.options.map((option) => (
+                                <MenuItem key={option} value={option}>
+                                    {option}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </Box>
+                );
+            } else if (isPassword) {
                 return (
                     <Box key={inputId} display="flex" flexDirection="column" gap={0.5}>
                         <InputLabel htmlFor={inputId} sx={{ mb: 1 }}>{label}</InputLabel>
