@@ -74,7 +74,7 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 // isPublicPath checks if the given path is a public endpoint that doesn't require authentication.
 func (s *securityService) isPublicPath(path string) bool {
 	publicPaths := []string{
-		"/healthcheck",
+		"/health/",
 		"/auth/",
 		"/flow/execute",
 		"/oauth2/",
