@@ -196,6 +196,34 @@ The following table lists the configurable parameters of the Thunder chart and t
 | `configuration.flow.authn.defaultFlow` | Default authentication flow                                     | `auth_flow_config_basic`     |
 | `configuration.cors.allowedOrigins`    | CORS allowed origins                                            | See values.yaml              |
 
+### Setup Job Parameters
+
+The setup job runs `setup.sh` as a one-time Helm pre-install hook to initialize Thunder with default resources (admin user, organization, etc.).
+
+| Name                                   | Description                                                     | Default                      |
+| -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
+| `setup.enabled`                        | Enable setup job (runs on install via Helm hook)                | `true`                       |
+| `setup.backoffLimit`                   | Number of retries if setup fails                                | `3`                          |
+| `setup.ttlSecondsAfterFinished`        | Time to keep job after completion (0 = indefinite)              | `86400` (24 hours)           |
+| `setup.debug`                          | Enable debug mode for setup                                     | `false`                      |
+| `setup.args`                           | Additional command-line arguments for setup.sh                  | `[]`                         |
+| `setup.env`                            | Additional environment variables for setup job                  | `[]`                         |
+| `setup.resources.requests.cpu`         | CPU request for setup job                                       | `250m`                       |
+| `setup.resources.requests.memory`      | Memory request for setup job                                    | `128Mi`                      |
+| `setup.resources.limits.cpu`           | CPU limit for setup job                                         | `500m`                       |
+| `setup.resources.limits.memory`        | Memory limit for setup job                                      | `256Mi`                      |
+| `setup.extraVolumeMounts`              | Additional volume mounts for setup job                          | `[]`                         |
+| `setup.extraVolumes`                   | Additional volumes for setup job                                | `[]`                         |
+
+### Bootstrap Script Parameters
+
+Custom bootstrap scripts can be added to extend the setup process. These scripts run after Thunder's default resources are created.
+
+| Name                                   | Description                                                     | Default                      |
+| -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
+| `bootstrap.scripts`                    | Inline custom bootstrap scripts (key: filename, value: content)| `{}`                         |
+| `bootstrap.existingConfigMap`          | Reference an existing ConfigMap with bootstrap scripts          | `""`                         |
+
 ### Custom Configuration
 
 The Thunder configuration file (deployment.yaml) can be customized by overriding the default values in the values.yaml file.

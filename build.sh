@@ -291,6 +291,12 @@ function prepare_backend_for_packaging() {
     cp -r "$SERVER_DB_SCRIPTS_DIR" "$DIST_DIR/$PRODUCT_FOLDER/"
     mkdir -p "$DIST_DIR/$PRODUCT_FOLDER/$SECURITY_DIR"
 
+    # Copy bootstrap directory
+    echo "Copying bootstrap scripts..."
+    cp -r "$BACKEND_DIR/bootstrap" "$DIST_DIR/$PRODUCT_FOLDER/"
+    # Ensure execute permissions on bootstrap scripts
+    chmod +x "$DIST_DIR/$PRODUCT_FOLDER/bootstrap/"*.sh 2>/dev/null || true
+
     echo "=== Ensuring server certificates exist in the distribution ==="
     ensure_certificates "$DIST_DIR/$PRODUCT_FOLDER/$SECURITY_DIR"
     echo "================================================================"
@@ -335,13 +341,18 @@ function package() {
     prepare_frontend_for_packaging
     prepare_backend_for_packaging
 
-    # Copy the appropriate startup script based on the target OS
+    # Copy the appropriate startup and setup scripts based on the target OS
     if [ "$GO_OS" = "windows" ]; then
-            echo "Including Windows start script (start.ps1)..."
-            cp -r "start.ps1" "$DIST_DIR/$PRODUCT_FOLDER"
+        echo "Including Windows scripts (start.ps1, setup.ps1)..."
+        cp -r "start.ps1" "$DIST_DIR/$PRODUCT_FOLDER"
+        cp -r "setup.ps1" "$DIST_DIR/$PRODUCT_FOLDER"
     else
-        echo "Including Unix start script (start.sh)..."
+        echo "Including Unix scripts (start.sh, setup.sh)..."
         cp -r "start.sh" "$DIST_DIR/$PRODUCT_FOLDER"
+        cp -r "setup.sh" "$DIST_DIR/$PRODUCT_FOLDER"
+        # Ensure execute permissions on Unix scripts
+        chmod +x "$DIST_DIR/$PRODUCT_FOLDER/start.sh"
+        chmod +x "$DIST_DIR/$PRODUCT_FOLDER/setup.sh"
     fi
 
     echo "Creating zip file..."
@@ -645,14 +656,40 @@ function run() {
     echo "⚙️  Running initial data setup..."
     echo ""
     
-    # Run the setup script - it will handle server readiness checking
-    # In dev mode, add the frontend dev server redirect URI
-    "$BACKEND_BASE_DIR/scripts/setup_initial_data.sh" -port "$BACKEND_PORT" --develop-redirect-uris "https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop"
+    # Wait for server to be ready
+    MAX_RETRIES=30
+    RETRY_INTERVAL=2
+    retries=0
+    
+    echo "[INFO] Waiting for Thunder server to be ready..."
+    while [ $retries -lt $MAX_RETRIES ]; do
+        if curl -k -s -f "https://localhost:$BACKEND_PORT/health/readiness" > /dev/null 2>&1; then
+            echo "✓ Server is ready!"
+            break
+        fi
+        
+        retries=$((retries + 1))
+        if [ $retries -ge $MAX_RETRIES ]; then
+            echo "❌ Server did not become ready after $MAX_RETRIES attempts"
+            echo "💡 Please ensure the Thunder server is running at https://localhost:$BACKEND_PORT"
+            exit 1
+        fi
+        
+        echo "[WAITING] Attempt $retries/$MAX_RETRIES - Server not ready yet, retrying in ${RETRY_INTERVAL}s..."
+        sleep $RETRY_INTERVAL
+    done
+    
+    echo ""
+    
+    # Run the bootstrap script directly with environment variable and arguments
+    THUNDER_API_BASE="https://localhost:$BACKEND_PORT" \
+        "$BACKEND_BASE_DIR/cmd/server/bootstrap/01-default-resources.sh" \
+        --develop-redirect-uris "https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop"
 
     if [ $? -ne 0 ]; then
         echo "❌ Initial data setup failed"
         echo "💡 Check the logs above for more details"
-        echo "💡 You can run the setup manually using: $BACKEND_BASE_DIR/scripts/setup_initial_data.sh -port $BACKEND_PORT --develop-redirect-uris \"https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop\""
+        echo "💡 You can run the setup manually using: THUNDER_API_BASE=\"https://localhost:$BACKEND_PORT\" $BACKEND_BASE_DIR/cmd/server/bootstrap/01-default-resources.sh --develop-redirect-uris \"https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop\""
     fi
 
     echo ""
