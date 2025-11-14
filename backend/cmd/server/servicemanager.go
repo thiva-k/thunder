@@ -50,7 +50,7 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 	logger := log.GetLogger()
 
 	ouService := ou.Initialize(mux)
-	userSchemaService := userschema.Initialize(mux)
+	userSchemaService := userschema.Initialize(mux, ouService)
 	userService := user.Initialize(mux, ouService, userSchemaService)
 	groupService := group.Initialize(mux, ouService, userService)
 	roleService := role.Initialize(mux, userService, groupService, ouService)
