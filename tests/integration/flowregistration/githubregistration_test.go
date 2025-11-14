@@ -30,6 +30,37 @@ import (
 )
 
 var (
+	githubRegTestOU = testutils.OrganizationUnit{
+		Handle:      "github-reg-flow-test-ou",
+		Name:        "GitHub Registration Flow Test Organization Unit",
+		Description: "Organization unit for GitHub registration flow testing",
+		Parent:      nil,
+	}
+
+	githubRegUserSchema = testutils.UserSchema{
+		Name: "github_reg_flow_user",
+		Schema: map[string]interface{}{
+			"username": map[string]interface{}{
+				"type": "string",
+			},
+			"password": map[string]interface{}{
+				"type": "string",
+			},
+			"sub": map[string]interface{}{
+				"type": "string",
+			},
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+			"givenName": map[string]interface{}{
+				"type": "string",
+			},
+			"familyName": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
 	githubRegTestApp = testutils.Application{
 		Name:                      "GitHub Registration Flow Test Application",
 		Description:               "Application for testing GitHub registration flows",
@@ -39,13 +70,7 @@ var (
 		ClientID:                  "github_reg_flow_test_client",
 		ClientSecret:              "github_reg_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
-	}
-
-	githubRegTestOU = testutils.OrganizationUnit{
-		Handle:      "github-reg-flow-test-ou",
-		Name:        "GitHub Registration Flow Test Organization Unit",
-		Description: "Organization unit for GitHub registration flow testing",
-		Parent:      nil,
+		AllowedUserTypes:          []string{githubRegUserSchema.Name},
 	}
 )
 
@@ -57,30 +82,6 @@ var (
 const (
 	mockGithubRegFlowPort = 8092
 )
-
-var githubRegUserSchema = testutils.UserSchema{
-	Name: "github_reg_flow_user",
-	Schema: map[string]interface{}{
-		"username": map[string]interface{}{
-			"type": "string",
-		},
-		"password": map[string]interface{}{
-			"type": "string",
-		},
-		"sub": map[string]interface{}{
-			"type": "string",
-		},
-		"email": map[string]interface{}{
-			"type": "string",
-		},
-		"givenName": map[string]interface{}{
-			"type": "string",
-		},
-		"familyName": map[string]interface{}{
-			"type": "string",
-		},
-	},
-}
 
 type GithubRegistrationFlowTestSuite struct {
 	suite.Suite
@@ -135,11 +136,12 @@ func (ts *GithubRegistrationFlowTestSuite) SetupSuite() {
 
 	// Create user schema
 	githubRegUserSchema.OrganizationUnitId = githubRegTestOUID
+	githubRegUserSchema.AllowSelfRegistration = true
 	schemaID, err := testutils.CreateUserType(githubRegUserSchema)
 	ts.Require().NoError(err, "Failed to create GitHub user schema")
 	ts.userSchemaID = schemaID
 
-	// Create test application for GitHub registration tests
+	// Create test application
 	appID, err := testutils.CreateApplication(githubRegTestApp)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)

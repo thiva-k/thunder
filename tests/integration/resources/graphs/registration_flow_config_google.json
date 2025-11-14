@@ -3,6 +3,13 @@
     "type": "REGISTRATION",
     "nodes": [
         {
+            "id": "registration_start",
+            "type": "REGISTRATION_START",
+            "next": [
+                "google_auth"
+            ]
+        },
+        {
             "id": "google_auth",
             "type": "TASK_EXECUTION",
             "properties": {
@@ -18,10 +25,6 @@
         {
             "id": "provisioning",
             "type": "TASK_EXECUTION",
-            "properties": {
-                "ouId": "test-ou-id",
-                "userType": "google_reg_flow_user"
-            },
             "executor": {
                 "name": "ProvisioningExecutor"
             },

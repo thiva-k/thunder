@@ -27,17 +27,6 @@ import (
 )
 
 var (
-	testApp = testutils.Application{
-		Name:                      "Registration Flow Test Application",
-		Description:               "Application for testing registration flows",
-		IsRegistrationFlowEnabled: true,
-		AuthFlowGraphID:           "auth_flow_config_basic",
-		RegistrationFlowGraphID:   "registration_flow_config_basic",
-		ClientID:                  "reg_flow_test_client",
-		ClientSecret:              "reg_flow_test_secret",
-		RedirectURIs:              []string{"http://localhost:3000/callback"},
-	}
-
 	testOU = testutils.OrganizationUnit{
 		Handle:      "reg-flow-test-ou",
 		Name:        "Registration Flow Test Organization Unit",
@@ -67,14 +56,14 @@ var (
 				"type": "string",
 			},
 		},
+		AllowSelfRegistration: true,
 	}
-
-	regUserOUID = "test-ou-id"
 )
 
 var (
-	testAppID string
-	testOUID  string
+	testAppID        string
+	testOUID         string
+	testUserTypeName string
 )
 
 type BasicRegistrationFlowTestSuite struct {
@@ -105,8 +94,21 @@ func (ts *BasicRegistrationFlowTestSuite) SetupSuite() {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
 	}
 	ts.userSchemaID = schemaID
+	testUserTypeName = testUserSchema.Name
 
-	// Create test application
+	// Create test application with allowed user types
+	testApp := testutils.Application{
+		Name:                      "Registration Flow Test Application",
+		Description:               "Application for testing registration flows",
+		IsRegistrationFlowEnabled: true,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic",
+		ClientID:                  "reg_flow_test_client",
+		ClientSecret:              "reg_flow_test_secret",
+		RedirectURIs:              []string{"http://localhost:3000/callback"},
+		AllowedUserTypes:          []string{testUserSchema.Name},
+	}
+
 	appID, err := testutils.CreateApplication(testApp)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)
@@ -219,7 +221,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSuccess() {
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
@@ -346,7 +348,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowInitialInvali
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
@@ -394,7 +396,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSingleRequest
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
