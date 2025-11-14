@@ -36,7 +36,7 @@ type NodeContext struct {
 	UserInputData  map[string]string
 	RuntimeData    map[string]string
 
-	Application       appmodel.ApplicationProcessedDTO
+	Application       appmodel.Application
 	AuthenticatedUser authncm.AuthenticatedUser
 	ExecutionHistory  map[string]*common.NodeExecutionRecord
 }

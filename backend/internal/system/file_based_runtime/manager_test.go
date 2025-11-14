@@ -33,7 +33,7 @@ import (
 
 // FileBasedRuntimeManagerTestSuite contains comprehensive tests for the file-based runtime manager.
 // The test suite covers:
-// - Environment variable substitution with different patterns ($VAR, ${VAR}, ${{VAR}})
+// - Environment variable substitution
 // - Configuration file reading from the immutable resources directory
 // - Concurrent file processing
 // - Error handling for missing directories and files
@@ -115,68 +115,28 @@ func (suite *FileBasedRuntimeManagerTestSuite) createTestFile(configDir, filenam
 	return filePath
 }
 
-// Tests for substituteEnvironmentVariables function
+// Tests for substituteEnvironmentVariables function - Go Template Syntax
 
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_DoubleBrace() {
-	suite.setEnvVar("TEST_VAR", "test_value")
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_SimpleVariable() {
+	suite.setEnvVar("TestVar", "test_value")
 
-	content := []byte("config: ${{TEST_VAR}}")
+	content := []byte("config: {{.TestVar}}")
 	result, err := substituteEnvironmentVariables(content)
 
 	suite.NoError(err)
 	suite.Equal("config: test_value", string(result))
 }
 
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_SingleBrace() {
-	suite.setEnvVar("DB_HOST", "localhost")
-
-	content := []byte("host: ${DB_HOST}")
-	result, err := substituteEnvironmentVariables(content)
-
-	suite.NoError(err)
-	suite.Equal("host: localhost", string(result))
-}
-
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_Direct() {
-	suite.setEnvVar("PORT", "8080")
-
-	content := []byte("port: $PORT")
-	result, err := substituteEnvironmentVariables(content)
-
-	suite.NoError(err)
-	suite.Equal("port: 8080", string(result))
-}
-
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_Precedence() {
-	suite.setEnvVar("VAR", "correct_value")
-
-	// Double brace should take precedence over single brace
-	content := []byte("value: ${{VAR}} and ${VAR}")
-	result, err := substituteEnvironmentVariables(content)
-
-	suite.NoError(err)
-	suite.Equal("value: correct_value and correct_value", string(result))
-}
-
 func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_MultipleVariables() {
-	suite.setEnvVar("HOST", "db.example.com")
-	suite.setEnvVar("PORT", "5432")
-	suite.setEnvVar("DB_NAME", "thunder")
+	suite.setEnvVar("Host", "db.example.com")
+	suite.setEnvVar("Port", "5432")
+	suite.setEnvVar("Database", "thunder")
 
-	content := []byte("connection: ${{HOST}}:${PORT}/$DB_NAME")
+	content := []byte("connection: {{.Host}}:{{.Port}}/{{.Database}}")
 	result, err := substituteEnvironmentVariables(content)
 
 	suite.NoError(err)
 	suite.Equal("connection: db.example.com:5432/thunder", string(result))
-}
-
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_MissingVariable() {
-	content := []byte("config: ${{MISSING_VAR}}")
-	result, err := substituteEnvironmentVariables(content)
-
-	suite.Error(err)
-	suite.Nil(result)
-	suite.Contains(err.Error(), "environment variable 'MISSING_VAR' is not set")
 }
 
 func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_EmptyContent() {
@@ -195,25 +155,47 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariable
 	suite.Equal("static config content", string(result))
 }
 
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_InvalidVariableName() {
-	content := []byte("config: ${123INVALID}")
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_MissingVariable() {
+	content := []byte("config: {{.MissingVar}}")
 	result, err := substituteEnvironmentVariables(content)
 
-	// Should not substitute invalid variable names
-	suite.NoError(err)
-	suite.Equal("config: ${123INVALID}", string(result))
+	suite.Error(err)
+	suite.Nil(result)
+	suite.Contains(err.Error(), "environment variable MissingVar is not set")
 }
 
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_ComplexConfig() {
-	suite.setEnvVar("DB_USER", "admin")
-	suite.setEnvVar("DB_PASS", "secret123")
-	suite.setEnvVar("DB_HOST", "db.internal")
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_ComplexYAMLConfig() {
+	suite.setEnvVar("DBHost", "db.internal")
+	suite.setEnvVar("DBUser", "admin")
+	suite.setEnvVar("DBPass", "secret123")
+
+	content := []byte(`database:
+  host: {{.DBHost}}
+  user: {{.DBUser}}
+  password: {{.DBPass}}
+  ssl: true`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.NoError(err)
+	expected := `database:
+  host: db.internal
+  user: admin
+  password: secret123
+  ssl: true`
+	suite.Equal(expected, string(result))
+}
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_ComplexJSONConfig() {
+	suite.setEnvVar("DBHost", "db.internal")
+	suite.setEnvVar("DBUser", "admin")
+	suite.setEnvVar("DBPass", "secret123")
 
 	content := []byte(`{
   "database": {
-    "host": "${{DB_HOST}}",
-    "user": "${DB_USER}",
-    "password": "$DB_PASS",
+    "host": "{{.DBHost}}",
+    "user": "{{.DBUser}}",
+    "password": "{{.DBPass}}",
     "ssl": true
   }
 }`)
@@ -230,6 +212,110 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariable
   }
 }`
 	suite.Equal(expected, string(result))
+}
+
+// Tests for Go template syntax
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_GoTemplate_SimpleVariable() {
+	suite.setEnvVar("Host", "localhost")
+
+	content := []byte(`server:
+  host: {{.Host}}
+  port: 8080`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.NoError(err)
+	expected := `server:
+  host: localhost
+  port: 8080`
+	suite.Equal(expected, string(result))
+}
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_GoTemplate_Array() {
+	suite.setEnvVar("AllowedIPs_0", "192.168.1.1")
+	suite.setEnvVar("AllowedIPs_1", "192.168.1.2")
+	suite.setEnvVar("AllowedIPs_2", "192.168.1.3")
+
+	content := []byte(`security:
+  allowedIPs:
+{{- range .AllowedIPs}}
+  - {{.}}
+{{- end}}`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.NoError(err)
+	expected := `security:
+  allowedIPs:
+  - 192.168.1.1
+  - 192.168.1.2
+  - 192.168.1.3`
+	suite.Equal(expected, string(result))
+}
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_GoTemplate_Mixed() {
+	suite.setEnvVar("Host", "localhost")
+	suite.setEnvVar("Port", "8080")
+	suite.setEnvVar("Endpoints_0", "/api/v1")
+	suite.setEnvVar("Endpoints_1", "/api/v2")
+
+	content := []byte(`server:
+  host: {{.Host}}
+  port: {{.Port}}
+  endpoints:
+{{- range .Endpoints}}
+  - {{.}}
+{{- end}}`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.NoError(err)
+	expected := `server:
+  host: localhost
+  port: 8080
+  endpoints:
+  - /api/v1
+  - /api/v2`
+	suite.Equal(expected, string(result))
+}
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_GoTemplate_MissingVariable() {
+	content := []byte(`server:
+  host: {{.NonExistentVar}}`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.Error(err)
+	suite.Nil(result)
+	suite.Contains(err.Error(), "environment variable NonExistentVar is not set")
+}
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_GoTemplate_EmptyArray() {
+	// No environment variables set for array
+	content := []byte(`security:
+  allowedIPs:
+{{- range .AllowedIPs}}
+  - {{.}}
+{{- end}}`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.NoError(err)
+	expected := `security:
+  allowedIPs:`
+	suite.Equal(expected, string(result))
+}
+
+func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_GoTemplate_NoTemplateVars() {
+	content := []byte(`server:
+  host: localhost
+  port: 8080`)
+
+	result, err := substituteEnvironmentVariables(content)
+
+	suite.NoError(err)
+	suite.Equal(string(content), string(result))
 }
 
 // Tests for GetConfigs function - Success Cases
@@ -272,10 +358,10 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_MultipleFiles() {
 }
 
 func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_WithEnvironmentVariables() {
-	suite.setEnvVar("CONFIG_VALUE", "substituted_value")
+	suite.setEnvVar("ConfigValue", "substituted_value")
 
 	configDir := "env-configs"
-	content := "value: ${{CONFIG_VALUE}}"
+	content := "value: {{.ConfigValue}}"
 	suite.createTestFile(configDir, "config.json", content)
 
 	configs, err := GetConfigs(configDir)
@@ -355,7 +441,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_FileWithMissingEnv
 	configDir := "test-error-missing-env"
 
 	// Create a file with a missing environment variable
-	content := "database_host: ${{MISSING_DB_HOST}}\nport: 5432"
+	content := "database_host: {{.MissingDBHost}}\nport: 5432"
 	suite.createTestFile(configDir, "config.yaml", content)
 
 	configs, err := GetConfigs(configDir)
@@ -363,17 +449,17 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_FileWithMissingEnv
 	suite.Error(err)
 	suite.Nil(configs)
 	suite.Contains(err.Error(), "errors occurred while reading configuration files")
-	suite.Contains(err.Error(), "environment variable 'MISSING_DB_HOST' is not set")
+	suite.Contains(err.Error(), "environment variable MissingDBHost is not set")
 }
 
 func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_MultipleFilesWithEnvironmentVariableErrors() {
 	configDir := "test-error-multiple-files"
 
 	// Create multiple files with missing environment variables
-	content1 := "host: ${{MISSING_HOST}}\nport: 8080"
+	content1 := "host: {{.MissingHost}}\nport: 8080"
 	suite.createTestFile(configDir, "config1.yaml", content1)
 
-	content2 := "database: ${{MISSING_DB}}\nuser: admin"
+	content2 := "database: {{.MissingDB}}\nuser: admin"
 	suite.createTestFile(configDir, "config2.yaml", content2)
 
 	content3 := "valid_config: true\nstatic_value: test"
@@ -384,8 +470,8 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_MultipleFilesWithE
 	suite.Error(err)
 	suite.Nil(configs)
 	suite.Contains(err.Error(), "errors occurred while reading configuration files")
-	suite.Contains(err.Error(), "environment variable 'MISSING_HOST' is not set")
-	suite.Contains(err.Error(), "environment variable 'MISSING_DB' is not set")
+	suite.Contains(err.Error(), "environment variable MissingHost is not set")
+	suite.Contains(err.Error(), "environment variable MissingDB is not set")
 }
 
 func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_MixedSuccessAndFailureFiles() {
@@ -395,7 +481,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_MixedSuccessAndFai
 	suite.createTestFile(configDir, "valid.yaml", "valid_config: true")
 
 	// Create one file with missing environment variable
-	suite.createTestFile(configDir, "invalid.yaml", "host: ${{MISSING_VAR}}")
+	suite.createTestFile(configDir, "invalid.yaml", "host: {{.MissingVar}}")
 
 	configs, err := GetConfigs(configDir)
 
@@ -403,7 +489,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_MixedSuccessAndFai
 	suite.Error(err)
 	suite.Nil(configs)
 	suite.Contains(err.Error(), "errors occurred while reading configuration files")
-	suite.Contains(err.Error(), "environment variable 'MISSING_VAR' is not set")
+	suite.Contains(err.Error(), "environment variable MissingVar is not set")
 }
 
 func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_ReadPermissionError() {
@@ -492,15 +578,15 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_FileWithComplexEnv
 	// Create a file with multiple missing variables in complex patterns
 	content := `
 database:
-  host: ${{DB_HOST}}
-  port: ${{DB_PORT}}
+  host: {{ .DB_HOST }}
+  port: {{ .DB_PORT }}
   credentials:
-    username: ${{DB_USER}}
-    password: ${{DB_PASS}}
+    username: {{ .DB_USER }}
+    password: {{ .DB_PASS }}
 redis:
-  url: ${{REDIS_URL}}
+  url: {{ .REDIS_URL }}
 logging:
-  level: ${{LOG_LEVEL}}
+  level: {{ .LOG_LEVEL }}
 `
 	suite.createTestFile(configDir, "complex.yaml", content)
 
@@ -521,7 +607,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_ConcurrentErrorSce
 	// Create multiple files with different error scenarios
 	for i := 0; i < 10; i++ {
 		filename := fmt.Sprintf("config%d.yaml", i)
-		content := fmt.Sprintf("missing_var_%d: ${{MISSING_VAR_%d}}", i, i)
+		content := fmt.Sprintf("missing_var_%d: {{ .MISSING_VAR_%d }}", i, i)
 		suite.createTestFile(configDir, filename, content)
 	}
 
@@ -533,7 +619,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_ConcurrentErrorSce
 
 	// Should handle multiple concurrent errors properly
 	for i := 0; i < 10; i++ {
-		expectedError := fmt.Sprintf("environment variable 'MISSING_VAR_%d' is not set", i)
+		expectedError := fmt.Sprintf("environment variable MISSING_VAR_%d is not set", i)
 		suite.Contains(err.Error(), expectedError)
 	}
 }
@@ -561,7 +647,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_SpecialCharactersI
 
 	configDir := "special-chars-configs"
 	content := `{
-  "special": "${{SPECIAL_VAR}}",
+  "special": "{{ .SPECIAL_VAR }}",
   "unicode": "Test με unicode 中文 🚀",
   "escaped": "This has \"quotes\" and \n newlines"
 }`
@@ -600,7 +686,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_NestedVariableSubs
 	configDir := "nested-vars-configs"
 	content := `{
   "api": {
-    "url": "${{BASE_URL}}/${API_VERSION}/$ENDPOINT",
+    "url": "{{ .BASE_URL }}/{{ .API_VERSION }}/{{ .ENDPOINT }}",
     "timeout": 30
   }
 }`
@@ -660,26 +746,4 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_HiddenFiles() {
 
 	suite.NoError(err)
 	suite.Len(configs, 2) // Both files should be read
-}
-
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_EdgeCases() {
-	// Test with empty environment variable
-	suite.setEnvVar("EMPTY_VAR", "")
-
-	content := []byte("value: ${{EMPTY_VAR}}")
-	result, err := substituteEnvironmentVariables(content)
-
-	suite.NoError(err)
-	suite.Equal("value: ", string(result))
-}
-
-func (suite *FileBasedRuntimeManagerTestSuite) TestSubstituteEnvironmentVariables_VariableNameWithNumbers() {
-	suite.setEnvVar("VAR123", "number_value")
-	suite.setEnvVar("_VAR", "underscore_value")
-
-	content := []byte("test: ${{VAR123}} and ${_VAR}")
-	result, err := substituteEnvironmentVariables(content)
-
-	suite.NoError(err)
-	suite.Equal("test: number_value and underscore_value", string(result))
 }

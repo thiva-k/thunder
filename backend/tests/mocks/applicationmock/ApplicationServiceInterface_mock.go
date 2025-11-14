@@ -155,23 +155,23 @@ func (_c *ApplicationServiceInterfaceMock_DeleteApplication_Call) RunAndReturn(r
 }
 
 // GetApplication provides a mock function for the type ApplicationServiceInterfaceMock
-func (_mock *ApplicationServiceInterfaceMock) GetApplication(appID string) (*model.ApplicationProcessedDTO, *serviceerror.ServiceError) {
+func (_mock *ApplicationServiceInterfaceMock) GetApplication(appID string) (*model.Application, *serviceerror.ServiceError) {
 	ret := _mock.Called(appID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetApplication")
 	}
 
-	var r0 *model.ApplicationProcessedDTO
+	var r0 *model.Application
 	var r1 *serviceerror.ServiceError
-	if returnFunc, ok := ret.Get(0).(func(string) (*model.ApplicationProcessedDTO, *serviceerror.ServiceError)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string) (*model.Application, *serviceerror.ServiceError)); ok {
 		return returnFunc(appID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string) *model.ApplicationProcessedDTO); ok {
+	if returnFunc, ok := ret.Get(0).(func(string) *model.Application); ok {
 		r0 = returnFunc(appID)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.ApplicationProcessedDTO)
+			r0 = ret.Get(0).(*model.Application)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string) *serviceerror.ServiceError); ok {
@@ -208,12 +208,12 @@ func (_c *ApplicationServiceInterfaceMock_GetApplication_Call) Run(run func(appI
 	return _c
 }
 
-func (_c *ApplicationServiceInterfaceMock_GetApplication_Call) Return(applicationProcessedDTO *model.ApplicationProcessedDTO, serviceError *serviceerror.ServiceError) *ApplicationServiceInterfaceMock_GetApplication_Call {
-	_c.Call.Return(applicationProcessedDTO, serviceError)
+func (_c *ApplicationServiceInterfaceMock_GetApplication_Call) Return(application *model.Application, serviceError *serviceerror.ServiceError) *ApplicationServiceInterfaceMock_GetApplication_Call {
+	_c.Call.Return(application, serviceError)
 	return _c
 }
 
-func (_c *ApplicationServiceInterfaceMock_GetApplication_Call) RunAndReturn(run func(appID string) (*model.ApplicationProcessedDTO, *serviceerror.ServiceError)) *ApplicationServiceInterfaceMock_GetApplication_Call {
+func (_c *ApplicationServiceInterfaceMock_GetApplication_Call) RunAndReturn(run func(appID string) (*model.Application, *serviceerror.ServiceError)) *ApplicationServiceInterfaceMock_GetApplication_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -121,7 +121,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_UserAuthenticated_Success(
 				EndTime:      1234567890,
 			},
 		},
-		Application: appmodel.ApplicationProcessedDTO{},
+		Application: appmodel.Application{},
 	}
 
 	suite.mockAssertGenerator.On("GenerateAssertion", mock.MatchedBy(func(refs []authncm.AuthenticatorReference) bool {
@@ -175,7 +175,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithAuthorizedPermissions(
 			"authorized_permissions": "read:documents write:documents",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application:      appmodel.ApplicationProcessedDTO{},
+		Application:      appmodel.Application{},
 	}
 
 	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
@@ -207,7 +207,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithUserAttributes() {
 			Attributes:      map[string]interface{}{"email": "test@example.com"},
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application: appmodel.ApplicationProcessedDTO{
+		Application: appmodel.Application{
 			Token: &appmodel.TokenConfig{
 				UserAttributes: []string{"email", "phone"},
 			},
@@ -244,7 +244,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_JWTGenerationFails() {
 			UserID:          "user-123",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application:      appmodel.ApplicationProcessedDTO{},
+		Application:      appmodel.Application{},
 	}
 
 	suite.mockJWTService.On("GenerateJWT", mock.Anything, mock.Anything, mock.Anything,
@@ -274,7 +274,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_AssertionGenerationFails_S
 				Step:         1,
 			},
 		},
-		Application: appmodel.ApplicationProcessedDTO{},
+		Application: appmodel.Application{},
 	}
 
 	suite.mockAssertGenerator.On("GenerateAssertion", mock.Anything).
@@ -412,7 +412,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithUserTypeAndOU() {
 			OrganizationUnitID: "ou-456",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application:      appmodel.ApplicationProcessedDTO{},
+		Application:      appmodel.Application{},
 	}
 
 	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
@@ -440,7 +440,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithCustomTokenConfig() {
 			UserID:          "user-123",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application: appmodel.ApplicationProcessedDTO{
+		Application: appmodel.Application{
 			Token: &appmodel.TokenConfig{
 				Issuer:         "custom-issuer",
 				ValidityPeriod: 7200,
@@ -470,7 +470,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithOUNameAndHandle() {
 			OrganizationUnitID: "ou-789",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application:      appmodel.ApplicationProcessedDTO{},
+		Application:      appmodel.Application{},
 	}
 
 	suite.mockOUService.On("GetOrganizationUnit", "ou-789").Return(ou.OrganizationUnit{
@@ -509,7 +509,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_AppendUserDetailsToClaimsF
 			UserID:          "user-123",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application: appmodel.ApplicationProcessedDTO{
+		Application: appmodel.Application{
 			Token: &appmodel.TokenConfig{
 				UserAttributes: []string{"email"},
 			},
@@ -574,7 +574,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_AppendOUDetailsToClaimsFai
 			OrganizationUnitID: "ou-123",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application:      appmodel.ApplicationProcessedDTO{},
+		Application:      appmodel.Application{},
 	}
 
 	suite.mockOUService.On("GetOrganizationUnit", "ou-123").
@@ -601,7 +601,7 @@ func (suite *AuthAssertExecutorTestSuite) TestAppendUserDetailsToClaims_GetUserA
 			Attributes:      map[string]interface{}{"email": "test@example.com"},
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application: appmodel.ApplicationProcessedDTO{
+		Application: appmodel.Application{
 			Token: &appmodel.TokenConfig{
 				UserAttributes: []string{"email", "phone"},
 			},
@@ -632,7 +632,7 @@ func (suite *AuthAssertExecutorTestSuite) TestAppendOUDetailsToClaims_GetOrganiz
 			OrganizationUnitID: "ou-invalid",
 		},
 		ExecutionHistory: map[string]*flowcm.NodeExecutionRecord{},
-		Application:      appmodel.ApplicationProcessedDTO{},
+		Application:      appmodel.Application{},
 	}
 
 	suite.mockOUService.On("GetOrganizationUnit", "ou-invalid").

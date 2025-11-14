@@ -66,7 +66,8 @@ func Initialize(
 			}
 			validatedApp, _, svcErr := appService.ValidateApplication(appDTO)
 			if svcErr != nil {
-				logger.Fatal("Error validating application", log.String("applicationName", appDTO.Name))
+				logger.Fatal("Error validating application",
+					log.String("applicationName", appDTO.Name), log.Any("serviceError", svcErr))
 			}
 
 			err = appStore.CreateApplication(*validatedApp)
@@ -83,13 +84,14 @@ func Initialize(
 }
 
 func parseToApplicationDTO(data []byte) (*model.ApplicationDTO, error) {
-	var appRequest model.ApplicationRequest
+	var appRequest model.ApplicationRequestWithID
 	err := yaml.Unmarshal(data, &appRequest)
 	if err != nil {
 		return nil, err
 	}
 
 	appDTO := model.ApplicationDTO{
+		ID:                        appRequest.ID,
 		Name:                      appRequest.Name,
 		Description:               appRequest.Description,
 		AuthFlowGraphID:           appRequest.AuthFlowGraphID,

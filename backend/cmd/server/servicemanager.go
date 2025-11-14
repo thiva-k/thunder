@@ -37,6 +37,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth"
 	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/role"
+	"github.com/asgardeo/thunder/internal/system/export"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/services"
@@ -73,6 +74,9 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 	certservice := cert.Initialize()
 	brandingService := branding.Initialize(mux)
 	applicationService := application.Initialize(mux, certservice, flowMgtService, brandingService, userSchemaService)
+
+	// Initialize export service with application service dependency
+	_ = export.Initialize(mux, applicationService)
 
 	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry)
 

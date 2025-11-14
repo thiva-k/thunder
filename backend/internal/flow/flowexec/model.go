@@ -41,7 +41,7 @@ type EngineContext struct {
 	CurrentActionID     string
 
 	Graph       core.GraphInterface
-	Application appmodel.ApplicationProcessedDTO
+	Application appmodel.Application
 
 	AuthenticatedUser authncm.AuthenticatedUser
 	ExecutionHistory  map[string]*common.NodeExecutionRecord

@@ -106,7 +106,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 	appID := "test-app-123"
 
 	// Mock application and graph - shared across all test cases
-	mockApp := &appmodel.ApplicationProcessedDTO{
+	mockApp := &appmodel.Application{
 		ID:              "app-id-123",
 		AuthFlowGraphID: "auth-graph-1",
 	}
@@ -277,7 +277,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
 				// Mock application service to return valid app
-				mockApp := &appmodel.ApplicationProcessedDTO{
+				mockApp := &appmodel.Application{
 					ID:              "app-id-123",
 					AuthFlowGraphID: "auth-graph-1",
 				}
@@ -297,7 +297,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 				mockFlowMgtSvc *flowmgtmock.FlowMgtServiceInterfaceMock,
 			) {
 				// Mock application service to return valid app
-				mockApp := &appmodel.ApplicationProcessedDTO{
+				mockApp := &appmodel.Application{
 					ID:              "app-id-123",
 					AuthFlowGraphID: "auth-graph-1",
 				}
