@@ -101,12 +101,13 @@ describe('useCreateUserType', () => {
   });
 
   it('should set loading state during creation', async () => {
-    mockHttpRequest.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve({data: mockUserSchema}), 100);
-        }),
-    );
+    // Create a promise we can control
+    let resolveRequest: (value: {data: ApiUserSchema}) => void;
+    const requestPromise = new Promise<{data: ApiUserSchema}>((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    mockHttpRequest.mockReturnValueOnce(requestPromise);
 
     const {result} = renderHook(() => useCreateUserType());
 
@@ -115,6 +116,9 @@ describe('useCreateUserType', () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
+
+    // Now resolve the request
+    resolveRequest!({data: mockUserSchema});
 
     await promise;
 

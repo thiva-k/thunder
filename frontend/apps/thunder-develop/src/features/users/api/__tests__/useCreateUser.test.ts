@@ -203,32 +203,31 @@ describe('useCreateUser', () => {
       },
     };
 
-    mockHttpRequest.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                data: mockResponse,
-              }),
-            50,
-          );
-        }),
-    );
+    // Create a promise we can control
+    let resolveRequest: (value: {data: ApiUser}) => void;
+    const requestPromise = new Promise<{data: ApiUser}>((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    mockHttpRequest.mockReturnValueOnce(requestPromise);
 
     const {result} = renderHook(() => useCreateUser());
 
     expect(result.current.loading).toBe(false);
 
     // Start the request without awaiting
-    result.current.createUser(mockRequest).catch(() => {
-      // Handle any errors
-    });
+    const createUserPromise = result.current.createUser(mockRequest);
 
     // Loading should become true immediately after calling createUser
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
+
+    // Now resolve the request
+    resolveRequest!({data: mockResponse});
+
+    // Wait for the request to complete
+    await createUserPromise;
 
     // Loading should become false after completion
     await waitFor(() => {
