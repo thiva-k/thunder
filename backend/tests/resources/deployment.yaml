@@ -6,7 +6,7 @@ gate_client:
   hostname: localhost
   port: 8090
   scheme: https
-  login_path: /signin
+  login_path: /gate/signin
   error_path: /error
 
 security:

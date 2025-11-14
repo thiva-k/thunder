@@ -307,12 +307,12 @@ func gracefulShutdown(logger *log.Logger, server *http.Server) {
 
 // registerStaticFileHandlers registers static file handlers for frontend applications.
 func registerStaticFileHandlers(logger *log.Logger, mux *http.ServeMux, thunderHome string) {
-	// Serve gate application from /signin
+	// Serve gate application from /gate
 	gateDir := path.Join(thunderHome, "apps", "gate")
 	if directoryExists(gateDir) {
 		logger.Debug("Registering static file handler for Gate application",
-			log.String("path", "/signin/"), log.String("directory", gateDir))
-		mux.Handle("/signin/", createStaticFileHandler("/signin/", gateDir, logger))
+			log.String("path", "/gate/"), log.String("directory", gateDir))
+		mux.Handle("/gate/", createStaticFileHandler("/gate/", gateDir, logger))
 	} else {
 		logger.Warn("Gate application directory not found", log.String("directory", gateDir))
 	}

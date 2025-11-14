@@ -193,7 +193,7 @@ try {
     Write-Host "🚀 Server running. PID: $($proc.Id)"
     Write-Host ""
     Write-Host "📱 Frontend Apps:"
-    Write-Host "   🚪 Gate (Login/Register): $BACKEND_PORT/signin"
+    Write-Host "   🚪 Gate (Login/Register): $BACKEND_PORT/gate"
     Write-Host "   🛠️  Develop (Admin Console): $BACKEND_PORT/develop"
     Write-Host ""
 

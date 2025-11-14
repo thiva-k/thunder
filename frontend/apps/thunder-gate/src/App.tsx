@@ -18,16 +18,24 @@
 
 import {BrowserRouter, Route, Routes} from 'react-router';
 import type {JSX} from 'react';
-import DefaultLayout from './layouts/DefaultLayout';
-import SignInPage from './pages/SignInPage';
+import appRoutes, {type AppRoute} from './config/appRoutes';
 
 export default function App(): JSX.Element {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Routes>
-        <Route path="/" element={<DefaultLayout />}>
-          <Route path="/" element={<SignInPage />} />
-        </Route>
+        {appRoutes.map((route: AppRoute) => (
+          <Route key={route.path} path={route.path} element={route.element}>
+            {route.children?.map((child: AppRoute, index: number) => (
+              <Route
+                key={child.path ?? `index-${index}`}
+                path={child.path}
+                index={child.index}
+                element={child.element}
+              />
+            ))}
+          </Route>
+        ))}
       </Routes>
     </BrowserRouter>
   );

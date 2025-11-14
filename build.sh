@@ -696,7 +696,7 @@ function run() {
     echo "🚀 Servers running:"
     echo "  👉 Backend : https://localhost:$BACKEND_PORT"
     echo "  📱 Frontend :"
-    echo "      🚪 Gate (Login/Register): https://localhost:$GATE_APP_DEFAULT_PORT/signin"
+    echo "      🚪 Gate (Login/Register): https://localhost:$GATE_APP_DEFAULT_PORT/gate"
     echo "      🛠️  Develop (Admin Console): https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop"
     echo ""
 
