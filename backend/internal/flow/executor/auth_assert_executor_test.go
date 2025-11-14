@@ -417,7 +417,7 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithUserTypeAndOU() {
 
 	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
 		mock.MatchedBy(func(claims map[string]interface{}) bool {
-			return claims["userType"] == "EXTERNAL" && claims["ouId"] == "ou-456"
+			return claims[userTypeKey] == "EXTERNAL" && claims[ouIDKey] == "ou-456"
 		})).Return("jwt-token", int64(3600), nil)
 
 	suite.mockOUService.On("GetOrganizationUnit", "ou-456").Return(ou.OrganizationUnit{ID: "ou-456"}, nil)
@@ -481,9 +481,9 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_WithOUNameAndHandle() {
 
 	suite.mockJWTService.On("GenerateJWT", "user-123", "app-123", mock.Anything, mock.Anything,
 		mock.MatchedBy(func(claims map[string]interface{}) bool {
-			return claims["ouId"] == "ou-789" &&
-				claims["ouName"] == "Engineering" &&
-				claims["ouHandle"] == "eng"
+			return claims[ouIDKey] == "ou-789" &&
+				claims[userInputOuName] == "Engineering" &&
+				claims[userInputOuHandle] == "eng"
 		})).Return("jwt-token", int64(3600), nil)
 
 	resp, err := suite.executor.Execute(ctx)

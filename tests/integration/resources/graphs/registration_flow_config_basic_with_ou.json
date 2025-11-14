@@ -3,6 +3,13 @@
     "type": "REGISTRATION",
     "nodes": [
         {
+            "id": "registration_start",
+            "type": "REGISTRATION_START",
+            "next": [
+                "basic_auth"
+            ]
+        },
+        {
             "id": "basic_auth",
             "type": "TASK_EXECUTION",
             "executor": {
@@ -52,10 +59,6 @@
                     "required": true
                 }
             ],
-            "properties": {
-                "ouId": "ouId",
-                "userType": "dynamic-user-type"
-            },
             "executor": {
                 "name": "ProvisioningExecutor"
             },

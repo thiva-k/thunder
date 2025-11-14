@@ -32,30 +32,44 @@ const (
 )
 
 var (
-	smsRegTestApp = testutils.Application{
-		Name:                      "SMS Registration Flow Test Application",
-		Description:               "Application for testing SMS registration flows",
-		IsRegistrationFlowEnabled: true,
-		AuthFlowGraphID:           "auth_flow_config_basic",
-		RegistrationFlowGraphID:   "registration_flow_config_sms",
-		ClientID:                  "sms_reg_flow_test_client",
-		ClientSecret:              "sms_reg_flow_test_secret",
-		RedirectURIs:              []string{"http://localhost:3000/callback"},
-	}
-
 	smsRegTestOU = testutils.OrganizationUnit{
 		Handle:      "sms-reg-flow-test-ou",
 		Name:        "SMS Registration Flow Test Organization Unit",
 		Description: "Organization unit for SMS registration flow testing",
 		Parent:      nil,
 	}
+
+	smsRegTestUserSchema = testutils.UserSchema{
+		Name: "sms-test-user-type",
+		Schema: map[string]interface{}{
+			"username": map[string]interface{}{
+				"type": "string",
+			},
+			"password": map[string]interface{}{
+				"type": "string",
+			},
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+			"firstName": map[string]interface{}{
+				"type": "string",
+			},
+			"lastName": map[string]interface{}{
+				"type": "string",
+			},
+			"mobileNumber": map[string]interface{}{
+				"type": "string",
+			},
+		},
+		AllowSelfRegistration: true,
+	}
 )
 
 type SMSRegistrationFlowTestSuite struct {
 	suite.Suite
-	config         *TestSuiteConfig
-	mockServer     *testutils.MockNotificationServer
-	userSchemaID   string
+	config       *TestSuiteConfig
+	mockServer   *testutils.MockNotificationServer
+	userSchemaID string
 }
 
 func TestSMSRegistrationFlowTestSuite(t *testing.T) {
@@ -73,15 +87,27 @@ func (ts *SMSRegistrationFlowTestSuite) SetupSuite() {
 	}
 	testOUID = ouID
 
-	// Create test user schema
-	testUserSchema.OrganizationUnitId = testOUID
-	schemaID, err := testutils.CreateUserType(testUserSchema)
+	// Create test user schema for SMS tests
+	smsRegTestUserSchema.OrganizationUnitId = testOUID
+	schemaID, err := testutils.CreateUserType(smsRegTestUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
 	}
 	ts.userSchemaID = schemaID
 
-	// Create test application for SMS tests
+	// Create test application with allowed user types
+	smsRegTestApp := testutils.Application{
+		Name:                      "SMS Registration Flow Test Application",
+		Description:               "Application for testing SMS registration flows",
+		IsRegistrationFlowEnabled: true,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_sms",
+		ClientID:                  "sms_reg_flow_test_client",
+		ClientSecret:              "sms_reg_flow_test_secret",
+		RedirectURIs:              []string{"http://localhost:3000/callback"},
+		AllowedUserTypes:          []string{smsRegTestUserSchema.Name},
+	}
+
 	appID, err := testutils.CreateApplication(smsRegTestApp)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)
@@ -245,8 +271,8 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber(
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
 
 	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
+	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
@@ -356,8 +382,8 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithUsername() {
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
 
 	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
+	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
@@ -487,8 +513,8 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowSingleRequestWith
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
 
 	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(regUserOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
+	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
 	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 

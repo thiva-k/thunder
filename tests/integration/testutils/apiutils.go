@@ -50,6 +50,10 @@ func getHTTPClient() *http.Client {
 
 // CreateUserType creates a user type via API and returns the schema ID
 func CreateUserType(schema UserSchema) (string, error) {
+	if !schema.AllowSelfRegistration {
+		schema.AllowSelfRegistration = true
+	}
+
 	payload, err := json.Marshal(schema)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal user schema: %w", err)
@@ -236,6 +240,11 @@ func CreateApplication(app Application) (string, error) {
 				},
 			},
 		},
+	}
+
+	// Add allowed_user_types if provided
+	if len(app.AllowedUserTypes) > 0 {
+		appData["allowed_user_types"] = app.AllowedUserTypes
 	}
 
 	appJSON, err := json.Marshal(appData)

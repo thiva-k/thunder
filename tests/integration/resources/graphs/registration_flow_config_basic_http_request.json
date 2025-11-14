@@ -3,6 +3,13 @@
     "type": "REGISTRATION",
     "nodes": [
         {
+            "id": "registration_start",
+            "type": "REGISTRATION_START",
+            "next": [
+                "provision_user"
+            ]
+        },
+        {
             "id": "provision_user",
             "type": "TASK_EXECUTION",
             "inputData": [
@@ -32,10 +39,6 @@
                     "required": true
                 }
             ],
-            "properties": {
-                "ouId": "test-ou-id",
-                "userType": "http_request_reg_test_person"
-            },
             "executor": {
                 "name": "ProvisioningExecutor"
             },

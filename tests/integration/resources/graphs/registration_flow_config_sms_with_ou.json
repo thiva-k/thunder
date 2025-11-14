@@ -3,6 +3,13 @@
     "type": "REGISTRATION",
     "nodes": [
         {
+            "id": "registration_start",
+            "type": "REGISTRATION_START",
+            "next": [
+                "sms_auth"
+            ]
+        },
+        {
             "id": "sms_auth",
             "type": "TASK_EXECUTION",
             "properties": {
@@ -67,10 +74,6 @@
                     "required": true
                 }
             ],
-            "properties": {
-                "ouId": "ouId",
-                "userType": "dynamic-user-type"
-            },
             "executor": {
                 "name": "ProvisioningExecutor"
             },

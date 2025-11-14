@@ -30,6 +30,37 @@ import (
 )
 
 var (
+	googleRegTestOU = testutils.OrganizationUnit{
+		Handle:      "google-reg-flow-test-ou",
+		Name:        "Google Registration Flow Test Organization Unit",
+		Description: "Organization unit for Google registration flow testing",
+		Parent:      nil,
+	}
+
+	googleRegUserSchema = testutils.UserSchema{
+		Name: "google_reg_flow_user",
+		Schema: map[string]interface{}{
+			"username": map[string]interface{}{
+				"type": "string",
+			},
+			"password": map[string]interface{}{
+				"type": "string",
+			},
+			"sub": map[string]interface{}{
+				"type": "string",
+			},
+			"email": map[string]interface{}{
+				"type": "string",
+			},
+			"givenName": map[string]interface{}{
+				"type": "string",
+			},
+			"familyName": map[string]interface{}{
+				"type": "string",
+			},
+		},
+	}
+
 	googleRegTestApp = testutils.Application{
 		Name:                      "Google Registration Flow Test Application",
 		Description:               "Application for testing Google registration flows",
@@ -39,13 +70,7 @@ var (
 		ClientID:                  "google_reg_flow_test_client",
 		ClientSecret:              "google_reg_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
-	}
-
-	googleRegTestOU = testutils.OrganizationUnit{
-		Handle:      "google-reg-flow-test-ou",
-		Name:        "Google Registration Flow Test Organization Unit",
-		Description: "Organization unit for Google registration flow testing",
-		Parent:      nil,
+		AllowedUserTypes:          []string{googleRegUserSchema.Name},
 	}
 )
 
@@ -57,30 +82,6 @@ var (
 const (
 	mockGoogleRegFlowPort = 8093
 )
-
-var googleRegUserSchema = testutils.UserSchema{
-	Name: "google_reg_flow_user",
-	Schema: map[string]interface{}{
-		"username": map[string]interface{}{
-			"type": "string",
-		},
-		"password": map[string]interface{}{
-			"type": "string",
-		},
-		"sub": map[string]interface{}{
-			"type": "string",
-		},
-		"email": map[string]interface{}{
-			"type": "string",
-		},
-		"givenName": map[string]interface{}{
-			"type": "string",
-		},
-		"familyName": map[string]interface{}{
-			"type": "string",
-		},
-	},
-}
 
 type GoogleRegistrationFlowTestSuite struct {
 	suite.Suite
@@ -129,11 +130,12 @@ func (ts *GoogleRegistrationFlowTestSuite) SetupSuite() {
 
 	// Create user schema
 	googleRegUserSchema.OrganizationUnitId = googleRegTestOUID
+	googleRegUserSchema.AllowSelfRegistration = true
 	schemaID, err := testutils.CreateUserType(googleRegUserSchema)
 	ts.Require().NoError(err, "Failed to create Google user schema")
 	ts.userSchemaID = schemaID
 
-	// Create test application for Google registration tests
+	// Create test application
 	appID, err := testutils.CreateApplication(googleRegTestApp)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)
