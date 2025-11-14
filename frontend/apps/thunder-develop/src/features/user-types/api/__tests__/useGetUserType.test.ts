@@ -87,24 +87,22 @@ describe('useGetUserType', () => {
   });
 
   it('should set loading state during fetch', async () => {
-    mockHttpRequest.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                data: mockUserSchema,
-              }),
-            100,
-          );
-        }),
-    );
+    // Create a promise we can control
+    let resolveRequest: (value: {data: ApiUserSchema}) => void;
+    const requestPromise = new Promise<{data: ApiUserSchema}>((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    mockHttpRequest.mockReturnValueOnce(requestPromise);
 
     const {result} = renderHook(() => useGetUserType('123'));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
+
+    // Now resolve the request
+    resolveRequest!({data: mockUserSchema});
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

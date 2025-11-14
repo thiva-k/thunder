@@ -211,18 +211,13 @@ describe('useUpdateUser', () => {
       },
     };
 
-    mockHttpRequest.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(
-            () =>
-              resolve({
-                data: mockResponse,
-              }),
-            50,
-          );
-        }),
-    );
+    // Create a promise we can control
+    let resolveRequest: (value: {data: ApiUser}) => void;
+    const requestPromise = new Promise<{data: ApiUser}>((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    mockHttpRequest.mockReturnValueOnce(requestPromise);
 
     const {result} = renderHook(() => useUpdateUser());
 
@@ -234,6 +229,9 @@ describe('useUpdateUser', () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
+
+    // Now resolve the request
+    resolveRequest!({data: mockResponse});
 
     await promise;
 

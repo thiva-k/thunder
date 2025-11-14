@@ -80,12 +80,13 @@ describe('useDeleteUserType', () => {
   });
 
   it('should set loading state during deletion', async () => {
-    mockHttpRequest.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          setTimeout(() => resolve({data: null}), 100);
-        }),
-    );
+    // Create a promise we can control
+    let resolveRequest: (value: {data: null}) => void;
+    const requestPromise = new Promise<{data: null}>((resolve) => {
+      resolveRequest = resolve;
+    });
+
+    mockHttpRequest.mockReturnValueOnce(requestPromise);
 
     const {result} = renderHook(() => useDeleteUserType());
 
@@ -94,6 +95,9 @@ describe('useDeleteUserType', () => {
     await waitFor(() => {
       expect(result.current.loading).toBe(true);
     });
+
+    // Now resolve the request
+    resolveRequest!({data: null});
 
     await promise;
 
