@@ -215,18 +215,32 @@ fi
 echo ""
 
 # ============================================================================
-# Kill Existing Processes on Ports
+# Check for Port Conflicts
 # ============================================================================
 
-function kill_port() {
+check_port() {
     local port=$1
-    lsof -ti tcp:$port | xargs kill -9 2>/dev/null || true
+    local port_name=$2
+    if lsof -ti tcp:$port >/dev/null 2>&1; then
+        echo ""
+        echo -e "${RED}❌ Port $port is already in use${NC}"
+        echo -e "${RED}   $port_name cannot start because another process is using port $port${NC}"
+        echo ""
+        echo -e "${YELLOW}💡 To find the process using this port:${NC}"
+        echo "   lsof -i tcp:$port"
+        echo ""
+        echo -e "${YELLOW}💡 To stop the process:${NC}"
+        echo "   kill -9 \$(lsof -ti tcp:$port)"
+        echo ""
+        exit 1
+    fi
 }
 
+# Check if ports are available
+check_port $PORT "Thunder server"
 if [ "$DEBUG_MODE" = "true" ]; then
-    kill_port $DEBUG_PORT
+    check_port $DEBUG_PORT "Debug server"
 fi
-sleep 1
 
 # Check for Delve if debug mode is enabled
 if [ "$DEBUG_MODE" = "true" ] && ! command -v dlv &> /dev/null; then
