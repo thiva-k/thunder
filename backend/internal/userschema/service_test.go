@@ -26,6 +26,78 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestGetUserSchemaByNameReturnsSchema(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+	expectedSchema := UserSchema{
+		ID:   "schema-id",
+		Name: "employee",
+	}
+	storeMock.
+		On("GetUserSchemaByName", "employee").
+		Return(expectedSchema, nil).
+		Once()
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+	}
+
+	userSchema, svcErr := service.GetUserSchemaByName("employee")
+
+	require.Nil(t, svcErr)
+	require.NotNil(t, userSchema)
+	require.Equal(t, &expectedSchema, userSchema)
+}
+
+func TestGetUserSchemaByNameReturnsNotFound(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+	storeMock.
+		On("GetUserSchemaByName", "employee").
+		Return(UserSchema{}, ErrUserSchemaNotFound).
+		Once()
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+	}
+
+	userSchema, svcErr := service.GetUserSchemaByName("employee")
+
+	require.Nil(t, userSchema)
+	require.NotNil(t, svcErr)
+	require.Equal(t, ErrorUserSchemaNotFound, *svcErr)
+}
+
+func TestGetUserSchemaByNameReturnsInternalErrorOnStoreFailure(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+	storeMock.
+		On("GetUserSchemaByName", "employee").
+		Return(UserSchema{}, errors.New("db failure")).
+		Once()
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+	}
+
+	userSchema, svcErr := service.GetUserSchemaByName("employee")
+
+	require.Nil(t, userSchema)
+	require.NotNil(t, svcErr)
+	require.Equal(t, ErrorInternalServerError, *svcErr)
+}
+
+func TestGetUserSchemaByNameRequiresName(t *testing.T) {
+	storeMock := newUserSchemaStoreInterfaceMock(t)
+
+	service := &userSchemaService{
+		userSchemaStore: storeMock,
+	}
+
+	userSchema, svcErr := service.GetUserSchemaByName("")
+
+	require.Nil(t, userSchema)
+	require.NotNil(t, svcErr)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, svcErr.Code)
+}
+
 func TestValidateUserReturnsTrueWhenValidationPasses(t *testing.T) {
 	storeMock := newUserSchemaStoreInterfaceMock(t)
 	storeMock.
