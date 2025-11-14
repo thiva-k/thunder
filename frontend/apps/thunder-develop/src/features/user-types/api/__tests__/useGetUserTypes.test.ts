@@ -45,8 +45,8 @@ describe('useGetUserTypes', () => {
     startIndex: 1,
     count: 2,
     schemas: [
-      {id: '123', name: 'UserType1'},
-      {id: '456', name: 'UserType2'},
+      {id: '123', name: 'UserType1', ouId: 'root-ou', allowSelfRegistration: false},
+      {id: '456', name: 'UserType2', ouId: 'child-ou', allowSelfRegistration: true},
     ],
     links: [
       {rel: 'self', href: 'https://localhost:8090/user-schemas'},

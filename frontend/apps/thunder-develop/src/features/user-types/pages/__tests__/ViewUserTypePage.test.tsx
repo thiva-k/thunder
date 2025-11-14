@@ -21,7 +21,7 @@ import {screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import render from '@/test/test-utils';
 import ViewUserTypePage from '../ViewUserTypePage';
-import type {ApiUserSchema, ApiError} from '../../types/user-types';
+import type {ApiUserSchema, ApiError, UpdateUserSchemaRequest} from '../../types/user-types';
 
 const mockNavigate = vi.fn();
 const mockRefetch = vi.fn();
@@ -48,7 +48,7 @@ interface UseGetUserTypeReturn {
 }
 
 interface UseUpdateUserTypeReturn {
-  updateUserType: (id: string, data: {name: string; schema: Record<string, unknown>}) => Promise<void>;
+  updateUserType: (id: string, data: UpdateUserSchemaRequest) => Promise<void>;
   error: ApiError | null;
   reset: () => void;
 }
@@ -79,6 +79,8 @@ describe('ViewUserTypePage', () => {
   const mockUserType: ApiUserSchema = {
     id: 'schema-123',
     name: 'Employee Schema',
+    ouId: 'root-ou',
+    allowSelfRegistration: false,
     schema: {
       email: {
         type: 'string',
@@ -230,6 +232,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithEnum: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -255,6 +259,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithRegex: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           username: {
             type: 'string',
@@ -392,6 +398,8 @@ describe('ViewUserTypePage', () => {
       await waitFor(() => {
         expect(mockUpdateUserType).toHaveBeenCalledWith('schema-123', {
           name: 'Updated Schema',
+          ouId: 'root-ou',
+          allowSelfRegistration: false,
           schema: expect.any(Object) as Record<string, unknown>,
         });
         expect(mockRefetch).toHaveBeenCalledWith('schema-123');
@@ -443,6 +451,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithString: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -479,6 +489,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithEnum: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -515,6 +527,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithString: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           username: {
             type: 'string',
@@ -677,6 +691,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithString: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -710,6 +726,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithNumber: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           employeeId: {
             type: 'number',
@@ -743,6 +761,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithArray: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           tags: {
             type: 'array',
@@ -786,6 +806,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithObject: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           address: {
             type: 'object',
@@ -853,6 +875,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithString: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -896,6 +920,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithRegex: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           username: {
             type: 'string',
@@ -939,6 +965,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithString: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -979,6 +1007,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithString: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           status: {
             type: 'string',
@@ -1038,6 +1068,8 @@ describe('ViewUserTypePage', () => {
       const userTypeWithUniqueNumber: ApiUserSchema = {
         id: 'schema-123',
         name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
         schema: {
           employeeId: {
             type: 'number',

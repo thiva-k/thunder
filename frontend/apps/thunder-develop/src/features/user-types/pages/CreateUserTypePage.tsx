@@ -38,7 +38,13 @@ import {
 import {ArrowLeft, Plus, Save, X} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useCreateUserType from '../api/useCreateUserType';
-import type {PropertyDefinition, UserSchemaDefinition, UIPropertyType, SchemaPropertyInput} from '../types/user-types';
+import type {
+  PropertyDefinition,
+  UserSchemaDefinition,
+  UIPropertyType,
+  SchemaPropertyInput,
+  CreateUserSchemaRequest,
+} from '../types/user-types';
 
 export default function CreateUserTypePage() {
   const navigate = useNavigate();
@@ -46,6 +52,8 @@ export default function CreateUserTypePage() {
   const {createUserType, loading, error: createError} = useCreateUserType();
 
   const [name, setName] = useState('');
+  const [ouId, setOuId] = useState('');
+  const [allowSelfRegistration, setAllowSelfRegistration] = useState(false);
   const [properties, setProperties] = useState<SchemaPropertyInput[]>([
     {
       id: '1',
@@ -143,6 +151,13 @@ export default function CreateUserTypePage() {
       return;
     }
 
+    const trimmedOuId = ouId.trim();
+    if (!trimmedOuId) {
+      setValidationError(t('userTypes:validationErrors.ouIdRequired'));
+      setSnackbarOpen(true);
+      return;
+    }
+
     const validProperties = properties.filter((prop) => prop.name.trim());
     if (validProperties.length === 0) {
       setValidationError(t('userTypes:validationErrors.propertiesRequired'));
@@ -197,11 +212,18 @@ export default function CreateUserTypePage() {
       schema[prop.name.trim()] = propDef as PropertyDefinition;
     });
 
+    const requestBody: CreateUserSchemaRequest = {
+      name: name.trim(),
+      ouId: trimmedOuId,
+      schema,
+    };
+
+    if (allowSelfRegistration) {
+      requestBody.allowSelfRegistration = true;
+    }
+
     try {
-      await createUserType({
-        name: name.trim(),
-        schema,
-      });
+      await createUserType(requestBody);
 
       // Navigate back to list on success
       await navigate('/user-types');
@@ -265,6 +287,31 @@ export default function CreateUserTypePage() {
               variant="outlined"
             />
           </FormControl>
+
+          <FormControl fullWidth sx={{mb: 3}}>
+            <FormLabel htmlFor="ouId">
+              {t('userTypes:ouId')} <span style={{color: 'red'}}>*</span>
+            </FormLabel>
+            <TextField
+              id="ouId"
+              value={ouId}
+              onChange={(e) => setOuId(e.target.value)}
+              placeholder={t('userTypes:ouIdPlaceholder')}
+              variant="outlined"
+              required
+            />
+          </FormControl>
+
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={allowSelfRegistration}
+                onChange={(e) => setAllowSelfRegistration(e.target.checked)}
+              />
+            }
+            label={t('userTypes:allowSelfRegistration')}
+            sx={{mb: 2}}
+          />
 
           <Typography variant="h6" gutterBottom sx={{mt: 4, mb: 2}}>
             {t('userTypes:schemaProperties')}

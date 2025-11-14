@@ -21,7 +21,7 @@ import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import render from '@/test/test-utils';
 import CreateUserTypePage from '../CreateUserTypePage';
-import type {ApiError} from '../../types/user-types';
+import type {ApiError, CreateUserSchemaRequest} from '../../types/user-types';
 
 const mockNavigate = vi.fn();
 const mockCreateUserType = vi.fn();
@@ -37,7 +37,7 @@ vi.mock('react-router', async () => {
 
 // Mock useCreateUserType hook
 interface UseCreateUserTypeReturn {
-  createUserType: (data: {name: string; schema: Record<string, unknown>}) => Promise<void>;
+  createUserType: (data: CreateUserSchemaRequest) => Promise<void>;
   loading: boolean;
   error: ApiError | null;
 }
@@ -169,6 +169,8 @@ describe('CreateUserTypePage', () => {
 
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Employee');
+    const ouInput = screen.getByLabelText(/Organization Unit ID/i);
+    await user.type(ouInput, 'root-ou');
 
     const submitButton = screen.getByRole('button', {name: /Create User Type/i});
     await user.click(submitButton);
@@ -180,12 +182,31 @@ describe('CreateUserTypePage', () => {
     expect(mockCreateUserType).not.toHaveBeenCalled();
   });
 
+  it('shows validation error when submitting without organization unit id', async () => {
+    const user = userEvent.setup();
+    render(<CreateUserTypePage />);
+
+    await user.type(screen.getByLabelText(/Type Name/i), 'Employee');
+    await user.type(screen.getByPlaceholderText(/e\.g\., email, age, address/i), 'email');
+
+    const submitButton = screen.getByRole('button', {name: /Create User Type/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Please provide an organization unit ID')).toBeInTheDocument();
+    });
+
+    expect(mockCreateUserType).not.toHaveBeenCalled();
+  });
+
   it('shows validation error for duplicate property names', async () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
 
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Employee');
+    const ouInput = screen.getByLabelText(/Organization Unit ID/i);
+    await user.type(ouInput, 'root-ou');
 
     // Add first property
     const firstPropertyInput = screen.getByPlaceholderText(/e\.g\., email, age, address/i);
@@ -373,6 +394,7 @@ describe('CreateUserTypePage', () => {
     // Fill in user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Employee');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Fill in property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -389,6 +411,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'Employee',
+        ouId: 'root-ou',
         schema: {
           email: {
             type: 'string',
@@ -400,6 +423,37 @@ describe('CreateUserTypePage', () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/user-types');
+    });
+  });
+
+  it('submits organization unit and registration flag when provided', async () => {
+    const user = userEvent.setup();
+    mockCreateUserType.mockResolvedValue(undefined);
+
+    render(<CreateUserTypePage />);
+
+    await user.type(screen.getByLabelText(/Type Name/i), 'Employee');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), ' ou-123 ');
+
+    const propertyNameInput = screen.getByPlaceholderText(/e\.g\., email, age, address/i);
+    await user.type(propertyNameInput, 'email');
+
+    await user.click(screen.getByLabelText(/Allow Self Registration/i));
+
+    await user.click(screen.getByRole('button', {name: /Create User Type/i}));
+
+    await waitFor(() => {
+      expect(mockCreateUserType).toHaveBeenCalledWith({
+        name: 'Employee',
+        ouId: 'ou-123',
+        allowSelfRegistration: true,
+        schema: {
+          email: {
+            type: 'string',
+            required: false,
+          },
+        },
+      });
     });
   });
 
@@ -466,6 +520,7 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Complex Type');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Change type to enum
     const typeSelect = screen.getByRole('combobox');
@@ -494,6 +549,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'Complex Type',
+        ouId: 'root-ou',
         schema: {
           status: {
             type: 'string',
@@ -549,6 +605,7 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'RegexTest');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -566,6 +623,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'RegexTest',
+        ouId: 'root-ou',
         schema: {
           code: {
             type: 'string',
@@ -586,6 +644,7 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'ArrayTest');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -604,6 +663,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'ArrayTest',
+        ouId: 'root-ou',
         schema: {
           tags: {
             type: 'array',
@@ -626,6 +686,7 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'ObjectTest');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -644,6 +705,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'ObjectTest',
+        ouId: 'root-ou',
         schema: {
           metadata: {
             type: 'object',
@@ -664,6 +726,7 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'NumberTest');
+    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -686,6 +749,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'NumberTest',
+        ouId: 'root-ou',
         schema: {
           employeeId: {
             type: 'number',

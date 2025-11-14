@@ -43,6 +43,8 @@ describe('useGetUserType', () => {
   const mockUserSchema: ApiUserSchema = {
     id: '123',
     name: 'TestUserType',
+    ouId: 'root-ou',
+    allowSelfRegistration: true,
     schema: {
       username: {
         type: 'string',
