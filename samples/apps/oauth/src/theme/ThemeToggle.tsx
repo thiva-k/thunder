@@ -33,7 +33,7 @@ export default function ThemeToggle() {
     return mode === 'light' ? 'dark' : mode === 'dark' ? 'system' : 'light';
   };
 
-  const currentMode: Mode = mode ?? 'system';
+  const currentMode: Mode = mode;
 
   const ColorModeIcon = () => {
     switch (currentMode) {
