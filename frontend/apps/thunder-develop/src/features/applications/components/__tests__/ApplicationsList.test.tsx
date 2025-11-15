@@ -293,7 +293,7 @@ describe('ApplicationsList', () => {
     });
   });
 
-  it('should navigate to application details when clicking View action', async () => {
+  it('should show View action as disabled', async () => {
     const user = userEvent.setup();
 
     vi.mocked(useGetApplications).mockReturnValue({
@@ -311,12 +311,8 @@ describe('ApplicationsList', () => {
       expect(screen.getByRole('menu')).toBeInTheDocument();
     });
 
-    const viewMenuItem = screen.getByText('View');
-    await user.click(viewMenuItem);
-
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith('/applications/app-1');
-    });
+    const viewMenuItem = screen.getByText('View').closest('li');
+    expect(viewMenuItem).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('should close menu when pressing Escape', async () => {
