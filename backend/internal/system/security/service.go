@@ -45,6 +45,11 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 		return r.Context(), nil
 	}
 
+	// Check if the request is options (CORS preflight)
+	if r.Method == http.MethodOptions {
+		return r.Context(), nil
+	}
+
 	// Find an authenticator that can process this request
 	var authenticator AuthenticatorInterface
 	for _, a := range s.authenticators {

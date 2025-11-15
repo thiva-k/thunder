@@ -646,7 +646,8 @@ function run() {
     echo "Running frontend apps..."
     run_frontend
 
-    # Start backend with initial output but without final output/wait
+    # Start backend with security disabled to set up
+    export THUNDER_SKIP_SECURITY=true
     run_backend false
     
     GATE_APP_DEFAULT_PORT=5190
@@ -689,8 +690,14 @@ function run() {
     if [ $? -ne 0 ]; then
         echo "❌ Initial data setup failed"
         echo "💡 Check the logs above for more details"
-        echo "💡 You can run the setup manually using: THUNDER_API_BASE=\"https://localhost:$BACKEND_PORT\" $BACKEND_BASE_DIR/cmd/server/bootstrap/01-default-resources.sh --develop-redirect-uris \"https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop\""
+        exit 1
     fi
+
+    echo "🔒 Enabling security and restarting backend..."
+    # Reset backend to enable security
+    export THUNDER_SKIP_SECURITY=false
+    # Start backend with initial output but without final output/wait
+    start_backend false
 
     echo ""
     echo "🚀 Servers running:"
@@ -740,6 +747,12 @@ function run_backend() {
 
     echo "Initializing databases..."
     initialize_databases
+
+    start_backend "$show_final_output"
+}
+
+function start_backend() {
+    local show_final_output=${1:-true}
 
     # Kill known ports
     function kill_port() {

@@ -239,27 +239,18 @@ func startHTTPServer(logger *log.Logger, server *http.Server) {
 // createHTTPServer creates and configures an HTTP server with common settings.
 func createHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux,
 	jwtService jwt.JWTServiceInterface) *http.Server {
-	handler := middleware.CorrelationIDMiddleware(mux)
-	handler = log.AccessLogHandler(logger, handler)
+	securityMiddleware := createSecurityMiddleware(logger, mux, jwtService)
 
-	// Check if security should be skipped via environment variable
-	skipSecurity := os.Getenv("THUNDER_SKIP_SECURITY")
-	if skipSecurity == "true" {
-		logger.Warn("******************************************************************")
-		logger.Warn("***         WARNING: SECURITY MIDDLEWARE DISABLED              ***")
-		logger.Warn("***                                                            ***")
-		logger.Warn("***  THUNDER_SKIP_SECURITY is set to 'true'                    ***")
-		logger.Warn("***  This is NOT RECOMMENDED for production environments!      ***")
-		logger.Warn("***  All endpoints will be accessible without authentication.  ***")
-		logger.Warn("***                                                            ***")
-		logger.Warn("******************************************************************")
+	// Build the middleware chain with proper execution order.
+	// Request flow: CorrelationID (outermost) -> AccessLog -> Security (if enabled) -> Route Handler (innermost)
+	// Note: Middlewares are wrapped in reverse order - the last added will execute first.
+	var handler http.Handler
+	if securityMiddleware != nil {
+		handler = log.AccessLogHandler(logger, securityMiddleware)
 	} else {
-		middlewareFunc, err := security.Initialize(jwtService)
-		if err != nil {
-			logger.Fatal("Failed to initialize security middleware", log.Error(err))
-		}
-		handler = middlewareFunc(handler)
+		handler = log.AccessLogHandler(logger, mux)
 	}
+	handler = middleware.CorrelationIDMiddleware(handler)
 
 	// Build the server address using hostname and port from the configurations.
 	serverAddr := fmt.Sprintf("%s:%d", cfg.Server.Hostname, cfg.Server.Port)
@@ -273,6 +264,29 @@ func createHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux
 	}
 
 	return server
+}
+
+func createSecurityMiddleware(logger *log.Logger, mux *http.ServeMux,
+	jwtService jwt.JWTServiceInterface) http.Handler {
+	// Check if security should be skipped via environment variable
+	skipSecurity := os.Getenv("THUNDER_SKIP_SECURITY")
+	if skipSecurity == "true" {
+		logger.Warn("============================================================")
+		logger.Warn("|       WARNING: SECURITY MIDDLEWARE DISABLED              |")
+		logger.Warn("|                                                          |")
+		logger.Warn("|        THUNDER_SKIP_SECURITY is set to 'true'            |")
+		logger.Warn("|  This is NOT RECOMMENDED for production environments!    |")
+		logger.Warn("| All endpoints will be accessible without authentication  |")
+		logger.Warn("|                                                          |")
+		logger.Warn("============================================================")
+		return nil
+	}
+
+	middlewareFunc, err := security.Initialize(jwtService)
+	if err != nil {
+		logger.Fatal("Failed to initialize security middleware", log.Error(err))
+	}
+	return middlewareFunc(mux)
 }
 
 // gracefulShutdown handles the graceful shutdown of all components.
