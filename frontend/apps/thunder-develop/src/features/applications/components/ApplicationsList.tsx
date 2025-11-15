@@ -69,17 +69,6 @@ export default function ApplicationsList(): JSX.Element {
     setSelectedAppId(null);
   };
 
-  const handleViewApplication = useCallback(() => {
-    if (!selectedAppId) return;
-    handleMenuClose();
-    (async (): Promise<void> => {
-      await navigate(`/applications/${selectedAppId}`);
-    })().catch(() => {
-      // TODO: Log the errors
-      // Tracker: https://github.com/asgardeo/thunder/issues/618
-    });
-  }, [selectedAppId, navigate]);
-
   const getInitials = (name: string): string =>
     name
       .split(' ')
@@ -231,7 +220,7 @@ export default function ApplicationsList(): JSX.Element {
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem onClick={handleViewApplication}>
+        <MenuItem disabled>
           <ListItemIcon>
             <Eye size={16} />
           </ListItemIcon>
