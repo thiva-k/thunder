@@ -52,6 +52,10 @@ type AccessTokenBuildContext struct {
 	GrantType      string
 	OAuthApp       *appmodel.OAuthAppConfigProcessedDTO
 	ActorClaims    *SubjectTokenClaims
+	UserType       string
+	OuID           string
+	OuName         string
+	OuHandle       string
 }
 
 // RefreshTokenBuildContext contains all the information needed to build a refresh token.
@@ -63,6 +67,10 @@ type RefreshTokenBuildContext struct {
 	AccessTokenAudience  string
 	AccessTokenUserAttrs map[string]interface{}
 	OAuthApp             *appmodel.OAuthAppConfigProcessedDTO
+	UserType             string
+	OuID                 string
+	OuName               string
+	OuHandle             string
 }
 
 // IDTokenBuildContext contains all the information needed to build an ID token (OIDC).
@@ -74,6 +82,10 @@ type IDTokenBuildContext struct {
 	UserGroups     []string
 	AuthTime       int64
 	OAuthApp       *appmodel.OAuthAppConfigProcessedDTO
+	UserType       string
+	OuID           string
+	OuName         string
+	OuHandle       string
 }
 
 // RefreshTokenClaims represents the validated claims from a refresh token.
@@ -84,6 +96,10 @@ type RefreshTokenClaims struct {
 	Scopes         []string
 	UserAttributes map[string]interface{}
 	Iat            int64
+	UserType       string
+	OuID           string
+	OuName         string
+	OuHandle       string
 }
 
 // SubjectTokenClaims represents the validated claims from a subject token (for token exchange).

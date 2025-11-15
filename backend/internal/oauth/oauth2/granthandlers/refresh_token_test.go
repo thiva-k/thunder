@@ -193,12 +193,13 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_InvalidSignature
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestIssueRefreshToken_Success() {
 	// Mock token builder for refresh token generation
-	suite.mockTokenBuilder.On("BuildRefreshToken", mock.MatchedBy(func(ctx *tokenservice.RefreshTokenBuildContext) bool {
-		return ctx.ClientID == "test-client-id" &&
-			ctx.GrantType == "authorization_code" &&
-			ctx.AccessTokenSubject == testRefreshTokenUserID &&
-			ctx.AccessTokenAudience == testRefreshTokenAudience
-	})).Return(&model.TokenDTO{
+	suite.mockTokenBuilder.On("BuildRefreshToken", mock.MatchedBy(
+		func(ctx *tokenservice.RefreshTokenBuildContext) bool {
+			return ctx.ClientID == "test-client-id" &&
+				ctx.GrantType == "authorization_code" &&
+				ctx.AccessTokenSubject == testRefreshTokenUserID &&
+				ctx.AccessTokenAudience == testRefreshTokenAudience
+		})).Return(&model.TokenDTO{
 		Token:     "new.refresh.token",
 		TokenType: "",
 		IssuedAt:  int64(1234567890),
@@ -209,8 +210,9 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestIssueRefreshToken_Success() 
 
 	tokenResponse := &model.TokenResponseDTO{}
 
-	err := suite.handler.IssueRefreshToken(tokenResponse, suite.oauthApp, testRefreshTokenUserID, testRefreshTokenAudience,
-		"authorization_code", []string{"read", "write"})
+	err := suite.handler.IssueRefreshToken(tokenResponse, suite.oauthApp,
+		testRefreshTokenUserID, testRefreshTokenAudience,
+		"authorization_code", []string{"read", "write"}, "", "", "", "")
 
 	assert.Nil(suite.T(), err)
 	assert.NotNil(suite.T(), tokenResponse.RefreshToken)
@@ -230,7 +232,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestIssueRefreshToken_JWTGenerat
 	tokenResponse := &model.TokenResponseDTO{}
 
 	err := suite.handler.IssueRefreshToken(tokenResponse, suite.oauthApp, "", "",
-		"authorization_code", []string{"read"})
+		"authorization_code", []string{"read"}, "", "", "", "")
 
 	assert.NotNil(suite.T(), err)
 	assert.Equal(suite.T(), constants.ErrorServerError, err.Error)
@@ -239,9 +241,10 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestIssueRefreshToken_JWTGenerat
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestIssueRefreshToken_WithEmptyTokenAttributes() {
 	// Mock token builder with matcher that checks for empty sub and aud
-	suite.mockTokenBuilder.On("BuildRefreshToken", mock.MatchedBy(func(ctx *tokenservice.RefreshTokenBuildContext) bool {
-		return ctx.AccessTokenSubject == "" && ctx.AccessTokenAudience == ""
-	})).Return(&model.TokenDTO{
+	suite.mockTokenBuilder.On("BuildRefreshToken", mock.MatchedBy(
+		func(ctx *tokenservice.RefreshTokenBuildContext) bool {
+			return ctx.AccessTokenSubject == "" && ctx.AccessTokenAudience == ""
+		})).Return(&model.TokenDTO{
 		Token:    "new.refresh.token",
 		IssuedAt: int64(1234567890),
 	}, nil)
@@ -249,7 +252,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestIssueRefreshToken_WithEmptyT
 	tokenResponse := &model.TokenResponseDTO{}
 
 	err := suite.handler.IssueRefreshToken(tokenResponse, suite.oauthApp, "", "",
-		"authorization_code", []string{"read"})
+		"authorization_code", []string{"read"}, "", "", "", "")
 
 	assert.Nil(suite.T(), err)
 }
@@ -267,11 +270,12 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_Success_WithRene
 		}, nil)
 
 	// Mock successful access token generation
-	suite.mockTokenBuilder.On("BuildAccessToken", mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
-		return ctx.Subject == testRefreshTokenUserID &&
-			ctx.ClientID == "test-client-id" &&
-			len(ctx.Scopes) == 1 && ctx.Scopes[0] == "read"
-	})).Return(&model.TokenDTO{
+	suite.mockTokenBuilder.On("BuildAccessToken", mock.MatchedBy(
+		func(ctx *tokenservice.AccessTokenBuildContext) bool {
+			return ctx.Subject == testRefreshTokenUserID &&
+				ctx.ClientID == "test-client-id" &&
+				len(ctx.Scopes) == 1 && ctx.Scopes[0] == "read"
+		})).Return(&model.TokenDTO{
 		Token:     "new.access.token",
 		IssuedAt:  time.Now().Unix(),
 		ExpiresIn: 3600,
@@ -312,10 +316,11 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_Success_WithRene
 	}, nil)
 
 	// Mock successful refresh token generation
-	suite.mockTokenBuilder.On("BuildRefreshToken", mock.MatchedBy(func(ctx *tokenservice.RefreshTokenBuildContext) bool {
-		return ctx.AccessTokenSubject == testRefreshTokenUserID &&
-			ctx.AccessTokenAudience == testRefreshTokenAudience
-	})).Return(&model.TokenDTO{
+	suite.mockTokenBuilder.On("BuildRefreshToken", mock.MatchedBy(
+		func(ctx *tokenservice.RefreshTokenBuildContext) bool {
+			return ctx.AccessTokenSubject == testRefreshTokenUserID &&
+				ctx.AccessTokenAudience == testRefreshTokenAudience
+		})).Return(&model.TokenDTO{
 		Token:     "new.refresh.token",
 		IssuedAt:  time.Now().Unix(),
 		ExpiresIn: 86400,

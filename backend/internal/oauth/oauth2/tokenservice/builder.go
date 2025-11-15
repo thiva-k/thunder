@@ -58,6 +58,18 @@ func (tb *tokenBuilder) BuildAccessToken(ctx *AccessTokenBuildContext) (*model.T
 	userAttributes := tb.buildAccessTokenUserAttributes(ctx.UserAttributes, ctx.UserGroups, ctx.OAuthApp)
 	jwtClaims := tb.buildAccessTokenClaims(ctx, userAttributes)
 
+	tokenDTO := &model.TokenDTO{
+		TokenType:      constants.TokenTypeBearer,
+		ExpiresIn:      tokenConfig.ValidityPeriod,
+		Scopes:         ctx.Scopes,
+		ClientID:       ctx.ClientID,
+		UserAttributes: userAttributes,
+		Subject:        ctx.Subject,
+		Audience:       ctx.Audience,
+	}
+
+	tb.appendUserTypeAndOU(tokenDTO, jwtClaims, ctx.UserType, ctx.OuID, ctx.OuName, ctx.OuHandle)
+
 	token, iat, err := tb.jwtService.GenerateJWT(
 		ctx.Subject,
 		ctx.Audience,
@@ -69,17 +81,11 @@ func (tb *tokenBuilder) BuildAccessToken(ctx *AccessTokenBuildContext) (*model.T
 		return nil, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	return &model.TokenDTO{
-		Token:          token,
-		TokenType:      constants.TokenTypeBearer,
-		IssuedAt:       iat,
-		ExpiresIn:      tokenConfig.ValidityPeriod,
-		Scopes:         ctx.Scopes,
-		ClientID:       ctx.ClientID,
-		UserAttributes: userAttributes,
-		Subject:        ctx.Subject,
-		Audience:       ctx.Audience,
-	}, nil
+	// Assign generated token and issued at time
+	tokenDTO.Token = token
+	tokenDTO.IssuedAt = iat
+
+	return tokenDTO, nil
 }
 
 // buildAccessTokenClaims builds the claims map for an access token.
@@ -181,6 +187,16 @@ func (tb *tokenBuilder) BuildRefreshToken(ctx *RefreshTokenBuildContext) (*model
 
 	claims := tb.buildRefreshTokenClaims(ctx)
 
+	tokenDTO := &model.TokenDTO{
+		ExpiresIn: tokenConfig.ValidityPeriod,
+		Scopes:    ctx.Scopes,
+		ClientID:  ctx.ClientID,
+		Subject:   ctx.AccessTokenSubject,
+		Audience:  ctx.AccessTokenAudience,
+	}
+
+	tb.appendUserTypeAndOU(tokenDTO, claims, ctx.UserType, ctx.OuID, ctx.OuName, ctx.OuHandle)
+
 	token, iat, err := tb.jwtService.GenerateJWT(
 		ctx.ClientID,
 		ctx.ClientID,
@@ -192,15 +208,11 @@ func (tb *tokenBuilder) BuildRefreshToken(ctx *RefreshTokenBuildContext) (*model
 		return nil, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	return &model.TokenDTO{
-		Token:     token,
-		IssuedAt:  iat,
-		ExpiresIn: tokenConfig.ValidityPeriod,
-		Scopes:    ctx.Scopes,
-		ClientID:  ctx.ClientID,
-		Subject:   ctx.AccessTokenSubject,
-		Audience:  ctx.AccessTokenAudience,
-	}, nil
+	// Assign generated token and issued at time
+	tokenDTO.Token = token
+	tokenDTO.IssuedAt = iat
+
+	return tokenDTO, nil
 }
 
 // buildRefreshTokenClaims builds the claims map for a refresh token.
@@ -236,6 +248,16 @@ func (tb *tokenBuilder) BuildIDToken(ctx *IDTokenBuildContext) (*model.TokenDTO,
 
 	jwtClaims := tb.buildIDTokenClaims(ctx)
 
+	tokenDTO := &model.TokenDTO{
+		ExpiresIn: tokenConfig.ValidityPeriod,
+		Scopes:    ctx.Scopes,
+		ClientID:  ctx.Audience,
+		Subject:   ctx.Subject,
+		Audience:  ctx.Audience,
+	}
+
+	tb.appendUserTypeAndOU(tokenDTO, jwtClaims, ctx.UserType, ctx.OuID, ctx.OuName, ctx.OuHandle)
+
 	token, iat, err := tb.jwtService.GenerateJWT(
 		ctx.Subject,
 		ctx.Audience,
@@ -247,15 +269,11 @@ func (tb *tokenBuilder) BuildIDToken(ctx *IDTokenBuildContext) (*model.TokenDTO,
 		return nil, fmt.Errorf("failed to generate ID token: %w", err)
 	}
 
-	return &model.TokenDTO{
-		Token:     token,
-		IssuedAt:  iat,
-		ExpiresIn: tokenConfig.ValidityPeriod,
-		Scopes:    ctx.Scopes,
-		ClientID:  ctx.Audience,
-		Subject:   ctx.Subject,
-		Audience:  ctx.Audience,
-	}, nil
+	// Assign generated token and issued at time
+	tokenDTO.Token = token
+	tokenDTO.IssuedAt = iat
+
+	return tokenDTO, nil
 }
 
 // buildIDTokenClaims builds the claims map for an ID token (OIDC).
@@ -292,4 +310,28 @@ func (tb *tokenBuilder) buildIDTokenClaims(ctx *IDTokenBuildContext) map[string]
 	}
 
 	return claims
+}
+
+// appendUserTypeAndOU appends userType and OU details to the token DTO and claims.
+func (tb *tokenBuilder) appendUserTypeAndOU(tokenDTO *model.TokenDTO,
+	claims map[string]interface{},
+	userType, ouID, ouName, ouHandle string,
+) {
+	if userType != "" {
+		claims[constants.ClaimUserType] = userType
+		tokenDTO.UserType = userType
+	}
+
+	if ouID != "" {
+		claims[constants.ClaimOUID] = ouID
+		tokenDTO.OuID = ouID
+	}
+	if ouName != "" {
+		claims[constants.ClaimOUName] = ouName
+		tokenDTO.OuName = ouName
+	}
+	if ouHandle != "" {
+		claims[constants.ClaimOUHandle] = ouHandle
+		tokenDTO.OuHandle = ouHandle
+	}
 }

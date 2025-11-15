@@ -93,7 +93,7 @@ func (s *userInfoService) GetUserInfo(accessToken string) (map[string]interface{
 		oauthApp.Token.IDToken != nil &&
 		slices.Contains(oauthApp.Token.IDToken.UserAttributes, constants.UserAttributeGroups)
 
-	userAttributes, userGroups, err := tokenservice.FetchUserAttributesAndGroups(
+	userAttributes, userGroups, _, _, err := tokenservice.FetchUserAttributesAndGroups(
 		s.userService,
 		sub,
 		includeGroups,
