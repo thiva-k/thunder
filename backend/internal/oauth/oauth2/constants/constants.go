@@ -263,6 +263,14 @@ const (
 	ClaimAuthTime string = "auth_time"
 )
 
+// Custom JWT claim names.
+const (
+	ClaimUserType string = "userType"
+	ClaimOUID     string = "ouId"
+	ClaimOUName   string = "ouName"
+	ClaimOUHandle string = "ouHandle"
+)
+
 // JWT signing algorithms.
 const (
 	SigningAlgorithmRS256 string = "RS256"

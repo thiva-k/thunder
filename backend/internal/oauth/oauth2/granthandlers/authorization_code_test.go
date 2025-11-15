@@ -34,13 +34,18 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice"
+	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/authzmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/tokenservicemock"
+	"github.com/asgardeo/thunder/tests/mocks/oumock"
 	usersvcmock "github.com/asgardeo/thunder/tests/mocks/usermock"
 )
+
+const oidcReadWriteScopes = "openid read write"
 
 type AuthorizationCodeGrantHandlerTestSuite struct {
 	suite.Suite
@@ -49,6 +54,7 @@ type AuthorizationCodeGrantHandlerTestSuite struct {
 	mockTokenBuilder *tokenservicemock.TokenBuilderInterfaceMock
 	mockAuthzService *authzmock.AuthorizeServiceInterfaceMock
 	mockUserService  *usersvcmock.UserServiceInterfaceMock
+	mockOUService    *oumock.OrganizationUnitServiceInterfaceMock
 	oauthApp         *appmodel.OAuthAppConfigProcessedDTO
 	testAuthzCode    authz.AuthorizationCode
 	testTokenReq     *model.TokenRequest
@@ -71,11 +77,13 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 	suite.mockTokenBuilder = tokenservicemock.NewTokenBuilderInterfaceMock(suite.T())
 	suite.mockAuthzService = &authzmock.AuthorizeServiceInterfaceMock{}
 	suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
+	suite.mockOUService = oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
 
 	suite.handler = &authorizationCodeGrantHandler{
 		tokenBuilder: suite.mockTokenBuilder,
 		authzService: suite.mockAuthzService,
 		userService:  suite.mockUserService,
+		ouService:    suite.mockOUService,
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
@@ -113,7 +121,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestNewAuthorizationCodeGrantHandler() {
-	handler := newAuthorizationCodeGrantHandler(suite.mockUserService, suite.mockAuthzService, suite.mockTokenBuilder)
+	handler := newAuthorizationCodeGrantHandler(suite.mockUserService, suite.mockOUService,
+		suite.mockAuthzService, suite.mockTokenBuilder)
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*GrantHandlerInterface)(nil), handler)
 }
@@ -534,7 +543,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 
 			authzCode := suite.testAuthzCode
 			if tc.includeOpenIDScope {
-				authzCode.Scopes = "openid read write"
+				authzCode.Scopes = oidcReadWriteScopes
 			}
 
 			suite.mockAuthzService.On("GetAuthorizationCodeDetails", testClientID, "test-auth-code").
@@ -737,7 +746,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 
 			authzCode := suite.testAuthzCode
 			if tc.includeOpenIDScope {
-				authzCode.Scopes = "openid read write"
+				authzCode.Scopes = oidcReadWriteScopes
 			}
 
 			suite.mockAuthzService.On("GetAuthorizationCodeDetails", testClientID, "test-auth-code").
@@ -923,4 +932,78 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_NoResourceP
 
 	// Verify audience defaults to client ID when no resource parameter
 	assert.Equal(suite.T(), testClientID, capturedAudience)
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_FetchUserOUFailed() {
+	// Mock authorization code store to return valid code
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", testClientID, "test-auth-code").
+		Return(&suite.testAuthzCode, nil)
+
+	// Mock user service to return user with OU ID
+	mockUser := &user.User{
+		ID:               testUserID,
+		Attributes:       json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
+		OrganizationUnit: "ou-123",
+	}
+	suite.mockUserService.On("GetUser", testUserID).Return(mockUser, nil)
+
+	// Mock OU service to return error
+	suite.mockOUService.On("GetOrganizationUnit", "ou-123").
+		Return(ou.OrganizationUnit{}, &serviceerror.ServiceError{
+			Code:  "OU_FETCH_ERROR",
+			Error: "failed to fetch organization unit",
+		})
+
+	result, err := suite.handler.HandleGrant(suite.testTokenReq, suite.oauthApp)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), constants.ErrorServerError, err.Error)
+	assert.Equal(suite.T(), "Something went wrong while fetching user organization unit details",
+		err.ErrorDescription)
+
+	suite.mockAuthzService.AssertExpectations(suite.T())
+	suite.mockUserService.AssertExpectations(suite.T())
+	suite.mockOUService.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_IDTokenGenerationFailed() {
+	// Create auth code with openid scope
+	authzCodeWithOpenID := suite.testAuthzCode
+	authzCodeWithOpenID.Scopes = oidcReadWriteScopes
+
+	suite.mockAuthzService.On("GetAuthorizationCodeDetails", testClientID, "test-auth-code").
+		Return(&authzCodeWithOpenID, nil)
+
+	// Mock user service to return user
+	mockUser := &user.User{
+		ID:         testUserID,
+		Attributes: json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
+	}
+	suite.mockUserService.On("GetUser", testUserID).Return(mockUser, nil)
+
+	// Mock access token generation succeeds
+	suite.mockTokenBuilder.On("BuildAccessToken", mock.Anything).Return(&model.TokenDTO{
+		Token:     "test-jwt-token",
+		TokenType: constants.TokenTypeBearer,
+		IssuedAt:  time.Now().Unix(),
+		ExpiresIn: 3600,
+		Scopes:    []string{"openid", "read", "write"},
+		ClientID:  testClientID,
+	}, nil)
+
+	// Mock ID token generation fails
+	suite.mockTokenBuilder.On("BuildIDToken", mock.Anything).
+		Return(nil, errors.New("failed to generate ID token"))
+
+	result, err := suite.handler.HandleGrant(suite.testTokenReq, suite.oauthApp)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), constants.ErrorServerError, err.Error)
+	assert.Equal(suite.T(), "Failed to generate ID token", err.ErrorDescription)
+
+	suite.mockAuthzService.AssertExpectations(suite.T())
+	suite.mockUserService.AssertExpectations(suite.T())
+	suite.mockTokenBuilder.AssertExpectations(suite.T())
 }
