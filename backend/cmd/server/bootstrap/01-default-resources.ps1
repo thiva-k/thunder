@@ -84,49 +84,52 @@ Write-Host ""
 
 Log-Info "Creating default user schema (person)..."
 
-$response = Invoke-ThunderApi -Method POST -Endpoint "/user-schemas" -Data '{
-  "name": "person",
-  "schema": {
-    "sub": {
-      "type": "string",
-      "required": true,
-      "unique": true
-    },
-    "email": {
-      "type": "string",
-      "required": true,
-      "unique": true
-    },
-    "email_verified": {
-      "type": "boolean",
-      "required": false
-    },
-    "name": {
-      "type": "string",
-      "required": false
-    },
-    "given_name": {
-      "type": "string",
-      "required": false
-    },
-    "family_name": {
-      "type": "string",
-      "required": false
-    },
-    "picture": {
-      "type": "string",
-      "required": false
-    },
-    "phone_number": {
-      "type": "string",
-      "required": false
-    },
-    "phone_number_verified": {
-      "type": "boolean",
-      "required": false
+$userSchemaData = ([ordered]@{
+    name = "person"
+    ouId = $DEFAULT_OU_ID
+    schema = [ordered]@{
+        sub = @{
+            type = "string"
+            required = $true
+            unique = $true
+        }
+        email = @{
+            type = "string"
+            required = $true
+            unique = $true
+        }
+        email_verified = @{
+            type = "boolean"
+            required = $false
+        }
+        name = @{
+            type = "string"
+            required = $false
+        }
+        given_name = @{
+            type = "string"
+            required = $false
+        }
+        family_name = @{
+            type = "string"
+            required = $false
+        }
+        picture = @{
+            type = "string"
+            required = $false
+        }
+        phone_number = @{
+            type = "string"
+            required = $false
+        }
+        phone_number_verified = @{
+            type = "boolean"
+            required = $false
+        }
     }
-  }
-}'
+} | ConvertTo-Json -Depth 5)
+
+$response = Invoke-ThunderApi -Method POST -Endpoint "/user-schemas" -Data $userSchemaData
 
 if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
     Log-Success "User schema created successfully"
@@ -147,22 +150,25 @@ Write-Host ""
 
 Log-Info "Creating admin user..."
 
-$response = Invoke-ThunderApi -Method POST -Endpoint "/users" -Data '{
-  "type": "person",
-  "attributes": {
-    "username": "admin",
-    "password": "admin",
-    "sub": "admin",
-    "email": "admin@thunder.dev",
-    "email_verified": true,
-    "name": "Administrator",
-    "given_name": "Admin",
-    "family_name": "User",
-    "picture": "https://example.com/avatar.jpg",
-    "phone_number": "+12345678920",
-    "phone_number_verified": true
-  }
-}'
+$adminUserData = ([ordered]@{
+    type = "person"
+    organizationUnit = $DEFAULT_OU_ID
+    attributes = @{
+        username = "admin"
+        password = "admin"
+        sub = "admin"
+        email = "admin@thunder.dev"
+        email_verified = $true
+        name = "Administrator"
+        given_name = "Admin"
+        family_name = "User"
+        picture = "https://example.com/avatar.jpg"
+        phone_number = "+12345678920"
+        phone_number_verified = $true
+    }
+} | ConvertTo-Json -Depth 5)
+
+$response = Invoke-ThunderApi -Method POST -Endpoint "/users" -Data $adminUserData
 
 if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
     Log-Success "Admin user created successfully"
