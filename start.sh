@@ -71,18 +71,30 @@ done
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
-# Kill known ports
-function kill_port() {
+# Check for port conflicts
+check_port() {
     local port=$1
-    lsof -ti tcp:$port | xargs kill -9 2>/dev/null || true
+    local port_name=$2
+    if lsof -ti tcp:$port >/dev/null 2>&1; then
+        echo ""
+        echo "❌ Port $port is already in use"
+        echo "   $port_name cannot start because another process is using port $port"
+        echo ""
+        echo "💡 To find the process using this port:"
+        echo "   lsof -i tcp:$port"
+        echo ""
+        echo "💡 To stop the process:"
+        echo "   kill -9 \$(lsof -ti tcp:$port)"
+        echo ""
+        exit 1
+    fi
 }
 
-# Kill ports before binding
-kill_port $BACKEND_PORT
+# Check if ports are available
+check_port $BACKEND_PORT "Thunder server"
 if [ "$DEBUG_MODE" = "true" ]; then
-    kill_port $DEBUG_PORT
+    check_port $DEBUG_PORT "Debug server"
 fi
-sleep 1
 
 # Check if Delve is available for debug mode
 if [ "$DEBUG_MODE" = "true" ]; then

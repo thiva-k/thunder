@@ -35,6 +35,7 @@ import {
   DialogActions,
   Button,
   DataGrid,
+  Chip,
 } from '@wso2/oxygen-ui';
 import {EllipsisVertical, Trash2, Eye} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
@@ -142,6 +143,25 @@ export default function UserTypesList() {
       flex: 1,
       minWidth: 250,
       valueGetter: (_value, row) => row.id ?? null,
+    },
+    {
+      field: 'ouId',
+      headerName: t('userTypes:ouId'),
+      flex: 1,
+      minWidth: 220,
+      valueGetter: (_value, row) => row.ouId ?? null,
+    },
+    {
+      field: 'allowSelfRegistration',
+      headerName: t('userTypes:allowSelfRegistration'),
+      width: 200,
+      renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => (
+        <Chip
+          label={params.row.allowSelfRegistration ? t('common:status.enabled') : t('common:status.disabled')}
+          color={params.row.allowSelfRegistration ? 'success' : 'default'}
+          size="small"
+        />
+      ),
     },
     {
       field: 'actions',

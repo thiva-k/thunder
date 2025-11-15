@@ -26,14 +26,23 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
 type UpdateUserSchemaTestSuite struct {
 	suite.Suite
-	client          *http.Client
-	testSchemaID    string
-	anotherSchemaID string
+	client             *http.Client
+	testSchemaID       string
+	anotherSchemaID    string
+	organizationUnitID string
+}
+
+var testUserSchemaAPIUpdateOU = testutils.OrganizationUnit{
+	Handle:      "test-user-schema-api-update-ou",
+	Name:        "Test Organization Unit for User Schema API Update",
+	Description: "Organization unit created for user schema API update testing",
+	Parent:      nil,
 }
 
 func TestUpdateUserSchemaTestSuite(t *testing.T) {
@@ -47,6 +56,13 @@ func (ts *UpdateUserSchemaTestSuite) SetupSuite() {
 		},
 	}
 
+	// Create organization unit for tests
+	ouID, err := testutils.CreateOrganizationUnit(testUserSchemaAPIUpdateOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	ts.organizationUnitID = ouID
+
 	// Create test schemas for update tests
 	schema1 := CreateUserSchemaRequest{
 		Name: "update-test-schema-1",
@@ -54,6 +70,7 @@ func (ts *UpdateUserSchemaTestSuite) SetupSuite() {
 			"originalField": {"type": "string"}
 		}`),
 	}
+	schema1.OrganizationUnitID = ts.organizationUnitID
 
 	schema2 := CreateUserSchemaRequest{
 		Name: "update-test-schema-2",
@@ -61,6 +78,7 @@ func (ts *UpdateUserSchemaTestSuite) SetupSuite() {
 			"anotherField": {"type": "string"}
 		}`),
 	}
+	schema2.OrganizationUnitID = ts.organizationUnitID
 
 	ts.testSchemaID = ts.createTestSchema(schema1)
 	ts.anotherSchemaID = ts.createTestSchema(schema2)
@@ -74,13 +92,20 @@ func (ts *UpdateUserSchemaTestSuite) TearDownSuite() {
 	if ts.anotherSchemaID != "" {
 		ts.deleteTestSchema(ts.anotherSchemaID)
 	}
+
+	// Clean up created organization units
+	if ts.organizationUnitID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.organizationUnitID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit %s: %v", ts.organizationUnitID, err)
+		}
+	}
 }
 
 // TestUpdateUserSchema tests PUT /user-schemas/{id} with valid data
 func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchema() {
-    updateRequest := UpdateUserSchemaRequest{
-        Name: "updated-schema-name",
-        Schema: json.RawMessage(`{
+	updateRequest := UpdateUserSchemaRequest{
+		Name: "updated-schema-name",
+		Schema: json.RawMessage(`{
             "updatedField": {"type": "string", "required": true},
             "newField": {"type": "number"},
             "complexField": {
@@ -90,7 +115,8 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchema() {
                 }
             }
         }`),
-    }
+	}
+	updateRequest.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(updateRequest)
 	if err != nil {
@@ -136,6 +162,7 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaNotFound() {
 		Name:   "updated-name",
 		Schema: json.RawMessage(`{"field": {"type": "string"}}`),
 	}
+	updateRequest.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(updateRequest)
 	if err != nil {
@@ -178,6 +205,7 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaWithNameConflict() {
 		Name:   "update-test-schema-2", // Name of another existing schema
 		Schema: json.RawMessage(`{"conflictField": {"type": "string"}}`),
 	}
+	updateRequest.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(updateRequest)
 	if err != nil {
@@ -215,10 +243,10 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaWithNameConflict() {
 
 // TestUpdateUserSchemaWithInvalidData tests PUT /user-schemas/{id} with invalid request data
 func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaWithInvalidData() {
-    testCases := []struct {
-        name        string
-        requestBody string
-    }{
+	testCases := []struct {
+		name        string
+		requestBody string
+	}{
 		{
 			name:        "empty name",
 			requestBody: `{"name": "", "schema": {"field": {"type": "string"}}}`,
@@ -239,15 +267,15 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaWithInvalidData() {
 			name:        "invalid JSON",
 			requestBody: `{"name": "updated-name", "schema": invalid}`,
 		},
-        {
-            name:        "malformed JSON",
-            requestBody: `{"name": "updated-name"`,
-        },
-        {
-            name:        "non-boolean required flag",
-            requestBody: `{"name": "updated-name", "schema": {"field": {"type": "string", "required": "yes"}}}`,
-        },
-    }
+		{
+			name:        "malformed JSON",
+			requestBody: `{"name": "updated-name"`,
+		},
+		{
+			name:        "non-boolean required flag",
+			requestBody: `{"name": "updated-name", "schema": {"field": {"type": "string", "required": "yes"}}}`,
+		},
+	}
 
 	for _, tc := range testCases {
 		ts.T().Run(tc.name, func(t *testing.T) {
@@ -327,6 +355,7 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaWithComplexData() {
 			}
 		}`),
 	}
+	updateRequest.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(updateRequest)
 	if err != nil {
@@ -366,6 +395,10 @@ func (ts *UpdateUserSchemaTestSuite) TestUpdateUserSchemaWithComplexData() {
 
 // Helper function to create a test schema
 func (ts *UpdateUserSchemaTestSuite) createTestSchema(schema CreateUserSchemaRequest) string {
+	if schema.OrganizationUnitID == "" {
+		schema.OrganizationUnitID = ts.organizationUnitID
+	}
+
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
 		ts.T().Fatalf("Failed to marshal request: %v", err)

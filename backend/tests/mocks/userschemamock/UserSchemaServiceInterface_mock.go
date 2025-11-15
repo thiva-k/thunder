@@ -220,6 +220,70 @@ func (_c *UserSchemaServiceInterfaceMock_GetUserSchema_Call) RunAndReturn(run fu
 	return _c
 }
 
+// GetUserSchemaByName provides a mock function for the type UserSchemaServiceInterfaceMock
+func (_mock *UserSchemaServiceInterfaceMock) GetUserSchemaByName(schemaName string) (*userschema.UserSchema, *serviceerror.ServiceError) {
+	ret := _mock.Called(schemaName)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserSchemaByName")
+	}
+
+	var r0 *userschema.UserSchema
+	var r1 *serviceerror.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(string) (*userschema.UserSchema, *serviceerror.ServiceError)); ok {
+		return returnFunc(schemaName)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) *userschema.UserSchema); ok {
+		r0 = returnFunc(schemaName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*userschema.UserSchema)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) *serviceerror.ServiceError); ok {
+		r1 = returnFunc(schemaName)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*serviceerror.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserSchemaByName'
+type UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call struct {
+	*mock.Call
+}
+
+// GetUserSchemaByName is a helper method to define mock.On call
+//   - schemaName string
+func (_e *UserSchemaServiceInterfaceMock_Expecter) GetUserSchemaByName(schemaName interface{}) *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call {
+	return &UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call{Call: _e.mock.On("GetUserSchemaByName", schemaName)}
+}
+
+func (_c *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call) Run(run func(schemaName string)) *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call) Return(userSchema *userschema.UserSchema, serviceError *serviceerror.ServiceError) *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call {
+	_c.Call.Return(userSchema, serviceError)
+	return _c
+}
+
+func (_c *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call) RunAndReturn(run func(schemaName string) (*userschema.UserSchema, *serviceerror.ServiceError)) *UserSchemaServiceInterfaceMock_GetUserSchemaByName_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetUserSchemaList provides a mock function for the type UserSchemaServiceInterfaceMock
 func (_mock *UserSchemaServiceInterfaceMock) GetUserSchemaList(limit int, offset int) (*userschema.UserSchemaListResponse, *serviceerror.ServiceError) {
 	ret := _mock.Called(limit, offset)

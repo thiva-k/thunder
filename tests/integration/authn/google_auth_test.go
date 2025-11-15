@@ -38,6 +38,13 @@ const (
 	mockGooglePort   = 8090
 )
 
+var googleAuthTestOU = testutils.OrganizationUnit{
+	Handle:      "google-auth-test-ou",
+	Name:        "Google Auth Test Organization Unit",
+	Description: "Organization unit for Google authentication testing",
+	Parent:      nil,
+}
+
 var googleUserSchema = testutils.UserSchema{
 	Name: "google_user",
 	Schema: map[string]interface{}{
@@ -68,6 +75,7 @@ type GoogleAuthTestSuite struct {
 	idpID            string
 	userID           string
 	userSchemaID     string
+	ouID             string
 }
 
 func TestGoogleAuthTestSuite(t *testing.T) {
@@ -94,6 +102,11 @@ func (suite *GoogleAuthTestSuite) SetupSuite() {
 	err = suite.mockGoogleServer.Start()
 	suite.Require().NoError(err, "Failed to start mock Google server")
 
+	ouID, err := testutils.CreateOrganizationUnit(googleAuthTestOU)
+	suite.Require().NoError(err, "Failed to create test organization unit")
+	suite.ouID = ouID
+
+	googleUserSchema.OrganizationUnitId = suite.ouID
 	schemaID, err := testutils.CreateUserType(googleUserSchema)
 	suite.Require().NoError(err, "Failed to create Google user schema")
 	suite.userSchemaID = schemaID
@@ -112,7 +125,7 @@ func (suite *GoogleAuthTestSuite) SetupSuite() {
 
 	user := testutils.User{
 		Type:             googleUserSchema.Name,
-		OrganizationUnit: "root",
+		OrganizationUnit: suite.ouID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
@@ -188,6 +201,12 @@ func (suite *GoogleAuthTestSuite) TearDownSuite() {
 
 	if suite.mockGoogleServer != nil {
 		_ = suite.mockGoogleServer.Stop()
+	}
+
+	if suite.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(suite.ouID); err != nil {
+			suite.T().Logf("Failed to delete test organization unit: %v", err)
+		}
 	}
 }
 

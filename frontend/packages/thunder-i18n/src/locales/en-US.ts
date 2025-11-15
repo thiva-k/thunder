@@ -352,6 +352,9 @@ const translations = {
     userTypeDetails: 'User Type Details',
     typeName: 'Type Name',
     typeNamePlaceholder: 'e.g., Employee, Customer, Partner',
+    ouId: 'Organization Unit ID',
+    ouIdPlaceholder: 'e.g., f47ac10b-58cc-4b77-9c42-1b48f9871f0b',
+    allowSelfRegistration: 'Allow Self Registration',
     description: 'Description',
     createDescription: 'Define a new user type schema for your organization',
     permissions: 'Permissions',
@@ -375,6 +378,7 @@ const translations = {
     },
     validationErrors: {
       nameRequired: 'Please enter a user type name',
+      ouIdRequired: 'Please provide an organization unit ID',
       propertiesRequired: 'Please add at least one property',
       duplicateProperties: 'Duplicate property names found: {{duplicates}}',
     },

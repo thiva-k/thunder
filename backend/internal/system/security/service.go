@@ -45,6 +45,11 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 		return r.Context(), nil
 	}
 
+	// Check if the request is options (CORS preflight)
+	if r.Method == http.MethodOptions {
+		return r.Context(), nil
+	}
+
 	// Find an authenticator that can process this request
 	var authenticator AuthenticatorInterface
 	for _, a := range s.authenticators {
@@ -80,8 +85,9 @@ func (s *securityService) isPublicPath(path string) bool {
 		"/oauth2/",
 		"/.well-known/openid-configuration",
 		"/.well-known/oauth-authorization-server",
-		"/signin/",  // Gate application (login UI)
+		"/gate/",    // Gate application (login UI)
 		"/develop/", // Develop application
+		"/error",
 	}
 
 	for _, publicPath := range publicPaths {

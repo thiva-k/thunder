@@ -42,6 +42,8 @@ describe('useUpdateUserType', () => {
   const mockUserTypeId = '123';
   const mockRequest: UpdateUserSchemaRequest = {
     name: 'UpdatedUserType',
+    ouId: 'root-ou',
+    allowSelfRegistration: true,
     schema: {
       username: {
         type: 'string',
@@ -57,6 +59,8 @@ describe('useUpdateUserType', () => {
   const mockUserSchema: ApiUserSchema = {
     id: mockUserTypeId,
     name: 'UpdatedUserType',
+    ouId: 'root-ou',
+    allowSelfRegistration: true,
     schema: mockRequest.schema,
   };
 

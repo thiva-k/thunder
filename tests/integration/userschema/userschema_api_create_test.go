@@ -26,13 +26,22 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
 type CreateUserSchemaTestSuite struct {
 	suite.Suite
-	client         *http.Client
-	createdSchemas []string // Track schemas for cleanup
+	client             *http.Client
+	createdSchemas     []string // Track schemas for cleanup
+	organizationUnitID string
+}
+
+var testUserSchemaAPICreateOU = testutils.OrganizationUnit{
+	Handle:      "test-user-schema-api-create-ou",
+	Name:        "Test Organization Unit for User Schema API Create",
+	Description: "Organization unit created for user schema API create testing",
+	Parent:      nil,
 }
 
 func TestCreateUserSchemaTestSuite(t *testing.T) {
@@ -46,6 +55,13 @@ func (ts *CreateUserSchemaTestSuite) SetupSuite() {
 		},
 	}
 	ts.createdSchemas = []string{}
+
+	// Create organization unit for tests
+	ouID, err := testutils.CreateOrganizationUnit(testUserSchemaAPICreateOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	ts.organizationUnitID = ouID
 }
 
 func (ts *CreateUserSchemaTestSuite) TearDownSuite() {
@@ -53,20 +69,28 @@ func (ts *CreateUserSchemaTestSuite) TearDownSuite() {
 	for _, schemaID := range ts.createdSchemas {
 		ts.deleteSchema(schemaID)
 	}
+
+	// Clean up created organization units
+	if ts.organizationUnitID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.organizationUnitID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit %s: %v", ts.organizationUnitID, err)
+		}
+	}
 }
 
 // TestCreateUserSchema tests POST /user-schemas with valid data
 func (ts *CreateUserSchemaTestSuite) TestCreateUserSchema() {
-    schema := CreateUserSchemaRequest{
-        Name: "employee-schema-test",
-        Schema: json.RawMessage(`{
+	schema := CreateUserSchemaRequest{
+		Name: "employee-schema-test",
+		Schema: json.RawMessage(`{
             "firstName": {"type": "string"},
             "lastName": {"type": "string", "required": true},
             "email": {"type": "string", "required": true, "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"},
             "department": {"type": "string"},
             "isManager": {"type": "boolean"}
         }`),
-    }
+	}
+	schema.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
@@ -109,9 +133,9 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchema() {
 
 // TestCreateUserSchemaWithComplexSchema tests POST /user-schemas with complex JSON schema
 func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithComplexSchema() {
-    schema := CreateUserSchemaRequest{
-        Name: "complex-customer-schema",
-        Schema: json.RawMessage(`{
+	schema := CreateUserSchemaRequest{
+		Name: "complex-customer-schema",
+		Schema: json.RawMessage(`{
             "personalInfo": {
                 "type": "object",
                 "properties": {
@@ -153,7 +177,8 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithComplexSchema() {
                 }
             }
         }`),
-    }
+	}
+	schema.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
@@ -201,6 +226,7 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithDuplicateName() {
 		Name:   "duplicate-name-test",
 		Schema: json.RawMessage(`{"field1": {"type": "string"}}`),
 	}
+	schema1.OrganizationUnitID = ts.organizationUnitID
 
 	createdID := ts.createSchemaHelper(schema1)
 	ts.createdSchemas = append(ts.createdSchemas, createdID)
@@ -210,6 +236,7 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithDuplicateName() {
 		Name:   "duplicate-name-test", // Same name
 		Schema: json.RawMessage(`{"field2": {"type": "string"}}`),
 	}
+	schema2.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(schema2)
 	if err != nil {
@@ -245,12 +272,64 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithDuplicateName() {
 	ts.Assert().NotEmpty(errorResp.Message, "Error should have message")
 }
 
+// TestCreateUserSchemasWithSharedOuID ensures multiple schemas can share the same OU.
+func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemasWithSharedOuID() {
+	sharedOuID := ts.organizationUnitID
+
+	firstSchema := CreateUserSchemaRequest{
+		Name:   "shared-ou-schema-one",
+		Schema: json.RawMessage(`{"username": {"type": "string", "required": true}}`),
+	}
+	firstSchema.OrganizationUnitID = sharedOuID
+
+	secondSchema := CreateUserSchemaRequest{
+		Name: "shared-ou-schema-two",
+		Schema: json.RawMessage(`{
+            "email": {"type": "string", "required": true, "regex": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"},
+            "enabled": {"type": "boolean"}
+        }`),
+	}
+	secondSchema.OrganizationUnitID = sharedOuID
+
+	firstID := ts.createSchemaHelper(firstSchema)
+	ts.createdSchemas = append(ts.createdSchemas, firstID)
+
+	secondID := ts.createSchemaHelper(secondSchema)
+	ts.createdSchemas = append(ts.createdSchemas, secondID)
+
+	req, err := http.NewRequest("GET", testServerURL+"/user-schemas/"+secondID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to create schema retrieval request: %v", err)
+	}
+
+	resp, err := ts.client.Do(req)
+	if err != nil {
+		ts.T().Fatalf("Failed to retrieve schema: %v", err)
+	}
+	defer resp.Body.Close()
+
+	ts.Assert().Equal(http.StatusOK, resp.StatusCode, "Should fetch newly created schema")
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ts.T().Fatalf("Failed to read schema response body: %v", err)
+	}
+
+	var retrievedSchema UserSchema
+	if err := json.Unmarshal(bodyBytes, &retrievedSchema); err != nil {
+		ts.T().Fatalf("Failed to unmarshal schema response: %v", err)
+	}
+
+	ts.Assert().Equal(sharedOuID, retrievedSchema.OrganizationUnitID,
+		"Schema should retain the shared OU ID")
+}
+
 // TestCreateUserSchemaWithInvalidData tests POST /user-schemas with invalid request data
 func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithInvalidData() {
-    testCases := []struct {
-        name        string
-        requestBody string
-    }{
+	testCases := []struct {
+		name        string
+		requestBody string
+	}{
 		{
 			name:        "empty name",
 			requestBody: `{"name": "", "schema": {"field": {"type": "string"}}}`,
@@ -271,15 +350,15 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithInvalidData() {
 			name:        "invalid JSON",
 			requestBody: `{"name": "test-schema", "schema": invalid}`,
 		},
-        {
-            name:        "malformed JSON",
-            requestBody: `{"name": "test-schema"`,
-        },
-        {
-            name:        "non-boolean required flag",
-            requestBody: `{"name": "bad-required", "schema": {"email": {"type": "string", "required": "true"}}}`,
-        },
-    }
+		{
+			name:        "malformed JSON",
+			requestBody: `{"name": "test-schema"`,
+		},
+		{
+			name:        "non-boolean required flag",
+			requestBody: `{"name": "bad-required", "schema": {"email": {"type": "string", "required": "true"}}}`,
+		},
+	}
 
 	for _, tc := range testCases {
 		ts.T().Run(tc.name, func(t *testing.T) {
@@ -320,6 +399,7 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithoutContentType() {
 		Name:   "no-content-type-test",
 		Schema: json.RawMessage(`{"field": {"type": "string"}}`),
 	}
+	schema.OrganizationUnitID = ts.organizationUnitID
 
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
@@ -356,6 +436,10 @@ func (ts *CreateUserSchemaTestSuite) TestCreateUserSchemaWithoutContentType() {
 
 // Helper function to create a schema and return its ID
 func (ts *CreateUserSchemaTestSuite) createSchemaHelper(schema CreateUserSchemaRequest) string {
+	if schema.OrganizationUnitID == "" {
+		schema.OrganizationUnitID = ts.organizationUnitID
+	}
+
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
 		ts.T().Fatalf("Failed to marshal request: %v", err)
@@ -404,4 +488,9 @@ func (ts *CreateUserSchemaTestSuite) deleteSchema(schemaID string) {
 		return
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusNotFound {
+		body, _ := io.ReadAll(resp.Body)
+		ts.T().Logf("Failed to delete schema %s: status %d, body: %s", schemaID, resp.StatusCode, string(body))
+	}
 }

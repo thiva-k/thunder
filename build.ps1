@@ -1032,7 +1032,8 @@ function Run {
     Write-Host "Running frontend apps..."
     Run-Frontend
 
-    # Start backend with initial output but without final output/wait
+    # Start backend with security disabled to set up
+    $env:THUNDER_SKIP_SECURITY = "true"
     Run-Backend -ShowFinalOutput $false
     
     $GATE_APP_DEFAULT_PORT = 5190
@@ -1050,14 +1051,20 @@ function Run {
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Initial data setup failed"
         Write-Host "💡 Check the logs above for more details"
-        Write-Host "💡 You can run the setup manually using: $setupScript -port $BACKEND_PORT --develop-redirect-uris `"https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop`""
+        exit 1
     }
+
+    Write-Host "🔒 Enabling security and restarting backend..."
+    # Reset backend to enable security
+    $env:THUNDER_SKIP_SECURITY = "false"
+    # Start backend with initial output but without final output/wait
+    Start-Backend -ShowFinalOutput $false
 
     Write-Host ""
     Write-Host "🚀 Servers running:"
     Write-Host "  👉 Backend : https://localhost:$BACKEND_PORT"
     Write-Host "  📱 Frontend :"
-    Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/signin"
+    Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/gate"
     Write-Host "      🛠️  Develop (Admin Console): https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
     Write-Host ""
 
@@ -1115,6 +1122,14 @@ function Run-Backend {
 
     Write-Host "Initializing databases..."
     Initialize-Databases
+
+    Start-Backend -ShowFinalOutput $ShowFinalOutput
+}
+
+function Start-Backend {
+    param(
+        [bool]$ShowFinalOutput = $true
+    )
 
     # Kill processes on known ports
     function Kill-Port {

@@ -18,6 +18,7 @@
 
 import {useNavigate, useParams} from 'react-router';
 import {useState, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   Box,
   Stack,
@@ -27,6 +28,7 @@ import {
   Divider,
   CircularProgress,
   Alert,
+  Snackbar,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -55,6 +57,7 @@ import type {PropertyDefinition, UserSchemaDefinition, PropertyType, SchemaPrope
 
 export default function ViewUserTypePage() {
   const navigate = useNavigate();
+  const {t} = useTranslation();
   const {id} = useParams<{id: string}>();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,8 +68,12 @@ export default function ViewUserTypePage() {
   const {deleteUserType, loading: isDeleting, error: deleteUserTypeError} = useDeleteUserType();
 
   const [name, setName] = useState('');
+  const [ouId, setOuId] = useState('');
+  const [allowSelfRegistration, setAllowSelfRegistration] = useState(false);
   const [properties, setProperties] = useState<SchemaPropertyInput[]>([]);
   const [enumInput, setEnumInput] = useState<Record<string, string>>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const convertSchemaToProperties = (schema: UserSchemaDefinition) => {
     const props: SchemaPropertyInput[] = Object.entries(schema).map(([key, value], index) => ({
@@ -84,6 +91,8 @@ export default function ViewUserTypePage() {
   useEffect(() => {
     if (userType) {
       setName(userType.name);
+      setOuId(userType.ouId);
+      setAllowSelfRegistration(userType.allowSelfRegistration ?? false);
       convertSchemaToProperties(userType.schema);
     }
   }, [userType]);
@@ -97,12 +106,20 @@ export default function ViewUserTypePage() {
     resetUpdateError();
     if (userType) {
       setName(userType.name);
+      setOuId(userType.ouId);
+      setAllowSelfRegistration(userType.allowSelfRegistration ?? false);
       convertSchemaToProperties(userType.schema);
     }
+    setValidationError(null);
+    setSnackbarOpen(false);
   };
 
   const handleBack = async () => {
     await navigate('/user-types');
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   const handlePropertyChange = <K extends keyof SchemaPropertyInput>(
@@ -150,6 +167,15 @@ export default function ViewUserTypePage() {
   const handleSave = async () => {
     if (!id) return;
 
+    setValidationError(null);
+    setSnackbarOpen(false);
+    const trimmedOuId = ouId.trim();
+    if (!trimmedOuId) {
+      setValidationError(t('userTypes:validationErrors.ouIdRequired'));
+      setSnackbarOpen(true);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
 
@@ -192,6 +218,8 @@ export default function ViewUserTypePage() {
 
       await updateUserType(id, {
         name: name.trim(),
+        ouId: trimmedOuId,
+        allowSelfRegistration,
         schema,
       });
 
@@ -354,6 +382,48 @@ export default function ViewUserTypePage() {
                   placeholder="User type name"
                   size="small"
                   fullWidth
+                />
+              )}
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>
+                {t('userTypes:ouId')}
+              </Typography>
+              {!isEditMode ? (
+                <Typography variant="body1" sx={{fontFamily: 'monospace', fontSize: '0.875rem'}}>
+                  {userType.ouId}
+                </Typography>
+              ) : (
+                <TextField
+                  value={ouId}
+                  onChange={(e) => setOuId(e.target.value)}
+                  placeholder={t('userTypes:ouIdPlaceholder')}
+                  size="small"
+                  fullWidth
+                  required
+                />
+              )}
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>
+                {t('userTypes:allowSelfRegistration')}
+              </Typography>
+              {!isEditMode ? (
+                <Chip
+                  label={userType.allowSelfRegistration ? t('common:status.enabled') : t('common:status.disabled')}
+                  color={userType.allowSelfRegistration ? 'success' : 'default'}
+                  size="small"
+                />
+              ) : (
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={allowSelfRegistration}
+                      onChange={(e) => setAllowSelfRegistration(e.target.checked)}
+                      size="small"
+                    />
+                  }
+                  label={t('userTypes:allowSelfRegistration')}
                 />
               )}
             </Box>
@@ -642,6 +712,17 @@ export default function ViewUserTypePage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{vertical: 'top', horizontal: 'right'}}
+      >
+        <Alert onClose={handleCloseSnackbar} severity="error" sx={{width: '100%'}}>
+          {validationError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -36,6 +36,14 @@ Configure message senders for OTP and notifications:
 
 - **[Configure Message Senders](notification-sender/configure-message-senders.md)** - Set up message notification senders
 
+### [Deployment Patterns](./deployment-patterns/)
+
+Deploy Thunder in various environments:
+
+- **[Docker Deployment](./deployment-patterns/docker/docker-deployment.md)** - Guide for running Thunder using Docker
+- **[Kubernetes Deployment](./deployment-patterns/kubernetes/kubernetes-deployment.md)** - Complete guide for deploying Thunder on Kubernetes using Helm charts
+- **[OpenChoreo Deployment](./deployment-patterns/openchoreo/openchoreo-deployment.md)** - Guide for deploying Thunder on OpenChoreo platform
+
 ## 🚀 Getting Started
 
 If you're new to Thunder, we recommend starting with these resources:

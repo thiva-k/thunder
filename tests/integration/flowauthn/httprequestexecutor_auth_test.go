@@ -99,19 +99,20 @@ func (ts *HTTPRequestAuthFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	// Create test user schema
-	schemaID, err := testutils.CreateUserType(httpRequestTestUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
-	}
-	httpRequestUserSchemaID = schemaID
-
 	// Create test organization unit
 	ouID, err := testutils.CreateOrganizationUnit(httpRequestTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	httpRequestTestOUID = ouID
+
+	// Create test user schema within the OU
+	httpRequestTestUserSchema.OrganizationUnitId = httpRequestTestOUID
+	schemaID, err := testutils.CreateUserType(httpRequestTestUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
+	}
+	httpRequestUserSchemaID = schemaID
 
 	// Create test application
 	appID, err := testutils.CreateApplication(httpRequestTestApp)

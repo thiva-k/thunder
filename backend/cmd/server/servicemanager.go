@@ -50,7 +50,7 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 	logger := log.GetLogger()
 
 	ouService := ou.Initialize(mux)
-	userSchemaService := userschema.Initialize(mux)
+	userSchemaService := userschema.Initialize(mux, ouService)
 	userService := user.Initialize(mux, ouService, userSchemaService)
 	groupService := group.Initialize(mux, ouService, userService)
 	roleService := role.Initialize(mux, userService, groupService, ouService)
@@ -65,7 +65,7 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 	// Initialize flow and executor services.
 	flowFactory := flowcore.Initialize()
 	execRegistry := executor.Initialize(flowFactory, userService, ouService,
-		idpService, otpService, jwtService, authSvcRegistry, authZService)
+		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService)
 
 	flowMgtService, err := flowmgt.Initialize(flowFactory, execRegistry)
 	if err != nil {
@@ -81,7 +81,7 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry)
 
 	// Initialize OAuth services.
-	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService)
+	oauth.Initialize(mux, applicationService, userService, ouService, jwtService, flowExecService)
 
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.

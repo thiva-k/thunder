@@ -70,3 +70,49 @@ func (suite *UUIDUtilTestSuite) TestGenerateUUIDLength() {
 	// UUID string format should be exactly 36 characters (32 hex digits + 4 hyphens)
 	assert.Equal(suite.T(), 36, len(uuid), "UUID should be 36 characters long")
 }
+
+func (suite *UUIDUtilTestSuite) TestIsValidUUID() {
+	testCases := []struct {
+		name     string
+		input    string
+		expected bool
+	}{
+		{
+			name:     "ValidLowercaseUUID",
+			input:    "550e8400-e29b-41d4-a716-446655440000",
+			expected: true,
+		},
+		{
+			name:     "ValidUppercaseUUID",
+			input:    "550E8400-E29B-41D4-A716-446655440000",
+			expected: true,
+		},
+		{
+			name:     "UUIDWithWhitespace",
+			input:    " 550e8400-e29b-41d4-a716-446655440000 ",
+			expected: false,
+		},
+		{
+			name:     "InvalidCharacters",
+			input:    "550e8400-e29b-41d4-a716-44665544000Z",
+			expected: false,
+		},
+		{
+			name:     "InvalidLength",
+			input:    "550e8400-e29b-41d4-a716-44665544",
+			expected: false,
+		},
+		{
+			name:     "EmptyString",
+			input:    "",
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			result := IsValidUUID(tc.input)
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}

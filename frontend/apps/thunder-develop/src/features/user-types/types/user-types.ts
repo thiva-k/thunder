@@ -102,6 +102,8 @@ export type UserSchemaDefinition = Record<string, PropertyDefinition>;
 export interface ApiUserSchema {
   id: string;
   name: string;
+  ouId: string;
+  allowSelfRegistration: boolean;
   schema: UserSchemaDefinition;
 }
 
@@ -111,6 +113,8 @@ export interface ApiUserSchema {
 export interface UserSchemaListItem {
   id: string;
   name: string;
+  ouId: string;
+  allowSelfRegistration: boolean;
 }
 
 /**
@@ -137,6 +141,8 @@ export interface UserSchemaListResponse {
  */
 export interface CreateUserSchemaRequest {
   name: string;
+  ouId: string;
+  allowSelfRegistration?: boolean;
   schema: UserSchemaDefinition;
 }
 
@@ -145,6 +151,8 @@ export interface CreateUserSchemaRequest {
  */
 export interface UpdateUserSchemaRequest {
   name: string;
+  ouId: string;
+  allowSelfRegistration?: boolean;
   schema: UserSchemaDefinition;
 }
 

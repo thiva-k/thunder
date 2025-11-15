@@ -27,16 +27,33 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
 type DeleteUserSchemaTestSuite struct {
 	suite.Suite
-	client *http.Client
+	client             *http.Client
+	organizationUnitID string
+}
+
+var testUserSchemaAPIDeleteOU = testutils.OrganizationUnit{
+	Handle:      "test-user-schema-api-delete-ou",
+	Name:        "Test Organization Unit for User Schema API Delete",
+	Description: "Organization unit created for user schema API delete testing",
+	Parent:      nil,
 }
 
 func TestDeleteUserSchemaTestSuite(t *testing.T) {
 	suite.Run(t, new(DeleteUserSchemaTestSuite))
+}
+
+func (ts *DeleteUserSchemaTestSuite) TearDownSuite() {
+	if ts.organizationUnitID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.organizationUnitID); err != nil {
+			ts.T().Logf("Failed to delete test organization unit %s: %v", ts.organizationUnitID, err)
+		}
+	}
 }
 
 func (ts *DeleteUserSchemaTestSuite) SetupSuite() {
@@ -45,18 +62,26 @@ func (ts *DeleteUserSchemaTestSuite) SetupSuite() {
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
 	}
+
+	// Create organization unit for tests
+	ouID, err := testutils.CreateOrganizationUnit(testUserSchemaAPIDeleteOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	ts.organizationUnitID = ouID
 }
 
 // TestDeleteUserSchema tests DELETE /user-schemas/{id} with valid ID
 func (ts *DeleteUserSchemaTestSuite) TestDeleteUserSchema() {
-    // Create a schema to delete
-    schema := CreateUserSchemaRequest{
-        Name: "schema-to-delete",
-        Schema: json.RawMessage(`{
+	// Create a schema to delete
+	schema := CreateUserSchemaRequest{
+		Name: "schema-to-delete",
+		Schema: json.RawMessage(`{
             "tempField": {"type": "string", "required": true},
             "description": {"type": "string"}
         }`),
-    }
+	}
+	schema.OrganizationUnitID = ts.organizationUnitID
 
 	schemaID := ts.createTestSchema(schema)
 
@@ -153,7 +178,7 @@ func (ts *DeleteUserSchemaTestSuite) TestDeleteUserSchemaWithInvalidID() {
 			defer resp.Body.Close()
 
 			// DELETE should be idempotent and return 204 even for invalid IDs
-			ts.Assert().Equal(http.StatusNoContent, resp.StatusCode, 
+			ts.Assert().Equal(http.StatusNoContent, resp.StatusCode,
 				"Should return 204 No Content for invalid ID (idempotent behavior) for case: %s", tc.name)
 
 			// Verify response has no content body for 204
@@ -299,6 +324,10 @@ func (ts *DeleteUserSchemaTestSuite) TestDeleteUserSchemaResponseHeaders() {
 
 // Helper function to create a test schema
 func (ts *DeleteUserSchemaTestSuite) createTestSchema(schema CreateUserSchemaRequest) string {
+	if schema.OrganizationUnitID == "" {
+		schema.OrganizationUnitID = ts.organizationUnitID
+	}
+
 	jsonData, err := json.Marshal(schema)
 	if err != nil {
 		ts.T().Fatalf("Failed to marshal request: %v", err)
@@ -333,4 +362,17 @@ func (ts *DeleteUserSchemaTestSuite) createTestSchema(schema CreateUserSchemaReq
 	}
 
 	return createdSchema.ID
+}
+
+func (ts *DeleteUserSchemaTestSuite) deleteSchema(schemaID string) {
+	req, err := http.NewRequest("DELETE", testServerURL+"/user-schemas/"+schemaID, nil)
+	if err != nil {
+		return
+	}
+
+	resp, err := ts.client.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
 }

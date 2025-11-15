@@ -44,6 +44,11 @@ var (
 
 var (
 	googleAuthTestAppID string
+	googleAuthTestOU = testutils.OrganizationUnit{
+		Handle:      "google-auth-flow-test-ou",
+		Name:        "Google Auth Flow Test OU",
+		Description: "Organization unit for Google authentication flow tests",
+	}
 )
 
 const (
@@ -110,7 +115,15 @@ func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
 	// Use the IDP created by database scripts
 	ts.idpID = "test-google-idp-id"
 
+	// Create test organization unit for Google auth tests
+	ouID, err := testutils.CreateOrganizationUnit(googleAuthTestOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
+	googleAuthTestOU.ID = ouID
+
 	// Create user schema
+	googleUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(googleUserSchema)
 	ts.Require().NoError(err, "Failed to create Google user schema")
 	ts.userSchemaID = schemaID
@@ -131,7 +144,7 @@ func (ts *GoogleAuthFlowTestSuite) SetupSuite() {
 	// Create user in the pre-configured OU from database scripts
 	user := testutils.User{
 		Type:             googleUserSchema.Name,
-		OrganizationUnit: testOUID,
+		OrganizationUnit: googleUserSchema.OrganizationUnitId,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
@@ -265,9 +278,9 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowCompleteSuccess() {
 		completeFlowStep.Assertion,
 		googleAuthTestAppID,
 		googleUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		googleAuthTestOU.ID,
+		googleAuthTestOU.Name,
+		googleAuthTestOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
@@ -361,9 +374,9 @@ func (ts *GoogleAuthFlowTestSuite) TestGoogleAuthFlowMultipleUsersSuccess() {
 		completeFlowStep.Assertion,
 		googleAuthTestAppID,
 		googleUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		googleAuthTestOU.ID,
+		googleAuthTestOU.Name,
+		googleAuthTestOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")

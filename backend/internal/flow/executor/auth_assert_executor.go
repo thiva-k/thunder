@@ -160,7 +160,7 @@ func (a *authAssertExecutor) generateAuthAssertion(ctx *flowcore.NodeContext, lo
 
 	// Add user type to the claims
 	if ctx.AuthenticatedUser.UserType != "" {
-		jwtClaims["userType"] = ctx.AuthenticatedUser.UserType
+		jwtClaims[userTypeKey] = ctx.AuthenticatedUser.UserType
 	}
 
 	if ctx.AuthenticatedUser.OrganizationUnitID != "" {
@@ -276,21 +276,21 @@ func (a *authAssertExecutor) getUserAttributes(userID string) (*user.User, map[s
 
 // appendOUDetailsToClaims appends organization unit details to the JWT claims.
 func (a *authAssertExecutor) appendOUDetailsToClaims(ouID string, jwtClaims map[string]interface{}) error {
-	logger := a.logger.With(log.String("ouID", ouID))
+	logger := a.logger.With(log.String(ouIDKey, ouID))
 
 	organizationUnit, svcErr := a.ouService.GetOrganizationUnit(ouID)
 	if svcErr != nil {
 		logger.Error("Failed to fetch organization unit details",
-			log.String("ouID", ouID), log.Any("error", svcErr))
+			log.String(ouIDKey, ouID), log.Any("error", svcErr))
 		return errors.New("something went wrong while fetching organization unit: " + svcErr.ErrorDescription)
 	}
 
-	jwtClaims["ouId"] = organizationUnit.ID
+	jwtClaims[ouIDKey] = organizationUnit.ID
 	if organizationUnit.Name != "" {
-		jwtClaims["ouName"] = organizationUnit.Name
+		jwtClaims[userInputOuName] = organizationUnit.Name
 	}
 	if organizationUnit.Handle != "" {
-		jwtClaims["ouHandle"] = organizationUnit.Handle
+		jwtClaims[userInputOuHandle] = organizationUnit.Handle
 	}
 
 	return nil

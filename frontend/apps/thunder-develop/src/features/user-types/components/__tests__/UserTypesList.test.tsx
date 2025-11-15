@@ -141,8 +141,8 @@ describe('UserTypesList', () => {
     startIndex: 1,
     count: 2,
     schemas: [
-      {id: 'schema1', name: 'Employee Schema'},
-      {id: 'schema2', name: 'Contractor Schema'},
+      {id: 'schema1', name: 'Employee Schema', ouId: 'root-ou', allowSelfRegistration: false},
+      {id: 'schema2', name: 'Contractor Schema', ouId: 'child-ou', allowSelfRegistration: true},
     ],
   };
 

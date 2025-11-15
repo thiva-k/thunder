@@ -85,14 +85,13 @@ func (suite *SecurityServiceTestSuite) TestProcess_PublicPaths() {
 		{"OAuth2 register", "/oauth2/register"},
 		{"Health check liveness", "/health/liveness"},
 		{"Health check readiness", "/health/readiness"},
-		{"Signin path", "/signin/verify"},
-		{"Signin path", "/signin/login"},
-		{"Signin path with subpath", "/signin/forgot-password"},
+		{"Signin path", "/gate/verify"},
+		{"Signin path with subpath", "/gate/forgot-password"},
 		{"Develop path", "/develop/dashboard"},
 		{"Develop path with subpath", "/develop/api/test"},
 		{"Auth without trailing slash", "/auth"},
 		{"OAuth2 token without params", "/oauth2/token"},
-		{"Signin without trailing slash", "/signin"},
+		{"Signin without trailing slash", "/gate/signin"},
 		{"Develop without trailing slash", "/develop"},
 	}
 
@@ -258,15 +257,15 @@ func (suite *SecurityServiceTestSuite) TestIsPublicPath() {
 		{"OAuth2 JWKS", "/oauth2/jwks", true},
 		{"OAuth2 register", "/oauth2/register", true},
 		{"Health check", "/health/liveness", true},
-		{"Signin root", "/signin/", true},
-		{"Signin logo", "/signin/logo/123", true},
+		{"Signin root", "/gate/signin", true},
+		{"Signin logo", "/gate/signin/logo/123", true},
 		{"Develop root", "/develop/", true},
 		{"Develop dashboard", "/develop/dashboard", true},
 
 		// Exact matches without trailing slash
 		{"Auth exact", "/auth", true},
 		{"OAuth2 token exact", "/oauth2/token", true},
-		{"Signin exact", "/signin", true},
+		{"Signin exact", "/gate/signin", true},
 		{"Develop exact", "/develop", true},
 
 		// Non-public paths - should return false
@@ -328,7 +327,6 @@ func (suite *SecurityServiceTestSuite) TestProcess_DifferentHTTPMethods() {
 		http.MethodPut,
 		http.MethodDelete,
 		http.MethodPatch,
-		http.MethodOptions,
 		http.MethodHead,
 	}
 
@@ -367,7 +365,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_PublicPathVariations() {
 		{"OAuth2 with query params", "/oauth2/token?grant_type=authorization_code"},
 		{"Auth with fragment", "/auth/login#section"},
 		{"Well-known with path", "/oauth2/.well-known/openid_configuration"},
-		{"Nested signin path", "/signin/forgot-password/confirm"},
+		{"Nested signin path", "/gate/forgot-password/confirm"},
 		{"Deep develop path", "/develop/api/v1/test"},
 		{"Health check with query", "/health/liveness?detailed=true"},
 	}
@@ -382,4 +380,18 @@ func (suite *SecurityServiceTestSuite) TestProcess_PublicPathVariations() {
 			assert.Equal(suite.T(), req.Context(), ctx)
 		})
 	}
+}
+
+// Test OPTIONS method bypasses authentication
+func (suite *SecurityServiceTestSuite) TestProcess_OptionsMethod() {
+	req := httptest.NewRequest(http.MethodOptions, "/api/protected", nil)
+
+	ctx, err := suite.service.Process(req)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), req.Context(), ctx)
+
+	// Verify no authenticators were called for OPTIONS method
+	suite.mockAuth1.AssertNotCalled(suite.T(), "CanHandle")
+	suite.mockAuth2.AssertNotCalled(suite.T(), "CanHandle")
 }

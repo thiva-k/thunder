@@ -116,7 +116,7 @@ configuration:
     hostname: "0.0.0.0"
     port: 8090
     scheme: "https"
-    loginPath: "/signin"
+    loginPath: "/gate/signin"
     errorPath: "/error"
 
   # Security configuration

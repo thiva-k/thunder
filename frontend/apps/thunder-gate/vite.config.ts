@@ -23,7 +23,7 @@ import {resolve} from 'path';
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 5190;
 const HOST = process.env.HOST ?? 'localhost';
-const BASE_URL = process.env.BASE_URL ?? '/signin';
+const BASE_URL = process.env.BASE_URL ?? '/gate';
 
 // https://vite.dev/config/
 export default defineConfig({

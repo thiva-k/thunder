@@ -33,6 +33,7 @@ const (
 	ExecutorNameAuthorization    = "AuthorizationExecutor"
 	ExecutorNameOUCreation       = "OUExecutor"
 	ExecutorNameHTTPRequest      = "HTTPRequestExecutor"
+	ExecutorNameUserTypeResolver = "UserTypeResolver"
 )
 
 // User attribute and input constants
@@ -47,7 +48,10 @@ const (
 	userInputOuName   = "ouName"
 	userInputOuHandle = "ouHandle"
 	userInputOuDesc   = "ouDescription"
-	ouIDKey           = "ouId"
+
+	ouIDKey        = "ouId"
+	defaultOUIDKey = "defaultOUID"
+	userTypeKey    = "userType"
 )
 
 // nonSearchableInputs contains the list of user inputs/ attributes that are non-searchable.
@@ -55,7 +59,7 @@ var nonSearchableInputs = []string{"password", "code", "nonce", "otp"}
 
 // nonUserAttributes contains the list of user attributes that do not belong to user entity.
 var nonUserAttributes = []string{"userID", "code", "nonce", "state", "flowID",
-	"otp", "attemptCount", "expiryTimeInMillis", "value"}
+	"otp", "attemptCount", "expiryTimeInMillis", "value", userTypeKey, ouIDKey, defaultOUIDKey}
 
 // Failure reason constants
 const (

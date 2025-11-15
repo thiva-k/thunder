@@ -36,6 +36,13 @@ const (
 	mockOIDCPort   = 8093
 )
 
+var oidcAuthTestOU = testutils.OrganizationUnit{
+	Handle:      "oidc-auth-test-ou",
+	Name:        "OIDC Auth Test Organization Unit",
+	Description: "Organization unit for OIDC authentication testing",
+	Parent:      nil,
+}
+
 var oidcUserSchema = testutils.UserSchema{
 	Name: "oidc_user",
 	Schema: map[string]interface{}{
@@ -66,6 +73,7 @@ type OIDCAuthTestSuite struct {
 	idpID          string
 	userID         string
 	userSchemaID   string
+	ouID           string
 }
 
 func TestOIDCAuthTestSuite(t *testing.T) {
@@ -95,6 +103,11 @@ func (suite *OIDCAuthTestSuite) SetupSuite() {
 	err = suite.mockOIDCServer.Start()
 	suite.Require().NoError(err, "Failed to start mock OIDC server")
 
+	ouID, err := testutils.CreateOrganizationUnit(oidcAuthTestOU)
+	suite.Require().NoError(err, "Failed to create test organization unit")
+	suite.ouID = ouID
+
+	oidcUserSchema.OrganizationUnitId = suite.ouID
 	schemaID, err := testutils.CreateUserType(oidcUserSchema)
 	suite.Require().NoError(err, "Failed to create OIDC user schema")
 	suite.userSchemaID = schemaID
@@ -113,7 +126,7 @@ func (suite *OIDCAuthTestSuite) SetupSuite() {
 
 	user := testutils.User{
 		Type:             oidcUserSchema.Name,
-		OrganizationUnit: "root",
+		OrganizationUnit: suite.ouID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
@@ -189,6 +202,12 @@ func (suite *OIDCAuthTestSuite) TearDownSuite() {
 
 	if suite.mockOIDCServer != nil {
 		_ = suite.mockOIDCServer.Stop()
+	}
+
+	if suite.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(suite.ouID); err != nil {
+			suite.T().Logf("Failed to delete test organization unit: %v", err)
+		}
 	}
 }
 

@@ -24,6 +24,7 @@ import (
 	"errors"
 	"fmt"
 
+	oupkg "github.com/asgardeo/thunder/internal/ou"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -38,6 +39,7 @@ type UserSchemaServiceInterface interface {
 	GetUserSchemaList(limit, offset int) (*UserSchemaListResponse, *serviceerror.ServiceError)
 	CreateUserSchema(request CreateUserSchemaRequest) (*UserSchema, *serviceerror.ServiceError)
 	GetUserSchema(schemaID string) (*UserSchema, *serviceerror.ServiceError)
+	GetUserSchemaByName(schemaName string) (*UserSchema, *serviceerror.ServiceError)
 	UpdateUserSchema(schemaID string, request UpdateUserSchemaRequest) (
 		*UserSchema, *serviceerror.ServiceError)
 	DeleteUserSchema(schemaID string) *serviceerror.ServiceError
@@ -49,12 +51,14 @@ type UserSchemaServiceInterface interface {
 // userSchemaService is the default implementation of the UserSchemaServiceInterface.
 type userSchemaService struct {
 	userSchemaStore userSchemaStoreInterface
+	ouService       oupkg.OrganizationUnitServiceInterface
 }
 
 // newUserSchemaService creates a new instance of userSchemaService.
-func newUserSchemaService() UserSchemaServiceInterface {
+func newUserSchemaService(ouService oupkg.OrganizationUnitServiceInterface) UserSchemaServiceInterface {
 	return &userSchemaService{
 		userSchemaStore: newUserSchemaStore(),
+		ouService:       ouService,
 	}
 }
 
@@ -97,6 +101,18 @@ func (us *userSchemaService) CreateUserSchema(request CreateUserSchemaRequest) (
 		return nil, invalidSchemaRequestError("user schema name must not be empty")
 	}
 
+	if request.OrganizationUnitID == "" {
+		return nil, invalidSchemaRequestError("organization unit id must not be empty")
+	}
+
+	if !utils.IsValidUUID(request.OrganizationUnitID) {
+		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
+	if svcErr := us.ensureOrganizationUnitExists(request.OrganizationUnitID, logger); svcErr != nil {
+		return nil, svcErr
+	}
+
 	if len(request.Schema) == 0 {
 		return nil, invalidSchemaRequestError("schema definition must not be empty")
 	}
@@ -117,9 +133,11 @@ func (us *userSchemaService) CreateUserSchema(request CreateUserSchemaRequest) (
 	schemaID := utils.GenerateUUID()
 
 	userSchema := UserSchema{
-		ID:     schemaID,
-		Name:   request.Name,
-		Schema: request.Schema,
+		ID:                    schemaID,
+		Name:                  request.Name,
+		OrganizationUnitID:    request.OrganizationUnitID,
+		AllowSelfRegistration: request.AllowSelfRegistration,
+		Schema:                request.Schema,
 	}
 
 	if err := us.userSchemaStore.CreateUserSchema(userSchema); err != nil {
@@ -148,6 +166,25 @@ func (us *userSchemaService) GetUserSchema(schemaID string) (*UserSchema, *servi
 	return &userSchema, nil
 }
 
+// GetUserSchemaByName retrieves a user schema by its name.
+func (us *userSchemaService) GetUserSchemaByName(schemaName string) (*UserSchema, *serviceerror.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, userSchemaLoggerComponentName))
+
+	if schemaName == "" {
+		return nil, invalidSchemaRequestError("schema name must not be empty")
+	}
+
+	userSchema, err := us.userSchemaStore.GetUserSchemaByName(schemaName)
+	if err != nil {
+		if errors.Is(err, ErrUserSchemaNotFound) {
+			return nil, &ErrorUserSchemaNotFound
+		}
+		return nil, logAndReturnServerError(logger, "Failed to get user schema by name", err)
+	}
+
+	return &userSchema, nil
+}
+
 // UpdateUserSchema updates a user schema by its ID.
 func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUserSchemaRequest) (
 	*UserSchema, *serviceerror.ServiceError) {
@@ -159,6 +196,18 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 
 	if request.Name == "" {
 		return nil, invalidSchemaRequestError("user schema name must not be empty")
+	}
+
+	if request.OrganizationUnitID == "" {
+		return nil, invalidSchemaRequestError("organization unit id must not be empty")
+	}
+
+	if !utils.IsValidUUID(request.OrganizationUnitID) {
+		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
+	if svcErr := us.ensureOrganizationUnitExists(request.OrganizationUnitID, logger); svcErr != nil {
+		return nil, svcErr
 	}
 
 	if len(request.Schema) == 0 {
@@ -189,9 +238,11 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 	}
 
 	userSchema := UserSchema{
-		ID:     schemaID,
-		Name:   request.Name,
-		Schema: request.Schema,
+		ID:                    schemaID,
+		Name:                  request.Name,
+		OrganizationUnitID:    request.OrganizationUnitID,
+		AllowSelfRegistration: request.AllowSelfRegistration,
+		Schema:                request.Schema,
 	}
 
 	if err := us.userSchemaStore.UpdateUserSchemaByID(schemaID, userSchema); err != nil {
@@ -300,6 +351,32 @@ func (us *userSchemaService) getCompiledSchemaForUserType(
 	}
 
 	return compiled, nil
+}
+
+// ensureOrganizationUnitExists validates that the provided organization unit exists using the OU service.
+func (us *userSchemaService) ensureOrganizationUnitExists(
+	organizationUnitID string,
+	logger *log.Logger,
+) *serviceerror.ServiceError {
+	if us.ouService == nil {
+		logger.Error("Organization unit service is not configured for user schema operations")
+		return &ErrorInternalServerError
+	}
+
+	exists, svcErr := us.ouService.IsOrganizationUnitExists(organizationUnitID)
+	if svcErr != nil {
+		logger.Error("Failed to verify organization unit existence",
+			log.String("organizationUnitID", organizationUnitID), log.Any("error", svcErr))
+		return &ErrorInternalServerError
+	}
+
+	if !exists {
+		logger.Debug("Organization unit does not exist",
+			log.String("organizationUnitID", organizationUnitID))
+		return invalidSchemaRequestError("organization unit id does not exist")
+	}
+
+	return nil
 }
 
 // validatePaginationParams validates the limit and offset parameters.

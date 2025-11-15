@@ -171,10 +171,12 @@ read_config() {
         HOSTNAME=$(yq eval '.server.hostname // "localhost"' "$config_file" 2>/dev/null)
         PORT=$(yq eval '.server.port // 8090' "$config_file" 2>/dev/null)
         HTTP_ONLY=$(yq eval '.server.http_only // false' "$config_file" 2>/dev/null)
+        PUBLIC_HOSTNAME=$(yq eval '.server.public_hostname // ""' "$config_file" 2>/dev/null)
     else
         # Fallback: basic parsing with grep/awk
         HOSTNAME=$(grep -E '^\s*hostname:' "$config_file" | awk -F':' '{gsub(/[[:space:]"'\'']/,"",$2); print $2}' | head -1)
         PORT=$(grep -E '^\s*port:' "$config_file" | awk -F':' '{gsub(/[[:space:]]/,"",$2); print $2}' | head -1)
+        PUBLIC_HOSTNAME=$(grep -E '^\s*public_hostname:' "$config_file" | grep -o '"[^"]*"' | tr -d '"' | head -1)
 
         # Check for http_only
         if grep -q 'http_only.*true' "$config_file" 2>/dev/null; then
@@ -200,8 +202,15 @@ read_config() {
 # Read configuration
 read_config
 
-# Construct base URL
+# Construct base URL (internal API endpoint)
 BASE_URL="${PROTOCOL}://${HOSTNAME}:${PORT}"
+
+# Construct public URL (external/redirect URLs)
+if [ -n "$PUBLIC_HOSTNAME" ]; then
+    PUBLIC_URL="$PUBLIC_HOSTNAME"
+else
+    PUBLIC_URL="$BASE_URL"
+fi
 
 echo ""
 echo "========================================="
@@ -209,24 +218,39 @@ echo "   Thunder Setup"
 echo "========================================="
 echo ""
 echo -e "${BLUE}Server URL:${NC} $BASE_URL"
+echo -e "${BLUE}Public URL:${NC} $PUBLIC_URL"
 if [ "$DEBUG_MODE" = "true" ]; then
     echo -e "${BLUE}Debug:${NC} Enabled (port $DEBUG_PORT)"
 fi
 echo ""
 
 # ============================================================================
-# Kill Existing Processes on Ports
+# Check for Port Conflicts
 # ============================================================================
 
-function kill_port() {
+check_port() {
     local port=$1
-    lsof -ti tcp:$port | xargs kill -9 2>/dev/null || true
+    local port_name=$2
+    if lsof -ti tcp:$port >/dev/null 2>&1; then
+        echo ""
+        echo -e "${RED}❌ Port $port is already in use${NC}"
+        echo -e "${RED}   $port_name cannot start because another process is using port $port${NC}"
+        echo ""
+        echo -e "${YELLOW}💡 To find the process using this port:${NC}"
+        echo "   lsof -i tcp:$port"
+        echo ""
+        echo -e "${YELLOW}💡 To stop the process:${NC}"
+        echo "   kill -9 \$(lsof -ti tcp:$port)"
+        echo ""
+        exit 1
+    fi
 }
 
+# Check if ports are available
+check_port $PORT "Thunder server"
 if [ "$DEBUG_MODE" = "true" ]; then
-    kill_port $DEBUG_PORT
+    check_port $DEBUG_PORT "Debug server"
 fi
-sleep 1
 
 # Check for Delve if debug mode is enabled
 if [ "$DEBUG_MODE" = "true" ] && ! command -v dlv &> /dev/null; then
@@ -301,6 +325,7 @@ fi
 
 # Export variables to be used in scripts
 export THUNDER_API_BASE="${BASE_URL}"
+export THUNDER_PUBLIC_URL="${PUBLIC_URL}"
 
 # Check if bootstrap directory exists
 if [ ! -d "$BOOTSTRAP_DIR" ]; then
@@ -320,19 +345,21 @@ else
 
     # Find scripts in main bootstrap directory (exclude common.sh)
     if [ -d "$BOOTSTRAP_DIR" ]; then
-        while IFS= read -r -d '' script; do
-            # Skip common.sh as it's a library, not a script to execute
-            if [[ "$(basename "$script")" != "common.sh" ]]; then
-                SCRIPTS+=("$script")
+        for script in "$BOOTSTRAP_DIR"/*.sh "$BOOTSTRAP_DIR"/*.bash; do
+            [ ! -e "$script" ] && continue
+            if [[ "$(basename "$script")" == "common.sh" ]]; then
+                continue
             fi
-        done < <(find -L "$BOOTSTRAP_DIR" -maxdepth 1 -type f \( -name "*.sh" -o -name "*.bash" \) -print0 2>/dev/null)
+            SCRIPTS+=("$script")
+        done
     fi
 
     # Find scripts in custom directory
     if [ -d "$BOOTSTRAP_DIR/custom" ]; then
-        while IFS= read -r -d '' script; do
+        for script in "$BOOTSTRAP_DIR/custom"/*.sh "$BOOTSTRAP_DIR/custom"/*.bash; do
+            [ ! -e "$script" ] && continue
             SCRIPTS+=("$script")
-        done < <(find -L "$BOOTSTRAP_DIR/custom" -maxdepth 1 -type f \( -name "*.sh" -o -name "*.bash" \) -print0 2>/dev/null)
+        done
     fi
 
     # Sort scripts by filename (numeric prefix determines order)

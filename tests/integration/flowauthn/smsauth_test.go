@@ -83,6 +83,11 @@ var (
 var (
 	smsAuthTestAppID    string
 	smsAuthUserSchemaID string
+	smsAuthTestOU = testutils.OrganizationUnit{
+		Handle:      "sms-auth-flow-test-ou",
+		Name:        "SMS Auth Flow Test OU",
+		Description: "Organization unit for SMS authentication flow tests",
+	}
 )
 
 // NotificationSenderRequest represents the request to create a message notification sender.
@@ -123,7 +128,12 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	// Note: OU is pre-configured in DB scripts
+	// Create test organization unit for SMS auth tests
+	ouID, err := testutils.CreateOrganizationUnit(smsAuthTestOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
+	smsAuthTestOU.ID = ouID
 
 	// Create test application for SMS auth tests
 	appID, err := testutils.CreateApplication(smsAuthTestApp)
@@ -132,6 +142,7 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 	}
 	smsAuthTestAppID = appID
 
+	smsAuthUserSchema.OrganizationUnitId = ouID
 	schemaID, err := testutils.CreateUserType(smsAuthUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
@@ -149,7 +160,7 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 
 	// Create test user with mobile number using the created OU
 	testUserWithMobile := testUserWithMobile
-	testUserWithMobile.OrganizationUnit = testOUID
+	testUserWithMobile.OrganizationUnit = smsAuthTestOU.ID
 	userIDs, err := testutils.CreateMultipleUsers(testUserWithMobile)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user during setup: %v", err)
@@ -273,9 +284,9 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithMobileNumber() {
 		completeFlowStep.Assertion,
 		smsAuthTestAppID,
 		smsAuthUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		smsAuthTestOU.ID,
+		smsAuthTestOU.Name,
+		smsAuthTestOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
@@ -370,9 +381,9 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithUsername() {
 		completeFlowStep.Assertion,
 		smsAuthTestAppID,
 		smsAuthUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		smsAuthTestOU.ID,
+		smsAuthTestOU.Name,
+		smsAuthTestOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
@@ -487,9 +498,9 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowSingleRequestWithMobileNumber() {
 		completeFlowStep.Assertion,
 		smsAuthTestAppID,
 		smsAuthUserSchema.Name,
-		testOUID,
-		testOUName,
-		testOUHandle,
+		smsAuthTestOU.ID,
+		smsAuthTestOU.Name,
+		smsAuthTestOU.Handle,
 	)
 	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")

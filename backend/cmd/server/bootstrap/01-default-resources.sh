@@ -102,6 +102,7 @@ log_info "Creating default user schema (person)..."
 
 RESPONSE=$(thunder_api_call POST "/user-schemas" '{
   "name": "person",
+  "ouId": "'${DEFAULT_OU_ID}'",
   "schema": {
     "sub": {
       "type": "string",
@@ -165,6 +166,7 @@ log_info "Creating admin user..."
 
 RESPONSE=$(thunder_api_call POST "/users" '{
   "type": "person",
+  "organizationUnit": "'${DEFAULT_OU_ID}'",
   "attributes": {
     "username": "admin",
     "password": "admin",
@@ -284,8 +286,11 @@ echo ""
 
 log_info "Creating DEVELOP application..."
 
+# Use THUNDER_PUBLIC_URL for redirect URIs, fallback to THUNDER_API_BASE if not set
+PUBLIC_URL="${THUNDER_PUBLIC_URL:-$THUNDER_API_BASE}"
+
 # Build redirect URIs array - default + custom if provided
-REDIRECT_URIS="\"${THUNDER_API_BASE}/develop\""
+REDIRECT_URIS="\"${PUBLIC_URL}/develop\""
 if [[ -n "$CUSTOM_DEVELOP_REDIRECT_URIS" ]]; then
     log_info "Adding custom redirect URIs: $CUSTOM_DEVELOP_REDIRECT_URIS"
     # Split comma-separated URIs and append to array
@@ -300,8 +305,8 @@ fi
 RESPONSE=$(thunder_api_call POST "/applications" "{
   \"name\": \"Develop\",
   \"description\": \"Developer application for Thunder\",
-  \"url\": \"${THUNDER_API_BASE}/develop\",
-  \"logo_url\": \"${THUNDER_API_BASE}/develop/assets/images/trifacta.svg\",
+  \"url\": \"${PUBLIC_URL}/develop\",
+  \"logo_url\": \"${PUBLIC_URL}/develop/assets/images/trifacta.svg\",
   \"auth_flow_graph_id\": \"auth_flow_config_basic\",
   \"registration_flow_graph_id\": \"registration_flow_config_basic\",
   \"is_registration_flow_enabled\": true,
@@ -317,7 +322,7 @@ RESPONSE=$(thunder_api_call POST "/applications" "{
       \"token_endpoint_auth_method\": \"none\",
       \"public_client\": true,
       \"token\": {
-        \"issuer\": \"${THUNDER_API_BASE}/oauth2/token\",
+        \"issuer\": \"${PUBLIC_URL}/oauth2/token\",
         \"access_token\": {
           \"validity_period\": 3600,
           \"user_attributes\": [\"given_name\",\"family_name\",\"email\",\"groups\", \"name\"]

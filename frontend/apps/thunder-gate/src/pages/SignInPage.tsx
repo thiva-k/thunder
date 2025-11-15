@@ -17,8 +17,8 @@
  */
 
 import type {JSX} from 'react';
-import SignInSlide from '../components/sign-in/SignInSide';
+import SignIn from '../components/SignIn/SignIn';
 
 export default function SignInPage(): JSX.Element {
-  return <SignInSlide />;
+  return <SignIn />;
 }

@@ -18,12 +18,9 @@
 
 import type {JSX} from 'react';
 import {Stack} from '@wso2/oxygen-ui';
-import SignInBox from './SignInBox';
-import SignInSlogan from './SignInSlogan';
+import SignUpBox from './SignUpBox';
 
-export type SignInSideProps = Record<string, unknown>;
-
-export default function SignInSide(): JSX.Element {
+export default function SignUp(): JSX.Element {
   return (
     <Stack
       direction="column"
@@ -54,8 +51,7 @@ export default function SignInSide(): JSX.Element {
             m: 'auto',
           }}
         >
-          <SignInSlogan />
-          <SignInBox />
+          <SignUpBox />
         </Stack>
       </Stack>
     </Stack>

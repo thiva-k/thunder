@@ -32,17 +32,6 @@ const (
 )
 
 var (
-	ouRegTestApp = testutils.Application{
-		Name:                      "OU Registration Flow Test Application",
-		Description:               "Application for testing OU registration flows",
-		IsRegistrationFlowEnabled: true,
-		AuthFlowGraphID:           "auth_flow_config_basic",
-		RegistrationFlowGraphID:   "registration_flow_config_basic_with_ou",
-		ClientID:                  "ou_reg_flow_test_client",
-		ClientSecret:              "ou_reg_flow_test_secret",
-		RedirectURIs:              []string{"http://localhost:3000/callback"},
-	}
-
 	ouRegTestOU = testutils.OrganizationUnit{
 		Handle:      "ou-reg-flow-test-ou",
 		Name:        "OU Registration Flow Test Organization Unit",
@@ -73,6 +62,18 @@ var (
 			},
 		},
 	}
+
+	ouRegTestApp = testutils.Application{
+		Name:                      "OU Registration Flow Test Application",
+		Description:               "Application for testing OU registration flows",
+		IsRegistrationFlowEnabled: true,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic_with_ou",
+		ClientID:                  "ou_reg_flow_test_client",
+		ClientSecret:              "ou_reg_flow_test_secret",
+		RedirectURIs:              []string{"http://localhost:3000/callback"},
+		AllowedUserTypes:          []string{dynamicUserSchema.Name},
+	}
 )
 
 type OURegistrationFlowTestSuite struct {
@@ -95,17 +96,33 @@ func (ts *OURegistrationFlowTestSuite) SetupSuite() {
 	ts.config = &TestSuiteConfig{}
 	ts.createdOUs = []string{}
 
+	ouID, err := testutils.CreateOrganizationUnit(ouRegTestOU)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	}
+	ts.basicFlowTestOUID = ouID
+
+	// Create dynamic user schema
+	dynamicUserSchema.OrganizationUnitId = ts.basicFlowTestOUID
+	dynamicUserSchema.AllowSelfRegistration = true
 	schemaID, err := testutils.CreateUserType(dynamicUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create dynamic user schema during setup: %v", err)
 	}
 	ts.userSchemaID = schemaID
 
-	ouID, err := testutils.CreateOrganizationUnit(ouRegTestOU)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
+	// Create test application with allowed user types
+	ouRegTestApp := testutils.Application{
+		Name:                      "OU Registration Flow Test Application",
+		Description:               "Application for testing OU registration flows",
+		IsRegistrationFlowEnabled: true,
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic_with_ou",
+		ClientID:                  "ou_reg_flow_test_client",
+		ClientSecret:              "ou_reg_flow_test_secret",
+		RedirectURIs:              []string{"http://localhost:3000/callback"},
+		AllowedUserTypes:          []string{dynamicUserSchema.Name},
 	}
-	ts.basicFlowTestOUID = ouID
 
 	appID, err := testutils.CreateApplication(ouRegTestApp)
 	if err != nil {
@@ -122,6 +139,7 @@ func (ts *OURegistrationFlowTestSuite) SetupSuite() {
 		ClientID:                  "ou_sms_reg_flow_test_client",
 		ClientSecret:              "ou_sms_reg_flow_test_secret",
 		RedirectURIs:              []string{"http://localhost:3000/callback"},
+		AllowedUserTypes:          []string{dynamicUserSchema.Name},
 	}
 
 	smsAppID, err := testutils.CreateApplication(smsApp)
@@ -252,6 +270,9 @@ func (ts *OURegistrationFlowTestSuite) TestBasicRegistrationFlowWithOU() {
 			ts.Require().NoError(err)
 			ts.Require().Equal(tc.ouName, ou.Name)
 			ts.Require().Equal(tc.ouHandle, ou.Handle)
+			ts.Require().NotNil(ou.Parent, "Created OU should have a parent")
+			ts.Require().Equal(ts.basicFlowTestOUID, *ou.Parent,
+				"Created OU should be a child of the user schema's OU")
 
 			if tc.ouDescription != "" {
 				ts.Require().Equal(tc.ouDescription, ou.Description)
@@ -277,7 +298,7 @@ func (ts *OURegistrationFlowTestSuite) TestBasicRegistrationFlowWithOUCreationDu
 			existingOUHandle:    generateUniqueHandle("duplicate-name"),
 			newOUName:           "Duplicate OU Name",
 			newOUHandle:         generateUniqueHandle("new-handle"),
-			expectedErrorSubstr: "organization unit with the same name already exists",
+			expectedErrorSubstr: "An organization unit with the same name already exists",
 		},
 		{
 			name:                "DuplicateOUHandle",
@@ -285,7 +306,7 @@ func (ts *OURegistrationFlowTestSuite) TestBasicRegistrationFlowWithOUCreationDu
 			existingOUHandle:    generateUniqueHandle("duplicate-handle"),
 			newOUName:           "New OU Name",
 			newOUHandle:         "",
-			expectedErrorSubstr: "organization unit with the same handle already exists",
+			expectedErrorSubstr: "An organization unit with the same handle already exists",
 		},
 	}
 
@@ -295,7 +316,7 @@ func (ts *OURegistrationFlowTestSuite) TestBasicRegistrationFlowWithOUCreationDu
 				Handle:      tc.existingOUHandle,
 				Name:        tc.existingOUName,
 				Description: "Existing OU",
-				Parent:      nil,
+				Parent:      &ts.basicFlowTestOUID,
 			}
 
 			existingOUID, err := testutils.CreateOrganizationUnit(existingOU)
@@ -401,6 +422,9 @@ func (ts *OURegistrationFlowTestSuite) TestSMSRegistrationFlowWithOUCreation() {
 			ts.Require().NoError(err)
 			ts.Require().Equal(tc.ouName, ou.Name)
 			ts.Require().Equal(tc.ouHandle, ou.Handle)
+			ts.Require().NotNil(ou.Parent, "Created OU should have a parent")
+			ts.Require().Equal(ts.basicFlowTestOUID, *ou.Parent,
+				"Created OU should be a child of the user schema's OU")
 
 			if tc.ouDescription != "" {
 				ts.Require().Equal(tc.ouDescription, ou.Description)
@@ -426,7 +450,7 @@ func (ts *OURegistrationFlowTestSuite) TestSMSRegistrationFlowWithOUCreationDupl
 			existingOUHandle:    generateUniqueHandle("sms-duplicate-name"),
 			newOUName:           "SMS Duplicate OU Name",
 			newOUHandle:         generateUniqueHandle("new-sms-handle"),
-			expectedErrorSubstr: "organization unit with the same name already exists",
+			expectedErrorSubstr: "An organization unit with the same name already exists",
 		},
 		{
 			name:                "DuplicateOUHandle",
@@ -434,7 +458,7 @@ func (ts *OURegistrationFlowTestSuite) TestSMSRegistrationFlowWithOUCreationDupl
 			existingOUHandle:    generateUniqueHandle("sms-duplicate-handle"),
 			newOUName:           "SMS New OU Name",
 			newOUHandle:         "",
-			expectedErrorSubstr: "organization unit with the same handle already exists",
+			expectedErrorSubstr: "An organization unit with the same handle already exists",
 		},
 	}
 
@@ -444,7 +468,7 @@ func (ts *OURegistrationFlowTestSuite) TestSMSRegistrationFlowWithOUCreationDupl
 				Handle:      tc.existingOUHandle,
 				Name:        tc.existingOUName,
 				Description: "Existing OU",
-				Parent:      nil,
+				Parent:      &ts.basicFlowTestOUID,
 			}
 
 			existingOUID, err := testutils.CreateOrganizationUnit(existingOU)

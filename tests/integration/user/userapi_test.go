@@ -123,6 +123,7 @@ func (ts *UserAPITestSuite) SetupSuite() {
 	}
 	testOUID = ouID
 
+	userSchema.OrganizationUnitId = testOUID
 	schemaID, err := testutils.CreateUserType(userSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create user schema during setup: %v", err)

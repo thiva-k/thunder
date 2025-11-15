@@ -57,6 +57,13 @@ var smsOTPUserSchema = testutils.UserSchema{
 	},
 }
 
+var smsOTPAuthTestOU = testutils.OrganizationUnit{
+	Handle:      "sms-otp-auth-test-ou",
+	Name:        "SMS OTP Auth Test Organization Unit",
+	Description: "Organization unit for SMS OTP authentication testing",
+	Parent:      nil,
+}
+
 type SMSOTPAuthTestSuite struct {
 	suite.Suite
 	mockServer   *testutils.MockNotificationServer
@@ -65,6 +72,7 @@ type SMSOTPAuthTestSuite struct {
 	userID       string
 	mobileNumber string
 	userSchemaID string
+	ouID         string
 }
 
 func TestSMSOTPAuthTestSuite(t *testing.T) {
@@ -84,6 +92,10 @@ func (suite *SMSOTPAuthTestSuite) SetupSuite() {
 	suite.Require().NoError(err, "Failed to start mock notification server")
 
 	time.Sleep(100 * time.Millisecond)
+
+	ouID, err := testutils.CreateOrganizationUnit(smsOTPAuthTestOU)
+	suite.Require().NoError(err, "Failed to create test organization unit")
+	suite.ouID = ouID
 
 	customSender := NotificationSenderRequest{
 		Name:        "Test SMS OTP Auth Sender",
@@ -112,6 +124,7 @@ func (suite *SMSOTPAuthTestSuite) SetupSuite() {
 	suite.Require().NoError(err, "Failed to create notification sender")
 	suite.senderID = senderID
 
+	smsOTPUserSchema.OrganizationUnitId = suite.ouID
 	schemaID, err := testutils.CreateUserType(smsOTPUserSchema)
 	suite.Require().NoError(err, "Failed to create SMS OTP user schema")
 	suite.userSchemaID = schemaID
@@ -127,7 +140,7 @@ func (suite *SMSOTPAuthTestSuite) SetupSuite() {
 
 	user := testutils.User{
 		Type:             smsOTPUserSchema.Name,
-		OrganizationUnit: "1234-abcd-5678-efgh",
+		OrganizationUnit: suite.ouID,
 		Attributes:       userAttributesJSON,
 	}
 	userID, err := testutils.CreateUser(user)
@@ -150,6 +163,12 @@ func (suite *SMSOTPAuthTestSuite) TearDownSuite() {
 
 	if suite.mockServer != nil {
 		_ = suite.mockServer.Stop()
+	}
+
+	if suite.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(suite.ouID); err != nil {
+			suite.T().Logf("Failed to delete test organization unit: %v", err)
+		}
 	}
 }
 

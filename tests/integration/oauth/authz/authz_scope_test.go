@@ -88,12 +88,6 @@ func (ts *OAuthAuthzScopeTestSuite) SetupSuite() {
 		},
 	}
 
-	// Create user schema
-	scopeUserSchemaID, err = testutils.CreateUserType(scopeTestUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create user schema: %v", err)
-	}
-
 	// Create test organization unit
 	ou := testutils.OrganizationUnit{
 		Handle:      "oauth-scope-authz-test-ou",
@@ -104,6 +98,13 @@ func (ts *OAuthAuthzScopeTestSuite) SetupSuite() {
 	scopeTestOUID, err = testutils.CreateOrganizationUnit(ou)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit: %v", err)
+	}
+	scopeTestUserSchema.OrganizationUnitId = scopeTestOUID
+
+	// Create user schema
+	scopeUserSchemaID, err = testutils.CreateUserType(scopeTestUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create user schema: %v", err)
 	}
 
 	// We need to use the inbound_auth_config approach for OAuth apps

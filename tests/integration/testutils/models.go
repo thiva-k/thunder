@@ -24,9 +24,11 @@ import (
 
 // UserSchema represents a user schema (user type) definition
 type UserSchema struct {
-	ID     string                 `json:"id,omitempty"`
-	Name   string                 `json:"name"`
-	Schema map[string]interface{} `json:"schema"`
+	ID                    string                 `json:"id,omitempty"`
+	Name                  string                 `json:"name"`
+	OrganizationUnitId    string                 `json:"ouId"`
+	AllowSelfRegistration bool                   `json:"allowSelfRegistration,omitempty"`
+	Schema                map[string]interface{} `json:"schema"`
 }
 
 // User represents a user in the system
@@ -48,6 +50,7 @@ type Application struct {
 	ClientID                  string                   `json:"client_id,omitempty"`
 	ClientSecret              string                   `json:"client_secret,omitempty"`
 	RedirectURIs              []string                 `json:"redirect_uris,omitempty"`
+	AllowedUserTypes          []string                 `json:"allowed_user_types,omitempty"`
 	Certificate               map[string]interface{}   `json:"certificate,omitempty"`
 	InboundAuthConfig         []map[string]interface{} `json:"inbound_auth_config,omitempty"`
 }

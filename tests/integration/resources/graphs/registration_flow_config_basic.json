@@ -3,6 +3,13 @@
     "type": "REGISTRATION",
     "nodes": [
         {
+            "id": "registration_start",
+            "type": "REGISTRATION_START",
+            "next": [
+                "basic_auth"
+            ]
+        },
+        {
             "id": "basic_auth",
             "type": "TASK_EXECUTION",
             "executor": {
@@ -42,10 +49,6 @@
                     "required": true
                 }
             ],
-            "properties": {
-                "ouId": "test-ou-id",
-                "userType": "test-user-type"
-            },
             "executor": {
                 "name": "ProvisioningExecutor"
             },

@@ -31,14 +31,6 @@ const (
 )
 
 var (
-	httpRequestRegTestApp = testutils.Application{
-		Name:                      "HTTP Request Executor Registration Test Application",
-		Description:               "Application for testing HTTP request executor in registration flows",
-		AuthFlowGraphID:           "auth_flow_config_basic",
-		RegistrationFlowGraphID:   "registration_flow_config_basic_http_request",
-		IsRegistrationFlowEnabled: true,
-	}
-
 	httpRequestRegTestOU = testutils.OrganizationUnit{
 		Name:        "HTTP Request Registration Test OU",
 		Handle:      "http-request-reg-test-ou",
@@ -65,6 +57,15 @@ var (
 			},
 		},
 	}
+
+	httpRequestRegTestApp = testutils.Application{
+		Name:                      "HTTP Request Executor Registration Test Application",
+		Description:               "Application for testing HTTP request executor in registration flows",
+		AuthFlowGraphID:           "auth_flow_config_basic",
+		RegistrationFlowGraphID:   "registration_flow_config_basic_http_request",
+		IsRegistrationFlowEnabled: true,
+		AllowedUserTypes:          []string{httpRequestRegTestUserSchema.Name},
+	}
 )
 
 var (
@@ -87,19 +88,21 @@ func (ts *HTTPRequestRegistrationFlowTestSuite) SetupSuite() {
 	// Initialize config
 	ts.config = &TestSuiteConfig{}
 
-	// Create test user schema
-	schemaID, err := testutils.CreateUserType(httpRequestRegTestUserSchema)
-	if err != nil {
-		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
-	}
-	httpRequestRegUserSchemaID = schemaID
-
 	// Create test organization unit
 	ouID, err := testutils.CreateOrganizationUnit(httpRequestRegTestOU)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
 	httpRequestRegTestOUID = ouID
+
+	// Create test user schema within the test OU
+	httpRequestRegTestUserSchema.OrganizationUnitId = httpRequestRegTestOUID
+	httpRequestRegTestUserSchema.AllowSelfRegistration = true
+	schemaID, err := testutils.CreateUserType(httpRequestRegTestUserSchema)
+	if err != nil {
+		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
+	}
+	httpRequestRegUserSchemaID = schemaID
 
 	// Create test application
 	appID, err := testutils.CreateApplication(httpRequestRegTestApp)

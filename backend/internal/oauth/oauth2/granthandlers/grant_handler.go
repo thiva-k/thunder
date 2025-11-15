@@ -34,6 +34,11 @@ type GrantHandlerInterface interface {
 // RefreshTokenGrantHandlerInterface defines the interface for handling refresh token grants.
 type RefreshTokenGrantHandlerInterface interface {
 	GrantHandlerInterface
-	IssueRefreshToken(tokenResponse *model.TokenResponseDTO, oauthApp *appmodel.OAuthAppConfigProcessedDTO,
-		subject string, audience string, grantType string, scopes []string) *model.ErrorResponse
+	IssueRefreshToken(
+		tokenResponse *model.TokenResponseDTO,
+		oauthApp *appmodel.OAuthAppConfigProcessedDTO,
+		subject, audience, grantType string,
+		scopes []string,
+		userType, ouID, ouName, ouHandle string,
+	) *model.ErrorResponse
 }

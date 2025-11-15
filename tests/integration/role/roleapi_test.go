@@ -45,7 +45,7 @@ var (
 	}
 
 	testUserSchema = testutils.UserSchema{
-		Name: "person",
+		Name: "role-person",
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
@@ -63,7 +63,7 @@ var (
 	}
 
 	testUser1 = testutils.User{
-		Type: "person",
+		Type: "role-person",
 		Attributes: json.RawMessage(`{
 			"email": "roleuser1@example.com",
 			"firstName": "Role",
@@ -73,7 +73,7 @@ var (
 	}
 
 	testUser2 = testutils.User{
-		Type: "person",
+		Type: "role-person",
 		Attributes: json.RawMessage(`{
 			"email": "roleuser2@example.com",
 			"firstName": "Role",
@@ -120,15 +120,16 @@ func (suite *RoleAPITestSuite) SetupSuite() {
 		},
 	}
 
-	// Create user schema
-	schemaID, err := testutils.CreateUserType(testUserSchema)
-	suite.Require().NoError(err, "Failed to create user schema")
-	userSchemaID = schemaID
-
 	// Create test organization unit
 	ouID, err := testutils.CreateOrganizationUnit(testOU)
 	suite.Require().NoError(err, "Failed to create test organization unit")
 	testOUID = ouID
+	testUserSchema.OrganizationUnitId = testOUID
+
+	// Create user schema
+	schemaID, err := testutils.CreateUserType(testUserSchema)
+	suite.Require().NoError(err, "Failed to create user schema")
+	userSchemaID = schemaID
 
 	// Create test users
 	user1 := testUser1

@@ -26,7 +26,6 @@ const config = {
     authorizationEndpoint: runtimeConfig.authorizationEndpoint || import.meta.env.VITE_REACT_APP_SERVER_AUTHORIZATION_ENDPOINT,
     tokenEndpoint: runtimeConfig.tokenEndpoint || import.meta.env.VITE_REACT_APP_SERVER_TOKEN_ENDPOINT,
     clientId: import.meta.env.VITE_REACT_APP_CLIENT_ID,
-    clientSecret: import.meta.env.VITE_REACT_APP_CLIENT_SECRET,
     redirectUri: runtimeConfig.redirectUri || import.meta.env.VITE_REACT_APP_REDIRECT_URI,
     scope: import.meta.env.VITE_REACT_APP_SCOPE
 };

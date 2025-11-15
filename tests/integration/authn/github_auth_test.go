@@ -37,6 +37,13 @@ const (
 	mockGithubPort   = 8091
 )
 
+var githubAuthTestOU = testutils.OrganizationUnit{
+	Handle:      "github-auth-test-ou",
+	Name:        "GitHub Auth Test Organization Unit",
+	Description: "Organization unit for GitHub authentication testing",
+	Parent:      nil,
+}
+
 var githubUserSchema = testutils.UserSchema{
 	Name: "github_user",
 	Schema: map[string]interface{}{
@@ -67,6 +74,7 @@ type GithubAuthTestSuite struct {
 	idpID            string
 	userID           string
 	userSchemaID     string
+	ouID             string
 }
 
 func TestGithubAuthTestSuite(t *testing.T) {
@@ -99,6 +107,11 @@ func (suite *GithubAuthTestSuite) SetupSuite() {
 	err := suite.mockGithubServer.Start()
 	suite.Require().NoError(err, "Failed to start mock GitHub server")
 
+	ouID, err := testutils.CreateOrganizationUnit(githubAuthTestOU)
+	suite.Require().NoError(err, "Failed to create test organization unit")
+	suite.ouID = ouID
+
+	githubUserSchema.OrganizationUnitId = suite.ouID
 	schemaID, err := testutils.CreateUserType(githubUserSchema)
 	suite.Require().NoError(err, "Failed to create GitHub user schema")
 	suite.userSchemaID = schemaID
@@ -117,7 +130,7 @@ func (suite *GithubAuthTestSuite) SetupSuite() {
 
 	user := testutils.User{
 		Type:             githubUserSchema.Name,
-		OrganizationUnit: "root",
+		OrganizationUnit: suite.ouID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
@@ -188,6 +201,12 @@ func (suite *GithubAuthTestSuite) TearDownSuite() {
 
 	if suite.mockGithubServer != nil {
 		_ = suite.mockGithubServer.Stop()
+	}
+
+	if suite.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(suite.ouID); err != nil {
+			suite.T().Logf("Failed to delete test organization unit: %v", err)
+		}
 	}
 }
 

@@ -37,6 +37,13 @@ const (
 	mockOAuthPort   = 8092
 )
 
+var oauthAuthTestOU = testutils.OrganizationUnit{
+	Handle:      "oauth-auth-test-ou",
+	Name:        "OAuth Auth Test Organization Unit",
+	Description: "Organization unit for OAuth authentication testing",
+	Parent:      nil,
+}
+
 var oauthUserSchema = testutils.UserSchema{
 	Name: "oauth_user",
 	Schema: map[string]interface{}{
@@ -67,6 +74,7 @@ type OAuthAuthTestSuite struct {
 	idpID           string
 	userID          string
 	userSchemaID    string
+	ouID            string
 }
 
 func TestOAuthAuthTestSuite(t *testing.T) {
@@ -91,6 +99,11 @@ func (suite *OAuthAuthTestSuite) SetupSuite() {
 	err := suite.mockOAuthServer.Start()
 	suite.Require().NoError(err, "Failed to start mock OAuth server")
 
+	ouID, err := testutils.CreateOrganizationUnit(oauthAuthTestOU)
+	suite.Require().NoError(err, "Failed to create test organization unit")
+	suite.ouID = ouID
+
+	oauthUserSchema.OrganizationUnitId = suite.ouID
 	schemaID, err := testutils.CreateUserType(oauthUserSchema)
 	suite.Require().NoError(err, "Failed to create OAuth user schema")
 	suite.userSchemaID = schemaID
@@ -109,7 +122,7 @@ func (suite *OAuthAuthTestSuite) SetupSuite() {
 
 	user := testutils.User{
 		Type:             oauthUserSchema.Name,
-		OrganizationUnit: "root",
+		OrganizationUnit: suite.ouID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}
 
@@ -180,6 +193,12 @@ func (suite *OAuthAuthTestSuite) TearDownSuite() {
 
 	if suite.mockOAuthServer != nil {
 		_ = suite.mockOAuthServer.Stop()
+	}
+
+	if suite.ouID != "" {
+		if err := testutils.DeleteOrganizationUnit(suite.ouID); err != nil {
+			suite.T().Logf("Failed to delete test organization unit: %v", err)
+		}
 	}
 }
 
