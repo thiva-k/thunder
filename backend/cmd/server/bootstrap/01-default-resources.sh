@@ -166,6 +166,7 @@ log_info "Creating admin user..."
 
 RESPONSE=$(thunder_api_call POST "/users" '{
   "type": "person",
+  "organizationUnit": "'${DEFAULT_OU_ID}'",
   "attributes": {
     "username": "admin",
     "password": "admin",
