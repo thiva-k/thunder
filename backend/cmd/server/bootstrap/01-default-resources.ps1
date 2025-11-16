@@ -33,7 +33,7 @@ Log-Info "Creating default organization unit..."
 
 $response = Invoke-ThunderApi -Method POST -Endpoint "/organization-units" -Data '{
   "handle": "default",
-  "name": "Default Organization",
+  "name": "Default",
   "description": "Default organization unit"
 }'
 
@@ -85,10 +85,10 @@ Write-Host ""
 Log-Info "Creating default user schema (person)..."
 
 $userSchemaData = ([ordered]@{
-    name = "person"
+    name = "Person"
     ouId = $DEFAULT_OU_ID
     schema = [ordered]@{
-        sub = @{
+        username = @{
             type = "string"
             required = $true
             unique = $true
@@ -102,19 +102,11 @@ $userSchemaData = ([ordered]@{
             type = "boolean"
             required = $false
         }
-        name = @{
-            type = "string"
-            required = $false
-        }
         given_name = @{
             type = "string"
             required = $false
         }
         family_name = @{
-            type = "string"
-            required = $false
-        }
-        picture = @{
             type = "string"
             required = $false
         }
@@ -151,7 +143,7 @@ Write-Host ""
 Log-Info "Creating admin user..."
 
 $adminUserData = ([ordered]@{
-    type = "person"
+    type = "Person"
     organizationUnit = $DEFAULT_OU_ID
     attributes = @{
         username = "admin"
