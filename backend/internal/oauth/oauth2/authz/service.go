@@ -21,6 +21,8 @@ package authz
 
 import (
 	"errors"
+
+	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 // AuthorizeServiceInterface defines the interface for authorization services.
@@ -31,26 +33,36 @@ type AuthorizeServiceInterface interface {
 // authorizeService implements the AuthorizeService for managing OAuth2 authorization flows.
 type authorizeService struct {
 	authzStore AuthorizationCodeStoreInterface
+	logger     log.Logger
 }
 
 // newAuthorizeService creates a new instance of authorizeService with injected dependencies.
 func newAuthorizeService(authzStore AuthorizationCodeStoreInterface) AuthorizeServiceInterface {
 	return &authorizeService{
 		authzStore: authzStore,
+		logger:     *log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthorizeService")),
 	}
 }
 
-func (as *authorizeService) GetAuthorizationCodeDetails(
-	clientID string, code string) (*AuthorizationCode, error) {
+// GetAuthorizationCodeDetails retrieves and invalidates the authorization code.
+func (as *authorizeService) GetAuthorizationCodeDetails(clientID string, code string) (*AuthorizationCode, error) {
 	authCode, err := as.authzStore.GetAuthorizationCode(clientID, code)
-	if err != nil || authCode.Code == "" {
+	if err != nil {
+		if errors.Is(err, ErrAuthorizationCodeNotFound) {
+			return nil, errors.New("invalid authorization code")
+		}
+		as.logger.Error("error retrieving authorization code", log.Error(err))
+		return nil, errors.New("failed to retrieve authorization code")
+	}
+	if authCode == nil || authCode.Code == "" {
 		return nil, errors.New("invalid authorization code")
 	}
 
 	// Invalidate the authorization code after use.
-	err = as.authzStore.DeactivateAuthorizationCode(authCode)
+	err = as.authzStore.DeactivateAuthorizationCode(*authCode)
 	if err != nil {
+		as.logger.Error("error invalidating authorization code", log.Error(err))
 		return nil, errors.New("failed to invalidate authorization code")
 	}
-	return &authCode, nil
+	return authCode, nil
 }

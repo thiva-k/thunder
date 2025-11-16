@@ -34,9 +34,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice"
-	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/config"
-	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/authzmock"
@@ -83,7 +81,6 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 		tokenBuilder: suite.mockTokenBuilder,
 		authzService: suite.mockAuthzService,
 		userService:  suite.mockUserService,
-		ouService:    suite.mockOUService,
 	}
 
 	suite.oauthApp = &appmodel.OAuthAppConfigProcessedDTO{
@@ -121,7 +118,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestNewAuthorizationCodeGrantHandler() {
-	handler := newAuthorizationCodeGrantHandler(suite.mockUserService, suite.mockOUService,
+	handler := newAuthorizationCodeGrantHandler(suite.mockUserService,
 		suite.mockAuthzService, suite.mockTokenBuilder)
 	assert.NotNil(suite.T(), handler)
 	assert.Implements(suite.T(), (*GrantHandlerInterface)(nil), handler)
@@ -935,36 +932,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_NoResourceP
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_FetchUserOUFailed() {
-	// Mock authorization code store to return valid code
-	suite.mockAuthzService.On("GetAuthorizationCodeDetails", testClientID, "test-auth-code").
-		Return(&suite.testAuthzCode, nil)
-
-	// Mock user service to return user with OU ID
-	mockUser := &user.User{
-		ID:               testUserID,
-		Attributes:       json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
-		OrganizationUnit: "ou-123",
-	}
-	suite.mockUserService.On("GetUser", testUserID).Return(mockUser, nil)
-
-	// Mock OU service to return error
-	suite.mockOUService.On("GetOrganizationUnit", "ou-123").
-		Return(ou.OrganizationUnit{}, &serviceerror.ServiceError{
-			Code:  "OU_FETCH_ERROR",
-			Error: "failed to fetch organization unit",
-		})
-
-	result, err := suite.handler.HandleGrant(suite.testTokenReq, suite.oauthApp)
-
-	assert.Nil(suite.T(), result)
-	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), constants.ErrorServerError, err.Error)
-	assert.Equal(suite.T(), "Something went wrong while fetching user organization unit details",
-		err.ErrorDescription)
-
-	suite.mockAuthzService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertExpectations(suite.T())
-	suite.mockOUService.AssertExpectations(suite.T())
+	suite.T().Skip("OU service is no longer used - OU details are retrieved from authz code which comes from JWT claims")
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_IDTokenGenerationFailed() {

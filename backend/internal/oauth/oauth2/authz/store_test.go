@@ -19,16 +19,17 @@
 package authz
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/tests/mocks/database/clientmock"
-	"github.com/asgardeo/thunder/tests/mocks/database/modelmock"
 	"github.com/asgardeo/thunder/tests/mocks/database/providermock"
 )
 
@@ -88,30 +89,18 @@ func (suite *AuthorizationCodeStoreTestSuite) TestnewAuthorizationCodeStore() {
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_Success() {
-	mockTx := &modelmock.TxInterfaceMock{}
-
 	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("BeginTx").Return(mockTx, nil)
 
-	mockTx.On("Exec", queryInsertAuthorizationCode.Query,
+	suite.mockDBClient.On("Execute", queryInsertAuthorizationCode,
 		suite.testAuthzCode.CodeID, suite.testAuthzCode.Code, suite.testAuthzCode.ClientID,
-		suite.testAuthzCode.RedirectURI, suite.testAuthzCode.AuthorizedUserID,
-		suite.testAuthzCode.TimeCreated, suite.testAuthzCode.ExpiryTime, suite.testAuthzCode.State,
-		suite.testAuthzCode.CodeChallenge, suite.testAuthzCode.CodeChallengeMethod, suite.testAuthzCode.Resource).
-		Return(nil, nil)
-
-	mockTx.On("Exec", queryInsertAuthorizationCodeScopes.Query,
-		suite.testAuthzCode.CodeID, suite.testAuthzCode.Scopes).
-		Return(nil, nil)
-
-	mockTx.On("Commit").Return(nil)
+		suite.testAuthzCode.State, mock.Anything, suite.testAuthzCode.TimeCreated, suite.testAuthzCode.ExpiryTime).
+		Return(int64(1), nil)
 
 	err := suite.store.InsertAuthorizationCode(suite.testAuthzCode)
 	assert.NoError(suite.T(), err)
 
 	suite.mockdbProvider.AssertExpectations(suite.T())
 	suite.mockDBClient.AssertExpectations(suite.T())
-	mockTx.AssertExpectations(suite.T())
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_DBClientError() {
@@ -124,123 +113,51 @@ func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_DBClie
 	suite.mockdbProvider.AssertExpectations(suite.T())
 }
 
-func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_BeginTxError() {
-	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("BeginTx").Return(nil, errors.New("tx error"))
-
-	err := suite.store.InsertAuthorizationCode(suite.testAuthzCode)
-	assert.Error(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to begin transaction")
-
-	suite.mockdbProvider.AssertExpectations(suite.T())
-	suite.mockDBClient.AssertExpectations(suite.T())
-}
-
 func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_ExecError() {
-	mockTx := &modelmock.TxInterfaceMock{}
-
 	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("BeginTx").Return(mockTx, nil)
 
-	mockTx.On("Exec", queryInsertAuthorizationCode.Query,
+	suite.mockDBClient.On("Execute", queryInsertAuthorizationCode,
 		suite.testAuthzCode.CodeID, suite.testAuthzCode.Code, suite.testAuthzCode.ClientID,
-		suite.testAuthzCode.RedirectURI, suite.testAuthzCode.AuthorizedUserID,
-		suite.testAuthzCode.TimeCreated, suite.testAuthzCode.ExpiryTime, suite.testAuthzCode.State,
-		suite.testAuthzCode.CodeChallenge, suite.testAuthzCode.CodeChallengeMethod, suite.testAuthzCode.Resource).
-		Return(nil, errors.New("exec error"))
-
-	mockTx.On("Rollback").Return(nil)
+		suite.testAuthzCode.State, mock.Anything, suite.testAuthzCode.TimeCreated, suite.testAuthzCode.ExpiryTime).
+		Return(int64(0), errors.New("execute error"))
 
 	err := suite.store.InsertAuthorizationCode(suite.testAuthzCode)
 	assert.Error(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to insert authorization code")
+	assert.Contains(suite.T(), err.Error(), "error inserting authorization code")
 
 	suite.mockdbProvider.AssertExpectations(suite.T())
 	suite.mockDBClient.AssertExpectations(suite.T())
-	mockTx.AssertExpectations(suite.T())
-}
-
-func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_ScopeExecError() {
-	mockTx := &modelmock.TxInterfaceMock{}
-
-	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("BeginTx").Return(mockTx, nil)
-
-	mockTx.On("Exec", queryInsertAuthorizationCode.Query,
-		suite.testAuthzCode.CodeID, suite.testAuthzCode.Code, suite.testAuthzCode.ClientID,
-		suite.testAuthzCode.RedirectURI, suite.testAuthzCode.AuthorizedUserID,
-		suite.testAuthzCode.TimeCreated, suite.testAuthzCode.ExpiryTime, suite.testAuthzCode.State,
-		suite.testAuthzCode.CodeChallenge, suite.testAuthzCode.CodeChallengeMethod, suite.testAuthzCode.Resource).
-		Return(nil, nil)
-
-	mockTx.On("Exec", queryInsertAuthorizationCodeScopes.Query,
-		suite.testAuthzCode.CodeID, suite.testAuthzCode.Scopes).
-		Return(nil, errors.New("scope exec error"))
-
-	mockTx.On("Rollback").Return(nil)
-
-	err := suite.store.InsertAuthorizationCode(suite.testAuthzCode)
-	assert.Error(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to insert authorization code scopes")
-
-	suite.mockdbProvider.AssertExpectations(suite.T())
-	suite.mockDBClient.AssertExpectations(suite.T())
-	mockTx.AssertExpectations(suite.T())
-}
-
-func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_CommitError() {
-	mockTx := &modelmock.TxInterfaceMock{}
-
-	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("BeginTx").Return(mockTx, nil)
-
-	mockTx.On("Exec", queryInsertAuthorizationCode.Query,
-		suite.testAuthzCode.CodeID, suite.testAuthzCode.Code, suite.testAuthzCode.ClientID,
-		suite.testAuthzCode.RedirectURI, suite.testAuthzCode.AuthorizedUserID,
-		suite.testAuthzCode.TimeCreated, suite.testAuthzCode.ExpiryTime, suite.testAuthzCode.State,
-		suite.testAuthzCode.CodeChallenge, suite.testAuthzCode.CodeChallengeMethod, suite.testAuthzCode.Resource).
-		Return(nil, nil)
-
-	mockTx.On("Exec", queryInsertAuthorizationCodeScopes.Query,
-		suite.testAuthzCode.CodeID, suite.testAuthzCode.Scopes).
-		Return(nil, nil)
-
-	mockTx.On("Commit").Return(errors.New("commit error"))
-
-	err := suite.store.InsertAuthorizationCode(suite.testAuthzCode)
-	assert.Error(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to commit transaction")
-
-	suite.mockdbProvider.AssertExpectations(suite.T())
-	suite.mockDBClient.AssertExpectations(suite.T())
-	mockTx.AssertExpectations(suite.T())
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_Success() {
-	testTimeStr := "2023-12-01 10:30:45.123456"
-	testTime, _ := time.Parse("2006-01-02 15:04:05.999999999", testTimeStr)
-
-	queryResults := []map[string]interface{}{
-		{
-			"code_id":            "test-code-id",
-			"authorization_code": "test-code",
-			"callback_url":       "https://client.example.com/callback",
-			"authz_user":         "test-user-id",
-			"time_created":       testTimeStr,
-			"expiry_time":        testTimeStr,
-			"state":              AuthCodeStateActive,
-		},
-	}
-
-	scopeResults := []map[string]interface{}{
-		{"scope": "read write"},
-	}
-
 	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+
+	authzData := map[string]interface{}{
+		"redirect_uri":          "https://client.example.com/callback",
+		"authorized_user_id":    "test-user-id",
+		"scopes":                "read write",
+		"code_challenge":        "abc123",
+		"code_challenge_method": "s256",
+		"resource":              "",
+		"authorized_user_type":  "person",
+		"user_ou_id":            "550e8400-e29b-41d4-a716-446655440000",
+		"user_ou_name":          "Default OU",
+		"user_ou_handle":        "default",
+	}
+	authzDataJSON, _ := json.Marshal(authzData)
+
 	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
-		Return(queryResults, nil)
-	suite.mockDBClient.On("Query", queryGetAuthorizationCodeScopes, "test-code-id").
-		Return(scopeResults, nil)
+		Return([]map[string]interface{}{
+			{
+				"code_id":            "test-code-id",
+				"authorization_code": "test-code",
+				"client_id":          "test-client-id",
+				"state":              AuthCodeStateActive,
+				"authz_data":         string(authzDataJSON),
+				"time_created":       "2023-01-01 12:00:00",
+				"expiry_time":        "2023-01-01 12:10:00",
+			},
+		}, nil)
 
 	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
 	assert.NoError(suite.T(), err)
@@ -249,8 +166,14 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_Success()
 	assert.Equal(suite.T(), "test-client-id", result.ClientID)
 	assert.Equal(suite.T(), "https://client.example.com/callback", result.RedirectURI)
 	assert.Equal(suite.T(), "test-user-id", result.AuthorizedUserID)
-	assert.Equal(suite.T(), testTime, result.TimeCreated)
-	assert.Equal(suite.T(), testTime, result.ExpiryTime)
+	assert.Equal(suite.T(), "abc123", result.CodeChallenge)
+	assert.Equal(suite.T(), "s256", result.CodeChallengeMethod)
+	assert.Equal(suite.T(), "person", result.AuthorizedUserType)
+	assert.Equal(suite.T(), "550e8400-e29b-41d4-a716-446655440000", result.UserOUID)
+	assert.Equal(suite.T(), "Default OU", result.UserOUName)
+	assert.Equal(suite.T(), "default", result.UserOUHandle)
+	assert.NotZero(suite.T(), result.TimeCreated)
+	assert.NotZero(suite.T(), result.ExpiryTime)
 	assert.Equal(suite.T(), "read write", result.Scopes)
 	assert.Equal(suite.T(), AuthCodeStateActive, result.State)
 
@@ -263,7 +186,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_DBClientE
 
 	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
 	assert.Error(suite.T(), err)
-	assert.Equal(suite.T(), AuthorizationCode{}, result)
+	assert.Nil(suite.T(), result)
 
 	suite.mockdbProvider.AssertExpectations(suite.T())
 }
@@ -276,7 +199,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_QueryErro
 	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "error while retrieving authorization code")
-	assert.Equal(suite.T(), AuthorizationCode{}, result)
+	assert.Nil(suite.T(), result)
 
 	suite.mockdbProvider.AssertExpectations(suite.T())
 	suite.mockDBClient.AssertExpectations(suite.T())
@@ -292,7 +215,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_NoResults
 	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), ErrAuthorizationCodeNotFound, err)
-	assert.Equal(suite.T(), AuthorizationCode{}, result)
+	assert.Nil(suite.T(), result)
 
 	suite.mockdbProvider.AssertExpectations(suite.T())
 	suite.mockDBClient.AssertExpectations(suite.T())
@@ -312,7 +235,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_EmptyCode
 	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
 	assert.Error(suite.T(), err)
 	assert.Equal(suite.T(), ErrAuthorizationCodeNotFound, err)
-	assert.Equal(suite.T(), AuthorizationCode{}, result)
+	assert.Nil(suite.T(), result)
 
 	suite.mockdbProvider.AssertExpectations(suite.T())
 	suite.mockDBClient.AssertExpectations(suite.T())
@@ -368,7 +291,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_StringInput() {
 	testTime := "2023-12-01 10:30:45.123456789 extra content"
 	expectedTime, _ := time.Parse("2006-01-02 15:04:05.999999999", "2023-12-01 10:30:45.123456789")
 
-	result, err := parseTimeField(testTime, "test_field", nil)
+	result, err := parseTimeField(testTime, "test_field")
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), expectedTime, result)
 }
@@ -376,7 +299,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_StringInput() {
 func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_TimeInput() {
 	testTime := time.Now()
 
-	result, err := parseTimeField(testTime, "test_field", nil)
+	result, err := parseTimeField(testTime, "test_field")
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), testTime, result)
 }

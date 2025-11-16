@@ -69,7 +69,7 @@ func (suite *AuthorizeServiceTestSuite) TestNewAuthorizeService() {
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_Success() {
 	// Mock store to return valid authorization code
 	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, suite.testCode).
-		Return(suite.testAuthzCode, nil)
+		Return(&suite.testAuthzCode, nil)
 	suite.mockAuthzStore.On("DeactivateAuthorizationCode", suite.testAuthzCode).
 		Return(nil)
 
@@ -87,13 +87,13 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_Success(
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_StoreError() {
 	// Mock store to return error
 	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, suite.testCode).
-		Return(AuthorizationCode{}, errors.New("database error"))
+		Return((*AuthorizationCode)(nil), errors.New("database error"))
 
 	result, err := suite.service.GetAuthorizationCodeDetails(suite.testClientID, suite.testCode)
 
 	assert.Nil(suite.T(), result)
 	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), "invalid authorization code", err.Error())
+	assert.Equal(suite.T(), "failed to retrieve authorization code", err.Error())
 
 	suite.mockAuthzStore.AssertExpectations(suite.T())
 }
@@ -104,7 +104,7 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCod
 	emptyAuthzCode.Code = ""
 
 	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, suite.testCode).
-		Return(emptyAuthzCode, nil)
+		Return(&emptyAuthzCode, nil)
 
 	result, err := suite.service.GetAuthorizationCodeDetails(suite.testClientID, suite.testCode)
 
@@ -118,7 +118,7 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCod
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_DeactivationError() {
 	// Mock store to return valid code but fail on deactivation
 	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, suite.testCode).
-		Return(suite.testAuthzCode, nil)
+		Return(&suite.testAuthzCode, nil)
 	suite.mockAuthzStore.On("DeactivateAuthorizationCode", suite.testAuthzCode).
 		Return(errors.New("deactivation failed"))
 
@@ -134,13 +134,13 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_Deactiva
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyClientID() {
 	// Mock store to be called with empty client ID
 	suite.mockAuthzStore.On("GetAuthorizationCode", "", suite.testCode).
-		Return(AuthorizationCode{}, errors.New("invalid client"))
+		Return((*AuthorizationCode)(nil), errors.New("invalid client"))
 
 	result, err := suite.service.GetAuthorizationCodeDetails("", suite.testCode)
 
 	assert.Nil(suite.T(), result)
 	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), "invalid authorization code", err.Error())
+	assert.Equal(suite.T(), "failed to retrieve authorization code", err.Error())
 
 	suite.mockAuthzStore.AssertExpectations(suite.T())
 }
@@ -148,13 +148,13 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCli
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCodeString() {
 	// Mock store to be called with empty code string
 	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, "").
-		Return(AuthorizationCode{}, errors.New("invalid code"))
+		Return((*AuthorizationCode)(nil), errors.New("invalid code"))
 
 	result, err := suite.service.GetAuthorizationCodeDetails(suite.testClientID, "")
 
 	assert.Nil(suite.T(), result)
 	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), "invalid authorization code", err.Error())
+	assert.Equal(suite.T(), "failed to retrieve authorization code", err.Error())
 
 	suite.mockAuthzStore.AssertExpectations(suite.T())
 }

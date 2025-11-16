@@ -185,7 +185,9 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_Success() {
 		AuthTime: time.Now(),
 	}
 
-	result, err := createAuthorizationCode(sessionData, "test-user")
+	assertionClaims := &assertionClaims{userID: "test-user"}
+
+	result, err := createAuthorizationCode(sessionData, assertionClaims)
 
 	assert.NoError(suite.T(), err)
 	assert.NotEmpty(suite.T(), result.CodeID)
@@ -202,13 +204,17 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_Success() {
 func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_MissingClientID() {
 	sessionData := &SessionData{
 		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "", // Missing client ID
+			ClientID:    "", // Empty client ID
 			RedirectURI: "https://client.example.com/callback",
 		},
 		AuthTime: time.Now(),
 	}
 
-	result, err := createAuthorizationCode(sessionData, "test-user")
+	assertionClaims := &assertionClaims{
+		userID: "test-user",
+	}
+
+	result, err := createAuthorizationCode(sessionData, assertionClaims)
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "client_id or redirect_uri is missing")
@@ -224,7 +230,11 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_MissingRedirect
 		AuthTime: time.Now(),
 	}
 
-	result, err := createAuthorizationCode(sessionData, "test-user")
+	assertionClaims := &assertionClaims{
+		userID: "test-user",
+	}
+
+	result, err := createAuthorizationCode(sessionData, assertionClaims)
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "client_id or redirect_uri is missing")
@@ -234,13 +244,17 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_MissingRedirect
 func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_EmptyUserID() {
 	sessionData := &SessionData{
 		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
+			ClientID:    "test-client-id",
 			RedirectURI: "https://client.example.com/callback",
 		},
 		AuthTime: time.Now(),
 	}
 
-	result, err := createAuthorizationCode(sessionData, "") // Empty user ID
+	assertionClaims := &assertionClaims{
+		userID: "", // Empty user ID
+	}
+
+	result, err := createAuthorizationCode(sessionData, assertionClaims)
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "authenticated user not found")
@@ -250,13 +264,17 @@ func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_EmptyUserID() {
 func (suite *AuthorizeHandlerTestSuite) TestGetAuthorizationCode_ZeroAuthTime() {
 	sessionData := &SessionData{
 		OAuthParameters: oauth2model.OAuthParameters{
-			ClientID:    "test-client",
+			ClientID:    "test-client-id",
 			RedirectURI: "https://client.example.com/callback",
 		},
-		AuthTime: time.Time{}, // Zero time
+		AuthTime: time.Time{}, // Zero auth time
 	}
 
-	result, err := createAuthorizationCode(sessionData, "test-user")
+	assertionClaims := &assertionClaims{
+		userID: "test-user",
+	}
+
+	result, err := createAuthorizationCode(sessionData, assertionClaims)
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "authentication time is not set")
