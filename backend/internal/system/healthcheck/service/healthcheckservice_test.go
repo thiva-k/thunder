@@ -72,8 +72,8 @@ func (suite *HealthCheckServiceTestSuite) BeforeTest(suiteName, testName string)
 	suite.mockRuntimeDB = dbClientRuntime
 
 	dbProvider := &dbprovidermock.DBProviderInterfaceMock{}
-	dbProvider.On("GetDBClient", "identity").Return(dbClientIdentity, nil)
-	dbProvider.On("GetDBClient", "runtime").Return(dbClientRuntime, nil)
+	dbProvider.On("GetConfigDBClient").Return(dbClientIdentity, nil)
+	dbProvider.On("GetRuntimeDBClient").Return(dbClientRuntime, nil)
 	suite.mockDBProvider = dbProvider
 	suite.service.(*HealthCheckService).DBProvider = dbProvider
 }
@@ -193,8 +193,8 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 
 func (suite *HealthCheckServiceTestSuite) TestCheckReadiness_DBRetrievalError() {
 	suite.mockDBProvider.ExpectedCalls = nil
-	suite.mockDBProvider.On("GetDBClient", "identity").Return(nil, errors.New("failed to get identity DB client"))
-	suite.mockDBProvider.On("GetDBClient", "runtime").Return(nil, errors.New("failed to get runtime DB client"))
+	suite.mockDBProvider.On("GetConfigDBClient").Return(nil, errors.New("failed to get identity DB client"))
+	suite.mockDBProvider.On("GetRuntimeDBClient").Return(nil, errors.New("failed to get runtime DB client"))
 
 	// Execute the method being tested
 	serverStatus := suite.service.CheckReadiness()

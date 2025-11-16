@@ -211,7 +211,7 @@ func (s *brandingStore) GetApplicationsCountByBrandingID(id string) (int, error)
 
 // getIdentityDBClient is a helper method to get the database client for the identity database.
 func (s *brandingStore) getIdentityDBClient() (provider.DBClientInterface, error) {
-	dbClient, err := s.dbProvider.GetDBClient("identity")
+	dbClient, err := s.dbProvider.GetConfigDBClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database client: %w", err)
 	}
