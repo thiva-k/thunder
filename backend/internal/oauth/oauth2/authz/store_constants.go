@@ -23,7 +23,7 @@ import dbmodel "github.com/asgardeo/thunder/internal/system/database/model"
 // queryInsertAuthorizationCode is the query to insert a new authorization code into the database.
 var queryInsertAuthorizationCode = dbmodel.DBQuery{
 	ID: "AZQ-00001",
-	Query: "INSERT INTO IDN_OAUTH2_AUTHZ_CODE (CODE_ID, AUTHORIZATION_CODE, CLIENT_ID, STATE, AUTHZ_DATA, " +
+	Query: "INSERT INTO AUTHORIZATION_CODE (CODE_ID, AUTHORIZATION_CODE, CLIENT_ID, STATE, AUTHZ_DATA, " +
 		"TIME_CREATED, EXPIRY_TIME) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 }
 
@@ -31,11 +31,11 @@ var queryInsertAuthorizationCode = dbmodel.DBQuery{
 var queryGetAuthorizationCode = dbmodel.DBQuery{
 	ID: "AZQ-00003",
 	Query: "SELECT CODE_ID, AUTHORIZATION_CODE, CLIENT_ID, STATE, AUTHZ_DATA, TIME_CREATED, " +
-		"EXPIRY_TIME FROM IDN_OAUTH2_AUTHZ_CODE WHERE CLIENT_ID = $1 AND AUTHORIZATION_CODE = $2",
+		"EXPIRY_TIME FROM AUTHORIZATION_CODE WHERE CLIENT_ID = $1 AND AUTHORIZATION_CODE = $2",
 }
 
 // queryUpdateAuthorizationCodeState is the query to update the state of an authorization code.
 var queryUpdateAuthorizationCodeState = dbmodel.DBQuery{
 	ID:    "AZQ-00004",
-	Query: "UPDATE IDN_OAUTH2_AUTHZ_CODE SET STATE = $1 WHERE CODE_ID = $2",
+	Query: "UPDATE AUTHORIZATION_CODE SET STATE = $1 WHERE CODE_ID = $2",
 }
