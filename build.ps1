@@ -1032,7 +1032,8 @@ function Run {
     Write-Host "Running frontend apps..."
     Run-Frontend
 
-    # Start backend with security disabled to set up
+    # Save original THUNDER_SKIP_SECURITY value and temporarily set to true
+    $script:ORIGINAL_THUNDER_SKIP_SECURITY = $env:THUNDER_SKIP_SECURITY
     $env:THUNDER_SKIP_SECURITY = "true"
     Run-Backend -ShowFinalOutput $false
     
@@ -1054,9 +1055,14 @@ function Run {
         exit 1
     }
 
-    Write-Host "🔒 Enabling security and restarting backend..."
-    # Reset backend to enable security
-    $env:THUNDER_SKIP_SECURITY = "false"
+    Write-Host "🔒 Restoring security setting and restarting backend..."
+    # Restore original THUNDER_SKIP_SECURITY value
+    if (![string]::IsNullOrEmpty($script:ORIGINAL_THUNDER_SKIP_SECURITY)) {
+        $env:THUNDER_SKIP_SECURITY = $script:ORIGINAL_THUNDER_SKIP_SECURITY
+    }
+    else {
+        Remove-Item Env:\THUNDER_SKIP_SECURITY -ErrorAction SilentlyContinue
+    }
     # Start backend with initial output but without final output/wait
     Start-Backend -ShowFinalOutput $false
 

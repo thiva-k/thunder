@@ -646,7 +646,8 @@ function run() {
     echo "Running frontend apps..."
     run_frontend
 
-    # Start backend with security disabled to set up
+    # Save original THUNDER_SKIP_SECURITY value and temporarily set to true
+    ORIGINAL_THUNDER_SKIP_SECURITY="${THUNDER_SKIP_SECURITY:-}"
     export THUNDER_SKIP_SECURITY=true
     run_backend false
     
@@ -693,9 +694,13 @@ function run() {
         exit 1
     fi
 
-    echo "🔒 Enabling security and restarting backend..."
-    # Reset backend to enable security
-    export THUNDER_SKIP_SECURITY=false
+    echo "🔒 Restoring security setting and restarting backend..."
+    # Restore original THUNDER_SKIP_SECURITY value
+    if [ -n "$ORIGINAL_THUNDER_SKIP_SECURITY" ]; then
+        export THUNDER_SKIP_SECURITY="$ORIGINAL_THUNDER_SKIP_SECURITY"
+    else
+        unset THUNDER_SKIP_SECURITY
+    fi
     # Start backend with initial output but without final output/wait
     start_backend false
 
