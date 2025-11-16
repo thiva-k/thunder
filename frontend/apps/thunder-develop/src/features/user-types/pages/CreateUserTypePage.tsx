@@ -17,7 +17,7 @@
  */
 
 import {useNavigate} from 'react-router';
-import {useState} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {
   Box,
   Stack,
@@ -38,6 +38,7 @@ import {
 import {ArrowLeft, Plus, Save, X} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useCreateUserType from '../api/useCreateUserType';
+import useGetOrganizationUnits from '../../organization-units/api/useGetOrganizationUnits';
 import type {
   PropertyDefinition,
   UserSchemaDefinition,
@@ -50,6 +51,11 @@ export default function CreateUserTypePage() {
   const navigate = useNavigate();
   const {t} = useTranslation();
   const {createUserType, loading, error: createError} = useCreateUserType();
+  const {
+    data: organizationUnitsResponse,
+    loading: organizationUnitsLoading,
+    error: organizationUnitsError,
+  } = useGetOrganizationUnits();
 
   const [name, setName] = useState('');
   const [ouId, setOuId] = useState('');
@@ -68,6 +74,17 @@ export default function CreateUserTypePage() {
   const [enumInput, setEnumInput] = useState<Record<string, string>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const organizationUnits = useMemo(() => organizationUnitsResponse?.organizationUnits ?? [], [organizationUnitsResponse]);
+  const selectedOrganizationUnit = useMemo(
+    () => organizationUnits.find((unit) => unit.id === ouId),
+    [organizationUnits, ouId],
+  );
+
+  useEffect(() => {
+    if (!ouId && organizationUnits.length > 0) {
+      setOuId(organizationUnits[0].id);
+    }
+  }, [organizationUnits, ouId]);
 
   const handleBack = async () => {
     await navigate('/user-types');
@@ -265,6 +282,14 @@ export default function CreateUserTypePage() {
       </Stack>
 
       <Paper sx={{p: 4}}>
+        {!organizationUnitsLoading && organizationUnitsError && (
+          <Alert severity="error" sx={{mb: 3}}>
+            <Typography variant="body2" sx={{fontWeight: 600, mb: 0.5}}>
+              {t('userTypes:errors.organizationUnitsFailedTitle')}
+            </Typography>
+            <Typography variant="body2">{organizationUnitsError.message}</Typography>
+          </Alert>
+        )}
         <Box
           component="form"
           onSubmit={(e) => {
@@ -290,16 +315,50 @@ export default function CreateUserTypePage() {
 
           <FormControl fullWidth sx={{mb: 3}}>
             <FormLabel htmlFor="ouId">
-              {t('userTypes:ouId')} <span style={{color: 'red'}}>*</span>
+              {t('userTypes:organizationUnit')} <span style={{color: 'red'}}>*</span>
             </FormLabel>
-            <TextField
+            <Select
               id="ouId"
+              aria-label={t('userTypes:organizationUnit')}
               value={ouId}
-              onChange={(e) => setOuId(e.target.value)}
-              placeholder={t('userTypes:ouIdPlaceholder')}
-              variant="outlined"
+              onChange={(event) => setOuId(event.target.value ?? '')}
+              displayEmpty
               required
-            />
+              renderValue={(selected) => {
+                const value = typeof selected === 'string' ? selected : '';
+                if (!value) {
+                  return t('userTypes:ouSelectPlaceholder');
+                }
+
+                return selectedOrganizationUnit ? selectedOrganizationUnit.name : value;
+              }}
+            >
+              {organizationUnitsLoading && (
+                <MenuItem value="" disabled>
+                  {t('common:status.loading')}
+                </MenuItem>
+              )}
+
+              {!organizationUnitsLoading && organizationUnitsError && (
+                <MenuItem value="" disabled>
+                  {organizationUnitsError.message}
+                </MenuItem>
+              )}
+
+              {!organizationUnitsLoading && !organizationUnitsError && organizationUnits.length === 0 && (
+                <MenuItem value="" disabled>
+                  {t('userTypes:noOrganizationUnits')}
+                </MenuItem>
+              )}
+
+              {organizationUnits.map((unit) => (
+                <MenuItem key={unit.id} value={unit.id}>
+                  <Typography variant="body2" sx={{fontWeight: 500}}>
+                    {unit.name}
+                  </Typography>
+                </MenuItem>
+              ))}
+            </Select>
           </FormControl>
 
           <FormControlLabel
