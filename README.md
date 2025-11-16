@@ -82,6 +82,8 @@ Follow these steps to download the latest release of WSO2 Thunder and run it loc
     .\setup.ps1
     ```
 
+    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>`.** You'll need it for the sample app configuration.
+
 4. **Start the product**
 
     If you are using a Linux or macOS machine:
@@ -117,6 +119,8 @@ Follow these steps to run WSO2 Thunder using Docker.
             ghcr.io/asgardeo/thunder:latest \
             ./setup.sh
     ```
+
+    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>`.** You'll need it for the sample app configuration.
 
     > [!NOTE]
     > This will shut down the container after the setup is complete. You need to start the container again using the command in step 3. If you are using sqlite as the database, then you need to mount a volume to persist the database file and share it between the setup and server run containers.
@@ -176,67 +180,19 @@ To quickly get started with Thunder, you can use the sample app provided with th
     cd sample-app-<version>-<os>-<arch>/
     ```
 
-3. **Create required application for sample app in Thunder**
+3. **Configure the sample app**
 
-    Before using the sample app, you need to create an application in Thunder:
+    Open `app/runtime.json` and set `applicationID` to the sample app ID generated during "Setup the product."
 
-    ```bash
-    curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
-    -d '{
-        "name": "Sample App",
-        "description": "Sample application for testing",
-        "url": "https://localhost:3000",
-        "logo_url": "https://localhost:3000/logo.png",
-        "tos_uri": "https://localhost:3000/terms",
-        "policy_uri": "https://localhost:3000/privacy",
-        "contacts": ["admin@example.com", "support@example.com"],
-        "auth_flow_graph_id": "auth_flow_config_basic",
-        "registration_flow_graph_id": "registration_flow_config_basic",
-        "is_registration_flow_enabled": true,
-        "user_attributes": ["given_name","family_name","email","groups"],
-        "inbound_auth_config": [{
-            "type": "oauth2",
-            "config": {
-                "client_id": "sample_app_client",
-                "client_secret": "sample_app_secret",
-                "redirect_uris": ["https://localhost:3000"],
-                "grant_types": ["authorization_code", "client_credentials"],
-                "response_types": ["code"],
-                "token_endpoint_auth_method": "client_secret_basic",
-                "pkce_required": false,
-                "public_client": false,
-                "scopes": ["openid", "profile", "email"],
-                "token": {
-                    "issuer": "thunder",
-                    "access_token": {
-                        "validity_period": 3600,
-                        "user_attributes": ["given_name","family_name","email","groups"]
-                    },
-                    "id_token": {
-                        "validity_period": 3600,
-                        "user_attributes": ["given_name","family_name","email","groups"],
-                        "scope_claims": {
-                            "profile": ["name","given_name","family_name","picture"],
-                            "email": ["email","email_verified"],
-                            "phone": ["phone_number","phone_number_verified"],
-                            "group": ["groups"]
-                        }
-                    }
-                }
-            }
-        }]
-    }'
+    For example, if the sample app ID is `d6df2ef9-88db-4ca9-9a23-d1577b2552c1`, `runtime.json` should look like:
+    ```
+    {
+        "applicationID": "d6df2ef9-88db-4ca9-9a23-d1577b2552c1",
+        "flowEndpoint": "https://localhost:8090/flow"
+    }
     ```
 
-    Note the `id` from the response - you'll need it for the sample app configuration.
-
-4. **Configure the sample app**
-
-    Open the `runtime.json` file in the thunder-sample-app-<version>-<os>-<arch>/app directory and update the configurations:
-    - `applicationID`: Use the application ID from step 3
-    - `flowEndpoint`: The root endpoint for the flow execution API (default: `https://localhost:8090/flow`)
-
-5. **Start the sample app**
+4. **Start the sample app**
 
     ```bash
     sh start.sh

@@ -51,7 +51,7 @@ log_info "Creating default organization unit..."
 
 RESPONSE=$(thunder_api_call POST "/organization-units" '{
   "handle": "default",
-  "name": "Default Organization",
+  "name": "Default",
   "description": "Default organization unit"
 }')
 
@@ -101,10 +101,10 @@ echo ""
 log_info "Creating default user schema (person)..."
 
 RESPONSE=$(thunder_api_call POST "/user-schemas" '{
-  "name": "person",
+  "name": "Person",
   "ouId": "'${DEFAULT_OU_ID}'",
   "schema": {
-    "sub": {
+    "username": {
       "type": "string",
       "required": true,
       "unique": true
@@ -118,19 +118,11 @@ RESPONSE=$(thunder_api_call POST "/user-schemas" '{
       "type": "boolean",
       "required": false
     },
-    "name": {
-      "type": "string",
-      "required": false
-    },
     "given_name": {
       "type": "string",
       "required": false
     },
     "family_name": {
-      "type": "string",
-      "required": false
-    },
-    "picture": {
       "type": "string",
       "required": false
     },
@@ -165,7 +157,7 @@ echo ""
 log_info "Creating admin user..."
 
 RESPONSE=$(thunder_api_call POST "/users" '{
-  "type": "person",
+  "type": "Person",
   "organizationUnit": "'${DEFAULT_OU_ID}'",
   "attributes": {
     "username": "admin",
