@@ -39,7 +39,6 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/authzmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/tokenservicemock"
-	"github.com/asgardeo/thunder/tests/mocks/oumock"
 	usersvcmock "github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
@@ -52,7 +51,6 @@ type AuthorizationCodeGrantHandlerTestSuite struct {
 	mockTokenBuilder *tokenservicemock.TokenBuilderInterfaceMock
 	mockAuthzService *authzmock.AuthorizeServiceInterfaceMock
 	mockUserService  *usersvcmock.UserServiceInterfaceMock
-	mockOUService    *oumock.OrganizationUnitServiceInterfaceMock
 	oauthApp         *appmodel.OAuthAppConfigProcessedDTO
 	testAuthzCode    authz.AuthorizationCode
 	testTokenReq     *model.TokenRequest
@@ -75,7 +73,6 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) SetupTest() {
 	suite.mockTokenBuilder = tokenservicemock.NewTokenBuilderInterfaceMock(suite.T())
 	suite.mockAuthzService = &authzmock.AuthorizeServiceInterfaceMock{}
 	suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
-	suite.mockOUService = oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
 
 	suite.handler = &authorizationCodeGrantHandler{
 		tokenBuilder: suite.mockTokenBuilder,

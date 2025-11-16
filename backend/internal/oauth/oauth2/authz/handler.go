@@ -607,7 +607,7 @@ func decodeAttributesFromAssertion(assertion string) (assertionClaims, error) {
 			if strValue, ok := value.(string); ok {
 				assertionClaims.ouID = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'ouid' claim is not a string")
+				return assertionClaims, errors.New("JWT 'ouId' claim is not a string")
 			}
 		case constants.ClaimOUName:
 			if strValue, ok := value.(string); ok {

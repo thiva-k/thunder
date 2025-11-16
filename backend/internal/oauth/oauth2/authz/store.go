@@ -160,19 +160,34 @@ func (acs *authorizationCodeStore) getJSONDataBytes(authzCode AuthorizationCode)
 
 // buildAuthorizationCodeFromResultRow builds an AuthorizationCode from a database result row.
 func buildAuthorizationCodeFromResultRow(row map[string]interface{}) (*AuthorizationCode, error) {
-	codeID := row[columnNameCodeID].(string)
+	codeID, ok := row[columnNameCodeID].(string)
+	if !ok {
+		return nil, errors.New("code ID is of unexpected type")
+	}
 	if codeID == "" {
 		return nil, ErrAuthorizationCodeNotFound
 	}
-	authorizationCode := row[columnNameAuthorizationCode].(string)
+
+	authorizationCode, ok := row[columnNameAuthorizationCode].(string)
+	if !ok {
+		return nil, errors.New("authorization code is of unexpected type")
+	}
 	if authorizationCode == "" {
 		return nil, errors.New("authorization code is empty")
 	}
-	clientID := row[columnNameClientID].(string)
+
+	clientID, ok := row[columnNameClientID].(string)
+	if !ok {
+		return nil, errors.New("client ID is of unexpected type")
+	}
 	if clientID == "" {
 		return nil, errors.New("client ID is empty")
 	}
-	state := row[columnNameState].(string)
+
+	state, ok := row[columnNameState].(string)
+	if !ok {
+		return nil, errors.New("state is of unexpected type")
+	}
 	if state == "" {
 		return nil, errors.New("state is empty")
 	}
@@ -203,7 +218,7 @@ func appendAuthzDataJSON(row map[string]interface{}, authzCode *AuthorizationCod
 	var dataJSON string
 	if val, ok := row[columnNameAuthZData].(string); ok && val != "" {
 		dataJSON = val
-	} else if val, ok := row[columnNameAuthZData].([]byte); ok && val != nil {
+	} else if val, ok := row[columnNameAuthZData].([]byte); ok && len(val) > 0 {
 		dataJSON = string(val)
 	} else {
 		return nil, errors.New("authz_data is missing or of unexpected type")

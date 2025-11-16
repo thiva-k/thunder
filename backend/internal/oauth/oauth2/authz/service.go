@@ -33,14 +33,14 @@ type AuthorizeServiceInterface interface {
 // authorizeService implements the AuthorizeService for managing OAuth2 authorization flows.
 type authorizeService struct {
 	authzStore AuthorizationCodeStoreInterface
-	logger     log.Logger
+	logger     *log.Logger
 }
 
 // newAuthorizeService creates a new instance of authorizeService with injected dependencies.
 func newAuthorizeService(authzStore AuthorizationCodeStoreInterface) AuthorizeServiceInterface {
 	return &authorizeService{
 		authzStore: authzStore,
-		logger:     *log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthorizeService")),
+		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthorizeService")),
 	}
 }
 

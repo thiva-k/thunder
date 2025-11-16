@@ -318,3 +318,363 @@ func (suite *AuthorizationCodeStoreTestSuite) TestTrimTimeString_ShortInput() {
 	result := trimTimeString(input)
 	assert.Equal(suite.T(), input, result)
 }
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidCodeIDType() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id": 12345, // Invalid type (int instead of string)
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "code ID is of unexpected type")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidAuthCodeType() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": 12345, // Invalid type
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "authorization code is of unexpected type")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_EmptyAuthCode() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "", // Empty authorization code
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "authorization code is empty")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidClientIDType() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          12345, // Invalid type
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "client ID is of unexpected type")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_EmptyClientID() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "", // Empty client ID
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "client ID is empty")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidStateType() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              12345, // Invalid type
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "state is of unexpected type")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_EmptyState() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              "", // Empty state
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "state is empty")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidTimeCreatedType() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       12345, // Invalid type
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "unexpected type for time_created")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidExpiryTimeType() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       "2023-01-01 12:00:00",
+			"expiry_time":        12345, // Invalid type
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "unexpected type for expiry_time")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_MissingAuthzData() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       "2023-01-01 12:00:00",
+			"expiry_time":        "2023-01-01 12:10:00",
+			// Missing authz_data
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "authz_data is missing or of unexpected type")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_EmptyAuthzDataString() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       "2023-01-01 12:00:00",
+			"expiry_time":        "2023-01-01 12:10:00",
+			"authz_data":         "", // Empty string
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "authz_data is missing or of unexpected type")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_EmptyAuthzDataJSON() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       "2023-01-01 12:00:00",
+			"expiry_time":        "2023-01-01 12:10:00",
+			"authz_data":         "{}", // Empty JSON object
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "authz_data is empty")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_InvalidAuthzDataJSON() {
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       "2023-01-01 12:00:00",
+			"expiry_time":        "2023-01-01 12:10:00",
+			"authz_data":         "{invalid json", // Invalid JSON
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "failed to unmarshal authz_data JSON")
+	assert.Nil(suite.T(), result)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_AuthzDataAsBytes() {
+	authzData := map[string]interface{}{
+		"redirect_uri":       "https://client.example.com/callback",
+		"authorized_user_id": "test-user-id",
+		"scopes":             "read write",
+	}
+	authzDataJSON, _ := json.Marshal(authzData)
+
+	queryResults := []map[string]interface{}{
+		{
+			"code_id":            "test-code-id",
+			"authorization_code": "test-code",
+			"client_id":          "test-client-id",
+			"state":              AuthCodeStateActive,
+			"time_created":       "2023-01-01 12:00:00",
+			"expiry_time":        "2023-01-01 12:10:00",
+			"authz_data":         authzDataJSON, // Byte array
+		},
+	}
+
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Query", queryGetAuthorizationCode, "test-client-id", "test-code").
+		Return(queryResults, nil)
+
+	result, err := suite.store.GetAuthorizationCode("test-client-id", "test-code")
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "test-code-id", result.CodeID)
+	assert.Equal(suite.T(), "https://client.example.com/callback", result.RedirectURI)
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_InvalidStringFormat() {
+	testTime := "invalid-time-format"
+
+	result, err := parseTimeField(testTime, "test_field")
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "error parsing test_field")
+	assert.True(suite.T(), result.IsZero())
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestUpdateAuthorizationCodeState_ExecuteError() {
+	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
+	suite.mockDBClient.On("Execute", queryUpdateAuthorizationCodeState,
+		AuthCodeStateInactive, suite.testAuthzCode.CodeID).Return(int64(0), errors.New("execute error"))
+
+	err := suite.store.DeactivateAuthorizationCode(suite.testAuthzCode)
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "execute error")
+
+	suite.mockdbProvider.AssertExpectations(suite.T())
+	suite.mockDBClient.AssertExpectations(suite.T())
+}
