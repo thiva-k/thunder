@@ -57,12 +57,12 @@ func GetHealthCheckService() HealthCheckServiceInterface {
 func (hcs *HealthCheckService) CheckReadiness() model.ServerStatus {
 	configDBStatus := model.ServiceStatus{
 		ServiceName: "IdentityDB",
-		Status:      hcs.checkDatabaseStatus("identity", queryConfigDBTable),
+		Status:      hcs.checkIdentityDatabaseStatus(queryConfigDBTable),
 	}
 
 	runtimeDBStatus := model.ServiceStatus{
 		ServiceName: "RuntimeDB",
-		Status:      hcs.checkDatabaseStatus("runtime", queryRuntimeDBTable),
+		Status:      hcs.checkRuntimeDatabaseStatus(queryRuntimeDBTable),
 	}
 
 	status := model.StatusUp
@@ -78,19 +78,32 @@ func (hcs *HealthCheckService) CheckReadiness() model.ServerStatus {
 	}
 }
 
-// checkDatabaseStatus checks the status of the specified database with the specified query.
-func (hcs *HealthCheckService) checkDatabaseStatus(dbname string, query dbmodel.DBQuery) model.Status {
+// checkIdentityDatabaseStatus checks the status of the identity database with the specified query.
+func (hcs *HealthCheckService) checkIdentityDatabaseStatus(query dbmodel.DBQuery) model.Status {
+	dbClient, err := hcs.DBProvider.GetConfigDBClient()
+	return hcs.executeDatabaseHealthCheck("IdentityDB", dbClient, err, query)
+}
+
+// checkRuntimeDatabaseStatus checks the status of the runtime database with the specified query.
+func (hcs *HealthCheckService) checkRuntimeDatabaseStatus(query dbmodel.DBQuery) model.Status {
+	dbClient, err := hcs.DBProvider.GetRuntimeDBClient()
+	return hcs.executeDatabaseHealthCheck("RuntimeDB", dbClient, err, query)
+}
+
+// executeDatabaseHealthCheck runs the provided query on the given database client and reports its status.
+func (hcs *HealthCheckService) executeDatabaseHealthCheck(
+	dbName string, dbClient provider.DBClientInterface, err error, query dbmodel.DBQuery,
+) model.Status {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "HealthCheckService"))
 
-	dbClient, err := hcs.DBProvider.GetDBClient(dbname)
 	if err != nil {
-		logger.Error("Failed to get database client", log.Error(err))
+		logger.Error("Failed to get database client", log.String("dbname", dbName), log.Error(err))
 		return model.StatusDown
 	}
 
 	_, err = dbClient.Query(query)
 	if err != nil {
-		logger.Error("Failed to execute query", log.Error(err))
+		logger.Error("Failed to execute query", log.String("dbname", dbName), log.Error(err))
 		return model.StatusDown
 	}
 	return model.StatusUp

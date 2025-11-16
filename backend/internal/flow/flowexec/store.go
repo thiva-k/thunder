@@ -74,7 +74,7 @@ func (s *flowStore) StoreFlowContext(ctx EngineContext) error {
 
 // GetFlowContext retrieves the flow context from the database.
 func (s *flowStore) GetFlowContext(flowID string) (*FlowContextWithUserDataDB, error) {
-	dbClient, err := s.dbProvider.GetDBClient("runtime")
+	dbClient, err := s.dbProvider.GetRuntimeDBClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database client: %w", err)
 	}
@@ -138,7 +138,7 @@ func (s *flowStore) DeleteFlowContext(flowID string) error {
 
 // executeTransaction is a helper function to handle database transactions.
 func (s *flowStore) executeTransaction(queries []func(tx dbmodel.TxInterface) error) error {
-	dbClient, err := s.dbProvider.GetDBClient("runtime")
+	dbClient, err := s.dbProvider.GetRuntimeDBClient()
 	if err != nil {
 		return fmt.Errorf("failed to get database client: %w", err)
 	}

@@ -114,7 +114,7 @@ func (st *applicationStore) CreateApplication(app model.ApplicationProcessedDTO)
 
 // GetTotalApplicationCount retrieves the total count of applications from the database.
 func (st *applicationStore) GetTotalApplicationCount() (int, error) {
-	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	dbClient, err := provider.GetDBProvider().GetConfigDBClient()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get database client: %w", err)
 	}
@@ -140,7 +140,7 @@ func (st *applicationStore) GetTotalApplicationCount() (int, error) {
 func (st *applicationStore) GetApplicationList() ([]model.BasicApplicationDTO, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationPersistence"))
 
-	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	dbClient, err := provider.GetDBProvider().GetConfigDBClient()
 	if err != nil {
 		logger.Error("Failed to get database client", log.Error(err))
 		return nil, fmt.Errorf("failed to get database client: %w", err)
@@ -170,7 +170,7 @@ func (st *applicationStore) GetApplicationList() ([]model.BasicApplicationDTO, e
 func (st *applicationStore) GetOAuthApplication(clientID string) (*model.OAuthAppConfigProcessedDTO, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationStore"))
 
-	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	dbClient, err := provider.GetDBProvider().GetConfigDBClient()
 	if err != nil {
 		logger.Error("Failed to get database client", log.Error(err))
 		return nil, fmt.Errorf("failed to get database client: %w", err)
@@ -289,7 +289,7 @@ func (st *applicationStore) getApplicationByQuery(query dbmodel.DBQuery, param s
 	*model.ApplicationProcessedDTO, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationStore"))
 
-	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	dbClient, err := provider.GetDBProvider().GetConfigDBClient()
 	if err != nil {
 		logger.Error("Failed to get database client", log.Error(err))
 		return nil, fmt.Errorf("failed to get database client: %w", err)
@@ -361,7 +361,7 @@ func (st *applicationStore) UpdateApplication(existingApp, updatedApp *model.App
 func (st *applicationStore) DeleteApplication(id string) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationStore"))
 
-	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	dbClient, err := provider.GetDBProvider().GetConfigDBClient()
 	if err != nil {
 		logger.Error("Failed to get database client", log.Error(err))
 		return fmt.Errorf("failed to get database client: %w", err)
@@ -822,7 +822,7 @@ func buildOAuthInboundAuthConfig(row map[string]interface{}, basicApp model.Basi
 func executeTransaction(queries []func(tx dbmodel.TxInterface) error) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationStore"))
 
-	dbClient, err := provider.GetDBProvider().GetDBClient("identity")
+	dbClient, err := provider.GetDBProvider().GetConfigDBClient()
 	if err != nil {
 		return fmt.Errorf("failed to get database client: %w", err)
 	}

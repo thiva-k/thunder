@@ -44,7 +44,8 @@ type dbConfig struct {
 
 // DBProviderInterface defines the interface for getting database clients.
 type DBProviderInterface interface {
-	GetDBClient(dbName string) (DBClientInterface, error)
+	GetConfigDBClient() (DBClientInterface, error)
+	GetRuntimeDBClient() (DBClientInterface, error)
 }
 
 // DBProviderCloser is a separate interface for closing the provider.
@@ -87,19 +88,18 @@ func GetDBProviderCloser() DBProviderCloser {
 	return instance
 }
 
-// GetDBClient returns a database client based on the provided database name.
+// GetConfigDBClient returns a database client for config datasource.
 // Not required to close the returned client manually since it manages its own connection pool.
-func (d *dbProvider) GetDBClient(dbName string) (DBClientInterface, error) {
-	switch dbName {
-	case "identity":
-		identityDBConfig := config.GetThunderRuntime().Config.Database.Identity
-		return d.getOrInitClient(&d.identityClient, &d.identityMutex, identityDBConfig)
-	case "runtime":
-		runtimeDBConfig := config.GetThunderRuntime().Config.Database.Runtime
-		return d.getOrInitClient(&d.runtimeClient, &d.runtimeMutex, runtimeDBConfig)
-	default:
-		return nil, fmt.Errorf("unsupported database name: %s", dbName)
-	}
+func (d *dbProvider) GetConfigDBClient() (DBClientInterface, error) {
+	identityDBConfig := config.GetThunderRuntime().Config.Database.Identity
+	return d.getOrInitClient(&d.identityClient, &d.identityMutex, identityDBConfig)
+}
+
+// GetRuntimeDBClient returns a database client for runtime datasource.
+// Not required to close the returned client manually since it manages its own connection pool.
+func (d *dbProvider) GetRuntimeDBClient() (DBClientInterface, error) {
+	runtimeDBConfig := config.GetThunderRuntime().Config.Database.Runtime
+	return d.getOrInitClient(&d.runtimeClient, &d.runtimeMutex, runtimeDBConfig)
 }
 
 // initializeAllClients initializes both identity and runtime clients at startup.
