@@ -269,6 +269,13 @@ func (suite *JWTAuthenticatorTestSuite) TestExtractScopes() {
 			},
 			expectedScopes: []string{"users:read"},
 		},
+		{
+			name: "Thunder assertion authorized_permissions claim",
+			claims: map[string]interface{}{
+				"authorized_permissions": "perm1 perm2 perm3",
+			},
+			expectedScopes: []string{"perm1", "perm2", "perm3"},
+		},
 	}
 
 	for _, tt := range tests {
