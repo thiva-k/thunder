@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useNavigate} from 'react-router';
 import {
   Box,
@@ -42,6 +42,7 @@ import {useTranslation} from 'react-i18next';
 import useDataGridLocaleText from '../../../hooks/useDataGridLocaleText';
 import useGetUserTypes from '../api/useGetUserTypes';
 import useDeleteUserType from '../api/useDeleteUserType';
+import useGetOrganizationUnits from '../../organization-units/api/useGetOrganizationUnits';
 import type {UserSchemaListItem} from '../types/user-types';
 
 type GridColDef<R extends DataGrid.GridValidRowModel = DataGrid.GridValidRowModel> = DataGrid.GridColDef<R>;
@@ -60,9 +61,22 @@ export default function UserTypesList() {
     refetch,
   } = useGetUserTypes();
   const {deleteUserType, loading: isDeleting, error: deleteUserTypeError} = useDeleteUserType();
+  const {
+    data: organizationUnitsResponse,
+    loading: organizationUnitsLoading,
+    error: organizationUnitsError,
+  } = useGetOrganizationUnits();
 
-  const error = userTypesRequestError;
-  const isLoading = isUserTypesRequestLoading;
+  const error = userTypesRequestError ?? organizationUnitsError;
+  const isLoading = isUserTypesRequestLoading || organizationUnitsLoading;
+  const organizationUnits = useMemo(() => organizationUnitsResponse?.organizationUnits ?? [], [organizationUnitsResponse]);
+  const organizationUnitMap = useMemo(() => {
+    const map = new Map<string, string>();
+    organizationUnits.forEach((unit) => {
+      map.set(unit.id, unit.name);
+    });
+    return map;
+  }, [organizationUnits]);
 
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -129,60 +143,89 @@ export default function UserTypesList() {
     [navigate],
   );
 
-  const columns: GridColDef<UserSchemaListItem>[] = [
-    {
-      field: 'name',
-      headerName: t('common:form.name'),
-      flex: 1,
-      minWidth: 200,
-      valueGetter: (_value, row) => row.name ?? null,
-    },
-    {
-      field: 'id',
-      headerName: 'ID',
-      flex: 1,
-      minWidth: 250,
-      valueGetter: (_value, row) => row.id ?? null,
-    },
-    {
-      field: 'ouId',
-      headerName: t('userTypes:ouId'),
-      flex: 1,
-      minWidth: 220,
-      valueGetter: (_value, row) => row.ouId ?? null,
-    },
-    {
-      field: 'allowSelfRegistration',
-      headerName: t('userTypes:allowSelfRegistration'),
-      width: 200,
-      renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => (
-        <Chip
-          label={params.row.allowSelfRegistration ? t('common:status.enabled') : t('common:status.disabled')}
-          color={params.row.allowSelfRegistration ? 'success' : 'default'}
-          size="small"
-        />
-      ),
-    },
-    {
-      field: 'actions',
-      headerName: t('users:actions'),
-      width: 80,
-      sortable: false,
-      filterable: false,
-      hideable: false,
-      renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => (
-        <IconButton
-          size="small"
-          aria-label="Open actions menu"
-          onClick={(e) => {
-            handleMenuOpen(e, params.row.id);
-          }}
-        >
-          <EllipsisVertical size={16} />
-        </IconButton>
-      ),
-    },
-  ];
+  const columns: GridColDef<UserSchemaListItem>[] = useMemo(
+    () => [
+      {
+        field: 'name',
+        headerName: t('common:form.name'),
+        flex: 1,
+        minWidth: 200,
+        valueGetter: (_value, row) => row.name ?? null,
+      },
+      {
+        field: 'id',
+        headerName: 'ID',
+        flex: 1,
+        minWidth: 250,
+        valueGetter: (_value, row) => row.id ?? null,
+      },
+      {
+        field: 'ou',
+        headerName: t('userTypes:organizationUnit'),
+        flex: 1,
+        minWidth: 220,
+        renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => {
+          const resolvedUnitName = params.row.ouId ? organizationUnitMap.get(params.row.ouId) : undefined;
+          const content = (() => {
+            if (!params.row.ouId) {
+              return t('common:messages.noData');
+            }
+            if (!resolvedUnitName) {
+              return params.row.ouId;
+            }
+            return resolvedUnitName;
+          })();
+
+          return (
+            <Box sx={{display: 'flex', alignItems: 'center', width: '100%', height: '100%'}}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: !resolvedUnitName && params.row.ouId ? 'monospace' : undefined,
+                  fontSize: '0.875rem',
+                  width: '100%'
+                }}
+              >
+                {content}
+              </Typography>
+            </Box>
+          );
+        },
+      },
+      {
+        field: 'allowSelfRegistration',
+        headerName: t('userTypes:allowSelfRegistration'),
+        width: 200,
+        renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => (
+          <Chip
+            label={params.row.allowSelfRegistration ? t('common:status.enabled') : t('common:status.disabled')}
+            color={params.row.allowSelfRegistration ? 'success' : 'default'}
+            size="small"
+          />
+        ),
+      },
+      {
+        field: 'actions',
+        headerName: t('users:actions'),
+        width: 80,
+        sortable: false,
+        filterable: false,
+        hideable: false,
+        renderCell: (params: GridRenderCellParams<UserSchemaListItem>) => (
+          <IconButton
+            size="small"
+            aria-label="Open actions menu"
+            onClick={(e) => {
+              handleMenuOpen(e, params.row.id);
+            }}
+          >
+            <EllipsisVertical size={16} />
+          </IconButton>
+        ),
+      },
+    ],
+    [organizationUnitMap, t, handleMenuOpen],
+  );
 
   return (
     <>

@@ -20,6 +20,7 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import render from '@/test/test-utils';
+import type {OrganizationUnitListParams} from '@/features/organization-units/types/organization-units';
 import ViewUserTypePage from '../ViewUserTypePage';
 import type {ApiUserSchema, ApiError, UpdateUserSchemaRequest} from '../../types/user-types';
 
@@ -59,9 +60,29 @@ interface UseDeleteUserTypeReturn {
   error: ApiError | null;
 }
 
+interface UseGetOrganizationUnitsReturn {
+  data: {
+    totalResults: number;
+    startIndex: number;
+    count: number;
+    organizationUnits: {
+      id: string;
+      name: string;
+      handle: string;
+      description?: string | null;
+      parent?: string | null;
+    }[];
+  } | null;
+  loading: boolean;
+  error: ApiError | null;
+  refetch: (newParams?: OrganizationUnitListParams) => Promise<void>;
+}
+
 const mockUseGetUserType = vi.fn<(id?: string) => UseGetUserTypeReturn>();
 const mockUseUpdateUserType = vi.fn<() => UseUpdateUserTypeReturn>();
 const mockUseDeleteUserType = vi.fn<() => UseDeleteUserTypeReturn>();
+const mockUseGetOrganizationUnits = vi.fn<() => UseGetOrganizationUnitsReturn>();
+const mockRefetchOrganizationUnits = vi.fn();
 
 vi.mock('../../api/useGetUserType', () => ({
   default: (id?: string) => mockUseGetUserType(id),
@@ -74,6 +95,14 @@ vi.mock('../../api/useUpdateUserType', () => ({
 vi.mock('../../api/useDeleteUserType', () => ({
   default: () => mockUseDeleteUserType(),
 }));
+
+vi.mock('../../../organization-units/api/useGetOrganizationUnits', () => ({
+  default: () => mockUseGetOrganizationUnits(),
+}));
+
+const getOrganizationUnitSelect = () => screen.getAllByRole('combobox')[0];
+const getPropertyTypeSelect = (index = 0) => screen.getAllByRole('combobox')[index + 1];
+const getPropertyTypeSelects = () => screen.getAllByRole('combobox').slice(1);
 
 describe('ViewUserTypePage', () => {
   const mockUserType: ApiUserSchema = {
@@ -98,6 +127,16 @@ describe('ViewUserTypePage', () => {
     },
   };
 
+  const mockOrganizationUnitsResponse = {
+    totalResults: 2,
+    startIndex: 1,
+    count: 2,
+    organizationUnits: [
+      {id: 'root-ou', name: 'Root Organization', handle: 'root', description: null, parent: null},
+      {id: 'child-ou', name: 'Child Organization', handle: 'child', description: null, parent: 'root-ou'},
+    ],
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseGetUserType.mockReturnValue({
@@ -115,6 +154,12 @@ describe('ViewUserTypePage', () => {
       deleteUserType: mockDeleteUserType,
       loading: false,
       error: null,
+    });
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: mockOrganizationUnitsResponse,
+      loading: false,
+      error: null,
+      refetch: mockRefetchOrganizationUnits,
     });
   });
 
@@ -194,6 +239,7 @@ describe('ViewUserTypePage', () => {
       expect(screen.getByText('View and manage user type schema')).toBeInTheDocument();
       expect(screen.getByText('schema-123')).toBeInTheDocument();
       expect(screen.getByText('Employee Schema')).toBeInTheDocument();
+      expect(screen.getByText('Root Organization')).toBeInTheDocument();
     });
 
     it('displays schema properties in table', () => {
@@ -207,6 +253,19 @@ describe('ViewUserTypePage', () => {
       expect(screen.getByText('email')).toBeInTheDocument();
       expect(screen.getByText('age')).toBeInTheDocument();
       expect(screen.getByText('isActive')).toBeInTheDocument();
+    });
+
+    it('falls back to organization unit id when lookup data is missing', () => {
+      mockUseGetOrganizationUnits.mockReturnValue({
+        data: {...mockOrganizationUnitsResponse, organizationUnits: []},
+        loading: false,
+        error: null,
+        refetch: mockRefetchOrganizationUnits,
+      });
+
+      render(<ViewUserTypePage />);
+
+      expect(screen.getByText('root-ou')).toBeInTheDocument();
     });
 
     it('displays edit and delete buttons in view mode', () => {
@@ -350,7 +409,7 @@ describe('ViewUserTypePage', () => {
 
       await user.click(screen.getByRole('button', {name: /edit/i}));
 
-      const typeSelects = screen.getAllByRole('combobox');
+      const typeSelects = getPropertyTypeSelects();
       await user.click(typeSelects[0]);
 
       // Click on Number option instead to avoid duplicate "String" text
@@ -359,6 +418,34 @@ describe('ViewUserTypePage', () => {
 
       await waitFor(() => {
         expect(typeSelects[0]).toHaveTextContent('Number');
+      });
+    });
+
+    it('allows selecting organization unit by name', async () => {
+      const user = userEvent.setup();
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const ouSelect = getOrganizationUnitSelect();
+      await user.click(ouSelect);
+
+      const childOption = await screen.findByText('Child Organization');
+      await user.click(childOption);
+
+      await waitFor(() => {
+        expect(ouSelect).toHaveTextContent('Child Organization');
+      });
+
+      await user.click(screen.getByRole('button', {name: /save changes/i}));
+
+      await waitFor(() => {
+        expect(mockUpdateUserType).toHaveBeenCalledWith(
+          'schema-123',
+          expect.objectContaining({
+            ouId: 'child-ou',
+          }),
+        );
       });
     });
 
@@ -989,7 +1076,7 @@ describe('ViewUserTypePage', () => {
 
       await user.click(screen.getByRole('button', {name: /edit/i}));
 
-      const typeSelect = screen.getByRole('combobox');
+      const typeSelect = getPropertyTypeSelect();
       await user.click(typeSelect);
 
       const booleanOption = await screen.findByRole('option', {name: 'Boolean'});

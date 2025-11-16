@@ -25,6 +25,7 @@ import render from '@/test/test-utils';
 import UserTypesList from '../UserTypesList';
 import type useGetUserTypesHook from '../../api/useGetUserTypes';
 import type useDeleteUserTypeHook from '../../api/useDeleteUserType';
+import type useGetOrganizationUnitsHook from '../../../organization-units/api/useGetOrganizationUnits';
 import type {UserSchemaListResponse, ApiError, UserSchemaListItem} from '../../types/user-types';
 
 const mockNavigate = vi.fn();
@@ -124,8 +125,12 @@ vi.mock('react-router', async () => {
 type UseGetUserTypesReturn = ReturnType<typeof useGetUserTypesHook>;
 type UseDeleteUserTypeReturn = ReturnType<typeof useDeleteUserTypeHook>;
 
+type UseGetOrganizationUnitsReturn = ReturnType<typeof useGetOrganizationUnitsHook>;
+
 const mockUseGetUserTypes = vi.fn<() => UseGetUserTypesReturn>();
 const mockUseDeleteUserType = vi.fn<() => UseDeleteUserTypeReturn>();
+const mockUseGetOrganizationUnits = vi.fn<() => UseGetOrganizationUnitsReturn>();
+const mockRefetchOrganizationUnits = vi.fn<() => Promise<void>>();
 
 vi.mock('../../api/useGetUserTypes', () => ({
   default: () => mockUseGetUserTypes(),
@@ -133,6 +138,10 @@ vi.mock('../../api/useGetUserTypes', () => ({
 
 vi.mock('../../api/useDeleteUserType', () => ({
   default: () => mockUseDeleteUserType(),
+}));
+
+vi.mock('../../../organization-units/api/useGetOrganizationUnits', () => ({
+  default: () => mockUseGetOrganizationUnits(),
 }));
 
 describe('UserTypesList', () => {
@@ -143,6 +152,16 @@ describe('UserTypesList', () => {
     schemas: [
       {id: 'schema1', name: 'Employee Schema', ouId: 'root-ou', allowSelfRegistration: false},
       {id: 'schema2', name: 'Contractor Schema', ouId: 'child-ou', allowSelfRegistration: true},
+    ],
+  };
+
+  const mockOrganizationUnitsResponse = {
+    totalResults: 2,
+    startIndex: 1,
+    count: 2,
+    organizationUnits: [
+      {id: 'root-ou', name: 'Root Organization', handle: 'root', description: null, parent: null},
+      {id: 'child-ou', name: 'Child Organization', handle: 'child', description: null, parent: 'root-ou'},
     ],
   };
 
@@ -160,6 +179,12 @@ describe('UserTypesList', () => {
       error: null,
       reset: mockResetDeleteUserType,
     });
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: mockOrganizationUnitsResponse,
+      loading: false,
+      error: null,
+      refetch: mockRefetchOrganizationUnits,
+    });
   });
 
   it('renders DataGrid with user types', () => {
@@ -167,6 +192,42 @@ describe('UserTypesList', () => {
 
     expect(screen.getByTestId('row-schema1')).toHaveTextContent('Employee Schema');
     expect(screen.getByTestId('row-schema2')).toHaveTextContent('Contractor Schema');
+  });
+
+  it('shows organization unit names when available', () => {
+    render(<UserTypesList />);
+
+    expect(screen.getByText('Root Organization')).toBeInTheDocument();
+    expect(screen.getByText('Child Organization')).toBeInTheDocument();
+  });
+
+  it('falls back to organization unit id when lookup is missing', () => {
+    mockUseGetOrganizationUnits.mockReturnValueOnce({
+      data: {...mockOrganizationUnitsResponse, organizationUnits: []},
+      loading: false,
+      error: null,
+      refetch: mockRefetchOrganizationUnits,
+    });
+
+    render(<UserTypesList />);
+
+    expect(screen.getByText('root-ou')).toBeInTheDocument();
+  });
+
+  it('shows no data text when organization unit is not provided', () => {
+    mockUseGetUserTypes.mockReturnValueOnce({
+      data: {
+        ...mockUserTypesData,
+        schemas: [{...mockUserTypesData.schemas[0], ouId: ''}],
+      },
+      loading: false,
+      error: null,
+      refetch: mockRefetch,
+    });
+
+    render(<UserTypesList />);
+
+    expect(screen.getByText('No data available')).toBeInTheDocument();
   });
 
   it('displays loading state', () => {

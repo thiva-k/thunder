@@ -20,6 +20,7 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import render from '@/test/test-utils';
+import type {OrganizationUnitListParams} from '@/features/organization-units/types/organization-units';
 import CreateUserTypePage from '../CreateUserTypePage';
 import type {ApiError, CreateUserSchemaRequest} from '../../types/user-types';
 
@@ -44,9 +45,47 @@ interface UseCreateUserTypeReturn {
 
 const mockUseCreateUserType = vi.fn<() => UseCreateUserTypeReturn>();
 
+interface UseGetOrganizationUnitsReturn {
+  data: {
+    totalResults: number;
+    startIndex: number;
+    count: number;
+    organizationUnits: {
+      id: string;
+      name: string;
+      handle: string;
+      description?: string | null;
+      parent?: string | null;
+    }[];
+  } | null;
+  loading: boolean;
+  error: ApiError | null;
+  refetch: (newParams?: OrganizationUnitListParams) => Promise<void>;
+}
+
+const mockUseGetOrganizationUnits = vi.fn<() => UseGetOrganizationUnitsReturn>();
+const mockRefetchOrganizationUnits = vi.fn();
+
 vi.mock('../../api/useCreateUserType', () => ({
   default: () => mockUseCreateUserType(),
 }));
+
+vi.mock('../../../organization-units/api/useGetOrganizationUnits', () => ({
+  default: () => mockUseGetOrganizationUnits(),
+}));
+
+const getOrganizationUnitSelect = () => screen.getAllByRole('combobox')[0];
+const getPropertyTypeSelect = (index = 0) => screen.getAllByRole('combobox')[index + 1];
+
+const mockOrganizationUnitsResponse = {
+  totalResults: 2,
+  startIndex: 1,
+  count: 2,
+  organizationUnits: [
+    {id: 'root-ou', name: 'Root Organization', handle: 'root', description: null, parent: null},
+    {id: 'child-ou', name: 'Child Organization', handle: 'child', description: null, parent: 'root-ou'},
+  ],
+};
 
 describe('CreateUserTypePage', () => {
   beforeEach(() => {
@@ -55,6 +94,12 @@ describe('CreateUserTypePage', () => {
       createUserType: mockCreateUserType,
       loading: false,
       error: null,
+    });
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: mockOrganizationUnitsResponse,
+      loading: false,
+      error: null,
+      refetch: mockRefetchOrganizationUnits,
     });
   });
 
@@ -138,7 +183,7 @@ describe('CreateUserTypePage', () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
 
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
 
     const numberOption = await screen.findByText('Number');
@@ -163,14 +208,47 @@ describe('CreateUserTypePage', () => {
     expect(mockCreateUserType).not.toHaveBeenCalled();
   });
 
+  it('renders organization units and allows selecting by name', async () => {
+    const user = userEvent.setup();
+    mockCreateUserType.mockResolvedValue(undefined);
+
+    render(<CreateUserTypePage />);
+
+    const ouSelect = getOrganizationUnitSelect();
+
+    await waitFor(() => {
+      expect(ouSelect).toHaveTextContent('Root Organization');
+    });
+
+    await user.click(ouSelect);
+    const childOption = await screen.findByText('Child Organization');
+    await user.click(childOption);
+
+    await waitFor(() => {
+      expect(ouSelect).toHaveTextContent('Child Organization');
+    });
+
+    await user.type(screen.getByLabelText(/Type Name/i), 'Employee');
+    await user.type(screen.getByPlaceholderText(/e\.g\., email, age, address/i), 'email');
+
+    const submitButton = screen.getByRole('button', {name: /Create User Type/i});
+    await user.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateUserType).toHaveBeenCalledWith(
+        expect.objectContaining({
+          ouId: 'child-ou',
+        }),
+      );
+    });
+  });
+
   it('shows validation error when submitting without property name', async () => {
     const user = userEvent.setup();
     render(<CreateUserTypePage />);
 
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Employee');
-    const ouInput = screen.getByLabelText(/Organization Unit ID/i);
-    await user.type(ouInput, 'root-ou');
 
     const submitButton = screen.getByRole('button', {name: /Create User Type/i});
     await user.click(submitButton);
@@ -184,6 +262,12 @@ describe('CreateUserTypePage', () => {
 
   it('shows validation error when submitting without organization unit id', async () => {
     const user = userEvent.setup();
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: {...mockOrganizationUnitsResponse, organizationUnits: []},
+      loading: false,
+      error: null,
+      refetch: mockRefetchOrganizationUnits,
+    });
     render(<CreateUserTypePage />);
 
     await user.type(screen.getByLabelText(/Type Name/i), 'Employee');
@@ -205,8 +289,6 @@ describe('CreateUserTypePage', () => {
 
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Employee');
-    const ouInput = screen.getByLabelText(/Organization Unit ID/i);
-    await user.type(ouInput, 'root-ou');
 
     // Add first property
     const firstPropertyInput = screen.getByPlaceholderText(/e\.g\., email, age, address/i);
@@ -263,7 +345,7 @@ describe('CreateUserTypePage', () => {
     expect(screen.getByRole('checkbox', {name: /Unique/i})).toBeInTheDocument();
 
     // Change to boolean type
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
 
     const booleanOption = await screen.findByText('Boolean');
@@ -290,7 +372,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     // Change type to enum
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const enumOption = await screen.findByText('Enum');
     await user.click(enumOption);
@@ -313,7 +395,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     // Change type to enum
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const enumOption = await screen.findByText('Enum');
     await user.click(enumOption);
@@ -333,7 +415,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     // Change type to enum
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const enumOption = await screen.findByText('Enum');
     await user.click(enumOption);
@@ -361,7 +443,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     // Change type to enum
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const enumOption = await screen.findByText('Enum');
     await user.click(enumOption);
@@ -394,7 +476,6 @@ describe('CreateUserTypePage', () => {
     // Fill in user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Employee');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Fill in property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -433,7 +514,10 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     await user.type(screen.getByLabelText(/Type Name/i), 'Employee');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), ' ou-123 ');
+    const ouSelect = getOrganizationUnitSelect();
+    await user.click(ouSelect);
+    const secondOuOption = await screen.findByText('Child Organization');
+    await user.click(secondOuOption);
 
     const propertyNameInput = screen.getByPlaceholderText(/e\.g\., email, age, address/i);
     await user.type(propertyNameInput, 'email');
@@ -445,7 +529,7 @@ describe('CreateUserTypePage', () => {
     await waitFor(() => {
       expect(mockCreateUserType).toHaveBeenCalledWith({
         name: 'Employee',
-        ouId: 'ou-123',
+        ouId: 'child-ou',
         allowSelfRegistration: true,
         schema: {
           email: {
@@ -520,10 +604,9 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'Complex Type');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Change type to enum
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const enumOption = await screen.findByText('Enum');
     await user.click(enumOption);
@@ -567,7 +650,7 @@ describe('CreateUserTypePage', () => {
     render(<CreateUserTypePage />);
 
     // Change type to enum first
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const enumTypeOption = await screen.findByText('Enum');
     await user.click(enumTypeOption);
@@ -605,7 +688,6 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'RegexTest');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
@@ -644,14 +726,13 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'ArrayTest');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
     await user.type(propertyNameInput, 'tags');
 
     // Change type to array
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const arrayOption = await screen.findByText('Array');
     await user.click(arrayOption);
@@ -686,14 +767,13 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'ObjectTest');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
     await user.type(propertyNameInput, 'metadata');
 
     // Change type to object
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const objectOption = await screen.findByText('Object');
     await user.click(objectOption);
@@ -726,14 +806,13 @@ describe('CreateUserTypePage', () => {
     // Set user type name
     const nameInput = screen.getByLabelText(/Type Name/i);
     await user.type(nameInput, 'NumberTest');
-    await user.type(screen.getByLabelText(/Organization Unit ID/i), 'root-ou');
 
     // Add property name
     const propertyNameInput = screen.getByPlaceholderText(/e.g., email, age, address/i);
     await user.type(propertyNameInput, 'employeeId');
 
     // Change type to number
-    const typeSelect = screen.getByRole('combobox');
+    const typeSelect = getPropertyTypeSelect();
     await user.click(typeSelect);
     const numberOption = await screen.findByText('Number');
     await user.click(numberOption);

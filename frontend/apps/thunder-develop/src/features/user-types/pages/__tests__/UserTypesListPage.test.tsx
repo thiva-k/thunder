@@ -36,7 +36,11 @@ vi.mock('react-router', async () => {
 
 // Mock the UserTypesList component
 vi.mock('../../components/UserTypesList', () => ({
-  default: () => <div data-testid="user-types-list">User Types List Component</div>,
+  default: () => (
+    <div data-testid="user-types-list">
+      <span>Organization Unit: Root Organization</span>
+    </div>
+  ),
 }));
 
 describe('UserTypesListPage', () => {
@@ -71,6 +75,12 @@ describe('UserTypesListPage', () => {
     render(<UserTypesListPage />);
 
     expect(screen.getByTestId('user-types-list')).toBeInTheDocument();
+  });
+
+  it('shows organization unit name within the list component', () => {
+    render(<UserTypesListPage />);
+
+    expect(screen.getByText('Organization Unit: Root Organization')).toBeInTheDocument();
   });
 
   it('navigates to create page when create button is clicked', async () => {
