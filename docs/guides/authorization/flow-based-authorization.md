@@ -30,6 +30,7 @@ This example demonstrates authorization for a document management system with re
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/organization-units \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "DocManagement",
     "description": "Document management organization",
@@ -45,6 +46,7 @@ Create an application that uses the basic authentication flow (which includes au
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/applications \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "Document Manager App",
     "description": "Application for managing documents",
@@ -60,6 +62,7 @@ Before creating users, define a user schema:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/user-schemas \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "test-person",
     "schema": {
@@ -90,6 +93,7 @@ Create a user in your organization unit:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/users \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "organizationUnit": "<organization-unit-id>",
     "type": "test-person",
@@ -111,6 +115,7 @@ Create a role with document permissions and assign it to the user:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "DocumentEditor",
     "description": "Can read and write documents",

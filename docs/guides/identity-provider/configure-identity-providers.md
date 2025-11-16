@@ -13,7 +13,7 @@ You can manage identity providers using the following REST API endpoints.
 Retrieve a list of all configured identity providers.
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/identity-providers
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/identity-providers
 ```
 
 ### Create an Identity Provider
@@ -21,7 +21,7 @@ curl -kL -H 'Accept: application/json' https://localhost:8090/identity-providers
 Create a new identity provider. See provider-specific examples below for the request body.
 
 ```bash
-curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/identity-providers \
 -d '{ ... }'
 ```
 
@@ -32,7 +32,7 @@ Refer to [Identity Provider Configuration](#identity-provider-configuration) for
 Retrieve details of a specific identity provider by its unique identifier.
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/identity-providers/<idp_id>
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/identity-providers/<idp_id>
 ```
 
 ### Update an Identity Provider
@@ -41,6 +41,7 @@ Update an existing identity provider by its unique identifier.
 
 ```bash
 curl -kL -X PUT -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers/<idp_id> \
+-H 'Authorization: Bearer <token>' \
 -d '{ ... }'
 ```
 
@@ -49,7 +50,7 @@ curl -kL -X PUT -H 'Content-Type: application/json' -H 'Accept: application/json
 Delete an identity provider by its unique identifier.
 
 ```bash
-curl -kL -X DELETE https://localhost:8090/identity-providers/<idp_id>
+curl -kL -X DELETE -H 'Authorization: Bearer <token>' https://localhost:8090/identity-providers/<idp_id>
 ```
 
 ---
@@ -75,6 +76,7 @@ To configure an identity provider, you need to specify the required properties f
 
 ```bash
 curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+-H 'Authorization: Bearer <token>' \
 -d '{
   "name": "Google",
   "description": "Login with Google",
@@ -121,6 +123,7 @@ curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https
 
 ```bash
 curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+-H 'Authorization: Bearer <token>' \
 -d '{
   "name": "Github",
   "description": "Login with Github",

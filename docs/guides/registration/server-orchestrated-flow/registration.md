@@ -18,6 +18,7 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "App Native Login 1",
         "description": "Sample application for App native login",
@@ -176,6 +177,7 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "App Native Login 1",
         "description": "Sample application for App native login",
@@ -307,6 +309,7 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Google",
         "description": "Login with Google",
@@ -443,6 +446,7 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Github",
         "description": "Login with Github",
@@ -490,6 +494,7 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "App Native Login 1",
         "description": "Sample application for App native login",

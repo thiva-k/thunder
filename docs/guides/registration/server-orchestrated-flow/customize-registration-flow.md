@@ -305,6 +305,7 @@ To use a custom registration flow, specify both the authentication and registrat
 
 ```bash
 curl -kL -X PUT -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications/<app_id> \
+-H 'Authorization: Bearer <token>' \
 --data '{
     "name": "My Application",
     "description": "Application with custom registration flow",

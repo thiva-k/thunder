@@ -20,6 +20,7 @@ If you don't already have an organization unit, create one:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/organization-units \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "Engineering",
     "description": "Engineering department",
@@ -35,6 +36,7 @@ Create a role and assign permissions to it:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "DocumentEditor",
     "description": "Can read and write documents",
@@ -73,6 +75,7 @@ Before creating users, you must define a user schema (user type). This defines t
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/user-schemas \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "test-person",
     "schema": {
@@ -119,6 +122,7 @@ Create a user in your organization unit using the schema you just defined:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/users \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "organizationUnit": "<organization-unit-id>",
     "type": "test-person",
@@ -140,6 +144,7 @@ Assign the role to the user:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles/<role-id>/assignments/add \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "assignments": [
         {
@@ -156,6 +161,7 @@ You can also assign users when creating the role:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "DocumentEditor",
     "description": "Can read and write documents",
@@ -183,6 +189,7 @@ Create a group in your organization unit:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/groups \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "Editors",
     "description": "Document editors group",
@@ -198,6 +205,7 @@ Add users to the group:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/groups/<group-id>/users \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "users": ["<user-id-1>", "<user-id-2>"]
 }'
@@ -209,6 +217,7 @@ Assign the role to the group:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles/<role-id>/assignments/add \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "assignments": [
         {
@@ -228,7 +237,7 @@ Now all users in the group will inherit the role's permissions.
 Retrieve all roles in an organization unit:
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/roles?ouId=<organization-unit-id>
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/roles?ouId=<organization-unit-id>
 ```
 
 ### Get Role Details
@@ -236,7 +245,7 @@ curl -kL -H 'Accept: application/json' https://localhost:8090/roles?ouId=<organi
 Retrieve details of a specific role:
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/roles/<role-id>
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/roles/<role-id>
 ```
 
 ### Get Role Assignments
@@ -244,7 +253,7 @@ curl -kL -H 'Accept: application/json' https://localhost:8090/roles/<role-id>
 List all users and groups assigned to a role:
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/roles/<role-id>/assignments
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/roles/<role-id>/assignments
 ```
 
 **Response:**
@@ -272,6 +281,7 @@ Update the permissions associated with a role:
 
 ```bash
 curl -kL -X PUT -H 'Content-Type: application/json' https://localhost:8090/roles/<role-id> \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "DocumentEditor",
     "description": "Can read and write documents",
@@ -290,6 +300,7 @@ Remove users or groups from a role:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles/<role-id>/assignments/remove \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "assignments": [
         {
@@ -305,7 +316,7 @@ curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/role
 Delete a role (note: all assignments must be removed first):
 
 ```bash
-curl -kL -X DELETE https://localhost:8090/roles/<role-id>
+curl -kL -X DELETE -H 'Authorization: Bearer <token>' https://localhost:8090/roles/<role-id>
 ```
 
 ## 🔗 Next Steps

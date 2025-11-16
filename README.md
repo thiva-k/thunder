@@ -230,16 +230,32 @@ To log in to the sample app, follow these steps:
 
 #### Try Out Client Credentials Flow
 
+To try out the Client Credentials flow, you first need to obtain a token to access the System APIs of Thunder. Follow these steps:
+
+Replace `<application_id>` with the sample app ID generated during "Setup the product."
+
+```bash
+curl -k -X POST 'https://localhost:8090/flow/execute' \
+  -d '{"applicationId":"<application_id>","flowType":"AUTHENTICATION", "inputs":{"username":"admin","password":"admin", "requested_permissions":"system"}}'
+```
+
+The response will contain an `assertion` field.
+```
+{"flowId":"<flow_id>","flowStatus":"COMPLETE","data":{},"assertion":"<assertion>"}
+```
+
+
 The Client Credentials flow is used to obtain an access token for machine-to-machine communication. This flow does not require user interaction and is typically used for server-to-server communication.
 
 To try out the Client Credentials flow, follow these steps:
 
 1. Create a Client Application
 
-   Create a client application in the system to use for the Client Credentials flow. You can use the following cURL command to create a new application.
+   Create a client application in the system to use for the Client Credentials flow. You can use the following cURL command to create a new application. Replace `<assertion>` with the assertion value obtained from the previous step.
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <assertion>' \
     -d '{
         "name": "Test Sample App",
         "description": "Initial testing App",
