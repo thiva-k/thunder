@@ -18,7 +18,7 @@
 
 import {Controller} from 'react-hook-form';
 import type {Control, FieldErrors, Path} from 'react-hook-form';
-import {Box, Typography, TextField, FormLabel, FormControl, Select, MenuItem} from '@wso2/oxygen-ui';
+import {Box, Typography, TextField, FormLabel, FormControl, Select, MenuItem, Checkbox, FormControlLabel} from '@wso2/oxygen-ui';
 import type {PropertyDefinition} from '../types/users';
 import ArrayFieldInput from '../components/ArrayFieldInput';
 
@@ -179,20 +179,21 @@ const renderSchemaField = <T extends Record<string, unknown>>(
           control={control}
           render={({field}) => (
             <Box sx={{display: 'flex', alignItems: 'center', py: 1}}>
-              <input
-                type="checkbox"
-                id={fieldName}
-                name={field.name}
-                checked={!!field.value}
-                onChange={(e) => field.onChange(e.target.checked)}
-                onBlur={field.onBlur}
-                ref={field.ref}
-                style={{width: '18px', height: '18px', cursor: 'pointer'}}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    id={fieldName}
+                    name={field.name}
+                    checked={!!field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                  />
+                }
+                required={isRequired}
+                label={fieldLabel}
+                sx={{mb: 2}}
               />
-              <FormLabel htmlFor={fieldName} sx={{ml: 1.5, cursor: 'pointer', mb: 0}}>
-                {fieldLabel}
-                {isRequired && <span style={{color: 'red'}}> *</span>}
-              </FormLabel>
             </Box>
           )}
         />

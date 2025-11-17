@@ -465,7 +465,7 @@ export default function CreateUserTypePage() {
                       size="small"
                       fullWidth
                     />
-                    <Button variant="outlined" size="small" onClick={() => handleAddEnumValue(property.id)}>
+                    <Button variant="outlined" onClick={() => handleAddEnumValue(property.id)}>
                       {t('common:actions.add')}
                     </Button>
                   </Box>
