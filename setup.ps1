@@ -77,59 +77,104 @@ function Invoke-ThunderApi {
         [string]$Data = ""
     )
 
-    $url = "$script:THUNDER_API_BASE$Endpoint"
-
-    Log-Debug "API Call: $Method $url"
-
-    try {
-        $headers = @{
-            "Content-Type" = "application/json"
-        }
-
-        $params = @{
-            Uri = $url
-            Method = $Method
-            Headers = $headers
-            SkipCertificateCheck = $true
-            ErrorAction = 'Stop'
-        }
-
-        if ($Data -and ($Method -eq "POST" -or $Method -eq "PUT" -or $Method -eq "PATCH")) {
-            $params.Body = $Data
-        }
-
-        $response = Invoke-WebRequest @params
-        $statusCode = $response.StatusCode
-        $body = $response.Content
-
+    # Get base URL from environment variable
+    $baseUrl = if ($env:THUNDER_API_BASE) {
+        $env:THUNDER_API_BASE
+    } else {
+        Log-Error "THUNDER_API_BASE is not set!"
         return @{
-            StatusCode = $statusCode
-            Body = $body
+            StatusCode = 0
+            Body = ""
+            Error = "THUNDER_API_BASE not set"
         }
     }
-    catch {
-        $statusCode = if ($_.Exception.Response) {
-            [int]$_.Exception.Response.StatusCode
-        } else {
-            0
+
+    $url = "$baseUrl$Endpoint"
+
+    Log-Debug "API Call: $Method $url"
+    if ($Data) {
+        Log-Debug "Request Body: $Data"
+    }
+
+    $responseFile = [System.IO.Path]::GetTempFileName()
+    $dataFile = $null
+
+    try {
+        $curlArgs = @(
+            "-X", $Method,
+            "-k",  # Skip SSL verification
+            "-s",  # Silent mode
+            "-w", "%{http_code}",  # Write status code
+            "-H", "Content-Type: application/json",
+            "-o", $responseFile  # Output to file
+        )
+
+        if ($Data -and ($Method -eq "POST" -or $Method -eq "PUT" -or $Method -eq "PATCH")) {
+            # Save data to temp file for curl
+            $dataFile = [System.IO.Path]::GetTempFileName()            
+            if ($PSVersionTable.PSVersion.Major -ge 6) {
+                $Data | Out-File -FilePath $dataFile -Encoding UTF8NoBOM -NoNewline
+            } else {
+                [System.IO.File]::WriteAllText($dataFile, $Data, [System.Text.UTF8Encoding]::new($false))
+            }
+            
+            $curlArgs += @("-d", "@$dataFile")
         }
 
-        $body = if ($_.Exception.Response) {
-            try {
-                $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-                $reader.ReadToEnd()
-            }
-            catch {
-                ""
+        $curlArgs += $url
+
+        Log-Debug "curl command: curl $($curlArgs -join ' ')"
+
+        # Execute curl and capture output
+        $curlOutput = & curl @curlArgs 2>&1
+        $curlExitCode = $LASTEXITCODE
+
+        # The last line should be the status code
+        $statusCode = $curlOutput | Select-Object -Last 1
+
+        # Handle curl errors (nonzero exit code or status code might be empty or non-numeric)
+        if ($curlExitCode -ne 0 -or -not $statusCode -or $statusCode -notmatch '^\d+$') {
+            Log-Error "Failed to execute curl command or received invalid response (exit code: $curlExitCode)"
+            Log-Error "curl output: $($curlOutput -join "`n")"
+            return @{
+                StatusCode = 0
+                Body = ""
+                Error = "curl execution failed (exit code: $curlExitCode): $($curlOutput -join '; ')"
             }
         }
-        else {
+
+        # Read response body (file should always exist, but check defensively)
+        $body = if (Test-Path $responseFile) {
+            Get-Content -Path $responseFile -Raw
+        } else {
             ""
         }
 
+        Log-Debug "Response Status: $statusCode"
+        Log-Debug "Response Body: $body"
+
         return @{
-            StatusCode = $statusCode
-            Body = $body
+            StatusCode = [int]$statusCode
+            Body = $body ?? ""
+        }
+    }
+    catch {
+        Log-Error "API call failed: $_"
+        Log-Error "Exception: $($_.Exception.Message)"
+
+        return @{
+            StatusCode = 0
+            Body = ""
+            Error = $_.Exception.Message
+        }
+    }
+    finally {
+        # Clean up temp files
+        if (Test-Path $responseFile) {
+            Remove-Item $responseFile -Force -ErrorAction SilentlyContinue
+        }
+        if ($dataFile -and (Test-Path $dataFile)) {
+            Remove-Item $dataFile -Force -ErrorAction SilentlyContinue
         }
     }
 }
@@ -269,6 +314,9 @@ Read-Config | Out-Null
 $BASE_URL = "$($script:PROTOCOL)://$($script:HOSTNAME):$($script:PORT)"
 $script:THUNDER_API_BASE = $BASE_URL
 
+# Export THUNDER_API_BASE as environment variable for bootstrap scripts
+$env:THUNDER_API_BASE = $BASE_URL
+
 Write-Host ""
 Write-Host "========================================="
 Write-Host "   Thunder Setup"
@@ -279,6 +327,12 @@ if ($DEBUG_MODE) {
     Write-Host "Debug: Enabled (port $DEBUG_PORT)" -ForegroundColor Blue
 }
 Write-Host ""
+
+# Log PowerShell version for debugging
+Log-Debug "PowerShell Version: $($PSVersionTable.PSVersion)"
+Log-Debug "PowerShell Edition: $($PSVersionTable.PSEdition)"
+Log-Debug "OS: $($PSVersionTable.OS)"
+Log-Debug "Platform: $($PSVersionTable.Platform)"
 
 # ============================================================================
 # Kill Existing Processes on Ports
@@ -397,33 +451,63 @@ try {
     # ============================================================================
 
     Write-Host "⏳ Waiting for server to be ready..." -ForegroundColor Blue
+    Write-Host "   Server URL: $BASE_URL" -ForegroundColor Blue
+
     $TIMEOUT = 60
     $ELAPSED = 0
     $RETRY_DELAY = 2
+    $lastError = ""
 
     while ($ELAPSED -lt $TIMEOUT) {
-        try {
-            $response = Invoke-WebRequest -Uri "$BASE_URL/health/readiness" -SkipCertificateCheck -TimeoutSec 2 -ErrorAction Stop
-            if ($response.StatusCode -eq 200) {
-                Write-Host ""
-                Write-Host "✓ Server is ready" -ForegroundColor Green
-                Write-Host ""
-                break
-            }
+        Log-Debug "Attempting health check (attempt $([math]::Floor($ELAPSED / $RETRY_DELAY) + 1))..."
+
+        $healthUrl = "$BASE_URL/health/readiness"
+        Log-Debug "Making request to: $healthUrl"
+
+        $requestStart = Get-Date
+        $statusCode = & curl -k -s -w "%{http_code}" -o NUL $healthUrl 2>&1 | Select-Object -Last 1
+        $requestDuration = (Get-Date) - $requestStart
+
+        Log-Debug "Request completed in $([math]::Round($requestDuration.TotalSeconds, 2))s with status: $statusCode"
+
+        if ($statusCode -eq "200") {
+            Write-Host ""
+            Write-Host "✓ Server is ready" -ForegroundColor Green
+            Log-Debug "Health check response: $body"
+            Write-Host ""
+            break
         }
-        catch {
+        else {
             # Server not ready yet
+            $currentError = "HTTP $statusCode"
+
+            # Log additional details when error status changes
+            if ($currentError -ne $lastError) {
+                Write-Host ""
+                Log-Debug "Health check failed with status: $statusCode"
+
+                if (-not $statusCode -or $statusCode -eq '000') {
+                    Log-Debug "Connection refused - server not yet listening"
+                } elseif ($statusCode -match "^50[0-9]$") {
+                    Log-Debug "Server error - server might be starting"
+                }
+
+                $lastError = $currentError
+                Write-Host "." -NoNewline
+            } else {
+                Write-Host "." -NoNewline
+            }
         }
 
         Start-Sleep -Seconds $RETRY_DELAY
         $ELAPSED += $RETRY_DELAY
-        Write-Host "." -NoNewline
     }
 
     if ($ELAPSED -ge $TIMEOUT) {
         Write-Host ""
-        Write-Host "❌ Server failed to start within $TIMEOUT seconds" -ForegroundColor Red
+        Write-Host "❌ Server health check failed within $TIMEOUT seconds" -ForegroundColor Red
         Write-Host "Expected server at: $BASE_URL" -ForegroundColor Red
+        Write-Host "Last status: $lastError" -ForegroundColor Red
         exit 1
     }
 
@@ -445,20 +529,34 @@ try {
         Log-Info "Started at: $(Get-Date)"
         Write-Host ""
 
-        # Collect all scripts from both built-in and custom directories
+        # Collect all PowerShell scripts from both built-in and custom directories
         $scripts = @()
 
-        # Find scripts in main bootstrap directory
+        # Find PowerShell scripts in main bootstrap directory
         if (Test-Path $BOOTSTRAP_DIR) {
-            $scripts += Get-ChildItem -Path $BOOTSTRAP_DIR -Filter "*.ps1" -File -ErrorAction SilentlyContinue
-            $scripts += Get-ChildItem -Path $BOOTSTRAP_DIR -Filter "*.sh" -File -ErrorAction SilentlyContinue
+            Log-Debug "Scanning $BOOTSTRAP_DIR for PowerShell scripts..."
+            $psScripts = Get-ChildItem -Path $BOOTSTRAP_DIR -Filter "*.ps1" -File -ErrorAction SilentlyContinue
+
+            Log-Debug "Found $($psScripts.Count) PowerShell script(s)"
+            foreach ($bootstrapScript in $psScripts) {
+                Log-Debug "  - $($bootstrapScript.Name)"
+            }
+
+            $scripts += $psScripts
         }
 
-        # Find scripts in custom directory
+        # Find PowerShell scripts in custom directory
         $customDir = Join-Path $BOOTSTRAP_DIR "custom"
         if (Test-Path $customDir) {
-            $scripts += Get-ChildItem -Path $customDir -Filter "*.ps1" -File -ErrorAction SilentlyContinue
-            $scripts += Get-ChildItem -Path $customDir -Filter "*.sh" -File -ErrorAction SilentlyContinue
+            Log-Debug "Searching for PowerShell scripts in: $customDir"
+            $customPsScripts = Get-ChildItem -Path $customDir -Filter "*.ps1" -File -ErrorAction SilentlyContinue
+
+            Log-Debug "Found $($customPsScripts.Count) PowerShell script(s) in custom directory"
+            foreach ($bootstrapScript in $customPsScripts) {
+                Log-Debug "  - $($bootstrapScript.Name)"
+            }
+
+            $scripts += $customPsScripts
         }
 
         # Sort scripts by filename (numeric prefix determines order)
@@ -468,7 +566,11 @@ try {
             Log-Warning "No bootstrap scripts found"
         }
         else {
-            Log-Info "Discovered $($sortedScripts.Count) script(s)"
+            Log-Info "Discovered $($sortedScripts.Count) PowerShell script(s)"
+            Log-Debug "Scripts will be executed in this order:"
+            foreach ($bootstrapScript in $sortedScripts) {
+                Log-Debug "  - $($bootstrapScript.Name)"
+            }
             Write-Host ""
 
             # Execute scripts
@@ -477,19 +579,19 @@ try {
             $failedCount = 0
             $skippedCount = 0
 
-            foreach ($script in $sortedScripts) {
-                $scriptName = $script.Name
+            foreach ($bootstrapScript in $sortedScripts) {
+                $scriptName = $bootstrapScript.Name
 
                 # Skip if matches skip pattern
                 if ($BOOTSTRAP_SKIP_PATTERN -and ($scriptName -match $BOOTSTRAP_SKIP_PATTERN)) {
-                    Log-Info "⊘ Skipping $scriptName (matches skip pattern)"
+                    Log-Info "⊘ Skipping $scriptName (matches skip pattern regex: $BOOTSTRAP_SKIP_PATTERN)"
                     $skippedCount++
                     continue
                 }
 
                 # Skip if doesn't match only pattern
                 if ($BOOTSTRAP_ONLY_PATTERN -and ($scriptName -notmatch $BOOTSTRAP_ONLY_PATTERN)) {
-                    Log-Info "⊘ Skipping $scriptName (doesn't match only pattern)"
+                    Log-Info "⊘ Skipping $scriptName (doesn't match only pattern: $BOOTSTRAP_ONLY_PATTERN)"
                     $skippedCount++
                     continue
                 }
@@ -497,28 +599,12 @@ try {
                 Log-Info "▶ Executing: $scriptName"
                 $scriptCount++
 
-                # Execute script
+                # Execute PowerShell script
                 $startTime = Get-Date
 
                 try {
-                    if ($script.Extension -eq ".ps1") {
-                        # PowerShell script
-                        & $script.FullName
-                        $exitCode = $LASTEXITCODE
-                    }
-                    else {
-                        # Bash script - requires bash or WSL on Windows
-                        if (Get-Command bash -ErrorAction SilentlyContinue) {
-                            & bash $script.FullName
-                            $exitCode = $LASTEXITCODE
-                        }
-                        else {
-                            Log-Warning "$scriptName is a bash script but bash is not available"
-                            Log-Info "Install Git Bash or WSL to run .sh scripts on Windows"
-                            $skippedCount++
-                            continue
-                        }
-                    }
+                    & $bootstrapScript.FullName
+                    $exitCode = $LASTEXITCODE
 
                     $endTime = Get-Date
                     $duration = [math]::Round(($endTime - $startTime).TotalSeconds, 2)
