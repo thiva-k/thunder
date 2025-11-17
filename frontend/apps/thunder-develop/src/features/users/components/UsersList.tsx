@@ -36,8 +36,7 @@ import {
   DialogContentText,
   DialogActions,
   Button,
-  DataGrid,
-  useTheme,
+  DataGrid
 } from '@wso2/oxygen-ui';
 import {EllipsisVertical, Trash2, Eye} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
@@ -52,7 +51,6 @@ interface UsersListProps {
 }
 
 export default function UsersList(props: UsersListProps) {
-  const theme = useTheme();
   const {selectedSchema} = props;
   const {t} = useTranslation();
   const dataGridLocaleText = useDataGridLocaleText();
@@ -314,7 +312,7 @@ export default function UsersList(props: UsersListProps) {
 
         default:
           // String and other types
-          columnDef.valueGetter = (_value: unknown, row: UserWithDetails) => {
+          columnDef.valueGetter = (_value, row) => {
             const value = row.attributes?.[fieldName] as string | number | undefined;
             return value ?? null;
           };
@@ -423,8 +421,8 @@ export default function UsersList(props: UsersListProps) {
           <ListItemText>{t('common:actions.view')}</ListItemText>
         </MenuItem>
         <MenuItem onClick={handleDeleteClick}>
-          <ListItemIcon>
-            <Trash2 size={16} color={theme.vars?.palette.error.main} />
+          <ListItemIcon sx={{color: 'error.main'}}>
+            <Trash2 size={16} />
           </ListItemIcon>
           <ListItemText sx={{color: 'error.main'}}>{t('common:actions.delete')}</ListItemText>
         </MenuItem>
