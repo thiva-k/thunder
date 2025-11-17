@@ -633,7 +633,12 @@ func (ous *organizationUnitService) validateOUName(name string) *serviceerror.Se
 
 // validateOUHandle validates organization unit handle.
 func (ous *organizationUnitService) validateOUHandle(handle string) *serviceerror.ServiceError {
-	if strings.TrimSpace(handle) == "" {
+	trimmed := strings.TrimSpace(handle)
+	if trimmed == "" {
+		return &ErrorInvalidRequestFormat
+	}
+
+	if strings.Contains(trimmed, "/") {
 		return &ErrorInvalidRequestFormat
 	}
 
