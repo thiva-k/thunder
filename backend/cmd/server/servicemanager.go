@@ -40,6 +40,7 @@ import (
 	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/resource"
 	"github.com/asgardeo/thunder/internal/role"
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/export"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -61,8 +62,9 @@ func registerServices(
 	observabilitySvc = observability.Initialize()
 
 	ouService := ou.Initialize(mux)
+	hashService := hash.Initialize()
 	userSchemaService := userschema.Initialize(mux, ouService)
-	userService, err := user.Initialize(mux, ouService, userSchemaService)
+	userService, err := user.Initialize(mux, ouService, userSchemaService, hashService)
 	if err != nil {
 		logger.Fatal("Failed to initialize UserService", log.Error(err))
 	}

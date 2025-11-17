@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	oupkg "github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 	"github.com/asgardeo/thunder/internal/userschema"
 )
@@ -32,12 +33,13 @@ func Initialize(
 	mux *http.ServeMux,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
+	hashService hash.HashServiceInterface,
 ) (UserServiceInterface, error) {
 	userStore, err := newUserStore()
 	if err != nil {
 		return nil, err
 	}
-	userService := newUserService(userStore, ouService, userSchemaService)
+	userService := newUserService(userStore, ouService, userSchemaService, hashService)
 	setUserService(userService) // Set the provider for backward compatibility
 	userHandler := newUserHandler(userService)
 	registerRoutes(mux, userHandler)

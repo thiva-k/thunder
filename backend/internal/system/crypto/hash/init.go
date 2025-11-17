@@ -18,26 +18,8 @@
 
 package hash
 
-// CredAlgorithm represents the supported credential hashing algorithms
-type CredAlgorithm string
-
-const (
-	// SHA256 represents SHA-256 hashing algorithm
-	SHA256 CredAlgorithm = "SHA256"
-	// PBKDF2 represents PBKDF2 key derivation function
-	PBKDF2 CredAlgorithm = "PBKDF2"
-)
-
-// CredParameters holds the parameters for credential hashing algorithms
-type CredParameters struct {
-	Iterations int
-	KeySize    int
-	Salt       string
-}
-
-// Credential represents the credentials of a hashed value.
-type Credential struct {
-	Algorithm  CredAlgorithm
-	Hash       string
-	Parameters CredParameters
+// Initialize initializes the HashService.
+func Initialize() HashServiceInterface {
+	hashService := newHashService()
+	return hashService
 }

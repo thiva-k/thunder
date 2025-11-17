@@ -68,6 +68,7 @@ type userService struct {
 	userStore         userStoreInterface
 	ouService         oupkg.OrganizationUnitServiceInterface
 	userSchemaService userschema.UserSchemaServiceInterface
+	hashService       hash.HashServiceInterface
 }
 
 // newUserService creates a new instance of userService with injected dependencies.
@@ -75,11 +76,13 @@ func newUserService(
 	userStore userStoreInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
+	hashService hash.HashServiceInterface,
 ) UserServiceInterface {
 	return &userService{
 		userStore:         userStore,
 		ouService:         ouService,
 		userSchemaService: userSchemaService,
+		hashService:       hashService,
 	}
 }
 
@@ -197,7 +200,7 @@ func (us *userService) CreateUser(user *User) (*User, *serviceerror.ServiceError
 
 	user.ID = utils.GenerateUUID()
 
-	credentials, err := extractCredentials(user)
+	credentials, err := us.extractCredentials(user)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to create user DTO", err)
 	}
@@ -247,7 +250,7 @@ func (us *userService) CreateUserByPath(
 }
 
 // extractCredentials extracts the credentials from the user attributes and returns a Credentials array.
-func extractCredentials(user *User) ([]Credential, error) {
+func (us *userService) extractCredentials(user *User) ([]Credential, error) {
 	if user.Attributes == nil {
 		return []Credential{}, nil
 	}
@@ -261,7 +264,7 @@ func extractCredentials(user *User) ([]Credential, error) {
 
 	for credField := range supportedCredentialFields {
 		if credValue, ok := attrsMap[credField].(string); ok {
-			credHash := hash.Generate([]byte(credValue))
+			credHash := us.hashService.Generate([]byte(credValue))
 
 			delete(attrsMap, credField)
 
@@ -269,8 +272,12 @@ func extractCredentials(user *User) ([]Credential, error) {
 				CredentialType: credField,
 				StorageType:    "hash",
 				StorageAlgo:    credHash.Algorithm,
-				Value:          credHash.Hash,
-				Salt:           credHash.Salt,
+				StorageAlgoParams: hash.CredParameters{
+					Iterations: credHash.Parameters.Iterations,
+					KeySize:    credHash.Parameters.KeySize,
+					Salt:       credHash.Parameters.Salt,
+				},
+				Value: credHash.Hash,
 			}
 
 			credentials = append(credentials, credential)
@@ -503,7 +510,7 @@ func (us *userService) UpdateUserCredentials(userID string, attributes json.RawM
 		Attributes: attributes,
 	}
 
-	credentials, err := extractCredentials(user)
+	credentials, err := us.extractCredentials(user)
 	if err != nil {
 		return logErrorAndReturnServerError(
 			logger,
@@ -685,9 +692,13 @@ func (us *userService) VerifyUser(
 		verifyingCredential := hash.Credential{
 			Algorithm: matchingCredential.StorageAlgo,
 			Hash:      matchingCredential.Value,
-			Salt:      matchingCredential.Salt,
+			Parameters: hash.CredParameters{
+				Salt:       matchingCredential.StorageAlgoParams.Salt,
+				Iterations: matchingCredential.StorageAlgoParams.Iterations,
+				KeySize:    matchingCredential.StorageAlgoParams.KeySize,
+			},
 		}
-		hashVerified := hash.Verify([]byte(credValue), verifyingCredential)
+		hashVerified := us.hashService.Verify([]byte(credValue), verifyingCredential)
 
 		if hashVerified {
 			logger.Debug("Credential verified successfully",
