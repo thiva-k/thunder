@@ -1,0 +1,666 @@
+openapi: 3.0.3
+info:
+  title: Export API
+  version: "1.0"
+  description: |
+    This API is used to export Thunder resource configurations as parameterized YAML files.
+    
+    The Export API supports exporting applications and other resources for backup, version control,
+    and deployment across multiple environments. Exported configurations contain parameterized
+    variables for environment-specific values like client IDs, secrets, and redirect URIs.
+    
+    ## Features
+    - Export single or multiple resources
+    - Support for wildcard exports (all resources of a type)
+    - Parameterized configurations for multi-environment deployments
+    - Multiple export formats (YAML, JSON, ZIP)
+    
+    ## Current Support
+    - **Applications**: Full support with parameterization ✅
+    - **Identity Providers**: Coming soon 🔜
+    - **Notification Senders**: Coming soon 🔜
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+servers:
+  - url: https://{host}:{port}
+    variables:
+      host:
+        default: "localhost"
+      port:
+        default: "8090"
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: export
+    description: Operations related to resource configuration export
+
+paths:
+  /export:
+    post:
+      tags:
+        - export
+      summary: Export resources as YAML
+      description: |
+        Export resource configurations as parameterized YAML content. This endpoint returns
+        a combined YAML document containing all requested resources with YAML document separators (---).
+        
+        The exported YAML includes parameterized variables for sensitive and environment-specific values.
+        Use this format for direct consumption in immutable configuration mode or for manual review.
+        
+        **Parameterized Variables:**
+        - `client_id`: Replaced with `{{.APP_NAME_CLIENT_ID}}`
+        - `client_secret`: Replaced with `{{.APP_NAME_CLIENT_SECRET}}`
+        - `redirect_uris`: Replaced with `{{- range .APP_NAME_REDIRECT_URIS}}` array pattern
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+            examples:
+              single-application:
+                summary: Export a single application
+                value:
+                  applications: ["550e8400-e29b-41d4-a716-446655440000"]
+              multiple-applications:
+                summary: Export specific applications
+                value:
+                  applications:
+                    - "550e8400-e29b-41d4-a716-446655440000"
+                    - "660e8400-e29b-41d4-a716-446655440001"
+              all-applications:
+                summary: Export all applications
+                value:
+                  applications: ["*"]
+              with-options:
+                summary: Export with custom options
+                value:
+                  applications: ["*"]
+                  options:
+                    include_metadata: true
+                    folder_structure:
+                      group_by_type: true
+      responses:
+        "200":
+          description: Resources exported successfully as YAML
+          content:
+            application/yaml:
+              schema:
+                type: string
+                description: Combined YAML content with document separators
+              example: |
+                # File: My_Web_Application.yaml
+                # Resource Type: application
+                # Resource ID: 550e8400-e29b-41d4-a716-446655440000
+                
+                name: My Web Application
+                description: Customer portal application
+                url: https://myapp.example.com
+                logo_url: https://myapp.example.com/logo.png
+                auth_flow_graph_id: auth_flow_config_basic
+                registration_flow_graph_id: registration_flow_config_basic
+                is_registration_flow_enabled: true
+                inbound_auth_config:
+                  - type: oauth2
+                    config:
+                      client_id: {{.MY_WEB_APPLICATION_CLIENT_ID}}
+                      redirect_uris:
+                        {{- range .MY_WEB_APPLICATION_REDIRECT_URIS}}
+                        - {{.}}
+                        {{- end}}
+                      grant_types:
+                        - authorization_code
+                        - refresh_token
+                      response_types:
+                        - code
+                      token_endpoint_auth_method: client_secret_basic
+                      pkce_required: false
+                      public_client: false
+                      token:
+                        issuer: thunder
+                        access_token:
+                          validity_period: 3600
+                          user_attributes:
+                            - email
+                            - name
+                ---
+                # File: Mobile_App.yaml
+                # Resource Type: application
+                # Resource ID: 660e8400-e29b-41d4-a716-446655440001
+                
+                name: Mobile App
+                description: Mobile application
+                url: https://mobileapp.example.com
+                auth_flow_graph_id: auth_flow_config_basic
+                inbound_auth_config:
+                  - type: oauth2
+                    config:
+                      client_id: {{.MOBILE_APP_CLIENT_ID}}
+                      redirect_uris:
+                        {{- range .MOBILE_APP_REDIRECT_URIS}}
+                        - {{.}}
+                        {{- end}}
+                      grant_types:
+                        - authorization_code
+                      response_types:
+                        - code
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid-request:
+                  summary: Invalid export request
+                  value:
+                    code: "EXP-1001"
+                    message: "Invalid export request"
+                    description: "The provided export request is invalid or malformed"
+                no-resources:
+                  summary: No resources specified
+                  value:
+                    code: "EXP-1002"
+                    message: "No resources found"
+                    description: "No valid resources found for the provided identifiers"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missing-token:
+                  summary: Missing authorization token
+                  value:
+                    code: "AUTH-1001"
+                    message: "Unauthorized"
+                    description: "Missing or invalid authorization token"
+                expired-token:
+                  summary: Expired token
+                  value:
+                    code: "AUTH-1002"
+                    message: "Token expired"
+                    description: "The provided access token has expired"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "AUTH-1003"
+                message: "Forbidden"
+                description: "Insufficient permissions to export resources. Required permission: export:read"
+        "404":
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "EXP-1002"
+                message: "No resources found"
+                description: "No valid resources found for the provided identifiers"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "EXP-5001"
+                message: "Internal server error"
+                description: "An unexpected error occurred while processing the export request"
+
+  /export/json:
+    post:
+      tags:
+        - export
+      summary: Export resources as JSON
+      description: |
+        Export resource configurations as a JSON response containing an array of files
+        along with export metadata and summary information.
+        
+        This format is useful for:
+        - Programmatic processing of exports
+        - Downloading multiple files with metadata
+        - Integration with automation tools
+        - Detailed export analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+            examples:
+              single-application:
+                summary: Export a single application
+                value:
+                  applications: ["550e8400-e29b-41d4-a716-446655440000"]
+              all-applications:
+                summary: Export all applications
+                value:
+                  applications: ["*"]
+      responses:
+        "200":
+          description: Resources exported successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+              example:
+                files:
+                  - file_name: "My_Web_Application.yaml"
+                    content: "name: My Web Application\ndescription: Customer portal application\n..."
+                    folder_path: "applications"
+                    resource_type: "application"
+                    resource_id: "550e8400-e29b-41d4-a716-446655440000"
+                    size: 1024
+                  - file_name: "Mobile_App.yaml"
+                    content: "name: Mobile App\ndescription: Mobile application\n..."
+                    folder_path: "applications"
+                    resource_type: "application"
+                    resource_id: "660e8400-e29b-41d4-a716-446655440001"
+                    size: 856
+                summary:
+                  total_files: 2
+                  total_size_bytes: 1880
+                  exported_at: "2025-11-17T10:30:00Z"
+                  resource_types:
+                    applications: 2
+                  errors: []
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalid-request:
+                  summary: Invalid export request
+                  value:
+                    code: "EXP-1001"
+                    message: "Invalid export request"
+                    description: "The provided export request is invalid or malformed"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "AUTH-1001"
+                message: "Unauthorized"
+                description: "Missing or invalid authorization token"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "AUTH-1003"
+                message: "Forbidden"
+                description: "Insufficient permissions to export resources. Required permission: export:read"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "EXP-5001"
+                message: "Internal server error"
+                description: "An unexpected error occurred while processing the export request"
+
+  /export/zip:
+    post:
+      tags:
+        - export
+      summary: Export resources as ZIP archive
+      description: |
+        Export resource configurations as a ZIP archive containing individual YAML files
+        organized in a folder structure.
+        
+        The ZIP file structure:
+        ```
+        export.zip
+        └── applications/
+            ├── My_Web_Application.yaml
+            ├── Mobile_App.yaml
+            └── Admin_Portal.yaml
+        ```
+        
+        This format is ideal for:
+        - Downloading multiple configurations at once
+        - Easy extraction and deployment
+        - Preserving folder structure
+        - Sharing complete configuration sets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+            examples:
+              all-applications:
+                summary: Export all applications as ZIP
+                value:
+                  applications: ["*"]
+              with-structure:
+                summary: Export with custom folder structure
+                value:
+                  applications: ["*"]
+                  options:
+                    folder_structure:
+                      group_by_type: true
+                      file_naming_pattern: "${type}_${name}"
+      responses:
+        "200":
+          description: ZIP archive created successfully
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+                description: ZIP file containing exported resource configurations
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "EXP-1001"
+                message: "Invalid export request"
+                description: "The provided export request is invalid or malformed"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "AUTH-1001"
+                message: "Unauthorized"
+                description: "Missing or invalid authorization token"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "AUTH-1003"
+                message: "Forbidden"
+                description: "Insufficient permissions to export resources. Required permission: export:read"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "EXP-5001"
+                message: "Internal server error"
+                description: "An unexpected error occurred while processing the export request"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT bearer token authentication. Obtain an access token by authenticating with Thunder's OAuth2 endpoints.
+        
+        **How to obtain a token:**
+        1. Authenticate via Thunder's authentication flow or OAuth2 token endpoint
+        2. Include the access token in the Authorization header: `Authorization: Bearer <access-token>`
+        
+        **Example:**
+        ```bash
+        curl -X POST https://localhost:8090/export \
+          -H "Content-Type: application/json" \
+          -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+          -d '{"applications": ["*"]}'
+        ```
+        
+        Tokens must be valid and not expired. Invalid or expired tokens will return a 401 Unauthorized response.
+
+  schemas:
+    ExportRequest:
+      type: object
+      description: Request body for exporting resources
+      properties:
+        applications:
+          type: array
+          items:
+            type: string
+          description: |
+            List of application IDs to export. Use `["*"]` to export all applications.
+            
+            Examples:
+            - Single: `["550e8400-e29b-41d4-a716-446655440000"]`
+            - Multiple: `["app-id-1", "app-id-2", "app-id-3"]`
+            - All: `["*"]`
+          example: ["550e8400-e29b-41d4-a716-446655440000"]
+        options:
+          $ref: '#/components/schemas/ExportOptions'
+
+    ExportOptions:
+      type: object
+      description: Optional configuration for export behavior
+      properties:
+        include_metadata:
+          type: boolean
+          description: |
+            Include additional metadata in exported files (creation dates, IDs, etc.).
+            Default: false
+          example: false
+          default: false
+        format:
+          type: string
+          enum: ["yaml"]
+          description: |
+            Output format for individual files. Default: "yaml"
+            
+            Only YAML format is currently supported. JSON support will be added in a future release.
+          example: "yaml"
+          default: "yaml"
+        folder_structure:
+          $ref: '#/components/schemas/FolderStructureOptions'
+        pagination:
+          $ref: '#/components/schemas/PaginationOptions'
+
+    FolderStructureOptions:
+      type: object
+      description: Configuration for how files are organized in exports
+      properties:
+        group_by_type:
+          type: boolean
+          description: |
+            Create separate folders for each resource type.
+            Example: `applications/`, `identity-providers/`
+          example: true
+          default: false
+        custom_structure:
+          type: object
+          additionalProperties:
+            type: string
+          description: |
+            Define custom folder paths for different resource types.
+            Example: `{"applications": "apps", "identity_providers": "idps"}`
+          example:
+            applications: "apps"
+            identity_providers: "idps"
+        file_naming_pattern:
+          type: string
+          description: |
+            Pattern for file naming using template variables.
+            Available variables: `${name}`, `${id}`, `${type}`
+            
+            Examples:
+            - `"${name}"` → "My_Application.yaml"
+            - `"${type}_${name}"` → "application_My_Application.yaml"
+            - `"${name}_${id}"` → "My_Application_550e8400.yaml"
+          example: "${name}"
+
+    PaginationOptions:
+      type: object
+      description: Pagination configuration for bulk exports
+      properties:
+        page:
+          type: integer
+          minimum: 1
+          description: Page number (1-based)
+          example: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of resources per page
+          example: 50
+          default: 30
+
+    ExportResponse:
+      type: object
+      description: Response containing exported files and summary
+      properties:
+        files:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportFile'
+          description: Array of exported configuration files
+        summary:
+          $ref: '#/components/schemas/ExportSummary'
+
+    ExportFile:
+      type: object
+      description: Individual exported configuration file
+      properties:
+        file_name:
+          type: string
+          description: Name of the file
+          example: "My_Web_Application.yaml"
+        content:
+          type: string
+          description: File content (YAML or JSON)
+          example: "name: My Web Application\ndescription: Customer portal\n..."
+        folder_path:
+          type: string
+          description: Relative path within the export
+          example: "applications"
+        resource_type:
+          type: string
+          description: Type of resource (application, identity_provider, etc.)
+          example: "application"
+        resource_id:
+          type: string
+          format: uuid
+          description: ID of the exported resource
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        size:
+          type: integer
+          format: int64
+          description: File size in bytes
+          example: 1024
+
+    ExportSummary:
+      type: object
+      description: Summary information about the export operation
+      properties:
+        total_files:
+          type: integer
+          description: Total number of files exported
+          example: 3
+        total_size_bytes:
+          type: integer
+          format: int64
+          description: Total size of all exported files in bytes
+          example: 3072
+        exported_at:
+          type: string
+          format: date-time
+          description: Timestamp when the export was performed (ISO 8601 format)
+          example: "2025-11-17T10:30:00Z"
+        resource_types:
+          type: object
+          additionalProperties:
+            type: integer
+          description: Count of resources by type
+          example:
+            applications: 3
+            identity_providers: 0
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExportError'
+          description: Errors encountered during export (partial success possible)
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    ExportError:
+      type: object
+      description: Error information for a failed resource export
+      properties:
+        resource_type:
+          type: string
+          description: Type of resource that failed to export
+          example: "application"
+        resource_id:
+          type: string
+          description: ID of the resource that failed
+          example: "invalid-uuid"
+        error:
+          type: string
+          description: Error message
+          example: "Application not found"
+        code:
+          type: string
+          description: Error code
+          example: "APP-1004"
+
+    PaginationInfo:
+      type: object
+      description: Pagination metadata for export results
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          description: Number of items per page
+          example: 50
+        total_pages:
+          type: integer
+          description: Total number of pages available
+          example: 3
+        has_more:
+          type: boolean
+          description: Whether more pages are available
+          example: true
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: The error code
+          example: "EXP-1001"
+        message:
+          type: string
+          description: The error message
+          example: "Invalid export request"
+        description:
+          type: string
+          description: A detailed description of the error
+          example: "The provided export request is invalid or malformed"
