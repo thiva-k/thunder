@@ -12,6 +12,7 @@ The credentials authentication API allows you to authenticate users by providing
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/organization-units \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Asgard",
         "description": "Realm of the gods",
@@ -23,6 +24,7 @@ The credentials authentication API allows you to authenticate users by providing
 
     ```bash
     curl -kL -H 'Content-Type: application/json' https://localhost:8090/users \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "organizationUnit": "{ou-id-from-above}",
         "type": "superhuman",
@@ -95,6 +97,7 @@ The SMS OTP authentication API allows you to authenticate users by sending a One
 
     ```bash
     curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
+    -H 'Authorization: Bearer <token>' \
     -d '{
       "name": "Custom SMS Sender",
       "description": "Sender for sending SMS messages",
@@ -192,6 +195,7 @@ The Google OAuth authentication API allows you to authenticate users using their
 
     ```bash
     curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
       "name": "Google",
       "description": "Login with Google",
@@ -296,6 +300,7 @@ The GitHub OAuth authentication API allows you to authenticate users using their
 
     ```bash
     curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
       "name": "Github",
       "description": "Login with Github",
@@ -399,6 +404,7 @@ The Standard OAuth IDP authentication API allows you to authenticate users using
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
       "name": "Custom OAuth IDP",
       "description": "Standard OAuth identity provider",

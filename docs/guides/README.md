@@ -6,6 +6,36 @@ Welcome to the Thunder documentation! This guide will help you understand and in
 
 Thunder is a modern, open-source identity management service designed for teams building secure, customizable authentication experiences. It enables developers to design and orchestrate login, registration, and recovery flows using a flexible identity flow designer.
 
+## Accessing the System APIs of Thunder
+
+System APIs of Thunder are secured by default. You need to obtain an access token with `system` scope by authenticating as an admin user. Follow these steps:
+
+1. **Authenticate and obtain an access token:**
+
+   Replace `<application_id>` with the sample app ID generated during "Setup the product."
+
+   ```bash
+   curl -k -X POST 'https://localhost:8090/flow/execute' \
+     -d '{"applicationId":"<application_id>","flowType":"AUTHENTICATION", "inputs":{"username":"admin","password":"admin", "requested_permissions":"system"}}'
+   ```
+
+2. **Extract the assertion from the response:**
+
+   The response will contain an `assertion` field:
+   ```json
+   {"flowId":"<flow_id>","flowStatus":"COMPLETE","data":{},"assertion":"<assertion>"}
+   ```
+
+3. **Use the assertion as a Bearer token:**
+
+   Use this assertion value as the Bearer token in the `Authorization` header when calling Thunder management APIs:
+   
+   ```bash
+   curl -kL -H 'Authorization: Bearer <assertion>' https://localhost:8090/applications
+   ```
+
+   > **Note:** In the API examples throughout this documentation, replace `<token>` with the assertion value you obtained from step 2.
+
 ## 🗂️ Documentation Structure
 
 This documentation is organized into the following sections:

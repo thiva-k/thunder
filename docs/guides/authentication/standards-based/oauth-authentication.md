@@ -18,6 +18,7 @@ To try out the Client Credentials flow, follow these steps:
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Test Sample App",
         "description": "Initial testing App",
@@ -90,6 +91,7 @@ The Authorization Code flow is used to obtain an access token after the user aut
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Test Sample App",
         "description": "Initial testing App",
@@ -164,6 +166,7 @@ The Authorization Code flow is used to obtain an access token after the user aut
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/organization-units \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Asgard",
         "description": "Realm of the gods",
@@ -175,6 +178,7 @@ The Authorization Code flow is used to obtain an access token after the user aut
 
     ```bash
     curl -kL -H 'Content-Type: application/json' https://localhost:8090/users \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "organizationUnit": "{ou-id-from-above}",
         "type": "superhuman",
@@ -248,6 +252,7 @@ Refresh token flow can only be try out with the Authorization Code flow. To try 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Test Sample App",
         "description": "Initial testing App",

@@ -129,6 +129,11 @@ func extractScopes(claims map[string]interface{}) []string {
 		}
 	}
 
+	// Try "authorized_permissions" from the Thunder assertion
+	if permsStr, ok := claims["authorized_permissions"].(string); ok && permsStr != "" {
+		return strings.Fields(permsStr)
+	}
+
 	return []string{}
 }
 

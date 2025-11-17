@@ -13,7 +13,7 @@ You can manage message notification senders using the following REST API endpoin
 Retrieve a list of all configured message notification senders.
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/notification-senders/message
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/notification-senders/message
 ```
 
 ### Create a Message Notification Sender
@@ -21,7 +21,7 @@ curl -kL -H 'Accept: application/json' https://localhost:8090/notification-sende
 Create a new message notification sender. See sender-specific examples below for the request body.
 
 ```bash
-curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
+curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/notification-senders/message \
 -d '{ ... }'
 ```
 
@@ -32,7 +32,7 @@ Refer [Message Sender Configuration](#message-sender-configuration) for details 
 Retrieve details of a specific message notification sender by its unique identifier.
 
 ```bash
-curl -kL -H 'Accept: application/json' https://localhost:8090/notification-senders/message/<sender_id>
+curl -kL -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/notification-senders/message/<sender_id>
 ```
 
 ### Update a Message Notification Sender
@@ -40,7 +40,7 @@ curl -kL -H 'Accept: application/json' https://localhost:8090/notification-sende
 Update an existing message notification sender by its unique identifier.
 
 ```bash
-curl -kL -X PUT -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message/<sender_id> \
+curl -kL -X PUT -H 'Content-Type: application/json' -H 'Accept: application/json' -H 'Authorization: Bearer <token>' https://localhost:8090/notification-senders/message/<sender_id> \
 -d '{ ... }'
 ```
 
@@ -49,7 +49,7 @@ curl -kL -X PUT -H 'Content-Type: application/json' -H 'Accept: application/json
 Delete a message notification sender by its unique identifier.
 
 ```bash
-curl -kL -X DELETE https://localhost:8090/notification-senders/message/<sender_id>
+curl -kL -X DELETE -H 'Authorization: Bearer <token>' https://localhost:8090/notification-senders/message/<sender_id>
 ```
 
 ---
@@ -72,6 +72,7 @@ To configure a message sender, you need to specify the `provider` type and the r
 
 ```bash
 curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
+-H 'Authorization: Bearer <token>' \
 -d '{
   "name": "Twilio SMS Sender",
   "description": "Sender for sending SMS messages using Twilio",
@@ -109,6 +110,7 @@ curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https
 
 ```bash
 curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
+-H 'Authorization: Bearer <token>' \
 -d '{
   "name": "Vonage SMS Sender",
   "description": "Sender for sending SMS messages using Vonage",
@@ -147,6 +149,7 @@ curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https
 
 ```bash
 curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
+-H 'Authorization: Bearer <token>' \
 -d '{
   "name": "Custom SMS Sender",
   "description": "Sender for sending SMS messages via custom provider",

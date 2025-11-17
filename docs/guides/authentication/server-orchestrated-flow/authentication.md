@@ -14,6 +14,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/organization-units \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Asgard",
         "description": "Realm of the gods",
@@ -25,6 +26,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -H 'Content-Type: application/json' https://localhost:8090/users \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "organizationUnit": "{ou-id-from-above}",
         "type": "superhuman",
@@ -54,6 +56,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "App Native Login 1",
         "description": "Sample application for App native login",
@@ -126,6 +129,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/notification-senders/message \
+    -H 'Authorization: Bearer <token>' \
     -d '{
       "name": "Custom SMS Sender",
       "description": "Sender for sending SMS messages",
@@ -159,6 +163,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "App Native Login 1",
         "description": "Sample application for App native login",
@@ -172,6 +177,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/organization-units \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Asgard",
         "description": "Realm of the gods",
@@ -183,6 +189,7 @@ Follow the steps below to configure and execute a login flow using username and 
 
     ```bash
     curl -kL -H 'Content-Type: application/json' https://localhost:8090/users \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "organizationUnit": "{ou-id-from-above}",
         "type": "superhuman",
@@ -259,6 +266,7 @@ Follow the steps below to configure and execute a login flow using Google OAuth 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Google",
         "description": "Login with Google",
@@ -300,6 +308,7 @@ Follow the steps below to configure and execute a login flow using Google OAuth 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/applications \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "App Native Login 1",
         "description": "Sample application for App native login",
@@ -389,6 +398,7 @@ Follow the steps below to configure and execute a login flow using GitHub OAuth 
 
     ```bash
     curl -kL -X POST -H 'Content-Type: application/json' -H 'Accept: application/json' https://localhost:8090/identity-providers \
+    -H 'Authorization: Bearer <token>' \
     -d '{
         "name": "Github",
         "description": "Login with Github",

@@ -21,6 +21,7 @@ This example demonstrates OAuth 2.0 authorization code flow with custom permissi
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/organization-units \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "OAuthDocManagement",
     "description": "OAuth document management organization",
@@ -36,6 +37,7 @@ Create an application with OAuth 2.0 inbound authentication:
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/applications \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "Document Manager OAuth App",
     "description": "OAuth application for document management",
@@ -69,6 +71,7 @@ Before creating users, define a user schema.
 
 ```bash
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/user-schemas \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "test-person",
     "schema": {
@@ -100,6 +103,7 @@ Create a user and assign a role with document permissions:
 ```bash
 # Create user
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/users \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "organizationUnit": "<organization-unit-id>",
     "type": "test-person",
@@ -118,6 +122,7 @@ Save the user `id`, then create a role:
 ```bash
 # Create role with permissions and assign to user
 curl -kL -X POST -H 'Content-Type: application/json' https://localhost:8090/roles \
+-H 'Authorization: Bearer <token>' \
 -d '{
     "name": "DocumentEditor",
     "description": "Can read and write documents",
