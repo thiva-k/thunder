@@ -30,7 +30,7 @@ export default function AppWithConfig(): JSX.Element {
       baseUrl={getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string)}
       platform="AsgardeoV2"
     >
-      <OxygenUIThemeProvider>
+      <OxygenUIThemeProvider radialBackground>
           <ColorSchemeToggle
             sx={{
               position: 'fixed',

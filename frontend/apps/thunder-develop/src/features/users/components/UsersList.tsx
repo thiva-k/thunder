@@ -276,7 +276,6 @@ export default function UsersList(props: UsersListProps) {
       // Type-specific configuration
       switch (fieldDef.type) {
         case 'boolean':
-          columnDef.type = 'boolean';
           columnDef.renderCell = (params: DataGrid.GridRenderCellParams<UserWithDetails>) => {
             const value = params.row.attributes?.[fieldName] as boolean | undefined;
             if (value === undefined || value === null) return '-';

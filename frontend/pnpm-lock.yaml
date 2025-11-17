@@ -55,8 +55,8 @@ catalogs:
       specifier: ^3.2.4
       version: 3.2.4
     '@wso2/oxygen-ui':
-      specifier: 0.0.1-alpha.2
-      version: 0.0.1-alpha.2
+      specifier: 0.0.1-alpha.3
+      version: 0.0.1-alpha.3
     '@wso2/oxygen-ui-icons-react':
       specifier: 0.0.1-alpha.1
       version: 0.0.1-alpha.1
@@ -196,7 +196,7 @@ importers:
         version: link:../../packages/thunder-i18n
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
-        version: 0.0.1-alpha.2(364b1f8ce18d8b166411506ae6acc263)
+        version: 0.0.1-alpha.3(364b1f8ce18d8b166411506ae6acc263)
       '@wso2/oxygen-ui-icons-react':
         specifier: 'catalog:'
         version: 0.0.1-alpha.1(lucide-react@0.545.0(react@19.2.0))(react@19.2.0)
@@ -302,7 +302,7 @@ importers:
         version: link:../../packages/thunder-commons-contexts
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
-        version: 0.0.1-alpha.2(364b1f8ce18d8b166411506ae6acc263)
+        version: 0.0.1-alpha.3(364b1f8ce18d8b166411506ae6acc263)
       '@wso2/oxygen-ui-icons-react':
         specifier: 'catalog:'
         version: 0.0.1-alpha.1(lucide-react@0.545.0(react@19.2.0))(react@19.2.0)
@@ -2568,8 +2568,8 @@ packages:
       lucide-react: ^0.545.0
       react: ^19.2.0
 
-  '@wso2/oxygen-ui@0.0.1-alpha.2':
-    resolution: {integrity: sha512-yhXwFPbGr4pSbbtij8e92otzP5ZC0seGprhfcMnpCPC5KCY5g5/lx4G+EndhhgvAaeQ+C2jhaigOvOxumt5acQ==}
+  '@wso2/oxygen-ui@0.0.1-alpha.3':
+    resolution: {integrity: sha512-G6tRyoD29OwPQi8oTM0Kx4tGS2J/16FMNrdAC/nNXHtgL7CD+fSt9I4ql3eyNKG6TLw/hsDq4pFQf1NbDjtwLg==}
     peerDependencies:
       '@emotion/react': ^11.14.0
       '@emotion/styled': ^11.14.1
@@ -7347,7 +7347,7 @@ snapshots:
       lucide-react: 0.545.0(react@19.2.0)
       react: 19.2.0
 
-  '@wso2/oxygen-ui@0.0.1-alpha.2(364b1f8ce18d8b166411506ae6acc263)':
+  '@wso2/oxygen-ui@0.0.1-alpha.3(364b1f8ce18d8b166411506ae6acc263)':
     dependencies:
       '@emotion/react': 11.14.0(@types/react@19.2.2)(react@19.2.0)
       '@emotion/styled': 11.14.1(@emotion/react@11.14.0(@types/react@19.2.2)(react@19.2.0))(@types/react@19.2.2)(react@19.2.0)

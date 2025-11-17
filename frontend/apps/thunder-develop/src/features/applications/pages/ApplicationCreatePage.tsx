@@ -271,7 +271,6 @@ export default function ApplicationCreatePage(): JSX.Element {
             <Stack direction="row" alignItems="center" spacing={2}>
               <IconButton
                 onClick={handleClose}
-                size="large"
                 sx={{
                   bgcolor: 'background.paper',
                   '&:hover': {bgcolor: 'action.hover'},
@@ -333,7 +332,7 @@ export default function ApplicationCreatePage(): JSX.Element {
                 >
                   {currentStep !== 'name' && (
                     <Button
-                      variant="text"
+                      variant="outlined"
                       onClick={handlePrevStep}
                       sx={{minWidth: 100}}
                       disabled={createApplication.isPending || createBranding.isPending}
@@ -345,7 +344,6 @@ export default function ApplicationCreatePage(): JSX.Element {
                   {currentStep === 'options' ? (
                     <Button
                       variant="contained"
-                      size="large"
                       sx={{minWidth: 150, bgcolor: selectedColor, '&:hover': {bgcolor: selectedColor}}}
                       onClick={handleCreateApplication}
                       disabled={createApplication.isPending || createBranding.isPending || !stepReady.options}
@@ -355,7 +353,6 @@ export default function ApplicationCreatePage(): JSX.Element {
                   ) : (
                     <Button
                       variant="contained"
-                      size="large"
                       disabled={!stepReady[currentStep]}
                       sx={{minWidth: 100}}
                       onClick={handleNextStep}

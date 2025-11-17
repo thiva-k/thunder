@@ -67,7 +67,7 @@ export default function ConfigureName({
 
   return (
     <Stack direction="column" spacing={4}>
-      <Typography variant="h3" component="h1" gutterBottom>
+      <Typography variant="h4" component="h1" gutterBottom>
         {t('applications:onboarding.configure.name.title')}
       </Typography>
 
@@ -79,7 +79,6 @@ export default function ConfigureName({
           value={appName}
           onChange={(e: ChangeEvent<HTMLInputElement>): void => onAppNameChange(e.target.value)}
           placeholder={t('applications:onboarding.configure.name.placeholder')}
-          size="medium"
         />
       </FormControl>
 
