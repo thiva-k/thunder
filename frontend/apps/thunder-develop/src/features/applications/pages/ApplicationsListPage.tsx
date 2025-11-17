@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Box, Typography, Stack, Button, TextField, InputAdornment, Paper} from '@wso2/oxygen-ui';
+import {Box, Typography, Stack, Button, TextField, InputAdornment} from '@wso2/oxygen-ui';
 import {Plus, Search} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -73,9 +73,7 @@ export default function ApplicationsListPage(): JSX.Element {
           }}
         />
       </Stack>
-      <Paper>
-        <ApplicationsList />
-      </Paper>
+      <ApplicationsList />
     </Box>
   );
 }

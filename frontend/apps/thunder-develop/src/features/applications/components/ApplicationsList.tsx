@@ -31,7 +31,7 @@ import {
   DataGrid,
   useTheme,
 } from '@wso2/oxygen-ui';
-import {EllipsisVertical, Eye, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {AppWindow, EllipsisVertical, Eye, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useDataGridLocaleText from '../../../hooks/useDataGridLocaleText';
 import useGetApplications from '../api/useGetApplications';
@@ -69,14 +69,6 @@ export default function ApplicationsList(): JSX.Element {
     setSelectedAppId(null);
   };
 
-  const getInitials = (name: string): string =>
-    name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-
   const columns: DataGrid.GridColDef<BasicApplication>[] = useMemo(
     () => [
       {
@@ -96,6 +88,13 @@ export default function ApplicationsList(): JSX.Element {
           >
             <Avatar
               src={params.row.logo_url}
+              slotProps={{
+                img: {
+                  onError: (e: React.SyntheticEvent<HTMLImageElement>) => {
+                    e.currentTarget.style.display = 'none';
+                  },
+                },
+              }}
               sx={{
                 p: 0.5,
                 backgroundColor: theme.vars?.palette.grey[500],
@@ -107,7 +106,7 @@ export default function ApplicationsList(): JSX.Element {
                 }),
               }}
             >
-              {!params.row.logo_url && getInitials(params.row.name)}
+              <AppWindow size={14} />
             </Avatar>
           </Box>
         ),
