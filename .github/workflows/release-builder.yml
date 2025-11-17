@@ -230,15 +230,18 @@ jobs:
           
           echo "🏗️ Building Thunder for ${#PLATFORMS[@]} platforms..."
           
-          # Loop through the platform matrix
+          # Build frontend once (platform-agnostic, same output for all platforms)
+          echo "🔨 Building frontend..."
+          make build_frontend
+          
+          # Loop through the platform matrix and build backend for each platform
           for platform in "${PLATFORMS[@]}"; do
             # Split the platform string into OS and ARCH
             OS="${platform%%:*}"
             ARCH="${platform#*:}"
             
-            echo "🔨 Building Thunder backend & frontend for $OS/$ARCH..."
+            echo "🔨 Building Thunder backend for $OS/$ARCH..."
             make build_backend OS=$OS ARCH=$ARCH
-            make build_frontend OS=$OS ARCH=$ARCH
             
             # Optional: Add a small delay to prevent resource contention
             sleep 1
