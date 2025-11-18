@@ -228,12 +228,103 @@ The setup job runs `setup.sh` as a one-time Helm pre-install hook to initialize 
 
 ### Bootstrap Script Parameters
 
-Custom bootstrap scripts can be added to extend the setup process. These scripts run after Thunder's default resources are created.
+Bootstrap scripts extend Thunder's setup process by adding your own initialization logic. These scripts run as part of the setup job.
 
-| Name                                   | Description                                                     | Default                      |
-| -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
-| `bootstrap.scripts`                    | Inline custom bootstrap scripts (key: filename, value: content)| `{}`                         |
-| `bootstrap.existingConfigMap`          | Reference an existing ConfigMap with bootstrap scripts          | `""`                         |
+#### Understanding Default Bootstrap Scripts
+
+Thunder provides these default bootstrap scripts in `/opt/thunder/bootstrap/`:
+- **`common.sh`** - Helper functions for logging (`log_info`, `log_success`, `log_warning`, `log_error`) and API calls (`thunder_api_call`)
+- **`01-default-resources.sh`** - Creates admin user, default organization, and Person user schema
+- **`02-sample-resources.sh`** - Creates sample resources for testing
+
+#### Configuration Parameters
+
+| Name                        | Description                                                                      | Default |
+| --------------------------- | -------------------------------------------------------------------------------- | ------- |
+| `bootstrap.scripts`         | Inline custom bootstrap scripts (key: filename, value: content)                 | `{}`    |
+| `bootstrap.configMap.name`  | Name of external ConfigMap containing bootstrap scripts                          | `""`    |
+| `bootstrap.configMap.files` | List of script filenames to mount from ConfigMap (empty = mount entire ConfigMap) | `[]`    |
+
+#### Three Bootstrap Patterns
+
+**Pattern 1: Add Inline Scripts** (Preserves Defaults)
+
+Use `bootstrap.scripts` to define scripts directly in values.yaml. These scripts are added to the default bootstrap scripts.
+
+```yaml
+bootstrap:
+  scripts:
+    30-custom-users.sh: |
+      #!/bin/bash
+      set -e
+      SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+      source "${SCRIPT_DIR}/common.sh"
+
+      log_info "Creating custom user..."
+      thunder_api_call POST "/users" '{"type":"person","attributes":{"username":"alice","password":"alice123","sub":"alice","email":"alice@example.com"}}'
+      log_success "User created"
+```
+
+- ✅ Preserves Thunder's default scripts (`common.sh`, `01-*`, `02-*`)
+- ✅ Can use helper functions from `common.sh`
+- ✅ No additional configuration needed
+
+---
+
+**Pattern 2: Add External ConfigMap Scripts** (Preserves Defaults)
+
+Use `bootstrap.configMap` with a `files` list to mount specific scripts from an external ConfigMap.
+
+Create your ConfigMap:
+```bash
+kubectl create configmap my-bootstrap \
+  --from-file=30-users.sh=./30-users.sh \
+  --from-file=40-apps.sh=./40-apps.sh
+```
+
+Configure Helm values:
+```yaml
+bootstrap:
+  configMap:
+    name: "my-bootstrap"
+    files:
+      - 30-users.sh
+      - 40-apps.sh
+```
+
+- ✅ Preserves Thunder's default scripts
+- ✅ Can use helper functions from `common.sh`
+- ✅ Scripts managed separately from Helm chart
+
+---
+
+**Pattern 3: Replace All Scripts with ConfigMap** (Complete Replacement)
+
+⚠️ **WARNING**: This completely replaces Thunder's default bootstrap scripts. Use only if you need complete control.
+
+Use `bootstrap.configMap` **without** specifying `files` to mount the entire ConfigMap and replace all defaults.
+
+Create your complete ConfigMap (must include `common.sh`):
+```bash
+kubectl create configmap complete-bootstrap \
+  --from-file=common.sh=./common.sh \
+  --from-file=01-my-setup.sh=./01-my-setup.sh
+```
+
+Configure Helm values:
+```yaml
+bootstrap:
+  configMap:
+    name: "complete-bootstrap"
+    # No files list = mounts entire ConfigMap (replaces all defaults)
+```
+
+- ⚠️ **Removes ALL default scripts** (`common.sh`, `01-default-resources.sh`, `02-sample-resources.sh`)
+- ⚠️ You MUST provide your own `common.sh` with required helper functions
+- ⚠️ No default admin user, organization, or schemas will be created
+- ✅ Complete control over bootstrap process
+
+**For comprehensive examples, helper function documentation, and best practices, see:** [Custom Bootstrap Guide](../../docs/guides/setup/custom-bootstrap.md)
 
 ### Custom Configuration
 

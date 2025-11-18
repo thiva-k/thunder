@@ -4,24 +4,24 @@ This guide explains how to extend Thunder's setup process with custom bootstrap 
 
 ## Overview
 
-Thunder provides an extensible bootstrap system that allows you to add custom initialization logic during setup. Bootstrap scripts run after Thunder's default resources are created (admin user, default organization, DEVELOP app) and before the server starts for normal operation.
+Thunder provides an extensible bootstrap system that allows you to add custom initialization logic during setup. The bootstrap scripts are placed in the `bootstrap/` directory and are executed in alphanumeric order based on their filename prefix.
 
 ## Quick Start
 
 ### 1. Create a Custom Script
 
-Create a new file in the `bootstrap/custom/` directory. You can use either **Bash** (`.sh`) or **PowerShell** (`.ps1`) scripts.
+Create a new file in the `bootstrap/` directory. You can use either **Bash** (`.sh`) or **PowerShell** (`.ps1`) scripts.
 
 #### Bash Script Example
 
 ```bash
-cat > bootstrap/custom/30-my-custom-setup.sh << 'EOF'
+cat > bootstrap/30-my-custom-setup.sh << 'EOF'
 #!/bin/bash
 set -e
 
 # Source common functions (provides log_* and thunder_api_call)
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 log_info "Creating custom user..."
 
@@ -48,13 +48,13 @@ else
 fi
 EOF
 
-chmod +x bootstrap/custom/30-my-custom-setup.sh
+chmod +x bootstrap/30-my-custom-setup.sh
 ```
 
 #### PowerShell Script Example
 
 ```powershell
-# bootstrap/custom/30-my-custom-setup.ps1
+# bootstrap/30-my-custom-setup.ps1
 $ErrorActionPreference = 'Stop'
 
 Log-Info "Creating custom user..."
@@ -94,16 +94,11 @@ else {
 .\setup.ps1
 ```
 
-The bootstrap system automatically discovers and executes your scripts in numeric order. Both `.sh` and `.ps1` scripts can coexist in the same directory.
+The bootstrap system automatically discovers and executes all scripts in the `bootstrap/` directory in alphanumeric order. Both `.sh` and `.ps1` scripts can coexist in the same directory.
 
 ## Execution Order
 
-Bootstrap scripts execute in alphanumeric order based on their filename prefix:
-
-| Range | Purpose | Who Uses It |
-|-------|---------|-------------|
-| `00-29` | Default resources (admin, OU, schemas) | **Thunder (Reserved)** |
-| `30-99` | **Custom resources (RECOMMENDED)** | **Users** |
+All bootstrap scripts execute in alphanumeric order based on their filename prefix. 
 
 ### Recommended Naming
 
@@ -117,7 +112,7 @@ Use descriptive names with numeric prefixes. Both Bash (`.sh`) and PowerShell (`
 - ❌ `script1.sh`
 - ❌ `test.sh`
 
-**Note**: On Windows with `setup.ps1`, both `.sh` (requires bash) and `.ps1` scripts will be discovered. On Linux/macOS with `setup.sh`, only `.sh` scripts will execute.
+**Note**: All scripts must be placed directly in the `bootstrap/` directory. On Windows with `setup.ps1`, both `.sh` (requires bash) and `.ps1` scripts will be discovered. On Linux/macOS with `setup.sh`, only `.sh` scripts will execute.
 
 ## Available Helper Functions
 
@@ -131,7 +126,7 @@ set -e
 
 # Source common functions from the bootstrap directory
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 # Now you can use log_* and thunder_api_call functions
 log_info "Starting custom setup..."
@@ -139,8 +134,8 @@ log_info "Starting custom setup..."
 
 **How it works:**
 - `SCRIPT_DIR` gets the directory where your script is located
-- `source "${SCRIPT_DIR}/../common.sh"` loads the shared functions from the parent directory
-- This works whether your script is in `bootstrap/` or `bootstrap/custom/`
+- `source "${SCRIPT_DIR}/common.sh"` loads the shared functions from the same directory
+- All scripts are placed in the `bootstrap/` directory alongside `common.sh`
 
 ### Logging Functions
 
@@ -247,9 +242,6 @@ These variables are available in both Bash and PowerShell bootstrap scripts:
 | Variable | Description | Default | Access |
 |----------|-------------|---------|--------|
 | `THUNDER_API_BASE` | Thunder API base URL | `https://localhost:8090` | Bash: `$THUNDER_API_BASE`<br>PS: `$env:THUNDER_API_BASE` |
-| `BOOTSTRAP_FAIL_FAST` | Stop on first error | `true` | Bash: `$BOOTSTRAP_FAIL_FAST`<br>PS: `$env:BOOTSTRAP_FAIL_FAST` |
-| `BOOTSTRAP_SKIP_PATTERN` | Regex pattern to skip scripts | (empty) | Bash: `$BOOTSTRAP_SKIP_PATTERN`<br>PS: `$env:BOOTSTRAP_SKIP_PATTERN` |
-| `BOOTSTRAP_ONLY_PATTERN` | Only run matching scripts | (empty) | Bash: `$BOOTSTRAP_ONLY_PATTERN`<br>PS: `$env:BOOTSTRAP_ONLY_PATTERN` |
 
 ## Common Use Cases
 
@@ -261,7 +253,7 @@ set -e
 
 # Source common functions
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 log_info "Creating employee user schema..."
 
@@ -289,7 +281,7 @@ set -e
 
 # Source common functions
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 log_info "Importing users..."
 
@@ -321,7 +313,7 @@ set -e
 
 # Source common functions
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-source "${SCRIPT_DIR}/../common.sh"
+source "${SCRIPT_DIR}/common.sh"
 
 log_info "Creating mobile application..."
 
@@ -348,22 +340,41 @@ HTTP_CODE="${RESPONSE: -3}"
 log_success "Mobile app created"
 ```
 
+## Containerized Deployments
+
+### Understanding Default Scripts in Containers
+
+Thunder provides default bootstrap scripts in the `/opt/thunder/bootstrap` directory:
+- `common.sh` - Helper functions for logging and API calls
+- `01-default-resources.sh` - Creates admin user, default organization, and Person user schema
+- `02-sample-resources.sh` - Creates sample resources for testing
+
+**Important:** When using volume mounts, ConfigMaps, or COPY commands:
+- **Mounting/copying to an entire directory** (e.g., `/opt/thunder/bootstrap`) replaces all default scripts.
+- **To keep the defaults**, mount/copy individual script files to specific paths (e.g., `/opt/thunder/bootstrap/30-my-script.sh`)
+- Your custom scripts can source `common.sh` for helper functions if you preserve it
+
+**Recommended naming for custom scripts:** Use numeric prefixes (e.g., `30-my-users.sh`, `40-my-apps.sh`) to run after default scripts.
+
+---
+
 ## Docker Deployment
 
 ### Volume Mount (Development)
 
-Mount your custom scripts directory when running the container. **Note:** Scripts must be executable on the host before mounting.
+Mount individual custom script files to preserve Thunder's default scripts (see [Understanding Default Scripts in Containers](#understanding-default-scripts-in-containers)).
 
 **Make scripts executable:**
 ```bash
 chmod +x custom-scripts/*.sh
 ```
 
-**Run with docker run:**
+**Run with docker run (mounting individual files):**
 ```bash
-# Run setup with custom scripts
+# Run setup with custom scripts (mount each file individually)
 docker run -it --rm \
-  -v "$(pwd)/custom-scripts:/opt/thunder/bootstrap/custom:ro" \
+  -v "$(pwd)/custom-scripts/30-my-users.sh:/opt/thunder/bootstrap/30-my-users.sh:ro" \
+  -v "$(pwd)/custom-scripts/40-my-apps.sh:/opt/thunder/bootstrap/40-my-apps.sh:ro" \
   ghcr.io/asgardeo/thunder:latest ./setup.sh
 
 # Then start Thunder server
@@ -373,7 +384,7 @@ docker run -d \
   ghcr.io/asgardeo/thunder:latest
 ```
 
-**Or use docker-compose:**
+**Or use docker-compose (mounting individual files):**
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -382,7 +393,9 @@ services:
     image: ghcr.io/asgardeo/thunder:latest
     command: ./setup.sh
     volumes:
-      - ./custom-scripts:/opt/thunder/bootstrap/custom:ro
+      # Mount each custom script individually to preserve built-in scripts
+      - ./custom-scripts/30-my-users.sh:/opt/thunder/bootstrap/30-my-users.sh:ro
+      - ./custom-scripts/40-my-apps.sh:/opt/thunder/bootstrap/40-my-apps.sh:ro
     restart: "no"
 
   thunder:
@@ -396,18 +409,18 @@ services:
 
 ### Custom Docker Image (Production)
 
-Build a custom image with your scripts embedded:
+Build a custom image with your scripts embedded. Using the wildcard pattern (`*.sh`) copies only your script files, adding them alongside the default scripts (see [Understanding Default Scripts in Containers](#understanding-default-scripts-in-containers)).
 
 ```dockerfile
 FROM ghcr.io/asgardeo/thunder:latest
 
-# Copy custom bootstrap scripts
-COPY custom-scripts/ /opt/thunder/bootstrap/custom/
+# Copy only custom script files (*.sh pattern adds files without replacing the directory)
+COPY custom-scripts/*.sh /opt/thunder/bootstrap/
 
 # Set permissions
 USER root
-RUN chmod +x /opt/thunder/bootstrap/custom/*.sh && \
-    chown -R thunder:thunder /opt/thunder/bootstrap/custom
+RUN chmod +x /opt/thunder/bootstrap/*.sh && \
+    chown -R thunder:thunder /opt/thunder/bootstrap
 USER thunder
 ```
 
@@ -423,7 +436,7 @@ docker run -d -p 8090:8090 thunder:custom
 
 ### Using ConfigMap
 
-Create a ConfigMap with your scripts:
+Create a ConfigMap with your custom scripts:
 
 ```yaml
 apiVersion: v1
@@ -435,12 +448,20 @@ data:
     #!/bin/bash
     set -e
     SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-    source "${SCRIPT_DIR}/../common.sh"
+    source "${SCRIPT_DIR}/common.sh"
     log_info "Creating custom users..."
+    # Your script here
+
+  40-custom-apps.sh: |
+    #!/bin/bash
+    set -e
+    SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+    source "${SCRIPT_DIR}/common.sh"
+    log_info "Creating custom applications..."
     # Your script here
 ```
 
-Mount it in a setup Job:
+Mount individual scripts using `subPath` to preserve default scripts (see [Understanding Default Scripts in Containers](#understanding-default-scripts-in-containers)):
 
 ```yaml
 apiVersion: batch/v1
@@ -455,8 +476,13 @@ spec:
         image: ghcr.io/asgardeo/thunder:latest
         command: ["./setup.sh"]
         volumeMounts:
+        # Mount each custom script individually using subPath
         - name: custom-bootstrap
-          mountPath: /opt/thunder/bootstrap/custom
+          mountPath: /opt/thunder/bootstrap/30-custom-users.sh
+          subPath: 30-custom-users.sh
+        - name: custom-bootstrap
+          mountPath: /opt/thunder/bootstrap/40-custom-apps.sh
+          subPath: 40-custom-apps.sh
       volumes:
       - name: custom-bootstrap
         configMap:
@@ -467,7 +493,11 @@ spec:
 
 ### Using Helm
 
-Add bootstrap scripts in `values.yaml`:
+Thunder's Helm chart provides three flexible patterns for bootstrap scripts:
+
+#### Pattern 1: Inline Scripts (Preserves Defaults)
+
+Add scripts directly in `values.yaml`:
 
 ```yaml
 bootstrap:
@@ -476,24 +506,95 @@ bootstrap:
       #!/bin/bash
       set -e
       SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-      source "${SCRIPT_DIR}/../common.sh"
+      source "${SCRIPT_DIR}/common.sh"
+
       log_info "Creating custom users..."
-      thunder_api_call POST "/users" '{"type":"person",...}'
+      thunder_api_call POST "/users" '{
+        "type": "person",
+        "attributes": {
+          "username": "alice",
+          "password": "alice123",
+          "sub": "alice",
+          "email": "alice@example.com"
+        }
+      }'
+      log_success "Users created"
+
+    40-custom-apps.sh: |
+      #!/bin/bash
+      set -e
+      SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+      source "${SCRIPT_DIR}/common.sh"
+
+      log_info "Creating custom application..."
+      thunder_api_call POST "/applications" '{ ... }'
+      log_success "Application created"
 ```
 
-Or for larger or reusable bootstrap scripts, create a ConfigMap and reference it:
+**Benefits:**
+- ✅ Preserves Thunder's default scripts (`common.sh`, `01-*`, `02-*`)
+- ✅ Simple for small scripts
+- ✅ Version controlled with Helm values
 
+---
+
+#### Pattern 2: External ConfigMap with Specific Files (Preserves Defaults)
+
+For larger scripts or separate management, create a ConfigMap and specify which files to mount:
+
+**Step 1:** Create ConfigMap with your scripts
 ```bash
-# Create ConfigMap with bootstrap scripts
-kubectl create configmap my-bootstrap-scripts \
+kubectl create configmap my-bootstrap \
   --from-file=30-users.sh=./scripts/30-users.sh \
   --from-file=40-apps.sh=./scripts/40-apps.sh
 ```
 
+**Step 2:** Configure Helm to mount specific files
 ```yaml
 bootstrap:
-  existingConfigMap: "my-custom-bootstrap"
+  configMap:
+    name: "my-bootstrap"
+    files:
+      - 30-users.sh
+      - 40-apps.sh
 ```
+
+**Benefits:**
+- ✅ Preserves Thunder's default scripts
+- ✅ Scripts managed separately from Helm chart
+- ✅ Easy to update scripts without Helm upgrade
+
+---
+
+#### Pattern 3: Replace All Scripts with Complete ConfigMap (Advanced)
+
+⚠️ **WARNING**: Only use this if you need complete control and will provide ALL scripts including `common.sh`.
+
+For complete replacement, create a ConfigMap with all scripts and **omit the files list**:
+
+**Step 1:** Create complete ConfigMap (must include `common.sh`)
+```bash
+kubectl create configmap complete-bootstrap \
+  --from-file=common.sh=./scripts/common.sh \
+  --from-file=01-my-setup.sh=./scripts/01-my-setup.sh \
+  --from-file=02-my-resources.sh=./scripts/02-my-resources.sh
+```
+
+**Step 2:** Configure Helm without specifying files
+```yaml
+bootstrap:
+  configMap:
+    name: "complete-bootstrap"
+    # No files list = mounts entire ConfigMap (replaces all defaults)
+```
+
+**Important:**
+- ⚠️ **Removes ALL default scripts** (including `common.sh`, admin user creation, etc.)
+- ⚠️ You must provide your own `common.sh` with required helper functions
+- ⚠️ No default resources will be created
+- ✅ Complete control over bootstrap process
+
+---
 
 ## Best Practices
 
@@ -584,14 +685,14 @@ BOOTSTRAP_FAIL_FAST=false ./setup.sh
 
 1. **Check permissions** (Linux/macOS only):
    ```bash
-   chmod +x bootstrap/custom/your-script.sh
+   chmod +x bootstrap/your-script.sh
    ```
 
 2. **Check filename** - Must end with:
    - Bash: `.sh` or `.bash`
    - PowerShell: `.ps1`
 
-3. **Check location** - Must be in `bootstrap/` or `bootstrap/custom/`
+3. **Check location** - Must be in `bootstrap/` directory
 
 4. **On Windows with `.sh` scripts** - Requires bash (Git Bash, WSL, etc.)
 

@@ -96,9 +96,36 @@ spec:
             - name: deployment-yaml-volume
               mountPath: /opt/thunder/repository/conf/deployment.yaml
               subPath: deployment.yaml
-            {{- if or .Values.bootstrap.scripts .Values.bootstrap.existingConfigMap }}
+            {{- /* Validate bootstrap configuration - patterns are mutually exclusive */ -}}
+            {{- if and .Values.bootstrap.scripts .Values.bootstrap.configMap.name }}
+            {{- fail "\n\n❌ ERROR: Invalid bootstrap configuration detected!\n\nYou cannot use both 'bootstrap.scripts' and 'bootstrap.configMap' at the same time." }}
+            {{- end }}
+            {{- if or .Values.bootstrap.scripts .Values.bootstrap.configMap.name }}
+            {{- if and .Values.bootstrap.configMap.name (not .Values.bootstrap.configMap.files) }}
+            # Pattern 3: Replace entire bootstrap directory (configMap without files list)
             - name: bootstrap-scripts
-              mountPath: /opt/thunder/bootstrap/custom
+              mountPath: /opt/thunder/bootstrap
+            {{- else }}
+            # Pattern 1 & 2: Mount individual scripts to preserve defaults
+
+            # Pattern 1: Inline scripts from values.yaml
+            {{- if .Values.bootstrap.scripts }}
+            {{- range $filename, $content := .Values.bootstrap.scripts }}
+            - name: bootstrap-scripts
+              mountPath: /opt/thunder/bootstrap/{{ $filename }}
+              subPath: {{ $filename }}
+            {{- end }}
+            {{- end }}
+
+            # Pattern 2: External ConfigMap with file list
+            {{- if and .Values.bootstrap.configMap.name .Values.bootstrap.configMap.files }}
+            {{- range .Values.bootstrap.configMap.files }}
+            - name: bootstrap-scripts
+              mountPath: /opt/thunder/bootstrap/{{ . }}
+              subPath: {{ . }}
+            {{- end }}
+            {{- end }}
+            {{- end }}
             {{- end }}
             {{- if .Values.setup.extraVolumeMounts }}
             {{- toYaml .Values.setup.extraVolumeMounts | nindent 12 }}
@@ -107,10 +134,10 @@ spec:
         - name: deployment-yaml-volume
           configMap:
             name: {{ include "thunder.fullname" . }}-setup-config-map
-        {{- if or .Values.bootstrap.scripts .Values.bootstrap.existingConfigMap }}
+        {{- if or .Values.bootstrap.scripts .Values.bootstrap.configMap.name }}
         - name: bootstrap-scripts
           configMap:
-            name: {{ if .Values.bootstrap.existingConfigMap }}{{ .Values.bootstrap.existingConfigMap }}{{ else }}{{ include "thunder.fullname" . }}-bootstrap{{ end }}
+            name: {{ if .Values.bootstrap.configMap.name }}{{ .Values.bootstrap.configMap.name }}{{ else }}{{ include "thunder.fullname" . }}-bootstrap{{ end }}
             defaultMode: 0755
         {{- end }}
         {{- if .Values.setup.extraVolumes }}
