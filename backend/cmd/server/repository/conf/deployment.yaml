@@ -27,9 +27,6 @@ cors:
   allowed_origins:
     - "https://localhost:3000"
 
-immutable_resources:
-  enabled: false
-
 observability:
   enabled: false
   output:

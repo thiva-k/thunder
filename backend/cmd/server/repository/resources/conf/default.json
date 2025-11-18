@@ -72,5 +72,8 @@
   },
   "crypto": {
     "key": ""
+  },
+  "immutable_resources": {
+    "enabled": false
   }
 }
