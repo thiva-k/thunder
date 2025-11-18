@@ -165,6 +165,14 @@ packages:
       pkgname: userinfo
       filename: "{{.InterfaceName}}_mock_test.go"
 
+  github.com/asgardeo/thunder/internal/application:
+    config:
+      all: true
+      dir: internal/application
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: application
+      filename: "{{.InterfaceName}}_mock_test.go"
+
   github.com/asgardeo/thunder/internal/cert:
     config:
       all: true
