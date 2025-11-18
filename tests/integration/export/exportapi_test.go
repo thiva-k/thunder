@@ -20,7 +20,6 @@ package export
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +27,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -156,11 +156,7 @@ func (ts *ExportAPITestSuite) createApplication(app Application) (string, error)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -192,11 +188,7 @@ func (ts *ExportAPITestSuite) deleteApplication(appID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -224,11 +216,7 @@ func (ts *ExportAPITestSuite) exportResourcesYAML(exportRequest ExportRequest) (
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -268,11 +256,7 @@ func (ts *ExportAPITestSuite) exportResourcesJSON(exportRequest ExportRequest) (
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

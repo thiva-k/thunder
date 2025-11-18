@@ -311,10 +311,8 @@ func StartServer(port string, zipFilePattern string) error {
 	cmd.Stderr = os.Stderr
 
 	// Preserve GOCOVERDIR environment variable for coverage collection
-	// and enable THUNDER_SKIP_SECURITY for integration tests until tests support security
 	envVars := []string{
 		"PORT=" + port,
-		"THUNDER_SKIP_SECURITY=true",
 	}
 
 	if goCoverDir := os.Getenv("GOCOVERDIR"); goCoverDir != "" {
@@ -372,6 +370,31 @@ func RestartServer() error {
 
 	// Start a new server instance
 	return StartServer(serverPort, zipFilePattern)
+}
+
+// RunSetupScript runs the setup.sh script from the extracted product directory.
+// This script starts the server without security, runs bootstrap scripts, and stops the server.
+func RunSetupScript() error {
+	ensureInitialized()
+	log.Println("Running setup.sh from extracted product...")
+
+	// Get absolute path to extracted product home
+	absProductHome, err := filepath.Abs(extractedProductHome)
+	if err != nil {
+		return fmt.Errorf("failed to get absolute path: %w", err)
+	}
+
+	setupScript := filepath.Join(absProductHome, "setup.sh")
+
+	cmd := exec.Command("bash", setupScript)
+	cmd.Dir = absProductHome // Run from product directory
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Env = os.Environ()
+
+	log.Println("setup.sh will start server, run bootstrap, and stop server automatically")
+
+	return cmd.Run()
 }
 
 func GetZipFilePattern() string {

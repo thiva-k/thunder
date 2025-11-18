@@ -20,7 +20,6 @@ package userschema
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -54,11 +53,7 @@ func TestUserTreeValidationTestSuite(t *testing.T) {
 }
 
 func (ts *UserTreeValidationTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 	ts.createdSchemas = []string{}
 	ts.createdUsers = []string{}
 	ts.createdOUs = []string{}

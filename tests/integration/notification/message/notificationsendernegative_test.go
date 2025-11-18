@@ -20,12 +20,12 @@ package notification
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -41,11 +41,7 @@ func TestSenderPropertyValidationTestSuite(t *testing.T) {
 
 // SetupSuite initializes the HTTP client
 func (ts *SenderPropertyValidationTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 }
 
 // TestVonageMissingRequiredProperties tests validation with missing properties for Vonage provider

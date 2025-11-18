@@ -20,7 +20,6 @@ package user
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -111,11 +110,7 @@ func (suite *UserTreeAPITestSuite) TestGetUsersByPath() {
 		suite.T().Fatal("OU ID is not available for path-based user retrieval")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/users/tree/"+pathTestOU.Handle, nil)
 	suite.Require().NoError(err)
@@ -149,11 +144,7 @@ func (suite *UserTreeAPITestSuite) TestCreateUserByPath() {
 		suite.T().Fatal("OU ID is not available for path-based user creation")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	createRequest := CreateUserByPathRequest{
 		Type:       "employee",
@@ -198,11 +189,7 @@ func (suite *UserTreeAPITestSuite) TestCreateUserByPath() {
 
 // TestGetUsersByInvalidPath tests retrieving users by invalid organization unit handle path
 func (suite *UserTreeAPITestSuite) TestGetUsersByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/users/tree/nonexistent-ou", nil)
 	suite.Require().NoError(err)
@@ -234,11 +221,7 @@ func (suite *UserTreeAPITestSuite) TestGetUsersByPathWithPagination() {
 		suite.T().Fatal("OU ID is not available for pagination test")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/users/tree/"+pathTestOU.Handle+"?limit=5&offset=0", nil)
 	suite.Require().NoError(err)

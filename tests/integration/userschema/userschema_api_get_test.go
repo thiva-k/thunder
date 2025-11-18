@@ -20,7 +20,6 @@ package userschema
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -53,11 +52,7 @@ func TestGetUserSchemaTestSuite(t *testing.T) {
 }
 
 func (ts *GetUserSchemaTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 
 	// Create organization unit for tests
 	ouID, err := testutils.CreateOrganizationUnit(testUserSchemaAPIGetOU)

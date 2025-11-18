@@ -20,7 +20,6 @@ package user
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -58,7 +57,7 @@ type groupCreateResponse struct {
 
 var (
 	userSchema = testutils.UserSchema{
-		Name: "person",
+		Name: "test-user-person",
 		Schema: map[string]interface{}{
 			"age": map[string]interface{}{"type": "number"},
 			"roles": map[string]interface{}{
@@ -76,12 +75,12 @@ var (
 	}
 
 	testUser = testutils.User{
-		Type:       "person",
+		Type:       "test-user-person",
 		Attributes: json.RawMessage(`{"age": 25, "roles": ["viewer"], "address": {"city": "Seattle", "zip": "98101"}}`),
 	}
 
 	userUpdate = testutils.User{
-		Type:       "person",
+		Type:       "test-user-person",
 		Attributes: json.RawMessage(`{"age": 35, "roles": ["admin"], "address": {"city": "Colombo", "zip": "10300"}}`),
 	}
 
@@ -199,12 +198,7 @@ func (ts *UserAPITestSuite) TestUserListing() {
 		ts.T().Fatalf("Failed to create request: %v", err)
 	}
 
-	// Configure the HTTP client to skip TLS verification
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Skip certificate verification
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Send the request
 	resp, err := client.Do(req)
@@ -274,11 +268,7 @@ func (ts *UserAPITestSuite) TestUserPagination() {
 		ts.T().Fatalf("Failed to create request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -387,11 +377,7 @@ func (ts *UserAPITestSuite) TestUserUpdate() {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -424,11 +410,7 @@ func (ts *UserAPITestSuite) TestUserGroupsListing() {
 		ts.T().Fatalf("Failed to create user groups request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -492,11 +474,7 @@ func (ts *UserAPITestSuite) TestUserGroupsListingNonExistingUser() {
 		ts.T().Fatalf("Failed to create request for non-existing user groups: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -527,11 +505,7 @@ func retrieveAndValidateUserDetails(ts *UserAPITestSuite, expectedUser testutils
 		ts.T().Fatalf("Failed to create get request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -576,11 +550,7 @@ func createUser(user testutils.User) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -613,11 +583,7 @@ func deleteUser(userId string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -644,11 +610,7 @@ func createOrganizationUnit(ouRequest OUCreateRequest) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -676,11 +638,7 @@ func deleteOrganizationUnit(ouID string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -706,11 +664,7 @@ func createGroup(groupReq groupCreateRequest) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -742,11 +696,7 @@ func deleteGroup(groupID string) error {
 		return fmt.Errorf("failed to create group delete request: %w", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

@@ -20,12 +20,13 @@ package flowregistration
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 )
 
 const testServerURL = "https://localhost:8095"
@@ -53,11 +54,7 @@ func initiateRegistrationFlow(appID string, inputs map[string]string) (*FlowStep
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -101,11 +98,7 @@ func completeRegistrationFlow(flowID string, actionID string, inputs map[string]
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -129,10 +122,7 @@ func completeRegistrationFlow(flowID string, actionID string, inputs map[string]
 
 // getAppConfig retrieves the current application configuration
 func getAppConfig(appID string) (map[string]interface{}, error) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest(
 		"GET",
@@ -177,10 +167,7 @@ func updateAppConfig(appID string, authFlowGraphID, regFlowGraphID string) error
 		appConfig["registration_flow_graph_id"] = regFlowGraphID
 	}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	jsonPayload, err := json.Marshal(appConfig)
 	if err != nil {
@@ -235,11 +222,7 @@ func RestoreAppConfig(appID string, originalConfig map[string]interface{}) error
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -355,11 +338,7 @@ func CreateNotificationSender(mockServerPort int, senderName string) (string, er
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -388,11 +367,7 @@ func DeleteNotificationSender(senderID string) error {
 		return fmt.Errorf("failed to create sender deletion request: %w", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

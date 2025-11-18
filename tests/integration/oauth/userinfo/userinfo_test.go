@@ -20,7 +20,6 @@ package userinfo
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -79,15 +78,7 @@ func TestUserInfoTestSuite(t *testing.T) {
 }
 
 func (ts *UserInfoTestSuite) SetupSuite() {
-	// Create HTTP client that skips TLS verification
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse // Don't follow redirects
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 
 	// Create test organization unit
 	ou := testutils.OrganizationUnit{
@@ -277,183 +268,10 @@ func (ts *UserInfoTestSuite) getClientCredentialsToken(scope string) (string, er
 	return accessToken, nil
 }
 
-// initiateAuthorizationFlow starts the OAuth2 authorization flow
-func (ts *UserInfoTestSuite) initiateAuthorizationFlow(clientID, redirectURI, responseType, scope, state string) (*http.Response, error) {
-	authURL := testServerURL + "/oauth2/authorize"
-	params := url.Values{}
-	params.Set("client_id", clientID)
-	params.Set("redirect_uri", redirectURI)
-	params.Set("response_type", responseType)
-	params.Set("scope", scope)
-	params.Set("state", state)
-
-	req, err := http.NewRequest("GET", authURL+"?"+params.Encode(), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create authorization request: %w", err)
-	}
-
-	resp, err := ts.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to send authorization request: %w", err)
-	}
-
-	return resp, nil
-}
-
-// extractSessionData extracts session data from the authorization redirect
-func (ts *UserInfoTestSuite) extractSessionData(location string) (string, string, error) {
-	redirectURL, err := url.Parse(location)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to parse redirect URL: %w", err)
-	}
-
-	sessionDataKey := redirectURL.Query().Get("sessionDataKey")
-	if sessionDataKey == "" {
-		return "", "", fmt.Errorf("sessionDataKey not found in redirect")
-	}
-
-	flowID := redirectURL.Query().Get("flowId")
-	if flowID == "" {
-		return "", "", fmt.Errorf("flowId not found in redirect")
-	}
-
-	return sessionDataKey, flowID, nil
-}
-
-// executeAuthenticationFlow executes an authentication flow
-func (ts *UserInfoTestSuite) executeAuthenticationFlow(flowID string, inputs map[string]string) (map[string]interface{}, error) {
-	flowData := map[string]interface{}{
-		"flowId": flowID,
-	}
-	if len(inputs) > 0 {
-		flowData["inputs"] = inputs
-	}
-
-	flowJSON, err := json.Marshal(flowData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal flow data: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", testServerURL+"/flow/execute", bytes.NewBuffer(flowJSON))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create flow request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := ts.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to execute flow: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("flow execution failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var flowStep map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&flowStep)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode flow response: %w", err)
-	}
-
-	return flowStep, nil
-}
-
-// completeAuthorization completes the authorization using the assertion
-func (ts *UserInfoTestSuite) completeAuthorization(sessionDataKey, assertion string) (map[string]interface{}, error) {
-	authzData := map[string]interface{}{
-		"sessionDataKey": sessionDataKey,
-		"assertion":      assertion,
-	}
-
-	authzJSON, err := json.Marshal(authzData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal authorization data: %w", err)
-	}
-
-	req, err := http.NewRequest("POST", testServerURL+"/oauth2/authorize", bytes.NewBuffer(authzJSON))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create authorization completion request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := ts.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to complete authorization: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("authorization completion failed with status %d: %s", resp.StatusCode, string(bodyBytes))
-	}
-
-	var authzResponse map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&authzResponse)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode authorization response: %w", err)
-	}
-
-	return authzResponse, nil
-}
-
-// extractAuthorizationCode extracts the authorization code from the redirect URI
-func (ts *UserInfoTestSuite) extractAuthorizationCode(redirectURI string) (string, error) {
-	parsedURL, err := url.Parse(redirectURI)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse redirect URI: %w", err)
-	}
-
-	code := parsedURL.Query().Get("code")
-	if code == "" {
-		return "", fmt.Errorf("authorization code not found in redirect URI")
-	}
-
-	return code, nil
-}
-
-// requestToken performs a token request
-func (ts *UserInfoTestSuite) requestToken(clientID, clientSecret, code, redirectURI, grantType string) (map[string]interface{}, int, error) {
-	tokenURL := testServerURL + "/oauth2/token"
-	tokenData := url.Values{}
-	tokenData.Set("grant_type", grantType)
-	tokenData.Set("code", code)
-	tokenData.Set("redirect_uri", redirectURI)
-
-	req, err := http.NewRequest("POST", tokenURL, bytes.NewBufferString(tokenData.Encode()))
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to create token request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.SetBasicAuth(clientID, clientSecret)
-
-	resp, err := ts.client.Do(req)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to send token request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("failed to read response body: %w", err)
-	}
-
-	if resp.StatusCode == http.StatusOK {
-		var tokenResponse map[string]interface{}
-		if err := json.Unmarshal(body, &tokenResponse); err != nil {
-			return nil, resp.StatusCode, fmt.Errorf("failed to unmarshal token response: %w", err)
-		}
-		return tokenResponse, resp.StatusCode, nil
-	}
-
-	return nil, resp.StatusCode, fmt.Errorf("token request failed with status %d: %s", resp.StatusCode, string(body))
-}
-
 // getAuthorizationCodeToken gets an access token using authorization_code grant
 func (ts *UserInfoTestSuite) getAuthorizationCodeToken(scope string) (string, error) {
 	// Step 1: Initiate authorization flow
-	authzResp, err := ts.initiateAuthorizationFlow(clientID, redirectURI, "code", scope, "test_state")
+	authzResp, err := testutils.InitiateAuthorizationFlow(clientID, redirectURI, "code", scope, "test_state")
 	if err != nil {
 		return "", fmt.Errorf("failed to initiate authorization: %w", err)
 	}
@@ -465,7 +283,7 @@ func (ts *UserInfoTestSuite) getAuthorizationCodeToken(scope string) (string, er
 	}
 
 	// Step 2: Extract session data
-	sessionDataKey, flowID, err := ts.extractSessionData(location)
+	sessionDataKey, flowID, err := testutils.ExtractSessionData(location)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract session data: %w", err)
 	}
@@ -475,56 +293,49 @@ func (ts *UserInfoTestSuite) getAuthorizationCodeToken(scope string) (string, er
 		"username": "userinfo_test_user",
 		"password": "SecurePass123!",
 	}
-	flowStep, err := ts.executeAuthenticationFlow(flowID, authInputs)
+	flowStep, err := testutils.ExecuteAuthenticationFlow(flowID, authInputs)
 	if err != nil {
 		return "", fmt.Errorf("failed to execute authentication flow: %w", err)
 	}
 
-	assertion, ok := flowStep["assertion"].(string)
-	if !ok || assertion == "" {
+	if flowStep.Assertion == "" {
 		return "", fmt.Errorf("assertion not found in flow step")
 	}
 
 	// Step 4: Complete authorization
-	authzResponse, err := ts.completeAuthorization(sessionDataKey, assertion)
+	authzResponse, err := testutils.CompleteAuthorization(sessionDataKey, flowStep.Assertion)
 	if err != nil {
 		return "", fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
-	redirectURIStr, ok := authzResponse["redirect_uri"].(string)
-	if !ok {
-		return "", fmt.Errorf("redirect_uri not found in authorization response")
-	}
-
 	// Step 5: Extract authorization code
-	code, err := ts.extractAuthorizationCode(redirectURIStr)
+	code, err := testutils.ExtractAuthorizationCode(authzResponse.RedirectURI)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract authorization code: %w", err)
 	}
 
 	// Step 6: Exchange code for token
-	tokenResp, statusCode, err := ts.requestToken(clientID, clientSecret, code, redirectURI, "authorization_code")
+	tokenResult, err := testutils.RequestToken(clientID, clientSecret, code, redirectURI, "authorization_code")
 	if err != nil {
 		return "", fmt.Errorf("failed to request token: %w", err)
 	}
 
-	if statusCode != http.StatusOK {
-		return "", fmt.Errorf("token request failed with status %d", statusCode)
+	if tokenResult.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token request failed with status %d", tokenResult.StatusCode)
 	}
 
-	accessToken, ok := tokenResp["access_token"].(string)
-	if !ok || accessToken == "" {
+	if tokenResult.Token == nil || tokenResult.Token.AccessToken == "" {
 		return "", fmt.Errorf("access token not found in response")
 	}
 
-	return accessToken, nil
+	return tokenResult.Token.AccessToken, nil
 }
 
 // getRefreshToken gets a refresh token and then uses it to get a new access token
 func (ts *UserInfoTestSuite) getRefreshToken(scope string) (string, error) {
 	// First get an access token with refresh token using authorization_code grant
 	// Step 1: Initiate authorization flow
-	authzResp, err := ts.initiateAuthorizationFlow(clientID, redirectURI, "code", scope, "test_state")
+	authzResp, err := testutils.InitiateAuthorizationFlow(clientID, redirectURI, "code", scope, "test_state")
 	if err != nil {
 		return "", fmt.Errorf("failed to initiate authorization: %w", err)
 	}
@@ -536,7 +347,7 @@ func (ts *UserInfoTestSuite) getRefreshToken(scope string) (string, error) {
 	}
 
 	// Step 2: Extract session data
-	sessionDataKey, flowID, err := ts.extractSessionData(location)
+	sessionDataKey, flowID, err := testutils.ExtractSessionData(location)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract session data: %w", err)
 	}
@@ -546,47 +357,42 @@ func (ts *UserInfoTestSuite) getRefreshToken(scope string) (string, error) {
 		"username": "userinfo_test_user",
 		"password": "SecurePass123!",
 	}
-	flowStep, err := ts.executeAuthenticationFlow(flowID, authInputs)
+	flowStep, err := testutils.ExecuteAuthenticationFlow(flowID, authInputs)
 	if err != nil {
 		return "", fmt.Errorf("failed to execute authentication flow: %w", err)
 	}
 
-	assertion, ok := flowStep["assertion"].(string)
-	if !ok || assertion == "" {
+	if flowStep.Assertion == "" {
 		return "", fmt.Errorf("assertion not found in flow step")
 	}
 
 	// Step 4: Complete authorization
-	authzResponse, err := ts.completeAuthorization(sessionDataKey, assertion)
+	authzResponse, err := testutils.CompleteAuthorization(sessionDataKey, flowStep.Assertion)
 	if err != nil {
 		return "", fmt.Errorf("failed to complete authorization: %w", err)
 	}
 
-	redirectURIStr, ok := authzResponse["redirect_uri"].(string)
-	if !ok {
-		return "", fmt.Errorf("redirect_uri not found in authorization response")
-	}
-
 	// Step 5: Extract authorization code
-	code, err := ts.extractAuthorizationCode(redirectURIStr)
+	code, err := testutils.ExtractAuthorizationCode(authzResponse.RedirectURI)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract authorization code: %w", err)
 	}
 
 	// Step 6: Exchange code for token (this should include refresh_token)
-	tokenResp, statusCode, err := ts.requestToken(clientID, clientSecret, code, redirectURI, "authorization_code")
+	tokenResult, err := testutils.RequestToken(clientID, clientSecret, code, redirectURI, "authorization_code")
 	if err != nil {
 		return "", fmt.Errorf("failed to request token: %w", err)
 	}
 
-	if statusCode != http.StatusOK {
-		return "", fmt.Errorf("token request failed with status %d", statusCode)
+	if tokenResult.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token request failed with status %d", tokenResult.StatusCode)
 	}
 
-	refreshToken, ok := tokenResp["refresh_token"].(string)
-	if !ok || refreshToken == "" {
+	if tokenResult.Token == nil || tokenResult.Token.RefreshToken == "" {
 		return "", fmt.Errorf("refresh_token not found in response")
 	}
+
+	refreshToken := tokenResult.Token.RefreshToken
 
 	// Step 7: Use refresh token to get a new access token
 	tokenData := url.Values{}

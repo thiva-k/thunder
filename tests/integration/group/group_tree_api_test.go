@@ -20,12 +20,12 @@ package group
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -103,11 +103,7 @@ func (suite *GroupTreeAPITestSuite) TestGetGroupsByPath() {
 		suite.T().Fatal("OU ID is not available for path-based group retrieval")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/tree/"+pathTestOU.Handle, nil)
 	suite.Require().NoError(err)
@@ -137,11 +133,7 @@ func (suite *GroupTreeAPITestSuite) TestGetGroupsByPath() {
 
 // TestGetGroupsByInvalidPath tests retrieving groups by invalid organization unit handle path
 func (suite *GroupTreeAPITestSuite) TestGetGroupsByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/tree/nonexistent-ou", nil)
 	suite.Require().NoError(err)
@@ -173,11 +165,7 @@ func (suite *GroupTreeAPITestSuite) TestGetGroupsByPathWithPagination() {
 		suite.T().Fatal("OU ID is not available for pagination test")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/tree/"+pathTestOU.Handle+"?limit=5&offset=0", nil)
 	suite.Require().NoError(err)
@@ -214,11 +202,7 @@ func (suite *GroupTreeAPITestSuite) TestCreateGroupByPath() {
 	jsonData, err := json.Marshal(pathTestGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups/tree/"+pathTestOU.Handle, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -264,11 +248,7 @@ func (suite *GroupTreeAPITestSuite) TestCreateGroupByInvalidPath() {
 	jsonData, err := json.Marshal(createRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups/tree/nonexistent-ou", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -311,11 +291,7 @@ func (suite *GroupTreeAPITestSuite) TestCreateGroupByPathWithInvalidData() {
 	jsonData, err := json.Marshal(createRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups/tree/"+pathTestOU.Handle, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -363,11 +339,7 @@ func (suite *GroupTreeAPITestSuite) TestCreateGroupByPathWithInvalidMemberType()
 	jsonData, err := json.Marshal(requestBody)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups/tree/"+pathTestOU.Handle, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -392,11 +364,7 @@ func (suite *GroupTreeAPITestSuite) TestCreateGroupByPathWithMalformedJSON() {
 
 	malformedJSON := `{"name": "Test Group", "description": "Malformed JSON",`
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups/tree/"+pathTestOU.Handle, bytes.NewBufferString(malformedJSON))
 	suite.Require().NoError(err)
@@ -424,11 +392,7 @@ func (suite *GroupTreeAPITestSuite) TestCreateGroupByPathWithEmptyPath() {
 	jsonData, err := json.Marshal(createRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups/tree/", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -469,11 +433,7 @@ func (suite *GroupTreeAPITestSuite) TestGroupTreeEndpointsWithNestedPaths() {
 		}
 	}()
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Test GET with nested path
 	nestedPath := pathTestOU.Handle + "/" + childOU.Handle
@@ -543,11 +503,7 @@ func createOUForGroupTests(suite *GroupTreeAPITestSuite, ouRequest CreateOUReque
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -579,11 +535,7 @@ func deleteOUByID(suite *GroupTreeAPITestSuite, id string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -605,11 +557,7 @@ func deleteGroupByID(suite *GroupTreeAPITestSuite, id string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

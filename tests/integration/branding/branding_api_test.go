@@ -20,7 +20,6 @@ package branding
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,6 +27,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -118,11 +118,7 @@ func TestBrandingAPITestSuite(t *testing.T) {
 
 func (suite *BrandingAPITestSuite) SetupSuite() {
 	// Create HTTP client that skips TLS verification for testing
-	suite.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	suite.client = testutils.GetHTTPClient()
 
 	// Create a shared branding that can be used by multiple tests
 	sharedBranding := CreateBrandingRequest{

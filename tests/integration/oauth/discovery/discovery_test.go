@@ -19,7 +19,6 @@
 package discovery
 
 import (
-	"crypto/tls"
 	"encoding/json"
 
 	"net/http"
@@ -71,11 +70,7 @@ func TestDiscoveryTestSuite(t *testing.T) {
 }
 
 func (ts *DiscoveryTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 }
 
 // TestOAuth2AuthorizationServerMetadata_GET_Success tests successful retrieval of OAuth2 Authorization Server Metadata

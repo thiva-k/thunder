@@ -20,7 +20,6 @@ package application
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -197,12 +196,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationListing() {
 		ts.T().Fatalf("Failed to create request: %v", err)
 	}
 
-	// Configure the HTTP client to skip TLS verification
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Skip certificate verification
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Send the request
 	resp, err := client.Do(req)
@@ -345,11 +339,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationListingWithLogoURL() {
 		ts.T().Fatalf("Failed to create request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -452,11 +442,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdate() {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -500,11 +486,7 @@ func retrieveAndValidateApplicationDetails(ts *ApplicationAPITestSuite, expected
 		ts.T().Fatalf("Failed to create request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -574,11 +556,7 @@ func createApplication(app Application) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -619,11 +597,7 @@ func deleteApplication(appID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -677,11 +651,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationCreationWithDefaults() {
 		ts.T().Fatalf("Failed to create GET request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -790,11 +760,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationCreationWithInvalidTokenEndpoi
 		ts.T().Fatalf("Failed to create GET request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -866,11 +832,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationCreationWithPartialDefaults() 
 		ts.T().Fatalf("Failed to create GET request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1136,11 +1098,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationCertificateUpdate() {
 	req, _ := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -1196,11 +1154,7 @@ func (ts *ApplicationAPITestSuite) TestOAuthAppCertificateUpdate() {
 	req, _ := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -1505,11 +1459,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithTokenConfigChanges()
 	req, _ := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -1596,11 +1546,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationListRetrievesMultiple() {
 
 	// List applications
 	req, _ := http.NewRequest("GET", testServerURL+"/applications", nil)
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -1660,11 +1606,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateCompleteOAuthConfig() {
 	req, _ := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -1687,11 +1629,7 @@ func getApplicationByID(appID string) (*Application, error) {
 		return nil, err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1880,11 +1818,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateRemoveOAuthConfig() {
 	req, _ := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2126,11 +2060,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationGetByName() {
 
 	// Get by name using query parameter
 	req, _ := http.NewRequest("GET", testServerURL+"/applications?name="+url.QueryEscape(uniqueName), nil)
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2254,11 +2184,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateAddOAuthConfig() {
 	req, _ := http.NewRequest("PUT", testServerURL+"/applications/"+appID, bytes.NewReader(appJSON))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2309,11 +2235,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationTotalCountRetrieval() {
 
 	// Get list to verify count
 	req, _ := http.NewRequest("GET", testServerURL+"/applications", nil)
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2478,11 +2400,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateMetadataFields() {
 	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/applications/%s", testServerURL, appID), bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2600,11 +2518,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateTokenConfiguration() {
 	req, _ := http.NewRequest("PUT", fmt.Sprintf("%s/applications/%s", testServerURL, appID), bytes.NewReader(payload))
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2802,11 +2716,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateNonExistent() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -2824,11 +2734,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationDeleteNonExistent() {
 	req, err := http.NewRequest("DELETE", testServerURL+"/applications/"+nonExistentID, nil)
 	ts.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3002,11 +2908,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateInvalidAuthFlow() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3022,11 +2924,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationListWhenEmpty() {
 	req, err := http.NewRequest("GET", testServerURL+"/applications", nil)
 	ts.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3079,11 +2977,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithEmptyAppID() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3114,11 +3008,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithEmptyName() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3165,11 +3055,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithDuplicateName() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3201,11 +3087,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithInvalidURL() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3237,11 +3119,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithInvalidLogoURL() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3289,11 +3167,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithClientIDGeneration()
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3348,11 +3222,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithClientIDChange() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3426,11 +3296,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithDuplicateClientID() 
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3515,11 +3381,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateRemoveCertificate() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3601,11 +3463,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationCreateWithInvalidURL() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3632,11 +3490,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationCreateWithInvalidLogoURL() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3658,11 +3512,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithNilApp() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3688,11 +3538,7 @@ func createBrandingForTest(preferences []byte) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -3725,11 +3571,7 @@ func deleteBrandingForTest(brandingID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -3823,11 +3665,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidBrandingID() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3898,11 +3736,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithBrandingID() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -3949,11 +3783,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithInvalidBrandingID() 
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -4020,11 +3850,7 @@ func (ts *ApplicationAPITestSuite) TestBrandingCannotDeleteWhenAssociatedWithApp
 	req, err := http.NewRequest("DELETE", testServerURL+"/branding/"+brandingID, nil)
 	ts.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -4175,11 +4001,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidAllowedUserTypes() 
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -4287,11 +4109,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithAllowedUserTypes() {
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -4356,11 +4174,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationUpdateWithInvalidAllowedUserTy
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -4485,11 +4299,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithPartialInvalidAllowedUserT
 	ts.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
