@@ -28,6 +28,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/asgardeo/thunder/internal/system/config"
@@ -58,7 +60,10 @@ func GetEncryptionService() *EncryptionService {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "EncryptionService"))
 	once.Do(func() {
 		var err error
-		instance, err = initEncryptionService()
+		instance, err = initEncryptionService(
+			os.ReadFile,
+			filepath.Join,
+		)
 		if err != nil {
 			logger.Error("Failed to initialize EncryptionService: %v", log.Error(err))
 		}
@@ -67,34 +72,43 @@ func GetEncryptionService() *EncryptionService {
 }
 
 // initEncryptionService initializes the EncryptionService from configuration sources.
-func initEncryptionService() (*EncryptionService, error) {
+func initEncryptionService(
+	fileReader func(name string) ([]byte, error),
+	pathJoiner func(elem ...string) string,
+) (*EncryptionService, error) {
+	thunderHome := config.GetThunderRuntime().ThunderHome
+	cryptoFilePath := config.GetThunderRuntime().Config.Security.CryptoFile
+
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "EncryptionService"))
-	// Try to get key from the application configuration
-	config := config.GetThunderRuntime().Config.Crypto.Key // Use the correct config getter
 
-	// Check if crypto configuration exists
-	if config != "" {
-		key, err := hex.DecodeString(config)
-		if err == nil {
-			logger.Debug("Using crypto key from configuration")
-			return NewEncryptionService(key)
+	if cryptoFilePath != "" {
+		var keyBytes []byte
+		var err error
+
+		cryptoFilePath = filepath.Clean(cryptoFilePath)
+		cryptoFilePath = pathJoiner(thunderHome, cryptoFilePath)
+		fileData, fileErr := fileReader(cryptoFilePath)
+		if fileErr == nil {
+			logger.Debug("Attempting to load crypto key from file", log.String("path", cryptoFilePath))
+			keyBytes, err = hex.DecodeString(string(fileData))
+			if err == nil {
+				logger.Debug("Successfully loaded crypto key from file")
+				return NewEncryptionService(keyBytes)
+			} else {
+				err = fmt.Errorf(
+					"error while reading crypto key file at path %s: %w",
+					cryptoFilePath,
+					err)
+				return nil, err
+			}
+		} else {
+			fileErr = fmt.Errorf("failed to read crypto key file at path %s: %w", cryptoFilePath, fileErr)
+			return nil, fileErr
 		}
-		logger.Warn("Invalid crypto key in configuration, generating a new key")
-	}
-
-	// Generate new key as fallback for development
-	logger.Warn("No valid crypto key found in configuration, generating a new one")
-
-	key, err := generateRandomKey(defaultKeySize)
-	if err != nil {
+	} else {
+		err := fmt.Errorf("crypto key file path not found in configs")
 		return nil, err
 	}
-
-	// Print the generated key for development purposes
-	encodedKey := hex.EncodeToString(key)
-	logger.Debug("Generated new crypto key (hex): %s", log.String("logKey", encodedKey))
-
-	return NewEncryptionService(key)
 }
 
 // NewEncryptionService creates a new instance of EncryptionService with the provided key.
