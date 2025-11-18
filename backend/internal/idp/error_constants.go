@@ -93,14 +93,3 @@ var (
 		ErrorDescription: "The request body is malformed or contains invalid data",
 	}
 )
-
-// Server errors for identity provider operations.
-var (
-	// ErrorInternalServerError is the error returned when an internal server error occurs.
-	ErrorInternalServerError = serviceerror.ServiceError{
-		Type:             serviceerror.ServerErrorType,
-		Code:             "IDP-5000",
-		Error:            "Internal server error",
-		ErrorDescription: "An unexpected error occurred while processing the request",
-	}
-)

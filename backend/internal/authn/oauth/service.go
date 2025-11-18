@@ -83,15 +83,6 @@ func newOAuthAuthnService(httpClient syshttp.HTTPClientInterface,
 func NewOAuthAuthnService(httpClient syshttp.HTTPClientInterface,
 	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
 	endpoints OAuthEndpoints) OAuthAuthnServiceInterface {
-	if httpClient == nil {
-		httpClient = syshttp.NewHTTPClient()
-	}
-	if idpSvc == nil {
-		idpSvc = idp.NewIDPService()
-	}
-	if userSvc == nil {
-		userSvc = user.GetUserService()
-	}
 	return newOAuthAuthnService(httpClient, idpSvc, userSvc, endpoints)
 }
 
