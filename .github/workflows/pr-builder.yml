@@ -147,6 +147,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: backend/coverage_unit.out
+          disable_search: true
           flags: backend-unit
           name: Backend Unit Tests
           fail_ci_if_error: false
@@ -163,6 +164,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: frontend/apps/thunder-develop/coverage/lcov.info
+          disable_search: true
           flags: frontend-apps-develop-unit
           name: Frontend Develop App Unit Tests
           fail_ci_if_error: false
@@ -238,18 +240,20 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: target/coverage_integration.out
+          disable_search: true
           flags: backend-integration-${{ matrix.database }}
           name: Backend Integration Tests (${{ matrix.database }})
           fail_ci_if_error: false
 
-      - name: 🧩 Generate Combined Coverage Report
-        run: ./build.sh merge_coverage
+      # - name: 🧩 Generate Combined Coverage Report
+      #   run: ./build.sh merge_coverage
 
-      - name: 📊 Upload Combined Coverage Report to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/coverage_combined.out
-          flags: backend-combined-${{ matrix.database }}
-          name: Backend-combined Coverage (${{ matrix.database }})
-          fail_ci_if_error: false
+      # - name: 📊 Upload Combined Coverage Report to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: target/coverage_combined.out
+      #     disable_search: true
+      #     flags: backend-combined-${{ matrix.database }}
+      #     name: Backend-combined Coverage (${{ matrix.database }})
+      #     fail_ci_if_error: false
