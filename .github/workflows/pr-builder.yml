@@ -257,3 +257,31 @@ jobs:
       #     flags: backend-combined-${{ matrix.database }}
       #     name: Backend-combined Coverage (${{ matrix.database }})
       #     fail_ci_if_error: false
+
+  detect-powershell-changes:
+    name: 🔍 Detect PowerShell Changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.filter.outputs.powershell }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            powershell:
+              - '**.ps1'
+              - '.github/workflows/windows-powershell-validation.yml'
+      - name: ✅ PowerShell files detected
+        if: steps.filter.outputs.powershell == 'true'
+        run: echo "PowerShell files changed - validation will run"
+      - name: ⏭️ No PowerShell changes
+        if: steps.filter.outputs.powershell != 'true'
+        run: echo "No PowerShell changes - skipping validation"
+
+  validate-windows:
+    name: 🪟 Validate Windows PowerShell
+    needs: detect-powershell-changes
+    if: needs.detect-powershell-changes.outputs.should-run == 'true'
+    uses: ./.github/workflows/windows-powershell-validation.yml
