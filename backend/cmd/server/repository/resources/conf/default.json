@@ -44,6 +44,20 @@
       "max_open_conns": 500,
       "max_idle_conns": 100,
       "conn_max_lifetime": 3600
+    },
+    "user": {
+      "type": "sqlite",
+      "hostname": "",
+      "port": 0,
+      "name": "",
+      "username": "",
+      "password": "",
+      "sslmode": "",
+      "path": "repository/database/userdb.db",
+      "options": "_journal_mode=WAL&_busy_timeout=5000",
+      "max_open_conns": 500,
+      "max_idle_conns": 100,
+      "conn_max_lifetime": 3600
     }
   },
   "cache": {
