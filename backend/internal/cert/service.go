@@ -44,21 +44,13 @@ type CertificateServiceInterface interface {
 
 // certificateService implements the CertificateServiceInterface for managing certificates.
 type certificateService struct {
-	Store certificateStoreInterface
+	store certificateStoreInterface
 }
 
-// TODO: Need to remove once the authz service and token service are refactored to use DI.
-
-// NewCertificateService creates a new instance of CertificateService.
-func NewCertificateService() CertificateServiceInterface {
-	return &certificateService{
-		Store: newCachedBackedCertificateStore(),
-	}
-}
-
+// newCertificateService creates a new instance of CertificateService.
 func newCertificateService(store certificateStoreInterface) CertificateServiceInterface {
 	return &certificateService{
-		Store: store,
+		store: store,
 	}
 }
 
@@ -70,13 +62,13 @@ func (s *certificateService) GetCertificateByID(id string) (*Certificate, *servi
 		return nil, &ErrorInvalidCertificateID
 	}
 
-	certObj, err := s.Store.GetCertificateByID(id)
+	certObj, err := s.store.GetCertificateByID(id)
 	if err != nil {
 		if errors.Is(err, ErrCertificateNotFound) {
 			return nil, &ErrorCertificateNotFound
 		}
 		logger.Error("Failed to get certificate by ID", log.String("id", id), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if certObj == nil {
 		logger.Debug("Certificate not found for ID", log.String("id", id))
@@ -98,14 +90,14 @@ func (s *certificateService) GetCertificateByReference(refType CertificateRefere
 		return nil, &ErrorInvalidReferenceID
 	}
 
-	certObj, err := s.Store.GetCertificateByReference(refType, refID)
+	certObj, err := s.store.GetCertificateByReference(refType, refID)
 	if err != nil {
 		if errors.Is(err, ErrCertificateNotFound) {
 			return nil, &ErrorCertificateNotFound
 		}
 		logger.Error("Failed to get certificate by reference", log.String("refType", string(refType)),
 			log.String("refID", refID), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if certObj == nil {
 		logger.Debug("Certificate not found for reference", log.String("refType", string(refType)),
@@ -126,21 +118,21 @@ func (s *certificateService) CreateCertificate(cert *Certificate) (*Certificate,
 	}
 
 	// Check if a certificate with the same reference already exists
-	existingCert, err := s.Store.GetCertificateByReference(cert.RefType, cert.RefID)
+	existingCert, err := s.store.GetCertificateByReference(cert.RefType, cert.RefID)
 	if err != nil && !errors.Is(err, ErrCertificateNotFound) {
 		logger.Error("Failed to check existing certificate", log.String("refType", string(cert.RefType)),
 			log.String("refID", cert.RefID), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if existingCert != nil {
 		return nil, &ErrorCertificateAlreadyExists
 	}
 
 	cert.ID = sysutils.GenerateUUID()
-	err = s.Store.CreateCertificate(cert)
+	err = s.store.CreateCertificate(cert)
 	if err != nil {
 		logger.Error("Failed to create certificate", log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return cert, nil
@@ -159,13 +151,13 @@ func (s *certificateService) UpdateCertificateByID(id string, cert *Certificate)
 	}
 
 	// Get the existing certificate to validate reference
-	existingCert, err := s.Store.GetCertificateByID(id)
+	existingCert, err := s.store.GetCertificateByID(id)
 	if err != nil {
 		if errors.Is(err, ErrCertificateNotFound) {
 			return nil, &ErrorCertificateNotFound
 		}
 		logger.Error("Failed to get existing certificate", log.String("id", id), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if existingCert == nil {
 		logger.Debug("Certificate not found for update", log.String("id", id))
@@ -177,13 +169,13 @@ func (s *certificateService) UpdateCertificateByID(id string, cert *Certificate)
 		return nil, &ErrorReferenceUpdateIsNotAllowed
 	}
 
-	err = s.Store.UpdateCertificateByID(existingCert, cert)
+	err = s.store.UpdateCertificateByID(existingCert, cert)
 	if err != nil {
 		if errors.Is(err, ErrCertificateNotFound) {
 			return nil, &ErrorCertificateNotFound
 		}
 		logger.Error("Failed to update certificate by ID", log.String("id", id), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return cert, nil
@@ -205,14 +197,14 @@ func (s *certificateService) UpdateCertificateByReference(refType CertificateRef
 	}
 
 	// Get the existing certificate to validate reference consistency
-	existingCert, err := s.Store.GetCertificateByReference(refType, refID)
+	existingCert, err := s.store.GetCertificateByReference(refType, refID)
 	if err != nil {
 		if errors.Is(err, ErrCertificateNotFound) {
 			return nil, &ErrorCertificateNotFound
 		}
 		logger.Error("Failed to get existing certificate", log.String("refType", string(refType)),
 			log.String("refID", refID), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if existingCert == nil {
 		logger.Debug("Certificate not found for update", log.String("refType", string(refType)),
@@ -226,14 +218,14 @@ func (s *certificateService) UpdateCertificateByReference(refType CertificateRef
 	}
 
 	cert.ID = existingCert.ID
-	err = s.Store.UpdateCertificateByReference(existingCert, cert)
+	err = s.store.UpdateCertificateByReference(existingCert, cert)
 	if err != nil {
 		if errors.Is(err, ErrCertificateNotFound) {
 			return nil, &ErrorCertificateNotFound
 		}
 		logger.Error("Failed to update certificate by reference", log.String("refType", string(refType)),
 			log.String("refID", refID), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return cert, nil
@@ -247,10 +239,10 @@ func (s *certificateService) DeleteCertificateByID(id string) *serviceerror.Serv
 		return &ErrorInvalidCertificateID
 	}
 
-	err := s.Store.DeleteCertificateByID(id)
+	err := s.store.DeleteCertificateByID(id)
 	if err != nil {
 		logger.Error("Failed to delete certificate by ID", log.String("id", id), log.Error(err))
-		return &ErrorInternalServerError
+		return &serviceerror.InternalServerError
 	}
 
 	return nil
@@ -268,11 +260,11 @@ func (s *certificateService) DeleteCertificateByReference(refType CertificateRef
 		return &ErrorInvalidReferenceID
 	}
 
-	err := s.Store.DeleteCertificateByReference(refType, refID)
+	err := s.store.DeleteCertificateByReference(refType, refID)
 	if err != nil {
 		logger.Error("Failed to delete certificate by reference", log.String("refType", string(refType)),
 			log.String("refID", refID), log.Error(err))
-		return &ErrorInternalServerError
+		return &serviceerror.InternalServerError
 	}
 
 	return nil
