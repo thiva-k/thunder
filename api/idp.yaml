@@ -392,7 +392,7 @@ components:
         - type: object
           properties:
             code:
-              example: "IDP-5000"
+              example: "SSE-5000"
             message:
               example: "Internal server error"
             description:

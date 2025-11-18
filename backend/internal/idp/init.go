@@ -27,7 +27,8 @@ import (
 
 // Initialize initializes the IDP service and registers its routes.
 func Initialize(mux *http.ServeMux) IDPServiceInterface {
-	idpService := newIDPService()
+	idpStore := newIDPStore()
+	idpService := newIDPService(idpStore)
 	idpHandler := newIDPHandler(idpService)
 	registerRoutes(mux, idpHandler)
 	return idpService
