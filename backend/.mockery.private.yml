@@ -51,6 +51,15 @@ packages:
       dir: internal/authn
       structname: '{{.InterfaceName}}Mock'
       pkgname: authn
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/idp:
+    config:
+      all: true
+      dir: internal/idp
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: idp
+      filename: "{{.InterfaceName}}_mock_test.go"
 
   github.com/asgardeo/thunder/internal/role:
     config:
