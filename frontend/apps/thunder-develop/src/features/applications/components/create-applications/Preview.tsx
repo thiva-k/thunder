@@ -71,9 +71,11 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
   const theme = useTheme();
   const {data: identityProviders} = useIdentityProviders();
 
-  const hasUsernamePassword: boolean = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? true;
+  const hasUsernamePassword: boolean = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? false;
+  
   const selectedProviders: IdentityProvider[] =
     identityProviders?.filter((idp: IdentityProvider): boolean => integrations[idp.id]) ?? [];
+  
   const hasSocialLogins: boolean = selectedProviders.length > 0;
 
   return (

@@ -23,6 +23,28 @@ import {IdentityProviderTypes, type IdentityProvider} from '@/features/integrati
 import ConfigureSignInOptions, {type ConfigureSignInOptionsProps} from '../ConfigureSignInOptions';
 import {USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY} from '../../../utils/resolveAuthFlowGraphId';
 
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'applications:onboarding.configure.SignInOptions.title': 'Sign In Options',
+        'applications:onboarding.configure.SignInOptions.subtitle': 'Choose how users will sign-in to your application',
+        'applications:onboarding.configure.SignInOptions.usernamePassword': 'Username & Password',
+        'applications:onboarding.configure.SignInOptions.google': 'Google',
+        'applications:onboarding.configure.SignInOptions.github': 'GitHub',
+        'applications:onboarding.configure.SignInOptions.notConfigured': 'Not configured',
+        'applications:onboarding.configure.SignInOptions.noSelectionWarning':
+          'At least one login option is required. Please select at least one authentication method.',
+        'applications:onboarding.configure.SignInOptions.hint':
+          'You can always change these settings later in the application settings.',
+        'applications:onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
+      };
+      return translations[key] || key;
+    },
+  }),
+}));
+
 // Mock the dependencies
 vi.mock('@/features/integrations/api/useIdentityProviders');
 vi.mock('@/features/integrations/utils/getIntegrationIcon');
@@ -114,7 +136,7 @@ describe('ConfigureSignInOptions', () => {
     expect(screen.getByText('Username & Password')).toBeInTheDocument();
   });
 
-  it('should render Username & Password as checked by default', () => {
+  it('should render Username & Password as toggleable (not forced enabled)', () => {
     vi.mocked(useIdentityProviders).mockReturnValue({
       data: mockIdentityProviders,
       isLoading: false,
@@ -129,6 +151,24 @@ describe('ConfigureSignInOptions', () => {
 
     const switches = screen.getAllByRole('switch');
     expect(switches[0]).toBeChecked();
+    
+    // Should be toggleable (not disabled)
+    expect(switches[0]).not.toBeDisabled();
+  });
+
+  it('should render Username & Password as unchecked when not selected', () => {
+    vi.mocked(useIdentityProviders).mockReturnValue({
+      data: mockIdentityProviders,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useIdentityProviders>);
+
+    renderComponent({
+      integrations: {},
+    });
+
+    const switches = screen.getAllByRole('switch');
+    expect(switches[0]).not.toBeChecked();
   });
 
   it('should render all identity providers', () => {
@@ -229,13 +269,13 @@ describe('ConfigureSignInOptions', () => {
 
     renderComponent();
 
-    // Should show username/password in the list (but disabled, no toggle)
+    // Should show username/password in the list with a switch (always toggleable)
     expect(screen.getByText('Username & Password')).toBeInTheDocument();
     expect(screen.getByRole('list')).toBeInTheDocument();
 
-    // Should not have a toggle/switch when it's the only option
-    const listItem = screen.getByText('Username & Password').closest('.MuiListItem-root');
-    expect(listItem?.querySelector('.MuiSwitch-root')).not.toBeInTheDocument();
+    // Should have a toggle/switch (username/password is always toggleable)
+    const switches = screen.getAllByRole('switch');
+    expect(switches.length).toBeGreaterThan(0);
   });
 
   it('should render integration icons', () => {
@@ -247,8 +287,10 @@ describe('ConfigureSignInOptions', () => {
 
     renderComponent();
 
-    expect(getIntegrationIcon).toHaveBeenCalledWith(IdentityProviderTypes.GOOGLE);
-    expect(getIntegrationIcon).toHaveBeenCalledWith(IdentityProviderTypes.GITHUB);
+    // Google and GitHub use direct icons, not getIntegrationIcon
+    // Other providers (if any) would use getIntegrationIcon
+    expect(screen.getByText('Google')).toBeInTheDocument();
+    expect(screen.getByText('GitHub')).toBeInTheDocument();
   });
 
   it('should render UserRound icon for Username & Password', () => {
@@ -293,8 +335,8 @@ describe('ConfigureSignInOptions', () => {
     renderComponent({integrations: {}});
 
     const switches = screen.getAllByRole('switch');
-    // Username & Password should default to true
-    expect(switches[0]).toBeChecked();
+    // Username & Password should default to false when integrations is empty
+    expect(switches[0]).not.toBeChecked();
     // Others should default to false
     expect(switches[1]).not.toBeChecked();
   });
@@ -379,5 +421,223 @@ describe('ConfigureSignInOptions', () => {
 
     switches = screen.getAllByRole('switch');
     expect(switches[1]).toBeChecked();
+  });
+
+  describe('Google and GitHub always shown', () => {
+    it('should always show Google option even when not configured', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: [], // No providers in API
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      expect(screen.getByText('Google')).toBeInTheDocument();
+    });
+
+    it('should always show GitHub option even when not configured', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: [], // No providers in API
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      expect(screen.getByText('GitHub')).toBeInTheDocument();
+    });
+
+    it('should show Google as disabled with "Not configured" when not in API', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: [], // No providers in API
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      const googleText = screen.getByText('Google');
+      const listItem = googleText.closest('.MuiListItem-root');
+      expect(listItem).toBeInTheDocument();
+      
+      // Should have "Not configured" as secondary text (both Google and GitHub show it)
+      const notConfiguredTexts = screen.getAllByText('Not configured');
+      expect(notConfiguredTexts.length).toBeGreaterThanOrEqual(1);
+      
+      // Should not have a switch for Google (disabled)
+      const switches = screen.getAllByRole('switch');
+      // Only username/password should have a switch
+      expect(switches.length).toBe(1);
+      
+      // Google button should be disabled
+      const googleButton = googleText.closest('.MuiListItemButton-root');
+      expect(googleButton).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('should show GitHub as disabled with "Not configured" when not in API', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: [], // No providers in API
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      const githubText = screen.getByText('GitHub');
+      const listItem = githubText.closest('.MuiListItem-root');
+      expect(listItem).toBeInTheDocument();
+      
+      // Should have "Not configured" as secondary text
+      const notConfiguredTexts = screen.getAllByText('Not configured');
+      expect(notConfiguredTexts.length).toBeGreaterThan(0);
+    });
+
+    it('should show Google as enabled with switch when configured in API', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      const switches = screen.getAllByRole('switch');
+      // Should have switches for username/password, Google, and GitHub
+      expect(switches.length).toBe(3);
+      
+      // Google should be toggleable
+      const googleButton = screen.getByText('Google').closest('.MuiListItemButton-root');
+      expect(googleButton).not.toBeDisabled();
+    });
+
+    it('should show GitHub as enabled with switch when configured in API', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      const switches = screen.getAllByRole('switch');
+      // Should have switches for username/password, Google, and GitHub
+      expect(switches.length).toBe(3);
+      
+      // GitHub should be toggleable
+      const githubButton = screen.getByText('GitHub').closest('.MuiListItemButton-root');
+      expect(githubButton).not.toBeDisabled();
+    });
+
+    it('should show Google enabled and GitHub disabled when only Google is configured', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: [mockIdentityProviders[0]], // Only Google
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      // Google should be enabled
+      const googleButton = screen.getByText('Google').closest('.MuiListItemButton-root');
+      expect(googleButton).not.toHaveAttribute('aria-disabled', 'true');
+      
+      // GitHub should be disabled
+      const githubButton = screen.getByText('GitHub').closest('.MuiListItemButton-root');
+      expect(githubButton).toHaveAttribute('aria-disabled', 'true');
+      
+      // Should show "Not configured" for GitHub
+      const notConfiguredTexts = screen.getAllByText('Not configured');
+      expect(notConfiguredTexts.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Validation warning', () => {
+    it('should show warning when no options are selected', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent({
+        integrations: {}, // No selections
+      });
+
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      // Check for the translation key or the actual text
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).toMatch(/noSelectionWarning|at least one login option is required/i);
+    });
+
+    it('should not show warning when at least one option is selected', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent({
+        integrations: {
+          [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: true,
+        },
+      });
+
+      // Should not have warning alert
+      const alerts = screen.queryAllByRole('alert');
+      const warningAlerts = alerts.filter((alert) => alert.textContent?.includes('at least one'));
+      expect(warningAlerts.length).toBe(0);
+    });
+
+    it('should show warning when only username/password is deselected', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent({
+        integrations: {
+          [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: false,
+          'google-idp': false,
+          'github-idp': false,
+        },
+      });
+
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      // Check for the translation key or the actual text
+      const alert = screen.getByRole('alert');
+      expect(alert.textContent).toMatch(/noSelectionWarning|at least one login option is required/i);
+    });
+
+    it('should hide warning when user selects an option', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      const {rerender} = renderComponent({
+        integrations: {}, // No selections initially
+      });
+
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+
+      // Select username/password
+      rerender(
+        <ConfigureSignInOptions
+          integrations={{
+            [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: true,
+          }}
+          onIntegrationToggle={mockOnIntegrationToggle}
+        />,
+      );
+
+      // Warning should be gone
+      const warningAlerts = screen.queryAllByRole('alert').filter((alert) =>
+        alert.textContent?.includes('at least one'),
+      );
+      expect(warningAlerts.length).toBe(0);
+    });
   });
 });

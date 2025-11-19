@@ -295,7 +295,7 @@ describe('ApplicationsList', () => {
     });
   });
 
-  it('should show View action as disabled', async () => {
+  it('should navigate to view page when clicking View action', async () => {
     const user = userEvent.setup();
 
     vi.mocked(useGetApplications).mockReturnValue({
@@ -313,8 +313,12 @@ describe('ApplicationsList', () => {
       expect(screen.getByRole('menu')).toBeInTheDocument();
     });
 
-    const viewMenuItem = screen.getByText('View').closest('li');
-    expect(viewMenuItem).toHaveAttribute('aria-disabled', 'true');
+    const viewMenuItem = screen.getByText('View');
+    await user.click(viewMenuItem);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/applications/app-1');
+    });
   });
 
   it('should close menu when pressing Escape', async () => {
@@ -361,7 +365,7 @@ describe('ApplicationsList', () => {
     expect(grid).toBeInTheDocument();
   });
 
-  it('should handle row click navigation', async () => {
+  it('should navigate to view page when clicking row', async () => {
     const user = userEvent.setup();
 
     vi.mocked(useGetApplications).mockReturnValue({
@@ -378,7 +382,29 @@ describe('ApplicationsList', () => {
       await user.click(rows[1]);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/applications');
+        expect(mockNavigate).toHaveBeenCalledWith('/applications/app-1');
+      });
+    }
+  });
+
+  it('should navigate to correct application when clicking different row', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const rows = screen.getAllByRole('row');
+    // Click on second data row (index 2)
+    if (rows[2]) {
+      await user.click(rows[2]);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/applications/app-2');
       });
     }
   });

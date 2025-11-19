@@ -69,6 +69,18 @@ export default function ApplicationsList(): JSX.Element {
     setSelectedAppId(null);
   };
 
+  const handleViewClick = (): void => {
+    handleMenuClose();
+    if (selectedAppId) {
+      (async (): Promise<void> => {
+        await navigate(`/applications/${selectedAppId}`);
+      })().catch(() => {
+        // TODO: Log the errors
+        // Tracker: https://github.com/asgardeo/thunder/issues/618
+      });
+    }
+  };
+
   const columns: DataGrid.GridColDef<BasicApplication>[] = useMemo(
     () => [
       {
@@ -193,9 +205,10 @@ export default function ApplicationsList(): JSX.Element {
           columns={columns}
           loading={isLoading}
           getRowId={(row): string => row.id}
-          onRowClick={() => {
+          onRowClick={(params) => {
+            const applicationId = (params.row as BasicApplication).id;
             (async (): Promise<void> => {
-              await navigate(`/applications`);
+              await navigate(`/applications/${applicationId}`);
             })().catch(() => {
               // TODO: Log the errors
               // Tracker: https://github.com/asgardeo/thunder/issues/618
@@ -219,7 +232,7 @@ export default function ApplicationsList(): JSX.Element {
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem disabled>
+        <MenuItem onClick={handleViewClick}>
           <ListItemIcon>
             <Eye size={16} />
           </ListItemIcon>

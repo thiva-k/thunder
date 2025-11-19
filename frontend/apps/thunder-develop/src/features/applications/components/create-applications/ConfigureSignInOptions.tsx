@@ -33,9 +33,9 @@ import {
 } from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useEffect} from 'react';
-import {Info, Lightbulb, UserRound} from '@wso2/oxygen-ui-icons-react';
+import {Info, Lightbulb, UserRound, Google, GitHub} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
-import {type IdentityProvider} from '@/features/integrations/models/identity-provider';
+import {type IdentityProvider, IdentityProviderTypes} from '@/features/integrations/models/identity-provider';
 import getIntegrationIcon from '@/features/integrations/utils/getIntegrationIcon';
 import useIdentityProviders from '../../../integrations/api/useIdentityProviders';
 import {USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY} from '../../utils/resolveAuthFlowGraphId';
@@ -101,12 +101,18 @@ export default function ConfigureSignInOptions({
   }
 
   const availableIntegrations: IdentityProvider[] = data ?? [];
-  const hasOnlyUsernamePassword = availableIntegrations.length === 0;
+  
+  // Check if Google and GitHub exist in the API data
+  const googleProvider = availableIntegrations.find((idp) => idp.type === IdentityProviderTypes.GOOGLE);
+  const githubProvider = availableIntegrations.find((idp) => idp.type === IdentityProviderTypes.GITHUB);
+  
+  const hasAtLeastOneSelectedOption = hasAtLeastOneSelected(integrations);
+  const hasUsernamePassword = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? false;
 
   return (
     <Stack direction="column" spacing={4}>
       <Stack direction="column" spacing={1}>
-        <Typography variant="h3" component="h1" gutterBottom>
+        <Typography variant="h4" component="h1" gutterBottom>
           {t('applications:onboarding.configure.SignInOptions.title')}
         </Typography>
         <Stack direction="row" alignItems="center" spacing={1}>
@@ -117,62 +123,132 @@ export default function ConfigureSignInOptions({
         </Stack>
       </Stack>
 
+      {/* Validation warning if no options selected */}
+      {!hasAtLeastOneSelectedOption && (
+        <Alert severity="warning" sx={{mb: 2}}>
+          {t('applications:onboarding.configure.SignInOptions.noSelectionWarning')}
+        </Alert>
+      )}
+
       <List sx={{bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider'}}>
-        {/* Username & Password Option - Always shown first */}
+        {/* Username & Password Option - Always shown first, always toggleable */}
         <ListItem
           disablePadding
           secondaryAction={
-            !hasOnlyUsernamePassword ? (
-              <Switch
-                edge="end"
-                checked={integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? true}
-                onChange={(): void => onIntegrationToggle(USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY)}
-                color="primary"
-              />
-            ) : undefined
+            <Switch
+              edge="end"
+              checked={hasUsernamePassword}
+              onChange={(): void => onIntegrationToggle(USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY)}
+              color="primary"
+            />
           }
         >
-          <ListItemButton
-            onClick={
-              !hasOnlyUsernamePassword
-                ? (): void => onIntegrationToggle(USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY)
-                : undefined
-            }
-            disabled={hasOnlyUsernamePassword}
-          >
+          <ListItemButton onClick={(): void => onIntegrationToggle(USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY)}>
             <ListItemIcon>
               <UserRound size={24} />
             </ListItemIcon>
             <ListItemText primary={t('applications:onboarding.configure.SignInOptions.usernamePassword')} />
           </ListItemButton>
         </ListItem>
-        {availableIntegrations.length > 0 && <Divider component="li" />}
+        
+        <Divider component="li" />
 
-        {/* Social Login Providers */}
-        {availableIntegrations.map(
-          (provider: IdentityProvider, index: number): JSX.Element => (
-            <>
-              <ListItem
-                key={provider.id}
-                disablePadding
-                secondaryAction={
-                  <Switch
-                    edge="end"
-                    checked={integrations[provider.id] ?? false}
-                    onChange={(): void => onIntegrationToggle(provider.id)}
-                    color="primary"
-                  />
-                }
-              >
-                <ListItemButton onClick={(): void => onIntegrationToggle(provider.id)}>
-                  <ListItemIcon>{getIntegrationIcon(provider.type)}</ListItemIcon>
-                  <ListItemText primary={provider.name} />
-                </ListItemButton>
-              </ListItem>
-              {index < availableIntegrations.length - 1 && <Divider component="li" />}
-            </>
-          ),
+        {/* Google Option - Always shown, enabled if configured */}
+        {googleProvider ? (
+          <ListItem
+            disablePadding
+            secondaryAction={
+              <Switch
+                edge="end"
+                checked={integrations[googleProvider.id] ?? false}
+                onChange={(): void => onIntegrationToggle(googleProvider.id)}
+                color="primary"
+              />
+            }
+          >
+            <ListItemButton onClick={(): void => onIntegrationToggle(googleProvider.id)}>
+              <ListItemIcon>
+                <Google size={24} />
+              </ListItemIcon>
+              <ListItemText primary={t('applications:onboarding.configure.SignInOptions.google')} />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <ListItem disablePadding>
+            <ListItemButton disabled>
+              <ListItemIcon>
+                <Google size={24} />
+              </ListItemIcon>
+              <ListItemText 
+                primary={t('applications:onboarding.configure.SignInOptions.google')} 
+                secondary={t('applications:onboarding.configure.SignInOptions.notConfigured')}
+              />
+            </ListItemButton>
+          </ListItem>
         )}
+        <Divider component="li" />
+
+        {/* GitHub Option - Always shown, enabled if configured */}
+        {githubProvider ? (
+          <ListItem
+            disablePadding
+            secondaryAction={
+              <Switch
+                edge="end"
+                checked={integrations[githubProvider.id] ?? false}
+                onChange={(): void => onIntegrationToggle(githubProvider.id)}
+                color="primary"
+              />
+            }
+          >
+            <ListItemButton onClick={(): void => onIntegrationToggle(githubProvider.id)}>
+              <ListItemIcon>
+                <GitHub size={24} />
+              </ListItemIcon>
+              <ListItemText primary={t('applications:onboarding.configure.SignInOptions.github')} />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <ListItem disablePadding>
+            <ListItemButton disabled>
+              <ListItemIcon>
+                <GitHub size={24} />
+              </ListItemIcon>
+              <ListItemText 
+                primary={t('applications:onboarding.configure.SignInOptions.github')} 
+                secondary={t('applications:onboarding.configure.SignInOptions.notConfigured')}
+              />
+            </ListItemButton>
+          </ListItem>
+        )}
+
+        {/* Other Social Login Providers (if any) */}
+        {availableIntegrations
+          .filter((provider) => provider.type !== IdentityProviderTypes.GOOGLE && provider.type !== IdentityProviderTypes.GITHUB)
+          .map(
+            (provider: IdentityProvider, index: number, filteredProviders): JSX.Element => (
+              <>
+                <ListItem
+                  key={provider.id}
+                  disablePadding
+                  secondaryAction={
+                    <Switch
+                      edge="end"
+                      checked={integrations[provider.id] ?? false}
+                      onChange={(): void => onIntegrationToggle(provider.id)}
+                      color="primary"
+                    />
+                  }
+                >
+                  <ListItemButton onClick={(): void => onIntegrationToggle(provider.id)}>
+                    <ListItemIcon>{getIntegrationIcon(provider.type)}</ListItemIcon>
+                    <ListItemText primary={provider.name} />
+                  </ListItemButton>
+                </ListItem>
+                {index < filteredProviders.length - 1 && <Divider component="li" />}
+              </>
+            ),
+          )}
       </List>
 
       <Stack direction="row" alignItems="center" spacing={1}>

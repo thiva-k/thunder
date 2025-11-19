@@ -79,18 +79,31 @@ vi.mock('../../components/create-applications/ConfigureDesign', () => ({
 
 vi.mock('../../components/create-applications/ConfigureSignInOptions', () => ({
   default: ({
+    integrations,
     onIntegrationToggle,
+    onReadyChange,
   }: {
     integrations: Record<string, boolean>;
     onIntegrationToggle: (id: string) => void;
     onReadyChange: (ready: boolean) => void;
-  }) => (
-    <div data-testid="configure-sign-in">
-      <button type="button" data-testid="toggle-integration" onClick={() => onIntegrationToggle('test-integration')}>
-        Toggle Integration
-      </button>
-    </div>
-  ),
+  }) => {
+    // Call onReadyChange immediately if at least one integration is selected
+    // Using setTimeout to avoid calling during render
+    setTimeout(() => {
+      if (onReadyChange) {
+        const hasSelection = Object.values(integrations).some((enabled) => enabled);
+        onReadyChange(hasSelection);
+      }
+    }, 0);
+
+    return (
+      <div data-testid="configure-sign-in">
+        <button type="button" data-testid="toggle-integration" onClick={() => onIntegrationToggle('test-integration')}>
+          Toggle Integration
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('../../components/create-applications/Preview', () => ({
@@ -101,6 +114,41 @@ vi.mock('../../components/create-applications/Preview', () => ({
       <div data-testid="preview-color">{selectedColor}</div>
     </div>
   ),
+}));
+
+vi.mock('../../components/create-applications/ConfigureRedirectURIs', () => ({
+  default: ({
+    redirectURIs,
+    onRedirectURIsChange,
+    onReadyChange,
+  }: {
+    redirectURIs: string[];
+    onRedirectURIsChange: (uris: string[]) => void;
+    onReadyChange?: (ready: boolean) => void;
+  }) => {
+    // Call onReadyChange immediately when redirectURIs change
+    // Using setTimeout to avoid calling during render
+    setTimeout(() => {
+      if (onReadyChange) {
+        const isReady = redirectURIs.length > 0 && redirectURIs.every((uri) => uri.trim().length > 0);
+        onReadyChange(isReady);
+      }
+    }, 0);
+
+    return (
+      <div data-testid="configure-redirect-uris">
+        <button
+          type="button"
+          data-testid="add-redirect-uri"
+          onClick={() => {
+            onRedirectURIsChange([...redirectURIs, 'https://example.com/callback']);
+          }}
+        >
+          Add URI
+        </button>
+      </div>
+    );
+  },
 }));
 
 // Mock react-router navigate
@@ -308,13 +356,39 @@ describe('ApplicationCreatePage', () => {
     it('should show Create Application button on final step', async () => {
       renderWithProviders();
 
-      // Navigate through all steps
+      // Step 1: Name
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      expect(screen.getByRole('button', {name: /create application/i})).toBeInTheDocument();
+      // Step 2: Design
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 3: Sign In Options - select an integration
+      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
+      if (toggleIntegrationButton) {
+        await user.click(toggleIntegrationButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 4: Configure Redirect URIs - add a URI
+      const addUriButton = screen.queryByTestId('add-redirect-uri');
+      if (addUriButton) {
+        await user.click(addUriButton);
+      }
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /create application/i})).toBeInTheDocument();
+      });
     });
   });
 
@@ -449,11 +523,38 @@ describe('ApplicationCreatePage', () => {
     it('should call createApplication when Create Application is clicked', async () => {
       renderWithProviders();
 
-      // Navigate through all steps
+      // Step 1: Name
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 2: Design
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 3: Sign In Options - select an integration
+      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
+      if (toggleIntegrationButton) {
+        await user.click(toggleIntegrationButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 4: Configure Redirect URIs - add a URI
+      const addUriButton = screen.queryByTestId('add-redirect-uri');
+      if (addUriButton) {
+        await user.click(addUriButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
+      });
 
       // Click Create Application
       const createButton = screen.getByRole('button', {name: /create application/i});
@@ -475,11 +576,38 @@ describe('ApplicationCreatePage', () => {
 
       renderWithProviders();
 
-      // Navigate through all steps
+      // Step 1: Name
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 2: Design
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 3: Sign In Options - select an integration
+      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
+      if (toggleIntegrationButton) {
+        await user.click(toggleIntegrationButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 4: Configure Redirect URIs - add a URI
+      const addUriButton = screen.queryByTestId('add-redirect-uri');
+      if (addUriButton) {
+        await user.click(addUriButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
+      });
 
       // Click Create Application
       const createButton = screen.getByRole('button', {name: /create application/i});
@@ -497,13 +625,40 @@ describe('ApplicationCreatePage', () => {
 
       renderWithProviders();
 
-      // Navigate through all steps
+      // Step 1: Name
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Click Create Application
+      // Step 2: Design (always ready, just click continue)
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 3: Sign In Options - need to select at least one integration
+      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
+      if (toggleIntegrationButton) {
+        await user.click(toggleIntegrationButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 4: Configure Redirect URIs - need to add at least one URI
+      const addUriButton = screen.queryByTestId('add-redirect-uri');
+      if (addUriButton) {
+        await user.click(addUriButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
+      });
+
+      // Click Create Application button
       const createButton = screen.getByRole('button', {name: /create application/i});
       await user.click(createButton);
 
@@ -519,12 +674,42 @@ describe('ApplicationCreatePage', () => {
 
       renderWithProviders();
 
-      // Navigate through all steps and trigger error
+      // Step 1: Name
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 2: Design (always ready, just click continue)
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /create application/i}));
+
+      // Step 3: Sign In Options - need to select at least one integration
+      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
+      if (toggleIntegrationButton) {
+        await user.click(toggleIntegrationButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Step 4: Configure Redirect URIs - need to add at least one URI
+      const addUriButton = screen.queryByTestId('add-redirect-uri');
+      if (addUriButton) {
+        await user.click(addUriButton);
+      }
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
+      });
+
+      // Click Create Application button
+      const createButton = screen.getByRole('button', {name: /create application/i});
+      await user.click(createButton);
 
       await waitFor(() => {
         expect(screen.getByText(/failed to create branding/i)).toBeInTheDocument();
@@ -556,6 +741,45 @@ describe('ApplicationCreatePage', () => {
 
       // Component should not crash
       expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
+    });
+
+    it('should start with no default selections (options step not ready)', async () => {
+      renderWithProviders();
+
+      // Navigate to options step
+      const nameInput = screen.getByTestId('app-name-input');
+      await user.type(nameInput, 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Options step should not be ready (no selections by default)
+      // Continue button should be disabled
+      const continueButton = screen.getByRole('button', {name: /continue/i});
+      expect(continueButton).toBeDisabled();
+    });
+
+    it('should require at least one option to be selected before proceeding', async () => {
+      renderWithProviders();
+
+      // Navigate to options step
+      const nameInput = screen.getByTestId('app-name-input');
+      await user.type(nameInput, 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Initially disabled
+      let continueButton = screen.getByRole('button', {name: /continue/i});
+      expect(continueButton).toBeDisabled();
+
+      // Select an integration
+      const toggleButton = screen.getByTestId('toggle-integration');
+      await user.click(toggleButton);
+
+      // Now should be enabled
+      await waitFor(() => {
+        continueButton = screen.getByRole('button', {name: /continue/i});
+        expect(continueButton).not.toBeDisabled();
+      });
     });
   });
 

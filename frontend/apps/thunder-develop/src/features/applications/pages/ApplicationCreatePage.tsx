@@ -24,21 +24,24 @@ import {useState} from 'react';
 import ConfigureSignInOptions from '../components/create-applications/ConfigureSignInOptions';
 import ConfigureDesign from '../components/create-applications/ConfigureDesign';
 import ConfigureName from '../components/create-applications/ConfigureName';
+import ConfigureRedirectURIs from '../components/create-applications/ConfigureRedirectURIs';
 import Preview from '../components/create-applications/Preview';
 import useCreateApplication from '../api/useCreateApplication';
 import resolveAuthFlowGraphId, {USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY} from '../utils/resolveAuthFlowGraphId';
 import useIdentityProviders from '../../integrations/api/useIdentityProviders';
 import type {CreateApplicationRequest} from '../models/requests';
+import type {OAuth2Config} from '../models/oauth';
 import useCreateBranding from '../../branding/api/useCreateBranding';
 import type {CreateBrandingRequest} from '../../branding/models/requests';
 import BrandingConstants from '../constants/branding-contants';
 
-type Step = 'name' | 'design' | 'options';
+type Step = 'name' | 'design' | 'options' | 'configure';
 
 const steps: Record<Step, {label: string; order: number}> = {
   name: {label: 'Create an Application', order: 1},
   design: {label: 'Design', order: 2},
   options: {label: 'Sign In Options', order: 3},
+  configure: {label: 'Configure', order: 4},
 };
 
 export default function ApplicationCreatePage(): JSX.Element {
@@ -51,16 +54,18 @@ export default function ApplicationCreatePage(): JSX.Element {
   const [selectedColor, setSelectedColor] = useState('#1976d2');
   const [appLogo, setAppLogo] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, boolean>>({
-    [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: true, // Username & Password is selected by default
+    // No default selections - user must select at least one option
   });
   const [error, setError] = useState<string | null>(null);
   const [stepReady, setStepReady] = useState<Record<Step, boolean>>({
     name: false,
     design: true,
-    options: true,
+    options: false, // Start as false since no options are selected by default
+    configure: false, // Start as false since no redirect URIs are added by default
   });
   const [useDefaultBranding, setUseDefaultBranding] = useState<boolean>(false);
   const [defaultBrandingId, setDefaultBrandingId] = useState<string | undefined>(undefined);
+  const [redirectURIs, setRedirectURIs] = useState<string[]>([]);
 
   const handleClose = () => {
     (async () => {
@@ -95,6 +100,9 @@ export default function ApplicationCreatePage(): JSX.Element {
       case 'design':
         setCurrentStep('options');
         break;
+      case 'options':
+        setCurrentStep('configure');
+        break;
       default:
         break;
     }
@@ -108,6 +116,9 @@ export default function ApplicationCreatePage(): JSX.Element {
       case 'options':
         setCurrentStep('design');
         break;
+      case 'configure':
+        setCurrentStep('options');
+        break;
       default:
         break;
     }
@@ -118,9 +129,9 @@ export default function ApplicationCreatePage(): JSX.Element {
     setError(null);
 
     // Check if username/password is enabled
-    const hasUsernamePassword = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? true;
+    const hasUsernamePassword = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? false;
 
-    // Get selected identity providers with their full data
+    // Get selected identity providers with their full data from API
     const selectedIdentityProviders = identityProviders?.filter((idp) => integrations[idp.id]) ?? [];
 
     // Resolve the appropriate auth flow graph ID based on selected options
@@ -138,6 +149,14 @@ export default function ApplicationCreatePage(): JSX.Element {
         auth_flow_graph_id: authFlowGraphId,
         user_attributes: ['given_name', 'family_name', 'email', 'groups'],
         branding_id: brandingId,
+        inbound_auth_config: [
+          {
+            type: 'oauth2',
+            config: {
+              redirect_uris: redirectURIs,
+            } as OAuth2Config,
+          },
+        ],
       };
 
       createApplication.mutate(applicationData, {
@@ -243,6 +262,15 @@ export default function ApplicationCreatePage(): JSX.Element {
           />
         );
 
+      case 'configure':
+        return (
+          <ConfigureRedirectURIs
+            redirectURIs={redirectURIs}
+            onRedirectURIsChange={setRedirectURIs}
+            onReadyChange={(isReady) => handleStepReadyChange('configure', isReady)}
+          />
+        );
+
       default:
         return null;
     }
@@ -341,12 +369,12 @@ export default function ApplicationCreatePage(): JSX.Element {
                     </Button>
                   )}
 
-                  {currentStep === 'options' ? (
+                  {currentStep === 'configure' ? (
                     <Button
                       variant="contained"
                       sx={{minWidth: 150, bgcolor: selectedColor, '&:hover': {bgcolor: selectedColor}}}
                       onClick={handleCreateApplication}
-                      disabled={createApplication.isPending || createBranding.isPending || !stepReady.options}
+                      disabled={createApplication.isPending || createBranding.isPending || !stepReady.configure}
                     >
                       {createApplication.isPending || createBranding.isPending ? 'Creating...' : 'Create Application'}
                     </Button>

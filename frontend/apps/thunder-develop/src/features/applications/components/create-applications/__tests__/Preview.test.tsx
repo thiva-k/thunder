@@ -202,9 +202,9 @@ describe('Preview', () => {
       integrations: {},
     });
 
-    // Username/password should be enabled by default (fallback to true)
-    expect(screen.getByText('Username')).toBeInTheDocument();
-    expect(screen.getByText('Password')).toBeInTheDocument();
+    // Username/password should not be shown when integrations is empty (defaults to false)
+    expect(screen.queryByText('Username')).not.toBeInTheDocument();
+    expect(screen.queryByText('Password')).not.toBeInTheDocument();
   });
 
   it('should handle null app name', () => {
@@ -265,8 +265,48 @@ describe('Preview', () => {
       },
     });
 
-    // Should not crash, no social providers should be rendered
+    // Should not crash, no social providers should be rendered (since data is undefined)
     expect(screen.queryByRole('button', {name: /Continue with/i})).not.toBeInTheDocument();
+  });
+
+  it('should only show providers that exist in API and are selected', () => {
+    vi.mocked(useIdentityProviders).mockReturnValue({
+      data: [mockIdentityProviders[0]], // Only Google in API
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useIdentityProviders>);
+
+    renderComponent({
+      integrations: {
+        [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: true,
+        'google-idp': true,
+        // 'github-idp' is not in API, so even if selected, it won't show
+      },
+    });
+
+    // Should only show Google (which exists in API)
+    expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /Continue with GitHub/i})).not.toBeInTheDocument();
+  });
+
+  it('should not show providers that are not selected even if they exist in API', () => {
+    vi.mocked(useIdentityProviders).mockReturnValue({
+      data: mockIdentityProviders,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useIdentityProviders>);
+
+    renderComponent({
+      integrations: {
+        [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: true,
+        'google-idp': true,
+        'github-idp': false, // Not selected
+      },
+    });
+
+    // Should only show Google
+    expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: /Continue with GitHub/i})).not.toBeInTheDocument();
   });
 
   it('should render multiple social providers in order', () => {
