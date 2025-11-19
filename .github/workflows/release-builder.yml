@@ -155,10 +155,15 @@ jobs:
           database-type: ${{ matrix.database }}
           coverage-enabled: true
 
+  validate-windows:
+    name: 🪟 Validate Windows PowerShell
+    needs: build-thunder
+    uses: ./.github/workflows/windows-powershell-validation.yml
+
   build-and-package:
     name: 📦 Build and Package Release
     runs-on: ubuntu-latest
-    needs: [build-thunder, test-integration]
+    needs: [build-thunder, test-integration, validate-windows]
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@v4
