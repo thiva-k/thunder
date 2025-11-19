@@ -20,7 +20,6 @@ package ou
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -70,11 +69,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitByPath() {
 		suite.T().Fatal("OU ID is not available for path-based retrieval")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/"+pathTestOU.Handle, nil)
 	suite.Require().NoError(err)
@@ -106,11 +101,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitByPath() {
 
 // TestGetOrganizationUnitByInvalidPath tests retrieving an organization unit by invalid handle path
 func (suite *OUPathAPITestSuite) TestGetOrganizationUnitByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/nonexistent", nil)
 	suite.Require().NoError(err)
@@ -151,11 +142,7 @@ func (suite *OUPathAPITestSuite) TestUpdateOrganizationUnitByPath() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/tree/"+pathTestOU.Handle, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -200,11 +187,7 @@ func (suite *OUPathAPITestSuite) TestUpdateOrganizationUnitByInvalidPath() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/tree/nonexistent", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -246,11 +229,7 @@ func (suite *OUPathAPITestSuite) TestUpdateOrganizationUnitByPathWithInvalidData
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/tree/"+pathTestOU.Handle, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -269,11 +248,7 @@ func (suite *OUPathAPITestSuite) TestUpdateOrganizationUnitByPathWithInvalidData
 
 // TestDeleteOrganizationUnitByInvalidPath tests deleting an organization unit by invalid handle path
 func (suite *OUPathAPITestSuite) TestDeleteOrganizationUnitByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("DELETE", testServerURL+"/organization-units/tree/nonexistent", nil)
 	suite.Require().NoError(err)
@@ -323,11 +298,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitChildrenByPath() {
 		}
 	}()
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/"+pathTestOU.Handle+"/ous", nil)
 	suite.Require().NoError(err)
@@ -370,11 +341,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitChildrenByPath() {
 
 // TestGetOrganizationUnitChildrenByInvalidPath tests retrieving child organization units by invalid handle path
 func (suite *OUPathAPITestSuite) TestGetOrganizationUnitChildrenByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/nonexistent/ous", nil)
 	suite.Require().NoError(err)
@@ -406,11 +373,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitUsersByPath() {
 		suite.T().Fatal("OU ID is not available for users path-based retrieval")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/"+pathTestOU.Handle+"/users", nil)
 	suite.Require().NoError(err)
@@ -440,11 +403,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitUsersByPath() {
 
 // TestGetOrganizationUnitUsersByInvalidPath tests retrieving users by invalid handle path
 func (suite *OUPathAPITestSuite) TestGetOrganizationUnitUsersByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/nonexistent/users", nil)
 	suite.Require().NoError(err)
@@ -476,11 +435,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitGroupsByPath() {
 		suite.T().Fatal("OU ID is not available for groups path-based retrieval")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/"+pathTestOU.Handle+"/groups", nil)
 	suite.Require().NoError(err)
@@ -510,11 +465,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitGroupsByPath() {
 
 // TestGetOrganizationUnitGroupsByInvalidPath tests retrieving groups by invalid handle path
 func (suite *OUPathAPITestSuite) TestGetOrganizationUnitGroupsByInvalidPath() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/nonexistent/groups", nil)
 	suite.Require().NoError(err)
@@ -546,11 +497,7 @@ func (suite *OUPathAPITestSuite) TestGetOrganizationUnitChildrenByPathWithPagina
 		suite.T().Fatal("OU ID is not available for pagination test")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/tree/"+pathTestOU.Handle+"/ous?limit=5&offset=0", nil)
 	suite.Require().NoError(err)
@@ -585,11 +532,7 @@ func deleteOUByID(suite *OUPathAPITestSuite, id string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -617,11 +560,7 @@ func createOUForPath(suite *OUPathAPITestSuite, ouRequest CreateOURequest) (stri
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -653,11 +592,7 @@ func deleteOUForPath(suite *OUPathAPITestSuite, path string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

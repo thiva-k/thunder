@@ -20,14 +20,13 @@ package notification
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/suite"
 	"github.com/asgardeo/thunder/tests/integration/testutils"
+	"github.com/stretchr/testify/suite"
 )
 
 const (
@@ -82,11 +81,7 @@ func TestOTPAPITestSuite(t *testing.T) {
 // SetupSuite initializes the test suite
 func (ts *OTPAPITestSuite) SetupSuite() {
 	// Initialize HTTP client
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 
 	// Start mock notification server
 	ts.mockServer = testutils.NewMockNotificationServer(mockNotificationServerPort)
@@ -94,7 +89,7 @@ func (ts *OTPAPITestSuite) SetupSuite() {
 	if err != nil {
 		ts.T().Fatalf("Failed to start mock notification server: %v", err)
 	}
-	
+
 	// Wait for mock server to start
 	time.Sleep(100 * time.Millisecond)
 	ts.T().Log("Mock notification server started successfully")

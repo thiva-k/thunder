@@ -20,7 +20,6 @@ package projects
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -49,7 +48,7 @@ const (
 
 var (
 	testOU = testutils.OrganizationUnit{
-		Handle: "customers",
+		Handle: "test-customers",
 		Name:   "Customers OU",
 		Parent: nil,
 	}
@@ -84,11 +83,7 @@ func TestSilverTestSuite(t *testing.T) {
 }
 
 func (ts *SilverTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 
 	// Create organization unit
 	ouID, err := testutils.CreateOrganizationUnit(testOU)

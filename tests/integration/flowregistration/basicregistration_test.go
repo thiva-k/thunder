@@ -60,16 +60,13 @@ var (
 	}
 )
 
-var (
+type BasicRegistrationFlowTestSuite struct {
+	suite.Suite
+	config           *TestSuiteConfig
+	userSchemaID     string
 	testAppID        string
 	testOUID         string
 	testUserTypeName string
-)
-
-type BasicRegistrationFlowTestSuite struct {
-	suite.Suite
-	config       *TestSuiteConfig
-	userSchemaID string
 }
 
 func TestBasicRegistrationFlowTestSuite(t *testing.T) {
@@ -85,16 +82,16 @@ func (ts *BasicRegistrationFlowTestSuite) SetupSuite() {
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
-	testOUID = ouID
+	ts.testOUID = ouID
 
 	// Create test user schema
-	testUserSchema.OrganizationUnitId = testOUID
+	testUserSchema.OrganizationUnitId = ts.testOUID
 	schemaID, err := testutils.CreateUserType(testUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
 	}
 	ts.userSchemaID = schemaID
-	testUserTypeName = testUserSchema.Name
+	ts.testUserTypeName = testUserSchema.Name
 
 	// Create test application with allowed user types
 	testApp := testutils.Application{
@@ -113,16 +110,16 @@ func (ts *BasicRegistrationFlowTestSuite) SetupSuite() {
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)
 	}
-	testAppID = appID
+	ts.testAppID = appID
 
 	// Store original app config (this will be overridden, but keeping for compatibility)
-	ts.config.OriginalAppConfig, err = getAppConfig(testAppID)
+	ts.config.OriginalAppConfig, err = getAppConfig(ts.testAppID)
 	if err != nil {
 		ts.T().Fatalf("Failed to get original app config during setup: %v", err)
 	}
 
 	// Update app config for registration flow
-	err = updateAppConfig(testAppID, "auth_flow_config_basic", "registration_flow_config_basic")
+	err = updateAppConfig(ts.testAppID, "auth_flow_config_basic", "registration_flow_config_basic")
 	if err != nil {
 		ts.T().Fatalf("Failed to update app config for basic flow: %v", err)
 	}
@@ -135,15 +132,15 @@ func (ts *BasicRegistrationFlowTestSuite) TearDownSuite() {
 	}
 
 	// Delete test application
-	if testAppID != "" {
-		if err := testutils.DeleteApplication(testAppID); err != nil {
+	if ts.testAppID != "" {
+		if err := testutils.DeleteApplication(ts.testAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
 		}
 	}
 
 	// Delete test organization unit
-	if testOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(testOUID); err != nil {
+	if ts.testOUID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.testOUID); err != nil {
 			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
@@ -161,7 +158,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSuccess() {
 	username := generateUniqueUsername("reguser")
 
 	// Step 1: Initialize the registration flow
-	flowStep, err := initiateRegistrationFlow(testAppID, nil)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, nil)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -221,8 +218,8 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSuccess() {
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
 	// Step 5: Verify the user was created by searching via the user API
@@ -241,7 +238,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSuccess() {
 func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowDuplicateUser() {
 	// Create a test user first
 	testUser := testutils.User{
-		OrganizationUnit: testOUID,
+		OrganizationUnit: ts.testOUID,
 		Type:             testUserSchema.Name,
 		Attributes: json.RawMessage(`{
 			"username": "duplicateuser",
@@ -259,7 +256,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowDuplicateUser
 	ts.config.CreatedUserIDs = append(ts.config.CreatedUserIDs, userIDs...)
 
 	// Step 1: Initialize the registration flow
-	flowStep, err := initiateRegistrationFlow(testAppID, nil)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, nil)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -285,7 +282,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowDuplicateUser
 
 func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowInitialInvalidInput() {
 	// Step 1: Initialize the registration flow
-	flowStep, err := initiateRegistrationFlow(testAppID, nil)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, nil)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -348,8 +345,8 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowInitialInvali
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
 	// Step 7: Verify the user was created by searching via the user API
@@ -378,7 +375,7 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSingleRequest
 		"lastName":  "Request",
 	}
 
-	flowStep, err := initiateRegistrationFlow(testAppID, inputs)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, inputs)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow with inputs: %v", err)
 	}
@@ -396,8 +393,8 @@ func (ts *BasicRegistrationFlowTestSuite) TestBasicRegistrationFlowSingleRequest
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(testUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
 	// Step 3: Verify the user was created by searching via the user API

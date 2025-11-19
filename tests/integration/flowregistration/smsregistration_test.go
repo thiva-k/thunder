@@ -70,6 +70,8 @@ type SMSRegistrationFlowTestSuite struct {
 	config       *TestSuiteConfig
 	mockServer   *testutils.MockNotificationServer
 	userSchemaID string
+	testAppID    string
+	testOUID     string
 }
 
 func TestSMSRegistrationFlowTestSuite(t *testing.T) {
@@ -85,10 +87,10 @@ func (ts *SMSRegistrationFlowTestSuite) SetupSuite() {
 	if err != nil {
 		ts.T().Fatalf("Failed to create test organization unit during setup: %v", err)
 	}
-	testOUID = ouID
+	ts.testOUID = ouID
 
 	// Create test user schema for SMS tests
-	smsRegTestUserSchema.OrganizationUnitId = testOUID
+	smsRegTestUserSchema.OrganizationUnitId = ts.testOUID
 	schemaID, err := testutils.CreateUserType(smsRegTestUserSchema)
 	if err != nil {
 		ts.T().Fatalf("Failed to create test user schema during setup: %v", err)
@@ -112,7 +114,7 @@ func (ts *SMSRegistrationFlowTestSuite) SetupSuite() {
 	if err != nil {
 		ts.T().Fatalf("Failed to create test application during setup: %v", err)
 	}
-	testAppID = appID
+	ts.testAppID = appID
 
 	// Start mock notification server
 	ts.mockServer = testutils.NewMockNotificationServer(mockNotificationServerPort)
@@ -124,7 +126,7 @@ func (ts *SMSRegistrationFlowTestSuite) SetupSuite() {
 	ts.T().Log("Mock notification server started successfully")
 
 	// Store original app config (this will be the created app config)
-	ts.config.OriginalAppConfig, err = getAppConfig(testAppID)
+	ts.config.OriginalAppConfig, err = getAppConfig(ts.testAppID)
 	if err != nil {
 		ts.T().Fatalf("Failed to get original app config during setup: %v", err)
 	}
@@ -145,15 +147,15 @@ func (ts *SMSRegistrationFlowTestSuite) TearDownSuite() {
 	}
 
 	// Delete test application
-	if testAppID != "" {
-		if err := testutils.DeleteApplication(testAppID); err != nil {
+	if ts.testAppID != "" {
+		if err := testutils.DeleteApplication(ts.testAppID); err != nil {
 			ts.T().Logf("Failed to delete test application during teardown: %v", err)
 		}
 	}
 
 	// Delete test organization unit
-	if testOUID != "" {
-		if err := testutils.DeleteOrganizationUnit(testOUID); err != nil {
+	if ts.testOUID != "" {
+		if err := testutils.DeleteOrganizationUnit(ts.testOUID); err != nil {
 			ts.T().Logf("Failed to delete test organization unit during teardown: %v", err)
 		}
 	}
@@ -168,7 +170,7 @@ func (ts *SMSRegistrationFlowTestSuite) TearDownSuite() {
 
 func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber() {
 	// Update app to use SMS flow
-	err := updateAppConfig(testAppID, "auth_flow_config_sms", "registration_flow_config_sms")
+	err := updateAppConfig(ts.testAppID, "auth_flow_config_sms", "registration_flow_config_sms")
 	if err != nil {
 		ts.T().Fatalf("Failed to update app config for SMS flow: %v", err)
 	}
@@ -177,7 +179,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber(
 	mobileNumber := generateUniqueMobileNumber()
 
 	// Step 1: Initialize the registration flow by calling the flow execution API
-	flowStep, err := initiateRegistrationFlow(testAppID, nil)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, nil)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -272,8 +274,8 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber(
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
 	// Step 5: Verify the user was created by searching via the user API
@@ -291,7 +293,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber(
 
 func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithUsername() {
 	// Update app to use SMS flow with username
-	err := updateAppConfig(testAppID, "auth_flow_config_sms_with_username", "registration_flow_config_sms_with_username")
+	err := updateAppConfig(ts.testAppID, "auth_flow_config_sms_with_username", "registration_flow_config_sms_with_username")
 	if err != nil {
 		ts.T().Fatalf("Failed to update app config for SMS flow with username: %v", err)
 	}
@@ -300,7 +302,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithUsername() {
 	username := generateUniqueUsername("smsreguser")
 
 	// Step 1: Initialize the registration flow
-	flowStep, err := initiateRegistrationFlow(testAppID, nil)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, nil)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -383,8 +385,8 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithUsername() {
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
 	// Step 5: Verify the user was created by searching via the user API
@@ -402,7 +404,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithUsername() {
 
 func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 	// Update app to use SMS flow
-	err := updateAppConfig(testAppID, "auth_flow_config_sms", "registration_flow_config_sms")
+	err := updateAppConfig(ts.testAppID, "auth_flow_config_sms", "registration_flow_config_sms")
 	if err != nil {
 		ts.T().Fatalf("Failed to update app config for SMS flow: %v", err)
 	}
@@ -415,7 +417,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 		"mobileNumber": mobileNumber,
 	}
 
-	flowStep, err := initiateRegistrationFlow(testAppID, inputs)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, inputs)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -454,7 +456,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 
 func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowSingleRequestWithMobileNumber() {
 	// Update app to use SMS flow
-	err := updateAppConfig(testAppID, "auth_flow_config_sms", "registration_flow_config_sms")
+	err := updateAppConfig(ts.testAppID, "auth_flow_config_sms", "registration_flow_config_sms")
 	if err != nil {
 		ts.T().Fatalf("Failed to update app config for SMS flow: %v", err)
 	}
@@ -473,7 +475,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowSingleRequestWith
 		"email":        fmt.Sprintf("%s@example.com", mobileNumber),
 	}
 
-	flowStep, err := initiateRegistrationFlow(testAppID, inputs)
+	flowStep, err := initiateRegistrationFlow(ts.testAppID, inputs)
 	if err != nil {
 		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
 	}
@@ -514,8 +516,8 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowSingleRequestWith
 
 	// Validate JWT contains expected user type and OU ID
 	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
+	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
+	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
 	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
 
 	// Step 3: Verify the user was created by searching via the user API

@@ -20,7 +20,6 @@ package authn
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"log"
@@ -125,11 +124,7 @@ func TestCredentialsAuthTestSuite(t *testing.T) {
 }
 
 func (suite *CredentialsAuthTestSuite) SetupSuite() {
-	suite.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	suite.client = testutils.GetHTTPClient()
 	suite.users = make(map[string]string)
 	suite.userSchemaIDs = make(map[string]string)
 

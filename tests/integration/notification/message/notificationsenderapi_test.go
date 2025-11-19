@@ -20,13 +20,13 @@ package notification
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -236,11 +236,7 @@ func (ts *NotificationSenderAPITestSuite) TestNotificationSenderListing() {
 	}
 
 	// Configure the HTTP client to skip TLS verification
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Send the request
 	resp, err := client.Do(req)
@@ -309,11 +305,7 @@ func (ts *NotificationSenderAPITestSuite) TestNotificationSenderUpdate() {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -349,11 +341,7 @@ func (ts *NotificationSenderAPITestSuite) TestNotificationSenderCreateDuplicate(
 		ts.T().Fatalf("Failed to create get request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -454,11 +442,7 @@ func (ts *NotificationSenderAPITestSuite) TestNotificationSenderInvalidProvider(
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -477,11 +461,7 @@ func retrieveAndValidateSenderDetails(ts *NotificationSenderAPITestSuite, expect
 		ts.T().Fatalf("Failed to create get request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -552,11 +532,7 @@ func deleteSender(senderID string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -674,11 +650,7 @@ func (ts *NotificationSenderAPITestSuite) TestNotificationSenderInvalidProviderP
 
 			req.Header.Set("Content-Type", "application/json")
 
-			client := &http.Client{
-				Transport: &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				},
-			}
+			client := testutils.GetHTTPClient()
 
 			resp, err := client.Do(req)
 			ts.Require().NoError(err, "Failed to send request")
@@ -704,11 +676,7 @@ func createSenderWithRequest(sender NotificationSenderRequest) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

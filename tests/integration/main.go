@@ -57,7 +57,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Step 4: Start the server
+	// Step 4: Run setup.sh
+	// This starts server without security, runs bootstrap scripts, and stops server
+	fmt.Println("Running bootstrap scripts...")
+	err = testutils.RunSetupScript()
+	if err != nil {
+		fmt.Printf("Failed to run setup script: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Step 5: Start server
+	fmt.Println("Starting server with security enabled...")
 	err = testutils.StartServer(serverPort, zipFilePattern)
 	if err != nil {
 		fmt.Printf("Failed to start server: %v\n", err)
@@ -69,23 +79,34 @@ func main() {
 	fmt.Println("Waiting for the server to start...")
 	time.Sleep(5 * time.Second)
 
-	// Step 5: Run all tests
+	// Step 6: Obtain admin access token once for all test packages
+	fmt.Println("Obtaining admin access token...")
+	err = testutils.ObtainAdminAccessToken()
+	if err != nil {
+		fmt.Printf("Failed to obtain admin access token: %v\n", err)
+		testutils.StopServer()
+		os.Exit(1)
+	}
+
+	// Step 7: Run all tests
 	err = runTests()
 	if err != nil {
 		fmt.Printf("there are test failures: %v\n", err)
 		testutils.StopServer()
 		os.Exit(1)
 	}
+
+	fmt.Println("All tests completed successfully!")
 }
 
 func initTests() {
-	// Read database type from environment variable  
-	dbType := os.Getenv("DB_TYPE")  
-	if dbType == "" {  
-		dbType = "sqlite" // Default to SQLite  
-	}  
+	// Read database type from environment variable
+	dbType := os.Getenv("DB_TYPE")
+	if dbType == "" {
+		dbType = "sqlite" // Default to SQLite
+	}
 	fmt.Printf("Database type: %s\n", dbType)
-	
+
 	zipFilePattern = testutils.GetZipFilePattern()
 	if zipFilePattern == "" {
 		fmt.Println("Failed to determine the zip file pattern.")

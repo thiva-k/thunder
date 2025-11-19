@@ -26,24 +26,20 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sync"
 )
 
 const (
 	TestServerURL = "https://localhost:8095"
 )
 
-var (
-	defaultOuID    string
-	defaultOuOnce  sync.Once
-	defaultOuIDErr error
-)
-
-// getHTTPClient returns a configured HTTP client for test requests
-func getHTTPClient() *http.Client {
+// GetHTTPClient returns a configured HTTP client for test requests with automatic auth injection
+func GetHTTPClient() *http.Client {
 	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		Transport: &authTransport{
+			base: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+			getToken: GetAccessToken,
 		},
 	}
 }
@@ -65,7 +61,7 @@ func CreateUserType(schema UserSchema) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -107,7 +103,7 @@ func CreateUser(user User) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -143,7 +139,7 @@ func DeleteUserType(schemaID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to delete user schema: %w", err)
@@ -165,7 +161,7 @@ func DeleteUser(userID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
@@ -258,7 +254,7 @@ func CreateApplication(app Application) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -294,7 +290,7 @@ func DeleteApplication(appID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to delete application: %w", err)
@@ -321,7 +317,7 @@ func CreateOrganizationUnit(ou OrganizationUnit) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -357,7 +353,7 @@ func DeleteOrganizationUnit(ouID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to delete organization unit: %w", err)
@@ -378,7 +374,7 @@ func GetOrganizationUnit(ouID string) (*OrganizationUnit, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
@@ -412,7 +408,7 @@ func CreateIDP(idp IDP) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -448,7 +444,7 @@ func DeleteIDP(idpID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to delete identity provider: %w", err)
@@ -475,7 +471,7 @@ func GetIDP(idpID string) (*IDP, error) {
 
 	req.Header.Set("Accept", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("IDP get request failed: %w", err)
@@ -514,7 +510,7 @@ func UpdateIDP(idpID string, idp IDP) error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("IDP update request failed: %w", err)
@@ -541,7 +537,7 @@ func GetUserAttributes(user User) (map[string]interface{}, error) {
 
 // FindUserByAttribute retrieves all users and returns the user with a matching attribute key and value
 func FindUserByAttribute(key, value string) (*User, error) {
-	client := getHTTPClient()
+	client := GetHTTPClient()
 
 	req, err := http.NewRequest("GET", TestServerURL+"/users", nil)
 	if err != nil {
@@ -592,7 +588,7 @@ func CreateGroup(group Group) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to send request: %w", err)
@@ -624,7 +620,7 @@ func DeleteGroup(groupID string) error {
 		return fmt.Errorf("failed to create delete request: %w", err)
 	}
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to delete group: %w", err)
@@ -650,7 +646,7 @@ func CreateRole(role Role) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := GetHTTPClient()
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to create role: %w", err)
@@ -675,7 +671,7 @@ func CreateRole(role Role) (string, error) {
 
 // DeleteRole deletes a role by ID
 func DeleteRole(roleID string) error {
-	client := getHTTPClient()
+	client := GetHTTPClient()
 
 	// Step 1: Get all assignments for this role
 	assignmentsResp, err := getRoleAssignments(roleID, client)
