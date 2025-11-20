@@ -192,14 +192,14 @@ func (tb *tokenBuilder) BuildRefreshToken(ctx *RefreshTokenBuildContext) (*model
 		Scopes:    ctx.Scopes,
 		ClientID:  ctx.ClientID,
 		Subject:   ctx.AccessTokenSubject,
-		Audience:  ctx.AccessTokenAudience,
+		Audience:  tokenConfig.Issuer,
 	}
 
 	tb.appendUserTypeAndOU(tokenDTO, claims, ctx.UserType, ctx.OuID, ctx.OuName, ctx.OuHandle)
 
 	token, iat, err := tb.jwtService.GenerateJWT(
 		ctx.ClientID,
-		ctx.ClientID,
+		tokenConfig.Issuer,
 		tokenConfig.Issuer,
 		tokenConfig.ValidityPeriod,
 		claims,
