@@ -58,10 +58,10 @@ export default function SignInBox(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState(false);
-  const [emailErrorMessage, setEmailErrorMessage] = useState('');
+  const [usernameError, setUsernameError] = useState(false);
+  const [usernameErrorMessage, setUsernameErrorMessage] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -81,18 +81,18 @@ export default function SignInBox(): JSX.Element {
   const validateInputs = () => {
     let isValid = true;
 
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setEmailError(true);
-      setEmailErrorMessage('Please enter a valid email address.');
+    if (!username || username.trim().length === 0) {
+      setUsernameError(true);
+      setUsernameErrorMessage('Username is required.');
       isValid = false;
     } else {
-      setEmailError(false);
-      setEmailErrorMessage('');
+      setUsernameError(false);
+      setUsernameErrorMessage('');
     }
 
-    if (!password || password.length < 6) {
+    if (!password) {
       setPasswordError(true);
-      setPasswordErrorMessage('Password must be at least 6 characters long.');
+      setPasswordErrorMessage('Password is required.');
       isValid = false;
     } else {
       setPasswordError(false);
@@ -119,8 +119,8 @@ export default function SignInBox(): JSX.Element {
       <StyledPaper variant="outlined">
         <SignIn
           onError={(error) => {
-            setEmailError(true);
-            setEmailErrorMessage(error?.message || 'Authentication failed');
+            setUsernameError(true);
+            setUsernameErrorMessage(error?.message || 'Authentication failed');
           }}
         >
           {({onSubmit, isLoading, components, error, isInitialized}) => (
@@ -160,7 +160,7 @@ export default function SignInBox(): JSX.Element {
                                   onSubmit({
                                     actionId: 'basic_auth',
                                     inputs: {
-                                      username: email,
+                                      username,
                                       password,
                                     },
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -173,23 +173,23 @@ export default function SignInBox(): JSX.Element {
                               sx={{display: 'flex', flexDirection: 'column', width: '100%', gap: 2, mb: 2, p: 3}}
                             >
                               <FormControl>
-                                <FormLabel htmlFor="email">Email</FormLabel>
+                                <FormLabel htmlFor="username">Username</FormLabel>
                                 <TextField
-                                  error={emailError}
-                                  helperText={emailErrorMessage}
-                                  id="email"
-                                  type="email"
-                                  name="email"
-                                  placeholder="your@email.com"
-                                  autoComplete="email"
+                                  error={usernameError}
+                                  helperText={usernameErrorMessage}
+                                  id="username"
+                                  type="text"
+                                  name="username"
+                                  placeholder="Enter your username"
+                                  autoComplete="username"
                                   autoFocus
                                   required
                                   fullWidth
                                   variant="outlined"
-                                  color={emailError ? 'error' : 'primary'}
+                                  color={usernameError ? 'error' : 'primary'}
                                   disabled={isLoading}
-                                  value={email}
-                                  onChange={(e) => setEmail(e.target.value)}
+                                  value={username}
+                                  onChange={(e) => setUsername(e.target.value)}
                                 />
                               </FormControl>
                               <FormControl>
