@@ -340,5 +340,15 @@ func getAuthenticatedUserForOIDC(o oidcAuthExecutorInterface, authService authno
 	//  when the support is implemented.
 	authenticatedUser.Attributes = userClaims
 
+	// Append email to runtime data if available.
+	if email, ok := userClaims["email"]; ok {
+		if emailStr, ok := email.(string); ok && emailStr != "" {
+			if execResp.RuntimeData == nil {
+				execResp.RuntimeData = make(map[string]string)
+			}
+			execResp.RuntimeData["email"] = emailStr
+		}
+	}
+
 	return &authenticatedUser, nil
 }
