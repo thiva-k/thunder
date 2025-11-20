@@ -140,6 +140,7 @@ func (suite *OAuthExecutorTestSuite) TestExecute_CodeProvided_AuthenticatesUser(
 	assert.True(suite.T(), resp.AuthenticatedUser.IsAuthenticated)
 	assert.Equal(suite.T(), "user-123", resp.AuthenticatedUser.UserID)
 	assert.Equal(suite.T(), "ou-123", resp.AuthenticatedUser.OrganizationUnitID)
+	assert.Equal(suite.T(), "test@example.com", resp.RuntimeData["email"])
 	suite.mockOAuthService.AssertExpectations(suite.T())
 }
 
@@ -740,4 +741,155 @@ func (suite *OAuthExecutorTestSuite) TestCheckInputData_CodeNotProvided() {
 
 	assert.True(suite.T(), result)
 	assert.NotEmpty(suite.T(), execResp.RequiredData)
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmail() {
+	userInfo := map[string]string{
+		"sub":      "user-sub-123",
+		"email":    "test@example.com",
+		"name":     "Test User",
+		"username": "testuser",
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		RuntimeData: make(map[string]string),
+	}
+
+	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+
+	assert.NotNil(suite.T(), attributes)
+	assert.Equal(suite.T(), "test@example.com", attributes["email"])
+	assert.Equal(suite.T(), "Test User", attributes["name"])
+	assert.Equal(suite.T(), "user-123", attributes["user_id"])
+	assert.NotContains(suite.T(), attributes, "sub")
+	assert.NotContains(suite.T(), attributes, "username")
+	assert.Equal(suite.T(), "test@example.com", execResp.RuntimeData["email"])
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithoutEmail() {
+	userInfo := map[string]string{
+		"sub":  "user-sub-123",
+		"name": "Test User",
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		RuntimeData: make(map[string]string),
+	}
+
+	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+
+	assert.NotNil(suite.T(), attributes)
+	assert.Equal(suite.T(), "Test User", attributes["name"])
+	assert.Equal(suite.T(), "user-123", attributes["user_id"])
+	assert.NotContains(suite.T(), attributes, "email")
+	assert.NotContains(suite.T(), execResp.RuntimeData, "email")
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmptyEmail() {
+	userInfo := map[string]string{
+		"sub":   "user-sub-123",
+		"email": "",
+		"name":  "Test User",
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		RuntimeData: make(map[string]string),
+	}
+
+	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+
+	assert.NotNil(suite.T(), attributes)
+	assert.Equal(suite.T(), "", attributes["email"])
+	assert.NotContains(suite.T(), execResp.RuntimeData, "email")
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithoutUserID() {
+	userInfo := map[string]string{
+		"sub":   "user-sub-123",
+		"email": "test@example.com",
+		"name":  "Test User",
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		RuntimeData: make(map[string]string),
+	}
+
+	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "", execResp)
+
+	assert.NotNil(suite.T(), attributes)
+	assert.Equal(suite.T(), "test@example.com", attributes["email"])
+	assert.NotContains(suite.T(), attributes, "user_id")
+	assert.Equal(suite.T(), "test@example.com", execResp.RuntimeData["email"])
+}
+
+func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_RegistrationFlow_WithEmail() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeRegistration,
+		UserInputData: map[string]string{
+			"code": "auth_code_123",
+		},
+		NodeProperties: map[string]interface{}{
+			"idpId": "idp-123",
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	tokenResp := &authnoauth.TokenResponse{
+		AccessToken: "access_token_123",
+		TokenType:   "Bearer",
+		Scope:       "openid profile email",
+		ExpiresIn:   3600,
+	}
+
+	userInfo := map[string]interface{}{
+		"sub":   "new-user-sub",
+		"email": "newuser@example.com",
+		"name":  "New User",
+	}
+
+	suite.mockOAuthService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
+		Return(tokenResp, nil)
+	suite.mockOAuthService.On("FetchUserInfo", "idp-123", "access_token_123").
+		Return(userInfo, nil)
+	suite.mockOAuthService.On("GetInternalUser", "new-user-sub").
+		Return(nil, &serviceerror.ServiceError{
+			Code: authncm.ErrorUserNotFound.Code,
+			Type: serviceerror.ClientErrorType,
+		})
+
+	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+	assert.False(suite.T(), execResp.AuthenticatedUser.IsAuthenticated)
+	assert.Equal(suite.T(), "new-user-sub", execResp.RuntimeData["sub"])
+	assert.Equal(suite.T(), "newuser@example.com", execResp.RuntimeData["email"])
+	assert.Equal(suite.T(), "newuser@example.com", execResp.AuthenticatedUser.Attributes["email"])
+	suite.mockOAuthService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmail_NilRuntimeData() {
+	userInfo := map[string]string{
+		"sub":   "user-sub-123",
+		"email": "test@example.com",
+		"name":  "Test User",
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		RuntimeData: nil, // Explicitly nil
+	}
+
+	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+
+	assert.NotNil(suite.T(), attributes)
+	assert.Equal(suite.T(), "test@example.com", attributes["email"])
+	assert.Equal(suite.T(), "Test User", attributes["name"])
+	assert.Equal(suite.T(), "user-123", attributes["user_id"])
+	assert.NotNil(suite.T(), execResp.RuntimeData, "RuntimeData should be initialized")
+	assert.Equal(suite.T(), "test@example.com", execResp.RuntimeData["email"])
 }

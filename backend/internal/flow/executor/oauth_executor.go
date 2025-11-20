@@ -360,7 +360,7 @@ func (o *oAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowcore.NodeCon
 
 				return &authncm.AuthenticatedUser{
 					IsAuthenticated: false,
-					Attributes:      o.getUserAttributes(userInfo, ""),
+					Attributes:      o.getUserAttributes(userInfo, "", execResp),
 				}, nil
 			} else {
 				execResp.Status = flowcm.ExecFailure
@@ -400,7 +400,7 @@ func (o *oAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowcore.NodeCon
 		UserID:             userID,
 		OrganizationUnitID: user.OrganizationUnit,
 		UserType:           user.Type,
-		Attributes:         o.getUserAttributes(userInfo, userID),
+		Attributes:         o.getUserAttributes(userInfo, userID, execResp),
 	}
 
 	return &authenticatedUser, nil
@@ -408,7 +408,8 @@ func (o *oAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowcore.NodeCon
 
 // getUserAttributes extracts user attributes from the user info map, excluding certain keys.
 // TODO: Need to convert attributes as per the IDP to local attribute mapping when the support is implemented.
-func (o *oAuthExecutor) getUserAttributes(userInfo map[string]string, userID string) map[string]interface{} {
+func (o *oAuthExecutor) getUserAttributes(userInfo map[string]string, userID string,
+	execResp *flowcm.ExecutorResponse) map[string]interface{} {
 	attributes := make(map[string]interface{})
 	for key, value := range userInfo {
 		if key != "username" && key != "sub" {
@@ -417,6 +418,16 @@ func (o *oAuthExecutor) getUserAttributes(userInfo map[string]string, userID str
 	}
 	if userID != "" {
 		attributes["user_id"] = userID
+	}
+
+	// Append email to runtime data if available.
+	if email, ok := attributes["email"]; ok {
+		if emailStr, ok := email.(string); ok && emailStr != "" {
+			if execResp.RuntimeData == nil {
+				execResp.RuntimeData = make(map[string]string)
+			}
+			execResp.RuntimeData["email"] = emailStr
+		}
 	}
 
 	return attributes
