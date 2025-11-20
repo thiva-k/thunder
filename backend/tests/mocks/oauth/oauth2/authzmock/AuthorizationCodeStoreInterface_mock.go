@@ -139,22 +139,24 @@ func (_c *AuthorizationCodeStoreInterfaceMock_ExpireAuthorizationCode_Call) RunA
 }
 
 // GetAuthorizationCode provides a mock function for the type AuthorizationCodeStoreInterfaceMock
-func (_mock *AuthorizationCodeStoreInterfaceMock) GetAuthorizationCode(clientID string, authCode string) (authz.AuthorizationCode, error) {
+func (_mock *AuthorizationCodeStoreInterfaceMock) GetAuthorizationCode(clientID string, authCode string) (*authz.AuthorizationCode, error) {
 	ret := _mock.Called(clientID, authCode)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAuthorizationCode")
 	}
 
-	var r0 authz.AuthorizationCode
+	var r0 *authz.AuthorizationCode
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, string) (authz.AuthorizationCode, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string) (*authz.AuthorizationCode, error)); ok {
 		return returnFunc(clientID, authCode)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, string) authz.AuthorizationCode); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, string) *authz.AuthorizationCode); ok {
 		r0 = returnFunc(clientID, authCode)
 	} else {
-		r0 = ret.Get(0).(authz.AuthorizationCode)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*authz.AuthorizationCode)
+		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, string) error); ok {
 		r1 = returnFunc(clientID, authCode)
@@ -194,12 +196,12 @@ func (_c *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call) Run(run
 	return _c
 }
 
-func (_c *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call) Return(authorizationCode authz.AuthorizationCode, err error) *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call {
+func (_c *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call) Return(authorizationCode *authz.AuthorizationCode, err error) *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call {
 	_c.Call.Return(authorizationCode, err)
 	return _c
 }
 
-func (_c *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call) RunAndReturn(run func(clientID string, authCode string) (authz.AuthorizationCode, error)) *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call {
+func (_c *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call) RunAndReturn(run func(clientID string, authCode string) (*authz.AuthorizationCode, error)) *AuthorizationCodeStoreInterfaceMock_GetAuthorizationCode_Call {
 	_c.Call.Return(run)
 	return _c
 }

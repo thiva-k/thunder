@@ -26,7 +26,6 @@ import (
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
-	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/user"
 )
@@ -267,32 +266,29 @@ func BuildOIDCClaimsFromScopes(
 }
 
 // FetchUserAttributesAndGroups fetches user attributes and groups from the user service.
-// It returns user attributes, user groups, user type, ouId, and an error if any.
+// It returns user attributes, user groups, and an error if any.
 // Callers should log errors with their own context.
-func FetchUserAttributesAndGroups(
-	userService user.UserServiceInterface,
-	userID string,
-	includeGroups bool,
-) (map[string]interface{}, []string, string, string, error) {
+func FetchUserAttributesAndGroups(userService user.UserServiceInterface, userID string,
+	includeGroups bool) (map[string]interface{}, []string, error) {
 	user, svcErr := userService.GetUser(userID)
 	if svcErr != nil {
-		return nil, nil, "", "", fmt.Errorf("failed to fetch user: %s", svcErr.Error)
+		return nil, nil, fmt.Errorf("failed to fetch user: %s", svcErr.Error)
 	}
 
 	var attrs map[string]interface{}
 	if user.Attributes != nil {
 		if err := json.Unmarshal(user.Attributes, &attrs); err != nil {
-			return nil, nil, "", "", fmt.Errorf("failed to unmarshal user attributes: %w", err)
+			return nil, nil, fmt.Errorf("failed to unmarshal user attributes: %w", err)
 		}
 	}
 
 	if !includeGroups {
-		return attrs, []string{}, user.Type, user.OrganizationUnit, nil
+		return attrs, []string{}, nil
 	}
 
 	groups, svcErr := userService.GetUserGroups(userID, constants.DefaultGroupListLimit, 0)
 	if svcErr != nil {
-		return nil, nil, "", "", fmt.Errorf("failed to fetch user groups: %s", svcErr.Error)
+		return nil, nil, fmt.Errorf("failed to fetch user groups: %s", svcErr.Error)
 	}
 
 	userGroups := make([]string, 0, len(groups.Groups))
@@ -300,16 +296,5 @@ func FetchUserAttributesAndGroups(
 		userGroups = append(userGroups, group.Name)
 	}
 
-	return attrs, userGroups, user.Type, user.OrganizationUnit, nil
-}
-
-// FetchUserOU fetches the organization unit details for a given OU ID. It returns the OU details
-// and an error if any. Callers should log errors with their own context.
-func FetchUserOU(ouService ou.OrganizationUnitServiceInterface, ouID string) (*ou.OrganizationUnit, error) {
-	ouEntity, svcErr := ouService.GetOrganizationUnit(ouID)
-	if svcErr != nil {
-		return nil, fmt.Errorf("failed to fetch organization unit: %s", svcErr.Error)
-	}
-
-	return &ouEntity, nil
+	return attrs, userGroups, nil
 }

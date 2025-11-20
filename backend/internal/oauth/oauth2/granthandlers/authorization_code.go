@@ -29,7 +29,6 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/pkce"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice"
-	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 	"github.com/asgardeo/thunder/internal/user"
@@ -39,21 +38,18 @@ import (
 type authorizationCodeGrantHandler struct {
 	authzService authz.AuthorizeServiceInterface
 	userService  user.UserServiceInterface
-	ouService    ou.OrganizationUnitServiceInterface
 	tokenBuilder tokenservice.TokenBuilderInterface
 }
 
 // newAuthorizationCodeGrantHandler creates a new instance of AuthorizationCodeGrantHandler.
 func newAuthorizationCodeGrantHandler(
 	userService user.UserServiceInterface,
-	ouService ou.OrganizationUnitServiceInterface,
 	authzService authz.AuthorizeServiceInterface,
 	tokenBuilder tokenservice.TokenBuilderInterface,
 ) GrantHandlerInterface {
 	return &authorizationCodeGrantHandler{
 		authzService: authzService,
 		userService:  userService,
-		ouService:    ouService,
 		tokenBuilder: tokenBuilder,
 	}
 }
@@ -139,11 +135,8 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 				slices.Contains(oauthApp.Token.IDToken.UserAttributes, constants.UserAttributeGroups))))
 
 	// Fetch user attributes and groups
-	attrs, userGroups, userType, ouID, err := tokenservice.FetchUserAttributesAndGroups(
-		h.userService,
-		authCode.AuthorizedUserID,
-		includeGroups,
-	)
+	attrs, userGroups, err := tokenservice.FetchUserAttributesAndGroups(h.userService,
+		authCode.AuthorizedUserID, includeGroups)
 	if err != nil {
 		logger.Error("Failed to fetch user attributes and groups",
 			log.String("userID", authCode.AuthorizedUserID), log.Error(err))
@@ -155,8 +148,8 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 
 	audience := tokenservice.DetermineAudience("", authCode.Resource, "", authCode.ClientID)
 
-	// Prepare access token build context
-	accessTokenCtx := &tokenservice.AccessTokenBuildContext{
+	// Generate access token using tokenBuilder (attributes will be filtered in BuildAccessToken)
+	accessToken, err := h.tokenBuilder.BuildAccessToken(&tokenservice.AccessTokenBuildContext{
 		Subject:        authCode.AuthorizedUserID,
 		Audience:       audience,
 		ClientID:       tokenRequest.ClientID,
@@ -165,38 +158,11 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 		UserGroups:     userGroups,
 		GrantType:      string(constants.GrantTypeAuthorizationCode),
 		OAuthApp:       oauthApp,
-	}
-
-	// Fetch user OU details if available
-	ouName := ""
-	ouHandle := ""
-	if ouID != "" {
-		ouDetails, err := tokenservice.FetchUserOU(h.ouService, ouID)
-		if err != nil {
-			logger.Error("Failed to fetch user OU details", log.String("userID", authCode.AuthorizedUserID),
-				log.String("ouID", ouID), log.Error(err))
-			return nil, &model.ErrorResponse{
-				Error:            constants.ErrorServerError,
-				ErrorDescription: "Something went wrong while fetching user organization unit details",
-			}
-		}
-
-		ouName = ouDetails.Name
-		ouHandle = ouDetails.Handle
-
-		// Set OU details in access token context
-		accessTokenCtx.OuID = ouID
-		accessTokenCtx.OuName = ouName
-		accessTokenCtx.OuHandle = ouHandle
-	}
-
-	// Set user type if available
-	if userType != "" {
-		accessTokenCtx.UserType = userType
-	}
-
-	// Generate access token using tokenBuilder (attributes will be filtered in BuildAccessToken)
-	accessToken, err := h.tokenBuilder.BuildAccessToken(accessTokenCtx)
+		UserType:       authCode.AuthorizedUserType,
+		OuID:           authCode.UserOUID,
+		OuName:         authCode.UserOUName,
+		OuHandle:       authCode.UserOUHandle,
+	})
 	if err != nil {
 		return nil, &model.ErrorResponse{
 			Error:            constants.ErrorServerError,
@@ -211,7 +177,7 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 
 	// Generate ID token if 'openid' scope is present
 	if slices.Contains(authorizedScopes, "openid") {
-		idTokenCtx := &tokenservice.IDTokenBuildContext{
+		idToken, err := h.tokenBuilder.BuildIDToken(&tokenservice.IDTokenBuildContext{
 			Subject:        authCode.AuthorizedUserID,
 			Audience:       tokenRequest.ClientID,
 			Scopes:         authorizedScopes,
@@ -219,25 +185,11 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 			UserGroups:     userGroups,
 			AuthTime:       time.Now().Unix(),
 			OAuthApp:       oauthApp,
-		}
-
-		// Set user type if available
-		if userType != "" {
-			idTokenCtx.UserType = userType
-		}
-
-		// Set OU details if available
-		if ouID != "" {
-			idTokenCtx.OuID = ouID
-		}
-		if ouName != "" {
-			idTokenCtx.OuName = ouName
-		}
-		if ouHandle != "" {
-			idTokenCtx.OuHandle = ouHandle
-		}
-
-		idToken, err := h.tokenBuilder.BuildIDToken(idTokenCtx)
+			UserType:       authCode.AuthorizedUserType,
+			OuID:           authCode.UserOUID,
+			OuName:         authCode.UserOUName,
+			OuHandle:       authCode.UserOUHandle,
+		})
 		if err != nil {
 			logger.Error("Failed to generate ID token", log.Error(err))
 			return nil, &model.ErrorResponse{

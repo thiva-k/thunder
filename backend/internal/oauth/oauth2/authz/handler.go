@@ -29,6 +29,7 @@ import (
 	"github.com/asgardeo/thunder/internal/application"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2model "github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	oauth2utils "github.com/asgardeo/thunder/internal/oauth/oauth2/utils"
@@ -251,25 +252,25 @@ func (ah *authorizeHandler) handleAuthorizationResponseFromEngine(msg *OAuthMess
 	}
 
 	// Decode user attributes from the assertion.
-	userID, attributes, err := decodeAttributesFromAssertion(assertion)
+	assertionClaims, err := decodeAttributesFromAssertion(assertion)
 	if err != nil {
 		logger.Error("Failed to decode user attributes from assertion", log.Error(err))
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Something went wrong", sessionData)
 		return
 	}
 
-	if userID == "" {
+	if assertionClaims.userID == "" {
 		logger.Error("User ID is empty after decoding assertion")
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Invalid user ID", sessionData)
 		return
 	}
 
-	authorizedScopes := attributes["authorized_permissions"]
+	authorizedScopes := assertionClaims.userAttributes["authorized_permissions"]
 	// Overwrite the non oidc scopes in session data with the authorized scopes from the assertion.
 	sessionData.OAuthParameters.PermissionScopes = utils.ParseStringArray(authorizedScopes, " ")
 
 	// Generate the authorization code.
-	authzCode, err := createAuthorizationCode(sessionData, userID)
+	authzCode, err := createAuthorizationCode(sessionData, &assertionClaims)
 	if err != nil {
 		logger.Error("Failed to generate authorization code", log.Error(err))
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorServerError, "Failed to generate authorization code",
@@ -487,8 +488,9 @@ func (ah *authorizeHandler) writeAuthZResponseToErrorPage(w http.ResponseWriter,
 	ah.writeAuthZResponse(w, redirectURI)
 }
 
-// createAuthorizationCode generates an authorization code based on the provided Session data and authenticated user.
-func createAuthorizationCode(sessionData *SessionData, authUserID string) (
+// createAuthorizationCode generates an authorization code based on the provided
+// session data and authenticated user.
+func createAuthorizationCode(sessionData *SessionData, assertionClaims *assertionClaims) (
 	AuthorizationCode, error) {
 	clientID := sessionData.OAuthParameters.ClientID
 	redirectURI := sessionData.OAuthParameters.RedirectURI
@@ -497,7 +499,7 @@ func createAuthorizationCode(sessionData *SessionData, authUserID string) (
 		return AuthorizationCode{}, errors.New("client_id or redirect_uri is missing")
 	}
 
-	if authUserID == "" {
+	if assertionClaims.userID == "" {
 		return AuthorizationCode{}, errors.New("authenticated user not found")
 	}
 
@@ -519,7 +521,11 @@ func createAuthorizationCode(sessionData *SessionData, authUserID string) (
 		Code:                utils.GenerateUUID(),
 		ClientID:            clientID,
 		RedirectURI:         redirectURI,
-		AuthorizedUserID:    authUserID,
+		AuthorizedUserID:    assertionClaims.userID,
+		AuthorizedUserType:  assertionClaims.userType,
+		UserOUID:            assertionClaims.ouID,
+		UserOUName:          assertionClaims.ouName,
+		UserOUHandle:        assertionClaims.ouHandle,
 		TimeCreated:         authTime,
 		ExpiryTime:          expiryTime,
 		Scopes:              utils.StringifyStringArray(allScopes, " "),
@@ -541,55 +547,83 @@ func (ah *authorizeHandler) verifyAssertion(assertion string, logger *log.Logger
 }
 
 // decodeAttributesFromAssertion decodes user attributes from the flow assertion JWT.
-// It returns the user ID, a map of user attributes, and an error if any.
-func decodeAttributesFromAssertion(assertion string) (string, map[string]string, error) {
+// It returns assertion claims and an error if any.
+func decodeAttributesFromAssertion(assertion string) (assertionClaims, error) {
+	assertionClaims := assertionClaims{
+		userAttributes: make(map[string]string),
+	}
+
 	_, jwtPayload, err := jwt.DecodeJWT(assertion)
 	if err != nil {
-		return "", nil, errors.New("Failed to decode the JWT token: " + err.Error())
+		return assertionClaims, errors.New("Failed to decode the JWT token: " + err.Error())
 	}
 
 	userAttributes := make(map[string]string)
-	userID := ""
 	for key, value := range jwtPayload {
 		switch key {
 		case oauth2const.ClaimSub:
 			if strValue, ok := value.(string); ok {
-				userID = strValue
+				assertionClaims.userID = strValue
 			} else {
-				return "", nil, errors.New("JWT 'sub' claim is not a string")
+				return assertionClaims, errors.New("JWT 'sub' claim is not a string")
 			}
 		case "username":
 			if strValue, ok := value.(string); ok {
 				userAttributes["username"] = strValue
 			} else {
-				return "", nil, errors.New("JWT 'username' claim is not a string")
+				return assertionClaims, errors.New("JWT 'username' claim is not a string")
 			}
 		case "email":
 			if strValue, ok := value.(string); ok {
 				userAttributes["email"] = strValue
 			} else {
-				return "", nil, errors.New("JWT 'email' claim is not a string")
+				return assertionClaims, errors.New("JWT 'email' claim is not a string")
 			}
 		case "firstName":
 			if strValue, ok := value.(string); ok {
 				userAttributes["firstName"] = strValue
 			} else {
-				return "", nil, errors.New("JWT 'firstName' claim is not a string")
+				return assertionClaims, errors.New("JWT 'firstName' claim is not a string")
 			}
 		case "lastName":
 			if strValue, ok := value.(string); ok {
 				userAttributes["lastName"] = strValue
 			} else {
-				return "", nil, errors.New("JWT 'lastName' claim is not a string")
+				return assertionClaims, errors.New("JWT 'lastName' claim is not a string")
 			}
 		case "authorized_permissions":
 			if strValue, ok := value.(string); ok {
 				userAttributes["authorized_permissions"] = strValue
 			} else {
-				return "", nil, errors.New("JWT 'authorized_permissions' claim is not a string")
+				return assertionClaims, errors.New("JWT 'authorized_permissions' claim is not a string")
+			}
+		case constants.ClaimUserType:
+			if strValue, ok := value.(string); ok {
+				assertionClaims.userType = strValue
+			} else {
+				return assertionClaims, errors.New("JWT 'userType' claim is not a string")
+			}
+		case constants.ClaimOUID:
+			if strValue, ok := value.(string); ok {
+				assertionClaims.ouID = strValue
+			} else {
+				return assertionClaims, errors.New("JWT 'ouId' claim is not a string")
+			}
+		case constants.ClaimOUName:
+			if strValue, ok := value.(string); ok {
+				assertionClaims.ouName = strValue
+			} else {
+				return assertionClaims, errors.New("JWT 'ouName' claim is not a string")
+			}
+		case constants.ClaimOUHandle:
+			if strValue, ok := value.(string); ok {
+				assertionClaims.ouHandle = strValue
+			} else {
+				return assertionClaims, errors.New("JWT 'ouHandle' claim is not a string")
 			}
 		}
 	}
+	assertionClaims.userAttributes = userAttributes
 
-	return userID, userAttributes, nil
+	return assertionClaims, nil
 }

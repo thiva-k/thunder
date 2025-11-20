@@ -19,21 +19,39 @@
 package authz
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/asgardeo/thunder/internal/system/database/provider"
-	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-const storeLoggerComponentName = "AuthorizationCodeStore"
+const (
+	columnNameCodeID               = "code_id"
+	columnNameAuthorizationCode    = "authorization_code"
+	columnNameClientID             = "client_id"
+	columnNameState                = "state"
+	columnNameAuthZData            = "authz_data"
+	columnNameTimeCreated          = "time_created"
+	columnNameExpiryTime           = "expiry_time"
+	jsonDataKeyRedirectURI         = "redirect_uri"
+	jsonDataKeyAuthorizedUserID    = "authorized_user_id"
+	jsonDataKeyScopes              = "scopes"
+	jsonDataKeyCodeChallenge       = "code_challenge"
+	jsonDataKeyCodeChallengeMethod = "code_challenge_method"
+	jsonDataKeyResource            = "resource"
+	jsonDataKeyAuthorizedUserType  = "authorized_user_type"
+	jsonDataKeyUserOUID            = "user_ou_id"
+	jsonDataKeyUserOUName          = "user_ou_name"
+	jsonDataKeyUserOUHandle        = "user_ou_handle"
+)
 
 // AuthorizationCodeStoreInterface defines the interface for managing authorization codes.
 type AuthorizationCodeStoreInterface interface {
 	InsertAuthorizationCode(authzCode AuthorizationCode) error
-	GetAuthorizationCode(clientID, authCode string) (AuthorizationCode, error)
+	GetAuthorizationCode(clientID, authCode string) (*AuthorizationCode, error)
 	DeactivateAuthorizationCode(authzCode AuthorizationCode) error
 	RevokeAuthorizationCode(authzCode AuthorizationCode) error
 	ExpireAuthorizationCode(authzCode AuthorizationCode) error
@@ -53,130 +71,42 @@ func newAuthorizationCodeStore() AuthorizationCodeStoreInterface {
 
 // InsertAuthorizationCode inserts a new authorization code into the database.
 func (acs *authorizationCodeStore) InsertAuthorizationCode(authzCode AuthorizationCode) error {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, storeLoggerComponentName))
-
 	dbClient, err := acs.dbProvider.GetRuntimeDBClient()
 	if err != nil {
-		logger.Error("Failed to get database client", log.Error(err))
+		return fmt.Errorf("failed to get database client: %w", err)
+	}
+
+	jsonDataBytes, err := acs.getJSONDataBytes(authzCode)
+	if err != nil {
 		return err
 	}
 
-	tx, err := dbClient.BeginTx()
+	_, err = dbClient.Execute(queryInsertAuthorizationCode, authzCode.CodeID, authzCode.Code,
+		authzCode.ClientID, authzCode.State, jsonDataBytes, authzCode.TimeCreated, authzCode.ExpiryTime)
 	if err != nil {
-		logger.Error("Failed to begin transaction", log.Error(err))
-		return errors.New("failed to begin transaction: " + err.Error())
-	}
-
-	// Insert authorization code.
-	_, err = tx.Exec(queryInsertAuthorizationCode.Query, authzCode.CodeID, authzCode.Code,
-		authzCode.ClientID, authzCode.RedirectURI, authzCode.AuthorizedUserID, authzCode.TimeCreated,
-		authzCode.ExpiryTime, authzCode.State, authzCode.CodeChallenge, authzCode.CodeChallengeMethod, authzCode.Resource)
-	if err != nil {
-		logger.Error("Failed to insert authorization code", log.Error(err))
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			logger.Error("Failed to rollback transaction", log.Error(rollbackErr))
-			err = errors.Join(err, errors.New("failed to rollback transaction: "+rollbackErr.Error()))
-		}
-		return errors.New("failed to insert authorization code: " + err.Error())
-	}
-
-	// Insert auth code scopes.
-	_, err = tx.Exec(queryInsertAuthorizationCodeScopes.Query, authzCode.CodeID,
-		authzCode.Scopes)
-	if err != nil {
-		logger.Error("Failed to insert authorization code scopes", log.Error(err))
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			logger.Error("Failed to rollback transaction", log.Error(rollbackErr))
-			err = errors.Join(err, errors.New("failed to rollback transaction: "+rollbackErr.Error()))
-		}
-		return errors.New("failed to insert authorization code scopes: " + err.Error())
-	}
-
-	// Commit the transaction.
-	if err = tx.Commit(); err != nil {
-		logger.Error("Failed to commit transaction", log.Error(err))
-		return errors.New("failed to commit transaction: " + err.Error())
+		return fmt.Errorf("error inserting authorization code: %w", err)
 	}
 
 	return nil
 }
 
 // GetAuthorizationCode retrieves an authorization code by client Id and authorization code.
-func (acs *authorizationCodeStore) GetAuthorizationCode(clientID, authCode string) (AuthorizationCode, error) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, storeLoggerComponentName))
-
+func (acs *authorizationCodeStore) GetAuthorizationCode(clientID, authCode string) (*AuthorizationCode, error) {
 	dbClient, err := acs.dbProvider.GetRuntimeDBClient()
 	if err != nil {
-		logger.Error("Failed to get database client", log.Error(err))
-		return AuthorizationCode{}, err
+		return nil, fmt.Errorf("failed to get database client: %w", err)
 	}
 
 	results, err := dbClient.Query(queryGetAuthorizationCode, clientID, authCode)
 	if err != nil {
-		return AuthorizationCode{}, fmt.Errorf("error while retrieving authorization code: %w", err)
+		return nil, fmt.Errorf("error while retrieving authorization code: %w", err)
 	}
 	if len(results) == 0 {
-		return AuthorizationCode{}, ErrAuthorizationCodeNotFound
+		return nil, ErrAuthorizationCodeNotFound
 	}
 	row := results[0]
 
-	codeID := row["code_id"].(string)
-	if codeID == "" {
-		return AuthorizationCode{}, ErrAuthorizationCodeNotFound
-	}
-
-	// Handle time_created field.
-	timeCreated, err := parseTimeField(row["time_created"], "time_created", logger)
-	if err != nil {
-		return AuthorizationCode{}, err
-	}
-
-	// Handle expiry_time field.
-	expiryTime, err := parseTimeField(row["expiry_time"], "expiry_time", logger)
-	if err != nil {
-		return AuthorizationCode{}, err
-	}
-
-	// Extract PKCE fields
-	codeChallenge := ""
-	if val, ok := row["code_challenge"]; ok && val != nil {
-		codeChallenge = val.(string)
-	}
-	codeChallengeMethod := ""
-	if val, ok := row["code_challenge_method"]; ok && val != nil {
-		codeChallengeMethod = val.(string)
-	}
-
-	// Extract resource field
-	resource := ""
-	if val, ok := row["resource"]; ok && val != nil {
-		resource = val.(string)
-	}
-
-	// Retrieve authorized scopes for the authorization code.
-	scopeResults, err := dbClient.Query(queryGetAuthorizationCodeScopes, codeID)
-	if err != nil {
-		return AuthorizationCode{}, fmt.Errorf("error while retrieving authorized scopes: %w", err)
-	}
-	scopes := ""
-	if len(scopeResults) > 0 {
-		scopes = scopeResults[0]["scope"].(string)
-	}
-
-	return AuthorizationCode{
-		CodeID:              codeID,
-		Code:                row["authorization_code"].(string),
-		ClientID:            clientID,
-		RedirectURI:         row["callback_url"].(string),
-		AuthorizedUserID:    row["authz_user"].(string),
-		TimeCreated:         timeCreated,
-		ExpiryTime:          expiryTime,
-		Scopes:              scopes,
-		State:               row["state"].(string),
-		CodeChallenge:       codeChallenge,
-		CodeChallengeMethod: codeChallengeMethod,
-		Resource:            resource,
-	}, nil
+	return buildAuthorizationCodeFromResultRow(row)
 }
 
 // DeactivateAuthorizationCode deactivates an authorization code.
@@ -197,20 +127,148 @@ func (acs *authorizationCodeStore) ExpireAuthorizationCode(authzCode Authorizati
 // updateAuthorizationCodeState updates the state of an authorization code.
 func (acs *authorizationCodeStore) updateAuthorizationCodeState(authzCode AuthorizationCode,
 	newState string) error {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, storeLoggerComponentName))
-
 	dbClient, err := acs.dbProvider.GetRuntimeDBClient()
 	if err != nil {
-		logger.Error("Failed to get database client", log.Error(err))
-		return err
+		return fmt.Errorf("failed to get database client: %w", err)
 	}
 
 	_, err = dbClient.Execute(queryUpdateAuthorizationCodeState, newState, authzCode.CodeID)
 	return err
 }
 
-// Helper function to parse a time field from the database.
-func parseTimeField(field interface{}, fieldName string, logger *log.Logger) (time.Time, error) {
+// getJSONDataBytes prepares the JSON data bytes for the authorization code.
+func (acs *authorizationCodeStore) getJSONDataBytes(authzCode AuthorizationCode) ([]byte, error) {
+	jsonData := map[string]interface{}{
+		jsonDataKeyRedirectURI:         authzCode.RedirectURI,
+		jsonDataKeyAuthorizedUserID:    authzCode.AuthorizedUserID,
+		jsonDataKeyScopes:              authzCode.Scopes,
+		jsonDataKeyCodeChallenge:       authzCode.CodeChallenge,
+		jsonDataKeyCodeChallengeMethod: authzCode.CodeChallengeMethod,
+		jsonDataKeyResource:            authzCode.Resource,
+		jsonDataKeyAuthorizedUserType:  authzCode.AuthorizedUserType,
+		jsonDataKeyUserOUID:            authzCode.UserOUID,
+		jsonDataKeyUserOUName:          authzCode.UserOUName,
+		jsonDataKeyUserOUHandle:        authzCode.UserOUHandle,
+	}
+
+	jsonDataBytes, err := json.Marshal(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("error marshaling authz data to JSON: %w", err)
+	}
+	return jsonDataBytes, nil
+}
+
+// buildAuthorizationCodeFromResultRow builds an AuthorizationCode from a database result row.
+func buildAuthorizationCodeFromResultRow(row map[string]interface{}) (*AuthorizationCode, error) {
+	codeID, ok := row[columnNameCodeID].(string)
+	if !ok {
+		return nil, errors.New("code ID is of unexpected type")
+	}
+	if codeID == "" {
+		return nil, ErrAuthorizationCodeNotFound
+	}
+
+	authorizationCode, ok := row[columnNameAuthorizationCode].(string)
+	if !ok {
+		return nil, errors.New("authorization code is of unexpected type")
+	}
+	if authorizationCode == "" {
+		return nil, errors.New("authorization code is empty")
+	}
+
+	clientID, ok := row[columnNameClientID].(string)
+	if !ok {
+		return nil, errors.New("client ID is of unexpected type")
+	}
+	if clientID == "" {
+		return nil, errors.New("client ID is empty")
+	}
+
+	state, ok := row[columnNameState].(string)
+	if !ok {
+		return nil, errors.New("state is of unexpected type")
+	}
+	if state == "" {
+		return nil, errors.New("state is empty")
+	}
+
+	timeCreated, err := parseTimeField(row[columnNameTimeCreated], columnNameTimeCreated)
+	if err != nil {
+		return nil, err
+	}
+	expiryTime, err := parseTimeField(row[columnNameExpiryTime], columnNameExpiryTime)
+	if err != nil {
+		return nil, err
+	}
+
+	authzCode := AuthorizationCode{
+		CodeID:      codeID,
+		Code:        authorizationCode,
+		ClientID:    clientID,
+		State:       state,
+		TimeCreated: timeCreated,
+		ExpiryTime:  expiryTime,
+	}
+
+	return appendAuthzDataJSON(row, &authzCode)
+}
+
+// appendAuthzDataJSON parses and appends authz_data JSON fields to the AuthorizationCode struct.
+func appendAuthzDataJSON(row map[string]interface{}, authzCode *AuthorizationCode) (*AuthorizationCode, error) {
+	var dataJSON string
+	if val, ok := row[columnNameAuthZData].(string); ok && val != "" {
+		dataJSON = val
+	} else if val, ok := row[columnNameAuthZData].([]byte); ok && len(val) > 0 {
+		dataJSON = string(val)
+	} else {
+		return nil, errors.New("authz_data is missing or of unexpected type")
+	}
+	if dataJSON == "" || dataJSON == "{}" {
+		return nil, errors.New("authz_data is empty")
+	}
+
+	var authzData map[string]interface{}
+	if err := json.Unmarshal([]byte(dataJSON), &authzData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal authz_data JSON: %w", err)
+	}
+
+	if redirectURI, ok := authzData[jsonDataKeyRedirectURI].(string); ok {
+		authzCode.RedirectURI = redirectURI
+	}
+	if authorizedUserID, ok := authzData[jsonDataKeyAuthorizedUserID].(string); ok {
+		authzCode.AuthorizedUserID = authorizedUserID
+	}
+	if scopes, ok := authzData[jsonDataKeyScopes].(string); ok {
+		authzCode.Scopes = scopes
+	}
+	if codeChallenge, ok := authzData[jsonDataKeyCodeChallenge].(string); ok {
+		authzCode.CodeChallenge = codeChallenge
+	}
+	if codeChallengeMethod, ok := authzData[jsonDataKeyCodeChallengeMethod].(string); ok {
+		authzCode.CodeChallengeMethod = codeChallengeMethod
+	}
+	if resource, ok := authzData[jsonDataKeyResource].(string); ok {
+		authzCode.Resource = resource
+	}
+
+	if authorizedUserType, ok := authzData[jsonDataKeyAuthorizedUserType].(string); ok {
+		authzCode.AuthorizedUserType = authorizedUserType
+	}
+	if userOUID, ok := authzData[jsonDataKeyUserOUID].(string); ok {
+		authzCode.UserOUID = userOUID
+	}
+	if userOUName, ok := authzData[jsonDataKeyUserOUName].(string); ok {
+		authzCode.UserOUName = userOUName
+	}
+	if userOUHandle, ok := authzData[jsonDataKeyUserOUHandle].(string); ok {
+		authzCode.UserOUHandle = userOUHandle
+	}
+
+	return authzCode, nil
+}
+
+// parseTimeField parses a time field from the database result.
+func parseTimeField(field interface{}, fieldName string) (time.Time, error) {
 	const customTimeFormat = "2006-01-02 15:04:05.999999999"
 
 	switch v := field.(type) {
@@ -218,19 +276,17 @@ func parseTimeField(field interface{}, fieldName string, logger *log.Logger) (ti
 		trimmedTime := trimTimeString(v)
 		parsedTime, err := time.Parse(customTimeFormat, trimmedTime)
 		if err != nil {
-			logger.Error("Error parsing time field", log.String("field", fieldName), log.Error(err))
 			return time.Time{}, fmt.Errorf("error parsing %s: %w", fieldName, err)
 		}
 		return parsedTime, nil
 	case time.Time:
 		return v, nil
 	default:
-		logger.Error("Unexpected type for time field", log.String("field", fieldName), log.Any("value", v))
 		return time.Time{}, fmt.Errorf("unexpected type for %s", fieldName)
 	}
 }
 
-// Helper function to trim a time string.
+// trimTimeString trims extra information from a time string to match the expected format.
 func trimTimeString(timeStr string) string {
 	// Split the string into parts by spaces and retain only the first two parts.
 	parts := strings.SplitN(timeStr, " ", 3)

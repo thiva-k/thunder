@@ -28,7 +28,6 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/authzmock"
 	"github.com/asgardeo/thunder/tests/mocks/oauth/oauth2/tokenservicemock"
-	"github.com/asgardeo/thunder/tests/mocks/oumock"
 	usersvcmock "github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
@@ -37,7 +36,6 @@ type GrantHandlerProviderTestSuite struct {
 	provider           GrantHandlerProviderInterface
 	mockJWTService     *jwtmock.JWTServiceInterfaceMock
 	mockUserService    *usersvcmock.UserServiceInterfaceMock
-	mockOUService      *oumock.OrganizationUnitServiceInterfaceMock
 	authzService       *authzmock.AuthorizeServiceInterfaceMock
 	mockTokenBuilder   *tokenservicemock.TokenBuilderInterfaceMock
 	mockTokenValidator *tokenservicemock.TokenValidatorInterfaceMock
@@ -50,14 +48,12 @@ func TestGrantHandlerProviderSuite(t *testing.T) {
 func (suite *GrantHandlerProviderTestSuite) SetupTest() {
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
-	suite.mockOUService = oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
 	suite.authzService = authzmock.NewAuthorizeServiceInterfaceMock(suite.T())
 	suite.mockTokenBuilder = tokenservicemock.NewTokenBuilderInterfaceMock(suite.T())
 	suite.mockTokenValidator = tokenservicemock.NewTokenValidatorInterfaceMock(suite.T())
 	suite.provider = newGrantHandlerProvider(
 		suite.mockJWTService,
 		suite.mockUserService,
-		suite.mockOUService,
 		suite.authzService,
 		suite.mockTokenBuilder,
 		suite.mockTokenValidator,
@@ -68,7 +64,6 @@ func (suite *GrantHandlerProviderTestSuite) TestNewGrantHandlerProvider() {
 	provider := newGrantHandlerProvider(
 		suite.mockJWTService,
 		suite.mockUserService,
-		suite.mockOUService,
 		suite.authzService,
 		suite.mockTokenBuilder,
 		suite.mockTokenValidator,

@@ -26,11 +26,8 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
-	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/system/config"
-	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
-	"github.com/asgardeo/thunder/tests/mocks/oumock"
 	"github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
@@ -638,29 +635,10 @@ func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_UnmarshalError() {
 		Type:       "local",
 	}, nil)
 
-	_, _, _, _, err := FetchUserAttributesAndGroups(mockUserService, "test-user", false)
+	_, _, err := FetchUserAttributesAndGroups(mockUserService, "test-user", false)
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "failed to unmarshal user attributes")
 
 	mockUserService.AssertExpectations(suite.T())
-}
-
-func (suite *UtilsTestSuite) TestFetchUserOU_ServiceError() {
-	mockOUService := oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
-
-	// Mock GetOrganizationUnit to return service error
-	mockOUService.On("GetOrganizationUnit", "ou-123").
-		Return(ou.OrganizationUnit{}, &serviceerror.ServiceError{
-			Code:  "OU_FETCH_ERROR",
-			Error: "service error",
-		})
-
-	_, err := FetchUserOU(mockOUService, "ou-123")
-
-	assert.Error(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to fetch organization unit")
-	assert.Contains(suite.T(), err.Error(), "service error")
-
-	mockOUService.AssertExpectations(suite.T())
 }
