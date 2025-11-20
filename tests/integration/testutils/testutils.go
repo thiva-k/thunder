@@ -299,6 +299,17 @@ func RunInitScript(zipFilePattern string) error {
 		return fmt.Errorf("failed to run init script for runtimedb: %v", err)
 	}
 
+	// Create the userdb database.
+	userDBSchemaPath := filepath.Join(extractedProductHome, "dbscripts/userdb", "sqlite.sql")
+	userDbPath := filepath.Join(extractedProductHome, DatabaseFileBasePath, "userdb.db")
+	cmd = exec.Command("bash", initScript, "-recreate", "-type", "sqlite", "-schema", userDBSchemaPath,
+		"-path", userDbPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed to run init script for userdb: %v", err)
+	}
 	return nil
 }
 

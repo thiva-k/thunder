@@ -133,6 +133,12 @@ database:
     password: secure_runtime_password
     type: postgres
     sslmode: require
+  user:
+    database: userdb
+    username: thunder_user
+    password: secure_identity_password
+    type: postgres
+    sslmode: require
 
 # JWT configuration
 jwt:
@@ -197,6 +203,7 @@ Before deploying Thunder, ensure you have:
    ```sql
    CREATE DATABASE thunderdb;
    CREATE DATABASE runtimedb;
+   CREATE DATABASE userdb;
    ```
 2. **Run database scripts**: Use the scripts in `backend/dbscripts` to initialize the schema.
 
@@ -232,6 +239,12 @@ database:
     password: secure_password
     type: postgres
     sslmode: require
+  user:
+    database: userdb
+    username: thunder_user
+    password: secure_password
+    type: postgres
+    sslmode: require
 ```
 
 #### In-Cluster PostgreSQL
@@ -248,6 +261,12 @@ database:
     sslmode: disable
   runtime:
     database: runtimedb
+    username: thunder_user
+    password: secure_password
+    type: postgres
+    sslmode: disable
+  user:
+    database: userdb
     username: thunder_user
     password: secure_password
     type: postgres

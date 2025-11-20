@@ -82,6 +82,10 @@ func (suite *HealthCheckHandlerTestSuite) TestHandleReadinessRequest_AllUp() {
 			ServiceName: "RuntimeDB",
 			Status:      model.StatusUp,
 		},
+		{
+			ServiceName: "UserDB",
+			Status:      model.StatusUp,
+		},
 	}
 	serverStatus := model.ServerStatus{
 		Status:        model.StatusUp,
@@ -100,7 +104,7 @@ func (suite *HealthCheckHandlerTestSuite) TestHandleReadinessRequest_AllUp() {
 	err := json.NewDecoder(rec.Body).Decode(&response)
 	assert.NoError(suite.T(), err)
 	assert.Equal(suite.T(), model.StatusUp, response.Status)
-	assert.Len(suite.T(), response.ServiceStatus, 2)
+	assert.Len(suite.T(), response.ServiceStatus, 3)
 
 	suite.mockService.AssertExpectations(suite.T())
 }
@@ -118,6 +122,10 @@ func (suite *HealthCheckHandlerTestSuite) TestHandleReadinessRequest_Down() {
 		},
 		{
 			ServiceName: "RuntimeDB",
+			Status:      model.StatusDown,
+		},
+		{
+			ServiceName: "UserDB",
 			Status:      model.StatusDown,
 		},
 	}

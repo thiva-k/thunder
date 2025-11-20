@@ -11,6 +11,7 @@ server:
 security:
   cert_file: "repository/resources/security/server.cert"
   key_file: "repository/resources/security/server.key"
+  crypto_file: "repository/resources/security/crypto.key"
 
 database:
 EOF
@@ -33,6 +34,17 @@ if [ "$DB_TYPE" = "postgres" ]; then
     hostname: localhost
     port: 5432
     name: runtimedb
+    username: asgthunder
+    password: asgthunder
+    sslmode: disable
+    path: ""
+    options: ""
+
+  user:
+    type: postgres
+    hostname: localhost
+    port: 5432
+    name: userdb
     username: asgthunder
     password: asgthunder
     sslmode: disable
@@ -61,6 +73,17 @@ else
     password: ""
     sslmode: ""
     path: "repository/database/runtimedb.db"
+    options: "cache=shared"
+
+  user:
+    type: sqlite
+    hostname: ""
+    port: 0
+    name: ""
+    username: ""
+    password: ""
+    sslmode: ""
+    path: "repository/database/userdb.db"
     options: "cache=shared"
 EOF
 fi

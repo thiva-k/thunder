@@ -520,6 +520,14 @@ docker compose down -v
             username: "asgthunder"
             password: "asgthunder"
             sslmode: "disable"
+        user:
+            type: "postgres"
+            hostname: "localhost"
+            port: 5432
+            name: "userdb"
+            username: "asgthunder"
+            password: "asgthunder"
+            sslmode: "disable"
     ```
 
 #### Step 3: Run the Product

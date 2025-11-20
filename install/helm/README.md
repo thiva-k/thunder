@@ -183,6 +183,15 @@ The following table lists the configurable parameters of the Thunder chart and t
 | `configuration.database.runtime.username` | Postgres username (for postgres only)                        | `asgthunder`                   |
 | `configuration.database.runtime.password` | Postgres password (for postgres only)                        | `asgthunder`              |
 | `configuration.database.runtime.sslmode` | Postgres SSL mode (for postgres only)                         | `require`                    |
+| `configuration.database.user.type`  | User database type (postgres or sqlite)                            | `postgres`                   |
+| `configuration.database.user.sqlitePath` | SQLite database path (for sqlite only)                        | `repository/database/userdb.db` |
+| `configuration.database.user.sqliteOptions` | SQLite options (for sqlite only)                           | `_journal_mode=WAL&_busy_timeout=5000` |
+| `configuration.database.user.name`  | Postgres database name (for postgres only)                         | `userdb`                  |
+| `configuration.database.user.host`  | Postgres host (for postgres only)                                  | `localhost` |
+| `configuration.database.user.port`  | Postgres port (for postgres only)                                  | `5432`                       |
+| `configuration.database.user.username` | Postgres username (for postgres only)                           | `asgthunder`                   |
+| `configuration.database.user.password` | Postgres password (for postgres only)                           | `asgthunder`              |
+| `configuration.database.user.sslmode` | Postgres SSL mode (for postgres only)                            | `require`                    |
 | `configuration.cache.disabled`         | Disable cache                                                   | `false`                      |
 | `configuration.cache.type`             | Cache type                                                      | `inmemory`                   |
 | `configuration.cache.size`             | Cache size                                                      | `1000`                       |

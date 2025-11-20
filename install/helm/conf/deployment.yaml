@@ -57,6 +57,19 @@ database:
     password: {{ .Values.configuration.database.runtime.password | quote }}
     sslmode: {{ .Values.configuration.database.runtime.sslmode | quote }}
     {{- end }}
+  user:
+    type: {{ .Values.configuration.database.user.type | quote }}
+    {{- if eq .Values.configuration.database.user.type "sqlite" }}
+    path: {{ .Values.configuration.database.user.sqlitePath | quote }}
+    options: {{ .Values.configuration.database.user.sqliteOptions | quote }}
+    {{- else }}
+    hostname: {{ .Values.configuration.database.user.host | quote }}
+    port: {{ .Values.configuration.database.user.port }}
+    name: {{ .Values.configuration.database.user.name | quote }}
+    username: {{ .Values.configuration.database.user.username | quote }}
+    password: {{ .Values.configuration.database.user.password | quote }}
+    sslmode: {{ .Values.configuration.database.user.sslmode | quote }}
+    {{- end }}    
 
 cache:
   disabled: {{ .Values.configuration.cache.disabled }}
