@@ -21,15 +21,43 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { AsgardeoProvider } from "@asgardeo/react";
+import { ConfigurationError } from "./ConfigurationError.tsx";
+import config from "./config.tsx";
+
+const baseUrl = config.baseUrl;
+const clientId = config.clientId;
+
+// Validate required configuration
+const missingConfig: string[] = [];
+if (!baseUrl) {
+  missingConfig.push("baseUrl");
+}
+if (!clientId) {
+  missingConfig.push("clientId");
+}
+
+if (missingConfig.length > 0) {
+  console.error(
+    "⚠️ Missing required configuration:",
+    missingConfig.join(", ")
+  );
+  console.error(
+    "Please configure these values in public/runtime.json. See the documentation for reference."
+  );
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AsgardeoProvider
-      baseUrl={import.meta.env.VITE_THUNDER_BASE_URL as string}
-      clientId={import.meta.env.VITE_REACT_APP_CLIENT_ID as string}
-      platform="AsgardeoV2"
-    >
-      <App />
-    </AsgardeoProvider>
+    {missingConfig.length > 0 ? (
+      <ConfigurationError missingConfig={missingConfig} />
+    ) : (
+      <AsgardeoProvider
+        baseUrl={baseUrl}
+        clientId={clientId}
+        platform="AsgardeoV2"
+      >
+        <App />
+      </AsgardeoProvider>
+    )}
   </StrictMode>
 );
