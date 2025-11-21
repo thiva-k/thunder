@@ -436,3 +436,39 @@ export interface OAuth2Config {
    */
   token: OAuth2Token;
 }
+
+/**
+ * Default OAuth2 configuration
+ *
+ * Returns a default OAuth2 configuration with sensible defaults.
+ * Used as a starting point for OAuth2 configuration in application creation.
+ *
+ * @returns Default OAuth2 configuration
+ * @public
+ */
+export function getDefaultOAuthConfig(): OAuth2Config {
+  return {
+    redirect_uris: [],
+    grant_types: [OAuth2GrantTypes.CLIENT_CREDENTIALS],
+    response_types: [], // Client credentials doesn't use response types
+    token_endpoint_auth_method: TokenEndpointAuthMethods.CLIENT_SECRET_BASIC,
+    pkce_required: false,
+    public_client: false,
+    scopes: ['openid', 'profile', 'email'],
+    token: {
+      issuer: 'thunder',
+      access_token: {
+        validity_period: 3600,
+        user_attributes: ['email', 'username'],
+      },
+      id_token: {
+        validity_period: 3600,
+        user_attributes: ['sub', 'email', 'name'],
+        scope_claims: {
+          profile: ['name', 'given_name', 'family_name', 'picture'],
+          email: ['email', 'email_verified'],
+        },
+      },
+    },
+  };
+}
