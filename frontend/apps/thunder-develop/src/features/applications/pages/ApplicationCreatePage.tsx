@@ -54,13 +54,13 @@ export default function ApplicationCreatePage(): JSX.Element {
   const [selectedColor, setSelectedColor] = useState('#1976d2');
   const [appLogo, setAppLogo] = useState<string | null>(null);
   const [integrations, setIntegrations] = useState<Record<string, boolean>>({
-    // No default selections - user must select at least one option
+    [USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY]: true,
   });
   const [error, setError] = useState<string | null>(null);
   const [stepReady, setStepReady] = useState<Record<Step, boolean>>({
     name: false,
     design: true,
-    options: false, // Start as false since no options are selected by default
+    options: true, // Start as true since username/password is enabled by default
     configure: false, // Start as false since no redirect URIs are added by default
   });
   const [useDefaultBranding, setUseDefaultBranding] = useState<boolean>(false);

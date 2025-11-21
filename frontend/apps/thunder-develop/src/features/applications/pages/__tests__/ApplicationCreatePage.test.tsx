@@ -98,7 +98,7 @@ vi.mock('../../components/create-applications/ConfigureSignInOptions', () => ({
 
     return (
       <div data-testid="configure-sign-in">
-        <button type="button" data-testid="toggle-integration" onClick={() => onIntegrationToggle('test-integration')}>
+        <button type="button" data-testid="toggle-integration" onClick={() => onIntegrationToggle('basic_auth')}>
           Toggle Integration
         </button>
       </div>
@@ -371,10 +371,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 3: Sign In Options - select an integration
-      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
-      if (toggleIntegrationButton) {
-        await user.click(toggleIntegrationButton);
-      }
+
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
       });
@@ -538,10 +535,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 3: Sign In Options - select an integration
-      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
-      if (toggleIntegrationButton) {
-        await user.click(toggleIntegrationButton);
-      }
+
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
       });
@@ -591,10 +585,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 3: Sign In Options - select an integration
-      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
-      if (toggleIntegrationButton) {
-        await user.click(toggleIntegrationButton);
-      }
+
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
       });
@@ -640,10 +631,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 3: Sign In Options - need to select at least one integration
-      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
-      if (toggleIntegrationButton) {
-        await user.click(toggleIntegrationButton);
-      }
+
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
       });
@@ -689,10 +677,7 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 3: Sign In Options - need to select at least one integration
-      const toggleIntegrationButton = screen.queryByTestId('toggle-integration');
-      if (toggleIntegrationButton) {
-        await user.click(toggleIntegrationButton);
-      }
+
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
       });
@@ -743,7 +728,7 @@ describe('ApplicationCreatePage', () => {
       expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
     });
 
-    it('should start with no default selections (options step not ready)', async () => {
+    it('should start with default selections (options step ready)', async () => {
       renderWithProviders();
 
       // Navigate to options step
@@ -752,10 +737,10 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Options step should not be ready (no selections by default)
-      // Continue button should be disabled
+      // Options step should be ready (username/password selected by default)
+      // Continue button should be enabled
       const continueButton = screen.getByRole('button', {name: /continue/i});
-      expect(continueButton).toBeDisabled();
+      expect(continueButton).toBeEnabled();
     });
 
     it('should require at least one option to be selected before proceeding', async () => {
@@ -767,15 +752,24 @@ describe('ApplicationCreatePage', () => {
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Initially disabled
+      // Initially enabled (default selection)
       let continueButton = screen.getByRole('button', {name: /continue/i});
-      expect(continueButton).toBeDisabled();
+      expect(continueButton).toBeEnabled();
 
-      // Select an integration
+      // Deselect the default integration
       const toggleButton = screen.getByTestId('toggle-integration');
       await user.click(toggleButton);
 
-      // Now should be enabled
+      // Now should be disabled
+      await waitFor(() => {
+        continueButton = screen.getByRole('button', {name: /continue/i});
+        expect(continueButton).toBeDisabled();
+      });
+
+      // Select it again
+      await user.click(toggleButton);
+
+      // Now should be enabled again
       await waitFor(() => {
         continueButton = screen.getByRole('button', {name: /continue/i});
         expect(continueButton).not.toBeDisabled();
