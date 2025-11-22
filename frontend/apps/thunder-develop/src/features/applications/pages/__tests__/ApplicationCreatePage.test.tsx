@@ -116,39 +116,43 @@ vi.mock('../../components/create-applications/Preview', () => ({
   ),
 }));
 
-vi.mock('../../components/create-applications/ConfigureRedirectURIs', () => ({
+vi.mock('../../components/create-applications/ConfigureOAuth', () => ({
   default: ({
-    redirectURIs,
-    onRedirectURIsChange,
     onReadyChange,
   }: {
-    redirectURIs: string[];
-    onRedirectURIsChange: (uris: string[]) => void;
+    oauthConfig: any;
+    onOAuthConfigChange: (config: any) => void;
     onReadyChange?: (ready: boolean) => void;
+    onValidationErrorsChange?: (hasErrors: boolean) => void;
   }) => {
-    // Call onReadyChange immediately when redirectURIs change
-    // Using setTimeout to avoid calling during render
     setTimeout(() => {
       if (onReadyChange) {
-        const isReady = redirectURIs.length > 0 && redirectURIs.every((uri) => uri.trim().length > 0);
-        onReadyChange(isReady);
+        onReadyChange(true);
       }
     }, 0);
 
-    return (
-      <div data-testid="configure-redirect-uris">
-        <button
-          type="button"
-          data-testid="add-redirect-uri"
-          onClick={() => {
-            onRedirectURIsChange([...redirectURIs, 'https://example.com/callback']);
-          }}
-        >
-          Add URI
-        </button>
-      </div>
-    );
+    return <div data-testid="configure-oauth">Configure OAuth</div>;
   },
+}));
+
+vi.mock('../../components/create-applications/ApplicationSummary', () => ({
+  default: ({
+    appName,
+    applicationId,
+  }: {
+    appName: string;
+    appLogo: string | null;
+    selectedColor: string;
+    clientId?: string;
+    clientSecret?: string;
+    hasOAuthConfig: boolean;
+    applicationId?: string | null;
+  }) => (
+    <div data-testid="application-summary">
+      <div data-testid="summary-app-name">{appName}</div>
+      <div data-testid="summary-app-id">{applicationId}</div>
+    </div>
+  ),
 }));
 
 // Mock react-router navigate
@@ -541,11 +545,10 @@ describe('ApplicationCreatePage', () => {
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Configure Redirect URIs - add a URI
-      const addUriButton = screen.queryByTestId('add-redirect-uri');
-      if (addUriButton) {
-        await user.click(addUriButton);
-      }
+      // Step 4: Configure OAuth
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-oauth')).toBeInTheDocument();
+      });
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
       });
@@ -565,7 +568,20 @@ describe('ApplicationCreatePage', () => {
       });
 
       mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'app-123', name: 'My App'});
+        onSuccess({
+          id: 'app-123',
+          name: 'My App',
+          inbound_auth_config: [
+            {
+              type: 'oauth2',
+              config: {
+                client_id: 'test-client-id',
+                client_secret: 'test-client-secret',
+                public_client: false,
+              },
+            },
+          ],
+        });
       });
 
       renderWithProviders();
@@ -591,11 +607,10 @@ describe('ApplicationCreatePage', () => {
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Configure Redirect URIs - add a URI
-      const addUriButton = screen.queryByTestId('add-redirect-uri');
-      if (addUriButton) {
-        await user.click(addUriButton);
-      }
+      // Step 4: Configure OAuth
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-oauth')).toBeInTheDocument();
+      });
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
       });
@@ -604,9 +619,14 @@ describe('ApplicationCreatePage', () => {
       const createButton = screen.getByRole('button', {name: /create application/i});
       await user.click(createButton);
 
+      // After successful creation, should show summary step
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/applications');
+        expect(screen.getByTestId('application-summary')).toBeInTheDocument();
       });
+      
+      // Verify the summary shows the created app
+      expect(screen.getByTestId('summary-app-name')).toHaveTextContent('My App');
+      expect(screen.getByTestId('summary-app-id')).toHaveTextContent('app-123');
     });
 
     it('should show error message when creation fails', async () => {
@@ -637,11 +657,10 @@ describe('ApplicationCreatePage', () => {
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Configure Redirect URIs - need to add at least one URI
-      const addUriButton = screen.queryByTestId('add-redirect-uri');
-      if (addUriButton) {
-        await user.click(addUriButton);
-      }
+      // Step 4: Configure OAuth
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-oauth')).toBeInTheDocument();
+      });
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
       });
@@ -683,11 +702,10 @@ describe('ApplicationCreatePage', () => {
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Configure Redirect URIs - need to add at least one URI
-      const addUriButton = screen.queryByTestId('add-redirect-uri');
-      if (addUriButton) {
-        await user.click(addUriButton);
-      }
+      // Step 4: Configure OAuth
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-oauth')).toBeInTheDocument();
+      });
       await waitFor(() => {
         expect(screen.getByRole('button', {name: /create application/i})).not.toBeDisabled();
       });
