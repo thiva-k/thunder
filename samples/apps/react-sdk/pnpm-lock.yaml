@@ -12,8 +12,8 @@ importers:
   .:
     dependencies:
       '@asgardeo/react':
-        specifier: ^0.6.6
-        version: 0.6.6(@types/react@19.2.6)(react@19.2.0)
+        specifier: ^0.6.8
+        version: 0.6.8(@types/react@19.2.6)(react@19.2.0)
       '@wso2/oxygen-ui':
         specifier: 0.0.1-alpha.3
         version: 0.0.1-alpha.3(0c7e0e06e579dc700ebe8f61b1456faf)
@@ -75,8 +75,8 @@ packages:
   '@asgardeo/javascript@0.2.2':
     resolution: {integrity: sha512-g0Xgc0KCHUXlffz5bZcMzadXCbwccPCDdM2kHXo1F2/ArR20SYPeYWyQZPD7fREOkjTY2Kud3xsILpAKSUOM0Q==}
 
-  '@asgardeo/react@0.6.6':
-    resolution: {integrity: sha512-tkxFJXljzSDjky6MAq88F/i4I9zBfXsA4DjxRhkkOSJU8HAkgtHLbYzww1JZp4bcEecDwzWtaEZUi8Cj3nOKMg==}
+  '@asgardeo/react@0.6.8':
+    resolution: {integrity: sha512-V7c9V4qDBMEa7h41Ta/tz6knYJYjkTNtEPrts0hRBlisrLtwVZg4Ay3Y/b+ZN1naAinpBYMqvwLge8roZJEWOw==}
     peerDependencies:
       '@types/react': '>=16.8.0'
       react: '>=16.8.0'
@@ -2132,7 +2132,7 @@ snapshots:
       '@asgardeo/i18n': 0.3.3
       tslib: 2.8.1
 
-  '@asgardeo/react@0.6.6(@types/react@19.2.6)(react@19.2.0)':
+  '@asgardeo/react@0.6.8(@types/react@19.2.6)(react@19.2.0)':
     dependencies:
       '@asgardeo/browser': 0.1.27(esbuild@0.25.12)
       '@asgardeo/i18n': 0.3.3
@@ -3832,7 +3832,7 @@ snapshots:
 
   md5.js@1.3.5:
     dependencies:
-      hash-base: 3.0.5
+      hash-base: 3.1.2
       inherits: 2.0.4
       safe-buffer: 5.2.1
 
