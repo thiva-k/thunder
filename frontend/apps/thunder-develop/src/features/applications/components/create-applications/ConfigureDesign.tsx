@@ -87,7 +87,7 @@ export default function ConfigureDesign({
   const theme = useTheme();
 
   const [logoSeed, setLogoSeed] = useState<number>(0);
-  const [customColor, setCustomColor] = useState<string>(theme?.vars?.palette.common.black ?? '#000000');
+  const [customColor, setCustomColor] = useState<string>('');
   const [showCustomColorInput, setShowCustomColorInput] = useState<boolean>(false);
   const [showColorOptions, setShowColorOptions] = useState<boolean>(false);
 
@@ -175,7 +175,7 @@ export default function ConfigureDesign({
   return (
     <Stack direction="column" spacing={4}>
       <Stack direction="column" spacing={1}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h1" gutterBottom>
           {t('applications:onboarding.configure.design.title')}
         </Typography>
         <Stack direction="row" alignItems="center" spacing={1}>
@@ -218,7 +218,6 @@ export default function ConfigureDesign({
                     border: isSelected
                       ? `2px solid ${theme.vars?.palette.primary.main}`
                       : `1px solid ${theme.vars?.palette.divider}`,
-                    bgcolor: isSelected ? selectedColor : undefined,
                     p: 1,
                     '&:hover': {
                       transform: 'scale(1.1)',
@@ -226,6 +225,9 @@ export default function ConfigureDesign({
                     },
                     transition: 'all 0.2s ease-in-out',
                     ...theme.applyStyles('light', {
+                      backgroundColor: isSelected ? selectedColor : theme.vars?.palette.grey[600],
+                    }),
+                    ...theme.applyStyles('dark', {
                       backgroundColor: isSelected ? selectedColor : theme.vars?.palette.grey[600],
                     }),
                   }}
@@ -342,7 +344,7 @@ export default function ConfigureDesign({
                     width: 50,
                     height: 50,
                     borderRadius: '8px',
-                    border: `1px solid ${theme.vars?.palette.divider}`,
+                    border: 'none',
                     cursor: 'pointer',
                     opacity: customColor ? 1 : 0,
                     zIndex: customColor ? 1 : 0,
@@ -374,15 +376,23 @@ export default function ConfigureDesign({
                     width: 50,
                     height: 50,
                     borderRadius: '8px',
-                    border: `1px solid ${theme.vars?.palette.divider}`,
-                    bgcolor: 'background.paper',
+                    border: customColor ?
+                      `2px solid ${theme.vars?.palette.primary.main}` :
+                      `2px solid ${theme.vars?.palette.text.primary}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     fontSize: '1.5rem',
                     fontWeight: 300,
-                    color: 'text.secondary',
+                    ...theme.applyStyles('light', {
+                      color: customColor ? 
+                        theme.vars?.palette.background.default :
+                        theme.vars?.palette.text.primary,
+                    }),
+                    ...theme.applyStyles('dark', {
+                      color: theme.vars?.palette.text.primary,
+                    }),
                     zIndex: 2,
                     '&:hover': {
                       transform: 'scale(1.1)',

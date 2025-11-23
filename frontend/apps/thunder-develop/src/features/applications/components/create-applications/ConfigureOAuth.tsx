@@ -332,7 +332,7 @@ export default function ConfigureOAuth({
   return (
     <Stack direction="column" spacing={3}>
       <Stack direction="column" spacing={1}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h1" gutterBottom>
           {t('applications:onboarding.configure.oauth.title')}
         </Typography>
         <Typography variant="body1" color="text.secondary">

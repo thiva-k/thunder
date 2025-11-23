@@ -125,7 +125,7 @@ export default function SignInBox(): JSX.Element {
         >
           {({onSubmit, isLoading, components, error, isInitialized}) => (
             <>
-              <Typography component="h1" variant="h5" sx={{width: '100%', mb: 2}}>
+              <Typography variant="h2" sx={{width: '100%', mb: 2}}>
                 Sign in
               </Typography>
 
@@ -419,35 +419,34 @@ export default function SignInBox(): JSX.Element {
                   })()}
                 </>
               )}
-
-              <Typography sx={{textAlign: 'center'}}>
-                Don&apos;t have an account?{' '}
-                <Button
-                  variant="text"
-                  onClick={() => {
-                    const currentParams = searchParams.toString();
-                    const createUrl = currentParams ? `${ROUTES.AUTH.SIGN_UP}?${currentParams}` : ROUTES.AUTH.SIGN_UP;
-                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                    navigate(createUrl);
-                  }}
-                  sx={{
-                    p: 0,
-                    minWidth: 'auto',
-                    textTransform: 'none',
-                    color: 'primary.main',
-                    textDecoration: 'underline',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  Sign up
-                </Button>
-              </Typography>
             </>
           )}
         </SignIn>
+        <Typography sx={{textAlign: 'center'}}>
+          Don&apos;t have an account?{' '}
+          <Button
+            variant="text"
+            onClick={() => {
+              const currentParams = searchParams.toString();
+              const createUrl = currentParams ? `${ROUTES.AUTH.SIGN_UP}?${currentParams}` : ROUTES.AUTH.SIGN_UP;
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              navigate(createUrl);
+            }}
+            sx={{
+              p: 0,
+              minWidth: 'auto',
+              textTransform: 'none',
+              color: 'primary.main',
+              textDecoration: 'underline',
+              '&:hover': {
+                textDecoration: 'underline',
+                backgroundColor: 'transparent',
+              },
+            }}
+          >
+            Sign up
+          </Button>
+        </Typography>
       </StyledPaper>
     </Stack>
   );
