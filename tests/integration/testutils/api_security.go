@@ -19,6 +19,7 @@
 package testutils
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -82,6 +83,55 @@ func isPublicEndpoint(path string) bool {
 	}
 
 	return false
+}
+
+// NewHTTPClientWithTokenProvider builds an HTTP client that injects Authorization headers using the provided token
+// provider and skips TLS verification to work with local test servers.
+func NewHTTPClientWithTokenProvider(getToken func() (string, error)) *http.Client {
+	return &http.Client{
+		Transport: &authTransport{
+			base: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
+			getToken: getToken,
+		},
+	}
+}
+
+// GetHTTPClientWithToken returns an HTTP client that always uses the provided bearer token.
+func GetHTTPClientWithToken(token string) *http.Client {
+	return NewHTTPClientWithTokenProvider(func() (string, error) {
+		if token == "" {
+			return "", fmt.Errorf("token is empty")
+		}
+		return token, nil
+	})
+}
+
+// GetHTTPClientForUser obtains a token using password grant (via DEVELOP app) and returns an HTTP client that
+// injects that token. This keeps token generation out of individual tests.
+func GetHTTPClientForUser(username, password string) (*http.Client, error) {
+	if username == "" || password == "" {
+		return nil, fmt.Errorf("username and password are required")
+	}
+
+	tokenResp, err := ObtainAccessTokenWithPassword(
+		"DEVELOP",
+		"https://localhost:8095/develop",
+		"openid",
+		username,
+		password,
+		true,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain token for user %s: %w", username, err)
+	}
+
+	if tokenResp == nil || tokenResp.AccessToken == "" {
+		return nil, fmt.Errorf("no access token returned for user %s", username)
+	}
+
+	return GetHTTPClientWithToken(tokenResp.AccessToken), nil
 }
 
 // ObtainAdminAccessToken obtains an admin access token using the DEVELOP app and stores it globally
