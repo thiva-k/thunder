@@ -144,8 +144,13 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
               sx={{
                 width: 64,
                 height: 64,
-                bgcolor: selectedColor,
                 p: 1,
+                ...theme.applyStyles('light', {
+                  backgroundColor: selectedColor,
+                }),
+                ...theme.applyStyles('dark', {
+                  backgroundColor: selectedColor,
+                })
               }}
             />
           </Box>
@@ -202,6 +207,7 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
                           variant="contained"
                           color="secondary"
                           sx={{
+                            color: '#fff',
                             backgroundColor: selectedColor,
                             '&:hover': {
                               backgroundColor: selectedColor,

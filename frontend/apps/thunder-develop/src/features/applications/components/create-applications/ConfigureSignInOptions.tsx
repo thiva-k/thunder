@@ -112,7 +112,7 @@ export default function ConfigureSignInOptions({
   return (
     <Stack direction="column" spacing={4}>
       <Stack direction="column" spacing={1}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h1" gutterBottom>
           {t('applications:onboarding.configure.SignInOptions.title')}
         </Typography>
         <Stack direction="row" alignItems="center" spacing={1}>

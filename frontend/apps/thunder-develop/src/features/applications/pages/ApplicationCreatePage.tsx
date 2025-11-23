@@ -491,7 +491,7 @@ export default function ApplicationCreatePage(): JSX.Element {
                     )}
 
                     {currentStep === 'configure' ? (
-                      <>
+                      <Stack direction="row" spacing={1}>
                         <Button
                           variant="outlined"
                           onClick={() => handleCreateApplication(true)}
@@ -512,7 +512,7 @@ export default function ApplicationCreatePage(): JSX.Element {
                             ? t('applications:onboarding.creating')
                             : t('applications:onboarding.createApplication')}
                         </Button>
-                      </>
+                      </Stack>
                     ) : (
                       <Button
                         variant="contained"

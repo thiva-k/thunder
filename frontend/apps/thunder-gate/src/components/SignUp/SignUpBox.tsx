@@ -92,7 +92,7 @@ export default function SignUpBox(): JSX.Element {
         >
           {({errors, handleSubmit, isLoading, components}) => (
             <>
-              <Typography component="h1" variant="h5" sx={{width: '100%', mb: 2}}>
+              <Typography variant="h2" sx={{width: '100%', mb: 2}}>
                 Create Account
               </Typography>
 
