@@ -131,9 +131,6 @@ $reactSdkPackageJson = Get-Content "samples/apps/react-sdk-sample/package.json" 
 $REACT_SDK_SAMPLE_APP_VERSION = $reactSdkPackageJson.version
 $REACT_SDK_SAMPLE_APP_FOLDER = "sample-app-react-sdk-${REACT_SDK_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
-# Server ports
-$BACKEND_PORT = 8090
-
 # Directories
 $TARGET_DIR = "target"
 $OUTPUT_DIR = Join-Path $TARGET_DIR "out"
@@ -156,6 +153,90 @@ $SAMPLE_BASE_DIR = "samples"
 $VANILLA_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-vanilla-sample"
 $VANILLA_SAMPLE_APP_SERVER_DIR = Join-Path $VANILLA_SAMPLE_APP_DIR "server"
 $REACT_SDK_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-sdk-sample"
+
+# ============================================================================
+# Read Configuration from deployment.yaml
+# ============================================================================
+
+$CONFIG_FILE = "./backend/cmd/server/repository/conf/deployment.yaml"
+
+# Function to read config with fallback
+function Read-Config {
+    if (-not (Test-Path $CONFIG_FILE)) {
+        # Use defaults if config file not found
+        $script:HOSTNAME = "localhost"
+        $script:PORT = 8090
+        $script:HTTP_ONLY = "false"
+        $script:PUBLIC_HOSTNAME = ""
+    }
+    else {
+        # Try yq first (YAML parser)
+        if (Get-Command yq -ErrorAction SilentlyContinue) {
+            $script:HOSTNAME = & yq eval '.server.hostname // "localhost"' $CONFIG_FILE 2>$null
+            $script:PORT = & yq eval '.server.port // 8090' $CONFIG_FILE 2>$null
+            $script:HTTP_ONLY = & yq eval '.server.http_only // false' $CONFIG_FILE 2>$null
+            $script:PUBLIC_HOSTNAME = & yq eval '.server.public_hostname // ""' $CONFIG_FILE 2>$null
+        }
+        else {
+            # Fallback: basic parsing with regex
+            $content = Get-Content $CONFIG_FILE -Raw
+            
+            # Try to extract hostname
+            if ($content -match 'hostname:\s*["\']?([^"\'\n]+)["\']?') {
+                $script:HOSTNAME = $matches[1].Trim()
+            }
+            else {
+                $script:HOSTNAME = "localhost"
+            }
+            
+            # Try to extract port
+            if ($content -match 'port:\s*(\d+)') {
+                $script:PORT = [int]$matches[1]
+            }
+            else {
+                $script:PORT = 8090
+            }
+            
+            # Try to extract http_only
+            if ($content -match 'http_only:\s*true') {
+                $script:HTTP_ONLY = "true"
+            }
+            else {
+                $script:HTTP_ONLY = "false"
+            }
+            
+            # Try to extract public_hostname
+            if ($content -match 'public_hostname:\s*["\']?([^"\'\n]+)["\']?') {
+                $script:PUBLIC_HOSTNAME = $matches[1].Trim()
+            }
+            else {
+                $script:PUBLIC_HOSTNAME = ""
+            }
+        }
+    }
+    
+    # Determine protocol
+    if ($script:HTTP_ONLY -eq "true") {
+        $script:PROTOCOL = "http"
+    }
+    else {
+        $script:PROTOCOL = "https"
+    }
+}
+
+# Read configuration
+Read-Config
+
+# Construct base URL (internal API endpoint)
+$BASE_URL = "${PROTOCOL}://${HOSTNAME}:${PORT}"
+
+# Construct public URL (external/redirect URLs)
+if ($PUBLIC_HOSTNAME) {
+    $PUBLIC_URL = $PUBLIC_HOSTNAME
+}
+else {
+    $PUBLIC_URL = $BASE_URL
+}
 
 function Get-CoverageExclusionPattern {
     # Read exclusion patterns (full package paths) from .excludecoverage file
@@ -1294,7 +1375,7 @@ function Run {
     # Run the setup script - it will handle server readiness checking
     # In dev mode, add the frontend dev server redirect URI
     $setupScript = Join-Path $BACKEND_BASE_DIR "scripts/setup_initial_data.sh"
-    & $setupScript -port $BACKEND_PORT --develop-redirect-uris "https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
+    & $setupScript -port $PORT --develop-redirect-uris "https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Initial data setup failed"
@@ -1315,7 +1396,7 @@ function Run {
 
     Write-Host ""
     Write-Host "🚀 Servers running:"
-    Write-Host "  👉 Backend : https://localhost:$BACKEND_PORT"
+    Write-Host "  👉 Backend : $BASE_URL"
     Write-Host "  📱 Frontend :"
     Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/gate"
     Write-Host "      🛠️  Develop (Admin Console): https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
@@ -1397,10 +1478,9 @@ function Start-Backend {
         }
     }
 
-    Kill-Port $BACKEND_PORT
+    Kill-Port $PORT
 
-    Write-Host "=== Starting backend on https://localhost:$BACKEND_PORT ==="
-    $env:BACKEND_PORT = $BACKEND_PORT
+    Write-Host "=== Starting backend on $BASE_URL ==="
     
     Push-Location $BACKEND_DIR
     try {
@@ -1414,7 +1494,7 @@ function Start-Backend {
     if ($ShowFinalOutput) {
         Write-Host ""
         Write-Host "🚀 Servers running:"
-        Write-Host "👉 Backend : https://localhost:$BACKEND_PORT"
+        Write-Host "👉 Backend : $BASE_URL"
         Write-Host "Press Ctrl+C to stop."
 
         try {
