@@ -45,9 +45,7 @@ func (h *jwtAuthenticator) CanHandle(r *http.Request) bool {
 	return strings.HasPrefix(authHeader, "Bearer ")
 }
 
-// Authenticate performs both authentication and authorization in a single operation.
-// It validates the JWT token and checks if the user has required scopes for the route.
-// Returns AuthenticationContext on success, or an error for auth (401) or authz (403) failures.
+// Authenticate validates the JWT token and builds an AuthenticationContext.
 func (h *jwtAuthenticator) Authenticate(r *http.Request) (*sysContext.AuthenticationContext, error) {
 	// Step 1: Extract Bearer token
 	authHeader := r.Header.Get(constants.AuthorizationHeaderName)
@@ -71,18 +69,7 @@ func (h *jwtAuthenticator) Authenticate(r *http.Request) (*sysContext.Authentica
 		return nil, errInvalidToken
 	}
 
-	// Step 4: Extract scopes and check authorization
-	scopes := extractScopes(claims)
-	requiredScopes := h.getRequiredScopes()
-
-	// If specific scopes are required, check if user has them
-	if len(requiredScopes) > 0 {
-		if !hasAnyScope(scopes, requiredScopes) {
-			return nil, errInsufficientScopes // 403 Forbidden
-		}
-	}
-
-	// Step 5: Extract user information and build AuthenticationContext
+	// Step 4: Extract user information and build AuthenticationContext
 	userID := ""
 	if sub, ok := claims["sub"].(string); ok && sub != "" {
 		userID = sub
@@ -93,6 +80,35 @@ func (h *jwtAuthenticator) Authenticate(r *http.Request) (*sysContext.Authentica
 
 	// Create immutable AuthenticationContext
 	return sysContext.NewAuthenticationContext(userID, ouID, appID, token, claims), nil
+}
+
+// Authorize verifies the authenticated user has the required scopes for the request.
+func (h *jwtAuthenticator) Authorize(r *http.Request, authCtx *sysContext.AuthenticationContext) error {
+	if authCtx == nil {
+		return errUnauthorized
+	}
+
+	ctx := r.Context()
+	claims := map[string]interface{}{}
+
+	if scope := sysContext.GetClaim(ctx, "scope"); scope != nil {
+		claims["scope"] = scope
+	}
+	if scopes := sysContext.GetClaim(ctx, "scopes"); scopes != nil {
+		claims["scopes"] = scopes
+	}
+	if perms := sysContext.GetClaim(ctx, "authorized_permissions"); perms != nil {
+		claims["authorized_permissions"] = perms
+	}
+
+	scopes := extractScopes(claims)
+	requiredScopes := h.getRequiredScopes(r)
+
+	if len(requiredScopes) > 0 && !hasAnyScope(scopes, requiredScopes) {
+		return errInsufficientScopes
+	}
+
+	return nil
 }
 
 // extractToken extracts the Bearer token from the Authorization header.
@@ -146,7 +162,7 @@ func extractClaim(claims map[string]interface{}, key string) string {
 }
 
 // getRequiredScopes returns the required scopes for a given route path.
-func (h *jwtAuthenticator) getRequiredScopes() []string {
+func (h *jwtAuthenticator) getRequiredScopes(_ *http.Request) []string {
 	return []string{"system"}
 }
 
