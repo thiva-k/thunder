@@ -1311,7 +1311,6 @@ func (suite *TokenExchangeGrantHandlerTestSuite) TestRFC8693_ActorDelegationChai
 
 func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_Success_WithActorTokenHasActButSubjectHasNoAct() {
 	// Test case: Actor token has its own act claim, but subject token has no act claim
-	// This covers lines 358-359 where actClaim["act"] = actorAct
 	now := time.Now().Unix()
 
 	// Subject token WITHOUT act claim

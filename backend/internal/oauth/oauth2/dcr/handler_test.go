@@ -26,32 +26,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
-// mockDCRService is a mock implementation of DCRServiceInterface
-type mockDCRService struct {
-	mock.Mock
-}
-
-func (m *mockDCRService) RegisterClient(
-	request *DCRRegistrationRequest,
-) (*DCRRegistrationResponse, *serviceerror.ServiceError) {
-	args := m.Called(request)
-	if args.Get(0) == nil {
-		return nil, args.Get(1).(*serviceerror.ServiceError)
-	}
-	return args.Get(0).(*DCRRegistrationResponse), args.Get(1).(*serviceerror.ServiceError)
-}
-
 // DCRHandlerTestSuite is the test suite for DCR handler
 type DCRHandlerTestSuite struct {
 	suite.Suite
-	mockService *mockDCRService
+	mockService *DCRServiceInterfaceMock
 	handler     *dcrHandler
 }
 
@@ -60,7 +44,7 @@ func TestDCRHandlerTestSuite(t *testing.T) {
 }
 
 func (s *DCRHandlerTestSuite) SetupTest() {
-	s.mockService = new(mockDCRService)
+	s.mockService = NewDCRServiceInterfaceMock(s.T())
 	s.handler = newDCRHandler(s.mockService)
 }
 
@@ -236,7 +220,7 @@ func (s *DCRHandlerTestSuite) TestHandleDCRRegistration_EmptyBody() {
 
 // TestNewDCRHandler tests the handler constructor
 func TestNewDCRHandler(t *testing.T) {
-	mockService := new(mockDCRService)
+	mockService := NewDCRServiceInterfaceMock(t)
 	handler := newDCRHandler(mockService)
 
 	assert.NotNil(t, handler)
@@ -245,7 +229,7 @@ func TestNewDCRHandler(t *testing.T) {
 
 // TestWriteServiceErrorResponse_DirectCall tests the writeServiceErrorResponse function directly
 func TestWriteServiceErrorResponse_DirectCall(t *testing.T) {
-	mockService := new(mockDCRService)
+	mockService := NewDCRServiceInterfaceMock(t)
 	handler := newDCRHandler(mockService)
 
 	testCases := []struct {

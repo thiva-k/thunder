@@ -165,6 +165,22 @@ packages:
       pkgname: userinfo
       filename: "{{.InterfaceName}}_mock_test.go"
 
+  github.com/asgardeo/thunder/internal/oauth/jwks:
+    config:
+      all: true
+      dir: internal/oauth/jwks
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: jwks
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/oauth/oauth2/dcr:
+    config:
+      all: true
+      dir: internal/oauth/oauth2/dcr
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: dcr
+      filename: "{{.InterfaceName}}_mock_test.go"
+
   github.com/asgardeo/thunder/internal/application:
     config:
       all: true

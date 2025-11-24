@@ -77,7 +77,7 @@ func (suite *RefreshTokenGrantHandlerTestSuite) SetupTest() {
 	}
 	_ = config.InitializeThunderRuntime("test", testConfig)
 
-	suite.mockJWTService = &jwtmock.JWTServiceInterfaceMock{}
+	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockUserService = usersvcmock.NewUserServiceInterfaceMock(suite.T())
 	suite.mockTokenBuilder = tokenservicemock.NewTokenBuilderInterfaceMock(suite.T())
 	suite.mockTokenValidator = tokenservicemock.NewTokenValidatorInterfaceMock(suite.T())
@@ -411,7 +411,6 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestHandleGrant_ExtractIatClaimE
 }
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_NoScopesRequested() {
-	// Test when no scopes are requested - should return all refresh token scopes
 	refreshTokenScopes := []string{"read", "write", "delete"}
 	logger := log.GetLogger()
 
@@ -422,7 +421,6 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_NoScop
 }
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_RequestedScopesSubset() {
-	// Test when requested scopes are a subset of refresh token scopes
 	refreshTokenScopes := []string{"read", "write", "delete"}
 	logger := log.GetLogger()
 
@@ -435,7 +433,6 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_Reques
 }
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_SomeRequestedScopesNotInRefreshToken() {
-	// Test when some requested scopes are not in refresh token scopes
 	refreshTokenScopes := []string{"read", "write"}
 	logger := log.GetLogger()
 
@@ -450,7 +447,6 @@ func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_SomeRe
 }
 
 func (suite *RefreshTokenGrantHandlerTestSuite) TestApplyScopeDownscoping_NoMatchingScopes() {
-	// Test when requested scopes don't match any refresh token scopes
 	refreshTokenScopes := []string{"read", "write"}
 	logger := log.GetLogger()
 

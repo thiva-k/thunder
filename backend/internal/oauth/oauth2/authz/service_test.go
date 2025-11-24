@@ -98,6 +98,19 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_StoreErr
 	suite.mockAuthzStore.AssertExpectations(suite.T())
 }
 
+func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_ErrAuthorizationCodeNotFound() {
+	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, suite.testCode).
+		Return((*AuthorizationCode)(nil), ErrAuthorizationCodeNotFound)
+
+	result, err := suite.service.GetAuthorizationCodeDetails(suite.testClientID, suite.testCode)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), "invalid authorization code", err.Error())
+
+	suite.mockAuthzStore.AssertExpectations(suite.T())
+}
+
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCode() {
 	// Mock store to return authorization code with empty code string
 	emptyAuthzCode := suite.testAuthzCode
@@ -146,7 +159,6 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCli
 }
 
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCodeString() {
-	// Mock store to be called with empty code string
 	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, "").
 		Return((*AuthorizationCode)(nil), errors.New("invalid code"))
 
@@ -155,6 +167,19 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_EmptyCod
 	assert.Nil(suite.T(), result)
 	assert.NotNil(suite.T(), err)
 	assert.Equal(suite.T(), "failed to retrieve authorization code", err.Error())
+
+	suite.mockAuthzStore.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_NilAuthCode() {
+	suite.mockAuthzStore.On("GetAuthorizationCode", suite.testClientID, suite.testCode).
+		Return((*AuthorizationCode)(nil), nil)
+
+	result, err := suite.service.GetAuthorizationCodeDetails(suite.testClientID, suite.testCode)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), "invalid authorization code", err.Error())
 
 	suite.mockAuthzStore.AssertExpectations(suite.T())
 }

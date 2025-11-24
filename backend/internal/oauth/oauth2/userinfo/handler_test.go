@@ -268,3 +268,50 @@ func (s *UserInfoHandlerTestSuite) TestHandleUserInfo_InvalidAuthorizationHeader
 	assert.Contains(s.T(), rr.Body.String(), constants.ErrorInvalidRequest)
 	assert.Contains(s.T(), rr.Body.String(), "invalid Authorization header format")
 }
+
+// TestHandleUserInfo_EncodingError tests encoding error handling
+func (s *UserInfoHandlerTestSuite) TestHandleUserInfo_EncodingError() {
+	req := httptest.NewRequest(http.MethodGet, "/oauth2/userinfo", nil)
+	req.Header.Set("Authorization", "Bearer valid-token")
+	rr := httptest.NewRecorder()
+
+	// Use a function which cannot be JSON encoded - this will cause Encode to return an error
+	userInfo := map[string]interface{}{
+		"sub":  "user123",
+		"name": "John Doe",
+		"func": func() {}, // Function cannot be JSON encoded and will cause an error
+	}
+
+	s.mockService.On("GetUserInfo", "valid-token").Return(userInfo, nil)
+
+	s.handler.HandleUserInfo(rr, req)
+
+	// The handler should detect the encoding error and call handleEncodingError
+	assert.Equal(s.T(), "application/json", rr.Header().Get("Content-Type"))
+	// Verify that handleEncodingError was called by checking for the error message
+	assert.Contains(s.T(), rr.Body.String(), serviceerror.ErrorEncodingError)
+	s.mockService.AssertExpectations(s.T())
+}
+
+// TestWriteServiceErrorResponse_DefaultCase tests the default case in writeServiceErrorResponse
+func (s *UserInfoHandlerTestSuite) TestWriteServiceErrorResponse_DefaultCase() {
+	req := httptest.NewRequest(http.MethodGet, "/oauth2/userinfo", nil)
+	req.Header.Set("Authorization", "Bearer token123")
+	rr := httptest.NewRecorder()
+
+	// Create a service error with an unknown type (not ClientErrorType or ServerErrorType)
+	unknownError := &serviceerror.ServiceError{
+		Type:             "UnknownErrorType", // Unknown type
+		Code:             "unknown_error",
+		ErrorDescription: "An unknown error occurred",
+	}
+	s.mockService.On("GetUserInfo", "token123").Return(nil, unknownError)
+
+	s.handler.HandleUserInfo(rr, req)
+
+	// Default case should return StatusUnauthorized
+	assert.Equal(s.T(), http.StatusUnauthorized, rr.Code)
+	assert.Contains(s.T(), rr.Body.String(), "unknown_error")
+	assert.Contains(s.T(), rr.Body.String(), "An unknown error occurred")
+	s.mockService.AssertExpectations(s.T())
+}

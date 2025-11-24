@@ -228,3 +228,157 @@ func (s *DCRServiceTestSuite) TestMapApplicationErrorToDCRError() {
 		})
 	}
 }
+
+func (s *DCRServiceTestSuite) TestRegisterClient_ConvertDCRToApplicationError() {
+	request := &DCRRegistrationRequest{
+		RedirectURIs: []string{"https://client.example.com/callback"},
+		GrantTypes:   []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode},
+		JWKS:         map[string]interface{}{"keys": make(chan int)},
+	}
+
+	s.mockAppService.On(
+		"CreateApplication", mock.AnythingOfType("*model.ApplicationDTO"),
+	).Return(nil, &serviceerror.ServiceError{
+		Type: serviceerror.ServerErrorType,
+		Code: "APP-5001",
+	})
+
+	response, err := s.service.RegisterClient(request)
+
+	s.Nil(response)
+	s.NotNil(err)
+	s.Equal(ErrorServerError.Code, err.Code)
+}
+
+func (s *DCRServiceTestSuite) TestRegisterClient_ConvertApplicationToDCRResponseError() {
+	request := &DCRRegistrationRequest{
+		RedirectURIs: []string{"https://client.example.com/callback"},
+		GrantTypes:   []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode},
+		ClientName:   "Test Client",
+	}
+
+	appDTO := &model.ApplicationDTO{
+		ID:   "app-id",
+		Name: "Test Client",
+		InboundAuthConfig: []model.InboundAuthConfigDTO{
+			{
+				Type: model.OAuthInboundAuthType,
+				OAuthAppConfig: &model.OAuthAppConfigDTO{
+					ClientID:     "client-id",
+					ClientSecret: "client-secret",
+					Scopes:       []string{},
+				},
+			},
+		},
+		Certificate: &model.ApplicationCertificate{
+			Type:  cert.CertificateTypeJWKS,
+			Value: "invalid json",
+		},
+	}
+
+	s.mockAppService.On(
+		"CreateApplication", mock.AnythingOfType("*model.ApplicationDTO"),
+	).Return(appDTO, (*serviceerror.ServiceError)(nil))
+
+	response, err := s.service.RegisterClient(request)
+
+	s.Nil(response)
+	s.NotNil(err)
+	s.Equal(ErrorServerError.Code, err.Code)
+}
+
+func (s *DCRServiceTestSuite) TestRegisterClient_WithJWKS() {
+	request := &DCRRegistrationRequest{
+		RedirectURIs: []string{"https://client.example.com/callback"},
+		GrantTypes:   []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode},
+		ClientName:   "Test Client",
+		JWKS:         map[string]interface{}{"keys": []interface{}{}},
+	}
+
+	appDTO := &model.ApplicationDTO{
+		ID:   "app-id",
+		Name: "Test Client",
+		InboundAuthConfig: []model.InboundAuthConfigDTO{
+			{
+				Type: model.OAuthInboundAuthType,
+				OAuthAppConfig: &model.OAuthAppConfigDTO{
+					ClientID:     "client-id",
+					ClientSecret: "client-secret",
+					Scopes:       []string{},
+				},
+			},
+		},
+		Certificate: &model.ApplicationCertificate{
+			Type:  cert.CertificateTypeJWKS,
+			Value: `{"keys":[]}`,
+		},
+	}
+
+	s.mockAppService.On(
+		"CreateApplication", mock.AnythingOfType("*model.ApplicationDTO"),
+	).Return(appDTO, (*serviceerror.ServiceError)(nil))
+
+	response, err := s.service.RegisterClient(request)
+
+	s.NotNil(response)
+	s.Nil(err)
+	s.NotNil(response.JWKS)
+}
+
+func (s *DCRServiceTestSuite) TestRegisterClient_WithScope() {
+	request := &DCRRegistrationRequest{
+		RedirectURIs: []string{"https://client.example.com/callback"},
+		GrantTypes:   []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode},
+		ClientName:   "Test Client",
+		Scope:        "read write admin",
+	}
+
+	appDTO := &model.ApplicationDTO{
+		ID:   "app-id",
+		Name: "Test Client",
+		InboundAuthConfig: []model.InboundAuthConfigDTO{
+			{
+				Type: model.OAuthInboundAuthType,
+				OAuthAppConfig: &model.OAuthAppConfigDTO{
+					ClientID:     "client-id",
+					ClientSecret: "client-secret",
+					Scopes:       []string{"read", "write", "admin"},
+				},
+			},
+		},
+	}
+
+	s.mockAppService.On(
+		"CreateApplication", mock.AnythingOfType("*model.ApplicationDTO"),
+	).Return(appDTO, (*serviceerror.ServiceError)(nil))
+
+	response, err := s.service.RegisterClient(request)
+
+	s.NotNil(response)
+	s.Nil(err)
+	s.Equal("read write admin", response.Scope)
+}
+
+func (s *DCRServiceTestSuite) TestRegisterClient_EmptyInboundAuthConfig() {
+	request := &DCRRegistrationRequest{
+		RedirectURIs: []string{"https://client.example.com/callback"},
+		GrantTypes:   []oauth2const.GrantType{oauth2const.GrantTypeAuthorizationCode},
+		ClientName:   "Test Client",
+	}
+
+	appDTO := &model.ApplicationDTO{
+		ID:                "app-id",
+		Name:              "Test Client",
+		InboundAuthConfig: []model.InboundAuthConfigDTO{},
+	}
+
+	s.mockAppService.On(
+		"CreateApplication", mock.AnythingOfType("*model.ApplicationDTO"),
+	).Return(appDTO, (*serviceerror.ServiceError)(nil))
+
+	response, err := s.service.RegisterClient(request)
+
+	s.NotNil(response)
+	s.Nil(err)
+	s.NotNil(response)
+}
