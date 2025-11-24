@@ -27,12 +27,17 @@ import (
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	"github.com/asgardeo/thunder/internal/idp"
+	"github.com/asgardeo/thunder/internal/notification/common"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/cmodels"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/system/log"
+	"github.com/asgardeo/thunder/internal/userschema"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
 	"github.com/asgardeo/thunder/tests/mocks/idp/idpmock"
+	"github.com/asgardeo/thunder/tests/mocks/notification/notificationmock"
+	"github.com/asgardeo/thunder/tests/mocks/userschemamock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -49,9 +54,11 @@ const (
 // ExportServiceTestSuite defines the test suite for the export service.
 type ExportServiceTestSuite struct {
 	suite.Suite
-	appServiceMock *applicationmock.ApplicationServiceInterfaceMock
-	idpServiceMock *idpmock.IDPServiceInterfaceMock
-	exportService  ExportServiceInterface
+	appServiceMock          *applicationmock.ApplicationServiceInterfaceMock
+	idpServiceMock          *idpmock.IDPServiceInterfaceMock
+	mockNotificationService *notificationmock.NotificationSenderMgtSvcInterfaceMock
+	mockUserSchemaService   *userschemamock.UserSchemaServiceInterfaceMock
+	exportService           ExportServiceInterface
 }
 
 // SetupTest sets up the test environment before each test.
@@ -81,11 +88,14 @@ func (suite *ExportServiceTestSuite) SetupTest() {
 
 	suite.appServiceMock = applicationmock.NewApplicationServiceInterfaceMock(suite.T())
 	suite.idpServiceMock = idpmock.NewIDPServiceInterfaceMock(suite.T())
+	suite.mockNotificationService = notificationmock.NewNotificationSenderMgtSvcInterfaceMock(suite.T())
+	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 
 	// Create parameterizer instance
 	parameterizer := newParameterizer(rules)
 
-	suite.exportService = newExportService(suite.appServiceMock, suite.idpServiceMock, parameterizer)
+	suite.exportService = newExportService(suite.appServiceMock,
+		suite.idpServiceMock, suite.mockNotificationService, suite.mockUserSchemaService, parameterizer)
 }
 
 func (suite *ExportServiceTestSuite) TearDownTest() {
@@ -500,14 +510,8 @@ func (suite *ExportServiceTestSuite) TestExportResources_IdentityProvider_Succes
 }
 
 // TestExportResources_IdentityProvider_Multiple tests exporting multiple IDPs.
+// nolint:dupl // Similar test pattern for different resource types
 func (suite *ExportServiceTestSuite) TestExportResources_IdentityProvider_Multiple() {
-	request := &ExportRequest{
-		IdentityProviders: []string{"idp1", "idp2"},
-		Options: &ExportOptions{
-			Format: "yaml",
-		},
-	}
-
 	mockProperty1, _ := cmodels.NewProperty("client_id", "client1", false)
 	mockIDP1 := &idp.IDPDTO{
 		ID:         "idp1",
@@ -527,13 +531,13 @@ func (suite *ExportServiceTestSuite) TestExportResources_IdentityProvider_Multip
 	suite.idpServiceMock.EXPECT().GetIdentityProvider("idp1").Return(mockIDP1, nil)
 	suite.idpServiceMock.EXPECT().GetIdentityProvider("idp2").Return(mockIDP2, nil)
 
+	request := &ExportRequest{
+		IdentityProviders: []string{"idp1", "idp2"},
+		Options:           &ExportOptions{Format: "yaml"},
+	}
 	result, err := suite.exportService.ExportResources(request)
 
-	assert.Nil(suite.T(), err)
-	assert.NotNil(suite.T(), result)
-	assert.Len(suite.T(), result.Files, 2)
-	assert.Equal(suite.T(), 2, result.Summary.TotalFiles)
-	assert.Equal(suite.T(), 2, result.Summary.ResourceTypes["identity_providers"])
+	suite.assertMultipleResourcesExport(result, err, 2, "identity_providers")
 }
 
 // TestExportResources_IdentityProvider_Wildcard tests exporting all IDPs using wildcard.
@@ -1141,7 +1145,8 @@ func (suite *ExportServiceTestSuite) TestExportResources_TemplateGenerationError
 	}
 
 	// Create a new export service with the mock parameterizer
-	exportServiceWithMock := newExportService(suite.appServiceMock, suite.idpServiceMock, mockParameterizer)
+	exportServiceWithMock := newExportService(suite.appServiceMock,
+		suite.idpServiceMock, suite.mockNotificationService, suite.mockUserSchemaService, mockParameterizer)
 
 	result, err := exportServiceWithMock.ExportResources(request)
 
@@ -1240,4 +1245,697 @@ func (suite *ExportServiceTestSuite) TestExportResources_WithGroupByTypeStructur
 
 	assert.Equal(suite.T(), 2, appFiles, "Should have 2 application files")
 	assert.Equal(suite.T(), 1, idpFiles, "Should have 1 IDP file")
+}
+
+// TestGetAllResourceIDsGeneric_Success tests successful retrieval of all resource IDs.
+func (suite *ExportServiceTestSuite) TestGetAllResourceIDsGeneric_Success() {
+	mockIDPList := []idp.BasicIDPDTO{
+		{ID: "idp1", Name: "Google IDP"},
+		{ID: "idp2", Name: "GitHub IDP"},
+		{ID: "idp3", Name: "OIDC IDP"},
+	}
+
+	getList := func() (interface{}, *serviceerror.ServiceError) {
+		return mockIDPList, nil
+	}
+
+	extractIDs := func(result interface{}) []string {
+		idps := result.([]idp.BasicIDPDTO)
+		ids := make([]string, 0, len(idps))
+		for _, i := range idps {
+			ids = append(ids, i.ID)
+		}
+		return ids
+	}
+
+	ids, err := getAllResourceIDsGeneric(getList, extractIDs)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), ids)
+	assert.Len(suite.T(), ids, 3)
+	assert.Contains(suite.T(), ids, "idp1")
+	assert.Contains(suite.T(), ids, "idp2")
+	assert.Contains(suite.T(), ids, "idp3")
+}
+
+// TestGetAllResourceIDsGeneric_Error tests error handling in getAllResourceIDsGeneric.
+func (suite *ExportServiceTestSuite) TestGetAllResourceIDsGeneric_Error() {
+	getList := func() (interface{}, *serviceerror.ServiceError) {
+		return nil, &serviceerror.ServiceError{
+			Code:  "LIST_FAILED",
+			Error: "Failed to retrieve resource list",
+		}
+	}
+
+	extractIDs := func(result interface{}) []string {
+		return nil
+	}
+
+	ids, err := getAllResourceIDsGeneric(getList, extractIDs)
+
+	assert.NotNil(suite.T(), err)
+	assert.Nil(suite.T(), ids)
+	assert.Equal(suite.T(), "LIST_FAILED", err.Code)
+	assert.Equal(suite.T(), "Failed to retrieve resource list", err.Error)
+}
+
+// TestGetAllResourceIDsGeneric_EmptyList tests getAllResourceIDsGeneric with empty list.
+func (suite *ExportServiceTestSuite) TestGetAllResourceIDsGeneric_EmptyList() {
+	mockIDPList := []idp.BasicIDPDTO{}
+
+	getList := func() (interface{}, *serviceerror.ServiceError) {
+		return mockIDPList, nil
+	}
+
+	extractIDs := func(result interface{}) []string {
+		idps := result.([]idp.BasicIDPDTO)
+		ids := make([]string, 0, len(idps))
+		for _, i := range idps {
+			ids = append(ids, i.ID)
+		}
+		return ids
+	}
+
+	ids, err := getAllResourceIDsGeneric(getList, extractIDs)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), ids)
+	assert.Len(suite.T(), ids, 0)
+}
+
+// TestValidateResourceGeneric_Success tests successful resource validation.
+func (suite *ExportServiceTestSuite) TestValidateResourceGeneric_Success() {
+	logger := log.GetLogger()
+
+	mockProperty, _ := cmodels.NewProperty("client_id", "test-client", false)
+	mockIDP := &idp.IDPDTO{
+		ID:         "idp1",
+		Name:       "Test IDP",
+		Type:       idp.IDPTypeGoogle,
+		Properties: []cmodels.Property{*mockProperty},
+	}
+
+	castResource := func(r interface{}) (interface{}, bool) {
+		idpDTO, ok := r.(*idp.IDPDTO)
+		return idpDTO, ok
+	}
+
+	extractName := func(r interface{}) string {
+		return r.(*idp.IDPDTO).Name
+	}
+
+	validateExtra := func(r interface{}, id, name string, logger *log.Logger) {
+		idpDTO := r.(*idp.IDPDTO)
+		if len(idpDTO.Properties) == 0 {
+			logger.Warn("Identity provider has no properties",
+				log.String("idpID", id), log.String("name", name))
+		}
+	}
+
+	name, err := validateResourceGeneric(
+		mockIDP, "idp1", "identity_provider", "IDP_VALIDATION_ERROR",
+		logger, castResource, extractName, validateExtra)
+
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), "Test IDP", name)
+}
+
+// TestValidateResourceGeneric_InvalidType tests validation with invalid type assertion.
+func (suite *ExportServiceTestSuite) TestValidateResourceGeneric_InvalidType() {
+	logger := log.GetLogger()
+
+	// Pass wrong type (string instead of IDP)
+	invalidResource := "not-an-idp"
+
+	castResource := func(r interface{}) (interface{}, bool) {
+		idpDTO, ok := r.(*idp.IDPDTO)
+		return idpDTO, ok
+	}
+
+	extractName := func(r interface{}) string {
+		return r.(*idp.IDPDTO).Name
+	}
+
+	name, err := validateResourceGeneric(
+		invalidResource, "idp1", "identity_provider", "IDP_VALIDATION_ERROR",
+		logger, castResource, extractName, nil)
+
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), "", name)
+	assert.Equal(suite.T(), "INVALID_TYPE", err.Code)
+	assert.Equal(suite.T(), "Invalid resource type", err.Error)
+	assert.Equal(suite.T(), "identity_provider", err.ResourceType)
+	assert.Equal(suite.T(), "idp1", err.ResourceID)
+}
+
+// TestValidateResourceGeneric_EmptyName tests validation with empty resource name.
+func (suite *ExportServiceTestSuite) TestValidateResourceGeneric_EmptyName() {
+	logger := log.GetLogger()
+
+	mockProperty, _ := cmodels.NewProperty("client_id", "test-client", false)
+	mockIDP := &idp.IDPDTO{
+		ID:         "idp1",
+		Name:       "", // Empty name
+		Type:       idp.IDPTypeGoogle,
+		Properties: []cmodels.Property{*mockProperty},
+	}
+
+	castResource := func(r interface{}) (interface{}, bool) {
+		idpDTO, ok := r.(*idp.IDPDTO)
+		return idpDTO, ok
+	}
+
+	extractName := func(r interface{}) string {
+		return r.(*idp.IDPDTO).Name
+	}
+
+	name, err := validateResourceGeneric(
+		mockIDP, "idp1", "identity_provider", "IDP_VALIDATION_ERROR",
+		logger, castResource, extractName, nil)
+
+	assert.NotNil(suite.T(), err)
+	assert.Equal(suite.T(), "", name)
+	assert.Equal(suite.T(), "IDP_VALIDATION_ERROR", err.Code)
+	assert.Equal(suite.T(), "identity_provider name is empty", err.Error)
+	assert.Equal(suite.T(), "identity_provider", err.ResourceType)
+	assert.Equal(suite.T(), "idp1", err.ResourceID)
+}
+
+// TestValidateResourceGeneric_WithExtraValidation tests validation with extra validation callback.
+func (suite *ExportServiceTestSuite) TestValidateResourceGeneric_WithExtraValidation() {
+	logger := log.GetLogger()
+
+	// IDP with no properties
+	mockIDP := &idp.IDPDTO{
+		ID:         "idp1",
+		Name:       "Test IDP",
+		Type:       idp.IDPTypeGoogle,
+		Properties: []cmodels.Property{}, // Empty properties
+	}
+
+	castResource := func(r interface{}) (interface{}, bool) {
+		idpDTO, ok := r.(*idp.IDPDTO)
+		return idpDTO, ok
+	}
+
+	extractName := func(r interface{}) string {
+		return r.(*idp.IDPDTO).Name
+	}
+
+	validateExtra := func(r interface{}, id, name string, logger *log.Logger) {
+		idpDTO := r.(*idp.IDPDTO)
+		if len(idpDTO.Properties) == 0 {
+			logger.Warn("Identity provider has no properties",
+				log.String("idpID", id), log.String("name", name))
+		}
+	}
+
+	name, err := validateResourceGeneric(
+		mockIDP, "idp1", "identity_provider", "IDP_VALIDATION_ERROR",
+		logger, castResource, extractName, validateExtra)
+
+	// Should succeed even with warning
+	assert.Nil(suite.T(), err)
+	assert.Equal(suite.T(), "Test IDP", name)
+}
+
+// TestExportNotificationSenders_Success tests successful export of notification senders.
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_Success() {
+	request := &ExportRequest{
+		NotificationSenders: []string{"sender1"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockProperty, _ := cmodels.NewProperty("api_key", "test-api-key", true)
+	mockSender := &common.NotificationSenderDTO{
+		ID:          "sender1",
+		Name:        "Test Sender",
+		Description: "Test notification sender",
+		Provider:    common.MessageProviderTypeTwilio,
+		Properties:  []cmodels.Property{*mockProperty},
+	}
+
+	suite.mockNotificationService.EXPECT().GetSender("sender1").Return(mockSender, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 1)
+	assert.Equal(suite.T(), 1, result.Summary.TotalFiles)
+	assert.Contains(suite.T(), result.Summary.ResourceTypes, "notification_senders")
+	assert.Equal(suite.T(), "Test_Sender.yaml", result.Files[0].FileName)
+	assert.Equal(suite.T(), "notification_sender", result.Files[0].ResourceType)
+	assert.Contains(suite.T(), result.Files[0].Content, "name: Test Sender")
+}
+
+// TestExportNotificationSenders_Multiple tests exporting multiple notification senders.
+// nolint:dupl // Similar test pattern for different resource types
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_Multiple() {
+	mockProperty1, _ := cmodels.NewProperty("api_key", "key1", true)
+	mockSender1 := &common.NotificationSenderDTO{
+		ID:         "sender1",
+		Name:       "Twilio Sender",
+		Provider:   common.MessageProviderTypeTwilio,
+		Properties: []cmodels.Property{*mockProperty1},
+	}
+
+	mockProperty2, _ := cmodels.NewProperty("api_key", "key2", true)
+	mockSender2 := &common.NotificationSenderDTO{
+		ID:         "sender2",
+		Name:       "Vonage Sender",
+		Provider:   common.MessageProviderTypeVonage,
+		Properties: []cmodels.Property{*mockProperty2},
+	}
+
+	suite.mockNotificationService.EXPECT().GetSender("sender1").Return(mockSender1, nil)
+	suite.mockNotificationService.EXPECT().GetSender("sender2").Return(mockSender2, nil)
+
+	request := &ExportRequest{
+		NotificationSenders: []string{"sender1", "sender2"},
+		Options:             &ExportOptions{Format: "yaml"},
+	}
+	result, err := suite.exportService.ExportResources(request)
+
+	suite.assertMultipleResourcesExport(result, err, 2, "notification_senders")
+}
+
+// TestExportNotificationSenders_Wildcard tests exporting all notification senders using wildcard.
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_Wildcard() {
+	request := &ExportRequest{
+		NotificationSenders: []string{"*"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockProperty1, _ := cmodels.NewProperty("api_key", "key1", true)
+	mockSender1 := &common.NotificationSenderDTO{
+		ID:         "sender1",
+		Name:       "Twilio Sender",
+		Provider:   common.MessageProviderTypeTwilio,
+		Properties: []cmodels.Property{*mockProperty1},
+	}
+
+	mockProperty2, _ := cmodels.NewProperty("api_key", "key2", true)
+	mockSender2 := &common.NotificationSenderDTO{
+		ID:         "sender2",
+		Name:       "Vonage Sender",
+		Provider:   common.MessageProviderTypeVonage,
+		Properties: []cmodels.Property{*mockProperty2},
+	}
+
+	mockSenderList := []common.NotificationSenderDTO{*mockSender1, *mockSender2}
+
+	suite.mockNotificationService.EXPECT().ListSenders().Return(mockSenderList, nil)
+	suite.mockNotificationService.EXPECT().GetSender("sender1").Return(mockSender1, nil)
+	suite.mockNotificationService.EXPECT().GetSender("sender2").Return(mockSender2, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 2)
+	assert.Equal(suite.T(), 2, result.Summary.TotalFiles)
+}
+
+// TestExportNotificationSenders_NotFound tests error handling when sender not found.
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_NotFound() {
+	request := &ExportRequest{
+		NotificationSenders: []string{"non-existent-sender"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	senderError := &serviceerror.ServiceError{
+		Code:  "SENDER_NOT_FOUND",
+		Error: "Notification sender not found",
+	}
+
+	suite.mockNotificationService.EXPECT().GetSender("non-existent-sender").Return(nil, senderError)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.NotNil(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), ErrorNoResourcesFound.Code, err.Code)
+}
+
+// TestExportNotificationSenders_EmptyName tests validation for sender with empty name.
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_EmptyName() {
+	request := &ExportRequest{
+		NotificationSenders: []string{"sender-no-name"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockProperty, _ := cmodels.NewProperty("api_key", "test-key", true)
+	mockSender := &common.NotificationSenderDTO{
+		ID:         "sender-no-name",
+		Name:       "", // Empty name
+		Provider:   common.MessageProviderTypeTwilio,
+		Properties: []cmodels.Property{*mockProperty},
+	}
+
+	suite.mockNotificationService.EXPECT().GetSender("sender-no-name").Return(mockSender, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.NotNil(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), ErrorNoResourcesFound.Code, err.Code)
+}
+
+// TestExportNotificationSenders_NoProperties tests exporting sender with no properties.
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_NoProperties() {
+	request := &ExportRequest{
+		NotificationSenders: []string{"sender-no-props"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSender := &common.NotificationSenderDTO{
+		ID:         "sender-no-props",
+		Name:       "Empty Sender",
+		Provider:   common.MessageProviderTypeTwilio,
+		Properties: []cmodels.Property{}, // Empty properties
+	}
+
+	suite.mockNotificationService.EXPECT().GetSender("sender-no-props").Return(mockSender, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	// Should succeed even with no properties
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 1)
+	assert.Equal(suite.T(), 1, result.Summary.TotalFiles)
+	assert.Contains(suite.T(), result.Files[0].Content, "name: Empty Sender")
+}
+
+// TestExportNotificationSenders_WildcardPartialFailure tests wildcard export with partial failures.
+func (suite *ExportServiceTestSuite) TestExportNotificationSenders_WildcardPartialFailure() {
+	request := &ExportRequest{
+		NotificationSenders: []string{"*"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockProperty1, _ := cmodels.NewProperty("api_key", "key1", true)
+	mockSender1 := &common.NotificationSenderDTO{
+		ID:         "sender1",
+		Name:       "Twilio Sender",
+		Provider:   common.MessageProviderTypeTwilio,
+		Properties: []cmodels.Property{*mockProperty1},
+	}
+
+	mockProperty3, _ := cmodels.NewProperty("api_key", "key3", true)
+	mockSender3 := &common.NotificationSenderDTO{
+		ID:         "sender3",
+		Name:       "Vonage Sender",
+		Provider:   common.MessageProviderTypeVonage,
+		Properties: []cmodels.Property{*mockProperty3},
+	}
+
+	// Create list with 3 senders but sender2 will fail to retrieve
+	mockSenderList := []common.NotificationSenderDTO{*mockSender1, *mockSender3}
+
+	suite.mockNotificationService.EXPECT().ListSenders().Return(mockSenderList, nil)
+	suite.mockNotificationService.EXPECT().GetSender("sender1").Return(mockSender1, nil)
+	suite.mockNotificationService.EXPECT().GetSender("sender3").Return(mockSender3, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 2)
+	assert.Equal(suite.T(), 2, result.Summary.TotalFiles)
+	assert.Equal(suite.T(), 2, result.Summary.ResourceTypes["notification_senders"])
+}
+
+// TestExportUserSchemas_Success tests successful export of user schemas.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_Success() {
+	request := &ExportRequest{
+		UserSchemas: []string{"schema1"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSchema := &userschema.UserSchema{
+		ID:                    "schema1",
+		Name:                  "Test Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: true,
+		Schema:                []byte(`{"type":"object","properties":{"email":{"type":"string"}}}`),
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema1").Return(mockSchema, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 1)
+	assert.Equal(suite.T(), 1, result.Summary.TotalFiles)
+	assert.Contains(suite.T(), result.Summary.ResourceTypes, "user_schemas")
+	assert.Equal(suite.T(), "Test_Schema.yaml", result.Files[0].FileName)
+	assert.Equal(suite.T(), "user_schema", result.Files[0].ResourceType)
+	assert.Contains(suite.T(), result.Files[0].Content, "name: Test Schema")
+}
+
+// TestExportUserSchemas_Multiple tests exporting multiple user schemas.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_Multiple() {
+	request := &ExportRequest{
+		UserSchemas: []string{"schema1", "schema2"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSchema1 := &userschema.UserSchema{
+		ID:                    "schema1",
+		Name:                  "Customer Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: true,
+		Schema:                []byte(`{"type":"object","properties":{"email":{"type":"string"}}}`),
+	}
+
+	mockSchema2 := &userschema.UserSchema{
+		ID:                    "schema2",
+		Name:                  "Employee Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: false,
+		Schema:                []byte(`{"type":"object","properties":{"empId":{"type":"string"}}}`),
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema1").Return(mockSchema1, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema2").Return(mockSchema2, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 2)
+	assert.Equal(suite.T(), 2, result.Summary.TotalFiles)
+	assert.Equal(suite.T(), 2, result.Summary.ResourceTypes["user_schemas"])
+}
+
+// TestExportUserSchemas_Wildcard tests exporting all user schemas using wildcard.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_Wildcard() {
+	request := &ExportRequest{
+		UserSchemas: []string{"*"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSchema1 := &userschema.UserSchema{
+		ID:                    "schema1",
+		Name:                  "Customer Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: true,
+		Schema:                []byte(`{"type":"object","properties":{"email":{"type":"string"}}}`),
+	}
+
+	mockSchema2 := &userschema.UserSchema{
+		ID:                    "schema2",
+		Name:                  "Employee Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: false,
+		Schema:                []byte(`{"type":"object","properties":{"empId":{"type":"string"}}}`),
+	}
+
+	mockSchemaList := &userschema.UserSchemaListResponse{
+		TotalResults: 2,
+		Count:        2,
+		Schemas: []userschema.UserSchemaListItem{
+			{ID: "schema1", Name: "Customer Schema", OrganizationUnitID: "ou1"},
+			{ID: "schema2", Name: "Employee Schema", OrganizationUnitID: "ou1"},
+		},
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchemaList(0, 1000).Return(mockSchemaList, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema1").Return(mockSchema1, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema2").Return(mockSchema2, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 2)
+	assert.Equal(suite.T(), 2, result.Summary.TotalFiles)
+}
+
+// TestExportUserSchemas_NotFound tests error handling when schema not found.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_NotFound() {
+	request := &ExportRequest{
+		UserSchemas: []string{"non-existent-schema"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	schemaError := &serviceerror.ServiceError{
+		Code:  "SCHEMA_NOT_FOUND",
+		Error: "User schema not found",
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("non-existent-schema").Return(nil, schemaError)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.NotNil(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), ErrorNoResourcesFound.Code, err.Code)
+}
+
+// TestExportUserSchemas_EmptyName tests validation for schema with empty name.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_EmptyName() {
+	request := &ExportRequest{
+		UserSchemas: []string{"schema-no-name"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSchema := &userschema.UserSchema{
+		ID:                    "schema-no-name",
+		Name:                  "", // Empty name
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: true,
+		Schema:                []byte(`{"type":"object"}`),
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema-no-name").Return(mockSchema, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.NotNil(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Equal(suite.T(), ErrorNoResourcesFound.Code, err.Code)
+}
+
+// TestExportUserSchemas_NoSchema tests exporting schema with no schema definition.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_NoSchema() {
+	request := &ExportRequest{
+		UserSchemas: []string{"schema-no-def"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSchema := &userschema.UserSchema{
+		ID:                    "schema-no-def",
+		Name:                  "Empty Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: true,
+		Schema:                []byte{}, // Empty schema
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema-no-def").Return(mockSchema, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	// Should succeed even with no schema definition
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 1)
+	assert.Equal(suite.T(), 1, result.Summary.TotalFiles)
+	assert.Contains(suite.T(), result.Files[0].Content, "name: Empty Schema")
+}
+
+// TestExportUserSchemas_WildcardPartialFailure tests wildcard export with partial failures.
+func (suite *ExportServiceTestSuite) TestExportUserSchemas_WildcardPartialFailure() {
+	request := &ExportRequest{
+		UserSchemas: []string{"*"},
+		Options: &ExportOptions{
+			Format: "yaml",
+		},
+	}
+
+	mockSchema1 := &userschema.UserSchema{
+		ID:                    "schema1",
+		Name:                  "Customer Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: true,
+		Schema:                []byte(`{"type":"object"}`),
+	}
+
+	mockSchema3 := &userschema.UserSchema{
+		ID:                    "schema3",
+		Name:                  "Partner Schema",
+		OrganizationUnitID:    "ou1",
+		AllowSelfRegistration: false,
+		Schema:                []byte(`{"type":"object"}`),
+	}
+
+	mockSchemaList := &userschema.UserSchemaListResponse{
+		TotalResults: 3,
+		Count:        3,
+		Schemas: []userschema.UserSchemaListItem{
+			{ID: "schema1", Name: "Customer Schema"},
+			{ID: "schema2", Name: "Employee Schema"},
+			{ID: "schema3", Name: "Partner Schema"},
+		},
+	}
+
+	schemaError := &serviceerror.ServiceError{
+		Code:  "SCHEMA_NOT_FOUND",
+		Error: "User schema not found",
+	}
+
+	suite.mockUserSchemaService.EXPECT().GetUserSchemaList(0, 1000).Return(mockSchemaList, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema1").Return(mockSchema1, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema2").Return(nil, schemaError)
+	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema3").Return(mockSchema3, nil)
+
+	result, err := suite.exportService.ExportResources(request)
+
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, 2) // 2 successful exports
+	assert.Equal(suite.T(), 2, result.Summary.TotalFiles)
+	assert.Equal(suite.T(), 2, result.Summary.ResourceTypes["user_schemas"])
+	assert.Len(suite.T(), result.Summary.Errors, 1) // One error recorded
+	assert.Equal(suite.T(), "user_schema", result.Summary.Errors[0].ResourceType)
+	assert.Equal(suite.T(), "schema2", result.Summary.Errors[0].ResourceID)
+}
+
+// Helper functions for test assertions
+
+// assertMultipleResourcesExport is a helper function to assert multiple resource export results.
+func (suite *ExportServiceTestSuite) assertMultipleResourcesExport(
+	result *ExportResponse, err *serviceerror.ServiceError, expectedCount int, resourceTypeKey string) {
+	assert.Nil(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Files, expectedCount)
+	assert.Equal(suite.T(), expectedCount, result.Summary.TotalFiles)
+	assert.Equal(suite.T(), expectedCount, result.Summary.ResourceTypes[resourceTypeKey])
 }

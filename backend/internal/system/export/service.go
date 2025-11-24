@@ -24,13 +24,21 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/idp"
+	"github.com/asgardeo/thunder/internal/notification"
+	"github.com/asgardeo/thunder/internal/notification/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
+	"github.com/asgardeo/thunder/internal/userschema"
 )
 
 const (
 	formatYAML = "yaml"
 	formatJSON = "json"
+
+	resourceTypeApplication        = "application"
+	resourceTypeIdentityProvider   = "identity_provider"
+	resourceTypeNotificationSender = "notification_sender"
+	resourceTypeUserSchema         = "user_schema"
 )
 
 // ParameterizerInterface defines the interface for template parameterization.
@@ -45,9 +53,11 @@ type ExportServiceInterface interface {
 
 // exportService implements the ExportServiceInterface.
 type exportService struct {
-	applicationService application.ApplicationServiceInterface
-	idpService         idp.IDPServiceInterface
-	parameterizer      ParameterizerInterface
+	applicationService        application.ApplicationServiceInterface
+	idpService                idp.IDPServiceInterface
+	notificationSenderService notification.NotificationSenderMgtSvcInterface
+	userSchemaService         userschema.UserSchemaServiceInterface
+	parameterizer             ParameterizerInterface
 	// Future: Add other service dependencies
 	// groupService group.GroupServiceInterface
 	// userService  user.UserServiceInterface
@@ -56,11 +66,15 @@ type exportService struct {
 // newExportService creates a new instance of exportService.
 func newExportService(appService application.ApplicationServiceInterface,
 	idpService idp.IDPServiceInterface,
+	notificationSenderService notification.NotificationSenderMgtSvcInterface,
+	userSchemaService userschema.UserSchemaServiceInterface,
 	param ParameterizerInterface) ExportServiceInterface {
 	return &exportService{
-		applicationService: appService,
-		idpService:         idpService,
-		parameterizer:      param,
+		applicationService:        appService,
+		idpService:                idpService,
+		notificationSenderService: notificationSenderService,
+		userSchemaService:         userSchemaService,
+		parameterizer:             param,
 	}
 }
 
@@ -104,6 +118,22 @@ func (es *exportService) ExportResources(request *ExportRequest) (*ExportRespons
 		resourceCounts["identity_providers"] = len(idpFiles)
 	}
 
+	// Export notification senders if requested
+	if len(request.NotificationSenders) > 0 {
+		senderFiles, senderErrors := es.exportNotificationSenders(request.NotificationSenders, options)
+		exportFiles = append(exportFiles, senderFiles...)
+		exportErrors = append(exportErrors, senderErrors...)
+		resourceCounts["notification_senders"] = len(senderFiles)
+	}
+
+	// Export user schemas if requested
+	if len(request.UserSchemas) > 0 {
+		schemaFiles, schemaErrors := es.exportUserSchemas(request.UserSchemas, options)
+		exportFiles = append(exportFiles, schemaFiles...)
+		exportErrors = append(exportErrors, schemaErrors...)
+		resourceCounts["user_schemas"] = len(schemaFiles)
+	}
+
 	if len(exportFiles) == 0 {
 		return nil, serviceerror.CustomServiceError(
 			ErrorNoResourcesFound,
@@ -130,6 +160,75 @@ func (es *exportService) ExportResources(request *ExportRequest) (*ExportRespons
 		Files:   exportFiles,
 		Summary: summary,
 	}, nil
+}
+
+// createTypeError creates a standardized type assertion error.
+func createTypeError(resourceType, resourceID string) *ExportError {
+	return &ExportError{
+		ResourceType: resourceType,
+		ResourceID:   resourceID,
+		Error:        "Invalid resource type",
+		Code:         "INVALID_TYPE",
+	}
+}
+
+// validateResourceName validates that a resource name is not empty and returns an error if it is.
+func validateResourceName(name, resourceType, resourceID, errorCode string, logger *log.Logger) *ExportError {
+	if name == "" {
+		logger.Warn(resourceType+" missing name, skipping export",
+			log.String("resourceID", resourceID))
+		return &ExportError{
+			ResourceType: resourceType,
+			ResourceID:   resourceID,
+			Error:        resourceType + " name is empty",
+			Code:         errorCode,
+		}
+	}
+	return nil
+}
+
+// validateResourceGeneric provides generic validation for any resource type.
+func validateResourceGeneric(
+	resource interface{},
+	id string,
+	resourceType string,
+	validationCode string,
+	logger *log.Logger,
+	castResource func(interface{}) (interface{}, bool),
+	extractName func(interface{}) string,
+	validateExtra func(interface{}, string, string, *log.Logger),
+) (string, *ExportError) {
+	// Type assertion
+	castedResource, ok := castResource(resource)
+	if !ok {
+		return "", createTypeError(resourceType, id)
+	}
+
+	// Extract and validate name
+	name := extractName(castedResource)
+	if err := validateResourceName(name, resourceType, id, validationCode, logger); err != nil {
+		return "", err
+	}
+
+	// Additional validation (resource-specific)
+	if validateExtra != nil {
+		validateExtra(castedResource, id, name, logger)
+	}
+
+	return name, nil
+}
+
+// getAllResourceIDsGeneric provides a generic way to get all resource IDs from a service.
+// It accepts a callback function that retrieves the list and extracts IDs.
+func getAllResourceIDsGeneric(
+	getList func() (interface{}, *serviceerror.ServiceError),
+	extractIDs func(interface{}) []string,
+) ([]string, *serviceerror.ServiceError) {
+	result, err := getList()
+	if err != nil {
+		return nil, err
+	}
+	return extractIDs(result), nil
 }
 
 // exportApplications exports application configurations as YAML files.
@@ -161,7 +260,7 @@ func (es *exportService) exportApplications(applicationIDs []string, options *Ex
 			logger.Warn("Failed to get application for export",
 				log.String("appID", appID), log.String("error", svcErr.Error))
 			exportErrors = append(exportErrors, ExportError{
-				ResourceType: "application",
+				ResourceType: resourceTypeApplication,
 				ResourceID:   appID,
 				Error:        svcErr.Error,
 				Code:         svcErr.Code,
@@ -184,7 +283,7 @@ func (es *exportService) exportApplications(applicationIDs []string, options *Ex
 			logger.Warn("Failed to generate template from struct",
 				log.String("appID", appID), log.String("error", err.Error()))
 			exportErrors = append(exportErrors, ExportError{
-				ResourceType: "application",
+				ResourceType: resourceTypeApplication,
 				ResourceID:   appID,
 				Error:        err.Error(),
 				Code:         "TemplateGenerationError",
@@ -194,15 +293,15 @@ func (es *exportService) exportApplications(applicationIDs []string, options *Ex
 		content = templateContent
 
 		// Determine file name and folder path based on options
-		fileName = es.generateFileName(app.Name, "application", appID, options)
-		folderPath := es.generateFolderPath("application", options)
+		fileName = es.generateFileName(app.Name, resourceTypeApplication, appID, options)
+		folderPath := es.generateFolderPath(resourceTypeApplication, options)
 
 		// Create export file
 		exportFile := ExportFile{
 			FileName:     fileName,
 			Content:      content,
 			FolderPath:   folderPath,
-			ResourceType: "application",
+			ResourceType: resourceTypeApplication,
 			ResourceID:   appID,
 		}
 		exportFiles = append(exportFiles, exportFile)
@@ -212,59 +311,214 @@ func (es *exportService) exportApplications(applicationIDs []string, options *Ex
 }
 
 // exportIdentityProviders exports identity provider configurations as YAML files.
+// nolint:dupl // Intentional duplication - follows same pattern as other export functions
 func (es *exportService) exportIdentityProviders(idpIDs []string, options *ExportOptions) (
 	[]ExportFile, []ExportError) {
 	logger := log.GetLogger().With(log.String("component", "ExportService"))
-	exportFiles := make([]ExportFile, 0, len(idpIDs))
-	exportErrors := make([]ExportError, 0, len(idpIDs))
 
-	idpIDList := make([]string, 0)
-	if len(idpIDs) == 1 && idpIDs[0] == "*" {
-		// Export all identity providers
-		idps, err := es.idpService.GetIdentityProviderList()
-		if err != nil {
-			logger.Warn("Failed to get all identity providers", log.Any("error", err))
-			return nil, nil
-		}
-		for _, idp := range idps {
-			idpIDList = append(idpIDList, idp.ID)
-		}
-	} else {
-		idpIDList = idpIDs
+	getAllResources := func() ([]string, *serviceerror.ServiceError) {
+		return getAllResourceIDsGeneric(
+			func() (interface{}, *serviceerror.ServiceError) {
+				return es.idpService.GetIdentityProviderList()
+			},
+			func(result interface{}) []string {
+				idps := result.([]idp.BasicIDPDTO)
+				ids := make([]string, 0, len(idps))
+				for _, idp := range idps {
+					ids = append(ids, idp.ID)
+				}
+				return ids
+			},
+		)
 	}
 
-	for _, idpID := range idpIDList {
-		// Get the identity provider
-		idp, svcErr := es.idpService.GetIdentityProvider(idpID)
+	getResource := func(id string) (interface{}, string, *serviceerror.ServiceError) {
+		idpDTO, svcErr := es.idpService.GetIdentityProvider(id)
 		if svcErr != nil {
-			logger.Warn("Failed to get identity provider for export",
-				log.String("idpID", idpID), log.String("error", svcErr.Error))
+			return nil, "", svcErr
+		}
+		return idpDTO, idpDTO.Name, nil
+	}
+
+	validateResource := func(resource interface{}, id string) (string, *ExportError) {
+		return validateResourceGeneric(
+			resource, id, resourceTypeIdentityProvider, "IDP_VALIDATION_ERROR", logger,
+			func(r interface{}) (interface{}, bool) {
+				idpDTO, ok := r.(*idp.IDPDTO)
+				return idpDTO, ok
+			},
+			func(r interface{}) string {
+				return r.(*idp.IDPDTO).Name
+			},
+			func(r interface{}, id, name string, logger *log.Logger) {
+				idpDTO := r.(*idp.IDPDTO)
+				if len(idpDTO.Properties) == 0 {
+					logger.Warn("Identity provider has no properties",
+						log.String("idpID", id), log.String("name", name))
+				}
+			},
+		)
+	}
+
+	return es.exportResourceGeneric(
+		idpIDs, resourceTypeIdentityProvider, getAllResources, getResource, validateResource, options)
+}
+
+// exportNotificationSenders exports notification sender configurations as YAML files.
+// nolint:dupl // Intentional duplication - follows same pattern as other export functions
+func (es *exportService) exportNotificationSenders(senderIDs []string, options *ExportOptions) (
+	[]ExportFile, []ExportError) {
+	logger := log.GetLogger().With(log.String("component", "ExportService"))
+
+	getAllResources := func() ([]string, *serviceerror.ServiceError) {
+		return getAllResourceIDsGeneric(
+			func() (interface{}, *serviceerror.ServiceError) {
+				return es.notificationSenderService.ListSenders()
+			},
+			func(result interface{}) []string {
+				senders := result.([]common.NotificationSenderDTO)
+				ids := make([]string, 0, len(senders))
+				for _, sender := range senders {
+					ids = append(ids, sender.ID)
+				}
+				return ids
+			},
+		)
+	}
+
+	getResource := func(id string) (interface{}, string, *serviceerror.ServiceError) {
+		senderDTO, svcErr := es.notificationSenderService.GetSender(id)
+		if svcErr != nil {
+			return nil, "", svcErr
+		}
+		return senderDTO, senderDTO.Name, nil
+	}
+
+	validateResource := func(resource interface{}, id string) (string, *ExportError) {
+		return validateResourceGeneric(
+			resource, id, resourceTypeNotificationSender, "SENDER_VALIDATION_ERROR", logger,
+			func(r interface{}) (interface{}, bool) {
+				senderDTO, ok := r.(*common.NotificationSenderDTO)
+				return senderDTO, ok
+			},
+			func(r interface{}) string {
+				return r.(*common.NotificationSenderDTO).Name
+			},
+			func(r interface{}, id, name string, logger *log.Logger) {
+				senderDTO := r.(*common.NotificationSenderDTO)
+				if len(senderDTO.Properties) == 0 {
+					logger.Warn("Notification sender has no properties",
+						log.String("senderID", id), log.String("name", name))
+				}
+			},
+		)
+	}
+
+	return es.exportResourceGeneric(
+		senderIDs, resourceTypeNotificationSender, getAllResources, getResource, validateResource, options)
+}
+
+// exportUserSchemas exports user schema configurations as YAML files.
+func (es *exportService) exportUserSchemas(schemaIDs []string, options *ExportOptions) (
+	[]ExportFile, []ExportError) {
+	logger := log.GetLogger().With(log.String("component", "ExportService"))
+
+	getAllResources := func() ([]string, *serviceerror.ServiceError) {
+		return getAllResourceIDsGeneric(
+			func() (interface{}, *serviceerror.ServiceError) {
+				return es.userSchemaService.GetUserSchemaList(0, 1000)
+			},
+			func(result interface{}) []string {
+				response := result.(*userschema.UserSchemaListResponse)
+				ids := make([]string, 0, len(response.Schemas))
+				for _, schema := range response.Schemas {
+					ids = append(ids, schema.ID)
+				}
+				return ids
+			},
+		)
+	}
+
+	getResource := func(id string) (interface{}, string, *serviceerror.ServiceError) {
+		schemaDTO, svcErr := es.userSchemaService.GetUserSchema(id)
+		if svcErr != nil {
+			return nil, "", svcErr
+		}
+		return schemaDTO, schemaDTO.Name, nil
+	}
+
+	validateResource := func(resource interface{}, id string) (string, *ExportError) {
+		return validateResourceGeneric(
+			resource, id, resourceTypeUserSchema, "SCHEMA_VALIDATION_ERROR", logger,
+			func(r interface{}) (interface{}, bool) {
+				schemaDTO, ok := r.(*userschema.UserSchema)
+				return schemaDTO, ok
+			},
+			func(r interface{}) string {
+				return r.(*userschema.UserSchema).Name
+			},
+			func(r interface{}, id, name string, logger *log.Logger) {
+				schemaDTO := r.(*userschema.UserSchema)
+				if len(schemaDTO.Schema) == 0 {
+					logger.Warn("User schema has no schema definition",
+						log.String("schemaID", id), log.String("name", name))
+				}
+			},
+		)
+	}
+
+	return es.exportResourceGeneric(
+		schemaIDs, resourceTypeUserSchema, getAllResources, getResource, validateResource, options)
+}
+
+// exportResourceGeneric is a generic helper function to export resources with common logic.
+func (es *exportService) exportResourceGeneric(
+	resourceIDs []string,
+	resourceType string,
+	getAllResources func() ([]string, *serviceerror.ServiceError),
+	getResource func(id string) (interface{}, string, *serviceerror.ServiceError),
+	validateResource func(resource interface{}, id string) (string, *ExportError),
+	options *ExportOptions,
+) ([]ExportFile, []ExportError) {
+	logger := log.GetLogger().With(log.String("component", "ExportService"))
+	exportFiles := make([]ExportFile, 0, len(resourceIDs))
+	exportErrors := make([]ExportError, 0, len(resourceIDs))
+
+	var resourceIDList []string
+	if len(resourceIDs) == 1 && resourceIDs[0] == "*" {
+		// Export all resources
+		ids, err := getAllResources()
+		if err != nil {
+			logger.Warn("Failed to get all resources", log.String("resourceType", resourceType), log.Any("error", err))
+			return nil, nil
+		}
+		resourceIDList = ids
+	} else {
+		resourceIDList = resourceIDs
+	}
+
+	for _, resourceID := range resourceIDList {
+		// Get the resource
+		resource, _, svcErr := getResource(resourceID)
+		if svcErr != nil {
+			logger.Warn("Failed to get resource for export",
+				log.String("resourceType", resourceType),
+				log.String("resourceID", resourceID),
+				log.String("error", svcErr.Error))
 			exportErrors = append(exportErrors, ExportError{
-				ResourceType: "identity_provider",
-				ResourceID:   idpID,
+				ResourceType: resourceType,
+				ResourceID:   resourceID,
 				Error:        svcErr.Error,
 				Code:         svcErr.Code,
-			})
-			continue // Skip IDPs that can't be found
-		}
-
-		// Validate IDP has required fields
-		if idp.Name == "" {
-			logger.Warn("Identity provider missing name, skipping export",
-				log.String("idpID", idpID))
-			exportErrors = append(exportErrors, ExportError{
-				ResourceType: "identity_provider",
-				ResourceID:   idpID,
-				Error:        "Identity provider name is empty",
-				Code:         "IDP_VALIDATION_ERROR",
 			})
 			continue
 		}
 
-		// Check if IDP has properties - warn if empty but continue
-		if len(idp.Properties) == 0 {
-			logger.Warn("Identity provider has no properties",
-				log.String("idpID", idpID), log.String("name", idp.Name))
+		// Validate resource
+		validatedName, exportErr := validateResource(resource, resourceID)
+		if exportErr != nil {
+			exportErrors = append(exportErrors, *exportErr)
+			continue
 		}
 
 		// Convert to export format based on options
@@ -277,13 +531,15 @@ func (es *exportService) exportIdentityProviders(idpIDs []string, options *Expor
 			options.Format = formatYAML
 		}
 
-		templateContent, err := es.generateTemplateFromStruct(idp, "IdentityProvider", idp.Name)
+		templateContent, err := es.generateTemplateFromStruct(resource, resourceType, validatedName)
 		if err != nil {
 			logger.Warn("Failed to generate template from struct",
-				log.String("idpID", idpID), log.String("error", err.Error()))
+				log.String("resourceType", resourceType),
+				log.String("resourceID", resourceID),
+				log.String("error", err.Error()))
 			exportErrors = append(exportErrors, ExportError{
-				ResourceType: "identity_provider",
-				ResourceID:   idpID,
+				ResourceType: resourceType,
+				ResourceID:   resourceID,
 				Error:        err.Error(),
 				Code:         "TemplateGenerationError",
 			})
@@ -292,16 +548,16 @@ func (es *exportService) exportIdentityProviders(idpIDs []string, options *Expor
 		content = templateContent
 
 		// Determine file name and folder path based on options
-		fileName = es.generateFileName(idp.Name, "identity_provider", idpID, options)
-		folderPath := es.generateFolderPath("identity_provider", options)
+		fileName = es.generateFileName(validatedName, resourceType, resourceID, options)
+		folderPath := es.generateFolderPath(resourceType, options)
 
 		// Create export file
 		exportFile := ExportFile{
 			FileName:     fileName,
 			Content:      content,
 			FolderPath:   folderPath,
-			ResourceType: "identity_provider",
-			ResourceID:   idpID,
+			ResourceType: resourceType,
+			ResourceID:   resourceID,
 		}
 		exportFiles = append(exportFiles, exportFile)
 	}
@@ -309,9 +565,26 @@ func (es *exportService) exportIdentityProviders(idpIDs []string, options *Expor
 	return exportFiles, exportErrors
 }
 
+// toParameterizerResourceType maps external resource type names to parameterizer resource type names.
+func toParameterizerResourceType(resourceType string) string {
+	switch resourceType {
+	case resourceTypeApplication:
+		return "Application"
+	case resourceTypeIdentityProvider:
+		return "IdentityProvider"
+	case resourceTypeNotificationSender:
+		return "NotificationSender"
+	case resourceTypeUserSchema:
+		return "UserSchema"
+	default:
+		return resourceType
+	}
+}
+
 func (es *exportService) generateTemplateFromStruct(
 	data interface{}, resourceType string, resourceName string) (string, error) {
-	template, err := es.parameterizer.ToParameterizedYAML(data, resourceType, resourceName)
+	paramResourceType := toParameterizerResourceType(resourceType)
+	template, err := es.parameterizer.ToParameterizedYAML(data, paramResourceType, resourceName)
 	if err != nil {
 		return "", err
 	}

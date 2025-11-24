@@ -25,8 +25,10 @@ import (
 	"fmt"
 
 	oupkg "github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/system/config"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	filebasedruntime "github.com/asgardeo/thunder/internal/system/file_based_runtime"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 	"github.com/asgardeo/thunder/internal/userschema/model"
@@ -55,9 +57,10 @@ type userSchemaService struct {
 }
 
 // newUserSchemaService creates a new instance of userSchemaService.
-func newUserSchemaService(ouService oupkg.OrganizationUnitServiceInterface) UserSchemaServiceInterface {
+func newUserSchemaService(ouService oupkg.OrganizationUnitServiceInterface,
+	store userSchemaStoreInterface) UserSchemaServiceInterface {
 	return &userSchemaService{
-		userSchemaStore: newUserSchemaStore(),
+		userSchemaStore: store,
 		ouService:       ouService,
 	}
 }
@@ -97,43 +100,38 @@ func (us *userSchemaService) CreateUserSchema(request CreateUserSchemaRequest) (
 	*UserSchema, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, userSchemaLoggerComponentName))
 
-	if request.Name == "" {
-		return nil, invalidSchemaRequestError("user schema name must not be empty")
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		return nil, &filebasedruntime.ErrorImmutableResourceCreateOperation
 	}
 
-	if request.OrganizationUnitID == "" {
-		return nil, invalidSchemaRequestError("organization unit id must not be empty")
+	// Validate the schema definition
+	schemaToValidate := UserSchema{
+		Name:               request.Name,
+		OrganizationUnitID: request.OrganizationUnitID,
+		Schema:             request.Schema,
+	}
+	if validationErr := validateUserSchemaDefinition(schemaToValidate); validationErr != nil {
+		logger.Debug("User schema validation failed", log.String("name", request.Name))
+		return nil, validationErr
 	}
 
-	if !utils.IsValidUUID(request.OrganizationUnitID) {
-		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
-	}
-
+	// Ensure organization unit exists
 	if svcErr := us.ensureOrganizationUnitExists(request.OrganizationUnitID, logger); svcErr != nil {
 		return nil, svcErr
 	}
 
-	if len(request.Schema) == 0 {
-		return nil, invalidSchemaRequestError("schema definition must not be empty")
-	}
-
-	_, err := model.CompileUserSchema(request.Schema)
-	if err != nil {
-		logger.Debug("Provided user schema failed compilation", log.String("name", request.Name), log.Error(err))
-		return nil, invalidSchemaRequestError(err.Error())
-	}
-
-	_, err = us.userSchemaStore.GetUserSchemaByName(request.Name)
+	// Check for name conflicts
+	_, err := us.userSchemaStore.GetUserSchemaByName(request.Name)
 	if err == nil {
 		return nil, &ErrorUserSchemaNameConflict
 	} else if !errors.Is(err, ErrUserSchemaNotFound) {
 		return nil, logAndReturnServerError(logger, "Failed to check existing user schema", err)
 	}
 
-	schemaID := utils.GenerateUUID()
+	id := utils.GenerateUUID()
 
 	userSchema := UserSchema{
-		ID:                    schemaID,
+		ID:                    id,
 		Name:                  request.Name,
 		OrganizationUnitID:    request.OrganizationUnitID,
 		AllowSelfRegistration: request.AllowSelfRegistration,
@@ -190,34 +188,28 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 	*UserSchema, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, userSchemaLoggerComponentName))
 
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		return nil, &filebasedruntime.ErrorImmutableResourceUpdateOperation
+	}
+
 	if schemaID == "" {
 		return nil, invalidSchemaRequestError("schema id must not be empty")
 	}
 
-	if request.Name == "" {
-		return nil, invalidSchemaRequestError("user schema name must not be empty")
+	// Validate the schema definition
+	schemaToValidate := UserSchema{
+		Name:               request.Name,
+		OrganizationUnitID: request.OrganizationUnitID,
+		Schema:             request.Schema,
+	}
+	if validationErr := validateUserSchemaDefinition(schemaToValidate); validationErr != nil {
+		logger.Debug("User schema validation failed", log.String("id", schemaID))
+		return nil, validationErr
 	}
 
-	if request.OrganizationUnitID == "" {
-		return nil, invalidSchemaRequestError("organization unit id must not be empty")
-	}
-
-	if !utils.IsValidUUID(request.OrganizationUnitID) {
-		return nil, invalidSchemaRequestError("organization unit id is not a valid UUID")
-	}
-
+	// Ensure organization unit exists
 	if svcErr := us.ensureOrganizationUnitExists(request.OrganizationUnitID, logger); svcErr != nil {
 		return nil, svcErr
-	}
-
-	if len(request.Schema) == 0 {
-		return nil, invalidSchemaRequestError("schema definition must not be empty")
-	}
-
-	_, err := model.CompileUserSchema(request.Schema)
-	if err != nil {
-		logger.Debug("Provided user schema failed compilation", log.String("id", schemaID), log.Error(err))
-		return nil, invalidSchemaRequestError(err.Error())
 	}
 
 	existingSchema, err := us.userSchemaStore.GetUserSchemaByID(schemaID)
@@ -255,6 +247,10 @@ func (us *userSchemaService) UpdateUserSchema(schemaID string, request UpdateUse
 // DeleteUserSchema deletes a user schema by its ID.
 func (us *userSchemaService) DeleteUserSchema(schemaID string) *serviceerror.ServiceError {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, userSchemaLoggerComponentName))
+
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		return &filebasedruntime.ErrorImmutableResourceDeleteOperation
+	}
 
 	if schemaID == "" {
 		return invalidSchemaRequestError("schema id must not be empty")
@@ -437,6 +433,42 @@ func logAndReturnServerError(
 ) *serviceerror.ServiceError {
 	logger.Error(message, log.Error(err))
 	return &ErrorInternalServerError
+}
+
+// validateUserSchemaDefinition validates the user schema definition without checking OU existence.
+// This is used during initialization to validate file-based configurations.
+func validateUserSchemaDefinition(schema UserSchema) *serviceerror.ServiceError {
+	logger := log.GetLogger()
+
+	if schema.Name == "" {
+		logger.Debug("User schema validation failed: name is empty")
+		return invalidSchemaRequestError("user schema name must not be empty")
+	}
+
+	if schema.OrganizationUnitID == "" {
+		logger.Debug("User schema validation failed: organization unit ID is empty")
+		return invalidSchemaRequestError("organization unit id must not be empty")
+	}
+
+	if !utils.IsValidUUID(schema.OrganizationUnitID) {
+		logger.Debug("User schema validation failed: invalid organization unit ID format",
+			log.String("ouId", schema.OrganizationUnitID))
+		return invalidSchemaRequestError("organization unit id is not a valid UUID")
+	}
+
+	if len(schema.Schema) == 0 {
+		logger.Debug("User schema validation failed: schema definition is empty")
+		return invalidSchemaRequestError("schema definition must not be empty")
+	}
+
+	_, err := model.CompileUserSchema(schema.Schema)
+	if err != nil {
+		logger.Debug("User schema validation failed: schema compilation error",
+			log.Error(err))
+		return invalidSchemaRequestError(err.Error())
+	}
+
+	return nil
 }
 
 func invalidSchemaRequestError(detail string) *serviceerror.ServiceError {

@@ -25,15 +25,33 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/tests/mocks/oumock"
 )
 
+const (
+	testOUID1 = "00000000-0000-0000-0000-000000000001"
+	testOUID2 = "00000000-0000-0000-0000-000000000002"
+	testOUID3 = "00000000-0000-0000-0000-000000000003"
+)
+
 func TestCreateUserSchemaReturnsErrorWhenOrganizationUnitMissing(t *testing.T) {
+	// Initialize ThunderRuntime with default config
+	testConfig := &config.Config{
+		ImmutableResources: config.ImmutableResources{
+			Enabled: false,
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/tmp/test", testConfig)
+	require.NoError(t, err)
+	defer config.ResetThunderRuntime()
+
 	storeMock := newUserSchemaStoreInterfaceMock(t)
 	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
 
-	ouID := "00000000-0000-0000-0000-000000000001"
+	ouID := testOUID1
 	ouServiceMock.On("IsOrganizationUnitExists", ouID).Return(false, (*serviceerror.ServiceError)(nil)).Once()
 
 	service := &userSchemaService{
@@ -56,10 +74,21 @@ func TestCreateUserSchemaReturnsErrorWhenOrganizationUnitMissing(t *testing.T) {
 }
 
 func TestCreateUserSchemaReturnsInternalErrorWhenOUValidationFails(t *testing.T) {
+	// Initialize ThunderRuntime with default config
+	testConfig := &config.Config{
+		ImmutableResources: config.ImmutableResources{
+			Enabled: false,
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/tmp/test", testConfig)
+	require.NoError(t, err)
+	defer config.ResetThunderRuntime()
+
 	storeMock := newUserSchemaStoreInterfaceMock(t)
 	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
 
-	ouID := "00000000-0000-0000-0000-000000000002"
+	ouID := testOUID2
 	ouServiceMock.
 		On("IsOrganizationUnitExists", ouID).
 		Return(false, &serviceerror.ServiceError{Code: "OUS-5000"}).
@@ -84,10 +113,21 @@ func TestCreateUserSchemaReturnsInternalErrorWhenOUValidationFails(t *testing.T)
 }
 
 func TestUpdateUserSchemaReturnsErrorWhenOrganizationUnitMissing(t *testing.T) {
+	// Initialize ThunderRuntime with default config
+	testConfig := &config.Config{
+		ImmutableResources: config.ImmutableResources{
+			Enabled: false,
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/tmp/test", testConfig)
+	require.NoError(t, err)
+	defer config.ResetThunderRuntime()
+
 	storeMock := newUserSchemaStoreInterfaceMock(t)
 	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
 
-	ouID := "00000000-0000-0000-0000-000000000003"
+	ouID := testOUID3
 	ouServiceMock.On("IsOrganizationUnitExists", ouID).Return(false, (*serviceerror.ServiceError)(nil)).Once()
 
 	service := &userSchemaService{
@@ -305,4 +345,270 @@ func TestValidateUserUniquenessReturnsInternalErrorWhenSchemaLoadFails(t *testin
 	require.False(t, ok)
 	require.NotNil(t, svcErr)
 	require.Equal(t, ErrorInternalServerError, *svcErr)
+}
+
+func TestValidateUserSchemaDefinitionSuccess(t *testing.T) {
+	validOUID := testOUID1
+	validSchema := json.RawMessage(`{"email":{"type":"string","required":true}}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             validSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.Nil(t, err)
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorWhenNameIsEmpty(t *testing.T) {
+	validOUID := testOUID1
+	validSchema := json.RawMessage(`{"email":{"type":"string"}}`)
+
+	schema := UserSchema{
+		Name:               "",
+		OrganizationUnitID: validOUID,
+		Schema:             validSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "user schema name must not be empty")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorWhenOrganizationUnitIDIsEmpty(t *testing.T) {
+	validSchema := json.RawMessage(`{"email":{"type":"string"}}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: "",
+		Schema:             validSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "organization unit id must not be empty")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorWhenOrganizationUnitIDIsNotUUID(t *testing.T) {
+	validSchema := json.RawMessage(`{"email":{"type":"string"}}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: "not-a-uuid",
+		Schema:             validSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "organization unit id is not a valid UUID")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorWhenSchemaIsEmpty(t *testing.T) {
+	validOUID := testOUID1
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             json.RawMessage{},
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "schema definition must not be empty")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorWhenSchemaIsNil(t *testing.T) {
+	validOUID := testOUID1
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             nil,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "schema definition must not be empty")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorWhenSchemaCompilationFails(t *testing.T) {
+	validOUID := testOUID1
+	invalidSchema := json.RawMessage(`{"email":"invalid"}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             invalidSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "property definition must be an object")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorForInvalidJSON(t *testing.T) {
+	validOUID := testOUID1
+	invalidSchema := json.RawMessage(`{invalid json}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             invalidSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorForEmptySchemaObject(t *testing.T) {
+	validOUID := testOUID1
+	emptySchema := json.RawMessage(`{}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             emptySchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "schema cannot be empty")
+}
+
+func TestValidateUserSchemaDefinitionWithComplexSchema(t *testing.T) {
+	validOUID := testOUID1
+	complexSchema := json.RawMessage(`{
+		"email": {
+			"type": "string",
+			"required": true,
+			"unique": true,
+			"pattern": "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+		},
+		"age": {
+			"type": "number",
+			"required": false
+		},
+		"isActive": {
+			"type": "boolean",
+			"required": true
+		},
+		"address": {
+			"type": "object",
+			"properties": {
+				"street": {"type": "string"},
+				"city": {"type": "string"}
+			}
+		},
+		"tags": {
+			"type": "array",
+			"items": {"type": "string"}
+		}
+	}`)
+
+	schema := UserSchema{
+		Name:               "complex-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             complexSchema,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.Nil(t, err)
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorForMissingTypeField(t *testing.T) {
+	validOUID := testOUID1
+	schemaWithoutType := json.RawMessage(`{"email":{"required":true}}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             schemaWithoutType,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+	require.Contains(t, err.ErrorDescription, "missing required 'type' field")
+}
+
+func TestValidateUserSchemaDefinitionReturnsErrorForInvalidType(t *testing.T) {
+	validOUID := testOUID1
+	schemaWithInvalidType := json.RawMessage(`{"email":{"type":"invalid-type"}}`)
+
+	schema := UserSchema{
+		Name:               "test-schema",
+		OrganizationUnitID: validOUID,
+		Schema:             schemaWithInvalidType,
+	}
+
+	err := validateUserSchemaDefinition(schema)
+
+	require.NotNil(t, err)
+	require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+}
+
+func TestValidateUserSchemaDefinitionWithMultipleValidationErrors(t *testing.T) {
+	testCases := []struct {
+		name          string
+		schema        UserSchema
+		expectedError string
+	}{
+		{
+			name: "Empty name and empty OU ID",
+			schema: UserSchema{
+				Name:               "",
+				OrganizationUnitID: "",
+				Schema:             json.RawMessage(`{"email":{"type":"string"}}`),
+			},
+			expectedError: "user schema name must not be empty",
+		},
+		{
+			name: "Valid name but invalid OU ID format",
+			schema: UserSchema{
+				Name:               "test",
+				OrganizationUnitID: "123",
+				Schema:             json.RawMessage(`{"email":{"type":"string"}}`),
+			},
+			expectedError: "organization unit id is not a valid UUID",
+		},
+		{
+			name: "Valid OU ID but empty schema",
+			schema: UserSchema{
+				Name:               "test",
+				OrganizationUnitID: testOUID1,
+				Schema:             json.RawMessage{},
+			},
+			expectedError: "schema definition must not be empty",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateUserSchemaDefinition(tc.schema)
+
+			require.NotNil(t, err)
+			require.Equal(t, ErrorInvalidUserSchemaRequest.Code, err.Code)
+			require.Contains(t, err.ErrorDescription, tc.expectedError)
+		})
+	}
 }
