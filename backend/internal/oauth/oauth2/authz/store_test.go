@@ -60,8 +60,8 @@ func (suite *AuthorizationCodeStoreTestSuite) SetupTest() {
 	}
 	_ = config.InitializeThunderRuntime("test", testConfig)
 
-	suite.mockdbProvider = &providermock.DBProviderInterfaceMock{}
-	suite.mockDBClient = &clientmock.DBClientInterfaceMock{}
+	suite.mockdbProvider = providermock.NewDBProviderInterfaceMock(suite.T())
+	suite.mockDBClient = clientmock.NewDBClientInterfaceMock(suite.T())
 
 	suite.store = &authorizationCodeStore{
 		dbProvider: suite.mockdbProvider,

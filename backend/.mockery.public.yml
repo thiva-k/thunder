@@ -85,14 +85,6 @@ packages:
       pkgname: jwtmock
       filename: "{{.InterfaceName}}_mock.go"
 
-  github.com/asgardeo/thunder/internal/oauth/jwks:
-    config:
-      all: true
-      dir: tests/mocks/oauth/jwksmock
-      structname: '{{.InterfaceName}}Mock'
-      pkgname: jwksmock
-      filename: "{{.InterfaceName}}_mock.go"
-
   github.com/asgardeo/thunder/internal/oauth/scope:
     config:
       all: true
