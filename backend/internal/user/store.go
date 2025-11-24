@@ -35,9 +35,10 @@ type userStoreInterface interface {
 	GetGroupCountForUser(userID string) (int, error)
 	GetUserGroups(userID string, limit, offset int) ([]UserGroup, error)
 	UpdateUser(user *User) error
+	UpdateUserCredentials(userID string, credentials []Credential) error
 	DeleteUser(id string) error
 	IdentifyUser(filters map[string]interface{}) (*string, error)
-	VerifyUser(id string) (User, []Credential, error)
+	GetCredentials(id string) (User, []Credential, error)
 	ValidateUserIDs(userIDs []string) ([]string, error)
 }
 
@@ -203,6 +204,30 @@ func (us *userStore) UpdateUser(user *User) error {
 	return nil
 }
 
+// UpdateUserCredentials updates the credentials for a given user.
+func (us *userStore) UpdateUserCredentials(userID string, credentials []Credential) error {
+	dbClient, err := provider.GetDBProvider().GetUserDBClient()
+	if err != nil {
+		return fmt.Errorf("failed to get database client: %w", err)
+	}
+
+	credentialsJSON, err := json.Marshal(credentials)
+	if err != nil {
+		return ErrBadAttributesInRequest
+	}
+
+	rowsAffected, err := dbClient.Execute(QueryUpdateUserCredentialsByUserID, userID, string(credentialsJSON))
+	if err != nil {
+		return fmt.Errorf("failed to execute query: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return ErrUserNotFound
+	}
+
+	return nil
+}
+
 // DeleteUser deletes the user from the database.
 func (us *userStore) DeleteUser(id string) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "UserStore"))
@@ -272,8 +297,8 @@ func (us *userStore) IdentifyUser(filters map[string]interface{}) (*string, erro
 	return &userID, nil
 }
 
-// VerifyUser validate the user specified user using the given credentials from the database.
-func (us *userStore) VerifyUser(id string) (User, []Credential, error) {
+// GetCredentials retrieves the hashed credentials for a given user.
+func (us *userStore) GetCredentials(id string) (User, []Credential, error) {
 	dbClient, err := provider.GetDBProvider().GetUserDBClient()
 	if err != nil {
 		return User{}, []Credential{}, fmt.Errorf("failed to get database client: %w", err)
