@@ -34,14 +34,7 @@ const (
 
 // GetHTTPClient returns a configured HTTP client for test requests with automatic auth injection
 func GetHTTPClient() *http.Client {
-	return &http.Client{
-		Transport: &authTransport{
-			base: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-			getToken: GetAccessToken,
-		},
-	}
+	return NewHTTPClientWithTokenProvider(GetAccessToken)
 }
 
 // CreateUserType creates a user type via API and returns the schema ID

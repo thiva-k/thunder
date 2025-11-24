@@ -64,14 +64,22 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 		return nil, errNoHandlerFound
 	}
 
-	// Authenticate and authorize (single operation)
+	// Authenticate the request
 	authCtx, err := authenticator.Authenticate(r)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add authentication context to request context
-	ctx := sysContext.WithAuthenticationContext(r.Context(), authCtx)
+	// Add authentication context to request context if available
+	ctx := r.Context()
+	if authCtx != nil {
+		ctx = sysContext.WithAuthenticationContext(ctx, authCtx)
+	}
+
+	// Authorize the authenticated principal
+	if err := authenticator.Authorize(r.WithContext(ctx), authCtx); err != nil {
+		return nil, err
+	}
 
 	return ctx, nil
 }

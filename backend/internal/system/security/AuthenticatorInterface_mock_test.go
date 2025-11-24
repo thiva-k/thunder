@@ -100,6 +100,63 @@ func (_c *AuthenticatorInterfaceMock_Authenticate_Call) RunAndReturn(run func(r 
 	return _c
 }
 
+// Authorize provides a mock function for the type AuthenticatorInterfaceMock
+func (_mock *AuthenticatorInterfaceMock) Authorize(r *http.Request, authCtx *context.AuthenticationContext) error {
+	ret := _mock.Called(r, authCtx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Authorize")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(*http.Request, *context.AuthenticationContext) error); ok {
+		r0 = returnFunc(r, authCtx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// AuthenticatorInterfaceMock_Authorize_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Authorize'
+type AuthenticatorInterfaceMock_Authorize_Call struct {
+	*mock.Call
+}
+
+// Authorize is a helper method to define mock.On call
+//   - r *http.Request
+//   - authCtx *context.AuthenticationContext
+func (_e *AuthenticatorInterfaceMock_Expecter) Authorize(r interface{}, authCtx interface{}) *AuthenticatorInterfaceMock_Authorize_Call {
+	return &AuthenticatorInterfaceMock_Authorize_Call{Call: _e.mock.On("Authorize", r, authCtx)}
+}
+
+func (_c *AuthenticatorInterfaceMock_Authorize_Call) Run(run func(r *http.Request, authCtx *context.AuthenticationContext)) *AuthenticatorInterfaceMock_Authorize_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *http.Request
+		if args[0] != nil {
+			arg0 = args[0].(*http.Request)
+		}
+		var arg1 *context.AuthenticationContext
+		if args[1] != nil {
+			arg1 = args[1].(*context.AuthenticationContext)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *AuthenticatorInterfaceMock_Authorize_Call) Return(err error) *AuthenticatorInterfaceMock_Authorize_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *AuthenticatorInterfaceMock_Authorize_Call) RunAndReturn(run func(r *http.Request, authCtx *context.AuthenticationContext) error) *AuthenticatorInterfaceMock_Authorize_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CanHandle provides a mock function for the type AuthenticatorInterfaceMock
 func (_mock *AuthenticatorInterfaceMock) CanHandle(r *http.Request) bool {
 	ret := _mock.Called(r)
