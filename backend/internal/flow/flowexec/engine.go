@@ -66,11 +66,6 @@ func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.Servi
 		logger.Debug("Executing node", log.String("nodeID", currentNode.GetID()),
 			log.String("nodeType", string(currentNode.GetType())))
 
-		svcErr := fe.setNodeExecutor(currentNode, logger)
-		if svcErr != nil {
-			return flowStep, svcErr
-		}
-
 		nodeCtx := &core.NodeContext{
 			FlowID:            ctx.FlowID,
 			FlowType:          ctx.FlowType,
@@ -91,6 +86,22 @@ func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.Servi
 		}
 		if nodeCtx.RuntimeData == nil {
 			nodeCtx.RuntimeData = make(map[string]string)
+		}
+
+		// Check if the node should be executed based on its condition
+		if !currentNode.ShouldExecute(nodeCtx) {
+			logger.Debug("Skipping node due to unmet condition", log.String("nodeID", currentNode.GetID()))
+			nextNode, svcErr := fe.skipToNextNode(ctx, currentNode, logger)
+			if svcErr != nil {
+				return flowStep, svcErr
+			}
+			currentNode = nextNode
+			continue
+		}
+
+		svcErr := fe.setNodeExecutor(currentNode, logger)
+		if svcErr != nil {
+			return flowStep, svcErr
 		}
 
 		executionStartTime := time.Now().Unix()
@@ -318,6 +329,20 @@ func (fe *flowEngine) handleCompletedResponse(ctx *EngineContext,
 	nextNode, err := fe.resolveToNextNode(ctx.Graph, currentNode, nodeResp)
 	if err != nil {
 		logger.Error("Error moving to the next node", log.Error(err))
+		return nil, &serviceerror.InternalServerError
+	}
+	ctx.CurrentNode = nextNode
+	return nextNode, nil
+}
+
+// skipToNextNode skips the current node and moves to the next node. It updates the context with the
+// next node and returns it.
+func (fe *flowEngine) skipToNextNode(ctx *EngineContext, currentNode core.NodeInterface,
+	logger *log.Logger) (core.NodeInterface, *serviceerror.ServiceError) {
+	// For skipped nodes, we pass nil for nodeResp since we're not executing the node.
+	nextNode, err := fe.resolveToNextNode(ctx.Graph, currentNode, nil)
+	if err != nil {
+		logger.Error("Error moving to the next node after skipping", log.Error(err))
 		return nil, &serviceerror.InternalServerError
 	}
 	ctx.CurrentNode = nextNode

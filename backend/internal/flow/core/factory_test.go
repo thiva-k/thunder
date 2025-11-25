@@ -189,6 +189,30 @@ func (s *FlowFactoryTestSuite) TestCloneNodeNil() {
 	s.Contains(err.Error(), "source node cannot be nil")
 }
 
+func (s *FlowFactoryTestSuite) TestCloneNodeWithCondition() {
+	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
+		map[string]interface{}{}, false, false)
+	node.SetCondition(&NodeCondition{
+		Key:   "{{ context.status }}",
+		Value: "active",
+	})
+
+	clonedNode, err := s.factory.CloneNode(node)
+
+	s.NoError(err)
+	s.NotNil(clonedNode)
+	s.NotNil(clonedNode.GetCondition())
+	s.Equal(node.GetCondition().Key, clonedNode.GetCondition().Key)
+	s.Equal(node.GetCondition().Value, clonedNode.GetCondition().Value)
+
+	// Verify deep copy - modifying cloned condition doesn't affect source
+	clonedNode.SetCondition(&NodeCondition{
+		Key:   "{{ context.newKey }}",
+		Value: "newValue",
+	})
+	s.NotEqual(node.GetCondition().Key, clonedNode.GetCondition().Key)
+}
+
 func (s *FlowFactoryTestSuite) TestCloneNodesSuccess() {
 	nodes := make(map[string]NodeInterface)
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
@@ -283,6 +307,16 @@ func (f *fakeExecutorBackedNode) GetInputData() []common.InputData {
 }
 
 func (f *fakeExecutorBackedNode) SetInputData(inputData []common.InputData) {}
+
+func (f *fakeExecutorBackedNode) GetCondition() *NodeCondition {
+	return nil
+}
+
+func (f *fakeExecutorBackedNode) SetCondition(condition *NodeCondition) {}
+
+func (f *fakeExecutorBackedNode) ShouldExecute(ctx *NodeContext) bool {
+	return true
+}
 
 func (f *fakeExecutorBackedNode) GetExecutorName() string {
 	return "fake-exec"

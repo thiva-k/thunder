@@ -374,7 +374,7 @@ func (o *oAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowcore.NodeCon
 				}, nil
 			} else {
 				// Try to provision the user automatically if allowed user types are configured
-				provisionedUser, provisionErr := o.provisionUserOAuth(ctx, sub, userInfo, logger)
+				provisionedUser, provisionErr := o.provisionUserOAuth(ctx, execResp, sub, userInfo)
 				if provisionErr != nil {
 					logger.Error("Automatic user provisioning failed", log.Error(provisionErr), log.String("sub", sub))
 					execResp.Status = flowcm.ExecFailure
@@ -462,8 +462,10 @@ func (o *oAuthExecutor) getUserAttributes(userInfo map[string]string, userID str
 }
 
 // provisionUserOAuth attempts to automatically provision a user if allowed user types are configured.
-func (o *oAuthExecutor) provisionUserOAuth(ctx *flowcore.NodeContext,
-	sub string, userInfo map[string]string, logger *log.Logger) (*user.User, error) {
+func (o *oAuthExecutor) provisionUserOAuth(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
+	sub string, userInfo map[string]string) (*user.User, error) {
+	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
 	allowedUserTypes := ctx.Application.AllowedUserTypes
 	if len(allowedUserTypes) == 0 {
 		logger.Debug("No allowed user types configured, cannot provision user automatically",
@@ -544,6 +546,14 @@ func (o *oAuthExecutor) provisionUserOAuth(ctx *flowcore.NodeContext,
 			log.String("userType", userType), log.String("sub", sub))
 		return nil, fmt.Errorf("failed to create user: %s", svcErr.ErrorDescription)
 	}
+
+	// Set runtime data for user provisioning
+	if execResp.RuntimeData == nil {
+		execResp.RuntimeData = make(map[string]string)
+	}
+	execResp.RuntimeData[userAutoProvisionedKey] = "true"
+	execResp.RuntimeData[userTypeKey] = userType
+	execResp.RuntimeData[defaultOUIDKey] = userSchema.OrganizationUnitID
 
 	return createdUser, nil
 }

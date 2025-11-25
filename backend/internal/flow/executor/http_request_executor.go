@@ -25,13 +25,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
+	"github.com/asgardeo/thunder/internal/flow/core"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	httpservice "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -281,53 +281,15 @@ func (h *httpRequestExecutor) parseErrorHandling(config *httpRequestConfig, prop
 
 // resolvePlaceholders resolves placeholders in the configuration using context data.
 func (h *httpRequestExecutor) resolvePlaceholders(ctx *flowcore.NodeContext, config *httpRequestConfig) {
-	config.URL = h.resolvePlaceholder(ctx, config.URL)
+	config.URL = core.ResolvePlaceholder(ctx, config.URL)
 
 	// Resolve headers
 	for key, value := range config.Headers {
-		config.Headers[key] = h.resolvePlaceholder(ctx, value)
+		config.Headers[key] = core.ResolvePlaceholder(ctx, value)
 	}
 
 	// Resolve body
 	config.Body = h.resolveMapPlaceholders(ctx, config.Body).(map[string]interface{})
-}
-
-// resolvePlaceholder resolves a single placeholder string using the "{{ context.key }}" syntax.
-func (h *httpRequestExecutor) resolvePlaceholder(ctx *flowcore.NodeContext, value string) string {
-	// Pattern matches {{ context.key }} with optional whitespace
-	// TODO: Extend to support {{ user.key }}, {{ env.key }}, etc.
-	pattern := regexp.MustCompile(`{{\s*context\.\s*(\w+)\s*}}`)
-
-	return pattern.ReplaceAllStringFunc(value, func(match string) string {
-		submatches := pattern.FindStringSubmatch(match)
-		if len(submatches) < 2 {
-			return match
-		}
-
-		key := submatches[1]
-
-		// Special handling for userID - only resolve from runtime data or authenticated user
-		if key == "userID" {
-			if userID := ctx.AuthenticatedUser.UserID; userID != "" {
-				return userID
-			}
-			if runtimeValue, ok := ctx.RuntimeData["userID"]; ok && runtimeValue != "" {
-				return runtimeValue
-			}
-			return match // Keep placeholder if not found
-		}
-
-		// For other keys, check RuntimeData first, then UserInputData
-		if runtimeValue, ok := ctx.RuntimeData[key]; ok && runtimeValue != "" {
-			return runtimeValue
-		}
-		if userInputValue, ok := ctx.UserInputData[key]; ok && userInputValue != "" {
-			return userInputValue
-		}
-
-		// If not found, keep the placeholder as-is
-		return match
-	})
 }
 
 // resolveMapPlaceholders recursively resolves placeholders in a map or slice.
@@ -346,7 +308,7 @@ func (h *httpRequestExecutor) resolveMapPlaceholders(ctx *flowcore.NodeContext, 
 		}
 		return result
 	case string:
-		return h.resolvePlaceholder(ctx, v)
+		return core.ResolvePlaceholder(ctx, v)
 	default:
 		return v
 	}

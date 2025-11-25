@@ -95,19 +95,21 @@ type FlowInitContext struct {
 
 // FlowContextWithUserDataDB represents the combined flow context and user data.
 type FlowContextWithUserDataDB struct {
-	FlowID           string
-	AppID            string
-	CurrentNodeID    *string
-	CurrentActionID  *string
-	GraphID          string
-	RuntimeData      *string
-	IsAuthenticated  bool
-	UserID           *string
-	UserInputs       *string
-	UserAttributes   *string
-	ExecutionHistory *string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	FlowID             string
+	AppID              string
+	CurrentNodeID      *string
+	CurrentActionID    *string
+	GraphID            string
+	RuntimeData        *string
+	IsAuthenticated    bool
+	UserID             *string
+	OrganizationUnitID *string
+	UserType           *string
+	UserInputs         *string
+	UserAttributes     *string
+	ExecutionHistory   *string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // ToEngineContext converts the database model to the flow engine context.
@@ -150,6 +152,12 @@ func (f *FlowContextWithUserDataDB) ToEngineContext(graph core.GraphInterface) (
 	}
 	if f.UserID != nil {
 		authenticatedUser.UserID = *f.UserID
+	}
+	if f.OrganizationUnitID != nil {
+		authenticatedUser.OrganizationUnitID = *f.OrganizationUnitID
+	}
+	if f.UserType != nil {
+		authenticatedUser.UserType = *f.UserType
 	}
 
 	// Parse execution history
@@ -239,6 +247,18 @@ func FromEngineContext(ctx EngineContext) (*FlowContextWithUserDataDB, error) {
 		authenticatedUserID = &ctx.AuthenticatedUser.UserID
 	}
 
+	// Get organization unit ID
+	var organizationUnitID *string
+	if ctx.AuthenticatedUser.OrganizationUnitID != "" {
+		organizationUnitID = &ctx.AuthenticatedUser.OrganizationUnitID
+	}
+
+	// Get user type
+	var userType *string
+	if ctx.AuthenticatedUser.UserType != "" {
+		userType = &ctx.AuthenticatedUser.UserType
+	}
+
 	// Get graph ID
 	graphID := ""
 	if ctx.Graph != nil {
@@ -246,16 +266,18 @@ func FromEngineContext(ctx EngineContext) (*FlowContextWithUserDataDB, error) {
 	}
 
 	return &FlowContextWithUserDataDB{
-		FlowID:           ctx.FlowID,
-		AppID:            ctx.AppID,
-		CurrentNodeID:    currentNodeID,
-		CurrentActionID:  currentActionID,
-		GraphID:          graphID,
-		RuntimeData:      &runtimeData,
-		IsAuthenticated:  ctx.AuthenticatedUser.IsAuthenticated,
-		UserID:           authenticatedUserID,
-		UserInputs:       &userInputData,
-		UserAttributes:   &userAttributes,
-		ExecutionHistory: &executionHistory,
+		FlowID:             ctx.FlowID,
+		AppID:              ctx.AppID,
+		CurrentNodeID:      currentNodeID,
+		CurrentActionID:    currentActionID,
+		GraphID:            graphID,
+		RuntimeData:        &runtimeData,
+		IsAuthenticated:    ctx.AuthenticatedUser.IsAuthenticated,
+		UserID:             authenticatedUserID,
+		OrganizationUnitID: organizationUnitID,
+		UserType:           userType,
+		UserInputs:         &userInputData,
+		UserAttributes:     &userAttributes,
+		ExecutionHistory:   &executionHistory,
 	}, nil
 }

@@ -87,12 +87,6 @@ func (o *ouExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.ExecutorRespons
 		RuntimeData:    make(map[string]string),
 	}
 
-	if ctx.FlowType != flowcm.FlowTypeRegistration {
-		logger.Debug("Flow type is not registration, skipping OU creation")
-		execResp.Status = flowcm.ExecComplete
-		return execResp, nil
-	}
-
 	if !o.ValidatePrerequisites(ctx, execResp) {
 		logger.Debug("Prerequisites validation failed for OU creation")
 		execResp.Status = flowcm.ExecFailure

@@ -49,9 +49,10 @@ const (
 	userInputOuHandle = "ouHandle"
 	userInputOuDesc   = "ouDescription"
 
-	ouIDKey        = "ouId"
-	defaultOUIDKey = "defaultOUID"
-	userTypeKey    = "userType"
+	ouIDKey                = "ouId"
+	defaultOUIDKey         = "defaultOUID"
+	userTypeKey            = "userType"
+	userAutoProvisionedKey = "userAutoProvisioned"
 )
 
 // nonSearchableInputs contains the list of user inputs/ attributes that are non-searchable.

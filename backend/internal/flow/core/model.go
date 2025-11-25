@@ -40,3 +40,10 @@ type NodeContext struct {
 	AuthenticatedUser authncm.AuthenticatedUser
 	ExecutionHistory  map[string]*common.NodeExecutionRecord
 }
+
+// NodeCondition represents a condition that must be met for a node to execute.
+// If specified, the node will only execute when the resolved value of key matches value.
+type NodeCondition struct {
+	Key   string
+	Value string
+}
