@@ -8,8 +8,7 @@
     "hostname": "localhost",
     "port": 8090,
     "scheme": "https",
-    "login_path": "/gate/signin",
-    "error_path": "/error"
+    "path": "/gate"
   },
   "security": {
     "cert_file": "repository/resources/security/server.cert",

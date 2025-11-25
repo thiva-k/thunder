@@ -22,6 +22,7 @@ package config
 import (
 	"encoding/json"
 	"os"
+	urlpath "path"
 	"path/filepath"
 	"reflect"
 
@@ -43,6 +44,7 @@ type GateClientConfig struct {
 	Hostname  string `yaml:"hostname" json:"hostname"`
 	Port      int    `yaml:"port" json:"port"`
 	Scheme    string `yaml:"scheme" json:"scheme"`
+	Path      string `yaml:"path" json:"path"`
 	LoginPath string `yaml:"login_path" json:"login_path"`
 	ErrorPath string `yaml:"error_path" json:"error_path"`
 }
@@ -209,6 +211,15 @@ func LoadConfig(path string, defaultsPath string) (*Config, error) {
 
 	// Merge user configuration with defaults
 	mergeConfigs(&cfg, &userCfg)
+	// Derive login_path and error_path from path if not explicitly set
+	if cfg.GateClient.Path != "" {
+		if cfg.GateClient.LoginPath == "" {
+			cfg.GateClient.LoginPath = urlpath.Join(cfg.GateClient.Path, "signin")
+		}
+		if cfg.GateClient.ErrorPath == "" {
+			cfg.GateClient.ErrorPath = urlpath.Join(cfg.GateClient.Path, "error")
+		}
+	}
 
 	return &cfg, nil
 }
