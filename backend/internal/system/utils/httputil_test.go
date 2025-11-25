@@ -28,6 +28,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/asgardeo/thunder/internal/system/error/apierror"
 )
 
 type HTTPUtilTestSuite struct {
@@ -472,4 +474,266 @@ func (suite *HTTPUtilTestSuite) TestExtractBearerToken() {
 			}
 		})
 	}
+}
+
+func (suite *HTTPUtilTestSuite) TestWriteSuccessResponse() {
+	testCases := []struct {
+		name       string
+		statusCode int
+		data       interface{}
+	}{
+		{
+			name:       "SuccessWithSimpleData",
+			statusCode: http.StatusOK,
+			data: map[string]string{
+				"message": "success",
+				"status":  "ok",
+			},
+		},
+		{
+			name:       "SuccessWithStructData",
+			statusCode: http.StatusCreated,
+			data: testStruct{
+				Name:  "test-object",
+				Value: 42,
+			},
+		},
+		{
+			name:       "SuccessWithArrayData",
+			statusCode: http.StatusOK,
+			data: []string{
+				"item1",
+				"item2",
+				"item3",
+			},
+		},
+		{
+			name:       "SuccessWithNilData",
+			statusCode: http.StatusNoContent,
+			data:       nil,
+		},
+		{
+			name:       "SuccessWithEmptyMap",
+			statusCode: http.StatusOK,
+			data:       map[string]interface{}{},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			WriteSuccessResponse(w, tc.statusCode, tc.data)
+
+			// Verify status code
+			assert.Equal(t, tc.statusCode, w.Code)
+
+			// Verify Content-Type header (except for 204 No Content)
+			if tc.statusCode != http.StatusNoContent {
+				assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+			}
+
+			// Verify response body content
+			if tc.data != nil {
+				var response interface{}
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+
+				// Verify the actual content matches the input data
+				switch v := tc.data.(type) {
+				case map[string]string:
+					responseMap, ok := response.(map[string]interface{})
+					assert.True(t, ok, "Response should be a map")
+					for key, value := range v {
+						assert.Equal(t, value, responseMap[key])
+					}
+				case testStruct:
+					responseMap, ok := response.(map[string]interface{})
+					assert.True(t, ok, "Response should be a map")
+					assert.Equal(t, v.Name, responseMap["name"])
+					assert.Equal(t, float64(v.Value), responseMap["value"]) // JSON numbers are float64
+				case []string:
+					responseArray, ok := response.([]interface{})
+					assert.True(t, ok, "Response should be an array")
+					assert.Equal(t, len(v), len(responseArray))
+					for i, item := range v {
+						assert.Equal(t, item, responseArray[i])
+					}
+				case map[string]interface{}:
+					responseMap, ok := response.(map[string]interface{})
+					assert.True(t, ok, "Response should be a map")
+					assert.Equal(t, len(v), len(responseMap))
+				}
+			}
+		})
+	}
+}
+
+func (suite *HTTPUtilTestSuite) TestWriteSuccessResponse_EncodingError() {
+	suite.T().Run("UnserializableData", func(t *testing.T) {
+		w := httptest.NewRecorder()
+
+		// Channel cannot be JSON encoded, should trigger encoding error
+		unserializableData := make(chan int)
+
+		WriteSuccessResponse(w, http.StatusOK, unserializableData)
+
+		// The function should have attempted to write status code
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		// After encoding fails, http.Error() is called which writes the predefined error message
+		responseBody := w.Body.String()
+		assert.Contains(t, responseBody, "Encoding error")
+	})
+}
+
+func (suite *HTTPUtilTestSuite) TestWriteErrorResponse() {
+	testCases := []struct {
+		name       string
+		statusCode int
+		errorResp  apierror.ErrorResponse
+	}{
+		{
+			name:       "BadRequestError",
+			statusCode: http.StatusBadRequest,
+			errorResp: apierror.ErrorResponse{
+				Code:        "invalid_request",
+				Message:     "Invalid Request",
+				Description: "The request is missing required parameters",
+			},
+		},
+		{
+			name:       "UnauthorizedError",
+			statusCode: http.StatusUnauthorized,
+			errorResp: apierror.ErrorResponse{
+				Code:        "unauthorized",
+				Message:     "Unauthorized",
+				Description: "Authentication is required",
+			},
+		},
+		{
+			name:       "ForbiddenError",
+			statusCode: http.StatusForbidden,
+			errorResp: apierror.ErrorResponse{
+				Code:        "forbidden",
+				Message:     "Forbidden",
+				Description: "You don't have permission to access this resource",
+			},
+		},
+		{
+			name:       "NotFoundError",
+			statusCode: http.StatusNotFound,
+			errorResp: apierror.ErrorResponse{
+				Code:        "not_found",
+				Message:     "Not Found",
+				Description: "The requested resource was not found",
+			},
+		},
+		{
+			name:       "InternalServerError",
+			statusCode: http.StatusInternalServerError,
+			errorResp: apierror.ErrorResponse{
+				Code:        "internal_error",
+				Message:     "Internal Server Error",
+				Description: "An unexpected error occurred",
+			},
+		},
+		{
+			name:       "ErrorWithEmptyDescription",
+			statusCode: http.StatusBadRequest,
+			errorResp: apierror.ErrorResponse{
+				Code:        "error_code",
+				Message:     "Error Message",
+				Description: "",
+			},
+		},
+		{
+			name:       "ConflictError",
+			statusCode: http.StatusConflict,
+			errorResp: apierror.ErrorResponse{
+				Code:        "conflict",
+				Message:     "Resource Conflict",
+				Description: "The resource already exists",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+
+			WriteErrorResponse(w, tc.statusCode, tc.errorResp)
+
+			// Verify status code
+			assert.Equal(t, tc.statusCode, w.Code)
+
+			// Verify Content-Type header
+			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+			// Verify response body
+			var response apierror.ErrorResponse
+			err := json.Unmarshal(w.Body.Bytes(), &response)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.errorResp.Code, response.Code)
+			assert.Equal(t, tc.errorResp.Message, response.Message)
+			assert.Equal(t, tc.errorResp.Description, response.Description)
+		})
+	}
+}
+
+func (suite *HTTPUtilTestSuite) TestWriteErrorResponse_EncodingError() {
+	suite.T().Run("ValidErrorResponse", func(t *testing.T) {
+		w := httptest.NewRecorder()
+
+		// Create a valid error response to ensure the happy path works
+		errorResp := apierror.ErrorResponse{
+			Code:        "test_error",
+			Message:     "Test Error",
+			Description: "This is a test error",
+		}
+
+		WriteErrorResponse(w, http.StatusBadRequest, errorResp)
+
+		// Verify the response is written correctly
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
+
+		var response apierror.ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		assert.NoError(t, err)
+		assert.Equal(t, errorResp.Code, response.Code)
+	})
+
+	suite.T().Run("EncodingErrorOnWrite", func(t *testing.T) {
+		// Create a response writer that fails on Write
+		w := &failingResponseWriter{
+			ResponseRecorder: httptest.NewRecorder(),
+			shouldFail:       true,
+		}
+
+		errorResp := apierror.ErrorResponse{
+			Code:        "test_error",
+			Message:     "Test Error",
+			Description: "This is a test error",
+		}
+
+		// This should trigger the encoding error path
+		WriteErrorResponse(w, http.StatusBadRequest, errorResp)
+
+		// Status code should still be set before the write failure
+		assert.Equal(t, http.StatusBadRequest, w.ResponseRecorder.Code)
+	})
+}
+
+// failingResponseWriter is a test helper that simulates write failures
+type failingResponseWriter struct {
+	*httptest.ResponseRecorder
+	shouldFail bool
+}
+
+func (f *failingResponseWriter) Write(b []byte) (int, error) {
+	if f.shouldFail {
+		return 0, assert.AnError
+	}
+	return f.ResponseRecorder.Write(b)
 }
