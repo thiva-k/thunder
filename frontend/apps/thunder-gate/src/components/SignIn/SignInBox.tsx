@@ -129,7 +129,7 @@ export default function SignInBox(): JSX.Element {
                 Sign in
               </Typography>
 
-              {!isInitialized ? (
+              {(isLoading || !isInitialized) ? (
                 <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
                   <Typography>Loading authentication...</Typography>
                 </Box>
@@ -170,7 +170,7 @@ export default function SignInBox(): JSX.Element {
                                 }
                               }}
                               noValidate
-                              sx={{display: 'flex', flexDirection: 'column', width: '100%', gap: 2, mb: 2, p: 3}}
+                              sx={{display: 'flex', flexDirection: 'column', width: '100%', gap: 2}}
                             >
                               <FormControl>
                                 <FormLabel htmlFor="username">Username</FormLabel>
@@ -239,7 +239,7 @@ export default function SignInBox(): JSX.Element {
 
                           {/* Show divider if there are other auth options besides basic_auth */}
                           {components.some((c) => c.type === 'BUTTON' && c.config?.actionId !== 'basic_auth') && (
-                            <Divider>or</Divider>
+                            <Divider sx={{my: 2}}>OR</Divider>
                           )}
 
                           {/* Show other authentication options as buttons */}
@@ -409,12 +409,11 @@ export default function SignInBox(): JSX.Element {
                       );
                     }
 
-                    // SignInBox fallback error
+                    // If no components send empty
                     return (
-                      <Alert severity="error" sx={{mb: 2}}>
-                        <AlertTitle>Oops, that didn&apos;t work</AlertTitle>
-                        We&apos;re sorry, we ran into a problem. Please try again!
-                      </Alert>
+                      <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
+                        <Typography>Loading authentication...</Typography>
+                      </Box>
                     );
                   })()}
                 </>
@@ -422,7 +421,7 @@ export default function SignInBox(): JSX.Element {
             </>
           )}
         </SignIn>
-        <Typography sx={{textAlign: 'center'}}>
+        <Typography sx={{textAlign: 'center', mt: 2}}>
           Don&apos;t have an account?{' '}
           <Button
             variant="text"
