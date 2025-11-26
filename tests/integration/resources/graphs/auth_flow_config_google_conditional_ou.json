@@ -1,0 +1,37 @@
+{
+    "id": "auth_flow_config_google_conditional_ou",
+    "type": "AUTHENTICATION",
+    "nodes": [
+        {
+            "id": "google_auth",
+            "type": "TASK_EXECUTION",
+            "properties": {
+                "idpId": "test-google-idp-id"
+            },
+            "executor": {
+                "name": "GoogleOIDCAuthExecutor"
+            },
+            "next": [
+                "conditional_ou_creation"
+            ]
+        },
+        {
+            "id": "conditional_ou_creation",
+            "type": "TASK_EXECUTION",
+            "condition": {
+                "key": "{{ context.userAutoProvisioned }}",
+                "value": "true"
+            },
+            "executor": {
+                "name": "OUExecutor"
+            },
+            "next": [
+                "authenticated"
+            ]
+        },
+        {
+            "id": "authenticated",
+            "type": "AUTHENTICATION_SUCCESS"
+        }
+    ]
+}

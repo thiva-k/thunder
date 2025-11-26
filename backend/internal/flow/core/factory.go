@@ -127,6 +127,14 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 	nodeCopy.SetPreviousNodeList(append([]string{}, source.GetPreviousNodeList()...))
 	nodeCopy.SetInputData(append([]common.InputData{}, source.GetInputData()...))
 
+	// Copy condition if present
+	if sourceCondition := source.GetCondition(); sourceCondition != nil {
+		nodeCopy.SetCondition(&NodeCondition{
+			Key:   sourceCondition.Key,
+			Value: sourceCondition.Value,
+		})
+	}
+
 	// Copy executor name if the node is executor-backed
 	if executableSource, ok := source.(ExecutorBackedNodeInterface); ok {
 		if executableCopy, ok := nodeCopy.(ExecutorBackedNodeInterface); ok {

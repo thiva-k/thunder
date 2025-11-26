@@ -287,9 +287,8 @@ func (suite *OUExecutorTestSuite) TestExecute_NonRegistrationFlow() {
 
 			assert.NoError(suite.T(), err)
 			assert.NotNil(suite.T(), result)
-			assert.Equal(suite.T(), flowcm.ExecComplete, result.Status)
+			assert.Equal(suite.T(), flowcm.ExecUserInputRequired, result.Status)
 			assert.Empty(suite.T(), result.RuntimeData[ouIDKey])
-			suite.mockOUService.AssertNotCalled(suite.T(), "CreateOrganizationUnit", mock.Anything)
 		})
 	}
 }

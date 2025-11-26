@@ -174,8 +174,7 @@ func (o *oidcAuthExecutor) ProcessAuthFlowResponse(ctx *flowcore.NodeContext,
 			return nil
 		}
 
-		user, err := resolveUserForOIDC(o.authService, logger, parsedSub, ctx, execResp,
-			o.userService, o.userSchemaService, idTokenClaims)
+		user, err := o.resolveUserForOIDC(ctx, execResp, parsedSub, idTokenClaims)
 		if err != nil {
 			return err
 		}
@@ -232,11 +231,11 @@ func (o *oidcAuthExecutor) GetIDTokenClaims(execResp *flowcm.ExecutorResponse,
 }
 
 // resolveUserForOIDC resolves the internal user based on the sub claim.
-func resolveUserForOIDC(authService authnoidc.OIDCAuthnCoreServiceInterface,
-	logger *log.Logger, sub string, ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
-	userService user.UserServiceInterface, userSchemaService userschema.UserSchemaServiceInterface,
-	idTokenClaims map[string]interface{}) (*user.User, error) {
-	user, svcErr := authService.GetInternalUser(sub)
+func (o *oidcAuthExecutor) resolveUserForOIDC(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
+	sub string, idTokenClaims map[string]interface{}) (*user.User, error) {
+	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
+	user, svcErr := o.authService.GetInternalUser(sub)
 	if svcErr != nil {
 		if svcErr.Code == authncm.ErrorUserNotFound.Code {
 			if ctx.FlowType == flowcm.FlowTypeRegistration {
@@ -252,8 +251,7 @@ func resolveUserForOIDC(authService authnoidc.OIDCAuthnCoreServiceInterface,
 				return nil, nil
 			} else {
 				// Provision the user automatically if allowed user types are configured
-				provisionedUser, provisionErr := provisionUserOIDC(ctx, sub, logger,
-					userService, userSchemaService, idTokenClaims)
+				provisionedUser, provisionErr := o.provisionUserOIDC(ctx, execResp, sub, idTokenClaims)
 				if provisionErr != nil {
 					logger.Error("Automatic user provisioning failed", log.Error(provisionErr), log.String("sub", sub))
 					execResp.Status = flowcm.ExecFailure
@@ -377,9 +375,10 @@ func getAuthenticatedUserForOIDC(o oidcAuthExecutorInterface, authService authno
 }
 
 // provisionUserOIDC attempts to automatically provision a user if allowed user types are configured.
-func provisionUserOIDC(ctx *flowcore.NodeContext,
-	sub string, logger *log.Logger, userService user.UserServiceInterface,
-	userSchemaService userschema.UserSchemaServiceInterface, idTokenClaims map[string]interface{}) (*user.User, error) {
+func (o *oidcAuthExecutor) provisionUserOIDC(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
+	sub string, idTokenClaims map[string]interface{}) (*user.User, error) {
+	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
 	allowedUserTypes := ctx.Application.AllowedUserTypes
 	if len(allowedUserTypes) == 0 {
 		logger.Debug("No allowed user types configured, cannot provision user automatically",
@@ -387,7 +386,7 @@ func provisionUserOIDC(ctx *flowcore.NodeContext,
 		return nil, nil
 	}
 
-	if userService == nil || userSchemaService == nil {
+	if o.userService == nil || o.userSchemaService == nil {
 		return nil, fmt.Errorf("required services are not available for provisioning")
 	}
 
@@ -395,7 +394,7 @@ func provisionUserOIDC(ctx *flowcore.NodeContext,
 	selfRegEnabledUserTypes := make([]string, 0)
 	var selectedUserSchema *userschema.UserSchema
 	for _, userType := range allowedUserTypes {
-		userSchema, svcErr := userSchemaService.GetUserSchemaByName(userType)
+		userSchema, svcErr := o.userSchemaService.GetUserSchemaByName(userType)
 		if svcErr != nil {
 			logger.Debug("Failed to get user schema for user type, skipping",
 				log.String("userType", userType), log.String("errorCode", svcErr.Code))
@@ -456,7 +455,7 @@ func provisionUserOIDC(ctx *flowcore.NodeContext,
 		Attributes:       attributesJSON,
 	}
 
-	createdUser, svcErr := userService.CreateUser(newUser)
+	createdUser, svcErr := o.userService.CreateUser(newUser)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
 			return nil, fmt.Errorf("failed to create user: %s", svcErr.ErrorDescription)
@@ -466,6 +465,14 @@ func provisionUserOIDC(ctx *flowcore.NodeContext,
 			log.String("userType", userType), log.String("sub", sub))
 		return nil, fmt.Errorf("failed to create user: %s", svcErr.ErrorDescription)
 	}
+
+	// Set runtime data for user provisioning
+	if execResp.RuntimeData == nil {
+		execResp.RuntimeData = make(map[string]string)
+	}
+	execResp.RuntimeData[userAutoProvisionedKey] = "true"
+	execResp.RuntimeData[userTypeKey] = userType
+	execResp.RuntimeData[defaultOUIDKey] = userSchema.OrganizationUnitID
 
 	return createdUser, nil
 }

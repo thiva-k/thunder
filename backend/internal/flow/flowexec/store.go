@@ -63,8 +63,8 @@ func (s *flowStore) StoreFlowContext(ctx EngineContext) error {
 		},
 		func(tx dbmodel.TxInterface) error {
 			_, err := tx.Exec(QueryCreateFlowUserData.Query, dbModel.FlowID,
-				dbModel.IsAuthenticated, dbModel.UserID,
-				dbModel.UserInputs, dbModel.UserAttributes)
+				dbModel.IsAuthenticated, dbModel.UserID, dbModel.OrganizationUnitID,
+				dbModel.UserType, dbModel.UserInputs, dbModel.UserAttributes)
 			return err
 		},
 	}
@@ -112,7 +112,8 @@ func (s *flowStore) UpdateFlowContext(ctx EngineContext) error {
 		},
 		func(tx dbmodel.TxInterface) error {
 			_, err := tx.Exec(QueryUpdateFlowUserData.Query, dbModel.FlowID, dbModel.IsAuthenticated,
-				dbModel.UserID, dbModel.UserInputs, dbModel.UserAttributes)
+				dbModel.UserID, dbModel.OrganizationUnitID, dbModel.UserType,
+				dbModel.UserInputs, dbModel.UserAttributes)
 			return err
 		},
 	}
@@ -186,6 +187,8 @@ func (s *flowStore) buildFlowContextFromResultRow(row map[string]interface{}) (*
 	currentNodeID := s.parseOptionalString(row["current_node_id"])
 	currentActionID := s.parseOptionalString(row["current_action_id"])
 	userID := s.parseOptionalString(row["user_id"])
+	organizationUnitID := s.parseOptionalString(row["ou_id"])
+	userType := s.parseOptionalString(row["user_type"])
 	userInputs := s.parseOptionalString(row["user_inputs"])
 	runtimeData := s.parseOptionalString(row["runtime_data"])
 	userAttributes := s.parseOptionalString(row["user_attributes"])
@@ -195,17 +198,19 @@ func (s *flowStore) buildFlowContextFromResultRow(row map[string]interface{}) (*
 	isAuthenticated := s.parseBoolean(row["is_authenticated"])
 
 	return &FlowContextWithUserDataDB{
-		FlowID:           flowID,
-		AppID:            appID,
-		CurrentNodeID:    currentNodeID,
-		CurrentActionID:  currentActionID,
-		GraphID:          graphID,
-		RuntimeData:      runtimeData,
-		IsAuthenticated:  isAuthenticated,
-		UserID:           userID,
-		UserInputs:       userInputs,
-		UserAttributes:   userAttributes,
-		ExecutionHistory: executionHistory,
+		FlowID:             flowID,
+		AppID:              appID,
+		CurrentNodeID:      currentNodeID,
+		CurrentActionID:    currentActionID,
+		GraphID:            graphID,
+		RuntimeData:        runtimeData,
+		IsAuthenticated:    isAuthenticated,
+		UserID:             userID,
+		OrganizationUnitID: organizationUnitID,
+		UserType:           userType,
+		UserInputs:         userInputs,
+		UserAttributes:     userAttributes,
+		ExecutionHistory:   executionHistory,
 	}, nil
 }
 

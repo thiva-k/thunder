@@ -360,6 +360,27 @@ func DeleteOrganizationUnit(ouID string) error {
 	return nil
 }
 
+// DeleteOrganizationUnitByHandlePath deletes an organization unit by its hierarchical handle path
+func DeleteOrganizationUnitByHandlePath(handlePath string) error {
+	req, err := http.NewRequest("DELETE", TestServerURL+"/organization-units/tree/"+handlePath, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete organization unit by handle path: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 200 or 204, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
+	return nil
+}
+
 // GetOrganizationUnit retrieves an organization unit by ID
 func GetOrganizationUnit(ouID string) (*OrganizationUnit, error) {
 	req, err := http.NewRequest("GET", TestServerURL+"/organization-units/"+ouID, nil)

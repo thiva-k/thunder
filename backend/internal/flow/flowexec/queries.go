@@ -47,14 +47,14 @@ var (
 	QueryCreateFlowUserData = model.DBQuery{
 		ID: "FLQ-FLOW_USER-01",
 		Query: "INSERT INTO FLOW_USER_DATA (FLOW_ID, IS_AUTHENTICATED, USER_ID, " +
-			"USER_INPUTS, USER_ATTRIBUTES) VALUES ($1, $2, $3, $4, $5)",
+			"OU_ID, USER_TYPE, USER_INPUTS, USER_ATTRIBUTES) VALUES ($1, $2, $3, $4, $5, $6, $7)",
 	}
 
 	// QueryUpdateFlowUserData is the query to update flow user data.
 	QueryUpdateFlowUserData = model.DBQuery{
 		ID: "FLQ-FLOW_USER-03",
 		Query: "UPDATE FLOW_USER_DATA SET IS_AUTHENTICATED = $2, USER_ID = $3, " +
-			"USER_INPUTS = $4, USER_ATTRIBUTES = $5, " +
+			"OU_ID = $4, USER_TYPE = $5, USER_INPUTS = $6, USER_ATTRIBUTES = $7, " +
 			"UPDATED_AT = CURRENT_TIMESTAMP WHERE FLOW_ID = $1",
 	}
 
@@ -70,7 +70,7 @@ var (
 		Query: `SELECT 
 			fc.FLOW_ID, fc.APP_ID, fc.CURRENT_NODE_ID, fc.CURRENT_ACTION_ID, 
 			fc.GRAPH_ID, fc.RUNTIME_DATA, fc.EXECUTION_HISTORY, fc.CREATED_AT, fc.UPDATED_AT,
-			fud.IS_AUTHENTICATED, fud.USER_ID, fud.USER_INPUTS, 
+			fud.IS_AUTHENTICATED, fud.USER_ID, fud.OU_ID, fud.USER_TYPE, fud.USER_INPUTS, 
 			fud.USER_ATTRIBUTES
 		FROM FLOW_CONTEXT fc
 		LEFT JOIN FLOW_USER_DATA fud ON fc.FLOW_ID = fud.FLOW_ID
