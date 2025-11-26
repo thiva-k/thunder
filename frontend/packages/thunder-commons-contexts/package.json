@@ -73,7 +73,7 @@
     "@emotion/react": "catalog:",
     "@emotion/styled": "catalog:",
     "@mui/material": "catalog:",
-    "react": ">=16.8.0",
-    "react-dom": ">=16.8.0"
+    "react": "catalog:",
+    "react-dom": "catalog:"
   }
 }

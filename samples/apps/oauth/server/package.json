@@ -18,9 +18,9 @@
         "start": "node server.js"
     },
     "dependencies": {
-        "express": "^4.18.2"
+        "express": "4.18.2"
     },
     "devDependencies": {
-        "pkg": "^5.8.1"
+        "pkg": "5.8.1"
     }
 }
