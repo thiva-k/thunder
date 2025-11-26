@@ -292,16 +292,16 @@ function Build-Frontend {
     Write-Host "Building frontend apps..."
     
     # Check if pnpm is installed, if not install it
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        Write-Host "pnpm not found, installing..."
-        & npm install -g pnpm
-    }
+    # if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+    #     Write-Host "pnpm not found, installing..."
+    #     & npm install -g pnpm
+    # }
     
     # Navigate to frontend directory and install dependencies
     Push-Location $FRONTEND_BASE_DIR
     try {
-        Write-Host "Installing frontend dependencies..."
-        & pnpm install
+        # Write-Host "Installing frontend dependencies..."
+        # & pnpm install
         
         Write-Host "Building frontend applications & packages..."
         & pnpm build
@@ -496,11 +496,11 @@ function Build-Sample-App {
     # Build the application
     Push-Location $SAMPLE_APP_DIR
     try {
-        Write-Host "Installing dependencies..."
-        & npm install
-        if ($LASTEXITCODE -ne 0) {
-            throw "npm install failed with exit code $LASTEXITCODE"
-        }
+        # Write-Host "Installing dependencies..."
+        # & npm install
+        # if ($LASTEXITCODE -ne 0) {
+        #     throw "npm install failed with exit code $LASTEXITCODE"
+        # }
         
         Write-Host "Building the app (TypeScript + Vite)..."
 
@@ -541,11 +541,11 @@ function Build-Sample-App {
         # Install server dependencies
         Push-Location $serverDir
         try {
-            Write-Host " - Installing server dependencies..."
-            & npm install
-            if ($LASTEXITCODE -ne 0) {
-                throw "npm install (server) failed with exit code $LASTEXITCODE"
-            }
+            # Write-Host " - Installing server dependencies..."
+            # & npm install
+            # if ($LASTEXITCODE -ne 0) {
+            #     throw "npm install (server) failed with exit code $LASTEXITCODE"
+            # }
         }
         finally {
             Pop-Location
@@ -1348,10 +1348,10 @@ function Run-Frontend {
     Write-Host "Running frontend apps..."
     
     # Check if pnpm is installed, if not install it
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        Write-Host "pnpm not found, installing..."
-        & npm install -g pnpm
-    }
+    # if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
+    #     Write-Host "pnpm not found, installing..."
+    #     & npm install -g pnpm
+    # }
     
     # Navigate to frontend directory and install dependencies
     Push-Location $FRONTEND_BASE_DIR
@@ -1359,8 +1359,8 @@ function Run-Frontend {
         Write-Host "Installing frontend dependencies..."
         & pnpm install
         
-        Write-Host "Building frontend applications & packages..."
-        & pnpm build
+        # Write-Host "Building frontend applications & packages..."
+        # & pnpm build
         
         Write-Host "Starting frontend applications in the background..."
         # Start frontend processes in background
