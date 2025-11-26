@@ -22,10 +22,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
@@ -33,22 +31,17 @@ import (
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
-	"github.com/asgardeo/thunder/internal/userschema"
 	"github.com/asgardeo/thunder/tests/mocks/authn/oidcmock"
 	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
 	"github.com/asgardeo/thunder/tests/mocks/idp/idpmock"
-	"github.com/asgardeo/thunder/tests/mocks/usermock"
-	"github.com/asgardeo/thunder/tests/mocks/userschemamock"
 )
 
 type OIDCAuthExecutorTestSuite struct {
 	suite.Suite
-	mockOIDCService       *oidcmock.OIDCAuthnCoreServiceInterfaceMock
-	mockIDPService        *idpmock.IDPServiceInterfaceMock
-	mockFlowFactory       *coremock.FlowFactoryInterfaceMock
-	mockUserService       *usermock.UserServiceInterfaceMock
-	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
-	executor              oidcAuthExecutorInterface
+	mockOIDCService *oidcmock.OIDCAuthnCoreServiceInterfaceMock
+	mockIDPService  *idpmock.IDPServiceInterfaceMock
+	mockFlowFactory *coremock.FlowFactoryInterfaceMock
+	executor        oidcAuthExecutorInterface
 }
 
 func TestOIDCAuthExecutorSuite(t *testing.T) {
@@ -59,8 +52,6 @@ func (suite *OIDCAuthExecutorTestSuite) SetupTest() {
 	suite.mockOIDCService = oidcmock.NewOIDCAuthnCoreServiceInterfaceMock(suite.T())
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
-	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
-	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 
 	defaultInputs := []flowcm.InputData{{Name: "code", Type: "string", Required: true}}
 	mockExec := createMockAuthExecutor(suite.T(), ExecutorNameOIDCAuth)
@@ -68,8 +59,7 @@ func (suite *OIDCAuthExecutorTestSuite) SetupTest() {
 		defaultInputs, []flowcm.InputData{}).Return(mockExec)
 
 	suite.executor = newOIDCAuthExecutor(ExecutorNameOIDCAuth, defaultInputs, []flowcm.InputData{},
-		suite.mockFlowFactory, suite.mockIDPService, suite.mockOIDCService,
-		suite.mockUserService, suite.mockUserSchemaService)
+		suite.mockFlowFactory, suite.mockIDPService, suite.mockOIDCService)
 }
 
 func (suite *OIDCAuthExecutorTestSuite) TestNewOIDCAuthExecutor() {
@@ -136,7 +126,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestExecute_CodeProvided_ValidIDToken_Au
 
 	existingUser := &user.User{
 		ID:               "user-123",
-		OrganizationUnit: testOUID,
+		OrganizationUnit: "ou-123",
 		Type:             "INTERNAL",
 	}
 
@@ -160,7 +150,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestExecute_CodeProvided_ValidIDToken_Au
 	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
 	assert.True(suite.T(), resp.AuthenticatedUser.IsAuthenticated)
 	assert.Equal(suite.T(), "user-123", resp.AuthenticatedUser.UserID)
-	assert.Equal(suite.T(), testOUID, resp.AuthenticatedUser.OrganizationUnitID)
+	assert.Equal(suite.T(), "ou-123", resp.AuthenticatedUser.OrganizationUnitID)
 	assert.Equal(suite.T(), "test@example.com", resp.RuntimeData["email"])
 	suite.mockOIDCService.AssertExpectations(suite.T())
 }
@@ -569,7 +559,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_WithAddition
 
 	existingUser := &user.User{
 		ID:               "user-123",
-		OrganizationUnit: testOUID,
+		OrganizationUnit: "ou-123",
 		Type:             "INTERNAL",
 	}
 
@@ -659,7 +649,7 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_FiltersNonUs
 
 	existingUser := &user.User{
 		ID:               "user-123",
-		OrganizationUnit: testOUID,
+		OrganizationUnit: "ou-123",
 		Type:             "INTERNAL",
 	}
 
@@ -1064,503 +1054,4 @@ func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_EmailInIDTok
 	assert.Equal(suite.T(), "niltest@example.com", execResp.RuntimeData["email"])
 	assert.Equal(suite.T(), "niltest@example.com", execResp.AuthenticatedUser.Attributes["email"])
 	suite.mockOIDCService.AssertExpectations(suite.T())
-}
-
-// Test provisioning functionality
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_ProvisioningSucceeds() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{"employee"},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub":   "new-user-sub",
-		"email": "newuser@example.com",
-		"name":  "New User",
-		"iss":   "https://provider.com",
-		"aud":   "client-id",
-	}
-
-	userSchema := &userschema.UserSchema{
-		ID:                    "schema-123",
-		Name:                  "employee",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: true,
-	}
-
-	provisionedUser := &user.User{
-		ID:               "user-provisioned-123",
-		OrganizationUnit: testOUID,
-		Type:             "employee",
-	}
-
-	oauthConfig := &authnoauth.OAuthClientConfig{
-		Scopes: []string{"openid"},
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-	suite.mockOIDCService.On("GetOAuthClientConfig", "idp-123").
-		Return(oauthConfig, nil)
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(userSchema, nil)
-	suite.mockUserService.On("CreateUser", mock.MatchedBy(func(u *user.User) bool {
-		return u.Type == testUserType && u.OrganizationUnit == testOUID
-	})).Return(provisionedUser, nil)
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
-	assert.True(suite.T(), execResp.AuthenticatedUser.IsAuthenticated)
-	assert.Equal(suite.T(), "user-provisioned-123", execResp.AuthenticatedUser.UserID)
-	assert.Equal(suite.T(), testOUID, execResp.AuthenticatedUser.OrganizationUnitID)
-	assert.Equal(suite.T(), "employee", execResp.AuthenticatedUser.UserType)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertExpectations(suite.T())
-}
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_NoAllowedUserTypes() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub": "new-user-sub",
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
-	assert.Equal(suite.T(), failureReasonUserNotFound, execResp.FailureReason)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertNotCalled(suite.T(), "GetUserSchemaByName")
-	suite.mockUserService.AssertNotCalled(suite.T(), "CreateUser")
-}
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_UserSchemaNotFound() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{"employee"},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub": "new-user-sub",
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(nil, &serviceerror.ServiceError{
-			Type:             serviceerror.ClientErrorType,
-			Code:             "USRS-1002",
-			ErrorDescription: "User schema not found",
-		})
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
-	assert.Equal(suite.T(), "User not found and automatic provisioning is not available", execResp.FailureReason)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertNotCalled(suite.T(), "CreateUser")
-}
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_UserCreationFails() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{"employee"},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub":   "new-user-sub",
-		"email": "newuser@example.com",
-	}
-
-	userSchema := &userschema.UserSchema{
-		ID:                    "schema-123",
-		Name:                  "employee",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: true,
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(userSchema, nil)
-	suite.mockUserService.On("CreateUser", mock.MatchedBy(func(u *user.User) bool {
-		return u.Type == testUserType && u.OrganizationUnit == testOUID
-	})).Return(nil, &serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "USR-1014",
-		ErrorDescription: "Attribute conflict",
-	})
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
-	assert.Equal(suite.T(), "User not found and automatic provisioning is not available", execResp.FailureReason)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertExpectations(suite.T())
-}
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_MultipleAllowedUserTypes() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{"employee", "customer", "partner"},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub":   "new-user-sub",
-		"email": "newuser@example.com",
-	}
-
-	employeeSchema := &userschema.UserSchema{
-		ID:                    "schema-employee",
-		Name:                  "employee",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: true,
-	}
-	customerSchema := &userschema.UserSchema{
-		ID:                    "schema-customer",
-		Name:                  "customer",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: true,
-	}
-	partnerSchema := &userschema.UserSchema{
-		ID:                    "schema-partner",
-		Name:                  "partner",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: true,
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-	// All three user types have self-registration enabled, so should fail
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(employeeSchema, nil)
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "customer").
-		Return(customerSchema, nil)
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "partner").
-		Return(partnerSchema, nil)
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
-	assert.Equal(suite.T(), "User not found and automatic provisioning is not available", execResp.FailureReason)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertNotCalled(suite.T(), "CreateUser")
-}
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_SelfRegistrationDisabled() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{"employee"},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub": "new-user-sub",
-	}
-
-	userSchema := &userschema.UserSchema{
-		ID:                    "schema-123",
-		Name:                  "employee",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: false,
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(userSchema, nil)
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
-	assert.Equal(suite.T(), "User not found and automatic provisioning is not available", execResp.FailureReason)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertNotCalled(suite.T(), "CreateUser")
-}
-
-func (suite *OIDCAuthExecutorTestSuite) TestProcessAuthFlowResponse_AuthFlow_UserNotFound_MultiTypes_OneWithSelfReg() {
-	ctx := &flowcore.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: flowcm.FlowTypeAuthentication,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{"employee", "customer", "partner"},
-		},
-		UserInputData: map[string]string{
-			"code": "auth_code_123",
-		},
-		NodeProperties: map[string]interface{}{
-			"idpId": "idp-123",
-		},
-	}
-
-	execResp := &flowcm.ExecutorResponse{
-		AdditionalData: make(map[string]string),
-		RuntimeData:    make(map[string]string),
-	}
-
-	tokenResp := &authnoauth.TokenResponse{
-		AccessToken: "access_token_123",
-		TokenType:   "Bearer",
-		Scope:       "openid",
-		IDToken:     "id_token_jwt",
-		ExpiresIn:   3600,
-	}
-
-	idTokenClaims := map[string]interface{}{
-		"sub":   "new-user-sub",
-		"email": "newuser@example.com",
-	}
-
-	employeeSchema := &userschema.UserSchema{
-		ID:                    "schema-employee",
-		Name:                  "employee",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: true,
-	}
-	customerSchema := &userschema.UserSchema{
-		ID:                    "schema-customer",
-		Name:                  "customer",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: false,
-	}
-	partnerSchema := &userschema.UserSchema{
-		ID:                    "schema-partner",
-		Name:                  "partner",
-		OrganizationUnitID:    testOUID,
-		AllowSelfRegistration: false,
-	}
-
-	provisionedUser := &user.User{
-		ID:               "user-provisioned-123",
-		OrganizationUnit: testOUID,
-		Type:             "employee",
-	}
-
-	oauthConfig := &authnoauth.OAuthClientConfig{
-		Scopes: []string{"openid"},
-	}
-
-	suite.mockOIDCService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
-		Return(tokenResp, nil)
-	suite.mockOIDCService.On("GetIDTokenClaims", "id_token_jwt").
-		Return(idTokenClaims, nil)
-	suite.mockOIDCService.On("GetInternalUser", "new-user-sub").
-		Return(nil, &serviceerror.ServiceError{
-			Code: authncm.ErrorUserNotFound.Code,
-			Type: serviceerror.ClientErrorType,
-		})
-	suite.mockOIDCService.On("GetOAuthClientConfig", "idp-123").
-		Return(oauthConfig, nil)
-	// Only employee has self-registration enabled
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(employeeSchema, nil)
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "customer").
-		Return(customerSchema, nil)
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "partner").
-		Return(partnerSchema, nil)
-	suite.mockUserService.On("CreateUser", mock.MatchedBy(func(u *user.User) bool {
-		return u.Type == "employee" && u.OrganizationUnit == testOUID
-	})).Return(provisionedUser, nil)
-
-	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
-
-	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
-	assert.True(suite.T(), execResp.AuthenticatedUser.IsAuthenticated)
-	assert.Equal(suite.T(), "employee", execResp.AuthenticatedUser.UserType)
-	suite.mockOIDCService.AssertExpectations(suite.T())
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-	suite.mockUserService.AssertExpectations(suite.T())
 }

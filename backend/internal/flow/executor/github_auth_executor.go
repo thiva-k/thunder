@@ -24,8 +24,6 @@ import (
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/idp"
-	"github.com/asgardeo/thunder/internal/user"
-	"github.com/asgardeo/thunder/internal/userschema"
 )
 
 // githubOAuthExecutor implements the OAuth authentication executor for GitHub.
@@ -41,8 +39,6 @@ func newGithubOAuthExecutor(
 	flowFactory flowcore.FlowFactoryInterface,
 	idpService idp.IDPServiceInterface,
 	authService authngithub.GithubOAuthAuthnServiceInterface,
-	userService user.UserServiceInterface,
-	userSchemaService userschema.UserSchemaServiceInterface,
 ) oAuthExecutorInterface {
 	oauthSvcCast, ok := authService.(authnoauth.OAuthAuthnCoreServiceInterface)
 	if !ok {
@@ -50,7 +46,7 @@ func newGithubOAuthExecutor(
 	}
 
 	base := newOAuthExecutor(ExecutorNameGitHubAuth, []flowcm.InputData{}, []flowcm.InputData{},
-		flowFactory, idpService, oauthSvcCast, userService, userSchemaService)
+		flowFactory, idpService, oauthSvcCast)
 
 	return &githubOAuthExecutor{
 		oAuthExecutorInterface: base,

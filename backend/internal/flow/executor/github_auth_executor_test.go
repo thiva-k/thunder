@@ -29,18 +29,14 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/authn/oauthmock"
 	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
 	"github.com/asgardeo/thunder/tests/mocks/idp/idpmock"
-	"github.com/asgardeo/thunder/tests/mocks/usermock"
-	"github.com/asgardeo/thunder/tests/mocks/userschemamock"
 )
 
 type GithubAuthExecutorTestSuite struct {
 	suite.Suite
-	mockFlowFactory       *coremock.FlowFactoryInterfaceMock
-	mockIDPService        *idpmock.IDPServiceInterfaceMock
-	mockGithubService     *githubmock.GithubOAuthAuthnServiceInterfaceMock
-	mockOAuthService      *oauthmock.OAuthAuthnCoreServiceInterfaceMock
-	mockUserService       *usermock.UserServiceInterfaceMock
-	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
+	mockFlowFactory   *coremock.FlowFactoryInterfaceMock
+	mockIDPService    *idpmock.IDPServiceInterfaceMock
+	mockGithubService *githubmock.GithubOAuthAuthnServiceInterfaceMock
+	mockOAuthService  *oauthmock.OAuthAuthnCoreServiceInterfaceMock
 }
 
 func TestGithubAuthExecutorTestSuite(t *testing.T) {
@@ -52,8 +48,6 @@ func (suite *GithubAuthExecutorTestSuite) SetupTest() {
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockGithubService = githubmock.NewGithubOAuthAuthnServiceInterfaceMock(suite.T())
 	suite.mockOAuthService = oauthmock.NewOAuthAuthnCoreServiceInterfaceMock(suite.T())
-	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
-	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 }
 
 func (suite *GithubAuthExecutorTestSuite) TestNewGithubOAuthExecutor_Success() {
@@ -74,8 +68,7 @@ func (suite *GithubAuthExecutorTestSuite) TestNewGithubOAuthExecutor_Success() {
 		oauthService:                         suite.mockOAuthService,
 	}
 
-	executor := newGithubOAuthExecutor(suite.mockFlowFactory, suite.mockIDPService, mockGithubSvc,
-		suite.mockUserService, suite.mockUserSchemaService)
+	executor := newGithubOAuthExecutor(suite.mockFlowFactory, suite.mockIDPService, mockGithubSvc)
 
 	suite.NotNil(executor)
 	githubExec, ok := executor.(*githubOAuthExecutor)

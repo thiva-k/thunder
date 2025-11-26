@@ -50,15 +50,13 @@ func Initialize(
 		flowFactory, userService, otpService))
 
 	reg.RegisterExecutor(ExecutorNameOAuth, newOAuthExecutor(
-		"", []flowcm.InputData{}, []flowcm.InputData{}, flowFactory, idpService, authRegistry.OAuthAuthnService,
-		userService, userSchemaService))
+		"", []flowcm.InputData{}, []flowcm.InputData{}, flowFactory, idpService, authRegistry.OAuthAuthnService))
 	reg.RegisterExecutor(ExecutorNameOIDCAuth, newOIDCAuthExecutor(
-		"", []flowcm.InputData{}, []flowcm.InputData{}, flowFactory, idpService, authRegistry.OIDCAuthnService,
-		userService, userSchemaService))
+		"", []flowcm.InputData{}, []flowcm.InputData{}, flowFactory, idpService, authRegistry.OIDCAuthnService))
 	reg.RegisterExecutor(ExecutorNameGitHubAuth, newGithubOAuthExecutor(
-		flowFactory, idpService, authRegistry.GithubOAuthAuthnService, userService, userSchemaService))
+		flowFactory, idpService, authRegistry.GithubOAuthAuthnService))
 	reg.RegisterExecutor(ExecutorNameGoogleAuth, newGoogleOIDCAuthExecutor(
-		flowFactory, idpService, authRegistry.GoogleOIDCAuthnService, userService, userSchemaService))
+		flowFactory, idpService, authRegistry.GoogleOIDCAuthnService))
 
 	reg.RegisterExecutor(ExecutorNameProvisioning, newProvisioningExecutor(flowFactory, userService))
 	reg.RegisterExecutor(ExecutorNameOUCreation, newOUExecutor(flowFactory, ouService))

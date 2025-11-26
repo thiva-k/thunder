@@ -19,7 +19,6 @@
 package executor
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -33,7 +32,6 @@ import (
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/user"
-	"github.com/asgardeo/thunder/internal/userschema"
 )
 
 const (
@@ -52,10 +50,8 @@ type oidcAuthExecutorInterface interface {
 // oidcAuthExecutor implements the OIDCAuthExecutorInterface for handling generic OIDC authentication flows.
 type oidcAuthExecutor struct {
 	oAuthExecutorInterface
-	authService       authnoidc.OIDCAuthnCoreServiceInterface
-	userService       user.UserServiceInterface
-	userSchemaService userschema.UserSchemaServiceInterface
-	logger            *log.Logger
+	authService authnoidc.OIDCAuthnCoreServiceInterface
+	logger      *log.Logger
 }
 
 var _ flowcore.ExecutorInterface = (*oidcAuthExecutor)(nil)
@@ -67,8 +63,6 @@ func newOIDCAuthExecutor(
 	flowFactory flowcore.FlowFactoryInterface,
 	idpService idp.IDPServiceInterface,
 	authService authnoidc.OIDCAuthnCoreServiceInterface,
-	userService user.UserServiceInterface,
-	userSchemaService userschema.UserSchemaServiceInterface,
 ) oidcAuthExecutorInterface {
 	if name == "" {
 		name = ExecutorNameOIDCAuth
@@ -82,13 +76,11 @@ func newOIDCAuthExecutor(
 	}
 
 	base := newOAuthExecutor(name, defaultInputs, prerequisites,
-		flowFactory, idpService, oauthSvcCast, userService, userSchemaService)
+		flowFactory, idpService, oauthSvcCast)
 
 	return &oidcAuthExecutor{
 		oAuthExecutorInterface: base,
 		authService:            authService,
-		userService:            userService,
-		userSchemaService:      userSchemaService,
 		logger:                 logger,
 	}
 }
@@ -174,7 +166,7 @@ func (o *oidcAuthExecutor) ProcessAuthFlowResponse(ctx *flowcore.NodeContext,
 			return nil
 		}
 
-		user, err := o.resolveUserForOIDC(ctx, execResp, parsedSub, idTokenClaims)
+		user, err := resolveUserForOIDC(o.authService, logger, parsedSub, ctx, execResp)
 		if err != nil {
 			return err
 		}
@@ -231,11 +223,10 @@ func (o *oidcAuthExecutor) GetIDTokenClaims(execResp *flowcm.ExecutorResponse,
 }
 
 // resolveUserForOIDC resolves the internal user based on the sub claim.
-func (o *oidcAuthExecutor) resolveUserForOIDC(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
-	sub string, idTokenClaims map[string]interface{}) (*user.User, error) {
-	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
-
-	user, svcErr := o.authService.GetInternalUser(sub)
+func resolveUserForOIDC(authService authnoidc.OIDCAuthnCoreServiceInterface,
+	logger *log.Logger, sub string, ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse) (
+	*user.User, error) {
+	user, svcErr := authService.GetInternalUser(sub)
 	if svcErr != nil {
 		if svcErr.Code == authncm.ErrorUserNotFound.Code {
 			if ctx.FlowType == flowcm.FlowTypeRegistration {
@@ -250,18 +241,6 @@ func (o *oidcAuthExecutor) resolveUserForOIDC(ctx *flowcore.NodeContext, execRes
 
 				return nil, nil
 			} else {
-				// Provision the user automatically if allowed user types are configured
-				provisionedUser, provisionErr := o.provisionUserOIDC(ctx, execResp, sub, idTokenClaims)
-				if provisionErr != nil {
-					logger.Error("Automatic user provisioning failed", log.Error(provisionErr), log.String("sub", sub))
-					execResp.Status = flowcm.ExecFailure
-					execResp.FailureReason = "User not found and automatic provisioning is not available"
-					return nil, nil
-				}
-				if provisionedUser != nil {
-					return provisionedUser, nil
-				}
-				// Provisioning not possible, return failure
 				execResp.Status = flowcm.ExecFailure
 				execResp.FailureReason = failureReasonUserNotFound
 				return nil, nil
@@ -372,107 +351,4 @@ func getAuthenticatedUserForOIDC(o oidcAuthExecutorInterface, authService authno
 	}
 
 	return &authenticatedUser, nil
-}
-
-// provisionUserOIDC attempts to automatically provision a user if allowed user types are configured.
-func (o *oidcAuthExecutor) provisionUserOIDC(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
-	sub string, idTokenClaims map[string]interface{}) (*user.User, error) {
-	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
-
-	allowedUserTypes := ctx.Application.AllowedUserTypes
-	if len(allowedUserTypes) == 0 {
-		logger.Debug("No allowed user types configured, cannot provision user automatically",
-			log.String("sub", sub))
-		return nil, nil
-	}
-
-	if o.userService == nil || o.userSchemaService == nil {
-		return nil, fmt.Errorf("required services are not available for provisioning")
-	}
-
-	// Filter allowed user types to only those with self-registration enabled
-	selfRegEnabledUserTypes := make([]string, 0)
-	var selectedUserSchema *userschema.UserSchema
-	for _, userType := range allowedUserTypes {
-		userSchema, svcErr := o.userSchemaService.GetUserSchemaByName(userType)
-		if svcErr != nil {
-			logger.Debug("Failed to get user schema for user type, skipping",
-				log.String("userType", userType), log.String("errorCode", svcErr.Code))
-			continue
-		}
-		if userSchema.AllowSelfRegistration {
-			selfRegEnabledUserTypes = append(selfRegEnabledUserTypes, userType)
-			if selectedUserSchema == nil {
-				selectedUserSchema = userSchema
-			}
-		}
-	}
-
-	// Fail if no user types have self-registration enabled
-	if len(selfRegEnabledUserTypes) == 0 {
-		logger.Debug("No user types with self-registration enabled for automatic provisioning",
-			log.String("sub", sub))
-		return nil, fmt.Errorf("no user types with self-registration enabled")
-	}
-
-	// Fail if multiple user types have self-registration enabled (ambiguous)
-	if len(selfRegEnabledUserTypes) > 1 {
-		logger.Debug("Multiple user types with self-registration enabled, cannot automatically provision",
-			log.String("sub", sub), log.Any("userTypes", selfRegEnabledUserTypes))
-		return nil, fmt.Errorf("multiple user types with self-registration enabled: %v", selfRegEnabledUserTypes)
-	}
-
-	// Exactly one user type with self-registration enabled
-	userType := selfRegEnabledUserTypes[0]
-	userSchema := selectedUserSchema
-
-	if userSchema.OrganizationUnitID == "" {
-		logger.Error("No organization unit found for user type", log.String("userType", userType))
-		return nil, fmt.Errorf("no organization unit found for user type: %s", userType)
-	}
-
-	// Extract user attributes from ID token claims
-	// We need to include 'sub' in attributes for user identification
-	userAttributes := make(map[string]interface{})
-	if len(idTokenClaims) != 0 {
-		for attr, val := range idTokenClaims {
-			if attr == "sub" || !slices.Contains(idTokenNonUserAttributes, attr) {
-				userAttributes[attr] = val
-			}
-		}
-	}
-
-	attributesJSON, err := json.Marshal(userAttributes)
-	if err != nil {
-		logger.Error("Failed to marshal user attributes", log.Error(err))
-		return nil, fmt.Errorf("failed to marshal user attributes: %w", err)
-	}
-
-	// Create the user
-	newUser := &user.User{
-		OrganizationUnit: userSchema.OrganizationUnitID,
-		Type:             userType,
-		Attributes:       attributesJSON,
-	}
-
-	createdUser, svcErr := o.userService.CreateUser(newUser)
-	if svcErr != nil {
-		if svcErr.Type == serviceerror.ClientErrorType {
-			return nil, fmt.Errorf("failed to create user: %s", svcErr.ErrorDescription)
-		}
-		logger.Error("Failed to create user during provisioning",
-			log.String("errorCode", svcErr.Code), log.String("errorDescription", svcErr.ErrorDescription),
-			log.String("userType", userType), log.String("sub", sub))
-		return nil, fmt.Errorf("failed to create user: %s", svcErr.ErrorDescription)
-	}
-
-	// Set runtime data for user provisioning
-	if execResp.RuntimeData == nil {
-		execResp.RuntimeData = make(map[string]string)
-	}
-	execResp.RuntimeData[userAutoProvisionedKey] = "true"
-	execResp.RuntimeData[userTypeKey] = userType
-	execResp.RuntimeData[defaultOUIDKey] = userSchema.OrganizationUnitID
-
-	return createdUser, nil
 }
