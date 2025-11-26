@@ -24,6 +24,7 @@ import (
 	"slices"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -77,10 +78,14 @@ func (p *provisioningExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.Execu
 		RuntimeData:    make(map[string]string),
 	}
 
-	if ctx.FlowType != flowcm.FlowTypeRegistration {
-		logger.Warn("ProvisioningExecutor is only applicable for registration flows, skipping execution")
-		execResp.Status = flowcm.ExecComplete
-		return execResp, nil
+	// If it's an authentication flow, skip execution if the user is not eligible for provisioning
+	if ctx.FlowType == flowcm.FlowTypeAuthentication {
+		eligible, ok := ctx.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning]
+		if !ok || eligible != dataValueTrue {
+			logger.Debug("User is not eligible for provisioning, skipping execution")
+			execResp.Status = flowcm.ExecComplete
+			return execResp, nil
+		}
 	}
 
 	if p.CheckInputData(ctx, execResp) {
@@ -93,7 +98,7 @@ func (p *provisioningExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.Execu
 		return execResp, nil
 	}
 
-	userAttributes := p.getInputAttributes(ctx)
+	userAttributes := p.getAttributesForProvisioning(ctx)
 	if len(userAttributes) == 0 {
 		logger.Debug("No user attributes provided for provisioning")
 		execResp.Status = flowcm.ExecFailure
@@ -113,6 +118,18 @@ func (p *provisioningExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.Execu
 	}
 	if userID != nil && *userID != "" {
 		logger.Debug("User already exists", log.String("userID", *userID))
+
+		// If it's a registration flow, check if proceeding with an existing user
+		if ctx.FlowType == flowcm.FlowTypeRegistration {
+			existing, ok := ctx.RuntimeData[common.RuntimeKeySkipProvisioning]
+			if ok && existing == dataValueTrue {
+				logger.Debug("Proceeding with an existing user in registration flow, skipping execution")
+				execResp.RuntimeData[userAttributeUserID] = *userID
+				execResp.Status = flowcm.ExecComplete
+				return execResp, nil
+			}
+		}
+
 		execResp.Status = flowcm.ExecFailure
 		execResp.FailureReason = "User already exists"
 		return execResp, nil
@@ -151,6 +168,14 @@ func (p *provisioningExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.Execu
 	}
 	execResp.AuthenticatedUser = authenticatedUser
 	execResp.Status = flowcm.ExecComplete
+
+	// Set user id in runtime data
+	execResp.RuntimeData[userAttributeUserID] = createdUser.ID
+
+	// Set the auto-provisioned flag if it's a user auto provisioning scenario
+	if ctx.FlowType == flowcm.FlowTypeAuthentication {
+		execResp.RuntimeData[common.RuntimeKeyUserAutoProvisioned] = dataValueTrue
+	}
 
 	return execResp, nil
 }
@@ -207,14 +232,19 @@ func (p *provisioningExecutor) CheckInputData(ctx *flowcore.NodeContext, execRes
 	return true
 }
 
-// getInputAttributes retrieves the input attributes from the context to be stored in user profile.
-func (p *provisioningExecutor) getInputAttributes(ctx *flowcore.NodeContext) map[string]interface{} {
+// getAttributesForProvisioning retrieves the input attributes from the context to be stored in user profile.
+func (p *provisioningExecutor) getAttributesForProvisioning(ctx *flowcore.NodeContext) map[string]interface{} {
 	attributesMap := make(map[string]interface{})
 	requiredInputAttrs := p.GetRequiredData(ctx)
 
 	// If no input attributes are defined, get all user attributes from the context.
 	if len(requiredInputAttrs) == 0 {
 		for key, value := range ctx.UserInputData {
+			if !slices.Contains(nonUserAttributes, key) {
+				attributesMap[key] = value
+			}
+		}
+		for key, value := range ctx.AuthenticatedUser.Attributes {
 			if !slices.Contains(nonUserAttributes, key) {
 				attributesMap[key] = value
 			}
@@ -238,6 +268,8 @@ func (p *provisioningExecutor) getInputAttributes(ctx *flowcore.NodeContext) map
 			attributesMap[inputAttr.Name] = value
 		} else if runtimeValue, exists := ctx.RuntimeData[inputAttr.Name]; exists {
 			attributesMap[inputAttr.Name] = runtimeValue
+		} else if authnValue, exists := ctx.AuthenticatedUser.Attributes[inputAttr.Name]; exists {
+			attributesMap[inputAttr.Name] = authnValue
 		}
 	}
 
@@ -285,7 +317,9 @@ func (p *provisioningExecutor) createUserInStore(ctx *flowcore.NodeContext,
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to create user in the store: %s", svcErr.Error)
 	}
-	logger.Debug("User account created successfully", log.String("userID", retUser.ID))
+	if retUser != nil && retUser.ID != "" {
+		logger.Debug("User account created successfully", log.String("userID", retUser.ID))
+	}
 
 	return retUser, nil
 }

@@ -34,6 +34,8 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/oumock"
 )
 
+const testOUID = "ou-123"
+
 type OUExecutorTestSuite struct {
 	suite.Suite
 	mockOUService   *oumock.OrganizationUnitServiceInterfaceMock
@@ -202,14 +204,14 @@ func (suite *OUExecutorTestSuite) TestExecute_Success() {
 				userInputOuHandle: "engineering",
 				userInputOuDesc:   "Engineering Department",
 			},
-			expectedOUID: "ou-123",
+			expectedOUID: testOUID,
 			expectedRequest: ou.OrganizationUnitRequest{
 				Name:        "Engineering",
 				Handle:      "engineering",
 				Description: "Engineering Department",
 			},
 			expectedResponse: ou.OrganizationUnit{
-				ID:          "ou-123",
+				ID:          testOUID,
 				Name:        "Engineering",
 				Handle:      "engineering",
 				Description: "Engineering Department",

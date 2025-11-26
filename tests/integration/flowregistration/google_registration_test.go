@@ -403,3 +403,95 @@ func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowDuplicateUs
 	ts.Require().Empty(completeFlowStep2.Assertion, "No JWT assertion should be returned for failed registration")
 	ts.Require().NotEmpty(completeFlowStep2.FailureReason, "Failure reason should be provided for duplicate user")
 }
+
+func (ts *GoogleRegistrationFlowTestSuite) TestGoogleRegistrationFlowWithExistingUserAllowed() {
+	// Step 1: First, create a user through registration with the default flow
+	flowStep, err := initiateRegistrationFlow(googleRegTestAppID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to initiate first Google registration flow: %v", err)
+	}
+
+	redirectURLStr := flowStep.Data.RedirectURL
+	authCode, err := testutils.SimulateFederatedOAuthFlow(redirectURLStr)
+	if err != nil {
+		ts.T().Fatalf("Failed to simulate first Google authorization: %v", err)
+	}
+
+	inputs := map[string]string{
+		"code": authCode,
+	}
+
+	completeFlowStep, err := completeRegistrationFlow(flowStep.FlowID, "", inputs)
+	if err != nil {
+		ts.T().Fatalf("Failed to complete first Google registration flow: %v", err)
+	}
+
+	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "First registration should complete successfully")
+
+	// Store created user for cleanup
+	user, err := testutils.FindUserByAttribute("sub", "google-reg-user-456")
+	if err == nil && user != nil {
+		ts.config.CreatedUserIDs = append(ts.config.CreatedUserIDs, user.ID)
+	}
+	ts.Require().NotNil(user, "User should be created after first registration")
+	firstUserID := user.ID
+
+	// Decode first JWT to verify initial registration
+	firstJWT, err := testutils.DecodeJWT(completeFlowStep.Assertion)
+	ts.Require().NoError(err, "Failed to decode first JWT assertion")
+	ts.Require().Equal(firstUserID, firstJWT.Sub, "First JWT subject should match the created user ID")
+
+	// Step 2: Update application config to use the flow that allows registration with existing users
+	err = updateAppConfig(googleRegTestAppID, "auth_flow_config_google",
+		"registration_flow_config_google_with_existing_user")
+	ts.Require().NoError(err, "Failed to update app config with custom registration flow")
+
+	// Step 3: Try to register again with the same Google user
+	flowStep2, err := initiateRegistrationFlow(googleRegTestAppID, nil)
+	if err != nil {
+		ts.T().Fatalf("Failed to initiate second Google registration flow: %v", err)
+	}
+
+	redirectURLStr2 := flowStep2.Data.RedirectURL
+	authCode2, err := testutils.SimulateFederatedOAuthFlow(redirectURLStr2)
+	if err != nil {
+		ts.T().Fatalf("Failed to simulate second Google authorization: %v", err)
+	}
+
+	inputs2 := map[string]string{
+		"code": authCode2,
+	}
+
+	completeFlowStep2, err := completeRegistrationFlow(flowStep2.FlowID, "", inputs2)
+	if err != nil {
+		ts.T().Fatalf("Failed to complete second Google registration flow: %v", err)
+	}
+
+	// Step 4: Verify that the flow completes successfully with the existing user
+	ts.Require().Equal("COMPLETE", completeFlowStep2.FlowStatus,
+		"Registration should complete successfully with existing user")
+	ts.Require().NotEmpty(completeFlowStep2.Assertion, "JWT assertion should be returned for existing user")
+	ts.Require().Empty(completeFlowStep2.FailureReason, "No failure reason should be present")
+
+	// Decode and validate JWT claims
+	jwtClaims, err := testutils.DecodeJWT(completeFlowStep2.Assertion)
+	ts.Require().NoError(err, "Failed to decode JWT assertion")
+	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
+
+	// Verify that the JWT is for the same user (existing user ID should match)
+	ts.Require().Equal(firstUserID, jwtClaims.Sub, "JWT subject should match the existing user ID")
+	ts.Require().Equal(googleRegUserSchema.Name, jwtClaims.UserType, "User type should match")
+	ts.Require().Equal(googleRegTestAppID, jwtClaims.Aud, "Audience should match the application ID")
+
+	// Verify that no new user was created - should still be the same user
+	userAfter, err := testutils.FindUserByAttribute("sub", "google-reg-user-456")
+	ts.Require().NoError(err, "Should be able to find the user")
+	ts.Require().NotNil(userAfter, "User should still exist")
+	ts.Require().Equal(firstUserID, userAfter.ID, "User ID should be the same (no new user created)")
+
+	// Step 5: Restore original app config
+	err = updateAppConfig(googleRegTestAppID, "auth_flow_config_google", "registration_flow_config_google")
+	if err != nil {
+		ts.T().Logf("Warning: Failed to restore original app config: %v", err)
+	}
+}

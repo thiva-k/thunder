@@ -24,24 +24,29 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
+	"github.com/asgardeo/thunder/internal/userschema"
 	"github.com/asgardeo/thunder/tests/mocks/authn/oauthmock"
 	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
 	"github.com/asgardeo/thunder/tests/mocks/idp/idpmock"
+	"github.com/asgardeo/thunder/tests/mocks/userschemamock"
 )
 
 type OAuthExecutorTestSuite struct {
 	suite.Suite
-	mockOAuthService *oauthmock.OAuthAuthnCoreServiceInterfaceMock
-	mockIDPService   *idpmock.IDPServiceInterfaceMock
-	mockFlowFactory  *coremock.FlowFactoryInterfaceMock
-	executor         oAuthExecutorInterface
+	mockOAuthService      *oauthmock.OAuthAuthnCoreServiceInterfaceMock
+	mockIDPService        *idpmock.IDPServiceInterfaceMock
+	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
+	mockFlowFactory       *coremock.FlowFactoryInterfaceMock
+	executor              oAuthExecutorInterface
 }
 
 func TestOAuthExecutorSuite(t *testing.T) {
@@ -51,6 +56,7 @@ func TestOAuthExecutorSuite(t *testing.T) {
 func (suite *OAuthExecutorTestSuite) SetupTest() {
 	suite.mockOAuthService = oauthmock.NewOAuthAuthnCoreServiceInterfaceMock(suite.T())
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
+	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 
 	defaultInputs := []flowcm.InputData{{Name: "code", Type: "string", Required: true}}
@@ -59,7 +65,7 @@ func (suite *OAuthExecutorTestSuite) SetupTest() {
 		defaultInputs, []flowcm.InputData{}).Return(mockExec)
 
 	suite.executor = newOAuthExecutor(ExecutorNameOAuth, defaultInputs, []flowcm.InputData{},
-		suite.mockFlowFactory, suite.mockIDPService, suite.mockOAuthService)
+		suite.mockFlowFactory, suite.mockIDPService, suite.mockUserSchemaService, suite.mockOAuthService)
 }
 
 func (suite *OAuthExecutorTestSuite) TestNewOAuthExecutor() {
@@ -626,8 +632,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_NoCodeProvided(
 	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
 
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
-	assert.Equal(suite.T(), failureReasonInvalidAuthorizationCode, execResp.FailureReason)
+	assert.False(suite.T(), execResp.AuthenticatedUser.IsAuthenticated)
 }
 
 func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_EmptyScope() {
@@ -743,7 +748,7 @@ func (suite *OAuthExecutorTestSuite) TestCheckInputData_CodeNotProvided() {
 	assert.NotEmpty(suite.T(), execResp.RequiredData)
 }
 
-func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmail() {
+func (suite *OAuthExecutorTestSuite) TestGetContextUserAttributes_WithEmail() {
 	userInfo := map[string]string{
 		"sub":      "user-sub-123",
 		"email":    "test@example.com",
@@ -755,18 +760,17 @@ func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmail() {
 		RuntimeData: make(map[string]string),
 	}
 
-	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+	attributes := suite.executor.(*oAuthExecutor).getContextUserAttributes(execResp, userInfo)
 
 	assert.NotNil(suite.T(), attributes)
 	assert.Equal(suite.T(), "test@example.com", attributes["email"])
 	assert.Equal(suite.T(), "Test User", attributes["name"])
-	assert.Equal(suite.T(), "user-123", attributes["user_id"])
 	assert.NotContains(suite.T(), attributes, "sub")
 	assert.NotContains(suite.T(), attributes, "username")
 	assert.Equal(suite.T(), "test@example.com", execResp.RuntimeData["email"])
 }
 
-func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithoutEmail() {
+func (suite *OAuthExecutorTestSuite) TestGetContextUserAttributes_WithoutEmail() {
 	userInfo := map[string]string{
 		"sub":  "user-sub-123",
 		"name": "Test User",
@@ -776,16 +780,15 @@ func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithoutEmail() {
 		RuntimeData: make(map[string]string),
 	}
 
-	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+	attributes := suite.executor.(*oAuthExecutor).getContextUserAttributes(execResp, userInfo)
 
 	assert.NotNil(suite.T(), attributes)
 	assert.Equal(suite.T(), "Test User", attributes["name"])
-	assert.Equal(suite.T(), "user-123", attributes["user_id"])
 	assert.NotContains(suite.T(), attributes, "email")
 	assert.NotContains(suite.T(), execResp.RuntimeData, "email")
 }
 
-func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmptyEmail() {
+func (suite *OAuthExecutorTestSuite) TestGetContextUserAttributes_WithEmptyEmail() {
 	userInfo := map[string]string{
 		"sub":   "user-sub-123",
 		"email": "",
@@ -796,29 +799,34 @@ func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmptyEmail() {
 		RuntimeData: make(map[string]string),
 	}
 
-	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+	attributes := suite.executor.(*oAuthExecutor).getContextUserAttributes(execResp, userInfo)
 
 	assert.NotNil(suite.T(), attributes)
 	assert.Equal(suite.T(), "", attributes["email"])
 	assert.NotContains(suite.T(), execResp.RuntimeData, "email")
 }
 
-func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithoutUserID() {
+func (suite *OAuthExecutorTestSuite) TestGetContextUserAttributes_FilterSkipAttributes() {
 	userInfo := map[string]string{
-		"sub":   "user-sub-123",
-		"email": "test@example.com",
-		"name":  "Test User",
+		"sub":      "user-sub-123",
+		"email":    "test@example.com",
+		"name":     "Test User",
+		"username": "testuser",
+		"id":       "some-id",
 	}
 
 	execResp := &flowcm.ExecutorResponse{
 		RuntimeData: make(map[string]string),
 	}
 
-	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "", execResp)
+	attributes := suite.executor.(*oAuthExecutor).getContextUserAttributes(execResp, userInfo)
 
 	assert.NotNil(suite.T(), attributes)
 	assert.Equal(suite.T(), "test@example.com", attributes["email"])
-	assert.NotContains(suite.T(), attributes, "user_id")
+	assert.Equal(suite.T(), "Test User", attributes["name"])
+	assert.NotContains(suite.T(), attributes, "sub")
+	assert.NotContains(suite.T(), attributes, "username")
+	assert.NotContains(suite.T(), attributes, "id")
 	assert.Equal(suite.T(), "test@example.com", execResp.RuntimeData["email"])
 }
 
@@ -873,7 +881,7 @@ func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_RegistrationFlo
 	suite.mockOAuthService.AssertExpectations(suite.T())
 }
 
-func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmail_NilRuntimeData() {
+func (suite *OAuthExecutorTestSuite) TestGetContextUserAttributes_WithEmail_NilRuntimeData() {
 	userInfo := map[string]string{
 		"sub":   "user-sub-123",
 		"email": "test@example.com",
@@ -884,12 +892,600 @@ func (suite *OAuthExecutorTestSuite) TestGetUserAttributes_WithEmail_NilRuntimeD
 		RuntimeData: nil, // Explicitly nil
 	}
 
-	attributes := suite.executor.(*oAuthExecutor).getUserAttributes(userInfo, "user-123", execResp)
+	attributes := suite.executor.(*oAuthExecutor).getContextUserAttributes(execResp, userInfo)
 
 	assert.NotNil(suite.T(), attributes)
 	assert.Equal(suite.T(), "test@example.com", attributes["email"])
 	assert.Equal(suite.T(), "Test User", attributes["name"])
-	assert.Equal(suite.T(), "user-123", attributes["user_id"])
 	assert.NotNil(suite.T(), execResp.RuntimeData, "RuntimeData should be initialized")
 	assert.Equal(suite.T(), "test@example.com", execResp.RuntimeData["email"])
+}
+
+func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_AllowAuthWithoutLocalUser() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		UserInputData: map[string]string{
+			"code": "auth_code_123",
+		},
+		NodeProperties: map[string]interface{}{
+			"idpId":                               "idp-123",
+			"allowAuthenticationWithoutLocalUser": true,
+		},
+		Application: appmodel.Application{
+			AllowedUserTypes: []string{"INTERNAL"},
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	tokenResp := &authnoauth.TokenResponse{
+		AccessToken: "access_token_123",
+		TokenType:   "Bearer",
+		Scope:       "openid profile",
+		ExpiresIn:   3600,
+	}
+
+	userInfo := map[string]interface{}{
+		"sub":   "new-user-sub",
+		"email": "newuser@example.com",
+		"name":  "New User",
+	}
+
+	suite.mockOAuthService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
+		Return(tokenResp, nil)
+	suite.mockOAuthService.On("FetchUserInfo", "idp-123", "access_token_123").
+		Return(userInfo, nil)
+	suite.mockOAuthService.On("GetInternalUser", "new-user-sub").
+		Return(nil, &serviceerror.ServiceError{
+			Code: authncm.ErrorUserNotFound.Code,
+			Type: serviceerror.ClientErrorType,
+		})
+	suite.mockUserSchemaService.On("GetUserSchemaByName", "INTERNAL").
+		Return(&userschema.UserSchema{
+			Name:                  "INTERNAL",
+			AllowSelfRegistration: true,
+			OrganizationUnitID:    "ou-123",
+		}, nil)
+
+	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+	assert.False(suite.T(), execResp.AuthenticatedUser.IsAuthenticated)
+	assert.Equal(suite.T(), dataValueTrue, execResp.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning])
+	assert.Equal(suite.T(), "new-user-sub", execResp.RuntimeData["sub"])
+	assert.NotNil(suite.T(), execResp.AuthenticatedUser.Attributes)
+	suite.mockOAuthService.AssertExpectations(suite.T())
+	suite.mockUserSchemaService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_PreventAuthWithoutLocalUser() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		UserInputData: map[string]string{
+			"code": "auth_code_123",
+		},
+		NodeProperties: map[string]interface{}{
+			"idpId":                               "idp-123",
+			"allowAuthenticationWithoutLocalUser": false,
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	tokenResp := &authnoauth.TokenResponse{
+		AccessToken: "access_token_123",
+		TokenType:   "Bearer",
+		Scope:       "openid profile",
+		ExpiresIn:   3600,
+	}
+
+	userInfo := map[string]interface{}{
+		"sub":   "new-user-sub",
+		"email": "newuser@example.com",
+	}
+
+	suite.mockOAuthService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
+		Return(tokenResp, nil)
+	suite.mockOAuthService.On("FetchUserInfo", "idp-123", "access_token_123").
+		Return(userInfo, nil)
+	suite.mockOAuthService.On("GetInternalUser", "new-user-sub").
+		Return(nil, &serviceerror.ServiceError{
+			Code: authncm.ErrorUserNotFound.Code,
+			Type: serviceerror.ClientErrorType,
+		})
+
+	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
+	assert.Equal(suite.T(), "User not found", execResp.FailureReason)
+	suite.mockOAuthService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_AllowRegistrationWithExistingUser() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeRegistration,
+		UserInputData: map[string]string{
+			"code": "auth_code_123",
+		},
+		NodeProperties: map[string]interface{}{
+			"idpId":                             "idp-123",
+			"allowRegistrationWithExistingUser": true,
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	tokenResp := &authnoauth.TokenResponse{
+		AccessToken: "access_token_123",
+		TokenType:   "Bearer",
+		Scope:       "openid profile email",
+		ExpiresIn:   3600,
+	}
+
+	userInfo := map[string]interface{}{
+		"sub":   "existing-user-sub",
+		"email": "existing@example.com",
+		"name":  "Existing User",
+	}
+
+	existingUser := &user.User{
+		ID:               "user-123",
+		OrganizationUnit: "ou-123",
+		Type:             "INTERNAL",
+	}
+
+	suite.mockOAuthService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
+		Return(tokenResp, nil)
+	suite.mockOAuthService.On("FetchUserInfo", "idp-123", "access_token_123").
+		Return(userInfo, nil)
+	suite.mockOAuthService.On("GetInternalUser", "existing-user-sub").
+		Return(existingUser, nil)
+
+	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+	assert.True(suite.T(), execResp.AuthenticatedUser.IsAuthenticated)
+	assert.Equal(suite.T(), "user-123", execResp.AuthenticatedUser.UserID)
+	assert.Equal(suite.T(), dataValueTrue, execResp.RuntimeData[common.RuntimeKeySkipProvisioning])
+	suite.mockOAuthService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestProcessAuthFlowResponse_PreventRegistrationWithExistingUser() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeRegistration,
+		UserInputData: map[string]string{
+			"code": "auth_code_123",
+		},
+		NodeProperties: map[string]interface{}{
+			"idpId":                             "idp-123",
+			"allowRegistrationWithExistingUser": false,
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	tokenResp := &authnoauth.TokenResponse{
+		AccessToken: "access_token_123",
+		TokenType:   "Bearer",
+		Scope:       "openid profile",
+		ExpiresIn:   3600,
+	}
+
+	userInfo := map[string]interface{}{
+		"sub":   "existing-user-sub",
+		"email": "existing@example.com",
+	}
+
+	existingUser := &user.User{
+		ID:               "user-123",
+		OrganizationUnit: "ou-123",
+		Type:             "INTERNAL",
+	}
+
+	suite.mockOAuthService.On("ExchangeCodeForToken", "idp-123", "auth_code_123", true).
+		Return(tokenResp, nil)
+	suite.mockOAuthService.On("FetchUserInfo", "idp-123", "access_token_123").
+		Return(userInfo, nil)
+	suite.mockOAuthService.On("GetInternalUser", "existing-user-sub").
+		Return(existingUser, nil)
+
+	err := suite.executor.ProcessAuthFlowResponse(ctx, execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
+	assert.Equal(suite.T(), "User already exists with the provided sub claim.", execResp.FailureReason)
+	suite.mockOAuthService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestResolveUserTypeForAutoProvisioning() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		Application: appmodel.Application{
+			AllowedUserTypes: []string{"INTERNAL"},
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	suite.mockUserSchemaService.On("GetUserSchemaByName", "INTERNAL").
+		Return(&userschema.UserSchema{
+			Name:                  "INTERNAL",
+			AllowSelfRegistration: true,
+			OrganizationUnitID:    "ou-123",
+		}, nil)
+
+	err := suite.executor.(*oAuthExecutor).resolveUserTypeForAutoProvisioning(ctx, execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.NotEqual(suite.T(), flowcm.ExecFailure, execResp.Status)
+	assert.Equal(suite.T(), "INTERNAL", execResp.RuntimeData[userTypeKey])
+	assert.Equal(suite.T(), "ou-123", execResp.RuntimeData[defaultOUIDKey])
+	suite.mockUserSchemaService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestResolveUserTypeForAutoProvisioning_Failures() {
+	tests := []struct {
+		name             string
+		allowedUserTypes []string
+		mockSetup        func()
+	}{
+		{
+			name:             "NoAllowedUserTypes",
+			allowedUserTypes: []string{},
+			mockSetup:        func() {},
+		},
+		{
+			name:             "NoSelfRegistrationEnabled",
+			allowedUserTypes: []string{"INTERNAL"},
+			mockSetup: func() {
+				suite.mockUserSchemaService.On("GetUserSchemaByName", "INTERNAL").
+					Return(&userschema.UserSchema{
+						Name:                  "INTERNAL",
+						AllowSelfRegistration: false,
+						OrganizationUnitID:    "ou-123",
+					}, nil).Once()
+			},
+		},
+		{
+			name:             "MultipleSelfRegistrationEnabled",
+			allowedUserTypes: []string{"INTERNAL", "CUSTOMER"},
+			mockSetup: func() {
+				suite.mockUserSchemaService.On("GetUserSchemaByName", "INTERNAL").
+					Return(&userschema.UserSchema{
+						Name:                  "INTERNAL",
+						AllowSelfRegistration: true,
+						OrganizationUnitID:    "ou-123",
+					}, nil).Once()
+				suite.mockUserSchemaService.On("GetUserSchemaByName", "CUSTOMER").
+					Return(&userschema.UserSchema{
+						Name:                  "CUSTOMER",
+						AllowSelfRegistration: true,
+						OrganizationUnitID:    "ou-456",
+					}, nil).Once()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			ctx := &flowcore.NodeContext{
+				FlowID:   "flow-123",
+				FlowType: flowcm.FlowTypeAuthentication,
+				Application: appmodel.Application{
+					AllowedUserTypes: tt.allowedUserTypes,
+				},
+			}
+
+			execResp := &flowcm.ExecutorResponse{
+				AdditionalData: make(map[string]string),
+				RuntimeData:    make(map[string]string),
+			}
+
+			tt.mockSetup()
+
+			err := suite.executor.(*oAuthExecutor).resolveUserTypeForAutoProvisioning(ctx, execResp)
+
+			assert.NoError(suite.T(), err)
+			assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
+			assert.Equal(suite.T(), errCannotProvisionUserAutomatically, execResp.FailureReason)
+			suite.mockUserSchemaService.AssertExpectations(suite.T())
+		})
+	}
+}
+
+func (suite *OAuthExecutorTestSuite) TestResolveUserTypeForAutoProvisioning_GetUserSchemaError() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeAuthentication,
+		Application: appmodel.Application{
+			AllowedUserTypes: []string{"INTERNAL"},
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	suite.mockUserSchemaService.On("GetUserSchemaByName", "INTERNAL").
+		Return(nil, &serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "SCHEMA-5000",
+			ErrorDescription: "Internal error",
+		})
+
+	err := suite.executor.(*oAuthExecutor).resolveUserTypeForAutoProvisioning(ctx, execResp)
+
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "error while retrieving user schema")
+	suite.mockUserSchemaService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetInternalUser_Errors() {
+	tests := []struct {
+		name               string
+		sub                string
+		serviceError       *serviceerror.ServiceError
+		expectError        bool
+		expectedStatus     flowcm.ExecutorStatus
+		expectedFailReason string
+		errorContains      string
+	}{
+		{
+			name: "UserNotFoundError",
+			sub:  "unknown-sub",
+			serviceError: &serviceerror.ServiceError{
+				Code: authncm.ErrorUserNotFound.Code,
+				Type: serviceerror.ClientErrorType,
+			},
+			expectError:    false,
+			expectedStatus: "", // Status should not be set to failure for user not found
+		},
+		{
+			name: "ClientError",
+			sub:  "invalid-sub",
+			serviceError: &serviceerror.ServiceError{
+				Type:             serviceerror.ClientErrorType,
+				ErrorDescription: "Invalid sub claim",
+			},
+			expectError:        false,
+			expectedStatus:     flowcm.ExecFailure,
+			expectedFailReason: "Invalid sub claim",
+		},
+		{
+			name: "ServerError",
+			sub:  "some-sub",
+			serviceError: &serviceerror.ServiceError{
+				Type:             serviceerror.ServerErrorType,
+				Code:             "USER-5000",
+				ErrorDescription: "Internal error",
+			},
+			expectError:   true,
+			errorContains: "error while retrieving internal user",
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			execResp := &flowcm.ExecutorResponse{
+				AdditionalData: make(map[string]string),
+				RuntimeData:    make(map[string]string),
+			}
+
+			suite.mockOAuthService.On("GetInternalUser", tt.sub).
+				Return(nil, tt.serviceError).Once()
+
+			result, err := suite.executor.GetInternalUser(tt.sub, execResp)
+
+			assert.Nil(suite.T(), result)
+			if tt.expectError {
+				assert.Error(suite.T(), err)
+				assert.Contains(suite.T(), err.Error(), tt.errorContains)
+			} else {
+				assert.NoError(suite.T(), err)
+				if tt.expectedStatus != "" {
+					assert.Equal(suite.T(), tt.expectedStatus, execResp.Status)
+					assert.Equal(suite.T(), tt.expectedFailReason, execResp.FailureReason)
+				} else {
+					assert.NotEqual(suite.T(), flowcm.ExecFailure, execResp.Status)
+				}
+			}
+			suite.mockOAuthService.AssertExpectations(suite.T())
+		})
+	}
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetInternalUser_Success() {
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	existingUser := &user.User{
+		ID:               "user-123",
+		OrganizationUnit: "ou-123",
+		Type:             "INTERNAL",
+	}
+
+	suite.mockOAuthService.On("GetInternalUser", "user-sub-123").
+		Return(existingUser, nil)
+
+	result, err := suite.executor.GetInternalUser("user-sub-123", execResp)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), "user-123", result.ID)
+	suite.mockOAuthService.AssertExpectations(suite.T())
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetContextUserForRegistration_WithExistingUser_SkipProvisioningFlag() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: flowcm.FlowTypeRegistration,
+		RuntimeData: map[string]string{
+			common.RuntimeKeySkipProvisioning: dataValueTrue,
+		},
+		NodeProperties: map[string]interface{}{
+			"allowRegistrationWithExistingUser": true,
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	existingUser := &user.User{
+		ID:               "user-456",
+		OrganizationUnit: "ou-456",
+		Type:             "INTERNAL",
+	}
+
+	contextUser, err := suite.executor.(*oAuthExecutor).getContextUserForRegistration(
+		ctx, execResp, "test-sub", existingUser)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), contextUser)
+	assert.True(suite.T(), contextUser.IsAuthenticated)
+	assert.Equal(suite.T(), "user-456", contextUser.UserID)
+	assert.Equal(suite.T(), dataValueTrue, execResp.RuntimeData[common.RuntimeKeySkipProvisioning])
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+}
+
+func (suite *OAuthExecutorTestSuite) TestResolveUserTypeForAutoProvisioning_FailureScenarios() {
+	tests := []struct {
+		name             string
+		allowedUserTypes []string
+		userSchemas      map[string]*userschema.UserSchema
+	}{
+		{
+			name:             "NoAllowedUserTypes",
+			allowedUserTypes: []string{},
+			userSchemas:      nil,
+		},
+		{
+			name:             "NoSelfRegistrationEnabled",
+			allowedUserTypes: []string{"TYPE1", "TYPE2"},
+			userSchemas: map[string]*userschema.UserSchema{
+				"TYPE1": {
+					Name:                  "TYPE1",
+					AllowSelfRegistration: false,
+				},
+				"TYPE2": {
+					Name:                  "TYPE2",
+					AllowSelfRegistration: false,
+				},
+			},
+		},
+		{
+			name:             "MultipleEligibleTypes",
+			allowedUserTypes: []string{"TYPE1", "TYPE2"},
+			userSchemas: map[string]*userschema.UserSchema{
+				"TYPE1": {
+					Name:                  "TYPE1",
+					AllowSelfRegistration: true,
+					OrganizationUnitID:    "ou-1",
+				},
+				"TYPE2": {
+					Name:                  "TYPE2",
+					AllowSelfRegistration: true,
+					OrganizationUnitID:    "ou-2",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			// Clear expectations before each test
+			suite.mockUserSchemaService.ExpectedCalls = nil
+
+			ctx := &flowcore.NodeContext{
+				FlowID: "flow-123",
+				Application: appmodel.Application{
+					AllowedUserTypes: tt.allowedUserTypes,
+				},
+			}
+
+			execResp := &flowcm.ExecutorResponse{
+				AdditionalData: make(map[string]string),
+				RuntimeData:    make(map[string]string),
+			}
+
+			if tt.userSchemas != nil {
+				for userType, schema := range tt.userSchemas {
+					suite.mockUserSchemaService.On("GetUserSchemaByName", userType).Return(schema, nil)
+				}
+			}
+
+			err := suite.executor.(*oAuthExecutor).resolveUserTypeForAutoProvisioning(ctx, execResp)
+
+			assert.NoError(suite.T(), err)
+			assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
+			assert.Equal(suite.T(), errCannotProvisionUserAutomatically, execResp.FailureReason)
+
+			if tt.userSchemas != nil {
+				suite.mockUserSchemaService.AssertExpectations(suite.T())
+			}
+		})
+	}
+}
+
+func (suite *OAuthExecutorTestSuite) TestGetContextUserForAuthentication_WithoutLocalUser_NotAllowed() {
+	ctx := &flowcore.NodeContext{
+		FlowID:         "flow-123",
+		FlowType:       flowcm.FlowTypeAuthentication,
+		NodeProperties: map[string]interface{}{
+			// allowAuthenticationWithoutLocalUser not set or false
+		},
+	}
+
+	execResp := &flowcm.ExecutorResponse{
+		AdditionalData: make(map[string]string),
+		RuntimeData:    make(map[string]string),
+	}
+
+	contextUser, err := suite.executor.(*oAuthExecutor).getContextUserForAuthentication(
+		ctx, execResp, "test-sub", nil)
+
+	assert.NoError(suite.T(), err)
+	assert.Nil(suite.T(), contextUser)
+	assert.Equal(suite.T(), flowcm.ExecFailure, execResp.Status)
+	assert.Equal(suite.T(), "User not found", execResp.FailureReason)
+}
+
+func (suite *OAuthExecutorTestSuite) TestExecute_InvalidFlowType() {
+	ctx := &flowcore.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: "InvalidFlowType",
+	}
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), flowcm.ExecComplete, resp.Status)
 }

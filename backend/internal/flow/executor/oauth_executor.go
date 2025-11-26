@@ -21,19 +21,24 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
+	"github.com/asgardeo/thunder/internal/flow/common"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 	systemutils "github.com/asgardeo/thunder/internal/system/utils"
+	"github.com/asgardeo/thunder/internal/user"
+	"github.com/asgardeo/thunder/internal/userschema"
 )
 
 const (
-	oAuthLoggerComponentName = "OAuthExecutor"
+	oAuthLoggerComponentName            = "OAuthExecutor"
+	errCannotProvisionUserAutomatically = "user not found and cannot provision automatically"
 )
 
 // OAuthTokenResponse represents the response from a OAuth token endpoint.
@@ -46,6 +51,9 @@ type OAuthTokenResponse struct {
 	ExpiresIn    int    `json:"expires_in"`
 }
 
+// userInfoSkipAttributes contains the list of user info attributes to skip when mapping to context user.
+var userInfoSkipAttributes = []string{"username", "sub", "id"}
+
 // oAuthExecutorInterface defines the interface for OAuth authentication executors.
 type oAuthExecutorInterface interface {
 	flowcore.ExecutorInterface
@@ -55,15 +63,19 @@ type oAuthExecutorInterface interface {
 		code string) (*OAuthTokenResponse, error)
 	GetUserInfo(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
 		accessToken string) (map[string]string, error)
+	GetInternalUser(sub string, execResp *flowcm.ExecutorResponse) (*user.User, error)
+	ResolveContextUser(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse,
+		sub string, internalUser *user.User) (*authncm.AuthenticatedUser, error)
 	GetIdpID(ctx *flowcore.NodeContext) (string, error)
 }
 
 // oAuthExecutor implements the OAuthExecutorInterface for handling generic OAuth authentication flows.
 type oAuthExecutor struct {
 	flowcore.ExecutorInterface
-	authService authnoauth.OAuthAuthnCoreServiceInterface
-	idpService  idp.IDPServiceInterface
-	logger      *log.Logger
+	authService       authnoauth.OAuthAuthnCoreServiceInterface
+	idpService        idp.IDPServiceInterface
+	userSchemaService userschema.UserSchemaServiceInterface
+	logger            *log.Logger
 }
 
 var _ flowcore.ExecutorInterface = (*oAuthExecutor)(nil)
@@ -74,6 +86,7 @@ func newOAuthExecutor(
 	defaultInputs, prerequisites []flowcm.InputData,
 	flowFactory flowcore.FlowFactoryInterface,
 	idpService idp.IDPServiceInterface,
+	userSchemaService userschema.UserSchemaServiceInterface,
 	authService authnoauth.OAuthAuthnCoreServiceInterface,
 ) oAuthExecutorInterface {
 	if name == "" {
@@ -82,7 +95,7 @@ func newOAuthExecutor(
 	if len(defaultInputs) == 0 {
 		defaultInputs = []flowcm.InputData{
 			{
-				Name:     "code",
+				Name:     userInputCode,
 				Type:     "string",
 				Required: true,
 			},
@@ -98,6 +111,7 @@ func newOAuthExecutor(
 		ExecutorInterface: base,
 		authService:       authService,
 		idpService:        idpService,
+		userSchemaService: userSchemaService,
 		logger:            logger,
 	}
 }
@@ -112,9 +126,13 @@ func (o *oAuthExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.ExecutorResp
 		RuntimeData:    make(map[string]string),
 	}
 
-	// Check if the required input data is provided
+	if ctx.FlowType != flowcm.FlowTypeAuthentication && ctx.FlowType != flowcm.FlowTypeRegistration {
+		logger.Warn("Invalid flow type for OAuth executor. Skipping execution")
+		execResp.Status = flowcm.ExecComplete
+		return execResp, nil
+	}
+
 	if o.CheckInputData(ctx, execResp) {
-		// If required input data is not provided, return incomplete status with redirection.
 		logger.Debug("Required input data for OAuth authentication executor is not provided")
 		err := o.BuildAuthorizeFlow(ctx, execResp)
 		if err != nil {
@@ -179,51 +197,76 @@ func (o *oAuthExecutor) ProcessAuthFlowResponse(ctx *flowcore.NodeContext,
 	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Processing OAuth authentication response")
 
-	code, ok := ctx.UserInputData["code"]
-	if ok && code != "" {
-		tokenResp, err := o.ExchangeCodeForToken(ctx, execResp, code)
-		if err != nil {
-			return err
-		}
-		if execResp.Status == flowcm.ExecFailure {
-			return nil
-		}
-
-		if tokenResp.Scope == "" {
-			logger.Error("Scopes are empty in the token response")
-			execResp.AuthenticatedUser = authncm.AuthenticatedUser{
-				IsAuthenticated: false,
-			}
-		} else {
-			authenticatedUser, err := o.getAuthenticatedUserWithAttributes(ctx, execResp, tokenResp.AccessToken)
-			if err != nil {
-				return err
-			}
-			if authenticatedUser == nil {
-				return nil
-			}
-			execResp.AuthenticatedUser = *authenticatedUser
-		}
-	} else {
+	code, ok := ctx.UserInputData[userInputCode]
+	if !ok || code == "" {
 		execResp.AuthenticatedUser = authncm.AuthenticatedUser{
 			IsAuthenticated: false,
 		}
-	}
-
-	if execResp.AuthenticatedUser.IsAuthenticated {
-		execResp.Status = flowcm.ExecComplete
-	} else if ctx.FlowType != flowcm.FlowTypeRegistration {
-		execResp.Status = flowcm.ExecFailure
-		execResp.FailureReason = failureReasonInvalidAuthorizationCode
 		return nil
 	}
+
+	tokenResp, err := o.ExchangeCodeForToken(ctx, execResp, code)
+	if err != nil {
+		return err
+	}
+	if execResp.Status == flowcm.ExecFailure {
+		return nil
+	}
+
+	if tokenResp.Scope == "" {
+		logger.Error("Scopes are empty in the token response")
+		execResp.Status = flowcm.ExecFailure
+		execResp.AuthenticatedUser = authncm.AuthenticatedUser{
+			IsAuthenticated: false,
+		}
+		return nil
+	}
+
+	userInfo, err := o.GetUserInfo(ctx, execResp, tokenResp.AccessToken)
+	if err != nil {
+		return err
+	}
+	if execResp.Status == flowcm.ExecFailure {
+		return nil
+	}
+
+	// Extract sub claim from user info
+	sub, ok := userInfo[userAttributeSub]
+	if !ok || sub == "" {
+		execResp.Status = flowcm.ExecFailure
+		execResp.FailureReason = "sub claim not found in the response."
+		return nil
+	}
+
+	internalUser, err := o.GetInternalUser(sub, execResp)
+	if err != nil {
+		return err
+	}
+	if execResp.Status == flowcm.ExecFailure {
+		return nil
+	}
+
+	contextUser, err := o.ResolveContextUser(ctx, execResp, sub, internalUser)
+	if err != nil {
+		return err
+	}
+	if execResp.Status == flowcm.ExecFailure {
+		return nil
+	}
+	if contextUser == nil {
+		logger.Error("Failed to resolve context user after OAuth authentication")
+		return errors.New("unexpected error occurred while resolving user")
+	}
+
+	contextUser.Attributes = o.getContextUserAttributes(execResp, userInfo)
+	execResp.AuthenticatedUser = *contextUser
 
 	return nil
 }
 
 // CheckInputData checks if the required input data is provided in the context.
 func (o *oAuthExecutor) CheckInputData(ctx *flowcore.NodeContext, execResp *flowcm.ExecutorResponse) bool {
-	if code, ok := ctx.UserInputData["code"]; ok && code != "" {
+	if code, ok := ctx.UserInputData[userInputCode]; ok && code != "" {
 		return false
 	}
 
@@ -322,111 +365,214 @@ func (o *oAuthExecutor) getIDPName(idpID string) (string, error) {
 	return idp.Name, nil
 }
 
-// getAuthenticatedUserWithAttributes retrieves the authenticated user information with additional attributes
-// from the OAuth provider using the access token.
-func (o *oAuthExecutor) getAuthenticatedUserWithAttributes(ctx *flowcore.NodeContext,
-	execResp *flowcm.ExecutorResponse, accessToken string) (*authncm.AuthenticatedUser, error) {
-	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
-
-	// Get user info using the access token
-	userInfo, err := o.GetUserInfo(ctx, execResp, accessToken)
-	if err != nil {
-		return nil, err
-	}
-	if execResp.Status == flowcm.ExecFailure {
-		return nil, nil
-	}
-
-	// Resolve user with the sub claim.
-	sub, ok := userInfo["sub"]
-	if !ok || sub == "" {
-		execResp.Status = flowcm.ExecFailure
-		execResp.FailureReason = "sub claim not found in the response."
-		return nil, nil
-	}
+func (o *oAuthExecutor) GetInternalUser(sub string, execResp *flowcm.ExecutorResponse) (*user.User, error) {
+	logger := o.logger
+	logger.Debug("Resolving internal user with the given sub claim")
 
 	user, svcErr := o.authService.GetInternalUser(sub)
 	if svcErr != nil {
 		if svcErr.Code == authncm.ErrorUserNotFound.Code {
-			if ctx.FlowType == flowcm.FlowTypeRegistration {
-				logger.Debug("User not found for the provided sub claim. Proceeding with registration flow.")
-				execResp.Status = flowcm.ExecComplete
-				execResp.FailureReason = ""
-
-				if execResp.RuntimeData == nil {
-					execResp.RuntimeData = make(map[string]string)
-				}
-				execResp.RuntimeData["sub"] = sub
-
-				return &authncm.AuthenticatedUser{
-					IsAuthenticated: false,
-					Attributes:      o.getUserAttributes(userInfo, "", execResp),
-				}, nil
-			} else {
-				execResp.Status = flowcm.ExecFailure
-				execResp.FailureReason = "User not found"
-				return nil, nil
-			}
-		} else {
-			if svcErr.Type == serviceerror.ClientErrorType {
-				execResp.Status = flowcm.ExecFailure
-				execResp.FailureReason = svcErr.ErrorDescription
-				return nil, nil
-			}
-			logger.Error("Error while retrieving internal user", log.String("errorCode", svcErr.Code),
-				log.String("description", svcErr.ErrorDescription))
-			return nil, errors.New("error while retrieving internal user")
+			return nil, nil
 		}
+		if svcErr.Type == serviceerror.ClientErrorType {
+			execResp.Status = flowcm.ExecFailure
+			execResp.FailureReason = svcErr.ErrorDescription
+			return nil, nil
+		}
+		logger.Error("Error while retrieving internal user", log.String("errorCode", svcErr.Code),
+			log.String("description", svcErr.ErrorDescription))
+		return nil, errors.New("error while retrieving internal user")
 	}
-
-	if ctx.FlowType == flowcm.FlowTypeRegistration {
-		// At this point, a unique user is found in the system. Hence fail the execution.
-		execResp.Status = flowcm.ExecFailure
-		execResp.FailureReason = "User already exists with the provided sub claim."
-		return nil, nil
-	}
-
 	if user == nil || user.ID == "" {
-		return nil, errors.New("retrieved user is nil or has an empty ID")
-	}
-	userID := user.ID
-
-	if execResp.Status == flowcm.ExecFailure {
 		return nil, nil
 	}
 
+	return user, nil
+}
+
+// ResolveContextUser resolves the authenticated user in context with the attributes.
+func (o *oAuthExecutor) ResolveContextUser(ctx *flowcore.NodeContext,
+	execResp *flowcm.ExecutorResponse, sub string, internalUser *user.User) (
+	*authncm.AuthenticatedUser, error) {
+	if ctx.FlowType == flowcm.FlowTypeAuthentication {
+		return o.getContextUserForAuthentication(ctx, execResp, sub, internalUser)
+	}
+	return o.getContextUserForRegistration(ctx, execResp, sub, internalUser)
+}
+
+// getContextUserForAuthentication resolves the authenticated user in context for authentication flows.
+func (o *oAuthExecutor) getContextUserForAuthentication(ctx *flowcore.NodeContext,
+	execResp *flowcm.ExecutorResponse, sub string, internalUser *user.User) (
+	*authncm.AuthenticatedUser, error) {
+	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
+	// If no local user is found, check if authentication without local user is allowed
+	if internalUser == nil {
+		allowAuthWithoutLocalUser := false
+		if val, ok := ctx.NodeProperties[flowcm.NodePropertyAllowAuthenticationWithoutLocalUser]; ok {
+			if boolVal, ok := val.(bool); ok {
+				allowAuthWithoutLocalUser = boolVal
+			}
+		}
+
+		if allowAuthWithoutLocalUser {
+			logger.Debug("User not found, but authentication is allowed without a local user")
+
+			err := o.resolveUserTypeForAutoProvisioning(ctx, execResp)
+			if err != nil {
+				return nil, err
+			}
+			if execResp.Status == flowcm.ExecFailure {
+				return nil, nil
+			}
+
+			execResp.Status = flowcm.ExecComplete
+			execResp.FailureReason = ""
+			execResp.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning] = dataValueTrue
+			execResp.RuntimeData[userAttributeSub] = sub
+
+			return &authncm.AuthenticatedUser{
+				IsAuthenticated: false,
+			}, nil
+		}
+
+		execResp.Status = flowcm.ExecFailure
+		execResp.FailureReason = "User not found"
+		return nil, nil
+	}
+
+	// User found, proceed with authentication
+	execResp.Status = flowcm.ExecComplete
 	authenticatedUser := authncm.AuthenticatedUser{
 		IsAuthenticated:    true,
-		UserID:             userID,
-		OrganizationUnitID: user.OrganizationUnit,
-		UserType:           user.Type,
-		Attributes:         o.getUserAttributes(userInfo, userID, execResp),
+		UserID:             internalUser.ID,
+		OrganizationUnitID: internalUser.OrganizationUnit,
+		UserType:           internalUser.Type,
 	}
 
 	return &authenticatedUser, nil
 }
 
-// getUserAttributes extracts user attributes from the user info map, excluding certain keys.
+// getContextUserForRegistration resolves the authenticated user in context for registration flows.
+func (o *oAuthExecutor) getContextUserForRegistration(ctx *flowcore.NodeContext,
+	execResp *flowcm.ExecutorResponse, sub string, internalUser *user.User) (
+	*authncm.AuthenticatedUser, error) {
+	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
+	// If no local user is found, proceed with registration
+	if internalUser == nil {
+		logger.Debug("User not found for the provided sub claim. Proceeding with registration flow.")
+		execResp.Status = flowcm.ExecComplete
+		execResp.FailureReason = ""
+		execResp.RuntimeData[userAttributeSub] = sub
+
+		return &authncm.AuthenticatedUser{
+			IsAuthenticated: false,
+		}, nil
+	}
+
+	// If a local user is found, check if registration with existing user is allowed
+	allowRegistrationWithExistingUser := false
+	if val, ok := ctx.NodeProperties[flowcm.NodePropertyAllowRegistrationWithExistingUser]; ok {
+		if boolVal, ok := val.(bool); ok {
+			allowRegistrationWithExistingUser = boolVal
+		}
+	}
+
+	if allowRegistrationWithExistingUser {
+		logger.Debug("User already exists, but registration flow is allowed to continue")
+		execResp.Status = flowcm.ExecComplete
+		execResp.FailureReason = ""
+		execResp.RuntimeData[common.RuntimeKeySkipProvisioning] = dataValueTrue
+
+		return &authncm.AuthenticatedUser{
+			IsAuthenticated:    true,
+			UserID:             internalUser.ID,
+			OrganizationUnitID: internalUser.OrganizationUnit,
+			UserType:           internalUser.Type,
+		}, nil
+	}
+
+	// Fail the execution as a unique user is found in the system.
+	execResp.Status = flowcm.ExecFailure
+	execResp.FailureReason = "User already exists with the provided sub claim."
+	return nil, nil
+}
+
+// resolveUserTypeForAutoProvisioning resolves the user type for auto provisioning in authentication flows.
+func (o *oAuthExecutor) resolveUserTypeForAutoProvisioning(ctx *flowcore.NodeContext,
+	execResp *flowcm.ExecutorResponse) error {
+	logger := o.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+	logger.Debug("Resolving user type for automatic provisioning")
+
+	if len(ctx.Application.AllowedUserTypes) == 0 {
+		logger.Debug("No allowed user types configured for the application")
+		execResp.Status = flowcm.ExecFailure
+		execResp.FailureReason = errCannotProvisionUserAutomatically
+		return nil
+	}
+
+	// Filter allowed user types to only those with self-registration enabled
+	selfRegEnabledSchemas := make([]userschema.UserSchema, 0)
+	for _, userType := range ctx.Application.AllowedUserTypes {
+		userSchema, svcErr := o.userSchemaService.GetUserSchemaByName(userType)
+		if svcErr != nil {
+			if svcErr.Type == serviceerror.ClientErrorType {
+				execResp.Status = flowcm.ExecFailure
+				execResp.FailureReason = svcErr.ErrorDescription
+				return nil
+			}
+
+			logger.Error("Error while retrieving user schema", log.String("errorCode", svcErr.Code),
+				log.String("description", svcErr.ErrorDescription))
+			return errors.New("error while retrieving user schema")
+		}
+		if userSchema.AllowSelfRegistration {
+			selfRegEnabledSchemas = append(selfRegEnabledSchemas, *userSchema)
+		}
+	}
+
+	// Fail if no user types have self-registration enabled
+	if len(selfRegEnabledSchemas) == 0 {
+		logger.Debug("No user types with self-registration enabled, cannot provision automatically")
+		execResp.Status = flowcm.ExecFailure
+		execResp.FailureReason = errCannotProvisionUserAutomatically
+		return nil
+	}
+
+	// Fail if multiple user types have self-registration enabled
+	if len(selfRegEnabledSchemas) > 1 {
+		logger.Debug("Multiple user types with self-registration enabled, cannot resolve user type automatically")
+		execResp.Status = flowcm.ExecFailure
+		execResp.FailureReason = errCannotProvisionUserAutomatically
+		return nil
+	}
+
+	// Proceed with the single resolved user type
+	// Add userType and ouID to runtime data
+	execResp.RuntimeData[userTypeKey] = selfRegEnabledSchemas[0].Name
+	execResp.RuntimeData[defaultOUIDKey] = selfRegEnabledSchemas[0].OrganizationUnitID
+	return nil
+}
+
+// getContextUserAttributes extracts and returns user attributes from the user info map.
 // TODO: Need to convert attributes as per the IDP to local attribute mapping when the support is implemented.
-func (o *oAuthExecutor) getUserAttributes(userInfo map[string]string, userID string,
-	execResp *flowcm.ExecutorResponse) map[string]interface{} {
+func (o *oAuthExecutor) getContextUserAttributes(execResp *flowcm.ExecutorResponse,
+	userInfo map[string]string) map[string]interface{} {
 	attributes := make(map[string]interface{})
 	for key, value := range userInfo {
-		if key != "username" && key != "sub" {
+		if !slices.Contains(userInfoSkipAttributes, key) {
 			attributes[key] = value
 		}
 	}
-	if userID != "" {
-		attributes["user_id"] = userID
-	}
 
 	// Append email to runtime data if available.
-	if email, ok := attributes["email"]; ok {
+	if email, ok := attributes[userAttributeEmail]; ok {
 		if emailStr, ok := email.(string); ok && emailStr != "" {
 			if execResp.RuntimeData == nil {
 				execResp.RuntimeData = make(map[string]string)
 			}
-			execResp.RuntimeData["email"] = emailStr
+			execResp.RuntimeData[userAttributeEmail] = emailStr
 		}
 	}
 
