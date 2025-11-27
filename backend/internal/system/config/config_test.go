@@ -602,3 +602,95 @@ func (suite *ConfigTestSuite) TestIsZeroValue_AdditionalCases() {
 	assert.False(suite.T(), isZeroValue(reflect.ValueOf(ch))) // Non-empty channel
 	close(ch)
 }
+
+func (suite *ConfigTestSuite) TestLoadConfigWithDerivedPaths() {
+	tempDir := suite.T().TempDir()
+
+	// Case 1: Only path is set
+	userContent1 := `
+gate_client:
+  path: "/app"
+`
+	userFile1 := filepath.Join(tempDir, "user1.yaml")
+	err := os.WriteFile(userFile1, []byte(userContent1), 0600)
+	assert.NoError(suite.T(), err)
+
+	config1, err := LoadConfig(userFile1, "")
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "/app", config1.GateClient.Path)
+	assert.Equal(suite.T(), "/app/signin", config1.GateClient.LoginPath)
+	assert.Equal(suite.T(), "/app/error", config1.GateClient.ErrorPath)
+
+	// Case 2: Path and LoginPath are set
+	userContent2 := `
+gate_client:
+  path: "/app"
+  login_path: "/custom/login"
+`
+	userFile2 := filepath.Join(tempDir, "user2.yaml")
+	err = os.WriteFile(userFile2, []byte(userContent2), 0600)
+	assert.NoError(suite.T(), err)
+
+	config2, err := LoadConfig(userFile2, "")
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "/app", config2.GateClient.Path)
+	assert.Equal(suite.T(), "/custom/login", config2.GateClient.LoginPath)
+	assert.Equal(suite.T(), "/app/error", config2.GateClient.ErrorPath)
+
+	// Case 3: Path and ErrorPath are set
+	userContent3 := `
+gate_client:
+  path: "/app"
+  error_path: "/custom/error"
+`
+	userFile3 := filepath.Join(tempDir, "user3.yaml")
+	err = os.WriteFile(userFile3, []byte(userContent3), 0600)
+	assert.NoError(suite.T(), err)
+
+	config3, err := LoadConfig(userFile3, "")
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "/app", config3.GateClient.Path)
+	assert.Equal(suite.T(), "/app/signin", config3.GateClient.LoginPath)
+	assert.Equal(suite.T(), "/custom/error", config3.GateClient.ErrorPath)
+
+	// Case 4: Path, LoginPath, and ErrorPath are set
+	userContent4 := `
+gate_client:
+  path: "/app"
+  login_path: "/custom/login"
+  error_path: "/custom/error"
+`
+	userFile4 := filepath.Join(tempDir, "user4.yaml")
+	err = os.WriteFile(userFile4, []byte(userContent4), 0600)
+	assert.NoError(suite.T(), err)
+
+	config4, err := LoadConfig(userFile4, "")
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "/app", config4.GateClient.Path)
+	assert.Equal(suite.T(), "/custom/login", config4.GateClient.LoginPath)
+	assert.Equal(suite.T(), "/custom/error", config4.GateClient.ErrorPath)
+
+	// Case 5: Default config with path, user overrides path
+	defaultContent := `{
+  "gate_client": {
+    "path": "/gate"
+  }
+}`
+	defaultFile := filepath.Join(tempDir, "default.json")
+	err = os.WriteFile(defaultFile, []byte(defaultContent), 0600)
+	assert.NoError(suite.T(), err)
+
+	userContent5 := `
+gate_client:
+  path: "/newapp"
+`
+	userFile5 := filepath.Join(tempDir, "user5.yaml")
+	err = os.WriteFile(userFile5, []byte(userContent5), 0600)
+	assert.NoError(suite.T(), err)
+
+	config5, err := LoadConfig(userFile5, defaultFile)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "/newapp", config5.GateClient.Path)
+	assert.Equal(suite.T(), "/newapp/signin", config5.GateClient.LoginPath)
+	assert.Equal(suite.T(), "/newapp/error", config5.GateClient.ErrorPath)
+}
