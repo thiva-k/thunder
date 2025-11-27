@@ -237,8 +237,9 @@ export default function SignInBox(): JSX.Element {
                             </Box>
                           )}
 
-                          {/* Show divider if there are other auth options besides basic_auth */}
-                          {components.some((c) => c.type === 'BUTTON' && c.config?.actionId !== 'basic_auth') && (
+                          {/* Show divider only if basic_auth exists AND there are other auth options */}
+                          {components.some((c) => c.config?.actionId === 'basic_auth') &&
+                           components.some((c) => c.type === 'BUTTON' && c.config?.actionId !== 'basic_auth') && (
                             <Divider sx={{my: 2}}>OR</Divider>
                           )}
 
