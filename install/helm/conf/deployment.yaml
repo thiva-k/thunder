@@ -17,6 +17,7 @@
 server:
   hostname: {{ .Values.configuration.server.hostname | quote }}
   port: {{ .Values.configuration.server.port }}
+  http_only: {{ .Values.configuration.server.httpOnly }}
 
 gate_client:
   hostname: {{ .Values.configuration.gateClient.hostname | quote }}
