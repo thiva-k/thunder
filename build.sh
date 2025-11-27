@@ -260,19 +260,19 @@ function build_frontend() {
     echo "================================================================"
     echo "Building frontend apps..."
     
-    # # Check if pnpm is installed, if not install it
-    # if ! command -v pnpm >/dev/null 2>&1; then
-    #     echo "pnpm not found, installing..."
-    #     npm install -g pnpm
-    # fi
+    # Check if pnpm is installed, if not install it
+    if ! command -v pnpm >/dev/null 2>&1; then
+        echo "pnpm not found, installing..."
+        npm install -g pnpm
+    fi
     
     # Navigate to frontend directory and install dependencies
     cd "$FRONTEND_BASE_DIR" || exit 1
-    # echo "Installing frontend dependencies..."
-    # pnpm install
+    echo "Installing frontend dependencies..."
+    pnpm install --frozen-lockfile
     
-    # echo "Building frontend applications & packages..."
-    # pnpm build
+    echo "Building frontend applications & packages..."
+    pnpm build
     
     # Return to script directory
     cd "$SCRIPT_DIR" || exit 1
@@ -380,11 +380,11 @@ function build_sample_app() {
     
     # Build the application
     cd "$SAMPLE_APP_DIR" || exit 1
-    # echo "Installing dependencies..."
-    # npm install
+    echo "Installing dependencies..."
+    npm install
     
-    # echo "Building the app..."
-    # npm run build
+    echo "Building the app..."
+    npm run build
     
     cd - || exit 1
     
@@ -414,7 +414,7 @@ function package_sample_app() {
 
     mkdir -p "executables"
 
-    # npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
+    npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
 
     cd $SCRIPT_DIR
 
@@ -743,8 +743,8 @@ function ensure_crypto_file() {
 }
 
 function run() {
-    # echo "Running frontend apps..."
-    # run_frontend
+    echo "Running frontend apps..."
+    run_frontend
 
     # Save original THUNDER_SKIP_SECURITY value and temporarily set to true
     ORIGINAL_THUNDER_SKIP_SECURITY="${THUNDER_SKIP_SECURITY:-}"
@@ -889,24 +889,24 @@ function run_frontend() {
     echo "================================================================"
     echo "Running frontend apps..."
     
-    # # Check if pnpm is installed, if not install it
-    # if ! command -v pnpm >/dev/null 2>&1; then
-    #     echo "pnpm not found, installing..."
-    #     npm install -g pnpm
-    # fi
+    # Check if pnpm is installed, if not install it
+    if ! command -v pnpm >/dev/null 2>&1; then
+        echo "pnpm not found, installing..."
+        npm install -g pnpm
+    fi
     
     # Navigate to frontend directory and install dependencies
     cd "$FRONTEND_BASE_DIR" || exit 1
-    # echo "Installing frontend dependencies..."
-    # pnpm install
+    echo "Installing frontend dependencies..."
+    pnpm install --frozen-lockfile
     
-    # echo "Building frontend applications & packages..."
-    # pnpm build
+    echo "Building frontend applications & packages..."
+    pnpm build
     
-    # echo "Starting frontend applications in the background..."
-    # # Start frontend processes in background
-    # pnpm -r --parallel --filter "@thunder/develop" --filter "@thunder/gate" dev &
-    # FRONTEND_PID=$!
+    echo "Starting frontend applications in the background..."
+    # Start frontend processes in background
+    pnpm -r --parallel --filter "@thunder/develop" --filter "@thunder/gate" dev &
+    FRONTEND_PID=$!
     
     # Return to script directory
     cd "$SCRIPT_DIR" || exit 1
