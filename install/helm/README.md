@@ -157,6 +157,7 @@ The following table lists the configurable parameters of the Thunder chart and t
 | -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
 | `configuration.server.hostname`        | Thunder server hostname                                         | `0.0.0.0`                    |
 | `configuration.server.port`            | Thunder server port                                             | `8090`                       |
+| `configuration.server.httpOnly`        | Whether the server should run in HTTP-only mode                 | `false`                      |
 | `configuration.gateClient.hostname`    | Gate client hostname                                            | `0.0.0.0`                    |
 | `configuration.gateClient.port`        | Gate client port                                                | `8090`                       |
 | `configuration.gateClient.scheme`      | Gate client scheme                                              | `https`                      |
