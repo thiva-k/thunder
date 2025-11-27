@@ -204,15 +204,34 @@ export default function SideMenu({
                 </Avatar>
                 {!mini && (
                   <>
-                    <Box sx={{mr: 'auto'}}>
-                      <Typography variant="body2" sx={{fontWeight: 500, lineHeight: '16px'}}>
+                    <Box sx={{mr: 'auto', minWidth: 0, flex: 1, overflow: 'hidden'}}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{
+                          fontWeight: 500, 
+                          lineHeight: '16px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {user?.name}
                       </Typography>
-                      <Typography variant="caption" sx={{color: 'text.secondary'}}>
+                      <Typography 
+                        variant="caption" 
+                        sx={{
+                          color: 'text.secondary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
                         {user?.email}
                       </Typography>
                     </Box>
+                    <Box sx={{flexShrink: 0}}>
                     <OptionsMenu />
+                    </Box>
                   </>
                 )}
               </>
