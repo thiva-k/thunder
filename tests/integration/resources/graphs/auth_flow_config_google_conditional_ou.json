@@ -6,7 +6,8 @@
             "id": "google_auth",
             "type": "TASK_EXECUTION",
             "properties": {
-                "idpId": "test-google-idp-id"
+                "idpId": "test-google-idp-id",
+                "allowAuthenticationWithoutLocalUser": true
             },
             "executor": {
                 "name": "GoogleOIDCAuthExecutor"
@@ -19,11 +20,25 @@
             "id": "conditional_ou_creation",
             "type": "TASK_EXECUTION",
             "condition": {
-                "key": "{{ context.userAutoProvisioned }}",
+                "key": "{{ context.userEligibleForProvisioning }}",
                 "value": "true"
             },
             "executor": {
                 "name": "OUExecutor"
+            },
+            "next": [
+                "provisioning"
+            ]
+        },
+        {
+            "id": "provisioning",
+            "type": "TASK_EXECUTION",
+            "condition": {
+                "key": "{{ context.userEligibleForProvisioning }}",
+                "value": "true"
+            },
+            "executor": {
+                "name": "ProvisioningExecutor"
             },
             "next": [
                 "authenticated"

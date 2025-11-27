@@ -279,15 +279,24 @@ func (ts *ConditionalExecAuthFlowTestSuite) TestExecuteConditionalNodes() {
 	ts.Require().Equal("COMPLETE", flowStep.FlowStatus, "Expected flow status to be COMPLETE")
 	ts.Require().NotEmpty(flowStep.Assertion, "Assertion token should be present")
 
-	// Validate JWT assertion
-	jwtClaims, err := testutils.ValidateJWTAssertionFields(
-		flowStep.Assertion,
-		conditionalExecTestAppID,
-		conditionalExecUserSchema.Name,
-		conditionalExecPreCreatedOUID,
-		conditionalExecTestOU.Name,
-		conditionalExecTestOU.Handle,
-	)
-	ts.Require().NoError(err, "Failed to validate JWT assertion fields")
+	// Find the created user to get their details
+	user, err := testutils.FindUserByAttribute("sub", conditionalExecNewUserSub)
+	ts.Require().NoError(err, "Failed to find created user")
+	ts.Require().NotNil(user, "User should be found after provisioning")
+
+	// Validate JWT assertion - user should be in the newly created OU
+	jwtClaims, err := testutils.DecodeJWT(flowStep.Assertion)
+	ts.Require().NoError(err, "Failed to decode JWT assertion")
 	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
+	ts.Require().Equal(conditionalExecTestAppID, jwtClaims.Aud, "JWT aud should match app ID")
+	ts.Require().Equal(conditionalExecUserSchema.Name, jwtClaims.UserType, "JWT userType should match schema")
+	ts.Require().NotEmpty(jwtClaims.OuID, "JWT ouId should not be empty")
+
+	// Verify the created OU
+	createdOU, err := testutils.GetOrganizationUnit(jwtClaims.OuID)
+	ts.Require().NoError(err, "Failed to get created OU")
+	ts.Require().Equal("Conditional Exec OU", createdOU.Name, "Created OU name should match")
+	ts.Require().Equal(conditionalExecNewOUHandle, createdOU.Handle, "Created OU handle should match")
+	ts.Require().NotNil(createdOU.Parent, "Created OU should have a parent")
+	ts.Require().Equal(conditionalExecPreCreatedOUID, *createdOU.Parent, "Created OU parent should match")
 }

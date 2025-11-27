@@ -24,7 +24,6 @@ import (
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/idp"
-	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/internal/userschema"
 )
 
@@ -40,9 +39,8 @@ var _ flowcore.ExecutorInterface = (*googleOIDCAuthExecutor)(nil)
 func newGoogleOIDCAuthExecutor(
 	flowFactory flowcore.FlowFactoryInterface,
 	idpService idp.IDPServiceInterface,
-	authService authngoogle.GoogleOIDCAuthnServiceInterface,
-	userService user.UserServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
+	authService authngoogle.GoogleOIDCAuthnServiceInterface,
 ) oidcAuthExecutorInterface {
 	defaultInputs := []flowcm.InputData{
 		{
@@ -63,7 +61,7 @@ func newGoogleOIDCAuthExecutor(
 	}
 
 	base := newOIDCAuthExecutor(ExecutorNameGoogleAuth, defaultInputs, []flowcm.InputData{},
-		flowFactory, idpService, oidcSvcCast, userService, userSchemaService)
+		flowFactory, idpService, userSchemaService, oidcSvcCast)
 
 	return &googleOIDCAuthExecutor{
 		oidcAuthExecutorInterface: base,

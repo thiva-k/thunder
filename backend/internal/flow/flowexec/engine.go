@@ -272,13 +272,26 @@ func (fe *flowEngine) shouldUpdateAuthenticatedUser(engineCtx *EngineContext) bo
 		return false
 	}
 
-	// For authentication flows, only update from authentication executors
+	// For authentication flows, only update from authentication executors or conditionally
+	// from provisioning executor
 	if engineCtx.FlowType == common.FlowTypeAuthentication {
-		return executorInst.GetType() == common.ExecutorTypeAuthentication
+		if executorInst.GetType() == common.ExecutorTypeAuthentication {
+			return true
+		}
+		if engineCtx.RuntimeData != nil &&
+			engineCtx.RuntimeData[common.RuntimeKeyUserEligibleForProvisioning] == "true" {
+			return executorInst.GetName() == executor.ExecutorNameProvisioning
+		}
+		return false
 	}
 
-	// For registration flows, only update from provisioning executor
+	// For registration flows, only update from provisioning executor or conditionally
+	// from authentication executors
 	if engineCtx.FlowType == common.FlowTypeRegistration {
+		if engineCtx.RuntimeData != nil && engineCtx.RuntimeData[common.RuntimeKeySkipProvisioning] == "true" {
+			return executorInst.GetType() == common.ExecutorTypeAuthentication
+		}
+
 		return executorInst.GetName() == executor.ExecutorNameProvisioning
 	}
 

@@ -29,7 +29,6 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/authn/oidcmock"
 	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
 	"github.com/asgardeo/thunder/tests/mocks/idp/idpmock"
-	"github.com/asgardeo/thunder/tests/mocks/usermock"
 	"github.com/asgardeo/thunder/tests/mocks/userschemamock"
 )
 
@@ -37,10 +36,9 @@ type GoogleAuthExecutorTestSuite struct {
 	suite.Suite
 	mockFlowFactory       *coremock.FlowFactoryInterfaceMock
 	mockIDPService        *idpmock.IDPServiceInterfaceMock
+	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
 	mockGoogleService     *googlemock.GoogleOIDCAuthnServiceInterfaceMock
 	mockOIDCService       *oidcmock.OIDCAuthnCoreServiceInterfaceMock
-	mockUserService       *usermock.UserServiceInterfaceMock
-	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
 }
 
 func TestGoogleAuthExecutorTestSuite(t *testing.T) {
@@ -50,10 +48,9 @@ func TestGoogleAuthExecutorTestSuite(t *testing.T) {
 func (suite *GoogleAuthExecutorTestSuite) SetupTest() {
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
+	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 	suite.mockGoogleService = googlemock.NewGoogleOIDCAuthnServiceInterfaceMock(suite.T())
 	suite.mockOIDCService = oidcmock.NewOIDCAuthnCoreServiceInterfaceMock(suite.T())
-	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
-	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 }
 
 func (suite *GoogleAuthExecutorTestSuite) TestNewGoogleOIDCAuthExecutor_Success() {
@@ -79,8 +76,8 @@ func (suite *GoogleAuthExecutorTestSuite) TestNewGoogleOIDCAuthExecutor_Success(
 		oidcService:                         suite.mockOIDCService,
 	}
 
-	executor := newGoogleOIDCAuthExecutor(suite.mockFlowFactory, suite.mockIDPService, mockGoogleSvc,
-		suite.mockUserService, suite.mockUserSchemaService)
+	executor := newGoogleOIDCAuthExecutor(suite.mockFlowFactory, suite.mockIDPService,
+		suite.mockUserSchemaService, mockGoogleSvc)
 
 	suite.NotNil(executor)
 	googleExec, ok := executor.(*googleOIDCAuthExecutor)
