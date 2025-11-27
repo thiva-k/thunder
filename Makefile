@@ -120,7 +120,7 @@ lint_backend: golangci-lint
 	cd backend && $(GOLANGCI_LINT) run ./...
 
 lint_frontend:
-	cd frontend && pnpm lint
+	cd frontend && pnpm install && pnpm build && pnpm lint
 
 mockery: install-mockery
 	cd backend && $(MOCKERY) --config .mockery.public.yml

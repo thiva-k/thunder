@@ -45,7 +45,7 @@
     "@wso2/oxygen-ui-icons-react": "catalog:",
     "clsx": "catalog:",
     "dayjs": "catalog:",
-    "human-id": "^4.1.2",
+    "human-id": "4.1.2",
     "i18next": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
