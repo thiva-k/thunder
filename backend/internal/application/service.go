@@ -1378,6 +1378,14 @@ func validatePublicClientConfiguration(oauthConfig *model.OAuthAppConfigDTO) *se
 		)
 	}
 
+	// Public clients must always have PKCE required for security
+	if !oauthConfig.PKCERequired {
+		return serviceerror.CustomServiceError(
+			ErrorInvalidPublicClientConfiguration,
+			"Public clients must have PKCE required set to true",
+		)
+	}
+
 	return nil
 }
 
