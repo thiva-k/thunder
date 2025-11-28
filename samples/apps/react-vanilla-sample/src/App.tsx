@@ -22,6 +22,7 @@ import LoginPage from './pages/LoginPage';
 import RedirectLoginPage from './pages/RedirectLoginPage';
 import AuthProvider from './contexts/AuthProvider';
 import useAuth from './hooks/useAuth';
+import config from './config';
 import './App.css';
 
 const App = () => {
@@ -32,7 +33,7 @@ const App = () => {
     if (token) {
       return <HomePage />;
     } else {
-      if (import.meta.env.VITE_REACT_APP_REDIRECT_BASED_LOGIN === "true") {
+      if (config.redirectBasedLogin) {
         return <RedirectLoginPage />;
       } else {
         return <LoginPage />;
