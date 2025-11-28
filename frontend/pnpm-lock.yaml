@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@asgardeo/react':
-      specifier: 0.6.11
-      version: 0.6.11
+      specifier: 0.6.12
+      version: 0.6.12
     '@asgardeo/react-router':
       specifier: 1.0.9
       version: 1.0.9
@@ -169,10 +169,10 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.11(@types/react@19.1.16)(react@19.1.1)
+        version: 0.6.12(@types/react@19.1.16)(react@19.1.1)
       '@asgardeo/react-router':
         specifier: 'catalog:'
-        version: 1.0.9(@asgardeo/react@0.6.11(@types/react@19.1.16)(react@19.1.1))(react-router@7.9.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)
+        version: 1.0.9(@asgardeo/react@0.6.12(@types/react@19.1.16)(react@19.1.1))(react-router@7.9.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.1.16)(react@19.1.1)
@@ -254,13 +254,13 @@ importers:
         version: 19.1.9(@types/react@19.1.16)
       '@vitejs/plugin-basic-ssl':
         specifier: 'catalog:'
-        version: 2.1.0(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.9)(terser@5.44.0)(yaml@2.8.1))
+        version: 2.1.0(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.12)(terser@5.44.0)(yaml@2.8.1))
       '@vitejs/plugin-react':
         specifier: 'catalog:'
-        version: 5.0.4(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.9)(terser@5.44.0)(yaml@2.8.1))
+        version: 5.0.4(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.12)(terser@5.44.0)(yaml@2.8.1))
       '@vitest/coverage-istanbul':
         specifier: 'catalog:'
-        version: 3.2.4(vitest@3.2.4(@types/node@24.7.2)(esbuild@0.25.9)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1))
+        version: 3.2.4(vitest@3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1))
       babel-plugin-react-compiler:
         specifier: 'catalog:'
         version: 19.1.0-rc.3
@@ -278,16 +278,16 @@ importers:
         version: 5.9.3
       vite:
         specifier: npm:rolldown-vite@7.1.14
-        version: rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.9)(terser@5.44.0)(yaml@2.8.1)
+        version: rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.12)(terser@5.44.0)(yaml@2.8.1)
       vitest:
         specifier: 'catalog:'
-        version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.9)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
+        version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
 
   apps/thunder-gate:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.11(@types/react@19.1.16)(react@19.1.1)
+        version: 0.6.12(@types/react@19.1.16)(react@19.1.1)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.1.16)(react@19.1.1)
@@ -333,10 +333,10 @@ importers:
         version: 19.1.9(@types/react@19.1.16)
       '@vitejs/plugin-basic-ssl':
         specifier: 'catalog:'
-        version: 2.1.0(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.12)(terser@5.44.0)(yaml@2.8.1))
+        version: 2.1.0(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.9)(terser@5.44.0)(yaml@2.8.1))
       '@vitejs/plugin-react':
         specifier: 'catalog:'
-        version: 5.0.4(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.12)(terser@5.44.0)(yaml@2.8.1))
+        version: 5.0.4(rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.9)(terser@5.44.0)(yaml@2.8.1))
       babel-plugin-react-compiler:
         specifier: 'catalog:'
         version: 19.1.0-rc.3
@@ -348,10 +348,10 @@ importers:
         version: 5.9.3
       vite:
         specifier: npm:rolldown-vite@7.1.14
-        version: rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.12)(terser@5.44.0)(yaml@2.8.1)
+        version: rolldown-vite@7.1.14(@types/node@24.7.2)(esbuild@0.25.9)(terser@5.44.0)(yaml@2.8.1)
       vitest:
         specifier: 'catalog:'
-        version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
+        version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.9)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
 
   packages/thunder-commons-contexts:
     dependencies:
@@ -627,14 +627,14 @@ packages:
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
 
-  '@asgardeo/browser@0.1.28':
-    resolution: {integrity: sha512-3i9+FRWkV82dRw+eZcF/NlRF0dfPPkpGrHuQdqVbWSdcYxeOnmztjAF1S6UF6lti0IMSZvJSGBW6en4tiD7S+w==}
+  '@asgardeo/browser@0.1.29':
+    resolution: {integrity: sha512-bHFvvBXoiczsv3p67H+BPx2VLuNIjfEuD+rITFTe/pBEUBevrZAXVdWEKzldAVkEwzuFFki7i+BK/0J2McPNwA==}
 
-  '@asgardeo/i18n@0.3.4':
-    resolution: {integrity: sha512-NL2zO4Ftn2CfzcSvYzgRAHEhb7HUdoT+DoDEVsJs5VXlk1myczSxo5dy5M4zkNRmjAcD5xJ+OZ5zG5zbSmXjQw==}
+  '@asgardeo/i18n@0.3.5':
+    resolution: {integrity: sha512-adWwnMMYMQnZMZGEb5SkXsgxNy9kh1hnoHpiDpXluicJkO4VfnuP2k+efZfVEvvKcuuwtFKdNAK72moZeX5how==}
 
-  '@asgardeo/javascript@0.2.3':
-    resolution: {integrity: sha512-+4u+kDPg3pvldeql23qJvNLOnsDArrcYsIg2QXPFF7dYE638tjNe/z77Xmh96UBvrMa3O2ZIxxxfMfs5ejEo9g==}
+  '@asgardeo/javascript@0.2.4':
+    resolution: {integrity: sha512-R1CiVK0Ax5FfY3SNUTWm7/PyPwXLYTogUXdFjoETZQg7C4jm/hY5tjIx5qzGQiVos4bTYAQZtPNJs7oVn22e7Q==}
 
   '@asgardeo/react-router@1.0.9':
     resolution: {integrity: sha512-TlIzK4hz0e6afR2tHIPgUw/mIaF3Wmzym+S4NnVbXlbK+kfH1QVt58Ulg2FSljlz23YxPyED+Y8hm5AHKJRGMQ==}
@@ -643,8 +643,8 @@ packages:
       react: 19.1.0
       react-router: 6.30.1
 
-  '@asgardeo/react@0.6.11':
-    resolution: {integrity: sha512-d2W4C1COm4oOMc3mtUGwn+Kx4H644Jbly9TU4rMCwIJoejOKs+LVjZ3lMsleBCUU5VG/E7aEOvI8O1HMgWSJIw==}
+  '@asgardeo/react@0.6.12':
+    resolution: {integrity: sha512-OFoF+EpdvGjWlMBnMMVQWpSYZqEP8ZHi0MwKMpYPmhXWE3twQhu+MKLFCAOrUG3C1fXbk6UOsV2jM7HYsrUgRQ==}
     peerDependencies:
       '@types/react': 19.1.5
       react: 19.1.0
@@ -5339,9 +5339,9 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@asgardeo/browser@0.1.28(esbuild@0.25.9)':
+  '@asgardeo/browser@0.1.29(esbuild@0.25.9)':
     dependencies:
-      '@asgardeo/javascript': 0.2.3
+      '@asgardeo/javascript': 0.2.4
       axios: 0.30.2
       base64url: 3.0.1
       buffer: 6.0.3
@@ -5358,26 +5358,26 @@ snapshots:
       - debug
       - esbuild
 
-  '@asgardeo/i18n@0.3.4':
+  '@asgardeo/i18n@0.3.5':
     dependencies:
       tslib: 2.8.1
 
-  '@asgardeo/javascript@0.2.3':
+  '@asgardeo/javascript@0.2.4':
     dependencies:
-      '@asgardeo/i18n': 0.3.4
+      '@asgardeo/i18n': 0.3.5
       tslib: 2.8.1
 
-  '@asgardeo/react-router@1.0.9(@asgardeo/react@0.6.11(@types/react@19.1.16)(react@19.1.1))(react-router@7.9.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)':
+  '@asgardeo/react-router@1.0.9(@asgardeo/react@0.6.12(@types/react@19.1.16)(react@19.1.1))(react-router@7.9.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(react@19.1.1)':
     dependencies:
-      '@asgardeo/react': 0.6.11(@types/react@19.1.16)(react@19.1.1)
+      '@asgardeo/react': 0.6.12(@types/react@19.1.16)(react@19.1.1)
       react: 19.1.1
       react-router: 7.9.4(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       tslib: 2.8.1
 
-  '@asgardeo/react@0.6.11(@types/react@19.1.16)(react@19.1.1)':
+  '@asgardeo/react@0.6.12(@types/react@19.1.16)(react@19.1.1)':
     dependencies:
-      '@asgardeo/browser': 0.1.28(esbuild@0.25.9)
-      '@asgardeo/i18n': 0.3.4
+      '@asgardeo/browser': 0.1.29(esbuild@0.25.9)
+      '@asgardeo/i18n': 0.3.5
       '@emotion/css': 11.13.5
       '@floating-ui/react': 0.27.12(react-dom@19.1.0(react@19.1.1))(react@19.1.1)
       '@types/react': 19.1.16
@@ -7470,7 +7470,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitest/coverage-istanbul@3.2.4(vitest@3.2.4(@types/node@24.7.2)(esbuild@0.25.9)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1))':
+  '@vitest/coverage-istanbul@3.2.4(vitest@3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1))':
     dependencies:
       '@istanbuljs/schema': 0.1.3
       debug: 4.4.3
@@ -7482,7 +7482,7 @@ snapshots:
       magicast: 0.3.5
       test-exclude: 7.0.1
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/node@24.7.2)(esbuild@0.25.9)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
+      vitest: 3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
