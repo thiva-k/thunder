@@ -193,13 +193,15 @@ Thunder provides two sample applications to help you get started quickly:
     }
     ```
 
-    > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration options including OAuth/OIDC redirect-based login.
-
 4. **Start the sample**
 
     ```bash
     ./start.sh
     ```
+
+    Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
+
+    > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration options including OAuth redirect-based login.
 
 ##### React SDK Sample
 
@@ -214,28 +216,15 @@ Thunder provides two sample applications to help you get started quickly:
     cd sample-app-react-sdk-<version>-<os>-<arch>/
     ```
 
-3. **Configure the sample**
-
-    Open `dist/runtime.json` and set the OAuth client credentials:
-
-    ```json
-    {
-        "clientId": "{your-oauth-client-id}",
-        "baseUrl": "https://localhost:8090"
-    }
-    ```
-
-    > **Note**: Create an OAuth application in Thunder with redirect URI `https://localhost:3000` before using this sample.
-
-    > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
-
-4. **Start the sample**
+3. **Start the sample**
 
     ```bash
     ./start.sh
     ```
 
-Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access either sample app.
+    Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
+
+    > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
 
 ##### Self Register and Login (React Vanilla Sample)
 
