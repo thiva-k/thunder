@@ -62,18 +62,6 @@ var (
 			},
 		},
 	}
-
-	ouRegTestApp = testutils.Application{
-		Name:                      "OU Registration Flow Test Application",
-		Description:               "Application for testing OU registration flows",
-		IsRegistrationFlowEnabled: true,
-		AuthFlowGraphID:           "auth_flow_config_basic",
-		RegistrationFlowGraphID:   "registration_flow_config_basic_with_ou",
-		ClientID:                  "ou_reg_flow_test_client",
-		ClientSecret:              "ou_reg_flow_test_secret",
-		RedirectURIs:              []string{"http://localhost:3000/callback"},
-		AllowedUserTypes:          []string{dynamicUserSchema.Name},
-	}
 )
 
 type OURegistrationFlowTestSuite struct {

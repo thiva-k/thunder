@@ -57,11 +57,6 @@ func newOUExecutor(
 			Required: true,
 			Type:     "string",
 		},
-		{
-			Name:     userInputOuDesc,
-			Required: false,
-			Type:     "string",
-		},
 	}
 
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, ouExecLoggerComponentName),

@@ -62,11 +62,6 @@ func (suite *OUExecutorTestSuite) SetupTest() {
 			Required: true,
 			Type:     "string",
 		},
-		{
-			Name:     userInputOuDesc,
-			Required: false,
-			Type:     "string",
-		},
 	}
 
 	// Mock the CreateExecutor method to return a base executor
@@ -128,11 +123,6 @@ func (suite *OUExecutorTestSuite) TestNewOUExecutor() {
 			Required: true,
 			Type:     "string",
 		},
-		{
-			Name:     userInputOuDesc,
-			Required: false,
-			Type:     "string",
-		},
 	}
 
 	// Mock the CreateExecutor method
@@ -146,13 +136,11 @@ func (suite *OUExecutorTestSuite) TestNewOUExecutor() {
 	assert.Equal(suite.T(), "OUExecutor", executor.GetName())
 
 	defaultInputsResult := executor.GetDefaultExecutorInputs()
-	assert.Len(suite.T(), defaultInputsResult, 3)
+	assert.Len(suite.T(), defaultInputsResult, 2)
 	assert.Equal(suite.T(), userInputOuName, defaultInputsResult[0].Name)
 	assert.True(suite.T(), defaultInputsResult[0].Required)
 	assert.Equal(suite.T(), userInputOuHandle, defaultInputsResult[1].Name)
 	assert.True(suite.T(), defaultInputsResult[1].Required)
-	assert.Equal(suite.T(), userInputOuDesc, defaultInputsResult[2].Name)
-	assert.False(suite.T(), defaultInputsResult[2].Required)
 }
 
 func (suite *OUExecutorTestSuite) TestExecutorMetadata() {
@@ -167,10 +155,10 @@ func (suite *OUExecutorTestSuite) TestExecutorMetadata() {
 			},
 		},
 		{
-			name: "GetDefaultExecutorInputs returns three inputs",
+			name: "GetDefaultExecutorInputs returns two inputs",
 			testFunc: func() {
 				inputs := suite.executor.GetDefaultExecutorInputs()
-				assert.Len(suite.T(), inputs, 3)
+				assert.Len(suite.T(), inputs, 2)
 			},
 		},
 		{
@@ -202,38 +190,16 @@ func (suite *OUExecutorTestSuite) TestExecute_Success() {
 			userInputData: map[string]string{
 				userInputOuName:   "Engineering",
 				userInputOuHandle: "engineering",
-				userInputOuDesc:   "Engineering Department",
 			},
 			expectedOUID: testOUID,
 			expectedRequest: ou.OrganizationUnitRequest{
-				Name:        "Engineering",
-				Handle:      "engineering",
-				Description: "Engineering Department",
+				Name:   "Engineering",
+				Handle: "engineering",
 			},
 			expectedResponse: ou.OrganizationUnit{
-				ID:          testOUID,
-				Name:        "Engineering",
-				Handle:      "engineering",
-				Description: "Engineering Department",
-			},
-		},
-		{
-			name: "Create OU without description",
-			userInputData: map[string]string{
-				userInputOuName:   "Sales",
-				userInputOuHandle: "sales",
-				userInputOuDesc:   "",
-			},
-			expectedOUID: "ou-456",
-			expectedRequest: ou.OrganizationUnitRequest{
-				Name:        "Sales",
-				Handle:      "sales",
-				Description: "",
-			},
-			expectedResponse: ou.OrganizationUnit{
-				ID:     "ou-456",
-				Name:   "Sales",
-				Handle: "sales",
+				ID:     testOUID,
+				Name:   "Engineering",
+				Handle: "engineering",
 			},
 		},
 	}
@@ -313,11 +279,6 @@ func (suite *OUExecutorTestSuite) TestExecute_PrerequisitesFailure() {
 		{
 			Name:     userInputOuHandle,
 			Required: true,
-			Type:     "string",
-		},
-		{
-			Name:     userInputOuDesc,
-			Required: false,
 			Type:     "string",
 		},
 	}
@@ -443,12 +404,10 @@ func (suite *OUExecutorTestSuite) TestExecute_ErrorScenarios() {
 			userInputData: map[string]string{
 				userInputOuName:   "Engineering",
 				userInputOuHandle: "engineering",
-				userInputOuDesc:   "",
 			},
 			expectedRequest: ou.OrganizationUnitRequest{
-				Name:        "Engineering",
-				Handle:      "engineering",
-				Description: "",
+				Name:   "Engineering",
+				Handle: "engineering",
 			},
 		},
 		{
@@ -460,12 +419,10 @@ func (suite *OUExecutorTestSuite) TestExecute_ErrorScenarios() {
 			userInputData: map[string]string{
 				userInputOuName:   "Engineering",
 				userInputOuHandle: "engineering",
-				userInputOuDesc:   "",
 			},
 			expectedRequest: ou.OrganizationUnitRequest{
-				Name:        "Engineering",
-				Handle:      "engineering",
-				Description: "",
+				Name:   "Engineering",
+				Handle: "engineering",
 			},
 		},
 		{
@@ -482,12 +439,10 @@ func (suite *OUExecutorTestSuite) TestExecute_ErrorScenarios() {
 			userInputData: map[string]string{
 				userInputOuName:   "Engineering",
 				userInputOuHandle: "engineering",
-				userInputOuDesc:   "",
 			},
 			expectedRequest: ou.OrganizationUnitRequest{
-				Name:        "Engineering",
-				Handle:      "engineering",
-				Description: "",
+				Name:   "Engineering",
+				Handle: "engineering",
 			},
 		},
 		{
@@ -499,12 +454,10 @@ func (suite *OUExecutorTestSuite) TestExecute_ErrorScenarios() {
 			userInputData: map[string]string{
 				userInputOuName:   "Engineering",
 				userInputOuHandle: "engineering",
-				userInputOuDesc:   "",
 			},
 			expectedRequest: ou.OrganizationUnitRequest{
-				Name:        "Engineering",
-				Handle:      "engineering",
-				Description: "",
+				Name:   "Engineering",
+				Handle: "engineering",
 			},
 		},
 	}
@@ -554,15 +507,13 @@ func (suite *OUExecutorTestSuite) TestExecute_EmptyOUID() {
 		UserInputData: map[string]string{
 			userInputOuName:   "Engineering",
 			userInputOuHandle: "engineering",
-			userInputOuDesc:   "",
 		},
 		RuntimeData: map[string]string{},
 	}
 
 	expectedRequest := ou.OrganizationUnitRequest{
-		Name:        "Engineering",
-		Handle:      "engineering",
-		Description: "",
+		Name:   "Engineering",
+		Handle: "engineering",
 	}
 
 	suite.mockOUService.On("CreateOrganizationUnit", expectedRequest).
@@ -639,7 +590,7 @@ func (suite *OUExecutorTestSuite) TestExecutorHelperMethods() {
 				requiredData := suite.executor.GetRequiredData(ctx)
 
 				assert.NotEmpty(suite.T(), requiredData)
-				assert.Len(suite.T(), requiredData, 3)
+				assert.Len(suite.T(), requiredData, 2)
 			},
 		},
 		{
@@ -649,7 +600,6 @@ func (suite *OUExecutorTestSuite) TestExecutorHelperMethods() {
 					UserInputData: map[string]string{
 						userInputOuName:   "Engineering",
 						userInputOuHandle: "engineering",
-						userInputOuDesc:   "Engineering Department",
 					},
 				}
 
@@ -657,7 +607,6 @@ func (suite *OUExecutorTestSuite) TestExecutorHelperMethods() {
 
 				assert.Equal(suite.T(), "Engineering", request.Name)
 				assert.Equal(suite.T(), "engineering", request.Handle)
-				assert.Equal(suite.T(), "Engineering Department", request.Description)
 			},
 		},
 	}
