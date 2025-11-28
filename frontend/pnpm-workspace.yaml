@@ -3,7 +3,7 @@ packages:
   - packages/*
 
 catalog:
-  '@asgardeo/react': 0.6.11
+  '@asgardeo/react': 0.6.12
   '@asgardeo/react-router': 1.0.9
   '@emotion/react': 11.14.0
   '@emotion/styled': 11.14.1
