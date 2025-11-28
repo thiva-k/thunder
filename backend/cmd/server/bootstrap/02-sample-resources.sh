@@ -167,13 +167,12 @@ read -r -d '' SAMPLE_APP_PAYLOAD <<'JSON' || true
     "type": "oauth2",
     "config": {
       "client_id": "sample_app_client",
-      "client_secret": "sample_app_secret",
       "redirect_uris": ["https://localhost:3000"],
-      "grant_types": ["authorization_code", "client_credentials"],
+      "grant_types": ["authorization_code"],
       "response_types": ["code"],
-      "token_endpoint_auth_method": "client_secret_basic",
-      "pkce_required": false,
-      "public_client": false,
+      "token_endpoint_auth_method": "none",
+      "pkce_required": true,
+      "public_client": true,
       "scopes": ["openid", "profile", "email"],
       "token": {
         "issuer": "thunder",
@@ -259,7 +258,7 @@ read -r -d '' REACT_SDK_APP_PAYLOAD <<'JSON' || true
       "grant_types": ["authorization_code"],
       "response_types": ["code"],
       "token_endpoint_auth_method": "none",
-      "pkce_required": false,
+      "pkce_required": true,
       "public_client": true,
       "token": {
         "issuer": "https://localhost:8090/oauth2/token",
