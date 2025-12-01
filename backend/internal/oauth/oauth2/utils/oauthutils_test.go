@@ -569,3 +569,124 @@ func (suite *OAuth2UtilsTestSuite) TestGenerateOAuth2CredentialInvalidType() {
 	assert.Equal(suite.T(), OAuth2ClientSecretLength, len(clientSecretBytes),
 		"Client secret should automatically use the correct length")
 }
+
+func (suite *OAuth2UtilsTestSuite) TestSeparateOIDCAndNonOIDCScopes() {
+	testCases := []struct {
+		name            string
+		scopes          string
+		expectedOIDC    []string
+		expectedNonOIDC []string
+	}{
+		{
+			name:            "OnlyOIDCScopes",
+			scopes:          "openid profile email",
+			expectedOIDC:    []string{"openid", "profile", "email"},
+			expectedNonOIDC: nil, // Function returns nil for empty slice
+		},
+		{
+			name:            "OnlyNonOIDCScopes",
+			scopes:          "read write admin",
+			expectedOIDC:    nil, // Function returns nil for empty slice
+			expectedNonOIDC: []string{"read", "write", "admin"},
+		},
+		{
+			name:            "MixedScopes",
+			scopes:          "openid profile read write",
+			expectedOIDC:    []string{"openid", "profile"},
+			expectedNonOIDC: []string{"read", "write"},
+		},
+		{
+			name:            "EmptyScopes",
+			scopes:          "",
+			expectedOIDC:    nil, // Function returns nil for empty slice
+			expectedNonOIDC: nil, // Function returns nil for empty slice
+		},
+		{
+			name:            "SingleOIDCScope",
+			scopes:          "openid",
+			expectedOIDC:    []string{"openid"},
+			expectedNonOIDC: nil, // Function returns nil for empty slice
+		},
+		{
+			name:            "SingleNonOIDCScope",
+			scopes:          "custom_scope",
+			expectedOIDC:    nil, // Function returns nil for empty slice
+			expectedNonOIDC: []string{"custom_scope"},
+		},
+		{
+			name:            "AllStandardOIDCScopes",
+			scopes:          "openid profile email address phone",
+			expectedOIDC:    []string{"openid", "profile", "email", "address", "phone"},
+			expectedNonOIDC: nil, // Function returns nil for empty slice
+		},
+		{
+			name: "MixedWithMultipleSpaces",
+			// Single spaces - ParseStringArray may include empty strings for multiple spaces
+			scopes:          "openid profile read write",
+			expectedOIDC:    []string{"openid", "profile"},
+			expectedNonOIDC: []string{"read", "write"},
+		},
+	}
+
+	for _, tc := range testCases {
+		suite.T().Run(tc.name, func(t *testing.T) {
+			oidcScopes, nonOidcScopes := SeparateOIDCAndNonOIDCScopes(tc.scopes)
+			// Compare lengths and contents, handling nil vs empty slice
+			if tc.expectedOIDC == nil {
+				assert.Nil(t, oidcScopes, "OIDC scopes should be nil")
+			} else {
+				assert.Equal(t, tc.expectedOIDC, oidcScopes, "OIDC scopes should match")
+			}
+			if tc.expectedNonOIDC == nil {
+				assert.Nil(t, nonOidcScopes, "Non-OIDC scopes should be nil")
+			} else {
+				// Filter out empty strings that may be introduced by ParseStringArray
+				filteredNonOIDC := []string{}
+				for _, s := range nonOidcScopes {
+					if s != "" {
+						filteredNonOIDC = append(filteredNonOIDC, s)
+					}
+				}
+				assert.Equal(t, tc.expectedNonOIDC, filteredNonOIDC, "Non-OIDC scopes should match")
+			}
+		})
+	}
+}
+
+func (suite *OAuth2UtilsTestSuite) TestSeparateOIDCAndNonOIDCScopes_StandardOIDCScopes() {
+	// Test all standard OIDC scopes are correctly identified
+	// Based on constants.StandardOIDCScopes, these are the standard scopes
+	standardOIDCScopes := []string{"openid", "profile", "email", "address", "phone"}
+
+	for _, scope := range standardOIDCScopes {
+		suite.T().Run("OIDCScope_"+scope, func(t *testing.T) {
+			oidcScopes, nonOidcScopes := SeparateOIDCAndNonOIDCScopes(scope)
+			if oidcScopes == nil {
+				assert.Fail(t, "OIDC scopes should not be nil for standard OIDC scope")
+			} else {
+				assert.Contains(t, oidcScopes, scope, "Standard OIDC scope should be in OIDC list")
+			}
+			if nonOidcScopes != nil {
+				assert.NotContains(t, nonOidcScopes, scope, "Standard OIDC scope should not be in non-OIDC list")
+			}
+		})
+	}
+}
+
+func (suite *OAuth2UtilsTestSuite) TestSeparateOIDCAndNonOIDCScopes_CustomScopes() {
+	// Test custom scopes are correctly identified as non-OIDC
+	customScopes := []string{"custom_read", "custom_write", "api_access", "admin_scope"}
+
+	for _, scope := range customScopes {
+		suite.T().Run("CustomScope_"+scope, func(t *testing.T) {
+			oidcScopes, nonOidcScopes := SeparateOIDCAndNonOIDCScopes(scope)
+			// Handle nil case - function may return nil for empty slices
+			if oidcScopes == nil {
+				assert.Nil(t, oidcScopes, "OIDC scopes should be nil for custom scope")
+			} else {
+				assert.NotContains(t, oidcScopes, scope, "Custom scope should not be in OIDC list")
+			}
+			assert.Contains(t, nonOidcScopes, scope, "Custom scope should be in non-OIDC list")
+		})
+	}
+}

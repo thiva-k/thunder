@@ -43,7 +43,6 @@ func TestDiscoverySuite(t *testing.T) {
 }
 
 func (suite *DiscoveryTestSuite) SetupTest() {
-	// Initialize Thunder Runtime config with basic test config
 	testConfig := &config.Config{
 		Server: config.ServerConfig{
 			Hostname: "localhost",
@@ -242,4 +241,74 @@ func TestGetStandardClaims(t *testing.T) {
 	assert.Contains(t, claims, constants.ClaimExp)
 	assert.Contains(t, claims, constants.ClaimIat)
 	assert.Contains(t, claims, constants.ClaimAuthTime)
+}
+
+func (suite *DiscoveryTestSuite) TestInitialize() {
+	mux := http.NewServeMux()
+	service := Initialize(mux)
+
+	assert.NotNil(suite.T(), service)
+	assert.Implements(suite.T(), (*DiscoveryServiceInterface)(nil), service)
+
+	// Test that routes are registered by making requests
+	req := httptest.NewRequest("GET", "/.well-known/oauth-authorization-server", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	req = httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+
+	// Test OPTIONS requests
+	req = httptest.NewRequest("OPTIONS", "/.well-known/oauth-authorization-server", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	assert.Equal(suite.T(), http.StatusNoContent, w.Code)
+
+	req = httptest.NewRequest("OPTIONS", "/.well-known/openid-configuration", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	assert.Equal(suite.T(), http.StatusNoContent, w.Code)
+}
+
+func (suite *DiscoveryTestSuite) TestGetBaseURL_WithPublicHostname() {
+	config.ResetThunderRuntime()
+	testConfig := &config.Config{
+		Server: config.ServerConfig{
+			PublicHostname: "https://public.thunder.io",
+			Hostname:       "localhost",
+			Port:           8080,
+		},
+		JWT: config.JWTConfig{
+			Issuer: "https://test.thunder.io",
+		},
+	}
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	service := newDiscoveryService()
+	metadata := service.GetOAuth2AuthorizationServerMetadata()
+	assert.Contains(suite.T(), metadata.AuthorizationEndpoint, "public.thunder.io")
+	config.ResetThunderRuntime()
+}
+
+func (suite *DiscoveryTestSuite) TestGetBaseURL_WithHTTPOnly() {
+	config.ResetThunderRuntime()
+	testConfig := &config.Config{
+		Server: config.ServerConfig{
+			Hostname: "localhost",
+			Port:     8080,
+			HTTPOnly: true,
+		},
+		JWT: config.JWTConfig{
+			Issuer: "https://test.thunder.io",
+		},
+	}
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	service := newDiscoveryService()
+	metadata := service.GetOAuth2AuthorizationServerMetadata()
+	assert.Contains(suite.T(), metadata.AuthorizationEndpoint, "http://")
+	config.ResetThunderRuntime()
 }

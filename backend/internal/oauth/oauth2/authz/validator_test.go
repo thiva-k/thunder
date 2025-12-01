@@ -359,3 +359,123 @@ func (suite *AuthorizationValidatorTestSuite) TestValidateInitialAuthorizationRe
 	assert.Empty(suite.T(), errorCode)
 	assert.Empty(suite.T(), errorMessage)
 }
+
+func (suite *AuthorizationValidatorTestSuite) TestValidateAuthzReq_PKCERequired_MissingCodeChallenge() {
+	// Create an app that requires PKCE
+	pkceApp := &appmodel.OAuthAppConfigProcessedDTO{
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
+		PKCERequired:            true,
+	}
+
+	msg := &OAuthMessage{
+		RequestQueryParams: map[string]string{
+			constants.RequestParamClientID:     "test-client-id",
+			constants.RequestParamRedirectURI:  "https://client.example.com/callback",
+			constants.RequestParamResponseType: string(constants.ResponseTypeCode),
+			// Missing code_challenge
+		},
+	}
+
+	sendErrorToApp, errorCode, errorMessage := suite.validator.validateInitialAuthorizationRequest(
+		msg, pkceApp)
+
+	assert.True(suite.T(), sendErrorToApp)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorCode)
+	assert.Equal(suite.T(), "code_challenge is required for this application", errorMessage)
+}
+
+func (suite *AuthorizationValidatorTestSuite) TestValidateAuthzReq_PKCERequired_InvalidCodeChallenge() {
+	// Create an app that requires PKCE
+	pkceApp := &appmodel.OAuthAppConfigProcessedDTO{
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
+		PKCERequired:            true,
+	}
+
+	msg := &OAuthMessage{
+		RequestQueryParams: map[string]string{
+			constants.RequestParamClientID:            "test-client-id",
+			constants.RequestParamRedirectURI:         "https://client.example.com/callback",
+			constants.RequestParamResponseType:        string(constants.ResponseTypeCode),
+			constants.RequestParamCodeChallenge:       "invalid-challenge", // Invalid format
+			constants.RequestParamCodeChallengeMethod: "plain",             // Plain is not allowed
+		},
+	}
+
+	sendErrorToApp, errorCode, errorMessage := suite.validator.validateInitialAuthorizationRequest(
+		msg, pkceApp)
+
+	assert.True(suite.T(), sendErrorToApp)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errorCode)
+	assert.Equal(suite.T(), "Invalid PKCE parameters", errorMessage)
+}
+
+func (suite *AuthorizationValidatorTestSuite) TestValidateInitialAuthorizationRequest_PKCERequired_ValidPKCE() {
+	// Create an app that requires PKCE
+	pkceApp := &appmodel.OAuthAppConfigProcessedDTO{
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
+		PKCERequired:            true,
+	}
+
+	// Use a valid S256 code challenge (base64url encoded SHA256 hash)
+	// This is a valid format for testing
+	msg := &OAuthMessage{
+		RequestQueryParams: map[string]string{
+			constants.RequestParamClientID:            "test-client-id",
+			constants.RequestParamRedirectURI:         "https://client.example.com/callback",
+			constants.RequestParamResponseType:        string(constants.ResponseTypeCode),
+			constants.RequestParamCodeChallenge:       "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+			constants.RequestParamCodeChallengeMethod: "S256",
+		},
+	}
+
+	sendErrorToApp, errorCode, errorMessage := suite.validator.validateInitialAuthorizationRequest(
+		msg, pkceApp)
+
+	assert.False(suite.T(), sendErrorToApp)
+	assert.Empty(suite.T(), errorCode)
+	assert.Empty(suite.T(), errorMessage)
+}
+
+func (suite *AuthorizationValidatorTestSuite) TestValidateInitialAuthorizationRequest_PKCENotRequired() {
+	// Create an app that doesn't require PKCE
+	nonPKCEApp := &appmodel.OAuthAppConfigProcessedDTO{
+		ClientID:                "test-client-id",
+		HashedClientSecret:      "hashed-secret",
+		RedirectURIs:            []string{"https://client.example.com/callback"},
+		GrantTypes:              []constants.GrantType{constants.GrantTypeAuthorizationCode},
+		ResponseTypes:           []constants.ResponseType{constants.ResponseTypeCode},
+		TokenEndpointAuthMethod: constants.TokenEndpointAuthMethodClientSecretPost,
+		PKCERequired:            false,
+	}
+
+	msg := &OAuthMessage{
+		RequestQueryParams: map[string]string{
+			constants.RequestParamClientID:     "test-client-id",
+			constants.RequestParamRedirectURI:  "https://client.example.com/callback",
+			constants.RequestParamResponseType: string(constants.ResponseTypeCode),
+			// No PKCE parameters - should be OK since PKCE is not required
+		},
+	}
+
+	sendErrorToApp, errorCode, errorMessage := suite.validator.validateInitialAuthorizationRequest(
+		msg, nonPKCEApp)
+
+	assert.False(suite.T(), sendErrorToApp)
+	assert.Empty(suite.T(), errorCode)
+	assert.Empty(suite.T(), errorMessage)
+}

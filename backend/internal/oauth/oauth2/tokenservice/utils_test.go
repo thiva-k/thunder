@@ -26,7 +26,9 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/usermock"
 )
@@ -639,6 +641,86 @@ func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_UnmarshalError() {
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "failed to unmarshal user attributes")
+
+	mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_GetUserGroupsError() {
+	mockUserService := usermock.NewUserServiceInterfaceMock(suite.T())
+
+	// Mock GetUser to return valid user
+	mockUserService.On("GetUser", "test-user").Return(&user.User{
+		ID:         "test-user",
+		Attributes: json.RawMessage(`{"email":"test@example.com"}`),
+		Type:       "local",
+	}, nil)
+
+	// Mock GetUserGroups to return error
+	serverErr := &serviceerror.ServiceError{
+		Type:             serviceerror.ServerErrorType,
+		Code:             "INTERNAL_ERROR",
+		ErrorDescription: "failed to fetch groups",
+	}
+	mockUserService.On("GetUserGroups", "test-user", constants.DefaultGroupListLimit, 0).
+		Return(nil, serverErr)
+
+	_, _, err := FetchUserAttributesAndGroups(mockUserService, "test-user", true)
+
+	assert.Error(suite.T(), err)
+	assert.Contains(suite.T(), err.Error(), "failed to fetch user groups")
+
+	mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_WithGroups() {
+	mockUserService := usermock.NewUserServiceInterfaceMock(suite.T())
+
+	// Mock GetUser to return valid user
+	mockUserService.On("GetUser", "test-user").Return(&user.User{
+		ID:         "test-user",
+		Attributes: json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
+		Type:       "local",
+	}, nil)
+
+	// Mock GetUserGroups to return groups
+	mockGroups := &user.UserGroupListResponse{
+		TotalResults: 2,
+		StartIndex:   0,
+		Count:        2,
+		Groups: []user.UserGroup{
+			{ID: "group1", Name: "Admin"},
+			{ID: "group2", Name: "Users"},
+		},
+	}
+	mockUserService.On("GetUserGroups", "test-user", constants.DefaultGroupListLimit, 0).
+		Return(mockGroups, nil)
+
+	attrs, groups, err := FetchUserAttributesAndGroups(mockUserService, "test-user", true)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), attrs)
+	assert.Equal(suite.T(), "test@example.com", attrs["email"])
+	assert.Equal(suite.T(), "testuser", attrs["username"])
+	assert.Equal(suite.T(), []string{"Admin", "Users"}, groups)
+
+	mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_WithoutGroups() {
+	mockUserService := usermock.NewUserServiceInterfaceMock(suite.T())
+
+	// Mock GetUser to return valid user
+	mockUserService.On("GetUser", "test-user").Return(&user.User{
+		ID:         "test-user",
+		Attributes: json.RawMessage(`{"email":"test@example.com"}`),
+		Type:       "local",
+	}, nil)
+
+	attrs, groups, err := FetchUserAttributesAndGroups(mockUserService, "test-user", false)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), attrs)
+	assert.Equal(suite.T(), []string{}, groups)
 
 	mockUserService.AssertExpectations(suite.T())
 }
