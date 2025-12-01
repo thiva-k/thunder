@@ -139,10 +139,10 @@ func ExecuteAuthenticationFlow(flowID string, inputs map[string]string) (*FlowSt
 }
 
 // CompleteAuthorization completes the authorization using the assertion
-func CompleteAuthorization(sessionDataKey, assertion string) (*AuthorizationResponse, error) {
+func CompleteAuthorization(authID, assertion string) (*AuthorizationResponse, error) {
 	authzData := map[string]interface{}{
-		"sessionDataKey": sessionDataKey,
-		"assertion":      assertion,
+		"authId":    authID,
+		"assertion": assertion,
 	}
 
 	authzJSON, err := json.Marshal(authzData)
@@ -280,16 +280,16 @@ func ExtractAuthorizationCode(redirectURI string) (string, error) {
 	return code, nil
 }
 
-// ExtractSessionData extracts session data from the authorization redirect
-func ExtractSessionData(location string) (string, string, error) {
+// ExtractAuthData extracts auth ID and flow ID from the authorization redirect
+func ExtractAuthData(location string) (string, string, error) {
 	redirectURL, err := url.Parse(location)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to parse redirect URL: %w", err)
 	}
 
-	sessionDataKey := redirectURL.Query().Get("sessionDataKey")
-	if sessionDataKey == "" {
-		return "", "", fmt.Errorf("sessionDataKey not found in redirect")
+	authID := redirectURL.Query().Get("authId")
+	if authID == "" {
+		return "", "", fmt.Errorf("authId not found in redirect")
 	}
 
 	flowId := redirectURL.Query().Get("flowId")
@@ -297,7 +297,7 @@ func ExtractSessionData(location string) (string, string, error) {
 		return "", "", fmt.Errorf("flowId not found in redirect")
 	}
 
-	return sessionDataKey, flowId, nil
+	return authID, flowId, nil
 }
 
 // ValidateOAuth2ErrorRedirect validates OAuth2 error redirect responses
@@ -388,10 +388,10 @@ func ObtainAccessTokenWithPassword(clientID, redirectURI, scope, username, passw
 	}
 
 	log.Printf("Authorization redirect location: %s", location)
-	// Step 2: Extract session data
-	sessionDataKey, flowID, err := ExtractSessionData(location)
+	// Step 2: Extract auth ID and flow ID
+	authID, flowID, err := ExtractAuthData(location)
 	if err != nil {
-		return nil, fmt.Errorf("failed to extract session data: %w", err)
+		return nil, fmt.Errorf("failed to extract auth ID: %w", err)
 	}
 
 	// Step 3: Execute authentication flow with credentials
@@ -413,7 +413,7 @@ func ObtainAccessTokenWithPassword(clientID, redirectURI, scope, username, passw
 	}
 
 	// Step 4: Complete authorization with assertion
-	authzResp, err := CompleteAuthorization(sessionDataKey, flowStep.Assertion)
+	authzResp, err := CompleteAuthorization(authID, flowStep.Assertion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to complete authorization: %w", err)
 	}

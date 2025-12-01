@@ -183,7 +183,7 @@ func (h *authorizationCodeGrantHandler) HandleGrant(tokenRequest *model.TokenReq
 			Scopes:         authorizedScopes,
 			UserAttributes: attrs,
 			UserGroups:     userGroups,
-			AuthTime:       time.Now().Unix(),
+			AuthTime:       authCode.TimeCreated.Unix(),
 			OAuthApp:       oauthApp,
 			UserType:       authCode.AuthorizedUserType,
 			OuID:           authCode.UserOUID,

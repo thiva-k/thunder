@@ -56,7 +56,7 @@ const (
 
 // Server OAuth constants.
 const (
-	SessionDataKey        string = "sessionDataKey"
+	AuthID                string = "authId"
 	SessionDataKeyConsent string = "sessionDataKeyConsent"
 	ShowInsecureWarning   string = "showInsecureWarning"
 	AppID                 string = "applicationId"

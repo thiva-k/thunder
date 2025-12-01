@@ -22,8 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/database/provider"
@@ -269,33 +267,4 @@ func appendAuthzDataJSON(row map[string]interface{}, authzCode *AuthorizationCod
 	}
 
 	return authzCode, nil
-}
-
-// parseTimeField parses a time field from the database result.
-func parseTimeField(field interface{}, fieldName string) (time.Time, error) {
-	const customTimeFormat = "2006-01-02 15:04:05.999999999"
-
-	switch v := field.(type) {
-	case string:
-		trimmedTime := trimTimeString(v)
-		parsedTime, err := time.Parse(customTimeFormat, trimmedTime)
-		if err != nil {
-			return time.Time{}, fmt.Errorf("error parsing %s: %w", fieldName, err)
-		}
-		return parsedTime, nil
-	case time.Time:
-		return v, nil
-	default:
-		return time.Time{}, fmt.Errorf("unexpected type for %s", fieldName)
-	}
-}
-
-// trimTimeString trims extra information from a time string to match the expected format.
-func trimTimeString(timeStr string) string {
-	// Split the string into parts by spaces and retain only the first two parts.
-	parts := strings.SplitN(timeStr, " ", 3)
-	if len(parts) >= 2 {
-		return parts[0] + " " + parts[1]
-	}
-	return timeStr
 }
