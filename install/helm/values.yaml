@@ -253,17 +253,61 @@ setup:
     #     secretName: thunder-secrets
 
 # Bootstrap configuration
+# Custom bootstrap scripts extend Thunder's setup process by adding initialization logic.
+#
+# ⚠️ IMPORTANT: Bootstrap patterns are MUTUALLY EXCLUSIVE
+#   Choose ONE pattern only. Using both 'scripts' and 'configMap' will fail validation.
+#
+#   - Pattern 1: Use 'scripts' for inline scripts
+#   - Pattern 2 OR 3: Use 'configMap' (with or without 'files')
+#
 bootstrap:
-  # Enable custom bootstrap scripts
-  enabled: false
-  # Custom bootstrap scripts provided inline
-  # Scripts will be mounted to /opt/thunder/bootstrap/custom/
+  # Pattern 1: Inline bootstrap scripts (key: filename, value: script content)
+  # Each script will be mounted individually using subPath to preserve default scripts
   scripts: {}
-    # Example:
-    # 30-custom-users.sh: |
+    # Example - Creating custom users:
+    # 20-custom-users.sh: |
     #   #!/bin/bash
     #   set -e
+    #   # Source common functions (provides log_* and thunder_api_call)
+    #   SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+    #   source "${SCRIPT_DIR}/common.sh"
+    #
     #   log_info "Creating custom users..."
-    #   # Your script here
-  # Or reference an existing ConfigMap
-  existingConfigMap: ""
+    #   thunder_api_call POST "/users" '{
+    #     "type": "person",
+    #     "attributes": {
+    #       "username": "alice",
+    #       "password": "alice123",
+    #       "sub": "alice",
+    #       "email": "alice@example.com",
+    #       "name": "Alice Johnson"
+    #     }
+    #   }'
+    #   log_success "Custom users created"
+    #
+  # Pattern 2 & 3: Reference an external ConfigMap with bootstrap scripts
+  #
+  # Behavior depends on whether 'files' is specified:
+  # - WITH files list: Mounts only specified files (preserves defaults) - Pattern 2
+  # - WITHOUT files (empty/omitted): Mounts entire ConfigMap (replaces all defaults) - Pattern 3
+  #
+  # Example 1 - Pattern 2: Add specific scripts (preserves defaults)
+  #   configMap:
+  #     name: "my-bootstrap"
+  #     files:
+  #       - 30-custom-users.sh
+  #       - 40-custom-apps.sh
+  #
+  # Example 2 - Pattern 3: Replace all scripts
+  #   configMap:
+  #     name: "complete-bootstrap"
+  #     # No files = replaces all defaults (must provide your own common.sh)
+  #
+  configMap:
+    # Name of the ConfigMap containing bootstrap scripts
+    name: ""
+    # List of script filenames to mount from the ConfigMap
+    # If empty/omitted: mounts entire ConfigMap (replaces all defaults - Pattern 3)
+    # If specified: mounts only these files (preserves defaults - Pattern 2)
+    files: []
