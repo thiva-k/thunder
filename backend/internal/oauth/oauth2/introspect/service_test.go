@@ -121,6 +121,20 @@ func (s *TokenIntrospectionServiceTestSuite) TestIntrospectToken_InvalidSignatur
 	s.jwtServiceMock.AssertExpectations(s.T())
 }
 
+func (s *TokenIntrospectionServiceTestSuite) TestIntrospectToken_DecodeFailsAfterVerify() {
+	// Test case where VerifyJWT succeeds but DecodeJWT fails
+	// This can happen with a malformed JWT structure (e.g., missing dots or invalid base64)
+	malformedToken := "header.payload" // Missing signature part
+
+	s.jwtServiceMock.On("VerifyJWT", malformedToken, "", "").Return(nil)
+
+	response, err := s.introspectService.IntrospectToken(malformedToken, "")
+	assert.NoError(s.T(), err)
+	assert.NotNil(s.T(), response)
+	assert.False(s.T(), response.Active)
+	s.jwtServiceMock.AssertExpectations(s.T())
+}
+
 func (s *TokenIntrospectionServiceTestSuite) TestIntrospectToken() {
 	testCases := []struct {
 		name           string

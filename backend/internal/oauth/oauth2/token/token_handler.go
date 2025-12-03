@@ -20,20 +20,18 @@
 package token
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/application"
-	"github.com/asgardeo/thunder/internal/system/utils"
-
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/scope"
 	"github.com/asgardeo/thunder/internal/system/log"
+	"github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // TokenHandlerInterface defines the interface for handling OAuth 2.0 token requests.
@@ -221,17 +219,11 @@ func (th *tokenHandler) HandleTokenRequest(w http.ResponseWriter, r *http.Reques
 		log.String("grant_type", grantTypeStr))
 
 	// Set the response headers.
-	w.Header().Set("Content-Type", "application/json")
 	// Must include the following headers when sensitive data is returned.
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Pragma", "no-cache")
 
 	// Write the token response.
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(tokenResponse); err != nil {
-		logger.Error("Failed to write token response", log.Error(err))
-		http.Error(w, "Failed to write token response", http.StatusInternalServerError)
-		return
-	}
+	utils.WriteSuccessResponse(w, http.StatusOK, tokenResponse)
 	logger.Debug("Token response sent", log.String("client_id", clientID), log.String("grant_type", grantTypeStr))
 }

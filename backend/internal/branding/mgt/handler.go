@@ -19,7 +19,6 @@
 package brandingmgt
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -53,13 +52,13 @@ func newBrandingMgtHandler(brandingMgtService BrandingMgtServiceInterface) *bran
 func (bh *brandingMgtHandler) HandleBrandingListRequest(w http.ResponseWriter, r *http.Request) {
 	limit, offset, svcErr := parsePaginationParams(r.URL.Query())
 	if svcErr != nil {
-		handleError(w, bh.logger, svcErr)
+		handleError(w, svcErr)
 		return
 	}
 
 	brandingList, svcErr := bh.brandingMgtService.GetBrandingList(limit, offset)
 	if svcErr != nil {
-		handleError(w, bh.logger, svcErr)
+		handleError(w, svcErr)
 		return
 	}
 
@@ -79,13 +78,7 @@ func (bh *brandingMgtHandler) HandleBrandingListRequest(w http.ResponseWriter, r
 		Links:        toHTTPLinks(brandingList.Links),
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	isErr := writeToResponse(w, brandingListResponse, bh.logger)
-	if isErr {
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, brandingListResponse)
 
 	bh.logger.Debug("Successfully listed branding configurations with pagination",
 		log.Int("limit", limit), log.Int("offset", offset),
@@ -97,13 +90,13 @@ func (bh *brandingMgtHandler) HandleBrandingListRequest(w http.ResponseWriter, r
 func (bh *brandingMgtHandler) HandleBrandingPostRequest(w http.ResponseWriter, r *http.Request) {
 	createRequest, err := sysutils.DecodeJSONBody[CreateBrandingRequest](r)
 	if err != nil {
-		handleError(w, bh.logger, &common.ErrorInvalidRequestFormat)
+		handleError(w, &common.ErrorInvalidRequestFormat)
 		return
 	}
 
 	createdBranding, svcErr := bh.brandingMgtService.CreateBranding(*createRequest)
 	if svcErr != nil {
-		handleError(w, bh.logger, svcErr)
+		handleError(w, svcErr)
 		return
 	}
 
@@ -113,13 +106,7 @@ func (bh *brandingMgtHandler) HandleBrandingPostRequest(w http.ResponseWriter, r
 		Preferences: createdBranding.Preferences,
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusCreated)
-
-	isErr := writeToResponse(w, brandingResponse, bh.logger)
-	if isErr {
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusCreated, brandingResponse)
 
 	bh.logger.Debug("Successfully created branding configuration", log.String("id", createdBranding.ID))
 }
@@ -129,7 +116,7 @@ func (bh *brandingMgtHandler) HandleBrandingGetRequest(w http.ResponseWriter, r 
 	id := r.PathValue("id")
 	branding, svcErr := bh.brandingMgtService.GetBranding(id)
 	if svcErr != nil {
-		handleError(w, bh.logger, svcErr)
+		handleError(w, svcErr)
 		return
 	}
 
@@ -139,13 +126,7 @@ func (bh *brandingMgtHandler) HandleBrandingGetRequest(w http.ResponseWriter, r 
 		Preferences: branding.Preferences,
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	isErr := writeToResponse(w, brandingResponse, bh.logger)
-	if isErr {
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, brandingResponse)
 
 	bh.logger.Debug("Successfully retrieved branding configuration", log.String("id", id))
 }
@@ -155,13 +136,13 @@ func (bh *brandingMgtHandler) HandleBrandingPutRequest(w http.ResponseWriter, r 
 	id := r.PathValue("id")
 	updateRequest, err := sysutils.DecodeJSONBody[UpdateBrandingRequest](r)
 	if err != nil {
-		handleError(w, bh.logger, &common.ErrorInvalidRequestFormat)
+		handleError(w, &common.ErrorInvalidRequestFormat)
 		return
 	}
 
 	updatedBranding, svcErr := bh.brandingMgtService.UpdateBranding(id, *updateRequest)
 	if svcErr != nil {
-		handleError(w, bh.logger, svcErr)
+		handleError(w, svcErr)
 		return
 	}
 
@@ -171,13 +152,7 @@ func (bh *brandingMgtHandler) HandleBrandingPutRequest(w http.ResponseWriter, r 
 		Preferences: updatedBranding.Preferences,
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	isErr := writeToResponse(w, brandingResponse, bh.logger)
-	if isErr {
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, brandingResponse)
 
 	bh.logger.Debug("Successfully updated branding configuration", log.String("id", id))
 }
@@ -187,11 +162,11 @@ func (bh *brandingMgtHandler) HandleBrandingDeleteRequest(w http.ResponseWriter,
 	id := r.PathValue("id")
 	svcErr := bh.brandingMgtService.DeleteBranding(id)
 	if svcErr != nil {
-		handleError(w, bh.logger, svcErr)
+		handleError(w, svcErr)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	sysutils.WriteSuccessResponse(w, http.StatusNoContent, nil)
 	bh.logger.Debug("Successfully deleted branding configuration", log.String("id", id))
 }
 
@@ -232,18 +207,8 @@ func toHTTPLinks(links []Link) []LinkResponse {
 	return httpLinks
 }
 
-// writeToResponse encodes the response as JSON and writes it to the ResponseWriter.
-func writeToResponse(w http.ResponseWriter, response any, logger *log.Logger) bool {
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Error("Error encoding response", log.Error(err))
-		handleEncodingError(w)
-		return true
-	}
-	return false
-}
-
 // handleError handles service errors and returns appropriate HTTP responses.
-func handleError(w http.ResponseWriter, logger *log.Logger,
+func handleError(w http.ResponseWriter,
 	svcErr *serviceerror.ServiceError) {
 	statusCode := http.StatusInternalServerError
 	if svcErr.Type == serviceerror.ClientErrorType {
@@ -262,24 +227,11 @@ func handleError(w http.ResponseWriter, logger *log.Logger,
 		}
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(statusCode)
-
 	errResp := apierror.ErrorResponse{
 		Code:        svcErr.Code,
 		Message:     svcErr.Error,
 		Description: svcErr.ErrorDescription,
 	}
 
-	if err := json.NewEncoder(w).Encode(errResp); err != nil {
-		logger.Error("Error encoding error response", log.Error(err))
-		handleEncodingError(w)
-		return
-	}
-}
-
-// handleEncodingError handles errors that occur during response encoding.
-func handleEncodingError(w http.ResponseWriter) {
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusInternalServerError)
+	sysutils.WriteErrorResponse(w, statusCode, errResp)
 }

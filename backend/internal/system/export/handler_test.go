@@ -340,6 +340,7 @@ func (suite *HandlerTestSuite) TestGenerateAndSendZipResponse_DeepFolderStructur
 
 // TestGenerateAndSendZipResponse_Standalone tests the function without suite dependencies.
 func TestGenerateAndSendZipResponse_Standalone(t *testing.T) {
+	logger := log.GetLogger()
 	// Setup config
 	config.ResetThunderRuntime()
 	testConfig := &config.Config{
@@ -375,7 +376,6 @@ func TestGenerateAndSendZipResponse_Standalone(t *testing.T) {
 
 	// Execute
 	w := httptest.NewRecorder()
-	logger := log.GetLogger()
 	err = handler.generateAndSendZipResponse(w, logger, exportResponse)
 
 	// Assert
@@ -684,13 +684,12 @@ func (suite *HandlerTestSuite) TestHandleExportZipRequest_ServiceError() {
 // TestHandleError_ClientError tests error handling for client errors.
 func (suite *HandlerTestSuite) TestHandleError_ClientError() {
 	w := httptest.NewRecorder()
-	logger := log.GetLogger()
 
 	// Create client error
 	clientErr := &ErrorNoResourcesFound
 
 	// Execute
-	suite.handler.handleError(w, logger, clientErr)
+	suite.handler.handleError(w, clientErr)
 
 	// Assert response
 	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
@@ -707,13 +706,12 @@ func (suite *HandlerTestSuite) TestHandleError_ClientError() {
 // TestHandleError_ServerError tests error handling for server errors.
 func (suite *HandlerTestSuite) TestHandleError_ServerError() {
 	w := httptest.NewRecorder()
-	logger := log.GetLogger()
 
 	// Create server error
 	serverErr := &ErrorInternalServerError
 
 	// Execute
-	suite.handler.handleError(w, logger, serverErr)
+	suite.handler.handleError(w, serverErr)
 
 	// Assert response
 	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
@@ -802,6 +800,7 @@ func (suite *HandlerTestSuite) TestHandleExportJSONRequest_EmptyFiles() {
 
 // BenchmarkGenerateAndSendZipResponse benchmarks ZIP generation performance.
 func BenchmarkGenerateAndSendZipResponse(b *testing.B) {
+	logger := log.GetLogger()
 	// Setup
 	config.ResetThunderRuntime()
 	testConfig := &config.Config{}
@@ -827,8 +826,6 @@ func BenchmarkGenerateAndSendZipResponse(b *testing.B) {
 			},
 		},
 	}
-
-	logger := log.GetLogger()
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

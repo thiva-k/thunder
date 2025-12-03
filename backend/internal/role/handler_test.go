@@ -29,7 +29,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/asgardeo/thunder/internal/system/log"
+	"github.com/asgardeo/thunder/internal/system/error/apierror"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
 type RoleHandlerTestSuite struct {
@@ -721,23 +722,29 @@ func (suite *RoleHandlerTestSuite) TestSanitizeAssignmentsRequest() {
 	suite.Equal(AssigneeTypeGroup, sanitized.Assignments[0].Type)
 }
 
-func (suite *RoleHandlerTestSuite) TestwriteToResponse_Success() {
-	response := &RoleResponse{
-		ID:                 "role1",
-		Name:               "Role 1",
-		Description:        "A sample role",
-		OrganizationUnitID: "ou1",
-	}
+// handleError coverage
+func (suite *RoleHandlerTestSuite) TestHandleError_ClientAndServerErrors() {
+	suite.T().Run("Client_NotFound", func(t *testing.T) {
+		w := httptest.NewRecorder()
 
-	w := httptest.NewRecorder()
-	isErr := writeToResponse(w, response, log.GetLogger())
-	suite.False(isErr)
-}
+		handleError(w, &ErrorRoleNotFound)
 
-func (suite *RoleHandlerTestSuite) TestwriteToResponse_Error() {
-	// Use a function which cannot be marshaled to JSON to cause encoding error
-	response := func() {}
-	w := httptest.NewRecorder()
-	isErr := writeToResponse(w, response, log.GetLogger())
-	suite.True(isErr)
+		suite.Equal(http.StatusNotFound, w.Code)
+		var resp apierror.ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		suite.NoError(err)
+		suite.Equal(ErrorRoleNotFound.Code, resp.Code)
+	})
+
+	suite.T().Run("ServerError", func(t *testing.T) {
+		w := httptest.NewRecorder()
+
+		handleError(w, &serviceerror.InternalServerError)
+
+		suite.Equal(http.StatusInternalServerError, w.Code)
+		var resp apierror.ErrorResponse
+		err := json.Unmarshal(w.Body.Bytes(), &resp)
+		suite.NoError(err)
+		suite.Equal(serviceerror.InternalServerError.Code, resp.Code)
+	})
 }

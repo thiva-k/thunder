@@ -19,13 +19,11 @@
 package idp
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/system/cmodels"
-	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/apierror"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -50,25 +48,19 @@ func (ih *idpHandler) HandleIDPPostRequest(w http.ResponseWriter, r *http.Reques
 
 	createRequest, err := sysutils.DecodeJSONBody[idpRequest](r)
 	if err != nil {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidRequestFormat.Code,
 			Message:     ErrorInvalidRequestFormat.Error,
 			Description: ErrorInvalidRequestFormat.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	properties, err := getSanitizedProperties(createRequest.Properties)
 	if err != nil {
 		logger.Error("Failed to sanitize properties", log.Error(err))
-		writeServiceErrorResponse(w, &serviceerror.InternalServerError, logger)
+		writeServiceErrorResponse(w, &serviceerror.InternalServerError)
 		return
 	}
 
@@ -80,34 +72,25 @@ func (ih *idpHandler) HandleIDPPostRequest(w http.ResponseWriter, r *http.Reques
 	}
 	createdIDP, svcErr := ih.idpService.CreateIdentityProvider(idpDTO)
 	if svcErr != nil {
-		writeServiceErrorResponse(w, svcErr, logger)
+		writeServiceErrorResponse(w, svcErr)
 		return
 	}
 
 	idpResponse, err := getIDPResponse(*createdIDP)
 	if err != nil {
 		logger.Error("Failed to convert IDP to response", log.String("idp", createdIDP.Name), log.Error(err))
-		writeServiceErrorResponse(w, &serviceerror.InternalServerError, logger)
+		writeServiceErrorResponse(w, &serviceerror.InternalServerError)
 		return
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusCreated)
-
-	if encodeErr := json.NewEncoder(w).Encode(idpResponse); encodeErr != nil {
-		logger.Error("Error encoding response", log.Error(encodeErr))
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusCreated, idpResponse)
 }
 
 // HandleIDPListRequest handles the list identity providers request.
 func (ih *idpHandler) HandleIDPListRequest(w http.ResponseWriter, r *http.Request) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IDPHandler"))
-
 	idpList, svcErr := ih.idpService.GetIdentityProviderList()
 	if svcErr != nil {
-		writeServiceErrorResponse(w, svcErr, logger)
+		writeServiceErrorResponse(w, svcErr)
 		return
 	}
 
@@ -121,14 +104,7 @@ func (ih *idpHandler) HandleIDPListRequest(w http.ResponseWriter, r *http.Reques
 		})
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if encodeErr := json.NewEncoder(w).Encode(idpListResponse); encodeErr != nil {
-		logger.Error("Error encoding response", log.Error(encodeErr))
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, idpListResponse)
 }
 
 // HandleIDPGetRequest handles the get identity provider request.
@@ -137,86 +113,60 @@ func (ih *idpHandler) HandleIDPGetRequest(w http.ResponseWriter, r *http.Request
 
 	id := r.PathValue("id")
 	if strings.TrimSpace(id) == "" {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidIDPID.Code,
 			Message:     ErrorInvalidIDPID.Error,
 			Description: ErrorInvalidIDPID.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	idp, svcErr := ih.idpService.GetIdentityProvider(id)
 	if svcErr != nil {
-		writeServiceErrorResponse(w, svcErr, logger)
+		writeServiceErrorResponse(w, svcErr)
 		return
 	}
 
 	idpResponse, err := getIDPResponse(*idp)
 	if err != nil {
 		logger.Error("Failed to convert IDP to response", log.String("idp", idp.Name), log.Error(err))
-		writeServiceErrorResponse(w, &serviceerror.InternalServerError, logger)
+		writeServiceErrorResponse(w, &serviceerror.InternalServerError)
 		return
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if encodeErr := json.NewEncoder(w).Encode(idpResponse); encodeErr != nil {
-		logger.Error("Error encoding response", log.Error(encodeErr))
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, idpResponse)
 }
 
 // HandleIDPPutRequest handles the update identity provider request.
 func (ih *idpHandler) HandleIDPPutRequest(w http.ResponseWriter, r *http.Request) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IDPHandler"))
-
 	id := r.PathValue("id")
 	if strings.TrimSpace(id) == "" {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidIDPID.Code,
 			Message:     ErrorInvalidIDPID.Error,
 			Description: ErrorInvalidIDPID.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	updateRequest, err := sysutils.DecodeJSONBody[idpRequest](r)
 	if err != nil {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidRequestFormat.Code,
 			Message:     ErrorInvalidRequestFormat.Error,
 			Description: ErrorInvalidRequestFormat.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	properties, err := getSanitizedProperties(updateRequest.Properties)
 	if err != nil {
 		logger.Error("Failed to sanitize properties", log.Error(err))
-		writeServiceErrorResponse(w, &serviceerror.InternalServerError, logger)
+		writeServiceErrorResponse(w, &serviceerror.InternalServerError)
 		return
 	}
 
@@ -230,68 +180,50 @@ func (ih *idpHandler) HandleIDPPutRequest(w http.ResponseWriter, r *http.Request
 
 	idp, svcErr := ih.idpService.UpdateIdentityProvider(id, idpDTO)
 	if svcErr != nil {
-		writeServiceErrorResponse(w, svcErr, logger)
+		writeServiceErrorResponse(w, svcErr)
 		return
 	}
 
 	idpResponse, err := getIDPResponse(*idp)
 	if err != nil {
 		logger.Error("Failed to convert IDP to response", log.String("idp", idp.Name), log.Error(err))
-		writeServiceErrorResponse(w, &serviceerror.InternalServerError, logger)
+		writeServiceErrorResponse(w, &serviceerror.InternalServerError)
 		return
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if encodeErr := json.NewEncoder(w).Encode(idpResponse); encodeErr != nil {
-		logger.Error("Error encoding response", log.Error(encodeErr))
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, idpResponse)
 }
 
 // HandleIDPDeleteRequest handles the delete identity provider request.
 func (ih *idpHandler) HandleIDPDeleteRequest(w http.ResponseWriter, r *http.Request) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IDPHandler"))
-
 	id := r.PathValue("id")
 	if strings.TrimSpace(id) == "" {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidIDPID.Code,
 			Message:     ErrorInvalidIDPID.Error,
 			Description: ErrorInvalidIDPID.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	svcErr := ih.idpService.DeleteIdentityProvider(id)
 	if svcErr != nil {
-		writeServiceErrorResponse(w, svcErr, logger)
+		writeServiceErrorResponse(w, svcErr)
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	sysutils.WriteSuccessResponse(w, http.StatusNoContent, nil)
 }
 
 // writeServiceErrorResponse writes the appropriate HTTP error response based on the service error.
-func writeServiceErrorResponse(w http.ResponseWriter, svcErr *serviceerror.ServiceError, logger *log.Logger) {
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-
+func writeServiceErrorResponse(w http.ResponseWriter, svcErr *serviceerror.ServiceError) {
 	var statusCode int
 	if svcErr.Type == serviceerror.ClientErrorType {
 		statusCode = getClientErrorStatusCode(svcErr.Code)
 	} else {
 		statusCode = http.StatusInternalServerError
 	}
-	w.WriteHeader(statusCode)
 
 	errResp := apierror.ErrorResponse{
 		Code:        svcErr.Code,
@@ -299,10 +231,7 @@ func writeServiceErrorResponse(w http.ResponseWriter, svcErr *serviceerror.Servi
 		Description: svcErr.ErrorDescription,
 	}
 
-	if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-		logger.Error("Error encoding error response", log.Error(encodeErr))
-		http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-	}
+	sysutils.WriteErrorResponse(w, statusCode, errResp)
 }
 
 // getClientErrorStatusCode returns the appropriate HTTP status code for client errors.

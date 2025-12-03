@@ -19,7 +19,6 @@
 package authn
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/authn/common"
@@ -27,10 +26,8 @@ import (
 	"github.com/asgardeo/thunder/internal/authn/otp"
 	"github.com/asgardeo/thunder/internal/idp"
 	notifcommon "github.com/asgardeo/thunder/internal/notification/common"
-	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/apierror"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
-	"github.com/asgardeo/thunder/internal/system/log"
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
@@ -50,7 +47,7 @@ func newAuthenticationHandler(authnService AuthenticationServiceInterface) *auth
 func (ah *authenticationHandler) HandleCredentialsAuthRequest(w http.ResponseWriter, r *http.Request) {
 	authRequestPtr, err := sysutils.DecodeJSONBody[map[string]interface{}](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 	authRequest := *authRequestPtr
@@ -75,14 +72,14 @@ func (ah *authenticationHandler) HandleCredentialsAuthRequest(w http.ResponseWri
 	}
 
 	responseDTO := AuthenticationResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // HandleSendSMSOTPRequest handles the send SMS OTP authentication request.
 func (ah *authenticationHandler) HandleSendSMSOTPRequest(w http.ResponseWriter, r *http.Request) {
 	otpRequest, err := sysutils.DecodeJSONBody[SendOTPAuthRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -97,14 +94,14 @@ func (ah *authenticationHandler) HandleSendSMSOTPRequest(w http.ResponseWriter, 
 		Status:       "SUCCESS",
 		SessionToken: sessionToken,
 	}
-	ah.writeSuccessResponse(w, response)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, response)
 }
 
 // HandleVerifySMSOTPRequest handles the verify SMS OTP authentication request.
 func (ah *authenticationHandler) HandleVerifySMSOTPRequest(w http.ResponseWriter, r *http.Request) {
 	otpRequest, err := sysutils.DecodeJSONBody[VerifyOTPAuthRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -116,14 +113,14 @@ func (ah *authenticationHandler) HandleVerifySMSOTPRequest(w http.ResponseWriter
 	}
 
 	responseDTO := AuthenticationResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // HandleGoogleAuthStartRequest handles the Google OAuth start authentication request.
 func (ah *authenticationHandler) HandleGoogleAuthStartRequest(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := sysutils.DecodeJSONBody[IDPAuthInitRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -134,14 +131,14 @@ func (ah *authenticationHandler) HandleGoogleAuthStartRequest(w http.ResponseWri
 	}
 
 	response := IDPAuthInitResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, response)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, response)
 }
 
 // HandleGoogleAuthFinishRequest handles the Google OAuth finish authentication request.
 func (ah *authenticationHandler) HandleGoogleAuthFinishRequest(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := sysutils.DecodeJSONBody[IDPAuthFinishRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -153,14 +150,14 @@ func (ah *authenticationHandler) HandleGoogleAuthFinishRequest(w http.ResponseWr
 	}
 
 	responseDTO := AuthenticationResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // HandleGithubAuthStartRequest handles the GitHub OAuth start authentication request.
 func (ah *authenticationHandler) HandleGithubAuthStartRequest(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := sysutils.DecodeJSONBody[IDPAuthInitRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -171,14 +168,14 @@ func (ah *authenticationHandler) HandleGithubAuthStartRequest(w http.ResponseWri
 	}
 
 	responseDTO := IDPAuthInitResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // HandleGithubAuthFinishRequest handles the GitHub OAuth finish authentication request.
 func (ah *authenticationHandler) HandleGithubAuthFinishRequest(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := sysutils.DecodeJSONBody[IDPAuthFinishRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -190,14 +187,14 @@ func (ah *authenticationHandler) HandleGithubAuthFinishRequest(w http.ResponseWr
 	}
 
 	responseDTO := AuthenticationResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // HandleStandardOAuthStartRequest handles the standard OAuth start authentication request.
 func (ah *authenticationHandler) HandleStandardOAuthStartRequest(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := sysutils.DecodeJSONBody[IDPAuthInitRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -208,14 +205,14 @@ func (ah *authenticationHandler) HandleStandardOAuthStartRequest(w http.Response
 	}
 
 	responseDTO := IDPAuthInitResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // HandleStandardOAuthFinishRequest handles the standard OAuth finish authentication request.
 func (ah *authenticationHandler) HandleStandardOAuthFinishRequest(w http.ResponseWriter, r *http.Request) {
 	authRequest, err := sysutils.DecodeJSONBody[IDPAuthFinishRequestDTO](r)
 	if err != nil {
-		ah.writeErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, common.APIErrorInvalidRequestFormat)
 		return
 	}
 
@@ -227,7 +224,7 @@ func (ah *authenticationHandler) HandleStandardOAuthFinishRequest(w http.Respons
 	}
 
 	responseDTO := AuthenticationResponseDTO(*authResponse)
-	ah.writeSuccessResponse(w, responseDTO)
+	sysutils.WriteSuccessResponse(w, http.StatusOK, responseDTO)
 }
 
 // handleServiceError converts service errors to appropriate HTTP responses.
@@ -249,32 +246,5 @@ func (ah *authenticationHandler) handleServiceError(w http.ResponseWriter, svcEr
 		Message:     svcErr.Error,
 		Description: svcErr.ErrorDescription,
 	}
-	ah.writeErrorResponse(w, status, errorResp)
-}
-
-// writeSuccessResponse writes a successful JSON response.
-func (ah *authenticationHandler) writeSuccessResponse(w http.ResponseWriter, data interface{}) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthenticationHandler"))
-
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		logger.Error("Failed to encode response", log.Error(err))
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
-}
-
-// writeErrorResponse writes an error response.
-func (ah *authenticationHandler) writeErrorResponse(w http.ResponseWriter,
-	statusCode int, errorResp apierror.ErrorResponse) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthenticationHandler"))
-
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(w).Encode(errorResp); err != nil {
-		logger.Error("Failed to encode error response", log.Error(err))
-		http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-	}
+	sysutils.WriteErrorResponse(w, status, errorResp)
 }

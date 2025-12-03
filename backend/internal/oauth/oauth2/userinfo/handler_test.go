@@ -286,9 +286,9 @@ func (s *UserInfoHandlerTestSuite) TestHandleUserInfo_EncodingError() {
 
 	s.handler.HandleUserInfo(rr, req)
 
-	// The handler should detect the encoding error and call handleEncodingError
-	assert.Equal(s.T(), "application/json", rr.Header().Get("Content-Type"))
-	// Verify that handleEncodingError was called by checking for the error message
+	// The handler should detect the encoding error - the utility logs the error and returns text/plain
+	assert.Equal(s.T(), http.StatusOK, rr.Code)
+	// Verify that encoding error message is returned
 	assert.Contains(s.T(), rr.Body.String(), serviceerror.ErrorEncodingError)
 	s.mockService.AssertExpectations(s.T())
 }

@@ -745,7 +745,6 @@ func (suite *HandlerTestSuite) TestHandleApplicationDeleteRequest_ServiceError()
 func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_Success() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
-
 	logger := log.GetLogger()
 
 	appDTO := &model.ApplicationDTO{
@@ -782,7 +781,6 @@ func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_Success() {
 func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_EmptyRedirectURIs() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
-
 	logger := log.GetLogger()
 
 	appDTO := &model.ApplicationDTO{
@@ -818,7 +816,6 @@ func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_EmptyRedirectURIs() 
 func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_EmptyGrantTypes() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
-
 	logger := log.GetLogger()
 
 	appDTO := &model.ApplicationDTO{
@@ -854,7 +851,6 @@ func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_EmptyGrantTypes() {
 func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_UnsupportedType() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
-
 	logger := log.GetLogger()
 
 	appDTO := &model.ApplicationDTO{
@@ -881,7 +877,6 @@ func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_UnsupportedType() {
 func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_NilOAuthConfig() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
-
 	logger := log.GetLogger()
 
 	appDTO := &model.ApplicationDTO{
@@ -908,7 +903,6 @@ func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_NilOAuthConfig() {
 func (suite *HandlerTestSuite) TestProcessInboundAuthConfig_EmptyInboundAuthConfig() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
-
 	logger := log.GetLogger()
 
 	appDTO := &model.ApplicationDTO{
@@ -931,12 +925,11 @@ func (suite *HandlerTestSuite) TestHandleError_ClientError() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
 
-	logger := log.GetLogger()
 	w := httptest.NewRecorder()
 
 	svcErr := &ErrorInvalidApplicationName
 
-	handler.handleError(w, logger, svcErr)
+	handler.handleError(w, svcErr)
 
 	assert.Equal(suite.T(), http.StatusBadRequest, w.Code)
 	assert.Equal(suite.T(), "application/json", w.Header().Get("Content-Type"))
@@ -951,12 +944,11 @@ func (suite *HandlerTestSuite) TestHandleError_NotFoundError() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
 
-	logger := log.GetLogger()
 	w := httptest.NewRecorder()
 
 	svcErr := &ErrorApplicationNotFound
 
-	handler.handleError(w, logger, svcErr)
+	handler.handleError(w, svcErr)
 
 	assert.Equal(suite.T(), http.StatusNotFound, w.Code)
 	assert.Equal(suite.T(), "application/json", w.Header().Get("Content-Type"))
@@ -971,12 +963,11 @@ func (suite *HandlerTestSuite) TestHandleError_ServerError() {
 	mockService := NewApplicationServiceInterfaceMock(suite.T())
 	handler := newApplicationHandler(mockService)
 
-	logger := log.GetLogger()
 	w := httptest.NewRecorder()
 
 	svcErr := &ErrorInternalServerError
 
-	handler.handleError(w, logger, svcErr)
+	handler.handleError(w, svcErr)
 
 	assert.Equal(suite.T(), http.StatusInternalServerError, w.Code)
 	assert.Equal(suite.T(), "application/json", w.Header().Get("Content-Type"))

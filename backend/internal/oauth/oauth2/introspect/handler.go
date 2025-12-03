@@ -26,6 +26,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/log"
+	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // tokenIntrospectionHandler handles OAuth 2.0 token introspection requests.
@@ -47,7 +48,6 @@ func (h *tokenIntrospectionHandler) HandleIntrospect(w http.ResponseWriter, r *h
 	if err := r.ParseForm(); err != nil {
 		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := model.ErrorResponse{
 			Error:            constants.ErrorInvalidRequest,
 			ErrorDescription: "Failed to decode request body",
@@ -64,7 +64,6 @@ func (h *tokenIntrospectionHandler) HandleIntrospect(w http.ResponseWriter, r *h
 	if token == "" {
 		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
 		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := model.ErrorResponse{
 			Error:            constants.ErrorInvalidRequest,
 			ErrorDescription: "Token parameter is required",
@@ -82,7 +81,6 @@ func (h *tokenIntrospectionHandler) HandleIntrospect(w http.ResponseWriter, r *h
 	if err != nil {
 		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
 		w.WriteHeader(http.StatusInternalServerError)
-
 		errResp := model.ErrorResponse{
 			Error:            constants.ErrorServerError,
 			ErrorDescription: "Server error while introspecting token",
@@ -94,11 +92,5 @@ func (h *tokenIntrospectionHandler) HandleIntrospect(w http.ResponseWriter, r *h
 		return
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		logger.Error("Error encoding response", log.Error(err))
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, response)
 }

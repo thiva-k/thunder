@@ -30,7 +30,6 @@ import (
 
 	"github.com/asgardeo/thunder/internal/system/cmodels"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
-	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 const (
@@ -479,8 +478,7 @@ func (s *IDPHandlerTestSuite) TestWriteServiceErrorResponse() {
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			rr := httptest.NewRecorder()
-			logger := log.GetLogger()
-			writeServiceErrorResponse(rr, &tc.serviceError, logger)
+			writeServiceErrorResponse(rr, &tc.serviceError)
 
 			s.Equal(tc.expectedStatus, rr.Code)
 		})
