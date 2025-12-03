@@ -149,12 +149,20 @@ packages:
       pkgname: security
       filename: "{{.InterfaceName}}_mock_test.go"
 
-  github.com/asgardeo/thunder/internal/branding:
+  github.com/asgardeo/thunder/internal/branding/mgt:
     config:
       all: true
-      dir: internal/branding
+      dir: internal/branding/mgt
       structname: '{{.InterfaceName}}Mock'
-      pkgname: branding
+      pkgname: brandingmgt
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/branding/resolve:
+    config:
+      all: true
+      dir: internal/branding/resolve
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: brandingresolve
       filename: "{{.InterfaceName}}_mock_test.go"
 
   github.com/asgardeo/thunder/internal/oauth/oauth2/userinfo:

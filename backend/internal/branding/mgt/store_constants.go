@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import dbmodel "github.com/asgardeo/thunder/internal/system/database/model"
 

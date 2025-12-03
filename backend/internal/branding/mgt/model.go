@@ -16,16 +16,13 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
-import "encoding/json"
+import (
+	"encoding/json"
 
-// BrandingResponse represents the response body for branding operations.
-type BrandingResponse struct {
-	ID          string          `json:"id"`
-	DisplayName string          `json:"displayName"`
-	Preferences json.RawMessage `json:"preferences"`
-}
+	"github.com/asgardeo/thunder/internal/branding/common"
+)
 
 // BrandingListItem represents a branding item in the list response.
 type BrandingListItem struct {
@@ -60,13 +57,6 @@ type LinkResponse struct {
 	Rel  string `json:"rel"`
 }
 
-// Branding represents the branding configuration.
-type Branding struct {
-	ID          string
-	DisplayName string
-	Preferences json.RawMessage
-}
-
 // Link represents a pagination link.
 type Link struct {
 	Href string
@@ -78,6 +68,6 @@ type BrandingList struct {
 	TotalResults int
 	StartIndex   int
 	Count        int
-	Brandings    []Branding
+	Brandings    []common.Branding
 	Links        []Link
 }

@@ -25,7 +25,8 @@ import (
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/authn"
 	"github.com/asgardeo/thunder/internal/authz"
-	"github.com/asgardeo/thunder/internal/branding"
+	brandingmgt "github.com/asgardeo/thunder/internal/branding/mgt"
+	brandingresolve "github.com/asgardeo/thunder/internal/branding/resolve"
 	"github.com/asgardeo/thunder/internal/cert"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/flow/executor"
@@ -84,8 +85,9 @@ func registerServices(
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
 	certservice := cert.Initialize()
-	brandingService := branding.Initialize(mux)
-	applicationService := application.Initialize(mux, certservice, flowMgtService, brandingService, userSchemaService)
+	brandingMgtService := brandingmgt.Initialize(mux)
+	applicationService := application.Initialize(mux, certservice, flowMgtService, brandingMgtService, userSchemaService)
+	_ = brandingresolve.Initialize(mux, brandingMgtService, applicationService)
 
 	// Initialize export service with application service dependency
 	_ = export.Initialize(mux, applicationService)

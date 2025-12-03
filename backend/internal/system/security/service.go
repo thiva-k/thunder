@@ -96,6 +96,7 @@ func (s *securityService) isPublicPath(path string) bool {
 		"/gate/",    // Gate application (login UI)
 		"/develop/", // Develop application
 		"/error",
+		"/branding/resolve",
 	}
 
 	for _, publicPath := range publicPaths {

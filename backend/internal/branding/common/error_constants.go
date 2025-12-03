@@ -16,8 +16,7 @@
  * under the License.
  */
 
-// Package branding provides error constants and service errors for branding management operations.
-package branding
+package common
 
 import (
 	"errors"
@@ -25,7 +24,7 @@ import (
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
-// Client errors for branding management operations.
+// Client errors shared across branding operations.
 var (
 	// ErrorInvalidRequestFormat is the error returned when the request format is invalid.
 	ErrorInvalidRequestFormat = serviceerror.ServiceError{
@@ -90,9 +89,44 @@ var (
 		Error:            "Invalid offset parameter",
 		ErrorDescription: "The offset parameter must be a non-negative integer",
 	}
+	// ErrorInvalidResolveType is the error returned when resolve type parameter is missing or invalid.
+	ErrorInvalidResolveType = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "BRD-1010",
+		Error:            "Invalid request format",
+		ErrorDescription: "The 'type' query parameter is required and must be either 'APP' or 'OU'",
+	}
+	// ErrorMissingResolveID is the error returned when resolve id parameter is missing.
+	ErrorMissingResolveID = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "BRD-1011",
+		Error:            "Invalid request format",
+		ErrorDescription: "The 'id' query parameter is required",
+	}
+	// ErrorUnsupportedResolveType is the error returned when resolve type is not yet supported.
+	ErrorUnsupportedResolveType = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "BRD-1012",
+		Error:            "Unsupported resolve type",
+		ErrorDescription: "The specified resolve type is not yet supported. Currently only 'APP' type is supported",
+	}
+	// ErrorApplicationHasNoBranding is the error returned when an application has no associated branding.
+	ErrorApplicationHasNoBranding = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "BRD-1013",
+		Error:            "Application has no branding",
+		ErrorDescription: "The specified application does not have an associated branding configuration",
+	}
+	// ErrorApplicationNotFound is the error returned when an application is not found.
+	ErrorApplicationNotFound = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "BRD-1014",
+		Error:            "Application not found",
+		ErrorDescription: "The application with the specified id does not exist",
+	}
 )
 
-// Internal error constants for branding management operations.
+// Internal error constants shared across branding operations.
 var (
 	// ErrBrandingNotFound is returned when the branding configuration is not found in the system.
 	ErrBrandingNotFound = errors.New("branding not found")

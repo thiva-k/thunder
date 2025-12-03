@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import (
 	"encoding/json"
@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/asgardeo/thunder/internal/branding/common"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/apierror"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -31,32 +32,32 @@ import (
 	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
-const handlerLoggerComponentName = "BrandingHandler"
+const handlerLoggerComponentName = "BrandingMgtHandler"
 
-// brandingHandler is the handler for branding management operations.
-type brandingHandler struct {
-	brandingService BrandingServiceInterface
-	logger          *log.Logger
+// brandingMgtHandler is the handler for branding management operations.
+type brandingMgtHandler struct {
+	brandingMgtService BrandingMgtServiceInterface
+	logger             *log.Logger
 }
 
-// newBrandingHandler creates a new instance of brandingHandler
-func newBrandingHandler(brandingService BrandingServiceInterface) *brandingHandler {
+// newBrandingMgtHandler creates a new instance of brandingMgtHandler
+func newBrandingMgtHandler(brandingMgtService BrandingMgtServiceInterface) *brandingMgtHandler {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, handlerLoggerComponentName))
-	return &brandingHandler{
-		brandingService: brandingService,
-		logger:          logger,
+	return &brandingMgtHandler{
+		brandingMgtService: brandingMgtService,
+		logger:             logger,
 	}
 }
 
 // HandleBrandingListRequest handles the list branding configurations request.
-func (bh *brandingHandler) HandleBrandingListRequest(w http.ResponseWriter, r *http.Request) {
+func (bh *brandingMgtHandler) HandleBrandingListRequest(w http.ResponseWriter, r *http.Request) {
 	limit, offset, svcErr := parsePaginationParams(r.URL.Query())
 	if svcErr != nil {
 		handleError(w, bh.logger, svcErr)
 		return
 	}
 
-	brandingList, svcErr := bh.brandingService.GetBrandingList(limit, offset)
+	brandingList, svcErr := bh.brandingMgtService.GetBrandingList(limit, offset)
 	if svcErr != nil {
 		handleError(w, bh.logger, svcErr)
 		return
@@ -93,20 +94,20 @@ func (bh *brandingHandler) HandleBrandingListRequest(w http.ResponseWriter, r *h
 }
 
 // HandleBrandingPostRequest handles the create branding configuration request.
-func (bh *brandingHandler) HandleBrandingPostRequest(w http.ResponseWriter, r *http.Request) {
+func (bh *brandingMgtHandler) HandleBrandingPostRequest(w http.ResponseWriter, r *http.Request) {
 	createRequest, err := sysutils.DecodeJSONBody[CreateBrandingRequest](r)
 	if err != nil {
-		handleError(w, bh.logger, &ErrorInvalidRequestFormat)
+		handleError(w, bh.logger, &common.ErrorInvalidRequestFormat)
 		return
 	}
 
-	createdBranding, svcErr := bh.brandingService.CreateBranding(*createRequest)
+	createdBranding, svcErr := bh.brandingMgtService.CreateBranding(*createRequest)
 	if svcErr != nil {
 		handleError(w, bh.logger, svcErr)
 		return
 	}
 
-	brandingResponse := BrandingResponse{
+	brandingResponse := common.BrandingResponse{
 		ID:          createdBranding.ID,
 		DisplayName: createdBranding.DisplayName,
 		Preferences: createdBranding.Preferences,
@@ -124,15 +125,15 @@ func (bh *brandingHandler) HandleBrandingPostRequest(w http.ResponseWriter, r *h
 }
 
 // HandleBrandingGetRequest handles the get branding configuration request.
-func (bh *brandingHandler) HandleBrandingGetRequest(w http.ResponseWriter, r *http.Request) {
+func (bh *brandingMgtHandler) HandleBrandingGetRequest(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	branding, svcErr := bh.brandingService.GetBranding(id)
+	branding, svcErr := bh.brandingMgtService.GetBranding(id)
 	if svcErr != nil {
 		handleError(w, bh.logger, svcErr)
 		return
 	}
 
-	brandingResponse := BrandingResponse{
+	brandingResponse := common.BrandingResponse{
 		ID:          branding.ID,
 		DisplayName: branding.DisplayName,
 		Preferences: branding.Preferences,
@@ -150,21 +151,21 @@ func (bh *brandingHandler) HandleBrandingGetRequest(w http.ResponseWriter, r *ht
 }
 
 // HandleBrandingPutRequest handles the update branding configuration request.
-func (bh *brandingHandler) HandleBrandingPutRequest(w http.ResponseWriter, r *http.Request) {
+func (bh *brandingMgtHandler) HandleBrandingPutRequest(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	updateRequest, err := sysutils.DecodeJSONBody[UpdateBrandingRequest](r)
 	if err != nil {
-		handleError(w, bh.logger, &ErrorInvalidRequestFormat)
+		handleError(w, bh.logger, &common.ErrorInvalidRequestFormat)
 		return
 	}
 
-	updatedBranding, svcErr := bh.brandingService.UpdateBranding(id, *updateRequest)
+	updatedBranding, svcErr := bh.brandingMgtService.UpdateBranding(id, *updateRequest)
 	if svcErr != nil {
 		handleError(w, bh.logger, svcErr)
 		return
 	}
 
-	brandingResponse := BrandingResponse{
+	brandingResponse := common.BrandingResponse{
 		ID:          updatedBranding.ID,
 		DisplayName: updatedBranding.DisplayName,
 		Preferences: updatedBranding.Preferences,
@@ -182,9 +183,9 @@ func (bh *brandingHandler) HandleBrandingPutRequest(w http.ResponseWriter, r *ht
 }
 
 // HandleBrandingDeleteRequest handles the delete branding configuration request.
-func (bh *brandingHandler) HandleBrandingDeleteRequest(w http.ResponseWriter, r *http.Request) {
+func (bh *brandingMgtHandler) HandleBrandingDeleteRequest(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
-	svcErr := bh.brandingService.DeleteBranding(id)
+	svcErr := bh.brandingMgtService.DeleteBranding(id)
 	if svcErr != nil {
 		handleError(w, bh.logger, svcErr)
 		return
@@ -201,7 +202,7 @@ func parsePaginationParams(query url.Values) (int, int, *serviceerror.ServiceErr
 
 	if limitStr := query.Get("limit"); limitStr != "" {
 		if parsedLimit, err := strconv.Atoi(limitStr); err != nil {
-			return 0, 0, &ErrorInvalidLimit
+			return 0, 0, &common.ErrorInvalidLimit
 		} else {
 			limit = parsedLimit
 		}
@@ -209,7 +210,7 @@ func parsePaginationParams(query url.Values) (int, int, *serviceerror.ServiceErr
 
 	if offsetStr := query.Get("offset"); offsetStr != "" {
 		if parsedOffset, err := strconv.Atoi(offsetStr); err != nil {
-			return 0, 0, &ErrorInvalidOffset
+			return 0, 0, &common.ErrorInvalidOffset
 		} else {
 			offset = parsedOffset
 		}
@@ -247,14 +248,14 @@ func handleError(w http.ResponseWriter, logger *log.Logger,
 	statusCode := http.StatusInternalServerError
 	if svcErr.Type == serviceerror.ClientErrorType {
 		switch svcErr.Code {
-		case ErrorBrandingNotFound.Code:
+		case common.ErrorBrandingNotFound.Code:
 			statusCode = http.StatusNotFound
-		case ErrorCannotDeleteBranding.Code:
+		case common.ErrorCannotDeleteBranding.Code:
 			statusCode = http.StatusConflict
-		case ErrorInvalidRequestFormat.Code, ErrorMissingBrandingID.Code,
-			ErrorInvalidLimit.Code, ErrorInvalidOffset.Code,
-			ErrorMissingPreferences.Code, ErrorInvalidPreferences.Code,
-			ErrorMissingDisplayName.Code:
+		case common.ErrorInvalidRequestFormat.Code, common.ErrorMissingBrandingID.Code,
+			common.ErrorInvalidLimit.Code, common.ErrorInvalidOffset.Code,
+			common.ErrorMissingPreferences.Code, common.ErrorInvalidPreferences.Code,
+			common.ErrorMissingDisplayName.Code:
 			statusCode = http.StatusBadRequest
 		default:
 			statusCode = http.StatusBadRequest

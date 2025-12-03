@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import (
 	"net/http"
@@ -24,24 +24,24 @@ import (
 	"github.com/asgardeo/thunder/internal/system/middleware"
 )
 
-// Initialize initializes the branding service and registers its routes.
-func Initialize(mux *http.ServeMux) BrandingServiceInterface {
-	brandingStore := newBrandingStore()
-	brandingService := newBrandingService(brandingStore)
-	brandingHandler := newBrandingHandler(brandingService)
-	registerRoutes(mux, brandingHandler)
-	return brandingService
+// Initialize initializes the branding management service and registers its routes.
+func Initialize(mux *http.ServeMux) BrandingMgtServiceInterface {
+	brandingMgtStore := newBrandingMgtStore()
+	brandingMgtService := newBrandingMgtService(brandingMgtStore)
+	brandingMgtHandler := newBrandingMgtHandler(brandingMgtService)
+	registerRoutes(mux, brandingMgtHandler)
+	return brandingMgtService
 }
 
 // registerRoutes registers the routes for branding management operations.
-func registerRoutes(mux *http.ServeMux, brandingHandler *brandingHandler) {
+func registerRoutes(mux *http.ServeMux, brandingMgtHandler *brandingMgtHandler) {
 	opts1 := middleware.CORSOptions{
 		AllowedMethods:   "GET, POST",
 		AllowedHeaders:   "Content-Type, Authorization",
 		AllowCredentials: true,
 	}
-	mux.HandleFunc(middleware.WithCORS("POST /branding", brandingHandler.HandleBrandingPostRequest, opts1))
-	mux.HandleFunc(middleware.WithCORS("GET /branding", brandingHandler.HandleBrandingListRequest, opts1))
+	mux.HandleFunc(middleware.WithCORS("POST /branding", brandingMgtHandler.HandleBrandingPostRequest, opts1))
+	mux.HandleFunc(middleware.WithCORS("GET /branding", brandingMgtHandler.HandleBrandingListRequest, opts1))
 	mux.HandleFunc(middleware.WithCORS("OPTIONS /branding", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}, opts1))
@@ -51,9 +51,9 @@ func registerRoutes(mux *http.ServeMux, brandingHandler *brandingHandler) {
 		AllowedHeaders:   "Content-Type, Authorization",
 		AllowCredentials: true,
 	}
-	mux.HandleFunc(middleware.WithCORS("GET /branding/{id}", brandingHandler.HandleBrandingGetRequest, opts2))
-	mux.HandleFunc(middleware.WithCORS("PUT /branding/{id}", brandingHandler.HandleBrandingPutRequest, opts2))
-	mux.HandleFunc(middleware.WithCORS("DELETE /branding/{id}", brandingHandler.HandleBrandingDeleteRequest, opts2))
+	mux.HandleFunc(middleware.WithCORS("GET /branding/{id}", brandingMgtHandler.HandleBrandingGetRequest, opts2))
+	mux.HandleFunc(middleware.WithCORS("PUT /branding/{id}", brandingMgtHandler.HandleBrandingPutRequest, opts2))
+	mux.HandleFunc(middleware.WithCORS("DELETE /branding/{id}", brandingMgtHandler.HandleBrandingDeleteRequest, opts2))
 	mux.HandleFunc(middleware.WithCORS("OPTIONS /branding/{id}", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}, opts2))
