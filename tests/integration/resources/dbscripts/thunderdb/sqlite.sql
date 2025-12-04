@@ -190,6 +190,108 @@ CREATE TABLE CERTIFICATE (
 -- Index for deployment isolation on CERTIFICATE
 CREATE INDEX idx_certificate_deployment_id ON CERTIFICATE (DEPLOYMENT_ID);
 
+-- Table to store resource servers.
+CREATE TABLE RESOURCE_SERVER (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    DEPLOYMENT_ID VARCHAR(255) NOT NULL,
+    RESOURCE_SERVER_ID VARCHAR(36) NOT NULL,
+    OU_ID VARCHAR(36) NOT NULL,
+    NAME VARCHAR(100) NOT NULL,
+    DESCRIPTION TEXT,
+    IDENTIFIER VARCHAR(100),
+    PROPERTIES TEXT,
+    CREATED_AT TEXT DEFAULT (datetime('now')),
+    UPDATED_AT TEXT DEFAULT (datetime('now')),
+    UNIQUE (RESOURCE_SERVER_ID, DEPLOYMENT_ID),
+    UNIQUE (OU_ID, NAME, DEPLOYMENT_ID),
+    UNIQUE (ID, DEPLOYMENT_ID)
+);
+
+-- Index for deployment isolation on RESOURCE_SERVER
+CREATE INDEX idx_resource_server_deployment_id ON RESOURCE_SERVER (DEPLOYMENT_ID);
+
+-- Unique constraint: Resource server identifier must be unique per deployment (when not null)
+CREATE UNIQUE INDEX uq_resource_server_identifier
+    ON RESOURCE_SERVER(IDENTIFIER, DEPLOYMENT_ID)
+    WHERE IDENTIFIER IS NOT NULL;
+
+-- Table to store resources within resource servers.
+CREATE TABLE RESOURCE (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    DEPLOYMENT_ID VARCHAR(255) NOT NULL,
+    RESOURCE_ID VARCHAR(36) NOT NULL,
+    RESOURCE_SERVER_ID INTEGER NOT NULL,
+    PARENT_RESOURCE_ID INTEGER,
+    NAME VARCHAR(100) NOT NULL,
+    HANDLE VARCHAR(100) NOT NULL,
+    DESCRIPTION TEXT,
+    PROPERTIES TEXT,
+    CREATED_AT TEXT DEFAULT (datetime('now')),
+    UPDATED_AT TEXT DEFAULT (datetime('now')),
+    UNIQUE (RESOURCE_ID, DEPLOYMENT_ID),
+    UNIQUE (ID, DEPLOYMENT_ID),
+
+    FOREIGN KEY (RESOURCE_SERVER_ID, DEPLOYMENT_ID)
+        REFERENCES RESOURCE_SERVER(ID, DEPLOYMENT_ID)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    FOREIGN KEY (PARENT_RESOURCE_ID, DEPLOYMENT_ID)
+        REFERENCES RESOURCE(ID, DEPLOYMENT_ID)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
+-- Index for deployment isolation on RESOURCE
+CREATE INDEX idx_resource_deployment_id ON RESOURCE (DEPLOYMENT_ID);
+
+-- Unique constraint: Resource handle must be unique under the same parent per deployment
+CREATE UNIQUE INDEX uq_resource_handle_with_parent
+    ON RESOURCE(RESOURCE_SERVER_ID, PARENT_RESOURCE_ID, HANDLE, DEPLOYMENT_ID)
+    WHERE PARENT_RESOURCE_ID IS NOT NULL;
+
+-- Unique constraint: Root-level resource handles must be unique per resource server per deployment
+CREATE UNIQUE INDEX uq_resource_handle_null_parent
+    ON RESOURCE(RESOURCE_SERVER_ID, HANDLE, DEPLOYMENT_ID)
+    WHERE PARENT_RESOURCE_ID IS NULL;
+
+-- Table to store actions at resource server or resource level.
+CREATE TABLE ACTION (
+    ID INTEGER PRIMARY KEY AUTOINCREMENT,
+    DEPLOYMENT_ID VARCHAR(255) NOT NULL,
+    ACTION_ID VARCHAR(36) NOT NULL,
+    RESOURCE_SERVER_ID INTEGER NOT NULL,
+    RESOURCE_ID INTEGER,
+    NAME VARCHAR(100) NOT NULL,
+    HANDLE VARCHAR(100) NOT NULL,
+    DESCRIPTION TEXT,
+    PROPERTIES TEXT,
+    CREATED_AT TEXT DEFAULT (datetime('now')),
+    UPDATED_AT TEXT DEFAULT (datetime('now')),
+    UNIQUE (ACTION_ID, DEPLOYMENT_ID),
+
+    FOREIGN KEY (RESOURCE_SERVER_ID, DEPLOYMENT_ID)
+        REFERENCES RESOURCE_SERVER(ID, DEPLOYMENT_ID)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE,
+    FOREIGN KEY (RESOURCE_ID, DEPLOYMENT_ID)
+        REFERENCES RESOURCE(ID, DEPLOYMENT_ID)
+        ON DELETE RESTRICT
+        ON UPDATE CASCADE
+);
+
+-- Index for deployment isolation on ACTION
+CREATE INDEX idx_action_deployment_id ON ACTION (DEPLOYMENT_ID);
+
+-- Unique constraint: Server-level action handles must be unique per resource server per deployment
+CREATE UNIQUE INDEX uq_action_server_handle
+    ON ACTION(RESOURCE_SERVER_ID, HANDLE, DEPLOYMENT_ID)
+    WHERE RESOURCE_ID IS NULL;
+
+-- Unique constraint: Resource-level action handles must be unique per resource per deployment
+CREATE UNIQUE INDEX uq_action_resource_handle
+    ON ACTION(RESOURCE_ID, HANDLE, DEPLOYMENT_ID)
+    WHERE RESOURCE_ID IS NOT NULL;
+
 -- Insert a pre-configured notification sender for SMS OTP tests
 INSERT INTO NOTIFICATION_SENDER (NAME, SENDER_ID, DESCRIPTION, TYPE, PROVIDER, PROPERTIES, DEPLOYMENT_ID) VALUES
 ('Custom SMS Sender', 'test-sms-sender-id', 'Custom SMS sender for integration tests', 'MESSAGE', 'custom', 

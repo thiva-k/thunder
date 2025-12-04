@@ -37,6 +37,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth"
 	"github.com/asgardeo/thunder/internal/observability"
 	"github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/resource"
 	"github.com/asgardeo/thunder/internal/role"
 	"github.com/asgardeo/thunder/internal/system/export"
 	"github.com/asgardeo/thunder/internal/system/jwt"
@@ -62,6 +63,8 @@ func registerServices(
 	userSchemaService := userschema.Initialize(mux, ouService)
 	userService := user.Initialize(mux, ouService, userSchemaService)
 	groupService := group.Initialize(mux, ouService, userService)
+
+	_ = resource.Initialize(mux, ouService)
 	roleService := role.Initialize(mux, userService, groupService, ouService)
 	authZService := authz.Initialize(roleService)
 

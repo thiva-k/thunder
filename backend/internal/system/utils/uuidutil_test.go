@@ -21,6 +21,7 @@ package utils
 import (
 	"regexp"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -115,4 +116,67 @@ func (suite *UUIDUtilTestSuite) TestIsValidUUID() {
 			assert.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+func (suite *UUIDUtilTestSuite) TestGenerateUUIDv7() {
+	uuid, err := GenerateUUIDv7()
+
+	assert.NoError(suite.T(), err, "GenerateUUIDv7 should not return error for valid system time")
+	assert.NotEmpty(suite.T(), uuid, "Generated UUIDv7 should not be empty")
+
+	// RFC 9562 compliant UUID format: 8-4-4-4-12 hexadecimal characters
+	uuidPattern := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+	assert.True(suite.T(), uuidPattern.MatchString(uuid), "UUIDv7 should match the RFC 9562 format")
+
+	// The 13th character is the first character of the 3rd group and should be '7' for version 7 UUIDs
+	assert.Equal(suite.T(), "7", string(uuid[14]), "UUID version should be 7")
+
+	// The 17th character is the first character of the 4th group
+	// The first 2-3 bits should be '10' for variant 1 UUIDs
+	// For a hex representation, this means the first character should be 8, 9, A, or B
+	variantChar := uuid[19]
+	assert.Contains(suite.T(), "89ab", string(variantChar), "UUID variant should be 10xx (RFC 9562)")
+}
+
+func (suite *UUIDUtilTestSuite) TestGenerateUUIDv7Uniqueness() {
+	uuids := make(map[string]bool)
+
+	for i := 0; i < 100; i++ {
+		uuid, err := GenerateUUIDv7()
+		assert.NoError(suite.T(), err)
+		_, exists := uuids[uuid]
+		assert.False(suite.T(), exists, "Generated UUIDv7s should be unique")
+		uuids[uuid] = true
+	}
+
+	assert.Equal(suite.T(), 100, len(uuids))
+}
+
+func (suite *UUIDUtilTestSuite) TestGenerateUUIDv7Length() {
+	uuid, err := GenerateUUIDv7()
+
+	assert.NoError(suite.T(), err)
+	// UUID string format should be exactly 36 characters (32 hex digits + 4 hyphens)
+	assert.Equal(suite.T(), 36, len(uuid), "UUIDv7 should be 36 characters long")
+}
+
+func (suite *UUIDUtilTestSuite) TestGenerateUUIDv7TimeOrdered() {
+	// Generate multiple UUIDs with small delays and verify they are in increasing order
+	uuid1, err1 := GenerateUUIDv7()
+	assert.NoError(suite.T(), err1)
+
+	// Small delay to ensure different timestamps
+	time.Sleep(2 * time.Millisecond)
+
+	uuid2, err2 := GenerateUUIDv7()
+	assert.NoError(suite.T(), err2)
+
+	time.Sleep(2 * time.Millisecond)
+
+	uuid3, err3 := GenerateUUIDv7()
+	assert.NoError(suite.T(), err3)
+
+	// UUIDv7 should be lexicographically sortable due to time-ordered prefix
+	assert.True(suite.T(), uuid1 < uuid2, "UUIDv7 should be time-ordered")
+	assert.True(suite.T(), uuid2 < uuid3, "UUIDv7 should be time-ordered")
 }
