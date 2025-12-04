@@ -567,20 +567,21 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 			var capturedIDTokenClaims map[string]interface{}
 
 			// Mock access token generation - use function return to access context at call time
-			suite.mockTokenBuilder.On("BuildAccessToken", mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
-				// Capture user attributes and groups (simulate filtering that happens in BuildAccessToken)
-				capturedAccessTokenClaims = make(map[string]interface{})
-				for k, v := range ctx.UserAttributes {
-					capturedAccessTokenClaims[k] = v
-				}
-				// Add groups if configured in app (simulate BuildAccessToken filtering)
-				if len(ctx.UserGroups) > 0 &&
-					slices.Contains(ctx.OAuthApp.Token.AccessToken.UserAttributes, constants.UserAttributeGroups) {
-					capturedAccessTokenClaims[constants.UserAttributeGroups] = ctx.UserGroups
-				}
-				// Verify GrantType is authorization_code
-				return ctx.GrantType == string(constants.GrantTypeAuthorizationCode)
-			})).Return(func(ctx *tokenservice.AccessTokenBuildContext) (*model.TokenDTO, error) {
+			suite.mockTokenBuilder.On("BuildAccessToken",
+				mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
+					// Capture user attributes and groups (simulate filtering that happens in BuildAccessToken)
+					capturedAccessTokenClaims = make(map[string]interface{})
+					for k, v := range ctx.UserAttributes {
+						capturedAccessTokenClaims[k] = v
+					}
+					// Add groups if configured in app (simulate BuildAccessToken filtering)
+					if len(ctx.UserGroups) > 0 &&
+						slices.Contains(ctx.OAuthApp.Token.AccessToken.UserAttributes, constants.UserAttributeGroups) {
+						capturedAccessTokenClaims[constants.UserAttributeGroups] = ctx.UserGroups
+					}
+					// Verify GrantType is authorization_code
+					return ctx.GrantType == string(constants.GrantTypeAuthorizationCode)
+				})).Return(func(ctx *tokenservice.AccessTokenBuildContext) (*model.TokenDTO, error) {
 				// Simulate filtering that happens in BuildAccessToken
 				userAttrs := make(map[string]interface{})
 				for k, v := range ctx.UserAttributes {
@@ -604,21 +605,23 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 
 			// Mock ID token generation if openid scope is present
 			if tc.includeOpenIDScope {
-				suite.mockTokenBuilder.On("BuildIDToken", mock.MatchedBy(func(ctx *tokenservice.IDTokenBuildContext) bool {
-					// Capture ID token claims
-					capturedIDTokenClaims = make(map[string]interface{})
-					for k, v := range ctx.UserAttributes {
-						capturedIDTokenClaims[k] = v
-					}
-					// Add groups if configured in ID token user attributes
-					if ctx.OAuthApp != nil && ctx.OAuthApp.Token != nil && ctx.OAuthApp.Token.IDToken != nil {
-						idTokenUserAttributes := ctx.OAuthApp.Token.IDToken.UserAttributes
-						if len(ctx.UserGroups) > 0 && slices.Contains(idTokenUserAttributes, constants.UserAttributeGroups) {
-							capturedIDTokenClaims[constants.UserAttributeGroups] = ctx.UserGroups
+				suite.mockTokenBuilder.On("BuildIDToken",
+					mock.MatchedBy(func(ctx *tokenservice.IDTokenBuildContext) bool {
+						// Capture ID token claims
+						capturedIDTokenClaims = make(map[string]interface{})
+						for k, v := range ctx.UserAttributes {
+							capturedIDTokenClaims[k] = v
 						}
-					}
-					return true
-				})).Return(&model.TokenDTO{
+						// Add groups if configured in ID token user attributes
+						if ctx.OAuthApp != nil && ctx.OAuthApp.Token != nil && ctx.OAuthApp.Token.IDToken != nil {
+							idTokenUserAttributes := ctx.OAuthApp.Token.IDToken.UserAttributes
+							if len(ctx.UserGroups) > 0 && slices.Contains(idTokenUserAttributes,
+								constants.UserAttributeGroups) {
+								capturedIDTokenClaims[constants.UserAttributeGroups] = ctx.UserGroups
+							}
+						}
+						return true
+					})).Return(&model.TokenDTO{
 					Token:     "test-id-token",
 					TokenType: "",
 					IssuedAt:  time.Now().Unix(),
@@ -640,7 +643,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithGroups(
 				assert.True(suite.T(), ok, tc.description)
 				assert.Equal(suite.T(), tc.expectedGroups, groupsInClaims, tc.description)
 
-				assert.NotNil(suite.T(), result.AccessToken.UserAttributes[constants.UserAttributeGroups], tc.description)
+				assert.NotNil(suite.T(),
+					result.AccessToken.UserAttributes[constants.UserAttributeGroups], tc.description)
 				groupsInAttrs, ok := result.AccessToken.UserAttributes[constants.UserAttributeGroups].([]string)
 				assert.True(suite.T(), ok, tc.description)
 				assert.Equal(suite.T(), tc.expectedGroups, groupsInAttrs, tc.description)
@@ -770,15 +774,16 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 			var capturedIDTokenClaims map[string]interface{}
 
 			// Mock access token generation - use function return to access context at call time
-			suite.mockTokenBuilder.On("BuildAccessToken", mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
-				// Capture user attributes which contain groups
-				capturedAccessTokenClaims = make(map[string]interface{})
-				for k, v := range ctx.UserAttributes {
-					capturedAccessTokenClaims[k] = v
-				}
-				// Verify GrantType is authorization_code
-				return ctx.GrantType == string(constants.GrantTypeAuthorizationCode)
-			})).Return(func(ctx *tokenservice.AccessTokenBuildContext) (*model.TokenDTO, error) {
+			suite.mockTokenBuilder.On("BuildAccessToken",
+				mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
+					// Capture user attributes which contain groups
+					capturedAccessTokenClaims = make(map[string]interface{})
+					for k, v := range ctx.UserAttributes {
+						capturedAccessTokenClaims[k] = v
+					}
+					// Verify GrantType is authorization_code
+					return ctx.GrantType == string(constants.GrantTypeAuthorizationCode)
+				})).Return(func(ctx *tokenservice.AccessTokenBuildContext) (*model.TokenDTO, error) {
 				// Return user attributes from the actual call context
 				userAttrs := make(map[string]interface{})
 				for k, v := range ctx.UserAttributes {
@@ -797,11 +802,12 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_WithEmptyGr
 
 			// Mock ID token generation if openid scope is present
 			if tc.includeOpenIDScope {
-				suite.mockTokenBuilder.On("BuildIDToken", mock.MatchedBy(func(ctx *tokenservice.IDTokenBuildContext) bool {
-					// Capture ID token claims from user attributes
-					capturedIDTokenClaims = ctx.UserAttributes
-					return true
-				})).Return(&model.TokenDTO{
+				suite.mockTokenBuilder.On("BuildIDToken",
+					mock.MatchedBy(func(ctx *tokenservice.IDTokenBuildContext) bool {
+						// Capture ID token claims from user attributes
+						capturedIDTokenClaims = ctx.UserAttributes
+						return true
+					})).Return(&model.TokenDTO{
 					Token:     "test-id-token",
 					TokenType: "",
 					IssuedAt:  time.Now().Unix(),
@@ -934,7 +940,8 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_NoResourceP
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_FetchUserOUFailed() {
-	suite.T().Skip("OU service is no longer used - OU details are retrieved from authz code which comes from JWT claims")
+	suite.T().Skip("OU service is no longer used - OU details are retrieved from authz code " +
+		"which comes from JWT claims")
 }
 
 func (suite *AuthorizationCodeGrantHandlerTestSuite) TestHandleGrant_IDTokenGenerationFailed() {

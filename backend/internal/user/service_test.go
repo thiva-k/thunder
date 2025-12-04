@@ -74,7 +74,8 @@ func TestOUStore_ValidateUserAndUniqueness(t *testing.T) {
 			assert: func(t *testing.T, err *serviceerror.ServiceError, mocks testMocks) {
 				require.NotNil(t, err)
 				require.Equal(t, ErrorInternalServerError.Code, err.Code)
-				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness", mock.Anything, mock.Anything, mock.Anything)
+				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness",
+					mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 		{
@@ -94,7 +95,8 @@ func TestOUStore_ValidateUserAndUniqueness(t *testing.T) {
 			assert: func(t *testing.T, err *serviceerror.ServiceError, mocks testMocks) {
 				require.NotNil(t, err)
 				require.Equal(t, ErrorUserSchemaNotFound, *err)
-				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness", mock.Anything, mock.Anything, mock.Anything)
+				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness",
+					mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 		{
@@ -118,7 +120,8 @@ func TestOUStore_ValidateUserAndUniqueness(t *testing.T) {
 			assert: func(t *testing.T, err *serviceerror.ServiceError, mocks testMocks) {
 				require.NotNil(t, err)
 				require.Equal(t, ErrorInternalServerError, *err)
-				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness", mock.Anything, mock.Anything, mock.Anything)
+				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness",
+					mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 		{
@@ -138,7 +141,8 @@ func TestOUStore_ValidateUserAndUniqueness(t *testing.T) {
 			assert: func(t *testing.T, err *serviceerror.ServiceError, mocks testMocks) {
 				require.NotNil(t, err)
 				require.Equal(t, ErrorSchemaValidationFailed, *err)
-				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness", mock.Anything, mock.Anything, mock.Anything)
+				mocks.schemaService.AssertNotCalled(t, "ValidateUserUniqueness",
+					mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 		{

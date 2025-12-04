@@ -123,7 +123,8 @@ func (suite *GroupServiceTestSuite) TestGroupService_GetGroupList() {
 				startIndex:   2,
 				groupNames:   []string{"group-1", "group-2"},
 				linkRels:     []string{"first", "prev", "last"},
-				linkHrefs:    []string{"/groups?offset=0&limit=2", "/groups?offset=0&limit=2", "/groups?offset=2&limit=2"},
+				linkHrefs: []string{"/groups?offset=0&limit=2", "/groups?offset=0&limit=2",
+					"/groups?offset=2&limit=2"},
 			},
 		},
 		{
@@ -330,7 +331,8 @@ func (suite *GroupServiceTestSuite) TestGroupService_GetGroupsByPath() {
 			},
 			wantErr: &ErrorInternalServerError,
 			assertStoreCalls: func(storeMock *groupStoreInterfaceMock) {
-				storeMock.AssertNotCalled(suite.T(), "GetGroupsByOrganizationUnit", mock.Anything, mock.Anything, mock.Anything)
+				storeMock.AssertNotCalled(suite.T(), "GetGroupsByOrganizationUnit",
+					mock.Anything, mock.Anything, mock.Anything)
 			},
 		},
 		{
@@ -565,7 +567,8 @@ func (suite *GroupServiceTestSuite) TestGroupService_CreateGroup() {
 			},
 			setup: func(args *setupArgs) {
 				args.ou.On("GetOrganizationUnit", "ou-001").
-					Return(oupkg.OrganizationUnit{}, &serviceerror.ServiceError{Code: "OU-5000", Type: serviceerror.ServerErrorType}).
+					Return(oupkg.OrganizationUnit{},
+						&serviceerror.ServiceError{Code: "OU-5000", Type: serviceerror.ServerErrorType}).
 					Once()
 			},
 			expectErr: &ErrorInternalServerError,
@@ -812,7 +815,8 @@ func (suite *GroupServiceTestSuite) TestGroupService_UpdateGroup() {
 			},
 			setup: func(args *setupArgs) {
 				args.store.On("GetGroup", "grp-001").
-					Return(GroupDAO{ID: "grp-001", Name: "old", Description: "legacy", OrganizationUnitID: "ou-old"}, nil).
+					Return(GroupDAO{ID: "grp-001", Name: "old", Description: "legacy",
+						OrganizationUnitID: "ou-old"}, nil).
 					Once()
 				args.store.On("CheckGroupNameConflictForUpdate", "new-name", "ou-new", "grp-001").
 					Return(nil).

@@ -86,7 +86,8 @@ func registerServices(
 	}
 	certservice := cert.Initialize()
 	brandingMgtService := brandingmgt.Initialize(mux)
-	applicationService := application.Initialize(mux, certservice, flowMgtService, brandingMgtService, userSchemaService)
+	applicationService := application.Initialize(mux, certservice, flowMgtService,
+		brandingMgtService, userSchemaService)
 	_ = brandingresolve.Initialize(mux, brandingMgtService, applicationService)
 
 	// Initialize export service with application and IDP service dependencies

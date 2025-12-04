@@ -90,8 +90,8 @@ var (
 	// queryGetOrganizationUnitChildrenList is the query to get child organization units with pagination.
 	queryGetOrganizationUnitChildrenList = dbmodel.DBQuery{
 		ID: "OUQ-OU_MGT-11",
-		Query: `SELECT OU_ID, HANDLE, NAME, DESCRIPTION FROM ORGANIZATION_UNIT WHERE PARENT_ID = $1 AND DEPLOYMENT_ID = $4 ` +
-			`ORDER BY NAME LIMIT $2 OFFSET $3`,
+		Query: `SELECT OU_ID, HANDLE, NAME, DESCRIPTION FROM ORGANIZATION_UNIT ` +
+			`WHERE PARENT_ID = $1 AND DEPLOYMENT_ID = $4 ORDER BY NAME LIMIT $2 OFFSET $3`,
 	}
 
 	// queryGetOrganizationUnitUsersCount is the query to get total count of users in an organization unit.
@@ -114,29 +114,33 @@ var (
 
 	// queryGetOrganizationUnitGroupsList is the query to get groups in an organization unit with pagination.
 	queryGetOrganizationUnitGroupsList = dbmodel.DBQuery{
-		ID:    "OUQ-OU_MGT-15",
-		Query: `SELECT GROUP_ID, NAME FROM "GROUP" WHERE OU_ID = $1 AND DEPLOYMENT_ID = $4 ORDER BY NAME LIMIT $2 OFFSET $3`,
+		ID: "OUQ-OU_MGT-15",
+		Query: `SELECT GROUP_ID, NAME FROM "GROUP" WHERE OU_ID = $1 AND DEPLOYMENT_ID = $4 ` +
+			`ORDER BY NAME LIMIT $2 OFFSET $3`,
 	}
 
 	// queryCheckOrganizationUnitNameConflict is the query to check if an organization
 	// unit name conflicts under the same parent.
 	queryCheckOrganizationUnitNameConflict = dbmodel.DBQuery{
-		ID:    "OUQ-OU_MGT-16",
-		Query: `SELECT COUNT(*) as count FROM ORGANIZATION_UNIT WHERE NAME = $1 AND PARENT_ID = $2 AND DEPLOYMENT_ID = $3`,
+		ID: "OUQ-OU_MGT-16",
+		Query: `SELECT COUNT(*) as count FROM ORGANIZATION_UNIT ` +
+			`WHERE NAME = $1 AND PARENT_ID = $2 AND DEPLOYMENT_ID = $3`,
 	}
 
 	// queryCheckOrganizationUnitNameConflictRoot is the query to check if an organization
 	// unit name conflicts at root level.
 	queryCheckOrganizationUnitNameConflictRoot = dbmodel.DBQuery{
-		ID:    "OUQ-OU_MGT-17",
-		Query: `SELECT COUNT(*) as count FROM ORGANIZATION_UNIT WHERE NAME = $1 AND PARENT_ID IS NULL AND DEPLOYMENT_ID = $2`,
+		ID: "OUQ-OU_MGT-17",
+		Query: `SELECT COUNT(*) as count FROM ORGANIZATION_UNIT ` +
+			`WHERE NAME = $1 AND PARENT_ID IS NULL AND DEPLOYMENT_ID = $2`,
 	}
 
 	// queryCheckOrganizationUnitHandleConflict is the query to check if an organization
 	// unit handle conflicts under the same parent.
 	queryCheckOrganizationUnitHandleConflict = dbmodel.DBQuery{
-		ID:    "OUQ-OU_MGT-18",
-		Query: `SELECT COUNT(*) as count FROM ORGANIZATION_UNIT WHERE HANDLE = $1 AND PARENT_ID = $2 AND DEPLOYMENT_ID = $3`,
+		ID: "OUQ-OU_MGT-18",
+		Query: `SELECT COUNT(*) as count FROM ORGANIZATION_UNIT ` +
+			`WHERE HANDLE = $1 AND PARENT_ID = $2 AND DEPLOYMENT_ID = $3`,
 	}
 
 	// queryCheckOrganizationUnitHandleConflictRoot is the query to check if an organization

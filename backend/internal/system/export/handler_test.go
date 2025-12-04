@@ -199,7 +199,8 @@ func (suite *HandlerTestSuite) TestGenerateAndSendZipResponse_SingleFileNoFolder
 		},
 	}
 
-	suite.testZipResponse(exportResponse, "standalone.yaml", "name: standalone-app\ndescription: Standalone Application")
+	suite.testZipResponse(exportResponse, "standalone.yaml",
+		"name: standalone-app\ndescription: Standalone Application")
 }
 
 // TestGenerateAndSendZipResponse_EmptyFiles tests ZIP generation with empty files list.

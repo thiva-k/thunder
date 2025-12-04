@@ -306,7 +306,8 @@ func (fa *FileAdapter) compressFile(filePath string) {
 
 	// Remove original file
 	if err := os.Remove(filePath); err != nil {
-		logger.Error("Failed to remove original file after compression", log.String("filePath", filePath), log.Error(err))
+		logger.Error("Failed to remove original file after compression",
+			log.String("filePath", filePath), log.Error(err))
 		return
 	}
 

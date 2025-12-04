@@ -166,7 +166,8 @@ func TestCorrelationIDMiddleware_XRequestIDPriorityOverXTraceID(t *testing.T) {
 	middleware.ServeHTTP(w, req)
 
 	if actualID != expectedID {
-		t.Errorf("Expected trace ID %s (X-Request-ID should take priority over X-Trace-ID), got %s", expectedID, actualID)
+		t.Errorf("Expected trace ID %s (X-Request-ID should take priority over X-Trace-ID), got %s",
+			expectedID, actualID)
 	}
 }
 

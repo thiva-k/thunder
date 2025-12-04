@@ -24,9 +24,9 @@ var (
 	// QueryCreateApplication is the query to create a new application with basic details.
 	QueryCreateApplication = dbmodel.DBQuery{
 		ID: "ASQ-APP_MGT-01",
-		Query: "INSERT INTO SP_APP (APP_ID, APP_NAME, DESCRIPTION, AUTH_FLOW_GRAPH_ID, REGISTRATION_FLOW_GRAPH_ID, " +
-			"IS_REGISTRATION_FLOW_ENABLED, BRANDING_ID, APP_JSON, DEPLOYMENT_ID) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, " +
-			"$9)",
+		Query: "INSERT INTO SP_APP (APP_ID, APP_NAME, DESCRIPTION, AUTH_FLOW_GRAPH_ID, " +
+			"REGISTRATION_FLOW_GRAPH_ID, IS_REGISTRATION_FLOW_ENABLED, BRANDING_ID, APP_JSON, DEPLOYMENT_ID) " +
+			"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 	}
 	// QueryCreateOAuthApplication is the query to create a new OAuth application.
 	QueryCreateOAuthApplication = dbmodel.DBQuery{
@@ -40,8 +40,9 @@ var (
 		Query: "SELECT sp.APP_ID, sp.APP_NAME, sp.DESCRIPTION, sp.AUTH_FLOW_GRAPH_ID, " +
 			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, sp.APP_JSON, " +
 			"oauth.CONSUMER_KEY, oauth.CONSUMER_SECRET, oauth.OAUTH_CONFIG_JSON " +
-			"FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth ON sp.APP_ID = oauth.APP_ID AND sp.DEPLOYMENT_ID = $2 " +
-			"AND oauth.DEPLOYMENT_ID = $2 WHERE sp.APP_ID = $1 AND sp.DEPLOYMENT_ID = $2",
+			"FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth " +
+			"ON sp.APP_ID = oauth.APP_ID AND sp.DEPLOYMENT_ID = $2 AND oauth.DEPLOYMENT_ID = $2 " +
+			"WHERE sp.APP_ID = $1 AND sp.DEPLOYMENT_ID = $2",
 	}
 	// QueryGetApplicationByName is the query to retrieve application details by name.
 	QueryGetApplicationByName = dbmodel.DBQuery{
@@ -49,8 +50,9 @@ var (
 		Query: "SELECT sp.APP_ID, sp.APP_NAME, sp.DESCRIPTION, sp.AUTH_FLOW_GRAPH_ID, " +
 			"sp.REGISTRATION_FLOW_GRAPH_ID, sp.IS_REGISTRATION_FLOW_ENABLED, sp.BRANDING_ID, sp.APP_JSON, " +
 			"oauth.CONSUMER_KEY, oauth.CONSUMER_SECRET, oauth.OAUTH_CONFIG_JSON " +
-			"FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth ON sp.APP_ID = oauth.APP_ID AND sp.DEPLOYMENT_ID = $2 " +
-			"AND oauth.DEPLOYMENT_ID = $2 WHERE sp.APP_NAME = $1 AND sp.DEPLOYMENT_ID = $2",
+			"FROM SP_APP sp LEFT JOIN IDN_OAUTH_CONSUMER_APPS oauth " +
+			"ON sp.APP_ID = oauth.APP_ID AND sp.DEPLOYMENT_ID = $2 AND oauth.DEPLOYMENT_ID = $2 " +
+			"WHERE sp.APP_NAME = $1 AND sp.DEPLOYMENT_ID = $2",
 	}
 	// QueryGetOAuthApplicationByClientID is the query to retrieve oauth application details by client ID.
 	QueryGetOAuthApplicationByClientID = dbmodel.DBQuery{

@@ -170,7 +170,8 @@ func (suite *BrandingResolveHandlerTestSuite) TestHandleResolveRequest_MissingTy
 }
 
 func (suite *BrandingResolveHandlerTestSuite) TestHandleResolveRequest_MissingID() {
-	suite.mockService.On("ResolveBranding", common.BrandingResolveTypeAPP, "").Return(nil, &common.ErrorMissingResolveID)
+	suite.mockService.On("ResolveBranding", common.BrandingResolveTypeAPP,
+		"").Return(nil, &common.ErrorMissingResolveID)
 
 	req := httptest.NewRequest(http.MethodGet, "/branding/resolve?type=APP", nil)
 	w := httptest.NewRecorder()

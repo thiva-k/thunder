@@ -23,8 +23,9 @@ import "github.com/asgardeo/thunder/internal/system/database/model"
 var (
 	// queryCreateIdentityProvider is the query to create a new IdP.
 	queryCreateIdentityProvider = model.DBQuery{
-		ID:    "IPQ-IDP_MGT-01",
-		Query: "INSERT INTO IDP (IDP_ID, NAME, DESCRIPTION, TYPE, PROPERTIES, DEPLOYMENT_ID) VALUES ($1, $2, $3, $4, $5, $6)",
+		ID: "IPQ-IDP_MGT-01",
+		Query: "INSERT INTO IDP (IDP_ID, NAME, DESCRIPTION, TYPE, PROPERTIES, DEPLOYMENT_ID) " +
+			"VALUES ($1, $2, $3, $4, $5, $6)",
 	}
 	// queryGetIdentityProviderByID is the query to get a IdP by IdP ID.
 	queryGetIdentityProviderByID = model.DBQuery{

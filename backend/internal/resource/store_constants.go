@@ -108,7 +108,8 @@ var (
 	queryCreateResource = dbmodel.DBQuery{
 		ID: "RSQ-RES_MGT-11",
 		Query: `INSERT INTO RESOURCE
-		        (RESOURCE_ID, RESOURCE_SERVER_ID, NAME, HANDLE, DESCRIPTION, PROPERTIES, PARENT_RESOURCE_ID, DEPLOYMENT_ID)
+		        (RESOURCE_ID, RESOURCE_SERVER_ID, NAME, HANDLE, DESCRIPTION, PROPERTIES,
+				PARENT_RESOURCE_ID, DEPLOYMENT_ID)
 		        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 	}
 
@@ -204,16 +205,16 @@ var (
 	queryCheckResourceHandleExistsUnderParent = dbmodel.DBQuery{
 		ID: "RSQ-RES_MGT-21",
 		Query: `SELECT COUNT(*) as count
-		        FROM RESOURCE r
-		        WHERE r.RESOURCE_SERVER_ID = $1 AND r.HANDLE = $2 AND r.PARENT_RESOURCE_ID = $3 AND r.DEPLOYMENT_ID = $4`,
+		        FROM RESOURCE r WHERE r.RESOURCE_SERVER_ID = $1 AND r.HANDLE = $2
+				AND r.PARENT_RESOURCE_ID = $3 AND r.DEPLOYMENT_ID = $4`,
 	}
 
 	// queryCheckResourceHandleExistsUnderNullParent checks if resource handle exists at top level.
 	queryCheckResourceHandleExistsUnderNullParent = dbmodel.DBQuery{
 		ID: "RSQ-RES_MGT-22",
 		Query: `SELECT COUNT(*) as count
-		        FROM RESOURCE r
-		        WHERE r.RESOURCE_SERVER_ID = $1 AND r.HANDLE = $2 AND r.PARENT_RESOURCE_ID IS NULL AND r.DEPLOYMENT_ID = $3`,
+		        FROM RESOURCE r WHERE r.RESOURCE_SERVER_ID = $1 AND r.HANDLE = $2
+				AND r.PARENT_RESOURCE_ID IS NULL AND r.DEPLOYMENT_ID = $3`,
 	}
 
 	// queryCheckResourceHasDependencies checks if resource has sub-resources or actions.
@@ -234,7 +235,8 @@ var (
 	queryCheckCircularDependency = dbmodel.DBQuery{
 		ID: "RSQ-RES_MGT-24",
 		Query: `WITH RECURSIVE parent_hierarchy AS (
-			SELECT ID, RESOURCE_ID, PARENT_RESOURCE_ID, DEPLOYMENT_ID FROM RESOURCE WHERE RESOURCE_ID = $1 AND DEPLOYMENT_ID = $3
+			SELECT ID, RESOURCE_ID, PARENT_RESOURCE_ID, DEPLOYMENT_ID FROM RESOURCE 
+			WHERE RESOURCE_ID = $1 AND DEPLOYMENT_ID = $3
 			UNION ALL
 			SELECT r.ID, r.RESOURCE_ID, r.PARENT_RESOURCE_ID, r.DEPLOYMENT_ID
 			FROM RESOURCE r

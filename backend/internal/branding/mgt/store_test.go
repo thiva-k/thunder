@@ -545,7 +545,8 @@ func (suite *BrandingStoreTestSuite) TestGetApplicationsCountByBrandingID_DBClie
 func (suite *BrandingStoreTestSuite) TestGetApplicationsCountByBrandingID_QueryError() {
 	queryError := errors.New("query error")
 	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("Query", queryGetApplicationsCountByBrandingID, "brand1", mock.Anything).Return(nil, queryError)
+	suite.mockDBClient.On("Query", queryGetApplicationsCountByBrandingID, "brand1", mock.Anything).
+		Return(nil, queryError)
 
 	count, err := suite.store.GetApplicationsCountByBrandingID("brand1")
 

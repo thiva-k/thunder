@@ -190,12 +190,13 @@ func (suite *ClientCredentialsGrantHandlerTestSuite) TestHandleGrant_Success() {
 			}
 
 			expectedToken := testJWTToken
-			suite.mockTokenBuilder.On("BuildAccessToken", mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
-				return ctx.Subject == testClientID &&
-					ctx.Audience == testClientID &&
-					ctx.ClientID == testClientID &&
-					tokenservice.JoinScopes(ctx.Scopes) == tokenservice.JoinScopes(tc.expectedScopes)
-			})).Return(&model.TokenDTO{
+			suite.mockTokenBuilder.On("BuildAccessToken",
+				mock.MatchedBy(func(ctx *tokenservice.AccessTokenBuildContext) bool {
+					return ctx.Subject == testClientID &&
+						ctx.Audience == testClientID &&
+						ctx.ClientID == testClientID &&
+						tokenservice.JoinScopes(ctx.Scopes) == tokenservice.JoinScopes(tc.expectedScopes)
+				})).Return(&model.TokenDTO{
 				Token:     expectedToken,
 				TokenType: constants.TokenTypeBearer,
 				IssuedAt:  int64(1234567890),

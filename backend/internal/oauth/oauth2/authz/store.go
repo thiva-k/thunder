@@ -85,7 +85,8 @@ func (acs *authorizationCodeStore) InsertAuthorizationCode(authzCode Authorizati
 	}
 
 	_, err = dbClient.Execute(queryInsertAuthorizationCode, authzCode.CodeID, authzCode.Code,
-		authzCode.ClientID, authzCode.State, jsonDataBytes, authzCode.TimeCreated, authzCode.ExpiryTime, acs.deploymentID)
+		authzCode.ClientID, authzCode.State, jsonDataBytes, authzCode.TimeCreated, authzCode.ExpiryTime,
+		acs.deploymentID)
 	if err != nil {
 		return fmt.Errorf("error inserting authorization code: %w", err)
 	}

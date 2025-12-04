@@ -764,7 +764,8 @@ func (suite *ResourceServiceTestSuite) TestCreateResource_MultiLevelHierarchy() 
 	suite.mockStore.On("CheckResourceExistAndGetInternalID", rootID, 123).Return(100, nil).Once()
 	rootInternalID := 100
 	suite.mockStore.On("CheckResourceHandleExists", 123, "child", &rootInternalID).Return(false, nil).Once()
-	suite.mockStore.On("CreateResource", mock.AnythingOfType("string"), 123, &rootInternalID, childRes).Return(nil).Once()
+	suite.mockStore.On("CreateResource", mock.AnythingOfType("string"), 123, &rootInternalID, childRes).
+		Return(nil).Once()
 
 	result2, err2 := suite.service.CreateResource("rs-123", childRes)
 	suite.Nil(err2)
@@ -993,7 +994,8 @@ func (suite *ResourceServiceTestSuite) TestCreateResource_SameHandleDifferentPar
 	suite.mockStore.On("CheckResourceExistAndGetInternalID", "parent-a", 123).Return(100, nil).Once()
 	parentAInternalID := 100
 	suite.mockStore.On("CheckResourceHandleExists", 123, "users", &parentAInternalID).Return(false, nil).Once()
-	suite.mockStore.On("CreateResource", mock.AnythingOfType("string"), 123, &parentAInternalID, res1).Return(nil).Once()
+	suite.mockStore.On("CreateResource", mock.AnythingOfType("string"), 123, &parentAInternalID, res1).
+		Return(nil).Once()
 
 	result1, err1 := suite.service.CreateResource("rs-123", res1)
 
@@ -1005,7 +1007,8 @@ func (suite *ResourceServiceTestSuite) TestCreateResource_SameHandleDifferentPar
 	suite.mockStore.On("CheckResourceExistAndGetInternalID", "parent-b", 123).Return(200, nil).Once()
 	parentBInternalID := 200
 	suite.mockStore.On("CheckResourceHandleExists", 123, "users", &parentBInternalID).Return(false, nil).Once()
-	suite.mockStore.On("CreateResource", mock.AnythingOfType("string"), 123, &parentBInternalID, res2).Return(nil).Once()
+	suite.mockStore.On("CreateResource", mock.AnythingOfType("string"), 123, &parentBInternalID, res2).
+		Return(nil).Once()
 
 	result2, err2 := suite.service.CreateResource("rs-123", res2)
 
@@ -1715,7 +1718,8 @@ func (suite *ResourceServiceTestSuite) TestGetResourceList() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errResourceServerNotFound)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errResourceServerNotFound)
 			},
 			expectedError: &ErrorResourceServerNotFound,
 		},
@@ -1727,7 +1731,8 @@ func (suite *ResourceServiceTestSuite) TestGetResourceList() {
 			offset:           0,
 			setupMocks: func() {
 				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testParentResourceID, 123).Return(0, errResourceNotFound)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testParentResourceID, 123).
+					Return(0, errResourceNotFound)
 			},
 			expectedError: &ErrorResourceNotFound,
 		},
@@ -1738,7 +1743,8 @@ func (suite *ResourceServiceTestSuite) TestGetResourceList() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -1762,8 +1768,10 @@ func (suite *ResourceServiceTestSuite) TestGetResourceList() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("GetResourceListCountByParent", 123, (*int)(nil)).Return(0, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("GetResourceListCountByParent", 123, (*int)(nil)).
+					Return(0, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -1774,9 +1782,12 @@ func (suite *ResourceServiceTestSuite) TestGetResourceList() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("GetResourceListCountByParent", 123, (*int)(nil)).Return(10, nil)
-				suite.mockStore.On("GetResourceListByParent", 123, (*int)(nil), 30, 0).Return(nil, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("GetResourceListCountByParent", 123, (*int)(nil)).
+					Return(10, nil)
+				suite.mockStore.On("GetResourceListByParent", 123, (*int)(nil), 30, 0).
+					Return(nil, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -2183,7 +2194,8 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResourceServer() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errResourceServerNotFound)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errResourceServerNotFound)
 			},
 			expectedError: &ErrorResourceServerNotFound,
 		},
@@ -2194,7 +2206,8 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResourceServer() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -2318,11 +2331,17 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 					Handle:      testOriginalHandle,
 					Description: "old description",
 				}
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("GetAction", "action-123", 123, (*int)(nil)).Return(currentAction, nil)
-				suite.mockStore.On("UpdateAction", "action-123", 123, (*int)(nil), mock.MatchedBy(func(a Action) bool {
-					return a.Name == testUpdatedName && a.Handle == testOriginalHandle && a.Description == testNewDescription
-				})).Return(nil)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("GetAction", "action-123", 123, (*int)(nil)).
+					Return(currentAction, nil)
+				suite.mockStore.On(
+					"UpdateAction", "action-123", 123, (*int)(nil),
+					mock.MatchedBy(func(a Action) bool {
+						return a.Name == testUpdatedName &&
+							a.Handle == testOriginalHandle &&
+							a.Description == testNewDescription
+					})).Return(nil)
 			},
 			expectedError: nil,
 			validateResponse: func(result *Action) {
@@ -2347,13 +2366,19 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 					Handle:      testOriginalHandle,
 					Description: "old description",
 				}
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(456, nil)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+					Return(456, nil)
 				resInternalID := 456
-				suite.mockStore.On("GetAction", "action-123", 123, &resInternalID).Return(currentAction, nil)
-				suite.mockStore.On("UpdateAction", "action-123", 123, &resInternalID, mock.MatchedBy(func(a Action) bool {
-					return a.Name == testUpdatedName && a.Handle == testOriginalHandle && a.Description == testNewDescription
-				})).Return(nil)
+				suite.mockStore.On("GetAction", "action-123", 123, &resInternalID).
+					Return(currentAction, nil)
+				suite.mockStore.On("UpdateAction", "action-123", 123, &resInternalID,
+					mock.MatchedBy(func(a Action) bool {
+						return a.Name == testUpdatedName &&
+							a.Handle == testOriginalHandle &&
+							a.Description == testNewDescription
+					})).Return(nil)
 			},
 			expectedError: nil,
 			validateResponse: func(result *Action) {
@@ -2396,7 +2421,8 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 			actionID:         "action-123",
 			action:           Action{Description: testNewDescription},
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errResourceServerNotFound)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errResourceServerNotFound)
 			},
 			expectedError: &ErrorResourceServerNotFound,
 		},
@@ -2407,8 +2433,10 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 			actionID:         "action-123",
 			action:           Action{Description: testNewDescription},
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(0, errResourceNotFound)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+					Return(0, errResourceNotFound)
 			},
 			expectedError: &ErrorResourceNotFound,
 		},
@@ -2431,10 +2459,13 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 			actionID:         "action-123",
 			action:           Action{Description: testNewDescription},
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(456, nil)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+					Return(456, nil)
 				resInternalID := 456
-				suite.mockStore.On("GetAction", "action-123", 123, &resInternalID).Return(Action{}, errActionNotFound)
+				suite.mockStore.On("GetAction", "action-123", 123, &resInternalID).
+					Return(Action{}, errActionNotFound)
 			},
 			expectedError: &ErrorActionNotFound,
 		},
@@ -2445,7 +2476,8 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 			actionID:         "action-123",
 			action:           Action{Description: testNewDescription},
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -2456,7 +2488,8 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 			actionID:         "action-123",
 			action:           Action{Description: testNewDescription},
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
 				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
 					Return(0, errors.New("database error"))
 			},
@@ -2469,8 +2502,10 @@ func (suite *ResourceServiceTestSuite) TestUpdateAction() {
 			actionID:         "action-123",
 			action:           Action{Description: testNewDescription},
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("GetAction", "action-123", 123, (*int)(nil)).Return(Action{}, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("GetAction", "action-123", 123, (*int)(nil)).
+					Return(Action{}, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -2652,7 +2687,8 @@ func (suite *ResourceServiceTestSuite) TestDeleteActionAtResource_StoreError() {
 }
 
 func (suite *ResourceServiceTestSuite) TestDeleteActionAtResource_CheckServerError() {
-	suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errors.New("database error"))
+	suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+		Return(0, errors.New("database error"))
 
 	resID := testResourceID
 	err := suite.service.DeleteAction("rs-123", &resID, "action-123")
@@ -2663,7 +2699,8 @@ func (suite *ResourceServiceTestSuite) TestDeleteActionAtResource_CheckServerErr
 
 func (suite *ResourceServiceTestSuite) TestDeleteActionAtResource_CheckResourceError() {
 	suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-	suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(0, errors.New("database error"))
+	suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+		Return(0, errors.New("database error"))
 
 	resID := testResourceID
 	err := suite.service.DeleteAction("rs-123", &resID, "action-123")
@@ -2792,7 +2829,8 @@ func (suite *ResourceServiceTestSuite) TestGetActionAtResource_StoreError() {
 }
 
 func (suite *ResourceServiceTestSuite) TestGetActionAtResource_CheckServerError() {
-	suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errors.New("database error"))
+	suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+		Return(0, errors.New("database error"))
 
 	resID := testResourceID
 	result, err := suite.service.GetAction("rs-123", &resID, "action-123")
@@ -2804,7 +2842,8 @@ func (suite *ResourceServiceTestSuite) TestGetActionAtResource_CheckServerError(
 
 func (suite *ResourceServiceTestSuite) TestGetActionAtResource_CheckResourceError() {
 	suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-	suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(0, errors.New("database error"))
+	suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+		Return(0, errors.New("database error"))
 
 	resID := testResourceID
 	result, err := suite.service.GetAction("rs-123", &resID, "action-123")
@@ -2968,7 +3007,8 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResource() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errResourceServerNotFound)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errResourceServerNotFound)
 			},
 			expectedError: &ErrorResourceServerNotFound,
 		},
@@ -2979,8 +3019,10 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResource() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(0, errResourceNotFound)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+					Return(0, errResourceNotFound)
 			},
 			expectedError: &ErrorResourceNotFound,
 		},
@@ -2991,7 +3033,8 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResource() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(0, errors.New("database error"))
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(0, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -3015,10 +3058,13 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResource() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(456, nil)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+					Return(456, nil)
 				resInternalID := 456
-				suite.mockStore.On("GetActionListCount", 123, &resInternalID).Return(0, errors.New("database error"))
+				suite.mockStore.On("GetActionListCount", 123, &resInternalID).
+					Return(0, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},
@@ -3029,11 +3075,14 @@ func (suite *ResourceServiceTestSuite) TestGetActionListAtResource() {
 			limit:            30,
 			offset:           0,
 			setupMocks: func() {
-				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").Return(123, nil)
-				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).Return(456, nil)
+				suite.mockStore.On("CheckResourceServerExistAndGetInternalID", "rs-123").
+					Return(123, nil)
+				suite.mockStore.On("CheckResourceExistAndGetInternalID", testResourceID, 123).
+					Return(456, nil)
 				resInternalID := 456
 				suite.mockStore.On("GetActionListCount", 123, &resInternalID).Return(2, nil)
-				suite.mockStore.On("GetActionList", 123, &resInternalID, 30, 0).Return(nil, errors.New("database error"))
+				suite.mockStore.On("GetActionList", 123, &resInternalID, 30, 0).
+					Return(nil, errors.New("database error"))
 			},
 			expectedError: &serviceerror.InternalServerError,
 		},

@@ -165,7 +165,8 @@ func (s *brandingMgtStore) UpdateBranding(id string, branding UpdateBrandingRequ
 		return fmt.Errorf("failed to marshal preferences: %w", err)
 	}
 
-	rowsAffected, err := dbClient.Execute(queryUpdateBranding, branding.DisplayName, preferencesJSON, id, s.deploymentID)
+	rowsAffected, err := dbClient.Execute(queryUpdateBranding, branding.DisplayName, preferencesJSON, id,
+		s.deploymentID)
 	if err != nil {
 		return fmt.Errorf("failed to execute query: %w", err)
 	}

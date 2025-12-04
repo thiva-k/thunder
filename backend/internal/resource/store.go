@@ -455,7 +455,8 @@ func (s *resourceStore) CheckResourceHandleExists(
 			)
 		} else {
 			results, err = dbClient.Query(
-				queryCheckResourceHandleExistsUnderParent, resServerInternalID, handle, *parentInternalID, s.deploymentID,
+				queryCheckResourceHandleExistsUnderParent, resServerInternalID, handle, *parentInternalID,
+				s.deploymentID,
 			)
 		}
 
@@ -575,7 +576,8 @@ func (s *resourceStore) GetActionList(
 ) ([]Action, error) {
 	var actions []Action
 	err := s.withDBClient(func(dbClient provider.DBClientInterface) error {
-		results, err := dbClient.Query(queryGetActionList, resServerInternalID, resInternalID, limit, offset, s.deploymentID)
+		results, err := dbClient.Query(queryGetActionList, resServerInternalID, resInternalID, limit, offset,
+			s.deploymentID)
 		if err != nil {
 			return fmt.Errorf("failed to get action list: %w", err)
 		}

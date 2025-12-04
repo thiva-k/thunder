@@ -99,7 +99,8 @@ func verifySHA256Credential(credentialValueToVerify []byte, referenceCredential 
 func newPBKDF2Credential(credentialValue []byte) Credential {
 	credSalt, _ := generateSalt()
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "PBKDF2HashProvider"))
-	hash, err := pbkdf2.Key(sha256.New, string(credentialValue), credSalt, defaultPBKDF2Iterations, defaultPBKDF2KeyLength)
+	hash, err := pbkdf2.Key(sha256.New, string(credentialValue), credSalt, defaultPBKDF2Iterations,
+		defaultPBKDF2KeyLength)
 	if err != nil {
 		logger.Error("Error hashing data with PBKDF2: %v", log.Error(err))
 		return Credential{}

@@ -673,8 +673,8 @@ func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_InvalidStringFo
 
 func (suite *AuthorizationCodeStoreTestSuite) TestUpdateAuthorizationCodeState_ExecuteError() {
 	suite.mockdbProvider.On("GetRuntimeDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("Execute", queryUpdateAuthorizationCodeState,
-		AuthCodeStateInactive, suite.testAuthzCode.CodeID, testDeploymentID).Return(int64(0), errors.New("execute error"))
+	suite.mockDBClient.On("Execute", queryUpdateAuthorizationCodeState, AuthCodeStateInactive,
+		suite.testAuthzCode.CodeID, testDeploymentID).Return(int64(0), errors.New("execute error"))
 
 	err := suite.store.DeactivateAuthorizationCode(suite.testAuthzCode)
 	assert.Error(suite.T(), err)
