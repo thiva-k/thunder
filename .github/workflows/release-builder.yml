@@ -77,7 +77,7 @@ jobs:
           go mod download  
 
       - name: 🧹 Clean Previous Builds  
-        run: make clean_all
+        run: make clean
 
       - name: 🔨 Build Product with Coverage  
         run: |  
