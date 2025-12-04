@@ -453,6 +453,116 @@ paths:
                 message: "Internal server error"
                 description: "An unexpected error occurred while processing the request"
 
+  /branding/resolve:
+    get:
+      tags:
+        - branding
+      summary: Resolve a branding configuration
+      description: Retrieve a branding configuration by type and ID.
+      security: []
+      parameters:
+        - in: query
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [APP, OU]
+          description: Type of entity to resolve branding for. Currently only APP is supported.
+          example: "APP"
+        - in: query
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the application or organizational unit
+          example: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+      responses:
+        "200":
+          description: Branding configuration details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandingResponse'
+              example:
+                id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+                displayName: "Application 1 Branding"
+                preferences:
+                  theme:
+                    activeColorScheme: "dark"
+                    colorSchemes:
+                      dark:
+                        colors:
+                          primary:
+                            main: "#1976d2"
+                            dark: "#0d47a1"
+                            contrastText: "#ffffff"
+                          secondary:
+                            main: "#9c27b0"
+                            dark: "#6a0080"
+                            contrastText: "#ffffff"
+                          tertiary:
+                            main: "#2e7d32"
+                            dark: "#1b5e20"
+                            contrastText: "#ffffff"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                missing-type:
+                  summary: Missing type parameter
+                  value:
+                    code: "BRD-1010"
+                    message: "Invalid request format"
+                    description: "The 'type' query parameter is required and must be either 'APP' or 'OU'"
+                missing-id:
+                  summary: Missing id parameter
+                  value:
+                    code: "BRD-1011"
+                    message: "Invalid request format"
+                    description: "The 'id' query parameter is required"
+                unsupported-type:
+                  summary: Unsupported resolve type
+                  value:
+                    code: "BRD-1012"
+                    message: "Unsupported resolve type"
+                    description: "The specified resolve type is not yet supported. Currently only 'APP' type is supported"
+        "404":
+          description: |
+            Not found. This error is returned in the following scenarios:
+            1. The specified application or organizational unit does not exist (error code BRD-1014).
+            2. The application or organizational unit exists but has no associated branding configuration (error code BRD-1013).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                application-not-found:
+                  summary: Application not found
+                  value:
+                    code: "BRD-1014"
+                    message: "Application not found"
+                    description: "The application with the specified id does not exist"
+                application-has-no-branding:
+                  summary: Application has no branding
+                  value:
+                    code: "BRD-1013"
+                    message: "Application has no branding"
+                    description: "The specified application does not have an associated branding configuration"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "BRD-5000"
+                message: "Internal server error"
+                description: "An unexpected error occurred while processing the request"
+
 components:
   securitySchemes:
     OAuth2:
