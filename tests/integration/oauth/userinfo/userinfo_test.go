@@ -282,10 +282,10 @@ func (ts *UserInfoTestSuite) getAuthorizationCodeToken(scope string) (string, er
 		return "", fmt.Errorf("no Location header in authorization response")
 	}
 
-	// Step 2: Extract session data
-	sessionDataKey, flowID, err := testutils.ExtractSessionData(location)
+	// Step 2: Extract auth ID and flow ID
+	authId, flowID, err := testutils.ExtractAuthData(location)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract session data: %w", err)
+		return "", fmt.Errorf("failed to extract auth ID: %w", err)
 	}
 
 	// Step 3: Execute authentication flow
@@ -303,7 +303,7 @@ func (ts *UserInfoTestSuite) getAuthorizationCodeToken(scope string) (string, er
 	}
 
 	// Step 4: Complete authorization
-	authzResponse, err := testutils.CompleteAuthorization(sessionDataKey, flowStep.Assertion)
+	authzResponse, err := testutils.CompleteAuthorization(authId, flowStep.Assertion)
 	if err != nil {
 		return "", fmt.Errorf("failed to complete authorization: %w", err)
 	}
@@ -346,10 +346,10 @@ func (ts *UserInfoTestSuite) getRefreshToken(scope string) (string, error) {
 		return "", fmt.Errorf("no Location header in authorization response")
 	}
 
-	// Step 2: Extract session data
-	sessionDataKey, flowID, err := testutils.ExtractSessionData(location)
+	// Step 2: Extract auth ID and flow ID
+	authId, flowID, err := testutils.ExtractAuthData(location)
 	if err != nil {
-		return "", fmt.Errorf("failed to extract session data: %w", err)
+		return "", fmt.Errorf("failed to extract auth ID: %w", err)
 	}
 
 	// Step 3: Execute authentication flow
@@ -367,7 +367,7 @@ func (ts *UserInfoTestSuite) getRefreshToken(scope string) (string, error) {
 	}
 
 	// Step 4: Complete authorization
-	authzResponse, err := testutils.CompleteAuthorization(sessionDataKey, flowStep.Assertion)
+	authzResponse, err := testutils.CompleteAuthorization(authId, flowStep.Assertion)
 	if err != nil {
 		return "", fmt.Errorf("failed to complete authorization: %w", err)
 	}

@@ -25,7 +25,7 @@ import (
 // OAuthMessage represents the OAuth message.
 type OAuthMessage struct {
 	RequestType        string
-	SessionDataKey     string
+	AuthID             string
 	RequestQueryParams map[string]string
 	RequestBodyParams  map[string]string
 }
@@ -52,8 +52,8 @@ type AuthorizationCode struct {
 
 // AuthZPostRequest represents the request body for the authorization POST request.
 type AuthZPostRequest struct {
-	SessionDataKey string `json:"sessionDataKey"`
-	Assertion      string `json:"assertion"`
+	AuthID    string `json:"authId"`
+	Assertion string `json:"assertion"`
 }
 
 // AuthZPostResponse represents the response body for the authorization POST request.

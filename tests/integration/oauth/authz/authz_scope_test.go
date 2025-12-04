@@ -203,13 +203,13 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_WithAuthorizedScopes() {
 	ts.Require().NoError(err, "Failed to initiate authorization")
 	ts.Require().NotNil(authResp, "Authorization response should not be nil")
 
-	// Step 2: Extract session data and flow ID from redirect
+	// Step 2: Extract auth ID and flow ID from redirect
 	location := authResp.Header.Get("Location")
 	ts.Require().NotEmpty(location, "Location header should not be empty")
 
-	sessionDataKey, flowID, err := testutils.ExtractSessionData(location)
-	ts.Require().NoError(err, "Failed to extract session data")
-	ts.Require().NotEmpty(sessionDataKey, "Session data key should not be empty")
+	authId, flowID, err := testutils.ExtractAuthData(location)
+	ts.Require().NoError(err, "Failed to extract auth ID")
+	ts.Require().NotEmpty(authId, "Auth ID should not be empty")
 	ts.Require().NotEmpty(flowID, "Flow ID should not be empty")
 
 	// Step 3: Execute authentication flow with authorized user
@@ -225,7 +225,7 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_WithAuthorizedScopes() {
 	ts.Require().NotEmpty(flowStep.Assertion, "Assertion should not be empty")
 
 	// Step 4: Complete authorization with assertion
-	authzResponse, err := testutils.CompleteAuthorization(sessionDataKey, flowStep.Assertion)
+	authzResponse, err := testutils.CompleteAuthorization(authId, flowStep.Assertion)
 	ts.Require().NoError(err, "Failed to complete authorization")
 	ts.Require().NotNil(authzResponse, "Authorization response should not be nil")
 	ts.Require().NotEmpty(authzResponse.RedirectURI, "Redirect URI should not be empty")
@@ -272,13 +272,13 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_WithNoAuthorizedScopes() 
 	ts.Require().NoError(err, "Failed to initiate authorization")
 	ts.Require().NotNil(authResp, "Authorization response should not be nil")
 
-	// Step 2: Extract session data and flow ID from redirect
+	// Step 2: Extract auth ID and flow ID from redirect
 	location := authResp.Header.Get("Location")
 	ts.Require().NotEmpty(location, "Location header should not be empty")
 
-	sessionDataKey, flowID, err := testutils.ExtractSessionData(location)
-	ts.Require().NoError(err, "Failed to extract session data")
-	ts.Require().NotEmpty(sessionDataKey, "Session data key should not be empty")
+	authId, flowID, err := testutils.ExtractAuthData(location)
+	ts.Require().NoError(err, "Failed to extract auth ID")
+	ts.Require().NotEmpty(authId, "Auth ID should not be empty")
 	ts.Require().NotEmpty(flowID, "Flow ID should not be empty")
 
 	// Step 3: Execute authentication flow with unauthorized user (no role)
@@ -294,7 +294,7 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_WithNoAuthorizedScopes() 
 	ts.Require().NotEmpty(flowStep.Assertion, "Assertion should not be empty")
 
 	// Step 4: Complete authorization with assertion
-	authzResponse, err := testutils.CompleteAuthorization(sessionDataKey, flowStep.Assertion)
+	authzResponse, err := testutils.CompleteAuthorization(authId, flowStep.Assertion)
 	ts.Require().NoError(err, "Failed to complete authorization")
 	ts.Require().NotNil(authzResponse, "Authorization response should not be nil")
 	ts.Require().NotEmpty(authzResponse.RedirectURI, "Redirect URI should not be empty")

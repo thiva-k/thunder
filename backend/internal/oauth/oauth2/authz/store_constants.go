@@ -20,6 +20,24 @@ package authz
 
 import dbmodel "github.com/asgardeo/thunder/internal/system/database/model"
 
+// JSON keys for authorization request context serialization.
+const (
+	jsonKeyState               = "state"
+	jsonKeyClientID            = "client_id"
+	jsonKeyRedirectURI         = "redirect_uri"
+	jsonKeyResponseType        = "response_type"
+	jsonKeyStandardScopes      = "standard_scopes"
+	jsonKeyPermissionScopes    = "permission_scopes"
+	jsonKeyCodeChallenge       = "code_challenge"
+	jsonKeyCodeChallengeMethod = "code_challenge_method"
+	jsonKeyResource            = "resource"
+)
+
+// Database column names for authorization request storage.
+const (
+	dbColumnRequestData = "request_data"
+)
+
 // queryInsertAuthorizationCode is the query to insert a new authorization code into the database.
 var queryInsertAuthorizationCode = dbmodel.DBQuery{
 	ID: "AZQ-ACS-01",
@@ -38,4 +56,24 @@ var queryGetAuthorizationCode = dbmodel.DBQuery{
 var queryUpdateAuthorizationCodeState = dbmodel.DBQuery{
 	ID:    "AZQ-ACS-03",
 	Query: "UPDATE AUTHORIZATION_CODE SET STATE = $1 WHERE CODE_ID = $2 AND DEPLOYMENT_ID = $3",
+}
+
+// queryInsertAuthRequest is the query to insert a new authorization request context.
+var queryInsertAuthRequest = dbmodel.DBQuery{
+	ID: "AZQ-ARS-01",
+	Query: "INSERT INTO AUTHORIZATION_REQUEST (AUTH_ID, REQUEST_DATA, EXPIRY_TIME, DEPLOYMENT_ID) " +
+		"VALUES ($1, $2, $3, $4)",
+}
+
+// queryGetAuthRequest is the query to retrieve an authorization request context by ID.
+var queryGetAuthRequest = dbmodel.DBQuery{
+	ID: "AZQ-ARS-02",
+	Query: "SELECT AUTH_ID, REQUEST_DATA, EXPIRY_TIME " +
+		"FROM AUTHORIZATION_REQUEST WHERE AUTH_ID = $1 AND EXPIRY_TIME > $2 AND DEPLOYMENT_ID = $3",
+}
+
+// queryDeleteAuthRequest is the query to delete a specific authorization request context.
+var queryDeleteAuthRequest = dbmodel.DBQuery{
+	ID:    "AZQ-ARS-03",
+	Query: "DELETE FROM AUTHORIZATION_REQUEST WHERE AUTH_ID = $1 AND DEPLOYMENT_ID = $2",
 }

@@ -292,9 +292,11 @@ func (suite *AuthorizationCodeStoreTestSuite) TestUpdateAuthorizationCodeState_E
 	suite.mockdbProvider.AssertExpectations(suite.T())
 }
 
+const testTimeString = "2023-12-01 10:30:45.123456789"
+
 func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_StringInput() {
-	testTime := "2023-12-01 10:30:45.123456789 extra content"
-	expectedTime, _ := time.Parse("2006-01-02 15:04:05.999999999", "2023-12-01 10:30:45.123456789")
+	testTime := testTimeString + " extra content"
+	expectedTime, _ := time.Parse("2006-01-02 15:04:05.999999999", testTimeString)
 
 	result, err := parseTimeField(testTime, "test_field")
 	assert.NoError(suite.T(), err)
@@ -310,8 +312,8 @@ func (suite *AuthorizationCodeStoreTestSuite) TestParseTimeField_TimeInput() {
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestTrimTimeString() {
-	input := "2023-12-01 10:30:45.123456789 extra content here"
-	expected := "2023-12-01 10:30:45.123456789"
+	input := testTimeString + " extra content here"
+	expected := testTimeString
 
 	result := trimTimeString(input)
 	assert.Equal(suite.T(), expected, result)

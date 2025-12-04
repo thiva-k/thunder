@@ -29,7 +29,6 @@ import (
 	"github.com/asgardeo/thunder/internal/application"
 	flowcm "github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
-	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	oauth2model "github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	oauth2utils "github.com/asgardeo/thunder/internal/oauth/oauth2/utils"
@@ -38,7 +37,6 @@ import (
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
-	systemutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
 const loggerComponentName = "AuthorizeHandler"
@@ -53,8 +51,8 @@ type AuthorizeHandlerInterface interface {
 type authorizeHandler struct {
 	appService      application.ApplicationServiceInterface
 	authZValidator  AuthorizationValidatorInterface
-	authZStore      AuthorizationCodeStoreInterface
-	sessionStore    sessionDataStoreInterface
+	authCodeStore   AuthorizationCodeStoreInterface
+	authReqStore    authorizationRequestStoreInterface
 	jwtService      jwt.JWTServiceInterface
 	flowExecService flowexec.FlowExecServiceInterface
 }
@@ -63,14 +61,15 @@ type authorizeHandler struct {
 func newAuthorizeHandler(
 	appService application.ApplicationServiceInterface,
 	jwtService jwt.JWTServiceInterface,
-	authZStore AuthorizationCodeStoreInterface,
+	authCodeStore AuthorizationCodeStoreInterface,
+	authReqStore authorizationRequestStoreInterface,
 	flowExecService flowexec.FlowExecServiceInterface,
 ) AuthorizeHandlerInterface {
 	return &authorizeHandler{
 		appService:      appService,
 		authZValidator:  newAuthorizationValidator(),
-		authZStore:      authZStore,
-		sessionStore:    newSessionDataStore(),
+		authCodeStore:   authCodeStore,
+		authReqStore:    authReqStore,
 		jwtService:      jwtService,
 		flowExecService: flowExecService,
 	}
@@ -140,17 +139,17 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 	if errorCode != "" {
 		if sendErrorToApp && redirectURI != "" {
 			// Redirect to the redirect URI with an error.
-			redirectURI, err := oauth2utils.GetURIWithQueryParams(redirectURI, map[string]string{
+			queryParams := map[string]string{
 				oauth2const.RequestParamError:            errorCode,
 				oauth2const.RequestParamErrorDescription: errorMessage,
-			})
+			}
+			if state != "" {
+				queryParams[oauth2const.RequestParamState] = state
+			}
+			redirectURI, err := oauth2utils.GetURIWithQueryParams(redirectURI, queryParams)
 			if err != nil {
 				ah.redirectToErrorPage(w, r, oauth2const.ErrorServerError, "Failed to redirect to login page")
 				return
-			}
-
-			if state != "" {
-				redirectURI += "&" + oauth2const.RequestParamState + "=" + state
 			}
 			http.Redirect(w, r, redirectURI, http.StatusFound)
 			return
@@ -162,7 +161,7 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 
 	oidcScopes, nonOidcScopes := oauth2utils.SeparateOIDCAndNonOIDCScopes(scope)
 
-	// Construct session data.
+	// Construct authorization request context.
 	oauthParams := oauth2model.OAuthParameters{
 		State:               state,
 		ClientID:            clientID,
@@ -196,17 +195,20 @@ func (ah *authorizeHandler) handleInitialAuthorizationRequest(msg *OAuthMessage,
 		return
 	}
 
-	sessionData := SessionData{
+	authRequestCtx := authRequestContext{
 		OAuthParameters: oauthParams,
-		AuthTime:        time.Now(),
 	}
 
-	// Store session data in the session store.
-	identifier := ah.sessionStore.AddSession(sessionData)
+	// Store authorization request context in the store.
+	identifier := ah.authReqStore.AddRequest(authRequestCtx)
+	if identifier == "" {
+		ah.redirectToErrorPage(w, r, oauth2const.ErrorServerError, "Failed to store authorization request")
+		return
+	}
 
 	// Add required query parameters.
 	queryParams := make(map[string]string)
-	queryParams[oauth2const.SessionDataKey] = identifier
+	queryParams[oauth2const.AuthID] = identifier
 	queryParams[oauth2const.AppID] = app.AppID
 	queryParams[oauth2const.FlowID] = flowID
 
@@ -229,8 +231,8 @@ func (ah *authorizeHandler) handleAuthorizationResponseFromEngine(msg *OAuthMess
 	w http.ResponseWriter) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 
-	// Validate the session data.
-	sessionData, err := ah.loadSessionData(msg.SessionDataKey)
+	// Validate the authorization request context.
+	authRequestCtx, err := ah.loadAuthRequestContext(msg.AuthID)
 	if err != nil {
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Invalid authorization request", nil)
 		return
@@ -240,71 +242,80 @@ func (ah *authorizeHandler) handleAuthorizationResponseFromEngine(msg *OAuthMess
 	assertion, ok := msg.RequestBodyParams[oauth2const.Assertion]
 	if !ok || assertion == "" {
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Invalid authorization request",
-			sessionData)
+			authRequestCtx)
 		return
 	}
 
 	// Verify the assertion.
 	err = ah.verifyAssertion(assertion, logger)
 	if err != nil {
-		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, err.Error(), sessionData)
+		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, err.Error(), authRequestCtx)
 		return
 	}
 
 	// Decode user attributes from the assertion.
-	assertionClaims, err := decodeAttributesFromAssertion(assertion)
+	assertionClaims, authTime, err := decodeAttributesFromAssertion(assertion)
 	if err != nil {
 		logger.Error("Failed to decode user attributes from assertion", log.Error(err))
-		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Something went wrong", sessionData)
+		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Something went wrong", authRequestCtx)
 		return
 	}
 
 	if assertionClaims.userID == "" {
 		logger.Error("User ID is empty after decoding assertion")
-		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Invalid user ID", sessionData)
+		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorInvalidRequest, "Invalid user ID", authRequestCtx)
 		return
 	}
 
 	authorizedScopes := assertionClaims.userAttributes["authorized_permissions"]
-	// Overwrite the non oidc scopes in session data with the authorized scopes from the assertion.
-	sessionData.OAuthParameters.PermissionScopes = utils.ParseStringArray(authorizedScopes, " ")
+	// Overwrite the non oidc scopes in auth request context with the authorized scopes from the assertion.
+	authRequestCtx.OAuthParameters.PermissionScopes = utils.ParseStringArray(authorizedScopes, " ")
 
 	// Generate the authorization code.
-	authzCode, err := createAuthorizationCode(sessionData, &assertionClaims)
+	authzCode, err := createAuthorizationCode(authRequestCtx, &assertionClaims, authTime)
 	if err != nil {
 		logger.Error("Failed to generate authorization code", log.Error(err))
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorServerError, "Failed to generate authorization code",
-			sessionData)
+			authRequestCtx)
 		return
 	}
 
 	// Persist the authorization code.
-	persistErr := ah.authZStore.InsertAuthorizationCode(authzCode)
+	persistErr := ah.authCodeStore.InsertAuthorizationCode(authzCode)
 	if persistErr != nil {
 		logger.Error("Failed to persist authorization code", log.Error(persistErr))
 		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorServerError, "Failed to persist authorization code",
-			sessionData)
+			authRequestCtx)
 		return
 	}
 
 	// Construct the redirect URI with the authorization code.
-	redirectURI := authzCode.RedirectURI + "?code=" + authzCode.Code
-	if sessionData.OAuthParameters.State != "" {
-		redirectURI += "&state=" + sessionData.OAuthParameters.State
+	queryParams := map[string]string{
+		"code": authzCode.Code,
+	}
+	if authRequestCtx.OAuthParameters.State != "" {
+		queryParams[oauth2const.RequestParamState] = authRequestCtx.OAuthParameters.State
+	}
+	redirectURI, err := oauth2utils.GetURIWithQueryParams(authzCode.RedirectURI, queryParams)
+	if err != nil {
+		logger.Error("Failed to construct redirect URI: " + err.Error())
+		ah.writeAuthZResponseToErrorPage(w, oauth2const.ErrorServerError, "Failed to redirect to client",
+			authRequestCtx)
+		return
 	}
 
 	ah.writeAuthZResponse(w, redirectURI)
 }
 
-func (ah *authorizeHandler) loadSessionData(sessionDataKey string) (*SessionData, error) {
-	ok, sessionData := ah.sessionStore.GetSession(sessionDataKey)
+func (ah *authorizeHandler) loadAuthRequestContext(authID string) (*authRequestContext, error) {
+	ok, authRequestCtx := ah.authReqStore.GetRequest(authID)
 	if !ok {
-		return nil, fmt.Errorf("session data not found for session data key: %s", sessionDataKey)
+		return nil, fmt.Errorf("authorization request context not found for auth ID: %s", authID)
 	}
 
-	// Remove the session data after retrieval.
-	ah.sessionStore.ClearSession(sessionDataKey)
-	return &sessionData, nil
+	// Remove the authorization request context after retrieval.
+	ah.authReqStore.ClearRequest(authID)
+	return &authRequestCtx, nil
 }
 
 // getOAuthMessage extracts the OAuth message from the request and response writer.
@@ -357,13 +368,13 @@ func (ah *authorizeHandler) getOAuthMessageForGetRequest(r *http.Request) (*OAut
 
 // getOAuthMessageForPostRequest extracts the OAuth message from a authorization POST request.
 func (ah *authorizeHandler) getOAuthMessageForPostRequest(r *http.Request) (*OAuthMessage, error) {
-	authZReq, err := systemutils.DecodeJSONBody[AuthZPostRequest](r)
+	authZReq, err := utils.DecodeJSONBody[AuthZPostRequest](r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode JSON body: %w", err)
 	}
 
-	if authZReq.SessionDataKey == "" || authZReq.Assertion == "" {
-		return nil, errors.New("sessionDataKey or assertion is missing")
+	if authZReq.AuthID == "" || authZReq.Assertion == "" {
+		return nil, errors.New("authId or assertion is missing")
 	}
 
 	// Determine the request type.
@@ -376,7 +387,7 @@ func (ah *authorizeHandler) getOAuthMessageForPostRequest(r *http.Request) (*OAu
 
 	return &OAuthMessage{
 		RequestType:       requestType,
-		SessionDataKey:    authZReq.SessionDataKey,
+		AuthID:            authZReq.AuthID,
 		RequestBodyParams: bodyParams,
 	}, nil
 }
@@ -390,7 +401,7 @@ func getLoginPageRedirectURI(queryParams map[string]string) (string, error) {
 		Path:   gateClientConfig.LoginPath,
 	}).String()
 
-	return utils.GetURIWithQueryParams(loginPageURL, queryParams)
+	return oauth2utils.GetURIWithQueryParams(loginPageURL, queryParams)
 }
 
 // redirectToLoginPage constructs the login page URL and redirects the user to it.
@@ -427,7 +438,7 @@ func getErrorPageRedirectURL(code, msg string) (string, error) {
 		"errorMessage": msg,
 	}
 
-	return utils.GetURIWithQueryParams(errorPageURL, queryParams)
+	return oauth2utils.GetURIWithQueryParams(errorPageURL, queryParams)
 }
 
 // redirectToErrorPage constructs the error page URL and redirects the user to it.
@@ -471,7 +482,7 @@ func (ah *authorizeHandler) writeAuthZResponse(w http.ResponseWriter, redirectUR
 
 // writeAuthZResponseToErrorPage writes the authorization response to the error page.
 func (ah *authorizeHandler) writeAuthZResponseToErrorPage(w http.ResponseWriter, code, msg string,
-	sessionData *SessionData) {
+	authRequestCtx *authRequestContext) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 
 	redirectURI, err := getErrorPageRedirectURL(code, msg)
@@ -481,19 +492,30 @@ func (ah *authorizeHandler) writeAuthZResponseToErrorPage(w http.ResponseWriter,
 		return
 	}
 
-	if sessionData != nil && sessionData.OAuthParameters.State != "" {
-		redirectURI += "&state=" + sessionData.OAuthParameters.State
+	if authRequestCtx != nil && authRequestCtx.OAuthParameters.State != "" {
+		queryParams := map[string]string{
+			oauth2const.RequestParamState: authRequestCtx.OAuthParameters.State,
+		}
+		redirectURI, err = oauth2utils.GetURIWithQueryParams(redirectURI, queryParams)
+		if err != nil {
+			logger.Error("Failed to add state to error page URL: " + err.Error())
+			http.Error(w, "Failed to redirect to error page", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	ah.writeAuthZResponse(w, redirectURI)
 }
 
 // createAuthorizationCode generates an authorization code based on the provided
-// session data and authenticated user.
-func createAuthorizationCode(sessionData *SessionData, assertionClaims *assertionClaims) (
-	AuthorizationCode, error) {
-	clientID := sessionData.OAuthParameters.ClientID
-	redirectURI := sessionData.OAuthParameters.RedirectURI
+// authorization request context and authenticated user.
+func createAuthorizationCode(
+	authRequestCtx *authRequestContext,
+	assertionClaims *assertionClaims,
+	authTime time.Time,
+) (AuthorizationCode, error) {
+	clientID := authRequestCtx.OAuthParameters.ClientID
+	redirectURI := authRequestCtx.OAuthParameters.RedirectURI
 
 	if clientID == "" || redirectURI == "" {
 		return AuthorizationCode{}, errors.New("client_id or redirect_uri is missing")
@@ -503,15 +525,15 @@ func createAuthorizationCode(sessionData *SessionData, assertionClaims *assertio
 		return AuthorizationCode{}, errors.New("authenticated user not found")
 	}
 
-	authTime := sessionData.AuthTime
+	// Use provided authTime, or fallback to current time if zero (iat claim was not available)
 	if authTime.IsZero() {
-		return AuthorizationCode{}, errors.New("authentication time is not set")
+		authTime = time.Now()
 	}
 
-	StandardScopes := sessionData.OAuthParameters.StandardScopes
-	permissionScopes := sessionData.OAuthParameters.PermissionScopes
+	StandardScopes := authRequestCtx.OAuthParameters.StandardScopes
+	permissionScopes := authRequestCtx.OAuthParameters.PermissionScopes
 	allScopes := append(append([]string{}, StandardScopes...), permissionScopes...)
-	resource := sessionData.OAuthParameters.Resource
+	resource := authRequestCtx.OAuthParameters.Resource
 
 	// TODO: Add expiry time logic.
 	expiryTime := authTime.Add(10 * time.Minute)
@@ -530,8 +552,8 @@ func createAuthorizationCode(sessionData *SessionData, assertionClaims *assertio
 		ExpiryTime:          expiryTime,
 		Scopes:              utils.StringifyStringArray(allScopes, " "),
 		State:               AuthCodeStateActive,
-		CodeChallenge:       sessionData.OAuthParameters.CodeChallenge,
-		CodeChallengeMethod: sessionData.OAuthParameters.CodeChallengeMethod,
+		CodeChallenge:       authRequestCtx.OAuthParameters.CodeChallenge,
+		CodeChallengeMethod: authRequestCtx.OAuthParameters.CodeChallengeMethod,
 		Resource:            resource,
 	}, nil
 }
@@ -547,15 +569,29 @@ func (ah *authorizeHandler) verifyAssertion(assertion string, logger *log.Logger
 }
 
 // decodeAttributesFromAssertion decodes user attributes from the flow assertion JWT.
-// It returns assertion claims and an error if any.
-func decodeAttributesFromAssertion(assertion string) (assertionClaims, error) {
+func decodeAttributesFromAssertion(assertion string) (assertionClaims, time.Time, error) {
 	assertionClaims := assertionClaims{
 		userAttributes: make(map[string]string),
 	}
 
 	_, jwtPayload, err := jwt.DecodeJWT(assertion)
 	if err != nil {
-		return assertionClaims, errors.New("Failed to decode the JWT token: " + err.Error())
+		return assertionClaims, time.Time{}, errors.New("Failed to decode the JWT token: " + err.Error())
+	}
+
+	// Extract authentication time from iat claim
+	authTime := time.Time{}
+	if iatValue, ok := jwtPayload["iat"]; ok {
+		switch v := iatValue.(type) {
+		case float64:
+			authTime = time.Unix(int64(v), 0)
+		case int64:
+			authTime = time.Unix(v, 0)
+		case int:
+			authTime = time.Unix(int64(v), 0)
+		default:
+			return assertionClaims, time.Time{}, errors.New("JWT 'iat' claim has unexpected type")
+		}
 	}
 
 	userAttributes := make(map[string]string)
@@ -565,65 +601,65 @@ func decodeAttributesFromAssertion(assertion string) (assertionClaims, error) {
 			if strValue, ok := value.(string); ok {
 				assertionClaims.userID = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'sub' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'sub' claim is not a string")
 			}
 		case "username":
 			if strValue, ok := value.(string); ok {
 				userAttributes["username"] = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'username' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'username' claim is not a string")
 			}
 		case "email":
 			if strValue, ok := value.(string); ok {
 				userAttributes["email"] = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'email' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'email' claim is not a string")
 			}
 		case "firstName":
 			if strValue, ok := value.(string); ok {
 				userAttributes["firstName"] = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'firstName' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'firstName' claim is not a string")
 			}
 		case "lastName":
 			if strValue, ok := value.(string); ok {
 				userAttributes["lastName"] = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'lastName' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'lastName' claim is not a string")
 			}
 		case "authorized_permissions":
 			if strValue, ok := value.(string); ok {
 				userAttributes["authorized_permissions"] = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'authorized_permissions' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'authorized_permissions' claim is not a string")
 			}
-		case constants.ClaimUserType:
+		case oauth2const.ClaimUserType:
 			if strValue, ok := value.(string); ok {
 				assertionClaims.userType = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'userType' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'userType' claim is not a string")
 			}
-		case constants.ClaimOUID:
+		case oauth2const.ClaimOUID:
 			if strValue, ok := value.(string); ok {
 				assertionClaims.ouID = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'ouId' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'ouId' claim is not a string")
 			}
-		case constants.ClaimOUName:
+		case oauth2const.ClaimOUName:
 			if strValue, ok := value.(string); ok {
 				assertionClaims.ouName = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'ouName' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'ouName' claim is not a string")
 			}
-		case constants.ClaimOUHandle:
+		case oauth2const.ClaimOUHandle:
 			if strValue, ok := value.(string); ok {
 				assertionClaims.ouHandle = strValue
 			} else {
-				return assertionClaims, errors.New("JWT 'ouHandle' claim is not a string")
+				return assertionClaims, time.Time{}, errors.New("JWT 'ouHandle' claim is not a string")
 			}
 		}
 	}
 	assertionClaims.userAttributes = userAttributes
 
-	return assertionClaims, nil
+	return assertionClaims, authTime, nil
 }

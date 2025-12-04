@@ -15,6 +15,22 @@ CREATE TABLE AUTHORIZATION_CODE (
 -- Index for deployment isolation on AUTHORIZATION_CODE
 CREATE INDEX idx_authorization_code_deployment_id ON AUTHORIZATION_CODE (DEPLOYMENT_ID);
 
+-- Table to store OAuth2 authorization request context
+CREATE TABLE AUTHORIZATION_REQUEST (
+    AUTH_ID VARCHAR(36) NOT NULL,
+    DEPLOYMENT_ID VARCHAR(255) NOT NULL,
+    REQUEST_DATA JSONB NOT NULL,
+    EXPIRY_TIME TIMESTAMP NOT NULL,
+    CREATED_AT TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (AUTH_ID, DEPLOYMENT_ID)
+);
+
+-- Index for deployment isolation on AUTHORIZATION_REQUEST
+CREATE INDEX idx_authorization_request_deployment_id ON AUTHORIZATION_REQUEST (DEPLOYMENT_ID);
+
+-- Index for expiry time on AUTHORIZATION_REQUEST
+CREATE INDEX idx_authorization_request_expiry_time ON AUTHORIZATION_REQUEST (EXPIRY_TIME);
+
 -- Table to store flow context metadata and state
 CREATE TABLE FLOW_CONTEXT (
     FLOW_ID VARCHAR(36) NOT NULL,
