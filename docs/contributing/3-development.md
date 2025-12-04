@@ -236,11 +236,6 @@ Generated mocks are placed in `backend/tests/mocks/`.
 make clean
 ```
 
-**Clean all artifacts including distribution files:**
-```bash
-make clean_all
-```
-
 **Build Docker images:**
 ```bash
 # Single-arch image with version tag

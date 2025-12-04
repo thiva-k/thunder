@@ -207,26 +207,10 @@ function get_coverage_exclusion_pattern() {
     echo "$pattern"
 }
 
-function clean_all() {
-    echo "================================================================"
-    echo "Cleaning all build artifacts..."
-    rm -rf "$TARGET_DIR"
-
-    echo "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
-    rm -rf "$BACKEND_DIR/$SECURITY_DIR"
-
-    echo "Removing certificates in the React Vanilla sample app"
-    rm -f "$VANILLA_SAMPLE_APP_DIR/server.cert"
-    rm -f "$VANILLA_SAMPLE_APP_DIR/server.key"
-    rm -f "$VANILLA_SAMPLE_APP_SERVER_DIR/server.cert"
-    rm -f "$VANILLA_SAMPLE_APP_SERVER_DIR/server.key"
-    echo "================================================================"
-}
-
 function clean() {
     echo "================================================================"
     echo "Cleaning build artifacts..."
-    rm -rf "$OUTPUT_DIR"
+    rm -rf "$TARGET_DIR"
 
     echo "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
     rm -rf "$BACKEND_DIR/$SECURITY_DIR"
@@ -234,6 +218,10 @@ function clean() {
     echo "Removing certificates in the $VANILLA_SAMPLE_APP_DIR"
     rm -f "$VANILLA_SAMPLE_APP_DIR/server.cert"
     rm -f "$VANILLA_SAMPLE_APP_DIR/server.key"
+
+    echo "Removing certificates in the $VANILLA_SAMPLE_APP_SERVER_DIR"
+    rm -f "$VANILLA_SAMPLE_APP_SERVER_DIR/server.cert"
+    rm -f "$VANILLA_SAMPLE_APP_SERVER_DIR/server.key"
 
     echo "Removing certificates in the $REACT_SDK_SAMPLE_APP_DIR"
     rm -f "$REACT_SDK_SAMPLE_APP_DIR/server.cert"
@@ -1058,9 +1046,6 @@ case "$1" in
     clean)
         clean
         ;;
-    clean_all)
-        clean_all
-        ;;
     build_backend)
         build_backend
         package
@@ -1108,7 +1093,6 @@ case "$1" in
         echo "Usage: ./build.sh {clean|build|build_backend|build_frontend|test|run} [OS] [ARCH]"
         echo ""
         echo "  clean                    - Clean build artifacts"
-        echo "  clean_all                - Clean all build artifacts including distributions"
         echo "  build                    - Build the complete Thunder application (backend + frontend + samples)"
         echo "  build_backend            - Build only the Thunder backend server"
         echo "  build_frontend           - Build only the Next.js frontend applications"

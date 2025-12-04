@@ -113,7 +113,7 @@ jobs:
       - name: 🧹 Clean Previous Builds
         run: |
           set -e
-          make clean_all
+          make clean
 
       - name: 🔨 Build Product with Coverage
         run: |

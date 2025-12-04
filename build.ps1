@@ -267,43 +267,27 @@ function Get-CoverageExclusionPattern {
     return ""
 }
 
-function Clean-All {
+function Clean {
     Write-Host "================================================================"
-    Write-Host "Cleaning all build artifacts..."
+    Write-Host "Cleaning build artifacts..."
     if (Test-Path $TARGET_DIR) {
         Remove-Item -Path $TARGET_DIR -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Host "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
+    Write-Host "Removing certificates in $BACKEND_DIR/$SECURITY_DIR"
     if (Test-Path (Join-Path $BACKEND_DIR $SECURITY_DIR)) {
         Remove-Item -Path (Join-Path $BACKEND_DIR $SECURITY_DIR) -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Host "Removing certificates in the React Vanilla sample app"
+    Write-Host "Removing certificates in $VANILLA_SAMPLE_APP_DIR"
     Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
+
+    Write-Host "Removing certificates in $VANILLA_SAMPLE_APP_SERVER_DIR"
     Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "server.cert") -Force -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "server.key") -Force -ErrorAction SilentlyContinue
-    Write-Host "================================================================"
-}
 
-function Clean {
-    Write-Host "================================================================"
-    Write-Host "Cleaning build artifacts..."
-    if (Test-Path $OUTPUT_DIR) {
-        Remove-Item -Path $OUTPUT_DIR -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    Write-Host "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
-    if (Test-Path (Join-Path $BACKEND_DIR $SECURITY_DIR)) {
-        Remove-Item -Path (Join-Path $BACKEND_DIR $SECURITY_DIR) -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    Write-Host "Removing certificates in the React Vanilla sample app"
-    Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
-
-    Write-Host "Removing certificates in the React SDK sample app"
+    Write-Host "Removing certificates in $REACT_SDK_SAMPLE_APP_DIR"
     Remove-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
     Write-Host "================================================================"
@@ -1552,9 +1536,6 @@ switch ($Command) {
     "clean" {
         Clean
     }
-    "clean_all" {
-        Clean-All
-    }
     "build_backend" {
         Build-Backend
         Package
@@ -1602,7 +1583,6 @@ switch ($Command) {
         Write-Host "Usage: ./build.ps1 {clean|build|build_backend|build_frontend|test|run} [OS] [ARCH]"
         Write-Host ""
         Write-Host "  clean                    - Clean build artifacts"
-        Write-Host "  clean_all                - Clean all build artifacts including distributions"
         Write-Host "  build                    - Build the complete Thunder application (backend + frontend + samples)"
         Write-Host "  build_backend            - Build only the Thunder backend server"
         Write-Host "  build_frontend           - Build only the Next.js frontend applications"
