@@ -53,7 +53,9 @@ type ResourceServiceInterface interface {
 	// Action operations
 	CreateAction(resourceServerID string, resourceID *string, action Action) (*Action, *serviceerror.ServiceError)
 	GetAction(resourceServerID string, resourceID *string, id string) (*Action, *serviceerror.ServiceError)
-	GetActionList(resourceServerID string, resourceID *string, limit, offset int) (*ActionList, *serviceerror.ServiceError)
+	GetActionList(
+		resourceServerID string, resourceID *string, limit, offset int,
+	) (*ActionList, *serviceerror.ServiceError)
 	UpdateAction(
 		resourceServerID string, resourceID *string, id string, action Action,
 	) (*Action, *serviceerror.ServiceError)
@@ -121,7 +123,8 @@ func (rs *resourceService) CreateResourceServer(
 			return nil, &serviceerror.InternalServerError
 		}
 		if identifierExists {
-			rs.logger.Debug("Resource server identifier already exists", log.String("identifier", resourceServer.Identifier))
+			rs.logger.Debug("Resource server identifier already exists",
+				log.String("identifier", resourceServer.Identifier))
 			return nil, &ErrorIdentifierConflict
 		}
 	}
@@ -247,7 +250,8 @@ func (rs *resourceService) UpdateResourceServer(
 			return nil, &serviceerror.InternalServerError
 		}
 		if identifierExists {
-			rs.logger.Debug("Resource server identifier already exists", log.String("identifier", resourceServer.Identifier))
+			rs.logger.Debug("Resource server identifier already exists",
+				log.String("identifier", resourceServer.Identifier))
 			return nil, &ErrorIdentifierConflict
 		}
 	}

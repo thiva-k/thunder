@@ -49,10 +49,11 @@ var (
 	}
 	// ErrorCannotDeleteBranding is the error returned when branding cannot be deleted.
 	ErrorCannotDeleteBranding = serviceerror.ServiceError{
-		Type:             serviceerror.ClientErrorType,
-		Code:             "BRD-1004",
-		Error:            "Cannot delete branding",
-		ErrorDescription: "Cannot delete branding configuration that is currently associated with one or more applications",
+		Type:  serviceerror.ClientErrorType,
+		Code:  "BRD-1004",
+		Error: "Cannot delete branding",
+		ErrorDescription: "Cannot delete branding configuration that is currently associated with " +
+			"one or more applications",
 	}
 	// ErrorMissingDisplayName is the error returned when displayName field is missing.
 	ErrorMissingDisplayName = serviceerror.ServiceError{

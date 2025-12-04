@@ -406,7 +406,8 @@ func getSenderResponseFromDTO(sender *common.NotificationSenderDTO) (common.Noti
 		} else {
 			propertyDTO, err := property.ToPropertyDTO()
 			if err != nil {
-				return common.NotificationSenderResponse{}, fmt.Errorf("failed to convert property %s: %w", property.GetName(), err)
+				return common.NotificationSenderResponse{},
+					fmt.Errorf("failed to convert property %s: %w", property.GetName(), err)
 			}
 			senderProperties = append(senderProperties, *propertyDTO)
 		}

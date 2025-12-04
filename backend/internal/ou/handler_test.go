@@ -1154,7 +1154,8 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutByPathRe
 			pathParamValue: defaultOUPath,
 			setup: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.
-					On("UpdateOrganizationUnitByPath", defaultOUPath, mock.AnythingOfType("ou.OrganizationUnitRequest")).
+					On("UpdateOrganizationUnitByPath", defaultOUPath,
+						mock.AnythingOfType("ou.OrganizationUnitRequest")).
 					Return(OrganizationUnit{}, &ErrorInternalServerError).
 					Once()
 			},
@@ -1176,7 +1177,8 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutByPathRe
 			useFlaky:       true,
 			setup: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.
-					On("UpdateOrganizationUnitByPath", defaultOUPath, mock.AnythingOfType("ou.OrganizationUnitRequest")).
+					On("UpdateOrganizationUnitByPath", defaultOUPath,
+						mock.AnythingOfType("ou.OrganizationUnitRequest")).
 					Return(OrganizationUnit{ID: defaultOURequestID}, nil).
 					Once()
 			},
@@ -1195,7 +1197,8 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutByPathRe
 			pathParamValue: defaultOUPath,
 			setup: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.
-					On("UpdateOrganizationUnitByPath", defaultOUPath, mock.AnythingOfType("ou.OrganizationUnitRequest")).
+					On("UpdateOrganizationUnitByPath", defaultOUPath,
+						mock.AnythingOfType("ou.OrganizationUnitRequest")).
 					Return(OrganizationUnit{ID: defaultOURequestID}, nil).
 					Once()
 			},

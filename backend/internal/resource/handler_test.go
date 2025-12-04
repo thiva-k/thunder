@@ -868,7 +868,8 @@ func (suite *HandlerTestSuite) TestHandleResourceListRequest_InvalidLimit() {
 }
 
 func (suite *HandlerTestSuite) TestHandleResourceListRequest_ServiceError() {
-	suite.mockService.On("GetResourceList", "rs-123", (*string)(nil), 30, 0).Return(nil, &serviceerror.InternalServerError)
+	suite.mockService.On("GetResourceList", "rs-123", (*string)(nil), 30, 0).
+		Return(nil, &serviceerror.InternalServerError)
 
 	req := httptest.NewRequest("GET", "/resource-servers/rs-123/resources", nil)
 	req.SetPathValue("rsId", "rs-123")
@@ -1095,7 +1096,8 @@ func (suite *HandlerTestSuite) TestHandleActionPutAtResourceServerRequest_Servic
 
 func (suite *HandlerTestSuite) TestHandleActionDeleteAtResourceServerRequest_ServiceError() {
 	var nilResourceID *string
-	suite.mockService.On("DeleteAction", "rs-123", nilResourceID, "action-123").Return(&serviceerror.InternalServerError)
+	suite.mockService.On("DeleteAction", "rs-123", nilResourceID, "action-123").
+		Return(&serviceerror.InternalServerError)
 
 	req := httptest.NewRequest("DELETE", "/resource-servers/rs-123/actions/action-123", nil)
 	req.SetPathValue("rsId", "rs-123")

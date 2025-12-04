@@ -24,7 +24,8 @@ var (
 	// queryCreateNotificationSender is the query to create a new notification sender.
 	queryCreateNotificationSender = dbmodel.DBQuery{
 		ID: "NMQ-SM-01",
-		Query: "INSERT INTO NOTIFICATION_SENDER (NAME, SENDER_ID, DESCRIPTION, TYPE, PROVIDER, PROPERTIES, DEPLOYMENT_ID) " +
+		Query: "INSERT INTO NOTIFICATION_SENDER " +
+			"(NAME, SENDER_ID, DESCRIPTION, TYPE, PROVIDER, PROPERTIES, DEPLOYMENT_ID) " +
 			"VALUES ($1, $2, $3, $4, $5, $6, $7)",
 	}
 

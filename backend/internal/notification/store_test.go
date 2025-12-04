@@ -493,7 +493,8 @@ func (suite *StoreTestSuite) TestUpdateSender_SerializeError() {
 func (suite *StoreTestSuite) TestDeleteSender_NoRows() {
 	// delete with 0 rows affected (should not return error)
 	suite.mockDBProvider.EXPECT().GetConfigDBClient().Return(suite.mockDBClient, nil).Once()
-	suite.mockDBClient.EXPECT().Execute(queryDeleteNotificationSender, "s1", testDeploymentID).Return(int64(0), nil).Once()
+	suite.mockDBClient.EXPECT().Execute(queryDeleteNotificationSender, "s1", testDeploymentID).
+		Return(int64(0), nil).Once()
 
 	err := suite.store.deleteSender("s1")
 	suite.NoError(err)

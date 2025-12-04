@@ -1023,7 +1023,8 @@ func (suite *AuthorizeHandlerTestSuite) TestDecodeAttributesFromAssertion_Invali
 		jwt   string
 	}{
 		{"InvalidOUID", "ouId", "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJvdUlkIjoxMjM0NX0."},
-		{"InvalidOUName", "ouName", "eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJvdU5hbWUiOjEyMzQ1fQ."},
+		{"InvalidOUName", "ouName",
+			"eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJvdU5hbWUiOjEyMzQ1fQ."},
 		{"InvalidOUHandle", "ouHandle",
 			"eyJhbGciOiJub25lIiwidHlwIjoiSldUIn0.eyJzdWIiOiJ0ZXN0LXVzZXIiLCJvdUhhbmRsZSI6MTIzNDV9."},
 	}

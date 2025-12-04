@@ -438,8 +438,9 @@ func (ouh *organizationUnitHandler) handleResourceListByPathRequest(
 			count = resp.Count
 		}
 
-		logger.Debug("Successfully listed resources in organization unit by path", log.String("resourceType", resourceType),
-			log.String("path", path), log.Int("limit", limit), log.Int("offset", offset),
+		logger.Debug("Successfully listed resources in organization unit by path",
+			log.String("resourceType", resourceType), log.String("path", path),
+			log.Int("limit", limit), log.Int("offset", offset),
 			log.Int("totalResults", totalResults), log.Int("count", count))
 	}
 }

@@ -461,7 +461,8 @@ func (suite *CacheBackedStoreTestSuite) TestGetApplicationByName_CacheMiss() {
 
 func (suite *CacheBackedStoreTestSuite) TestGetApplicationByName_StoreError() {
 	storeErr := errors.New("store error")
-	suite.mockStore.On("GetApplicationByName", "test-name").Return((*model.ApplicationProcessedDTO)(nil), storeErr).Once()
+	suite.mockStore.On("GetApplicationByName", "test-name").
+		Return((*model.ApplicationProcessedDTO)(nil), storeErr).Once()
 
 	result, err := suite.cachedStore.GetApplicationByName("test-name")
 	suite.Equal(storeErr, err)

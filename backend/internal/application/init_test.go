@@ -336,7 +336,8 @@ inbound_auth_config:
 	assert.Contains(suite.T(), oauthConfig.GrantTypes, oauth2const.GrantType("refresh_token"))
 	assert.Contains(suite.T(), oauthConfig.ResponseTypes, oauth2const.ResponseType("code"))
 	assert.Contains(suite.T(), oauthConfig.ResponseTypes, oauth2const.ResponseType("token"))
-	assert.Equal(suite.T(), oauth2const.TokenEndpointAuthMethod("client_secret_post"), oauthConfig.TokenEndpointAuthMethod)
+	assert.Equal(suite.T(), oauth2const.TokenEndpointAuthMethod("client_secret_post"),
+		oauthConfig.TokenEndpointAuthMethod)
 	assert.False(suite.T(), oauthConfig.PKCERequired)
 	assert.True(suite.T(), oauthConfig.PublicClient)
 

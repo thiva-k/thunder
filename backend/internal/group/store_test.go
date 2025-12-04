@@ -448,9 +448,10 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 	}
 
 	testCases := []struct {
-		name      string
-		group     GroupDAO
-		setup     func(*providermock.DBProviderInterfaceMock, *clientmock.DBClientInterfaceMock, *modelmock.TxInterfaceMock)
+		name  string
+		group GroupDAO
+		setup func(*providermock.DBProviderInterfaceMock, *clientmock.DBClientInterfaceMock,
+			*modelmock.TxInterfaceMock)
 		expectErr string
 		needsTx   bool
 		verifyTx  func(*modelmock.TxInterfaceMock)
@@ -1217,9 +1218,10 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 	groupMinimal := GroupDAO{ID: "grp-001"}
 
 	testCases := []struct {
-		name        string
-		group       GroupDAO
-		setup       func(*providermock.DBProviderInterfaceMock, *clientmock.DBClientInterfaceMock, *modelmock.TxInterfaceMock)
+		name  string
+		group GroupDAO
+		setup func(*providermock.DBProviderInterfaceMock, *clientmock.DBClientInterfaceMock,
+			*modelmock.TxInterfaceMock)
 		expectErr   string
 		expectErrIs error
 		needsTx     bool
@@ -1679,9 +1681,10 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 
 func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 	testCases := []struct {
-		name      string
-		groupID   string
-		setup     func(*providermock.DBProviderInterfaceMock, *clientmock.DBClientInterfaceMock, *modelmock.TxInterfaceMock)
+		name    string
+		groupID string
+		setup   func(*providermock.DBProviderInterfaceMock, *clientmock.DBClientInterfaceMock,
+			*modelmock.TxInterfaceMock)
 		expectErr string
 		needsTx   bool
 		verifyTx  func(*modelmock.TxInterfaceMock)
@@ -2537,7 +2540,10 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CheckGroupNameConflictForCreate
 		},
 		{
 			name: "database client error",
-			setupProvider: func(providerMock *providermock.DBProviderInterfaceMock, _ *clientmock.DBClientInterfaceMock) {
+			setupProvider: func(
+				providerMock *providermock.DBProviderInterfaceMock,
+				_ *clientmock.DBClientInterfaceMock,
+			) {
 				providerMock.
 					On("GetUserDBClient").
 					Return(nil, errors.New("client fail")).
@@ -2595,7 +2601,10 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CheckGroupNameConflictForUpdate
 		},
 		{
 			name: "database client error",
-			setupProvider: func(providerMock *providermock.DBProviderInterfaceMock, _ *clientmock.DBClientInterfaceMock) {
+			setupProvider: func(
+				providerMock *providermock.DBProviderInterfaceMock,
+				_ *clientmock.DBClientInterfaceMock,
+			) {
 				providerMock.
 					On("GetUserDBClient").
 					Return(nil, errors.New("client fail")).

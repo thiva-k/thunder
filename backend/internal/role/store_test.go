@@ -155,8 +155,8 @@ func (suite *RoleStoreTestSuite) TestCreateRole_Success() {
 		Return(&mockResult{}, nil)
 	suite.mockTx.On("Exec", queryCreateRolePermission.Query, mock.Anything, "perm2", testDeploymentID).
 		Return(&mockResult{}, nil)
-	suite.mockTx.On("Exec", queryCreateRoleAssignment.Query, mock.Anything, AssigneeTypeUser, "user1", testDeploymentID).
-		Return(&mockResult{}, nil)
+	suite.mockTx.On("Exec", queryCreateRoleAssignment.Query, mock.Anything, AssigneeTypeUser, "user1",
+		testDeploymentID).Return(&mockResult{}, nil)
 	suite.mockTx.On("Commit").Return(nil)
 
 	err := suite.store.CreateRole("role1", roleDetail)
@@ -244,9 +244,10 @@ func (suite *RoleStoreTestSuite) TestIsRoleExist_Exists() {
 
 func (suite *RoleStoreTestSuite) TestIsRoleExist_DoesNotExist() {
 	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("Query", queryCheckRoleExists, "nonexistent", testDeploymentID).Return([]map[string]interface{}{
-		{"count": int64(0)},
-	}, nil)
+	suite.mockDBClient.On("Query", queryCheckRoleExists, "nonexistent", testDeploymentID).
+		Return([]map[string]interface{}{
+			{"count": int64(0)},
+		}, nil)
 
 	exists, err := suite.store.IsRoleExist("nonexistent")
 
@@ -296,7 +297,8 @@ func (suite *RoleStoreTestSuite) TestUpdateRole_Success() {
 	suite.mockTx.On("Exec", queryUpdateRole.Query, "ou1", "Updated Role", "Updated Description", "role1",
 		testDeploymentID).Return(&mockResult{rowsAffected: 1}, nil)
 	suite.mockTx.On("Exec", queryDeleteRolePermissions.Query, "role1", testDeploymentID).Return(&mockResult{}, nil)
-	suite.mockTx.On("Exec", queryCreateRolePermission.Query, "role1", "perm1", testDeploymentID).Return(&mockResult{}, nil)
+	suite.mockTx.On("Exec", queryCreateRolePermission.Query, "role1", "perm1", testDeploymentID).
+		Return(&mockResult{}, nil)
 	suite.mockTx.On("Commit").Return(nil)
 
 	err := suite.store.UpdateRole("role1", roleDetail)
@@ -367,8 +369,8 @@ func (suite *RoleStoreTestSuite) TestRemoveAssignments_Success() {
 
 	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil)
 	suite.mockDBClient.On("BeginTx").Return(suite.mockTx, nil)
-	suite.mockTx.On("Exec", queryDeleteRoleAssignmentsByIDs.Query, "role1", AssigneeTypeUser, "user1", testDeploymentID).
-		Return(&mockResult{}, nil)
+	suite.mockTx.On("Exec", queryDeleteRoleAssignmentsByIDs.Query, "role1", AssigneeTypeUser, "user1",
+		testDeploymentID).Return(&mockResult{}, nil)
 	suite.mockTx.On("Commit").Return(nil)
 
 	err := suite.store.RemoveAssignments("role1", assignments)

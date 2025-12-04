@@ -915,7 +915,8 @@ func (suite *ServiceTestSuite) TestDeleteApplication_Success() {
 	service, mockStore, mockCertService, _ := suite.setupTestService()
 
 	mockStore.On("DeleteApplication", "app123").Return(nil)
-	mockCertService.EXPECT().DeleteCertificateByReference(cert.CertificateReferenceTypeApplication, "app123").Return(nil)
+	mockCertService.EXPECT().DeleteCertificateByReference(cert.CertificateReferenceTypeApplication,
+		"app123").Return(nil)
 
 	svcErr := service.DeleteApplication("app123")
 
@@ -964,7 +965,8 @@ func (suite *ServiceTestSuite) TestGetApplicationCertificate_NotFound() {
 func (suite *ServiceTestSuite) TestGetApplicationCertificate_NilCertificate() {
 	service, _, mockCertService, _ := suite.setupTestService()
 
-	mockCertService.EXPECT().GetCertificateByReference(cert.CertificateReferenceTypeApplication, "app123").Return(nil, nil)
+	mockCertService.EXPECT().GetCertificateByReference(cert.CertificateReferenceTypeApplication,
+		"app123").Return(nil, nil)
 
 	result, err := service.getApplicationCertificate("app123")
 
@@ -1043,7 +1045,8 @@ func (suite *ServiceTestSuite) TestCreateApplicationCertificate_ClientError() {
 func (suite *ServiceTestSuite) TestRollbackAppCertificateCreation_Success() {
 	service, _, mockCertService, _ := suite.setupTestService()
 
-	mockCertService.EXPECT().DeleteCertificateByReference(cert.CertificateReferenceTypeApplication, "app123").Return(nil)
+	mockCertService.EXPECT().DeleteCertificateByReference(cert.CertificateReferenceTypeApplication,
+		"app123").Return(nil)
 
 	svcErr := service.rollbackAppCertificateCreation("app123")
 
@@ -1369,7 +1372,8 @@ func (suite *ServiceTestSuite) TestGetValidatedCertificateForCreate_JWKSURI_Inva
 func (suite *ServiceTestSuite) TestDeleteApplicationCertificate_Success() {
 	service, _, mockCertService, _ := suite.setupTestService()
 
-	mockCertService.EXPECT().DeleteCertificateByReference(cert.CertificateReferenceTypeApplication, "app123").Return(nil)
+	mockCertService.EXPECT().DeleteCertificateByReference(cert.CertificateReferenceTypeApplication,
+		"app123").Return(nil)
 
 	svcErr := service.deleteApplicationCertificate("app123")
 

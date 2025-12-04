@@ -29,8 +29,9 @@ var (
 
 	// queryGetBrandingByID retrieves a branding configuration by ID.
 	queryGetBrandingByID = dbmodel.DBQuery{
-		ID:    "BRQ-BRANDING_MGT-02",
-		Query: "SELECT BRANDING_ID, DISPLAY_NAME, PREFERENCES FROM BRANDING WHERE BRANDING_ID = $1 AND DEPLOYMENT_ID = $2",
+		ID: "BRQ-BRANDING_MGT-02",
+		Query: "SELECT BRANDING_ID, DISPLAY_NAME, PREFERENCES FROM BRANDING " +
+			"WHERE BRANDING_ID = $1 AND DEPLOYMENT_ID = $2",
 	}
 
 	// queryGetBrandingList retrieves a list of branding configurations with pagination.

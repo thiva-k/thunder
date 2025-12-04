@@ -161,7 +161,8 @@ func (suite *RoleServiceTestSuite) TestCreateRole_Success() {
 	suite.mockOUService.On("GetOrganizationUnit", "ou1").Return(ou, nil)
 	suite.mockStore.On("CheckRoleNameExists", "ou1", "Test Role").Return(false, nil)
 	suite.mockUserService.On("ValidateUserIDs", []string{testUserID1}).Return([]string{}, nil)
-	suite.mockStore.On("CreateRole", mock.AnythingOfType("string"), mock.AnythingOfType("RoleCreationDetail")).Return(nil)
+	suite.mockStore.On("CreateRole", mock.AnythingOfType("string"),
+		mock.AnythingOfType("RoleCreationDetail")).Return(nil)
 
 	result, err := suite.service.CreateRole(request)
 

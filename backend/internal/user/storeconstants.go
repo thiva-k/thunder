@@ -71,8 +71,9 @@ var (
 	}
 	// QueryValidateUserWithCredentials is the query to validate the user with the give credentials.
 	QueryValidateUserWithCredentials = model.DBQuery{
-		ID:    "ASQ-USER_MGT-07",
-		Query: "SELECT USER_ID, OU_ID, TYPE, ATTRIBUTES, CREDENTIALS FROM \"USER\" WHERE USER_ID = $1 AND DEPLOYMENT_ID = $2",
+		ID: "ASQ-USER_MGT-07",
+		Query: "SELECT USER_ID, OU_ID, TYPE, ATTRIBUTES, CREDENTIALS FROM \"USER\" " +
+			"WHERE USER_ID = $1 AND DEPLOYMENT_ID = $2",
 	}
 	// QueryGetGroupCountForUser is the query to get the count of groups for a given user.
 	QueryGetGroupCountForUser = model.DBQuery{

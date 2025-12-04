@@ -131,7 +131,8 @@ func (suite *PKCETestSuite) TestValidatePKCE() {
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
 				if tt.expectedError != nil {
-					assert.ErrorIs(t, err, tt.expectedError, "Expected specific error: %v, got: %v", tt.expectedError, err)
+					assert.ErrorIs(t, err, tt.expectedError,
+						"Expected specific error: %v, got: %v", tt.expectedError, err)
 				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got: %v", err)
@@ -193,7 +194,8 @@ func (suite *PKCETestSuite) TestGenerateCodeChallenge() {
 				assert.Error(t, err, "Expected error but got none")
 				assert.Empty(t, challenge, "Challenge should be empty on error")
 				if tt.expectedError != nil {
-					assert.ErrorIs(t, err, tt.expectedError, "Expected specific error: %v, got: %v", tt.expectedError, err)
+					assert.ErrorIs(t, err, tt.expectedError,
+						"Expected specific error: %v, got: %v", tt.expectedError, err)
 				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got: %v", err)
@@ -293,7 +295,8 @@ func (suite *PKCETestSuite) TestValidateCodeChallenge() {
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
 				if tt.expectedError != nil {
-					assert.ErrorIs(t, err, tt.expectedError, "Expected specific error: %v, got: %v", tt.expectedError, err)
+					assert.ErrorIs(t, err, tt.expectedError,
+						"Expected specific error: %v, got: %v", tt.expectedError, err)
 				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got: %v", err)

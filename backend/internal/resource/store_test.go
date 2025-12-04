@@ -121,15 +121,16 @@ func (suite *ResourceStoreTestSuite) TestCreateResourceServer_DBClientError() {
 
 func (suite *ResourceStoreTestSuite) TestGetResourceServer_Success() {
 	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("Query", queryGetResourceServerByID, "rs1", "test-deployment").Return([]map[string]interface{}{
-		{
-			"resource_server_id": "rs1",
-			"ou_id":              "ou1",
-			"name":               "Test Server",
-			"description":        "Test Description",
-			"identifier":         "test-identifier",
-		},
-	}, nil)
+	suite.mockDBClient.On("Query", queryGetResourceServerByID, "rs1", "test-deployment").
+		Return([]map[string]interface{}{
+			{
+				"resource_server_id": "rs1",
+				"ou_id":              "ou1",
+				"name":               "Test Server",
+				"description":        "Test Description",
+				"identifier":         "test-identifier",
+			},
+		}, nil)
 
 	rs, err := suite.store.GetResourceServer("rs1")
 
@@ -167,22 +168,23 @@ func (suite *ResourceStoreTestSuite) TestGetResourceServer_QueryError() {
 
 func (suite *ResourceStoreTestSuite) TestGetResourceServerList_Success() {
 	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("Query", queryGetResourceServerList, 10, 0, "test-deployment").Return([]map[string]interface{}{
-		{
-			"resource_server_id": "rs1",
-			"ou_id":              "ou1",
-			"name":               "Server 1",
-			"description":        "Description 1",
-			"identifier":         "identifier-1",
-		},
-		{
-			"resource_server_id": "rs2",
-			"ou_id":              "ou1",
-			"name":               "Server 2",
-			"description":        "Description 2",
-			"identifier":         "identifier-2",
-		},
-	}, nil)
+	suite.mockDBClient.On("Query", queryGetResourceServerList, 10, 0, "test-deployment").
+		Return([]map[string]interface{}{
+			{
+				"resource_server_id": "rs1",
+				"ou_id":              "ou1",
+				"name":               "Server 1",
+				"description":        "Description 1",
+				"identifier":         "identifier-1",
+			},
+			{
+				"resource_server_id": "rs2",
+				"ou_id":              "ou1",
+				"name":               "Server 2",
+				"description":        "Description 2",
+				"identifier":         "identifier-2",
+			},
+		}, nil)
 
 	servers, err := suite.store.GetResourceServerList(10, 0)
 
@@ -205,13 +207,14 @@ func (suite *ResourceStoreTestSuite) TestGetResourceServerList_QueryError() {
 
 func (suite *ResourceStoreTestSuite) TestGetResourceServerList_InvalidRowData() {
 	suite.mockDBProvider.On("GetConfigDBClient").Return(suite.mockDBClient, nil)
-	suite.mockDBClient.On("Query", queryGetResourceServerList, 10, 0, "test-deployment").Return([]map[string]interface{}{
-		{
-			"resource_server_id": 123, // Invalid type
-			"ou_id":              "ou1",
-			"name":               "Server 1",
-		},
-	}, nil)
+	suite.mockDBClient.On("Query", queryGetResourceServerList, 10, 0, "test-deployment").
+		Return([]map[string]interface{}{
+			{
+				"resource_server_id": 123, // Invalid type
+				"ou_id":              "ou1",
+				"name":               "Server 1",
+			},
+		}, nil)
 
 	servers, err := suite.store.GetResourceServerList(10, 0)
 

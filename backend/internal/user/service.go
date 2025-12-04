@@ -434,7 +434,8 @@ func (us *userService) UpdateUserAttributes(
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
-		return nil, logErrorAndReturnServerError(logger, "Failed to update user attributes", err, log.String("id", userID))
+		return nil, logErrorAndReturnServerError(logger, "Failed to update user attributes", err,
+			log.String("id", userID))
 	}
 
 	logger.Debug("Successfully updated user attributes", log.String("id", userID))
@@ -675,7 +676,8 @@ func (us *userService) VerifyUser(
 		}
 
 		if matchingCredential == nil {
-			logger.Debug("No stored credential found for type", log.String("userID", userID), log.String("credType", credType))
+			logger.Debug("No stored credential found for type",
+				log.String("userID", userID), log.String("credType", credType))
 			return nil, &ErrorAuthenticationFailed
 		}
 
@@ -687,9 +689,11 @@ func (us *userService) VerifyUser(
 		hashVerified := hash.Verify([]byte(credValue), verifyingCredential)
 
 		if hashVerified {
-			logger.Debug("Credential verified successfully", log.String("userID", userID), log.String("credType", credType))
+			logger.Debug("Credential verified successfully",
+				log.String("userID", userID), log.String("credType", credType))
 		} else {
-			logger.Debug("Credential verification failed", log.String("userID", userID), log.String("credType", credType))
+			logger.Debug("Credential verification failed",
+				log.String("userID", userID), log.String("credType", credType))
 			return nil, &ErrorAuthenticationFailed
 		}
 	}

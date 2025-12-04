@@ -750,7 +750,8 @@ func buildOAuthInboundAuthConfig(row map[string]interface{}, basicApp model.Basi
 	} else if v, ok := row["oauth_config_json"].([]byte); ok {
 		oauthConfigJSON = string(v)
 	} else {
-		return model.InboundAuthConfigProcessedDTO{}, fmt.Errorf("failed to parse oauth_config_json as string or []byte")
+		return model.InboundAuthConfigProcessedDTO{},
+			fmt.Errorf("failed to parse oauth_config_json as string or []byte")
 	}
 
 	var oauthConfig oAuthConfig

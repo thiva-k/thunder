@@ -248,7 +248,8 @@ func (suite *OAuthAuthnServiceTestSuite) TestBuildAuthorizeURLSuccessWithAdditio
 			clientSecretProp, _ := cmodels.NewProperty("client_secret", "test_client_secret", false)
 			redirectURIProp, _ := cmodels.NewProperty("redirect_uri", "https://app.example.com/callback", false)
 			scopesProp, _ := cmodels.NewProperty("scopes", "openid profile", false)
-			authzEndpointProp, _ := cmodels.NewProperty("authorization_endpoint", "https://example.com/oauth/authorize", false)
+			authzEndpointProp, _ := cmodels.NewProperty("authorization_endpoint",
+				"https://example.com/oauth/authorize", false)
 
 			idpDTO := &idp.IDPDTO{
 				ID:   testIDPID,

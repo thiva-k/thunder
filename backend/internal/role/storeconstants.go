@@ -85,8 +85,9 @@ var (
 
 	// queryCreateRoleAssignment creates a new role assignment.
 	queryCreateRoleAssignment = dbmodel.DBQuery{
-		ID:    "RLQ-ROLE_MGT-10",
-		Query: `INSERT INTO ROLE_ASSIGNMENT (ROLE_ID, ASSIGNEE_TYPE, ASSIGNEE_ID, DEPLOYMENT_ID) VALUES ($1, $2, $3, $4)`,
+		ID: "RLQ-ROLE_MGT-10",
+		Query: `INSERT INTO ROLE_ASSIGNMENT (ROLE_ID, ASSIGNEE_TYPE, ASSIGNEE_ID, DEPLOYMENT_ID) 
+			VALUES ($1, $2, $3, $4)`,
 	}
 
 	// queryGetRoleAssignments retrieves all assignments for a role with pagination.
@@ -117,8 +118,9 @@ var (
 
 	// queryCheckRoleNameExistsExcludingID checks if a role name exists for an OU excluding a specific role ID.
 	queryCheckRoleNameExistsExcludingID = dbmodel.DBQuery{
-		ID:    "RLQ-ROLE_MGT-15",
-		Query: `SELECT COUNT(*) as count FROM "ROLE" WHERE OU_ID = $1 AND NAME = $2 AND ROLE_ID != $3 AND DEPLOYMENT_ID = $4`,
+		ID: "RLQ-ROLE_MGT-15",
+		Query: `SELECT COUNT(*) as count FROM "ROLE" 
+			WHERE OU_ID = $1 AND NAME = $2 AND ROLE_ID != $3 AND DEPLOYMENT_ID = $4`,
 	}
 
 	// queryCheckRoleExists checks if a role exists by its ID.

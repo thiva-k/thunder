@@ -23,8 +23,9 @@ import dbmodel "github.com/asgardeo/thunder/internal/system/database/model"
 var (
 	// queryGetCertificateByID retrieves a certificate by its ID.
 	queryGetCertificateByID = dbmodel.DBQuery{
-		ID:    "CER_MGT-01",
-		Query: "SELECT CERT_ID, REF_TYPE, REF_ID, TYPE, VALUE FROM CERTIFICATE WHERE CERT_ID = $1 AND DEPLOYMENT_ID = $2",
+		ID: "CER_MGT-01",
+		Query: "SELECT CERT_ID, REF_TYPE, REF_ID, TYPE, VALUE FROM CERTIFICATE " +
+			"WHERE CERT_ID = $1 AND DEPLOYMENT_ID = $2",
 	}
 	// queryGetCertificateByReference retrieves a certificate based on its reference type and ID.
 	queryGetCertificateByReference = dbmodel.DBQuery{
@@ -45,8 +46,9 @@ var (
 	}
 	// queryUpdateCertificateByReference updates a certificate based on its reference type and ID.
 	queryUpdateCertificateByReference = dbmodel.DBQuery{
-		ID:    "CER_MGT-05",
-		Query: "UPDATE CERTIFICATE SET TYPE = $3, VALUE = $4 WHERE REF_TYPE = $1 AND REF_ID = $2 AND DEPLOYMENT_ID = $5",
+		ID: "CER_MGT-05",
+		Query: "UPDATE CERTIFICATE SET TYPE = $3, VALUE = $4 " +
+			"WHERE REF_TYPE = $1 AND REF_ID = $2 AND DEPLOYMENT_ID = $5",
 	}
 	// queryDeleteCertificateByID deletes a certificate by its ID.
 	queryDeleteCertificateByID = dbmodel.DBQuery{
