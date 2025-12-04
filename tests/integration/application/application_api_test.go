@@ -2450,6 +2450,35 @@ func (ts *ApplicationAPITestSuite) TestApplicationPublicClientWithoutSecret() {
 	ts.Assert().Equal("none", string(retrievedApp.InboundAuthConfig[0].OAuthAppConfig.TokenEndpointAuthMethod))
 }
 
+// TestApplicationPublicClientPKCEValidation tests that public clients must have PKCE required.
+func (ts *ApplicationAPITestSuite) TestApplicationPublicClientPKCEValidation() {
+	app := Application{
+		Name:        "Public Client PKCE Validation",
+		Description: "Public client with PKCE explicitly set to false should fail",
+		Certificate: &ApplicationCert{Type: "NONE", Value: ""},
+		InboundAuthConfig: []InboundAuthConfig{
+			{
+				Type: "oauth2",
+				OAuthAppConfig: &OAuthAppConfig{
+					RedirectURIs:            []string{"https://public-pkce-validation.example.com/callback"},
+					GrantTypes:              []string{"authorization_code"},
+					ResponseTypes:           []string{"code"},
+					TokenEndpointAuthMethod: "none",
+					PublicClient:            true,
+					PKCERequired:            false, // Explicitly set to false - should fail validation
+					Scopes:                  []string{"openid", "profile"},
+				},
+			},
+		},
+	}
+
+	// Attempt to create application - should fail validation
+	appID, err := createApplication(app)
+	ts.Require().Error(err, "Public client with pkce_required=false should fail validation")
+	ts.Assert().Contains(err.Error(), "PKCE required", "Error should mention PKCE requirement")
+	ts.Assert().Empty(appID, "Application ID should be empty on validation failure")
+}
+
 // TestApplicationWithRefreshTokenGrant tests app with refresh_token grant.
 func (ts *ApplicationAPITestSuite) TestApplicationWithRefreshTokenGrant() {
 	app := Application{

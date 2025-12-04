@@ -128,6 +128,7 @@ func (ds *dcrService) convertDCRToApplication(request *DCRRegistrationRequest) (
 		ResponseTypes:           request.ResponseTypes,
 		TokenEndpointAuthMethod: request.TokenEndpointAuthMethod,
 		PublicClient:            isPublicClient,
+		PKCERequired:            isPublicClient,
 		Scopes:                  scopes,
 	}
 
