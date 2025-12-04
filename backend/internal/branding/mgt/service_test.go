@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import (
 	"encoding/json"
@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/asgardeo/thunder/internal/branding/common"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
@@ -39,8 +40,8 @@ const (
 
 type BrandingServiceTestSuite struct {
 	suite.Suite
-	mockStore *brandingStoreInterfaceMock
-	service   BrandingServiceInterface
+	mockStore *brandingMgtStoreInterfaceMock
+	service   BrandingMgtServiceInterface
 }
 
 func TestBrandingServiceTestSuite(t *testing.T) {
@@ -48,13 +49,13 @@ func TestBrandingServiceTestSuite(t *testing.T) {
 }
 
 func (suite *BrandingServiceTestSuite) SetupTest() {
-	suite.mockStore = newBrandingStoreInterfaceMock(suite.T())
-	suite.service = newBrandingService(suite.mockStore)
+	suite.mockStore = newBrandingMgtStoreInterfaceMock(suite.T())
+	suite.service = newBrandingMgtService(suite.mockStore)
 }
 
 // GetBrandingList Tests
 func (suite *BrandingServiceTestSuite) TestGetBrandingList_Success() {
-	expectedBrandings := []Branding{
+	expectedBrandings := []common.Branding{
 		{ID: "brand1", DisplayName: "Application 1 Branding"},
 		{ID: "brand2", DisplayName: "Application 2 Branding"},
 	}
@@ -77,7 +78,7 @@ func (suite *BrandingServiceTestSuite) TestGetBrandingList_Success() {
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBrandingList_WithPaginationLinks() {
-	expectedBrandings := []Branding{
+	expectedBrandings := []common.Branding{
 		{ID: "brand1", DisplayName: "Application 1 Branding"},
 	}
 	suite.mockStore.On("GetBrandingListCount").Return(15, nil)
@@ -100,7 +101,7 @@ func (suite *BrandingServiceTestSuite) TestGetBrandingList_WithPaginationLinks()
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBrandingList_WithPrevAndNextLinks() {
-	expectedBrandings := []Branding{
+	expectedBrandings := []common.Branding{
 		{ID: "brand1", DisplayName: "Application 1 Branding"},
 	}
 	suite.mockStore.On("GetBrandingListCount").Return(25, nil)
@@ -119,7 +120,7 @@ func (suite *BrandingServiceTestSuite) TestGetBrandingList_InvalidLimit_Zero() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidLimit.Code, err.Code)
+	suite.Equal(common.ErrorInvalidLimit.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBrandingList_InvalidLimit_TooLarge() {
@@ -127,7 +128,7 @@ func (suite *BrandingServiceTestSuite) TestGetBrandingList_InvalidLimit_TooLarge
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidLimit.Code, err.Code)
+	suite.Equal(common.ErrorInvalidLimit.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBrandingList_InvalidOffset_Negative() {
@@ -135,7 +136,7 @@ func (suite *BrandingServiceTestSuite) TestGetBrandingList_InvalidOffset_Negativ
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidOffset.Code, err.Code)
+	suite.Equal(common.ErrorInvalidOffset.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBrandingList_CountError() {
@@ -188,7 +189,7 @@ func (suite *BrandingServiceTestSuite) TestCreateBranding_MissingDisplayName() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingDisplayName.Code, err.Code)
+	suite.Equal(common.ErrorMissingDisplayName.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestCreateBranding_MissingPreferences() {
@@ -201,7 +202,7 @@ func (suite *BrandingServiceTestSuite) TestCreateBranding_MissingPreferences() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingPreferences.Code, err.Code)
+	suite.Equal(common.ErrorMissingPreferences.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestCreateBranding_InvalidJSON() {
@@ -214,7 +215,7 @@ func (suite *BrandingServiceTestSuite) TestCreateBranding_InvalidJSON() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidPreferences.Code, err.Code)
+	suite.Equal(common.ErrorInvalidPreferences.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestCreateBranding_ArrayInsteadOfObject() {
@@ -227,7 +228,7 @@ func (suite *BrandingServiceTestSuite) TestCreateBranding_ArrayInsteadOfObject()
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidPreferences.Code, err.Code)
+	suite.Equal(common.ErrorInvalidPreferences.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestCreateBranding_PrimitiveInsteadOfObject() {
@@ -240,7 +241,7 @@ func (suite *BrandingServiceTestSuite) TestCreateBranding_PrimitiveInsteadOfObje
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidPreferences.Code, err.Code)
+	suite.Equal(common.ErrorInvalidPreferences.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestCreateBranding_StoreError() {
@@ -261,7 +262,7 @@ func (suite *BrandingServiceTestSuite) TestCreateBranding_StoreError() {
 
 // GetBranding Tests
 func (suite *BrandingServiceTestSuite) TestGetBranding_Success() {
-	expectedBranding := Branding{
+	expectedBranding := common.Branding{
 		ID:          "brand1",
 		DisplayName: "Application 1 Branding",
 		Preferences: json.RawMessage(`{"theme":"dark"}`),
@@ -282,21 +283,21 @@ func (suite *BrandingServiceTestSuite) TestGetBranding_MissingID() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingBrandingID.Code, err.Code)
+	suite.Equal(common.ErrorMissingBrandingID.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBranding_NotFound() {
-	suite.mockStore.On("GetBranding", "brand1").Return(Branding{}, ErrBrandingNotFound)
+	suite.mockStore.On("GetBranding", "brand1").Return(common.Branding{}, common.ErrBrandingNotFound)
 
 	result, err := suite.service.GetBranding("brand1")
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorBrandingNotFound.Code, err.Code)
+	suite.Equal(common.ErrorBrandingNotFound.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestGetBranding_StoreError() {
-	suite.mockStore.On("GetBranding", "brand1").Return(Branding{}, errors.New("database error"))
+	suite.mockStore.On("GetBranding", "brand1").Return(common.Branding{}, errors.New("database error"))
 
 	result, err := suite.service.GetBranding("brand1")
 
@@ -334,7 +335,7 @@ func (suite *BrandingServiceTestSuite) TestUpdateBranding_MissingID() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingBrandingID.Code, err.Code)
+	suite.Equal(common.ErrorMissingBrandingID.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestUpdateBranding_MissingDisplayName() {
@@ -347,7 +348,7 @@ func (suite *BrandingServiceTestSuite) TestUpdateBranding_MissingDisplayName() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingDisplayName.Code, err.Code)
+	suite.Equal(common.ErrorMissingDisplayName.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestUpdateBranding_MissingPreferences() {
@@ -360,7 +361,7 @@ func (suite *BrandingServiceTestSuite) TestUpdateBranding_MissingPreferences() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingPreferences.Code, err.Code)
+	suite.Equal(common.ErrorMissingPreferences.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestUpdateBranding_InvalidJSON() {
@@ -373,7 +374,7 @@ func (suite *BrandingServiceTestSuite) TestUpdateBranding_InvalidJSON() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInvalidPreferences.Code, err.Code)
+	suite.Equal(common.ErrorInvalidPreferences.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestUpdateBranding_NotFound() {
@@ -383,13 +384,13 @@ func (suite *BrandingServiceTestSuite) TestUpdateBranding_NotFound() {
 		Preferences: preferencesJSON,
 	}
 
-	suite.mockStore.On("UpdateBranding", "brand1", request).Return(ErrBrandingNotFound)
+	suite.mockStore.On("UpdateBranding", "brand1", request).Return(common.ErrBrandingNotFound)
 
 	result, err := suite.service.UpdateBranding("brand1", request)
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorBrandingNotFound.Code, err.Code)
+	suite.Equal(common.ErrorBrandingNotFound.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestUpdateBranding_StoreError() {
@@ -423,7 +424,7 @@ func (suite *BrandingServiceTestSuite) TestDeleteBranding_MissingID() {
 	err := suite.service.DeleteBranding("")
 
 	suite.NotNil(err)
-	suite.Equal(ErrorMissingBrandingID.Code, err.Code)
+	suite.Equal(common.ErrorMissingBrandingID.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestDeleteBranding_NotExists() {
@@ -450,7 +451,7 @@ func (suite *BrandingServiceTestSuite) TestDeleteBranding_HasApplications() {
 	err := suite.service.DeleteBranding("brand1")
 
 	suite.NotNil(err)
-	suite.Equal(ErrorCannotDeleteBranding.Code, err.Code)
+	suite.Equal(common.ErrorCannotDeleteBranding.Code, err.Code)
 }
 
 func (suite *BrandingServiceTestSuite) TestDeleteBranding_GetApplicationsCountError() {

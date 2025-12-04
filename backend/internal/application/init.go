@@ -23,7 +23,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application/model"
-	"github.com/asgardeo/thunder/internal/branding"
+	brandingmgt "github.com/asgardeo/thunder/internal/branding/mgt"
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/flow/flowmgt"
 	"github.com/asgardeo/thunder/internal/system/config"
@@ -40,7 +40,7 @@ func Initialize(
 	mux *http.ServeMux,
 	certService cert.CertificateServiceInterface,
 	flowMgtService flowmgt.FlowMgtServiceInterface,
-	brandingService branding.BrandingServiceInterface,
+	brandingService brandingmgt.BrandingMgtServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
 ) ApplicationServiceInterface {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationInit"))

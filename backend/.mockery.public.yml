@@ -333,7 +333,7 @@ packages:
       pkgname: observabilitymock
       filename: "{{.InterfaceName}}_mock.go"
 
-  github.com/asgardeo/thunder/internal/branding:
+  github.com/asgardeo/thunder/internal/branding/mgt:
     config:
       all: true
       dir: tests/mocks/brandingmock

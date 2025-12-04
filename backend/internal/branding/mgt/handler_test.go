@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import (
 	"bytes"
@@ -28,14 +28,15 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/asgardeo/thunder/internal/branding/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 type BrandingHandlerTestSuite struct {
 	suite.Suite
-	mockService *BrandingServiceInterfaceMock
-	handler     *brandingHandler
+	mockService *BrandingMgtServiceInterfaceMock
+	handler     *brandingMgtHandler
 }
 
 func TestBrandingHandlerTestSuite(t *testing.T) {
@@ -43,8 +44,8 @@ func TestBrandingHandlerTestSuite(t *testing.T) {
 }
 
 func (suite *BrandingHandlerTestSuite) SetupTest() {
-	suite.mockService = NewBrandingServiceInterfaceMock(suite.T())
-	suite.handler = newBrandingHandler(suite.mockService)
+	suite.mockService = NewBrandingMgtServiceInterfaceMock(suite.T())
+	suite.handler = newBrandingMgtHandler(suite.mockService)
 }
 
 // HandleBrandingListRequest Tests
@@ -53,7 +54,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingListRequest_Success() {
 		TotalResults: 2,
 		StartIndex:   1,
 		Count:        2,
-		Brandings: []Branding{
+		Brandings: []common.Branding{
 			{ID: "brand1", DisplayName: "Application 1 Branding"},
 			{ID: "brand2", DisplayName: "Application 2 Branding"},
 		},
@@ -85,7 +86,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingListRequest_DefaultPagi
 		TotalResults: 1,
 		StartIndex:   1,
 		Count:        1,
-		Brandings:    []Branding{{ID: "brand1", DisplayName: "Application 1 Branding"}},
+		Brandings:    []common.Branding{{ID: "brand1", DisplayName: "Application 1 Branding"}},
 		Links:        []Link{},
 	}
 
@@ -137,7 +138,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPostRequest_Success() {
 		Preferences: json.RawMessage(`{"theme":{"activeColorScheme":"dark"}}`),
 	}
 
-	expectedBranding := &Branding{
+	expectedBranding := &common.Branding{
 		ID:          "brand1",
 		DisplayName: "Application 1 Branding",
 		Preferences: json.RawMessage(`{"theme":{"activeColorScheme":"dark"}}`),
@@ -154,7 +155,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPostRequest_Success() {
 
 	suite.Equal(http.StatusCreated, w.Code)
 
-	var response BrandingResponse
+	var response common.BrandingResponse
 	err := json.NewDecoder(w.Body).Decode(&response)
 	suite.NoError(err)
 	suite.Equal("brand1", response.ID)
@@ -177,7 +178,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPostRequest_MissingDisp
 		Preferences: json.RawMessage(`{}`),
 	}
 
-	suite.mockService.On("CreateBranding", request).Return(nil, &ErrorMissingDisplayName)
+	suite.mockService.On("CreateBranding", request).Return(nil, &common.ErrorMissingDisplayName)
 
 	body, _ := json.Marshal(request)
 	req := httptest.NewRequest(http.MethodPost, "/branding", bytes.NewBuffer(body))
@@ -195,7 +196,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPostRequest_ServiceErro
 		Preferences: json.RawMessage(`{}`),
 	}
 
-	suite.mockService.On("CreateBranding", request).Return(nil, &ErrorInvalidPreferences)
+	suite.mockService.On("CreateBranding", request).Return(nil, &common.ErrorInvalidPreferences)
 
 	body, _ := json.Marshal(request)
 	req := httptest.NewRequest(http.MethodPost, "/branding", bytes.NewBuffer(body))
@@ -209,7 +210,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPostRequest_ServiceErro
 
 // HandleBrandingGetRequest Tests
 func (suite *BrandingHandlerTestSuite) TestHandleBrandingGetRequest_Success() {
-	expectedBranding := &Branding{
+	expectedBranding := &common.Branding{
 		ID:          "brand1",
 		DisplayName: "Application 1 Branding",
 		Preferences: json.RawMessage(`{"theme":"dark"}`),
@@ -225,7 +226,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingGetRequest_Success() {
 
 	suite.Equal(http.StatusOK, w.Code)
 
-	var response BrandingResponse
+	var response common.BrandingResponse
 	err := json.NewDecoder(w.Body).Decode(&response)
 	suite.NoError(err)
 	suite.Equal("brand1", response.ID)
@@ -233,7 +234,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingGetRequest_Success() {
 }
 
 func (suite *BrandingHandlerTestSuite) TestHandleBrandingGetRequest_NotFound() {
-	suite.mockService.On("GetBranding", "brand1").Return(nil, &ErrorBrandingNotFound)
+	suite.mockService.On("GetBranding", "brand1").Return(nil, &common.ErrorBrandingNotFound)
 
 	req := httptest.NewRequest(http.MethodGet, "/branding/brand1", nil)
 	req.SetPathValue("id", "brand1")
@@ -263,7 +264,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPutRequest_Success() {
 		Preferences: json.RawMessage(`{"theme":{"activeColorScheme":"light"}}`),
 	}
 
-	expectedBranding := &Branding{
+	expectedBranding := &common.Branding{
 		ID:          "brand1",
 		DisplayName: "Application 2 Branding",
 		Preferences: json.RawMessage(`{"theme":{"activeColorScheme":"light"}}`),
@@ -281,7 +282,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPutRequest_Success() {
 
 	suite.Equal(http.StatusOK, w.Code)
 
-	var response BrandingResponse
+	var response common.BrandingResponse
 	err := json.NewDecoder(w.Body).Decode(&response)
 	suite.NoError(err)
 	suite.Equal("brand1", response.ID)
@@ -305,7 +306,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPutRequest_NotFound() {
 		Preferences: json.RawMessage(`{}`),
 	}
 
-	suite.mockService.On("UpdateBranding", "brand1", request).Return(nil, &ErrorBrandingNotFound)
+	suite.mockService.On("UpdateBranding", "brand1", request).Return(nil, &common.ErrorBrandingNotFound)
 
 	body, _ := json.Marshal(request)
 	req := httptest.NewRequest(http.MethodPut, "/branding/brand1", bytes.NewBuffer(body))
@@ -324,7 +325,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPutRequest_MissingDispl
 		Preferences: json.RawMessage(`{}`),
 	}
 
-	suite.mockService.On("UpdateBranding", "brand1", request).Return(nil, &ErrorMissingDisplayName)
+	suite.mockService.On("UpdateBranding", "brand1", request).Return(nil, &common.ErrorMissingDisplayName)
 
 	body, _ := json.Marshal(request)
 	req := httptest.NewRequest(http.MethodPut, "/branding/brand1", bytes.NewBuffer(body))
@@ -343,7 +344,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingPutRequest_ServiceError
 		Preferences: json.RawMessage(`{}`),
 	}
 
-	suite.mockService.On("UpdateBranding", "brand1", request).Return(nil, &ErrorInvalidPreferences)
+	suite.mockService.On("UpdateBranding", "brand1", request).Return(nil, &common.ErrorInvalidPreferences)
 
 	body, _ := json.Marshal(request)
 	req := httptest.NewRequest(http.MethodPut, "/branding/brand1", bytes.NewBuffer(body))
@@ -383,7 +384,7 @@ func (suite *BrandingHandlerTestSuite) TestHandleBrandingDeleteRequest_NotFound(
 }
 
 func (suite *BrandingHandlerTestSuite) TestHandleBrandingDeleteRequest_CannotDelete() {
-	suite.mockService.On("DeleteBranding", "brand1").Return(&ErrorCannotDeleteBranding)
+	suite.mockService.On("DeleteBranding", "brand1").Return(&common.ErrorCannotDeleteBranding)
 
 	req := httptest.NewRequest(http.MethodDelete, "/branding/brand1", nil)
 	req.SetPathValue("id", "brand1")
@@ -459,7 +460,7 @@ func (suite *BrandingHandlerTestSuite) TestParsePaginationParams_InvalidLimit() 
 	suite.NotNil(err)
 	suite.Equal(0, limit)
 	suite.Equal(0, offset)
-	suite.Equal(ErrorInvalidLimit.Code, err.Code)
+	suite.Equal(common.ErrorInvalidLimit.Code, err.Code)
 }
 
 func (suite *BrandingHandlerTestSuite) TestParsePaginationParams_InvalidOffset() {
@@ -471,7 +472,7 @@ func (suite *BrandingHandlerTestSuite) TestParsePaginationParams_InvalidOffset()
 	suite.NotNil(err)
 	suite.Equal(0, limit)
 	suite.Equal(0, offset)
-	suite.Equal(ErrorInvalidOffset.Code, err.Code)
+	suite.Equal(common.ErrorInvalidOffset.Code, err.Code)
 }
 
 // toHTTPLinks Tests

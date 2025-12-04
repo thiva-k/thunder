@@ -16,47 +16,48 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/asgardeo/thunder/internal/branding/common"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/database/provider"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-const storeLoggerComponentName = "BrandingStore"
+const storeLoggerComponentName = "BrandingMgtStore"
 
-// brandingStoreInterface defines the interface for branding store operations.
-type brandingStoreInterface interface {
+// brandingMgtStoreInterface defines the interface for branding management store operations.
+type brandingMgtStoreInterface interface {
 	GetBrandingListCount() (int, error)
-	GetBrandingList(limit, offset int) ([]Branding, error)
+	GetBrandingList(limit, offset int) ([]common.Branding, error)
 	CreateBranding(id string, branding CreateBrandingRequest) error
-	GetBranding(id string) (Branding, error)
+	GetBranding(id string) (common.Branding, error)
 	IsBrandingExist(id string) (bool, error)
 	UpdateBranding(id string, branding UpdateBrandingRequest) error
 	DeleteBranding(id string) error
 	GetApplicationsCountByBrandingID(id string) (int, error)
 }
 
-// brandingStore is the default implementation of brandingStoreInterface.
-type brandingStore struct {
+// brandingMgtStore is the default implementation of brandingMgtStoreInterface.
+type brandingMgtStore struct {
 	dbProvider   provider.DBProviderInterface
 	deploymentID string
 }
 
-// newBrandingStore creates a new instance of brandingStore.
-func newBrandingStore() brandingStoreInterface {
-	return &brandingStore{
+// newBrandingMgtStore creates a new instance of brandingMgtStore.
+func newBrandingMgtStore() brandingMgtStoreInterface {
+	return &brandingMgtStore{
 		dbProvider:   provider.GetDBProvider(),
 		deploymentID: config.GetThunderRuntime().Config.Server.Identifier,
 	}
 }
 
 // GetBrandingListCount retrieves the total count of branding configurations.
-func (s *brandingStore) GetBrandingListCount() (int, error) {
+func (s *brandingMgtStore) GetBrandingListCount() (int, error) {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
 		return 0, err
@@ -71,7 +72,7 @@ func (s *brandingStore) GetBrandingListCount() (int, error) {
 }
 
 // GetBrandingList retrieves branding configurations with pagination.
-func (s *brandingStore) GetBrandingList(limit, offset int) ([]Branding, error) {
+func (s *brandingMgtStore) GetBrandingList(limit, offset int) ([]common.Branding, error) {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
 		return nil, err
@@ -82,7 +83,7 @@ func (s *brandingStore) GetBrandingList(limit, offset int) ([]Branding, error) {
 		return nil, fmt.Errorf("failed to execute branding list query: %w", err)
 	}
 
-	brandings := make([]Branding, 0)
+	brandings := make([]common.Branding, 0)
 	for _, row := range results {
 		branding, err := buildBrandingListItemFromResultRow(row)
 		if err != nil {
@@ -95,7 +96,7 @@ func (s *brandingStore) GetBrandingList(limit, offset int) ([]Branding, error) {
 }
 
 // CreateBranding creates a new branding configuration in the database.
-func (s *brandingStore) CreateBranding(id string, branding CreateBrandingRequest) error {
+func (s *brandingMgtStore) CreateBranding(id string, branding CreateBrandingRequest) error {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
 		return err
@@ -115,30 +116,30 @@ func (s *brandingStore) CreateBranding(id string, branding CreateBrandingRequest
 }
 
 // GetBranding retrieves a branding configuration by its id.
-func (s *brandingStore) GetBranding(id string) (Branding, error) {
+func (s *brandingMgtStore) GetBranding(id string) (common.Branding, error) {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
-		return Branding{}, err
+		return common.Branding{}, err
 	}
 
 	results, err := dbClient.Query(queryGetBrandingByID, id, s.deploymentID)
 	if err != nil {
-		return Branding{}, fmt.Errorf("failed to execute query: %w", err)
+		return common.Branding{}, fmt.Errorf("failed to execute query: %w", err)
 	}
 
 	if len(results) == 0 {
-		return Branding{}, ErrBrandingNotFound
+		return common.Branding{}, common.ErrBrandingNotFound
 	}
 
 	if len(results) != 1 {
-		return Branding{}, fmt.Errorf("unexpected number of results: %d", len(results))
+		return common.Branding{}, fmt.Errorf("unexpected number of results: %d", len(results))
 	}
 
 	return buildBrandingFromResultRow(results[0])
 }
 
 // IsBrandingExist checks if a branding configuration exists by its ID without fetching its details.
-func (s *brandingStore) IsBrandingExist(id string) (bool, error) {
+func (s *brandingMgtStore) IsBrandingExist(id string) (bool, error) {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
 		return false, err
@@ -153,7 +154,7 @@ func (s *brandingStore) IsBrandingExist(id string) (bool, error) {
 }
 
 // UpdateBranding updates an existing branding configuration.
-func (s *brandingStore) UpdateBranding(id string, branding UpdateBrandingRequest) error {
+func (s *brandingMgtStore) UpdateBranding(id string, branding UpdateBrandingRequest) error {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
 		return err
@@ -170,14 +171,14 @@ func (s *brandingStore) UpdateBranding(id string, branding UpdateBrandingRequest
 	}
 
 	if rowsAffected == 0 {
-		return ErrBrandingNotFound
+		return common.ErrBrandingNotFound
 	}
 
 	return nil
 }
 
 // DeleteBranding deletes a branding configuration.
-func (s *brandingStore) DeleteBranding(id string) error {
+func (s *brandingMgtStore) DeleteBranding(id string) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, storeLoggerComponentName))
 
 	dbClient, err := s.getIdentityDBClient()
@@ -198,7 +199,7 @@ func (s *brandingStore) DeleteBranding(id string) error {
 }
 
 // GetApplicationsCountByBrandingID retrieves the count of applications using a branding configuration.
-func (s *brandingStore) GetApplicationsCountByBrandingID(id string) (int, error) {
+func (s *brandingMgtStore) GetApplicationsCountByBrandingID(id string) (int, error) {
 	dbClient, err := s.getIdentityDBClient()
 	if err != nil {
 		return 0, err
@@ -213,7 +214,7 @@ func (s *brandingStore) GetApplicationsCountByBrandingID(id string) (int, error)
 }
 
 // getIdentityDBClient is a helper method to get the database client for the identity database.
-func (s *brandingStore) getIdentityDBClient() (provider.DBClientInterface, error) {
+func (s *brandingMgtStore) getIdentityDBClient() (provider.DBClientInterface, error) {
 	dbClient, err := s.dbProvider.GetConfigDBClient()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get database client: %w", err)
@@ -222,15 +223,15 @@ func (s *brandingStore) getIdentityDBClient() (provider.DBClientInterface, error
 }
 
 // buildBrandingFromResultRow builds a Branding struct from a database result row.
-func buildBrandingFromResultRow(row map[string]interface{}) (Branding, error) {
+func buildBrandingFromResultRow(row map[string]interface{}) (common.Branding, error) {
 	id, err := parseStringField(row, "branding_id")
 	if err != nil {
-		return Branding{}, err
+		return common.Branding{}, err
 	}
 
 	displayName, err := parseStringField(row, "display_name")
 	if err != nil {
-		return Branding{}, err
+		return common.Branding{}, err
 	}
 
 	var preferences json.RawMessage
@@ -244,13 +245,13 @@ func buildBrandingFromResultRow(row map[string]interface{}) (Branding, error) {
 		default:
 			prefBytes, err := json.Marshal(v)
 			if err != nil {
-				return Branding{}, fmt.Errorf("failed to marshal preferences: %w", err)
+				return common.Branding{}, fmt.Errorf("failed to marshal preferences: %w", err)
 			}
 			preferences = json.RawMessage(prefBytes)
 		}
 	}
 
-	return Branding{
+	return common.Branding{
 		ID:          id,
 		DisplayName: displayName,
 		Preferences: preferences,
@@ -258,18 +259,18 @@ func buildBrandingFromResultRow(row map[string]interface{}) (Branding, error) {
 }
 
 // buildBrandingListItemFromResultRow builds a Branding struct from a database result row.
-func buildBrandingListItemFromResultRow(row map[string]interface{}) (Branding, error) {
+func buildBrandingListItemFromResultRow(row map[string]interface{}) (common.Branding, error) {
 	id, err := parseStringField(row, "branding_id")
 	if err != nil {
-		return Branding{}, err
+		return common.Branding{}, err
 	}
 
 	displayName, err := parseStringField(row, "display_name")
 	if err != nil {
-		return Branding{}, err
+		return common.Branding{}, err
 	}
 
-	return Branding{
+	return common.Branding{
 		ID:          id,
 		DisplayName: displayName,
 	}, nil

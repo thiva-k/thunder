@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package branding
+package brandingmgt
 
 import (
 	"encoding/json"
@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/asgardeo/thunder/internal/branding/common"
 	"github.com/asgardeo/thunder/tests/mocks/database/clientmock"
 	"github.com/asgardeo/thunder/tests/mocks/database/providermock"
 )
@@ -34,7 +35,7 @@ type BrandingStoreTestSuite struct {
 	suite.Suite
 	mockDBProvider *providermock.DBProviderInterfaceMock
 	mockDBClient   *clientmock.DBClientInterfaceMock
-	store          *brandingStore
+	store          *brandingMgtStore
 }
 
 func TestBrandingStoreTestSuite(t *testing.T) {
@@ -44,7 +45,7 @@ func TestBrandingStoreTestSuite(t *testing.T) {
 func (suite *BrandingStoreTestSuite) SetupTest() {
 	suite.mockDBProvider = providermock.NewDBProviderInterfaceMock(suite.T())
 	suite.mockDBClient = clientmock.NewDBClientInterfaceMock(suite.T())
-	suite.store = &brandingStore{
+	suite.store = &brandingMgtStore{
 		dbProvider:   suite.mockDBProvider,
 		deploymentID: "test-deployment-id",
 	}
@@ -275,8 +276,8 @@ func (suite *BrandingStoreTestSuite) TestGetBranding_NotFound() {
 	branding, err := suite.store.GetBranding("brand1")
 
 	suite.Error(err)
-	suite.Equal(Branding{}, branding)
-	suite.Equal(ErrBrandingNotFound, err)
+	suite.Equal(common.Branding{}, branding)
+	suite.Equal(common.ErrBrandingNotFound, err)
 }
 
 func (suite *BrandingStoreTestSuite) TestGetBranding_MultipleResults() {
@@ -289,7 +290,7 @@ func (suite *BrandingStoreTestSuite) TestGetBranding_MultipleResults() {
 	branding, err := suite.store.GetBranding("brand1")
 
 	suite.Error(err)
-	suite.Equal(Branding{}, branding)
+	suite.Equal(common.Branding{}, branding)
 	suite.Contains(err.Error(), "unexpected number of results")
 }
 
@@ -300,7 +301,7 @@ func (suite *BrandingStoreTestSuite) TestGetBranding_DBClientError() {
 	branding, err := suite.store.GetBranding("brand1")
 
 	suite.Error(err)
-	suite.Equal(Branding{}, branding)
+	suite.Equal(common.Branding{}, branding)
 	suite.Contains(err.Error(), "failed to get database client")
 }
 
@@ -312,7 +313,7 @@ func (suite *BrandingStoreTestSuite) TestGetBranding_QueryError() {
 	branding, err := suite.store.GetBranding("brand1")
 
 	suite.Error(err)
-	suite.Equal(Branding{}, branding)
+	suite.Equal(common.Branding{}, branding)
 	suite.Contains(err.Error(), "failed to execute query")
 }
 
@@ -419,7 +420,7 @@ func (suite *BrandingStoreTestSuite) TestUpdateBranding_NotFound() {
 	err := suite.store.UpdateBranding("brand1", request)
 
 	suite.Error(err)
-	suite.Equal(ErrBrandingNotFound, err)
+	suite.Equal(common.ErrBrandingNotFound, err)
 }
 
 func (suite *BrandingStoreTestSuite) TestUpdateBranding_DBClientError() {
@@ -638,7 +639,7 @@ func (suite *BrandingStoreTestSuite) TestBuildBrandingFromResultRow_InvalidID() 
 	}
 	branding, err := buildBrandingFromResultRow(row)
 	suite.Error(err)
-	suite.Equal(Branding{}, branding)
+	suite.Equal(common.Branding{}, branding)
 	suite.Contains(err.Error(), "failed to parse branding_id as string")
 }
 
@@ -666,6 +667,6 @@ func (suite *BrandingStoreTestSuite) TestBuildBrandingFromResultRow_MarshalError
 	}
 	branding, err := buildBrandingFromResultRow(row)
 	suite.Error(err)
-	suite.Equal(Branding{}, branding)
+	suite.Equal(common.Branding{}, branding)
 	suite.Contains(err.Error(), "failed to marshal preferences")
 }
