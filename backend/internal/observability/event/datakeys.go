@@ -52,11 +52,12 @@ var DataKey = struct {
 	GrantType string
 
 	// Event Metadata Keys
-	Message    string
-	Error      string
-	ErrorCode  string
-	DurationMs string
-	LatencyUs  string
+	Message     string
+	Error       string
+	ErrorCode   string
+	DurationMs  string
+	LatencyUs   string
+	TraceParent string
 
 	// Testing Keys
 	Key   string
@@ -88,11 +89,12 @@ var DataKey = struct {
 	GrantType: "grant_type",
 
 	// Event Metadata Keys
-	Message:    "message",
-	Error:      "error",
-	ErrorCode:  "error_code",
-	DurationMs: "duration_ms",
-	LatencyUs:  "latency_us",
+	Message:     "message",
+	Error:       "error",
+	ErrorCode:   "error_code",
+	DurationMs:  "duration_ms",
+	LatencyUs:   "latency_us",
+	TraceParent: "trace_parent",
 
 	// Testing Keys
 	Key:   "key",

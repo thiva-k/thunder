@@ -21,6 +21,7 @@ package subscriber
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -148,6 +149,42 @@ func (o *OTelSubscriber) OnEvent(evt *event.Event) error {
 // Following OTel best practices: event data becomes a span event (timestamp is meaningful).
 func (o *OTelSubscriber) createSpan(evt *event.Event) error {
 	ctx := context.Background()
+
+	// Parse TraceID from event
+	// OTel expects 32-char hex string, but Event TraceID might be UUID (36 chars with hyphens)
+	cleanTraceID := strings.ReplaceAll(evt.TraceID, "-", "")
+	traceID, err := trace.TraceIDFromHex(cleanTraceID)
+	if err != nil {
+		// If invalid TraceID, log warning and let OTel generate a new one
+		o.logger.Warn("Invalid TraceID in event, generating new one",
+			log.String("traceID", evt.TraceID),
+			log.Error(err))
+	} else {
+		// Check for parent span ID in event data
+		var parentSpanID trace.SpanID
+		if parentIDStr := o.getStringData(evt, event.DataKey.TraceParent); parentIDStr != "" {
+			if parsedParentID, err := trace.SpanIDFromHex(parentIDStr); err == nil {
+				parentSpanID = parsedParentID
+			}
+		}
+
+		// Create a remote span context with the event's TraceID
+		spanContextConfig := trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     parentSpanID, // Can be empty if no parent
+			TraceFlags: trace.FlagsSampled,
+		}
+
+		// If we have a parent span ID, we use it. If not, we still use the TraceID
+		// but let OTel generate a new SpanID for this span.
+		// However, to force OTel to use our TraceID, we must provide a remote span context.
+		// If SpanID is zero, it might be treated as a root span of that trace.
+
+		remoteSpanContext := trace.NewSpanContext(spanContextConfig)
+
+		// Inject into context
+		ctx = trace.ContextWithRemoteSpanContext(ctx, remoteSpanContext)
+	}
 
 	// Create span name from event type
 	spanName := evt.Type
