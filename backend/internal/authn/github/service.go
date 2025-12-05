@@ -100,7 +100,7 @@ func (g *githubOAuthAuthnService) FetchUserInfo(idpID, accessToken string) (
 	}
 
 	// Fetch primary email from the GitHub user emails endpoint.
-	primaryEmail, svcErr := g.fetchPrimaryEmail(accessToken)
+	primaryEmail, svcErr := g.fetchPrimaryEmail(oAuthClientConfig, accessToken)
 	if svcErr != nil {
 		return nil, svcErr
 	}
@@ -118,12 +118,20 @@ func (g *githubOAuthAuthnService) shouldFetchEmail(scopes []string) bool {
 }
 
 // fetchPrimaryEmail fetches the primary email of the user from the GitHub user emails endpoint.
-func (g *githubOAuthAuthnService) fetchPrimaryEmail(accessToken string) (string, *serviceerror.ServiceError) {
+func (g *githubOAuthAuthnService) fetchPrimaryEmail(
+	oAuthClientConfig *authnoauth.OAuthClientConfig, accessToken string) (
+	string, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-	logger.Debug("Fetching user email from GitHub user email endpoint",
-		log.String("userEmailEndpoint", UserEmailEndpoint))
 
-	req, svcErr := buildUserEmailRequest(UserEmailEndpoint, accessToken, logger)
+	userEmailEndpoint := oAuthClientConfig.OAuthEndpoints.UserEmailEndpoint
+	if userEmailEndpoint == "" {
+		userEmailEndpoint = UserEmailEndpoint
+	}
+
+	logger.Debug("Fetching user email from GitHub user email endpoint",
+		log.String("userEmailEndpoint", userEmailEndpoint))
+
+	req, svcErr := buildUserEmailRequest(userEmailEndpoint, accessToken, logger)
 	if svcErr != nil {
 		return "", svcErr
 	}

@@ -61,6 +61,22 @@ var (
 				Value:    "user:email,read:user",
 				IsSecret: false,
 			},
+			// Default endpoints added by server
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://github.com/login/oauth/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://github.com/login/oauth/access_token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://api.github.com/user",
+				IsSecret: false,
+			},
 		},
 	}
 	testGoogleIdp = testutils.IDP{
@@ -88,6 +104,27 @@ var (
 				Value:    "openid,email,profile",
 				IsSecret: false,
 			},
+			// Default endpoints added by server
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://accounts.google.com/o/oauth2/v2/auth",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://oauth2.googleapis.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "jwks_endpoint",
+				Value:    "https://www.googleapis.com/oauth2/v3/certs",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://openidconnect.googleapis.com/v1/userinfo",
+				IsSecret: false,
+			},
 		},
 	}
 	idpToCreate = testutils.IDP{
@@ -108,6 +145,21 @@ var (
 			{
 				Name:     "redirect_uri",
 				Value:    "https://localhost:3000/oidc/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://test-idp.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://test-idp.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://test-idp.example.com/userinfo",
 				IsSecret: false,
 			},
 			{
@@ -135,6 +187,21 @@ var (
 			{
 				Name:     "redirect_uri",
 				Value:    "https://localhost:3000/updated/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://updated-idp.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://updated-idp.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://updated-idp.example.com/userinfo",
 				IsSecret: false,
 			},
 			{
@@ -277,11 +344,6 @@ var (
 			{
 				Name:     "logout_endpoint",
 				Value:    "https://provider.com/oauth/logout",
-				IsSecret: false,
-			},
-			{
-				Name:     "jwks_endpoint",
-				Value:    "https://provider.com/.well-known/jwks.json",
 				IsSecret: false,
 			},
 			{
@@ -447,6 +509,26 @@ func (ts *IdpAPITestSuite) TestCreateIdpSuccess() {
 						Value:    "test_success_secret",
 						IsSecret: true,
 					},
+					{
+						Name:     "redirect_uri",
+						Value:    "https://localhost:3000/oauth/callback",
+						IsSecret: false,
+					},
+					{
+						Name:     "authorization_endpoint",
+						Value:    "https://test-oauth.example.com/authorize",
+						IsSecret: false,
+					},
+					{
+						Name:     "token_endpoint",
+						Value:    "https://test-oauth.example.com/token",
+						IsSecret: false,
+					},
+					{
+						Name:     "userinfo_endpoint",
+						Value:    "https://test-oauth.example.com/userinfo",
+						IsSecret: false,
+					},
 				},
 			},
 			description: "Should successfully create basic OAuth IDP",
@@ -467,6 +549,11 @@ func (ts *IdpAPITestSuite) TestCreateIdpSuccess() {
 						Name:     "client_secret",
 						Value:    "test_google_success_secret",
 						IsSecret: true,
+					},
+					{
+						Name:     "redirect_uri",
+						Value:    "https://localhost:3000/google/callback",
+						IsSecret: false,
 					},
 				},
 			},
@@ -489,6 +576,11 @@ func (ts *IdpAPITestSuite) TestCreateIdpSuccess() {
 						Value:    "test_github_success_secret",
 						IsSecret: true,
 					},
+					{
+						Name:     "redirect_uri",
+						Value:    "https://localhost:3000/github/callback",
+						IsSecret: false,
+					},
 				},
 			},
 			description: "Should successfully create basic Github IDP",
@@ -503,13 +595,32 @@ func (ts *IdpAPITestSuite) TestCreateIdpSuccess() {
 				t.Fatalf("Failed to create IDP for test case %s: %v", tc.name, err)
 			}
 
+			// For Google and GitHub types, add expected default properties
+			expectedProps := tc.idp.Properties
+			if tc.idp.Type == "GOOGLE" {
+				expectedProps = append(expectedProps,
+					testutils.IDPProperty{Name: "authorization_endpoint", Value: "https://accounts.google.com/o/oauth2/v2/auth", IsSecret: false},
+					testutils.IDPProperty{Name: "token_endpoint", Value: "https://oauth2.googleapis.com/token", IsSecret: false},
+					testutils.IDPProperty{Name: "jwks_endpoint", Value: "https://www.googleapis.com/oauth2/v3/certs", IsSecret: false},
+					testutils.IDPProperty{Name: "userinfo_endpoint", Value: "https://openidconnect.googleapis.com/v1/userinfo", IsSecret: false},
+					testutils.IDPProperty{Name: "scopes", Value: "openid", IsSecret: false},
+				)
+			} else if tc.idp.Type == "GITHUB" {
+				expectedProps = append(expectedProps,
+					testutils.IDPProperty{Name: "authorization_endpoint", Value: "https://github.com/login/oauth/authorize", IsSecret: false},
+					testutils.IDPProperty{Name: "token_endpoint", Value: "https://github.com/login/oauth/access_token", IsSecret: false},
+					testutils.IDPProperty{Name: "userinfo_endpoint", Value: "https://api.github.com/user", IsSecret: false},
+					testutils.IDPProperty{Name: "user_email_endpoint", Value: "https://api.github.com/user/emails", IsSecret: false},
+				)
+			}
+
 			// Validate that the IDP was created correctly
 			retrieveAndValidateIdpDetails(ts, testutils.IDP{
 				ID:          idpID,
 				Name:        tc.idp.Name,
 				Description: tc.idp.Description,
 				Type:        tc.idp.Type,
-				Properties:  tc.idp.Properties,
+				Properties:  expectedProps,
 			})
 
 			// Clean up
@@ -703,22 +814,50 @@ func (ts *IdpAPITestSuite) TestSupportedIdpTypes() {
 	supportedTypes := []string{"OAUTH", "GOOGLE", "GITHUB"}
 
 	for _, idpType := range supportedTypes {
+		properties := []testutils.IDPProperty{
+			{
+				Name:     "client_id",
+				Value:    fmt.Sprintf("test_%s_client", strings.ToLower(idpType)),
+				IsSecret: false,
+			},
+			{
+				Name:     "client_secret",
+				Value:    fmt.Sprintf("test_%s_secret", strings.ToLower(idpType)),
+				IsSecret: true,
+			},
+			{
+				Name:     "redirect_uri",
+				Value:    fmt.Sprintf("https://localhost:3000/%s/callback", strings.ToLower(idpType)),
+				IsSecret: false,
+			},
+		}
+
+		// Add required endpoints for OAuth type
+		if idpType == "OAUTH" {
+			properties = append(properties,
+				testutils.IDPProperty{
+					Name:     "authorization_endpoint",
+					Value:    "https://test-oauth.example.com/authorize",
+					IsSecret: false,
+				},
+				testutils.IDPProperty{
+					Name:     "token_endpoint",
+					Value:    "https://test-oauth.example.com/token",
+					IsSecret: false,
+				},
+				testutils.IDPProperty{
+					Name:     "userinfo_endpoint",
+					Value:    "https://test-oauth.example.com/userinfo",
+					IsSecret: false,
+				},
+			)
+		}
+
 		testIDP := testutils.IDP{
 			Name:        fmt.Sprintf("Test %s IDP", idpType),
 			Description: fmt.Sprintf("%s identity provider for testing", idpType),
 			Type:        idpType,
-			Properties: []testutils.IDPProperty{
-				{
-					Name:     "client_id",
-					Value:    fmt.Sprintf("test_%s_client", strings.ToLower(idpType)),
-					IsSecret: false,
-				},
-				{
-					Name:     "client_secret",
-					Value:    fmt.Sprintf("test_%s_secret", strings.ToLower(idpType)),
-					IsSecret: true,
-				},
-			},
+			Properties:  properties,
 		}
 
 		// Create IDP with the supported type
@@ -727,13 +866,32 @@ func (ts *IdpAPITestSuite) TestSupportedIdpTypes() {
 			ts.T().Fatalf("Failed to create IDP with type %s: %v", idpType, err)
 		}
 
+		// For Google and GitHub types, add expected default properties
+		expectedProps := testIDP.Properties
+		if idpType == "GOOGLE" {
+			expectedProps = append(expectedProps,
+				testutils.IDPProperty{Name: "authorization_endpoint", Value: "https://accounts.google.com/o/oauth2/v2/auth", IsSecret: false},
+				testutils.IDPProperty{Name: "token_endpoint", Value: "https://oauth2.googleapis.com/token", IsSecret: false},
+				testutils.IDPProperty{Name: "jwks_endpoint", Value: "https://www.googleapis.com/oauth2/v3/certs", IsSecret: false},
+				testutils.IDPProperty{Name: "userinfo_endpoint", Value: "https://openidconnect.googleapis.com/v1/userinfo", IsSecret: false},
+				testutils.IDPProperty{Name: "scopes", Value: "openid", IsSecret: false},
+			)
+		} else if idpType == "GITHUB" {
+			expectedProps = append(expectedProps,
+				testutils.IDPProperty{Name: "authorization_endpoint", Value: "https://github.com/login/oauth/authorize", IsSecret: false},
+				testutils.IDPProperty{Name: "token_endpoint", Value: "https://github.com/login/oauth/access_token", IsSecret: false},
+				testutils.IDPProperty{Name: "userinfo_endpoint", Value: "https://api.github.com/user", IsSecret: false},
+				testutils.IDPProperty{Name: "user_email_endpoint", Value: "https://api.github.com/user/emails", IsSecret: false},
+			)
+		}
+
 		// Validate type is correctly stored
 		retrieveAndValidateIdpDetails(ts, testutils.IDP{
 			ID:          idpID,
 			Name:        testIDP.Name,
 			Description: testIDP.Description,
 			Type:        testIDP.Type,
-			Properties:  testIDP.Properties,
+			Properties:  expectedProps,
 		})
 
 		// Clean up
@@ -745,24 +903,51 @@ func (ts *IdpAPITestSuite) TestSupportedIdpTypes() {
 }
 
 func (ts *IdpAPITestSuite) TestSupportedPropertyNames() {
+	// Test with OIDC type since it supports more optional properties
 	supportedProperties := []string{
-		"client_id", "client_secret", "redirect_uri", "scopes",
-		"authorization_endpoint", "token_endpoint", "userinfo_endpoint",
-		"logout_endpoint", "jwks_endpoint", "prompt",
+		"scopes", "logout_endpoint", "jwks_endpoint", "prompt",
 	}
 
 	for _, propertyName := range supportedProperties {
+		// Start with required OIDC properties
+		properties := []testutils.IDPProperty{
+			{
+				Name:     "client_id",
+				Value:    "test_client",
+				IsSecret: false,
+			},
+			{
+				Name:     "client_secret",
+				Value:    "test_secret",
+				IsSecret: true,
+			},
+			{
+				Name:     "redirect_uri",
+				Value:    "https://localhost:3000/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://test.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://test.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     propertyName,
+				Value:    fmt.Sprintf("test_%s_value", strings.ReplaceAll(propertyName, "_", "")),
+				IsSecret: false,
+			},
+		}
+
 		testIDP := testutils.IDP{
 			Name:        fmt.Sprintf("Test IDP with %s", propertyName),
 			Description: fmt.Sprintf("Testing %s property", propertyName),
-			Type:        "OAUTH",
-			Properties: []testutils.IDPProperty{
-				{
-					Name:     propertyName,
-					Value:    fmt.Sprintf("test_%s_value", strings.ReplaceAll(propertyName, "_", "")),
-					IsSecret: propertyName == "client_secret",
-				},
-			},
+			Type:        "OIDC",
+			Properties:  properties,
 		}
 
 		// Create IDP with the supported property

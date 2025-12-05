@@ -40,16 +40,122 @@ var supportedIDPTypes = []IDPType{
 	IDPTypeGitHub,
 }
 
-// supportedIDPProperties lists all the supported identity provider properties.
-var supportedIDPProperties = []string{
-	"client_id",
-	"client_secret",
-	"redirect_uri",
-	"scopes",
-	"authorization_endpoint",
-	"token_endpoint",
-	"userinfo_endpoint",
-	"logout_endpoint",
-	"jwks_endpoint",
-	"prompt",
+// IDP property names.
+const (
+	PropClientID              = "client_id"
+	PropClientSecret          = "client_secret"
+	PropRedirectURI           = "redirect_uri"
+	PropScopes                = "scopes"
+	PropAuthorizationEndpoint = "authorization_endpoint"
+	PropTokenEndpoint         = "token_endpoint"
+	PropUserInfoEndpoint      = "userinfo_endpoint"
+	PropUserEmailEndpoint     = "user_email_endpoint"
+	PropLogoutEndpoint        = "logout_endpoint"
+	PropJwksEndpoint          = "jwks_endpoint"
+	PropPrompt                = "prompt"
+)
+
+// Known endpoints for Google OAuth2/OIDC.
+const (
+	googleAuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
+	googleTokenEndpoint         = "https://oauth2.googleapis.com/token" // #nosec G101
+	googleUserInfoEndpoint      = "https://openidconnect.googleapis.com/v1/userinfo"
+	googleJwksEndpoint          = "https://www.googleapis.com/oauth2/v3/certs"
+)
+
+// Known endpoints for GitHub OAuth.
+const (
+	gitHubAuthorizationEndpoint = "https://github.com/login/oauth/authorize"
+	gitHubTokenEndpoint         = "https://github.com/login/oauth/access_token" // #nosec G101
+	gitHubUserInfoEndpoint      = "https://api.github.com/user"
+	gitHubUserEmailEndpoint     = "https://api.github.com/user/emails"
+)
+
+// idpPropertyConfig defines the required and optional properties for an IDP type,
+// along with any default values.
+type idpPropertyConfig struct {
+	Required []string
+	Optional []string
+	Defaults map[string]string
+}
+
+// idpPropertyConfigs maps each IDP type to its property configuration.
+var idpPropertyConfigs = map[IDPType]idpPropertyConfig{
+	IDPTypeOAuth: {
+		Required: []string{
+			PropClientID,
+			PropClientSecret,
+			PropRedirectURI,
+			PropAuthorizationEndpoint,
+			PropTokenEndpoint,
+			PropUserInfoEndpoint,
+		},
+		Optional: []string{
+			PropScopes,
+			PropLogoutEndpoint,
+			PropPrompt,
+		},
+		Defaults: map[string]string{},
+	},
+	IDPTypeOIDC: {
+		Required: []string{
+			PropClientID,
+			PropClientSecret,
+			PropRedirectURI,
+			PropAuthorizationEndpoint,
+			PropTokenEndpoint,
+		},
+		Optional: []string{
+			PropScopes,
+			PropUserInfoEndpoint,
+			PropLogoutEndpoint,
+			PropJwksEndpoint,
+			PropPrompt,
+		},
+		Defaults: map[string]string{},
+	},
+	IDPTypeGoogle: {
+		Required: []string{
+			PropClientID,
+			PropClientSecret,
+			PropRedirectURI,
+		},
+		Optional: []string{
+			PropAuthorizationEndpoint,
+			PropTokenEndpoint,
+			PropScopes,
+			PropUserInfoEndpoint,
+			PropLogoutEndpoint,
+			PropJwksEndpoint,
+			PropPrompt,
+		},
+		Defaults: map[string]string{
+			PropAuthorizationEndpoint: googleAuthorizationEndpoint,
+			PropTokenEndpoint:         googleTokenEndpoint,
+			PropUserInfoEndpoint:      googleUserInfoEndpoint,
+			PropJwksEndpoint:          googleJwksEndpoint,
+		},
+	},
+	IDPTypeGitHub: {
+		Required: []string{
+			PropClientID,
+			PropClientSecret,
+			PropRedirectURI,
+		},
+		Optional: []string{
+			PropAuthorizationEndpoint,
+			PropTokenEndpoint,
+			PropUserInfoEndpoint,
+			PropUserEmailEndpoint,
+			PropScopes,
+			PropLogoutEndpoint,
+			PropPrompt,
+		},
+		Defaults: map[string]string{
+			PropAuthorizationEndpoint: gitHubAuthorizationEndpoint,
+			PropTokenEndpoint:         gitHubTokenEndpoint,
+			PropUserInfoEndpoint:      gitHubUserInfoEndpoint,
+			PropUserEmailEndpoint:     gitHubUserEmailEndpoint,
+		},
+	},
 }

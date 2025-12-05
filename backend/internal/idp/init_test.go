@@ -29,6 +29,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/system/cmodels"
 	"github.com/asgardeo/thunder/internal/system/config"
+	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 type IDPInitTestSuite struct {
@@ -37,6 +38,20 @@ type IDPInitTestSuite struct {
 
 func TestIDPInitTestSuite(t *testing.T) {
 	suite.Run(t, new(IDPInitTestSuite))
+}
+
+func (s *IDPInitTestSuite) SetupTest() {
+	config.ResetThunderRuntime()
+	testConfig := &config.Config{
+		ImmutableResources: config.ImmutableResources{
+			Enabled: false,
+		},
+	}
+	_ = config.InitializeThunderRuntime("/tmp/test", testConfig)
+}
+
+func (s *IDPInitTestSuite) TearDownTest() {
+	config.ResetThunderRuntime()
 }
 
 func (s *IDPInitTestSuite) TestInitialize() {
@@ -111,11 +126,6 @@ func (s *IDPInitTestSuite) TestNewIDPService() {
 	idpSvc, ok := service.(*idpService)
 	s.True(ok)
 	s.Equal(store, idpSvc.idpStore)
-}
-
-func (suite *IDPInitTestSuite) TearDownTest() {
-	// Reset config to clear singleton state for next test
-	config.ResetThunderRuntime()
 }
 
 func (suite *IDPInitTestSuite) TestParseToIDPDTO_Valid() {
@@ -199,22 +209,26 @@ func (suite *IDPInitTestSuite) TestParseIDPType_Invalid() {
 }
 
 func (suite *IDPInitTestSuite) TestValidateIDPForInit_Valid() {
-	prop, _ := cmodels.NewProperty("client_id", "test_value", false)
+	prop1, _ := cmodels.NewProperty("client_id", "test_value", false)
+	prop2, _ := cmodels.NewProperty("client_secret", "test_secret", false)
+	prop3, _ := cmodels.NewProperty("redirect_uri", "http://localhost:3000/callback", false)
 
 	idp := &IDPDTO{
 		ID:          "test-idp-1",
 		Name:        "Test IDP",
 		Description: "Test",
 		Type:        IDPTypeGoogle,
-		Properties:  []cmodels.Property{*prop},
+		Properties:  []cmodels.Property{*prop1, *prop2, *prop3},
 	}
 
-	err := validateIDPForInit(idp)
+	logger := log.GetLogger()
+	err := validateIDP(idp, logger)
 	suite.Nil(err)
 }
 
 func (suite *IDPInitTestSuite) TestValidateIDPForInit_NilIDP() {
-	err := validateIDPForInit(nil)
+	logger := log.GetLogger()
+	err := validateIDP(nil, logger)
 	suite.NotNil(err)
 	suite.Equal(ErrorIDPNil.Code, err.Code)
 }
@@ -226,7 +240,8 @@ func (suite *IDPInitTestSuite) TestValidateIDPForInit_EmptyName() {
 		Type: IDPTypeGoogle,
 	}
 
-	err := validateIDPForInit(idp)
+	logger := log.GetLogger()
+	err := validateIDP(idp, logger)
 	suite.NotNil(err)
 	suite.Equal(ErrorInvalidIDPName.Code, err.Code)
 }
@@ -238,7 +253,8 @@ func (suite *IDPInitTestSuite) TestValidateIDPForInit_EmptyType() {
 		Type: "",
 	}
 
-	err := validateIDPForInit(idp)
+	logger := log.GetLogger()
+	err := validateIDP(idp, logger)
 	suite.NotNil(err)
 	suite.Equal(ErrorInvalidIDPType.Code, err.Code)
 }
@@ -250,34 +266,10 @@ func (suite *IDPInitTestSuite) TestValidateIDPForInit_InvalidType() {
 		Type: "INVALID",
 	}
 
-	err := validateIDPForInit(idp)
+	logger := log.GetLogger()
+	err := validateIDP(idp, logger)
 	suite.NotNil(err)
 	suite.Equal(ErrorInvalidIDPType.Code, err.Code)
-}
-
-func (suite *IDPInitTestSuite) TestValidateIDPPropertiesForInit_Valid() {
-	prop1, _ := cmodels.NewProperty("client_id", "test_id", false)
-	prop2, _ := cmodels.NewProperty("client_secret", "test_secret", false)
-
-	properties := []cmodels.Property{*prop1, *prop2}
-
-	err := validateIDPProperties(properties)
-	suite.Nil(err)
-}
-
-func (suite *IDPInitTestSuite) TestValidateIDPProperties_EmptyList() {
-	err := validateIDPProperties([]cmodels.Property{})
-	suite.Nil(err)
-}
-
-func (suite *IDPInitTestSuite) TestValidateIDPProperties_UnsupportedProperty() {
-	prop, _ := cmodels.NewProperty("unsupported_property", "value", false)
-
-	properties := []cmodels.Property{*prop}
-
-	err := validateIDPProperties(properties)
-	suite.NotNil(err)
-	suite.Equal(ErrorUnsupportedIDPProperty.Code, err.Code)
 }
 
 // TestInitialize_WithImmutableResourcesDisabled tests the Initialize function when immutable resources are disabled
@@ -363,6 +355,16 @@ func TestInitialize_WithImmutableResourcesEnabled_ValidConfigs(t *testing.T) {
 
 	// Setup config with encryption support (path relative to thunderHome)
 	testConfig := &config.Config{
+		Database: config.DatabaseConfig{
+			Identity: config.DataSource{
+				Type: "sqlite",
+				Path: ":memory:",
+			},
+			Runtime: config.DataSource{
+				Type: "sqlite",
+				Path: ":memory:",
+			},
+		},
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
@@ -383,6 +385,9 @@ properties:
   - name: client_secret
     value: google-client-secret
     is_secret: true
+  - name: redirect_uri
+    value: http://localhost:3000/callback
+    is_secret: false
 `
 	err = os.WriteFile(idpDir+"/google_idp.yaml", []byte(googleIDPYAML), 0600)
 	assert.NoError(t, err)
@@ -399,6 +404,9 @@ properties:
   - name: client_secret
     value: github-client-secret
     is_secret: true
+  - name: redirect_uri
+    value: http://localhost:3000/callback
+    is_secret: false
 `
 	err = os.WriteFile(idpDir+"/github_idp.yaml", []byte(githubIDPYAML), 0600)
 	assert.NoError(t, err)
@@ -435,12 +443,18 @@ properties:
 	assert.NotNil(t, googleIDP)
 	assert.Equal(t, "Google IDP", googleIDP.Name)
 	assert.Equal(t, IDPTypeGoogle, googleIDP.Type)
-	assert.Len(t, googleIDP.Properties, 2)
+	// Google IDP should have 8 properties after defaults are applied:
+	// client_id, client_secret, redirect_uri (from YAML) + authorization_endpoint, token_endpoint,
+	// jwks_endpoint, userinfo_endpoint, scopes (defaults)
+	assert.Len(t, googleIDP.Properties, 8)
 
 	githubIDP, svcErr := service.GetIdentityProviderByName("GitHub IDP")
 	assert.Nil(t, svcErr)
 	assert.NotNil(t, githubIDP)
 	assert.Equal(t, "GitHub IDP", githubIDP.Name)
 	assert.Equal(t, IDPTypeGitHub, githubIDP.Type)
-	assert.Len(t, githubIDP.Properties, 2)
+	// GitHub IDP should have 7 properties after defaults are applied:
+	// client_id, client_secret, redirect_uri (from YAML) + authorization_endpoint, token_endpoint,
+	// userinfo_endpoint, user_email_endpoint (defaults)
+	assert.Len(t, githubIDP.Properties, 7)
 }
