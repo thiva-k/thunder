@@ -16,12 +16,15 @@ Industry-standard OAuth 2.0 and OpenID Connect (OIDC) protocols for secure authe
 - You need standards-compliant authentication
 - Working with frameworks that support OAuth/OIDC
 
-**Supported flows:**
-- **Client Credentials** - Service-to-service authentication without user interaction
+**Supported Grant Types:**
 - **Authorization Code** - User authentication with secure server-side token exchange
+- **Client Credentials** - Service-to-service authentication without user interaction
 - **Refresh Token** - Obtain new access tokens without re-authentication
+- **Token Exchange** - Exchange tokens for different audiences or scopes
 
-[Learn more about Standards-Based Authentication →](./standards-based/oauth-authentication.md)
+For comprehensive OAuth 2.0 and OIDC documentation, including detailed guides, endpoints, and features, see the [Standards-Based documentation](../standards-based/).
+
+[Quick overview of Standards-Based Authentication →](./standards-based/oauth-authentication.md)
 
 ### 2. Server Orchestrated Flows (App Native Authentication)
 
