@@ -86,6 +86,11 @@ func (suite *AuthorizeHandlerTestSuite) BeforeTest(suiteName, testName string) {
 				Path: ":memory:",
 			},
 		},
+		OAuth: config.OAuthConfig{
+			AuthorizationCode: config.AuthorizationCodeConfig{
+				ValidityPeriod: 600,
+			},
+		},
 	}
 	_ = config.InitializeThunderRuntime("test", testConfig)
 }
