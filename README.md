@@ -100,58 +100,34 @@ Follow these steps to download the latest release of WSO2 Thunder and run it loc
 
     The product will start on `https://localhost:8090`.
 
-#### Option 2: Run with Docker
+#### Option 2: Run with Docker Compose
 
-Follow these steps to run WSO2 Thunder using Docker.
+Follow these steps to run WSO2 Thunder using Docker Compose.
 
-1. **Pull the Docker image**
+1. **Download the Docker Compose file**
 
-    ```bash
-    docker pull ghcr.io/asgardeo/thunder:latest
-    ```
-
-2. **Setup the product**
-
-    You need to setup the server with the initial configurations and data before starting the server for the first time.
+    Download the `docker-compose.yml` file using the following command:
 
     ```bash
-        docker run -it --rm \
-            ghcr.io/asgardeo/thunder:latest \
-            ./setup.sh
+    curl -o docker-compose.yml https://raw.githubusercontent.com/asgardeo/thunder/v0.14.0/install/quick-start/docker-compose.yml
     ```
 
-    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>`.** You'll need it for the sample app configuration.
+2. **Start Thunder**
 
-    > [!NOTE]
-    > This will shut down the container after the setup is complete. You need to start the container again using the command in step 3. If you are using sqlite as the database, then you need to mount a volume to persist the database file and share it between the setup and server run containers.
-
-3. **Run the container**
+    Run the following command in the directory where you downloaded the `docker-compose.yml` file:
 
     ```bash
-    docker run --rm \
-      -p 8090:8090 \
-      ghcr.io/asgardeo/thunder:latest
+    docker compose up
     ```
 
-    Optionally if you want to modify the server configurations, you can mount a custom `deployment.yaml` file. Create a `deployment.yaml` file in your working directory similar to the [deployment.yaml](https://github.com/asgardeo/thunder/blob/main/backend/cmd/server/repository/conf/deployment.yaml), and mount it as below:
+    This will automatically:
+    - Initialize the database
+    - Run the setup process
+    - Start the Thunder server
 
-    ```bash
-    docker run --rm \
-      -p 8090:8090 \
-      -v $(pwd)/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml \
-      ghcr.io/asgardeo/thunder:latest
-    ```
+    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>` in the setup logs.** You'll need it for the sample app configuration.
 
-    Optionally if you want to use custom configurations or certificates, you can mount them as follows:
-
-    ```bash
-    docker run --rm \
-      -p 8090:8090 \
-      -v $(pwd)/deployment.yaml:/opt/thunder/repository/conf/deployment.yaml \
-      -v $(pwd)/certs/server.cert:/opt/thunder/repository/resources/security/server.cert \
-      -v $(pwd)/certs/server.key:/opt/thunder/repository/resources/security/server.key \
-      ghcr.io/asgardeo/thunder:latest
-    ```
+    The product will start on `https://localhost:8090`.
 
 ### Try Out the Product
 
