@@ -82,7 +82,6 @@ service:
 ingress:
   className: "nginx"
   commonAnnotations: &commonAnnotations
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
     nginx.ingress.kubernetes.io/affinity: cookie
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
@@ -108,21 +107,28 @@ ingress:
 configuration:
   # Server configuration
   server:
-    hostname: "0.0.0.0"
     port: 8090
+    httpOnly: false
+    publicUrl: "https://thunder.local"
 
   # Gate client configuration
   gateClient:
-    hostname: "0.0.0.0"
-    port: 8090
+    hostname: "thunder.local"
+    port: 443
     scheme: "https"
-    loginPath: "/gate/signin"
-    errorPath: "/error"
+    path: "/gate"
+
+  # Developer client configuration
+  developerClient:
+    path: "/develop"
+    clientId: "DEVELOP"
+    scopes: "['openid', 'profile', 'email', 'system']"
 
   # Security configuration
   security:
     certFile: "repository/resources/security/server.cert"
     keyFile: "repository/resources/security/server.key"
+    cryptoFile: "repository/resources/security/crypto.key"
 
   # Database configuration
   database:
@@ -159,6 +165,22 @@ configuration:
       max_open_conns: 500
       max_idle_conns: 100
       conn_max_lifetime: 3600 
+    user:
+      # WARNING: Use sqlite only if you are running a single pod.
+      type: "postgres" # postgres or sqlite
+      # Below two parameters are only required for sqlite
+      sqlitePath: "repository/database/userdb.db" # Only required for sqlite
+      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000" # Only required for sqlite
+      # Below parameters are only required for Postgres
+      name: "userdb" 
+      host: "localhost" 
+      port: "5432" 
+      username: "asgthunder"
+      password: "asgthunder" 
+      sslmode: "require"
+      max_open_conns: 500
+      max_idle_conns: 100
+      conn_max_lifetime: 3600 
 
   # Cache configuration
   cache:
@@ -173,6 +195,7 @@ configuration:
   jwt:
     issuer: "thunder"
     validityPeriod: 3600
+    audience: "application"
 
   # OAuth configuration
   oauth:
@@ -191,6 +214,15 @@ configuration:
     allowedOrigins:
       - "https://localhost:3000"
 
+# Persistence configuration for SQLite databases
+# Only relevant when using SQLite as the database type
+persistence:
+  enabled: false
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 1Gi
+  annotations: {}
+
 # Setup Job configuration
 # Runs setup.sh as a one-time initialization job during Helm install
 setup:
@@ -198,7 +230,12 @@ setup:
   enabled: true
   # Number of retries if setup fails
   backoffLimit: 3
-  # Time to keep job after completion (seconds, 0 = indefinite)
+  # Whether to preserve the setup job after completion
+  # When false: Job is deleted immediately on success, and after ttlSecondsAfterFinished on failure
+  # When true: Job is kept indefinitely (ttlSecondsAfterFinished is not applied)
+  preserveJob: false
+  # Time to keep failed jobs after completion (seconds, 0 = indefinite)
+  # Only applies when preserveJob=false. Successful jobs are deleted immediately via hook-delete-policy.
   ttlSecondsAfterFinished: 86400  # 24 hours
   # Enable debug mode for setup
   debug: false
@@ -235,17 +272,61 @@ setup:
     #     secretName: thunder-secrets
 
 # Bootstrap configuration
+# Custom bootstrap scripts extend Thunder's setup process by adding initialization logic.
+#
+# ⚠️ IMPORTANT: Bootstrap patterns are MUTUALLY EXCLUSIVE
+#   Choose ONE pattern only. Using both 'scripts' and 'configMap' will fail validation.
+#
+#   - Pattern 1: Use 'scripts' for inline scripts
+#   - Pattern 2 OR 3: Use 'configMap' (with or without 'files')
+#
 bootstrap:
-  # Enable custom bootstrap scripts
-  enabled: false
-  # Custom bootstrap scripts provided inline
-  # Scripts will be mounted to /opt/thunder/bootstrap/custom/
+  # Pattern 1: Inline bootstrap scripts (key: filename, value: script content)
+  # Each script will be mounted individually using subPath to preserve default scripts
   scripts: {}
-    # Example:
-    # 30-custom-users.sh: |
+    # Example - Creating custom users:
+    # 20-custom-users.sh: |
     #   #!/bin/bash
     #   set -e
+    #   # Source common functions (provides log_* and thunder_api_call)
+    #   SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+    #   source "${SCRIPT_DIR}/common.sh"
+    #
     #   log_info "Creating custom users..."
-    #   # Your script here
-  # Or reference an existing ConfigMap
-  existingConfigMap: ""
+    #   thunder_api_call POST "/users" '{
+    #     "type": "person",
+    #     "attributes": {
+    #       "username": "alice",
+    #       "password": "alice123",
+    #       "sub": "alice",
+    #       "email": "alice@example.com",
+    #       "name": "Alice Johnson"
+    #     }
+    #   }'
+    #   log_success "Custom users created"
+    #
+  # Pattern 2 & 3: Reference an external ConfigMap with bootstrap scripts
+  #
+  # Behavior depends on whether 'files' is specified:
+  # - WITH files list: Mounts only specified files (preserves defaults) - Pattern 2
+  # - WITHOUT files (empty/omitted): Mounts entire ConfigMap (replaces all defaults) - Pattern 3
+  #
+  # Example 1 - Pattern 2: Add specific scripts (preserves defaults)
+  #   configMap:
+  #     name: "my-bootstrap"
+  #     files:
+  #       - 30-custom-users.sh
+  #       - 40-custom-apps.sh
+  #
+  # Example 2 - Pattern 3: Replace all scripts
+  #   configMap:
+  #     name: "complete-bootstrap"
+  #     # No files = replaces all defaults (must provide your own common.sh)
+  #
+  configMap:
+    # Name of the ConfigMap containing bootstrap scripts
+    name: ""
+    # List of script filenames to mount from the ConfigMap
+    # If empty/omitted: mounts entire ConfigMap (replaces all defaults - Pattern 3)
+    # If specified: mounts only these files (preserves defaults - Pattern 2)
+    files: []

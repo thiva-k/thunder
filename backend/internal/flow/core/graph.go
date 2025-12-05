@@ -199,6 +199,11 @@ func (g *graph) ToJSON() (string, error) {
 		Options  []string `json:"options,omitempty"`
 	}
 
+	type JSONCondition struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	}
+
 	type JSONNode struct {
 		ID                 string          `json:"id"`
 		Type               string          `json:"type"`
@@ -208,6 +213,7 @@ func (g *graph) ToJSON() (string, error) {
 		PreviousNodeIDList []string        `json:"previousNodeIds"`
 		InputData          []JSONInputData `json:"inputData,omitempty"`
 		Executor           string          `json:"executor,omitempty"`
+		Condition          *JSONCondition  `json:"condition,omitempty"`
 	}
 
 	type JSONGraph struct {
@@ -249,6 +255,14 @@ func (g *graph) ToJSON() (string, error) {
 			jsonNode.InputData = make([]JSONInputData, len(inputData))
 			for i, input := range inputData {
 				jsonNode.InputData[i] = JSONInputData(input)
+			}
+		}
+
+		// Set condition if present
+		if condition := node.GetCondition(); condition != nil {
+			jsonNode.Condition = &JSONCondition{
+				Key:   condition.Key,
+				Value: condition.Value,
 			}
 		}
 

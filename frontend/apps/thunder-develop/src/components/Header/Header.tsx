@@ -50,7 +50,7 @@ export default function Header(): JSX.Element {
       <Stack direction="row" sx={{gap: 1}}>
         <Search />
         <Tooltip title={t('common:header.notifications')}>
-          <MenuButton showBadge aria-label={t('common:header.openNotifications')}>
+          <MenuButton aria-label={t('common:header.openNotifications')}>
             <Bell strokeWidth={1} />
           </MenuButton>
         </Tooltip>

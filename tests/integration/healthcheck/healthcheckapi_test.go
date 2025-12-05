@@ -18,11 +18,11 @@
 package healthcheck
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -43,11 +43,7 @@ func (ts *HealthCheckAPITestSuite) TestLivenessCheck() {
 	req, err := http.NewRequest("GET", testServerURL+"/health/liveness", nil)
 	ts.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)
@@ -59,11 +55,7 @@ func (ts *HealthCheckAPITestSuite) TestReadinessCheck() {
 	req, err := http.NewRequest("GET", testServerURL+"/health/readiness", nil)
 	ts.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.Require().NoError(err)

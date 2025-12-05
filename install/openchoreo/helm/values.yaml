@@ -52,6 +52,12 @@ database:
     password: <DB_PASSWORD>   # Required: Database password for runtime DB (can be same as identity)
     type: postgres            # Database type (currently only postgres is supported)
     sslmode: disable          # SSL mode: disable, require, verify-ca, verify-full
+  user:
+    database: userdb          # User database name
+    username: <DB_USERNAME>   # Required: Database username for user DB (can be same as identity)
+    password: <DB_PASSWORD>   # Required: Database password for user DB (can be same as identity)
+    type: postgres            # Database type (currently only postgres is supported)
+    sslmode: disable          # SSL mode: disable, require, verify-ca, verify-full
 
 jwt:
   issuer: thunder     # JWT token issuer identifier

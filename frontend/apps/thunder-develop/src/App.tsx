@@ -28,6 +28,7 @@ import ViewUserTypePage from './features/user-types/pages/ViewUserTypePage';
 import IntegrationsPage from './features/integrations/pages/IntegrationsPage';
 import ApplicationsListPage from './features/applications/pages/ApplicationsListPage';
 import ApplicationCreatePage from './features/applications/pages/ApplicationCreatePage';
+import ViewApplicationPage from './features/applications/pages/ViewApplicationPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import FullScreenLayout from './layouts/FullScreenLayout';
 
@@ -52,6 +53,7 @@ export default function App(): JSX.Element {
           <Route path="user-types/:id" element={<ViewUserTypePage />} />
           <Route path="integrations" element={<IntegrationsPage />} />
           <Route path="applications" element={<ApplicationsListPage />} />
+          <Route path="applications/:applicationId" element={<ViewApplicationPage />} />
         </Route>
         <Route
           path="/applications/create"

@@ -17,7 +17,7 @@
  */
 
 import {useNavigate} from 'react-router';
-import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem, Paper} from '@wso2/oxygen-ui';
+import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem} from '@wso2/oxygen-ui';
 import {useMemo, useState} from 'react';
 import {Plus, Search} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
@@ -47,10 +47,10 @@ export default function UsersListPage() {
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h1" gutterBottom>
             {t('users:title')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="subtitle1" color="text.secondary">
             {t('users:subtitle')}
           </Typography>
         </Box>
@@ -100,9 +100,7 @@ export default function UsersListPage() {
           ))}
         </Select>
       </Stack>
-      <Paper>
-        <UsersList selectedSchema={selectedSchema ?? ''} />
-      </Paper>
+      <UsersList selectedSchema={selectedSchema ?? ''} />
     </Box>
   );
 }

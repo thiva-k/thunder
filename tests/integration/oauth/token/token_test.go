@@ -20,7 +20,6 @@ package token
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -29,6 +28,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -52,11 +52,7 @@ func TestTokenTestSuite(t *testing.T) {
 
 func (ts *TokenTestSuite) SetupSuite() {
 	// Create a client that skips TLS verification
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 
 	// Create applications for different authentication methods
 	ts.applicationIDBasic = ts.createTestApplication("client_secret_basic")

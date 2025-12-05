@@ -22,8 +22,10 @@ package config
 import (
 	"encoding/json"
 	"os"
+	urlpath "path"
 	"path/filepath"
 	"reflect"
+	"time"
 
 	"github.com/asgardeo/thunder/internal/system/log"
 
@@ -32,10 +34,11 @@ import (
 
 // ServerConfig holds the server configuration details.
 type ServerConfig struct {
-	Hostname       string `yaml:"hostname" json:"hostname"`
-	Port           int    `yaml:"port" json:"port"`
-	HTTPOnly       bool   `yaml:"http_only" json:"http_only"`
-	PublicHostname string `yaml:"public_hostname" json:"public_hostname"`
+	Hostname   string `yaml:"hostname" json:"hostname"`
+	Port       int    `yaml:"port" json:"port"`
+	HTTPOnly   bool   `yaml:"http_only" json:"http_only"`
+	PublicURL  string `yaml:"public_url" json:"public_url"`
+	Identifier string `yaml:"identifier" json:"identifier"`
 }
 
 // GateClientConfig holds the client configuration details.
@@ -43,14 +46,16 @@ type GateClientConfig struct {
 	Hostname  string `yaml:"hostname" json:"hostname"`
 	Port      int    `yaml:"port" json:"port"`
 	Scheme    string `yaml:"scheme" json:"scheme"`
+	Path      string `yaml:"path" json:"path"`
 	LoginPath string `yaml:"login_path" json:"login_path"`
 	ErrorPath string `yaml:"error_path" json:"error_path"`
 }
 
 // SecurityConfig holds the security configuration details.
 type SecurityConfig struct {
-	CertFile string `yaml:"cert_file" json:"cert_file"`
-	KeyFile  string `yaml:"key_file" json:"key_file"`
+	CertFile   string `yaml:"cert_file" json:"cert_file"`
+	KeyFile    string `yaml:"key_file" json:"key_file"`
+	CryptoFile string `yaml:"crypto_file" json:"crypto_file"`
 }
 
 // DataSource holds the individual database connection details.
@@ -73,6 +78,7 @@ type DataSource struct {
 type DatabaseConfig struct {
 	Identity DataSource `yaml:"identity" json:"identity"`
 	Runtime  DataSource `yaml:"runtime" json:"runtime"`
+	User     DataSource `yaml:"user" json:"user"`
 }
 
 // CacheProperty defines the properties for individual caches.
@@ -99,6 +105,7 @@ type CacheConfig struct {
 type JWTConfig struct {
 	Issuer         string `yaml:"issuer" json:"issuer"`
 	ValidityPeriod int64  `yaml:"validity_period" json:"validity_period"`
+	Audience       string `yaml:"audience" json:"audience"`
 }
 
 // RefreshTokenConfig holds the refresh token configuration details.
@@ -123,11 +130,6 @@ type FlowConfig struct {
 	Authn          FlowAuthnConfig `yaml:"authn" json:"authn"`
 }
 
-// CryptoConfig holds the cryptographic configuration details.
-type CryptoConfig struct {
-	Key string `yaml:"key" json:"key"`
-}
-
 // CORSConfig holds the configuration details for the CORS.
 type CORSConfig struct {
 	AllowedOrigins []string `yaml:"allowed_origins" json:"allowed_origins"`
@@ -145,21 +147,47 @@ type ImmutableResources struct {
 
 // ObservabilityConfig holds the observability configuration details.
 type ObservabilityConfig struct {
-	Enabled     bool                       `yaml:"enabled" json:"enabled"`
-	Output      ObservabilityOutputConfig  `yaml:"output" json:"output"`
-	Metrics     ObservabilityMetricsConfig `yaml:"metrics" json:"metrics"`
-	FailureMode string                     `yaml:"failure_mode" json:"failure_mode"`
+	Enabled     bool                      `yaml:"enabled" json:"enabled"`
+	Output      ObservabilityOutputConfig `yaml:"output" json:"output"`
+	FailureMode string                    `yaml:"failure_mode" json:"failure_mode"`
 }
 
 // ObservabilityOutputConfig holds observability output configuration.
 type ObservabilityOutputConfig struct {
-	Type   string `yaml:"type" json:"type"`
-	Format string `yaml:"format" json:"format"`
+	File          ObservabilityFileConfig    `yaml:"file" json:"file"`
+	Console       ObservabilityConsoleConfig `yaml:"console" json:"console"`
+	OpenTelemetry ObservabilityOTelConfig    `yaml:"opentelemetry" json:"opentelemetry"`
 }
 
-// ObservabilityMetricsConfig holds observability metrics configuration.
-type ObservabilityMetricsConfig struct {
-	Enabled bool `yaml:"enabled" json:"enabled"`
+// ObservabilityFileConfig captures file sink settings for observability events.
+type ObservabilityFileConfig struct {
+	Enabled       bool          `yaml:"enabled" json:"enabled"`
+	FilePath      string        `yaml:"file_path" json:"file_path"`
+	Format        string        `yaml:"format" json:"format"`
+	BufferSize    int           `yaml:"buffer_size" json:"buffer_size"`
+	FlushInterval time.Duration `yaml:"flush_interval" json:"flush_interval"`
+	Categories    []string      `yaml:"categories" json:"categories"`
+}
+
+// ObservabilityConsoleConfig captures console sink settings for observability events.
+type ObservabilityConsoleConfig struct {
+	Enabled    bool     `yaml:"enabled" json:"enabled"`
+	Format     string   `yaml:"format" json:"format"`
+	Categories []string `yaml:"categories" json:"categories"`
+}
+
+// ObservabilityOTelConfig holds OpenTelemetry configuration.
+type ObservabilityOTelConfig struct {
+	Enabled        bool     `yaml:"enabled" json:"enabled"`
+	ExporterType   string   `yaml:"exporter_type" json:"exporter_type"`
+	OTLPEndpoint   string   `yaml:"otlp_endpoint" json:"otlp_endpoint"`
+	ServiceName    string   `yaml:"service_name" json:"service_name"`
+	ServiceVersion string   `yaml:"service_version" json:"service_version"`
+	Environment    string   `yaml:"environment" json:"environment"`
+	SampleRate     float64  `yaml:"sample_rate" json:"sample_rate"`
+	Categories     []string `yaml:"categories" json:"categories"`
+	// Insecure disables TLS for OTLP (not recommended for production)
+	Insecure bool `yaml:"insecure" json:"insecure"`
 }
 
 // Config holds the complete configuration details of the server.
@@ -172,7 +200,6 @@ type Config struct {
 	JWT                JWTConfig           `yaml:"jwt" json:"jwt"`
 	OAuth              OAuthConfig         `yaml:"oauth" json:"oauth"`
 	Flow               FlowConfig          `yaml:"flow" json:"flow"`
-	Crypto             CryptoConfig        `yaml:"crypto" json:"crypto"`
 	Hash               HashConfig          `yaml:"hash"`
 	CORS               CORSConfig          `yaml:"cors" json:"cors"`
 	ImmutableResources ImmutableResources  `yaml:"immutable_resources" json:"immutable_resources"`
@@ -212,6 +239,15 @@ func LoadConfig(path string, defaultsPath string) (*Config, error) {
 
 	// Merge user configuration with defaults
 	mergeConfigs(&cfg, &userCfg)
+	// Derive login_path and error_path from path if not explicitly set
+	if cfg.GateClient.Path != "" {
+		if cfg.GateClient.LoginPath == "" {
+			cfg.GateClient.LoginPath = urlpath.Join(cfg.GateClient.Path, "signin")
+		}
+		if cfg.GateClient.ErrorPath == "" {
+			cfg.GateClient.ErrorPath = urlpath.Join(cfg.GateClient.Path, "error")
+		}
+	}
 
 	return &cfg, nil
 }

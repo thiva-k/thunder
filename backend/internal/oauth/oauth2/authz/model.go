@@ -25,7 +25,7 @@ import (
 // OAuthMessage represents the OAuth message.
 type OAuthMessage struct {
 	RequestType        string
-	SessionDataKey     string
+	AuthID             string
 	RequestQueryParams map[string]string
 	RequestBodyParams  map[string]string
 }
@@ -37,6 +37,10 @@ type AuthorizationCode struct {
 	ClientID            string
 	RedirectURI         string
 	AuthorizedUserID    string
+	AuthorizedUserType  string
+	UserOUID            string
+	UserOUName          string
+	UserOUHandle        string
 	TimeCreated         time.Time
 	ExpiryTime          time.Time
 	Scopes              string
@@ -48,11 +52,21 @@ type AuthorizationCode struct {
 
 // AuthZPostRequest represents the request body for the authorization POST request.
 type AuthZPostRequest struct {
-	SessionDataKey string `json:"sessionDataKey"`
-	Assertion      string `json:"assertion"`
+	AuthID    string `json:"authId"`
+	Assertion string `json:"assertion"`
 }
 
 // AuthZPostResponse represents the response body for the authorization POST request.
 type AuthZPostResponse struct {
 	RedirectURI string `json:"redirect_uri"`
+}
+
+// assertionClaims represents the claims extracted from the flow assertion JWT.
+type assertionClaims struct {
+	userID         string
+	userType       string
+	ouID           string
+	ouName         string
+	ouHandle       string
+	userAttributes map[string]string
 }

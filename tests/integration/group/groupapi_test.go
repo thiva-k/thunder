@@ -20,7 +20,6 @@ package group
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,7 +39,7 @@ var (
 	}
 
 	testUserSchema = testutils.UserSchema{
-		Name: "person",
+		Name: "group-test-person",
 		Schema: map[string]interface{}{
 			"email": map[string]interface{}{
 				"type": "string",
@@ -58,7 +57,7 @@ var (
 	}
 
 	testUser = testutils.User{
-		Type: "person",
+		Type: "group-test-person",
 		Attributes: json.RawMessage(`{
 			"email": "testuser@example.com",
 			"firstName": "Test",
@@ -167,11 +166,7 @@ func (suite *GroupAPITestSuite) TestGetGroup() {
 	}
 
 	// Get the created group
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/"+createdGroupID, nil)
 	suite.Require().NoError(err)
@@ -208,11 +203,7 @@ func (suite *GroupAPITestSuite) TestListGroups() {
 	}
 
 	// List groups
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups", nil)
 	suite.Require().NoError(err)
@@ -259,11 +250,7 @@ func (suite *GroupAPITestSuite) TestListGroupsWithPagination() {
 	}
 
 	// Test pagination with limit=1, offset=0
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups?limit=1&offset=0", nil)
 	suite.Require().NoError(err)
@@ -306,11 +293,7 @@ func (suite *GroupAPITestSuite) TestListGroupsWithPagination() {
 
 func (suite *GroupAPITestSuite) TestListGroupsWithInvalidPagination() {
 	// Test with invalid limit parameter
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Test invalid limit (negative)
 	req, err := http.NewRequest("GET", testServerURL+"/groups?limit=-1", nil)
@@ -373,11 +356,7 @@ func (suite *GroupAPITestSuite) TestListGroupsWithInvalidPagination() {
 
 func (suite *GroupAPITestSuite) TestListGroupsWithOnlyOffset() {
 	// Test with only offset parameter provided (should use default limit=30)
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups?offset=0", nil)
 	suite.Require().NoError(err)
@@ -416,11 +395,7 @@ func (suite *GroupAPITestSuite) TestUpdateGroup() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/groups/"+createdGroupID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -455,11 +430,7 @@ func (suite *GroupAPITestSuite) TestDeleteGroup() {
 	jsonData, err := json.Marshal(tempGroupToCreate)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Create temporary group
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
@@ -501,11 +472,7 @@ func (suite *GroupAPITestSuite) TestDeleteGroup() {
 
 func (suite *GroupAPITestSuite) TestGetNonExistentGroup() {
 	// Try to get a non-existent group
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/non-existent-id", nil)
 	suite.Require().NoError(err)
@@ -528,11 +495,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithInvalidData() {
 	jsonData, err := json.Marshal(invalidGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -563,11 +526,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithInvalidUserID() {
 	jsonData, err := json.Marshal(invalidGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -616,11 +575,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithMixedValidInvalidUserIDs() {
 	jsonData, err := json.Marshal(invalidGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -655,11 +610,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithEmptyUserList() {
 	jsonData, err := json.Marshal(validGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -701,11 +652,7 @@ func (suite *GroupAPITestSuite) TestUpdateGroupWithInvalidUserID() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/groups/"+createdGroupID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -745,11 +692,7 @@ func (suite *GroupAPITestSuite) TestUpdateGroupWithValidEmptyUserList() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/groups/"+createdGroupID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -798,11 +741,7 @@ func (suite *GroupAPITestSuite) TestUpdateGroupWithMultipleInvalidUserIDs() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/groups/"+createdGroupID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -830,7 +769,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithMultipleMembers() {
 	// Create a temporary user for testing
 	tempUser := testutils.User{
 		OrganizationUnit: testOUID,
-		Type:             "person",
+		Type:             "group-test-person",
 		Attributes: json.RawMessage(`{
 			"email": "testuser2@example.com",
 			"firstName": "Test",
@@ -867,11 +806,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithMultipleMembers() {
 	jsonData, err := json.Marshal(groupWithMembers)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -912,7 +847,7 @@ func (suite *GroupAPITestSuite) TestUpdateGroupMembers() {
 	// Create a temporary user for testing
 	tempUser := testutils.User{
 		OrganizationUnit: testOUID,
-		Type:             "person",
+		Type:             "group-test-person",
 		Attributes: json.RawMessage(`{
 			"email": "testuser2@example.com",
 			"firstName": "Test",
@@ -945,11 +880,7 @@ func (suite *GroupAPITestSuite) TestUpdateGroupMembers() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/groups/"+createdGroupID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -984,11 +915,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithGroupMember() {
 	jsonData, err := json.Marshal(tempGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Create the member group
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
@@ -1067,11 +994,7 @@ func (suite *GroupAPITestSuite) TestCreateGroupWithInvalidGroupMember() {
 	jsonData, err := json.Marshal(invalidGroup)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/groups", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -1108,11 +1031,7 @@ func createGroup(group CreateGroupRequest) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1140,11 +1059,7 @@ func deleteGroup(groupID string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1184,11 +1099,7 @@ func (suite *GroupAPITestSuite) TestGetGroupMembers() {
 	}
 
 	// Get the group members
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/"+createdGroupID+"/members", nil)
 	suite.Require().NoError(err)
@@ -1229,11 +1140,7 @@ func (suite *GroupAPITestSuite) TestGetGroupMembersWithPagination() {
 	}
 
 	// Test pagination with limit=1, offset=0
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/"+createdGroupID+"/members?limit=1&offset=0", nil)
 	suite.Require().NoError(err)
@@ -1260,11 +1167,7 @@ func (suite *GroupAPITestSuite) TestGetGroupMembersWithPagination() {
 
 func (suite *GroupAPITestSuite) TestGetGroupMembersNotFound() {
 	// Try to get members of a non-existent group
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/groups/non-existent-id/members", nil)
 	suite.Require().NoError(err)

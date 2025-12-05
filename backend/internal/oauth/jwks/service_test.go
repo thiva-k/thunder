@@ -283,6 +283,90 @@ func (suite *JWKSServiceTestSuite) TestGetJWKS_TLSConfigNotFound() {
 	assert.Equal(suite.T(), ErrorTLSConfigNotFound.Code, svcErr.Code)
 }
 
-func (suite *JWKSServiceTestSuite) TestJWKSServiceInterface() {
-	var _ JWKSServiceInterface = &jwksService{}
+func (suite *JWKSServiceTestSuite) TestGetJWKS_ECDSAKey_P384() {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	assert.NoError(suite.T(), err)
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Test Org"},
+		},
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: nil,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	assert.NoError(suite.T(), err)
+
+	cert := tls.Certificate{
+		Certificate: [][]byte{certDER},
+		PrivateKey:  privateKey,
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	err = suite.setupRuntimeConfig(tlsConfig, "test-kid")
+	assert.NoError(suite.T(), err)
+
+	result, svcErr := suite.jwksService.GetJWKS()
+	assert.Nil(suite.T(), svcErr)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Keys, 1)
+
+	jwk := result.Keys[0]
+	assert.Equal(suite.T(), "test-kid", jwk.Kid)
+	assert.Equal(suite.T(), "EC", jwk.Kty)
+	assert.Equal(suite.T(), "ES384", jwk.Alg)
+	assert.Equal(suite.T(), "P-384", jwk.Crv)
+}
+
+func (suite *JWKSServiceTestSuite) TestGetJWKS_ECDSAKey_P521() {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+	assert.NoError(suite.T(), err)
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Test Org"},
+		},
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().Add(365 * 24 * time.Hour),
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: nil,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	assert.NoError(suite.T(), err)
+
+	cert := tls.Certificate{
+		Certificate: [][]byte{certDER},
+		PrivateKey:  privateKey,
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS12,
+	}
+
+	err = suite.setupRuntimeConfig(tlsConfig, "test-kid")
+	assert.NoError(suite.T(), err)
+
+	result, svcErr := suite.jwksService.GetJWKS()
+	assert.Nil(suite.T(), svcErr)
+	assert.NotNil(suite.T(), result)
+	assert.Len(suite.T(), result.Keys, 1)
+
+	jwk := result.Keys[0]
+	assert.Equal(suite.T(), "test-kid", jwk.Kid)
+	assert.Equal(suite.T(), "EC", jwk.Kty)
+	assert.Equal(suite.T(), "ES512", jwk.Alg)
+	assert.Equal(suite.T(), "P-521", jwk.Crv)
 }

@@ -145,3 +145,58 @@ func (_c *DBProviderInterfaceMock_GetRuntimeDBClient_Call) RunAndReturn(run func
 	_c.Call.Return(run)
 	return _c
 }
+
+// GetUserDBClient provides a mock function for the type DBProviderInterfaceMock
+func (_mock *DBProviderInterfaceMock) GetUserDBClient() (provider.DBClientInterface, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserDBClient")
+	}
+
+	var r0 provider.DBClientInterface
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() (provider.DBClientInterface, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() provider.DBClientInterface); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(provider.DBClientInterface)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// DBProviderInterfaceMock_GetUserDBClient_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUserDBClient'
+type DBProviderInterfaceMock_GetUserDBClient_Call struct {
+	*mock.Call
+}
+
+// GetUserDBClient is a helper method to define mock.On call
+func (_e *DBProviderInterfaceMock_Expecter) GetUserDBClient() *DBProviderInterfaceMock_GetUserDBClient_Call {
+	return &DBProviderInterfaceMock_GetUserDBClient_Call{Call: _e.mock.On("GetUserDBClient")}
+}
+
+func (_c *DBProviderInterfaceMock_GetUserDBClient_Call) Run(run func()) *DBProviderInterfaceMock_GetUserDBClient_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *DBProviderInterfaceMock_GetUserDBClient_Call) Return(dBClientInterface provider.DBClientInterface, err error) *DBProviderInterfaceMock_GetUserDBClient_Call {
+	_c.Call.Return(dBClientInterface, err)
+	return _c
+}
+
+func (_c *DBProviderInterfaceMock_GetUserDBClient_Call) RunAndReturn(run func() (provider.DBClientInterface, error)) *DBProviderInterfaceMock_GetUserDBClient_Call {
+	_c.Call.Return(run)
+	return _c
+}

@@ -22,8 +22,30 @@ codecov:
     wait_for_ci: true
 
 flags:
+  backend-unit:
+    carryforward: false
+    paths:
+      - backend/
+  backend-integration-sqlite:
+    carryforward: false
+    paths:
+      - backend/
+  backend-integration-postgres:
+    carryforward: false
+    paths:
+      - backend/
+  # backend-combined-sqlite:
+  #   carryforward: false
+  #   paths:
+  #     - backend/
+  # backend-combined-postgres:
+  #   carryforward: false
+  #   paths:
+  #     - backend/
   frontend-apps-develop-unit:
     carryforward: false
+    paths:
+      - frontend/apps/thunder-develop/
 
 coverage:
   status:
@@ -33,6 +55,26 @@ coverage:
         target: auto
         threshold: 1%
         informational: false
+      backend-unit:
+        flags:
+          - backend-unit
+        target: auto
+        threshold: 1%
+        informational: false
+      backend-integration:
+        flags:
+          - backend-integration-sqlite
+          - backend-integration-postgres
+        target: auto
+        threshold: 1%
+        informational: false
+      # backend-combined:
+      #   flags:
+      #     - backend-combined-sqlite
+      #     - backend-combined-postgres
+      #   target: auto
+      #   threshold: 1%
+      #   informational: false
       frontend-apps-develop-unit:
         flags:
           - frontend-apps-develop-unit

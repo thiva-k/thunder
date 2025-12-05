@@ -182,6 +182,52 @@ func (_c *NodeInterfaceMock_Execute_Call) RunAndReturn(run func(ctx *core.NodeCo
 	return _c
 }
 
+// GetCondition provides a mock function for the type NodeInterfaceMock
+func (_mock *NodeInterfaceMock) GetCondition() *core.NodeCondition {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCondition")
+	}
+
+	var r0 *core.NodeCondition
+	if returnFunc, ok := ret.Get(0).(func() *core.NodeCondition); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*core.NodeCondition)
+		}
+	}
+	return r0
+}
+
+// NodeInterfaceMock_GetCondition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCondition'
+type NodeInterfaceMock_GetCondition_Call struct {
+	*mock.Call
+}
+
+// GetCondition is a helper method to define mock.On call
+func (_e *NodeInterfaceMock_Expecter) GetCondition() *NodeInterfaceMock_GetCondition_Call {
+	return &NodeInterfaceMock_GetCondition_Call{Call: _e.mock.On("GetCondition")}
+}
+
+func (_c *NodeInterfaceMock_GetCondition_Call) Run(run func()) *NodeInterfaceMock_GetCondition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *NodeInterfaceMock_GetCondition_Call) Return(nodeCondition *core.NodeCondition) *NodeInterfaceMock_GetCondition_Call {
+	_c.Call.Return(nodeCondition)
+	return _c
+}
+
+func (_c *NodeInterfaceMock_GetCondition_Call) RunAndReturn(run func() *core.NodeCondition) *NodeInterfaceMock_GetCondition_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetID provides a mock function for the type NodeInterfaceMock
 func (_mock *NodeInterfaceMock) GetID() string {
 	ret := _mock.Called()
@@ -688,6 +734,46 @@ func (_c *NodeInterfaceMock_SetAsStartNode_Call) RunAndReturn(run func()) *NodeI
 	return _c
 }
 
+// SetCondition provides a mock function for the type NodeInterfaceMock
+func (_mock *NodeInterfaceMock) SetCondition(condition *core.NodeCondition) {
+	_mock.Called(condition)
+	return
+}
+
+// NodeInterfaceMock_SetCondition_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetCondition'
+type NodeInterfaceMock_SetCondition_Call struct {
+	*mock.Call
+}
+
+// SetCondition is a helper method to define mock.On call
+//   - condition *core.NodeCondition
+func (_e *NodeInterfaceMock_Expecter) SetCondition(condition interface{}) *NodeInterfaceMock_SetCondition_Call {
+	return &NodeInterfaceMock_SetCondition_Call{Call: _e.mock.On("SetCondition", condition)}
+}
+
+func (_c *NodeInterfaceMock_SetCondition_Call) Run(run func(condition *core.NodeCondition)) *NodeInterfaceMock_SetCondition_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *core.NodeCondition
+		if args[0] != nil {
+			arg0 = args[0].(*core.NodeCondition)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *NodeInterfaceMock_SetCondition_Call) Return() *NodeInterfaceMock_SetCondition_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *NodeInterfaceMock_SetCondition_Call) RunAndReturn(run func(condition *core.NodeCondition)) *NodeInterfaceMock_SetCondition_Call {
+	_c.Run(run)
+	return _c
+}
+
 // SetInputData provides a mock function for the type NodeInterfaceMock
 func (_mock *NodeInterfaceMock) SetInputData(inputData []common.InputData) {
 	_mock.Called(inputData)
@@ -805,5 +891,56 @@ func (_c *NodeInterfaceMock_SetPreviousNodeList_Call) Return() *NodeInterfaceMoc
 
 func (_c *NodeInterfaceMock_SetPreviousNodeList_Call) RunAndReturn(run func(previousNodeIDList []string)) *NodeInterfaceMock_SetPreviousNodeList_Call {
 	_c.Run(run)
+	return _c
+}
+
+// ShouldExecute provides a mock function for the type NodeInterfaceMock
+func (_mock *NodeInterfaceMock) ShouldExecute(ctx *core.NodeContext) bool {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ShouldExecute")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(*core.NodeContext) bool); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// NodeInterfaceMock_ShouldExecute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ShouldExecute'
+type NodeInterfaceMock_ShouldExecute_Call struct {
+	*mock.Call
+}
+
+// ShouldExecute is a helper method to define mock.On call
+//   - ctx *core.NodeContext
+func (_e *NodeInterfaceMock_Expecter) ShouldExecute(ctx interface{}) *NodeInterfaceMock_ShouldExecute_Call {
+	return &NodeInterfaceMock_ShouldExecute_Call{Call: _e.mock.On("ShouldExecute", ctx)}
+}
+
+func (_c *NodeInterfaceMock_ShouldExecute_Call) Run(run func(ctx *core.NodeContext)) *NodeInterfaceMock_ShouldExecute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 *core.NodeContext
+		if args[0] != nil {
+			arg0 = args[0].(*core.NodeContext)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *NodeInterfaceMock_ShouldExecute_Call) Return(b bool) *NodeInterfaceMock_ShouldExecute_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *NodeInterfaceMock_ShouldExecute_Call) RunAndReturn(run func(ctx *core.NodeContext) bool) *NodeInterfaceMock_ShouldExecute_Call {
+	_c.Call.Return(run)
 	return _c
 }

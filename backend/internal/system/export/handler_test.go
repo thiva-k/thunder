@@ -34,6 +34,7 @@ import (
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
+	"github.com/asgardeo/thunder/tests/mocks/idp/idpmock"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -43,6 +44,7 @@ import (
 type HandlerTestSuite struct {
 	suite.Suite
 	mockAppService *applicationmock.ApplicationServiceInterfaceMock
+	mockIDPService *idpmock.IDPServiceInterfaceMock
 	exportService  ExportServiceInterface
 	handler        *exportHandler
 }
@@ -60,7 +62,9 @@ func (suite *HandlerTestSuite) SetupTest() {
 
 	// Setup services and handler
 	suite.mockAppService = applicationmock.NewApplicationServiceInterfaceMock(suite.T())
-	suite.exportService = newExportService(suite.mockAppService)
+	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
+	parameterizer := newParameterizer(rules)
+	suite.exportService = newExportService(suite.mockAppService, suite.mockIDPService, parameterizer)
 	suite.handler = newExportHandler(suite.exportService)
 }
 
@@ -195,7 +199,8 @@ func (suite *HandlerTestSuite) TestGenerateAndSendZipResponse_SingleFileNoFolder
 		},
 	}
 
-	suite.testZipResponse(exportResponse, "standalone.yaml", "name: standalone-app\ndescription: Standalone Application")
+	suite.testZipResponse(exportResponse, "standalone.yaml",
+		"name: standalone-app\ndescription: Standalone Application")
 }
 
 // TestGenerateAndSendZipResponse_EmptyFiles tests ZIP generation with empty files list.
@@ -341,7 +346,9 @@ func TestGenerateAndSendZipResponse_Standalone(t *testing.T) {
 
 	// Setup handler
 	mockAppService := applicationmock.NewApplicationServiceInterfaceMock(t)
-	exportService := newExportService(mockAppService)
+	mockIDPService := idpmock.NewIDPServiceInterfaceMock(t)
+	parameterizer := newParameterizer(rules)
+	exportService := newExportService(mockAppService, mockIDPService, parameterizer)
 	handler := newExportHandler(exportService)
 
 	// Test data
@@ -371,7 +378,9 @@ func TestGenerateAndSendZipResponse_Standalone(t *testing.T) {
 // TestNewExportHandler tests the handler constructor.
 func TestNewExportHandler(t *testing.T) {
 	mockAppService := applicationmock.NewApplicationServiceInterfaceMock(t)
-	exportService := newExportService(mockAppService)
+	mockIDPService := idpmock.NewIDPServiceInterfaceMock(t)
+	parameterizer := newParameterizer(rules)
+	exportService := newExportService(mockAppService, mockIDPService, parameterizer)
 
 	handler := newExportHandler(exportService)
 
@@ -787,7 +796,9 @@ func BenchmarkGenerateAndSendZipResponse(b *testing.B) {
 	defer config.ResetThunderRuntime()
 
 	mockAppService := applicationmock.NewApplicationServiceInterfaceMock(b)
-	exportService := newExportService(mockAppService)
+	mockIDPService := idpmock.NewIDPServiceInterfaceMock(b)
+	parameterizer := newParameterizer(rules)
+	exportService := newExportService(mockAppService, mockIDPService, parameterizer)
 	handler := newExportHandler(exportService)
 
 	exportResponse := &ExportResponse{
@@ -819,7 +830,9 @@ func setupBenchmarkTest(b *testing.B) (*exportHandler, []byte) {
 	b.Cleanup(func() { config.ResetThunderRuntime() })
 
 	mockAppService := applicationmock.NewApplicationServiceInterfaceMock(b)
-	exportService := newExportService(mockAppService)
+	mockIDPService := idpmock.NewIDPServiceInterfaceMock(b)
+	parameterizer := newParameterizer(rules)
+	exportService := newExportService(mockAppService, mockIDPService, parameterizer)
 	handler := newExportHandler(exportService)
 
 	// Setup mock expectation

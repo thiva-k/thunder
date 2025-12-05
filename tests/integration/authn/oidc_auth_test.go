@@ -223,7 +223,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthStartSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -258,7 +258,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthStartInvalidIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -281,7 +281,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthStartMissingIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -300,7 +300,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthCompleteFlowSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -357,7 +357,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthFinishInvalidSessionToken() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -376,7 +376,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthFinishMissingCode() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -399,7 +399,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthWithNonce() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -434,7 +434,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthCompleteFlowWithSkipAssertionFalse()
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -492,7 +492,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthCompleteFlowWithSkipAssertionTrue() 
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -550,7 +550,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthWithAssuranceLevelAAL1() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -611,7 +611,7 @@ func (suite *OIDCAuthTestSuite) TestOIDCAuthWithSkipAssertion() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()

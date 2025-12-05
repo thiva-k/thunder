@@ -44,6 +44,20 @@ helm install my-thunder oci://ghcr.io/asgardeo/helm-charts/thunder -f custom-val
 
 The command deploys Thunder on the Kubernetes cluster with the default configuration. The [Parameters](#parameters) section lists the available parameters that can be configured during installation.
 
+If you want to install Thunder with SQLite databases, use the following command:
+
+```bash
+helm install my-thunder oci://ghcr.io/asgardeo/helm-charts/thunder \
+  --set configuration.database.identity.type=sqlite \
+  --set configuration.database.runtime.type=sqlite \
+  --set configuration.database.user.type=sqlite
+```
+
+**Note:** When using SQLite:
+- **Persistence is automatically enabled** when any database is configured to use SQLite
+- The setup job's init container will automatically copy SQLite databases from the image to a PVC
+- Database files will persist across pod restarts
+
 ### 2. Obtain the External IP
 
 After deploying Thunder, you need to find its external IP address to access it outside the cluster. Run the following command to list the Ingress resources:
@@ -155,15 +169,19 @@ The following table lists the configurable parameters of the Thunder chart and t
 
 | Name                                   | Description                                                     | Default                      |
 | -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
-| `configuration.server.hostname`        | Thunder server hostname                                         | `0.0.0.0`                    |
 | `configuration.server.port`            | Thunder server port                                             | `8090`                       |
-| `configuration.gateClient.hostname`    | Gate client hostname                                            | `0.0.0.0`                    |
-| `configuration.gateClient.port`        | Gate client port                                                | `8090`                       |
+| `configuration.server.httpOnly`        | Whether the server should run in HTTP-only mode                 | `false`                      |
+| `configuration.server.publicURL`       | Public URL of the Thunder server                                | `https://thunder.local`      |
+| `configuration.gateClient.hostname`    | Gate client hostname                                            | `thunder.local`              |
+| `configuration.gateClient.port`        | Gate client port                                                | `443`                       |
 | `configuration.gateClient.scheme`      | Gate client scheme                                              | `https`                      |
-| `configuration.gateClient.loginPath`   | Gate client login path                                          | `/gate/signin`                     |
-| `configuration.gateClient.errorPath`   | Gate client error path                                          | `/error`                     |
+| `configuration.gateClient.path`        | Gate client base path                                           | `/gate`                      |
+| `configuration.developerClient.path`    | Developer client base path                                     | `/develop`                 |
+| `configuration.developerClient.clientId` | Developer client ID                                           | `DEVELOP`   |
+| `configuration.developerClient.scopes`   | Developer client scopes                                       | `['openid', 'profile', 'email', 'system']` |
 | `configuration.security.certFile`      | Server certificate file path                                    | `repository/resources/security/server.cert` |
 | `configuration.security.keyFile`       | Server key file path                                            | `repository/resources/security/server.key`  |
+| `configuration.security.cryptoFile`    | Crypto key file path                                            | `repository/resources/security/crypto.key`  |
 | `configuration.database.identity.type` | Identity database type (postgres or sqlite)                     | `postgres`                   |
 | `configuration.database.identity.sqlitePath` | SQLite database path (for sqlite only)                    | `repository/database/thunderdb.db` |
 | `configuration.database.identity.sqliteOptions` | SQLite options (for sqlite only)                       | `_journal_mode=WAL&_busy_timeout=5000` |
@@ -182,6 +200,15 @@ The following table lists the configurable parameters of the Thunder chart and t
 | `configuration.database.runtime.username` | Postgres username (for postgres only)                        | `asgthunder`                   |
 | `configuration.database.runtime.password` | Postgres password (for postgres only)                        | `asgthunder`              |
 | `configuration.database.runtime.sslmode` | Postgres SSL mode (for postgres only)                         | `require`                    |
+| `configuration.database.user.type`  | User database type (postgres or sqlite)                            | `postgres`                   |
+| `configuration.database.user.sqlitePath` | SQLite database path (for sqlite only)                        | `repository/database/userdb.db` |
+| `configuration.database.user.sqliteOptions` | SQLite options (for sqlite only)                           | `_journal_mode=WAL&_busy_timeout=5000` |
+| `configuration.database.user.name`  | Postgres database name (for postgres only)                         | `userdb`                  |
+| `configuration.database.user.host`  | Postgres host (for postgres only)                                  | `localhost` |
+| `configuration.database.user.port`  | Postgres port (for postgres only)                                  | `5432`                       |
+| `configuration.database.user.username` | Postgres username (for postgres only)                           | `asgthunder`                   |
+| `configuration.database.user.password` | Postgres password (for postgres only)                           | `asgthunder`              |
+| `configuration.database.user.sslmode` | Postgres SSL mode (for postgres only)                            | `require`                    |
 | `configuration.cache.disabled`         | Disable cache                                                   | `false`                      |
 | `configuration.cache.type`             | Cache type                                                      | `inmemory`                   |
 | `configuration.cache.size`             | Cache size                                                      | `1000`                       |
@@ -190,11 +217,29 @@ The following table lists the configurable parameters of the Thunder chart and t
 | `configuration.cache.cleanupInterval`  | Cache cleanup interval in seconds                               | `300`                        |
 | `configuration.jwt.issuer`             | JWT issuer                                                      | `thunder`                    |
 | `configuration.jwt.validityPeriod`     | JWT validity period in seconds                                  | `3600`                       |
+| `configuration.jwt.audience`           | Default audience for auth assertions                            | `application`                |
 | `configuration.oauth.refreshToken.renewOnGrant` | Renew refresh token on grant                           | `false`                      |
 | `configuration.oauth.refreshToken.validityPeriod` | Refresh token validity period in seconds             | `86400`                      |
 | `configuration.flow.graphDirectory`    | Flow graph directory                                            | `repository/resources/graphs/` |
 | `configuration.flow.authn.defaultFlow` | Default authentication flow                                     | `auth_flow_config_basic`     |
 | `configuration.cors.allowedOrigins`    | CORS allowed origins                                            | See values.yaml              |
+
+### Persistence Parameters
+
+Persistence is **automatically enabled** when using SQLite as the database type for any database (identity, runtime, or user). It creates a PersistentVolumeClaim to store SQLite database files.
+
+| Name                                   | Description                                                     | Default                      |
+| -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
+| `persistence.enabled`                  | Enable persistence for SQLite databases (auto-enabled for SQLite) | `false`                    |
+| `persistence.storageClass`             | Storage class name (use "-" for no storage class)               | `""`                         |
+| `persistence.accessMode`               | PVC access mode                                                 | `ReadWriteOnce`              |
+| `persistence.size`                     | PVC storage size                                                | `1Gi`                        |
+| `persistence.annotations`              | Additional annotations for PVC                                  | `{}`                         |
+
+**Note:** 
+- When any database is configured to use SQLite, a PersistentVolumeClaim (PVC) is **always created** to store the database files, regardless of the `persistence.enabled` or `setup.enabled` settings.
+- The PVC is mounted by the setup job's init container (if `setup.enabled` is true) to initialize the database, and by the main Thunder deployment for ongoing operation.
+- You can customize the storage size and storage class for the PVC using the `persistence.size` and `persistence.storageClass` values.
 
 ### Setup Job Parameters
 
@@ -204,7 +249,8 @@ The setup job runs `setup.sh` as a one-time Helm pre-install hook to initialize 
 | -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
 | `setup.enabled`                        | Enable setup job (runs on install via Helm hook)                | `true`                       |
 | `setup.backoffLimit`                   | Number of retries if setup fails                                | `3`                          |
-| `setup.ttlSecondsAfterFinished`        | Time to keep job after completion (0 = indefinite)              | `86400` (24 hours)           |
+| `setup.preserveJob`                    | Preserve job after completion (false = delete on success)       | `false`                      |
+| `setup.ttlSecondsAfterFinished`        | Time to keep failed jobs (only if preserveJob=false)            | `86400` (24 hours)           |
 | `setup.debug`                          | Enable debug mode for setup                                     | `false`                      |
 | `setup.args`                           | Additional command-line arguments for setup.sh                  | `[]`                         |
 | `setup.env`                            | Additional environment variables for setup job                  | `[]`                         |
@@ -215,14 +261,109 @@ The setup job runs `setup.sh` as a one-time Helm pre-install hook to initialize 
 | `setup.extraVolumeMounts`              | Additional volume mounts for setup job                          | `[]`                         |
 | `setup.extraVolumes`                   | Additional volumes for setup job                                | `[]`                         |
 
+**Job Retention Behavior:**
+- When `preserveJob=false` (default): Successful jobs are deleted immediately. Failed jobs are kept for `ttlSecondsAfterFinished` (24 hours) to allow debugging.
+- When `preserveJob=true`: Job is kept indefinitely regardless of success/failure status. Use this for troubleshooting or audit purposes.
+
 ### Bootstrap Script Parameters
 
-Custom bootstrap scripts can be added to extend the setup process. These scripts run after Thunder's default resources are created.
+Bootstrap scripts extend Thunder's setup process by adding your own initialization logic. These scripts run as part of the setup job.
 
-| Name                                   | Description                                                     | Default                      |
-| -------------------------------------- | --------------------------------------------------------------- | ---------------------------- |
-| `bootstrap.scripts`                    | Inline custom bootstrap scripts (key: filename, value: content)| `{}`                         |
-| `bootstrap.existingConfigMap`          | Reference an existing ConfigMap with bootstrap scripts          | `""`                         |
+#### Understanding Default Bootstrap Scripts
+
+Thunder provides these default bootstrap scripts in `/opt/thunder/bootstrap/`:
+- **`common.sh`** - Helper functions for logging (`log_info`, `log_success`, `log_warning`, `log_error`) and API calls (`thunder_api_call`)
+- **`01-default-resources.sh`** - Creates admin user, default organization, and Person user schema
+- **`02-sample-resources.sh`** - Creates sample resources for testing
+
+#### Configuration Parameters
+
+| Name                        | Description                                                                      | Default |
+| --------------------------- | -------------------------------------------------------------------------------- | ------- |
+| `bootstrap.scripts`         | Inline custom bootstrap scripts (key: filename, value: content)                 | `{}`    |
+| `bootstrap.configMap.name`  | Name of external ConfigMap containing bootstrap scripts                          | `""`    |
+| `bootstrap.configMap.files` | List of script filenames to mount from ConfigMap (empty = mount entire ConfigMap) | `[]`    |
+
+#### Three Bootstrap Patterns
+
+**Pattern 1: Add Inline Scripts** (Preserves Defaults)
+
+Use `bootstrap.scripts` to define scripts directly in values.yaml. These scripts are added to the default bootstrap scripts.
+
+```yaml
+bootstrap:
+  scripts:
+    30-custom-users.sh: |
+      #!/bin/bash
+      set -e
+      SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+      source "${SCRIPT_DIR}/common.sh"
+
+      log_info "Creating custom user..."
+      thunder_api_call POST "/users" '{"type":"person","attributes":{"username":"alice","password":"alice123","sub":"alice","email":"alice@example.com"}}'
+      log_success "User created"
+```
+
+- ✅ Preserves Thunder's default scripts (`common.sh`, `01-*`, `02-*`)
+- ✅ Can use helper functions from `common.sh`
+- ✅ No additional configuration needed
+
+---
+
+**Pattern 2: Add External ConfigMap Scripts** (Preserves Defaults)
+
+Use `bootstrap.configMap` with a `files` list to mount specific scripts from an external ConfigMap.
+
+Create your ConfigMap:
+```bash
+kubectl create configmap my-bootstrap \
+  --from-file=30-users.sh=./30-users.sh \
+  --from-file=40-apps.sh=./40-apps.sh
+```
+
+Configure Helm values:
+```yaml
+bootstrap:
+  configMap:
+    name: "my-bootstrap"
+    files:
+      - 30-users.sh
+      - 40-apps.sh
+```
+
+- ✅ Preserves Thunder's default scripts
+- ✅ Can use helper functions from `common.sh`
+- ✅ Scripts managed separately from Helm chart
+
+---
+
+**Pattern 3: Replace All Scripts with ConfigMap** (Complete Replacement)
+
+⚠️ **WARNING**: This completely replaces Thunder's default bootstrap scripts. Use only if you need complete control.
+
+Use `bootstrap.configMap` **without** specifying `files` to mount the entire ConfigMap and replace all defaults.
+
+Create your complete ConfigMap (must include `common.sh`):
+```bash
+kubectl create configmap complete-bootstrap \
+  --from-file=common.sh=./common.sh \
+  --from-file=01-my-setup.sh=./01-my-setup.sh
+```
+
+Configure Helm values:
+```yaml
+bootstrap:
+  configMap:
+    name: "complete-bootstrap"
+    # No files list = mounts entire ConfigMap (replaces all defaults)
+```
+
+- ⚠️ **Removes ALL default scripts** (`common.sh`, `01-default-resources.sh`, `02-sample-resources.sh`)
+- ⚠️ You MUST provide your own `common.sh` with required helper functions
+- ⚠️ No default admin user, organization, or schemas will be created
+- ✅ Complete control over bootstrap process
+
+**For comprehensive examples, helper function documentation, and best practices, see:** [Custom Bootstrap Guide](../../docs/guides/setup/custom-bootstrap.md)
 
 ### Custom Configuration
 

@@ -87,7 +87,7 @@ export default function ConfigureDesign({
   const theme = useTheme();
 
   const [logoSeed, setLogoSeed] = useState<number>(0);
-  const [customColor, setCustomColor] = useState<string>(theme?.vars?.palette.common.black ?? '#000000');
+  const [customColor, setCustomColor] = useState<string>('');
   const [showCustomColorInput, setShowCustomColorInput] = useState<boolean>(false);
   const [showColorOptions, setShowColorOptions] = useState<boolean>(false);
 
@@ -175,7 +175,7 @@ export default function ConfigureDesign({
   return (
     <Stack direction="column" spacing={4}>
       <Stack direction="column" spacing={1}>
-        <Typography variant="h3" component="h1" gutterBottom>
+        <Typography variant="h1" gutterBottom>
           {t('applications:onboarding.configure.design.title')}
         </Typography>
         <Stack direction="row" alignItems="center" spacing={1}>
@@ -187,13 +187,13 @@ export default function ConfigureDesign({
       </Stack>
 
       {/* Logo Selection */}
-      <Stack direction="column" spacing={3}>
+      <Stack direction="column" spacing={4}>
         <Stack direction="row" alignItems="center" justifyContent="space-between">
           <Typography variant="h6">{t('applications:onboarding.configure.design.logo.title')}</Typography>
           <Button
             size="small"
             variant="text"
-            startIcon={<Shuffle size={16} />}
+            startIcon={<Shuffle size={14} />}
             onClick={handleRotateLogos}
             sx={{minWidth: 'auto'}}
           >
@@ -202,7 +202,7 @@ export default function ConfigureDesign({
         </Stack>
 
         {/* Logo Preview and Suggestions - Inline */}
-        <Stack direction="row" spacing={2} sx={{flexWrap: 'wrap', gap: 2}}>
+        <Stack direction="row" sx={{flexWrap: 'wrap', gap: 2}}>
           {logoSuggestions.map((logoUrl: string) => {
             const isSelected: boolean = appLogo === logoUrl;
 
@@ -212,13 +212,12 @@ export default function ConfigureDesign({
                   src={logoUrl}
                   onClick={(): void => handleLogoSelect(logoUrl)}
                   sx={{
-                    width: isSelected ? 80 : 56,
-                    height: isSelected ? 80 : 56,
+                    width: isSelected ? 70 : 50,
+                    height: isSelected ? 70 : 50,
                     cursor: 'pointer',
                     border: isSelected
                       ? `2px solid ${theme.vars?.palette.primary.main}`
                       : `1px solid ${theme.vars?.palette.divider}`,
-                    bgcolor: isSelected ? selectedColor : undefined,
                     p: 1,
                     '&:hover': {
                       transform: 'scale(1.1)',
@@ -226,6 +225,9 @@ export default function ConfigureDesign({
                     },
                     transition: 'all 0.2s ease-in-out',
                     ...theme.applyStyles('light', {
+                      backgroundColor: isSelected ? selectedColor : theme.vars?.palette.grey[600],
+                    }),
+                    ...theme.applyStyles('dark', {
                       backgroundColor: isSelected ? selectedColor : theme.vars?.palette.grey[600],
                     }),
                   }}
@@ -239,7 +241,7 @@ export default function ConfigureDesign({
       {/* Color Selection */}
       <Stack direction="column" spacing={3}>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Palette size={20} />
+          <Palette size={14} />
           <Typography variant="h6">{t('applications:onboarding.configure.design.color.title')}</Typography>
         </Stack>
 
@@ -249,8 +251,8 @@ export default function ConfigureDesign({
             <Stack direction="row" alignItems="center" spacing={2}>
               <Box
                 sx={{
-                  width: 80,
-                  height: 80,
+                  width: 50,
+                  height: 50,
                   borderRadius: '8px',
                   bgcolor: selectedColor,
                   border: `2px solid ${theme.vars?.palette.primary.main}`,
@@ -277,7 +279,7 @@ export default function ConfigureDesign({
             <Button
               variant="outlined"
               size="medium"
-              startIcon={<Palette size={16} />}
+              startIcon={<Palette size={14} />}
               onClick={(): void => setShowColorOptions(true)}
               sx={{alignSelf: 'flex-start'}}
             >
@@ -298,8 +300,8 @@ export default function ConfigureDesign({
                         onClick={(): void => handleColorSelect(color)}
                         sx={{
                           bgcolor: color,
-                          width: 80,
-                          height: 80,
+                          width: 50,
+                          height: 50,
                           borderRadius: '8px',
                           border: isSelected
                             ? `2px solid ${theme.vars?.palette.primary.main}`
@@ -339,10 +341,10 @@ export default function ConfigureDesign({
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: 80,
-                    height: 80,
+                    width: 50,
+                    height: 50,
                     borderRadius: '8px',
-                    border: `1px solid ${theme.vars?.palette.divider}`,
+                    border: 'none',
                     cursor: 'pointer',
                     opacity: customColor ? 1 : 0,
                     zIndex: customColor ? 1 : 0,
@@ -371,18 +373,26 @@ export default function ConfigureDesign({
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: 80,
-                    height: 80,
+                    width: 50,
+                    height: 50,
                     borderRadius: '8px',
-                    border: `1px solid ${theme.vars?.palette.divider}`,
-                    bgcolor: 'background.paper',
+                    border: customColor ?
+                      `2px solid ${theme.vars?.palette.primary.main}` :
+                      `2px solid ${theme.vars?.palette.text.primary}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     fontSize: '1.5rem',
                     fontWeight: 300,
-                    color: 'text.secondary',
+                    ...theme.applyStyles('light', {
+                      color: customColor ? 
+                        theme.vars?.palette.background.default :
+                        theme.vars?.palette.text.primary,
+                    }),
+                    ...theme.applyStyles('dark', {
+                      color: theme.vars?.palette.text.primary,
+                    }),
                     zIndex: 2,
                     '&:hover': {
                       transform: 'scale(1.1)',
@@ -391,7 +401,7 @@ export default function ConfigureDesign({
                     transition: 'all 0.2s ease-in-out',
                   }}
                 >
-                  <Plus size={32} />
+                  <Plus size={28} />
                 </Box>
               </Box>
             </Stack>

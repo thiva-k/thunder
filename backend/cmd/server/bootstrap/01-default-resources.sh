@@ -310,7 +310,7 @@ RESPONSE=$(thunder_api_call POST "/applications" "{
       \"redirect_uris\": [${REDIRECT_URIS}],
       \"grant_types\": [\"authorization_code\"],
       \"response_types\": [\"code\"],
-      \"pkce_required\": false,
+      \"pkce_required\": true,
       \"token_endpoint_auth_method\": \"none\",
       \"public_client\": true,
       \"token\": {

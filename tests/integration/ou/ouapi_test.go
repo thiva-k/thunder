@@ -20,7 +20,6 @@ package ou
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -94,11 +93,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnit() {
 		suite.T().Fatal("OU ID is not available for retrieval")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID, nil)
 	suite.Require().NoError(err)
@@ -132,11 +127,7 @@ func (suite *OUAPITestSuite) TestListOrganizationUnits() {
 		suite.T().Fatal("OU ID is not available, OU creation failed in setup")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units", nil)
 	suite.Require().NoError(err)
@@ -172,11 +163,7 @@ func (suite *OUAPITestSuite) TestListOrganizationUnits() {
 }
 
 func (suite *OUAPITestSuite) TestListOrganizationUnitsWithPagination() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units?limit=1&offset=0", nil)
 	suite.Require().NoError(err)
@@ -203,11 +190,7 @@ func (suite *OUAPITestSuite) TestListOrganizationUnitsWithPagination() {
 }
 
 func (suite *OUAPITestSuite) TestListOrganizationUnitsWithInvalidPagination() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units?limit=-1", nil)
 	suite.Require().NoError(err)
@@ -246,11 +229,7 @@ func (suite *OUAPITestSuite) TestListOrganizationUnitsWithInvalidPagination() {
 }
 
 func (suite *OUAPITestSuite) TestListOrganizationUnitsWithOnlyOffset() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units?offset=0", nil)
 	suite.Require().NoError(err)
@@ -287,11 +266,7 @@ func (suite *OUAPITestSuite) TestUpdateOrganizationUnit() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/"+createdOUID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -328,11 +303,7 @@ func (suite *OUAPITestSuite) TestDeleteOrganizationUnit() {
 	tempOUID, err := createOU(suite, tempOUToCreate)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Delete the temporary OU
 	req, err := http.NewRequest("DELETE", testServerURL+"/organization-units/"+tempOUID, nil)
@@ -355,11 +326,7 @@ func (suite *OUAPITestSuite) TestDeleteOrganizationUnit() {
 }
 
 func (suite *OUAPITestSuite) TestGetNonExistentOrganizationUnit() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/non-existent-id", nil)
 	suite.Require().NoError(err)
@@ -380,11 +347,7 @@ func (suite *OUAPITestSuite) TestCreateOrganizationUnitWithInvalidData() {
 	jsonData, err := json.Marshal(invalidOU)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -409,11 +372,7 @@ func (suite *OUAPITestSuite) TestCreateOrganizationUnitWithInvalidParent() {
 	jsonData, err := json.Marshal(invalidOU)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -448,11 +407,7 @@ func (suite *OUAPITestSuite) TestCreateOrganizationUnitWithDuplicateName() {
 	jsonData, err := json.Marshal(duplicateOU)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -487,11 +442,7 @@ func (suite *OUAPITestSuite) TestCreateOrganizationUnitWithDuplicateHandle() {
 	jsonData, err := json.Marshal(duplicateHandleOU)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -520,11 +471,7 @@ func (suite *OUAPITestSuite) TestDeleteOrganizationUnitWithChildren() {
 		suite.T().Fatal("Parent or child OU ID is not available for deletion test")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("DELETE", testServerURL+"/organization-units/"+createdOUID, nil)
 	suite.Require().NoError(err)
@@ -562,11 +509,7 @@ func (suite *OUAPITestSuite) TestUpdateOrganizationUnitWithInvalidParent() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/"+createdOUID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -637,11 +580,7 @@ func (suite *OUAPITestSuite) TestUpdateOrganizationUnitWithDuplicateName() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/"+sibling2ID, bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -676,11 +615,7 @@ func (suite *OUAPITestSuite) TestCreateOrganizationUnitWithEmptyName() {
 	jsonData, err := json.Marshal(invalidOU)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -704,11 +639,7 @@ func (suite *OUAPITestSuite) TestCreateOrganizationUnitWithEmptyHandle() {
 	jsonData, err := json.Marshal(invalidOU)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/organization-units", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -731,11 +662,7 @@ func (suite *OUAPITestSuite) TestUpdateNonExistentOrganizationUnit() {
 	jsonData, err := json.Marshal(updateRequest)
 	suite.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("PUT", testServerURL+"/organization-units/non-existent-id", bytes.NewBuffer(jsonData))
 	suite.Require().NoError(err)
@@ -749,11 +676,7 @@ func (suite *OUAPITestSuite) TestUpdateNonExistentOrganizationUnit() {
 }
 
 func (suite *OUAPITestSuite) TestDeleteNonExistentOrganizationUnit() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("DELETE", testServerURL+"/organization-units/non-existent-id", nil)
 	suite.Require().NoError(err)
@@ -770,11 +693,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitChildren() {
 		suite.T().Fatal("OU ID is not available for retrieving children")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID+"/ous", nil)
 	suite.Require().NoError(err)
@@ -817,11 +736,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitUsers() {
 		suite.T().Fatal("OU ID is not available for retrieving users")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID+"/users", nil)
 	suite.Require().NoError(err)
@@ -854,11 +769,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitGroups() {
 		suite.T().Fatal("OU ID is not available for retrieving groups")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID+"/groups", nil)
 	suite.Require().NoError(err)
@@ -887,11 +798,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitGroups() {
 }
 
 func (suite *OUAPITestSuite) TestGetNonExistentOrganizationUnitChildren() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/non-existent-id/ous", nil)
 	suite.Require().NoError(err)
@@ -913,11 +820,7 @@ func (suite *OUAPITestSuite) TestGetNonExistentOrganizationUnitChildren() {
 }
 
 func (suite *OUAPITestSuite) TestGetNonExistentOrganizationUnitUsers() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/non-existent-id/users", nil)
 	suite.Require().NoError(err)
@@ -939,11 +842,7 @@ func (suite *OUAPITestSuite) TestGetNonExistentOrganizationUnitUsers() {
 }
 
 func (suite *OUAPITestSuite) TestGetNonExistentOrganizationUnitGroups() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/non-existent-id/groups", nil)
 	suite.Require().NoError(err)
@@ -969,11 +868,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitChildrenWithPagination() {
 		suite.T().Fatal("OU ID is not available for retrieving children with pagination")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID+"/ous?limit=1&offset=0", nil)
 	suite.Require().NoError(err)
@@ -1001,11 +896,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitUsersWithPagination() {
 		suite.T().Fatal("OU ID is not available for retrieving users with pagination")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID+"/users?limit=10&offset=0", nil)
 	suite.Require().NoError(err)
@@ -1033,11 +924,7 @@ func (suite *OUAPITestSuite) TestGetOrganizationUnitGroupsWithPagination() {
 		suite.T().Fatal("OU ID is not available for retrieving groups with pagination")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("GET", testServerURL+"/organization-units/"+createdOUID+"/groups?limit=10&offset=0", nil)
 	suite.Require().NoError(err)
@@ -1072,11 +959,7 @@ func createOU(ts *OUAPITestSuite, ouRequest CreateOURequest) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -1104,11 +987,7 @@ func deleteOU(ouID string) error {
 		return err
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {

@@ -113,7 +113,7 @@ jobs:
       - name: 🧹 Clean Previous Builds
         run: |
           set -e
-          make clean_all
+          make clean
 
       - name: 🔨 Build Product with Coverage
         run: |
@@ -147,6 +147,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: backend/coverage_unit.out
+          disable_search: true
           flags: backend-unit
           name: Backend Unit Tests
           fail_ci_if_error: false
@@ -163,6 +164,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: frontend/apps/thunder-develop/coverage/lcov.info
+          disable_search: true
           flags: frontend-apps-develop-unit
           name: Frontend Develop App Unit Tests
           fail_ci_if_error: false
@@ -238,18 +240,48 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: target/coverage_integration.out
+          disable_search: true
           flags: backend-integration-${{ matrix.database }}
           name: Backend Integration Tests (${{ matrix.database }})
           fail_ci_if_error: false
 
-      - name: 🧩 Generate Combined Coverage Report
-        run: ./build.sh merge_coverage
+      # - name: 🧩 Generate Combined Coverage Report
+      #   run: ./build.sh merge_coverage
 
-      - name: 📊 Upload Combined Coverage Report to Codecov
-        uses: codecov/codecov-action@v4
+      # - name: 📊 Upload Combined Coverage Report to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     token: ${{ secrets.CODECOV_TOKEN }}
+      #     files: target/coverage_combined.out
+      #     disable_search: true
+      #     flags: backend-combined-${{ matrix.database }}
+      #     name: Backend-combined Coverage (${{ matrix.database }})
+      #     fail_ci_if_error: false
+
+  detect-powershell-changes:
+    name: 🔍 Detect PowerShell Changes
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      should-run: ${{ steps.filter.outputs.powershell }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: target/coverage_combined.out
-          flags: backend-combined-${{ matrix.database }}
-          name: Backend-combined Coverage (${{ matrix.database }})
-          fail_ci_if_error: false
+          filters: |
+            powershell:
+              - '**.ps1'
+              - '.github/workflows/windows-powershell-validation.yml'
+      - name: ✅ PowerShell files detected
+        if: steps.filter.outputs.powershell == 'true'
+        run: echo "PowerShell files changed - validation will run"
+      - name: ⏭️ No PowerShell changes
+        if: steps.filter.outputs.powershell != 'true'
+        run: echo "No PowerShell changes - skipping validation"
+
+  validate-windows:
+    name: 🪟 Validate Windows PowerShell
+    needs: detect-powershell-changes
+    if: needs.detect-powershell-changes.outputs.should-run == 'true'
+    uses: ./.github/workflows/windows-powershell-validation.yml

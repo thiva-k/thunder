@@ -120,13 +120,16 @@ $PRODUCT_FOLDER = "${BINARY_NAME}-${THUNDER_VERSION}-${GO_PACKAGE_OS}-${GO_PACKA
 $SAMPLE_PACKAGE_OS = $SAMPLE_DIST_OS
 $SAMPLE_PACKAGE_ARCH = $SAMPLE_DIST_ARCH
 
-$SAMPLE_APP_SERVER_BINARY_NAME = "server"
-$packageJson = Get-Content "samples/apps/oauth/package.json" -Raw | ConvertFrom-Json
-$SAMPLE_APP_VERSION = $packageJson.version
-$SAMPLE_APP_FOLDER = "sample-app-${SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
+# React Vanilla Sample
+$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME = "server"
+$vanillaPackageJson = Get-Content "samples/apps/react-vanilla-sample/package.json" -Raw | ConvertFrom-Json
+$VANILLA_SAMPLE_APP_VERSION = $vanillaPackageJson.version
+$VANILLA_SAMPLE_APP_FOLDER = "sample-app-react-vanilla-${VANILLA_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
-# Server ports
-$BACKEND_PORT = 8090
+# React SDK Sample
+$reactSdkPackageJson = Get-Content "samples/apps/react-sdk-sample/package.json" -Raw | ConvertFrom-Json
+$REACT_SDK_SAMPLE_APP_VERSION = $reactSdkPackageJson.version
+$REACT_SDK_SAMPLE_APP_FOLDER = "sample-app-react-sdk-${REACT_SDK_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
 # Directories
 $TARGET_DIR = "target"
@@ -147,8 +150,93 @@ $DEVELOP_APP_DIST_DIR = "apps/develop"
 $FRONTEND_GATE_APP_SOURCE_DIR = Join-Path $FRONTEND_BASE_DIR "apps/thunder-gate"
 $FRONTEND_DEVELOP_APP_SOURCE_DIR = Join-Path $FRONTEND_BASE_DIR "apps/thunder-develop"
 $SAMPLE_BASE_DIR = "samples"
-$SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/oauth"
-$SAMPLE_APP_SERVER_DIR = Join-Path $SAMPLE_APP_DIR "server"
+$VANILLA_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-vanilla-sample"
+$VANILLA_SAMPLE_APP_SERVER_DIR = Join-Path $VANILLA_SAMPLE_APP_DIR "server"
+$REACT_SDK_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-sdk-sample"
+
+# ============================================================================
+# Read Configuration from deployment.yaml
+# ============================================================================
+
+$CONFIG_FILE = "./backend/cmd/server/repository/conf/deployment.yaml"
+
+# Function to read config with fallback
+function Read-Config {
+    if (-not (Test-Path $CONFIG_FILE)) {
+        # Use defaults if config file not found
+        $script:HOSTNAME = "localhost"
+        $script:PORT = 8090
+        $script:HTTP_ONLY = "false"
+        $script:PUBLIC_HOSTNAME = ""
+    }
+    else {
+        # Try yq first (YAML parser)
+        if (Get-Command yq -ErrorAction SilentlyContinue) {
+            $script:HOSTNAME = & yq eval '.server.hostname // "localhost"' $CONFIG_FILE 2>$null
+            $script:PORT = & yq eval '.server.port // 8090' $CONFIG_FILE 2>$null
+            $script:HTTP_ONLY = & yq eval '.server.http_only // false' $CONFIG_FILE 2>$null
+            $script:PUBLIC_HOSTNAME = & yq eval '.server.public_hostname // ""' $CONFIG_FILE 2>$null
+        }
+        else {
+            # Fallback: basic parsing with regex
+            $content = Get-Content $CONFIG_FILE -Raw
+            
+            # Try to extract hostname
+            if ($content -match 'hostname:\s*["\']?([^"\'\n]+)["\']?') {
+                $script:HOSTNAME = $matches[1].Trim()
+            }
+            else {
+                $script:HOSTNAME = "localhost"
+            }
+            
+            # Try to extract port
+            if ($content -match 'port:\s*(\d+)') {
+                $script:PORT = [int]$matches[1]
+            }
+            else {
+                $script:PORT = 8090
+            }
+            
+            # Try to extract http_only
+            if ($content -match 'http_only:\s*true') {
+                $script:HTTP_ONLY = "true"
+            }
+            else {
+                $script:HTTP_ONLY = "false"
+            }
+            
+            # Try to extract public_hostname
+            if ($content -match 'public_hostname:\s*["\']?([^"\'\n]+)["\']?') {
+                $script:PUBLIC_HOSTNAME = $matches[1].Trim()
+            }
+            else {
+                $script:PUBLIC_HOSTNAME = ""
+            }
+        }
+    }
+    
+    # Determine protocol
+    if ($script:HTTP_ONLY -eq "true") {
+        $script:PROTOCOL = "http"
+    }
+    else {
+        $script:PROTOCOL = "https"
+    }
+}
+
+# Read configuration
+Read-Config
+
+# Construct base URL (internal API endpoint)
+$BASE_URL = "${PROTOCOL}://${HOSTNAME}:${PORT}"
+
+# Construct public URL (external/redirect URLs)
+if ($PUBLIC_HOSTNAME) {
+    $PUBLIC_URL = $PUBLIC_HOSTNAME
+}
+else {
+    $PUBLIC_URL = $BASE_URL
+}
 
 function Get-CoverageExclusionPattern {
     # Read exclusion patterns (full package paths) from .excludecoverage file
@@ -179,41 +267,29 @@ function Get-CoverageExclusionPattern {
     return ""
 }
 
-function Clean-All {
+function Clean {
     Write-Host "================================================================"
-    Write-Host "Cleaning all build artifacts..."
+    Write-Host "Cleaning build artifacts..."
     if (Test-Path $TARGET_DIR) {
         Remove-Item -Path $TARGET_DIR -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Host "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
+    Write-Host "Removing certificates in $BACKEND_DIR/$SECURITY_DIR"
     if (Test-Path (Join-Path $BACKEND_DIR $SECURITY_DIR)) {
         Remove-Item -Path (Join-Path $BACKEND_DIR $SECURITY_DIR) -Recurse -Force -ErrorAction SilentlyContinue
     }
 
-    Write-Host "Removing certificates in the $SAMPLE_APP_DIR"
-    Remove-Item -Path (Join-Path $SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $SAMPLE_APP_SERVER_DIR "server.cert") -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $SAMPLE_APP_SERVER_DIR "server.key") -Force -ErrorAction SilentlyContinue
-    Write-Host "================================================================"
-}
+    Write-Host "Removing certificates in $VANILLA_SAMPLE_APP_DIR"
+    Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
 
-function Clean {
-    Write-Host "================================================================"
-    Write-Host "Cleaning build artifacts..."
-    if (Test-Path $OUTPUT_DIR) {
-        Remove-Item -Path $OUTPUT_DIR -Recurse -Force -ErrorAction SilentlyContinue
-    }
+    Write-Host "Removing certificates in $VANILLA_SAMPLE_APP_SERVER_DIR"
+    Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "server.cert") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "server.key") -Force -ErrorAction SilentlyContinue
 
-    Write-Host "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
-    if (Test-Path (Join-Path $BACKEND_DIR $SECURITY_DIR)) {
-        Remove-Item -Path (Join-Path $BACKEND_DIR $SECURITY_DIR) -Recurse -Force -ErrorAction SilentlyContinue
-    }
-
-    Write-Host "Removing certificates in the $SAMPLE_APP_DIR"
-    Remove-Item -Path (Join-Path $SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
-    Remove-Item -Path (Join-Path $SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
+    Write-Host "Removing certificates in $REACT_SDK_SAMPLE_APP_DIR"
+    Remove-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
     Write-Host "================================================================"
 }
 
@@ -301,7 +377,7 @@ function Build-Frontend {
     Push-Location $FRONTEND_BASE_DIR
     try {
         Write-Host "Installing frontend dependencies..."
-        & pnpm install
+        & pnpm install --frozen-lockfile
         
         Write-Host "Building frontend applications & packages..."
         & pnpm build
@@ -339,8 +415,8 @@ function Initialize-Databases {
 
     New-Item -Path $REPOSITORY_DB_DIR -ItemType Directory -Force | Out-Null
 
-    $db_files = @("thunderdb.db", "runtimedb.db")
-    $script_paths = @("thunderdb/sqlite.sql", "runtimedb/sqlite.sql")
+    $db_files = @("thunderdb.db", "runtimedb.db", "userdb.db")
+    $script_paths = @("thunderdb/sqlite.sql", "runtimedb/sqlite.sql", "userdb/sqlite.sql")
 
     for ($i = 0; $i -lt $db_files.Length; $i++) {
         $db_file = $db_files[$i]
@@ -365,6 +441,11 @@ function Initialize-Databases {
             & sqlite3 $db_path ".read $script_path"
             if ($LASTEXITCODE -ne 0) {
                 throw "SQLite operation failed with exit code $LASTEXITCODE"
+            }
+            Write-Host " - Enabling WAL mode for $db_file"
+            & sqlite3 $db_path "PRAGMA journal_mode=WAL;"
+            if ($LASTEXITCODE -ne 0) {
+                throw "Failed to enable WAL mode with exit code $LASTEXITCODE"
             }
         }
         else {
@@ -402,6 +483,10 @@ function Prepare-Backend-For-Packaging {
 
     Write-Host "=== Ensuring server certificates exist in the distribution ==="
     Ensure-Certificates -cert_dir $security_dir
+    Write-Host "================================================================"
+
+    Write-Host "=== Ensuring crypto file exists in the distribution ==="
+    Ensure-Crypto-File -conf_dir (Join-Path $package_folder "repository/conf")
     Write-Host "================================================================"
 }
 
@@ -478,24 +563,23 @@ function Package {
 
 function Build-Sample-App {
     Write-Host "================================================================"
-    Write-Host "Building sample app..."
+    Write-Host "Building sample apps..."
 
-    # Ensure certificate exists for the sample app
-    Write-Host "=== Ensuring sample app certificates exist ==="
-    Ensure-Certificates -cert_dir $SAMPLE_APP_DIR
-    
-    # Build the application
-    Push-Location $SAMPLE_APP_DIR
+    # Build React Vanilla sample
+    Write-Host "=== Building React Vanilla sample app ==="
+    Write-Host "=== Ensuring React Vanilla sample app certificates exist ==="
+    Ensure-Certificates -cert_dir $VANILLA_SAMPLE_APP_DIR
+
+    Push-Location $VANILLA_SAMPLE_APP_DIR
     try {
-        Write-Host "Installing dependencies..."
+        Write-Host "Installing React Vanilla sample dependencies..."
         & npm install
         if ($LASTEXITCODE -ne 0) {
             throw "npm install failed with exit code $LASTEXITCODE"
         }
-        
-        Write-Host "Building the app (TypeScript + Vite)..."
 
-        # Use npx to invoke local tsc and vite to avoid shell-specific npm script commands
+        Write-Host "Building React Vanilla sample app (TypeScript + Vite)..."
+
         Write-Host " - Running TypeScript build (tsc -b)..."
         & npx tsc -b
         if ($LASTEXITCODE -ne 0) {
@@ -508,25 +592,23 @@ function Build-Sample-App {
             throw "vite build failed with exit code $LASTEXITCODE"
         }
 
-        # Replicate npm script: copy dist to server/app and copy certs using PowerShell (cross-platform safe)
-        $serverDir = Join-Path $SAMPLE_APP_DIR "server"
+        # Replicate npm script: copy dist to server/app and copy certs
+        $serverDir = Join-Path $VANILLA_SAMPLE_APP_DIR "server"
         $serverAppDir = Join-Path $serverDir "app"
-        if (Test-Path $serverAppDir) { 
-            Remove-Item -Path $serverAppDir -Recurse -Force 
+        if (Test-Path $serverAppDir) {
+            Remove-Item -Path $serverAppDir -Recurse -Force
         }
         New-Item -Path $serverAppDir -ItemType Directory -Force | Out-Null
 
-        # Resolve absolute dist path to avoid path duplication when Push-Location is used
-        # We're already inside $SAMPLE_APP_DIR due to Push-Location, so resolve relative 'dist'
         $distFull = Resolve-Path -Path "dist" | Select-Object -ExpandProperty Path
         Copy-Item -Path (Join-Path $distFull "*") -Destination $serverAppDir -Recurse -Force
 
         # Copy server certs into server directory
-        if (Test-Path (Join-Path $SAMPLE_APP_DIR "server.key")) {
-            Copy-Item -Path (Join-Path $SAMPLE_APP_DIR "server.key") -Destination $serverDir -Force
+        if (Test-Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.key")) {
+            Copy-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.key") -Destination $serverDir -Force
         }
-        if (Test-Path (Join-Path $SAMPLE_APP_DIR "server.cert")) {
-            Copy-Item -Path (Join-Path $SAMPLE_APP_DIR "server.cert") -Destination $serverDir -Force
+        if (Test-Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.cert")) {
+            Copy-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "server.cert") -Destination $serverDir -Force
         }
 
         # Install server dependencies
@@ -545,50 +627,85 @@ function Build-Sample-App {
     finally {
         Pop-Location
     }
-    
-    Write-Host "Sample app built successfully."
+
+    Write-Host "✅ React Vanilla sample app built successfully."
+
+    # Build React SDK sample
+    Write-Host "=== Building React SDK sample app ==="
+
+    # Ensure certificates exist for React SDK sample
+    Write-Host "=== Ensuring React SDK sample app certificates exist ==="
+    Ensure-Certificates -cert_dir $REACT_SDK_SAMPLE_APP_DIR
+
+    Push-Location $REACT_SDK_SAMPLE_APP_DIR
+    try {
+        Write-Host "Installing React SDK sample dependencies..."
+        & pnpm install --frozen-lockfile
+        if ($LASTEXITCODE -ne 0) {
+            throw "pnpm install failed with exit code $LASTEXITCODE"
+        }
+
+        Write-Host "Building React SDK sample app..."
+        & pnpm run build
+        if ($LASTEXITCODE -ne 0) {
+            throw "pnpm build failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    Write-Host "✅ React SDK sample app built successfully."
     Write-Host "================================================================"
 }
 
 function Package-Sample-App {
     Write-Host "================================================================"
-    Write-Host "Copying sample artifacts..."
+    Write-Host "Packaging sample apps..."
 
+    # Package React Vanilla sample
+    Write-Host "=== Packaging React Vanilla sample app ==="
+    Package-Vanilla-Sample
+
+    # Package React SDK sample
+    Write-Host "=== Packaging React SDK sample app ==="
+    Package-React-SDK-Sample
+
+    Write-Host "================================================================"
+}
+
+function Package-Vanilla-Sample {
     # Use appropriate binary name based on OS
-    $binary_name = $SAMPLE_APP_SERVER_BINARY_NAME
-    $executable_name = "$SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH"
+    $binary_name = $VANILLA_SAMPLE_APP_SERVER_BINARY_NAME
+    $executable_name = "$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH"
 
     if ($SAMPLE_DIST_OS -eq "win") {
-        $binary_name = "${SAMPLE_APP_SERVER_BINARY_NAME}.exe"
-        $executable_name = "${SAMPLE_APP_SERVER_BINARY_NAME}-${SAMPLE_DIST_OS}-${SAMPLE_DIST_ARCH}.exe"
+        $binary_name = "${VANILLA_SAMPLE_APP_SERVER_BINARY_NAME}.exe"
+        $executable_name = "${VANILLA_SAMPLE_APP_SERVER_BINARY_NAME}-${SAMPLE_DIST_OS}-${SAMPLE_DIST_ARCH}.exe"
     }
-    
-    $sample_app_folder = Join-Path $DIST_DIR $SAMPLE_APP_FOLDER
-    # Ensure we have full absolute paths to avoid duplication when CreateFromDirectory is called
-    New-Item -Path $sample_app_folder -ItemType Directory -Force | Out-Null
-    $sample_app_folder = (Resolve-Path -Path $sample_app_folder).Path
-    
-    # Copy the built app files. If the server 'app' folder doesn't exist (build step may not have created it),
-    # fall back to copying directly from the sample app 'dist' directory.
-    $serverAppSource = Join-Path $SAMPLE_APP_SERVER_DIR "app"
+
+    $vanilla_sample_app_folder = Join-Path $DIST_DIR $VANILLA_SAMPLE_APP_FOLDER
+    New-Item -Path $vanilla_sample_app_folder -ItemType Directory -Force | Out-Null
+    $vanilla_sample_app_folder = (Resolve-Path -Path $vanilla_sample_app_folder).Path
+
+    # Copy the built app files
+    $serverAppSource = Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "app"
     if (-not (Test-Path $serverAppSource)) {
-        Write-Host "Server app folder '$serverAppSource' not found; falling back to copying from '$SAMPLE_APP_DIR/dist'..."
-        # Ensure server directory exists
-        New-Item -Path $SAMPLE_APP_SERVER_DIR -ItemType Directory -Force | Out-Null
+        Write-Host "Server app folder '$serverAppSource' not found; falling back to copying from '$VANILLA_SAMPLE_APP_DIR/dist'..."
+        New-Item -Path $VANILLA_SAMPLE_APP_SERVER_DIR -ItemType Directory -Force | Out-Null
         New-Item -Path $serverAppSource -ItemType Directory -Force | Out-Null
 
-        # Resolve dist (relative to sample app dir)
-        $distFull = Resolve-Path -Path (Join-Path $SAMPLE_APP_DIR "dist") | Select-Object -ExpandProperty Path
+        $distFull = Resolve-Path -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "dist") | Select-Object -ExpandProperty Path
         Copy-Item -Path (Join-Path $distFull "*") -Destination $serverAppSource -Recurse -Force
     }
 
-    Copy-Item -Path $serverAppSource -Destination $sample_app_folder -Recurse -Force
+    Copy-Item -Path $serverAppSource -Destination $vanilla_sample_app_folder -Recurse -Force
 
-    Push-Location $SAMPLE_APP_SERVER_DIR
+    Push-Location $VANILLA_SAMPLE_APP_SERVER_DIR
     try {
         New-Item -Path "executables" -ItemType Directory -Force | Out-Null
 
-        & npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
+        & npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
         if ($LASTEXITCODE -ne 0) {
             throw "npx pkg failed with exit code $LASTEXITCODE"
         }
@@ -598,38 +715,88 @@ function Package-Sample-App {
     }
 
     # Copy the server binary
-    Copy-Item -Path (Join-Path $SAMPLE_APP_SERVER_DIR "executables/$executable_name") -Destination (Join-Path $sample_app_folder $binary_name) -Force
+    Copy-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "executables/$executable_name") -Destination (Join-Path $vanilla_sample_app_folder $binary_name) -Force
+
+    # Copy README and other necessary files
+    if (Test-Path (Join-Path $VANILLA_SAMPLE_APP_DIR "README.md")) {
+        Copy-Item -Path (Join-Path $VANILLA_SAMPLE_APP_DIR "README.md") -Destination $vanilla_sample_app_folder -Force
+    }
 
     # Ensure the certificates exist in the sample app directory
-    Write-Host "=== Ensuring certificates exist in the sample distribution ==="
-    Ensure-Certificates -cert_dir $sample_app_folder
+    Write-Host "=== Ensuring certificates exist in the React Vanilla sample distribution ==="
+    Ensure-Certificates -cert_dir $vanilla_sample_app_folder
 
     # Copy the appropriate startup script based on the target OS
     if ($SAMPLE_DIST_OS -eq "win") {
         Write-Host "Including Windows start script (start.ps1)..."
-        Copy-Item -Path (Join-Path $SAMPLE_APP_SERVER_DIR "start.ps1") -Destination $sample_app_folder -Force
+        Copy-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "start.ps1") -Destination $vanilla_sample_app_folder -Force
     }
     else {
         Write-Host "Including Unix start script (start.sh)..."
-        Copy-Item -Path (Join-Path $SAMPLE_APP_SERVER_DIR "start.sh") -Destination $sample_app_folder -Force
+        Copy-Item -Path (Join-Path $VANILLA_SAMPLE_APP_SERVER_DIR "start.sh") -Destination $vanilla_sample_app_folder -Force
     }
 
-    Write-Host "Creating zip file..."
-    # Construct an absolute, well-formed zip path using .NET helpers to avoid accidental
-    # concatenation of already-absolute paths (which produced duplicated segments).
+    Write-Host "Creating React Vanilla sample zip file..."
     $distAbs = (Resolve-Path -Path $DIST_DIR).Path
-    $zipFile = [System.IO.Path]::Combine($distAbs, "$SAMPLE_APP_FOLDER.zip")
+    $zipFile = [System.IO.Path]::Combine($distAbs, "$VANILLA_SAMPLE_APP_FOLDER.zip")
     if (Test-Path $zipFile) {
         Remove-Item $zipFile -Force
     }
 
     Add-Type -AssemblyName System.IO.Compression.FileSystem
-    [System.IO.Compression.ZipFile]::CreateFromDirectory($sample_app_folder, $zipFile)
-    
-    Remove-Item -Path $sample_app_folder -Recurse -Force
-    
-    Write-Host "Sample app packaged successfully as $zipFile"
-    Write-Host "================================================================"
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($vanilla_sample_app_folder, $zipFile)
+
+    Remove-Item -Path $vanilla_sample_app_folder -Recurse -Force
+
+    Write-Host "✅ React Vanilla sample app packaged successfully as $zipFile"
+}
+
+function Package-React-SDK-Sample {
+    $react_sdk_sample_app_folder = Join-Path $DIST_DIR $REACT_SDK_SAMPLE_APP_FOLDER
+    New-Item -Path $react_sdk_sample_app_folder -ItemType Directory -Force | Out-Null
+
+    # Copy the built React app (dist folder)
+    if (Test-Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "dist")) {
+        Write-Host "Copying React SDK sample build output..."
+        Copy-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "dist") -Destination $react_sdk_sample_app_folder -Recurse -Force
+    }
+    else {
+        Write-Host "Warning: React SDK sample build output not found at $((Join-Path $REACT_SDK_SAMPLE_APP_DIR 'dist'))"
+        throw "React SDK sample build output not found"
+    }
+
+    # Copy README and other necessary files
+    if (Test-Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "README.md")) {
+        Copy-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "README.md") -Destination $react_sdk_sample_app_folder -Force
+    }
+
+    if (Test-Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR ".env.example")) {
+        Copy-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR ".env.example") -Destination $react_sdk_sample_app_folder -Force
+    }
+
+    # Copy the appropriate startup script based on the target OS
+    if ($SAMPLE_DIST_OS -eq "win") {
+        Write-Host "Including Windows start script (start.ps1)..."
+        Copy-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "start.ps1") -Destination $react_sdk_sample_app_folder -Force
+    }
+    else {
+        Write-Host "Including Unix start script (start.sh)..."
+        Copy-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "start.sh") -Destination $react_sdk_sample_app_folder -Force
+    }
+
+    Write-Host "Creating React SDK sample zip file..."
+    $distAbs = (Resolve-Path -Path $DIST_DIR).Path
+    $zipFile = [System.IO.Path]::Combine($distAbs, "$REACT_SDK_SAMPLE_APP_FOLDER.zip")
+    if (Test-Path $zipFile) {
+        Remove-Item $zipFile -Force
+    }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($react_sdk_sample_app_folder, $zipFile)
+
+    Remove-Item -Path $react_sdk_sample_app_folder -Recurse -Force
+
+    Write-Host "✅ React SDK sample app packaged successfully as $zipFile"
 }
 
 function Test-Unit {
@@ -1028,6 +1195,151 @@ function Ensure-Certificates {
     }
 }
 
+function Ensure-Crypto-File {
+    param(
+        [string]$conf_dir
+    )
+
+    $DEPLOYMENT_FILE = Join-Path $conf_dir "deployment.yaml"
+    # Resolve the .. path segment to get a clean key directory path
+    $KEY_DIR_Temp = Join-Path $conf_dir ".." "resources/security"
+    $KEY_DIR = (Resolve-Path -Path $KEY_DIR_Temp).Path
+    $KEY_FILE = Join-Path $KEY_DIR "crypto.key"
+    $KEY_PATH_IN_YAML = "repository/resources/security/crypto.key"
+
+    Write-Host "================================================================"
+    Write-Host "Ensuring crypto key file exists..."
+
+    # 1. Check if the key file exists
+    if (Test-Path $KEY_FILE) {
+        Write-Host "Default crypto key file already present in $KEY_FILE. Skipping generation."
+    }
+    else {
+        Write-Host "Default crypto key file not found. Generating new key at $KEY_FILE..."
+        $NEW_KEY = $null
+        
+        # Try generating key using OpenSSL first
+        $openssl = Get-Command openssl -ErrorAction SilentlyContinue
+        if ($openssl) {
+            try {
+                Write-Host " - Using OpenSSL to generate key..."
+                # openssl rand -hex 32 returns a 64-char string.
+                $NEW_KEY = (openssl rand -hex 32 | Out-String).Trim()
+                
+                if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($NEW_KEY) -or $NEW_KEY.Length -ne 64) {
+                    throw "OpenSSL rand command failed or returned empty/incorrect length."
+                }
+            }
+            catch {
+                Write-Host " - OpenSSL failed: $_. Falling back to POSIX tools/DOTNET."
+                $NEW_KEY = $null
+            }
+        }
+        else {
+            Write-Host " - OpenSSL not found. Falling back to POSIX tools/DOTNET."
+        }
+
+        # Try POSIX tools as first fallback option
+        if ([string]::IsNullOrEmpty($NEW_KEY)) {
+            $bash = Get-Command bash -ErrorAction SilentlyContinue
+            if ($bash -and (Test-Path /dev/urandom)) {
+                try {
+                    Write-Host " - Using POSIX tools (/dev/urandom) to generate key..."
+                    # Command: head -c 32 /dev/urandom | xxd -p -c 256
+                    # Generates 32 random bytes, converts to a single line of hex (64 chars)
+                    # The ToLower() ensures consistency with the openssl/dotnet output.
+                    $POS_KEY_RAW = (& bash -c 'head -c 32 /dev/urandom | xxd -p -c 256' | Out-String).Trim()
+                    $NEW_KEY = $POS_KEY_RAW.ToLower()
+                    
+                    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrEmpty($NEW_KEY) -or $NEW_KEY.Length -ne 64) {
+                         throw "POSIX key generation command failed or returned invalid length."
+                    }
+                }
+                catch {
+                    Write-Host " - POSIX tool failed: $_. Falling back to .NET cryptography."
+                    $NEW_KEY = $null
+                }
+            }
+            else {
+                Write-Host " - POSIX tools not found or not suitable. Falling back to .NET cryptography."
+            }
+        }
+
+        # try .NET cryptography as final fallback
+        if ([string]::IsNullOrEmpty($NEW_KEY)) {
+            try {
+                Write-Host " - Using .NET cryptography to generate key..."
+                $bytes = New-Object byte[] 32
+                # Note: System.Security.Cryptography.RandomNumberGenerator is available in both .NET Framework and .NET (Core)
+                $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+                $rng.GetBytes($bytes)
+                $rng.Dispose()
+                # Convert bytes to lowercase hex string (64 chars)
+                $NEW_KEY = ([System.BitConverter]::ToString($bytes) -replace '-', '').ToLower()
+            }
+            catch {
+                 throw "Failed to generate crypto key using .NET: $_"
+            }
+        }
+        # --- END: .NET cryptography fallback ---
+        
+        # Ensure the target directory exists
+        New-Item -Path $KEY_DIR -ItemType Directory -Force | Out-Null
+
+        # Write the key to the new file (NoNewline matches 'echo -n')
+        Set-Content -Path $KEY_FILE -Value $NEW_KEY -NoNewline -Encoding Ascii
+        
+        Write-Host "Successfully generated and added new crypto key to $KEY_FILE."
+    }
+
+    # 2. Check and update deployment.yaml
+    if (-not (Test-Path $DEPLOYMENT_FILE)) {
+        throw "ERROR: $DEPLOYMENT_FILE not found. Cannot configure crypto key."
+    }
+    
+    $configLines = Get-Content $DEPLOYMENT_FILE
+    $cryptoLine = $configLines | Select-String -Pattern "^\s*crypto_file\s*:" -ErrorAction SilentlyContinue
+
+   
+    $ANCHOR_LINE_PATTERN = '^\s*key_file\s*:\s*".*server\.key"'
+    $KEY_FILE_LINE_TO_INSERT = '  crypto_file: "{0}"' -f $KEY_PATH_IN_YAML
+    
+    if ($cryptoLine) {
+        # Config exists, check if it's correct
+        $expected_line_pattern = '^\s*crypto_file\s*:\s*"{0}"' -f $KEY_PATH_IN_YAML
+        if ($cryptoLine -match $expected_line_pattern) {
+            Write-Host "Crypto key file is already configured in $DEPLOYMENT_FILE."
+        }
+        else {
+            throw "ERROR: 'crypto_file' is defined in $DEPLOYMENT_FILE but does not match the default path '$KEY_PATH_IN_YAML'. Please fix or remove the line."
+        }
+    }
+    else {
+        # Config is missing, add it
+        Write-Host "Crypto key file is not configured in $DEPLOYMENT_FILE. Inserting entry..."
+        
+        $newConfigLines = @()
+        $lineInserted = $false
+
+        foreach ($line in $configLines) {
+            $newConfigLines += $line
+            if ($line -match $ANCHOR_LINE_PATTERN) {
+                $newConfigLines += $KEY_FILE_LINE_TO_INSERT
+                $lineInserted = $true
+            }
+        }
+
+        if (-not $lineInserted) {
+            throw "ERROR: Could not insert crypto_file line into $DEPLOYMENT_FILE. Anchor line (pattern '$ANCHOR_LINE_PATTERN') not found."
+        }
+
+        # Save the file (YAML should use UTF-8)
+        Set-Content -Path $DEPLOYMENT_FILE -Value $newConfigLines -Encoding UTF8
+        Write-Host "Successfully updated $DEPLOYMENT_FILE to use the default key file."
+    }
+    Write-Host "================================================================"
+}
+
 function Run {
     Write-Host "Running frontend apps..."
     Run-Frontend
@@ -1047,7 +1359,7 @@ function Run {
     # Run the setup script - it will handle server readiness checking
     # In dev mode, add the frontend dev server redirect URI
     $setupScript = Join-Path $BACKEND_BASE_DIR "scripts/setup_initial_data.sh"
-    & $setupScript -port $BACKEND_PORT --develop-redirect-uris "https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
+    & $setupScript -port $PORT --develop-redirect-uris "https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
 
     if ($LASTEXITCODE -ne 0) {
         Write-Host "❌ Initial data setup failed"
@@ -1068,7 +1380,7 @@ function Run {
 
     Write-Host ""
     Write-Host "🚀 Servers running:"
-    Write-Host "  👉 Backend : https://localhost:$BACKEND_PORT"
+    Write-Host "  👉 Backend : $BASE_URL"
     Write-Host "  📱 Frontend :"
     Write-Host "      🚪 Gate (Login/Register): https://localhost:${GATE_APP_DEFAULT_PORT}/gate"
     Write-Host "      🛠️  Develop (Admin Console): https://localhost:${DEVELOP_APP_DEFAULT_PORT}/develop"
@@ -1123,8 +1435,11 @@ function Run-Backend {
     Write-Host "=== Ensuring server certificates exist ==="
     Ensure-Certificates -cert_dir (Join-Path $BACKEND_DIR $SECURITY_DIR)
 
-    Write-Host "=== Ensuring sample app certificates exist ==="
-    Ensure-Certificates -cert_dir $SAMPLE_APP_DIR
+    Write-Host "=== Ensuring React Vanilla sample app certificates exist ==="
+    Ensure-Certificates -cert_dir $VANILLA_SAMPLE_APP_DIR
+
+    Write-Host "=== Ensuring crypto file exists for run ==="
+    Ensure-Crypto-File -conf_dir (Join-Path $BACKEND_DIR "repository/conf")
 
     Write-Host "Initializing databases..."
     Initialize-Databases
@@ -1147,10 +1462,9 @@ function Start-Backend {
         }
     }
 
-    Kill-Port $BACKEND_PORT
+    Kill-Port $PORT
 
-    Write-Host "=== Starting backend on https://localhost:$BACKEND_PORT ==="
-    $env:BACKEND_PORT = $BACKEND_PORT
+    Write-Host "=== Starting backend on $BASE_URL ==="
     
     Push-Location $BACKEND_DIR
     try {
@@ -1164,7 +1478,7 @@ function Start-Backend {
     if ($ShowFinalOutput) {
         Write-Host ""
         Write-Host "🚀 Servers running:"
-        Write-Host "👉 Backend : https://localhost:$BACKEND_PORT"
+        Write-Host "👉 Backend : $BASE_URL"
         Write-Host "Press Ctrl+C to stop."
 
         try {
@@ -1200,7 +1514,7 @@ function Run-Frontend {
     Push-Location $FRONTEND_BASE_DIR
     try {
         Write-Host "Installing frontend dependencies..."
-        & pnpm install
+        & pnpm install --frozen-lockfile
         
         Write-Host "Building frontend applications & packages..."
         & pnpm build
@@ -1221,9 +1535,6 @@ function Run-Frontend {
 switch ($Command) {
     "clean" {
         Clean
-    }
-    "clean_all" {
-        Clean-All
     }
     "build_backend" {
         Build-Backend
@@ -1272,7 +1583,6 @@ switch ($Command) {
         Write-Host "Usage: ./build.ps1 {clean|build|build_backend|build_frontend|test|run} [OS] [ARCH]"
         Write-Host ""
         Write-Host "  clean                    - Clean build artifacts"
-        Write-Host "  clean_all                - Clean all build artifacts including distributions"
         Write-Host "  build                    - Build the complete Thunder application (backend + frontend + samples)"
         Write-Host "  build_backend            - Build only the Thunder backend server"
         Write-Host "  build_frontend           - Build only the Next.js frontend applications"

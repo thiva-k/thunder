@@ -35,8 +35,9 @@ func Initialize(
 	flowExecService flowexec.FlowExecServiceInterface,
 ) AuthorizeServiceInterface {
 	authzCodeStore := newAuthorizationCodeStore()
+	authzReqStore := newAuthorizationRequestStore()
 	authzService := newAuthorizeService(authzCodeStore)
-	authzHandler := newAuthorizeHandler(applicationService, jwtService, authzCodeStore, flowExecService)
+	authzHandler := newAuthorizeHandler(applicationService, jwtService, authzCodeStore, authzReqStore, flowExecService)
 	registerRoutes(mux, authzHandler)
 	return authzService
 }

@@ -222,7 +222,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthStartSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -254,7 +254,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthStartInvalidIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -277,7 +277,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthStartMissingIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -297,7 +297,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthCompleteFlowSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -356,7 +356,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthFinishInvalidSessionToken() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -375,7 +375,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthFinishMissingCode() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -396,7 +396,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthCompleteFlowWithSkipAssertionFal
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -457,7 +457,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthCompleteFlowWithSkipAssertionTru
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -518,7 +518,7 @@ func (suite *GithubAuthTestSuite) TestGithubAuthWithAssuranceLevelAAL1() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()

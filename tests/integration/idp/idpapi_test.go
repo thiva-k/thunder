@@ -20,7 +20,6 @@ package idp
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -371,12 +370,7 @@ func (ts *IdpAPITestSuite) TestIdpListing() {
 		ts.T().Fatalf("Failed to create request: %v", err)
 	}
 
-	// Configure the HTTP client to skip TLS verification
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, // Skip certificate verification
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	// Send the request
 	resp, err := client.Do(req)
@@ -637,11 +631,7 @@ func (ts *IdpAPITestSuite) TestUpdateIdp() {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -840,11 +830,7 @@ func retrieveAndValidateIdpDetails(ts *IdpAPITestSuite, expectedIdp testutils.ID
 		ts.T().Fatalf("Failed to create get request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -922,11 +908,7 @@ func makeIDPAPIRequest(method, path string, body io.Reader) (*http.Response, err
 		req.Header.Set("Content-Type", "application/json")
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	return client.Do(req)
 }

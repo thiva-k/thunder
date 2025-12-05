@@ -70,7 +70,7 @@ jobs:
           echo "Set version to: $VERSION"
 
       - name: 🧹 Clean Previous Builds
-        run: make clean_all
+        run: make clean
 
       - name: 🔨 Build Product with Coverage
         id: build

@@ -78,18 +78,6 @@ func newOIDCAuthnService(httpClient httpservice.HTTPClientInterface,
 func NewOIDCAuthnService(httpClient httpservice.HTTPClientInterface,
 	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
 	jwtSvc jwt.JWTServiceInterface, endpoints authnoauth.OAuthEndpoints) OIDCAuthnServiceInterface {
-	if httpClient == nil {
-		httpClient = httpservice.NewHTTPClient()
-	}
-	if idpSvc == nil {
-		idpSvc = idp.NewIDPService()
-	}
-	if userSvc == nil {
-		userSvc = user.GetUserService()
-	}
-	if jwtSvc == nil {
-		jwtSvc = jwt.GetJWTService()
-	}
 	return newOIDCAuthnService(httpClient, idpSvc, userSvc, jwtSvc, endpoints)
 }
 

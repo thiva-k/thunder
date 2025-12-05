@@ -20,7 +20,6 @@ package role
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -114,11 +113,7 @@ func TestRoleAPITestSuite(t *testing.T) {
 
 func (suite *RoleAPITestSuite) SetupSuite() {
 	// Create HTTP client that skips TLS verification for testing
-	suite.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	suite.client = testutils.GetHTTPClient()
 
 	// Create test organization unit
 	ouID, err := testutils.CreateOrganizationUnit(testOU)

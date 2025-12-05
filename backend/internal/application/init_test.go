@@ -46,14 +46,14 @@ type InitTestSuite struct {
 	suite.Suite
 	mockCertService       *certmock.CertificateServiceInterfaceMock
 	mockFlowMgtService    *flowmgtmock.FlowMgtServiceInterfaceMock
-	mockBrandingService   *brandingmock.BrandingServiceInterfaceMock
+	mockBrandingService   *brandingmock.BrandingMgtServiceInterfaceMock
 	mockUserSchemaService *userschemamock.UserSchemaServiceInterfaceMock
 }
 
 func (suite *InitTestSuite) SetupTest() {
 	suite.mockCertService = certmock.NewCertificateServiceInterfaceMock(suite.T())
 	suite.mockFlowMgtService = flowmgtmock.NewFlowMgtServiceInterfaceMock(suite.T())
-	suite.mockBrandingService = brandingmock.NewBrandingServiceInterfaceMock(suite.T())
+	suite.mockBrandingService = brandingmock.NewBrandingMgtServiceInterfaceMock(suite.T())
 	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 }
 
@@ -336,7 +336,8 @@ inbound_auth_config:
 	assert.Contains(suite.T(), oauthConfig.GrantTypes, oauth2const.GrantType("refresh_token"))
 	assert.Contains(suite.T(), oauthConfig.ResponseTypes, oauth2const.ResponseType("code"))
 	assert.Contains(suite.T(), oauthConfig.ResponseTypes, oauth2const.ResponseType("token"))
-	assert.Equal(suite.T(), oauth2const.TokenEndpointAuthMethod("client_secret_post"), oauthConfig.TokenEndpointAuthMethod)
+	assert.Equal(suite.T(), oauth2const.TokenEndpointAuthMethod("client_secret_post"),
+		oauthConfig.TokenEndpointAuthMethod)
 	assert.False(suite.T(), oauthConfig.PKCERequired)
 	assert.True(suite.T(), oauthConfig.PublicClient)
 
@@ -474,7 +475,7 @@ func TestInitialize_Standalone(t *testing.T) {
 	mux := http.NewServeMux()
 	mockCertService := certmock.NewCertificateServiceInterfaceMock(t)
 	mockFlowMgtService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
-	mockBrandingService := brandingmock.NewBrandingServiceInterfaceMock(t)
+	mockBrandingService := brandingmock.NewBrandingMgtServiceInterfaceMock(t)
 	mockUserSchemaService := userschemamock.NewUserSchemaServiceInterfaceMock(t)
 
 	// Execute
@@ -513,7 +514,7 @@ func TestInitialize_WithImmutableResources_Standalone(t *testing.T) {
 	mux := http.NewServeMux()
 	mockCertService := certmock.NewCertificateServiceInterfaceMock(t)
 	mockFlowMgtService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
-	mockBrandingService := brandingmock.NewBrandingServiceInterfaceMock(t)
+	mockBrandingService := brandingmock.NewBrandingMgtServiceInterfaceMock(t)
 	mockUserSchemaService := userschemamock.NewUserSchemaServiceInterfaceMock(t)
 
 	// Execute

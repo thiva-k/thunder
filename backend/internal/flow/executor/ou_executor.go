@@ -57,11 +57,6 @@ func newOUExecutor(
 			Required: true,
 			Type:     "string",
 		},
-		{
-			Name:     userInputOuDesc,
-			Required: false,
-			Type:     "string",
-		},
 	}
 
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, ouExecLoggerComponentName),
@@ -85,12 +80,6 @@ func (o *ouExecutor) Execute(ctx *flowcore.NodeContext) (*flowcm.ExecutorRespons
 	execResp := &flowcm.ExecutorResponse{
 		AdditionalData: make(map[string]string),
 		RuntimeData:    make(map[string]string),
-	}
-
-	if ctx.FlowType != flowcm.FlowTypeRegistration {
-		logger.Debug("Flow type is not registration, skipping OU creation")
-		execResp.Status = flowcm.ExecComplete
-		return execResp, nil
 	}
 
 	if !o.ValidatePrerequisites(ctx, execResp) {

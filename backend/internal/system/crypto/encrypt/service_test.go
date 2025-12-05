@@ -20,8 +20,12 @@ package encrypt
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"testing"
+
+	"github.com/asgardeo/thunder/internal/system/config"
 
 	"github.com/stretchr/testify/require"
 )
@@ -35,6 +39,138 @@ type MockThunderRuntime struct {
 	}
 }
 
+const (
+	expectedPath = "/home/thunder/config/crypto.key"
+)
+
+func TestInitEncryptionServiceCryptoFilePathNotFound(t *testing.T) {
+	mockFileReader := func(name string) ([]byte, error) { return nil, nil }
+	mockPathJoiner := func(elem ...string) string { return "/mock/path" }
+
+	mockConfig := &config.Config{
+		Security: config.SecurityConfig{
+			CryptoFile: "",
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/home/thunder", mockConfig)
+	require.NoError(t, err)
+
+	service, err := initEncryptionService(
+		mockFileReader,
+		mockPathJoiner,
+	)
+
+	config.ResetThunderRuntime()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "crypto key file path not found in configs")
+	require.Nil(t, service)
+}
+
+func TestInitEncryptionServiceCryptoFileReadError(t *testing.T) {
+	expectedError := errors.New("permission denied")
+
+	mockFileReader := func(name string) ([]byte, error) {
+		require.Equal(t, expectedPath, name)
+		return nil, expectedError
+	}
+
+	mockPathJoiner := func(elem ...string) string {
+		require.Equal(t, "/home/thunder", elem[0])
+		require.Equal(t, "config/crypto.key", elem[1])
+		return expectedPath
+	}
+
+	mockConfig := &config.Config{
+		Security: config.SecurityConfig{
+			CryptoFile: "config/crypto.key",
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/home/thunder", mockConfig)
+	require.NoError(t, err)
+
+	service, err := initEncryptionService(
+		mockFileReader,
+		mockPathJoiner,
+	)
+
+	config.ResetThunderRuntime()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to read crypto key file at path")
+	require.Contains(t, err.Error(), expectedPath)
+	require.ErrorIs(t, err, expectedError)
+	require.Nil(t, service)
+}
+
+func TestInitEncryptionServiceInvalidHexInCryptoFile(t *testing.T) {
+	invalidHexData := []byte("INVALID_HEX_STRING")
+
+	mockFileReader := func(name string) ([]byte, error) {
+		return invalidHexData, nil
+	}
+
+	mockPathJoiner := func(elem ...string) string {
+		return expectedPath
+	}
+	mockConfig := &config.Config{
+		Security: config.SecurityConfig{
+			CryptoFile: "config/crypto.key",
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/home/thunder", mockConfig)
+	require.NoError(t, err)
+
+	service, err := initEncryptionService(
+		mockFileReader,
+		mockPathJoiner,
+	)
+
+	config.ResetThunderRuntime()
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "error while reading crypto key file at path")
+	require.Contains(t, err.Error(), expectedPath)
+	require.Contains(t, err.Error(), "invalid byte")
+	require.Nil(t, service)
+}
+
+func TestInitEncryptionServiceSuccess(t *testing.T) {
+	validKey, _ := generateRandomKey(defaultKeySize)
+	validHexData := []byte(hex.EncodeToString(validKey))
+
+	mockFileReader := func(name string) ([]byte, error) {
+		return validHexData, nil
+	}
+
+	mockPathJoiner := func(elem ...string) string {
+		return expectedPath
+	}
+
+	mockConfig := &config.Config{
+		Security: config.SecurityConfig{
+			CryptoFile: "config/crypto.key",
+		},
+	}
+	config.ResetThunderRuntime()
+	err := config.InitializeThunderRuntime("/home/thunder", mockConfig)
+	require.NoError(t, err)
+
+	service, err := initEncryptionService(
+		mockFileReader,
+		mockPathJoiner,
+	)
+
+	config.ResetThunderRuntime()
+
+	require.NoError(t, err)
+	require.NotNil(t, service)
+	require.Equal(t, validKey, service.Key)
+	require.Equal(t, getKeyID(validKey), service.Kid)
+}
 func TestEncryptionService(t *testing.T) {
 	// Generate a random key
 	key, err := generateRandomKey(defaultKeySize)

@@ -19,12 +19,12 @@
 package security
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	sysContext "github.com/asgardeo/thunder/internal/system/context"
@@ -106,7 +106,6 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 
 	tests := []struct {
 		name           string
-		path           string
 		authHeader     string
 		setupMock      func(*jwtmock.JWTServiceInterfaceMock)
 		expectedError  error
@@ -114,50 +113,39 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 	}{
 		{
 			name:       "Successful authentication with system scope",
-			path:       "/users",
 			authHeader: "Bearer " + validToken,
 			setupMock: func(m *jwtmock.JWTServiceInterfaceMock) {
 				m.On("VerifyJWTSignature", validToken).Return(nil)
 			},
 			expectedError: nil,
 			validateResult: func(t *testing.T, ctx *sysContext.AuthenticationContext) {
-				assert.NotNil(t, ctx)
-				// We can't directly access fields, use context helpers
+				baseCtx := sysContext.WithAuthenticationContext(context.Background(), ctx)
+				assert.Equal(t, "user123", sysContext.GetUserID(baseCtx))
+				assert.Equal(t, "ou1", sysContext.GetOUID(baseCtx))
+				assert.Equal(t, "app1", sysContext.GetAppID(baseCtx))
+				assert.Equal(t, "system users:read", sysContext.GetClaimString(baseCtx, "scope"))
 			},
-		},
-		{
-			name:       "Authentication failure - insufficient scopes",
-			path:       "/users",
-			authHeader: "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyMTIzIiwic2NvcGUiOiJ1c2VyczpyZWFkIn0.sig",
-			setupMock: func(m *jwtmock.JWTServiceInterfaceMock) {
-				m.On("VerifyJWTSignature", mock.Anything).Return(nil)
-			},
-			expectedError: errInsufficientScopes,
 		},
 		{
 			name:          "Missing Authorization header",
-			path:          "/users",
 			authHeader:    "",
 			setupMock:     func(m *jwtmock.JWTServiceInterfaceMock) {},
 			expectedError: errMissingAuthHeader,
 		},
 		{
 			name:          "Invalid header format",
-			path:          "/users",
 			authHeader:    "Basic dXNlcjpwYXNz",
 			setupMock:     func(m *jwtmock.JWTServiceInterfaceMock) {},
 			expectedError: errMissingAuthHeader,
 		},
 		{
 			name:          "Empty token",
-			path:          "/users",
 			authHeader:    "Bearer   ",
 			setupMock:     func(m *jwtmock.JWTServiceInterfaceMock) {},
 			expectedError: errInvalidToken,
 		},
 		{
 			name:       "Invalid JWT signature",
-			path:       "/users",
 			authHeader: "Bearer invalid.jwt.token",
 			setupMock: func(m *jwtmock.JWTServiceInterfaceMock) {
 				m.On("VerifyJWTSignature", "invalid.jwt.token").Return(assert.AnError)
@@ -166,7 +154,6 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 		},
 		{
 			name:       "Invalid JWT format - decoding error",
-			path:       "/users",
 			authHeader: "Bearer invalidjwtformat", // Not 3 parts separated by dots
 			setupMock: func(m *jwtmock.JWTServiceInterfaceMock) {
 				m.On("VerifyJWTSignature", "invalidjwtformat").Return(nil)
@@ -175,7 +162,6 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 		},
 		{
 			name:       "Invalid JWT payload - malformed base64",
-			path:       "/users",
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiJ9.invalid!base64!payload.signature",
 			setupMock: func(m *jwtmock.JWTServiceInterfaceMock) {
 				m.On("VerifyJWTSignature", "eyJhbGciOiJIUzI1NiJ9.invalid!base64!payload.signature").Return(nil)
@@ -184,7 +170,6 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 		},
 		{
 			name:       "Invalid JWT payload - malformed JSON",
-			path:       "/users",
 			authHeader: "Bearer eyJhbGciOiJIUzI1NiJ9.bm90X3ZhbGlkX2pzb24.signature", // "not_valid_json" base64 encoded
 			setupMock: func(m *jwtmock.JWTServiceInterfaceMock) {
 				m.On("VerifyJWTSignature", "eyJhbGciOiJIUzI1NiJ9.bm90X3ZhbGlkX2pzb24.signature").Return(nil)
@@ -197,10 +182,12 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 		suite.Run(tt.name, func() {
 			// Reset mock for each test case
 			suite.mockJWT = jwtmock.NewJWTServiceInterfaceMock(suite.T())
-			tt.setupMock(suite.mockJWT)
+			if tt.setupMock != nil {
+				tt.setupMock(suite.mockJWT)
+			}
 			suite.authenticator = newJWTAuthenticator(suite.mockJWT)
 
-			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			req := httptest.NewRequest(http.MethodGet, "/users", nil)
 			if tt.authHeader != "" {
 				req.Header.Set("Authorization", tt.authHeader)
 			}
@@ -219,6 +206,62 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate() {
 			}
 
 			suite.mockJWT.AssertExpectations(suite.T())
+		})
+	}
+}
+
+func (suite *JWTAuthenticatorTestSuite) TestAuthorize() {
+	tests := []struct {
+		name          string
+		claims        map[string]interface{}
+		expectedError error
+	}{
+		{
+			name: "Has system scope in scope claim",
+			claims: map[string]interface{}{
+				"scope": "system users:read",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Has authorized_permissions claim",
+			claims: map[string]interface{}{
+				"authorized_permissions": "other system",
+			},
+			expectedError: nil,
+		},
+		{
+			name: "Missing required scopes",
+			claims: map[string]interface{}{
+				"scope": "users:read",
+			},
+			expectedError: errInsufficientScopes,
+		},
+		{
+			name:          "Nil authentication context",
+			claims:        nil,
+			expectedError: errUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		suite.Run(tt.name, func() {
+			req := httptest.NewRequest(http.MethodGet, "/users", nil)
+
+			var authCtx *sysContext.AuthenticationContext
+			if tt.claims != nil {
+				authCtx = sysContext.NewAuthenticationContext("user123", "ou1", "app1", "token", tt.claims)
+				ctx := sysContext.WithAuthenticationContext(req.Context(), authCtx)
+				req = req.WithContext(ctx)
+			}
+
+			err := suite.authenticator.Authorize(req, authCtx)
+
+			if tt.expectedError != nil {
+				assert.ErrorIs(suite.T(), err, tt.expectedError)
+			} else {
+				assert.NoError(suite.T(), err)
+			}
 		})
 	}
 }
@@ -415,7 +458,8 @@ func (suite *JWTAuthenticatorTestSuite) TestGetRequiredScopes() {
 
 	for _, tt := range tests {
 		suite.Run(tt.name, func() {
-			result := suite.authenticator.getRequiredScopes()
+			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
+			result := suite.authenticator.getRequiredScopes(req)
 			assert.Equal(suite.T(), tt.expected, result)
 		})
 	}

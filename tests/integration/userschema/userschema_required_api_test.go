@@ -20,7 +20,6 @@ package userschema
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -51,9 +50,7 @@ func TestUserSchemaRequiredAPITestSuite(t *testing.T) {
 }
 
 func (ts *UserSchemaRequiredAPITestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true}},
-	}
+	ts.client = testutils.GetHTTPClient()
 	ts.createdSchemas = []string{}
 	ts.createdUsers = []string{}
 

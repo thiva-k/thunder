@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	sysContext "github.com/asgardeo/thunder/internal/system/context"
@@ -117,6 +118,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_SuccessfulAuthentication_Firs
 	// First authenticator can handle the request
 	suite.mockAuth1.On("CanHandle", req).Return(true)
 	suite.mockAuth1.On("Authenticate", req).Return(suite.testAuthCtx, nil)
+	suite.mockAuth1.On("Authorize", mock.AnythingOfType("*http.Request"), suite.testAuthCtx).Return(nil)
 
 	ctx, err := suite.service.Process(req)
 
@@ -136,6 +138,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_SuccessfulAuthentication_Firs
 	// Second authenticator should not be called
 	suite.mockAuth2.AssertNotCalled(suite.T(), "CanHandle")
 	suite.mockAuth2.AssertNotCalled(suite.T(), "Authenticate")
+	suite.mockAuth2.AssertNotCalled(suite.T(), "Authorize")
 }
 
 // Test Process method with second authenticator handling the request
@@ -146,6 +149,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_SuccessfulAuthentication_Seco
 	suite.mockAuth1.On("CanHandle", req).Return(false)
 	suite.mockAuth2.On("CanHandle", req).Return(true)
 	suite.mockAuth2.On("Authenticate", req).Return(suite.testAuthCtx, nil)
+	suite.mockAuth2.On("Authorize", mock.AnythingOfType("*http.Request"), suite.testAuthCtx).Return(nil)
 
 	ctx, err := suite.service.Process(req)
 
@@ -173,6 +177,8 @@ func (suite *SecurityServiceTestSuite) TestProcess_NoHandlerFound() {
 	// Verify neither authenticate method was called
 	suite.mockAuth1.AssertNotCalled(suite.T(), "Authenticate")
 	suite.mockAuth2.AssertNotCalled(suite.T(), "Authenticate")
+	suite.mockAuth1.AssertNotCalled(suite.T(), "Authorize")
+	suite.mockAuth2.AssertNotCalled(suite.T(), "Authorize")
 }
 
 // Test Process method when authentication fails
@@ -187,6 +193,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_AuthenticationFailure() {
 
 	assert.Nil(suite.T(), ctx)
 	assert.Equal(suite.T(), authError, err)
+	suite.mockAuth1.AssertNotCalled(suite.T(), "Authorize")
 }
 
 // Test Process method with specific security errors
@@ -218,6 +225,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_SecurityErrors() {
 
 			assert.Nil(suite.T(), ctx)
 			assert.Equal(suite.T(), tc.error, err)
+			suite.mockAuth1.AssertNotCalled(suite.T(), "Authorize", mock.Anything, mock.Anything)
 
 			suite.mockAuth1.AssertExpectations(suite.T())
 		})
@@ -230,6 +238,12 @@ func (suite *SecurityServiceTestSuite) TestProcess_NilAuthenticationContext() {
 
 	suite.mockAuth1.On("CanHandle", req).Return(true)
 	suite.mockAuth1.On("Authenticate", req).Return(nil, nil)
+	suite.mockAuth1.
+		On("Authorize",
+			mock.AnythingOfType("*http.Request"),
+			(*sysContext.AuthenticationContext)(nil),
+		).
+		Return(nil)
 
 	ctx, err := suite.service.Process(req)
 
@@ -341,6 +355,7 @@ func (suite *SecurityServiceTestSuite) TestProcess_DifferentHTTPMethods() {
 
 			suite.mockAuth1.On("CanHandle", req).Return(true)
 			suite.mockAuth1.On("Authenticate", req).Return(suite.testAuthCtx, nil)
+			suite.mockAuth1.On("Authorize", mock.AnythingOfType("*http.Request"), suite.testAuthCtx).Return(nil)
 
 			ctx, err := suite.service.Process(req)
 

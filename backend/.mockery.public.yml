@@ -85,14 +85,6 @@ packages:
       pkgname: jwtmock
       filename: "{{.InterfaceName}}_mock.go"
 
-  github.com/asgardeo/thunder/internal/oauth/jwks:
-    config:
-      all: true
-      dir: tests/mocks/oauth/jwksmock
-      structname: '{{.InterfaceName}}Mock'
-      pkgname: jwksmock
-      filename: "{{.InterfaceName}}_mock.go"
-
   github.com/asgardeo/thunder/internal/oauth/scope:
     config:
       all: true
@@ -333,7 +325,15 @@ packages:
       pkgname: rolemock
       filename: "{{.InterfaceName}}_mock.go"
 
-  github.com/asgardeo/thunder/internal/branding:
+  github.com/asgardeo/thunder/internal/observability:
+    config:
+      all: true
+      dir: tests/mocks/observabilitymock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: observabilitymock
+      filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/branding/mgt:
     config:
       all: true
       dir: tests/mocks/brandingmock

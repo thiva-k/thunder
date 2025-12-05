@@ -42,7 +42,7 @@ export default function AppWithConfig(): JSX.Element {
         },
       }}
     >
-      <OxygenUIThemeProvider>
+      <OxygenUIThemeProvider radialBackground>
         <QueryClientProvider client={queryClient}>
           <App />
           <ReactQueryDevtools initialIsOpen={false} />

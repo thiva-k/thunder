@@ -37,7 +37,7 @@ import {
   InputAdornment,
 } from '@wso2/oxygen-ui';
 import {useState} from 'react';
-import {SignIn} from '@asgardeo/react';
+import {SignIn, SignUp} from '@asgardeo/react';
 import {Smartphone, Google, Facebook, GitHub, Eye, EyeClosed} from '@wso2/oxygen-ui-icons-react';
 import {useNavigate, useSearchParams} from 'react-router';
 import ROUTES from '../../constants/routes';
@@ -58,10 +58,10 @@ export default function SignInBox(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState(false);
-  const [emailErrorMessage, setEmailErrorMessage] = useState('');
+  const [usernameError, setUsernameError] = useState(false);
+  const [usernameErrorMessage, setUsernameErrorMessage] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [passwordErrorMessage, setPasswordErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -81,18 +81,18 @@ export default function SignInBox(): JSX.Element {
   const validateInputs = () => {
     let isValid = true;
 
-    if (!email || !/\S+@\S+\.\S+/.test(email)) {
-      setEmailError(true);
-      setEmailErrorMessage('Please enter a valid email address.');
+    if (!username || username.trim().length === 0) {
+      setUsernameError(true);
+      setUsernameErrorMessage('Username is required.');
       isValid = false;
     } else {
-      setEmailError(false);
-      setEmailErrorMessage('');
+      setUsernameError(false);
+      setUsernameErrorMessage('');
     }
 
-    if (!password || password.length < 6) {
+    if (!password) {
       setPasswordError(true);
-      setPasswordErrorMessage('Password must be at least 6 characters long.');
+      setPasswordErrorMessage('Password is required.');
       isValid = false;
     } else {
       setPasswordError(false);
@@ -119,17 +119,17 @@ export default function SignInBox(): JSX.Element {
       <StyledPaper variant="outlined">
         <SignIn
           onError={(error) => {
-            setEmailError(true);
-            setEmailErrorMessage(error?.message || 'Authentication failed');
+            setUsernameError(true);
+            setUsernameErrorMessage(error?.message || 'Authentication failed');
           }}
         >
           {({onSubmit, isLoading, components, error, isInitialized}) => (
             <>
-              <Typography component="h1" variant="h5" sx={{width: '100%', mb: 2}}>
+              <Typography variant="h2" sx={{width: '100%', mb: 2}}>
                 Sign in
               </Typography>
 
-              {!isInitialized ? (
+              {(isLoading || !isInitialized) ? (
                 <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
                   <Typography>Loading authentication...</Typography>
                 </Box>
@@ -160,7 +160,7 @@ export default function SignInBox(): JSX.Element {
                                   onSubmit({
                                     actionId: 'basic_auth',
                                     inputs: {
-                                      username: email,
+                                      username,
                                       password,
                                     },
                                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,26 +170,26 @@ export default function SignInBox(): JSX.Element {
                                 }
                               }}
                               noValidate
-                              sx={{display: 'flex', flexDirection: 'column', width: '100%', gap: 2, mb: 2, p: 3}}
+                              sx={{display: 'flex', flexDirection: 'column', width: '100%', gap: 2}}
                             >
                               <FormControl>
-                                <FormLabel htmlFor="email">Email</FormLabel>
+                                <FormLabel htmlFor="username">Username</FormLabel>
                                 <TextField
-                                  error={emailError}
-                                  helperText={emailErrorMessage}
-                                  id="email"
-                                  type="email"
-                                  name="email"
-                                  placeholder="your@email.com"
-                                  autoComplete="email"
+                                  error={usernameError}
+                                  helperText={usernameErrorMessage}
+                                  id="username"
+                                  type="text"
+                                  name="username"
+                                  placeholder="Enter your username"
+                                  autoComplete="username"
                                   autoFocus
                                   required
                                   fullWidth
                                   variant="outlined"
-                                  color={emailError ? 'error' : 'primary'}
+                                  color={usernameError ? 'error' : 'primary'}
                                   disabled={isLoading}
-                                  value={email}
-                                  onChange={(e) => setEmail(e.target.value)}
+                                  value={username}
+                                  onChange={(e) => setUsername(e.target.value)}
                                 />
                               </FormControl>
                               <FormControl>
@@ -237,9 +237,10 @@ export default function SignInBox(): JSX.Element {
                             </Box>
                           )}
 
-                          {/* Show divider if there are other auth options besides basic_auth */}
-                          {components.some((c) => c.type === 'BUTTON' && c.config?.actionId !== 'basic_auth') && (
-                            <Divider>or</Divider>
+                          {/* Show divider only if basic_auth exists AND there are other auth options */}
+                          {components.some((c) => c.config?.actionId === 'basic_auth') &&
+                           components.some((c) => c.type === 'BUTTON' && c.config?.actionId !== 'basic_auth') && (
+                            <Divider sx={{my: 2}}>OR</Divider>
                           )}
 
                           {/* Show other authentication options as buttons */}
@@ -409,45 +410,54 @@ export default function SignInBox(): JSX.Element {
                       );
                     }
 
-                    // SignInBox fallback error
+                    // If no components send empty
                     return (
-                      <Alert severity="error" sx={{mb: 2}}>
-                        <AlertTitle>Oops, that didn&apos;t work</AlertTitle>
-                        We&apos;re sorry, we ran into a problem. Please try again!
-                      </Alert>
+                      <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
+                        <Typography>Loading authentication...</Typography>
+                      </Box>
                     );
                   })()}
                 </>
               )}
-
-              <Typography sx={{textAlign: 'center'}}>
-                Don&apos;t have an account?{' '}
-                <Button
-                  variant="text"
-                  onClick={() => {
-                    const currentParams = searchParams.toString();
-                    const createUrl = currentParams ? `${ROUTES.AUTH.SIGN_UP}?${currentParams}` : ROUTES.AUTH.SIGN_UP;
-                    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                    navigate(createUrl);
-                  }}
-                  sx={{
-                    p: 0,
-                    minWidth: 'auto',
-                    textTransform: 'none',
-                    color: 'primary.main',
-                    textDecoration: 'underline',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  Sign up
-                </Button>
-              </Typography>
             </>
           )}
         </SignIn>
+          
+        <SignUp>
+          {({components}) => {
+            if (components && components.length > 0) {
+              return (
+                <Typography sx={{textAlign: 'center', mt: 2}}>
+                  Don&apos;t have an account?{' '}
+                  <Button
+                    variant="text"
+                    onClick={() => {
+                      const currentParams = searchParams.toString();
+                      const createUrl = currentParams ? `${ROUTES.AUTH.SIGN_UP}?${currentParams}` : ROUTES.AUTH.SIGN_UP;
+                      // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                      navigate(createUrl);
+                    }}
+                    sx={{
+                      p: 0,
+                      minWidth: 'auto',
+                      textTransform: 'none',
+                      color: 'primary.main',
+                      textDecoration: 'underline',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                        backgroundColor: 'transparent',
+                      },
+                    }}
+                  >
+                    Sign up
+                  </Button>
+                </Typography>
+              );
+            }
+
+            return null;
+          }}
+        </SignUp>
       </StyledPaper>
     </Stack>
   );

@@ -256,7 +256,8 @@ func (suite *AuthenticationHandlerTestSuite) TestHandleCredentialsAuthRequestSer
 	for _, tc := range cases {
 		suite.T().Run(tc.name, func(t *testing.T) {
 			m := NewAuthenticationServiceInterfaceMock(t)
-			m.On("AuthenticateWithCredentials", mock.Anything, mock.Anything, mock.Anything).Return(nil, tc.serviceError)
+			m.On("AuthenticateWithCredentials", mock.Anything, mock.Anything, mock.Anything).
+				Return(nil, tc.serviceError)
 			h := &authenticationHandler{authService: m}
 
 			body, _ := json.Marshal(tc.authRequest)
@@ -390,7 +391,8 @@ func (suite *AuthenticationHandlerTestSuite) TestHandleVerifySMSOTPRequestServic
 	}
 	serviceError := &otp.ErrorIncorrectOTP
 
-	suite.mockService.On("VerifyOTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, serviceError)
+	suite.mockService.On("VerifyOTP", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, serviceError)
 
 	body, _ := json.Marshal(otpRequest)
 	req := httptest.NewRequest(http.MethodPost, "/authenticate/otp/verify", bytes.NewReader(body))

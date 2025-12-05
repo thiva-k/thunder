@@ -54,7 +54,21 @@ func (suite *HTTPRequestExecutorTestSuite) TearDownTest() {
 	}
 }
 
-func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholder() {
+func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholdersInConfig() {
+	var receivedURL string
+	var receivedHeaders http.Header
+	var receivedBody map[string]interface{}
+
+	suite.mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedURL = r.URL.Path
+		receivedHeaders = r.Header
+		err := json.NewDecoder(r.Body).Decode(&receivedBody)
+		if err != nil {
+			receivedBody = nil
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
 	ctx := &flowcore.NodeContext{
 		FlowID: "test-flow",
 		UserInputData: map[string]string{
@@ -63,99 +77,148 @@ func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholder() {
 		},
 		RuntimeData: map[string]string{
 			"sessionId": "session-123",
+			"orgId":     "org-456",
 		},
-		AuthenticatedUser: authncm.AuthenticatedUser{
-			UserID: "user-456",
-		},
-	}
-
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "Resolve from UserInputData",
-			input:    "Hello {{ context.username }}",
-			expected: "Hello testuser",
-		},
-		{
-			name:     "Resolve from RuntimeData",
-			input:    "Session: {{ context.sessionId }}",
-			expected: "Session: session-123",
-		},
-		{
-			name:     "Resolve userID from AuthenticatedUser",
-			input:    "User {{ context.userID }} logged in",
-			expected: "User user-456 logged in",
-		},
-		{
-			name:     "RuntimeData takes precedence over UserInputData",
-			input:    "{{ context.sessionId }}",
-			expected: "session-123",
-		},
-		{
-			name:     "Multiple placeholders",
-			input:    "{{ context.username }} - {{ context.email }}",
-			expected: "testuser - test@example.com",
-		},
-		{
-			name:     "Placeholder with spaces",
-			input:    "{{  context.username  }}",
-			expected: "testuser",
-		},
-		{
-			name:     "Non-existent placeholder remains unchanged",
-			input:    "{{ context.nonexistent }}",
-			expected: "{{ context.nonexistent }}",
-		},
-		{
-			name:     "No placeholders",
-			input:    "static text",
-			expected: "static text",
+		NodeProperties: map[string]interface{}{
+			"url":    suite.mockServer.URL + "/api/users/{{ context.username }}",
+			"method": "POST",
+			"headers": map[string]interface{}{
+				"X-Session-Id": "{{ context.sessionId }}",
+				"X-Org-Id":     "{{ context.orgId }}",
+			},
+			"body": map[string]interface{}{
+				"user":  "{{ context.username }}",
+				"email": "{{ context.email }}",
+			},
 		},
 	}
 
-	for _, tt := range tests {
-		suite.Run(tt.name, func() {
-			result := suite.executor.resolvePlaceholder(ctx, tt.input)
-			assert.Equal(suite.T(), tt.expected, result)
-		})
-	}
+	execResp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+
+	// Verify URL placeholder was resolved
+	assert.Equal(suite.T(), "/api/users/testuser", receivedURL)
+
+	// Verify header placeholders were resolved
+	assert.Equal(suite.T(), "session-123", receivedHeaders.Get("X-Session-Id"))
+	assert.Equal(suite.T(), "org-456", receivedHeaders.Get("X-Org-Id"))
+
+	// Verify body placeholders were resolved
+	assert.Equal(suite.T(), "testuser", receivedBody["user"])
+	assert.Equal(suite.T(), "test@example.com", receivedBody["email"])
 }
 
-func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholder_UserIDSpecialHandling() {
-	// Test 1: userID should not resolve from UserInputData
+func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholderUserIDSpecialHandling() {
+	// Test that userID is resolved correctly from AuthenticatedUser
+	var receivedBody map[string]interface{}
+
+	suite.mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := json.NewDecoder(r.Body).Decode(&receivedBody)
+		if err != nil {
+			receivedBody = nil
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
 	ctx := &flowcore.NodeContext{
 		FlowID: "test-flow",
 		UserInputData: map[string]string{
-			"userID": "input-user-id", // This should NOT be used
+			"userID": "input-user-id", // This should NOT be used for userID
 		},
-		AuthenticatedUser: authncm.AuthenticatedUser{},
+		RuntimeData: map[string]string{},
+		AuthenticatedUser: authncm.AuthenticatedUser{
+			UserID: "auth-user-456",
+		},
+		NodeProperties: map[string]interface{}{
+			"url":    suite.mockServer.URL + "/api/user",
+			"method": "POST",
+			"body": map[string]interface{}{
+				"userId": "{{ context.userID }}",
+			},
+		},
 	}
 
-	result := suite.executor.resolvePlaceholder(ctx, "{{ context.userID }}")
-	assert.Equal(suite.T(), "{{ context.userID }}", result,
-		"userID should not be resolved from UserInputData")
+	execResp, err := suite.executor.Execute(ctx)
 
-	// Test 2: userID resolves from AuthenticatedUser
-	ctx.AuthenticatedUser.UserID = "auth-user-id"
-	result = suite.executor.resolvePlaceholder(ctx, "{{ context.userID }}")
-	assert.Equal(suite.T(), "auth-user-id", result)
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
 
-	// Test 3: userID resolves from RuntimeData
-	ctx.AuthenticatedUser.UserID = ""
-	ctx.RuntimeData = map[string]string{
-		"userID": "runtime-user-id",
+	// userID should be resolved from AuthenticatedUser, not UserInputData
+	assert.Equal(suite.T(), "auth-user-456", receivedBody["userId"])
+}
+
+func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholderRuntimeDataPrecedence() {
+	// Test that RuntimeData takes precedence over UserInputData
+	var receivedBody map[string]interface{}
+
+	suite.mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := json.NewDecoder(r.Body).Decode(&receivedBody)
+		if err != nil {
+			receivedBody = nil
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	ctx := &flowcore.NodeContext{
+		FlowID: "test-flow",
+		UserInputData: map[string]string{
+			"key": "user-input-value",
+		},
+		RuntimeData: map[string]string{
+			"key": "runtime-value",
+		},
+		NodeProperties: map[string]interface{}{
+			"url":    suite.mockServer.URL + "/api/test",
+			"method": "POST",
+			"body": map[string]interface{}{
+				"value": "{{ context.key }}",
+			},
+		},
 	}
-	result = suite.executor.resolvePlaceholder(ctx, "{{ context.userID }}")
-	assert.Equal(suite.T(), "runtime-user-id", result)
 
-	// Test 4: AuthenticatedUser takes precedence over RuntimeData for userID
-	ctx.AuthenticatedUser.UserID = "auth-user-id"
-	ctx.RuntimeData["userID"] = "runtime-user-id"
-	result = suite.executor.resolvePlaceholder(ctx, "{{ context.userID }}")
-	assert.Equal(suite.T(), "auth-user-id", result)
+	execResp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+
+	// RuntimeData should take precedence
+	assert.Equal(suite.T(), "runtime-value", receivedBody["value"])
+}
+
+func (suite *HTTPRequestExecutorTestSuite) TestResolvePlaceholderNonExistentKey() {
+	// Test that non-existent keys keep the placeholder as-is
+	var receivedBody map[string]interface{}
+
+	suite.mockServer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		err := json.NewDecoder(r.Body).Decode(&receivedBody)
+		if err != nil {
+			receivedBody = nil
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	ctx := &flowcore.NodeContext{
+		FlowID:        "test-flow",
+		UserInputData: map[string]string{},
+		RuntimeData:   map[string]string{},
+		NodeProperties: map[string]interface{}{
+			"url":    suite.mockServer.URL + "/api/test",
+			"method": "POST",
+			"body": map[string]interface{}{
+				"value": "{{ context.nonexistent }}",
+			},
+		},
+	}
+
+	execResp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), flowcm.ExecComplete, execResp.Status)
+
+	// Non-existent key should keep placeholder
+	assert.Equal(suite.T(), "{{ context.nonexistent }}", receivedBody["value"])
 }
 
 func (suite *HTTPRequestExecutorTestSuite) TestResolveMapPlaceholders() {

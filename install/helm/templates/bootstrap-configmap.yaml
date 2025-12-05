@@ -14,7 +14,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-{{- if and .Values.bootstrap.scripts (not .Values.bootstrap.existingConfigMap) }}
+{{- if and .Values.bootstrap.scripts (not .Values.bootstrap.configMap.name) }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

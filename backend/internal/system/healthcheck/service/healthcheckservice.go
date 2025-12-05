@@ -65,8 +65,15 @@ func (hcs *HealthCheckService) CheckReadiness() model.ServerStatus {
 		Status:      hcs.checkRuntimeDatabaseStatus(queryRuntimeDBTable),
 	}
 
+	userDBStatus := model.ServiceStatus{
+		ServiceName: "UserDB",
+		Status:      hcs.checkUserDatabaseStatus(queryUserDBTable),
+	}
+
 	status := model.StatusUp
-	if configDBStatus.Status == model.StatusDown || runtimeDBStatus.Status == model.StatusDown {
+	if configDBStatus.Status == model.StatusDown ||
+		runtimeDBStatus.Status == model.StatusDown ||
+		userDBStatus.Status == model.StatusDown {
 		status = model.StatusDown
 	}
 	return model.ServerStatus{
@@ -74,6 +81,7 @@ func (hcs *HealthCheckService) CheckReadiness() model.ServerStatus {
 		ServiceStatus: []model.ServiceStatus{
 			configDBStatus,
 			runtimeDBStatus,
+			userDBStatus,
 		},
 	}
 }
@@ -88,6 +96,12 @@ func (hcs *HealthCheckService) checkIdentityDatabaseStatus(query dbmodel.DBQuery
 func (hcs *HealthCheckService) checkRuntimeDatabaseStatus(query dbmodel.DBQuery) model.Status {
 	dbClient, err := hcs.DBProvider.GetRuntimeDBClient()
 	return hcs.executeDatabaseHealthCheck("RuntimeDB", dbClient, err, query)
+}
+
+// checkUserDatabaseStatus checks the status of the runtime database with the specified query.
+func (hcs *HealthCheckService) checkUserDatabaseStatus(query dbmodel.DBQuery) model.Status {
+	dbClient, err := hcs.DBProvider.GetUserDBClient()
+	return hcs.executeDatabaseHealthCheck("UserDB", dbClient, err, query)
 }
 
 // executeDatabaseHealthCheck runs the provided query on the given database client and reports its status.

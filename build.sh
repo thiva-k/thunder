@@ -92,12 +92,14 @@ PRODUCT_FOLDER=${BINARY_NAME}-${THUNDER_VERSION}-${GO_PACKAGE_OS}-${GO_PACKAGE_A
 SAMPLE_PACKAGE_OS=$SAMPLE_DIST_OS
 SAMPLE_PACKAGE_ARCH=$SAMPLE_DIST_ARCH
 
-SAMPLE_APP_SERVER_BINARY_NAME=server
-SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/oauth/package.json | sed 's/"version": *"\(.*\)"/\1/')
-SAMPLE_APP_FOLDER="sample-app-${SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
+# React Vanilla Sample
+VANILLA_SAMPLE_APP_SERVER_BINARY_NAME=server
+VANILLA_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/react-vanilla-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
+VANILLA_SAMPLE_APP_FOLDER="sample-app-react-vanilla-${VANILLA_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
-# Server ports
-BACKEND_PORT=8090
+# React SDK Sample
+REACT_SDK_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/react-sdk-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
+REACT_SDK_SAMPLE_APP_FOLDER="sample-app-react-sdk-${REACT_SDK_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
 # Directories
 TARGET_DIR=target
@@ -118,8 +120,73 @@ DEVELOP_APP_DIST_DIR=apps/develop
 FRONTEND_GATE_APP_SOURCE_DIR=$FRONTEND_BASE_DIR/apps/thunder-gate
 FRONTEND_DEVELOP_APP_SOURCE_DIR=$FRONTEND_BASE_DIR/apps/thunder-develop
 SAMPLE_BASE_DIR=samples
-SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/oauth
-SAMPLE_APP_SERVER_DIR=$SAMPLE_APP_DIR/server
+VANILLA_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/react-vanilla-sample
+VANILLA_SAMPLE_APP_SERVER_DIR=$VANILLA_SAMPLE_APP_DIR/server
+REACT_SDK_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/react-sdk-sample
+
+# ============================================================================
+# Read Configuration from deployment.yaml
+# ============================================================================
+
+CONFIG_FILE="./backend/cmd/server/repository/conf/deployment.yaml"
+
+# Function to read config with fallback
+read_config() {
+    local config_file="$CONFIG_FILE"
+
+    if [ ! -f "$config_file" ]; then
+        # Use defaults if config file not found
+        HOSTNAME="localhost"
+        PORT=8090
+        HTTP_ONLY="false"
+        PUBLIC_HOSTNAME=""
+    else
+        # Try yq first (YAML parser)
+        if command -v yq >/dev/null 2>&1; then
+            HOSTNAME=$(yq eval '.server.hostname // "localhost"' "$config_file" 2>/dev/null)
+            PORT=$(yq eval '.server.port // 8090' "$config_file" 2>/dev/null)
+            HTTP_ONLY=$(yq eval '.server.http_only // false' "$config_file" 2>/dev/null)
+            PUBLIC_HOSTNAME=$(yq eval '.server.public_hostname // ""' "$config_file" 2>/dev/null)
+        else
+            # Fallback: basic parsing with grep/awk
+            HOSTNAME=$(grep -E '^\s*hostname:' "$config_file" | awk -F':' '{gsub(/[[:space:]"'\'']/,"",$2); print $2}' | head -1)
+            PORT=$(grep -E '^\s*port:' "$config_file" | awk -F':' '{gsub(/[[:space:]]/,"",$2); print $2}' | head -1)
+            PUBLIC_HOSTNAME=$(grep -E '^\s*public_hostname:' "$config_file" | grep -o '"[^"]*"' | tr -d '"' | head -1)
+
+            # Check for http_only
+            if grep -q 'http_only.*true' "$config_file" 2>/dev/null; then
+                HTTP_ONLY="true"
+            else
+                HTTP_ONLY="false"
+            fi
+
+            # Use defaults if not found
+            HOSTNAME=${HOSTNAME:-localhost}
+            PORT=${PORT:-8090}
+        fi
+    fi
+
+    # Determine protocol
+    if [ "$HTTP_ONLY" = "true" ]; then
+        PROTOCOL="http"
+    else
+        PROTOCOL="https"
+    fi
+    return 0
+}
+
+# Read configuration
+read_config
+
+# Construct base URL (internal API endpoint)
+BASE_URL="${PROTOCOL}://${HOSTNAME}:${PORT}"
+
+# Construct public URL (external/redirect URLs)
+if [ -n "$PUBLIC_HOSTNAME" ]; then
+    PUBLIC_URL="$PUBLIC_HOSTNAME"
+else
+    PUBLIC_URL="$BASE_URL"
+fi
 
 function get_coverage_exclusion_pattern() {
     # Read exclusion patterns (full package paths) from .excludecoverage file
@@ -140,33 +207,25 @@ function get_coverage_exclusion_pattern() {
     echo "$pattern"
 }
 
-function clean_all() {
+function clean() {
     echo "================================================================"
-    echo "Cleaning all build artifacts..."
+    echo "Cleaning build artifacts..."
     rm -rf "$TARGET_DIR"
 
     echo "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
     rm -rf "$BACKEND_DIR/$SECURITY_DIR"
 
-    echo "Removing certificates in the $SAMPLE_APP_DIR"
-    rm -f "$SAMPLE_APP_DIR/server.cert"
-    rm -f "$SAMPLE_APP_DIR/server.key"
-    rm -f "$SAMPLE_APP_SERVER_DIR/server.cert"
-    rm -f "$SAMPLE_APP_SERVER_DIR/server.key"
-    echo "================================================================"
-}
+    echo "Removing certificates in the $VANILLA_SAMPLE_APP_DIR"
+    rm -f "$VANILLA_SAMPLE_APP_DIR/server.cert"
+    rm -f "$VANILLA_SAMPLE_APP_DIR/server.key"
 
-function clean() {
-    echo "================================================================"
-    echo "Cleaning build artifacts..."
-    rm -rf "$OUTPUT_DIR"
+    echo "Removing certificates in the $VANILLA_SAMPLE_APP_SERVER_DIR"
+    rm -f "$VANILLA_SAMPLE_APP_SERVER_DIR/server.cert"
+    rm -f "$VANILLA_SAMPLE_APP_SERVER_DIR/server.key"
 
-    echo "Removing certificates in the $BACKEND_DIR/$SECURITY_DIR"
-    rm -rf "$BACKEND_DIR/$SECURITY_DIR"
-
-    echo "Removing certificates in the $SAMPLE_APP_DIR"
-    rm -f "$SAMPLE_APP_DIR/server.cert"
-    rm -f "$SAMPLE_APP_DIR/server.key"
+    echo "Removing certificates in the $REACT_SDK_SAMPLE_APP_DIR"
+    rm -f "$REACT_SDK_SAMPLE_APP_DIR/server.cert"
+    rm -f "$REACT_SDK_SAMPLE_APP_DIR/server.key"
     echo "================================================================"
 }
 
@@ -220,8 +279,8 @@ function initialize_databases() {
 
     mkdir -p "$REPOSITORY_DB_DIR"
 
-    db_files=("thunderdb.db" "runtimedb.db")
-    script_paths=("thunderdb/sqlite.sql" "runtimedb/sqlite.sql")
+    db_files=("thunderdb.db" "runtimedb.db" "userdb.db")
+    script_paths=("thunderdb/sqlite.sql" "runtimedb/sqlite.sql" "userdb/sqlite.sql")
 
     for ((i = 0; i < ${#db_files[@]}; i++)); do
         db_file="${db_files[$i]}"
@@ -242,6 +301,11 @@ function initialize_databases() {
 
             echo " - Creating $db_file using $script_path"
             sqlite3 "$db_path" < "$script_path"
+            sqlite3 "$db_path" "PRAGMA journal_mode=WAL;"
+            if [ $? -ne 0 ]; then
+                echo "Failed to enable WAL mode for $db_file"
+                exit 1
+            fi
         else
             echo " ! Skipping $db_file: SQL script not found at $script_path"
         fi
@@ -264,7 +328,7 @@ function build_frontend() {
     # Navigate to frontend directory and install dependencies
     cd "$FRONTEND_BASE_DIR" || exit 1
     echo "Installing frontend dependencies..."
-    pnpm install
+    pnpm install --frozen-lockfile
     
     echo "Building frontend applications & packages..."
     pnpm build
@@ -299,6 +363,10 @@ function prepare_backend_for_packaging() {
 
     echo "=== Ensuring server certificates exist in the distribution ==="
     ensure_certificates "$DIST_DIR/$PRODUCT_FOLDER/$SECURITY_DIR"
+    echo "================================================================"
+
+    echo "=== Ensuring crypto file exists in the distribution ==="
+    ensure_crypto_file "$DIST_DIR/$PRODUCT_FOLDER/$SECURITY_DIR"
     echo "================================================================"
 }
 
@@ -363,74 +431,144 @@ function package() {
 
 function build_sample_app() {
     echo "================================================================"
-    echo "Building sample app..."
+    echo "Building sample apps..."
 
-    # Ensure certificate exists for the sample app
-    echo "=== Ensuring sample app certificates exist ==="
-    ensure_certificates "$SAMPLE_APP_DIR"
-    
-    # Build the application
-    cd "$SAMPLE_APP_DIR" || exit 1
-    echo "Installing dependencies..."
+    # Build React Vanilla sample
+    echo "=== Building React Vanilla sample app ==="
+    echo "=== Ensuring React Vanilla sample app certificates exist ==="
+    ensure_certificates "$VANILLA_SAMPLE_APP_DIR"
+
+    cd "$VANILLA_SAMPLE_APP_DIR" || exit 1
+    echo "Installing React Vanilla sample dependencies..."
     npm install
-    
-    echo "Building the app..."
+
+    echo "Building React Vanilla sample app..."
     npm run build
-    
+
     cd - || exit 1
-    
-    echo "Sample app built successfully."
+    echo "✅ React Vanilla sample app built successfully."
+
+    # Build React SDK sample
+    echo "=== Building React SDK sample app ==="
+
+    # Ensure certificates exist for React SDK sample
+    echo "=== Ensuring React SDK sample app certificates exist ==="
+    ensure_certificates "$REACT_SDK_SAMPLE_APP_DIR"
+
+    cd "$REACT_SDK_SAMPLE_APP_DIR" || exit 1
+    echo "Installing React SDK sample dependencies..."
+    pnpm install --frozen-lockfile
+
+    echo "Building React SDK sample app..."
+    pnpm run build
+
+    cd - || exit 1
+    echo "✅ React SDK sample app built successfully."
+
     echo "================================================================"
 }
 
 function package_sample_app() {
     echo "================================================================"
-    echo "Copying sample artifacts..."
+    echo "Packaging sample apps..."
 
+    # Package React Vanilla sample
+    echo "=== Packaging React Vanilla sample app ==="
+    package_vanilla_sample
+
+    # Package React SDK sample
+    echo "=== Packaging React SDK sample app ==="
+    package_react_sdk_sample
+
+    echo "================================================================"
+}
+
+function package_vanilla_sample() {
     # Use appropriate binary name based on OS
-    local binary_name="$SAMPLE_APP_SERVER_BINARY_NAME"
-    local executable_name="$SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH"
+    local binary_name="$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME"
+    local executable_name="$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH"
 
     if [ "$SAMPLE_DIST_OS" = "win" ]; then
-        binary_name="${SAMPLE_APP_SERVER_BINARY_NAME}.exe"
-        executable_name="${SAMPLE_APP_SERVER_BINARY_NAME}-${SAMPLE_DIST_OS}-${SAMPLE_DIST_ARCH}.exe"
+        binary_name="${VANILLA_SAMPLE_APP_SERVER_BINARY_NAME}.exe"
+        executable_name="${VANILLA_SAMPLE_APP_SERVER_BINARY_NAME}-${SAMPLE_DIST_OS}-${SAMPLE_DIST_ARCH}.exe"
     fi
-    
-    mkdir -p "$DIST_DIR/$SAMPLE_APP_FOLDER"
-    
-    # Copy the built app files
-    cp -r "$SAMPLE_APP_SERVER_DIR/app" "$DIST_DIR/$SAMPLE_APP_FOLDER/"
 
-    cd $SAMPLE_APP_SERVER_DIR
+    mkdir -p "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER"
+
+    # Copy the built app files
+    cp -r "$VANILLA_SAMPLE_APP_SERVER_DIR/app" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER/"
+
+    cd "$VANILLA_SAMPLE_APP_SERVER_DIR" || exit 1
 
     mkdir -p "executables"
 
-    npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
+    npx pkg . -t "$SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH" -o "executables/$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH"
 
-    cd $SCRIPT_DIR
+    cd "$SCRIPT_DIR" || exit 1
 
     # Copy the server binary
-    cp "$SAMPLE_APP_SERVER_DIR/executables/$executable_name" "$DIST_DIR/$SAMPLE_APP_FOLDER/$binary_name"
+    cp "$VANILLA_SAMPLE_APP_SERVER_DIR/executables/$executable_name" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER/$binary_name"
+
+    # Copy README and other necessary files
+    if [ -f "$VANILLA_SAMPLE_APP_DIR/README.md" ]; then
+        cp "$VANILLA_SAMPLE_APP_DIR/README.md" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER/"
+    fi
 
     # Ensure the certificates exist in the sample app directory
-    echo "=== Ensuring certificates exist in the sample distribution ==="
-    ensure_certificates "$DIST_DIR/$SAMPLE_APP_FOLDER"
+    echo "=== Ensuring certificates exist in the React Vanilla sample distribution ==="
+    ensure_certificates "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER"
 
     # Copy the appropriate startup script based on the target OS
     if [ "$SAMPLE_DIST_OS" = "win" ]; then
-            echo "Including Windows start script (start.ps1)..."
-            cp -r "$SAMPLE_APP_SERVER_DIR/start.ps1" "$DIST_DIR/$SAMPLE_APP_FOLDER"
+        echo "Including Windows start script (start.ps1)..."
+        cp -r "$VANILLA_SAMPLE_APP_SERVER_DIR/start.ps1" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER"
     else
         echo "Including Unix start script (start.sh)..."
-        cp -r "$SAMPLE_APP_SERVER_DIR/start.sh" "$DIST_DIR/$SAMPLE_APP_FOLDER"
+        cp -r "$VANILLA_SAMPLE_APP_SERVER_DIR/start.sh" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER"
     fi
 
-    echo "Creating zip file..."
-    (cd "$DIST_DIR" && zip -r "$SAMPLE_APP_FOLDER.zip" "$SAMPLE_APP_FOLDER")
-    rm -rf "${DIST_DIR:?}/$SAMPLE_APP_FOLDER"
-    
-    echo "Sample app packaged successfully as $DIST_DIR/$SAMPLE_APP_FOLDER.zip"
-    echo "================================================================"
+    echo "Creating React Vanilla sample zip file..."
+    (cd "$DIST_DIR" && zip -r "$VANILLA_SAMPLE_APP_FOLDER.zip" "$VANILLA_SAMPLE_APP_FOLDER")
+    rm -rf "${DIST_DIR:?}/$VANILLA_SAMPLE_APP_FOLDER"
+
+    echo "✅ React Vanilla sample app packaged successfully as $DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER.zip"
+}
+
+function package_react_sdk_sample() {
+    mkdir -p "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER"
+
+    # Copy the built React app (dist folder)
+    if [ -d "$REACT_SDK_SAMPLE_APP_DIR/dist" ]; then
+        echo "Copying React SDK sample build output..."
+        cp -r "$REACT_SDK_SAMPLE_APP_DIR/dist" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER/"
+    else
+        echo "Warning: React SDK sample build output not found at $REACT_SDK_SAMPLE_APP_DIR/dist"
+        exit 1
+    fi
+
+    # Copy README and other necessary files
+    if [ -f "$REACT_SDK_SAMPLE_APP_DIR/README.md" ]; then
+        cp "$REACT_SDK_SAMPLE_APP_DIR/README.md" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER/"
+    fi
+
+    if [ -f "$REACT_SDK_SAMPLE_APP_DIR/.env.example" ]; then
+        cp "$REACT_SDK_SAMPLE_APP_DIR/.env.example" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER/"
+    fi
+
+    # Copy the appropriate startup script based on the target OS
+    if [ "$SAMPLE_DIST_OS" = "win" ]; then
+        echo "Including Windows start script (start.ps1)..."
+        cp -r "$REACT_SDK_SAMPLE_APP_DIR/start.ps1" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER"
+    else
+        echo "Including Unix start script (start.sh)..."
+        cp -r "$REACT_SDK_SAMPLE_APP_DIR/start.sh" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER"
+    fi
+
+    echo "Creating React SDK sample zip file..."
+    (cd "$DIST_DIR" && zip -r "$REACT_SDK_SAMPLE_APP_FOLDER.zip" "$REACT_SDK_SAMPLE_APP_FOLDER")
+    rm -rf "${DIST_DIR:?}/$REACT_SDK_SAMPLE_APP_FOLDER"
+
+    echo "✅ React SDK sample app packaged successfully as $DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER.zip"
 }
 
 function test_unit() {
@@ -642,6 +780,97 @@ function ensure_certificates() {
     fi
 }
 
+function ensure_crypto_file() {
+    local KEY_DIR="$1"
+    local DEPLOYMENT_FILE="$KEY_DIR/../../conf/deployment.yaml"
+    
+    # Define the default path for the key file
+    local KEY_FILE="$KEY_DIR/crypto.key"
+    local KEY_PATH_IN_YAML="$SECURITY_DIR/crypto.key"
+
+    echo "=== Ensuring crypto key file exists in the distribution ==="
+
+    # Check Whether the key file exists
+    if [ -f "$KEY_FILE" ]; then
+        echo "Default crypto key file already present in $KEY_FILE. Skipping generation."
+    else
+        echo "Default crypto key file not found. Generating new key at $KEY_FILE..."
+        
+        # Generate key using openssl
+        # 32 bytes = 64 hex characters
+        local NEW_KEY
+        NEW_KEY=$(openssl rand -hex 32 2> /dev/null)
+        
+        if [[ $? -ne 0 || -z "$NEW_KEY" ]]; then
+            echo "ERROR: Failed to generate crypto key with 'openssl rand -hex 32'."
+            echo "Please ensure OpenSSL is installed and in your PATH (required for certs anyway)."
+            exit 1
+        fi
+
+        # Ensure the target directory exists
+        mkdir -p "$KEY_DIR"
+
+        # Write the key to the new file.
+        echo -n "$NEW_KEY" > "$KEY_FILE"
+        
+        echo "Successfully generated and added new crypto key to $KEY_FILE."
+    fi
+
+
+    # Check if the crypto_file key is defined 
+    if grep -qE "^\s*crypto_file\s*:" "$DEPLOYMENT_FILE"; then
+        
+        # If it is defined check if it matches the default path.
+        local expected_line_pattern="^\s*crypto_file\s*:\s*\"$KEY_PATH_IN_YAML\""
+        
+        if grep -qE "$expected_line_pattern" "$DEPLOYMENT_FILE"; then
+            # The line exists and matches the default then proceed
+            echo "Crypto key file is already configured in $DEPLOYMENT_FILE."
+        else
+            # The line exists, but has a different value. This is a user misconfiguration.
+            echo "ERROR: 'crypto_file' is defined in $DEPLOYMENT_FILE but does not match the default path." >&2
+            echo "This script expects to manage the default key: '$KEY_PATH_IN_YAML'" >&2
+            echo "If you have a custom key, this build script cannot verify it." >&2
+            echo "Please remove the 'crypto_file' line to allow this script to set the default," >&2
+            echo "or ensure it points to the correct default path." >&2
+            exit 1
+        fi
+        
+    else
+        # The crypto_file line is missing it needs to be added.
+        echo "Crypto key file is not configured in $DEPLOYMENT_FILE. Inserting entry..."
+        
+        local KEY_FILE_LINE_TO_INSERT="  crypto_file: \"$KEY_PATH_IN_YAML\""
+        local ANCHOR_LINE_PATTERN="key_file: \"repository/resources/security/server.key\""
+        local TEMP_FILE="$DEPLOYMENT_FILE.tmp"
+
+        # Using 'awk' for a safer and more readable insertion
+        awk -v anchor="$ANCHOR_LINE_PATTERN" -v new_line="$KEY_FILE_LINE_TO_INSERT" '
+        {
+            print $0  # Print the current line
+            if ($0 ~ anchor) {
+                print new_line  # Print the new line after the anchor
+            }
+        }
+        ' "$DEPLOYMENT_FILE" > "$TEMP_FILE"
+
+        # Check if the new line was added.
+        if ! grep -q "crypto_file:" "$TEMP_FILE"; then
+            echo "ERROR: Could not insert crypto_file line into $DEPLOYMENT_FILE." >&2
+            echo "Anchor line (or pattern '$ANCHOR_LINE_PATTERN') not found." >&2
+            rm "$TEMP_FILE"
+            exit 1
+        fi
+
+        # Move the new file into place
+        mv "$TEMP_FILE" "$DEPLOYMENT_FILE"
+        
+        echo "Successfully updated $DEPLOYMENT_FILE to use the default key file."
+    fi
+    
+    echo "================================================================"
+}
+
 function run() {
     echo "Running frontend apps..."
     run_frontend
@@ -665,7 +894,7 @@ function run() {
     
     echo "[INFO] Waiting for Thunder server to be ready..."
     while [ $retries -lt $MAX_RETRIES ]; do
-        if curl -k -s -f "https://localhost:$BACKEND_PORT/health/readiness" > /dev/null 2>&1; then
+        if curl -k -s -f "$BASE_URL/health/readiness" > /dev/null 2>&1; then
             echo "✓ Server is ready!"
             break
         fi
@@ -673,7 +902,7 @@ function run() {
         retries=$((retries + 1))
         if [ $retries -ge $MAX_RETRIES ]; then
             echo "❌ Server did not become ready after $MAX_RETRIES attempts"
-            echo "💡 Please ensure the Thunder server is running at https://localhost:$BACKEND_PORT"
+            echo "💡 Please ensure the Thunder server is running at $BASE_URL"
             exit 1
         fi
         
@@ -684,7 +913,7 @@ function run() {
     echo ""
     
     # Run the bootstrap script directly with environment variable and arguments
-    THUNDER_API_BASE="https://localhost:$BACKEND_PORT" \
+    THUNDER_API_BASE="$BASE_URL" \
         "$BACKEND_BASE_DIR/cmd/server/bootstrap/01-default-resources.sh" \
         --develop-redirect-uris "https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop"
 
@@ -706,7 +935,7 @@ function run() {
 
     echo ""
     echo "🚀 Servers running:"
-    echo "  👉 Backend : https://localhost:$BACKEND_PORT"
+    echo "  👉 Backend : $BASE_URL"
     echo "  📱 Frontend :"
     echo "      🚪 Gate (Login/Register): https://localhost:$GATE_APP_DEFAULT_PORT/gate"
     echo "      🛠️  Develop (Admin Console): https://localhost:$DEVELOP_APP_DEFAULT_PORT/develop"
@@ -748,7 +977,9 @@ function run_backend() {
     ensure_certificates "$BACKEND_DIR/$SECURITY_DIR"
 
     echo "=== Ensuring sample app certificates exist ==="
-    ensure_certificates "$SAMPLE_APP_DIR"
+    ensure_certificates "$VANILLA_SAMPLE_APP_DIR"
+
+    ensure_crypto_file "$BACKEND_DIR/$SECURITY_DIR"
 
     echo "Initializing databases..."
     initialize_databases
@@ -765,16 +996,16 @@ function start_backend() {
         lsof -ti tcp:$port | xargs kill -9 2>/dev/null || true
     }
 
-    kill_port $BACKEND_PORT
+    kill_port $PORT
 
-    echo "=== Starting backend on https://localhost:$BACKEND_PORT ==="
-    BACKEND_PORT=$BACKEND_PORT go run -C "$BACKEND_DIR" . &
+    echo "=== Starting backend on $BASE_URL ==="
+    go run -C "$BACKEND_DIR" . &
     BACKEND_PID=$!
 
     if [ "$show_final_output" = "true" ]; then
         echo ""
         echo "🚀 Servers running:"
-        echo "👉 Backend : https://localhost:$BACKEND_PORT"
+        echo "👉 Backend : $BASE_URL"
         echo "Press Ctrl+C to stop."
 
         trap 'echo -e "\n🛑 Shutting down backend server..."; kill $BACKEND_PID 2>/dev/null; echo "✅ Backend server stopped successfully."; exit 0' SIGINT
@@ -796,7 +1027,7 @@ function run_frontend() {
     # Navigate to frontend directory and install dependencies
     cd "$FRONTEND_BASE_DIR" || exit 1
     echo "Installing frontend dependencies..."
-    pnpm install
+    pnpm install --frozen-lockfile
     
     echo "Building frontend applications & packages..."
     pnpm build
@@ -814,9 +1045,6 @@ function run_frontend() {
 case "$1" in
     clean)
         clean
-        ;;
-    clean_all)
-        clean_all
         ;;
     build_backend)
         build_backend
@@ -865,7 +1093,6 @@ case "$1" in
         echo "Usage: ./build.sh {clean|build|build_backend|build_frontend|test|run} [OS] [ARCH]"
         echo ""
         echo "  clean                    - Clean build artifacts"
-        echo "  clean_all                - Clean all build artifacts including distributions"
         echo "  build                    - Build the complete Thunder application (backend + frontend + samples)"
         echo "  build_backend            - Build only the Thunder backend server"
         echo "  build_frontend           - Build only the Next.js frontend applications"

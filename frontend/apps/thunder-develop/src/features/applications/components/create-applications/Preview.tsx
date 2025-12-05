@@ -71,9 +71,11 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
   const theme = useTheme();
   const {data: identityProviders} = useIdentityProviders();
 
-  const hasUsernamePassword: boolean = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? true;
+  const hasUsernamePassword: boolean = integrations[USERNAME_PASSWORD_AUTHENTICATION_OPTION_KEY] ?? false;
+  
   const selectedProviders: IdentityProvider[] =
     identityProviders?.filter((idp: IdentityProvider): boolean => integrations[idp.id]) ?? [];
+  
   const hasSocialLogins: boolean = selectedProviders.length > 0;
 
   return (
@@ -142,8 +144,13 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
               sx={{
                 width: 64,
                 height: 64,
-                bgcolor: selectedColor,
                 p: 1,
+                ...theme.applyStyles('light', {
+                  backgroundColor: selectedColor,
+                }),
+                ...theme.applyStyles('dark', {
+                  backgroundColor: selectedColor,
+                })
               }}
             />
           </Box>
@@ -200,6 +207,7 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
                           variant="contained"
                           color="secondary"
                           sx={{
+                            color: '#fff',
                             backgroundColor: selectedColor,
                             '&:hover': {
                               backgroundColor: selectedColor,

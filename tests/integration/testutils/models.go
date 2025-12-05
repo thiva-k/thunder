@@ -20,6 +20,7 @@ package testutils
 
 import (
 	"encoding/json"
+	"time"
 )
 
 // UserSchema represents a user schema (user type) definition
@@ -133,4 +134,58 @@ type Role struct {
 	OrganizationUnitID string       `json:"ouId"`
 	Permissions        []string     `json:"permissions"`
 	Assignments        []Assignment `json:"assignments,omitempty"`
+}
+
+// TokenResponse represents the response from token exchange
+type TokenResponse struct {
+	AccessToken  string    `json:"access_token"`
+	TokenType    string    `json:"token_type"`
+	ExpiresIn    float64   `json:"expires_in"`
+	Scope        string    `json:"scope,omitempty"`
+	RefreshToken string    `json:"refresh_token,omitempty"`
+	ExpiresAt    time.Time `json:"expires_at,omitempty"` // Absolute expiry time
+}
+
+// TokenHTTPResult captures raw HTTP response details from the token endpoint.
+type TokenHTTPResult struct {
+	StatusCode int
+	Body       []byte
+	Token      *TokenResponse
+}
+
+// FlowResponse represents the response from flow execution
+type FlowResponse struct {
+	FlowID        string    `json:"flowId"`
+	FlowStatus    string    `json:"flowStatus"`
+	Type          string    `json:"type"`
+	Data          *FlowData `json:"data,omitempty"`
+	Assertion     string    `json:"assertion,omitempty"`
+	FailureReason string    `json:"failureReason,omitempty"`
+}
+
+// FlowData represents the data returned by flow execution
+type FlowData struct {
+	Inputs []FlowInput `json:"inputs,omitempty"`
+}
+
+// FlowInput represents an input required by the flow
+type FlowInput struct {
+	Name     string `json:"name"`
+	Type     string `json:"type"`
+	Required bool   `json:"required"`
+}
+
+// AuthorizationResponse represents the response from authorization completion
+type AuthorizationResponse struct {
+	RedirectURI string `json:"redirect_uri"`
+}
+
+// FlowStep represents a single step in a flow execution
+type FlowStep struct {
+	FlowID        string    `json:"flowId"`
+	FlowStatus    string    `json:"flowStatus"`
+	Type          string    `json:"type"`
+	Data          *FlowData `json:"data,omitempty"`
+	Assertion     string    `json:"assertion,omitempty"`
+	FailureReason string    `json:"failureReason,omitempty"`
 }

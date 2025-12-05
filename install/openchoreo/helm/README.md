@@ -77,6 +77,9 @@ The chart creates the following OpenChoreo resources:
 | `database.runtime.database` | Runtime database name | `runtimedb` | No |
 | `database.runtime.username` | Runtime database username | `<DB_USERNAME>` | **Yes** |
 | `database.runtime.password` | Runtime database password | `<DB_PASSWORD>` | **Yes** |
+| `database.user.database` | User database name | `userdb` | No |
+| `database.user.username` | User database username | `<DB_USERNAME>` | **Yes** |
+| `database.user.password` | User database password | `<DB_PASSWORD>` | **Yes** |
 
 ### Authentication & Security
 

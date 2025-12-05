@@ -33,6 +33,7 @@ type nodeDefinition struct {
 	InputData  []inputDefinition      `json:"inputData"`
 	Executor   executorDefinition     `json:"executor"`
 	Next       []string               `json:"next,omitempty"`
+	Condition  *conditionDefinition   `json:"condition,omitempty"`
 }
 
 // inputDefinition represents an input parameter for a node
@@ -45,4 +46,11 @@ type inputDefinition struct {
 // executorDefinition represents the executor configuration for a node
 type executorDefinition struct {
 	Name string `json:"name"`
+}
+
+// conditionDefinition represents a condition that must be met for a node to execute.
+// If specified, the node will only execute when the resolved value of Key matches Value.
+type conditionDefinition struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }

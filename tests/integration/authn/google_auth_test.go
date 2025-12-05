@@ -221,7 +221,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthStartSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -253,7 +253,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthStartInvalidIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -276,7 +276,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthStartMissingIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -295,7 +295,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthCompleteFlowSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -352,7 +352,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthFinishInvalidSessionToken() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -371,7 +371,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthFinishMissingCode() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -391,7 +391,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthCompleteFlowWithSkipAssertionFal
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -449,7 +449,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthCompleteFlowWithSkipAssertionTru
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -549,7 +549,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthWithAssuranceLevelAAL1() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -613,7 +613,7 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthWithSkipAssertion() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -648,13 +648,4 @@ func (suite *GoogleAuthTestSuite) TestGoogleAuthWithSkipAssertion() {
 	suite.Equal(http.StatusOK, resp.StatusCode)
 
 	suite.Empty(authResp.Assertion, "Response should not contain assertion when skip_assertion is true")
-}
-
-// getHTTPClient returns a configured HTTP client
-func getHTTPClient() *http.Client {
-	return &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
 }

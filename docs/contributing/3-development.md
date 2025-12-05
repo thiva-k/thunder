@@ -84,8 +84,6 @@ cors:
 ```yaml
 gate_client:
   port: 5190
-  scheme: "https"
-  login_path: "/gate/signin"
 ```
 
 > [!TIP]
@@ -238,11 +236,6 @@ Generated mocks are placed in `backend/tests/mocks/`.
 make clean
 ```
 
-**Clean all artifacts including distribution files:**
-```bash
-make clean_all
-```
-
 **Build Docker images:**
 ```bash
 # Single-arch image with version tag
@@ -310,8 +303,6 @@ THUNDER_API_BASE="https://localhost:8090" \
 ```yaml
 gate_client:
   port: 5190
-  scheme: "https"
-  login_path: "/gate/signin"
 ```
 
 2. Add the local development origin of the Thunder Gate application (https://localhost:5190) to the CORS allowed origins in `<THUNDER_HOME>/repository/conf/deployment.yaml`.

@@ -131,7 +131,8 @@ func (suite *PKCETestSuite) TestValidatePKCE() {
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
 				if tt.expectedError != nil {
-					assert.ErrorIs(t, err, tt.expectedError, "Expected specific error: %v, got: %v", tt.expectedError, err)
+					assert.ErrorIs(t, err, tt.expectedError,
+						"Expected specific error: %v, got: %v", tt.expectedError, err)
 				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got: %v", err)
@@ -193,7 +194,8 @@ func (suite *PKCETestSuite) TestGenerateCodeChallenge() {
 				assert.Error(t, err, "Expected error but got none")
 				assert.Empty(t, challenge, "Challenge should be empty on error")
 				if tt.expectedError != nil {
-					assert.ErrorIs(t, err, tt.expectedError, "Expected specific error: %v, got: %v", tt.expectedError, err)
+					assert.ErrorIs(t, err, tt.expectedError,
+						"Expected specific error: %v, got: %v", tt.expectedError, err)
 				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got: %v", err)
@@ -293,11 +295,56 @@ func (suite *PKCETestSuite) TestValidateCodeChallenge() {
 			if tt.expectError {
 				assert.Error(t, err, "Expected error but got none")
 				if tt.expectedError != nil {
-					assert.ErrorIs(t, err, tt.expectedError, "Expected specific error: %v, got: %v", tt.expectedError, err)
+					assert.ErrorIs(t, err, tt.expectedError,
+						"Expected specific error: %v, got: %v", tt.expectedError, err)
 				}
 			} else {
 				assert.NoError(t, err, "Expected no error but got: %v", err)
 			}
 		})
 	}
+}
+
+func (suite *PKCETestSuite) TestValidateCodeChallenge_InvalidMethod() {
+	// Test the default case in validateCodeChallenge
+	err := ValidateCodeChallenge("valid-challenge", "unsupported_method")
+	assert.Error(suite.T(), err)
+	assert.Equal(suite.T(), ErrInvalidCodeChallenge, err)
+}
+
+func (suite *PKCETestSuite) TestGenerateCodeChallenge_InvalidMethod() {
+	// Test the default case in generateCodeChallenge
+	challenge, err := GenerateCodeChallenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk", "unsupported_method")
+	assert.Error(suite.T(), err)
+	assert.Empty(suite.T(), challenge)
+	assert.Equal(suite.T(), ErrInvalidChallengeMethod, err)
+}
+
+func (suite *PKCETestSuite) TestValidateCodeChallenge_S256InvalidCharacters() {
+	// Test S256 challenge with invalid base64URL characters
+	// S256 challenge must be exactly 43 characters and only base64URL characters
+	invalidChallenges := []string{
+		"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM!", // Invalid character
+		"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM ", // Space
+		"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM+", // Plus sign (not base64URL)
+		"E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM/", // Slash (not base64URL)
+	}
+
+	for _, challenge := range invalidChallenges {
+		suite.T().Run("Invalid_"+challenge, func(t *testing.T) {
+			err := ValidateCodeChallenge(challenge, CodeChallengeMethodS256)
+			assert.Error(t, err)
+			assert.Equal(t, ErrInvalidCodeChallenge, err)
+		})
+	}
+}
+
+func (suite *PKCETestSuite) TestGetSupportedCodeChallengeMethods() {
+	// Test GetSupportedCodeChallengeMethods function
+	methods := GetSupportedCodeChallengeMethods()
+
+	assert.NotNil(suite.T(), methods)
+	assert.Equal(suite.T(), 2, len(methods))
+	assert.Contains(suite.T(), methods, CodeChallengeMethodS256)
+	assert.Contains(suite.T(), methods, CodeChallengeMethodPlain)
 }

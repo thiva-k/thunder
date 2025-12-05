@@ -19,7 +19,6 @@
 package userschema
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -27,6 +26,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -40,11 +40,7 @@ func TestListUserSchemasTestSuite(t *testing.T) {
 }
 
 func (ts *ListUserSchemasTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 }
 
 // TestListUserSchemas tests GET /user-schemas

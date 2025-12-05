@@ -79,14 +79,3 @@ var (
 		ErrorDescription: "Updating the reference type or ID of an existing certificate is not allowed",
 	}
 )
-
-// Server errors for the certificate service.
-var (
-	// ErrorInternalServerError is the error for an internal server error.
-	ErrorInternalServerError = serviceerror.ServiceError{
-		Type:             serviceerror.ServerErrorType,
-		Code:             "CES-5001",
-		Error:            "Internal server error",
-		ErrorDescription: "An unexpected error occurred while processing the request",
-	}
-)

@@ -145,3 +145,19 @@ const (
 
 // DefaultHTTPTimeout defines the default timeout duration for HTTP requests.
 const DefaultHTTPTimeout = 5 * time.Second
+
+const (
+	// NodePropertyAllowAuthenticationWithoutLocalUser indicates whether authentication is allowed without a local user
+	NodePropertyAllowAuthenticationWithoutLocalUser = "allowAuthenticationWithoutLocalUser"
+	// NodePropertyAllowRegistrationWithExistingUser indicates whether registration is allowed with an existing user
+	NodePropertyAllowRegistrationWithExistingUser = "allowRegistrationWithExistingUser"
+)
+
+const (
+	// RuntimeKeyUserAutoProvisioned indicates whether the user was auto-provisioned
+	RuntimeKeyUserAutoProvisioned = "userAutoProvisioned"
+	// RuntimeKeyUserEligibleForProvisioning indicates whether the user is eligible for auto provisioning
+	RuntimeKeyUserEligibleForProvisioning = "userEligibleForProvisioning"
+	// RuntimeKeySkipProvisioning indicates whether to skip provisioning
+	RuntimeKeySkipProvisioning = "skipProvisioning"
+)

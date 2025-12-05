@@ -26,11 +26,10 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
-	"github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
-	"github.com/asgardeo/thunder/tests/mocks/oumock"
 	"github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
@@ -525,14 +524,107 @@ func (suite *UtilsTestSuite) TestParseScopes_WithSingleScope() {
 	assert.Equal(suite.T(), []string{"read"}, result)
 }
 
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithValidScope() {
+	claims := map[string]interface{}{
+		"scope": "read write admin",
+	}
+
+	result := extractScopesFromClaims(claims, false)
+
+	assert.Equal(suite.T(), []string{"read", "write", "admin"}, result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithEmptyScopeString() {
+	claims := map[string]interface{}{
+		"scope": "", // Empty string
+	}
+
+	result := extractScopesFromClaims(claims, false)
+
+	assert.Empty(suite.T(), result)
+}
+
 func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithInvalidScopeType() {
 	claims := map[string]interface{}{
 		"scope": 12345, // Invalid type (not string)
 	}
 
-	result := extractScopesFromClaims(claims)
+	result := extractScopesFromClaims(claims, false)
 
 	assert.Empty(suite.T(), result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithNoScopeButAuthorizedPermissions_IsAuthAssertion() {
+	claims := map[string]interface{}{
+		"authorized_permissions": "read:documents write:documents",
+	}
+
+	result := extractScopesFromClaims(claims, true)
+
+	assert.Equal(suite.T(), []string{"read:documents", "write:documents"}, result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithNoScopeButAuthorizedPermissions_NotAuthAssertion() {
+	claims := map[string]interface{}{
+		"authorized_permissions": "read:documents write:documents",
+	}
+
+	result := extractScopesFromClaims(claims, false)
+
+	assert.Empty(suite.T(), result) // Should not use authorized_permissions when not auth assertion
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithEmptyScopeButAuthorizedPermissions_IsAuthAssertion() {
+	claims := map[string]interface{}{
+		"scope":                  "", // Empty scope
+		"authorized_permissions": "read write",
+	}
+
+	result := extractScopesFromClaims(claims, true)
+
+	assert.Equal(suite.T(), []string{"read", "write"}, result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithEmptyAuthorizedPermissions_IsAuthAssertion() {
+	claims := map[string]interface{}{
+		"authorized_permissions": "", // Empty string
+	}
+
+	result := extractScopesFromClaims(claims, true)
+
+	assert.Empty(suite.T(), result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithInvalidAuthorizedPermissionsType_IsAuthAssertion() {
+	claims := map[string]interface{}{
+		"authorized_permissions": 12345, // Invalid type (not string)
+	}
+
+	result := extractScopesFromClaims(claims, true)
+
+	assert.Empty(suite.T(), result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_WithNoScopeAndNoAuthorizedPermissions() {
+	claims := map[string]interface{}{
+		// No scope or authorized_permissions
+	}
+
+	result := extractScopesFromClaims(claims, true)
+
+	assert.Empty(suite.T(), result)
+}
+
+func (suite *UtilsTestSuite) TestextractScopesFromClaims_ScopeTakesPriorityOverAuthorizedPermissions() {
+	claims := map[string]interface{}{
+		"scope":                  "openid profile",
+		"authorized_permissions": "read:documents write:documents",
+	}
+
+	result := extractScopesFromClaims(claims, true)
+
+	// Scope should take priority
+	assert.Equal(suite.T(), []string{"openid", "profile"}, result)
 }
 
 func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_UnmarshalError() {
@@ -545,7 +637,7 @@ func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_UnmarshalError() {
 		Type:       "local",
 	}, nil)
 
-	_, _, _, _, err := FetchUserAttributesAndGroups(mockUserService, "test-user", false)
+	_, _, err := FetchUserAttributesAndGroups(mockUserService, "test-user", false)
 
 	assert.Error(suite.T(), err)
 	assert.Contains(suite.T(), err.Error(), "failed to unmarshal user attributes")
@@ -553,21 +645,82 @@ func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_UnmarshalError() {
 	mockUserService.AssertExpectations(suite.T())
 }
 
-func (suite *UtilsTestSuite) TestFetchUserOU_ServiceError() {
-	mockOUService := oumock.NewOrganizationUnitServiceInterfaceMock(suite.T())
+func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_GetUserGroupsError() {
+	mockUserService := usermock.NewUserServiceInterfaceMock(suite.T())
 
-	// Mock GetOrganizationUnit to return service error
-	mockOUService.On("GetOrganizationUnit", "ou-123").
-		Return(ou.OrganizationUnit{}, &serviceerror.ServiceError{
-			Code:  "OU_FETCH_ERROR",
-			Error: "service error",
-		})
+	// Mock GetUser to return valid user
+	mockUserService.On("GetUser", "test-user").Return(&user.User{
+		ID:         "test-user",
+		Attributes: json.RawMessage(`{"email":"test@example.com"}`),
+		Type:       "local",
+	}, nil)
 
-	_, err := FetchUserOU(mockOUService, "ou-123")
+	// Mock GetUserGroups to return error
+	serverErr := &serviceerror.ServiceError{
+		Type:             serviceerror.ServerErrorType,
+		Code:             "INTERNAL_ERROR",
+		ErrorDescription: "failed to fetch groups",
+	}
+	mockUserService.On("GetUserGroups", "test-user", constants.DefaultGroupListLimit, 0).
+		Return(nil, serverErr)
+
+	_, _, err := FetchUserAttributesAndGroups(mockUserService, "test-user", true)
 
 	assert.Error(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to fetch organization unit")
-	assert.Contains(suite.T(), err.Error(), "service error")
+	assert.Contains(suite.T(), err.Error(), "failed to fetch user groups")
 
-	mockOUService.AssertExpectations(suite.T())
+	mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_WithGroups() {
+	mockUserService := usermock.NewUserServiceInterfaceMock(suite.T())
+
+	// Mock GetUser to return valid user
+	mockUserService.On("GetUser", "test-user").Return(&user.User{
+		ID:         "test-user",
+		Attributes: json.RawMessage(`{"email":"test@example.com","username":"testuser"}`),
+		Type:       "local",
+	}, nil)
+
+	// Mock GetUserGroups to return groups
+	mockGroups := &user.UserGroupListResponse{
+		TotalResults: 2,
+		StartIndex:   0,
+		Count:        2,
+		Groups: []user.UserGroup{
+			{ID: "group1", Name: "Admin"},
+			{ID: "group2", Name: "Users"},
+		},
+	}
+	mockUserService.On("GetUserGroups", "test-user", constants.DefaultGroupListLimit, 0).
+		Return(mockGroups, nil)
+
+	attrs, groups, err := FetchUserAttributesAndGroups(mockUserService, "test-user", true)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), attrs)
+	assert.Equal(suite.T(), "test@example.com", attrs["email"])
+	assert.Equal(suite.T(), "testuser", attrs["username"])
+	assert.Equal(suite.T(), []string{"Admin", "Users"}, groups)
+
+	mockUserService.AssertExpectations(suite.T())
+}
+
+func (suite *UtilsTestSuite) TestFetchUserAttributesAndGroups_WithoutGroups() {
+	mockUserService := usermock.NewUserServiceInterfaceMock(suite.T())
+
+	// Mock GetUser to return valid user
+	mockUserService.On("GetUser", "test-user").Return(&user.User{
+		ID:         "test-user",
+		Attributes: json.RawMessage(`{"email":"test@example.com"}`),
+		Type:       "local",
+	}, nil)
+
+	attrs, groups, err := FetchUserAttributesAndGroups(mockUserService, "test-user", false)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), attrs)
+	assert.Equal(suite.T(), []string{}, groups)
+
+	mockUserService.AssertExpectations(suite.T())
 }

@@ -171,12 +171,12 @@ read_config() {
         HOSTNAME=$(yq eval '.server.hostname // "localhost"' "$config_file" 2>/dev/null)
         PORT=$(yq eval '.server.port // 8090' "$config_file" 2>/dev/null)
         HTTP_ONLY=$(yq eval '.server.http_only // false' "$config_file" 2>/dev/null)
-        PUBLIC_HOSTNAME=$(yq eval '.server.public_hostname // ""' "$config_file" 2>/dev/null)
+        PUBLIC_URL=$(yq eval '.server.public_url // ""' "$config_file" 2>/dev/null)
     else
         # Fallback: basic parsing with grep/awk
         HOSTNAME=$(grep -E '^\s*hostname:' "$config_file" | awk -F':' '{gsub(/[[:space:]"'\'']/,"",$2); print $2}' | head -1)
         PORT=$(grep -E '^\s*port:' "$config_file" | awk -F':' '{gsub(/[[:space:]]/,"",$2); print $2}' | head -1)
-        PUBLIC_HOSTNAME=$(grep -E '^\s*public_hostname:' "$config_file" | grep -o '"[^"]*"' | tr -d '"' | head -1)
+        PUBLIC_URL=$(grep -E '^\s*public_url:' "$config_file" | grep -o '"[^"]*"' | tr -d '"' | head -1)
 
         # Check for http_only
         if grep -q 'http_only.*true' "$config_file" 2>/dev/null; then
@@ -206,11 +206,7 @@ read_config
 BASE_URL="${PROTOCOL}://${HOSTNAME}:${PORT}"
 
 # Construct public URL (external/redirect URLs)
-if [ -n "$PUBLIC_HOSTNAME" ]; then
-    PUBLIC_URL="$PUBLIC_HOSTNAME"
-else
-    PUBLIC_URL="$BASE_URL"
-fi
+PUBLIC_URL="${PUBLIC_URL:-$BASE_URL}"
 
 echo ""
 echo "========================================="
@@ -340,10 +336,10 @@ else
     log_info "Started at: $(date)"
     echo ""
 
-    # Collect all scripts from both built-in and custom directories
+    # Collect all scripts from bootstrap directory
     SCRIPTS=()
 
-    # Find scripts in main bootstrap directory (exclude common.sh)
+    # Find scripts in bootstrap directory (exclude common.sh)
     if [ -d "$BOOTSTRAP_DIR" ]; then
         for script in "$BOOTSTRAP_DIR"/*.sh "$BOOTSTRAP_DIR"/*.bash; do
             [ ! -e "$script" ] && continue
@@ -354,19 +350,8 @@ else
         done
     fi
 
-    # Find scripts in custom directory
-    if [ -d "$BOOTSTRAP_DIR/custom" ]; then
-        for script in "$BOOTSTRAP_DIR/custom"/*.sh "$BOOTSTRAP_DIR/custom"/*.bash; do
-            [ ! -e "$script" ] && continue
-            SCRIPTS+=("$script")
-        done
-    fi
-
     # Sort scripts by filename (numeric prefix determines order)
-    # Use basename for sorting so custom scripts with numeric prefixes work correctly
-    IFS=$'\n' SORTED_SCRIPTS=($(printf '%s\n' "${SCRIPTS[@]}" | while read -r script; do
-        echo "$(basename "$script")|$script"
-    done | sort | cut -d'|' -f2))
+    IFS=$'\n' SORTED_SCRIPTS=($(printf '%s\n' "${SCRIPTS[@]}" | sort))
     unset IFS
 
     if [ ${#SORTED_SCRIPTS[@]} -eq 0 ]; then

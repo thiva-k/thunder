@@ -25,7 +25,8 @@ import (
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/authn"
 	"github.com/asgardeo/thunder/internal/authz"
-	"github.com/asgardeo/thunder/internal/branding"
+	brandingmgt "github.com/asgardeo/thunder/internal/branding/mgt"
+	brandingresolve "github.com/asgardeo/thunder/internal/branding/resolve"
 	"github.com/asgardeo/thunder/internal/cert"
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/flow/executor"
@@ -35,7 +36,9 @@ import (
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/notification"
 	"github.com/asgardeo/thunder/internal/oauth"
+	"github.com/asgardeo/thunder/internal/observability"
 	"github.com/asgardeo/thunder/internal/ou"
+	"github.com/asgardeo/thunder/internal/resource"
 	"github.com/asgardeo/thunder/internal/role"
 	"github.com/asgardeo/thunder/internal/system/export"
 	"github.com/asgardeo/thunder/internal/system/jwt"
@@ -45,14 +48,24 @@ import (
 	"github.com/asgardeo/thunder/internal/userschema"
 )
 
+// observabilitySvc is the observability service instance. This is used for graceful shutdown.
+var observabilitySvc observability.ObservabilityServiceInterface
+
 // registerServices registers all the services with the provided HTTP multiplexer.
-func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
+func registerServices(
+	mux *http.ServeMux,
+	jwtService jwt.JWTServiceInterface,
+) {
 	logger := log.GetLogger()
+
+	observabilitySvc = observability.Initialize()
 
 	ouService := ou.Initialize(mux)
 	userSchemaService := userschema.Initialize(mux, ouService)
 	userService := user.Initialize(mux, ouService, userSchemaService)
 	groupService := group.Initialize(mux, ouService, userService)
+
+	_ = resource.Initialize(mux, ouService)
 	roleService := role.Initialize(mux, userService, groupService, ouService)
 	authZService := authz.Initialize(roleService)
 
@@ -72,20 +85,27 @@ func registerServices(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) {
 		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
 	}
 	certservice := cert.Initialize()
-	brandingService := branding.Initialize(mux)
-	applicationService := application.Initialize(mux, certservice, flowMgtService, brandingService, userSchemaService)
+	brandingMgtService := brandingmgt.Initialize(mux)
+	applicationService := application.Initialize(mux, certservice, flowMgtService,
+		brandingMgtService, userSchemaService)
+	_ = brandingresolve.Initialize(mux, brandingMgtService, applicationService)
 
-	// Initialize export service with application service dependency
-	_ = export.Initialize(mux, applicationService)
+	// Initialize export service with application and IDP service dependencies
+	_ = export.Initialize(mux, applicationService, idpService)
 
-	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry)
+	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry, observabilitySvc)
 
 	// Initialize OAuth services.
-	oauth.Initialize(mux, applicationService, userService, ouService, jwtService, flowExecService)
+	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService)
 
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.
 
 	// Register the health service.
 	services.NewHealthCheckService(mux)
+}
+
+// unregisterServices unregisters all services that require cleanup during shutdown.
+func unregisterServices() {
+	observabilitySvc.Shutdown()
 }

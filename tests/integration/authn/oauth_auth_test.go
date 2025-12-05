@@ -214,7 +214,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthStartSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -246,7 +246,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthStartInvalidIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -269,7 +269,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthStartMissingIDPID() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -288,7 +288,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthCompleteFlowSuccess() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -345,7 +345,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthFinishInvalidSessionToken() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -364,7 +364,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthFinishMissingCode() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -384,7 +384,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthFinishWithError() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -427,7 +427,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthCompleteFlowWithSkipAssertionFalse
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -485,7 +485,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthCompleteFlowWithSkipAssertionTrue(
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()
@@ -544,7 +544,7 @@ func (suite *OAuthAuthTestSuite) TestOAuthAuthWithAssuranceLevelAAL1() {
 	suite.Require().NoError(err)
 	req.Header.Set("Content-Type", "application/json")
 
-	client := getHTTPClient()
+	client := testutils.GetHTTPClient()
 	resp, err := client.Do(req)
 	suite.Require().NoError(err)
 	defer resp.Body.Close()

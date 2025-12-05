@@ -20,11 +20,12 @@ package flowauthn
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+
+	"github.com/asgardeo/thunder/tests/integration/testutils"
 )
 
 const testServerURL = "https://localhost:8095"
@@ -52,11 +53,7 @@ func initiateAuthFlow(appID string, inputs map[string]string) (*FlowStep, error)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -100,11 +97,7 @@ func initiateAuthFlowWithError(appID string, inputs map[string]string) (*ErrorRe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -149,11 +142,7 @@ func completeAuthFlow(flowID string, actionID string, inputs map[string]string) 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -195,11 +184,7 @@ func completeAuthFlowWithError(flowID string, inputs map[string]string) (*ErrorR
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -223,10 +208,7 @@ func completeAuthFlowWithError(flowID string, inputs map[string]string) (*ErrorR
 
 // getAppConfig retrieves the current application configuration
 func getAppConfig(appID string) (map[string]interface{}, error) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest(
 		"GET",
@@ -268,10 +250,7 @@ func updateAppConfig(appID string, authFlowGraphID string) error {
 	appConfig["auth_flow_graph_id"] = authFlowGraphID
 	appConfig["client_secret"] = "secret123"
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	jsonPayload, err := json.Marshal(appConfig)
 	if err != nil {
@@ -341,10 +320,7 @@ func CreateNotificationSender(senderURL, senderName string) (string, error) {
 		return "", fmt.Errorf("failed to marshal sender request: %w", err)
 	}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+"/notification-senders/message", bytes.NewBuffer(jsonPayload))
 	if err != nil {
@@ -380,10 +356,7 @@ func CreateNotificationSender(senderURL, senderName string) (string, error) {
 
 // DeleteNotificationSender deletes a notification sender
 func DeleteNotificationSender(senderID string) error {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("DELETE", testServerURL+"/notification-senders/message/"+senderID, nil)
 	if err != nil {
@@ -413,10 +386,7 @@ func RestoreAppConfig(appID string, originalConfig map[string]interface{}) error
 	// Add client secret to original config for restoration
 	originalConfig["client_secret"] = "secret123"
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	client := &http.Client{Transport: tr}
+	client := testutils.GetHTTPClient()
 
 	jsonPayload, err := json.Marshal(originalConfig)
 	if err != nil {

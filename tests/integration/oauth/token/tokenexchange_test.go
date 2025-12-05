@@ -20,7 +20,6 @@ package token
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -56,7 +55,7 @@ type TokenExchangeTestSuite struct {
 
 var (
 	testUserSchema = testutils.UserSchema{
-		Name: "person",
+		Name: "token-test-person",
 		Schema: map[string]interface{}{
 			"username": map[string]interface{}{
 				"type": "string",
@@ -77,11 +76,7 @@ func TestTokenExchangeTestSuite(t *testing.T) {
 
 func (ts *TokenExchangeTestSuite) SetupSuite() {
 	// Create HTTP client that skips TLS verification
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 
 	// Create test organization unit for user creation
 	ts.organizationUnitID = ts.createTestOrganizationUnit()
@@ -190,7 +185,7 @@ func (ts *TokenExchangeTestSuite) createTestUser() string {
 	ts.Require().NoError(err, "Failed to marshal user attributes")
 
 	user := testutils.User{
-		Type:             "person",
+		Type:             "token-test-person",
 		OrganizationUnit: ts.organizationUnitID,
 		Attributes:       json.RawMessage(attributesJSON),
 	}

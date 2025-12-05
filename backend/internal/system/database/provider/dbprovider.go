@@ -46,6 +46,7 @@ type dbConfig struct {
 type DBProviderInterface interface {
 	GetConfigDBClient() (DBClientInterface, error)
 	GetRuntimeDBClient() (DBClientInterface, error)
+	GetUserDBClient() (DBClientInterface, error)
 }
 
 // DBProviderCloser is a separate interface for closing the provider.
@@ -60,6 +61,8 @@ type dbProvider struct {
 	identityMutex  sync.RWMutex
 	runtimeClient  DBClientInterface
 	runtimeMutex   sync.RWMutex
+	userClient     DBClientInterface
+	userMutex      sync.RWMutex
 }
 
 var (
@@ -102,6 +105,13 @@ func (d *dbProvider) GetRuntimeDBClient() (DBClientInterface, error) {
 	return d.getOrInitClient(&d.runtimeClient, &d.runtimeMutex, runtimeDBConfig)
 }
 
+// GetUserDBClient returns a database client for runtime datasource.
+// Not required to close the returned client manually since it manages its own connection pool.
+func (d *dbProvider) GetUserDBClient() (DBClientInterface, error) {
+	userDBConfig := config.GetThunderRuntime().Config.Database.User
+	return d.getOrInitClient(&d.userClient, &d.userMutex, userDBConfig)
+}
+
 // initializeAllClients initializes both identity and runtime clients at startup.
 func (d *dbProvider) initializeAllClients() {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "DBProvider"))
@@ -116,6 +126,12 @@ func (d *dbProvider) initializeAllClients() {
 	err = d.initializeClient(&d.runtimeClient, runtimeDBConfig)
 	if err != nil {
 		logger.Error("Failed to initialize runtime database client", log.Error(err))
+	}
+
+	userDBConfig := config.GetThunderRuntime().Config.Database.User
+	err = d.initializeClient(&d.userClient, userDBConfig)
+	if err != nil {
+		logger.Error("Failed to initialize user database client", log.Error(err))
 	}
 }
 
@@ -215,7 +231,8 @@ func (d *dbProvider) Close() error {
 
 	identityErr := d.closeClient(&d.identityClient, &d.identityMutex, "identity")
 	runtimeErr := d.closeClient(&d.runtimeClient, &d.runtimeMutex, "runtime")
-	return errors.Join(identityErr, runtimeErr)
+	userErr := d.closeClient(&d.userClient, &d.userMutex, "user")
+	return errors.Join(identityErr, runtimeErr, userErr)
 }
 
 // closeClient is a helper to close a DB client with locking.

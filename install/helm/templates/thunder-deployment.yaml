@@ -14,6 +14,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+{{- $usingSqlite := or (eq .Values.configuration.database.identity.type "sqlite") (eq .Values.configuration.database.runtime.type "sqlite") (eq .Values.configuration.database.user.type "sqlite") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -89,13 +90,13 @@ spec:
             httpGet:
               path: /health/liveness
               port: {{ .Values.deployment.container.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.configuration.server.httpOnly }}HTTP{{ else }}HTTPS{{ end }}
             periodSeconds: {{ .Values.deployment.livenessProbe.periodSeconds }}
           readinessProbe:
             httpGet:
               path: /health/readiness
               port: {{ .Values.deployment.container.port }}
-              scheme: HTTPS
+              scheme: {{ if .Values.configuration.server.httpOnly }}HTTP{{ else }}HTTPS{{ end }}
             initialDelaySeconds: {{ .Values.deployment.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.deployment.readinessProbe.periodSeconds }}
           resources:
@@ -119,10 +120,31 @@ spec:
             - containerPort: {{ .Values.deployment.container.port }}
               protocol: TCP
           volumeMounts:
+            {{- if or .Values.persistence.enabled $usingSqlite }}
+            - name: database-storage
+              mountPath: /opt/thunder/repository/database
+            {{- end }}
             - name: deployment-yaml-volume
               mountPath: /opt/thunder/repository/conf/deployment.yaml
               subPath: deployment.yaml
+            - name: gate-config-volume
+              mountPath: /opt/thunder/apps/gate/config.js
+              subPath: gate-config.js
+            - name: develop-config-volume
+              mountPath: /opt/thunder/apps/develop/config.js
+              subPath: develop-config.js
       volumes:
+        {{- if or .Values.persistence.enabled $usingSqlite }}
+        - name: database-storage
+          persistentVolumeClaim:
+            claimName: {{ include "thunder.fullname" . }}-database-pvc
+        {{- end }}
         - name: deployment-yaml-volume
+          configMap:
+            name: {{ include "thunder.fullname" . }}-config-map
+        - name: gate-config-volume
+          configMap:
+            name: {{ include "thunder.fullname" . }}-config-map
+        - name: develop-config-volume
           configMap:
             name: {{ include "thunder.fullname" . }}-config-map

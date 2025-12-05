@@ -135,6 +135,14 @@ configuration:
       username: thunder_user
       password: secure_password
       sslmode: require
+    user:
+      type: postgres
+      host: postgres.default.svc.cluster.local
+      port: 5432
+      name: userdb
+      username: thunder_user
+      password: secure_password
+      sslmode: require
 EOF
 
 # Install with custom values
@@ -154,6 +162,7 @@ Before deploying Thunder, ensure you have:
    ```sql
    CREATE DATABASE thunderdb;
    CREATE DATABASE runtimedb;
+   CREATE DATABASE userdb; 
    ```
 2. **Run database scripts**: Use the scripts in `backend/dbscripts` to initialize the schema.
 
@@ -191,6 +200,14 @@ configuration:
       username: thunder_user
       password: secure_password
       sslmode: require
+    user:
+      type: postgres
+      host: postgres.example.com
+      port: 5432
+      name: userdb
+      username: thunder_user
+      password: secure_password
+      sslmode: require
 ```
 
 ### SQLite Configuration
@@ -206,6 +223,10 @@ configuration:
       type: sqlite
       sqlitePath: repository/database/runtimedb.db
       sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000"
+    user:
+      type: sqlite
+      sqlitePath: repository/database/userdb.db
+      sqliteOptions: "_journal_mode=WAL&_busy_timeout=5000"  
 ```
 
 ### Update Strategy

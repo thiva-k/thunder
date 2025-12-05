@@ -45,7 +45,8 @@ func (p *number) validateValue(value interface{}, path string, logger *log.Logge
 
 	if p.enum != nil {
 		if _, exists := p.enum[numberValue]; !exists {
-			logger.Debug("Value not in enum", log.String("property", path), log.String("value", fmt.Sprintf("%v", value)))
+			logger.Debug("Value not in enum", log.String("property", path),
+				log.String("value", fmt.Sprintf("%v", value)))
 			return false, nil
 		}
 	}

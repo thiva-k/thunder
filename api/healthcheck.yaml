@@ -52,6 +52,8 @@ paths:
                     status: "UP"
                   - service_name: "RuntimeDB"
                     status: "UP"
+                  - service_name: "UserDB"
+                    status: "UP"
         '503':
           description: Service is not ready
           content:
@@ -64,6 +66,8 @@ paths:
                   - service_name: "IdentityDB"
                     status: "DOWN"
                   - service_name: "RuntimeDB"
+                    status: "UP"
+                  - service_name: "UserDB"
                     status: "UP"
 
 components:
@@ -87,6 +91,7 @@ components:
                 enum:
                   - IdentityDB
                   - RuntimeDB
+                  - UserDB
               status:
                 type: string
                 enum:

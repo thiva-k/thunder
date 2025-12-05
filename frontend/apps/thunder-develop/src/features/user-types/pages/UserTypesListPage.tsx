@@ -17,7 +17,7 @@
  */
 
 import {useNavigate} from 'react-router';
-import {Box, Stack, Typography, Button, Paper} from '@wso2/oxygen-ui';
+import {Box, Stack, Typography, Button} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import UserTypesList from '../components/UserTypesList';
@@ -30,10 +30,10 @@ export default function UserTypesListPage() {
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h1" gutterBottom>
             {t('userTypes:title')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="subtitle1" color="text.secondary">
             {t('userTypes:createDescription')}
           </Typography>
         </Box>
@@ -56,9 +56,7 @@ export default function UserTypesListPage() {
           </Button>
         </Stack>
       </Stack>
-      <Paper>
-        <UserTypesList />
-      </Paper>
+      <UserTypesList />
     </Box>
   );
 }

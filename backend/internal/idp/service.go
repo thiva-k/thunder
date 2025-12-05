@@ -26,7 +26,9 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/system/cmodels"
+	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	filebasedruntime "github.com/asgardeo/thunder/internal/system/file_based_runtime"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 )
@@ -47,22 +49,18 @@ type idpService struct {
 }
 
 // newIDPService creates a new instance of IdPService.
-func newIDPService() IDPServiceInterface {
+func newIDPService(idpStore idpStoreInterface) IDPServiceInterface {
 	return &idpService{
-		idpStore: newIDPStore(),
+		idpStore: idpStore,
 	}
-}
-
-// NewIDPService creates a new instance of IdPService for external use.
-// Deprecated: Use dependency injection via Initialize() for new code.
-// TODO: Remove this once all usages are migrated to dependency injection.
-func NewIDPService() IDPServiceInterface {
-	return newIDPService()
 }
 
 // CreateIdentityProvider creates a new Identity Provider.
 func (is *idpService) CreateIdentityProvider(idp *IDPDTO) (*IDPDTO, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IdPService"))
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		return nil, &filebasedruntime.ErrorImmutableResourceCreateOperation
+	}
 
 	if svcErr := is.validateIDP(idp); svcErr != nil {
 		return nil, svcErr
@@ -73,7 +71,7 @@ func (is *idpService) CreateIdentityProvider(idp *IDPDTO) (*IDPDTO, *serviceerro
 	if err != nil && !errors.Is(err, ErrIDPNotFound) {
 		logger.Error("Failed to check existing identity provider by name", log.Error(err),
 			log.String("idpName", idp.Name))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if existingIDP != nil {
 		return nil, &ErrorIDPAlreadyExists
@@ -84,7 +82,7 @@ func (is *idpService) CreateIdentityProvider(idp *IDPDTO) (*IDPDTO, *serviceerro
 	err = is.idpStore.CreateIdentityProvider(*idp)
 	if err != nil {
 		logger.Error("Failed to create IdP", log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return idp, nil
@@ -97,7 +95,7 @@ func (is *idpService) GetIdentityProviderList() ([]BasicIDPDTO, *serviceerror.Se
 	idps, err := is.idpStore.GetIdentityProviderList()
 	if err != nil {
 		logger.Error("Failed to get identity provider list", log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return idps, nil
@@ -117,7 +115,7 @@ func (is *idpService) GetIdentityProvider(idpID string) (*IDPDTO, *serviceerror.
 			return nil, &ErrorIDPNotFound
 		}
 		logger.Error("Failed to get identity provider", log.String("idpID", idpID), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return idp, nil
@@ -137,7 +135,7 @@ func (is *idpService) GetIdentityProviderByName(idpName string) (*IDPDTO, *servi
 			return nil, &ErrorIDPNotFound
 		}
 		logger.Error("Failed to get identity provider by name", log.String("idpName", idpName), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return idp, nil
@@ -147,6 +145,9 @@ func (is *idpService) GetIdentityProviderByName(idpName string) (*IDPDTO, *servi
 func (is *idpService) UpdateIdentityProvider(idpID string, idp *IDPDTO) (*IDPDTO,
 	*serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IdPService"))
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		return nil, &filebasedruntime.ErrorImmutableResourceUpdateOperation
+	}
 
 	if strings.TrimSpace(idpID) == "" {
 		return nil, &ErrorInvalidIDPID
@@ -162,7 +163,7 @@ func (is *idpService) UpdateIdentityProvider(idpID string, idp *IDPDTO) (*IDPDTO
 			return nil, &ErrorIDPNotFound
 		}
 		logger.Error("Failed to get identity provider for update", log.String("idpID", idpID), log.Error(err))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if existingIDP == nil {
 		return nil, &ErrorIDPNotFound
@@ -174,7 +175,7 @@ func (is *idpService) UpdateIdentityProvider(idpID string, idp *IDPDTO) (*IDPDTO
 		if err != nil && !errors.Is(err, ErrIDPNotFound) {
 			logger.Error("Failed to check existing identity provider by name", log.Error(err),
 				log.String("idpName", idp.Name))
-			return nil, &ErrorInternalServerError
+			return nil, &serviceerror.InternalServerError
 		}
 		if existingIDPByName != nil {
 			return nil, &ErrorIDPAlreadyExists
@@ -185,7 +186,7 @@ func (is *idpService) UpdateIdentityProvider(idpID string, idp *IDPDTO) (*IDPDTO
 	err = is.idpStore.UpdateIdentityProvider(idp)
 	if err != nil {
 		logger.Error("Failed to update identity provider", log.Error(err), log.String("idpID", idpID))
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return idp, nil
@@ -194,6 +195,9 @@ func (is *idpService) UpdateIdentityProvider(idpID string, idp *IDPDTO) (*IDPDTO
 // DeleteIdentityProvider deletes an Identity Provider by its ID.
 func (is *idpService) DeleteIdentityProvider(idpID string) *serviceerror.ServiceError {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "IdPService"))
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		return &filebasedruntime.ErrorImmutableResourceDeleteOperation
+	}
 
 	if strings.TrimSpace(idpID) == "" {
 		return &ErrorInvalidIDPID
@@ -206,13 +210,13 @@ func (is *idpService) DeleteIdentityProvider(idpID string) *serviceerror.Service
 			return nil
 		}
 		logger.Error("Failed to get identity provider for deletion", log.Error(err), log.String("idpID", idpID))
-		return &ErrorInternalServerError
+		return &serviceerror.InternalServerError
 	}
 
 	err = is.idpStore.DeleteIdentityProvider(idpID)
 	if err != nil {
 		logger.Error("Failed to delete identity provider", log.Error(err), log.String("idpID", idpID))
-		return &ErrorInternalServerError
+		return &serviceerror.InternalServerError
 	}
 
 	return nil

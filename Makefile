@@ -42,9 +42,6 @@ backend: prepare clean build_with_coverage build_backend
 prepare:
 	chmod +x build.sh
 
-clean_all:
-	./build.sh clean_all $(OS) $(ARCH)
-
 clean:
 	./build.sh clean $(OS) $(ARCH)
 
@@ -131,7 +128,6 @@ help:
 	@echo "  all                           - Clean, build, and test the project."
 	@echo "  backend                       - Clean, build, and test only the backend."
 	@echo "  clean                         - Remove build artifacts."
-	@echo "  clean_all                     - Remove all build artifacts including distribution files."
 	@echo "  build                         - Build Thunder (backend + frontend + samples)."
 	@echo "  build_backend                 - Build the backend Go application."
 	@echo "  build_frontend                - Build the frontend applications."
@@ -156,7 +152,7 @@ help:
 	@echo "  mockery                       - Generate mocks for unit tests using mockery."
 	@echo "  help                          - Show this help message."
 
-.PHONY: all prepare clean clean_all build build_backend build_frontend build_samples package_samples run
+.PHONY: all prepare clean build build_backend build_frontend build_samples package_samples run
 .PHONY: docker-build docker-build-latest docker-build-multiarch 
 .PHONY: docker-build-multiarch-latest docker-build-multiarch-push
 .PHONY: test_unit test_integration build_with_coverage build_with_coverage_only test

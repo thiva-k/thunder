@@ -24,6 +24,8 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -46,8 +48,24 @@ func TestMessageHandlerTestSuite(t *testing.T) {
 }
 
 func (suite *MessageHandlerTestSuite) SetupSuite() {
-	testConfig := &config.Config{}
-	err := config.InitializeThunderRuntime("", testConfig)
+	// Get the current working directory.
+	cwd, err := os.Getwd()
+	if err != nil {
+		suite.T().Fatalf("Failed to get working directory: %v", err)
+	}
+	suite.T().Logf("Current working directory: %s", cwd)
+	cryptoFile := filepath.Join(cwd, "..", "..", "tests", "resources", "testKey")
+
+	if _, err := os.Stat(cryptoFile); os.IsNotExist(err) {
+		suite.T().Fatalf("Crypto file not found at expected path: %s", cryptoFile)
+	}
+
+	testConfig := &config.Config{
+		Security: config.SecurityConfig{
+			CryptoFile: cryptoFile,
+		},
+	}
+	err = config.InitializeThunderRuntime("", testConfig)
 	if err != nil {
 		suite.T().Fatalf("Failed to initialize ThunderRuntime: %v", err)
 	}

@@ -38,6 +38,7 @@ type HealthCheckServiceTestSuite struct {
 	mockDBProvider *dbprovidermock.DBProviderInterfaceMock
 	mockIdentityDB *clientmock.DBClientInterfaceMock
 	mockRuntimeDB  *clientmock.DBClientInterfaceMock
+	mockUserDB     *clientmock.DBClientInterfaceMock
 }
 
 func TestHealthCheckServiceSuite(t *testing.T) {
@@ -52,6 +53,10 @@ func (suite *HealthCheckServiceTestSuite) SetupTest() {
 				Path: ":memory:",
 			},
 			Runtime: config.DataSource{
+				Type: "sqlite",
+				Path: ":memory:",
+			},
+			User: config.DataSource{
 				Type: "sqlite",
 				Path: ":memory:",
 			},
@@ -71,36 +76,52 @@ func (suite *HealthCheckServiceTestSuite) BeforeTest(suiteName, testName string)
 	dbClientRuntime := &clientmock.DBClientInterfaceMock{}
 	suite.mockRuntimeDB = dbClientRuntime
 
+	dbClientUser := &clientmock.DBClientInterfaceMock{}
+	suite.mockUserDB = dbClientUser
+
 	dbProvider := &dbprovidermock.DBProviderInterfaceMock{}
 	dbProvider.On("GetConfigDBClient").Return(dbClientIdentity, nil)
 	dbProvider.On("GetRuntimeDBClient").Return(dbClientRuntime, nil)
+	dbProvider.On("GetUserDBClient").Return(dbClientUser, nil)
 	suite.mockDBProvider = dbProvider
 	suite.service.(*HealthCheckService).DBProvider = dbProvider
 }
 
 func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
+	const (
+		tcAllDBUp        = "AllDatabasesUp"
+		tcIdentityDBDown = "IdentityDBDown"
+		tcRuntimeDBDown  = "RuntimeDBDown"
+		tcUserDBDown     = "UserDBDown"
+		tcAllThreeDBDown = "AllThreeDBsDown"
+	)
 	testCases := []struct {
 		name                 string
 		setupIdentityDB      func()
 		setupRuntimeDB       func()
+		setupUserDB          func()
 		expectedStatus       model.Status
 		expectedServiceCount int
 	}{
 		{
-			name: "AllDatabasesUp",
+			name: tcAllDBUp,
 			setupIdentityDB: func() {
 				suite.mockIdentityDB.On("Query", queryConfigDBTable).Return([]map[string]interface{}{
 					{"1": 1}}, nil)
 			},
 			setupRuntimeDB: func() {
 				suite.mockRuntimeDB.On("Query", queryRuntimeDBTable).Return([]map[string]interface{}{
+					{"1": 1}}, nil)
+			},
+			setupUserDB: func() {
+				suite.mockUserDB.On("Query", queryUserDBTable).Return([]map[string]interface{}{
 					{"1": 1}}, nil)
 			},
 			expectedStatus:       model.StatusUp,
-			expectedServiceCount: 2,
+			expectedServiceCount: 3,
 		},
 		{
-			name: "IdentityDBDown",
+			name: tcIdentityDBDown,
 			setupIdentityDB: func() {
 				suite.mockIdentityDB.On("Query", queryConfigDBTable).Return(nil, errors.New("database error"))
 			},
@@ -108,11 +129,15 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 				suite.mockRuntimeDB.On("Query", queryRuntimeDBTable).Return([]map[string]interface{}{
 					{"1": 1}}, nil)
 			},
+			setupUserDB: func() {
+				suite.mockUserDB.On("Query", queryUserDBTable).Return([]map[string]interface{}{
+					{"1": 1}}, nil)
+			},
 			expectedStatus:       model.StatusDown,
-			expectedServiceCount: 2,
+			expectedServiceCount: 3,
 		},
 		{
-			name: "RuntimeDBDown",
+			name: tcRuntimeDBDown,
 			setupIdentityDB: func() {
 				suite.mockIdentityDB.On("Query", queryConfigDBTable).Return([]map[string]interface{}{
 					{"1": 1}}, nil)
@@ -120,19 +145,41 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 			setupRuntimeDB: func() {
 				suite.mockRuntimeDB.On("Query", queryRuntimeDBTable).Return(nil, errors.New("database error"))
 			},
+			setupUserDB: func() {
+				suite.mockUserDB.On("Query", queryUserDBTable).Return([]map[string]interface{}{
+					{"1": 1}}, nil)
+			},
 			expectedStatus:       model.StatusDown,
-			expectedServiceCount: 2,
+			expectedServiceCount: 3,
 		},
 		{
-			name: "BothDBsDown",
+			name: tcUserDBDown,
+			setupIdentityDB: func() {
+				suite.mockIdentityDB.On("Query", queryConfigDBTable).Return([]map[string]interface{}{
+					{"1": 1}}, nil)
+			},
+			setupRuntimeDB: func() {
+				suite.mockRuntimeDB.On("Query", queryRuntimeDBTable).Return(nil, errors.New("database error"))
+			},
+			setupUserDB: func() {
+				suite.mockUserDB.On("Query", queryUserDBTable).Return(nil, errors.New("database error"))
+			},
+			expectedStatus:       model.StatusDown,
+			expectedServiceCount: 3,
+		},
+		{
+			name: tcAllThreeDBDown,
 			setupIdentityDB: func() {
 				suite.mockIdentityDB.On("Query", queryConfigDBTable).Return(nil, errors.New("database error"))
 			},
 			setupRuntimeDB: func() {
 				suite.mockRuntimeDB.On("Query", queryRuntimeDBTable).Return(nil, errors.New("database error"))
 			},
+			setupUserDB: func() {
+				suite.mockUserDB.On("Query", queryUserDBTable).Return(nil, errors.New("database error"))
+			},
 			expectedStatus:       model.StatusDown,
-			expectedServiceCount: 2,
+			expectedServiceCount: 3,
 		},
 	}
 
@@ -141,6 +188,7 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 			// Reset mock expectations
 			suite.mockIdentityDB.ExpectedCalls = nil
 			suite.mockRuntimeDB.ExpectedCalls = nil
+			suite.mockUserDB.ExpectedCalls = nil
 
 			// Setup database mocks
 			if tc.setupIdentityDB != nil {
@@ -148,6 +196,9 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 			}
 			if tc.setupRuntimeDB != nil {
 				tc.setupRuntimeDB()
+			}
+			if tc.setupUserDB != nil {
+				tc.setupUserDB()
 			}
 
 			// Execute the method being tested
@@ -164,9 +215,10 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 			}
 			assert.True(t, serviceNames["IdentityDB"], "IdentityDB service status should be present")
 			assert.True(t, serviceNames["RuntimeDB"], "RuntimeDB service status should be present")
+			assert.True(t, serviceNames["UserDB"], "UserDB service status should be present")
 
 			// If identity DB is expected down, verify it's reported as down
-			if tc.name == "IdentityDBDown" || tc.name == "IdentityDBClientError" || tc.name == "BothDBsDown" {
+			if tc.name == tcIdentityDBDown || tc.name == "IdentityDBClientError" || tc.name == tcAllThreeDBDown {
 				for _, status := range serverStatus.ServiceStatus {
 					if status.ServiceName == "IdentityDB" {
 						assert.Equal(t, model.StatusDown, status.Status, "IdentityDB should be DOWN")
@@ -175,10 +227,19 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness() {
 			}
 
 			// If runtime DB is expected down, verify it's reported as down
-			if tc.name == "RuntimeDBDown" || tc.name == "RuntimeDBClientError" || tc.name == "BothDBsDown" {
+			if tc.name == tcRuntimeDBDown || tc.name == "RuntimeDBClientError" || tc.name == tcAllThreeDBDown {
 				for _, status := range serverStatus.ServiceStatus {
 					if status.ServiceName == "RuntimeDB" {
 						assert.Equal(t, model.StatusDown, status.Status, "RuntimeDB should be DOWN")
+					}
+				}
+			}
+
+			// If user DB is expected down, verify it's reported as down
+			if tc.name == tcUserDBDown || tc.name == "UserDBClientError" || tc.name == tcAllThreeDBDown {
+				for _, status := range serverStatus.ServiceStatus {
+					if status.ServiceName == "UserDB" {
+						assert.Equal(t, model.StatusDown, status.Status, "UserDB should be DOWN")
 					}
 				}
 			}
@@ -195,19 +256,22 @@ func (suite *HealthCheckServiceTestSuite) TestCheckReadiness_DBRetrievalError() 
 	suite.mockDBProvider.ExpectedCalls = nil
 	suite.mockDBProvider.On("GetConfigDBClient").Return(nil, errors.New("failed to get identity DB client"))
 	suite.mockDBProvider.On("GetRuntimeDBClient").Return(nil, errors.New("failed to get runtime DB client"))
+	suite.mockDBProvider.On("GetUserDBClient").Return(nil, errors.New("failed to get user DB client"))
 
 	// Execute the method being tested
 	serverStatus := suite.service.CheckReadiness()
 
 	// Assertions
 	assert.Equal(suite.T(), model.StatusDown, serverStatus.Status, "Server status should be DOWN")
-	assert.Len(suite.T(), serverStatus.ServiceStatus, 2, "There should be two service statuses reported")
+	assert.Len(suite.T(), serverStatus.ServiceStatus, 3, "There should be three service statuses reported")
 
 	for _, status := range serverStatus.ServiceStatus {
 		if status.ServiceName == "IdentityDB" {
 			assert.Equal(suite.T(), model.StatusDown, status.Status, "IdentityDB should be DOWN")
 		} else if status.ServiceName == "RuntimeDB" {
 			assert.Equal(suite.T(), model.StatusDown, status.Status, "RuntimeDB should be DOWN")
+		} else if status.ServiceName == "UserDB" {
+			assert.Equal(suite.T(), model.StatusDown, status.Status, "UserDB should be DOWN")
 		}
 	}
 

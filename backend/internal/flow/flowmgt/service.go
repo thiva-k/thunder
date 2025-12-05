@@ -247,6 +247,14 @@ func (s *flowMgtService) buildGraphFromDefinition(definition *graphDefinition) (
 		}
 		node.SetInputData(inputData)
 
+		// Set condition if defined
+		if nodeDef.Condition != nil && (nodeDef.Condition.Key != "" || nodeDef.Condition.Value != "") {
+			node.SetCondition(&core.NodeCondition{
+				Key:   nodeDef.Condition.Key,
+				Value: nodeDef.Condition.Value,
+			})
+		}
+
 		// Set the executor name if defined, otherwise check for special node types
 		executorName := nodeDef.Executor.Name
 		if executorName == "" {

@@ -72,14 +72,14 @@ export default function MenuContent(): JSX.Element {
       <List dense>
         {mainListItems.map((item) => (
           <ListItem key={item.id} disablePadding sx={{display: 'block'}}>
-            <Tooltip title={mini ? item.text : ''} placement="right" arrow>
+            <Tooltip title={mini ? item.text : ''} placement="right">
               <ListItemButton
                 component={NavLink}
                 to={item.path}
                 selected={currentPage === item.id}
                 onClick={() => handleListItemClick(item)}
                 sx={{
-                  minHeight: 48,
+                  minHeight: 38,
                   justifyContent: mini ? 'center' : 'initial',
                   px: 2.5,
                 }}

@@ -26,6 +26,7 @@ import (
 // NodeInterface defines the interface for nodes in the graph
 type NodeInterface interface {
 	Execute(ctx *NodeContext) (*common.NodeResponse, *serviceerror.ServiceError)
+	ShouldExecute(ctx *NodeContext) bool
 	GetID() string
 	GetType() common.NodeType
 	GetProperties() map[string]interface{}
@@ -43,6 +44,8 @@ type NodeInterface interface {
 	RemovePreviousNodeID(previousNodeID string)
 	GetInputData() []common.InputData
 	SetInputData(inputData []common.InputData)
+	GetCondition() *NodeCondition
+	SetCondition(condition *NodeCondition)
 }
 
 // ExecutorBackedNodeInterface extends NodeInterface for nodes backed by executors.
@@ -65,6 +68,7 @@ type node struct {
 	nextNodeList     []string
 	previousNodeList []string
 	inputData        []common.InputData
+	condition        *NodeCondition
 }
 
 var _ NodeInterface = (*node)(nil)
@@ -72,6 +76,22 @@ var _ NodeInterface = (*node)(nil)
 // Execute executes the node
 func (n *node) Execute(ctx *NodeContext) (*common.NodeResponse, *serviceerror.ServiceError) {
 	return nil, nil
+}
+
+// ShouldExecute checks if the node's condition is satisfied and the node should execute.
+// Returns true if no condition is set or if the condition is met.
+func (n *node) ShouldExecute(ctx *NodeContext) bool {
+	if n.condition == nil {
+		return true
+	}
+
+	// Decision nodes should always execute to evaluate their branches
+	if n._type == common.NodeTypeDecision {
+		return true
+	}
+
+	resolvedKey := ResolvePlaceholder(ctx, n.condition.Key)
+	return resolvedKey == n.condition.Value
 }
 
 // GetID returns the node's ID
@@ -213,4 +233,14 @@ func (n *node) GetInputData() []common.InputData {
 // SetInputData sets the input data for the node
 func (n *node) SetInputData(inputData []common.InputData) {
 	n.inputData = inputData
+}
+
+// GetCondition returns the execution condition for the node
+func (n *node) GetCondition() *NodeCondition {
+	return n.condition
+}
+
+// SetCondition sets the execution condition for the node
+func (n *node) SetCondition(condition *NodeCondition) {
+	n.condition = condition
 }

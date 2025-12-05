@@ -74,7 +74,10 @@ export default function CreateUserTypePage() {
   const [enumInput, setEnumInput] = useState<Record<string, string>>({});
   const [validationError, setValidationError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const organizationUnits = useMemo(() => organizationUnitsResponse?.organizationUnits ?? [], [organizationUnitsResponse]);
+  const organizationUnits = useMemo(
+    () => organizationUnitsResponse?.organizationUnits ?? [],
+    [organizationUnitsResponse],
+  );
   const selectedOrganizationUnit = useMemo(
     () => organizationUnits.find((unit) => unit.id === ouId),
     [organizationUnits, ouId],
@@ -272,10 +275,10 @@ export default function CreateUserTypePage() {
 
       <Stack direction="row" alignItems="flex-start" justifyContent="space-between" mb={4} gap={2}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography variant="h1" gutterBottom>
             {t('userTypes:addUserType')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography variant="subtitle1" color="text.secondary">
             {t('userTypes:createDescription')}
           </Typography>
         </Box>
@@ -363,10 +366,7 @@ export default function CreateUserTypePage() {
 
           <FormControlLabel
             control={
-              <Checkbox
-                checked={allowSelfRegistration}
-                onChange={(e) => setAllowSelfRegistration(e.target.checked)}
-              />
+              <Checkbox checked={allowSelfRegistration} onChange={(e) => setAllowSelfRegistration(e.target.checked)} />
             }
             label={t('userTypes:allowSelfRegistration')}
             sx={{mb: 2}}
@@ -407,8 +407,6 @@ export default function CreateUserTypePage() {
                     <MenuItem value="number">{t('userTypes:types.number')}</MenuItem>
                     <MenuItem value="boolean">{t('userTypes:types.boolean')}</MenuItem>
                     <MenuItem value="enum">{t('userTypes:types.enum')}</MenuItem>
-                    <MenuItem value="array">{t('userTypes:types.array')}</MenuItem>
-                    <MenuItem value="object">{t('userTypes:types.object')}</MenuItem>
                   </Select>
                 </FormControl>
               </Box>
@@ -465,7 +463,7 @@ export default function CreateUserTypePage() {
                       size="small"
                       fullWidth
                     />
-                    <Button variant="outlined" size="small" onClick={() => handleAddEnumValue(property.id)}>
+                    <Button variant="outlined" onClick={() => handleAddEnumValue(property.id)}>
                       {t('common:actions.add')}
                     </Button>
                   </Box>

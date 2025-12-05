@@ -20,7 +20,6 @@ package authn
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -80,11 +79,7 @@ func TestSMSOTPAuthTestSuite(t *testing.T) {
 }
 
 func (suite *SMSOTPAuthTestSuite) SetupSuite() {
-	suite.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	suite.client = testutils.GetHTTPClient()
 	suite.mobileNumber = testMobileNumber
 
 	suite.mockServer = testutils.NewMockNotificationServer(mockNotificationServerPort)

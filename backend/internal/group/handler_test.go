@@ -293,7 +293,8 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupListRequest() {
 			},
 			assertBody: func(recorder *httptest.ResponseRecorder) {
 				suite.Require().Equal(http.StatusOK, recorder.Code)
-				suite.Require().Equal(serverconst.ContentTypeJSON, recorder.Header().Get(serverconst.ContentTypeHeaderName))
+				suite.Require().Equal(serverconst.ContentTypeJSON,
+					recorder.Header().Get(serverconst.ContentTypeHeaderName))
 
 				var body GroupListResponse
 				suite.Require().NoError(json.Unmarshal(recorder.Body.Bytes(), &body))
@@ -308,7 +309,8 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupListRequest() {
 			requestPath: "/groups?limit=invalid",
 			assertBody: func(recorder *httptest.ResponseRecorder) {
 				suite.Require().Equal(http.StatusBadRequest, recorder.Code)
-				suite.Require().Equal(serverconst.ContentTypeJSON, recorder.Header().Get(serverconst.ContentTypeHeaderName))
+				suite.Require().Equal(serverconst.ContentTypeJSON,
+					recorder.Header().Get(serverconst.ContentTypeHeaderName))
 
 				var body apierror.ErrorResponse
 				suite.Require().NoError(json.Unmarshal(recorder.Body.Bytes(), &body))
@@ -513,7 +515,8 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPostRequest() {
 			body: "{invalid json",
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), serverconst.ContentTypeJSON, rr.Header().Get(serverconst.ContentTypeHeaderName))
+				require.Equal(suite.T(), serverconst.ContentTypeJSON,
+					rr.Header().Get(serverconst.ContentTypeHeaderName))
 				var body apierror.ErrorResponse
 				require.NoError(suite.T(), json.Unmarshal(rr.Body.Bytes(), &body))
 				require.Equal(suite.T(), ErrorInvalidRequestFormat.Code, body.Code)
@@ -543,12 +546,14 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPostRequest() {
 							request.Members[0].ID == "member-1" &&
 							request.Members[0].Type == MemberTypeUser
 					})).
-					Return(&Group{ID: "grp-001", Name: "Team &lt;script&gt;", OrganizationUnitID: testOrganizationUnitID}, nil).
+					Return(&Group{ID: "grp-001", Name: "Team &lt;script&gt;",
+						OrganizationUnitID: testOrganizationUnitID}, nil).
 					Once()
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusCreated, rr.Code)
-				require.Equal(suite.T(), serverconst.ContentTypeJSON, rr.Header().Get(serverconst.ContentTypeHeaderName))
+				require.Equal(suite.T(), serverconst.ContentTypeJSON,
+					rr.Header().Get(serverconst.ContentTypeHeaderName))
 				var body Group
 				require.NoError(suite.T(), json.Unmarshal(rr.Body.Bytes(), &body))
 				require.Equal(suite.T(), "grp-001", body.ID)
@@ -1163,7 +1168,8 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupMembersGetReques
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusOK, rr.Code)
-				require.Equal(suite.T(), serverconst.ContentTypeJSON, rr.Header().Get(serverconst.ContentTypeHeaderName))
+				require.Equal(suite.T(), serverconst.ContentTypeJSON,
+					rr.Header().Get(serverconst.ContentTypeHeaderName))
 				var body MemberListResponse
 				require.NoError(suite.T(), json.Unmarshal(rr.Body.Bytes(), &body))
 				require.Equal(suite.T(), 3, body.TotalResults)

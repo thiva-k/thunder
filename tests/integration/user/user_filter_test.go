@@ -19,7 +19,6 @@
 package user
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -220,7 +219,7 @@ func (ts *UserFilterTestSuite) TestFilterByNumberAttribute() {
 
 	for i, user := range users {
 		ts.Require().NotNil(user.Attributes, "User attributes should not be nil for user %d", i)
-		
+
 		var userAttrs map[string]interface{}
 		err := json.Unmarshal(user.Attributes, &userAttrs)
 		ts.NoError(err, "Failed to unmarshal user attributes for user %d", i)
@@ -238,7 +237,7 @@ func (ts *UserFilterTestSuite) TestFilterByBooleanAttribute() {
 
 	for i, user := range users {
 		ts.Require().NotNil(user.Attributes, "User attributes should not be nil for user %d", i)
-		
+
 		var userAttrs map[string]interface{}
 		err := json.Unmarshal(user.Attributes, &userAttrs)
 		ts.NoError(err, "Failed to unmarshal user attributes for user %d", i)
@@ -268,7 +267,7 @@ func (ts *UserFilterTestSuite) TestFilterByNestedObjectAttribute() {
 
 	for i, user := range users {
 		ts.Require().NotNil(user.Attributes, "User attributes should not be nil for user %d", i)
-		
+
 		var userAttrs map[string]interface{}
 		err := json.Unmarshal(user.Attributes, &userAttrs)
 		ts.NoError(err, "Failed to unmarshal user attributes for user %d", i)
@@ -305,7 +304,7 @@ func (ts *UserFilterTestSuite) TestFilterByDepartment() {
 
 	for i, user := range users {
 		ts.Require().NotNil(user.Attributes, "User attributes should not be nil for user %d", i)
-		
+
 		var userAttrs map[string]interface{}
 		err := json.Unmarshal(user.Attributes, &userAttrs)
 		ts.NoError(err, "Failed to unmarshal user attributes for user %d", i)
@@ -337,11 +336,7 @@ func (ts *UserFilterTestSuite) TestFilterWithPagination() {
 	q.Add("offset", "0")
 	req.URL.RawQuery = q.Encode()
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.NoError(err, "Failed to send request")
@@ -359,7 +354,7 @@ func (ts *UserFilterTestSuite) TestFilterWithPagination() {
 	// Verify all returned users match the filter
 	for i, user := range userListResponse.Users {
 		ts.Require().NotNil(user.Attributes, "User attributes should not be nil for user %d", i)
-		
+
 		var userAttrs map[string]interface{}
 		err := json.Unmarshal(user.Attributes, &userAttrs)
 		ts.NoError(err, "Failed to unmarshal user attributes for user %d", i)
@@ -379,11 +374,7 @@ func (ts *UserFilterTestSuite) TestInvalidFilterFormats() {
 		"",                        // Empty filter
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	for _, filter := range invalidFilters {
 		req, err := http.NewRequest("GET", testServerURL+"/users", nil)
@@ -436,7 +427,7 @@ func (ts *UserFilterTestSuite) TestMultipleMatchingUsers() {
 
 	for i, user := range users {
 		ts.Require().NotNil(user.Attributes, "User attributes should not be nil for user %d", i)
-		
+
 		var userAttrs map[string]interface{}
 		err := json.Unmarshal(user.Attributes, &userAttrs)
 		ts.NoError(err, "Failed to unmarshal user attributes for user %d", i)
@@ -455,11 +446,7 @@ func (ts *UserFilterTestSuite) getUsersWithFilter(filter string) []testutils.Use
 	q.Add("filter", filter)
 	req.URL.RawQuery = q.Encode()
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	resp, err := client.Do(req)
 	ts.NoError(err, "Failed to send request")

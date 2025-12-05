@@ -31,7 +31,7 @@ import {
   DataGrid,
   useTheme,
 } from '@wso2/oxygen-ui';
-import {EllipsisVertical, Eye, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {AppWindow, EllipsisVertical, Eye, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import useDataGridLocaleText from '../../../hooks/useDataGridLocaleText';
 import useGetApplications from '../api/useGetApplications';
@@ -69,13 +69,17 @@ export default function ApplicationsList(): JSX.Element {
     setSelectedAppId(null);
   };
 
-  const getInitials = (name: string): string =>
-    name
-      .split(' ')
-      .map((n) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+  const handleViewClick = (): void => {
+    handleMenuClose();
+    if (selectedAppId) {
+      (async (): Promise<void> => {
+        await navigate(`/applications/${selectedAppId}`);
+      })().catch(() => {
+        // TODO: Log the errors
+        // Tracker: https://github.com/asgardeo/thunder/issues/618
+      });
+    }
+  };
 
   const columns: DataGrid.GridColDef<BasicApplication>[] = useMemo(
     () => [
@@ -96,6 +100,13 @@ export default function ApplicationsList(): JSX.Element {
           >
             <Avatar
               src={params.row.logo_url}
+              slotProps={{
+                img: {
+                  onError: (e: React.SyntheticEvent<HTMLImageElement>) => {
+                    e.currentTarget.src = '';
+                  },
+                },
+              }}
               sx={{
                 p: 0.5,
                 backgroundColor: theme.vars?.palette.grey[500],
@@ -107,7 +118,7 @@ export default function ApplicationsList(): JSX.Element {
                 }),
               }}
             >
-              {!params.row.logo_url && getInitials(params.row.name)}
+              <AppWindow size={14} />
             </Avatar>
           </Box>
         ),
@@ -194,9 +205,10 @@ export default function ApplicationsList(): JSX.Element {
           columns={columns}
           loading={isLoading}
           getRowId={(row): string => row.id}
-          onRowClick={() => {
+          onRowClick={(params) => {
+            const applicationId = (params.row as BasicApplication).id;
             (async (): Promise<void> => {
-              await navigate(`/applications`);
+              await navigate(`/applications/${applicationId}`);
             })().catch(() => {
               // TODO: Log the errors
               // Tracker: https://github.com/asgardeo/thunder/issues/618
@@ -220,7 +232,7 @@ export default function ApplicationsList(): JSX.Element {
 
       {/* Actions Menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose}>
-        <MenuItem disabled>
+        <MenuItem onClick={handleViewClick}>
           <ListItemIcon>
             <Eye size={16} />
           </ListItemIcon>

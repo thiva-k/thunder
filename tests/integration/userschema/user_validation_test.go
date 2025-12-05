@@ -20,7 +20,6 @@ package userschema
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -50,11 +49,7 @@ func TestUserValidationTestSuite(t *testing.T) {
 }
 
 func (ts *UserValidationTestSuite) SetupSuite() {
-	ts.client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	ts.client = testutils.GetHTTPClient()
 	ts.createdSchemas = []string{}
 	ts.createdUsers = []string{}
 
@@ -256,7 +251,7 @@ func (ts *UserValidationTestSuite) TestUpdateUserWithValidSchema() {
 
 	// Update user with valid data
 	updateUserReq := UpdateUserRequest{
-		Type: "employee",
+		Type:             "employee",
 		OrganizationUnit: ts.organizationUnitID,
 		Attributes: json.RawMessage(`{
 			"firstName": "John",
@@ -290,7 +285,7 @@ func (ts *UserValidationTestSuite) TestUpdateUserWithInvalidSchema() {
 
 	// Update user with invalid data (wrong type for isManager)
 	updateUserReq := UpdateUserRequest{
-		Type: "employee",
+		Type:             "employee",
 		OrganizationUnit: ts.organizationUnitID,
 		Attributes: json.RawMessage(`{
 			"firstName": "John",

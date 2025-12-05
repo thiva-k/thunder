@@ -165,68 +165,80 @@ Follow these steps to access the Developer Console:
 
 #### Try Out with the Sample App
 
-To quickly get started with Thunder, you can use the sample app provided with the product. This guide demonstrates how to download and run the sample app, self register a user and try out login to the sample app.
+Thunder provides two sample applications to help you get started quickly:
 
-##### Download and Run the Sample App
+- **React Vanilla Sample** — Sample React application demonstrating direct API integration without external SDKs. Supports Native Flow API or Standard OAuth/OIDC.
+- **React SDK Sample** — Sample React application demonstrating SDK-based integration using `@asgardeo/react` for OAuth 2.0/OIDC authentication.
 
-1. Download the sample app from the latest release
+##### React Vanilla Sample
 
-    Download `sample-app-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/asgardeo/thunder/releases/latest) for your operating system and architecture.
+1. **Download the sample**
 
-2. Unzip and navigate to the sample app directory
+    Download `sample-app-react-vanilla-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/asgardeo/thunder/releases/latest).
+
+2. **Unzip and navigate to the sample app directory**
 
     ```bash
-    unzip sample-app-<version>-<os>-<arch>.zip
-    cd sample-app-<version>-<os>-<arch>/
+    unzip sample-app-react-vanilla-<version>-<os>-<arch>.zip
+    cd sample-app-react-vanilla-<version>-<os>-<arch>/
     ```
 
-3. **Configure the sample app**
+3. **Configure the sample**
 
-    Open `app/runtime.json` and set `applicationID` to the sample app ID generated during "Setup the product."
+    Open `app/runtime.json` and set the `applicationID` to the sample app ID generated during "Setup the product":
 
-    For example, if the sample app ID is `d6df2ef9-88db-4ca9-9a23-d1577b2552c1`, `runtime.json` should look like:
-    ```
+    ```json
     {
-        "applicationID": "d6df2ef9-88db-4ca9-9a23-d1577b2552c1",
-        "flowEndpoint": "https://localhost:8090/flow"
+        "applicationID": "{your-application-id}"
     }
     ```
 
-4. **Start the sample app**
+4. **Start the sample**
 
     ```bash
-    sh start.sh
+    ./start.sh
     ```
 
-Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to see the sample app in action.
+    Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
 
-##### Self Register a User
+    > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration options including OAuth redirect-based login.
 
-To self register a user in the sample app, follow these steps:
+##### React SDK Sample
 
-1. Open the sample app in your browser at [https://localhost:3000](https://localhost:3000) and click on the "Sign up" button.
+1. **Download the sample**
 
-2. Provide a username and password for the new user and click on the "Create Account" button.
+    Download `sample-app-react-sdk-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/asgardeo/thunder/releases/latest).
+
+2. **Unzip and navigate to the sample app directory**
+
+    ```bash
+    unzip sample-app-react-sdk-<version>-<os>-<arch>.zip
+    cd sample-app-react-sdk-<version>-<os>-<arch>/
+    ```
+
+3. **Start the sample**
+
+    ```bash
+    ./start.sh
+    ```
+
+    Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
+
+    > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
+
+##### Self Register and Login (React Vanilla Sample)
+
+The React Vanilla sample supports user self-registration and login:
+
+1. Open [https://localhost:3000](https://localhost:3000) and click **"Sign up"** to register a new user.
 
     ![Self Registration Username Password](resources/images/sample-app-self-registration-basic.png)
 
-3. Fill in the additional user attributes such as first name, last name and email address. Click "Continue" to complete the registration.
-
-    ![Self Registration Additional Details](resources/images/sample-app-self-registration-details.png)
-
-4. After successful registration, you will be automatically logged in to the sample application.
-
-##### Login to the Sample App
-
-To log in to the sample app, follow these steps:
-
-1. Open the sample app in your browser at [https://localhost:3000](https://localhost:3000).
-
-2. Enter username and password you used during the self registration process and click on the "Sign In" button.
+2. After registration, use the same credentials to **"Sign In"**.
 
     ![Login to Sample App](resources/images/sample-app-login.png)
 
-3. If the login is successful, you will be redirected to the home page of the sample app with the access token.
+3. Upon successful login, you'll see the home page with your access token.
 
 #### Try Out Client Credentials Flow
 
@@ -240,10 +252,9 @@ curl -k -X POST 'https://localhost:8090/flow/execute' \
 ```
 
 The response will contain an `assertion` field.
-```
+```json
 {"flowId":"<flow_id>","flowStatus":"COMPLETE","data":{},"assertion":"<assertion>"}
 ```
-
 
 The Client Credentials flow is used to obtain an access token for machine-to-machine communication. This flow does not require user interaction and is typically used for server-to-server communication.
 
@@ -341,20 +352,39 @@ To try out the Client Credentials flow, follow these steps:
 
 ### Start the Sample App in Development Mode
 
+The sample apps support two configuration approaches:
+- **`.env` file**: Used during development (values are bundled at build time)
+- **`runtime.json` file**: Used for deployed/distributed apps (values loaded at runtime)
+
+For development, use the `.env` file approach:
+
 - Navigate to the sample app directory:
 
   ```bash
-  cd samples/apps/oauth
+  cd samples/apps/react-vanilla-sample
   ```
 
-- Create a file `.env` in the path `samples/apps/oauth/` and add below values.
+- Create a file `.env` in the path `samples/apps/react-vanilla-sample/` by copying `.env.example`:
 
+  ```bash
+  cp .env.example .env
   ```
+
+- Edit the `.env` file and configure the required values:
+
+  ```env
+  # Application ID registered in Thunder
+  VITE_REACT_APP_AUTH_APP_ID={your-application-id}
+  
+  # Thunder server endpoints
   VITE_REACT_APP_SERVER_FLOW_ENDPOINT=https://localhost:8090/flow
   VITE_REACT_APPLICATIONS_ENDPOINT=https://localhost:8090/applications
-  VITE_REACT_APP_AUTH_APP_ID={your-application-id}
+  
+  # Set to false for native flow, true for OAuth redirect flow
   VITE_REACT_APP_REDIRECT_BASED_LOGIN=false
   ```
+
+  > **Note**: For OAuth redirect flow, additional configurations like `VITE_REACT_APP_CLIENT_ID`, `VITE_REACT_APP_SERVER_AUTHORIZATION_ENDPOINT`, and `VITE_REACT_APP_SERVER_TOKEN_ENDPOINT` are required. See `.env.example` for the complete list.
 
 - Install the dependencies:
 
@@ -517,6 +547,14 @@ docker compose down -v
             hostname: "localhost"
             port: 5432
             name: "runtimedb"
+            username: "asgthunder"
+            password: "asgthunder"
+            sslmode: "disable"
+        user:
+            type: "postgres"
+            hostname: "localhost"
+            port: 5432
+            name: "userdb"
             username: "asgthunder"
             password: "asgthunder"
             sslmode: "disable"

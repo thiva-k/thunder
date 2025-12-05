@@ -20,7 +20,6 @@ package dcr
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -250,11 +249,7 @@ func (ts *DCRTestSuite) TestDCRRegistrationFragmentInRedirectURI() {
 func (ts *DCRTestSuite) TestDCRRegistrationInvalidJSON() {
 	invalidJSON := []byte(`{"redirect_uris": ["https://example.com"], "invalid_json"}`)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+dcrEndpoint, bytes.NewReader(invalidJSON))
 	if err != nil {
@@ -311,11 +306,7 @@ func (ts *DCRTestSuite) registerClient(request DCRRegistrationRequest) (*DCRRegi
 		ts.T().Fatalf("Failed to marshal request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+dcrEndpoint, bytes.NewReader(requestJSON))
 	if err != nil {
@@ -501,11 +492,7 @@ func (ts *DCRTestSuite) registerClientWithError(request DCRRegistrationRequest) 
 		ts.T().Fatalf("Failed to marshal request: %v", err)
 	}
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+dcrEndpoint, bytes.NewReader(requestJSON))
 	if err != nil {
@@ -615,11 +602,7 @@ func (ts *DCRTestSuite) TestDCRRegistrationWithJWKSURIAndRetrieve() {
 	ts.Assert().Equal(request.JWKSUri, response.JWKSUri)
 
 	// Retrieve the application via application API to verify the JWKS URI is persisted
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	getReq, err := http.NewRequest("GET", testServerURL+"/applications/"+response.AppID, nil)
 	ts.Require().NoError(err, "Failed to create GET request")
@@ -1221,11 +1204,7 @@ func (ts *DCRTestSuite) TestDCRRegistrationErrorInvalidJWKSURI() {
 
 // TestDCRRegistrationEmptyRequest tests that empty request body results in error handling.
 func (ts *DCRTestSuite) TestDCRRegistrationEmptyRequest() {
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+dcrEndpoint, bytes.NewReader([]byte("{}")))
 	ts.Require().NoError(err, "Failed to create request")
@@ -1254,11 +1233,7 @@ func (ts *DCRTestSuite) TestDCRRegistrationNullRedirectURIs() {
 	requestJSON, err := json.Marshal(requestData)
 	ts.Require().NoError(err)
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-	}
+	client := testutils.GetHTTPClient()
 
 	req, err := http.NewRequest("POST", testServerURL+dcrEndpoint, bytes.NewReader(requestJSON))
 	ts.Require().NoError(err)

@@ -40,11 +40,17 @@ System APIs of Thunder are secured by default. You need to obtain an access toke
 
 This documentation is organized into the following sections:
 
+### [Standards-Based Protocols](standards-based/)
+
+Comprehensive documentation for OAuth 2.0 and OpenID Connect (OIDC) standards:
+
+- **[OAuth 2.0 & OpenID Connect (OIDC)](standards-based/)** - Grant types, endpoints, and features for OAuth 2.0 and OIDC with samples
+
 ### [Authentication](authentication/)
 
 Learn how to implement authentication in your applications using Thunder:
 
-- **[Standards-Based Authentication](authentication/standards-based/)** - OAuth 2.0, OpenID Connect (OIDC) flows including Authorization Code, Client Credentials, and Refresh Token
+- **[Standards-Based Authentication](authentication/standards-based/oauth-authentication.md)** - Quick reference for OAuth 2.0 and OIDC (see [Standards-Based](standards-based/) for comprehensive documentation)
 - **[Server Orchestrated Flows](authentication/server-orchestrated-flow/)** - App native authentication using server orchestrated flows
 - **[Client Orchestrated Flows](authentication/client-orchestrated-flow/)** - App native authentication using client orchestrated flows
 
@@ -65,6 +71,13 @@ Configure external identity providers for social login and enterprise SSO:
 Configure message senders for OTP and notifications:
 
 - **[Configure Message Senders](notification-sender/configure-message-senders.md)** - Set up message notification senders
+
+### [Immutable Configurations](immutable-configurations/)
+
+Manage Thunder configurations and deployments:
+
+- **[Export Configurations](immutable-configurations/export-configurations.md)** - Export applications and other resources as YAML files for version control and backup
+- **[Immutable Configuration Mode](immutable-configurations/immutable-configuration.md)** - Run Thunder with file-based configurations for GitOps workflows
 
 ### [Deployment Patterns](./deployment-patterns/)
 

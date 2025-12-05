@@ -356,7 +356,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUListRequest
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 	}
@@ -428,7 +428,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPostRequest
 			useFlaky: true,
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusBadRequest, recorder.Code)
-				suite.Equal("Failed to encode error response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 			assertService: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "CreateOrganizationUnit", mock.Anything)
@@ -502,7 +502,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPostRequest
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusInternalServerError, recorder.Code)
-				suite.Equal("Failed to encode error response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -517,7 +517,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPostRequest
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusCreated, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 	}
@@ -582,7 +582,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUGetRequest(
 			useFlaky: true,
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusBadRequest, recorder.Code)
-				suite.Equal("Failed to encode error response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 			assertService: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "GetOrganizationUnit", mock.Anything)
@@ -620,7 +620,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUGetRequest(
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -695,7 +695,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutRequest(
 			useFlaky:       true,
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusBadRequest, recorder.Code)
-				suite.Equal("Failed to encode error response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -765,7 +765,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutRequest(
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 	}
@@ -948,7 +948,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUChildrenLis
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -1044,7 +1044,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUGetByPathRe
 			useFlaky: true,
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusBadRequest, recorder.Code)
-				suite.Equal("Failed to encode error response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 			assertService: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "GetOrganizationUnitByPath", mock.Anything)
@@ -1082,7 +1082,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUGetByPathRe
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -1154,7 +1154,8 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutByPathRe
 			pathParamValue: defaultOUPath,
 			setup: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.
-					On("UpdateOrganizationUnitByPath", defaultOUPath, mock.AnythingOfType("ou.OrganizationUnitRequest")).
+					On("UpdateOrganizationUnitByPath", defaultOUPath,
+						mock.AnythingOfType("ou.OrganizationUnitRequest")).
 					Return(OrganizationUnit{}, &ErrorInternalServerError).
 					Once()
 			},
@@ -1176,13 +1177,14 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutByPathRe
 			useFlaky:       true,
 			setup: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.
-					On("UpdateOrganizationUnitByPath", defaultOUPath, mock.AnythingOfType("ou.OrganizationUnitRequest")).
+					On("UpdateOrganizationUnitByPath", defaultOUPath,
+						mock.AnythingOfType("ou.OrganizationUnitRequest")).
 					Return(OrganizationUnit{ID: defaultOURequestID}, nil).
 					Once()
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -1195,7 +1197,8 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUPutByPathRe
 			pathParamValue: defaultOUPath,
 			setup: func(serviceMock *OrganizationUnitServiceInterfaceMock) {
 				serviceMock.
-					On("UpdateOrganizationUnitByPath", defaultOUPath, mock.AnythingOfType("ou.OrganizationUnitRequest")).
+					On("UpdateOrganizationUnitByPath", defaultOUPath,
+						mock.AnythingOfType("ou.OrganizationUnitRequest")).
 					Return(OrganizationUnit{ID: defaultOURequestID}, nil).
 					Once()
 			},
@@ -1352,7 +1355,7 @@ func (suite *OrganizationUnitHandlerTestSuite) TestOUHandler_HandleOUUsersListBy
 			},
 			assert: func(recorder *httptest.ResponseRecorder) {
 				suite.Equal(http.StatusOK, recorder.Code)
-				suite.Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{

@@ -93,11 +93,8 @@ func (s *userInfoService) GetUserInfo(accessToken string) (map[string]interface{
 		oauthApp.Token.IDToken != nil &&
 		slices.Contains(oauthApp.Token.IDToken.UserAttributes, constants.UserAttributeGroups)
 
-	userAttributes, userGroups, _, _, err := tokenservice.FetchUserAttributesAndGroups(
-		s.userService,
-		sub,
-		includeGroups,
-	)
+	userAttributes, userGroups, err := tokenservice.FetchUserAttributesAndGroups(s.userService,
+		sub, includeGroups)
 	if err != nil {
 		s.logger.Error("Failed to fetch user attributes", log.String("userID", sub), log.Error(err))
 		return nil, &serviceerror.InternalServerError

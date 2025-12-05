@@ -51,6 +51,15 @@ packages:
       dir: internal/authn
       structname: '{{.InterfaceName}}Mock'
       pkgname: authn
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/idp:
+    config:
+      all: true
+      dir: internal/idp
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: idp
+      filename: "{{.InterfaceName}}_mock_test.go"
 
   github.com/asgardeo/thunder/internal/role:
     config:
@@ -140,12 +149,20 @@ packages:
       pkgname: security
       filename: "{{.InterfaceName}}_mock_test.go"
 
-  github.com/asgardeo/thunder/internal/branding:
+  github.com/asgardeo/thunder/internal/branding/mgt:
     config:
       all: true
-      dir: internal/branding
+      dir: internal/branding/mgt
       structname: '{{.InterfaceName}}Mock'
-      pkgname: branding
+      pkgname: brandingmgt
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/branding/resolve:
+    config:
+      all: true
+      dir: internal/branding/resolve
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: brandingresolve
       filename: "{{.InterfaceName}}_mock_test.go"
 
   github.com/asgardeo/thunder/internal/oauth/oauth2/userinfo:
@@ -154,4 +171,44 @@ packages:
       dir: internal/oauth/oauth2/userinfo
       structname: '{{.InterfaceName}}Mock'
       pkgname: userinfo
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/oauth/jwks:
+    config:
+      all: true
+      dir: internal/oauth/jwks
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: jwks
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/oauth/oauth2/dcr:
+    config:
+      all: true
+      dir: internal/oauth/oauth2/dcr
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: dcr
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/application:
+    config:
+      all: true
+      dir: internal/application
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: application
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/cert:
+    config:
+      all: true
+      dir: internal/cert
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: cert
+      filename: "{{.InterfaceName}}_mock_test.go"
+
+  github.com/asgardeo/thunder/internal/resource:
+    config:
+      all: true
+      dir: internal/resource
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: resource
       filename: "{{.InterfaceName}}_mock_test.go"

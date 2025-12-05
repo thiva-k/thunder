@@ -26,16 +26,18 @@ import (
 
 // AuthenticatorInterface defines the interface for pluggable authentication and authorization mechanisms.
 // Implementations handle different authentication methods (JWT, API keys, mTLS, etc.) and
-// perform both authentication and authorization in a single operation.
+// perform authentication and authorization.
 type AuthenticatorInterface interface {
 	// CanHandle determines if this authenticator can process the given request.
 	// Returns true if the authenticator recognizes the authentication mechanism in the request.
 	CanHandle(r *http.Request) bool
 
-	// Authenticate validates credentials and checks authorization in a single operation.
-	// On success, returns an AuthenticationContext with user information.
-	// On failure, returns an error indicating authentication failure (401) or authorization failure (403).
-	// The returned error should be one of the security package errors (ErrInvalidToken, ErrInsufficientScopes, etc.)
-	// to allow proper HTTP status code mapping.
+	// Authenticate validates credentials and builds an AuthenticationContext on success.
+	// On failure, returns an authentication error (401).
 	Authenticate(r *http.Request) (*sysContext.AuthenticationContext, error)
+
+	// Authorize verifies the authenticated principal has permission to access the resource.
+	// The provided AuthenticationContext is the result of Authenticate.
+	// On failure, returns an authorization error (403).
+	Authorize(r *http.Request, authCtx *sysContext.AuthenticationContext) error
 }

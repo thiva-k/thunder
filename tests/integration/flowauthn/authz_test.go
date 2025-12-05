@@ -36,7 +36,7 @@ var (
 	}
 
 	authzTestUserSchema = testutils.UserSchema{
-		Name: "person",
+		Name: "authz-test-person",
 		Schema: map[string]interface{}{
 			"username": map[string]interface{}{
 				"type": "string",
@@ -68,7 +68,7 @@ var (
 	}
 
 	userWithRole = testutils.User{
-		Type: "person",
+		Type: "authz-test-person",
 		Attributes: json.RawMessage(`{
 			"username": "authorized_user",
 			"password": "SecurePass123!",
@@ -79,7 +79,7 @@ var (
 	}
 
 	userNoRole = testutils.User{
-		Type: "person",
+		Type: "authz-test-person",
 		Attributes: json.RawMessage(`{
 			"username": "unauthorized_user",
 			"password": "SecurePass123!",
