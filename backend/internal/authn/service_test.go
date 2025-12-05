@@ -283,7 +283,7 @@ func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentialsJWTG
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(common.ErrorInternalServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentialsSubjectMismatch() {
@@ -665,7 +665,7 @@ func (suite *AuthenticationServiceTestSuite) TestStartIDPAuthenticationJWTGenera
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(common.ErrorInternalServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *AuthenticationServiceTestSuite) TestFinishIDPAuthenticationOAuthSuccess() {
@@ -959,7 +959,7 @@ func (suite *AuthenticationServiceTestSuite) TestHandleIDPServiceErrorServerErro
 	result := suite.service.handleIDPServiceError(idpID, svcErr, logger)
 
 	suite.NotNil(result)
-	suite.Equal(common.ErrorInternalServerError.Code, result.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, result.Code)
 }
 
 func (suite *AuthenticationServiceTestSuite) TestVerifyAndDecodeSessionTokenMalformedPayload() {
@@ -1452,7 +1452,7 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyOTPJWTGenerationError() {
 
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(common.ErrorInternalServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *AuthenticationServiceTestSuite) TestExtractClaimsFromAssertionInvalidJWTSignature() {

@@ -20,7 +20,6 @@
 package oidc
 
 import (
-	"slices"
 	"strings"
 
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
@@ -55,17 +54,19 @@ type OIDCAuthnServiceInterface interface {
 type oidcAuthnService struct {
 	internal   authnoauth.OAuthAuthnServiceInterface
 	jwtService jwt.JWTServiceInterface
+	logger     *log.Logger
 }
 
 // newOIDCAuthnService creates a new instance of OIDC authenticator service.
 func newOIDCAuthnService(httpClient httpservice.HTTPClientInterface,
 	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
-	jwtSvc jwt.JWTServiceInterface, endpoints authnoauth.OAuthEndpoints) OIDCAuthnServiceInterface {
-	internal := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc, endpoints)
+	jwtSvc jwt.JWTServiceInterface) OIDCAuthnServiceInterface {
+	internal := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc)
 
 	service := &oidcAuthnService{
 		internal:   internal,
 		jwtService: jwtSvc,
+		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
 	authncm.RegisterAuthenticator(service.getMetadata())
 
@@ -77,27 +78,14 @@ func newOIDCAuthnService(httpClient httpservice.HTTPClientInterface,
 // TODO: Should be removed when executors are migrated to di pattern.
 func NewOIDCAuthnService(httpClient httpservice.HTTPClientInterface,
 	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
-	jwtSvc jwt.JWTServiceInterface, endpoints authnoauth.OAuthEndpoints) OIDCAuthnServiceInterface {
-	return newOIDCAuthnService(httpClient, idpSvc, userSvc, jwtSvc, endpoints)
+	jwtSvc jwt.JWTServiceInterface) OIDCAuthnServiceInterface {
+	return newOIDCAuthnService(httpClient, idpSvc, userSvc, jwtSvc)
 }
 
-// GetOAuthClientConfig retrieves and validates the OAuth client configuration for the given identity provider ID.
+// GetOAuthClientConfig retrieves the OAuth client configuration for the given identity provider ID.
 func (s *oidcAuthnService) GetOAuthClientConfig(idpID string) (
 	*authnoauth.OAuthClientConfig, *serviceerror.ServiceError) {
-	oAuthClientConfig, svcErr := s.internal.GetOAuthClientConfig(idpID)
-	if svcErr != nil {
-		return nil, svcErr
-	}
-
-	// Validate OIDC scope is included in the configured scopes.
-	if !slices.Contains(oAuthClientConfig.Scopes, ScopeOpenID) {
-		logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-			log.String("idpId", idpID))
-		logger.Debug("The 'openid' scope is not configured for the OIDC identity provider. Adding it to the scopes.")
-		oAuthClientConfig.Scopes = append(oAuthClientConfig.Scopes, ScopeOpenID)
-	}
-
-	return oAuthClientConfig, nil
+	return s.internal.GetOAuthClientConfig(idpID)
 }
 
 // BuildAuthorizeURL constructs the authorization request URL for the external identity provider.
@@ -129,7 +117,7 @@ func (s *oidcAuthnService) ExchangeCodeForToken(idpID, code string, validateResp
 // to true. Hence generally you may not need to call this method explicitly.
 func (s *oidcAuthnService) ValidateTokenResponse(idpID string, tokenResp *authnoauth.TokenResponse,
 	validateIDToken bool) *serviceerror.ServiceError {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+	logger := s.logger
 	logger.Debug("Validating token response")
 
 	if tokenResp == nil {
@@ -160,8 +148,7 @@ func (s *oidcAuthnService) ValidateTokenResponse(idpID string, tokenResp *authno
 // to true. Hence generally you may not need to call this method explicitly if ExchangeCodeForToken method
 // is called with validateResponse set to true.
 func (s *oidcAuthnService) ValidateIDToken(idpID, idToken string) *serviceerror.ServiceError {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String("idpId", idpID))
+	logger := s.logger.With(log.String("idpId", idpID))
 	logger.Debug("Validating ID token")
 
 	if strings.TrimSpace(idToken) == "" {
@@ -195,7 +182,7 @@ func (s *oidcAuthnService) ValidateIDToken(idpID, idToken string) *serviceerror.
 // GetIDTokenClaims extracts and returns the claims from the ID token.
 func (s *oidcAuthnService) GetIDTokenClaims(idToken string) (
 	map[string]interface{}, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+	logger := s.logger
 	logger.Debug("Extracting claims from ID token")
 
 	if strings.TrimSpace(idToken) == "" {

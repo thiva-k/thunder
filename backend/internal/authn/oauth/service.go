@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	"github.com/asgardeo/thunder/internal/authn/common"
-	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	"github.com/asgardeo/thunder/internal/idp"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -59,20 +58,20 @@ type oAuthAuthnService struct {
 	httpClient  syshttp.HTTPClientInterface
 	idpService  idp.IDPServiceInterface
 	userService user.UserServiceInterface
-	endpoints   OAuthEndpoints
+	logger      *log.Logger
 }
 
 // newOAuthAuthnService creates a new instance of OAuth authenticator service.
 func newOAuthAuthnService(httpClient syshttp.HTTPClientInterface,
 	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
-	endpoints OAuthEndpoints) OAuthAuthnServiceInterface {
+) OAuthAuthnServiceInterface {
 	service := &oAuthAuthnService{
 		httpClient:  httpClient,
 		idpService:  idpSvc,
 		userService: userSvc,
-		endpoints:   endpoints,
+		logger:      log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
-	authncm.RegisterAuthenticator(service.getMetadata())
+	common.RegisterAuthenticator(service.getMetadata())
 
 	return service
 }
@@ -81,17 +80,14 @@ func newOAuthAuthnService(httpClient syshttp.HTTPClientInterface,
 // [Deprecated: use dependency injection to get the instance instead].
 // TODO: Should be removed when executors are migrated to di pattern.
 func NewOAuthAuthnService(httpClient syshttp.HTTPClientInterface,
-	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
-	endpoints OAuthEndpoints) OAuthAuthnServiceInterface {
-	return newOAuthAuthnService(httpClient, idpSvc, userSvc, endpoints)
+	idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface) OAuthAuthnServiceInterface {
+	return newOAuthAuthnService(httpClient, idpSvc, userSvc)
 }
 
-// GetOAuthClientConfig retrieves and validates the OAuth client configuration for the given identity provider ID.
+// GetOAuthClientConfig retrieves the OAuth client configuration for the given identity provider ID.
 func (s *oAuthAuthnService) GetOAuthClientConfig(idpID string) (
 	*OAuthClientConfig, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String("idpId", idpID))
-
+	logger := s.logger.With(log.String("idpId", idpID))
 	if strings.TrimSpace(idpID) == "" {
 		return nil, &ErrorEmptyIdpID
 	}
@@ -99,12 +95,12 @@ func (s *oAuthAuthnService) GetOAuthClientConfig(idpID string) (
 	idp, svcErr := s.idpService.GetIdentityProvider(idpID)
 	if svcErr != nil {
 		if svcErr.Type == serviceerror.ClientErrorType {
-			return nil, customServiceError(ErrorClientErrorWhileRetrievingIDP,
+			return nil, serviceerror.CustomServiceError(ErrorClientErrorWhileRetrievingIDP,
 				"Error while retrieving identity provider: "+svcErr.ErrorDescription)
 		}
 		logger.Error("Error while retrieving identity provider", log.String("errorCode", svcErr.Code),
 			log.String("description", svcErr.ErrorDescription))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	if idp == nil {
 		return nil, &ErrorInvalidIDP
@@ -113,12 +109,7 @@ func (s *oAuthAuthnService) GetOAuthClientConfig(idpID string) (
 	oAuthClientConfig, err := parseIDPConfig(idp)
 	if err != nil {
 		logger.Error("Failed to parse identity provider configurations", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
-	}
-
-	svcErr = s.validateClientConfig(oAuthClientConfig)
-	if svcErr != nil {
-		return nil, svcErr
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return oAuthClientConfig, nil
@@ -126,19 +117,25 @@ func (s *oAuthAuthnService) GetOAuthClientConfig(idpID string) (
 
 // BuildAuthorizeURL constructs the authorization request URL for the external identity provider.
 func (s *oAuthAuthnService) BuildAuthorizeURL(idpID string) (string, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-	logger.Debug("Building authorize URL", log.String("idpId", idpID))
+	logger := s.logger.With(log.String("idpId", idpID))
+	logger.Debug("Building authorize URL")
 
 	oAuthClientConfig, svcErr := s.GetOAuthClientConfig(idpID)
 	if svcErr != nil {
 		return "", svcErr
+	}
+	if oAuthClientConfig.OAuthEndpoints.AuthorizationEndpoint == "" {
+		logger.Error("Authorization endpoint is not configured for the identity provider")
+		return "", &serviceerror.InternalServerError
 	}
 
 	queryParams := map[string]string{
 		oauth2const.RequestParamClientID:     oAuthClientConfig.ClientID,
 		oauth2const.RequestParamRedirectURI:  oAuthClientConfig.RedirectURI,
 		oauth2const.RequestParamResponseType: oauth2const.RequestParamCode,
-		oauth2const.RequestParamScope:        sysutils.StringifyStringArray(oAuthClientConfig.Scopes, " "),
+	}
+	if len(oAuthClientConfig.Scopes) > 0 {
+		queryParams[oauth2const.RequestParamScope] = sysutils.StringifyStringArray(oAuthClientConfig.Scopes, " ")
 	}
 
 	for key, value := range oAuthClientConfig.AdditionalParams {
@@ -152,7 +149,7 @@ func (s *oAuthAuthnService) BuildAuthorizeURL(idpID string) (string, *serviceerr
 		queryParams)
 	if err != nil {
 		logger.Error("Failed to build authorize URL", log.Error(err))
-		return "", &ErrorUnexpectedServerError
+		return "", &serviceerror.InternalServerError
 	}
 
 	return authZURL, nil
@@ -162,8 +159,8 @@ func (s *oAuthAuthnService) BuildAuthorizeURL(idpID string) (string, *serviceerr
 // and validates the token response if validateResponse is true.
 func (s *oAuthAuthnService) ExchangeCodeForToken(idpID, code string, validateResponse bool) (
 	*TokenResponse, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-	logger.Debug("Exchanging authorization code for token", log.String("idpId", idpID))
+	logger := s.logger.With(log.String("idpId", idpID))
+	logger.Debug("Exchanging authorization code for token")
 
 	if strings.TrimSpace(code) == "" {
 		return nil, &ErrorEmptyAuthorizationCode
@@ -172,6 +169,10 @@ func (s *oAuthAuthnService) ExchangeCodeForToken(idpID, code string, validateRes
 	oAuthClientConfig, svcErr := s.GetOAuthClientConfig(idpID)
 	if svcErr != nil {
 		return nil, svcErr
+	}
+	if oAuthClientConfig.OAuthEndpoints.TokenEndpoint == "" {
+		logger.Error("Token endpoint is not configured for the identity provider")
+		return nil, &serviceerror.InternalServerError
 	}
 
 	httpReq, svcErr := buildTokenRequest(oAuthClientConfig, code, logger)
@@ -198,8 +199,7 @@ func (s *oAuthAuthnService) ExchangeCodeForToken(idpID, code string, validateRes
 // ExchangeCodeForToken method calls this method to validate the token response if validateResponse is set
 // to true. Hence generally you may not need to call this method explicitly.
 func (s *oAuthAuthnService) ValidateTokenResponse(idpID string, tokenResp *TokenResponse) *serviceerror.ServiceError {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String("idpId", idpID))
+	logger := s.logger.With(log.String("idpId", idpID))
 	logger.Debug("Validating token response")
 
 	if tokenResp == nil {
@@ -228,7 +228,7 @@ func (s *oAuthAuthnService) FetchUserInfo(idpID, accessToken string) (
 // FetchUserInfoWithClientConfig retrieves user information using the provided OAuth client configuration.
 func (s *oAuthAuthnService) FetchUserInfoWithClientConfig(oAuthClientConfig *OAuthClientConfig,
 	accessToken string) (map[string]interface{}, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+	logger := s.logger
 	logger.Debug("Fetching user info")
 
 	if strings.TrimSpace(accessToken) == "" {
@@ -236,8 +236,8 @@ func (s *oAuthAuthnService) FetchUserInfoWithClientConfig(oAuthClientConfig *OAu
 	}
 
 	if oAuthClientConfig.OAuthEndpoints.UserInfoEndpoint == "" {
-		logger.Error("Userinfo endpoint is not configured for the identity provider")
-		return nil, &ErrorUnexpectedServerError
+		logger.Error("User info endpoint is not configured for the identity provider")
+		return nil, &serviceerror.InternalServerError
 	}
 
 	httpReq, svcErr := buildUserInfoRequest(oAuthClientConfig.OAuthEndpoints.UserInfoEndpoint,
@@ -257,8 +257,7 @@ func (s *oAuthAuthnService) FetchUserInfoWithClientConfig(oAuthClientConfig *OAu
 
 // GetInternalUser retrieves the internal user based on the external subject identifier.
 func (s *oAuthAuthnService) GetInternalUser(sub string) (*user.User, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName),
-		log.String("sub", log.MaskString(sub)))
+	logger := s.logger.With(log.String("sub", log.MaskString(sub)))
 	logger.Debug("Retrieving internal user for the given sub claim")
 
 	if strings.TrimSpace(sub) == "" {
@@ -279,7 +278,7 @@ func (s *oAuthAuthnService) GetInternalUser(sub string) (*user.User, *serviceerr
 		}
 		logger.Error("Error while identifying user", log.String("errorCode", svcErr.Code),
 			log.String("description", svcErr.ErrorDescription))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	if userID == nil {
@@ -294,52 +293,17 @@ func (s *oAuthAuthnService) GetInternalUser(sub string) (*user.User, *serviceerr
 		}
 		logger.Error("Error while retrieving user", log.String("errorCode", svcErr.Code),
 			log.String("description", svcErr.ErrorDescription))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return user, nil
 }
 
-// validateClientConfig checks if the essential fields are present in the OAuth client configuration.
-func (s *oAuthAuthnService) validateClientConfig(idpConfig *OAuthClientConfig) *serviceerror.ServiceError {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-
-	if idpConfig.ClientID == "" || idpConfig.ClientSecret == "" || idpConfig.RedirectURI == "" ||
-		len(idpConfig.Scopes) == 0 {
-		logger.Error("Invalid identity provider configuration")
-		return &ErrorUnexpectedServerError
-	}
-
-	// Set default endpoints if not provided in the IDP config
-	if idpConfig.OAuthEndpoints.AuthorizationEndpoint == "" {
-		idpConfig.OAuthEndpoints.AuthorizationEndpoint = s.endpoints.AuthorizationEndpoint
-	}
-	if idpConfig.OAuthEndpoints.TokenEndpoint == "" {
-		idpConfig.OAuthEndpoints.TokenEndpoint = s.endpoints.TokenEndpoint
-	}
-	if idpConfig.OAuthEndpoints.UserInfoEndpoint == "" {
-		idpConfig.OAuthEndpoints.UserInfoEndpoint = s.endpoints.UserInfoEndpoint
-	}
-	if idpConfig.OAuthEndpoints.LogoutEndpoint == "" {
-		idpConfig.OAuthEndpoints.LogoutEndpoint = s.endpoints.LogoutEndpoint
-	}
-	if idpConfig.OAuthEndpoints.JwksEndpoint == "" {
-		idpConfig.OAuthEndpoints.JwksEndpoint = s.endpoints.JwksEndpoint
-	}
-
-	if idpConfig.OAuthEndpoints.AuthorizationEndpoint == "" || idpConfig.OAuthEndpoints.TokenEndpoint == "" {
-		logger.Error("Invalid identity provider configuration: Missing essential endpoints")
-		return &ErrorUnexpectedServerError
-	}
-
-	return nil
-}
-
 // getMetadata returns the authenticator metadata for OAuth authenticator.
-func (s *oAuthAuthnService) getMetadata() authncm.AuthenticatorMeta {
-	return authncm.AuthenticatorMeta{
-		Name:          authncm.AuthenticatorOAuth,
-		Factors:       []authncm.AuthenticationFactor{authncm.FactorKnowledge},
+func (s *oAuthAuthnService) getMetadata() common.AuthenticatorMeta {
+	return common.AuthenticatorMeta{
+		Name:          common.AuthenticatorOAuth,
+		Factors:       []common.AuthenticationFactor{common.FactorKnowledge},
 		AssociatedIDP: idp.IDPTypeOAuth,
 	}
 }

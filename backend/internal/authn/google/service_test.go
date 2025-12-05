@@ -30,6 +30,7 @@ import (
 	"github.com/asgardeo/thunder/internal/authn/oauth"
 	"github.com/asgardeo/thunder/internal/authn/oidc"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/authn/oidcmock"
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
@@ -58,6 +59,7 @@ func (suite *GoogleOIDCAuthnServiceTestSuite) SetupTest() {
 	suite.service = &googleOIDCAuthnService{
 		internal:   suite.mockOIDCService,
 		jwtService: suite.mockJWTService,
+		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, "GoogleOIDCAuthnService")),
 	}
 }
 
@@ -784,16 +786,4 @@ func generateTestJWT(claims map[string]interface{}) string {
 	signature := base64.RawURLEncoding.EncodeToString([]byte("fake-signature"))
 
 	return encodedHeader + "." + encodedClaims + "." + signature
-}
-
-func (suite *GoogleOIDCAuthnServiceTestSuite) TestCustomServiceError() {
-	// Ensure customServiceError sets description when provided and preserves original fields
-	base := serviceerror.ServiceError{Type: "T", Code: "C", Error: "E", ErrorDescription: "orig"}
-
-	res := customServiceError(base, "")
-	// when empty description provided, original description must be preserved
-	suite.Equal("orig", res.ErrorDescription)
-	// when custom description provided, it should be set
-	res2 := customServiceError(base, "my-desc")
-	suite.Equal("my-desc", res2.ErrorDescription)
 }

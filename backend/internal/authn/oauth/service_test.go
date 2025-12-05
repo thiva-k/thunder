@@ -67,13 +67,8 @@ func (suite *OAuthAuthnServiceTestSuite) SetupTest() {
 		TokenEndpoint:         "https://localhost:8090/oauth/token",
 		UserInfoEndpoint:      "https://localhost:8090/oauth/userinfo",
 	}
-	service := &oAuthAuthnService{
-		httpClient:  suite.mockHTTPClient,
-		idpService:  suite.mockIDPService,
-		userService: suite.mockUserService,
-		endpoints:   suite.endpoints,
-	}
-	suite.service = service
+	// Use the constructor to properly initialize the service including logger
+	suite.service = newOAuthAuthnService(suite.mockHTTPClient, suite.mockIDPService, suite.mockUserService)
 }
 
 func createTestIDPDTO(idpID string) *idp.IDPDTO {
@@ -164,7 +159,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestGetOAuthClientConfigWithError() {
 				}
 				m.On("GetIdentityProvider", testIDPID).Return(nil, serverErr)
 			},
-			expectedErrCode: ErrorUnexpectedServerError.Code,
+			expectedErrCode: serviceerror.InternalServerError.Code,
 		},
 	}
 
@@ -294,7 +289,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestBuildAuthorizeURLWithError() {
 	url, err := suite.service.BuildAuthorizeURL(testIDPID)
 	suite.Empty(url)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthAuthnServiceTestSuite) TestExchangeCodeForTokenEmptyCode() {
@@ -398,7 +393,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestExchangeCodeForTokenWithFailure() {
 				suite.mockHTTPClient.On("Do", mock.Anything).
 					Return(nil, errors.New("network error")).Once()
 			},
-			expectedError: ErrorUnexpectedServerError.Code,
+			expectedError: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "Non200StatusCode",
@@ -412,7 +407,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestExchangeCodeForTokenWithFailure() {
 				suite.mockIDPService.On("GetIdentityProvider", testIDPID).Return(idpData, nil).Once()
 				suite.mockHTTPClient.On("Do", mock.Anything).Return(resp, nil).Once()
 			},
-			expectedError: ErrorUnexpectedServerError.Code,
+			expectedError: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "InvalidJSONResponse",
@@ -426,7 +421,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestExchangeCodeForTokenWithFailure() {
 				suite.mockIDPService.On("GetIdentityProvider", testIDPID).Return(idpData, nil).Once()
 				suite.mockHTTPClient.On("Do", mock.Anything).Return(resp, nil).Once()
 			},
-			expectedError: ErrorUnexpectedServerError.Code,
+			expectedError: serviceerror.InternalServerError.Code,
 		},
 	}
 
@@ -564,7 +559,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestGetInternalUserWithServiceError() {
 				}
 				m.On("IdentifyUser", mock.Anything).Return(nil, serverErr)
 			},
-			expectedErrCode: ErrorUnexpectedServerError.Code,
+			expectedErrCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "GetUserServerError",
@@ -578,7 +573,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestGetInternalUserWithServiceError() {
 				m.On("IdentifyUser", mock.Anything).Return(&userID, nil)
 				m.On("GetUser", userID).Return(nil, serverErr)
 			},
-			expectedErrCode: ErrorUnexpectedServerError.Code,
+			expectedErrCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "IdentifyNilUserID",
@@ -654,31 +649,6 @@ func (suite *OAuthAuthnServiceTestSuite) TestValidateTokenResponseWithError() {
 	}
 }
 
-func (suite *OAuthAuthnServiceTestSuite) TestValidateClientConfigAndDefaults() {
-	svcImpl, ok := suite.service.(*oAuthAuthnService)
-	suite.True(ok)
-
-	// Missing required fields -> error
-	badConfig := &OAuthClientConfig{}
-	err := svcImpl.validateClientConfig(badConfig)
-	suite.NotNil(err)
-
-	// Provide required fields but leave endpoints empty -> defaults should be set
-	goodConfig := &OAuthClientConfig{
-		ClientID:     "c",
-		ClientSecret: "s",
-		RedirectURI:  "https://app/cb",
-		Scopes:       []string{"openid"},
-	}
-
-	// ensure endpoints on svcImpl are set in setup
-	err2 := svcImpl.validateClientConfig(goodConfig)
-	suite.Nil(err2)
-	suite.Equal(suite.endpoints.AuthorizationEndpoint, goodConfig.OAuthEndpoints.AuthorizationEndpoint)
-	suite.Equal(suite.endpoints.TokenEndpoint, goodConfig.OAuthEndpoints.TokenEndpoint)
-	suite.Equal(suite.endpoints.UserInfoEndpoint, goodConfig.OAuthEndpoints.UserInfoEndpoint)
-}
-
 func (suite *OAuthAuthnServiceTestSuite) TestBuildAuthorizeURLURIError() {
 	// Create idp DTO with invalid authorization endpoint so GetURIWithQueryParams fails
 	clientIDProp, _ := cmodels.NewProperty("client_id", "test_client_id", false)
@@ -700,7 +670,7 @@ func (suite *OAuthAuthnServiceTestSuite) TestBuildAuthorizeURLURIError() {
 	url, err := suite.service.BuildAuthorizeURL(testIDPID)
 	suite.Empty(url)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthAuthnServiceTestSuite) TestExchangeCodeForTokenWithValidationFailure() {
@@ -750,5 +720,74 @@ func (suite *OAuthAuthnServiceTestSuite) TestFetchUserInfoWithClientConfigMissin
 	userInfo, err := suite.service.FetchUserInfoWithClientConfig(config, "access_token")
 	suite.Nil(userInfo)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
+}
+
+func (suite *OAuthAuthnServiceTestSuite) TestBuildAuthorizeURLMissingAuthorizationEndpoint() {
+	clientIDProp, _ := cmodels.NewProperty("client_id", "test_client", false)
+	clientSecretProp, _ := cmodels.NewProperty("client_secret", "test_secret", false)
+	redirectURIProp, _ := cmodels.NewProperty("redirect_uri", "https://app.com/callback", false)
+	scopesProp, _ := cmodels.NewProperty("scopes", "openid", false)
+	authzEndpointProp, _ := cmodels.NewProperty("authorization_endpoint", "", false)
+
+	idpDTO := &idp.IDPDTO{
+		ID:   testIDPID,
+		Name: "Test OAuth Provider",
+		Type: idp.IDPTypeOAuth,
+		Properties: []cmodels.Property{
+			*clientIDProp, *clientSecretProp, *redirectURIProp, *scopesProp, *authzEndpointProp,
+		},
+	}
+	suite.mockIDPService.On("GetIdentityProvider", testIDPID).Return(idpDTO, nil)
+
+	url, err := suite.service.BuildAuthorizeURL(testIDPID)
+	suite.Empty(url)
+	suite.NotNil(err)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
+}
+
+func (suite *OAuthAuthnServiceTestSuite) TestExchangeCodeForTokenMissingTokenEndpoint() {
+	clientIDProp, _ := cmodels.NewProperty("client_id", "test_client", false)
+	clientSecretProp, _ := cmodels.NewProperty("client_secret", "test_secret", false)
+	redirectURIProp, _ := cmodels.NewProperty("redirect_uri", "https://app.com/callback", false)
+	scopesProp, _ := cmodels.NewProperty("scopes", "openid", false)
+	tokenEndpointProp, _ := cmodels.NewProperty("token_endpoint", "", false)
+
+	idpDTO := &idp.IDPDTO{
+		ID:   testIDPID,
+		Name: "Test OAuth Provider",
+		Type: idp.IDPTypeOAuth,
+		Properties: []cmodels.Property{
+			*clientIDProp, *clientSecretProp, *redirectURIProp, *scopesProp, *tokenEndpointProp,
+		},
+	}
+	suite.mockIDPService.On("GetIdentityProvider", testIDPID).Return(idpDTO, nil)
+
+	token, err := suite.service.ExchangeCodeForToken(testIDPID, "code123", false)
+	suite.Nil(token)
+	suite.NotNil(err)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
+}
+
+func (suite *OAuthAuthnServiceTestSuite) TestFetchUserInfoMissingUserInfoEndpoint() {
+	clientIDProp, _ := cmodels.NewProperty("client_id", "test_client", false)
+	clientSecretProp, _ := cmodels.NewProperty("client_secret", "test_secret", false)
+	redirectURIProp, _ := cmodels.NewProperty("redirect_uri", "https://app.com/callback", false)
+	scopesProp, _ := cmodels.NewProperty("scopes", "openid", false)
+	userInfoEndpointProp, _ := cmodels.NewProperty("userinfo_endpoint", "", false)
+
+	idpDTO := &idp.IDPDTO{
+		ID:   testIDPID,
+		Name: "Test OAuth Provider",
+		Type: idp.IDPTypeOAuth,
+		Properties: []cmodels.Property{
+			*clientIDProp, *clientSecretProp, *redirectURIProp, *scopesProp, *userInfoEndpointProp,
+		},
+	}
+	suite.mockIDPService.On("GetIdentityProvider", testIDPID).Return(idpDTO, nil)
+
+	userInfo, err := suite.service.FetchUserInfo(testIDPID, "access_token")
+	suite.Nil(userInfo)
+	suite.NotNil(err)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }

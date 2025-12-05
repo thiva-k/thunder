@@ -26,7 +26,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/asgardeo/thunder/internal/idp"
+	idpPkg "github.com/asgardeo/thunder/internal/idp"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	sysconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
@@ -36,7 +36,7 @@ import (
 )
 
 // parseIDPConfig extracts the OAuth client configuration from the identity provider details.
-func parseIDPConfig(idp *idp.IDPDTO) (*OAuthClientConfig, error) {
+func parseIDPConfig(idp *idpPkg.IDPDTO) (*OAuthClientConfig, error) {
 	oAuthClientConfig := OAuthClientConfig{
 		AdditionalParams: make(map[string]string),
 	}
@@ -51,25 +51,25 @@ func parseIDPConfig(idp *idp.IDPDTO) (*OAuthClientConfig, error) {
 		value = strings.TrimSpace(value)
 
 		switch name {
-		case "client_id":
+		case idpPkg.PropClientID:
 			oAuthClientConfig.ClientID = value
-		case "client_secret":
+		case idpPkg.PropClientSecret:
 			oAuthClientConfig.ClientSecret = value
-		case "redirect_uri":
+		case idpPkg.PropRedirectURI:
 			oAuthClientConfig.RedirectURI = value
-		case "scopes":
+		case idpPkg.PropScopes:
 			scopesRaw = value
-		case "authorization_endpoint":
+		case idpPkg.PropAuthorizationEndpoint:
 			oAuthClientConfig.OAuthEndpoints.AuthorizationEndpoint = value
-		case "token_endpoint":
+		case idpPkg.PropTokenEndpoint:
 			oAuthClientConfig.OAuthEndpoints.TokenEndpoint = value
-		case "userinfo_endpoint":
+		case idpPkg.PropUserInfoEndpoint:
 			oAuthClientConfig.OAuthEndpoints.UserInfoEndpoint = value
-		case "user_email_endpoint":
+		case idpPkg.PropUserEmailEndpoint:
 			oAuthClientConfig.OAuthEndpoints.UserEmailEndpoint = value
-		case "logout_endpoint":
+		case idpPkg.PropLogoutEndpoint:
 			oAuthClientConfig.OAuthEndpoints.LogoutEndpoint = value
-		case "jwks_endpoint":
+		case idpPkg.PropJwksEndpoint:
 			oAuthClientConfig.OAuthEndpoints.JwksEndpoint = value
 		default:
 			if value != "" {
@@ -103,7 +103,7 @@ func buildTokenRequest(oAuthClientConfig *OAuthClientConfig, code string, logger
 		strings.NewReader(form.Encode()))
 	if err != nil {
 		logger.Error("Failed to create token request", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	httpReq.Header.Add(sysconst.ContentTypeHeaderName, sysconst.ContentTypeFormURLEncoded)
@@ -118,7 +118,7 @@ func sendTokenRequest(httpReq *http.Request, httpClient httpservice.HTTPClientIn
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
 		logger.Error("Token request to identity provider failed", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -130,13 +130,13 @@ func sendTokenRequest(httpReq *http.Request, httpClient httpservice.HTTPClientIn
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		logger.Error("Token endpoint returned an error response",
 			log.Int("statusCode", resp.StatusCode), log.String("response", string(body)))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	var tokenResp TokenResponse
 	if err := json.NewDecoder(resp.Body).Decode(&tokenResp); err != nil {
 		logger.Error("Failed to parse token response", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return &tokenResp, nil
@@ -148,7 +148,7 @@ func buildUserInfoRequest(userInfoEndpoint string, accessToken string, logger *l
 	req, err := http.NewRequest(http.MethodGet, userInfoEndpoint, nil)
 	if err != nil {
 		logger.Error("Failed to create userinfo request", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	req.Header.Set(sysconst.AuthorizationHeaderName, sysconst.TokenTypeBearer+" "+accessToken)
@@ -163,7 +163,7 @@ func sendUserInfoRequest(httpReq *http.Request, httpClient httpservice.HTTPClien
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
 		logger.Error("Userinfo request to identity provider failed", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -175,19 +175,19 @@ func sendUserInfoRequest(httpReq *http.Request, httpClient httpservice.HTTPClien
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		logger.Error("Userinfo endpoint returned an error response",
 			log.Int("statusCode", resp.StatusCode), log.String("response", string(body)))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		logger.Error("Failed to read userinfo response body", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	var userInfo map[string]interface{}
 	if err := json.Unmarshal(body, &userInfo); err != nil {
 		logger.Error("Failed to parse userinfo response", log.Error(err))
-		return nil, &ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return userInfo, nil
