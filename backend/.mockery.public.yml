@@ -340,3 +340,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: brandingmock
       filename: "{{.InterfaceName}}_mock.go"
+  
+  github.com/asgardeo/thunder/internal/system/crypto/hash:
+    config:
+      all: true
+      dir: tests/mocks/crypto/hashmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: hashmock
+      filename: "{{.InterfaceName}}_mock.go"
