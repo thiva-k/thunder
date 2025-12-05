@@ -60,11 +60,11 @@ repository/conf/immutable_resources/
 │   ├── my-web-app.yaml
 │   ├── mobile-app.yaml
 │   └── admin-portal.yaml
-├── identity-providers/
+├── identity_providers/
 │   ├── google-idp.yaml
 │   ├── github-idp.yaml
 │   └── oidc-idp.yaml
-└── notification-senders/        # Coming soon
+└── notification_senders/        # Coming soon
     └── smtp-sender.yaml
 ```
 

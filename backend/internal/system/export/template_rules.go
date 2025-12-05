@@ -31,4 +31,8 @@ var rules templatingRules = templatingRules{
 	IdentityProvider: &resourceRules{
 		DynamicPropertyFields: []string{"Properties"},
 	},
+	NotificationSender: &resourceRules{
+		DynamicPropertyFields: []string{"Properties"},
+	},
+	UserSchema: &resourceRules{},
 }

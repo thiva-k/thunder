@@ -341,7 +341,7 @@ func TestInitialize_WithImmutableResourcesEnabled_ValidConfigs(t *testing.T) {
 	// Create a temporary directory structure for file-based runtime
 	tmpDir := t.TempDir()
 	confDir := tmpDir + "/repository/conf/immutable_resources"
-	idpDir := confDir + "/identity-providers"
+	idpDir := confDir + "/identity_providers"
 
 	// Create the directory structure
 	err := os.MkdirAll(idpDir, 0750)

@@ -46,7 +46,7 @@ func Initialize(mux *http.ServeMux) IDPServiceInterface {
 	idpService := newIDPService(idpStore)
 
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
-		configs, err := filebasedruntime.GetConfigs("identity-providers")
+		configs, err := filebasedruntime.GetConfigs("identity_providers")
 		if err != nil {
 			logger.Fatal("Failed to read identity provider configs from file-based runtime", log.Error(err))
 		}

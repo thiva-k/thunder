@@ -30,8 +30,10 @@ import (
 )
 
 type templatingRules struct {
-	Application      *resourceRules `yaml:"Application,omitempty"`
-	IdentityProvider *resourceRules `yaml:"IdentityProvider,omitempty"`
+	Application        *resourceRules `yaml:"Application,omitempty"`
+	IdentityProvider   *resourceRules `yaml:"IdentityProvider,omitempty"`
+	NotificationSender *resourceRules `yaml:"NotificationSender,omitempty"`
+	UserSchema         *resourceRules `yaml:"UserSchema,omitempty"`
 }
 
 // ResourceRules defines variables and array variables to parameterize
@@ -61,6 +63,10 @@ func (p *parameterizer) ToParameterizedYAML(obj interface{}, resourceType string
 		rules = p.rules.Application
 	case "IdentityProvider":
 		rules = p.rules.IdentityProvider
+	case "NotificationSender":
+		rules = p.rules.NotificationSender
+	case "UserSchema":
+		rules = p.rules.UserSchema
 	default:
 		return "", fmt.Errorf("unknown resource type: %s", resourceType)
 	}

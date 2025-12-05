@@ -557,6 +557,61 @@ func (suite *NotificationSenderMgtServiceTestSuite) TestDeleteSender_StoreError(
 	suite.Equal(ErrorInternalServerError.Code, err.Code)
 }
 
+// TestCreateSender_ImmutableResourcesEnabled tests that CreateSender returns error when immutable resources enabled
+func (suite *NotificationSenderMgtServiceTestSuite) TestCreateSender_ImmutableResourcesEnabled() {
+	// Save original config
+	originalConfig := config.GetThunderRuntime().Config
+	defer func() {
+		config.GetThunderRuntime().Config = originalConfig
+	}()
+
+	// Enable immutable resources
+	config.GetThunderRuntime().Config.ImmutableResources.Enabled = true
+
+	sender := suite.getValidTwilioSender()
+	result, err := suite.service.CreateSender(sender)
+
+	suite.Nil(result)
+	suite.NotNil(err)
+	suite.Equal("FBR-1001", err.Code)
+}
+
+// TestUpdateSender_ImmutableResourcesEnabled tests that UpdateSender returns error when immutable resources enabled
+func (suite *NotificationSenderMgtServiceTestSuite) TestUpdateSender_ImmutableResourcesEnabled() {
+	// Save original config
+	originalConfig := config.GetThunderRuntime().Config
+	defer func() {
+		config.GetThunderRuntime().Config = originalConfig
+	}()
+
+	// Enable immutable resources
+	config.GetThunderRuntime().Config.ImmutableResources.Enabled = true
+
+	sender := suite.getValidTwilioSender()
+	result, err := suite.service.UpdateSender(testSenderID, sender)
+
+	suite.Nil(result)
+	suite.NotNil(err)
+	suite.Equal("FBR-1002", err.Code)
+}
+
+// TestDeleteSender_ImmutableResourcesEnabled tests that DeleteSender returns error when immutable resources enabled
+func (suite *NotificationSenderMgtServiceTestSuite) TestDeleteSender_ImmutableResourcesEnabled() {
+	// Save original config
+	originalConfig := config.GetThunderRuntime().Config
+	defer func() {
+		config.GetThunderRuntime().Config = originalConfig
+	}()
+
+	// Enable immutable resources
+	config.GetThunderRuntime().Config.ImmutableResources.Enabled = true
+
+	err := suite.service.DeleteSender(testSenderID)
+
+	suite.NotNil(err)
+	suite.Equal("FBR-1003", err.Code)
+}
+
 func createTestProperty(name, value string, isSecret bool) cmodels.Property {
 	prop, _ := cmodels.NewProperty(name, value, isSecret)
 	return *prop
