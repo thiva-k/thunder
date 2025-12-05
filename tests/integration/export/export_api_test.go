@@ -164,6 +164,21 @@ func (ts *ExportAPITestSuite) TestIdentityProviderExportYAML() {
 				Value:    "https://localhost:3000/oauth/callback",
 				IsSecret: false,
 			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://export-test-idp.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://export-test-idp.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://export-test-idp.example.com/userinfo",
+				IsSecret: false,
+			},
 		},
 	}
 
@@ -211,6 +226,26 @@ func (ts *ExportAPITestSuite) TestMultipleIdentityProvidersExportYAML() {
 				Value:    "github_export_secret",
 				IsSecret: true,
 			},
+			{
+				Name:     "redirect_uri",
+				Value:    "https://localhost:3000/github/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://github-export.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://github-export.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://github-export.example.com/userinfo",
+				IsSecret: false,
+			},
 		},
 	}
 
@@ -233,6 +268,21 @@ func (ts *ExportAPITestSuite) TestMultipleIdentityProvidersExportYAML() {
 				Name:     "client_secret",
 				Value:    "google_export_secret",
 				IsSecret: true,
+			},
+			{
+				Name:     "redirect_uri",
+				Value:    "https://localhost:3000/google/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://google-export.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://google-export.example.com/token",
+				IsSecret: false,
 			},
 		},
 	}
@@ -308,6 +358,26 @@ func (ts *ExportAPITestSuite) TestMixedResourcesExportYAML() {
 				Value:    "mixed_idp_secret",
 				IsSecret: true,
 			},
+			{
+				Name:     "redirect_uri",
+				Value:    "https://localhost:3000/mixed/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://mixed-export.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://mixed-export.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://mixed-export.example.com/userinfo",
+				IsSecret: false,
+			},
 		},
 	}
 
@@ -343,6 +413,31 @@ func (ts *ExportAPITestSuite) TestIdentityProviderExportWithWildcard() {
 			{
 				Name:     "client_id",
 				Value:    "wildcard_test_client",
+				IsSecret: false,
+			},
+			{
+				Name:     "client_secret",
+				Value:    "wildcard_test_secret",
+				IsSecret: true,
+			},
+			{
+				Name:     "redirect_uri",
+				Value:    "https://localhost:3000/wildcard/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://wildcard-test.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://wildcard-test.example.com/token",
+				IsSecret: false,
+			},
+			{
+				Name:     "userinfo_endpoint",
+				Value:    "https://wildcard-test.example.com/userinfo",
 				IsSecret: false,
 			},
 		},
@@ -386,6 +481,16 @@ func (ts *ExportAPITestSuite) TestIdentityProviderExportWithProperties() {
 			{
 				Name:     "redirect_uri",
 				Value:    "https://localhost:3000/callback",
+				IsSecret: false,
+			},
+			{
+				Name:     "authorization_endpoint",
+				Value:    "https://props-test.example.com/authorize",
+				IsSecret: false,
+			},
+			{
+				Name:     "token_endpoint",
+				Value:    "https://props-test.example.com/token",
 				IsSecret: false,
 			},
 			{

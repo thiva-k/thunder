@@ -65,6 +65,8 @@ func parseIDPConfig(idp *idp.IDPDTO) (*OAuthClientConfig, error) {
 			oAuthClientConfig.OAuthEndpoints.TokenEndpoint = value
 		case "userinfo_endpoint":
 			oAuthClientConfig.OAuthEndpoints.UserInfoEndpoint = value
+		case "user_email_endpoint":
+			oAuthClientConfig.OAuthEndpoints.UserEmailEndpoint = value
 		case "logout_endpoint":
 			oAuthClientConfig.OAuthEndpoints.LogoutEndpoint = value
 		case "jwks_endpoint":
