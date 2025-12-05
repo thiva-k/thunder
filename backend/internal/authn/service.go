@@ -199,7 +199,7 @@ func (as *authenticationService) StartIDPAuthentication(requestedType idp.IDPTyp
 	default:
 		logger.Error("Unsupported IDP type", log.String("idpId", idpID),
 			log.String("type", string(identityProvider.Type)))
-		return nil, &common.ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	if svcErr != nil {
@@ -210,7 +210,7 @@ func (as *authenticationService) StartIDPAuthentication(requestedType idp.IDPTyp
 	sessionToken, err := as.createSessionToken(idpID, identityProvider.Type)
 	if err != nil {
 		logger.Error("Failed to create session token", log.String("idpId", idpID), log.Error(err))
-		return nil, &common.ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return &IDPAuthInitData{
@@ -256,7 +256,7 @@ func (as *authenticationService) FinishIDPAuthentication(requestedType idp.IDPTy
 	default:
 		logger.Error("Unsupported IDP type in session", log.String("idpId", sessionData.IDPID),
 			log.String("type", string(sessionData.IDPType)))
-		return nil, &common.ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	if svcErr != nil {
@@ -275,7 +275,7 @@ func (as *authenticationService) FinishIDPAuthentication(requestedType idp.IDPTy
 		if err != nil {
 			logger.Error("Failed to get authenticator name for IDP type",
 				log.String("idpType", string(sessionData.IDPType)), log.Error(err))
-			return nil, &common.ErrorInternalServerError
+			return nil, &serviceerror.InternalServerError
 		}
 
 		svcErr = as.validateAndAppendAuthAssertion(authResponse, user, authenticatorName,
@@ -350,7 +350,7 @@ func (as *authenticationService) validateAndAppendAuthAssertion(authResponse *co
 		jwtConfig.ValidityPeriod, jwtClaims)
 	if err != nil {
 		logger.Error("Failed to generate auth assertion", log.Error(err))
-		return &common.ErrorInternalServerError
+		return &serviceerror.InternalServerError
 	}
 
 	authResponse.Assertion = token
@@ -547,7 +547,7 @@ func (as *authenticationService) handleIDPServiceError(idpID string, svcErr *ser
 	}
 
 	logger.Error("Error occurred while retrieving IDP", log.String("idpId", idpID), log.Any("error", svcErr))
-	return &common.ErrorInternalServerError
+	return &serviceerror.InternalServerError
 }
 
 // validateIDPType validates that the requested IDP type matches the actual IDP type.

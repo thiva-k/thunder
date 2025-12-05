@@ -79,28 +79,3 @@ var (
 		ErrorDescription: "The token response received from the identity provider is invalid",
 	}
 )
-
-// Server errors for OAuth authentication.
-var (
-	// ErrorUnexpectedServerError is a generic error for unexpected server errors.
-	ErrorUnexpectedServerError = serviceerror.ServiceError{
-		Type:             serviceerror.ServerErrorType,
-		Code:             "AUTH-OAUTH-5000",
-		Error:            "Something went wrong",
-		ErrorDescription: "An unexpected error occurred while processing the request",
-	}
-)
-
-// customServiceError creates a new service error based on an existing error with custom description.
-func customServiceError(svcError serviceerror.ServiceError, errorDesc string) *serviceerror.ServiceError {
-	err := &serviceerror.ServiceError{
-		Type:             svcError.Type,
-		Code:             svcError.Code,
-		Error:            svcError.Error,
-		ErrorDescription: svcError.ErrorDescription,
-	}
-	if errorDesc != "" {
-		err.ErrorDescription = errorDesc
-	}
-	return err
-}

@@ -106,13 +106,3 @@ var (
 		ErrorDescription: "The subject in the assertion does not match the authenticated user",
 	}
 )
-
-// Server errors for the service
-
-// ErrorInternalServerError is returned when an unexpected error occurs on the server.
-var ErrorInternalServerError = serviceerror.ServiceError{
-	Type:             serviceerror.ServerErrorType,
-	Code:             "AUTHN-5000",
-	Error:            "Internal server error",
-	ErrorDescription: "An unexpected error occurred while processing the request",
-}

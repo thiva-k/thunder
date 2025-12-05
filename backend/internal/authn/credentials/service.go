@@ -77,7 +77,7 @@ func (c *credentialsAuthnService) Authenticate(attributes map[string]interface{}
 
 		logger.Error("Error occurred while authenticating the user", log.String("errorCode", svcErr.Code),
 			log.String("errorDescription", svcErr.ErrorDescription))
-		return nil, &common.ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	// Fetch the user details
@@ -90,7 +90,7 @@ func (c *credentialsAuthnService) Authenticate(attributes map[string]interface{}
 
 		logger.Error("Error occurred while retrieving the user", log.String("errorCode", svcErr.Code),
 			log.String("errorDescription", svcErr.ErrorDescription))
-		return nil, &common.ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return user, nil

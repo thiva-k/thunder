@@ -20,12 +20,6 @@ package google
 
 // Constants for Google OAuth2 authentication.
 const (
-	// Google OAuth2 endpoints (also defined in service.go for reference)
-	AuthorizeEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"
-	TokenEndpoint     = "https://oauth2.googleapis.com/token" // #nosec G101
-	UserInfoEndpoint  = "https://openidconnect.googleapis.com/v1/userinfo"
-	JwksEndpoint      = "https://www.googleapis.com/oauth2/v3/certs"
-
 	// Google OAuth2 issuer values
 	Issuer1 = "accounts.google.com"
 	Issuer2 = "https://accounts.google.com"

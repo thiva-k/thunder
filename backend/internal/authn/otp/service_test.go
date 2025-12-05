@@ -126,7 +126,7 @@ func (suite *OTPAuthnServiceTestSuite) TestSendOTPWithServiceError() {
 				Code:             "INTERNAL_ERROR",
 				ErrorDescription: "Service unavailable",
 			},
-			expectedErrCode: ErrorInternalServerError.Code,
+			expectedErrCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "ClientError",
@@ -248,7 +248,7 @@ func (suite *OTPAuthnServiceTestSuite) TestVerifyOTPWithOTPServiceError() {
 				Code:             "INTERNAL_ERROR",
 				ErrorDescription: "Service unavailable",
 			},
-			expectedErrCode: ErrorInternalServerError.Code,
+			expectedErrCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "ClientError",
@@ -316,7 +316,7 @@ func (suite *OTPAuthnServiceTestSuite) TestVerifyOTPWithUserServiceError() {
 			serverErr,
 			nil,
 			nil,
-			ErrorInternalServerError.Code,
+			serviceerror.InternalServerError.Code,
 		},
 		{
 			"GetUserServerError",
@@ -324,7 +324,7 @@ func (suite *OTPAuthnServiceTestSuite) TestVerifyOTPWithUserServiceError() {
 			nil,
 			nil,
 			serverErr,
-			ErrorInternalServerError.Code,
+			serviceerror.InternalServerError.Code,
 		},
 		{
 			"UserIDNil",
@@ -368,5 +368,5 @@ func (suite *OTPAuthnServiceTestSuite) TestVerifyOTPWithEmptyRecipient() {
 	result, err := suite.service.VerifyOTP(testSessionToken, "123456")
 	suite.Nil(result)
 	suite.NotNil(err)
-	suite.Equal(ErrorInternalServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }

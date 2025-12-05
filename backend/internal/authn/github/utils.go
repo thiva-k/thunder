@@ -23,7 +23,6 @@ import (
 	"io"
 	"net/http"
 
-	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
 	sysconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	syshttp "github.com/asgardeo/thunder/internal/system/http"
@@ -36,7 +35,7 @@ func buildUserEmailRequest(userEmailEndpoint string, accessToken string, logger 
 	req, err := http.NewRequest(http.MethodGet, userEmailEndpoint, nil)
 	if err != nil {
 		logger.Error("Failed to create user email request", log.Error(err))
-		return nil, &authnoauth.ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	req.Header.Set(sysconst.AuthorizationHeaderName, sysconst.TokenTypeBearer+" "+accessToken)
@@ -51,7 +50,7 @@ func sendUserEmailRequest(httpReq *http.Request, httpClient syshttp.HTTPClientIn
 	resp, err := httpClient.Do(httpReq)
 	if err != nil {
 		logger.Error("User email request to GitHub failed", log.Error(err))
-		return nil, &authnoauth.ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 	defer func() {
 		if closeErr := resp.Body.Close(); closeErr != nil {
@@ -63,13 +62,13 @@ func sendUserEmailRequest(httpReq *http.Request, httpClient syshttp.HTTPClientIn
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		logger.Error("User email endpoint returned an error response",
 			log.Int("statusCode", resp.StatusCode), log.String("response", string(body)))
-		return nil, &authnoauth.ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	var emails []map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&emails); err != nil {
 		logger.Error("Failed to decode user email response", log.Error(err))
-		return nil, &authnoauth.ErrorUnexpectedServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	return emails, nil

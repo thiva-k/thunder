@@ -30,6 +30,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/system/cmodels"
+	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/tests/mocks/httpmock"
 )
@@ -176,7 +177,7 @@ func (suite *OAuthUtilsTestSuite) TestBuildTokenRequestWithInvalidURL() {
 
 	suite.Nil(req)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendTokenRequestSuccess() {
@@ -223,7 +224,7 @@ func (suite *OAuthUtilsTestSuite) TestSendTokenRequestHTTPError() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendTokenRequestNonOKStatus() {
@@ -243,7 +244,7 @@ func (suite *OAuthUtilsTestSuite) TestSendTokenRequestNonOKStatus() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendTokenRequestInvalidJSON() {
@@ -262,7 +263,7 @@ func (suite *OAuthUtilsTestSuite) TestSendTokenRequestInvalidJSON() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestBuildUserInfoRequestSuccess() {
@@ -287,7 +288,7 @@ func (suite *OAuthUtilsTestSuite) TestBuildUserInfoRequestWithInvalidURL() {
 
 	suite.Nil(req)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestSuccess() {
@@ -328,7 +329,7 @@ func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestHTTPError() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestNonOKStatus() {
@@ -348,7 +349,7 @@ func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestNonOKStatus() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestInvalidJSON() {
@@ -367,7 +368,7 @@ func (suite *OAuthUtilsTestSuite) TestSendUserInfoRequestInvalidJSON() {
 
 	suite.Nil(resp)
 	suite.NotNil(err)
-	suite.Equal(ErrorUnexpectedServerError.Code, err.Code)
+	suite.Equal(serviceerror.InternalServerError.Code, err.Code)
 }
 
 func (suite *OAuthUtilsTestSuite) TestProcessSubClaimSuccess() {

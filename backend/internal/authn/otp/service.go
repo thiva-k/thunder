@@ -143,7 +143,7 @@ func (s *otpAuthnService) handleOTPServiceError(svcErr *serviceerror.ServiceErro
 	} else {
 		logger.Error("Error occurred while sending OTP", log.Any("error", svcErr))
 	}
-	return &ErrorInternalServerError
+	return &serviceerror.InternalServerError
 }
 
 // validateOTPVerifyRequest validates the parameters for verifying an OTP.
@@ -166,7 +166,7 @@ func (s *otpAuthnService) handleVerifyOTPResponse(result *notifcommon.VerifyOTPR
 
 	if result.Recipient == "" {
 		logger.Error("Recipient not found in OTP verification result")
-		return nil, &ErrorInternalServerError
+		return nil, &serviceerror.InternalServerError
 	}
 
 	user, svcErr := s.resolveUser(result.Recipient, notifcommon.ChannelTypeSMS, logger)
@@ -222,7 +222,7 @@ func (s *otpAuthnService) handleUserServiceError(svcErr *serviceerror.ServiceErr
 	}
 
 	logger.Error("Error occurred while retrieving user", log.Any("error", svcErr))
-	return &ErrorInternalServerError
+	return &serviceerror.InternalServerError
 }
 
 // getMetadata returns the authenticator metadata for OTP authenticator.

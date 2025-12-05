@@ -19,7 +19,6 @@
 package oidc
 
 import (
-	authnoauth "github.com/asgardeo/thunder/internal/authn/oauth"
 	"github.com/asgardeo/thunder/internal/idp"
 	syshttp "github.com/asgardeo/thunder/internal/system/http"
 	"github.com/asgardeo/thunder/internal/system/jwt"
@@ -30,5 +29,5 @@ import (
 func Initialize(idpSvc idp.IDPServiceInterface, userSvc user.UserServiceInterface,
 	jwtSvc jwt.JWTServiceInterface) OIDCAuthnServiceInterface {
 	httpClient := syshttp.NewHTTPClient()
-	return newOIDCAuthnService(httpClient, idpSvc, userSvc, jwtSvc, authnoauth.OAuthEndpoints{})
+	return newOIDCAuthnService(httpClient, idpSvc, userSvc, jwtSvc)
 }

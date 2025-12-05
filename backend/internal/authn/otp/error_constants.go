@@ -79,14 +79,3 @@ var (
 		ErrorDescription: "An error occurred while resolving the user for the recipient",
 	}
 )
-
-// Server errors for OTP authentication service
-var (
-	// ErrorInternalServerError is returned when an unexpected error occurs on the server.
-	ErrorInternalServerError = serviceerror.ServiceError{
-		Type:             serviceerror.ServerErrorType,
-		Code:             "AUTHN-OTP-5000",
-		Error:            "Internal server error",
-		ErrorDescription: "An unexpected error occurred while processing the request",
-	}
-)

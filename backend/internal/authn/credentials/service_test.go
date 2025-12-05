@@ -152,7 +152,7 @@ func (suite *CredentialsAuthnServiceTestSuite) TestAuthenticateWithServiceErrors
 				}
 				m.On("AuthenticateUser", mock.Anything).Return(nil, serverErr)
 			},
-			expectedErrorCode: common.ErrorInternalServerError.Code,
+			expectedErrorCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "UserServiceClientError",
@@ -188,7 +188,7 @@ func (suite *CredentialsAuthnServiceTestSuite) TestAuthenticateWithServiceErrors
 				m.On("AuthenticateUser", mock.Anything).Return(authResp, nil)
 				m.On("GetUser", userID).Return(nil, serverErr)
 			},
-			expectedErrorCode: common.ErrorInternalServerError.Code,
+			expectedErrorCode: serviceerror.InternalServerError.Code,
 		},
 		{
 			name: "GetUserClientError",

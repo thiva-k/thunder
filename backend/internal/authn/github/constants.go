@@ -18,12 +18,8 @@
 
 package github
 
-// GitHub OAuth endpoints and scopes.
+// GitHub OAuth constants.
 const (
-	AuthorizeEndpoint = "https://github.com/login/oauth/authorize"
-	TokenEndpoint     = "https://github.com/login/oauth/access_token" // #nosec G101
-	UserInfoEndpoint  = "https://api.github.com/user"
-	UserEmailEndpoint = "https://api.github.com/user/emails"
-	UserScope         = "user"
-	UserEmailScope    = "user:email"
+	UserScope      = "user"
+	UserEmailScope = "user:email"
 )

@@ -44,21 +44,19 @@ type GithubOAuthAuthnServiceInterface interface {
 type githubOAuthAuthnService struct {
 	internal   authnoauth.OAuthAuthnServiceInterface
 	httpClient syshttp.HTTPClientInterface
+	logger     *log.Logger
 }
 
 // newGithubOAuthAuthnService creates a new instance of GitHub OAuth authenticator service.
 func newGithubOAuthAuthnService(idpSvc idp.IDPServiceInterface,
 	userSvc user.UserServiceInterface) GithubOAuthAuthnServiceInterface {
 	httpClient := syshttp.NewHTTPClient()
-	internal := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc, authnoauth.OAuthEndpoints{
-		AuthorizationEndpoint: AuthorizeEndpoint,
-		TokenEndpoint:         TokenEndpoint,
-		UserInfoEndpoint:      UserInfoEndpoint,
-	})
+	internal := authnoauth.NewOAuthAuthnService(httpClient, idpSvc, userSvc)
 
 	service := &githubOAuthAuthnService{
 		internal:   internal,
 		httpClient: httpClient,
+		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
 	authncm.RegisterAuthenticator(service.getMetadata())
 
@@ -79,8 +77,7 @@ func (g *githubOAuthAuthnService) ExchangeCodeForToken(idpID, code string, valid
 // FetchUserInfo retrieves user information from the Github API, ensuring email resolution if necessary.
 func (g *githubOAuthAuthnService) FetchUserInfo(idpID, accessToken string) (
 	map[string]interface{}, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-
+	logger := g.logger
 	oAuthClientConfig, svcErr := g.internal.GetOAuthClientConfig(idpID)
 	if svcErr != nil {
 		return nil, svcErr
@@ -121,17 +118,15 @@ func (g *githubOAuthAuthnService) shouldFetchEmail(scopes []string) bool {
 func (g *githubOAuthAuthnService) fetchPrimaryEmail(
 	oAuthClientConfig *authnoauth.OAuthClientConfig, accessToken string) (
 	string, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+	logger := g.logger
+	logger.Debug("Fetching primary email from GitHub user emails endpoint")
 
-	userEmailEndpoint := oAuthClientConfig.OAuthEndpoints.UserEmailEndpoint
-	if userEmailEndpoint == "" {
-		userEmailEndpoint = UserEmailEndpoint
+	if oAuthClientConfig.OAuthEndpoints.UserEmailEndpoint == "" {
+		logger.Error("User email endpoint is not configured in OAuth client config")
+		return "", &serviceerror.InternalServerError
 	}
 
-	logger.Debug("Fetching user email from GitHub user email endpoint",
-		log.String("userEmailEndpoint", userEmailEndpoint))
-
-	req, svcErr := buildUserEmailRequest(userEmailEndpoint, accessToken, logger)
+	req, svcErr := buildUserEmailRequest(oAuthClientConfig.OAuthEndpoints.UserEmailEndpoint, accessToken, logger)
 	if svcErr != nil {
 		return "", svcErr
 	}
