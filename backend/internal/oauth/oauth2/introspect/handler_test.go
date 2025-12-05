@@ -32,6 +32,26 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+// brokenWriter is a writer that always returns an error
+type brokenWriter struct {
+	header http.Header
+}
+
+func (b *brokenWriter) Header() http.Header {
+	if b.header == nil {
+		b.header = make(http.Header)
+	}
+	return b.header
+}
+
+func (b *brokenWriter) Write([]byte) (int, error) {
+	return 0, errors.New("write error")
+}
+
+func (b *brokenWriter) WriteHeader(statusCode int) {
+	// Do nothing
+}
+
 type TokenIntrospectionHandlerTestSuite struct {
 	suite.Suite
 	introspectionServiceMock *TokenIntrospectionServiceInterfaceMock
@@ -58,6 +78,23 @@ func (s *TokenIntrospectionHandlerTestSuite) TestHandleIntrospect_ParseFormError
 	assert.Contains(s.T(), rr.Body.String(), constants.ErrorInvalidRequest)
 }
 
+func (s *TokenIntrospectionHandlerTestSuite) TestHandleIntrospect_ParseFormError_EncodeError() {
+	// Create a request with an invalid content type to cause form parse error
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/introspect", strings.NewReader("%"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Use a broken writer to trigger encoding error
+	bw := &brokenWriter{}
+
+	// Execute the handler - should attempt to write error response despite encoding failure
+	s.handler.HandleIntrospect(bw, req)
+
+	// Verify that the handler attempted to set headers (Content-Type will be text/plain after http.Error fallback)
+	assert.NotNil(s.T(), bw.Header())
+	// After encoding fails, http.Error() is called which sets Content-Type to text/plain
+	assert.Contains(s.T(), bw.Header().Get("Content-Type"), "text/plain")
+}
+
 func (s *TokenIntrospectionHandlerTestSuite) TestHandleIntrospect_MissingToken() {
 	form := url.Values{}
 	req := httptest.NewRequest(http.MethodPost, "/oauth2/introspect", strings.NewReader(form.Encode()))
@@ -68,6 +105,23 @@ func (s *TokenIntrospectionHandlerTestSuite) TestHandleIntrospect_MissingToken()
 	assert.Equal(s.T(), http.StatusBadRequest, rr.Code)
 	assert.Contains(s.T(), rr.Body.String(), constants.ErrorInvalidRequest)
 	assert.Contains(s.T(), rr.Body.String(), "Token parameter is required")
+}
+
+func (s *TokenIntrospectionHandlerTestSuite) TestHandleIntrospect_MissingToken_EncodeError() {
+	form := url.Values{}
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/introspect", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	// Use a broken writer to trigger encoding error
+	bw := &brokenWriter{}
+
+	// Execute the handler - should attempt to write error response despite encoding failure
+	s.handler.HandleIntrospect(bw, req)
+
+	// Verify that the handler attempted to set headers (Content-Type will be text/plain after http.Error fallback)
+	assert.NotNil(s.T(), bw.Header())
+	// After encoding fails, http.Error() is called which sets Content-Type to text/plain
+	assert.Contains(s.T(), bw.Header().Get("Content-Type"), "text/plain")
 }
 
 func (s *TokenIntrospectionHandlerTestSuite) TestHandleIntrospect_IntrospectionError() {

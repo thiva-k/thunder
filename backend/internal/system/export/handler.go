@@ -21,7 +21,6 @@ package export
 import (
 	"archive/zip"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -49,25 +48,19 @@ func (eh *exportHandler) HandleExportRequest(w http.ResponseWriter, r *http.Requ
 
 	exportRequest, err := sysutils.DecodeJSONBody[ExportRequest](r)
 	if err != nil {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidRequest.Code,
 			Message:     ErrorInvalidRequest.Error,
 			Description: ErrorInvalidRequest.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	// Export resources using the export service
 	exportResponse, svcErr := eh.service.ExportResources(exportRequest)
 	if svcErr != nil {
-		eh.handleError(w, logger, svcErr)
+		eh.handleError(w, svcErr)
 		return
 	}
 
@@ -93,41 +86,26 @@ func (eh *exportHandler) HandleExportRequest(w http.ResponseWriter, r *http.Requ
 
 // HandleExportJSONRequest handles the export request and returns JSON with files.
 func (eh *exportHandler) HandleExportJSONRequest(w http.ResponseWriter, r *http.Request) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ExportHandler"))
-
 	exportRequest, err := sysutils.DecodeJSONBody[ExportRequest](r)
 	if err != nil {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidRequest.Code,
 			Message:     ErrorInvalidRequest.Error,
 			Description: ErrorInvalidRequest.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	// Export resources using the export service
 	exportResponse, svcErr := eh.service.ExportResources(exportRequest)
 	if svcErr != nil {
-		eh.handleError(w, logger, svcErr)
+		eh.handleError(w, svcErr)
 		return
 	}
 
 	// Return the JSON response with files
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(exportResponse); err != nil {
-		logger.Error("Error encoding JSON export response", log.Error(err))
-		http.Error(w, "Failed to encode export response", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, exportResponse)
 }
 
 // HandleExportZipRequest handles the export request and returns a ZIP file containing all resources.
@@ -136,32 +114,31 @@ func (eh *exportHandler) HandleExportZipRequest(w http.ResponseWriter, r *http.R
 
 	exportRequest, err := sysutils.DecodeJSONBody[ExportRequest](r)
 	if err != nil {
-		w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-		w.WriteHeader(http.StatusBadRequest)
-
 		errResp := apierror.ErrorResponse{
 			Code:        ErrorInvalidRequest.Code,
 			Message:     ErrorInvalidRequest.Error,
 			Description: ErrorInvalidRequest.ErrorDescription,
 		}
-		if encodeErr := json.NewEncoder(w).Encode(errResp); encodeErr != nil {
-			logger.Error("Error encoding error response", log.Error(encodeErr))
-			http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-		}
+		sysutils.WriteErrorResponse(w, http.StatusBadRequest, errResp)
 		return
 	}
 
 	// Export resources using the export service
 	exportResponse, svcErr := eh.service.ExportResources(exportRequest)
 	if svcErr != nil {
-		eh.handleError(w, logger, svcErr)
+		eh.handleError(w, svcErr)
 		return
 	}
 
 	// Generate ZIP file and send response
 	if err := eh.generateAndSendZipResponse(w, logger, exportResponse); err != nil {
 		logger.Error("Error generating ZIP response", log.Error(err))
-		http.Error(w, "Failed to generate ZIP file", http.StatusInternalServerError)
+		errResp := apierror.ErrorResponse{
+			Code:        ErrorInternalServerError.Code,
+			Message:     ErrorInternalServerError.Error,
+			Description: ErrorInternalServerError.ErrorDescription,
+		}
+		sysutils.WriteErrorResponse(w, http.StatusInternalServerError, errResp)
 		return
 	}
 }
@@ -215,14 +192,11 @@ func (eh *exportHandler) generateAndSendZipResponse(
 }
 
 // handleError handles service errors and sends appropriate HTTP responses.
-func (eh *exportHandler) handleError(w http.ResponseWriter, logger *log.Logger, svcErr *serviceerror.ServiceError) {
+func (eh *exportHandler) handleError(w http.ResponseWriter, svcErr *serviceerror.ServiceError) {
 	statusCode := http.StatusInternalServerError
 	if svcErr.Type == serviceerror.ClientErrorType {
 		statusCode = http.StatusBadRequest
 	}
-
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(statusCode)
 
 	errResp := apierror.ErrorResponse{
 		Code:        svcErr.Code,
@@ -230,8 +204,5 @@ func (eh *exportHandler) handleError(w http.ResponseWriter, logger *log.Logger, 
 		Description: svcErr.ErrorDescription,
 	}
 
-	if err := json.NewEncoder(w).Encode(errResp); err != nil {
-		logger.Error("Error encoding error response", log.Error(err))
-		http.Error(w, "Failed to encode error response", http.StatusInternalServerError)
-	}
+	sysutils.WriteErrorResponse(w, statusCode, errResp)
 }

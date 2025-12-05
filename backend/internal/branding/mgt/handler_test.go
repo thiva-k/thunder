@@ -21,7 +21,6 @@ package brandingmgt
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,7 +29,6 @@ import (
 
 	"github.com/asgardeo/thunder/internal/branding/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
-	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 type BrandingHandlerTestSuite struct {
@@ -495,26 +493,6 @@ func (suite *BrandingHandlerTestSuite) TestToHTTPLinks_Empty() {
 	suite.Len(httpLinks, 0)
 }
 
-// Test handleEncodingError
-func (suite *BrandingHandlerTestSuite) TestHandleEncodingError() {
-	w := httptest.NewRecorder()
-	handleEncodingError(w)
-	suite.Equal(http.StatusInternalServerError, w.Code)
-	suite.Equal("application/json", w.Header().Get("Content-Type"))
-}
-
-// Test writeToResponse error path
-func (suite *BrandingHandlerTestSuite) TestWriteToResponse_Error() {
-	// Create a response writer that will fail on Write
-	w := &failingResponseWriter{ResponseWriter: httptest.NewRecorder()}
-	logger := log.GetLogger()
-
-	// Use a type that cannot be encoded (channel)
-	response := make(chan int)
-	isErr := writeToResponse(w, response, logger)
-	suite.True(isErr)
-}
-
 // Test handleError default case
 func (suite *BrandingHandlerTestSuite) TestHandleError_DefaultCase() {
 	// Create an error with unknown code
@@ -526,21 +504,6 @@ func (suite *BrandingHandlerTestSuite) TestHandleError_DefaultCase() {
 	}
 
 	w := httptest.NewRecorder()
-	logger := log.GetLogger()
-	handleError(w, logger, unknownError)
+	handleError(w, unknownError)
 	suite.Equal(http.StatusBadRequest, w.Code)
-}
-
-// failingResponseWriter is a ResponseWriter that fails on Write
-type failingResponseWriter struct {
-	http.ResponseWriter
-	writeError error
-}
-
-func (w *failingResponseWriter) Write(p []byte) (int, error) {
-	if w.writeError != nil {
-		return 0, w.writeError
-	}
-	// Make Write fail by returning an error
-	return 0, errors.New("write failed")
 }

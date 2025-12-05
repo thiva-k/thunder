@@ -333,7 +333,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupListRequest() {
 			},
 			assertBody: func(recorder *httptest.ResponseRecorder) {
 				suite.Require().Equal(http.StatusOK, recorder.Code)
-				suite.Require().Equal("Failed to encode response\n", recorder.Body.String())
+				suite.Require().Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 		},
 		{
@@ -342,7 +342,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupListRequest() {
 			useFlaky:    true,
 			assertBody: func(recorder *httptest.ResponseRecorder) {
 				suite.Require().Equal(http.StatusBadRequest, recorder.Code)
-				suite.Require().Equal("Failed to encode error response\n", recorder.Body.String())
+				suite.Require().Equal(serviceerror.ErrorEncodingError+"\n", recorder.Body.String())
 			},
 			assertSvc: func(svc *GroupServiceInterfaceMock) {
 				svc.AssertNotCalled(suite.T(), "GetGroupList", mock.Anything, mock.Anything)
@@ -491,7 +491,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupListByPathReques
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusOK, rr.Code)
-				require.Equal(suite.T(), "Failed to encode response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 		},
 	}
@@ -604,7 +604,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPostRequest() {
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusCreated, rr.Code)
-				require.Equal(suite.T(), "Failed to encode response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 		},
 		{
@@ -613,7 +613,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPostRequest() {
 			useFlaky: true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "CreateGroup", mock.Anything)
@@ -749,7 +749,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPostByPathReques
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusCreated, rr.Code)
-				require.Equal(suite.T(), "Failed to encode response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 		},
 		{
@@ -763,7 +763,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPostByPathReques
 			setJSONHeader:  true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "CreateGroupByPath", mock.Anything, mock.Anything)
@@ -849,7 +849,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupGetRequest() {
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusOK, rr.Code)
-				require.Equal(suite.T(), "Failed to encode response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 		},
 		{
@@ -859,7 +859,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupGetRequest() {
 			useFlaky: true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "GetGroup", mock.Anything)
@@ -977,7 +977,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPutRequest() {
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusOK, rr.Code)
-				require.Equal(suite.T(), "Failed to encode response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 		},
 		{
@@ -1010,7 +1010,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPutRequest() {
 			setJSONHeader:  true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "UpdateGroup", mock.Anything, mock.Anything)
@@ -1042,7 +1042,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupPutRequest() {
 			setJSONHeader: true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "UpdateGroup", mock.Anything, mock.Anything)
@@ -1078,7 +1078,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupDeleteRequest() 
 			useFlaky: true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "DeleteGroup", mock.Anything)
@@ -1221,7 +1221,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupMembersGetReques
 			},
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusOK, rr.Code)
-				require.Equal(suite.T(), "Failed to encode response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 		},
 		{
@@ -1231,7 +1231,7 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupMembersGetReques
 			useFlaky: true,
 			assert: func(rr *httptest.ResponseRecorder) {
 				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				require.Equal(suite.T(), "Failed to encode error response\n", rr.Body.String())
+				require.Equal(suite.T(), serviceerror.ErrorEncodingError+"\n", rr.Body.String())
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "GetGroupMembers", mock.Anything, mock.Anything, mock.Anything)
@@ -1289,14 +1289,13 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_ExtractAndValidatePathEncod
 	t := suite.T()
 	writer := newFlakyResponseWriter()
 	req := httptest.NewRequest(http.MethodGet, "/ous//groups", nil)
-	logger := log.GetLogger().With(log.String("component", "test"))
 
-	path, failed := extractAndValidatePath(writer, req, logger)
+	path, failed := extractAndValidatePath(writer, req)
 
 	require.True(t, failed)
 	require.Equal(t, "", path)
 	require.Equal(t, http.StatusBadRequest, writer.Code)
-	require.Equal(t, "Failed to encode error response\n", writer.Body.String())
+	require.Equal(t, serviceerror.ErrorEncodingError+"\n", writer.Body.String())
 }
 
 func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleErrorInternalServer() {

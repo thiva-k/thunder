@@ -53,6 +53,15 @@ func (suite *AuthenticationHandlerTestSuite) SetupTest() {
 	}
 }
 
+func (suite *AuthenticationHandlerTestSuite) TestNewAuthenticationHandler() {
+	mockService := NewAuthenticationServiceInterfaceMock(suite.T())
+
+	handler := newAuthenticationHandler(mockService)
+
+	suite.NotNil(handler)
+	suite.Equal(mockService, handler.authService)
+}
+
 func (suite *AuthenticationHandlerTestSuite) testIDPAuthFinishSuccess(
 	idpType idp.IDPType, endpoint string, handlerFunc func(http.ResponseWriter, *http.Request)) {
 	authRequest := IDPAuthFinishRequestDTO{

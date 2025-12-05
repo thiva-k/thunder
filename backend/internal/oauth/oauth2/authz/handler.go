@@ -19,7 +19,6 @@
 package authz
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -33,7 +32,6 @@ import (
 	oauth2model "github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	oauth2utils "github.com/asgardeo/thunder/internal/oauth/oauth2/utils"
 	"github.com/asgardeo/thunder/internal/system/config"
-	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
@@ -463,31 +461,18 @@ func (ah *authorizeHandler) redirectToErrorPage(w http.ResponseWriter, r *http.R
 
 // writeAuthZResponse writes the authorization response to the HTTP response writer.
 func (ah *authorizeHandler) writeAuthZResponse(w http.ResponseWriter, redirectURI string) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-
 	authZResp := AuthZPostResponse{
 		RedirectURI: redirectURI,
 	}
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	err := json.NewEncoder(w).Encode(authZResp)
-	if err != nil {
-		logger.Error("Error encoding response", log.Error(err))
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	utils.WriteSuccessResponse(w, http.StatusOK, authZResp)
 }
 
 // writeAuthZResponseToErrorPage writes the authorization response to the error page.
 func (ah *authorizeHandler) writeAuthZResponseToErrorPage(w http.ResponseWriter, code, msg string,
 	authRequestCtx *authRequestContext) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
-
 	redirectURI, err := getErrorPageRedirectURL(code, msg)
 	if err != nil {
-		logger.Error("Failed to construct error page URL: " + err.Error())
 		http.Error(w, "Failed to redirect to error page", http.StatusInternalServerError)
 		return
 	}
@@ -498,7 +483,6 @@ func (ah *authorizeHandler) writeAuthZResponseToErrorPage(w http.ResponseWriter,
 		}
 		redirectURI, err = oauth2utils.GetURIWithQueryParams(redirectURI, queryParams)
 		if err != nil {
-			logger.Error("Failed to add state to error page URL: " + err.Error())
 			http.Error(w, "Failed to redirect to error page", http.StatusInternalServerError)
 			return
 		}

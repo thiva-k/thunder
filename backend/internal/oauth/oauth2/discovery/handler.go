@@ -19,11 +19,10 @@
 package discovery
 
 import (
-	"encoding/json"
 	"net/http"
 
-	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/log"
+	sysutils "github.com/asgardeo/thunder/internal/system/utils"
 )
 
 // DiscoveryHandlerInterface defines the interface for discovery handlers
@@ -50,14 +49,8 @@ func (dh *discoveryHandler) HandleOAuth2AuthorizationServerMetadata(w http.Respo
 
 	metadata := dh.discoveryService.GetOAuth2AuthorizationServerMetadata()
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(metadata); err != nil {
-		logger.Error("Failed to encode OAuth 2.0 Authorization Server Metadata response", log.Error(err))
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, metadata)
+	logger.Debug("OAuth 2.0 Authorization Server Metadata response sent successfully")
 }
 
 // HandleOIDCDiscovery handles OpenID Connect Discovery requests
@@ -66,12 +59,6 @@ func (dh *discoveryHandler) HandleOIDCDiscovery(w http.ResponseWriter, r *http.R
 
 	metadata := dh.discoveryService.GetOIDCMetadata()
 
-	w.Header().Set(serverconst.ContentTypeHeaderName, serverconst.ContentTypeJSON)
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(metadata); err != nil {
-		logger.Error("Failed to encode OIDC discovery response", log.Error(err))
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	sysutils.WriteSuccessResponse(w, http.StatusOK, metadata)
+	logger.Debug("OIDC discovery response sent successfully")
 }
