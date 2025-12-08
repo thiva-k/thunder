@@ -21,6 +21,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	urlpath "path"
 	"path/filepath"
@@ -275,6 +276,11 @@ func LoadConfig(path string, defaultsPath string) (*Config, error) {
 		}
 	}
 
+	// Derive JWT issuer from server config if not set
+	if cfg.JWT.Issuer == "" {
+		cfg.JWT.Issuer = GetServerURL(&cfg.Server)
+	}
+
 	return &cfg, nil
 }
 
@@ -298,6 +304,19 @@ func loadDefaultConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+// GetServerURL constructs the server URL from the server configuration.
+// It uses PublicURL if set, otherwise constructs from hostname, port, and scheme.
+func GetServerURL(server *ServerConfig) string {
+	if server.PublicURL != "" {
+		return server.PublicURL
+	}
+	scheme := "https"
+	if server.HTTPOnly {
+		scheme = "http"
+	}
+	return fmt.Sprintf("%s://%s:%d", scheme, server.Hostname, server.Port)
 }
 
 // mergeConfigs merges user configuration into the base configuration.

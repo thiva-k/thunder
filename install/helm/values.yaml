@@ -193,7 +193,6 @@ configuration:
 
   # Token Configuration
   jwt:
-    issuer: "thunder"
     validityPeriod: 3600
     audience: "application"
 
