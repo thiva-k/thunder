@@ -216,6 +216,36 @@ func (suite *ApplicationStoreTestSuite) TestGetAppJSONDataBytes_EmptyContacts() 
 	suite.Len(contacts, 0)
 }
 
+func (suite *ApplicationStoreTestSuite) TestGetAppJSONDataBytes_WithTemplate() {
+	app := suite.createTestApplication()
+	app.Template = "spa"
+
+	jsonBytes, err := getAppJSONDataBytes(&app)
+
+	suite.NoError(err)
+	suite.NotNil(jsonBytes)
+
+	var result map[string]interface{}
+	err = json.Unmarshal(jsonBytes, &result)
+	suite.NoError(err)
+	suite.Equal("spa", result["template"])
+}
+
+func (suite *ApplicationStoreTestSuite) TestGetAppJSONDataBytes_WithEmptyTemplate() {
+	app := suite.createTestApplication()
+	app.Template = ""
+
+	jsonBytes, err := getAppJSONDataBytes(&app)
+
+	suite.NoError(err)
+	suite.NotNil(jsonBytes)
+
+	var result map[string]interface{}
+	err = json.Unmarshal(jsonBytes, &result)
+	suite.NoError(err)
+	suite.Nil(result["template"]) // Empty template should not be included
+}
+
 func (suite *ApplicationStoreTestSuite) TestGetOAuthConfigJSONBytes_Success() {
 	app := suite.createTestApplication()
 	inboundAuthConfig := app.InboundAuthConfig[0]
@@ -410,6 +440,78 @@ func (suite *ApplicationStoreTestSuite) TestBuildBasicApplicationFromResultRow_W
 	suite.False(result.IsRegistrationFlowEnabled)
 }
 
+func (suite *ApplicationStoreTestSuite) TestBuildBasicApplicationFromResultRow_WithTemplate() {
+	appJSON := map[string]interface{}{
+		"template": "spa",
+	}
+	appJSONBytes, _ := json.Marshal(appJSON)
+
+	row := map[string]interface{}{
+		"app_id":                       "app1",
+		"app_name":                     "Test App 1",
+		"description":                  "Test description",
+		"auth_flow_graph_id":           "auth_flow_1",
+		"registration_flow_graph_id":   "reg_flow_1",
+		"is_registration_flow_enabled": "1",
+		"branding_id":                  "brand-123",
+		"app_json":                     string(appJSONBytes),
+		"consumer_key":                 "client_app1",
+	}
+
+	result, err := buildBasicApplicationFromResultRow(row)
+
+	suite.NoError(err)
+	suite.Equal("app1", result.ID)
+	suite.Equal("brand-123", result.BrandingID)
+	suite.Equal("spa", result.Template)
+}
+
+func (suite *ApplicationStoreTestSuite) TestBuildBasicApplicationFromResultRow_WithNullTemplate() {
+	appJSON := map[string]interface{}{}
+	appJSONBytes, _ := json.Marshal(appJSON)
+
+	row := map[string]interface{}{
+		"app_id":                       "app1",
+		"app_name":                     "Test App 1",
+		"description":                  "Test description",
+		"auth_flow_graph_id":           "auth_flow_1",
+		"registration_flow_graph_id":   "reg_flow_1",
+		"is_registration_flow_enabled": "1",
+		"app_json":                     string(appJSONBytes),
+		"consumer_key":                 "client_app1",
+	}
+
+	result, err := buildBasicApplicationFromResultRow(row)
+
+	suite.NoError(err)
+	suite.Equal("app1", result.ID)
+	suite.Equal("", result.Template)
+}
+
+func (suite *ApplicationStoreTestSuite) TestBuildBasicApplicationFromResultRow_WithEmptyTemplate() {
+	appJSON := map[string]interface{}{
+		"template": "",
+	}
+	appJSONBytes, _ := json.Marshal(appJSON)
+
+	row := map[string]interface{}{
+		"app_id":                       "app1",
+		"app_name":                     "Test App 1",
+		"description":                  "Test description",
+		"auth_flow_graph_id":           "auth_flow_1",
+		"registration_flow_graph_id":   "reg_flow_1",
+		"is_registration_flow_enabled": "1",
+		"app_json":                     string(appJSONBytes),
+		"consumer_key":                 "client_app1",
+	}
+
+	result, err := buildBasicApplicationFromResultRow(row)
+
+	suite.NoError(err)
+	suite.Equal("app1", result.ID)
+	suite.Equal("", result.Template)
+}
+
 func (suite *ApplicationStoreTestSuite) TestBuildBasicApplicationFromResultRow_InvalidAppID() {
 	row := map[string]interface{}{
 		"app_id": 123, // Invalid type
@@ -540,6 +642,59 @@ func (suite *ApplicationStoreTestSuite) TestBuildApplicationFromResultRow_Succes
 	suite.Equal("client_app1", result.InboundAuthConfig[0].OAuthAppConfig.ClientID)
 }
 
+func (suite *ApplicationStoreTestSuite) TestBuildApplicationFromResultRow_WithTemplate() {
+	appJSON := map[string]interface{}{
+		"url":      "https://example.com",
+		"logo_url": "https://example.com/logo.png",
+		"template": "mobile",
+	}
+	appJSONBytes, _ := json.Marshal(appJSON)
+
+	row := map[string]interface{}{
+		"app_id":                       "app1",
+		"app_name":                     "Test App 1",
+		"description":                  "Test description",
+		"auth_flow_graph_id":           "auth_flow_1",
+		"registration_flow_graph_id":   "reg_flow_1",
+		"is_registration_flow_enabled": "1",
+		"branding_id":                  "brand-123",
+		"app_json":                     string(appJSONBytes),
+	}
+
+	result, err := buildApplicationFromResultRow(row)
+
+	suite.NoError(err)
+	suite.Equal("app1", result.ID)
+	suite.Equal("brand-123", result.BrandingID)
+	suite.Equal("mobile", result.Template)
+	suite.Equal("https://example.com", result.URL)
+}
+
+func (suite *ApplicationStoreTestSuite) TestBuildApplicationFromResultRow_WithoutTemplate() {
+	appJSON := map[string]interface{}{
+		"url":      "https://example.com",
+		"logo_url": "https://example.com/logo.png",
+	}
+	appJSONBytes, _ := json.Marshal(appJSON)
+
+	row := map[string]interface{}{
+		"app_id":                       "app1",
+		"app_name":                     "Test App 1",
+		"description":                  "Test description",
+		"auth_flow_graph_id":           "auth_flow_1",
+		"registration_flow_graph_id":   "reg_flow_1",
+		"is_registration_flow_enabled": "1",
+		"app_json":                     string(appJSONBytes),
+	}
+
+	result, err := buildApplicationFromResultRow(row)
+
+	suite.NoError(err)
+	suite.Equal("app1", result.ID)
+	suite.Equal("", result.Template) // No template in app_json
+	suite.Equal("https://example.com", result.URL)
+}
+
 func (suite *ApplicationStoreTestSuite) TestBuildApplicationFromResultRow_WithNullAppJSON() {
 	row := map[string]interface{}{
 		"app_id":                       "app1",
@@ -556,6 +711,7 @@ func (suite *ApplicationStoreTestSuite) TestBuildApplicationFromResultRow_WithNu
 	suite.NoError(err)
 	suite.Equal("", result.URL)
 	suite.Equal("", result.LogoURL)
+	suite.Equal("", result.Template) // Null app_json means no template
 	suite.Nil(result.Token)
 }
 

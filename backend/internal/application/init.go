@@ -97,6 +97,8 @@ func parseToApplicationDTO(data []byte) (*model.ApplicationDTO, error) {
 		AuthFlowGraphID:           appRequest.AuthFlowGraphID,
 		RegistrationFlowGraphID:   appRequest.RegistrationFlowGraphID,
 		IsRegistrationFlowEnabled: appRequest.IsRegistrationFlowEnabled,
+		BrandingID:                appRequest.BrandingID,
+		Template:                  appRequest.Template,
 		URL:                       appRequest.URL,
 		LogoURL:                   appRequest.LogoURL,
 		Token:                     appRequest.Token,
