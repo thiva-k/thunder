@@ -199,8 +199,9 @@ func (s *flowStore) buildFlowContextFromResultRow(row map[string]interface{}) (*
 	userAttributes := s.parseOptionalString(row["user_attributes"])
 	executionHistory := s.parseOptionalString(row["execution_history"])
 
-	// Parse boolean field with type conversion support
+	// Parse boolean fields with type conversion support
 	isAuthenticated := s.parseBoolean(row["is_authenticated"])
+	verbose := s.parseBoolean(row["verbose"])
 
 	return &FlowContextWithUserDataDB{
 		FlowID:             flowID,
@@ -209,6 +210,7 @@ func (s *flowStore) buildFlowContextFromResultRow(row map[string]interface{}) (*
 		CurrentAction:      currentAction,
 		GraphID:            graphID,
 		RuntimeData:        runtimeData,
+		Verbose:            verbose,
 		IsAuthenticated:    isAuthenticated,
 		UserID:             userID,
 		OrganizationUnitID: organizationUnitID,
