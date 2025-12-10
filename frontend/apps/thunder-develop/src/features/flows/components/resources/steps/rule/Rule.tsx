@@ -16,14 +16,15 @@
  * under the License.
  */
 
-import {useCallback, useRef, type DragEvent, type ReactElement} from 'react';
-import './Rule.scss';
-import {Handle, Position, useNodeId, useNodesData, useReactFlow, type Node} from '@xyflow/react';
-import useFlowBuilderCore from '@/features/flows/hooks/useFlowBuilderCore';
+import {memo, useCallback, useMemo, useRef, type DragEvent, type ReactElement} from 'react';
+import {useTranslation} from 'react-i18next';
+import {Handle, Position, useNodeId, useReactFlow} from '@xyflow/react';
 import {Box, IconButton, Tooltip, Typography} from '@wso2/oxygen-ui';
 import {CrossIcon} from '@wso2/oxygen-ui-icons-react';
+import useFlowBuilderCore from '@/features/flows/hooks/useFlowBuilderCore';
 import type {Resource} from '@/features/flows/models/resources';
 import type {CommonStepFactoryPropsInterface} from '../CommonStepFactory';
+import './Rule.scss';
 
 /**
  * Props interface of {@link Rule}
@@ -36,10 +37,10 @@ export type RulePropsInterface = CommonStepFactoryPropsInterface;
  * @param props - Props injected to the component.
  * @returns Rule component.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function Rule(_props: RulePropsInterface): ReactElement {
+function Rule({data, id}: RulePropsInterface): ReactElement {
+  const {t} = useTranslation();
   const nodeId: string | null = useNodeId();
-  const node: Pick<Node, 'data' | 'type' | 'id'> | null = useNodesData(nodeId ?? '');
+  // The `data` and `id` props already contain the node's data, passed down from React Flow
   const {deleteElements} = useReactFlow();
   const {setLastInteractedResource} = useFlowBuilderCore();
 
@@ -60,10 +61,11 @@ function Rule(_props: RulePropsInterface): ReactElement {
     event.preventDefault();
   }, []);
 
-  const ruleStep: Resource = {
-    ...(typeof node?.data === 'object' && node.data !== null ? node.data : {}),
-    id: node?.id ?? '',
-  } as Resource;
+  // Memoize ruleStep to prevent recreation on each render
+  const ruleStep: Resource = useMemo(() => ({
+    ...(typeof data === 'object' && data !== null ? data : {}),
+    id: id ?? nodeId ?? '',
+  } as Resource), [data, id, nodeId]);
 
   return (
     <div ref={ref} className="flow-builder-rule" onDrop={handleDrop} onDrag={handleDragOver}>
@@ -75,9 +77,9 @@ function Rule(_props: RulePropsInterface): ReactElement {
         onClick={() => setLastInteractedResource(ruleStep)}
       >
         <Typography variant="body2" className="flow-builder-rule-id">
-          Conditional Rule
+          {t('flows:core.rule.conditionalRule')}
         </Typography>
-        <Tooltip title="Remove">
+        <Tooltip title={t('flows:core.rule.remove')}>
           <IconButton
             size="small"
             onClick={() => {
@@ -97,4 +99,17 @@ function Rule(_props: RulePropsInterface): ReactElement {
   );
 }
 
-export default Rule;
+// Memoize Rule to prevent re-renders when parent re-renders with same props
+const MemoizedRule = memo(Rule, (prevProps, nextProps) => {
+  // Re-render if data changed
+  if (prevProps.data !== nextProps.data) {
+    return false;
+  }
+  // Re-render if id changed
+  if (prevProps.id !== nextProps.id) {
+    return false;
+  }
+  return true;
+});
+
+export default MemoizedRule;

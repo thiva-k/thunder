@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {useState, type HTMLAttributes, type ReactElement} from 'react';
+import {memo, useCallback, useState, type HTMLAttributes, type ReactElement} from 'react';
 import {Box, Button, Drawer, IconButton, type DrawerProps} from '@wso2/oxygen-ui';
 import {useReactFlow} from '@xyflow/react';
 import classNames from 'classnames';
@@ -58,6 +58,29 @@ function ResourcePropertyPanel({
     lastInteractedResource,
   } = useFlowBuilderCore();
 
+  const handleClose = useCallback(() => {
+    setIsOpenResourcePropertiesPanel(false);
+  }, [setIsOpenResourcePropertiesPanel]);
+
+  const handleDelete = useCallback(() => {
+    if (!lastInteractedResource) return;
+
+    if (lastInteractedResource.resourceType === ResourceTypes.Step) {
+      deleteElements({nodes: [{id: lastInteractedResource.id}]}).catch(() => {
+        // Deletion may fail silently if the node doesn't exist or is protected
+      });
+    } else {
+      onComponentDelete(lastInteractedStepId, lastInteractedResource as Element);
+    }
+    setIsOpenResourcePropertiesPanel(false);
+  }, [
+    deleteElements,
+    lastInteractedResource,
+    lastInteractedStepId,
+    onComponentDelete,
+    setIsOpenResourcePropertiesPanel,
+  ]);
+
   return (
     <Box
       ref={setContainerEl}
@@ -72,7 +95,7 @@ function ResourcePropertyPanel({
       <Drawer
         open={open}
         anchor={anchor}
-        onClose={() => setIsOpenResourcePropertiesPanel(false)}
+        onClose={handleClose}
         elevation={5}
         slotProps={{
           paper: {
@@ -105,47 +128,29 @@ function ResourcePropertyPanel({
           className="flow-builder-right-panel header"
         >
           {resourcePropertiesPanelHeading}
-          <IconButton onClick={() => setIsOpenResourcePropertiesPanel(false)}>
+          <IconButton onClick={handleClose}>
             <X height={16} width={16} />
           </IconButton>
         </Box>
         <div className="flow-builder-right-panel content full-height">
           <ResourceProperties />
         </div>
-        {lastInteractedResource?.deletable ||
-          (lastInteractedResource?.deletable === undefined && (
-            <Box
-              display="flex"
-              justifyContent="flex-end"
-              alignItems="right"
-              className="flow-builder-right-panel footer"
+        {lastInteractedResource?.deletable !== false && (
+          <Box display="flex" justifyContent="flex-end" alignItems="right" className="flow-builder-right-panel footer">
+            <Button
+              variant="outlined"
+              onClick={handleDelete}
+              color="error"
+              startIcon={<TrashIcon size={16} />}
+              fullWidth
             >
-              {lastInteractedResource?.deletable ||
-                (lastInteractedResource?.deletable === undefined && (
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      if (lastInteractedResource.resourceType === ResourceTypes.Step) {
-                        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-                        deleteElements({nodes: [{id: lastInteractedResource.id}]});
-                      } else {
-                        onComponentDelete(lastInteractedStepId, lastInteractedResource);
-                      }
-
-                      setIsOpenResourcePropertiesPanel(false);
-                    }}
-                    color="error"
-                    startIcon={<TrashIcon size={16} />}
-                    fullWidth
-                  >
-                    Delete Element
-                  </Button>
-                ))}
-            </Box>
-          ))}
+              Delete Element
+            </Button>
+          </Box>
+        )}
       </Drawer>
     </Box>
   );
 }
 
-export default ResourcePropertyPanel;
+export default memo(ResourcePropertyPanel);

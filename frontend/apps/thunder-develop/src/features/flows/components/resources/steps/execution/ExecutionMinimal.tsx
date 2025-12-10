@@ -24,7 +24,7 @@ import {useTranslation} from 'react-i18next';
 import {Box, Card, IconButton, Tooltip, Typography} from '@wso2/oxygen-ui';
 import {CogIcon} from '@wso2/oxygen-ui-icons-react';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
-import ExecutionFactory from './execution-factory';
+import ExecutionFactory from './execution-factory/ExecutionFactory';
 import './ExecutionMinimal.scss';
 
 /**
@@ -85,7 +85,7 @@ function ExecutionMinimal({resource}: ExecutionMinimalPropsInterface): ReactElem
             fontWeight: 500,
           }}
         >
-          {(resource.display as {displayname?: string})?.displayname || resource.display?.label || 'Execution'}
+          {(resource.display as {displayname?: string})?.displayname ?? resource.display?.label ?? 'Execution'}
         </Typography>
         <Tooltip title={t('flows:core.executions.tooltip.configurationHint')}>
           <IconButton

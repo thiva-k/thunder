@@ -31,14 +31,25 @@ import ValidationNotificationsList from './ValidationNotificationsList';
  * Props interface for TabPanel component.
  */
 interface TabPanelProps {
+  /**
+   * Tab panel index.
+   */
   index: number;
+  /**
+   * Current selected tab value.
+   */
   value: number;
+  /**
+   * Tab panel children.
+   * @defaultValue undefined
+   */
+  children?: React.ReactNode;
 }
 
 /**
  * TabPanel component to conditionally render tab content.
  */
-function TabPanel({children, value, index}: PropsWithChildren<TabPanelProps>): ReactElement {
+function TabPanel({children = undefined, value, index}: PropsWithChildren<TabPanelProps>): ReactElement {
   return (
     <div
       role="tabpanel"
@@ -62,9 +73,9 @@ const getNotificationIcon = (type: NotificationType): ReactElement => {
     case NotificationType.ERROR:
       return <CircleXIcon size={16} />;
     case NotificationType.INFO:
-      return <TriangleAlertIcon size={16} />;
-    case NotificationType.WARNING:
       return <InfoIcon size={16} />;
+    case NotificationType.WARNING:
+      return <TriangleAlertIcon size={16} />;
     default:
       return <InfoIcon size={16} />;
   }

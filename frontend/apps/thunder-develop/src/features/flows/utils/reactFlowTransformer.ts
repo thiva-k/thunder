@@ -18,9 +18,37 @@
 
 import type {Edge, Node} from '@xyflow/react';
 import type {Element} from '../models/elements';
-import {ElementTypes, InputVariants, BlockTypes} from '../models/elements';
+import {ElementCategories, ElementTypes, InputVariants, ActionEventTypes, ButtonTypes} from '../models/elements';
 import type {StepData} from '../models/steps';
 import {StepTypes, StaticStepTypes} from '../models/steps';
+import {ActionTypes} from '../models/actions';
+
+/**
+ * Suffix used in edge sourceHandle to identify the connection point
+ */
+const NEXT_HANDLE_SUFFIX = `_${ActionTypes.Next}`;
+
+/**
+ * Layout information for a node
+ */
+interface NodeLayout {
+  size: {
+    width: number;
+    height: number;
+  };
+  position: {
+    x: number;
+    y: number;
+  };
+}
+
+/**
+ * Default layout dimensions
+ */
+const DEFAULT_LAYOUT = {
+  width: 200,
+  height: 100,
+};
 
 /**
  * Flow node definition structure
@@ -28,8 +56,9 @@ import {StepTypes, StaticStepTypes} from '../models/steps';
 interface FlowNode {
   id: string;
   type: string;
+  layout: NodeLayout;
   meta?: {
-    components?: FlowComponent[];
+    components?: Record<string, unknown>[];
   };
   inputs?: FlowInput[];
   actions?: FlowAction[];
@@ -40,25 +69,6 @@ interface FlowNode {
   };
   onSuccess?: string;
   onFailure?: string;
-}
-
-/**
- * Flow UI component structure (for PROMPT nodes)
- */
-interface FlowComponent {
-  type: string;
-  id: string;
-  label?: string;
-  variant?: string | Record<string, unknown>;
-  length?: number;
-  required?: boolean;
-  placeholder?: string;
-  components?: FlowComponent[];
-  // Include all UI properties from the original element
-  resourceType?: string;
-  category?: string;
-  properties?: unknown;
-  action?: unknown;
 }
 
 /**
@@ -77,6 +87,10 @@ interface FlowInput {
 interface FlowAction {
   ref: string;
   nextNode: string;
+  executor?: {
+    name: string;
+    [key: string]: unknown;
+  };
 }
 
 /**
@@ -90,8 +104,9 @@ interface FlowGraph {
  * Complete flow configuration with metadata
  */
 interface FlowConfiguration {
-  id: string;
-  type: string;
+  name: string;
+  handle: string;
+  flowType: string;
   nodes: FlowNode[];
 }
 
@@ -121,22 +136,6 @@ const STEP_TO_NODE_TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * Maps canvas element types to flow component types
- */
-const ELEMENT_TO_COMPONENT_TYPE_MAP: Record<string, string> = {
-  [ElementTypes.Input]: 'TEXT_INPUT',
-  [ElementTypes.Button]: 'ACTION',
-  [ElementTypes.Divider]: 'DIVIDER',
-  [ElementTypes.Typography]: 'TEXT',
-  [ElementTypes.RichText]: 'TEXT',
-  [ElementTypes.Image]: 'IMAGE',
-  [ElementTypes.Captcha]: 'CAPTCHA',
-  [ElementTypes.Choice]: 'CHOICE',
-  [ElementTypes.Resend]: 'ACTION',
-  [BlockTypes.Form]: 'BLOCK',
-};
-
-/**
  * Maps input variants to flow input types
  */
 const INPUT_VARIANT_TO_TYPE_MAP: Record<string, string> = {
@@ -150,93 +149,58 @@ const INPUT_VARIANT_TO_TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * Transforms a canvas UI element to a flow component
+ * Derives the eventType for ACTION category components based on buttonType
  */
-function transformElement(element: Element): FlowComponent | null {
-  if (!element || !element.type) {
-    return null;
+function deriveEventType(component?: Element & {buttonType?: string}): string {
+  const buttonType = component?.buttonType;
+
+  if (!buttonType) {
+    return ActionEventTypes.Trigger;
   }
 
-  const component: FlowComponent = {
-    type: ELEMENT_TO_COMPONENT_TYPE_MAP[element.type] || element.type,
-    id: element.id,
-  };
-
-  // Include resourceType and category
-  if (element.resourceType) {
-    component.resourceType = element.resourceType;
+  switch (buttonType) {
+    case ButtonTypes.Submit:
+      return ActionEventTypes.Submit;
+    case ButtonTypes.Button:
+    default:
+      return ActionEventTypes.Trigger;
   }
+}
 
-  if (element.category) {
-    component.category = element.category;
-  }
+/**
+ * Removes internal properties (variants, display, config, action) from components recursively.
+ * These transformations prepare the component for the API payload.
+ * Note: action is removed because actions are defined separately in the node's actions array.
+ */
+function cleanComponents(components: Element[]): Record<string, unknown>[] {
+  return components.map((component) => {
+    // Extract and remove internal properties (including action which is defined in node.actions)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- config is excluded from output
+    const {variants, display, config, action, ...rest} = component as Element & {
+      variants?: unknown;
+      display?: unknown;
+      config?: unknown;
+      action?: unknown;
+    };
 
-  // Extract text from config and set as label
-  if (element.config && typeof element.config === 'object' && 'text' in element.config) {
-    component.label = String(element.config.text);
-  }
+    // Build the cleaned component
+    const cleanedComponent: Record<string, unknown> = {
+      ...rest,
+    };
 
-  // Include variant
-  if (element.variant !== undefined) {
-    component.variant = typeof element.variant === 'string' ? element.variant : (element.variant as Record<string, unknown>);
-  }
+    // For ACTION category components, ensure eventType is set
+    if (component.category === ElementCategories.Action && !cleanedComponent.eventType) {
+      cleanedComponent.eventType = deriveEventType(component as Element & {buttonType?: string});
+    }
 
-  // Include all properties (contains UI-specific data from config)
-  if (element.config && typeof element.config === 'object') {
-    component.properties = element.config;
-  }
+    // Recursively clean nested components if present
+    const nestedComponents = cleanedComponent.components as Element[] | undefined;
+    if (nestedComponents && nestedComponents.length > 0) {
+      cleanedComponent.components = cleanComponents(nestedComponents);
+    }
 
-  // Include action definition
-  if (element.action) {
-    component.action = element.action;
-  }
-
-  // Override label from config if present (for input fields, etc.)
-  const elementConfig = element.config as unknown as Record<string, unknown> | undefined;
-  if (elementConfig?.label) {
-    component.label = String(elementConfig.label);
-  }
-
-  // Handle Input field variants
-  if (element.type === ElementTypes.Input && element.variant) {
-    const variant = String(element.variant);
-    component.type = INPUT_VARIANT_TO_TYPE_MAP[variant] || 'TEXT_INPUT';
-  }
-
-  // Handle Button action variants
-  if (element.type === ElementTypes.Button && element.variant) {
-    component.variant = String(element.variant);
-    component.type = 'ACTION';
-  }
-
-  // Handle Typography text variants
-  if (element.type === ElementTypes.Typography && element.variant) {
-    component.variant = String(element.variant);
-  }
-
-  // Add required flag for input fields (for backwards compatibility)
-  if (elementConfig?.required !== undefined) {
-    component.required = Boolean(elementConfig.required);
-  }
-
-  // Add placeholder for input fields (for backwards compatibility)
-  if (elementConfig?.placeholder) {
-    component.placeholder = String(elementConfig.placeholder);
-  }
-
-  // Add length for OTP input fields (for backwards compatibility)
-  if (elementConfig?.length !== undefined) {
-    component.length = Number(elementConfig.length);
-  }
-
-  // Handle nested components (for FORM blocks)
-  if (element.components && element.components.length > 0) {
-    component.components = element.components
-      .map(transformElement)
-      .filter((c): c is FlowComponent => c !== null);
-  }
-
-  return component;
+    return cleanedComponent;
+  });
 }
 
 /**
@@ -248,15 +212,28 @@ function extractInputs(components: Element[]): FlowInput[] {
   function processComponent(component: Element): void {
     // Check if this is an input field
     if (component.type === ElementTypes.Input) {
-      const config = component.config as unknown as Record<string, unknown> | undefined;
-      const variant = String(component.variant || InputVariants.Text);
-      const inputType = INPUT_VARIANT_TO_TYPE_MAP[variant] || 'TEXT_INPUT';
+      const variantValue = component.variant;
+      const variant = typeof variantValue === 'string' ? variantValue : InputVariants.Text;
+      const inputType = INPUT_VARIANT_TO_TYPE_MAP[variant] ?? 'TEXT_INPUT';
+
+      // Extract identifier from top-level properties
+      const componentWithProps = component as Element & {name?: string; identifier?: string; required?: boolean};
+      let identifier: string;
+      if (typeof componentWithProps.name === 'string') {
+        identifier = componentWithProps.name;
+      } else if (typeof componentWithProps.identifier === 'string') {
+        identifier = componentWithProps.identifier;
+      } else {
+        identifier = component.id;
+      }
+
+      const isRequired = componentWithProps.required ?? false;
 
       inputs.push({
         ref: component.id,
         type: inputType,
-        identifier: String(config?.name || config?.identifier || component.id),
-        required: Boolean(config?.required),
+        identifier,
+        required: isRequired,
       });
     }
 
@@ -271,37 +248,45 @@ function extractInputs(components: Element[]): FlowInput[] {
 }
 
 /**
- * Extracts action definitions from UI components and edges
+ * Extracts action definitions from UI components and edges.
+ * Edges are the source of truth for connections - they represent the current
+ * state of the canvas. The action.next property may be stale from when the
+ * flow was loaded.
  */
-function extractActions(
-  components: Element[],
-  nodeId: string,
-  edges: Edge[]
-): FlowAction[] {
+function extractActions(components: Element[], nodeId: string, edges: Edge[]): FlowAction[] {
   const actions: FlowAction[] = [];
 
   function processComponent(component: Element): void {
     // Check if this is a button/action element
     if (component.type === ElementTypes.Button || component.type === ElementTypes.Resend) {
-      // Check if the component has an action with a next reference
-      if (component.action?.next) {
-        actions.push({
-          ref: component.id,
-          nextNode: component.action.next,
-        });
-      } else {
-        // Try to find the next node from edges connected to this button
-        // Look for edges with sourceHandle matching the component ID
-        const connectedEdge = edges.find(
-          (edge) => edge.source === nodeId && edge.sourceHandle === component.id
-        );
+      // Build the action object
+      const action: FlowAction = {
+        ref: component.id,
+        nextNode: '',
+      };
 
-        if (connectedEdge) {
-          actions.push({
-            ref: component.id,
-            nextNode: connectedEdge.target,
-          });
-        }
+      // First try to find the next node from edges (source of truth for connections)
+      // The sourceHandle includes a suffix (e.g., "button_id_NEXT")
+      const expectedHandle = `${component.id}${NEXT_HANDLE_SUFFIX}`;
+      const connectedEdge = edges.find(
+        (edge) => edge.source === nodeId && edge.sourceHandle === expectedHandle,
+      );
+
+      if (connectedEdge) {
+        action.nextNode = connectedEdge.target;
+      } else if (component.action?.next) {
+        // Fall back to action.next only if no edge exists
+        action.nextNode = component.action.next;
+      }
+
+      // Include executor information if present (for EXECUTOR action type)
+      if (component.action?.executor) {
+        action.executor = component.action.executor as {name: string; [key: string]: unknown};
+      }
+
+      // Only add the action if we have a valid nextNode
+      if (action.nextNode) {
+        actions.push(action);
       }
     }
 
@@ -316,15 +301,13 @@ function extractActions(
 }
 
 /**
- * Finds the primary next node from edges or step action
+ * Finds the primary next node from edges or step action.
+ * Edges are the source of truth for connections - they represent the current
+ * state of the canvas. The action.next property may be stale from when the
+ * flow was loaded.
  */
 function findNextNode(canvasNode: Node<StepData>, edges: Edge[]): string | undefined {
-  // First check if the step has an action.next defined
-  if (canvasNode.data?.action?.next) {
-    return canvasNode.data.action.next;
-  }
-
-  // Otherwise find from edges (use the default/first edge)
+  // First try to find from edges (these are the source of truth for connections)
   const outgoingEdges = edges.filter((edge) => edge.source === canvasNode.id);
 
   if (outgoingEdges.length > 0) {
@@ -338,6 +321,11 @@ function findNextNode(canvasNode: Node<StepData>, edges: Edge[]): string | undef
     return outgoingEdges[0].target;
   }
 
+  // Fall back to action.next only if no edges exist (should be rare)
+  if (canvasNode.data?.action?.next) {
+    return canvasNode.data.action.next;
+  }
+
   return undefined;
 }
 
@@ -345,24 +333,32 @@ function findNextNode(canvasNode: Node<StepData>, edges: Edge[]): string | undef
  * Transforms a React Flow canvas node to a flow node definition
  */
 function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
-  const flowNode: FlowNode = {
-    id: canvasNode.id,
-    type: STEP_TO_NODE_TYPE_MAP[canvasNode.type || ''] || canvasNode.type || 'UNKNOWN',
-  };
-
   const stepData = canvasNode.data;
 
-  // Handle PROMPT nodes (VIEW steps with UI components)
-  if (canvasNode.type === StepTypes.View && stepData?.components) {
-    const components = stepData.components
-      .map(transformElement)
-      .filter((c): c is FlowComponent => c !== null);
+  // Build the layout from canvas node position and measured dimensions
+  const layout: NodeLayout = {
+    size: {
+      width: canvasNode.measured?.width ?? canvasNode.width ?? DEFAULT_LAYOUT.width,
+      height: canvasNode.measured?.height ?? canvasNode.height ?? DEFAULT_LAYOUT.height,
+    },
+    position: {
+      x: Math.round(canvasNode.position.x),
+      y: Math.round(canvasNode.position.y),
+    },
+  };
 
-    if (components.length > 0) {
-      flowNode.meta = {
-        components,
-      };
-    }
+  const flowNode: FlowNode = {
+    id: canvasNode.id,
+    type: STEP_TO_NODE_TYPE_MAP[canvasNode.type ?? ''] ?? canvasNode.type ?? 'UNKNOWN',
+    layout,
+  };
+
+  // Handle PROMPT nodes (VIEW steps with UI components)
+  // Clean components to remove internal properties like variants
+  if (canvasNode.type === StepTypes.View && stepData?.components) {
+    flowNode.meta = {
+      components: cleanComponents(stepData.components),
+    };
 
     // Extract input field definitions
     const inputs = extractInputs(stepData.components);
@@ -377,10 +373,17 @@ function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
     }
   }
 
+  // Handle END nodes with components
+  if (canvasNode.type === StepTypes.End && stepData?.components) {
+    flowNode.meta = {
+      components: cleanComponents(stepData.components),
+    };
+  }
+
   // Handle TASK_EXECUTION nodes (EXECUTION steps)
   if (canvasNode.type === StepTypes.Execution) {
     // Add executor configuration
-    if (stepData?.action?.executor && stepData.action.executor.name) {
+    if (stepData?.action?.executor?.name) {
       flowNode.executor = stepData.action.executor as {name: string; [key: string]: unknown};
     }
 
@@ -396,12 +399,13 @@ function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
     }
 
     // Check for onFailure connection (if there's a sourceHandle named 'failure')
-    const failureEdge = edges.find(
-      (edge) => edge.source === canvasNode.id && edge.sourceHandle === 'failure'
-    );
+    const failureEdge = edges.find((edge) => edge.source === canvasNode.id && edge.sourceHandle === 'failure');
     if (failureEdge) {
       flowNode.onFailure = failureEdge.target;
     }
+
+    // Note: inputs for TASK_EXECUTION nodes are collected in a second pass
+    // after all nodes are transformed, since we need to look at preceding PROMPT nodes
   }
 
   // Handle DECISION nodes (RULE steps)
@@ -412,7 +416,7 @@ function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
 
     if (nextNodes.length > 0) {
       // For DECISION nodes, we use onSuccess for the primary path
-      flowNode.onSuccess = nextNodes[0];
+      [flowNode.onSuccess] = nextNodes;
     }
 
     // Add decision properties if present (for conditions)
@@ -429,12 +433,84 @@ function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
     }
   }
 
-  // Handle END nodes (no additional processing needed)
-  if (canvasNode.type === StepTypes.End || canvasNode.type === StaticStepTypes.UserOnboard) {
-    // END nodes don't need any connections
-  }
+  // Handle END nodes (no additional processing needed for connections)
+  // Components are already handled above
 
   return flowNode;
+}
+
+/**
+ * Finds the PROMPT node that connects to the given TASK_EXECUTION node
+ * by tracing back through the edges and actions.
+ */
+function findPrecedingPromptNode(
+  targetNodeId: string,
+  canvasNodes: Node<StepData>[],
+  edges: Edge[],
+): Node<StepData> | undefined {
+  // Find edges that point to this node
+  const incomingEdges = edges.filter((edge) => edge.target === targetNodeId);
+
+  // Find the source nodes for incoming edges
+  const sourceNodes = incomingEdges
+    .map((edge) => canvasNodes.find((node) => node.id === edge.source))
+    .filter((node): node is Node<StepData> => node !== undefined);
+
+  // First, check if any source is directly a PROMPT (VIEW) node
+  const directPromptNode = sourceNodes.find((node) => node.type === StepTypes.View);
+  if (directPromptNode) {
+    return directPromptNode;
+  }
+
+  // Check if any source is a START node and follow to find PROMPT
+  const startNode = sourceNodes.find((node) => node.type === StaticStepTypes.Start);
+  if (startNode) {
+    const nextFromStart = findNextNode(startNode, edges);
+    if (nextFromStart) {
+      const nextNode = canvasNodes.find((node) => node.id === nextFromStart);
+      if (nextNode?.type === StepTypes.View) {
+        return nextNode;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Collects inputs for TASK_EXECUTION nodes from their preceding PROMPT nodes.
+ * This is done in a second pass after all nodes are transformed.
+ * Returns a new array of flow nodes with inputs added where applicable.
+ */
+function collectInputsForExecutionNodes(
+  flowNodes: FlowNode[],
+  canvasNodes: Node<StepData>[],
+  edges: Edge[],
+): FlowNode[] {
+  return flowNodes.map((flowNode) => {
+    if (flowNode.type !== 'TASK_EXECUTION') {
+      return flowNode;
+    }
+
+    // Find the preceding PROMPT node
+    const precedingPromptNode = findPrecedingPromptNode(flowNode.id, canvasNodes, edges);
+
+    if (!precedingPromptNode?.data?.components) {
+      return flowNode;
+    }
+
+    // Extract inputs from the PROMPT node's components
+    const inputs = extractInputs(precedingPromptNode.data.components);
+
+    if (inputs.length > 0) {
+      return {
+        ...flowNode,
+        inputs,
+      };
+    }
+
+    return flowNode;
+  });
 }
 
 /**
@@ -444,16 +520,16 @@ function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
  * @returns The flow graph structure
  */
 export function transformReactFlow(canvasData: ReactFlowCanvasData): FlowGraph {
-  const flowNodes: FlowNode[] = [];
-
   // Transform each React Flow canvas node to a flow node
-  for (const canvasNode of canvasData.nodes) {
-    const flowNode = transformNode(canvasNode, canvasData.edges);
-    flowNodes.push(flowNode);
-  }
+  const flowNodes: FlowNode[] = canvasData.nodes.map((canvasNode) =>
+    transformNode(canvasNode, canvasData.edges),
+  );
+
+  // Second pass: collect inputs for TASK_EXECUTION nodes from preceding PROMPT nodes
+  const nodesWithInputs = collectInputsForExecutionNodes(flowNodes, canvasData.nodes, canvasData.edges);
 
   return {
-    nodes: flowNodes,
+    nodes: nodesWithInputs,
   };
 }
 
@@ -468,16 +544,14 @@ export function validateFlowGraph(flowGraph: FlowGraph): string[] {
   const nodeIds = new Set(flowGraph.nodes.map((node) => node.id));
 
   // Check for duplicate node IDs
-  const duplicateIds = flowGraph.nodes
-    .map((node) => node.id)
-    .filter((id, index, arr) => arr.indexOf(id) !== index);
+  const duplicateIds = flowGraph.nodes.map((node) => node.id).filter((id, index, arr) => arr.indexOf(id) !== index);
 
   if (duplicateIds.length > 0) {
     errors.push(`Duplicate node IDs found: ${duplicateIds.join(', ')}`);
   }
 
   // Validate node connections
-  for (const node of flowGraph.nodes) {
+  flowGraph.nodes.forEach((node) => {
     // Check onSuccess references
     if (node.onSuccess && !nodeIds.has(node.onSuccess)) {
       errors.push(`Node ${node.id}: onSuccess references non-existent node ${node.onSuccess}`);
@@ -490,15 +564,15 @@ export function validateFlowGraph(flowGraph: FlowGraph): string[] {
 
     // Check action nextNode references
     if (node.actions) {
-      for (const action of node.actions) {
+      node.actions.forEach((action) => {
         if (!nodeIds.has(action.nextNode)) {
           errors.push(
-            `Node ${node.id}, action ${action.ref}: nextNode references non-existent node ${action.nextNode}`
+            `Node ${node.id}, action ${action.ref}: nextNode references non-existent node ${action.nextNode}`,
           );
         }
-      }
+      });
     }
-  }
+  });
 
   // Check for at least one START node
   const startNodes = flowGraph.nodes.filter((node) => node.type === 'START');
@@ -519,30 +593,24 @@ export function validateFlowGraph(flowGraph: FlowGraph): string[] {
  * Creates a complete flow configuration with metadata
  *
  * @param canvasData - The output from React Flow's toObject() method
- * @param flowId - The unique identifier for this flow
+ * @param flowName - The name of the flow
  * @param flowType - The type of flow (e.g., 'AUTHENTICATION', 'LOGIN_FLOW')
  * @returns The complete flow configuration with metadata
  */
 export function createFlowConfiguration(
   canvasData: ReactFlowCanvasData,
-  flowId: string,
-  flowType: string = 'AUTHENTICATION'
+  flowName = 'New Flow',
+  flowHandle = 'new-flow',
+  flowType = 'AUTHENTICATION',
 ): FlowConfiguration {
   const flowGraph = transformReactFlow(canvasData);
 
   return {
-    id: flowId,
-    type: flowType,
+    name: flowName,
+    handle: flowHandle,
+    flowType,
     nodes: flowGraph.nodes,
   };
 }
 
-export type {
-  FlowNode,
-  FlowComponent,
-  FlowInput,
-  FlowAction,
-  FlowGraph,
-  FlowConfiguration,
-  ReactFlowCanvasData,
-};
+export type {FlowNode, FlowInput, FlowAction, FlowGraph, FlowConfiguration, ReactFlowCanvasData};

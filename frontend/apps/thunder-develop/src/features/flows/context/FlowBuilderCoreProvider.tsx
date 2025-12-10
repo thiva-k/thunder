@@ -16,31 +16,29 @@
  * under the License.
  */
 
-import {type EdgeTypes, type NodeTypes, ReactFlowProvider, useReactFlow} from '@xyflow/react';
+import {type EdgeTypes, type NodeTypes, ReactFlowProvider} from '@xyflow/react';
 import merge from 'lodash-es/merge';
 import startCase from 'lodash-es/startCase';
 import {
   type FunctionComponent,
-  type MutableRefObject,
   type PropsWithChildren,
   type ReactElement,
   type ReactNode,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
+  type Dispatch,
+  type SetStateAction,
 } from 'react';
 import {Stack, Typography} from '@wso2/oxygen-ui';
-import useUserPreferences from '@/features/common/hooks/useUserPreferences';
 import {Settings} from '@wso2/oxygen-ui-icons-react';
 import ValidationProvider from './ValidationProvider';
-import FlowConstants from '../constants/FlowConstants';
 import FlowBuilderCoreContext from './FlowBuilderCoreContext';
-import type {FlowCompletionConfigsInterface, FlowsHistoryInterface} from '../models/flows';
+import type {FlowCompletionConfigsInterface} from '../models/flows';
 import {type Resource, ResourceTypes} from '../models/resources';
 import {StepTypes, EdgeStyleTypes, type EdgeStyleTypes as EdgeStyleTypesType} from '../models/steps';
-import type {Claim, FlowTypes} from '../models/metadata';
+import type {Claim} from '../models/metadata';
 import {PreviewScreenType} from '../models/custom-text-preference';
 import type {ValidationConfig} from './ValidationContext';
 
@@ -90,10 +88,6 @@ export interface FlowBuilderCoreProviderProps {
    */
   ResourceProperties: FunctionComponent<ResourcePropertiesProps>;
   /**
-   * The type of the flow.
-   */
-  flowType: FlowTypes;
-  /**
    * Screen types for the i18n text.
    * First provided screen type will be used as the primary screen type.
    */
@@ -111,13 +105,9 @@ function FlowContextWrapper({
   children = null,
   ElementFactory,
   ResourceProperties,
-  flowType,
   screenTypes,
   validationConfig = {},
 }: PropsWithChildren<FlowBuilderCoreProviderProps>): ReactElement {
-  const {toObject} = useReactFlow();
-  const {flows, setPreferences} = useUserPreferences();
-
   const [isResourcePanelOpen, setIsResourcePanelOpen] = useState<boolean>(true);
   const [isResourcePropertiesPanelOpen, setIsOpenResourcePropertiesPanel] = useState<boolean>(false);
   const [isVersionHistoryPanelOpen, setIsVersionHistoryPanelOpen] = useState<boolean>(false);
@@ -127,17 +117,21 @@ function FlowContextWrapper({
   const [selectedAttributes, setSelectedAttributes] = useState<Record<string, Claim[]>>({});
   const [language, setLanguage] = useState<string>('en-US');
   const [flowCompletionConfigs, setFlowCompletionConfigs] = useState<FlowCompletionConfigsInterface>({});
-  const [isAutoSaveLocalHistoryEnabled, setIsAutoSaveLocalHistoryEnabled] = useState<boolean>(true);
-  const [isAutoSavingLocalHistory, setIsAutoSavingLocalHistory] = useState<boolean>(false);
-  const [lastLocalHistoryAutoSaveTimestamp, setLastLocalHistoryAutoSaveTimestamp] = useState<number | null>(null);
-  const [hasLocalHistory, setHasLocalHistory] = useState<boolean>(false);
   const [flowNodeTypes, setFlowNodeTypes] = useState<NodeTypes>({});
   const [flowEdgeTypes, setFlowEdgeTypes] = useState<EdgeTypes>({});
   const [isVerboseMode, setIsVerboseMode] = useState<boolean>(true);
-  const [edgeStyle, setEdgeStyle] = useState<EdgeStyleTypesType>(EdgeStyleTypes.Bezier);
-  const [isCollisionAvoidanceEnabled, setIsCollisionAvoidanceEnabled] = useState<boolean>(true);
+  const [edgeStyle, setEdgeStyle] = useState<EdgeStyleTypesType>(EdgeStyleTypes.SmoothStep);
 
-  const intervalRef: MutableRefObject<NodeJS.Timeout | null> = useRef<NodeJS.Timeout | null>(null);
+  const setResourcePropertiesPanelHeadingRef = useRef(setResourcePropertiesPanelHeading);
+  const setLastInteractedElementInternalRef = useRef(setLastInteractedElementInternal);
+  const setIsOpenResourcePropertiesPanelRef = useRef<Dispatch<SetStateAction<boolean>>>(setIsOpenResourcePropertiesPanel);
+  const setLastInteractedStepIdRef = useRef(setLastInteractedStepId);
+
+  // Keep refs in sync (this is cheap - just pointer assignment)
+  setResourcePropertiesPanelHeadingRef.current = setResourcePropertiesPanelHeading;
+  setLastInteractedElementInternalRef.current = setLastInteractedElementInternal;
+  setIsOpenResourcePropertiesPanelRef.current = setIsOpenResourcePropertiesPanel;
+  setLastInteractedStepIdRef.current = setLastInteractedStepId;
 
   // Temp variables for data fetching and error handling.
   const flowMetadata = undefined;
@@ -150,7 +144,6 @@ function FlowContextWrapper({
   const customTextPreferenceMetaLoading = false;
   const isFlowMetadataLoading = false;
   const isI18nSubmitting = false;
-  const userName = 'unknown';
 
   // TODO: Implement i18n key update logic
   const updateI18nKey = useCallback(
@@ -159,14 +152,6 @@ function FlowContextWrapper({
       Promise.resolve(false),
     [],
   );
-
-  /**
-   * Memoized drafts for the current flow type.
-   */
-  const localHistory: FlowsHistoryInterface[] = useMemo(() => {
-    const flowsData = flows as Record<string, {history?: FlowsHistoryInterface[]}> | undefined;
-    return flowsData?.[flowType]?.history ?? [];
-  }, [flows, flowType]);
 
   /**
    * Memoized i18n text combining both text preference and fallback.
@@ -195,184 +180,21 @@ function FlowContextWrapper({
     [screenTypes],
   );
 
-  /**
-   * Check for existing drafts on component mount.
-   */
-  useEffect(() => {
-    setHasLocalHistory(localHistory.length > 0);
-  }, [localHistory]);
-
-  /**
-   * Manually trigger an auto-save operation.
-   */
-  const triggerLocalHistoryAutoSave: () => Promise<boolean> = useCallback(async (): Promise<boolean> => {
-    if (!toObject || isAutoSavingLocalHistory) {
-      return false;
-    }
-
-    setIsAutoSavingLocalHistory(true);
-
-    try {
-      const flowData: Record<string, unknown> = toObject();
-
-      if (!flowData || Object.keys(flowData).length === 0) {
-        return false;
-      }
-
-      // Check if the new flow data is different from the most recent history item
-      const mostRecentHistoryItem: FlowsHistoryInterface = localHistory[localHistory.length - 1];
-
-      if (mostRecentHistoryItem && JSON.stringify(mostRecentHistoryItem.flowData) === JSON.stringify(flowData)) {
-        // Data is the same as the most recent item, no need to save
-        return false;
-      }
-
-      const timestamp: number = Date.now();
-
-      const history: FlowsHistoryInterface[] = [
-        ...localHistory,
-        {
-          author: {
-            userName,
-          },
-          flowData,
-          timestamp,
-        },
-      ].slice(-FlowConstants.MAX_HISTORY_ITEMS);
-
-      // Save a draft using setPreferences in localstorage.
-      setPreferences({
-        flows: {
-          [flowType]: {
-            history,
-          },
-        },
-      });
-
-      setLastLocalHistoryAutoSaveTimestamp(timestamp);
-      setHasLocalHistory(true);
-
-      return true;
-    } catch {
-      return false;
-    } finally {
-      setIsAutoSavingLocalHistory(false);
-    }
-  }, [toObject, isAutoSavingLocalHistory, flowType, setPreferences, localHistory]);
-
-  /**
-   * Clear all saved drafts for this flow type.
-   */
-  const clearLocalHistory: () => Promise<boolean> = useCallback(async (): Promise<boolean> => {
-    try {
-      // Clear drafts from preferences
-      setPreferences({
-        flows: {
-          [flowType]: {
-            history: [],
-          },
-        },
-      });
-
-      setHasLocalHistory(false);
-      setLastLocalHistoryAutoSaveTimestamp(null);
-
-      return true;
-    } catch {
-      return false;
-    }
-  }, [flowType, setPreferences]);
-
-  /**
-   * Restore flow from a specific history item.
-   */
-  const restoreFromHistory: (historyItem: FlowsHistoryInterface) => Promise<boolean> = useCallback(
-    async (historyItem: FlowsHistoryInterface): Promise<boolean> => {
-      try {
-        const {flowData} = historyItem;
-
-        if (!flowData?.nodes || !flowData.edges) {
-          // eslint-disable-next-line no-console
-          console.error('flows:core.notifications.restoreFromHistory.invalidData');
-
-          return false;
-        }
-
-        // Extract nodes and edges from the flow data
-        const {nodes, edges} = flowData as {nodes: unknown[]; edges: unknown[]};
-
-        // Apply the restored flow data to the current flow using React Flow's methods
-        // Note: This assumes the provider has access to setNodes and setEdges methods
-        // which will be provided by the specific flow builder implementation
-        if (typeof window !== 'undefined') {
-          // Dispatch a custom event that the flow builder cores can listen to
-          const restoreEvent: CustomEvent = new CustomEvent('restoreFromHistory', {
-            detail: {edges, historyItem, nodes},
-          });
-
-          window.dispatchEvent(restoreEvent);
-
-          // TODO: Show success message
-        }
-
-        return true;
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('flows:core.notifications.restoreFromHistory.error', error);
-
-        return false;
-      }
-    },
-    [],
-  );
-
-  /**
-   * Set up auto-save interval.
-   */
-  useEffect(() => {
-    if (isAutoSaveLocalHistoryEnabled && FlowConstants.AUTO_SAVE_INTERVAL > 0) {
-      intervalRef.current = setInterval(() => {
-        triggerLocalHistoryAutoSave().catch(() => {
-          // Ignore errors
-        });
-      }, FlowConstants.AUTO_SAVE_INTERVAL);
-
-      return () => {
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
-        }
-      };
-    }
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
-    return undefined;
-  }, [isAutoSaveLocalHistoryEnabled, triggerLocalHistoryAutoSave]);
-
-  /**
-   * Cleanup interval on unmount.
-   */
-  useEffect(
-    () => () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    },
-    [],
-  );
-
-  const setLastInteractedResource = useCallback((resource: Resource): void => {
+  const setLastInteractedResource = useCallback((resource: Resource, openPanel = true): void => {
     // TODO: Internationalize this string and get from a mapping.
-    setResourcePropertiesPanelHeading(
+    setResourcePropertiesPanelHeadingRef.current(
       <Stack direction="row" className="sub-title" gap={1} alignItems="center">
         <Settings />
         <Typography variant="h5">{startCase(resource?.type?.toLowerCase())} Properties</Typography>
       </Stack>,
     );
-    setLastInteractedElementInternal(resource);
+    setLastInteractedElementInternalRef.current(resource);
+
+    // If openPanel is false, don't open the properties panel
+    if (!openPanel) {
+      return;
+    }
+
     // If the element is a step node, do not open the properties panel for now.
     // TODO: Figure out if there are properties for a step.
     if (
@@ -380,20 +202,29 @@ function FlowContextWrapper({
       resource.resourceType === ResourceTypes.Template ||
       resource.resourceType === ResourceTypes.Widget
     ) {
-      setIsOpenResourcePropertiesPanel(false);
+      setIsOpenResourcePropertiesPanelRef.current(false);
 
       return;
     }
 
-    setIsOpenResourcePropertiesPanel(true);
+    setIsOpenResourcePropertiesPanelRef.current(true);
+  }, []);
+
+  const setLastInteractedStepIdStable = useCallback((stepId: string): void => {
+    setLastInteractedStepIdRef.current(stepId);
+  }, []);
+
+  const setIsOpenResourcePropertiesPanelStable = useCallback((isOpen: boolean): void => {
+    setIsOpenResourcePropertiesPanelRef.current(isOpen);
   }, []);
 
   const onResourceDropOnCanvas = useCallback(
     (resource: Resource, stepId: string): void => {
-      setLastInteractedResource(resource);
-      setLastInteractedStepId(stepId);
+      // Pass false to not open the properties panel when adding from resource panel
+      setLastInteractedResource(resource, false);
+      setLastInteractedStepIdStable(stepId);
     },
-    [setLastInteractedResource],
+    [setLastInteractedResource, setLastInteractedStepIdStable],
   );
 
   /**
@@ -415,15 +246,11 @@ function FlowContextWrapper({
     () => ({
       ElementFactory,
       ResourceProperties,
-      clearLocalHistory,
       flowCompletionConfigs,
       flowEdgeTypes,
       flowNodeTypes,
-      hasLocalHistory,
       i18nText,
       i18nTextLoading: textPreferenceLoading || fallbackTextPreferenceLoading || customTextPreferenceMetaLoading,
-      isAutoSaveLocalHistoryEnabled,
-      isAutoSavingLocalHistory,
       isBrandingEnabled,
       isCustomI18nKey,
       isFlowMetadataLoading,
@@ -434,50 +261,39 @@ function FlowContextWrapper({
       language,
       lastInteractedResource: lastInteractedElementInternal!,
       lastInteractedStepId,
-      lastLocalHistoryAutoSaveTimestamp,
-      localHistory,
       metadata: flowMetadata,
       onResourceDropOnCanvas,
       primaryI18nScreen,
       resourcePropertiesPanelHeading,
-      restoreFromHistory,
       selectedAttributes,
       setFlowCompletionConfigs,
       setFlowEdgeTypes,
       setFlowNodeTypes,
-      setIsOpenResourcePropertiesPanel,
+      setIsOpenResourcePropertiesPanel: setIsOpenResourcePropertiesPanelStable,
       setIsResourcePanelOpen,
       setIsVersionHistoryPanelOpen,
       setLanguage,
       setLastInteractedResource,
-      setLastInteractedStepId,
-      setLocalHistoryAutoSaveEnabled: setIsAutoSaveLocalHistoryEnabled,
+      setLastInteractedStepId: setLastInteractedStepIdStable,
       setResourcePropertiesPanelHeading,
       setSelectedAttributes,
       supportedLocales,
-      triggerLocalHistoryAutoSave,
       updateI18nKey,
       isVerboseMode,
       setIsVerboseMode,
       edgeStyle,
       setEdgeStyle,
-      isCollisionAvoidanceEnabled,
-      setIsCollisionAvoidanceEnabled,
     }),
     [
       ElementFactory,
       ResourceProperties,
-      clearLocalHistory,
       customTextPreferenceMetaLoading,
       fallbackTextPreferenceLoading,
       flowCompletionConfigs,
       flowEdgeTypes,
       flowMetadata,
       flowNodeTypes,
-      hasLocalHistory,
       i18nText,
-      isAutoSaveLocalHistoryEnabled,
-      isAutoSavingLocalHistory,
       isBrandingEnabled,
       isCustomI18nKey,
       isFlowMetadataLoading,
@@ -488,21 +304,18 @@ function FlowContextWrapper({
       language,
       lastInteractedElementInternal,
       lastInteractedStepId,
-      lastLocalHistoryAutoSaveTimestamp,
-      localHistory,
       onResourceDropOnCanvas,
       primaryI18nScreen,
       resourcePropertiesPanelHeading,
-      restoreFromHistory,
       selectedAttributes,
       setLastInteractedResource,
+      setLastInteractedStepIdStable,
+      setIsOpenResourcePropertiesPanelStable,
       supportedLocales,
       textPreferenceLoading,
-      triggerLocalHistoryAutoSave,
       updateI18nKey,
       isVerboseMode,
       edgeStyle,
-      isCollisionAvoidanceEnabled,
     ],
   );
 

@@ -61,7 +61,7 @@ export default function MenuContent(): JSX.Element {
       },
       {
         id: 'flows',
-        text: 'Flows',
+        text: t('navigation:pages.flows'),
         icon: <Workflow size={16} />,
         category: 'Dashboard',
         path: '/flows',

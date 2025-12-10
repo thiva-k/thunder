@@ -17,8 +17,6 @@
  */
 
 import {BlockTypes, ElementTypes, InputVariants, type Element} from '@/features/flows/models/elements';
-import FlowEventTypes from '@/features/flows/models/extension';
-import PluginRegistry from '@/features/flows/plugins/PluginRegistry';
 import type {ReactElement} from 'react';
 import FormAdapter from './adapters/FormAdapter';
 import CheckboxAdapter from './adapters/input/CheckboxAdapter';
@@ -49,16 +47,19 @@ export interface CommonElementFactoryPropsInterface {
   /**
    * The index of the element in its parent container.
    * Used to trigger handle position updates when elements are reordered.
+   * @defaultValue undefined
    */
   elementIndex?: number;
   /**
    * List of available elements that can be added.
+   * @defaultValue undefined
    */
   availableElements?: Element[];
   /**
    * Callback for adding an element to a form.
    * @param element - The element to add.
    * @param formId - The ID of the form to add to.
+   * @defaultValue undefined
    */
   onAddElementToForm?: (element: Element, formId: string) => void;
 }
@@ -72,20 +73,19 @@ export interface CommonElementFactoryPropsInterface {
 function CommonElementFactory({
   stepId,
   resource,
-  elementIndex,
+  elementIndex = undefined,
+  availableElements = undefined,
+  onAddElementToForm = undefined,
 }: CommonElementFactoryPropsInterface): ReactElement | null {
-  const overrideElements: ReactElement[] = [];
-
-  if (
-    !PluginRegistry.getInstance().executeSync(FlowEventTypes.ON_NODE_ELEMENT_RENDER, stepId, resource, overrideElements)
-  ) {
-    if (overrideElements.length > 0) {
-      return overrideElements.length === 1 ? overrideElements[0] : <div>{overrideElements}</div>;
-    }
-  }
-
   if (resource.type === BlockTypes.Form) {
-    return <FormAdapter stepId={stepId} resource={resource} />;
+    return (
+      <FormAdapter
+        stepId={stepId}
+        resource={resource}
+        availableElements={availableElements}
+        onAddElementToForm={onAddElementToForm}
+      />
+    );
   }
   if (resource.type === ElementTypes.Input) {
     if (resource.variant === InputVariants.Checkbox) {

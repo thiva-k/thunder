@@ -16,7 +16,8 @@
  * under the License.
  */
 
-import {type HTMLAttributes, type ReactElement, useContext, useState} from 'react';
+import {type HTMLAttributes, type ReactElement, useCallback, useState, useRef, useEffect} from 'react';
+import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import {
   Box,
@@ -28,15 +29,10 @@ import {
   Stack,
   Typography,
   Tooltip,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
+  TextField,
 } from '@wso2/oxygen-ui';
-import {ArrowLeftIcon, HistoryIcon, SaveIcon, LayoutTemplate, Eye, EyeOff, Spline, Check, ShieldCheck, ShieldOff} from '@wso2/oxygen-ui-icons-react';
-import FlowBuilderCoreContext from '../../context/FlowBuilderCoreContext';
+import {ArrowLeft, Save, LayoutGrid, Edit, X, Check} from '@wso2/oxygen-ui-icons-react';
 import ValidationStatusLabels from '../validation-panel/ValidationStatusLabels';
-import {EdgeStyleTypes} from '../../models/steps';
 
 /**
  * Props interface of {@link HeaderPanel}
@@ -45,7 +41,15 @@ export interface HeaderPanelPropsInterface extends Omit<CardProps, 'open' | 'tit
   /**
    * Title to display in the header.
    */
-  title?: string;
+  title: string;
+  /**
+   * URL-friendly handle for the flow.
+   */
+  handle: string;
+  /**
+   * Callback to be triggered when title changes.
+   */
+  onTitleChange?: (newTitle: string) => void;
   /**
    * Callback to be triggered when back button is clicked.
    */
@@ -67,44 +71,35 @@ export interface HeaderPanelPropsInterface extends Omit<CardProps, 'open' | 'tit
  * @returns The HeaderPanel component.
  */
 function HeaderPanel({
-  title = 'Login Flow',
+  title,
+  handle,
+  onTitleChange = undefined,
   onBack = undefined,
   onSave = undefined,
   onAutoLayout = undefined,
   ...rest
 }: HeaderPanelPropsInterface): ReactElement {
+  const {t} = useTranslation();
   const navigate = useNavigate();
-  const {isVerboseMode, setIsVerboseMode, edgeStyle, setEdgeStyle, isCollisionAvoidanceEnabled, setIsCollisionAvoidanceEnabled} = useContext(FlowBuilderCoreContext);
-  const [edgeStyleMenuAnchor, setEdgeStyleMenuAnchor] = useState<null | HTMLElement>(null);
-  const isEdgeStyleMenuOpen = Boolean(edgeStyleMenuAnchor);
 
-  const handleEdgeStyleMenuOpen = (event: React.MouseEvent<HTMLButtonElement>): void => {
-    setEdgeStyleMenuAnchor(event.currentTarget);
-  };
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(title);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleEdgeStyleMenuClose = (): void => {
-    setEdgeStyleMenuAnchor(null);
-  };
+  // Sync editedTitle when title prop changes
+  useEffect(() => {
+    setEditedTitle(title);
+  }, [title]);
 
-  const handleEdgeStyleChange = (style: typeof edgeStyle): void => {
-    setEdgeStyle(style);
-    handleEdgeStyleMenuClose();
-  };
-
-  const getEdgeStyleLabel = (): string => {
-    switch (edgeStyle) {
-      case EdgeStyleTypes.Bezier:
-        return 'Bézier';
-      case EdgeStyleTypes.SmoothStep:
-        return 'Smooth Step';
-      case EdgeStyleTypes.Step:
-        return 'Step';
-      default:
-        return 'Edge Style';
+  // Focus input when entering edit mode
+  useEffect(() => {
+    if (isEditingTitle && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-  };
+  }, [isEditingTitle]);
 
-  const handleBackClick = () => {
+  const handleBackClick = useCallback(() => {
     if (onBack) {
       onBack();
       return;
@@ -113,13 +108,43 @@ function HeaderPanel({
     // Go back to the flows list
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     navigate('/flows');
-  };
+  }, [onBack, navigate]);
 
-  const handleSaveClick = () => {
+  const handleSaveClick = useCallback(() => {
     // Note: getNodes/getEdges returns visually displayed nodes (may be filtered)
     // The actual save handler uses the full unfiltered data
     onSave?.();
-  };
+  }, [onSave]);
+
+  const handleEditClick = useCallback(() => {
+    setIsEditingTitle(true);
+  }, []);
+
+  const handleTitleSave = useCallback(() => {
+    const trimmedTitle = editedTitle.trim();
+    if (trimmedTitle && trimmedTitle !== title) {
+      onTitleChange?.(trimmedTitle);
+    } else {
+      setEditedTitle(title);
+    }
+    setIsEditingTitle(false);
+  }, [editedTitle, title, onTitleChange]);
+
+  const handleTitleCancel = useCallback(() => {
+    setEditedTitle(title);
+    setIsEditingTitle(false);
+  }, [title]);
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Enter') {
+        handleTitleSave();
+      } else if (event.key === 'Escape') {
+        handleTitleCancel();
+      }
+    },
+    [handleTitleSave, handleTitleCancel],
+  );
 
   return (
     <Box sx={{flexShrink: 0, pb: 1}} {...rest}>
@@ -136,78 +161,75 @@ function HeaderPanel({
         <Stack direction="row" alignItems="center" spacing={2} width="100%">
           {/* Left section - Back button and title */}
           <Stack direction="row" alignItems="center">
-            <Button onClick={handleBackClick} startIcon={<ArrowLeftIcon size={20} />}>
-              Go back to Flows
+            <Button onClick={handleBackClick} startIcon={<ArrowLeft size={20} />}>
+              {t('flows:core.headerPanel.goBack')}
             </Button>
           </Stack>
 
-          <Typography variant="h4">{title}</Typography>
+          {/* Title section - editable or display mode */}
+          {isEditingTitle ? (
+            <Stack direction="row" alignItems="center" spacing={0.5}>
+              <TextField
+                inputRef={inputRef}
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onKeyDown={handleKeyDown}
+                size="small"
+                variant="outlined"
+                sx={{
+                  '& .MuiInputBase-input': {
+                    py: 0.5,
+                    fontSize: '1.25rem',
+                    fontWeight: 500,
+                  },
+                }}
+              />
+              <Tooltip title={t('flows:core.headerPanel.saveTitle')}>
+                <IconButton size="small" onClick={handleTitleSave} color="primary">
+                  <Check size={18} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={t('flows:core.headerPanel.cancelEdit')}>
+                <IconButton size="small" onClick={handleTitleCancel}>
+                  <X size={18} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          ) : (
+            <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack direction="column" spacing={0}>
+                <Stack direction="row" alignItems="center" spacing={0.5}>
+                  <Typography variant="h4">{title}</Typography>
+                  {onTitleChange && (
+                    <Tooltip title={t('flows:core.headerPanel.editTitle')}>
+                      <IconButton size="small" onClick={handleEditClick}>
+                        <Edit size={16} />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+                {handle && (
+                  <Typography variant="caption" color="text.secondary" sx={{mt: -0.5}}>
+                    {handle}
+                  </Typography>
+                )}
+              </Stack>
+            </Stack>
+          )}
 
           {/* Right section - Action buttons */}
           <Stack direction="row" alignItems="center" spacing={1} ml="auto">
             <ValidationStatusLabels />
-            <Tooltip title="History">
-              <IconButton size="small">
-                <HistoryIcon size={20} />
-              </IconButton>
-            </Tooltip>
             {onAutoLayout && (
-              <Tooltip title="Auto Layout">
+              <Tooltip title={t('flows:core.headerPanel.autoLayout')}>
                 <IconButton size="small" onClick={onAutoLayout}>
-                  <LayoutTemplate size={20} />
+                  <LayoutGrid size={20} />
                 </IconButton>
               </Tooltip>
             )}
-            <Tooltip title={isVerboseMode ? 'Hide Executors' : 'Show Executors'}>
-              <IconButton size="small" onClick={() => setIsVerboseMode(!isVerboseMode)}>
-                {isVerboseMode ? <Eye size={20} /> : <EyeOff size={20} />}
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={`Edge Style: ${getEdgeStyleLabel()}`}>
-              <IconButton size="small" onClick={handleEdgeStyleMenuOpen}>
-                <Spline size={20} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={isCollisionAvoidanceEnabled ? 'Disable Collision Avoidance (Better Performance)' : 'Enable Collision Avoidance'}>
-              <IconButton size="small" onClick={() => setIsCollisionAvoidanceEnabled(!isCollisionAvoidanceEnabled)}>
-                {isCollisionAvoidanceEnabled ? <ShieldCheck size={20} /> : <ShieldOff size={20} />}
-              </IconButton>
-            </Tooltip>
-            <Menu
-              anchorEl={edgeStyleMenuAnchor}
-              open={isEdgeStyleMenuOpen}
-              onClose={handleEdgeStyleMenuClose}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right',
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-            >
-              <MenuItem onClick={() => handleEdgeStyleChange(EdgeStyleTypes.Bezier)}>
-                <ListItemIcon>
-                  {edgeStyle === EdgeStyleTypes.Bezier && <Check size={16} />}
-                </ListItemIcon>
-                <ListItemText>Bézier (Curved)</ListItemText>
-              </MenuItem>
-              <MenuItem onClick={() => handleEdgeStyleChange(EdgeStyleTypes.SmoothStep)}>
-                <ListItemIcon>
-                  {edgeStyle === EdgeStyleTypes.SmoothStep && <Check size={16} />}
-                </ListItemIcon>
-                <ListItemText>Smooth Step</ListItemText>
-              </MenuItem>
-              <MenuItem onClick={() => handleEdgeStyleChange(EdgeStyleTypes.Step)}>
-                <ListItemIcon>
-                  {edgeStyle === EdgeStyleTypes.Step && <Check size={16} />}
-                </ListItemIcon>
-                <ListItemText>Step (Angular)</ListItemText>
-              </MenuItem>
-            </Menu>
             <ColorSchemeToggle data-testid="theme-toggle" />
-            <Button variant="contained" startIcon={<SaveIcon size={20} />} onClick={handleSaveClick}>
-              Save
+            <Button variant="contained" startIcon={<Save size={20} />} onClick={handleSaveClick}>
+              {t('flows:core.headerPanel.save')}
             </Button>
           </Stack>
         </Stack>

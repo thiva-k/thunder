@@ -17,18 +17,23 @@
  */
 
 import {useMemo, type CSSProperties, type ReactElement} from 'react';
-import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Trans, useTranslation} from 'react-i18next';
+import {TextField} from '@wso2/oxygen-ui';
 import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
-import {TextField} from '@wso2/oxygen-ui';
-import PlaceholderComponent from '../PlaceholderComponent';
+import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Hint} from '../../hint';
+import PlaceholderComponent from '../PlaceholderComponent';
+
+const INPUT_VALIDATION_FIELD_NAMES = {
+  label: 'label',
+  identifier: 'identifier',
+} as const;
 
 /**
- * Configuration interface for Input element.
+ * Input element type with properties at top level.
  */
-interface InputConfig {
+export type InputElement = FlowElement & {
   className?: string;
   defaultValue?: string;
   hint?: string;
@@ -38,14 +43,9 @@ interface InputConfig {
   multiline?: boolean;
   placeholder?: string;
   required?: boolean;
-  type?: string;
+  inputType?: string;
   styles?: CSSProperties;
-}
-
-/**
- * Input element type.
- */
-export type InputElement = FlowElement<InputConfig>;
+};
 
 /**
  * Props interface of {@link DefaultInputAdapter}
@@ -75,45 +75,44 @@ function DefaultInputAdapter({resource}: DefaultInputAdapterPropsInterface): Rea
     [resource?.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
         errorMessage: t('flows:core.validation.fields.input.label'),
-        name: 'label',
+        name: INPUT_VALIDATION_FIELD_NAMES.label,
       },
       {
         errorMessage: t('flows:core.validation.fields.input.identifier'),
-        name: 'identifier',
+        name: INPUT_VALIDATION_FIELD_NAMES.identifier,
       },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
+  useRequiredFields(resource, generalMessage, validationFields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const inputConfig = resource.config as InputConfig | undefined;
+  const inputElement = resource as InputElement;
 
   return (
     <TextField
       fullWidth
-      className={inputConfig?.className}
-      defaultValue={inputConfig?.defaultValue}
-      helperText={inputConfig?.hint && <Hint hint={inputConfig?.hint} />}
+      className={inputElement?.className}
+      defaultValue={inputElement?.defaultValue}
+      helperText={inputElement?.hint && <Hint hint={inputElement?.hint} />}
       inputProps={{
-        maxLength: inputConfig?.maxLength,
-        minLength: inputConfig?.minLength,
+        maxLength: inputElement?.maxLength,
+        minLength: inputElement?.minLength,
       }}
-      label={<PlaceholderComponent value={inputConfig?.label ?? ''} />}
-      multiline={inputConfig?.multiline}
-      placeholder={inputConfig?.placeholder ?? ''}
-      required={inputConfig?.required}
+      label={<PlaceholderComponent value={inputElement?.label ?? ''} />}
+      multiline={inputElement?.multiline}
+      placeholder={inputElement?.placeholder ?? ''}
+      required={inputElement?.required}
       InputLabelProps={{
-        required: inputConfig?.required,
+        required: inputElement?.required,
       }}
-      type={inputConfig?.type}
-      style={inputConfig?.styles}
-      autoComplete={inputConfig?.type === 'password' ? 'new-password' : 'off'}
+      type={inputElement?.inputType}
+      style={inputElement?.styles}
+      autoComplete={inputElement?.inputType === 'password' ? 'new-password' : 'off'}
     />
   );
 }

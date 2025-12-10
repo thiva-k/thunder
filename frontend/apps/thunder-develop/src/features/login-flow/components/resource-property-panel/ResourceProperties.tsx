@@ -24,10 +24,12 @@ import type {FieldKey, FieldValue} from '@/features/flows/models/base';
 import {ExecutionTypes, StepCategories, StepTypes} from '@/features/flows/models/steps';
 import {ElementCategories, ElementTypes, type Element} from '@/features/flows/models/elements';
 import type {Resource} from '@/features/flows/models/resources';
+import TextPropertyField from '@/features/flows/components/resource-property-panel/TextPropertyField';
 import ResourcePropertyFactory from './ResourcePropertyFactory';
 import RulesProperties from './nodes/RulesProperties';
 import FieldExtendedProperties from './extended-properties/FieldExtendedProperties';
 import ButtonExtendedProperties from './extended-properties/ButtonExtendedProperties';
+import ExecutionExtendedProperties from './extended-properties/ExecutionExtendedProperties';
 
 /**
  * Factory to generate the property configurator for the given password recovery flow resource.
@@ -190,7 +192,71 @@ function ResourceProperties({
       return (
         <>
           {renderElementId()}
-          {/* <FederationProperties resource={resource} onChange={onChange} /> */}
+          <ExecutionExtendedProperties resource={resource} onChange={handleChange} />
+          {renderElementPropertyFactory()}
+        </>
+      );
+    case ElementCategories.Display:
+      if (resource.type === ElementTypes.Typography) {
+        const hasVariants = !isEmpty(resource?.variants);
+
+        return (
+          <>
+            {renderElementId()}
+            {hasVariants && (
+              <div>
+                <FormLabel htmlFor="variant-select">Variant</FormLabel>
+                <Select
+                  id="variant-select"
+                  value={selectedVariant?.variant ?? ''}
+                  onChange={(e) => {
+                    const newVariant = resource?.variants?.find(
+                      (variant: Element) => variant.variant === e.target.value,
+                    );
+                    onVariantChange?.((newVariant?.variant as string) ?? '');
+                    setSelectedVariant(newVariant);
+                  }}
+                  fullWidth
+                >
+                  {resource?.variants?.map((variant: Element) => (
+                    <MenuItem key={variant.variant as string} value={variant.variant as string}>
+                      {variant.variant as string}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </div>
+            )}
+            <TextPropertyField
+              resource={resource}
+              propertyKey="label"
+              propertyValue={(resource as Element & {label?: string}).label ?? ''}
+              onChange={(_key, value, res) => handleChange('label', value, res)}
+            />
+          </>
+        );
+      }
+      if (resource.type === ElementTypes.Image) {
+        return (
+          <>
+            {renderElementId()}
+            <TextPropertyField
+              resource={resource}
+              propertyKey="src"
+              propertyValue={(resource as Element & {src?: string}).src ?? ''}
+              onChange={(_key, value, res) => handleChange('src', value, res)}
+            />
+            <TextPropertyField
+              resource={resource}
+              propertyKey="alt"
+              propertyValue={(resource as Element & {alt?: string}).alt ?? ''}
+              onChange={(_key, value, res) => handleChange('alt', value, res)}
+            />
+          </>
+        );
+      }
+      return (
+        <>
+          {renderElementId()}
           {renderElementPropertyFactory()}
         </>
       );

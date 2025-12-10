@@ -37,11 +37,11 @@ export type ResourceTypes = (typeof ResourceTypes)[keyof typeof ResourceTypes];
  */
 export interface Resources {
   /**
-   * List of blocks.
+   * List of Elements.
    */
   elements: Element[];
   /**
-   * List of nodes.
+   * List of Steps.
    */
   steps: Step[];
   /**
@@ -52,4 +52,8 @@ export interface Resources {
    * List of templates.
    */
   templates: Template[];
+  /**
+   * List of executors (EXECUTION step resources).
+   */
+  executors: Step[];
 }

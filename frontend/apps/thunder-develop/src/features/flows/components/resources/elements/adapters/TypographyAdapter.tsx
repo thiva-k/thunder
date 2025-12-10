@@ -18,17 +18,21 @@
 
 import {useMemo, type CSSProperties, type ReactElement} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
+import {Typography, type TypographyProps} from '@wso2/oxygen-ui';
 import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
-import {Typography, type TypographyProps} from '@wso2/oxygen-ui';
 import {TypographyVariants, type Element} from '@/features/flows/models/elements';
 import PlaceholderComponent from './PlaceholderComponent';
+
+const TYPOGRAPHY_VALIDATION_FIELD_NAMES = {
+  label: 'label',
+  variant: 'variant',
+} as const;
 
 /**
  * Configuration interface for Typography element.
  */
 interface TypographyConfig {
-  text?: string;
   styles?: CSSProperties;
 }
 
@@ -37,6 +41,7 @@ interface TypographyConfig {
  */
 export interface TypographyElement extends Element<TypographyConfig> {
   variant: (typeof TypographyVariants)[keyof typeof TypographyVariants];
+  label?: string;
 }
 
 /**
@@ -71,41 +76,40 @@ function TypographyAdapter({resource}: TypographyAdapterPropsInterface): ReactEl
     [resource?.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
-        errorMessage: t('flows:core.validation.fields.typography.text'),
-        name: 'text',
+        errorMessage: t('flows:core.validation.fields.typography.label'),
+        name: TYPOGRAPHY_VALIDATION_FIELD_NAMES.label,
       },
       {
         errorMessage: t('flows:core.validation.fields.typography.variant'),
-        name: 'variant',
+        name: TYPOGRAPHY_VALIDATION_FIELD_NAMES.variant,
       },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
+  useRequiredFields(resource, generalMessage, validationFields);
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
   const typographyConfig = resource.config as TypographyConfig | undefined;
+  const typographyElement = resource as TypographyElement;
   const variantStr = resource?.variant as string | undefined;
 
-  let config: TypographyProps = {};
-
-  if (
-    variantStr === TypographyVariants.H1 ||
-    variantStr === TypographyVariants.H2 ||
-    variantStr === TypographyVariants.H3 ||
-    variantStr === TypographyVariants.H4 ||
-    variantStr === TypographyVariants.H5 ||
-    variantStr === TypographyVariants.H6
-  ) {
-    config = {
-      ...config,
-      textAlign: 'center',
-    };
-  }
+  const config: TypographyProps = useMemo(() => {
+    if (
+      variantStr === TypographyVariants.H1 ||
+      variantStr === TypographyVariants.H2 ||
+      variantStr === TypographyVariants.H3 ||
+      variantStr === TypographyVariants.H4 ||
+      variantStr === TypographyVariants.H5 ||
+      variantStr === TypographyVariants.H6
+    ) {
+      return {textAlign: 'center'};
+    }
+    return {};
+  }, [variantStr]);
 
   return (
     <Typography
@@ -113,7 +117,7 @@ function TypographyAdapter({resource}: TypographyAdapterPropsInterface): ReactEl
       style={typographyConfig?.styles}
       {...config}
     >
-      <PlaceholderComponent value={typographyConfig?.text ?? ''} />
+      <PlaceholderComponent value={typographyElement?.label ?? ''} />
     </Typography>
   );
 }

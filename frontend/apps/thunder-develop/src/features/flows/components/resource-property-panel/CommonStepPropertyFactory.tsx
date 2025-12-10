@@ -17,7 +17,7 @@
  */
 
 import type {ChangeEvent, ReactElement, SyntheticEvent} from 'react';
-import {Checkbox, FormControlLabel, TextField} from '@wso2/oxygen-ui';
+import {Checkbox, FormControl, FormControlLabel, FormLabel, TextField} from '@wso2/oxygen-ui';
 import startCase from 'lodash-es/startCase';
 import RichTextWithTranslation from './rich-text/RichTextWithTranslation';
 import {ElementTypes} from '../../models/elements';
@@ -90,14 +90,16 @@ function CommonStepPropertyFactory({
 
   if (typeof propertyValue === 'string') {
     return (
-      <TextField
-        fullWidth
-        label={startCase(propertyKey)}
-        defaultValue={propertyValue}
-        onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(propertyKey, e.target.value, resource)}
-        placeholder={`Enter ${startCase(propertyKey)}`}
-        {...rest}
-      />
+      <FormControl fullWidth sx={{mb: 3}}>
+        <FormLabel htmlFor="name">{startCase(propertyKey)} </FormLabel>
+        <TextField
+          fullWidth
+          defaultValue={propertyValue}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(propertyKey, e.target.value, resource)}
+          placeholder={`Enter ${startCase(propertyKey)}`}
+          {...rest}
+        />
+      </FormControl>
     );
   }
 

@@ -134,8 +134,8 @@ function HTMLPlugin({onChange, resource, disabled = false}: HTMLPluginProps): Re
     }
 
     const parser: DOMParser = new DOMParser();
-    const config = resource.config as {text?: string};
-    const dom: Document = parser.parseFromString(postProcessHTML(config.text ?? ''), 'text/html');
+    const labelValue = (resource as Resource & {label?: string})?.label ?? '';
+    const dom: Document = parser.parseFromString(postProcessHTML(labelValue), 'text/html');
 
     editor.update(() => {
       updateType.current = UPDATE_TYPES.EXTERNAL;

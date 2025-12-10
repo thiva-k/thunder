@@ -19,14 +19,6 @@ import LoginFlowBuilderContext from './LoginFlowBuilderContext';
  * under the License.
  */
 function FlowContextWrapper({children}: PropsWithChildren): ReactElement {
-  //   const handleUpdateSuccess = () => {
-  //     // TODO: Show success notification.
-  //   };
-
-  //   const handleSubmit = (values) => {
-  //     console.log(values);
-  //   };
-
   return <LoginFlowBuilderContext.Provider value={null}>{children}</LoginFlowBuilderContext.Provider>;
 }
 

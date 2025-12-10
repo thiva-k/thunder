@@ -74,18 +74,15 @@ const useRequiredFields = (
    * @param path - The path to the nested property.
    * @returns True if the property exists, false otherwise.
    */
-  const getNestedProperty = useCallback(
-    (obj: Resource, path: string): string => {
-      if (!resource || !path.includes('.')) {
-        return '';
-      }
+  const getNestedProperty = useCallback((obj: Resource, path: string): string => {
+    if (!obj || !path.includes('.')) {
+      return '';
+    }
 
-      const value: string | null = get(obj, path, null);
+    const value: string | null = get(obj, path, null);
 
-      return value === IDP_NAME_PLACEHOLDER ? '' : (value ?? '');
-    },
-    [resource],
-  );
+    return value === IDP_NAME_PLACEHOLDER ? '' : (value ?? '');
+  }, []);
 
   useEffect(() => {
     if (!resource || !fields || fields.length === 0) {

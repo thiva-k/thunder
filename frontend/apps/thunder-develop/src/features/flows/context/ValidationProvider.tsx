@@ -23,12 +23,18 @@ import {ValidationContext, type ValidationConfig} from './ValidationContext';
 export interface ValidationProviderProps {
   /**
    * Validation configuration settings.
+   * @defaultValue { isOTPValidationEnabled: false, isRecoveryFactorValidationEnabled: false }
    */
   validationConfig?: ValidationConfig;
+  /**
+   * Provider children.
+   * @defaultValue undefined
+   */
+  children?: React.ReactNode;
 }
 
 function ValidationProvider({
-  children,
+  children = undefined,
   validationConfig = {
     isOTPValidationEnabled: false,
     isRecoveryFactorValidationEnabled: false,

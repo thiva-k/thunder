@@ -17,12 +17,51 @@
  */
 
 import type {JSX} from 'react';
+import {useTranslation} from 'react-i18next';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
 
 /**
  * Type of component being dropped that requires container(s)
  */
 export type DropScenario = 'form-on-canvas' | 'input-on-canvas' | 'input-on-view' | 'widget-on-canvas';
+
+/**
+ * i18n key mapping for each scenario
+ */
+const SCENARIO_I18N_KEYS: Record<
+  DropScenario,
+  {
+    title: string;
+    description: string;
+    alertMessage: string;
+    confirmButton: string;
+  }
+> = {
+  'form-on-canvas': {
+    title: 'flows:core.dialogs.formRequiresView.formOnCanvas.title',
+    description: 'flows:core.dialogs.formRequiresView.formOnCanvas.description',
+    alertMessage: 'flows:core.dialogs.formRequiresView.formOnCanvas.alertMessage',
+    confirmButton: 'flows:core.dialogs.formRequiresView.formOnCanvas.confirmButton',
+  },
+  'input-on-canvas': {
+    title: 'flows:core.dialogs.formRequiresView.inputOnCanvas.title',
+    description: 'flows:core.dialogs.formRequiresView.inputOnCanvas.description',
+    alertMessage: 'flows:core.dialogs.formRequiresView.inputOnCanvas.alertMessage',
+    confirmButton: 'flows:core.dialogs.formRequiresView.inputOnCanvas.confirmButton',
+  },
+  'input-on-view': {
+    title: 'flows:core.dialogs.formRequiresView.inputOnView.title',
+    description: 'flows:core.dialogs.formRequiresView.inputOnView.description',
+    alertMessage: 'flows:core.dialogs.formRequiresView.inputOnView.alertMessage',
+    confirmButton: 'flows:core.dialogs.formRequiresView.inputOnView.confirmButton',
+  },
+  'widget-on-canvas': {
+    title: 'flows:core.dialogs.formRequiresView.widgetOnCanvas.title',
+    description: 'flows:core.dialogs.formRequiresView.widgetOnCanvas.description',
+    alertMessage: 'flows:core.dialogs.formRequiresView.widgetOnCanvas.alertMessage',
+    confirmButton: 'flows:core.dialogs.formRequiresView.widgetOnCanvas.confirmButton',
+  },
+};
 
 export interface FormRequiresViewDialogProps {
   /**
@@ -44,45 +83,6 @@ export interface FormRequiresViewDialogProps {
 }
 
 /**
- * Configuration for each drop scenario
- */
-const scenarioConfig: Record<
-  DropScenario,
-  {
-    title: string;
-    description: string;
-    alertMessage: string;
-    confirmButtonText: string;
-  }
-> = {
-  'form-on-canvas': {
-    title: 'Form Requires a View',
-    description: 'Form components cannot be placed directly on the canvas. They must be inside a View component.',
-    alertMessage: 'Would you like to create a View and add the Form inside it?',
-    confirmButtonText: 'Add View with Form',
-  },
-  'input-on-canvas': {
-    title: 'Input Requires a Form and View',
-    description:
-      'Input components cannot be placed directly on the canvas. They must be inside a Form, which must be inside a View.',
-    alertMessage: 'Would you like to create a View with a Form and add the Input inside it?',
-    confirmButtonText: 'Add View, Form and Input',
-  },
-  'input-on-view': {
-    title: 'Input Requires a Form',
-    description: 'Input components cannot be placed directly inside a View. They must be inside a Form component.',
-    alertMessage: 'Would you like to create a Form and add the Input inside it?',
-    confirmButtonText: 'Add Form with Input',
-  },
-  'widget-on-canvas': {
-    title: 'Widget Requires a View',
-    description: 'Widgets cannot be placed directly on the canvas. They must be inside a View component.',
-    alertMessage: 'Would you like to create a View and add the Widget inside it?',
-    confirmButtonText: 'Add View with Widget',
-  },
-};
-
-/**
  * Dialog component informing users about component container requirements.
  * Offers the option to automatically create the required container hierarchy.
  */
@@ -92,21 +92,22 @@ export default function FormRequiresViewDialog({
   onClose,
   onConfirm,
 }: FormRequiresViewDialogProps): JSX.Element {
-  const config = scenarioConfig[scenario];
+  const {t} = useTranslation();
+  const i18nKeys = SCENARIO_I18N_KEYS[scenario];
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{config.title}</DialogTitle>
+      <DialogTitle>{t(i18nKeys.title)}</DialogTitle>
       <DialogContent>
-        <DialogContentText sx={{mb: 2}}>{config.description}</DialogContentText>
+        <DialogContentText sx={{mb: 2}}>{t(i18nKeys.description)}</DialogContentText>
         <Alert severity="info" sx={{mb: 2}}>
-          {config.alertMessage}
+          {t(i18nKeys.alertMessage)}
         </Alert>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={onClose}>{t('flows:core.dialogs.formRequiresView.cancelButton')}</Button>
         <Button onClick={onConfirm} color="primary" variant="contained">
-          {config.confirmButtonText}
+          {t(i18nKeys.confirmButton)}
         </Button>
       </DialogActions>
     </Dialog>

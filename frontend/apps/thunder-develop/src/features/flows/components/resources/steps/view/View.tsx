@@ -8,7 +8,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless requi by applicable law or agreed to in writing,
+ * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
  * KIND, either express or implied. See the License for the
@@ -16,20 +16,20 @@
  * under the License.
  */
 
-import {Box, FormGroup, IconButton, Menu, MenuItem, Paper, Tooltip, Typography} from '@wso2/oxygen-ui';
+import {Box, FormGroup, IconButton, Menu, MenuItem, Paper, Tooltip, Typography, type Theme} from '@wso2/oxygen-ui';
 import {CogIcon, PlusIcon, TrashIcon} from '@wso2/oxygen-ui-icons-react';
-import {Handle, Position, useNodeId, useNodesData, useReactFlow, type Node} from '@xyflow/react';
+import {Handle, Position, useNodeId, useReactFlow} from '@xyflow/react';
 import classNames from 'classnames';
-import {useEffect, useState, type HTMLAttributes, type MouseEvent, type ReactElement} from 'react';
-import generateResourceId from '@/features/flows/utils/generateResourceId';
+import {memo, useCallback, useMemo, useState, type HTMLAttributes, type MouseEvent, type ReactElement} from 'react';
+import {useTranslation} from 'react-i18next';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import PluginRegistry from '@/features/flows/plugins/PluginRegistry';
 import FlowEventTypes from '@/features/flows/models/extension';
-import {CollisionPriority} from '@dnd-kit/abstract';
-import {ElementTypes, type Element} from '@/features/flows/models/elements';
+import type {Element} from '@/features/flows/models/elements';
 import type {StepData} from '@/features/flows/models/steps';
-import ReorderableViewElement from './ReorderableElement';
+import generateResourceId from '@/features/flows/utils/generateResourceId';
 import Droppable from '../../../dnd/droppable';
+import ReorderableViewElement from './ReorderableElement';
 import './View.scss';
 
 /**
@@ -56,7 +56,9 @@ export interface ViewPropsInterface extends Omit<HTMLAttributes<HTMLDivElement>,
   droppableAllowedTypes?: string[];
   /**
    * Droppable restricted resource list that should not be accepted.
+   * @deprecated Currently unused but kept for future implementation
    */
+  // eslint-disable-next-line react/no-unused-prop-types
   droppableRestrictedTypes?: string[];
   /**
    * Flag to enable source handle.
@@ -83,8 +85,9 @@ export interface ViewPropsInterface extends Omit<HTMLAttributes<HTMLDivElement>,
   /**
    * Callback for adding an element to the view.
    * @param element - The element to add.
+   * @param viewId - The ID of the view to add to.
    */
-  onAddElement?: (element: Element) => void;
+  onAddElement?: (element: Element, viewId: string) => void;
   /**
    * List of available elements that can be added to the view.
    */
@@ -99,6 +102,7 @@ export interface ViewPropsInterface extends Omit<HTMLAttributes<HTMLDivElement>,
 
 /**
  * Node for representing an empty view as a step in the flow builder.
+ * TEST 12: Restore full View features (menus, buttons, Droppable).
  *
  * @param props - Props injected to the component.
  * @returns Step Node component.
@@ -106,7 +110,7 @@ export interface ViewPropsInterface extends Omit<HTMLAttributes<HTMLDivElement>,
 function View({
   heading = 'View',
   droppableAllowedTypes = undefined,
-  droppableRestrictedTypes = undefined,
+  // droppableRestrictedTypes = undefined,
   enableSourceHandle = false,
   data = undefined,
   onActionPanelDoubleClick = undefined,
@@ -123,39 +127,57 @@ function View({
   // @ts-expect-error - intentionally unused
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const unusedResources = resources;
+  const {t} = useTranslation();
   const stepId: string | null = useNodeId();
-  const node: Pick<Node, 'data'> | null = useNodesData(stepId ?? '');
-  const {deleteElements, updateNodeData} = useReactFlow();
+  const {deleteElements, getNode} = useReactFlow();
+
+  // Get current node - use getNode instead of useNodesData to avoid re-renders
+  const currentNode = useMemo(() => (stepId ? getNode(stepId) : undefined), [stepId, getNode]);
+
+  // Memoize Droppable data to prevent re-creation on every render
+  const droppableData = useMemo(
+    () => ({
+      stepId,
+      droppedOn: currentNode,
+    }),
+    [stepId, currentNode],
+  );
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
 
-  const handleMenuOpen = (event: MouseEvent<HTMLElement>): void => {
+  // Filter availableElements to only show items where showOnResourcePanel is not false
+  const filteredAvailableElements = useMemo(
+    () => availableElements.filter((element) => element.display?.showOnResourcePanel !== false),
+    [availableElements],
+  );
+
+  const handleMenuOpen = useCallback((event: MouseEvent<HTMLElement>): void => {
     setAnchorEl(event.currentTarget);
-  };
+  }, []);
 
-  const handleMenuClose = (): void => {
+  const handleMenuClose = useCallback((): void => {
     setAnchorEl(null);
-  };
+  }, []);
 
-  const handleAddResource = (element: Element): void => {
-    if (onAddElement) {
-      onAddElement(element);
-    }
-    handleMenuClose();
-  };
+  const handleAddResource = useCallback(
+    (element: Element): void => {
+      if (onAddElement && stepId) {
+        onAddElement(element, stepId);
+      }
+      setAnchorEl(null);
+    },
+    [onAddElement, stepId],
+  );
 
-  //   useOTPValidation(node as unknown as Node);
-  //   useRecoveryFactorValidation(node as unknown as Node);
-
-  useEffect(() => {
-    if (!data?.components || data.components.length <= 0 || !stepId) {
-      return;
-    }
-
-    updateNodeData(stepId, () => ({
-      components: data?.components,
-    }));
-  }, [data?.components, stepId, updateNodeData]);
+  // Filter components using PluginRegistry
+  // Note: The ref-based caching was removed because it only tracked ID changes,
+  // not property changes (variant, config, display). This caused property updates
+  // to not reflect in the UI. The memo() on View already handles preventing
+  // unnecessary re-renders by comparing data.components via JSON.stringify.
+  const components = data?.components ?? [];
+  const filteredComponents = components.filter((component: Element) =>
+    PluginRegistry.getInstance().executeSync(FlowEventTypes.ON_NODE_ELEMENT_FILTER, component),
+  );
 
   return (
     // <ValidationErrorBoundary disableErrorBoundaryOnHover={false} resource={node}>
@@ -189,47 +211,39 @@ function View({
           {heading ?? 'View'}
         </Typography>
         <Box display="flex" gap={0.5}>
-          <Tooltip
-            title={
-              // TODO: Add i18n
-              'Add Component'
-            }
-          >
-            <IconButton
-              size="small"
-              onClick={handleMenuOpen}
-              className="flow-builder-step-action"
-              sx={(theme) => ({
-                color: 'text.secondary',
-                '&:hover': {
-                  ...theme.applyStyles('dark', {
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                    color: 'common.white',
-                  }),
-                  ...theme.applyStyles('light', {
-                    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-                    color: 'text.primary',
-                  }),
-                },
-              })}
-            >
-              <PlusIcon size={18} />
-            </IconButton>
-          </Tooltip>
+          {filteredAvailableElements.length > 0 && (
+            <Tooltip title={t('flows:core.steps.view.addComponent')}>
+              <IconButton
+                size="small"
+                onClick={handleMenuOpen}
+                className="flow-builder-step-action"
+                sx={(theme: Theme) => ({
+                  color: 'text.secondary',
+                  '&:hover': {
+                    ...theme.applyStyles('dark', {
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                      color: 'common.white',
+                    }),
+                    ...theme.applyStyles('light', {
+                      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                      color: 'text.primary',
+                    }),
+                  },
+                })}
+              >
+                <PlusIcon size={18} />
+              </IconButton>
+            </Tooltip>
+          )}
           {configurable && (
-            <Tooltip
-              title={
-                // TODO: Add i18n
-                'Configure'
-              }
-            >
+            <Tooltip title={t('flows:core.steps.view.configure')}>
               <IconButton
                 size="small"
                 onClick={() => {
                   onConfigure?.();
                 }}
                 className="flow-builder-step-action"
-                sx={(theme) => ({
+                sx={(theme: Theme) => ({
                   color: 'text.secondary',
                   '&:hover': {
                     ...theme.applyStyles('dark', {
@@ -248,12 +262,7 @@ function View({
             </Tooltip>
           )}
           {deletable && (
-            <Tooltip
-              title={
-                // TODO: Add i18n
-                'Remove'
-              }
-            >
+            <Tooltip title={t('flows:core.steps.view.remove')}>
               <IconButton
                 size="small"
                 onClick={() => {
@@ -263,7 +272,7 @@ function View({
                   }
                 }}
                 className="flow-builder-step-action"
-                sx={(theme) => ({
+                sx={(theme: Theme) => ({
                   color: 'text.secondary',
                   '&:hover': {
                     ...theme.applyStyles('dark', {
@@ -298,10 +307,10 @@ function View({
           horizontal: 'right',
         }}
       >
-        {availableElements && availableElements.length > 0 ? (
-          availableElements.map((element: Element) => (
+        {filteredAvailableElements && filteredAvailableElements.length > 0 ? (
+          filteredAvailableElements.map((element: Element, index: number) => (
             <MenuItem
-              key={element.id || element.type}
+              key={element.id || `${element.type}-${element.category}-${index}`}
               onClick={() => handleAddResource(element)}
               sx={{
                 minWidth: 200,
@@ -312,7 +321,7 @@ function View({
           ))
         ) : (
           <MenuItem disabled sx={{minWidth: 200}}>
-            No components available
+            {t('flows:core.steps.view.noComponentsAvailable')}
           </MenuItem>
         )}
       </Menu>
@@ -332,48 +341,24 @@ function View({
         >
           <Box className="flow-builder-step-content-form">
             <FormGroup>
+              {/* TEST 12l: Droppable + ReorderableViewElement with memoization fixes */}
               <Droppable
-                id={generateResourceId(`${VisualFlowConstants.FLOW_BUILDER_VIEW_ID}_${stepId}`)}
-                data={{droppedOn: node, stepId}}
+                id={generateResourceId(VisualFlowConstants.FLOW_BUILDER_VIEW_ID)}
                 type={VisualFlowConstants.FLOW_BUILDER_DROPPABLE_VIEW_ID}
-                accept={
-                  droppableAllowedTypes
-                    ? [
-                        VisualFlowConstants.FLOW_BUILDER_DRAGGABLE_ID,
-                        ...droppableAllowedTypes.filter((type: string) => !droppableRestrictedTypes?.includes(type)),
-                      ]
-                    : [
-                        VisualFlowConstants.FLOW_BUILDER_DRAGGABLE_ID,
-                        ...VisualFlowConstants.FLOW_BUILDER_VIEW_ALLOWED_RESOURCE_TYPES.filter(
-                          (type: string) => !droppableRestrictedTypes?.includes(type),
-                        ),
-                      ]
-                }
-                collisionPriority={CollisionPriority.High}
+                accept={droppableAllowedTypes ?? VisualFlowConstants.FLOW_BUILDER_VIEW_ALLOWED_RESOURCE_TYPES}
+                data={droppableData}
               >
-                {((node?.data?.components ?? data?.components) as Element[])?.map(
-                  (component: Element, index: number) =>
-                    PluginRegistry.getInstance().executeSync(FlowEventTypes.ON_NODE_ELEMENT_FILTER, component) && (
-                      <ReorderableViewElement
-                        key={component.id}
-                        id={component.id}
-                        index={index}
-                        element={component}
-                        className={classNames('flow-builder-step-content-form-field')}
-                        type={VisualFlowConstants.FLOW_BUILDER_DRAGGABLE_ID}
-                        accept={[
-                          VisualFlowConstants.FLOW_BUILDER_DRAGGABLE_ID,
-                          // Exclude INPUT from view-level sortables - inputs should only go inside forms
-                          ...VisualFlowConstants.FLOW_BUILDER_VIEW_ALLOWED_RESOURCE_TYPES.filter(
-                            (type) => type !== ElementTypes.Input,
-                          ),
-                        ]}
-                        group={stepId ?? ''}
-                        availableElements={availableElements}
-                        onAddElementToForm={onAddElementToForm}
-                      />
-                    ),
-                )}
+                {filteredComponents.map((component: Element, index: number) => (
+                  <ReorderableViewElement
+                    key={component.id}
+                    id={component.id}
+                    index={index}
+                    element={component}
+                    className={classNames('flow-builder-step-content-form-field')}
+                    availableElements={availableElements}
+                    onAddElementToForm={onAddElementToForm}
+                  />
+                ))}
               </Droppable>
             </FormGroup>
           </Box>
@@ -391,4 +376,28 @@ function View({
   );
 }
 
-export default View;
+// Memoize View to prevent re-renders when parent re-renders with same props
+// Custom comparator checks data.components by reference since they're the main changing prop
+const MemoizedView = memo(View, (prevProps, nextProps) => {
+  // Re-render if data changed (components array reference)
+  if (prevProps.data !== nextProps.data) {
+    return false;
+  }
+  // Re-render if heading changed
+  if (prevProps.heading !== nextProps.heading) {
+    return false;
+  }
+  // Re-render if deletable/configurable changed
+  if (prevProps.deletable !== nextProps.deletable || prevProps.configurable !== nextProps.configurable) {
+    return false;
+  }
+  // Re-render if enableSourceHandle changed
+  if (prevProps.enableSourceHandle !== nextProps.enableSourceHandle) {
+    return false;
+  }
+  // Don't re-render for callback changes (availableElements, onAddElement, etc.)
+  // These are read via refs or stable references in the component
+  return true;
+});
+
+export default MemoizedView;

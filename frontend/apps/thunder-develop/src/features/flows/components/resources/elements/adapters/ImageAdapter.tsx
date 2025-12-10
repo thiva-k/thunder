@@ -16,26 +16,22 @@
  * under the License.
  */
 
-import {useMemo, type CSSProperties, type ReactElement} from 'react';
+import {useCallback, useMemo, useState, type CSSProperties, type ReactElement} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
+import {Box, Typography} from '@wso2/oxygen-ui';
+import {ImageIcon} from '@wso2/oxygen-ui-icons-react';
 import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
-import {Box} from '@wso2/oxygen-ui';
 import type {Element as FlowElement} from '@/features/flows/models/elements';
 
 /**
- * Configuration interface for Image element.
+ * Image element type with properties at top level.
  */
-interface ImageConfig {
+export type ImageElement = FlowElement & {
   src?: string;
   alt?: string;
   styles?: CSSProperties;
-}
-
-/**
- * Image element type.
- */
-export type ImageElement = FlowElement<ImageConfig>;
+};
 
 /**
  * Props interface of {@link ImageAdapter}
@@ -55,6 +51,8 @@ export interface ImageAdapterPropsInterface {
  */
 function ImageAdapter({resource}: ImageAdapterPropsInterface): ReactElement {
   const {t} = useTranslation();
+  const imageElement = resource as ImageElement;
+  const [hasError, setHasError] = useState(false);
 
   const generalMessage: ReactElement = useMemo(
     () => (
@@ -65,28 +63,61 @@ function ImageAdapter({resource}: ImageAdapterPropsInterface): ReactElement {
     [resource.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
         errorMessage: t('flows:core.validation.fields.image.src'),
         name: 'src',
       },
-      {
-        errorMessage: t('flows:core.validation.fields.image.variant'),
-        name: 'variant',
-      },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
+  useRequiredFields(resource, generalMessage, validationFields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const imageConfig = resource.config as ImageConfig | undefined;
+  // Check if src is empty or has errored
+  const src = imageElement?.src?.trim() ?? '';
+  const shouldShowPlaceholder = !src || hasError;
+
+  const handleImageError = useCallback(() => {
+    setHasError(true);
+  }, []);
+
+  // Placeholder UI
+  const placeholderUI = (
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      justifyContent="center"
+      sx={{
+        width: '100%',
+        minHeight: 120,
+        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+        borderRadius: 1,
+        border: '1px dashed rgba(0, 0, 0, 0.2)',
+      }}
+    >
+      <ImageIcon style={{fontSize: 48, color: 'rgba(0, 0, 0, 0.3)'}} />
+      <Typography variant="body2" color="textSecondary" sx={{mt: 1}}>
+        {t('flows:core.placeholders.image')}
+      </Typography>
+    </Box>
+  );
+
+  if (shouldShowPlaceholder) {
+    return placeholderUI;
+  }
 
   return (
     <Box display="flex" alignItems="center" justifyContent="center">
-      <img src={imageConfig?.src} alt={imageConfig?.alt} width="100%" style={imageConfig?.styles} />
+      <img
+        src={src}
+        alt={imageElement?.alt}
+        width="100%"
+        style={imageElement?.styles}
+        onError={handleImageError}
+      />
     </Box>
   );
 }

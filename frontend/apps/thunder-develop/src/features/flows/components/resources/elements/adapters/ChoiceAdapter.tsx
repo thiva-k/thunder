@@ -23,18 +23,14 @@ import {FormControl, FormControlLabel, FormHelperText, FormLabel, Radio, RadioGr
 import {Hint} from '../hint';
 
 /**
- * Configuration interface for Choice element.
+ * Choice element type with properties at top level.
  */
-interface ChoiceConfig {
-  id?: string;
+export type ChoiceElement = FlowElement & {
   defaultValue?: string;
   options?: FieldOption[];
-}
-
-/**
- * Choice element type.
- */
-export type ChoiceElement = FlowElement<ChoiceConfig>;
+  label?: string;
+  hint?: string;
+};
 
 /**
  * Props interface of {@link ChoiceAdapter}
@@ -53,20 +49,19 @@ export interface ChoiceAdapterPropsInterface {
  * @returns The ChoiceAdapter component.
  */
 function ChoiceAdapter({resource}: ChoiceAdapterPropsInterface): ReactElement {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const choiceConfig = resource.config as ChoiceConfig | undefined;
+  const choiceElement = resource as ChoiceElement;
 
   return (
     <FormControl sx={{my: 2}}>
-      <FormLabel id={choiceConfig?.id}>{resource.config?.label}</FormLabel>
-      <RadioGroup defaultValue={choiceConfig?.defaultValue}>
-        {choiceConfig?.options?.map((option: FieldOption) => (
+      <FormLabel id={choiceElement?.id}>{choiceElement?.label}</FormLabel>
+      <RadioGroup defaultValue={choiceElement?.defaultValue}>
+        {choiceElement?.options?.map((option: FieldOption) => (
           <FormControlLabel key={option?.key} value={option?.value} control={<Radio />} label={option?.label} />
         ))}
       </RadioGroup>
-      {resource.config?.hint && (
+      {choiceElement?.hint && (
         <FormHelperText>
-          <Hint hint={resource.config?.hint} />
+          <Hint hint={choiceElement?.hint} />
         </FormHelperText>
       )}
     </FormControl>

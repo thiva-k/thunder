@@ -3,27 +3,21 @@
     "resourceType": "STEP",
     "category": "INTERFACE",
     "type": "VIEW",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Blank View",
       "image": "assets/images/icons/step.svg",
       "showOnResourcePanel": true
-    },
-    "config": {}
+    }
   },
   {
     "resourceType": "STEP",
     "category": "INTERFACE",
     "type": "VIEW",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Email OTP View",
       "image": "assets/images/icons/email-down.svg",
-      "showOnResourcePanel": true
+      "showOnResourcePanel": false
     },
-    "config": {},
     "data": {
       "components": [
         {
@@ -31,38 +25,30 @@
           "category": "DISPLAY",
           "type": "TYPOGRAPHY",
           "variant": "H3",
-          "config": {
-            "text": "Verify OTP"
-          }
+          "label": "Verify OTP"
         },
         {
           "id": "{{ID}}",
           "category": "BLOCK",
           "type": "FORM",
-          "config": {},
           "components": [
             {
               "id": "{{ID}}",
               "category": "FIELD",
               "type": "INPUT",
               "variant": "OTP",
-              "config": {
-                "type": "text",
-                "hint": "",
-                "identifier": "otp",
-                "label": "Enter the code sent to your email",
-                "placeholder": ""
-              }
+              "inputType": "text",
+              "hint": "",
+              "identifier": "otp",
+              "label": "Enter the code sent to your email",
+              "placeholder": ""
             },
             {
               "id": "{{ID}}",
               "category": "ACTION",
               "type": "BUTTON",
               "variant": "PRIMARY",
-              "config": {
-                "type": "submit",
-                "text": "Verify"
-              },
+              "label": "Verify",
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
@@ -75,10 +61,7 @@
               "id": "{{ID}}",
               "category": "ACTION",
               "type": "RESEND",
-              "config": {
-                "type": "submit",
-                "text": "Resend OTP"
-              }
+              "label": "Resend OTP"
             }
           ]
         }
@@ -89,14 +72,11 @@
     "resourceType": "STEP",
     "category": "INTERFACE",
     "type": "VIEW",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "SMS OTP View",
       "image": "assets/images/icons/mobile-message.svg",
       "showOnResourcePanel": true
     },
-    "config": {},
     "data": {
       "components": [
         {
@@ -104,38 +84,30 @@
           "category": "DISPLAY",
           "type": "TYPOGRAPHY",
           "variant": "H3",
-          "config": {
-            "text": "Verify OTP"
-          }
+          "label": "Verify OTP"
         },
         {
           "id": "{{ID}}",
           "category": "BLOCK",
           "type": "FORM",
-          "config": {},
           "components": [
             {
               "id": "{{ID}}",
               "category": "FIELD",
               "type": "INPUT",
               "variant": "OTP",
-              "config": {
-                "type": "text",
-                "hint": "",
-                "identifier": "otp",
-                "label": "Enter the code sent to your mobile",
-                "placeholder": ""
-              }
+              "inputType": "text",
+              "hint": "",
+              "identifier": "otp",
+              "label": "Enter the code sent to your mobile",
+              "placeholder": ""
             },
             {
               "id": "{{ID}}",
               "category": "ACTION",
               "type": "BUTTON",
               "variant": "PRIMARY",
-              "config": {
-                "type": "submit",
-                "text": "Verify"
-              },
+              "label": "Verify",
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
@@ -148,10 +120,7 @@
               "id": "{{ID}}",
               "category": "ACTION",
               "type": "RESEND",
-              "config": {
-                "type": "submit",
-                "text": "Resend OTP"
-              }
+              "label": "Resend OTP"
             }
           ]
         }
@@ -162,38 +131,30 @@
     "resourceType": "STEP",
     "category": "DECISION",
     "type": "RULE",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Rule",
       "image": "assets/images/icons/decide.svg",
       "showOnResourcePanel": false
-    },
-    "config": {}
+    }
   },
   {
     "resourceType": "STEP",
     "category": "WORKFLOW",
     "type": "EXECUTION",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Execution",
       "image": "assets/images/icons/play.svg",
       "showOnResourcePanel": false
-    },
-    "config": {}
+    }
   },
   {
     "resourceType": "STEP",
     "category": "WORKFLOW",
     "type": "EXECUTION",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Magic Link View",
       "image": "assets/images/icons/link.svg",
-      "showOnResourcePanel": true
+      "showOnResourcePanel": false
     },
     "data": {
       "action": {
@@ -208,9 +169,7 @@
           "id": "{{ID}}",
           "category": "DISPLAY",
           "type": "RICH_TEXT",
-          "config": {
-            "text": "<h3 class=\"rich-text-heading-h3 rich-text-align-center\"><span class=\"rich-text-pre-wrap\">Check Your Email</span></h3><h5 class=\"rich-text-heading-h5 rich-text-align-center\"><br><span class=\"rich-text-pre-wrap\">An email containing further instructions has been sent to your email address. Please check your inbox to continue.</span></h5>"
-          }
+          "label": "<h3 class=\"rich-text-heading-h3 rich-text-align-center\"><span class=\"rich-text-pre-wrap\">Check Your Email</span></h3><h5 class=\"rich-text-heading-h5 rich-text-align-center\"><br><span class=\"rich-text-pre-wrap\">An email containing further instructions has been sent to your email address. Please check your inbox to continue.</span></h5>"
         }
       ]
     }
@@ -226,7 +185,6 @@
       "label": "End Screen",
       "image": "assets/images/icons/check-mark-inside-a-black-box.svg",
       "showOnResourcePanel": false
-    },
-    "config": {}
+    }
   }
 ]

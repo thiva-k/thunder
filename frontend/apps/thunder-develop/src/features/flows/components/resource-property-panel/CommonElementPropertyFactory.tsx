@@ -67,11 +67,11 @@ function CommonElementPropertyFactory({
   onChange,
   ...rest
 }: CommonElementPropertyFactoryPropsInterface): ReactElement | null {
-  if (propertyKey === 'text') {
+  if (propertyKey === 'label') {
     if (resource.type === ElementTypes.RichText) {
       return (
         <RichTextWithTranslation
-          onChange={(html: string) => onChange(`config.${propertyKey}`, html, resource)}
+          onChange={(html: string) => onChange(propertyKey, html, resource)}
           resource={resource}
           {...rest}
         />

@@ -326,6 +326,7 @@ const translations = {
       integrations: 'Integrations',
       applications: 'Applications',
       dashboard: 'Dashboard',
+      flows: 'Flows',
     },
     breadcrumb: {
       develop: 'Develop',
@@ -799,6 +800,22 @@ const translations = {
   // Flows - Flow builder feature translations
   // ============================================================================
   flows: {
+    // Flow listing page
+    'listing.title': 'Flows',
+    'listing.subtitle': 'Create and manage authentication and registration flows for your applications',
+    'listing.addFlow': 'Create New Flow',
+    'listing.columns.name': 'Name',
+    'listing.columns.flowType': 'Type',
+    'listing.columns.version': 'Version',
+    'listing.columns.updatedAt': 'Last Updated',
+    'listing.columns.actions': 'Actions',
+    'listing.error.title': 'Failed to load flows',
+    'listing.error.unknown': 'An unknown error occurred',
+    'delete.title': 'Delete Flow',
+    'delete.message': 'Are you sure you want to delete this flow? This action cannot be undone.',
+    'delete.disclaimer': 'Warning: All associated configurations will be permanently removed.',
+    'delete.error': 'Failed to delete flow. Please try again.',
+
     // Flow labels and navigation
     label: 'Flows',
     'core.breadcrumb': '{{flowType}}',
@@ -847,27 +864,49 @@ const translations = {
     'core.validation.fields.input.label': 'Label is required',
     'core.validation.fields.input.identifier': 'Identifier is required',
 
+    // Validation messages - executor
+    'core.validation.fields.executor.general': 'The executor <0>{{id}}</0> is not properly configured.',
+
     // Validation messages - button
+    'core.validation.fields.button.general':
+      'Required fields are not properly configured for the button with ID <code>{{id}}</code>.',
     'core.validation.fields.button.text': 'Button text is required',
-    'core.validation.fields.button.action': 'Button action is required',
+    'core.validation.fields.button.label': 'Label is required',
+    'core.validation.fields.button.action': 'Action is required',
+    'core.validation.fields.button.variant': 'Variant is required',
 
     // Validation messages - checkbox
+    'core.validation.fields.checkbox.general':
+      'Required fields are not properly configured for the checkbox with ID <code>{{id}}</code>.',
     'core.validation.fields.checkbox.label': 'Label is required',
     'core.validation.fields.checkbox.identifier': 'Identifier is required',
 
     // Validation messages - divider
-    'core.validation.fields.divider.variant': 'Divider variant is required',
+    'core.validation.fields.divider.general':
+      'Required fields are not properly configured for the divider with ID <code>{{id}}</code>.',
+    'core.validation.fields.divider.variant': 'Variant is required',
 
     // Validation messages - typography
+    'core.validation.fields.typography.general':
+      'Required fields are not properly configured for the typography with ID <code>{{id}}</code>.',
     'core.validation.fields.typography.text': 'Text content is required',
-    'core.validation.fields.typography.variant': 'Typography variant is required',
+    'core.validation.fields.typography.label': 'Label is required',
+    'core.validation.fields.typography.variant': 'Variant is required',
 
     // Validation messages - image
+    'core.validation.fields.image.general':
+      'Required fields are not properly configured for the image with ID <code>{{id}}</code>.',
     'core.validation.fields.image.src': 'Image source is required',
-    'core.validation.fields.image.variant': 'Image variant is required',
+    'core.validation.fields.image.variant': 'Variant is required',
+
+    // Placeholders
+    'core.placeholders.image': 'No image source',
 
     // Validation messages - rich text
+    'core.validation.fields.richText.general':
+      'Required fields are not properly configured for the rich text with ID <code>{{id}}</code>.',
     'core.validation.fields.richText.text': 'Rich text content is required',
+    'core.validation.fields.richText.label': 'Label is required',
 
     // Validation messages - OTP input
     'core.validation.fields.otpInput.label': 'OTP input label is required',
@@ -902,6 +941,86 @@ const translations = {
     'core.elements.textPropertyField.i18nCard.tooltip.commonKeyTooltip': 'This key is shared across multiple screens',
     'core.elements.textPropertyField.i18nCard.tooltip.editExistingTranslation': 'Edit existing translation',
     'core.elements.textPropertyField.i18nCard.tooltip.addNewTranslation': 'Add new translation',
+
+    // Form requires view dialog
+    'core.dialogs.formRequiresView.formOnCanvas.title': 'Form Requires a View',
+    'core.dialogs.formRequiresView.formOnCanvas.description':
+      'Form components cannot be placed directly on the canvas. They must be inside a View component.',
+    'core.dialogs.formRequiresView.formOnCanvas.alertMessage': 'Would you like to create a View and add the Form inside it?',
+    'core.dialogs.formRequiresView.formOnCanvas.confirmButton': 'Add View with Form',
+    'core.dialogs.formRequiresView.inputOnCanvas.title': 'Input Requires a Form and View',
+    'core.dialogs.formRequiresView.inputOnCanvas.description':
+      'Input components cannot be placed directly on the canvas. They must be inside a Form, which must be inside a View.',
+    'core.dialogs.formRequiresView.inputOnCanvas.alertMessage':
+      'Would you like to create a View with a Form and add the Input inside it?',
+    'core.dialogs.formRequiresView.inputOnCanvas.confirmButton': 'Add View, Form and Input',
+    'core.dialogs.formRequiresView.inputOnView.title': 'Input Requires a Form',
+    'core.dialogs.formRequiresView.inputOnView.description':
+      'Input components cannot be placed directly inside a View. They must be inside a Form component.',
+    'core.dialogs.formRequiresView.inputOnView.alertMessage': 'Would you like to create a Form and add the Input inside it?',
+    'core.dialogs.formRequiresView.inputOnView.confirmButton': 'Add Form with Input',
+    'core.dialogs.formRequiresView.widgetOnCanvas.title': 'Widget Requires a View',
+    'core.dialogs.formRequiresView.widgetOnCanvas.description':
+      'Widgets cannot be placed directly on the canvas. They must be inside a View component.',
+    'core.dialogs.formRequiresView.widgetOnCanvas.alertMessage':
+      'Would you like to create a View and add the Widget inside it?',
+    'core.dialogs.formRequiresView.widgetOnCanvas.confirmButton': 'Add View with Widget',
+    'core.dialogs.formRequiresView.cancelButton': 'Cancel',
+
+    // Form adapter
+    'core.adapters.form.badgeLabel': 'Form',
+    'core.adapters.form.placeholder': 'DROP FORM COMPONENTS HERE',
+
+    // Header panel
+    'core.headerPanel.goBack': 'Go back to Flows',
+    'core.headerPanel.autoLayout': 'Auto Layout',
+    'core.headerPanel.save': 'Save',
+    'core.headerPanel.editTitle': 'Edit flow name',
+    'core.headerPanel.saveTitle': 'Save flow name',
+    'core.headerPanel.cancelEdit': 'Cancel',
+
+    // Resource panel
+    'core.resourcePanel.title': 'Resources',
+    'core.resourcePanel.showResources': 'Show Resources',
+    'core.resourcePanel.hideResources': 'Hide Resources',
+    'core.resourcePanel.starterTemplates.title': 'Starter Templates',
+    'core.resourcePanel.starterTemplates.description': 'Choose one of these templates to start building registration experience',
+    'core.resourcePanel.widgets.title': 'Widgets',
+    'core.resourcePanel.widgets.description': 'Use these widgets to build up the flow using pre-created flow blocks',
+    'core.resourcePanel.steps.title': 'Steps',
+    'core.resourcePanel.steps.description': 'Use these as steps in your flow',
+    'core.resourcePanel.components.title': 'Components',
+    'core.resourcePanel.components.description': 'Use these components to build up your views',
+    'core.resourcePanel.executors.title': 'Executors',
+    'core.resourcePanel.executors.description': 'Add authentication executors to your flow',
+
+    // View step
+    'core.steps.view.addComponent': 'Add Component',
+    'core.steps.view.configure': 'Configure',
+    'core.steps.view.remove': 'Remove',
+    'core.steps.view.noComponentsAvailable': 'No components available',
+
+    // Rule
+    'core.rule.conditionalRule': 'Conditional Rule',
+    'core.rule.remove': 'Remove',
+
+    // Field extended properties
+    'core.fieldExtendedProperties.attribute': 'Attribute',
+    'core.fieldExtendedProperties.selectAttribute': 'Select an attribute',
+
+    // Button extended properties
+    'core.buttonExtendedProperties.type': 'Type',
+
+    // Rules properties
+    'core.rulesProperties.description': 'Define a rule to how conditionally proceed to next steps in the flow',
+
+    // Login flow builder
+    'core.loginFlowBuilder.form': 'Form',
+    'core.loginFlowBuilder.errors.validationRequired': 'Please fix all validation errors before saving.',
+    'core.loginFlowBuilder.errors.structureValidationFailed': 'Flow structure validation failed: {{error}}',
+    'core.loginFlowBuilder.errors.saveFailed': 'Failed to save flow. Please try again.',
+    'core.loginFlowBuilder.success.flowCreated': 'Flow created successfully.',
+    'core.loginFlowBuilder.success.flowUpdated': 'Flow updated successfully.',
   },
 } as const;
 

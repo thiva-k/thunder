@@ -119,7 +119,7 @@ function TextPropertyField({
           defaultValue={propertyValue}
           value={isI18nPattern ? '' : undefined}
           error={!!errorMessage}
-          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(`config.${propertyKey}`, e.target.value, resource)}
+          onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(propertyKey, e.target.value, resource)}
           placeholder={
             isI18nPattern
               ? ''
@@ -141,7 +141,7 @@ function TextPropertyField({
           propertyKey={propertyKey}
           onClose={handleI18nClose}
           i18nKey={isI18nPattern ? propertyValue.slice(2, -2) : ''}
-          onChange={(i18nKey: string) => onChange(`config.${propertyKey}`, i18nKey ? `{{${i18nKey}}}` : '', resource)}
+          onChange={(i18nKey: string) => onChange(propertyKey, i18nKey ? `{{${i18nKey}}}` : '', resource)}
         />
       )}
     </Box>

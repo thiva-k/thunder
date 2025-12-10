@@ -16,22 +16,26 @@
  * under the License.
  */
 
+import type {JSX} from 'react';
 import {useNavigate} from 'react-router';
 import {Box, Stack, Typography, Button} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
+import {useTranslation} from 'react-i18next';
+import FlowsList from '../components/FlowsList';
 
-export default function FlowsListPage() {
+export default function FlowsListPage(): JSX.Element {
   const navigate = useNavigate();
+  const {t} = useTranslation();
 
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
         <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Login Flows
+          <Typography variant="h1" gutterBottom>
+            {t('flows:listing.title')}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Create and manage authentication flows for your applications
+          <Typography variant="subtitle1" color="text.secondary">
+            {t('flows:listing.subtitle')}
           </Typography>
         </Box>
         <Stack direction="row" spacing={2}>
@@ -48,12 +52,12 @@ export default function FlowsListPage() {
               });
             }}
           >
-            Create New Flow
+            {t('flows:listing.addFlow')}
           </Button>
         </Stack>
       </Stack>
 
-      {/* <FlowsList /> */}
+      <FlowsList />
     </Box>
   );
 }

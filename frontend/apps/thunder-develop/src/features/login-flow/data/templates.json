@@ -3,8 +3,6 @@
     "resourceType": "TEMPLATE",
     "category": "STARTER",
     "type": "BLANK",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Blank",
       "description": "Start a new flow from scratch",
@@ -32,14 +30,11 @@
                   "category": "DISPLAY",
                   "type": "TYPOGRAPHY",
                   "variant": "H3",
-                  "config": {
-                    "text": "Heading"
-                  }
+                  "label": "Heading"
                 },
                 {
                   "category": "BLOCK",
                   "type": "FORM",
-                  "config": {},
                   "id": "{{ID}}",
                   "components": [
                     {
@@ -47,10 +42,8 @@
                       "type": "BUTTON",
                       "id": "{{ID}}",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Continue"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
                       "action": {
                         "next": "END",
                         "type": "NEXT"
@@ -79,26 +72,7 @@
                 "executor": {
                   "name": "LoginCompletionExecutor"
                 }
-              },
-              "components": [
-                {
-                  "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "id": "typography_u2oz",
-                  "variant": "H3",
-                  "config": {
-                    "text": "Login Successful!"
-                  }
-                },
-                {
-                  "category": "DISPLAY",
-                  "type": "RICH_TEXT",
-                  "config": {
-                    "text": "<p class=\"rich-text-paragraph rich-text-align-center\"><span class=\"rich-text-pre-wrap\">You have successfully logged in.</span></p>"
-                  },
-                  "id": "display_hgvm"
-                }
-              ]
+              }
             }
           }
         ]
@@ -109,8 +83,6 @@
     "resourceType": "TEMPLATE",
     "category": "STARTER",
     "type": "BASIC",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Basic Login",
       "description": "Basic login experience with username and password",
@@ -119,6 +91,15 @@
     },
     "config": {
       "data": {
+        "__generationMeta__": {
+          "defaultPropertySelectorId": "{{BASIC_AUTH_EXECUTION_STEP_ID}}",
+          "replacers": [
+            {
+              "key": "BASIC_AUTH_EXECUTION_STEP_ID",
+              "type": "ID"
+            }
+          ]
+        },
         "steps": [
           {
             "id": "{{ID}}",
@@ -138,14 +119,11 @@
                   "category": "DISPLAY",
                   "type": "TYPOGRAPHY",
                   "variant": "H3",
-                  "config": {
-                    "text": "Sign In"
-                  }
+                  "label": "Sign In"
                 },
                 {
                   "category": "BLOCK",
                   "type": "FORM",
-                  "config": {},
                   "id": "{{ID}}",
                   "components": [
                     {
@@ -153,51 +131,40 @@
                       "category": "FIELD",
                       "type": "INPUT",
                       "variant": "TEXT",
-                      "config": {
-                        "type": "text",
-                        "hint": "",
-                        "label": "Username",
-                        "required": true,
-                        "placeholder": "Enter your username",
-                        "identifier": "http://wso2.org/claims/username"
-                      }
+                      "inputType": "text",
+                      "hint": "",
+                      "label": "Username",
+                      "required": true,
+                      "placeholder": "Enter your username",
+                      "identifier": "username"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "INPUT",
                       "variant": "PASSWORD",
-                      "config": {
-                        "identifier": "password",
-                        "type": "password",
-                        "hint": "",
-                        "label": "Password",
-                        "required": true,
-                        "placeholder": "Enter your password"
-                      }
+                      "inputType": "password",
+                      "identifier": "password",
+                      "hint": "",
+                      "label": "Password",
+                      "required": true,
+                      "placeholder": "Enter your password"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
                       "type": "BUTTON",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Sign In"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Sign In",
                       "action": {
-                        "type": "EXECUTOR",
-                        "executor": {
-                          "name": "BasicAuthenticationExecutor"
-                        },
-                        "next": "END"
+                        "type": "NEXT",
+                        "next": "{{BASIC_AUTH_EXECUTION_STEP_ID}}"
                       }
                     },
                     {
                       "category": "DISPLAY",
-                      "config": {
-                        "text": "<p class=\"rich-text-paragraph\"><br></p><p class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Don't have an account? </span><a href=\"{{application.selfRegisterUrl}}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign up</span></a></p>"
-                      },
+                      "label": "<p class=\"rich-text-paragraph\"><br></p><p class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Don't have an account? </span><a href=\"{{application.selfRegisterUrl}}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign up</span></a></p>",
                       "id": "{{ID}}",
                       "type": "RICH_TEXT"
                     }
@@ -207,142 +174,24 @@
             }
           },
           {
-            "id": "END",
-            "type": "END",
-            "size": {
-              "width": 280,
-              "height": 220
-            },
-            "position": {
-              "x": 690,
-              "y": 200
-            },
-            "config": {},
-            "data": {
-              "action": {
-                "type": "EXECUTOR",
-                "executor": {
-                  "name": "LoginCompletionExecutor"
-                }
-              },
-              "components": [
-                {
-                  "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "id": "typography_u2oz",
-                  "variant": "H3",
-                  "config": {
-                    "text": "Login Successful!"
-                  }
-                },
-                {
-                  "category": "DISPLAY",
-                  "type": "RICH_TEXT",
-                  "config": {
-                    "text": "<p class=\"rich-text-paragraph rich-text-align-center\"><span class=\"rich-text-pre-wrap\">You have successfully logged in.</span></p>"
-                  },
-                  "id": "display_hgvm"
-                }
-              ]
-            }
-          }
-        ]
-      }
-    }
-  },
-  {
-    "resourceType": "TEMPLATE",
-    "category": "STARTER",
-    "type": "DEFAULT",
-    "version": "0.1.0",
-    "deprecated": false,
-    "display": {
-      "label": "Default Login",
-      "description": "Default login flow with password authentication",
-      "image": "assets/images/icons/password.svg",
-      "showOnResourcePanel": false
-    },
-    "config": {
-      "data": {
-        "steps": [
-          {
-            "id": "{{ID}}",
-            "type": "VIEW",
+            "id": "{{BASIC_AUTH_EXECUTION_STEP_ID}}",
+            "type": "EXECUTION",
             "size": {
               "width": 350,
               "height": 291
             },
             "position": {
-              "x": 300,
+              "x": 690,
               "y": 200
             },
             "data": {
-              "components": [
-                {
-                  "id": "{{ID}}",
-                  "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
-                  "config": {
-                    "text": "Sign In"
-                  }
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "BasicAuthExecutor"
                 },
-                {
-                  "category": "BLOCK",
-                  "type": "FORM",
-                  "config": {},
-                  "id": "{{ID}}",
-                  "components": [
-                    {
-                      "id": "{{ID}}",
-                      "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "PASSWORD",
-                      "config": {
-                        "identifier": "password",
-                        "type": "password",
-                        "hint": "",
-                        "label": "Password",
-                        "required": true,
-                        "placeholder": "Enter your password"
-                      }
-                    },
-                    {
-                      "category": "DISPLAY",
-                      "config": {
-                        "text": ""
-                      },
-                      "id": "{{ID}}",
-                      "type": "RICH_TEXT"
-                    },
-                    {
-                      "id": "{{ID}}",
-                      "category": "ACTION",
-                      "type": "BUTTON",
-                      "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Sign In"
-                      },
-                      "action": {
-                        "type": "EXECUTOR",
-                        "executor": {
-                          "name": "BasicAuthenticationExecutor"
-                        },
-                        "next": "END"
-                      }
-                    },
-                    {
-                      "category": "DISPLAY",
-                      "config": {
-                        "text": "<p class=\"rich-text-paragraph\"><br></p><p class=\"rich-text-paragraph\"><span class=\"rich-text-pre-wrap\">Don't have an account? </span><a href=\"{{application.selfRegisterUrl}}\" target=\"_blank\" rel=\"noopener noreferrer\" class=\"rich-text-link\"><span class=\"rich-text-pre-wrap\">Sign up</span></a></p>"
-                      },
-                      "id": "{{ID}}",
-                      "type": "RICH_TEXT"
-                    }
-                  ]
-                }
-              ]
+                "next": "END"
+              }
             }
           },
           {
@@ -353,8 +202,8 @@
               "height": 220
             },
             "position": {
-              "x": 1200,
-              "y": 408
+              "x": 1080,
+              "y": 200
             },
             "config": {},
             "data": {
@@ -363,26 +212,7 @@
                 "executor": {
                   "name": "LoginCompletionExecutor"
                 }
-              },
-              "components": [
-                {
-                  "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "id": "typography_u2oz",
-                  "variant": "H3",
-                  "config": {
-                    "text": "Login Successful!"
-                  }
-                },
-                {
-                  "category": "DISPLAY",
-                  "type": "RICH_TEXT",
-                  "config": {
-                    "text": "<p class=\"rich-text-paragraph rich-text-align-center\"><span class=\"rich-text-pre-wrap\">You have successfully logged in.</span></p>"
-                  },
-                  "id": "display_hgvm"
-                }
-              ]
+              }
             }
           }
         ]
@@ -393,8 +223,6 @@
     "resourceType": "TEMPLATE",
     "category": "STARTER",
     "type": "BASIC_FEDERATED",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Basic + Google",
       "description": "Basic login experience with Google as an additional option",
@@ -408,6 +236,10 @@
           "replacers": [
             {
               "key": "GOOGLE_EXECUTION_STEP_ID",
+              "type": "ID"
+            },
+            {
+              "key": "BASIC_AUTH_EXECUTION_STEP_ID",
               "type": "ID"
             }
           ]
@@ -431,14 +263,11 @@
                   "category": "DISPLAY",
                   "type": "TYPOGRAPHY",
                   "variant": "H3",
-                  "config": {
-                    "text": "Login"
-                  }
+                  "label": "Login"
                 },
                 {
                   "category": "BLOCK",
                   "type": "FORM",
-                  "config": {},
                   "id": "{{ID}}",
                   "components": [
                     {
@@ -446,44 +275,35 @@
                       "category": "FIELD",
                       "type": "INPUT",
                       "variant": "TEXT",
-                      "config": {
-                        "type": "text",
-                        "hint": "",
-                        "label": "Username",
-                        "required": true,
-                        "placeholder": "Enter your username",
-                        "identifier": "http://wso2.org/claims/username"
-                      }
+                      "inputType": "text",
+                      "hint": "",
+                      "label": "Username",
+                      "required": true,
+                      "placeholder": "Enter your username",
+                      "identifier": "username"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "INPUT",
                       "variant": "PASSWORD",
-                      "config": {
-                        "identifier": "password",
-                        "type": "password",
-                        "hint": "",
-                        "label": "Password",
-                        "required": true,
-                        "placeholder": "Enter your password"
-                      }
+                      "inputType": "password",
+                      "identifier": "password",
+                      "hint": "",
+                      "label": "Password",
+                      "required": true,
+                      "placeholder": "Enter your password"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
                       "type": "BUTTON",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Continue"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
                       "action": {
-                        "type": "EXECUTOR",
-                        "executor": {
-                          "name": "BasicAuthenticationExecutor"
-                        },
-                        "next": "END"
+                        "type": "NEXT",
+                        "next": "{{BASIC_AUTH_EXECUTION_STEP_ID}}"
                       }
                     }
                   ]
@@ -493,17 +313,36 @@
                   "category": "ACTION",
                   "type": "BUTTON",
                   "variant": "SOCIAL",
-                  "config": {
-                    "type": "button",
-                    "text": "Continue with Google",
-                    "image": "assets/images/icons/google.svg"
-                  },
+                  "eventType": "TRIGGER",
+                  "label": "Continue with Google",
+                  "image": "assets/images/icons/google.svg",
                   "action": {
                     "type": "NEXT",
                     "next": "{{GOOGLE_EXECUTION_STEP_ID}}"
                   }
                 }
               ]
+            }
+          },
+          {
+            "id": "{{BASIC_AUTH_EXECUTION_STEP_ID}}",
+            "type": "EXECUTION",
+            "size": {
+              "width": 350,
+              "height": 291
+            },
+            "position": {
+              "x": 580,
+              "y": 130
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "BasicAuthExecutor"
+                },
+                "next": "END"
+              }
             }
           },
           {
@@ -515,13 +354,13 @@
             },
             "position": {
               "x": 580,
-              "y": 730
+              "y": 530
             },
             "data": {
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "GoogleExecutor",
+                  "name": "GoogleOIDCAuthExecutor",
                   "meta": {
                     "idpName": "{{IDP_NAME}}"
                   }
@@ -538,8 +377,8 @@
               "height": 220
             },
             "position": {
-              "x": 900,
-              "y": 408
+              "x": 970,
+              "y": 330
             },
             "config": {},
             "data": {
@@ -548,26 +387,7 @@
                 "executor": {
                   "name": "LoginCompletionExecutor"
                 }
-              },
-              "components": [
-                {
-                  "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "id": "typography_u2oz",
-                  "variant": "H3",
-                  "config": {
-                    "text": "Login Successful!"
-                  }
-                },
-                {
-                  "category": "DISPLAY",
-                  "type": "RICH_TEXT",
-                  "config": {
-                    "text": "<p class=\"rich-text-paragraph rich-text-align-center\"><span class=\"rich-text-pre-wrap\">You have successfully logged in.</span></p>"
-                  },
-                  "id": "display_hgvm"
-                }
-              ]
+              }
             }
           }
         ]
@@ -578,13 +398,11 @@
     "resourceType": "TEMPLATE",
     "category": "STARTER",
     "type": "BASIC_PASSKEY",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Basic + Passkey",
       "description": "Basic login experience with passkey authentication",
       "image": "assets/images/icons/fingerprint.svg",
-      "showOnResourcePanel": true
+      "showOnResourcePanel": false
     },
     "config": {
       "data": {
@@ -616,14 +434,11 @@
                   "category": "DISPLAY",
                   "type": "TYPOGRAPHY",
                   "variant": "H3",
-                  "config": {
-                    "text": "Login"
-                  }
+                  "label": "Login"
                 },
                 {
                   "category": "BLOCK",
                   "type": "FORM",
-                  "config": {},
                   "id": "{{ID}}",
                   "components": [
                     {
@@ -631,10 +446,8 @@
                       "category": "ACTION",
                       "type": "BUTTON",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "button",
-                        "text": "Login with Passkey"
-                      },
+                      "eventType": "TRIGGER",
+                      "label": "Login with Passkey",
                       "action": {
                         "type": "NEXT",
                         "next": "{{PASSKEY_ENROLLMENT_STEP_ID}}"
@@ -684,26 +497,7 @@
                 "executor": {
                   "name": "LoginCompletionExecutor"
                 }
-              },
-              "components": [
-                {
-                  "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "id": "typography_u2oz",
-                  "variant": "H3",
-                  "config": {
-                    "text": "Login Successful!"
-                  }
-                },
-                {
-                  "category": "DISPLAY",
-                  "type": "RICH_TEXT",
-                  "config": {
-                    "text": "<p class=\"rich-text-paragraph rich-text-align-center\"><span class=\"rich-text-pre-wrap\">You have successfully logged in.</span></p>"
-                  },
-                  "id": "display_hgvm"
-                }
-              ]
+              }
             }
           }
         ]

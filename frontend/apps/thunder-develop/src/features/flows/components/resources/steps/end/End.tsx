@@ -37,6 +37,7 @@ export type EndPropsInterface = CommonStepFactoryPropsInterface;
  * @param _props - Props injected to the component (unused).
  * @returns End node component.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function End(_props: EndPropsInterface): ReactElement {
   return (
     <div>

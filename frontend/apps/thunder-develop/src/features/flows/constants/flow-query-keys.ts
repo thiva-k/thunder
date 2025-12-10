@@ -16,5 +16,18 @@
  * under the License.
  */
 
-// Most styles have been migrated to Material-UI sx prop in ResourcePanelItem.tsx
-// This file is kept for backwards compatibility and can be removed if not needed elsewhere
+/**
+ * Query key constants for flows feature cache management.
+ */
+const FlowQueryKeys = {
+  /**
+   * Base key for all flow-related queries
+   */
+  FLOWS: 'flows',
+  /**
+   * Key for a single flow query
+   */
+  FLOW: 'flow',
+} as const;
+
+export default FlowQueryKeys;

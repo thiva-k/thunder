@@ -17,30 +17,30 @@
  */
 
 import {useMemo, type CSSProperties, type ReactElement} from 'react';
-import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Trans, useTranslation} from 'react-i18next';
+import {Checkbox, FormControlLabel, FormHelperText} from '@wso2/oxygen-ui';
 import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
-import {Checkbox, FormControlLabel, FormHelperText} from '@wso2/oxygen-ui';
-import PlaceholderComponent from '../PlaceholderComponent';
+import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Hint} from '../../hint';
+import PlaceholderComponent from '../PlaceholderComponent';
+
+const CHECKBOX_VALIDATION_FIELD_NAMES = {
+  label: 'label',
+  identifier: 'identifier',
+} as const;
 
 /**
- * Configuration interface for Checkbox element.
+ * Checkbox element type with properties at top level.
  */
-interface CheckboxConfig {
+export type CheckboxElement = FlowElement & {
   className?: string;
   defaultValue?: string;
   label?: string;
   required?: boolean;
   styles?: CSSProperties;
   hint?: string;
-}
-
-/**
- * Checkbox element type.
- */
-export type CheckboxElement = FlowElement<CheckboxConfig>;
+};
 
 /**
  * Props interface of {@link CheckboxAdapter}
@@ -70,37 +70,36 @@ function CheckboxAdapter({resource}: CheckboxAdapterPropsInterface): ReactElemen
     [resource?.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
         errorMessage: t('flows:core.validation.fields.checkbox.label'),
-        name: 'label',
+        name: CHECKBOX_VALIDATION_FIELD_NAMES.label,
       },
       {
         errorMessage: t('flows:core.validation.fields.checkbox.identifier'),
-        name: 'identifier',
+        name: CHECKBOX_VALIDATION_FIELD_NAMES.identifier,
       },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
+  useRequiredFields(resource, generalMessage, validationFields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const checkboxConfig = resource.config as CheckboxConfig | undefined;
+  const checkboxElement = resource as CheckboxElement;
 
   return (
     <div>
       <FormControlLabel
         control={<Checkbox defaultChecked />}
-        className={checkboxConfig?.className}
-        label={<PlaceholderComponent value={checkboxConfig?.label ?? ''} />}
-        required={checkboxConfig?.required}
-        style={checkboxConfig?.styles}
+        className={checkboxElement?.className}
+        label={<PlaceholderComponent value={checkboxElement?.label ?? ''} />}
+        required={checkboxElement?.required}
+        style={checkboxElement?.styles}
       />
-      {checkboxConfig?.hint && (
+      {checkboxElement?.hint && (
         <FormHelperText>
-          <Hint hint={checkboxConfig?.hint} />
+          <Hint hint={checkboxElement?.hint} />
         </FormHelperText>
       )}
     </div>

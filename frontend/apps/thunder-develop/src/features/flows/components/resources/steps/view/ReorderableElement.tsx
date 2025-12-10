@@ -17,13 +17,14 @@
  */
 
 import {Box, Menu, MenuItem, type BoxProps} from '@wso2/oxygen-ui';
-import {useRef, useState, type MouseEvent, type ReactElement} from 'react';
+import {useRef, useState, useMemo, memo, type MouseEvent, type ReactElement} from 'react';
 import PluginRegistry from '@/features/flows/plugins/PluginRegistry';
 import FlowEventTypes from '@/features/flows/models/extension';
 import classNames from 'classnames';
 import {GripVertical, PencilLineIcon, PlusIcon, Trash2Icon} from '@wso2/oxygen-ui-icons-react';
 import useComponentDelete from '@/features/flows/hooks/useComponentDelete';
 import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
+import Notification, {NotificationType} from '@/features/flows/models/notification';
 import {useNodeId} from '@xyflow/react';
 import useFlowBuilderCore from '@/features/flows/hooks/useFlowBuilderCore';
 import type {Resource} from '@/features/flows/models/resources';
@@ -46,12 +47,14 @@ export interface ReorderableComponentPropsInterface
   element: Resource;
   /**
    * List of available elements that can be added.
+   * @defaultValue undefined
    */
   availableElements?: Resource[];
   /**
    * Callback for adding an element to a form.
    * @param element - The element to add.
    * @param formId - The ID of the form to add to.
+   * @defaultValue undefined
    */
   onAddElementToForm?: (element: Resource, formId: string) => void;
 }
@@ -62,13 +65,13 @@ export interface ReorderableComponentPropsInterface
  * @param props - Props injected to the component.
  * @returns ReorderableElement component.
  */
-export function ReorderableElement({
+function ReorderableElement({
   id,
   index,
   element,
   className,
-  availableElements,
-  onAddElementToForm,
+  availableElements = undefined,
+  onAddElementToForm = undefined,
   ...rest
 }: ReorderableComponentPropsInterface): ReactElement {
   const handleRef = useRef<HTMLButtonElement>(null);
@@ -76,81 +79,120 @@ export function ReorderableElement({
   const {deleteComponent} = useComponentDelete();
   const {ElementFactory, setLastInteractedResource, setLastInteractedStepId, setIsOpenResourcePropertiesPanel} =
     useFlowBuilderCore();
-  const {setOpenValidationPanel, setSelectedNotification} = useValidationStatus();
+  const {setOpenValidationPanel, setSelectedNotification, addNotification} = useValidationStatus();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const menuOpen = Boolean(anchorEl);
 
   // Check if this element is a Form
   const isForm = element.type === BlockTypes.Form;
 
-  /**
-   * Handles the opening of the property panel for the resource.
-   *
-   * @param event - React MouseEvent triggered on element interaction.
-   */
-  const handlePropertyPanelOpen = (event: React.MouseEvent<HTMLElement>): void => {
-    event.stopPropagation();
-    setOpenValidationPanel?.(false);
-    setSelectedNotification?.(null);
-    if (stepId) {
-      setLastInteractedStepId(stepId);
-    }
-    setLastInteractedResource(element);
+  const depsRef = useRef({
+    element,
+    onAddElementToForm,
+    availableElements,
+    stepId,
+    setOpenValidationPanel,
+    setSelectedNotification,
+    addNotification,
+    setLastInteractedStepId,
+    setLastInteractedResource,
+    deleteComponent,
+    setIsOpenResourcePropertiesPanel,
+    setAnchorEl,
+  });
+
+  // Update refs every render (minimal overhead - just assignment)
+  depsRef.current = {
+    element,
+    onAddElementToForm,
+    availableElements,
+    stepId,
+    setOpenValidationPanel,
+    setSelectedNotification,
+    addNotification,
+    setLastInteractedStepId,
+    setLastInteractedResource,
+    deleteComponent,
+    setIsOpenResourcePropertiesPanel,
+    setAnchorEl,
   };
 
-  /**
-   * Handles the deletion of the element.
-   */
-  const handleElementDelete = (): void => {
-    /**
-     * Execute plugins for ON_NODE_ELEMENT_DELETE event and handle deletion.
-     */
-    PluginRegistry.getInstance()
-      .executeAsync(FlowEventTypes.ON_NODE_ELEMENT_DELETE, stepId, element)
-      .then(() => {
-        if (stepId) {
-          deleteComponent(stepId, element);
-        }
-        setIsOpenResourcePropertiesPanel(false);
-      })
-      .catch((error: Error) => {
-        // TODO: Handle error with proper error notification
-        throw error;
-      });
+  // Store stable references to handler functions
+  const handlersRef = useRef<{
+    handlePropertyPanelOpen: (event: React.MouseEvent<HTMLElement>) => void;
+    handleElementDelete: () => void;
+    handleMenuOpen: (event: MouseEvent<HTMLElement>) => void;
+    handleMenuClose: () => void;
+    handleAddFieldToForm: (fieldElement: Resource) => void;
+  } | null>(null);
+
+  // Create handlers only once using lazy initialization - reads ALL deps from ref at call time
+  handlersRef.current ??= {
+    handlePropertyPanelOpen: (event: React.MouseEvent<HTMLElement>): void => {
+      event.stopPropagation();
+      const deps = depsRef.current;
+      deps.setOpenValidationPanel?.(false);
+      deps.setSelectedNotification?.(null);
+      if (deps.stepId) {
+        deps.setLastInteractedStepId(deps.stepId);
+      }
+      deps.setLastInteractedResource(deps.element);
+    },
+
+    handleElementDelete: (): void => {
+      const deps = depsRef.current;
+      PluginRegistry.getInstance()
+        .executeAsync(FlowEventTypes.ON_NODE_ELEMENT_DELETE, deps.stepId, deps.element)
+        .then(() => {
+          if (deps.stepId) {
+            deps.deleteComponent(deps.stepId, deps.element);
+          }
+          deps.setIsOpenResourcePropertiesPanel(false);
+        })
+        .catch((error: Error) => {
+          const errorNotification = new Notification(
+            `delete-element-error-${deps.element.id}`,
+            `Failed to delete element: ${error.message}`,
+            NotificationType.ERROR,
+          );
+          deps.addNotification?.(errorNotification);
+        });
+    },
+
+    handleMenuOpen: (event: MouseEvent<HTMLElement>): void => {
+      event.stopPropagation();
+      depsRef.current.setAnchorEl(event.currentTarget);
+    },
+
+    handleMenuClose: (): void => {
+      depsRef.current.setAnchorEl(null);
+    },
+
+    handleAddFieldToForm: (fieldElement: Resource): void => {
+      const deps = depsRef.current;
+      if (deps.onAddElementToForm) {
+        deps.onAddElementToForm(fieldElement, deps.element.id);
+      }
+      deps.setAnchorEl(null);
+    },
   };
 
-  /**
-   * Handles opening the add field menu for Forms.
-   */
-  const handleMenuOpen = (event: MouseEvent<HTMLElement>): void => {
-    event.stopPropagation();
-    setAnchorEl(event.currentTarget);
-  };
+  // Extract stable handlers
+  const {handlePropertyPanelOpen, handleElementDelete, handleMenuOpen, handleMenuClose, handleAddFieldToForm} =
+    handlersRef.current;
 
-  /**
-   * Handles closing the add field menu.
-   */
-  const handleMenuClose = (): void => {
-    setAnchorEl(null);
-  };
-
-  /**
-   * Handles adding an element to the form.
-   */
-  const handleAddFieldToForm = (fieldElement: Resource): void => {
-    if (onAddElementToForm) {
-      onAddElementToForm(fieldElement, element.id);
-    }
-    handleMenuClose();
-  };
-
-  // Filter available elements to only show form-compatible types
-  const formCompatibleElements =
-    isForm && availableElements
-      ? availableElements.filter((el: Resource) =>
-          VisualFlowConstants.FLOW_BUILDER_FORM_ALLOWED_RESOURCE_TYPES.includes(el.type),
-        )
-      : [];
+  // Filter available elements to only show form-compatible types that are visible on resource panel
+  const formCompatibleElements = useMemo(
+    () =>
+      isForm && depsRef.current.availableElements
+        ? depsRef.current.availableElements.filter(
+            (el: Resource) =>
+              VisualFlowConstants.FLOW_BUILDER_FORM_ALLOWED_RESOURCE_TYPES.includes(el.type) &&
+              el.display?.showOnResourcePanel !== false,
+          )
+        : [],
+    [isForm],
+  );
 
   return (
     <Sortable
@@ -183,6 +225,7 @@ export function ReorderableElement({
               <Trash2Icon size={16} color="white" />
             </Handle>
           </Box>
+          {/* eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */}
           <div className="flow-builder-step-content-form-field-content" onClick={handlePropertyPanelOpen}>
             <ElementFactory
               stepId={stepId ?? ''}
@@ -211,15 +254,15 @@ export function ReorderableElement({
           }}
         >
           {formCompatibleElements && formCompatibleElements.length > 0 ? (
-            formCompatibleElements.map((fieldElement: Resource, index: number) => (
+            formCompatibleElements.map((fieldElement: Resource) => (
               <MenuItem
-                key={`${fieldElement.type}-${fieldElement.variant || ''}-${index}`}
+                key={`${fieldElement.type}-${fieldElement.id}-${typeof fieldElement.variant === 'string' ? fieldElement.variant : ''}`}
                 onClick={() => handleAddFieldToForm(fieldElement)}
                 sx={{
                   minWidth: 200,
                 }}
               >
-                {fieldElement.display?.label || fieldElement.type}
+                {fieldElement.display?.label ?? fieldElement.type}
               </MenuItem>
             ))
           ) : (
@@ -233,4 +276,24 @@ export function ReorderableElement({
   );
 }
 
-export default ReorderableElement;
+// Only re-render if element.id or element properties actually change
+const MemoizedReorderableElement = memo(ReorderableElement, (prevProps, nextProps) => {
+  // Re-render if element changed (compare by reference and key props)
+  if (prevProps.element !== nextProps.element) {
+    return false;
+  }
+  // Re-render if id or index changed
+  if (prevProps.id !== nextProps.id || prevProps.index !== nextProps.index) {
+    return false;
+  }
+  // Re-render if className changed
+  if (prevProps.className !== nextProps.className) {
+    return false;
+  }
+  // Don't re-render for availableElements or onAddElementToForm changes
+  // (handlers read from refs, so they don't need to trigger re-renders)
+  return true;
+});
+
+export {MemoizedReorderableElement as ReorderableElement};
+export default MemoizedReorderableElement;

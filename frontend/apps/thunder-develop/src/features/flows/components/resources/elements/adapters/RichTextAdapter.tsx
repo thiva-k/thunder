@@ -40,17 +40,16 @@ import './RichTextAdapter.scss';
   },
 );
 
-/**
- * Configuration interface for RichText element.
- */
-interface RichTextConfig {
-  text?: string;
-}
+const RICHTEXT_VALIDATION_FIELD_NAMES = {
+  label: 'label',
+} as const;
 
 /**
  * RichText element type.
  */
-export type RichTextElement = FlowElement<RichTextConfig>;
+export type RichTextElement = FlowElement & {
+  label?: string;
+};
 
 /**
  * Props interface of {@link RichTextAdapter}
@@ -80,30 +79,34 @@ function RichTextAdapter({resource}: RichTextAdapterPropsInterface): ReactElemen
     [resource.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
-        errorMessage: t('flows:core.validation.fields.richText.text'),
-        name: 'text',
+        errorMessage: t('flows:core.validation.fields.richText.label'),
+        name: RICHTEXT_VALIDATION_FIELD_NAMES.label,
       },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
+  useRequiredFields(resource, generalMessage, validationFields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const richTextConfig = resource.config as RichTextConfig | undefined;
+  const richTextElement = resource as RichTextElement;
+  const textContent = richTextElement?.label ?? '';
 
-  const sanitizedHtml: string = DOMPurify.sanitize(richTextConfig?.text ?? '', {
-    ADD_ATTR: ['target'],
-    RETURN_TRUSTED_TYPE: false,
-  });
+  const sanitizedHtml: string = useMemo(
+    () =>
+      DOMPurify.sanitize(textContent, {
+        ADD_ATTR: ['target'],
+        RETURN_TRUSTED_TYPE: false,
+      }),
+    [textContent],
+  );
 
   return (
     <div className="rich-text-content">
       {/* eslint-disable-next-line @typescript-eslint/no-unsafe-call -- html-react-parser types issue */}
-      <PlaceholderComponent value={richTextConfig?.text ?? ''}>{parse(sanitizedHtml)}</PlaceholderComponent>
+      <PlaceholderComponent value={textContent}>{parse(sanitizedHtml)}</PlaceholderComponent>
     </div>
   );
 }

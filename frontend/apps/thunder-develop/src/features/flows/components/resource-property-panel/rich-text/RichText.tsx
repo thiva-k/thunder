@@ -115,18 +115,21 @@ function RichText({
 }: RichTextProps): ReactElement {
   const {t} = useTranslation();
 
+  const labelValue: string | undefined = useMemo(
+    () => (resource as Resource & {label?: string})?.label,
+    [resource],
+  );
+
   /**
-   * Check if the resource.config.text matches the i18n pattern.
+   * Check if the resource label matches the i18n pattern.
    */
   const isI18nPattern: boolean = useMemo(() => {
-    const config = resource?.config as {text?: string} | undefined;
-
-    if (!config?.text) return false;
+    if (!labelValue) return false;
 
     const i18nPattern = /^\{\{[^}]+\}\}$/;
 
-    return i18nPattern.test(config.text.trim());
-  }, [resource?.config]);
+    return i18nPattern.test(labelValue.trim());
+  }, [labelValue]);
 
   return (
     <LexicalComposer initialConfig={editorConfig}>
@@ -135,7 +138,7 @@ function RichText({
         <Paper className={classNames('OxygenRichText-editor-root', {error: hasError})} elevation={0} variant="outlined">
           {isI18nPattern ? (
             <div className="OxygenRichText-i18n-placeholder">
-              <div className="OxygenRichText-i18n-placeholder-key">{(resource.config as {text?: string}).text}</div>
+              <div className="OxygenRichText-i18n-placeholder-key">{labelValue}</div>
             </div>
           ) : (
             <>

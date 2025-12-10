@@ -80,7 +80,7 @@ function CheckboxPropertyField({
       <FormControlLabel
         control={<Checkbox checked={propertyValue} color={errorMessage ? 'error' : 'primary'} />}
         label={startCase(propertyKey)}
-        onChange={(_event: SyntheticEvent, checked: boolean) => onChange(`config.${propertyKey}`, checked, resource)}
+        onChange={(_event: SyntheticEvent, checked: boolean) => onChange(propertyKey, checked, resource)}
         {...rest}
       />
       {errorMessage && <FormHelperText error>{errorMessage}</FormHelperText>}

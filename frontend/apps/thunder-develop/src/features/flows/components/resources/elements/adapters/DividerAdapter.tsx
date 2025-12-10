@@ -17,24 +17,22 @@
  */
 
 import {useMemo, type ReactElement} from 'react';
-import {DividerVariants, type Element as FlowElement} from '@/features/flows/models/elements';
 import {Trans, useTranslation} from 'react-i18next';
-import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import {Divider, type DividerProps} from '@wso2/oxygen-ui';
+import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
+import {DividerVariants, type Element as FlowElement} from '@/features/flows/models/elements';
 
-/**
- * Configuration interface for Divider element.
- */
-interface DividerConfig {
-  text?: string;
-}
+const DIVIDER_VALIDATION_FIELD_NAMES = {
+  variant: 'variant',
+} as const;
 
 /**
  * Divider element type.
  */
-export type DividerElement = FlowElement<DividerConfig> & {
+export type DividerElement = FlowElement & {
   variant?: string;
+  label?: string;
 };
 
 /**
@@ -65,37 +63,36 @@ function DividerAdapter({resource}: DividerAdapterPropsInterface): ReactElement 
     [resource?.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
         errorMessage: t('flows:core.validation.fields.divider.variant'),
-        name: 'variant',
+        name: DIVIDER_VALIDATION_FIELD_NAMES.variant,
       },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
+  useRequiredFields(resource, generalMessage, validationFields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const dividerConfig = resource.config as DividerConfig | undefined;
+  const dividerElement = resource as DividerElement;
   const variantStr = resource?.variant as string | undefined;
 
-  let config: DividerProps = {};
+  const config: DividerProps = useMemo(() => {
+    if (variantStr === DividerVariants.Horizontal || variantStr === DividerVariants.Vertical) {
+      return {
+        orientation: variantStr.toLowerCase() as 'horizontal' | 'vertical',
+      };
+    }
+    if (variantStr) {
+      return {
+        variant: variantStr.toLowerCase() as DividerProps['variant'],
+      };
+    }
+    return {};
+  }, [variantStr]);
 
-  if (variantStr === DividerVariants.Horizontal || variantStr === DividerVariants.Vertical) {
-    config = {
-      ...config,
-      orientation: variantStr.toLowerCase() as 'horizontal' | 'vertical',
-    };
-  } else if (variantStr) {
-    config = {
-      ...config,
-      variant: variantStr.toLowerCase() as DividerProps['variant'],
-    };
-  }
-
-  return <Divider {...config}>{dividerConfig?.text}</Divider>;
+  return <Divider {...config}>{dividerElement?.label}</Divider>;
 }
 
 export default DividerAdapter;

@@ -93,3 +93,18 @@ export const DividerVariants = {
   Horizontal: 'HORIZONTAL',
   Vertical: 'VERTICAL',
 } as const;
+
+/**
+ * Event types for ACTION components.
+ * Defines the interaction semantics for buttons and actions.
+ */
+export const ActionEventTypes = {
+  Trigger: 'TRIGGER',
+  Submit: 'SUBMIT',
+  Navigate: 'NAVIGATE',
+  Cancel: 'CANCEL',
+  Reset: 'RESET',
+  Back: 'BACK',
+} as const;
+
+export type ActionEventTypes = (typeof ActionEventTypes)[keyof typeof ActionEventTypes];

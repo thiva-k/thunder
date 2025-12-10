@@ -21,16 +21,12 @@ import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Box} from '@wso2/oxygen-ui';
 
 /**
- * Configuration interface for Captcha element.
+ * Captcha element type with properties at top level.
  */
-interface CaptchaConfig {
+export type CaptchaElement = FlowElement & {
   alt?: string;
-}
-
-/**
- * Captcha element type.
- */
-export type CaptchaElement = FlowElement<CaptchaConfig>;
+  version?: number;
+};
 
 /**
  * Props interface of {@link CaptchaAdapter}
@@ -49,14 +45,13 @@ export interface CaptchaAdapterPropsInterface {
  * @returns The CaptchaAdapter component.
  */
 function CaptchaAdapter({resource}: CaptchaAdapterPropsInterface): ReactElement {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const captchaConfig = resource.config as CaptchaConfig | undefined;
+  const captchaElement = resource as CaptchaElement;
 
   return (
     <Box display="flex" alignItems="center" justifyContent="center">
       {/* eslint-disable max-len */}
       <svg width="276" height="80" viewBox="0 0 276 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <title>{captchaConfig?.alt}</title>
+        <title>{captchaElement?.alt}</title>
         <g filter="url(#filter0_d_72_124)">
           <g clipPath="url(#clip0_72_124)">
             <rect width="70" height="60" transform="translate(10 10)" fill="#F9F9F9" />

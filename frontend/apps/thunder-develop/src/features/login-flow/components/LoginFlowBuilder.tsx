@@ -16,17 +16,19 @@
  * under the License.
  */
 
-import {Box} from '@wso2/oxygen-ui';
-import type {Edge, Node, NodeTypes, NodeProps} from '@xyflow/react';
+import {Alert, Box, Snackbar} from '@wso2/oxygen-ui';
+import {useTranslation} from 'react-i18next';
+import {useNavigate, useParams} from 'react-router';
+import type {Edge, EdgeTypes, Node, NodeTypes, NodeProps} from '@xyflow/react';
 import {MarkerType, useEdgesState, useNodesState, useUpdateNodeInternals} from '@xyflow/react';
-import {useCallback, useEffect, useLayoutEffect, useMemo, useRef} from 'react';
+import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState} from 'react';
 import '@xyflow/react/dist/style.css';
 import cloneDeep from 'lodash-es/cloneDeep';
 import isEmpty from 'lodash-es/isEmpty';
 import mergeWith from 'lodash-es/mergeWith';
 import type {UpdateNodeInternals} from '@xyflow/system';
 import FlowBuilder from '@/features/flows/components/FlowBuilder';
-import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
+import BaseEdge from '@/features/flows/components/react-flow-overrides/BaseEdge';
 import {
   BlockTypes,
   ButtonTypes,
@@ -46,48 +48,233 @@ import updateTemplatePlaceholderReferences from '@/features/flows/utils/updateTe
 import {ResourceTypes, type Resource as FlowResource, type Resource} from '@/features/flows/models/resources';
 import useFlowBuilderCore from '@/features/flows/hooks/useFlowBuilderCore';
 import useGenerateStepElement from '@/features/flows/hooks/useGenerateStepElement';
+import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
+import useCreateFlow from '@/features/flows/api/useCreateFlow';
+import useUpdateFlow from '@/features/flows/api/useUpdateFlow';
+import useGetFlowById from '@/features/flows/api/useGetFlowById';
+import type {CreateFlowRequest, UpdateFlowRequest} from '@/features/flows/models/responses';
+import {createFlowConfiguration, validateFlowGraph} from '@/features/flows/utils/reactFlowTransformer';
+import {transformFlowToCanvas} from '@/features/flows/utils/flowToCanvasTransformer';
 import StaticStepFactory from './resources/steps/StaticStepFactory';
 import StepFactory from './resources/steps/StepFactory';
 import useGetLoginFlowBuilderResources from '../api/useGetLoginFlowBuilderResources';
+import useEdgeGeneration from '../hooks/useEdgeGeneration';
+import LoginFlowConstants from '../constants/LoginFlowConstants';
+
+// Use centralized executor names constant
+const {ExecutorNames} = LoginFlowConstants;
+
+/**
+ * Process form components to set button types and auto-assign executors.
+ * Optimized to use a single pass through the components.
+ */
+const processFormComponents = (formComponents: Element[] | undefined): Element[] | undefined => {
+  if (!formComponents || formComponents.length === 0) {
+    return formComponents;
+  }
+
+  // Single pass to collect information and transform
+  let hasPasswordField = false;
+  let hasOtpField = false;
+  let submitButtonCount = 0;
+
+  // First pass: collect info and set PRIMARY buttons to submit
+  const updatedComponents = formComponents.map((formComponent: Element) => {
+    // Check for field types
+    if (formComponent.type === ElementTypes.Input) {
+      if (formComponent.variant === InputVariants.Password) {
+        hasPasswordField = true;
+      } else if (formComponent.variant === InputVariants.OTP) {
+        hasOtpField = true;
+      }
+    }
+
+    // Set PRIMARY buttons to submit type
+    if (formComponent.type === ElementTypes.Button && formComponent.variant === ButtonVariants.Primary) {
+      const updatedButton = {
+        ...formComponent,
+        config: {
+          ...formComponent.config,
+          type: ButtonTypes.Submit,
+        },
+      };
+      submitButtonCount += 1;
+      return updatedButton;
+    }
+
+    // Count existing submit buttons
+    if (
+      formComponent.type === ElementTypes.Button &&
+      (formComponent.config as {type?: string})?.type === ButtonTypes.Submit
+    ) {
+      submitButtonCount += 1;
+    }
+
+    return formComponent;
+  });
+
+  // If exactly one submit button and has password/otp field, assign executor
+  if (submitButtonCount === 1 && (hasPasswordField || hasOtpField)) {
+    const executorName = hasPasswordField ? ExecutorNames.PASSWORD_PROVISIONING : ExecutorNames.EMAIL_OTP;
+
+    return updatedComponents.map((formComponent: Element) => {
+      if (formComponent.type === ElementTypes.Button) {
+        return {
+          ...formComponent,
+          action: {
+            ...(formComponent?.action ?? {}),
+            executor: {name: executorName},
+            type: LoginFlowConstants.ActionTypes.EXECUTOR,
+          },
+        };
+      }
+      return formComponent;
+    });
+  }
+
+  return updatedComponents;
+};
+
+/**
+ * Mutate components to ensure proper form structure and button actions.
+ * This is extracted outside the component to prevent unnecessary re-renders and dependency issues.
+ *
+ * Optimizations:
+ * - Single pass for filtering and counting forms
+ * - Separated form processing logic for clarity
+ * - Uses typed constants for executor names
+ *
+ * @param components - The components to mutate
+ * @returns The mutated components
+ */
+const mutateComponents = (components: Element[]): Element[] => {
+  // Clone and filter in single pass, tracking form count
+  let firstFormFound = false;
+
+  const modifiedComponents = cloneDeep(components).filter((component) => {
+    // Filter out non-element resources
+    if (component.resourceType && component.resourceType !== 'ELEMENT') {
+      return false;
+    }
+
+    // Keep only the first form
+    if (component.type === BlockTypes.Form) {
+      if (firstFormFound) {
+        return false;
+      }
+      firstFormFound = true;
+    }
+
+    return true;
+  });
+
+  // Process forms and their components
+  return modifiedComponents.map((component: Element) => {
+    if (component.type === BlockTypes.Form) {
+      return {
+        ...component,
+        components: processFormComponents(component.components),
+      };
+    }
+    return component;
+  });
+};
 
 function LoginFlowBuilder() {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const {t} = useTranslation();
+  const navigate = useNavigate();
+  const {flowId} = useParams<{flowId: string}>();
+  const [nodes, setNodes, defaultOnNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-  const INITIAL_FLOW_START_STEP_ID: string = StaticStepTypes.Start.toLowerCase();
-  const INITIAL_FLOW_USER_ONBOARD_STEP_ID: string = StepTypes.End;
+
+  // Use centralized constants for step IDs
+  const INITIAL_FLOW_START_STEP_ID = LoginFlowConstants.START_STEP_ID;
+  const INITIAL_FLOW_USER_ONBOARD_STEP_ID = LoginFlowConstants.END_STEP_ID;
 
   const {data: resources} = useGetLoginFlowBuilderResources();
-  const {setFlowCompletionConfigs} = useFlowBuilderCore();
+  const {setFlowCompletionConfigs, edgeStyle, isVerboseMode} = useFlowBuilderCore();
   const {generateStepElement} = useGenerateStepElement();
+  const {isValid: isFlowValid, setOpenValidationPanel} = useValidationStatus();
+  const createFlow = useCreateFlow();
+  const updateFlow = useUpdateFlow();
+
+  // Fetch the existing flow if flowId is provided (editing an existing flow)
+  const {data: existingFlowData, isLoading: isLoadingExistingFlow} = useGetFlowById(flowId);
+
+  // Determine if we're editing an existing flow
+  const isEditingExistingFlow = Boolean(flowId && existingFlowData);
+
+  const [errorSnackbar, setErrorSnackbar] = useState<{open: boolean; message: string}>({
+    open: false,
+    message: '',
+  });
+  const [successSnackbar, setSuccessSnackbar] = useState<{open: boolean; message: string}>({
+    open: false,
+    message: '',
+  });
+
+  // Flow name state - initialize from existing flow data or use default
+  const [flowName, setFlowName] = useState<string>('Login Flow');
+  const [flowHandle, setFlowHandle] = useState<string>('login-flow');
+
+  /**
+   * Generate a URL-friendly handle from a name.
+   * Converts to lowercase, replaces spaces with hyphens, removes special characters.
+   */
+  const generateHandleFromName = useCallback(
+    (name: string): string =>
+      name
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, ''),
+    [],
+  );
+
+  // Sync flowName and flowHandle when existingFlowData is loaded
+  useEffect(() => {
+    if (existingFlowData?.name) {
+      setFlowName(existingFlowData.name);
+    }
+    const handle = (existingFlowData as {handle?: string} | undefined)?.handle;
+    if (handle) {
+      setFlowHandle(handle);
+    } else if (existingFlowData?.name) {
+      setFlowHandle(generateHandleFromName(existingFlowData.name));
+    }
+  }, [existingFlowData, generateHandleFromName]);
+
+  const handleFlowNameChange = useCallback(
+    (newName: string) => {
+      setFlowName(newName);
+      setFlowHandle(generateHandleFromName(newName));
+    },
+    [generateHandleFromName],
+  );
 
   const {steps} = resources;
+
+  // Edge generation hook - extracted for better code organization
+  const {generateEdges, validateEdges} = useEdgeGeneration({
+    startStepId: INITIAL_FLOW_START_STEP_ID,
+    endStepId: INITIAL_FLOW_USER_ONBOARD_STEP_ID,
+  });
 
   const updateNodeInternals: UpdateNodeInternals = useUpdateNodeInternals();
   const flowUpdatesInProgress = useRef<boolean>(false);
   const nodesUpdatedRef = useRef<boolean>(false);
 
+  const onNodesChange = defaultOnNodesChange;
+
   /**
    * Determines if a step is deletable based on its type and executor.
-   * @param step - The step to check.
+   * @param _step - The step to check.
    * @returns true if the step is deletable, false otherwise.
    */
-  const isStepDeletable = (step: Node): boolean => {
-    let isDeletable = true;
-
-    if (step.type === StepTypes.Execution) {
-      isDeletable = false;
-    }
-
-    return isDeletable;
-  };
-
-  /**
-   * Validate edges based on the nodes.
-   * @param validatingEdges - Edges to validate.
-   * @param _nodes - Nodes for validation (currently unused).
-   */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const validateEdges = (validatingEdges: Edge[], _nodes: Node[]): Edge[] => validatingEdges.slice();
+  const isStepDeletable = (_step: Node): boolean => true;
 
   const getBlankTemplateComponents = (): Element[] => {
     const blankTemplate: Template | undefined = cloneDeep(
@@ -142,7 +329,7 @@ function LoginFlowBuilder() {
               updatedComponents = [...existingComponents, generatedElement];
             }
 
-            const mutatedComponents: Element[] | undefined = handleMutateComponents(updatedComponents);
+            const mutatedComponents: Element[] | undefined = mutateComponents(updatedComponents);
 
             return {
               ...node,
@@ -157,11 +344,11 @@ function LoginFlowBuilder() {
         }),
       );
 
-      // Update node internals for rendering
-      setTimeout(() => {
+      // Update node internals for rendering - use queueMicrotask for immediate execution after state update
+      queueMicrotask(() => {
         updateNodeInternals(existingViewStep.id);
         updateNodeInternals(generatedElement.id);
-      }, 100);
+      });
     }
     // If no View exists, the user should add a View step first
     // We could optionally create a View automatically here if needed
@@ -188,220 +375,6 @@ function LoginFlowBuilder() {
     }
 
     return resolveStepMetadata(resources, [processedStep])[0];
-  };
-
-  const generateEdges = (flowSteps: Step[]): Edge[] => {
-    let generatedEdges: Edge[] = [];
-
-    // Get all step IDs for validation
-    const stepIds: string[] = flowSteps.map((step: Step) => step.id);
-
-    // Find the user onboard step
-    const userOnboardStep: Step | undefined = flowSteps.find((step: Step) => step.type === StepTypes.End);
-
-    // Get the ID of the user onboard step or use the default one
-    const userOnboardStepId: string = userOnboardStep?.id ?? INITIAL_FLOW_USER_ONBOARD_STEP_ID;
-
-    // Check if we need to connect start to the first step
-    if (flowSteps.length > 0) {
-      // eslint-disable-next-line prefer-destructuring
-      let firstStep: Step = flowSteps[0];
-
-      // TODO: Handle this better. Templates have a `Start` node, but the black starter doesn't.
-      if (firstStep.id === INITIAL_FLOW_START_STEP_ID) {
-        // eslint-disable-next-line prefer-destructuring
-        firstStep = flowSteps[1];
-      }
-
-      if (firstStep) {
-        generatedEdges.push({
-          animated: false,
-          id: `${INITIAL_FLOW_START_STEP_ID}-${firstStep.id}`,
-          markerEnd: {
-            type: MarkerType.Arrow,
-          },
-          source: INITIAL_FLOW_START_STEP_ID,
-          sourceHandle: `${INITIAL_FLOW_START_STEP_ID}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-          target: firstStep.id,
-          type: 'base-edge',
-        });
-      }
-    }
-
-    // Flag to track if we've already created an edge to the user onboard step
-    let userOnboardEdgeCreated = false;
-
-    const createEdgesForButtons = (step: Step, button: Element) => {
-      const buttonEdges: Edge[] = [];
-
-      if (button.action?.next) {
-        // If next points to a valid step, create that edge
-        if (stepIds.includes(button.action.next)) {
-          buttonEdges.push({
-            animated: false,
-            id: button.id,
-            markerEnd: {
-              type: MarkerType.Arrow,
-            },
-            source: step.id,
-            sourceHandle: `${button.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-            target: button.action.next,
-            type: 'base-edge',
-          });
-
-          // Check if this is pointing to the user onboard step
-          if (button.action.next === userOnboardStepId) {
-            userOnboardEdgeCreated = true;
-          }
-        } else if (button.action.next === StepTypes.End) {
-          // If next references a user onboard ID that's not in the steps
-          // but follows the naming pattern, connect to our actual user onboard step
-          buttonEdges.push({
-            animated: false,
-            id: button.id,
-            markerEnd: {
-              type: MarkerType.Arrow,
-            },
-            source: step.id,
-            sourceHandle: `${button.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-            target: userOnboardStepId,
-            type: 'base-edge',
-          });
-          userOnboardEdgeCreated = true;
-        }
-      } else {
-        // For PasswordProvisioningExecutor buttons without explicit next,
-        // create an edge to the user onboard step
-        buttonEdges.push({
-          animated: false,
-          id: button.id,
-          markerEnd: {
-            type: MarkerType.Arrow,
-          },
-          source: step.id,
-          sourceHandle: `${button.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-          target: userOnboardStepId,
-          type: 'base-edge',
-        });
-        userOnboardEdgeCreated = true;
-      }
-
-      return buttonEdges;
-    };
-
-    // Create edges based on the action configuration in each step
-    flowSteps.forEach((step: Step) => {
-      // Skip processing for the user onboard step itself
-      if (step.type === StepTypes.End) {
-        return;
-      }
-
-      // Check if the step has components with actions
-      if (step.data?.components) {
-        // Look for forms and their buttons
-        step.data.components.forEach((component: Element) => {
-          if (component.type === BlockTypes.Form) {
-            const buttons: Element[] | undefined = component.components?.filter(
-              (elem: Element) => elem.type === ElementTypes.Button,
-            );
-
-            buttons?.forEach((button: Element) => {
-              generatedEdges = [...generatedEdges, ...createEdgesForButtons(step, button)];
-            });
-          }
-
-          if (component.type === ElementTypes.Button) {
-            generatedEdges = [...generatedEdges, ...createEdgesForButtons(step, component)];
-          }
-        });
-      }
-
-      // Check if the step has an action with a next step
-      if (step.data?.action?.next) {
-        // If next points to a valid step, create that edge
-        if (stepIds.includes(step.data.action.next)) {
-          generatedEdges.push({
-            animated: false,
-            id: `${step.id}-to-${step.data.action.next}`,
-            markerEnd: {
-              type: MarkerType.Arrow,
-            },
-            source: step.id,
-            sourceHandle: `${step.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-            target: step.data.action.next,
-            type: 'base-edge',
-          });
-
-          // Check if this is pointing to the user onboard step
-          if (step.data.action.next === userOnboardStepId) {
-            userOnboardEdgeCreated = true;
-          }
-        } else if (step.data.action.next === StepTypes.End) {
-          // If next references a user onboard ID that's not in the steps
-          // but follows the naming pattern, connect to our actual user onboard step
-          generatedEdges.push({
-            animated: false,
-            id: `${step.id}-to-${userOnboardStepId}`,
-            markerEnd: {
-              type: MarkerType.Arrow,
-            },
-            source: step.id,
-            sourceHandle: `${step.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-            target: userOnboardStepId,
-            type: 'base-edge',
-          });
-          userOnboardEdgeCreated = true;
-        }
-      }
-    });
-
-    // If no edge to user onboard was created and we have view steps,
-    // connect the last view step to the user onboard step
-    if (!userOnboardEdgeCreated && flowSteps.length > 0) {
-      // Find view steps
-      const viewSteps: Step[] = flowSteps.filter((step: Step) => step.type === StepTypes.View);
-
-      if (viewSteps.length > 0) {
-        // Get the last view step
-        const lastViewStep: Step = viewSteps[viewSteps.length - 1];
-
-        // Find a button in this step to use for the connection
-        let buttonId: string | null = null;
-
-        if (lastViewStep.data?.components) {
-          const formComponent = lastViewStep.data.components.find(
-            (component: Element) => component.type === BlockTypes.Form,
-          );
-
-          if (formComponent?.components) {
-            const button = formComponent.components.find((elem: Element) => elem.type === ElementTypes.Button);
-
-            if (button) {
-              buttonId = button.id;
-            }
-          }
-        }
-
-        // If we found a button, use it; otherwise generate a fallback ID
-        const edgeId: string = buttonId ?? `${lastViewStep.id}-to-${userOnboardStepId}`;
-
-        generatedEdges.push({
-          animated: false,
-          id: edgeId,
-          markerEnd: {
-            type: MarkerType.Arrow,
-          },
-          source: lastViewStep.id,
-          ...(buttonId
-            ? {sourceHandle: `${buttonId}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}
-            : {sourceHandle: `${lastViewStep.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}),
-          target: userOnboardStepId,
-          type: 'base-edge',
-        });
-      }
-    }
-
-    return generatedEdges;
   };
 
   const generateSteps = useCallback(
@@ -467,9 +440,14 @@ function LoginFlowBuilder() {
     );
 
     const templateSteps: Step[] = basicTemplate?.config?.data?.steps ?? [];
+    // eslint-disable-next-line no-underscore-dangle
+    const replacers: TemplateReplacer[] | undefined = basicTemplate?.config?.data?.__generationMeta__?.replacers;
 
-    // generateSteps already handles ID generation via generateIdsForResources
-    return generateSteps(templateSteps);
+    // generateSteps handles {{ID}} placeholders via generateIdsForResources
+    // updateTemplatePlaceholderReferences handles named placeholders like {{GOOGLE_EXECUTION_STEP_ID}}
+    const generatedSteps = generateSteps(templateSteps);
+
+    return replacers ? updateTemplatePlaceholderReferences(generatedSteps, replacers)[0] : generatedSteps;
   }, [generateSteps, resources?.templates]);
 
   const generateUnconnectedEdges = (currentEdges: Edge[], currentNodes: Node[]): Edge[] => {
@@ -502,7 +480,7 @@ function LoginFlowBuilder() {
             source: stepId,
             sourceHandle: `${buttonId}_NEXT`,
             target: expectedTarget,
-            type: 'base-edge',
+            type: edgeStyle,
           });
         }
       }
@@ -569,14 +547,14 @@ function LoginFlowBuilder() {
     };
 
     widgetFlow.steps.forEach((step: Step) => {
-      // eslint-disable-next-line no-underscore-dangle
+      /* eslint-disable no-underscore-dangle */
       if (
         step.__generationMeta__ &&
         typeof step.__generationMeta__ === 'object' &&
         'strategy' in step.__generationMeta__
       ) {
-        // eslint-disable-next-line no-underscore-dangle
         const {strategy} = step.__generationMeta__ as {strategy?: string};
+        /* eslint-enable no-underscore-dangle */
 
         if (strategy === 'MERGE_WITH_DROP_POINT') {
           newNodes = newNodes.map((node: Node) => {
@@ -724,7 +702,13 @@ function LoginFlowBuilder() {
         const generatedEdges: Edge[] = generateEdges(updatedSteps as Step[]);
         const validatedEdges: Edge[] = validateEdges(generatedEdges, updatedSteps);
 
-        setEdges(() => validatedEdges);
+        // Apply current edge style to all edges
+        const styledEdges = validatedEdges.map((edge) => ({
+          ...edge,
+          type: edgeStyle,
+        }));
+
+        setEdges(() => styledEdges);
 
         flowUpdatesInProgress.current = false;
       });
@@ -734,20 +718,59 @@ function LoginFlowBuilder() {
   };
 
   /**
-   * Effect that updates the flow with the password recovery flow steps.
+   * Effect that updates the flow with the existing flow data or default template.
+   * When opening an existing flow (flowId is provided), transform and load the saved flow data.
+   * Otherwise, load the default basic auth flow template.
    */
   useLayoutEffect(() => {
-    // if (!isAskPasswordFlowFetchRequestLoading && !isAskPasswordFlowFetchRequestValidating) {
-    // if (!isEmpty(askPasswordFlow?.steps)) {
-    //   const steps: Node[] = generateSteps(askPasswordFlow.steps);
+    // Skip if we're still loading the existing flow data
+    if (flowId && isLoadingExistingFlow) {
+      return;
+    }
 
-    //   updateFlowWithSequence(steps);
-    // } else {
-    // }
-    updateFlowWithSequence(initialNodes);
-    // }
+    // If we have an existing flow, transform and load it
+    if (flowId && existingFlowData) {
+      const canvasData = transformFlowToCanvas(existingFlowData);
+
+      // Process nodes to resolve metadata without adding a new START node
+      // (the transformed data already contains the START node from the API)
+      const processedNodes = generateIdsForResources<Node[]>(
+        resolveStepMetadata(
+          resources,
+          canvasData.nodes.map((node: Node) => ({
+            data: node.data?.components
+              ? {
+                  ...node.data,
+                  components: resolveComponentMetadata(resources, node.data.components as Element[]),
+                }
+              : (node.data ?? {}),
+            deletable: node.type !== StepTypes.End && node.type !== StaticStepTypes.Start,
+            id: node.id,
+            position: node.position,
+            type: node.type,
+          })) as Step[],
+        ),
+      );
+
+      // Set nodes and edges from the transformed flow data
+      setNodes(processedNodes);
+      setEdges(
+        canvasData.edges.map((edge) => ({
+          ...edge,
+          type: edgeStyle,
+        })),
+      );
+
+      // Update all node internals after setting nodes - use queueMicrotask for immediate execution after state update
+      queueMicrotask(() => {
+        updateAllNodeInternals(processedNodes);
+      });
+    } else if (!flowId) {
+      // No flowId provided - load the default basic auth flow template
+      updateFlowWithSequence(initialNodes);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [flowId, existingFlowData, isLoadingExistingFlow]);
 
   /**
    * Handle restore from history event.
@@ -790,7 +813,12 @@ function LoginFlowBuilder() {
       ? updateTemplatePlaceholderReferences(generateSteps(template.config.data.steps), replacers)[0]
       : generateSteps(template.config.data.steps);
 
-    const templateEdges: Edge[] = validateEdges(generateEdges(templateSteps as Step[]), templateSteps);
+    const generatedTemplateEdges: Edge[] = validateEdges(generateEdges(templateSteps as Step[]), templateSteps);
+    // Apply current edge style to all template edges
+    const templateEdges: Edge[] = generatedTemplateEdges.map((edge) => ({
+      ...edge,
+      type: edgeStyle,
+    }));
 
     // Handle BASIC_FEDERATED template case.
     if (template.type === TemplateTypes.BasicFederated) {
@@ -806,126 +834,11 @@ function LoginFlowBuilder() {
     return [templateSteps, templateEdges, {} as FlowResource, ''];
   };
 
-  const handleMutateComponents = (components: Element[]): Element[] => {
-    // Filter out any non-element resources (like widgets) that may have been accidentally added
-    let modifiedComponents: Element[] = cloneDeep(components).filter(
-      (c: Element) => !c.resourceType || c.resourceType === 'ELEMENT',
-    );
-
-    const formCount: number = modifiedComponents.filter((c: Element) => c.type === BlockTypes.Form).length;
-
-    if (formCount > 1) {
-      let firstFormFound = false;
-
-      modifiedComponents = modifiedComponents.filter((c: Element) => {
-        if (c.type === BlockTypes.Form) {
-          if (!firstFormFound) {
-            firstFormFound = true;
-
-            return true;
-          }
-
-          return false;
-        }
-
-        return true;
-      });
-    }
-
-    // Check inside `forms`, if there is a form with a password field and there's only one submit button,
-    // Set the `"action": { "type": "EXECUTOR", "executor": { "name": "PasswordProvisioningExecutor"}, "next": "" }`
-    modifiedComponents = modifiedComponents.map((component: Element) => {
-      if (component.type === BlockTypes.Form) {
-        // Set all the `PRIMARY` buttons inside the form type to `submit`.
-        const updatedComponents = component?.components?.map((formComponent: Element) => {
-          if (formComponent.type === ElementTypes.Button && formComponent.variant === ButtonVariants.Primary) {
-            return {
-              ...formComponent,
-              config: {
-                ...formComponent.config,
-                type: ButtonTypes.Submit,
-              },
-            };
-          }
-
-          return formComponent;
-        });
-
-        const hasPasswordField: boolean = updatedComponents
-          ? updatedComponents.some(
-              (formComponent: Element) =>
-                formComponent.type === ElementTypes.Input && formComponent.variant === InputVariants.Password,
-            )
-          : false;
-
-        const hasOtpField: boolean = updatedComponents
-          ? updatedComponents.some(
-              (formComponent: Element) =>
-                formComponent.type === ElementTypes.Input && formComponent.variant === InputVariants.OTP,
-            )
-          : false;
-
-        const submitButtons: Element[] = updatedComponents
-          ? updatedComponents.filter(
-              (formComponent: Element) =>
-                formComponent.type === ElementTypes.Button &&
-                'type' in (formComponent.config ?? {}) &&
-                (formComponent.config as {type?: string})?.type === ButtonTypes.Submit,
-            )
-          : [];
-
-        const finalComponents =
-          submitButtons?.length === 1 && updatedComponents
-            ? updatedComponents.map((formComponent: Element) => {
-                if (hasPasswordField) {
-                  if (formComponent.type === ElementTypes.Button) {
-                    return {
-                      ...formComponent,
-                      action: {
-                        ...(formComponent?.action ?? {}),
-                        executor: {
-                          name: 'AskPasswordFlowExecutorConstants.PASSWORD_PROVISIONING_EXECUTOR',
-                        },
-                        type: 'EXECUTOR',
-                      },
-                    };
-                  }
-                } else if (hasOtpField) {
-                  if (formComponent.type === ElementTypes.Button) {
-                    return {
-                      ...formComponent,
-                      action: {
-                        ...(formComponent?.action ?? {}),
-                        executor: {
-                          name: 'AskPasswordFlowExecutorConstants.EMAIL_OTP_EXECUTOR',
-                        },
-                        type: 'EXECUTOR',
-                      },
-                    };
-                  }
-                }
-
-                return formComponent;
-              })
-            : updatedComponents;
-
-        return {
-          ...component,
-          components: finalComponents,
-        };
-      }
-
-      return component;
-    });
-
-    return modifiedComponents;
-  };
-
   /**
    * Ref to store the callback for adding elements to view.
    * Using a ref ensures nodeTypes doesn't need to be recreated when the callback changes.
    */
-  const handleAddElementToViewRef = useRef<(element: Element) => void>(() => {});
+  const handleAddElementToViewRef = useRef<(element: Element, viewId: string) => void>(() => {});
 
   /**
    * Ref to store the callback for adding elements to form.
@@ -935,17 +848,17 @@ function LoginFlowBuilder() {
 
   /**
    * Callback for adding an element to a view from the context menu.
-   * Adds the element to an existing View or creates a new View if needed.
+   * Adds the element to the specified View.
    */
   const handleAddElementToView = useCallback(
-    (element: Element): void => {
+    (element: Element, viewId: string): void => {
       // Use generateStepElement to properly apply variants and generate unique IDs
       const generatedElement: Element = generateStepElement(element);
       let viewStepId: string | null = null;
 
       setNodes((prevNodes: Node[]) => {
-        // Find existing View in the current nodes
-        const existingViewStep = prevNodes.find((node) => node.type === StepTypes.View);
+        // Find the View node with the given viewId
+        const existingViewStep = prevNodes.find((node) => node.id === viewId && node.type === StepTypes.View);
 
         if (!existingViewStep) {
           return prevNodes; // No View exists, do nothing
@@ -979,7 +892,7 @@ function LoginFlowBuilder() {
                   ...node,
                   data: {
                     ...nodeData,
-                    components: handleMutateComponents([...componentsWithoutForm, updatedForm]),
+                    components: mutateComponents([...componentsWithoutForm, updatedForm]),
                   },
                 };
               }
@@ -1004,7 +917,7 @@ function LoginFlowBuilder() {
                 ...node,
                 data: {
                   ...nodeData,
-                  components: handleMutateComponents([...existingComponents, newForm]),
+                  components: mutateComponents([...existingComponents, newForm]),
                 },
               };
             }
@@ -1022,7 +935,7 @@ function LoginFlowBuilder() {
               ...node,
               data: {
                 ...nodeData,
-                components: handleMutateComponents([...existingComponents, generatedElement]),
+                components: mutateComponents([...existingComponents, generatedElement]),
               },
             };
           }
@@ -1030,14 +943,14 @@ function LoginFlowBuilder() {
         });
       });
 
-      // Schedule node internals update after state has been updated
+      // Schedule node internals update after state has been updated - use queueMicrotask for immediate execution
       if (viewStepId) {
-        setTimeout(() => {
+        queueMicrotask(() => {
           updateNodeInternals(viewStepId!);
-        }, 50);
+        });
       }
     },
-    [setNodes, handleMutateComponents, updateNodeInternals, generateStepElement],
+    [setNodes, updateNodeInternals, generateStepElement],
   );
 
   /**
@@ -1051,8 +964,14 @@ function LoginFlowBuilder() {
       let viewStepId: string | null = null;
 
       setNodes((prevNodes: Node[]) => {
-        // Find the View node that contains the form
-        const existingViewStep = prevNodes.find((node) => node.type === StepTypes.View);
+        // Find the View node that contains the form with the given formId
+        const existingViewStep = prevNodes.find((node) => {
+          if (node.type !== StepTypes.View) return false;
+          const nodeData = node.data as {components?: Element[]} | undefined;
+          const components = nodeData?.components ?? [];
+          // Check if this view contains the form with the given formId
+          return components.some((component: Element) => component.id === formId && component.type === BlockTypes.Form);
+        });
 
         if (!existingViewStep) {
           return prevNodes;
@@ -1080,7 +999,7 @@ function LoginFlowBuilder() {
               ...node,
               data: {
                 ...nodeData,
-                components: handleMutateComponents(updatedComponents),
+                components: mutateComponents(updatedComponents),
               },
             };
           }
@@ -1088,14 +1007,14 @@ function LoginFlowBuilder() {
         });
       });
 
-      // Schedule node internals update after state has been updated
+      // Schedule node internals update after state has been updated - use queueMicrotask for immediate execution
       if (viewStepId) {
-        setTimeout(() => {
+        queueMicrotask(() => {
           updateNodeInternals(viewStepId!);
-        }, 50);
+        });
       }
     },
-    [setNodes, handleMutateComponents, updateNodeInternals, generateStepElement],
+    [setNodes, updateNodeInternals, generateStepElement],
   );
 
   // Update refs whenever callbacks change
@@ -1104,35 +1023,73 @@ function LoginFlowBuilder() {
     handleAddElementToFormRef.current = handleAddElementToForm;
   }, [handleAddElementToView, handleAddElementToForm]);
 
-  const nodeTypes = useMemo((): NodeTypes => {
-    if (!steps) {
-      return {};
+  const resourcesRef = useRef(resources);
+
+  // Update refs when data changes (doesn't trigger re-render)
+  useEffect(() => {
+    resourcesRef.current = resources;
+  }, [resources]);
+
+  // Update edge types when edge style changes
+  useEffect(() => {
+    setEdges((currentEdges) =>
+      currentEdges.map((edge) => ({
+        ...edge,
+        type: edgeStyle,
+      })),
+    );
+  }, [edgeStyle, setEdges]);
+
+  // Filter nodes and edges based on verbose mode
+  const filteredNodes = useMemo(() => {
+    if (isVerboseMode) {
+      return nodes;
     }
+    // Hide execution nodes in non-verbose mode
+    return nodes.filter((node) => node.type !== StepTypes.Execution);
+  }, [nodes, isVerboseMode]);
 
-    const stepsByType: Record<string, Step[]> = steps.reduce((acc: Record<string, Step[]>, step: Step) => {
-      if (!acc[step.type]) {
-        acc[step.type] = [];
-      }
-      acc[step.type].push(step);
+  const filteredEdges = useMemo(() => {
+    if (isVerboseMode) {
+      return edges;
+    }
+    // Hide edges connected to execution nodes in non-verbose mode
+    const executionNodeIds = new Set(nodes.filter((node) => node.type === StepTypes.Execution).map((node) => node.id));
+    return edges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
+  }, [edges, nodes, isVerboseMode]);
 
-      return acc;
-    }, {});
+  const stepsByTypeRef = useRef<Record<string, Step[]>>({});
+  useEffect(() => {
+    if (steps) {
+      stepsByTypeRef.current = steps.reduce((acc: Record<string, Step[]>, step: Step) => {
+        if (!acc[step.type]) {
+          acc[step.type] = [];
+        }
+        acc[step.type].push(step);
+        return acc;
+      }, {});
+    }
+  }, [steps]);
 
-    const stepNodes: NodeTypes = steps.reduce((acc: NodeTypes, resource: Step) => {
-      acc[resource.type] = (props: NodeProps) => (
+  const nodeTypes = useMemo((): NodeTypes => {
+    // Get unique step types from steps (only to determine which types we need)
+    const stepTypeSet = new Set(steps?.map((s) => s.type) ?? []);
+
+    const stepNodes: NodeTypes = Array.from(stepTypeSet).reduce((acc: NodeTypes, stepType: string) => {
+      // Create a stable component that reads from refs at render time
+      acc[stepType] = (props: NodeProps) => (
         // @ts-expect-error NodeProps doesn't include all required properties but they're provided at runtime
         <StepFactory
           resourceId={props.id}
-          resources={stepsByType[resource.type]}
-          allResources={resources}
-          onAddElement={(element: Element) => handleAddElementToViewRef.current?.(element)}
+          resources={stepsByTypeRef.current[stepType] ?? []}
+          allResources={resourcesRef.current}
+          onAddElement={(element: Element) => handleAddElementToViewRef.current?.(element, props.id)}
           onAddElementToForm={(element: Element, formId: string) =>
             handleAddElementToFormRef.current?.(element, formId)
           }
           {...props}
         />
       );
-
       return acc;
     }, {});
 
@@ -1152,42 +1109,127 @@ function LoginFlowBuilder() {
       ...staticStepNodes,
       ...stepNodes,
     };
-  }, [steps, resources]);
+    // IMPORTANT: Only depend on the step types array, not resources
+    // The actual data is accessed via refs at render time
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [steps?.map((s) => s.type).join(',')]);
+
+  // Edge types - register BaseEdge which uses SmartStepEdge for intelligent routing around nodes
+  const edgeTypes: EdgeTypes = useMemo(
+    () => ({
+      default: BaseEdge,
+      smoothstep: BaseEdge,
+      step: BaseEdge,
+      [LoginFlowConstants.DEFAULT_EDGE_TYPE]: BaseEdge,
+    }),
+    [],
+  );
 
   /**
    * Handle save button click - transforms React Flow data to backend format.
    * @param canvasData - The canvas data from React Flow (nodes, edges, viewport).
    */
   const handleSave = useCallback(
-    async (canvasData: {nodes: Node[]; edges: Edge[]; viewport: {x: number; y: number; zoom: number}}) => {
-      try {
-        console.log('canvasData', canvasData);
+    (canvasData: {nodes: Node[]; edges: Edge[]; viewport: {x: number; y: number; zoom: number}}) => {
+      // Check if there are validation errors in the validation panel
+      if (!isFlowValid) {
+        setErrorSnackbar({
+          open: true,
+          message: t('flows:core.loginFlowBuilder.errors.validationRequired'),
+        });
+        setOpenValidationPanel?.(true);
+        return;
+      }
 
-        const {transformReactFlow, validateFlowGraph} = await import('@/features/flows/utils/reactFlowTransformer');
+      const flowConfig = createFlowConfiguration(canvasData, flowName, flowHandle, 'AUTHENTICATION');
+      const errors = validateFlowGraph({nodes: flowConfig.nodes});
 
-        const flowGraph = transformReactFlow(canvasData);
-        const errors = validateFlowGraph(flowGraph);
+      if (errors.length > 0) {
+        setErrorSnackbar({
+          open: true,
+          message: t('flows:core.loginFlowBuilder.errors.structureValidationFailed', {error: errors[0]}),
+        });
+        return;
+      }
 
-        if (errors.length > 0) {
-          // eslint-disable-next-line no-console
-          console.error('Flow validation errors:', errors);
-          // TODO: Show validation errors to user
-          return;
-        }
-
-        // eslint-disable-next-line no-console
-        console.log('✅ Transformed flow:', flowGraph);
-
-        // TODO: Send to backend API
-        // await saveLoginFlow(flowGraph);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error saving flow:', error);
-        // TODO: Show error notification to user
+      // Send to backend API - use update if editing existing flow, create if new
+      if (isEditingExistingFlow && flowId) {
+        // Update existing flow
+        updateFlow.mutate(
+          {
+            flowId,
+            flowData: flowConfig as UpdateFlowRequest,
+          },
+          {
+            onSuccess: () => {
+              setSuccessSnackbar({
+                open: true,
+                message: t('flows:core.loginFlowBuilder.success.flowUpdated'),
+              });
+              // Redirect to flows list after a short delay to show the success message
+              setTimeout(() => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                navigate('/flows');
+              }, 1500);
+            },
+            onError: () => {
+              setErrorSnackbar({
+                open: true,
+                message: t('flows:core.loginFlowBuilder.errors.saveFailed'),
+              });
+            },
+          },
+        );
+      } else {
+        // Create new flow
+        createFlow.mutate(flowConfig as CreateFlowRequest, {
+          onSuccess: () => {
+            setSuccessSnackbar({
+              open: true,
+              message: t('flows:core.loginFlowBuilder.success.flowCreated'),
+            });
+            // Redirect to flows list after a short delay to show the success message
+            setTimeout(() => {
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
+              navigate('/flows');
+            }, 1500);
+          },
+          onError: () => {
+            setErrorSnackbar({
+              open: true,
+              message: t('flows:core.loginFlowBuilder.errors.saveFailed'),
+            });
+          },
+        });
       }
     },
-    [],
+    [
+      createFlow,
+      updateFlow,
+      flowId,
+      isEditingExistingFlow,
+      isFlowValid,
+      setOpenValidationPanel,
+      t,
+      flowName,
+      flowHandle,
+      navigate,
+    ],
   );
+
+  /**
+   * Handle closing the error snackbar.
+   */
+  const handleCloseErrorSnackbar = useCallback(() => {
+    setErrorSnackbar((prev) => ({...prev, open: false}));
+  }, []);
+
+  /**
+   * Handle closing the success snackbar.
+   */
+  const handleCloseSuccessSnackbar = useCallback(() => {
+    setSuccessSnackbar((prev) => ({...prev, open: false}));
+  }, []);
 
   return (
     <Box
@@ -1199,19 +1241,43 @@ function LoginFlowBuilder() {
       <FlowBuilder
         resources={resources}
         nodeTypes={nodeTypes}
-        mutateComponents={handleMutateComponents}
+        edgeTypes={edgeTypes}
+        mutateComponents={mutateComponents}
         onTemplateLoad={handleTemplateLoad}
         onWidgetLoad={handleWidgetLoad}
         onStepLoad={handleStepLoad}
         onResourceAdd={handleResourceAdd}
         onSave={handleSave}
-        nodes={nodes}
-        edges={edges}
+        nodes={filteredNodes}
+        edges={filteredEdges}
         setNodes={setNodes}
         setEdges={setEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        flowTitle={flowName}
+        flowHandle={flowHandle}
+        onFlowTitleChange={handleFlowNameChange}
       />
+      <Snackbar
+        open={errorSnackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseErrorSnackbar}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert onClose={handleCloseErrorSnackbar} severity="error" sx={{width: '100%'}}>
+          {errorSnackbar.message}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={successSnackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSuccessSnackbar}
+        anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}
+      >
+        <Alert onClose={handleCloseSuccessSnackbar} severity="success" sx={{width: '100%'}}>
+          {successSnackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

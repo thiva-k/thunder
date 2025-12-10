@@ -31,14 +31,15 @@ import NodeHandle from './NodeHandle';
  * Configuration interface for ResendButton element.
  */
 interface ResendButtonConfig {
-  text?: string;
   styles?: SxProps<Theme>;
 }
 
 /**
  * ResendButton element type.
  */
-export type ResendButtonElement = FlowElement<ResendButtonConfig>;
+export type ResendButtonElement = FlowElement<ResendButtonConfig> & {
+  label?: string;
+};
 
 /**
  * Props interface of {@link ResendButtonAdapter}
@@ -75,8 +76,8 @@ function ResendButtonAdapter({resource}: ResendButtonAdapterPropsInterface): Rea
   const fields: RequiredFieldInterface[] = useMemo(
     () => [
       {
-        errorMessage: t('flows:core.validation.fields.button.text'),
-        name: 'text',
+        errorMessage: t('flows:core.validation.fields.button.label'),
+        name: 'label',
       },
     ],
     [t],
@@ -92,11 +93,12 @@ function ResendButtonAdapter({resource}: ResendButtonAdapterPropsInterface): Rea
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
   const resendConfig = resource.config as ResendButtonConfig | undefined;
+  const resendElement = resource as ResendButtonElement;
 
   return (
     <div className="adapter button-adapter">
       <Button sx={resendConfig?.styles} {...config}>
-        <PlaceholderComponent value={resendConfig?.text ?? ''} />
+        <PlaceholderComponent value={resendElement?.label ?? ''} />
       </Button>
       <NodeHandle
         id={`${resource?.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}

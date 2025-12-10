@@ -25,20 +25,15 @@ import {FormHelperText, TextField} from '@wso2/oxygen-ui';
 import {Hint} from '../../hint';
 
 /**
- * Configuration interface for Phone Number Input element.
+ * Phone Number Input element type with properties at top level.
  */
-interface PhoneNumberInputConfig {
+export type PhoneNumberInputElement = FlowElement & {
   className?: string;
   label?: string;
   placeholder?: string;
   required?: boolean;
   hint?: string;
-}
-
-/**
- * Phone Number Input element type.
- */
-export type PhoneNumberInputElement = FlowElement<PhoneNumberInputConfig>;
+};
 
 /**
  * Props interface of {@link PhoneNumberInputAdapter}
@@ -84,23 +79,22 @@ function PhoneNumberInputAdapter({resource}: PhoneNumberInputAdapterPropsInterfa
 
   useRequiredFields(resource, generalMessage, fields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const phoneConfig = resource.config as PhoneNumberInputConfig | undefined;
+  const phoneElement = resource as PhoneNumberInputElement;
 
   return (
     <>
       <TextField
-        className={phoneConfig?.className}
-        label={phoneConfig?.label}
-        placeholder={phoneConfig?.placeholder ?? ''}
+        className={phoneElement?.className}
+        label={phoneElement?.label}
+        placeholder={phoneElement?.placeholder ?? ''}
         InputLabelProps={{
-          required: phoneConfig?.required,
+          required: phoneElement?.required,
         }}
         type="number"
       />
-      {phoneConfig?.hint && (
+      {phoneElement?.hint && (
         <FormHelperText>
-          <Hint hint={phoneConfig?.hint} />
+          <Hint hint={phoneElement?.hint} />
         </FormHelperText>
       )}
     </>

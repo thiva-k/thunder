@@ -17,16 +17,22 @@
  */
 
 import {useMemo, type ReactElement} from 'react';
-import {ButtonVariants, type Element as FlowElement} from '@/features/flows/models/elements';
 import {Trans, useTranslation} from 'react-i18next';
-import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
-import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
 import {Button, type ButtonProps, type SxProps, type Theme} from '@wso2/oxygen-ui';
 import {Position} from '@xyflow/react';
+import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
+import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
+import {ButtonVariants, type Element as FlowElement} from '@/features/flows/models/elements';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import resolveStaticResourcePath from '@/features/flows/utils/resolveStaticResourcePath';
 import PlaceholderComponent from './PlaceholderComponent';
 import NodeHandle from './NodeHandle';
+
+const BUTTON_VALIDATION_FIELD_NAMES = {
+  action: 'action',
+  label: 'label',
+  variant: 'variant',
+} as const;
 
 /**
  * Configuration interface for Button element.
@@ -34,7 +40,6 @@ import NodeHandle from './NodeHandle';
 interface ButtonConfig {
   styles?: SxProps<Theme>;
   image?: string;
-  text?: string;
 }
 
 /**
@@ -42,6 +47,8 @@ interface ButtonConfig {
  */
 export type ButtonElement = FlowElement<ButtonConfig> & {
   variant?: string;
+  label?: string;
+  image?: string;
 };
 
 /**
@@ -55,6 +62,7 @@ export interface ButtonAdapterPropsInterface {
   /**
    * The index of the element in its parent container.
    * Used to trigger handle position updates when elements are reordered.
+   * @defaultValue undefined
    */
   elementIndex?: number;
 }
@@ -65,7 +73,7 @@ export interface ButtonAdapterPropsInterface {
  * @param props - Props injected to the component.
  * @returns The ButtonAdapter component.
  */
-function ButtonAdapter({resource, elementIndex}: ButtonAdapterPropsInterface): ReactElement {
+function ButtonAdapter({resource, elementIndex = undefined}: ButtonAdapterPropsInterface): ReactElement {
   const {t} = useTranslation();
 
   const generalMessage: ReactElement = useMemo(
@@ -77,79 +85,86 @@ function ButtonAdapter({resource, elementIndex}: ButtonAdapterPropsInterface): R
     [resource?.id],
   );
 
-  const fields: RequiredFieldInterface[] = useMemo(
+  const validationFields: RequiredFieldInterface[] = useMemo(
     () => [
       {
         errorMessage: t('flows:core.validation.fields.button.action'),
-        name: 'action',
+        name: BUTTON_VALIDATION_FIELD_NAMES.action,
       },
       {
-        errorMessage: t('flows:core.validation.fields.button.text'),
-        name: 'text',
+        errorMessage: t('flows:core.validation.fields.button.label'),
+        name: BUTTON_VALIDATION_FIELD_NAMES.label,
       },
       {
         errorMessage: t('flows:core.validation.fields.button.variant'),
-        name: 'variant',
+        name: BUTTON_VALIDATION_FIELD_NAMES.variant,
       },
     ],
     [t],
   );
 
-  useRequiredFields(resource, generalMessage, fields);
-
-  // usePasswordExecutorValidation(resource as unknown as Element);
+  useRequiredFields(resource, generalMessage, validationFields);
 
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
   const buttonConfig = resource.config as ButtonConfig | undefined;
 
-  let config: ButtonProps = {};
-  let image = '';
+  const {config, image} = useMemo(() => {
+    let buttonProps: ButtonProps = {};
+    let buttonImage = '';
 
-  if (resource.variant === ButtonVariants.Primary) {
-    config = {
-      ...config,
-      color: 'primary',
-      fullWidth: true,
-      variant: 'contained',
-    };
-  } else if (resource.variant === ButtonVariants.Secondary) {
-    config = {
-      ...config,
-      color: 'secondary',
-      fullWidth: true,
-      variant: 'contained',
-    };
-  } else if (resource.variant === ButtonVariants.Text) {
-    config = {
-      ...config,
-      fullWidth: true,
-      variant: 'text',
-    };
-  } else if (resource.variant === ButtonVariants.Social) {
-    // TODO: Figure out a way to identify the social connection from the next step.
-    image = 'https://www.svgrepo.com/show/475656/google.svg';
+    if (resource.variant === ButtonVariants.Primary) {
+      buttonProps = {
+        color: 'primary',
+        fullWidth: true,
+        variant: 'contained',
+      };
+    } else if (resource.variant === ButtonVariants.Secondary) {
+      buttonProps = {
+        color: 'secondary',
+        fullWidth: true,
+        variant: 'contained',
+      };
+    } else if (resource.variant === ButtonVariants.Text) {
+      buttonProps = {
+        fullWidth: true,
+        variant: 'text',
+      };
+    } else if (resource.variant === ButtonVariants.Social) {
+      buttonImage = 'https://www.svgrepo.com/show/475656/google.svg';
+      buttonProps = {
+        fullWidth: true,
+        variant: 'outlined',
+      };
+    }
 
-    config = {
-      ...config,
-      fullWidth: true,
-      variant: 'outlined',
-    };
-  }
+    return {config: buttonProps, image: buttonImage};
+  }, [resource.variant]);
+
+  // Cast resource to ButtonElement to access label and image properties
+  const buttonElement = resource as ButtonElement;
+
+  const startIcon = useMemo(() => {
+    // Check resource.image first (new format), then config.image, then variant default
+    if (buttonElement?.image) {
+      return <img src={resolveStaticResourcePath(buttonElement.image)} height={20} alt="" />;
+    }
+    if (buttonConfig?.image) {
+      return <img src={resolveStaticResourcePath(buttonConfig.image)} height={20} alt="" />;
+    }
+    if (image) {
+      return <img src={resolveStaticResourcePath(image)} height={20} alt="" />;
+    }
+    return undefined;
+  }, [buttonElement?.image, buttonConfig?.image, image]);
 
   return (
     <div className="adapter button-adapter">
       <Button
         sx={buttonConfig?.styles}
-        startIcon={
-          buttonConfig?.image ? (
-            <img src={resolveStaticResourcePath(buttonConfig?.image)} height={20} alt="" />
-          ) : (
-            image && <img src={resolveStaticResourcePath(image)} height={20} alt="" />
-          )
-        }
+        startIcon={startIcon}
         {...config}
       >
-        <PlaceholderComponent value={buttonConfig?.text ?? ''} />
+        <PlaceholderComponent value={buttonElement?.label ?? ''} />
       </Button>
       <NodeHandle
         id={`${resource?.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}

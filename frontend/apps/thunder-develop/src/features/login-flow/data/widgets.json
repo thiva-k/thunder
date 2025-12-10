@@ -3,8 +3,6 @@
     "resourceType": "WIDGET",
     "category": "COMPOSITE",
     "type": "IDENTIFIER_PASSWORD",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Username + Password",
       "description": "Basic login experience with username & password",
@@ -39,7 +37,7 @@
                         "label": "Username",
                         "required": true,
                         "placeholder": "Enter your username",
-                        "identifier": "http://wso2.org/claims/username"
+                        "identifier": "username"
                       }
                     },
                     {
@@ -61,14 +59,12 @@
                       "category": "ACTION",
                       "type": "BUTTON",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Continue"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
                       "action": {
                         "type": "EXECUTOR",
                         "executor": {
-                          "name": "BasicAuthenticationExecutor"
+                          "name": "BasicAuthExecutor"
                         }
                       }
                     }
@@ -85,8 +81,6 @@
     "resourceType": "WIDGET",
     "category": "FLOW",
     "type": "GOOGLE_FEDERATION",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Continue with Google",
       "description": "Login experience with Google",
@@ -117,11 +111,9 @@
                   "category": "ACTION",
                   "type": "BUTTON",
                   "variant": "SOCIAL",
-                  "config": {
-                    "type": "button",
-                    "text": "Continue with Google",
-                    "image": "assets/images/icons/google.svg"
-                  },
+                  "eventType": "TRIGGER",
+                  "label": "Continue with Google",
+                  "image": "assets/images/icons/google.svg",
                   "action": {
                     "type": "NEXT",
                     "next": "{{GOOGLE_EXECUTION_STEP_ID}}"
@@ -145,7 +137,7 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "GoogleExecutor",
+                  "name": "GoogleOIDCAuthExecutor",
                   "meta": {
                     "idpName": "{{IDP_NAME}}"
                   }
@@ -162,8 +154,6 @@
     "resourceType": "WIDGET",
     "category": "FLOW",
     "type": "GITHUB_FEDERATION",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Continue with GitHub",
       "description": "Login experience with GitHub",
@@ -194,11 +184,9 @@
                   "category": "ACTION",
                   "type": "BUTTON",
                   "variant": "SOCIAL",
-                  "config": {
-                    "type": "button",
-                    "text": "Continue with GitHub",
-                    "image": "assets/images/icons/github.svg"
-                  },
+                  "eventType": "TRIGGER",
+                  "label": "Continue with GitHub",
+                  "image": "assets/images/icons/github.svg",
                   "action": {
                     "type": "NEXT",
                     "next": "{{GITHUB_EXECUTION_STEP_ID}}"
@@ -222,7 +210,7 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "GithubExecutor",
+                  "name": "GithubOAuthExecutor",
                   "meta": {
                     "idpName": "{{IDP_NAME}}"
                   }
@@ -239,13 +227,11 @@
     "resourceType": "WIDGET",
     "category": "FLOW",
     "type": "EMAIL_OTP",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Continue with Email OTP",
       "description": "Login experience with Email OTP",
       "image": "assets/images/icons/email-down.svg",
-      "showOnResourcePanel": true
+      "showOnResourcePanel": false
     },
     "config": {
       "data": {
@@ -278,10 +264,8 @@
                   "category": "ACTION",
                   "type": "BUTTON",
                   "variant": "PRIMARY",
-                  "config": {
-                    "type": "button",
-                    "text": "Continue with Email OTP"
-                  },
+                  "eventType": "TRIGGER",
+                  "label": "Continue with Email OTP",
                   "action": {
                     "next": "{{EMAIL_SEND_EXECUTOR_ID}}",
                     "type": "NEXT"
@@ -329,15 +313,12 @@
                   "category": "DISPLAY",
                   "type": "TYPOGRAPHY",
                   "variant": "H3",
-                  "config": {
-                    "text": "Verify OTP"
-                  }
+                  "label": "Verify OTP"
                 },
                 {
                   "id": "{{ID}}",
                   "category": "BLOCK",
                   "type": "FORM",
-                  "config": {},
                   "components": [
                     {
                       "id": "{{ID}}",
@@ -358,10 +339,8 @@
                       "category": "ACTION",
                       "type": "BUTTON",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Verify"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Verify",
                       "action": {
                         "type": "NEXT",
                         "next": "{{EMAIL_VERIFY_EXECUTOR_ID}}"
@@ -371,10 +350,8 @@
                       "id": "{{ID}}",
                       "category": "ACTION",
                       "type": "RESEND",
-                      "config": {
-                        "type": "submit",
-                        "text": "Resend OTP"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Resend OTP",
                       "action": {
                         "type": "NEXT",
                         "next": "{{EMAIL_SEND_EXECUTOR_ID}}"
@@ -414,8 +391,6 @@
     "resourceType": "WIDGET",
     "category": "FLOW",
     "type": "SMS_OTP",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Continue with SMS OTP",
       "description": "Login experience with SMS OTP",
@@ -453,10 +428,8 @@
                   "category": "ACTION",
                   "type": "BUTTON",
                   "variant": "PRIMARY",
-                  "config": {
-                    "type": "button",
-                    "text": "Continue with SMS OTP"
-                  },
+                  "eventType": "TRIGGER",
+                  "label": "Continue with SMS OTP",
                   "action": {
                     "next": "{{SMS_SEND_EXECUTOR_ID}}",
                     "type": "NEXT"
@@ -504,15 +477,12 @@
                   "category": "DISPLAY",
                   "type": "TYPOGRAPHY",
                   "variant": "H3",
-                  "config": {
-                    "text": "Verify OTP"
-                  }
+                  "label": "Verify OTP"
                 },
                 {
                   "id": "{{ID}}",
                   "category": "BLOCK",
                   "type": "FORM",
-                  "config": {},
                   "components": [
                     {
                       "id": "{{ID}}",
@@ -533,10 +503,8 @@
                       "category": "ACTION",
                       "type": "BUTTON",
                       "variant": "PRIMARY",
-                      "config": {
-                        "type": "submit",
-                        "text": "Verify"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Verify",
                       "action": {
                         "type": "NEXT",
                         "next": "{{SMS_VERIFY_EXECUTOR_ID}}"
@@ -546,10 +514,8 @@
                       "id": "{{ID}}",
                       "category": "ACTION",
                       "type": "RESEND",
-                      "config": {
-                        "type": "submit",
-                        "text": "Resend OTP"
-                      },
+                      "eventType": "SUBMIT",
+                      "label": "Resend OTP",
                       "action": {
                         "type": "NEXT",
                         "next": "{{SMS_SEND_EXECUTOR_ID}}"
@@ -589,13 +555,11 @@
     "resourceType": "WIDGET",
     "category": "FLOW",
     "type": "PASSKEY_AUTHENTICATION",
-    "version": "0.1.0",
-    "deprecated": false,
     "display": {
       "label": "Continue with Passkey",
       "description": "Login experience with Passkeys",
       "image": "assets/images/icons/fingerprint.svg",
-      "showOnResourcePanel": true
+      "showOnResourcePanel": false
     },
     "config": {
       "data": {
@@ -621,11 +585,9 @@
                   "category": "ACTION",
                   "type": "BUTTON",
                   "variant": "SOCIAL",
-                  "config": {
-                    "type": "button",
-                    "text": "Continue with Passkey",
-                    "image": "assets/images/icons/fingerprint.svg"
-                  },
+                  "eventType": "TRIGGER",
+                  "label": "Continue with Passkey",
+                  "image": "assets/images/icons/fingerprint.svg",
                   "action": {
                     "type": "NEXT",
                     "next": "{{PASSKEY_EXECUTION_STEP_ID}}"

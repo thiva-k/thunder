@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import type {Element} from './elements';
+
 export interface Executor {
   name: string;
   meta: Record<string, unknown>;

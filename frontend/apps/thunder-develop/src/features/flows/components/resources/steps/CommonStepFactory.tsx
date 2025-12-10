@@ -40,16 +40,19 @@ export interface CommonStepFactoryPropsInterface extends NodeProps {
   resources: Step[];
   /**
    * All available resources in the flow.
+   * @defaultValue undefined
    */
   allResources?: Resources;
   /**
    * Callback for adding an element to the view.
+   * @defaultValue undefined
    */
   onAddElement?: (element: Element) => void;
   /**
    * Callback for adding an element to a form.
    * @param element - The element to add.
    * @param formId - The ID of the form to add to.
+   * @defaultValue undefined
    */
   onAddElementToForm?: (element: Element, formId: string) => void;
 }
@@ -63,9 +66,9 @@ export interface CommonStepFactoryPropsInterface extends NodeProps {
 function CommonStepFactory({
   resources,
   data,
-  allResources,
-  onAddElement,
-  onAddElementToForm,
+  allResources = undefined,
+  onAddElement = undefined,
+  onAddElementToForm = undefined,
   ...rest
 }: CommonStepFactoryPropsInterface): ReactElement | null {
   if (resources && resources[0].type === StepTypes.View) {

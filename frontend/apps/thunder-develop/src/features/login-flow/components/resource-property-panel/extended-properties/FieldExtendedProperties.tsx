@@ -16,9 +16,8 @@
  * under the License.
  */
 
-import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
-import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
-import {InputVariants} from '@/features/flows/models/elements';
+import {useEffect, useMemo, useState, type ReactNode, type SyntheticEvent} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   Autocomplete,
   FormHelperText,
@@ -27,7 +26,9 @@ import {
   TextField,
   type AutocompleteRenderInputParams,
 } from '@wso2/oxygen-ui';
-import {useMemo, type ReactNode, type SyntheticEvent} from 'react';
+import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
+import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
+import {InputVariants, type Element} from '@/features/flows/models/elements';
 
 /**
  * Props interface of {@link FieldExtendedProperties}
@@ -41,14 +42,23 @@ export type FieldExtendedPropertiesPropsInterface = CommonResourcePropertiesProp
  * @returns The FieldExtendedProperties component.
  */
 function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPropsInterface): ReactNode {
+  const {t} = useTranslation();
   const {selectedNotification} = useValidationStatus();
 
   const attributes: string[] = useMemo(() => ['email', 'username', 'firstName'], []);
 
-  const selectedValue: string | null = useMemo(
-    () => attributes?.find((attribute: string) => attribute === resource.config.identifier) ?? null,
-    [resource.config.identifier, attributes],
+  const resourceIdentifier = (resource as Element & {identifier?: string})?.identifier;
+
+  // Use local state to track the selected value immediately (avoids revert on blur due to debounced updates)
+  const [localSelectedValue, setLocalSelectedValue] = useState<string | null>(() =>
+    attributes?.find((attribute: string) => attribute === resourceIdentifier) ?? null,
   );
+
+  // Sync local state when resource changes (e.g., when switching to a different element)
+  useEffect(() => {
+    const newValue = attributes?.find((attribute: string) => attribute === resourceIdentifier) ?? null;
+    setLocalSelectedValue(newValue);
+  }, [resourceIdentifier, attributes]);
 
   /**
    * Get the error message for the identifier field.
@@ -77,13 +87,14 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
         sx={{width: '100%'}}
         renderInput={(params: AutocompleteRenderInputParams) => (
           <>
-            <FormLabel htmlFor="attribute-select">Attribute</FormLabel>
-            <TextField {...params} id="attribute-select" placeholder="Select an attribute" error={!!errorMessage} />
+            <FormLabel htmlFor="attribute-select">{t('flows:core.fieldExtendedProperties.attribute')}</FormLabel>
+            <TextField {...params} id="attribute-select" placeholder={t('flows:core.fieldExtendedProperties.selectAttribute')} error={!!errorMessage} />
           </>
         )}
-        value={selectedValue}
+        value={localSelectedValue}
         onChange={(_: SyntheticEvent, attribute: string | null) => {
-          onChange('config.identifier', attribute ?? '', resource);
+          setLocalSelectedValue(attribute);
+          onChange('identifier', attribute ?? '', resource);
         }}
       />
       {errorMessage && <FormHelperText error>{errorMessage}</FormHelperText>}

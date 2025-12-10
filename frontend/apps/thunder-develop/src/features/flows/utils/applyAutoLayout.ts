@@ -51,7 +51,6 @@ export interface AutoLayoutOptions {
   offsetY?: number;
 }
 
-// ELK instance - reuse for better performance
 const elk = new ELK();
 
 /**
@@ -67,15 +66,9 @@ const elk = new ELK();
 export default async function applyAutoLayout(
   nodes: Node[],
   edges: Edge[],
-  options: AutoLayoutOptions = {}
+  options: AutoLayoutOptions = {},
 ): Promise<Node[]> {
-  const {
-    direction = 'RIGHT',
-    nodeSpacing = 150,
-    rankSpacing = 300,
-    offsetX = 50,
-    offsetY = 50,
-  } = options;
+  const {direction = 'RIGHT', nodeSpacing = 150, rankSpacing = 300, offsetX = 50, offsetY = 50} = options;
 
   if (nodes.length === 0) {
     return nodes;
@@ -201,27 +194,44 @@ export default async function applyAutoLayout(
     // Post-process: Align all VIEW nodes to the same Y position (horizontal row)
     const viewNodes = layoutedNodes.filter((n) => n.type?.toUpperCase() === NODE_TYPES.VIEW);
     if (viewNodes.length > 0) {
-      // Find the minimum Y position among VIEW nodes (topmost)
-      const minViewY = Math.min(...viewNodes.map((n) => n.position.y));
+      // First, collect ALL node types and calculate their center positions
+      const startNodes = layoutedNodes.filter((n) => n.type?.toUpperCase() === NODE_TYPES.START);
+      const endNodes = layoutedNodes.filter((n) => n.type?.toUpperCase() === NODE_TYPES.END);
 
-      // Align all VIEW nodes to the same Y position
+      // Calculate the overall bounding box center Y for all nodes (START, END, VIEWs)
+      const allRelevantNodes = [...startNodes, ...endNodes, ...viewNodes];
+
+      let minCenterY = Infinity;
+      let maxCenterY = -Infinity;
+
+      allRelevantNodes.forEach((node) => {
+        const nodeHeight = node.measured?.height ?? node.height ?? 100;
+        const centerY = node.position.y + nodeHeight / 2;
+        minCenterY = Math.min(minCenterY, centerY);
+        maxCenterY = Math.max(maxCenterY, centerY);
+      });
+
+      // Use the middle point as the target center Y
+      const targetCenterY = (minCenterY + maxCenterY) / 2;
+
+      // Align all VIEW nodes so their centers align with targetCenterY
+      // Each view may have different height, so calculate Y individually
       layoutedNodes = layoutedNodes.map((node) => {
         if (node.type?.toUpperCase() === NODE_TYPES.VIEW) {
+          const nodeHeight = node.measured?.height ?? node.height ?? 100;
+          const nodeY = targetCenterY - nodeHeight / 2;
           return {
             ...node,
             position: {
               ...node.position,
-              y: minViewY,
+              y: nodeY,
             },
           };
         }
         return node;
       });
 
-      // Get the first VIEW node (leftmost) for reference
-      const firstViewNode = viewNodes.reduce((min, n) => n.position.x < min.position.x ? n : min);
-      const viewHeight = firstViewNode.measured?.height ?? firstViewNode.height ?? 100;
-      const viewCenterY = minViewY + viewHeight / 2;
+      const viewCenterY = targetCenterY;
 
       // Align START and END nodes to the same horizontal level (centered with Views)
       layoutedNodes = layoutedNodes.map((node) => {
@@ -272,7 +282,15 @@ export default async function applyAutoLayout(
         }[] = [];
 
         // Now check for overlaps and move conflicting execution nodes below
-        const viewBottomY = minViewY + viewHeight + nodeSpacing;
+        // Find the maximum bottom Y of all view nodes
+        const viewBottoms = layoutedNodes
+          .filter((n) => n.type?.toUpperCase() === NODE_TYPES.VIEW)
+          .map((n) => {
+            const height = n.measured?.height ?? n.height ?? 100;
+            return n.position.y + height;
+          });
+        const maxViewBottom = viewBottoms.length > 0 ? Math.max(...viewBottoms) : 0;
+        const viewBottomY = maxViewBottom + nodeSpacing;
         const horizontalPadding = 50;
         const verticalPadding = 30;
 
@@ -302,20 +320,18 @@ export default async function applyAutoLayout(
           // Check for overlap with already placed execution nodes
           // Keep moving down until no overlap
           // Helper to check if a Y position overlaps with any placed node
-          const checkOverlapAtY = (testY: number): { overlaps: boolean; nextY: number } => {
-            let result = { overlaps: false, nextY: testY };
+          const checkOverlapAtY = (testY: number): {overlaps: boolean; nextY: number} => {
+            let result = {overlaps: false, nextY: testY};
 
             placedExecutionNodes.forEach((placed) => {
               if (result.overlaps) return; // Already found overlap
 
               // Check if rectangles overlap (with padding)
               const horizontalOverlap =
-                execRight + horizontalPadding > placed.x &&
-                execX - horizontalPadding < placed.x + placed.width;
+                execRight + horizontalPadding > placed.x && execX - horizontalPadding < placed.x + placed.width;
 
               const verticalOverlap =
-                testY + execHeight + verticalPadding > placed.y &&
-                testY - verticalPadding < placed.y + placed.height;
+                testY + execHeight + verticalPadding > placed.y && testY - verticalPadding < placed.y + placed.height;
 
               if (horizontalOverlap && verticalOverlap) {
                 result = {

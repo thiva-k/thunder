@@ -18,9 +18,7 @@
 
 import FlowBuilderCoreProvider from '@/features/flows/context/FlowBuilderCoreProvider';
 import {PreviewScreenType} from '@/features/flows/models/custom-text-preference';
-import {FlowTypes} from '@/features/flows/models/metadata';
 import {useMemo, type PropsWithChildren, type ReactElement} from 'react';
-import UserPreferencesProvider from '@/features/common/contexts/UserPreferencesProvider';
 import FlowContextWrapper from './FlowContextWrapper';
 import ResourceProperties from '../components/resource-property-panel/ResourceProperties';
 import ElementFactory from '../components/resources/elements/ElementFactory';
@@ -43,17 +41,13 @@ function LoginFlowBuilderProvider({children}: PropsWithChildren): ReactElement {
   );
 
   return (
-    <UserPreferencesProvider userId="">
-      <FlowBuilderCoreProvider
-        ElementFactory={ElementFactory}
-        ResourceProperties={ResourceProperties}
-        flowType={FlowTypes.LOGIN}
-        screenTypes={screensList}
-        // validationConfig={{isPasswordExecutorValidationEnabled: true}}
-      >
-        <FlowContextWrapper>{children}</FlowContextWrapper>
-      </FlowBuilderCoreProvider>
-    </UserPreferencesProvider>
+    <FlowBuilderCoreProvider
+      ElementFactory={ElementFactory}
+      ResourceProperties={ResourceProperties}
+      screenTypes={screensList}
+    >
+      <FlowContextWrapper>{children}</FlowContextWrapper>
+    </FlowBuilderCoreProvider>
   );
 }
 

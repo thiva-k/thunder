@@ -26,22 +26,17 @@ import PlaceholderComponent from '../PlaceholderComponent';
 import {Hint} from '../../hint';
 
 /**
- * Configuration interface for OTP Input element.
+ * OTP Input element type with properties at top level.
  */
-interface OTPInputConfig {
+export type OTPInputElement = FlowElement & {
   className?: string;
   label?: string;
   required?: boolean;
-  type?: string;
+  inputType?: string;
   styles?: CSSProperties;
   placeholder?: string;
   hint?: string;
-}
-
-/**
- * OTP Input element type.
- */
-export type OTPInputElement = FlowElement<OTPInputConfig>;
+};
 
 /**
  * Props interface of {@link OTPInputAdapter}
@@ -83,13 +78,12 @@ function OTPInputAdapter({resource}: OTPInputAdapterPropsInterface): ReactElemen
 
   useRequiredFields(resource, generalMessage, fields);
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- Config type is validated at runtime
-  const otpConfig = resource.config as OTPInputConfig | undefined;
+  const otpElement = resource as OTPInputElement;
 
   return (
-    <div className={otpConfig?.className}>
-      <InputLabel htmlFor="otp-input-adapter" required={otpConfig?.required} disableAnimation>
-        <PlaceholderComponent value={otpConfig?.label ?? ''} />
+    <div className={otpElement?.className}>
+      <InputLabel htmlFor="otp-input-adapter" required={otpElement?.required} disableAnimation>
+        <PlaceholderComponent value={otpElement?.label ?? ''} />
       </InputLabel>
       <Box display="flex" flexDirection="row" gap={1}>
         {Array.from({length: 6}, (_, index) => (
@@ -97,15 +91,15 @@ function OTPInputAdapter({resource}: OTPInputAdapterPropsInterface): ReactElemen
             key={index}
             size="small"
             id="otp-input-adapter"
-            type={otpConfig?.type}
-            style={otpConfig?.styles}
-            placeholder={otpConfig?.placeholder ?? ''}
+            type={otpElement?.inputType}
+            style={otpElement?.styles}
+            placeholder={otpElement?.placeholder ?? ''}
           />
         ))}
       </Box>
-      {otpConfig?.hint && (
+      {otpElement?.hint && (
         <FormHelperText>
-          <Hint hint={otpConfig?.hint} />
+          <Hint hint={otpElement?.hint} />
         </FormHelperText>
       )}
     </div>

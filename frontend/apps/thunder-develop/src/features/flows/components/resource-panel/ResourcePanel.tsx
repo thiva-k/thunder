@@ -17,7 +17,8 @@
  */
 
 import kebabCase from 'lodash-es/kebabCase';
-import {type HTMLAttributes, type ReactElement} from 'react';
+import {memo, useCallback, useMemo, type HTMLAttributes, type ReactElement} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   Accordion,
   AccordionDetails,
@@ -37,6 +38,7 @@ import {
   ChevronRightIcon,
   CogIcon,
   LayoutTemplate,
+  ZapIcon,
 } from '@wso2/oxygen-ui-icons-react';
 import useFlowBuilderCore from '../../hooks/useFlowBuilderCore';
 import ResourcePanelStatic from './ResourcePanelStatic';
@@ -46,7 +48,6 @@ import type {Step} from '../../models/steps';
 import type {Template} from '../../models/templates';
 import type {Widget} from '../../models/widget';
 import ResourcePanelDraggable from './ResourcePanelDraggable';
-import './ResourcePanel.scss';
 
 /**
  * Props interface of {@link ResourcePanel}
@@ -58,6 +59,7 @@ export interface ResourcePanelPropsInterface extends HTMLAttributes<HTMLDivEleme
   resources: Resources;
   /**
    * Whether the panel is open.
+   * @defaultValue undefined
    */
   open?: boolean;
   /**
@@ -67,6 +69,7 @@ export interface ResourcePanelPropsInterface extends HTMLAttributes<HTMLDivEleme
   onAdd: (resource: Resource) => void;
   /**
    * Flag to disable the panel.
+   * @defaultValue false
    */
   disabled?: boolean;
 }
@@ -81,12 +84,13 @@ const PANEL_WIDTH = 350;
  */
 function ResourcePanel({
   children,
-  open,
+  open = undefined,
   resources,
   onAdd,
   disabled = false,
   ...rest
 }: ResourcePanelPropsInterface): ReactElement {
+  const {t} = useTranslation();
   const {setIsResourcePanelOpen} = useFlowBuilderCore();
 
   const {
@@ -94,29 +98,39 @@ function ResourcePanel({
     widgets: unfilteredWidgets,
     steps: unfilteredSteps,
     templates: unfilteredTemplates,
+    executors: unfilteredExecutors,
   } = resources;
 
-  const handleTogglePanel = (): void => {
+  const handleTogglePanel = useCallback((): void => {
     setIsResourcePanelOpen((prev: boolean) => !prev);
-  };
+  }, [setIsResourcePanelOpen]);
 
-  const elements: Element[] = unfilteredElements?.filter(
-    (element: Element) => element.display?.showOnResourcePanel !== false,
+  const elements: Element[] = useMemo(
+    () => unfilteredElements?.filter((element: Element) => element.display?.showOnResourcePanel !== false),
+    [unfilteredElements],
   );
-  const widgets: Widget[] = unfilteredWidgets?.filter(
-    (widget: Widget) => widget.display?.showOnResourcePanel !== false,
+  const widgets: Widget[] = useMemo(
+    () => unfilteredWidgets?.filter((widget: Widget) => widget.display?.showOnResourcePanel !== false),
+    [unfilteredWidgets],
   );
-
-  const steps: Step[] = unfilteredSteps?.filter((step: Step) => step.display?.showOnResourcePanel !== false);
-  const templates: Template[] = unfilteredTemplates?.filter(
-    (template: Template) => template.display?.showOnResourcePanel !== false,
+  const steps: Step[] = useMemo(
+    () => unfilteredSteps?.filter((step: Step) => step.display?.showOnResourcePanel !== false),
+    [unfilteredSteps],
+  );
+  const templates: Template[] = useMemo(
+    () => unfilteredTemplates?.filter((template: Template) => template.display?.showOnResourcePanel !== false),
+    [unfilteredTemplates],
+  );
+  const executors: Step[] = useMemo(
+    () => unfilteredExecutors?.filter((executor: Step) => executor.display?.showOnResourcePanel !== false),
+    [unfilteredExecutors],
   );
 
   return (
     <Box width="100%" height="100%" display="flex" position="relative" {...rest}>
       {/* Floating expand button shown when panel is collapsed */}
       {!open && (
-        <Tooltip title="Show Resources" placement="right">
+        <Tooltip title={t('flows:core.resourcePanel.showResources')} placement="right">
           <IconButton
             onClick={handleTogglePanel}
             sx={{
@@ -179,9 +193,9 @@ function ResourcePanel({
           }}
         >
           <Typography variant="subtitle1" fontWeight={600}>
-            Resources
+            {t('flows:core.resourcePanel.title')}
           </Typography>
-          <Tooltip title="Hide Resources" placement="right">
+          <Tooltip title={t('flows:core.resourcePanel.hideResources')} placement="right">
             <IconButton onClick={handleTogglePanel} size="small">
               <ChevronLeftIcon size={16} />
             </IconButton>
@@ -226,7 +240,7 @@ function ResourcePanel({
               <LayoutTemplate size={16} />
             </Box>
             <Typography variant="subtitle2" fontWeight={600}>
-              Starter Templates
+              {t('flows:core.resourcePanel.starterTemplates.title')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails
@@ -237,7 +251,7 @@ function ResourcePanel({
             }}
           >
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{mb: 1.5}}>
-              Choose one of these templates to start building registration experience
+              {t('flows:core.resourcePanel.starterTemplates.description')}
             </Typography>
             <Stack direction="column" spacing={1}>
               {templates?.map((template: Template, index: number) => (
@@ -289,7 +303,7 @@ function ResourcePanel({
               <CogIcon size={16} />
             </Box>
             <Typography variant="subtitle2" fontWeight={600}>
-              Widgets
+              {t('flows:core.resourcePanel.widgets.title')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails
@@ -300,7 +314,7 @@ function ResourcePanel({
             }}
           >
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{mb: 1.5}}>
-              Use these widgets to build up the flow using pre-created flow blocks
+              {t('flows:core.resourcePanel.widgets.description')}
             </Typography>
             <Stack direction="column" spacing={1}>
               {widgets?.map((widget: Widget, index: number) => (
@@ -353,7 +367,7 @@ function ResourcePanel({
               <BoxIcon size={16} />
             </Box>
             <Typography variant="subtitle2" fontWeight={600}>
-              Steps
+              {t('flows:core.resourcePanel.steps.title')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails
@@ -364,7 +378,7 @@ function ResourcePanel({
             }}
           >
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{mb: 1.5}}>
-              Use these as steps in your flow
+              {t('flows:core.resourcePanel.steps.description')}
             </Typography>
             <Stack direction="column" spacing={1}>
               {steps?.map((step: Step, index: number) => (
@@ -417,7 +431,7 @@ function ResourcePanel({
               <BoxesIcon size={16} />
             </Box>
             <Typography variant="subtitle2" fontWeight={600}>
-              Components
+              {t('flows:core.resourcePanel.components.title')}
             </Typography>
           </AccordionSummary>
           <AccordionDetails
@@ -428,7 +442,7 @@ function ResourcePanel({
             }}
           >
             <Typography variant="body2" color="text.secondary" gutterBottom sx={{mb: 1.5}}>
-              Use these components to build up your views
+              {t('flows:core.resourcePanel.components.description')}
             </Typography>
             <Stack direction="column" spacing={1}>
               {elements?.map((element: Element, index: number) => (
@@ -442,6 +456,70 @@ function ResourcePanel({
                   resource={element}
                   onAdd={onAdd}
                   disabled={false}
+                />
+              ))}
+            </Stack>
+          </AccordionDetails>
+        </Accordion>
+
+        {/* Executors */}
+        <Accordion
+          square
+          disableGutters
+          sx={{
+            backgroundColor: 'transparent',
+            '&:before': {
+              display: 'none',
+            },
+            overflow: 'hidden',
+            flexShrink: 0,
+          }}
+        >
+          <AccordionSummary
+            expandIcon={<ChevronDownIcon size={14} />}
+            aria-controls="panel-executors-content"
+            id="panel-executors-header"
+            sx={{
+              minHeight: 48,
+              '&.Mui-expanded': {
+                minHeight: 48,
+              },
+              '& .MuiAccordionSummary-content': {
+                margin: '12px 0',
+                gap: 1,
+              },
+            }}
+            slotProps={{
+              content: {
+                sx: {alignItems: 'center'},
+              },
+            }}
+          >
+            <Box component="span" display="inline-flex" alignItems="center">
+              <ZapIcon size={16} />
+            </Box>
+            <Typography variant="subtitle2" fontWeight={600}>
+              {t('flows:core.resourcePanel.executors.title')}
+            </Typography>
+          </AccordionSummary>
+          <AccordionDetails
+            sx={{
+              pt: 0,
+              pb: 2,
+              px: 2,
+            }}
+          >
+            <Typography variant="body2" color="text.secondary" gutterBottom sx={{mb: 1.5}}>
+              {t('flows:core.resourcePanel.executors.description')}
+            </Typography>
+            <Stack direction="column" spacing={1}>
+              {executors?.map((executor: Step, index: number) => (
+                <ResourcePanelDraggable
+                  id={`${executor.resourceType}-${executor.type}-${index}`}
+                  key={`${executor.type}-${kebabCase(executor.display.label)}`}
+                  resource={executor}
+                  onAdd={onAdd}
+                  disabled={disabled}
                 />
               ))}
             </Stack>
@@ -469,4 +547,4 @@ function ResourcePanel({
   );
 }
 
-export default ResourcePanel;
+export default memo(ResourcePanel);

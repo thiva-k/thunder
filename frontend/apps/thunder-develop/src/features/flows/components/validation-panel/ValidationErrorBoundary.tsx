@@ -40,6 +40,7 @@ export interface ValidationErrorBoundaryPropsInterface {
 
 /**
  * Validation error boundary component that wraps components and shows error indicators.
+ * TEST 11: Restore full validation logic.
  *
  * @param props - Props injected to the component.
  * @returns ValidationErrorBoundary component.
@@ -47,7 +48,7 @@ export interface ValidationErrorBoundaryPropsInterface {
 function ValidationErrorBoundary({
   resource,
   children = null,
-  disableErrorBoundaryOnHover = true,
+  disableErrorBoundaryOnHover = false,
 }: PropsWithChildren<ValidationErrorBoundaryPropsInterface>): ReactElement {
   const {notifications} = useValidationStatus();
   const [active, setActive] = useState<boolean>(false);

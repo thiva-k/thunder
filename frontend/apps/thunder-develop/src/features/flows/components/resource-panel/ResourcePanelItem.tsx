@@ -20,7 +20,6 @@ import {Avatar, Box, Card, CardContent, IconButton, Stack, Typography, useColorS
 import {PlusIcon} from '@wso2/oxygen-ui-icons-react';
 import React, {type HTMLAttributes, type ReactElement} from 'react';
 import type {Resource} from '../../models/resources';
-import './ResourcePanelItem.scss';
 
 /**
  * Props interface of {@link ResourcePanelItem}

@@ -29,11 +29,11 @@ const EventTypes = {
    */
   ON_EDGE_DELETE: 'onEdgeDelete',
   /**
-   * Event triggered when a element of a node is deleted.
+   * Event triggered when an element of a node is deleted.
    */
   ON_NODE_ELEMENT_DELETE: 'onNodeElementDelete',
   /**
-   * Event triggered when a the flow is updated.
+   * Event triggered when a flow is updated.
    */
   ON_FLOW_UPDATE: 'onFlowUpdate',
   /**

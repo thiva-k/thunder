@@ -38,9 +38,11 @@ export interface DragTargetData {
 }
 
 /**
- * Interface for drag event with native mouse event.
+ * Interface for drag event with optional native event.
+ * The nativeEvent may be undefined or a generic Event from dnd-kit,
+ * but is validated as MouseEvent before use.
  */
 export interface DragEventWithNative {
-  nativeEvent: MouseEvent;
+  nativeEvent?: Event;
   [key: string]: unknown;
 }

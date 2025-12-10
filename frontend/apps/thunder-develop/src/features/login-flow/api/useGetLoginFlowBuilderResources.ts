@@ -18,6 +18,7 @@
 
 import type {Resources} from '@/features/flows/models/resources';
 import useGetFlowBuilderCoreResources from '@/features/flows/api/useGetFlowBuilderCoreResources';
+import executors from '../data/executors.json';
 import steps from '../data/steps.json';
 import templates from '../data/templates.json';
 import widgets from '../data/widgets.json';
@@ -42,6 +43,7 @@ const useGetLoginFlowBuilderResources = <Data = Resources>() => {
       steps: [...(coreResources?.steps ?? []), ...steps],
       templates: [...(coreResources?.templates ?? []), ...templates],
       widgets: [...(coreResources?.widgets ?? []), ...widgets],
+      executors: [...(coreResources?.executors ?? []), ...executors],
     } as unknown as Data,
     error: null,
     isLoading: false,

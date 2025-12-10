@@ -57,7 +57,7 @@
         "action": {
           "type": "EXECUTOR",
           "executor": {
-            "name": "BasicAuthenticationExecutor"
+            "name": "BasicAuthExecutor"
           }
         },
         "display": {

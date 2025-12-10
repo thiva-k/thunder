@@ -20,7 +20,7 @@ import type {EdgeTypes, NodeTypes} from '@xyflow/react';
 import type {Context, Dispatch, FunctionComponent, ReactNode, SetStateAction} from 'react';
 import {createContext} from 'react';
 import {type Base} from '../models/base';
-import type {FlowCompletionConfigsInterface, FlowsHistoryInterface} from '../models/flows';
+import type {FlowCompletionConfigsInterface} from '../models/flows';
 import type {MetadataInterface, Claim} from '../models/metadata';
 import type {Resource} from '../models/resources';
 import {PreviewScreenType} from '../models/custom-text-preference';
@@ -83,12 +83,14 @@ export interface FlowBuilderCoreContextProps {
   selectedAttributes: Record<string, Claim[]>;
   /**
    * Sets the latest interacted resource inside the canvas.
+   * @param resource - The resource that was interacted with.
+   * @param openPanel - Whether to open the properties panel. Defaults to true.
    */
-  setLastInteractedResource: (resource: Resource) => void;
+  setLastInteractedResource: (resource: Resource, openPanel?: boolean) => void;
   /**
    * Sets the active element node ID.
    */
-  setLastInteractedStepId: Dispatch<SetStateAction<string>>;
+  setLastInteractedStepId: (stepId: string) => void;
   /**
    * Sets the heading for the element properties panel.
    *
@@ -106,7 +108,7 @@ export interface FlowBuilderCoreContextProps {
    *
    * @param isOpen - Boolean indicating whether the element properties panel should be open.
    */
-  setIsOpenResourcePropertiesPanel: Dispatch<SetStateAction<boolean>>;
+  setIsOpenResourcePropertiesPanel: (isOpen: boolean) => void;
   /**
    * Function to set the state of the version history panel.
    */
@@ -179,42 +181,6 @@ export interface FlowBuilderCoreContextProps {
    */
   isFlowMetadataLoading?: boolean;
   /**
-   * Indicates whether local auto-save is enabled.
-   */
-  isAutoSaveLocalHistoryEnabled?: boolean;
-  /**
-   * Indicates whether an local auto-save operation is in progress.
-   */
-  isAutoSavingLocalHistory?: boolean;
-  /**
-   * The timestamp of the last successful local auto-save.
-   */
-  lastLocalHistoryAutoSaveTimestamp?: number | null;
-  /**
-   * Manually trigger an local auto-save operation.
-   */
-  triggerLocalHistoryAutoSave?: () => Promise<boolean>;
-  /**
-   * Enable or disable locally saved auto-save functionality.
-   */
-  setLocalHistoryAutoSaveEnabled?: (enabled: boolean) => void;
-  /**
-   * Check if there are locally saved drafts for this flow type.
-   */
-  hasLocalHistory?: boolean;
-  /**
-   * Clear all locally saved drafts for this flow type.
-   */
-  clearLocalHistory?: () => Promise<boolean>;
-  /**
-   * Restore flow from a specific history item.
-   */
-  restoreFromHistory?: (historyItem: FlowsHistoryInterface) => Promise<boolean>;
-  /**
-   * All locally saved drafts for the current flow type.
-   */
-  localHistory?: FlowsHistoryInterface[];
-  /**
    * Node types active in the flow.
    */
   flowNodeTypes: NodeTypes;
@@ -266,15 +232,6 @@ export interface FlowBuilderCoreContextProps {
    * @param style - The edge style type to apply.
    */
   setEdgeStyle: Dispatch<SetStateAction<EdgeStyleTypes>>;
-  /**
-   * Whether collision avoidance is enabled for edges.
-   * When disabled, edges use simple paths without obstacle detection.
-   */
-  isCollisionAvoidanceEnabled: boolean;
-  /**
-   * Function to toggle collision avoidance for edges.
-   */
-  setIsCollisionAvoidanceEnabled: Dispatch<SetStateAction<boolean>>;
 }
 
 /**
@@ -283,15 +240,11 @@ export interface FlowBuilderCoreContextProps {
 const FlowBuilderCoreContext: Context<FlowBuilderCoreContextProps> = createContext<FlowBuilderCoreContextProps>({
   ElementFactory: () => null,
   ResourceProperties: () => null,
-  clearLocalHistory: () => Promise.resolve(false),
   flowCompletionConfigs: {},
   flowEdgeTypes: {},
   flowNodeTypes: {},
-  hasLocalHistory: false,
   i18nText: undefined,
   i18nTextLoading: false,
-  isAutoSaveLocalHistoryEnabled: true,
-  isAutoSavingLocalHistory: false,
   isBrandingEnabled: false,
   isCustomI18nKey: () => false,
   isFlowMetadataLoading: false,
@@ -301,13 +254,10 @@ const FlowBuilderCoreContext: Context<FlowBuilderCoreContextProps> = createConte
   language: '',
   lastInteractedResource: {} as Base,
   lastInteractedStepId: '',
-  lastLocalHistoryAutoSaveTimestamp: null,
-  localHistory: [],
   metadata: undefined,
   onResourceDropOnCanvas: () => {},
   primaryI18nScreen: PreviewScreenType.LOGIN,
   resourcePropertiesPanelHeading: null,
-  restoreFromHistory: () => Promise.resolve(false),
   selectedAttributes: {},
   setFlowCompletionConfigs: () => {},
   setFlowEdgeTypes: () => {},
@@ -318,19 +268,15 @@ const FlowBuilderCoreContext: Context<FlowBuilderCoreContextProps> = createConte
   setLanguage: () => {},
   setLastInteractedResource: () => {},
   setLastInteractedStepId: () => {},
-  setLocalHistoryAutoSaveEnabled: () => {},
   setResourcePropertiesPanelHeading: () => {},
   setSelectedAttributes: () => {},
   supportedLocales: {},
-  triggerLocalHistoryAutoSave: () => Promise.resolve(false),
   addResourceToFlow: undefined,
   publishFlow: () => Promise.resolve(false),
   isVerboseMode: false,
   setIsVerboseMode: () => {},
-  edgeStyle: EdgeStyleTypesEnum.Bezier,
+  edgeStyle: EdgeStyleTypesEnum.SmoothStep,
   setEdgeStyle: () => {},
-  isCollisionAvoidanceEnabled: true,
-  setIsCollisionAvoidanceEnabled: () => {},
 });
 
 FlowBuilderCoreContext.displayName = 'FlowBuilderCoreContext';

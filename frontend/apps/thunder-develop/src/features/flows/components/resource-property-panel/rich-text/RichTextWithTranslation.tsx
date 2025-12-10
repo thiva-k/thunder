@@ -53,16 +53,13 @@ export interface RichTextWithTranslationProps {
 function TranslationRichText({onChange, value, disabled}: LanguageTextFieldProps): ReactElement {
   /**
    * Resource object to hold the rich text editor content.
-   * Note: This is a partial mock object that only contains the `config.text` property
-   * needed by the RichText component. We use a type assertion here since we know
-   * the RichText component only accesses this specific property.
+   * Note: This is a partial mock object that contains the `label` property (new format)
+   * needed by the RichText component.
    */
   const resource = useMemo(
     () =>
       ({
-        config: {
-          text: value ?? '',
-        },
+        label: value ?? '',
       }) as unknown as Resource,
     [value],
   );
@@ -143,7 +140,7 @@ function RichTextWithTranslation({
           propertyKey="richText"
           onClose={() => setIsI18nCardOpen(false)}
           i18nKey={(() => {
-            const text = String((resource.config as {text?: string})?.text ?? '');
+            const text = String((resource as Resource & {label?: string})?.label ?? '');
             return /^{{(.*)}}$/.test(text) ? text.slice(2, -2) : '';
           })()}
           onChange={(i18nKey: string) => onChange(i18nKey ? `{{${i18nKey}}}` : '')}

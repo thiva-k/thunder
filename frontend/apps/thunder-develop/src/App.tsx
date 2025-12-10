@@ -81,6 +81,16 @@ export default function App(): JSX.Element {
         >
           <Route index element={<LoginFlowBuilderPage />} />
         </Route>
+        <Route
+          path="/flows/login/:flowId"
+          element={
+            <ProtectedRoute>
+              <FullScreenLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<LoginFlowBuilderPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );

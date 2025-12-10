@@ -16,18 +16,19 @@
  * under the License.
  */
 
-import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
 import {useMemo, type ReactNode} from 'react';
-import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
-import useFlowBuilderCore from '@/features/flows/hooks/useFlowBuilderCore';
-import {Avatar, Box, Card, Divider, FormHelperText, Grid, Stack, Typography, useColorScheme} from '@wso2/oxygen-ui';
+import {useTranslation} from 'react-i18next';
 import classNames from 'classnames';
-import resolveStaticResourcePath from '@/features/flows/utils/resolveStaticResourcePath';
-import {type Element} from '@/features/flows/models/elements';
 import isEqual from 'lodash-es/isEqual';
 import omit from 'lodash-es/omit';
-import './ButtonExtendedProperties.scss';
+import {Avatar, Box, Card, Divider, FormHelperText, Grid, Stack, Typography, useColorScheme} from '@wso2/oxygen-ui';
+import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
+import useFlowBuilderCore from '@/features/flows/hooks/useFlowBuilderCore';
+import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
+import {type Element} from '@/features/flows/models/elements';
+import resolveStaticResourcePath from '@/features/flows/utils/resolveStaticResourcePath';
 import useGetLoginFlowBuilderActions from '@/features/login-flow/api/useGetLoginFlowBuilderActions';
+import './ButtonExtendedProperties.scss';
 
 /**
  * Props interface of {@link ButtonExtendedProperties}
@@ -40,6 +41,7 @@ export type ButtonExtendedPropertiesPropsInterface = CommonResourcePropertiesPro
  * @returns The ButtonExtendedProperties component.
  */
 function ButtonExtendedProperties({resource, onChange}: ButtonExtendedPropertiesPropsInterface): ReactNode {
+  const {t} = useTranslation();
   const {data: actions} = useGetLoginFlowBuilderActions();
   const {lastInteractedResource, setLastInteractedResource} = useFlowBuilderCore();
   const {selectedNotification} = useValidationStatus();
@@ -65,16 +67,16 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
     <Stack className="button-extended-properties" gap={2}>
       <Divider sx={{marginY: 2}} />
       <div>
-        <Typography className="button-extended-properties-heading">Type</Typography>
-        {actions?.map((action: Partial<Element> & {types?: Element[]}, index: number) => (
-          <Box key={index}>
+        <Typography className="button-extended-properties-heading">{t('flows:core.buttonExtendedProperties.type')}</Typography>
+        {actions?.map((action: Partial<Element> & {types?: Element[]}) => (
+          <Box key={`${action.type ?? 'action'}-${action.id ?? action.display?.label ?? ''}`}>
             <Typography className="button-extended-properties-sub-heading" variant="body1">
               {action?.display?.label}
             </Typography>
             <Grid container spacing={1}>
-              {action.types?.map((actionType: Element, typeIndex: number) => (
+              {action.types?.map((actionType: Element) => (
                 <Grid
-                  key={typeIndex}
+                  key={`${actionType.type}-${actionType.id}`}
                   size={{xs: 12}}
                   onClick={() => {
                     onChange(

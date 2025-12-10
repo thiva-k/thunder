@@ -16,8 +16,9 @@
  * under the License.
  */
 
-import {Stack, Typography} from '@wso2/oxygen-ui';
 import type {ReactElement} from 'react';
+import {useTranslation} from 'react-i18next';
+import {Stack, Typography} from '@wso2/oxygen-ui';
 import './RulesProperties.scss';
 
 /**
@@ -27,9 +28,11 @@ import './RulesProperties.scss';
  * @returns Rules properties component.
  */
 function RulesProperties(): ReactElement {
+  const {t} = useTranslation();
+
   return (
     <Stack gap={2}>
-      <Typography variant="body2">Define a rule to how conditionally proceed to next steps in the flow</Typography>
+      <Typography variant="body2">{t('flows:core.rulesProperties.description')}</Typography>
     </Stack>
   );
 }

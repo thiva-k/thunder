@@ -20,7 +20,7 @@ import CommonStepFactory, {
   type CommonStepFactoryPropsInterface,
 } from '@/features/flows/components/resources/steps/CommonStepFactory';
 import type {Node} from '@xyflow/react';
-import type {ReactElement} from 'react';
+import {memo, type ReactElement} from 'react';
 import type {Resources} from '@/features/flows/models/resources';
 import type {Element} from '@/features/flows/models/elements';
 
@@ -30,16 +30,19 @@ import type {Element} from '@/features/flows/models/elements';
 export interface StepFactoryPropsInterface extends CommonStepFactoryPropsInterface {
   /**
    * All available resources in the flow.
+   * @defaultValue undefined
    */
   allResources?: Resources;
   /**
    * Callback for adding an element to the view.
+   * @defaultValue undefined
    */
   onAddElement?: (element: Element) => void;
   /**
    * Callback for adding an element to a form.
    * @param element - The element to add.
    * @param formId - The ID of the form to add to.
+   * @defaultValue undefined
    */
   onAddElementToForm?: (element: Element, formId: string) => void;
 }
@@ -54,9 +57,9 @@ export interface StepFactoryPropsInterface extends CommonStepFactoryPropsInterfa
 function StepFactory({
   resourceId,
   resources,
-  allResources,
-  onAddElement,
-  onAddElementToForm,
+  allResources = undefined,
+  onAddElement = undefined,
+  onAddElementToForm = undefined,
   ...rest
 }: StepFactoryPropsInterface & Node): ReactElement {
   return (
@@ -71,4 +74,12 @@ function StepFactory({
   );
 }
 
-export default StepFactory;
+// Memoize to prevent re-renders during drag operations
+export default memo(StepFactory, (prevProps, nextProps) =>
+  prevProps.id === nextProps.id &&
+  prevProps.data === nextProps.data &&
+  prevProps.resources === nextProps.resources &&
+  prevProps.allResources === nextProps.allResources &&
+  prevProps.onAddElement === nextProps.onAddElement &&
+  prevProps.onAddElementToForm === nextProps.onAddElementToForm
+);

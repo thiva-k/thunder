@@ -66,6 +66,7 @@ export const StepCategories = {
   Decision: 'DECISION',
   Interface: 'INTERFACE',
   Workflow: 'WORKFLOW',
+  Executor: 'EXECUTOR',
 } as const;
 
 export const StepTypes = {
@@ -81,11 +82,11 @@ export const StaticStepTypes = {
 } as const;
 
 export const ExecutionTypes = {
-  GoogleFederation: 'GoogleExecutor',
+  GoogleFederation: 'GoogleOIDCAuthExecutor',
   AppleFederation: 'AppleExecutor',
   FacebookFederation: 'FacebookExecutor',
   MicrosoftFederation: 'Office365Executor',
-  GithubFederation: 'GithubExecutor',
+  GithubFederation: 'GithubOAuthExecutor',
   PasskeyEnrollment: 'FIDO2Executor',
   ConfirmationCode: 'ConfirmationCodeValidationExecutor',
   MagicLinkExecutor: 'MagicLinkExecutor',
@@ -111,12 +112,12 @@ export type ExecutionStepViewTypes = (typeof ExecutionStepViewTypes)[keyof typeo
  * Edge style types for the flow canvas.
  * These are used by the BaseEdge component to determine the visual style
  * while maintaining collision avoidance.
- * - bezier: Bézier curve (smooth curved edges)
+ * - default: Bézier curve (smooth curved edges) - ReactFlow's default edge type
  * - smoothstep: Smooth step edges (rounded corners)
  * - step: Step edges (right angles)
  */
 export const EdgeStyleTypes = {
-  Bezier: 'bezier',
+  Bezier: 'default',
   SmoothStep: 'smoothstep',
   Step: 'step',
 } as const;

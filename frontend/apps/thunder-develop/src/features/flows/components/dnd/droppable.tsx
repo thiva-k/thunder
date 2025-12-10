@@ -16,54 +16,11 @@
  * under the License.
  */
 
-import {useDragDropManager, useDroppable, type DragDropEventHandlers, type UseDroppableInput} from '@dnd-kit/react';
+import {useDroppable, type UseDroppableInput} from '@dnd-kit/react';
 import {Box, type BoxProps} from '@wso2/oxygen-ui';
-import {type PropsWithChildren, type ReactElement, useState, useEffect} from 'react';
+import {memo, type PropsWithChildren, type ReactElement, type ReactNode} from 'react';
 import {pointerIntersection} from '@dnd-kit/collision';
 import './droppable.scss';
-
-/**
- * Resource type for drag and drop operations.
- */
-interface Resource {
-  type: string;
-}
-
-/**
- * A safe version of useDragDropMonitor that only subscribes when inside a DragDropProvider.
- * This prevents the "useDndMonitor hook was called outside of a DragDropProvider" warning.
- */
-function useSafeDragDropMonitor(handlers: Partial<DragDropEventHandlers>): void {
-  const manager = useDragDropManager();
-
-  useEffect(() => {
-    if (!manager) {
-      return undefined;
-    }
-
-    const unsubscribers: (() => void)[] = [];
-
-    if (handlers.onDragEnd) {
-      unsubscribers.push(manager.monitor.addEventListener('dragend', handlers.onDragEnd));
-    }
-
-    if (handlers.onDragOver) {
-      unsubscribers.push(manager.monitor.addEventListener('dragover', handlers.onDragOver));
-    }
-
-    if (handlers.onDragStart) {
-      unsubscribers.push(manager.monitor.addEventListener('dragstart', handlers.onDragStart));
-    }
-
-    if (handlers.onDragMove) {
-      unsubscribers.push(manager.monitor.addEventListener('dragmove', handlers.onDragMove));
-    }
-
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    };
-  }, [manager, handlers]);
-}
 
 /**
  * Props interface of {@link Droppable}
@@ -71,7 +28,48 @@ function useSafeDragDropMonitor(handlers: Partial<DragDropEventHandlers>): void 
 export type DroppableProps = UseDroppableInput<Record<string, unknown>> & BoxProps;
 
 /**
+ * Props interface for DroppablePresentation
+ */
+interface DroppablePresentationProps {
+  children: ReactNode;
+  className?: string;
+  sx?: BoxProps['sx'];
+}
+
+/**
+ * Memoized presentation component for Droppable content.
+ * PERFORMANCE FIX: Based on dnd-kit issue #389 - separate presentation from hook
+ * This prevents children from re-rendering when useDroppable causes parent re-renders.
+ * @see https://github.com/clauderic/dnd-kit/issues/389
+ *
+ * @param props - Props injected to the component.
+ * @returns DroppablePresentation component.
+ */
+function DroppablePresentation({children, className = undefined, sx = {}}: DroppablePresentationProps): ReactElement {
+  return (
+    <Box
+      className={className ?? 'flow-builder-dnd-droppable-content'}
+      sx={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        gap: '10px',
+        height: '100%',
+        width: '100%',
+        ...sx,
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+const MemoizedDroppablePresentation = memo(DroppablePresentation);
+
+/**
  * Droppable component.
+ * PERFORMANCE FIX: Uses memoized presentation pattern from dnd-kit issue #389
+ * The useDroppable hook causes re-renders during drag operations, but by memoizing
+ * the children separately, those re-renders become cheap (only the wrapper re-renders).
  *
  * @param props - Props injected to the component.
  * @returns Droppable component.
@@ -86,7 +84,7 @@ function Droppable({
   accept,
   ...rest
 }: PropsWithChildren<DroppableProps>): ReactElement {
-  const {ref, isDropTarget} = useDroppable<Record<string, unknown>>({
+  const {ref} = useDroppable<Record<string, unknown>>({
     accept,
     collisionDetector,
     data,
@@ -94,49 +92,20 @@ function Droppable({
     ...rest,
   });
 
-  const [draggedResource, setDraggedResource] = useState<Resource | null>(null);
-
-  useSafeDragDropMonitor({
-    onDragEnd() {
-      setDraggedResource(null);
-    },
-    onDragOver(event) {
-      const {source} = event.operation;
-      const sourceData = source?.data as {dragged?: Resource} | undefined;
-
-      if (sourceData?.dragged) {
-        setDraggedResource(sourceData.dragged);
-      }
-    },
-  });
-
-  const droppableClassName = [
-    'flow-builder-dnd-droppable',
-    draggedResource && (accept as string[])?.includes(draggedResource.type) && 'allowed',
-    draggedResource && !(accept as string[])?.includes(draggedResource.type) && 'disallowed',
-    isDropTarget && typeof id === 'string' && id.includes((data as {stepId?: string})?.stepId ?? '') && 'is-dropping',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   return (
     <Box
       ref={ref as BoxProps['ref']}
-      className={droppableClassName}
+      className={className ?? 'flow-builder-dnd-droppable'}
       sx={{
         display: 'inline-flex',
         flexDirection: 'column',
-        gap: '10px',
         height: '100%',
-        transition: 'background-color 0.2s ease',
         width: '100%',
-        ...sx,
       }}
     >
-      {children}
+      <MemoizedDroppablePresentation sx={sx}>{children}</MemoizedDroppablePresentation>
     </Box>
   );
 }
 
-export default Droppable;
+export default memo(Droppable);

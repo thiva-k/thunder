@@ -35,10 +35,10 @@ interface Box {
   node: Node;
 }
 
-function getBoxesFromNodes(nodes: Node[], margin: number = 0): Box[] {
-  const boxes: Box[] = new Array(nodes.length);
+function getBoxesFromNodes(nodes: Node[], margin = 0): Box[] {
+  const boxes: Box[] = new Array<Box>(nodes.length);
 
-  for (let i = 0; i < nodes.length; i++) {
+  for (let i = 0; i < nodes.length; i += 1) {
     const node = nodes[i];
     boxes[i] = {
       x: node.position.x - margin,
@@ -68,11 +68,11 @@ export const resolveCollisions: CollisionAlgorithm = (
 ) => {
   const boxes = getBoxesFromNodes(nodes, margin);
 
-  for (let iter = 0; iter <= maxIterations; iter++) {
+  for (let iter = 0; iter <= maxIterations; iter += 1) {
     let moved = false;
 
-    for (let i = 0; i < boxes.length; i++) {
-      for (let j = i + 1; j < boxes.length; j++) {
+    for (let i = 0; i < boxes.length; i += 1) {
+      for (let j = i + 1; j < boxes.length; j += 1) {
         const A = boxes[i];
         const B = boxes[j];
 
@@ -135,5 +135,3 @@ export const resolveCollisions: CollisionAlgorithm = (
 
   return newNodes;
 };
-
-export default resolveCollisions;
