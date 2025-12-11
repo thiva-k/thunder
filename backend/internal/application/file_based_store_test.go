@@ -36,9 +36,6 @@ import (
 // - Application listing and counting functionality
 // - Error handling for storage failures, type assertion failures, and edge cases
 // - Mock entity store implementation for isolated unit testing
-//
-// Test Coverage: 100% of statements in file_based_store.go
-// All interface methods are thoroughly tested with success and error scenarios.
 type FileBasedStoreTestSuite struct {
 	suite.Suite
 	store applicationStoreInterface

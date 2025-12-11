@@ -26,9 +26,10 @@ import (
 	urlpath "path"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"time"
 
-	"github.com/asgardeo/thunder/internal/system/log"
+	"github.com/asgardeo/thunder/internal/system/utils"
 
 	yaml "gopkg.in/yaml.v3"
 )
@@ -54,9 +55,8 @@ type GateClientConfig struct {
 
 // SecurityConfig holds the security configuration details.
 type SecurityConfig struct {
-	CertFile   string `yaml:"cert_file" json:"cert_file"`
-	KeyFile    string `yaml:"key_file" json:"key_file"`
-	CryptoFile string `yaml:"crypto_file" json:"crypto_file"`
+	CertFile string `yaml:"cert_file" json:"cert_file"`
+	KeyFile  string `yaml:"key_file" json:"key_file"`
 }
 
 // DataSource holds the individual database connection details.
@@ -135,8 +135,13 @@ type FlowConfig struct {
 
 // CryptoConfig holds the cryptographic configuration details.
 type CryptoConfig struct {
-	Key             string                `yaml:"key" json:"key"`
+	Encryption      EncryptionConfig      `yaml:"encryption" json:"encryption"`
 	PasswordHashing PasswordHashingConfig `yaml:"password_hashing" json:"password_hashing"`
+}
+
+// EncryptionConfig holds the encryption configuration details.
+type EncryptionConfig struct {
+	Key string `yaml:"key" json:"key"`
 }
 
 // PasswordHashingConfig holds the password hashing configuration details.
@@ -247,13 +252,12 @@ type Config struct {
 }
 
 // LoadConfig loads the configurations from the specified YAML file and applies defaults.
-func LoadConfig(path string, defaultsPath string) (*Config, error) {
+func LoadConfig(configPath string, defaultPath string, thunderHome string) (*Config, error) {
 	var cfg Config
-	path = filepath.Clean(path)
 
 	// Load default configuration if provided
-	if defaultsPath != "" {
-		defaultCfg, err := loadDefaultConfig(defaultsPath)
+	if defaultPath != "" {
+		defaultCfg, err := loadDefaultConfig(defaultPath, thunderHome)
 		if err != nil {
 			return nil, err
 		}
@@ -261,19 +265,9 @@ func LoadConfig(path string, defaultsPath string) (*Config, error) {
 	}
 
 	// Load user configuration
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if ferr := file.Close(); ferr != nil {
-			log.GetLogger().Error("Failed to close config file", log.Error(ferr))
-		}
-	}()
-
-	decoder := yaml.NewDecoder(file)
 	var userCfg Config
-	if err := decoder.Decode(&userCfg); err != nil {
+	userCfg, err := loadUserConfig(configPath, thunderHome)
+	if err != nil {
 		return nil, err
 	}
 
@@ -298,25 +292,46 @@ func LoadConfig(path string, defaultsPath string) (*Config, error) {
 }
 
 // loadDefaultConfig loads the default configuration from a JSON file.
-func loadDefaultConfig(path string) (*Config, error) {
+func loadDefaultConfig(path string, thunderHome string) (*Config, error) {
 	var cfg Config
-	path = filepath.Clean(path)
-
-	file, err := os.Open(path)
+	configPath := filepath.Clean(path)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if ferr := file.Close(); ferr != nil {
-			log.GetLogger().Error("Failed to close default config file", log.Error(ferr))
-		}
-	}()
+	data, err = utils.SubstituteFilePaths(data, thunderHome)
+	if err != nil {
+		return nil, err
+	}
 
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&cfg); err != nil {
+	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func loadUserConfig(path string, thunderHome string) (Config, error) {
+	var cfg Config
+	configPath := filepath.Clean(path)
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return Config{}, err
+	}
+	data, err = utils.SubstituteEnvironmentVariables(data)
+	if err != nil {
+		return Config{}, err
+	}
+	data, err = utils.SubstituteFilePaths(data, thunderHome)
+	if err != nil {
+		return Config{}, err
+	}
+
+	decoder := yaml.NewDecoder(strings.NewReader(string(data)))
+	decoder.KnownFields(true)
+	if err := decoder.Decode(&cfg); err != nil {
+		return Config{}, err
+	}
+	return cfg, nil
 }
 
 // GetServerURL constructs the server URL from the server configuration.

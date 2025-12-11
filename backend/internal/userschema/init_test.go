@@ -735,21 +735,14 @@ func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 	err = os.WriteFile(schemaDir+"/invalid-schema.yaml", []byte(invalidYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoDir := tmpDir + "/repository/conf"
-	err = os.MkdirAll(cryptoDir, 0750)
-	assert.NoError(t, err)
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
@@ -795,18 +788,14 @@ schema: |
 	err = os.WriteFile(schemaDir+"/invalid-schema.yaml", []byte(invalidSchemaYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
@@ -851,18 +840,14 @@ schema: |
 	err = os.WriteFile(schemaDir+"/test-schema.yaml", []byte(validSchemaYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
@@ -917,18 +902,14 @@ schema: |
 	err = os.WriteFile(schemaDir+"/invalid-json.yaml", []byte(invalidJSONYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
