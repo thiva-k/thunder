@@ -215,7 +215,7 @@ The following table lists the configurable parameters of the Thunder chart and t
 | `configuration.cache.ttl`              | Cache TTL in seconds                                            | `3600`                       |
 | `configuration.cache.evictionPolicy`   | Cache eviction policy                                           | `LRU`                        |
 | `configuration.cache.cleanupInterval`  | Cache cleanup interval in seconds                               | `300`                        |
-| `configuration.jwt.issuer`             | JWT issuer                                                      | `thunder`                    |
+| `configuration.jwt.issuer`             | JWT issuer (derived from server.publicUrl if not set)           | derived                      |
 | `configuration.jwt.validityPeriod`     | JWT validity period in seconds                                  | `3600`                       |
 | `configuration.jwt.audience`           | Default audience for auth assertions                            | `application`                |
 | `configuration.oauth.refreshToken.renewOnGrant` | Renew refresh token on grant                           | `false`                      |
