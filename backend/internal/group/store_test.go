@@ -145,7 +145,7 @@ func (suite *GroupStoreTestSuite) runGroupNameConflictTestCases(testCases []grou
 }
 
 // testExecRollbackError is a helper function to test rollback errors during database operations.
-func testExecRollbackError(t *testing.T, query string, operation func(*groupStore, GroupDAO) error) {
+func testExecRollbackError(t *testing.T, query dbmodel.DBQuery, operation func(*groupStore, GroupDAO) error) {
 	providerMock := providermock.NewDBProviderInterfaceMock(t)
 	dbClientMock := clientmock.NewDBClientInterfaceMock(t)
 	txMock := modelmock.NewTxInterfaceMock(t)
@@ -480,7 +480,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryCreateGroup.Query,
+						QueryCreateGroup,
 						groupWithMember.ID,
 						groupWithMember.OrganizationUnitID,
 						groupWithMember.Name,
@@ -493,7 +493,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						groupWithMember.ID,
 						MemberTypeUser,
 						"user-1",
@@ -533,7 +533,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryCreateGroup.Query,
+						QueryCreateGroup,
 						groupNoMembers.ID,
 						groupNoMembers.OrganizationUnitID,
 						groupNoMembers.Name,
@@ -570,7 +570,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 			name:      "insert rollback failure",
 			useHelper: true,
 			helper: func() {
-				testExecRollbackError(suite.T(), QueryCreateGroup.Query, func(store *groupStore, group GroupDAO) error {
+				testExecRollbackError(suite.T(), QueryCreateGroup, func(store *groupStore, group GroupDAO) error {
 					return store.CreateGroup(group)
 				})
 			},
@@ -597,7 +597,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryCreateGroup.Query,
+						QueryCreateGroup,
 						groupMemberOnly.ID,
 						groupMemberOnly.OrganizationUnitID,
 						groupMemberOnly.Name,
@@ -610,7 +610,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						groupMemberOnly.ID,
 						MemberTypeUser,
 						"usr-1",
@@ -648,7 +648,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryCreateGroup.Query,
+						QueryCreateGroup,
 						groupMemberOnly.ID,
 						groupMemberOnly.OrganizationUnitID,
 						groupMemberOnly.Name,
@@ -661,7 +661,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						groupMemberOnly.ID,
 						MemberTypeUser,
 						"usr-1",
@@ -720,7 +720,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryCreateGroup.Query,
+						QueryCreateGroup,
 						groupWithMember.ID,
 						groupWithMember.OrganizationUnitID,
 						groupWithMember.Name,
@@ -733,7 +733,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_CreateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						groupWithMember.ID,
 						MemberTypeUser,
 						"user-1",
@@ -1249,7 +1249,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupWithMembers.ID,
 						groupWithMembers.OrganizationUnitID,
 						groupWithMembers.Name,
@@ -1284,7 +1284,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 			name:      "exec rollback helper",
 			useHelper: true,
 			helper: func() {
-				testExecRollbackError(suite.T(), QueryUpdateGroup.Query, func(store *groupStore, group GroupDAO) error {
+				testExecRollbackError(suite.T(), QueryUpdateGroup, func(store *groupStore, group GroupDAO) error {
 					return store.UpdateGroup(group)
 				})
 			},
@@ -1309,7 +1309,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupMinimal.ID,
 						groupMinimal.OrganizationUnitID,
 						groupMinimal.Name,
@@ -1345,7 +1345,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupMinimal.ID,
 						groupMinimal.OrganizationUnitID,
 						groupMinimal.Name,
@@ -1381,7 +1381,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						"grp-001",
 						"",
 						"",
@@ -1393,7 +1393,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1402,7 +1402,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						"grp-001",
 						MemberTypeUser,
 						"usr-1",
@@ -1437,7 +1437,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupMinimal.ID,
 						groupMinimal.OrganizationUnitID,
 						groupMinimal.Name,
@@ -1449,7 +1449,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						groupMinimal.ID,
 						testDeploymentID,
 					).
@@ -1458,7 +1458,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						groupMinimal.ID,
 						mock.Anything,
 						mock.Anything,
@@ -1512,7 +1512,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupMinimal.ID,
 						groupMinimal.OrganizationUnitID,
 						groupMinimal.Name,
@@ -1548,7 +1548,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupWithoutMembers.ID,
 						groupWithoutMembers.OrganizationUnitID,
 						groupWithoutMembers.Name,
@@ -1560,7 +1560,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						groupWithoutMembers.ID,
 						testDeploymentID,
 					).
@@ -1593,7 +1593,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryUpdateGroup.Query,
+						QueryUpdateGroup,
 						groupWithMembers.ID,
 						groupWithMembers.OrganizationUnitID,
 						groupWithMembers.Name,
@@ -1605,7 +1605,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						groupWithMembers.ID,
 						testDeploymentID,
 					).
@@ -1614,7 +1614,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						groupWithMembers.ID,
 						MemberTypeUser,
 						"user-1",
@@ -1731,7 +1731,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1767,7 +1767,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1777,7 +1777,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroup.Query,
+						QueryDeleteGroup,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1813,7 +1813,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1823,7 +1823,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroup.Query,
+						QueryDeleteGroup,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1859,7 +1859,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1869,7 +1869,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroup.Query,
+						QueryDeleteGroup,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1905,7 +1905,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1915,7 +1915,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroup.Query,
+						QueryDeleteGroup,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -1967,7 +1967,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2003,7 +2003,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2013,7 +2013,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroup.Query,
+						QueryDeleteGroup,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2049,7 +2049,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2059,7 +2059,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_DeleteGroup() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroup.Query,
+						QueryDeleteGroup,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2681,7 +2681,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_AddMembersToGroupReturnsError()
 	txMock.
 		On(
 			"Exec",
-			QueryAddMemberToGroup.Query,
+			QueryAddMemberToGroup,
 			"grp-001",
 			MemberTypeUser,
 			"usr-1",
@@ -2711,7 +2711,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroupMembers() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2721,7 +2721,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroupMembers() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						"grp-001",
 						MemberTypeUser,
 						"usr-1",
@@ -2740,7 +2740,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroupMembers() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2757,7 +2757,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroupMembers() {
 				txMock.
 					On(
 						"Exec",
-						QueryDeleteGroupMembers.Query,
+						QueryDeleteGroupMembers,
 						"grp-001",
 						testDeploymentID,
 					).
@@ -2767,7 +2767,7 @@ func (suite *GroupStoreTestSuite) TestGroupStore_UpdateGroupMembers() {
 				txMock.
 					On(
 						"Exec",
-						QueryAddMemberToGroup.Query,
+						QueryAddMemberToGroup,
 						"grp-001",
 						MemberTypeUser,
 						"usr-1",

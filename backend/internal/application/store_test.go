@@ -1704,7 +1704,7 @@ func TestCreateOAuthAppQuery_ExecError(t *testing.T) {
 
 	mockTx := modelmock.NewTxInterfaceMock(t)
 	mockTx.
-		On("Exec", QueryCreateOAuthApplication.Query, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+		On("Exec", QueryCreateOAuthApplication, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 			testServerID).
 		Return(nil, errors.New("database exec error")).
 		Once()
@@ -1722,7 +1722,7 @@ func TestDeleteOAuthAppQuery_ExecError(t *testing.T) {
 
 	mockTx := modelmock.NewTxInterfaceMock(t)
 	mockTx.
-		On("Exec", QueryDeleteOAuthApplicationByClientID.Query, mock.Anything, testServerID).
+		On("Exec", QueryDeleteOAuthApplicationByClientID, mock.Anything, testServerID).
 		Return(nil, errors.New("database delete error")).
 		Once()
 
