@@ -205,6 +205,114 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_Success() {
 	}
 }
 
+func (suite *FlowMgtAPITestSuite) TestCreateFlow_WithLayout() {
+	// Create a flow with layout information
+	flowWithLayout := FlowDefinition{
+		Name:     "Flow with Layout",
+		FlowType: "AUTHENTICATION",
+		Nodes: []NodeDefinition{
+			{
+				ID:   "START",
+				Type: "START",
+				Layout: &NodeLayout{
+					Size: &NodeSize{
+						Width:  180,
+						Height: 80,
+					},
+					Position: &NodePosition{
+						X: 50,
+						Y: 50,
+					},
+				},
+			},
+			{
+				ID:   "basic_auth",
+				Type: "TASK_EXECUTION",
+				Layout: &NodeLayout{
+					Size: &NodeSize{
+						Width:  200,
+						Height: 120,
+					},
+					Position: &NodePosition{
+						X: 300,
+						Y: 50,
+					},
+				},
+				Executor: &ExecutorDefinition{
+					Name: "BasicAuthExecutor",
+				},
+				OnSuccess: "END",
+				OnFailure: "END",
+			},
+			{
+				ID:   "END",
+				Type: "END",
+				Layout: &NodeLayout{
+					Size: &NodeSize{
+						Width:  180,
+						Height: 80,
+					},
+					Position: &NodePosition{
+						X: 550,
+						Y: 50,
+					},
+				},
+			},
+		},
+	}
+
+	// Create the flow
+	response := suite.createFlow(flowWithLayout)
+	suite.trackFlow(response.ID)
+
+	// Verify layout is preserved in the response
+	suite.NotEmpty(response.ID)
+	suite.Equal(flowWithLayout.Name, response.Name)
+	suite.Len(response.Nodes, 3)
+
+	// Verify START node layout
+	startNode := response.Nodes[0]
+	suite.Equal("START", startNode.ID)
+	suite.NotNil(startNode.Layout)
+	suite.NotNil(startNode.Layout.Size)
+	suite.Equal(180.0, startNode.Layout.Size.Width)
+	suite.Equal(80.0, startNode.Layout.Size.Height)
+	suite.NotNil(startNode.Layout.Position)
+	suite.Equal(50.0, startNode.Layout.Position.X)
+	suite.Equal(50.0, startNode.Layout.Position.Y)
+
+	// Verify basic_auth node layout
+	authNode := response.Nodes[1]
+	suite.Equal("basic_auth", authNode.ID)
+	suite.NotNil(authNode.Layout)
+	suite.NotNil(authNode.Layout.Size)
+	suite.Equal(200.0, authNode.Layout.Size.Width)
+	suite.Equal(120.0, authNode.Layout.Size.Height)
+	suite.NotNil(authNode.Layout.Position)
+	suite.Equal(300.0, authNode.Layout.Position.X)
+	suite.Equal(50.0, authNode.Layout.Position.Y)
+
+	// Verify END node layout
+	endNode := response.Nodes[2]
+	suite.Equal("END", endNode.ID)
+	suite.NotNil(endNode.Layout)
+	suite.NotNil(endNode.Layout.Size)
+	suite.Equal(180.0, endNode.Layout.Size.Width)
+	suite.Equal(80.0, endNode.Layout.Size.Height)
+	suite.NotNil(endNode.Layout.Position)
+	suite.Equal(550.0, endNode.Layout.Position.X)
+	suite.Equal(50.0, endNode.Layout.Position.Y)
+
+	// Retrieve the flow by ID and verify layout is persisted
+	retrievedFlow := suite.getFlow(response.ID)
+	suite.Len(retrievedFlow.Nodes, 3)
+
+	// Verify layout is preserved after retrieval
+	suite.NotNil(retrievedFlow.Nodes[0].Layout)
+	suite.Equal(180.0, retrievedFlow.Nodes[0].Layout.Size.Width)
+	suite.Equal(50.0, retrievedFlow.Nodes[0].Layout.Position.X)
+}
+
 func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 	testCases := []struct {
 		name           string
