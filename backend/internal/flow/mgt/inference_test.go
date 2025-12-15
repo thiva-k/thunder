@@ -73,11 +73,15 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_Success() {
 	provNode := s.getNode(regFlow.Nodes, provisioningNodeID)
 	s.Equal(executor.ExecutorNameProvisioning, provNode.Executor.Name)
 	s.Equal("end", provNode.OnSuccess)
+	// No layout should be added since source flow has no layout
+	s.Nil(provNode.Layout)
 
 	// Verify user type resolver was inserted
 	s.True(s.hasNode(regFlow.Nodes, userTypeResolverNodeID))
 	resolverNode := s.getNode(regFlow.Nodes, userTypeResolverNodeID)
 	s.Equal(executor.ExecutorNameUserTypeResolver, resolverNode.Executor.Name)
+	// No layout should be added since source flow has no layout
+	s.Nil(resolverNode.Layout)
 
 	// Verify start node points to user type resolver
 	startNode := s.getNode(regFlow.Nodes, "start")
@@ -253,6 +257,86 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithOnFailure(
 	s.Equal(provisioningNodeID, taskNode.OnFailure)
 }
 
+func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithLayout() {
+	authFlow := &FlowDefinition{
+		Name:     "Basic Authentication",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{
+				ID:   "start",
+				Type: "START",
+				Layout: &NodeLayout{
+					Size:     &NodeSize{Width: 180, Height: 80},
+					Position: &NodePosition{X: 50, Y: 50},
+				},
+				OnSuccess: "prompt",
+			},
+			{
+				ID:   "prompt",
+				Type: "PROMPT",
+				Layout: &NodeLayout{
+					Size:     &NodeSize{Width: 320, Height: 200},
+					Position: &NodePosition{X: 300, Y: 50},
+				},
+				OnSuccess: "auth",
+			},
+			{
+				ID:   "auth",
+				Type: "TASK_EXECUTION",
+				Layout: &NodeLayout{
+					Size:     &NodeSize{Width: 200, Height: 120},
+					Position: &NodePosition{X: 700, Y: 50},
+				},
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameBasicAuth,
+				},
+				OnSuccess: "end",
+			},
+			{
+				ID:   "end",
+				Type: "END",
+				Layout: &NodeLayout{
+					Size:     &NodeSize{Width: 180, Height: 80},
+					Position: &NodePosition{X: 1000, Y: 50},
+				},
+			},
+		},
+	}
+
+	regFlow, err := s.service.InferRegistrationFlow(authFlow)
+
+	s.NoError(err)
+	s.NotNil(regFlow)
+
+	// Verify provisioning node has layout since source flow has layout
+	s.True(s.hasNode(regFlow.Nodes, provisioningNodeID))
+	provNode := s.getNode(regFlow.Nodes, provisioningNodeID)
+	s.NotNil(provNode.Layout, "Provisioning node should have layout when source flow has layout")
+	s.NotNil(provNode.Layout.Size)
+	s.Equal(float64(100), provNode.Layout.Size.Width)
+	s.Equal(float64(120), provNode.Layout.Size.Height)
+	s.NotNil(provNode.Layout.Position)
+	s.Equal(float64(0), provNode.Layout.Position.X)
+	s.Equal(float64(0), provNode.Layout.Position.Y)
+
+	// Verify user type resolver has layout since source flow has layout
+	s.True(s.hasNode(regFlow.Nodes, userTypeResolverNodeID))
+	resolverNode := s.getNode(regFlow.Nodes, userTypeResolverNodeID)
+	s.NotNil(resolverNode.Layout, "User type resolver node should have layout when source flow has layout")
+	s.NotNil(resolverNode.Layout.Size)
+	s.Equal(float64(100), resolverNode.Layout.Size.Width)
+	s.Equal(float64(120), resolverNode.Layout.Size.Height)
+	s.NotNil(resolverNode.Layout.Position)
+	s.Equal(float64(0), resolverNode.Layout.Position.X)
+	s.Equal(float64(0), resolverNode.Layout.Position.Y)
+
+	// Verify original nodes still have their layout preserved
+	startNode := s.getNode(regFlow.Nodes, "start")
+	s.NotNil(startNode.Layout)
+	s.Equal(float64(180), startNode.Layout.Size.Width)
+	s.Equal(float64(50), startNode.Layout.Position.X)
+}
+
 // Test generateRegistrationFlowName
 
 func (s *FlowInferenceServiceTestSuite) TestGenerateRegistrationFlowName_Authentication() {
@@ -415,6 +499,89 @@ func (s *FlowInferenceServiceTestSuite) TestFindStartNode_NotFound() {
 	s.Contains(err.Error(), "no START node found")
 }
 
+// Test hasLayoutInformation
+
+func (s *FlowInferenceServiceTestSuite) TestHasLayoutInformation_WithLayout() {
+	service := s.service.(*flowInferenceService)
+	nodes := []NodeDefinition{
+		{
+			ID:   "node1",
+			Type: "START",
+			Layout: &NodeLayout{
+				Size:     &NodeSize{Width: 100, Height: 50},
+				Position: &NodePosition{X: 0, Y: 0},
+			},
+		},
+		{ID: "node2", Type: "END"},
+	}
+
+	result := service.hasLayoutInformation(nodes)
+
+	s.True(result, "Should return true when at least one node has layout")
+}
+
+func (s *FlowInferenceServiceTestSuite) TestHasLayoutInformation_WithoutLayout() {
+	service := s.service.(*flowInferenceService)
+	nodes := []NodeDefinition{
+		{ID: "node1", Type: "START"},
+		{ID: "node2", Type: "END"},
+	}
+
+	result := service.hasLayoutInformation(nodes)
+
+	s.False(result, "Should return false when no nodes have layout")
+}
+
+func (s *FlowInferenceServiceTestSuite) TestHasLayoutInformation_EmptyNodes() {
+	service := s.service.(*flowInferenceService)
+	nodes := []NodeDefinition{}
+
+	result := service.hasLayoutInformation(nodes)
+
+	s.False(result, "Should return false for empty node list")
+}
+
+func (s *FlowInferenceServiceTestSuite) TestHasLayoutInformation_WithEmptyLayoutObject() {
+	service := s.service.(*flowInferenceService)
+	nodes := []NodeDefinition{
+		{
+			ID:     "node1",
+			Type:   "START",
+			Layout: &NodeLayout{}, // Empty layout object
+		},
+		{ID: "node2", Type: "END"},
+	}
+
+	result := service.hasLayoutInformation(nodes)
+
+	s.False(result, "Should return false when layout is empty object without size or position")
+}
+
+// Test addDefaultLayout
+
+func (s *FlowInferenceServiceTestSuite) TestAddDefaultLayout() {
+	service := s.service.(*flowInferenceService)
+	node := NodeDefinition{
+		ID:   "test-node",
+		Type: "TASK_EXECUTION",
+	}
+
+	// Verify node has no layout initially
+	s.Nil(node.Layout)
+
+	// Add default layout
+	service.addDefaultLayout(&node)
+
+	// Verify layout is added with default values
+	s.NotNil(node.Layout)
+	s.NotNil(node.Layout.Size)
+	s.Equal(float64(100), node.Layout.Size.Width)
+	s.Equal(float64(120), node.Layout.Size.Height)
+	s.NotNil(node.Layout.Position)
+	s.Equal(float64(0), node.Layout.Position.X)
+	s.Equal(float64(0), node.Layout.Position.Y)
+}
+
 // Test findEndNode
 
 func (s *FlowInferenceServiceTestSuite) TestFindEndNode_Success() {
@@ -478,13 +645,35 @@ func (s *FlowInferenceServiceTestSuite) TestHasProvisioningNode_NotExists() {
 func (s *FlowInferenceServiceTestSuite) TestCreateProvisioningNode() {
 	service := s.service.(*flowInferenceService)
 
-	node := service.createProvisioningNode("end-node")
+	// Test with layout
+	nodeWithLayout := service.createProvisioningNode("end-node", true)
 
-	s.Equal(provisioningNodeID, node.ID)
-	s.Equal(string(common.NodeTypeTaskExecution), node.Type)
-	s.NotNil(node.Executor)
-	s.Equal(executor.ExecutorNameProvisioning, node.Executor.Name)
-	s.Equal("end-node", node.OnSuccess)
+	s.Equal(provisioningNodeID, nodeWithLayout.ID)
+	s.Equal(string(common.NodeTypeTaskExecution), nodeWithLayout.Type)
+	s.NotNil(nodeWithLayout.Executor)
+	s.Equal(executor.ExecutorNameProvisioning, nodeWithLayout.Executor.Name)
+	s.Equal("end-node", nodeWithLayout.OnSuccess)
+
+	// Verify layout is set with default values
+	s.NotNil(nodeWithLayout.Layout)
+	s.NotNil(nodeWithLayout.Layout.Size)
+	s.Equal(float64(100), nodeWithLayout.Layout.Size.Width)
+	s.Equal(float64(120), nodeWithLayout.Layout.Size.Height)
+	s.NotNil(nodeWithLayout.Layout.Position)
+	s.Equal(float64(0), nodeWithLayout.Layout.Position.X)
+	s.Equal(float64(0), nodeWithLayout.Layout.Position.Y)
+
+	// Test without layout
+	nodeWithoutLayout := service.createProvisioningNode("end-node", false)
+
+	s.Equal(provisioningNodeID, nodeWithoutLayout.ID)
+	s.Equal(string(common.NodeTypeTaskExecution), nodeWithoutLayout.Type)
+	s.NotNil(nodeWithoutLayout.Executor)
+	s.Equal(executor.ExecutorNameProvisioning, nodeWithoutLayout.Executor.Name)
+	s.Equal("end-node", nodeWithoutLayout.OnSuccess)
+
+	// Verify layout is not set
+	s.Nil(nodeWithoutLayout.Layout)
 }
 
 // Test hasUserTypeResolverNode
@@ -522,12 +711,33 @@ func (s *FlowInferenceServiceTestSuite) TestHasUserTypeResolverNode_NotExists() 
 func (s *FlowInferenceServiceTestSuite) TestCreateUserTypeResolverNode() {
 	service := s.service.(*flowInferenceService)
 
-	node := service.createUserTypeResolverNode()
+	// Test with layout
+	nodeWithLayout := service.createUserTypeResolverNode(true)
 
-	s.Equal(userTypeResolverNodeID, node.ID)
-	s.Equal(string(common.NodeTypeTaskExecution), node.Type)
-	s.NotNil(node.Executor)
-	s.Equal(executor.ExecutorNameUserTypeResolver, node.Executor.Name)
+	s.Equal(userTypeResolverNodeID, nodeWithLayout.ID)
+	s.Equal(string(common.NodeTypeTaskExecution), nodeWithLayout.Type)
+	s.NotNil(nodeWithLayout.Executor)
+	s.Equal(executor.ExecutorNameUserTypeResolver, nodeWithLayout.Executor.Name)
+
+	// Verify layout is set with default values
+	s.NotNil(nodeWithLayout.Layout)
+	s.NotNil(nodeWithLayout.Layout.Size)
+	s.Equal(float64(100), nodeWithLayout.Layout.Size.Width)
+	s.Equal(float64(120), nodeWithLayout.Layout.Size.Height)
+	s.NotNil(nodeWithLayout.Layout.Position)
+	s.Equal(float64(0), nodeWithLayout.Layout.Position.X)
+	s.Equal(float64(0), nodeWithLayout.Layout.Position.Y)
+
+	// Test without layout
+	nodeWithoutLayout := service.createUserTypeResolverNode(false)
+
+	s.Equal(userTypeResolverNodeID, nodeWithoutLayout.ID)
+	s.Equal(string(common.NodeTypeTaskExecution), nodeWithoutLayout.Type)
+	s.NotNil(nodeWithoutLayout.Executor)
+	s.Equal(executor.ExecutorNameUserTypeResolver, nodeWithoutLayout.Executor.Name)
+
+	// Verify layout is not set
+	s.Nil(nodeWithoutLayout.Layout)
 }
 
 // Test insertNodeBeforeEnd

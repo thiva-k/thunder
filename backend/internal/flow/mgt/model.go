@@ -94,10 +94,29 @@ type Link struct {
 	Rel  string `json:"rel"`
 }
 
+// NodeLayout represents the layout information for a node in the flow composer UI.
+type NodeLayout struct {
+	Size     *NodeSize     `json:"size,omitempty"`
+	Position *NodePosition `json:"position,omitempty"`
+}
+
+// NodeSize represents the dimensions of a node.
+type NodeSize struct {
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+// NodePosition represents the position of a node on the canvas.
+type NodePosition struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
 // NodeDefinition represents a single node in a flow definition.
 type NodeDefinition struct {
 	ID         string                 `json:"id"`
 	Type       string                 `json:"type"`
+	Layout     *NodeLayout            `json:"layout,omitempty"`
 	Meta       interface{}            `json:"meta,omitempty"`
 	Inputs     []InputDefinition      `json:"inputs,omitempty"`
 	Actions    []ActionDefinition     `json:"actions,omitempty"`

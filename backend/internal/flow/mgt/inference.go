@@ -51,6 +51,7 @@ func (s *flowInferenceService) InferRegistrationFlow(authFlow *FlowDefinition) (
 		log.String("authFlowName", authFlow.Name))
 
 	regFlowName := s.generateRegistrationFlowName(authFlow.Name)
+	hasLayout := s.hasLayoutInformation(authFlow.Nodes)
 
 	// Deep copy nodes to avoid modifying the original flow
 	regNodes, err := s.cloneNodes(authFlow.Nodes)
@@ -66,7 +67,7 @@ func (s *flowInferenceService) InferRegistrationFlow(authFlow *FlowDefinition) (
 	}
 
 	if !s.hasProvisioningNode(regNodes) {
-		provisioningNode := s.createProvisioningNode(endNodeID)
+		provisioningNode := s.createProvisioningNode(endNodeID, hasLayout)
 		if err := s.insertNodeBeforeEnd(&regNodes, provisioningNode, endNodeID); err != nil {
 			return nil, err
 		}
@@ -81,7 +82,7 @@ func (s *flowInferenceService) InferRegistrationFlow(authFlow *FlowDefinition) (
 	}
 
 	if !s.hasUserTypeResolverNode(regNodes) {
-		userTypeResolverNode := s.createUserTypeResolverNode()
+		userTypeResolverNode := s.createUserTypeResolverNode(hasLayout)
 		if err := s.insertNodeAfterStart(&regNodes, userTypeResolverNode, startNodeID); err != nil {
 			return nil, err
 		}
@@ -170,6 +171,30 @@ func (s *flowInferenceService) findEndNode(nodes []NodeDefinition) (string, erro
 	return "", fmt.Errorf("no END node found in flow")
 }
 
+// hasLayoutInformation checks if any node in the flow has layout information
+func (s *flowInferenceService) hasLayoutInformation(nodes []NodeDefinition) bool {
+	for _, node := range nodes {
+		if node.Layout != nil && (node.Layout.Size != nil || node.Layout.Position != nil) {
+			return true
+		}
+	}
+	return false
+}
+
+// addDefaultLayout adds default layout information to a node
+func (s *flowInferenceService) addDefaultLayout(node *NodeDefinition) {
+	node.Layout = &NodeLayout{
+		Size: &NodeSize{
+			Width:  defaultNodeWidth,
+			Height: defaultNodeHeight,
+		},
+		Position: &NodePosition{
+			X: defaultNodeXPos,
+			Y: defaultNodeYPos,
+		},
+	}
+}
+
 // hasProvisioningNode checks if a provisioning node already exists in the flow
 func (s *flowInferenceService) hasProvisioningNode(nodes []NodeDefinition) bool {
 	for _, node := range nodes {
@@ -181,8 +206,8 @@ func (s *flowInferenceService) hasProvisioningNode(nodes []NodeDefinition) bool 
 }
 
 // createProvisioningNode creates a TASK_EXECUTION node with ProvisioningExecutor
-func (s *flowInferenceService) createProvisioningNode(endNodeID string) NodeDefinition {
-	return NodeDefinition{
+func (s *flowInferenceService) createProvisioningNode(endNodeID string, includeLayout bool) NodeDefinition {
+	node := NodeDefinition{
 		ID:   provisioningNodeID,
 		Type: string(common.NodeTypeTaskExecution),
 		Executor: &ExecutorDefinition{
@@ -190,6 +215,12 @@ func (s *flowInferenceService) createProvisioningNode(endNodeID string) NodeDefi
 		},
 		OnSuccess: endNodeID,
 	}
+
+	if includeLayout {
+		s.addDefaultLayout(&node)
+	}
+
+	return node
 }
 
 // hasUserTypeResolverNode checks if a user type resolver node already exists in the flow
@@ -203,14 +234,20 @@ func (s *flowInferenceService) hasUserTypeResolverNode(nodes []NodeDefinition) b
 }
 
 // createUserTypeResolverNode creates a TASK_EXECUTION node with UserTypeResolverExecutor
-func (s *flowInferenceService) createUserTypeResolverNode() NodeDefinition {
-	return NodeDefinition{
+func (s *flowInferenceService) createUserTypeResolverNode(includeLayout bool) NodeDefinition {
+	node := NodeDefinition{
 		ID:   userTypeResolverNodeID,
 		Type: string(common.NodeTypeTaskExecution),
 		Executor: &ExecutorDefinition{
 			Name: executor.ExecutorNameUserTypeResolver,
 		},
 	}
+
+	if includeLayout {
+		s.addDefaultLayout(&node)
+	}
+
+	return node
 }
 
 // insertNodeBeforeEnd inserts a node before the END node by updating all nodes that point to END

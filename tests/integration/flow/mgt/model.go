@@ -81,9 +81,25 @@ type Link struct {
 	Rel  string `json:"rel"`
 }
 
+type NodeLayout struct {
+	Size     *NodeSize     `json:"size,omitempty"`
+	Position *NodePosition `json:"position,omitempty"`
+}
+
+type NodeSize struct {
+	Width  float64 `json:"width"`
+	Height float64 `json:"height"`
+}
+
+type NodePosition struct {
+	X float64 `json:"x"`
+	Y float64 `json:"y"`
+}
+
 type NodeDefinition struct {
 	ID         string                 `json:"id"`
 	Type       string                 `json:"type"`
+	Layout     *NodeLayout            `json:"layout,omitempty"`
 	Meta       interface{}            `json:"meta,omitempty"`
 	Inputs     []InputDefinition      `json:"inputs,omitempty"`
 	Actions    []ActionDefinition     `json:"actions,omitempty"`

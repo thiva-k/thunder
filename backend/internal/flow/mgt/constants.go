@@ -34,4 +34,12 @@ const (
 	provisioningNodeID = "prov_node"
 	// userTypeResolverNodeID is the node ID for the inferred user type resolver node
 	userTypeResolverNodeID = "ut_res_node"
+	// defaultNodeWidth is the default width for a node layout
+	defaultNodeWidth = 100
+	// defaultNodeHeight is the default height for a node layout
+	defaultNodeHeight = 120
+	// defaultNodeXPos is the default X position for a node layout
+	defaultNodeXPos = 0
+	// defaultNodeYPos is the default Y position for a node layout
+	defaultNodeYPos = 0
 )
