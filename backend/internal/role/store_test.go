@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	dbmodel "github.com/asgardeo/thunder/internal/system/database/model"
-	"github.com/asgardeo/thunder/tests/mocks/database/clientmock"
+
 	"github.com/asgardeo/thunder/tests/mocks/database/modelmock"
 	"github.com/asgardeo/thunder/tests/mocks/database/providermock"
 )
@@ -54,7 +54,7 @@ var _ sql.Result = (*mockResult)(nil)
 type RoleStoreTestSuite struct {
 	suite.Suite
 	mockDBProvider *providermock.DBProviderInterfaceMock
-	mockDBClient   *clientmock.DBClientInterfaceMock
+	mockDBClient   *providermock.DBClientInterfaceMock
 	mockTx         *modelmock.TxInterfaceMock
 	store          *roleStore
 }
@@ -67,7 +67,7 @@ func TestRoleStoreTestSuite(t *testing.T) {
 // SetupTest sets up the test suite.
 func (suite *RoleStoreTestSuite) SetupTest() {
 	suite.mockDBProvider = providermock.NewDBProviderInterfaceMock(suite.T())
-	suite.mockDBClient = clientmock.NewDBClientInterfaceMock(suite.T())
+	suite.mockDBClient = providermock.NewDBClientInterfaceMock(suite.T())
 	suite.mockTx = modelmock.NewTxInterfaceMock(suite.T())
 	suite.store = &roleStore{
 		dbProvider:   suite.mockDBProvider,
