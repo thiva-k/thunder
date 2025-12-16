@@ -65,7 +65,12 @@ func registerServices(
 	// List to collect exporters from each package
 	var exporters []immutableresource.ResourceExporter
 
-	ouService := ou.Initialize(mux)
+	ouService, ouExporter, err := ou.Initialize(mux)
+	if err != nil {
+		logger.Fatal("Failed to initialize OrganizationUnitService", log.Error(err))
+	}
+	exporters = append(exporters, ouExporter)
+
 	hashService := hash.Initialize()
 	userSchemaService, userSchemaExporter, err := userschema.Initialize(mux, ouService)
 	if err != nil {

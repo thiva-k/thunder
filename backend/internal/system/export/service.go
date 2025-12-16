@@ -35,6 +35,7 @@ const (
 	resourceTypeIdentityProvider   = "identity_provider"
 	resourceTypeNotificationSender = "notification_sender"
 	resourceTypeUserSchema         = "user_schema"
+	resourceTypeOU                 = "organization_unit"
 )
 
 // parameterizerInterface defines the interface for template parameterization.
@@ -100,6 +101,7 @@ func (es *exportService) ExportResources(request *ExportRequest) (*ExportRespons
 		resourceTypeIdentityProvider:   request.IdentityProviders,
 		resourceTypeNotificationSender: request.NotificationSenders,
 		resourceTypeUserSchema:         request.UserSchemas,
+		resourceTypeOU:                 request.OrganizationUnits,
 	}
 
 	// Export resources using the registry
