@@ -94,6 +94,7 @@ func (s *flowInferenceService) InferRegistrationFlow(authFlow *FlowDefinition) (
 	return &FlowDefinition{
 		Name:     regFlowName,
 		FlowType: common.FlowTypeRegistration,
+		Handle:   authFlow.Handle,
 		Nodes:    regNodes,
 	}, nil
 }

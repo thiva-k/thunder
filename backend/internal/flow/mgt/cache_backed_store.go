@@ -21,6 +21,7 @@ package flowmgt
 import (
 	"errors"
 
+	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/system/cache"
 	"github.com/asgardeo/thunder/internal/system/log"
 )
@@ -29,16 +30,18 @@ const cacheBackedStoreLoggerComponentName = "CacheBackedFlowStore"
 
 // cacheBackedFlowStore is the implementation of flowStoreInterface that uses caching.
 type cacheBackedFlowStore struct {
-	flowByIDCache cache.CacheInterface[*CompleteFlowDefinition]
-	store         flowStoreInterface
-	logger        *log.Logger
+	flowByIDCache     cache.CacheInterface[*CompleteFlowDefinition]
+	flowByHandleCache cache.CacheInterface[*CompleteFlowDefinition]
+	store             flowStoreInterface
+	logger            *log.Logger
 }
 
 // newCacheBackedFlowStore creates a new instance of cacheBackedFlowStore.
 func newCacheBackedFlowStore() flowStoreInterface {
 	return &cacheBackedFlowStore{
-		flowByIDCache: cache.GetCache[*CompleteFlowDefinition]("FlowByIDCache"),
-		store:         newFlowStore(),
+		flowByIDCache:     cache.GetCache[*CompleteFlowDefinition]("FlowByIDCache"),
+		flowByHandleCache: cache.GetCache[*CompleteFlowDefinition]("FlowByHandleCache"),
+		store:             newFlowStore(),
 		logger: log.GetLogger().With(
 			log.String(log.LoggerKeyComponentName, cacheBackedStoreLoggerComponentName)),
 	}
@@ -82,6 +85,25 @@ func (s *cacheBackedFlowStore) GetFlowByID(flowID string) (*CompleteFlowDefiniti
 	return flow, nil
 }
 
+// GetFlowByHandle retrieves a flow definition by handle and flow type, using cache if available.
+func (s *cacheBackedFlowStore) GetFlowByHandle(handle string, flowType common.FlowType) (
+	*CompleteFlowDefinition, error) {
+	cacheKey := getFlowByHandleCacheKey(handle, flowType)
+	cachedFlow, ok := s.flowByHandleCache.Get(cacheKey)
+	if ok {
+		return cachedFlow, nil
+	}
+
+	flow, err := s.store.GetFlowByHandle(handle, flowType)
+	if err != nil || flow == nil {
+		return flow, err
+	}
+
+	s.cacheFlow(flow)
+
+	return flow, nil
+}
+
 // UpdateFlow updates an existing flow definition and refreshes the cache.
 func (s *cacheBackedFlowStore) UpdateFlow(flowID string, flow *FlowDefinition) (
 	*CompleteFlowDefinition, error) {
@@ -118,8 +140,33 @@ func (s *cacheBackedFlowStore) DeleteFlow(flowID string) error {
 		return err
 	}
 	s.invalidateFlowCache(flowID)
+	s.invalidateFlowCacheByHandle(existingFlow.Handle, existingFlow.FlowType)
 
 	return nil
+}
+
+// IsFlowExists checks if a flow exists with a given flow ID, using cache if available.
+func (s *cacheBackedFlowStore) IsFlowExists(flowID string) (bool, error) {
+	cacheKey := cache.CacheKey{
+		Key: flowID,
+	}
+	cachedFlow, ok := s.flowByIDCache.Get(cacheKey)
+	if ok && cachedFlow != nil {
+		return true, nil
+	}
+
+	return s.store.IsFlowExists(flowID)
+}
+
+// IsFlowExistsByHandle checks if a flow exists with a given handle and flow type, using cache if available.
+func (s *cacheBackedFlowStore) IsFlowExistsByHandle(handle string, flowType common.FlowType) (bool, error) {
+	cacheKey := getFlowByHandleCacheKey(handle, flowType)
+	cachedFlow, ok := s.flowByHandleCache.Get(cacheKey)
+	if ok && cachedFlow != nil {
+		return true, nil
+	}
+
+	return s.store.IsFlowExistsByHandle(handle, flowType)
 }
 
 // ListFlowVersions retrieves all versions of a flow.
@@ -147,7 +194,7 @@ func (s *cacheBackedFlowStore) RestoreFlowVersion(flowID string, version int) (
 	return restoredFlow, nil
 }
 
-// cacheFlow caches the flow definition by ID.
+// cacheFlow caches the flow definition by ID and by handle.
 func (s *cacheBackedFlowStore) cacheFlow(flow *CompleteFlowDefinition) {
 	if flow == nil {
 		return
@@ -155,6 +202,7 @@ func (s *cacheBackedFlowStore) cacheFlow(flow *CompleteFlowDefinition) {
 
 	logger := s.logger.With(log.String("flowID", flow.ID))
 
+	// Cache by ID
 	if flow.ID != "" {
 		cacheKey := cache.CacheKey{
 			Key: flow.ID,
@@ -163,6 +211,18 @@ func (s *cacheBackedFlowStore) cacheFlow(flow *CompleteFlowDefinition) {
 			logger.Error("Failed to cache flow by ID", log.Error(err))
 		} else {
 			logger.Debug("Flow cached by ID")
+		}
+	}
+
+	// Cache by handle and flowType
+	if flow.Handle != "" && flow.FlowType != "" {
+		handleCacheKey := getFlowByHandleCacheKey(flow.Handle, flow.FlowType)
+		if err := s.flowByHandleCache.Set(handleCacheKey, flow); err != nil {
+			logger.Error("Failed to cache flow by handle",
+				log.String("handle", flow.Handle), log.String("flowType", string(flow.FlowType)), log.Error(err))
+		} else {
+			logger.Debug("Flow cached by handle",
+				log.String("handle", flow.Handle), log.String("flowType", string(flow.FlowType)))
 		}
 	}
 }
@@ -180,5 +240,25 @@ func (s *cacheBackedFlowStore) invalidateFlowCache(flowID string) {
 		} else {
 			logger.Debug("Flow cache invalidated by ID")
 		}
+	}
+}
+
+// invalidateFlowCacheByHandle invalidates the flow cache for the given handle and type.
+func (s *cacheBackedFlowStore) invalidateFlowCacheByHandle(handle string, flowType common.FlowType) {
+	if handle == "" || flowType == "" {
+		return
+	}
+
+	cacheKey := getFlowByHandleCacheKey(handle, flowType)
+	if err := s.flowByHandleCache.Delete(cacheKey); err != nil {
+		s.logger.Error("Failed to invalidate flow cache by handle",
+			log.String("handle", handle), log.String("flowType", string(flowType)), log.Error(err))
+	}
+}
+
+// getFlowByHandleCacheKey generates a cache key for flow lookup by handle and type.
+func getFlowByHandleCacheKey(handle string, flowType common.FlowType) cache.CacheKey {
+	return cache.CacheKey{
+		Key: handle + ":" + string(flowType),
 	}
 }

@@ -169,6 +169,165 @@ func (s *FlowStoreTestSuite) TestDeleteFlowExecuteError() {
 	s.Contains(err.Error(), "failed to delete flow")
 }
 
+// IsFlowExists Tests
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsSuccess() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryCheckFlowExistsByID, "flow-1", "test-deployment").
+		Return([]map[string]interface{}{{"exists": 1}}, nil).Once()
+
+	exists, err := s.store.IsFlowExists("flow-1")
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsNotFound() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryCheckFlowExistsByID, "non-existent", "test-deployment").
+		Return([]map[string]interface{}{}, nil).Once()
+
+	exists, err := s.store.IsFlowExists("non-existent")
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsDBError() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(nil, errors.New("connection error"))
+
+	exists, err := s.store.IsFlowExists("flow-1")
+
+	s.Error(err)
+	s.Contains(err.Error(), "failed to get database client")
+	s.False(exists)
+}
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsQueryError() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryCheckFlowExistsByID, "flow-1", "test-deployment").
+		Return(nil, errors.New("query error")).Once()
+
+	exists, err := s.store.IsFlowExists("flow-1")
+
+	s.Error(err)
+	s.Contains(err.Error(), "failed to check flow existence")
+	s.False(exists)
+}
+
+// GetFlowByHandle Tests
+
+func (s *FlowStoreTestSuite) TestGetFlowByHandleSuccess() {
+	flowData := map[string]interface{}{
+		colFlowID:        "flow-123",
+		colHandle:        "test-handle",
+		colName:          "Test Flow",
+		colFlowType:      string(common.FlowTypeAuthentication),
+		colActiveVersion: int64(1),
+		colNodes:         `[{"id":"START","type":"START"}]`,
+		colCreatedAt:     time.Now().Format(time.RFC3339),
+		colUpdatedAt:     time.Now().Format(time.RFC3339),
+	}
+
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryGetFlowByHandle, "test-handle",
+		string(common.FlowTypeAuthentication), "test-deployment").Return(
+		[]map[string]interface{}{flowData}, nil).Once()
+
+	flow, err := s.store.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.NotNil(flow)
+	s.Equal("flow-123", flow.ID)
+	s.Equal("test-handle", flow.Handle)
+	s.Equal("Test Flow", flow.Name)
+}
+
+func (s *FlowStoreTestSuite) TestGetFlowByHandleNotFound() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryGetFlowByHandle, "non-existent",
+		string(common.FlowTypeAuthentication), "test-deployment").Return(
+		[]map[string]interface{}{}, nil).Once()
+
+	flow, err := s.store.GetFlowByHandle("non-existent", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.ErrorIs(err, errFlowNotFound)
+	s.Nil(flow)
+}
+
+func (s *FlowStoreTestSuite) TestGetFlowByHandleDBError() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(nil, errors.New("connection error"))
+
+	flow, err := s.store.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.Contains(err.Error(), "failed to get database client")
+	s.Nil(flow)
+}
+
+func (s *FlowStoreTestSuite) TestGetFlowByHandleQueryError() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryGetFlowByHandle, "test-handle",
+		string(common.FlowTypeAuthentication), "test-deployment").Return(
+		nil, errors.New("query error")).Once()
+
+	flow, err := s.store.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.Contains(err.Error(), "failed to get flow by handle")
+	s.Nil(flow)
+}
+
+// IsFlowExistsByHandle Tests
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsByHandleSuccess() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryCheckFlowExistsByHandle, "test-handle",
+		string(common.FlowTypeAuthentication), "test-deployment").Return(
+		[]map[string]interface{}{{"exists": 1}}, nil).Once()
+
+	exists, err := s.store.IsFlowExistsByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsByHandleNotFound() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryCheckFlowExistsByHandle, "non-existent",
+		string(common.FlowTypeAuthentication), "test-deployment").Return(
+		[]map[string]interface{}{}, nil).Once()
+
+	exists, err := s.store.IsFlowExistsByHandle("non-existent", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsByHandleDBError() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(nil, errors.New("connection error"))
+
+	exists, err := s.store.IsFlowExistsByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.Contains(err.Error(), "failed to get database client")
+	s.False(exists)
+}
+
+func (s *FlowStoreTestSuite) TestIsFlowExistsByHandleQueryError() {
+	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
+	s.mockDBClient.EXPECT().Query(queryCheckFlowExistsByHandle, "test-handle",
+		string(common.FlowTypeAuthentication), "test-deployment").Return(
+		nil, errors.New("query error")).Once()
+
+	exists, err := s.store.IsFlowExistsByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.Contains(err.Error(), "failed to check flow existence by handle")
+	s.False(exists)
+}
+
 // ListFlowVersions Tests
 
 func (s *FlowStoreTestSuite) TestListFlowVersionsDBError() {
@@ -371,6 +530,7 @@ func (s *FlowStoreTestSuite) TestGetFlowInternalIDQueryError() {
 func (s *FlowStoreTestSuite) TestBuildBasicFlowDefinitionFromRowInvalidActiveVersion() {
 	row := map[string]interface{}{
 		colFlowID:        "flow-1",
+		colHandle:        "test-handle",
 		colName:          "Test Flow",
 		colFlowType:      "authentication",
 		colActiveVersion: "not-an-int", // Invalid type
@@ -388,6 +548,7 @@ func (s *FlowStoreTestSuite) TestBuildBasicFlowDefinitionFromRowInvalidActiveVer
 func (s *FlowStoreTestSuite) TestBuildCompleteFlowDefinitionFromRowInvalidActiveVersion() {
 	row := map[string]interface{}{
 		colFlowID:        "flow-1",
+		colHandle:        "test-handle",
 		colName:          "Test Flow",
 		colFlowType:      "authentication",
 		colActiveVersion: "invalid", // Invalid type
@@ -434,6 +595,7 @@ func (s *FlowStoreTestSuite) TestBuildBasicFlowVersionFromRowInvalidActiveVersio
 func (s *FlowStoreTestSuite) TestBuildFlowVersionFromRowInvalidVersion() {
 	row := map[string]interface{}{
 		colFlowID:    "flow-1",
+		colHandle:    "test-handle",
 		colName:      "Test",
 		colFlowType:  "authentication",
 		colVersion:   "not-an-int", // Invalid type
@@ -469,6 +631,7 @@ func (s *FlowStoreTestSuite) TestBuildFlowVersionFromRowInvalidFlowID() {
 
 func (s *FlowStoreTestSuite) TestCreateFlow_BeginTxError() {
 	flowDef := &FlowDefinition{
+		Handle:   "login-handle",
 		Name:     "Login Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{{Type: "start", ID: "node1"}},
@@ -486,6 +649,7 @@ func (s *FlowStoreTestSuite) TestCreateFlow_BeginTxError() {
 
 func (s *FlowStoreTestSuite) TestCreateFlow_ExecError() {
 	flowDef := &FlowDefinition{
+		Handle:   "login-handle",
 		Name:     "Login Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{{Type: "start", ID: "node1"}},
@@ -494,7 +658,7 @@ func (s *FlowStoreTestSuite) TestCreateFlow_ExecError() {
 	mockTx := modelmock.NewTxInterfaceMock(s.T())
 	s.mockDBProvider.EXPECT().GetConfigDBClient().Return(s.mockDBClient, nil)
 	s.mockDBClient.EXPECT().BeginTx().Return(mockTx, nil)
-	mockTx.EXPECT().Exec(queryCreateFlow, "flow-1", "Login Flow", common.FlowTypeAuthentication,
+	mockTx.EXPECT().Exec(queryCreateFlow, "flow-1", "login-handle", "Login Flow", common.FlowTypeAuthentication,
 		int64(1), s.store.deploymentID).Return(nil, errors.New("insert error"))
 	mockTx.EXPECT().Rollback().Return(nil)
 
@@ -507,6 +671,7 @@ func (s *FlowStoreTestSuite) TestCreateFlow_ExecError() {
 
 func (s *FlowStoreTestSuite) TestUpdateFlow_BeginTxError() {
 	flowDef := &FlowDefinition{
+		Handle:   "updated-handle",
 		Name:     "Updated Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{},
@@ -652,6 +817,7 @@ func (s *FlowStoreTestSuite) TestGetInt64() {
 func (s *FlowStoreTestSuite) TestBuildBasicFlowDefinitionFromRow() {
 	validRow := map[string]interface{}{
 		colFlowID:        "flow-1",
+		colHandle:        "test-handle",
 		colName:          "Test Flow",
 		colFlowType:      string(common.FlowTypeAuthentication),
 		colActiveVersion: int64(1),
@@ -684,6 +850,7 @@ func (s *FlowStoreTestSuite) TestBuildCompleteFlowDefinitionFromRow() {
 
 	validRow := map[string]interface{}{
 		colFlowID:        "flow-1",
+		colHandle:        "test-handle",
 		colName:          "Test Flow",
 		colFlowType:      string(common.FlowTypeAuthentication),
 		colActiveVersion: int64(1),
@@ -705,6 +872,7 @@ func (s *FlowStoreTestSuite) TestBuildCompleteFlowDefinitionFromRow() {
 func (s *FlowStoreTestSuite) TestBuildCompleteFlowDefinitionFromRowInvalidJSON() {
 	invalidRow := map[string]interface{}{
 		colFlowID:        "flow-1",
+		colHandle:        "test-handle",
 		colName:          "Test Flow",
 		colFlowType:      string(common.FlowTypeAuthentication),
 		colActiveVersion: int64(1),
@@ -740,6 +908,7 @@ func (s *FlowStoreTestSuite) TestBuildFlowVersionFromRow() {
 
 	validRow := map[string]interface{}{
 		colFlowID:        "flow-1",
+		colHandle:        "test-handle",
 		colName:          "Test Flow",
 		colFlowType:      string(common.FlowTypeAuthentication),
 		colVersion:       int64(2),

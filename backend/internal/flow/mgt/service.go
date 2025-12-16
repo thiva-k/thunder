@@ -22,6 +22,7 @@ package flowmgt
 import (
 	"errors"
 	"fmt"
+	"regexp"
 
 	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/core"
@@ -32,6 +33,12 @@ import (
 )
 
 const loggerComponentName = "FlowMgtService"
+
+// handleFormatRegex matches valid handle format:
+// - starts with lowercase letter or digit
+// - contains only lowercase letters, digits, underscores, or dashes
+// - ends with lowercase letter or digit
+var handleFormatRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$`)
 
 // FlowMgtServiceInterface defines the interface for the flow management service.
 type FlowMgtServiceInterface interface {
@@ -44,6 +51,7 @@ type FlowMgtServiceInterface interface {
 	GetFlowVersion(flowID string, version int) (*FlowVersion, *serviceerror.ServiceError)
 	RestoreFlowVersion(flowID string, version int) (*CompleteFlowDefinition, *serviceerror.ServiceError)
 	GetGraph(flowID string) (core.GraphInterface, *serviceerror.ServiceError)
+	IsValidFlow(flowID string) bool
 }
 
 // flowMgtService is the default implementation of the FlowMgtServiceInterface.
@@ -111,9 +119,19 @@ func (s *flowMgtService) CreateFlow(flowDef *FlowDefinition) (
 		return nil, err
 	}
 
-	flowID, err := utils.GenerateUUIDv7()
+	// Check if a flow with the same handle and type already exists
+	exists, err := s.store.IsFlowExistsByHandle(flowDef.Handle, flowDef.FlowType)
 	if err != nil {
-		s.logger.Error("Failed to generate UUID v7", log.Error(err))
+		s.logger.Error("Failed to check flow existence by handle", log.Error(err))
+		return nil, &serviceerror.InternalServerError
+	}
+	if exists {
+		return nil, &ErrorDuplicateFlowHandle
+	}
+
+	flowID, genErr := utils.GenerateUUIDv7()
+	if genErr != nil {
+		s.logger.Error("Failed to generate UUID v7", log.Error(genErr))
 		return nil, &serviceerror.InternalServerError
 	}
 
@@ -174,6 +192,11 @@ func (s *flowMgtService) UpdateFlow(flowID string, flowDef *FlowDefinition) (
 	// Prevent changing the flow type
 	if existingFlow.FlowType != flowDef.FlowType {
 		return nil, &ErrorCannotUpdateFlowType
+	}
+
+	// Prevent changing the handle
+	if existingFlow.Handle != flowDef.Handle {
+		return nil, &ErrorHandleUpdateNotAllowed
 	}
 
 	updatedFlow, err := s.store.UpdateFlow(flowID, flowDef)
@@ -343,6 +366,21 @@ func (s *flowMgtService) GetGraph(flowID string) (core.GraphInterface, *servicee
 	return s.graphBuilder.GetGraph(flow)
 }
 
+// IsValidFlow checks if a valid flow exists for the given flow ID.
+func (s *flowMgtService) IsValidFlow(flowID string) bool {
+	if flowID == "" {
+		return false
+	}
+
+	exists, err := s.store.IsFlowExists(flowID)
+	if err != nil {
+		s.logger.Error("Failed to check flow existence", log.String(logKeyFlowID, flowID), log.Error(err))
+		return false
+	}
+
+	return exists
+}
+
 // Helper functions
 
 // isValidFlowType checks if the provided flow type is valid.
@@ -398,6 +436,12 @@ func validateFlowDefinition(flowDef *FlowDefinition) *serviceerror.ServiceError 
 	if flowDef == nil {
 		return &ErrorInvalidRequestFormat
 	}
+	if flowDef.Handle == "" {
+		return &ErrorMissingFlowHandle
+	}
+	if !isValidHandleFormat(flowDef.Handle) {
+		return &ErrorInvalidFlowHandleFormat
+	}
 	if flowDef.Name == "" {
 		return &ErrorMissingFlowName
 	}
@@ -414,6 +458,15 @@ func validateFlowDefinition(flowDef *FlowDefinition) *serviceerror.ServiceError 
 	}
 
 	return nil
+}
+
+// isValidHandleFormat validates that the handle follows the required format:
+// - all lowercase
+// - alphanumeric characters
+// - can contain underscores (_) or dashes (-)
+// - cannot start or end with underscore or dash
+func isValidHandleFormat(handle string) bool {
+	return handleFormatRegex.MatchString(handle)
 }
 
 // tryInferRegistrationFlow attempts to infer and create a registration flow from an authentication flow

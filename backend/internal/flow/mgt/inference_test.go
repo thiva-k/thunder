@@ -44,6 +44,7 @@ func (s *FlowInferenceServiceTestSuite) SetupTest() {
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_Success() {
 	authFlow := &FlowDefinition{
+		Handle:   "basic-auth-handle",
 		Name:     "Basic Authentication",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -67,6 +68,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_Success() {
 	s.NotNil(regFlow)
 	s.Equal("Basic Registration", regFlow.Name)
 	s.Equal(common.FlowTypeRegistration, regFlow.FlowType)
+	s.Equal(authFlow.Handle, regFlow.Handle)
 
 	// Verify provisioning node was inserted
 	s.True(s.hasNode(regFlow.Nodes, provisioningNodeID))
@@ -90,6 +92,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_Success() {
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithExistingProvisioning() {
 	authFlow := &FlowDefinition{
+		Handle:   "auth-flow-handle",
 		Name:     "Auth Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -116,6 +119,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithExistingPr
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithExistingUserTypeResolver() {
 	authFlow := &FlowDefinition{
+		Handle:   "auth-flow-handle",
 		Name:     "Auth Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -142,6 +146,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithExistingUs
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_CleansAuthProperties() {
 	authFlow := &FlowDefinition{
+		Handle:   "auth-flow-handle",
 		Name:     "Auth Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -171,6 +176,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_CleansAuthProp
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_NoStartNode() {
 	authFlow := &FlowDefinition{
+		Handle:   "invalid-flow-handle",
 		Name:     "Invalid Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -188,6 +194,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_NoStartNode() 
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_NoEndNode() {
 	authFlow := &FlowDefinition{
+		Handle:   "invalid-flow-handle",
 		Name:     "Invalid Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -205,6 +212,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_NoEndNode() {
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithActions() {
 	authFlow := &FlowDefinition{
+		Handle:   "auth-flow-handle",
 		Name:     "Auth Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -233,6 +241,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithActions() 
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithOnFailure() {
 	authFlow := &FlowDefinition{
+		Handle:   "auth-flow-handle",
 		Name:     "Auth Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
