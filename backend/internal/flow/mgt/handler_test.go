@@ -53,8 +53,8 @@ func (s *FlowMgtHandlerTestSuite) SetupTest() {
 func (s *FlowMgtHandlerTestSuite) TestListFlows_Success() {
 	expectedList := &FlowListResponse{
 		Flows: []BasicFlowDefinition{
-			{ID: "flow1", Name: "Flow 1", FlowType: common.FlowTypeAuthentication},
-			{ID: "flow2", Name: "Flow 2", FlowType: common.FlowTypeRegistration},
+			{ID: "flow1", Handle: "flow1-handle", Name: "Flow 1", FlowType: common.FlowTypeAuthentication},
+			{ID: "flow2", Handle: "flow2-handle", Name: "Flow 2", FlowType: common.FlowTypeRegistration},
 		},
 		Count: 2,
 	}
@@ -143,6 +143,7 @@ func (s *FlowMgtHandlerTestSuite) TestListFlows_ServiceError() {
 
 func (s *FlowMgtHandlerTestSuite) TestCreateFlow_Success() {
 	flowDef := &FlowDefinition{
+		Handle:   "new-flow-handle",
 		Name:     "New Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -151,6 +152,7 @@ func (s *FlowMgtHandlerTestSuite) TestCreateFlow_Success() {
 	}
 	createdFlow := &CompleteFlowDefinition{
 		ID:       testFlowIDHandler,
+		Handle:   "new-flow-handle",
 		Name:     "New Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    flowDef.Nodes,
@@ -185,6 +187,7 @@ func (s *FlowMgtHandlerTestSuite) TestCreateFlow_InvalidJSON() {
 
 func (s *FlowMgtHandlerTestSuite) TestCreateFlow_ServiceError() {
 	flowDef := &FlowDefinition{
+		Handle:   "new-flow-handle",
 		Name:     "New Flow",
 		FlowType: common.FlowTypeAuthentication,
 	}
@@ -206,6 +209,7 @@ func (s *FlowMgtHandlerTestSuite) TestCreateFlow_ServiceError() {
 func (s *FlowMgtHandlerTestSuite) TestGetFlow_Success() {
 	expectedFlow := &CompleteFlowDefinition{
 		ID:       testFlowIDHandler,
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 	}
@@ -250,6 +254,7 @@ func (s *FlowMgtHandlerTestSuite) TestGetFlow_NotFound() {
 
 func (s *FlowMgtHandlerTestSuite) TestUpdateFlow_Success() {
 	flowDef := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "Updated Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -258,6 +263,7 @@ func (s *FlowMgtHandlerTestSuite) TestUpdateFlow_Success() {
 	}
 	updatedFlow := &CompleteFlowDefinition{
 		ID:       testFlowIDHandler,
+		Handle:   "test-handle",
 		Name:     "Updated Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    flowDef.Nodes,
@@ -304,6 +310,7 @@ func (s *FlowMgtHandlerTestSuite) TestUpdateFlow_InvalidJSON() {
 
 func (s *FlowMgtHandlerTestSuite) TestUpdateFlow_NotFound() {
 	flowDef := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "Updated Flow",
 		FlowType: common.FlowTypeAuthentication,
 	}
@@ -408,6 +415,7 @@ func (s *FlowMgtHandlerTestSuite) TestListFlowVersions_NotFound() {
 func (s *FlowMgtHandlerTestSuite) TestGetFlowVersion_Success() {
 	expectedVersion := &FlowVersion{
 		ID:      testFlowIDHandler,
+		Handle:  "test-handle",
 		Version: 1,
 		Name:    "Test Flow",
 	}
@@ -489,6 +497,7 @@ func (s *FlowMgtHandlerTestSuite) TestRestoreFlowVersion_Success() {
 	request := &RestoreVersionRequest{Version: 1}
 	restoredFlow := &CompleteFlowDefinition{
 		ID:       testFlowIDHandler,
+		Handle:   "test-handle",
 		Name:     "Restored Flow",
 		FlowType: common.FlowTypeAuthentication,
 	}
@@ -614,6 +623,7 @@ func (s *FlowMgtHandlerTestSuite) TestParsePaginationParams_NegativeOffset() {
 
 func (s *FlowMgtHandlerTestSuite) TestSanitizeFlowDefinitionRequest() {
 	input := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "  Test Flow  ",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{

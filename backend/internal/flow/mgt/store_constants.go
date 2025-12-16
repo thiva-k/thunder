@@ -26,14 +26,14 @@ var (
 	// queryCreateFlow is the query to creates a new flow definition.
 	queryCreateFlow = model.DBQuery{
 		ID: "FLQ-FLOW_MGT-01",
-		Query: "INSERT INTO FLOW (FLOW_ID, NAME, FLOW_TYPE, ACTIVE_VERSION, DEPLOYMENT_ID) " +
-			"VALUES ($1, $2, $3, $4, $5)",
+		Query: "INSERT INTO FLOW (FLOW_ID, HANDLE, NAME, FLOW_TYPE, ACTIVE_VERSION, DEPLOYMENT_ID) " +
+			"VALUES ($1, $2, $3, $4, $5, $6)",
 	}
 
 	// queryGetFlow is the query to retrieves a flow definition by its ID.
 	queryGetFlow = model.DBQuery{
 		ID: "FLQ-FLOW_MGT-02",
-		Query: "SELECT f.FLOW_ID, f.NAME, f.FLOW_TYPE, f.ACTIVE_VERSION, fv.NODES, f.CREATED_AT, " +
+		Query: "SELECT f.FLOW_ID, f.HANDLE, f.NAME, f.FLOW_TYPE, f.ACTIVE_VERSION, fv.NODES, f.CREATED_AT, " +
 			"f.UPDATED_AT FROM FLOW f INNER JOIN FLOW_VERSION fv ON f.ID = fv.FLOW_INTERNAL_ID " +
 			"AND f.DEPLOYMENT_ID = fv.DEPLOYMENT_ID AND f.ACTIVE_VERSION = fv.VERSION " +
 			"WHERE f.FLOW_ID = $1 AND f.DEPLOYMENT_ID = $2",
@@ -59,14 +59,14 @@ var (
 	// queryListFlows is the query to retrieves a list of flow definitions.
 	queryListFlows = model.DBQuery{
 		ID: "FLQ-FLOW_MGT-05",
-		Query: "SELECT FLOW_ID, NAME, FLOW_TYPE, ACTIVE_VERSION, CREATED_AT, UPDATED_AT " +
+		Query: "SELECT FLOW_ID, HANDLE, NAME, FLOW_TYPE, ACTIVE_VERSION, CREATED_AT, UPDATED_AT " +
 			"FROM FLOW WHERE DEPLOYMENT_ID = $1 ORDER BY CREATED_AT DESC LIMIT $2 OFFSET $3",
 	}
 
 	// queryListFlowsWithType is the query to retrieves a list of flow definitions filtered by type.
 	queryListFlowsWithType = model.DBQuery{
 		ID: "FLQ-FLOW_MGT-06",
-		Query: "SELECT FLOW_ID, NAME, FLOW_TYPE, ACTIVE_VERSION, CREATED_AT, UPDATED_AT FROM FLOW " +
+		Query: "SELECT FLOW_ID, HANDLE, NAME, FLOW_TYPE, ACTIVE_VERSION, CREATED_AT, UPDATED_AT FROM FLOW " +
 			"WHERE FLOW_TYPE = $1 AND DEPLOYMENT_ID = $2 ORDER BY CREATED_AT DESC LIMIT $3 OFFSET $4",
 	}
 
@@ -104,8 +104,8 @@ var (
 	// queryGetFlowVersionWithMetadata is the query to retrieve a specific version with flow metadata.
 	queryGetFlowVersionWithMetadata = model.DBQuery{
 		ID: "FLQ-FLOW_MGT-12",
-		Query: "SELECT f.FLOW_ID, f.NAME, f.FLOW_TYPE, f.ACTIVE_VERSION, fv.VERSION, fv.NODES, fv.CREATED_AT " +
-			"FROM FLOW f INNER JOIN FLOW_VERSION fv ON f.ID = fv.FLOW_INTERNAL_ID " +
+		Query: "SELECT f.FLOW_ID, f.HANDLE, f.NAME, f.FLOW_TYPE, f.ACTIVE_VERSION, fv.VERSION, fv.NODES, " +
+			"fv.CREATED_AT FROM FLOW f INNER JOIN FLOW_VERSION fv ON f.ID = fv.FLOW_INTERNAL_ID " +
 			"AND f.DEPLOYMENT_ID = fv.DEPLOYMENT_ID WHERE f.FLOW_ID = $1 AND fv.VERSION = $2 " +
 			"AND f.DEPLOYMENT_ID = $3",
 	}
@@ -130,5 +130,26 @@ var (
 		ID: "FLQ-FLOW_MGT-15",
 		Query: "DELETE FROM FLOW_VERSION WHERE FLOW_INTERNAL_ID = $1 AND DEPLOYMENT_ID = $2 AND " +
 			"VERSION = (SELECT MIN(VERSION) FROM FLOW_VERSION WHERE FLOW_INTERNAL_ID = $1 AND DEPLOYMENT_ID = $2)",
+	}
+
+	// queryCheckFlowExistsByID is the query to check if a flow exists by its ID.
+	queryCheckFlowExistsByID = model.DBQuery{
+		ID:    "FLQ-FLOW_MGT-16",
+		Query: "SELECT 1 FROM FLOW WHERE FLOW_ID = $1 AND DEPLOYMENT_ID = $2 LIMIT 1",
+	}
+
+	// queryCheckFlowExistsByHandle is the query to check if a flow exists by handle and flow type.
+	queryCheckFlowExistsByHandle = model.DBQuery{
+		ID:    "FLQ-FLOW_MGT-17",
+		Query: "SELECT 1 FROM FLOW WHERE HANDLE = $1 AND FLOW_TYPE = $2 AND DEPLOYMENT_ID = $3 LIMIT 1",
+	}
+
+	// queryGetFlowByHandle retrieves a flow definition by handle and flow type.
+	queryGetFlowByHandle = model.DBQuery{
+		ID: "FLQ-FLOW_MGT-18",
+		Query: "SELECT f.FLOW_ID, f.HANDLE, f.NAME, f.FLOW_TYPE, f.ACTIVE_VERSION, fv.NODES, f.CREATED_AT, " +
+			"f.UPDATED_AT FROM FLOW f INNER JOIN FLOW_VERSION fv ON f.ID = fv.FLOW_INTERNAL_ID " +
+			"AND f.DEPLOYMENT_ID = fv.DEPLOYMENT_ID AND f.ACTIVE_VERSION = fv.VERSION " +
+			"WHERE f.HANDLE = $1 AND f.FLOW_TYPE = $2 AND f.DEPLOYMENT_ID = $3",
 	}
 )

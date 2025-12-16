@@ -31,12 +31,16 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/cachemock"
 )
 
+const testAuthenticationHandleCacheKey = "test-handle:AUTHENTICATION"
+
 type CacheBackedFlowStoreTestSuite struct {
 	suite.Suite
-	mockStore     *flowStoreInterfaceMock
-	flowByIDCache *cachemock.CacheInterfaceMock[*CompleteFlowDefinition]
-	cachedStore   *cacheBackedFlowStore
-	cacheData     map[string]*CompleteFlowDefinition
+	mockStore         *flowStoreInterfaceMock
+	flowByIDCache     *cachemock.CacheInterfaceMock[*CompleteFlowDefinition]
+	flowByHandleCache *cachemock.CacheInterfaceMock[*CompleteFlowDefinition]
+	cachedStore       *cacheBackedFlowStore
+	cacheData         map[string]*CompleteFlowDefinition
+	handleCacheData   map[string]*CompleteFlowDefinition
 }
 
 func TestCacheBackedFlowStoreTestSuite(t *testing.T) {
@@ -46,15 +50,18 @@ func TestCacheBackedFlowStoreTestSuite(t *testing.T) {
 func (s *CacheBackedFlowStoreTestSuite) SetupTest() {
 	s.mockStore = newFlowStoreInterfaceMock(s.T())
 	s.cacheData = make(map[string]*CompleteFlowDefinition)
+	s.handleCacheData = make(map[string]*CompleteFlowDefinition)
 
 	s.flowByIDCache = cachemock.NewCacheInterfaceMock[*CompleteFlowDefinition](s.T())
+	s.flowByHandleCache = cachemock.NewCacheInterfaceMock[*CompleteFlowDefinition](s.T())
 
 	s.setupCacheMock()
 
 	s.cachedStore = &cacheBackedFlowStore{
-		flowByIDCache: s.flowByIDCache,
-		store:         s.mockStore,
-		logger:        log.GetLogger().With(log.String(log.LoggerKeyComponentName, "CacheBackedFlowStore")),
+		flowByIDCache:     s.flowByIDCache,
+		flowByHandleCache: s.flowByHandleCache,
+		store:             s.mockStore,
+		logger:            log.GetLogger().With(log.String(log.LoggerKeyComponentName, "CacheBackedFlowStore")),
 	}
 }
 
@@ -90,11 +97,37 @@ func (s *CacheBackedFlowStoreTestSuite) setupCacheMock() {
 	s.flowByIDCache.EXPECT().GetName().Return("FlowByIDCache").Maybe()
 	s.flowByIDCache.EXPECT().CleanupExpired().Maybe()
 	s.flowByIDCache.EXPECT().IsEnabled().Return(true).Maybe()
+
+	// Setup mock for flowByHandleCache
+	s.flowByHandleCache.EXPECT().Set(mock.Anything, mock.Anything).
+		RunAndReturn(func(key cache.CacheKey, value *CompleteFlowDefinition) error {
+			s.handleCacheData[key.Key] = value
+			return nil
+		}).Maybe()
+
+	s.flowByHandleCache.EXPECT().Get(mock.Anything).
+		RunAndReturn(func(key cache.CacheKey) (*CompleteFlowDefinition, bool) {
+			if val, ok := s.handleCacheData[key.Key]; ok {
+				return val, true
+			}
+			return nil, false
+		}).Maybe()
+
+	s.flowByHandleCache.EXPECT().Delete(mock.Anything).
+		RunAndReturn(func(key cache.CacheKey) error {
+			delete(s.handleCacheData, key.Key)
+			return nil
+		}).Maybe()
+
+	s.flowByHandleCache.EXPECT().GetName().Return("FlowByHandleCache").Maybe()
+	s.flowByHandleCache.EXPECT().CleanupExpired().Maybe()
+	s.flowByHandleCache.EXPECT().IsEnabled().Return(true).Maybe()
 }
 
 func (s *CacheBackedFlowStoreTestSuite) createTestFlow() *CompleteFlowDefinition {
 	return &CompleteFlowDefinition{
 		ID:            "flow-1",
+		Handle:        "test-handle",
 		Name:          "Test Flow",
 		FlowType:      common.FlowTypeAuthentication,
 		ActiveVersion: 1,
@@ -113,12 +146,14 @@ func (s *CacheBackedFlowStoreTestSuite) TestListFlows() {
 	flows := []BasicFlowDefinition{
 		{
 			ID:            "flow-1",
+			Handle:        "flow-1-handle",
 			Name:          "Flow 1",
 			FlowType:      common.FlowTypeAuthentication,
 			ActiveVersion: 1,
 		},
 		{
 			ID:            "flow-2",
+			Handle:        "flow-2-handle",
 			Name:          "Flow 2",
 			FlowType:      common.FlowTypeRegistration,
 			ActiveVersion: 1,
@@ -147,6 +182,7 @@ func (s *CacheBackedFlowStoreTestSuite) TestListFlowsError() {
 
 func (s *CacheBackedFlowStoreTestSuite) TestCreateFlowSuccess() {
 	flowDef := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -170,6 +206,7 @@ func (s *CacheBackedFlowStoreTestSuite) TestCreateFlowSuccess() {
 
 func (s *CacheBackedFlowStoreTestSuite) TestCreateFlowError() {
 	flowDef := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{{ID: "node-1", Type: "basic-auth"}},
@@ -220,6 +257,7 @@ func (s *CacheBackedFlowStoreTestSuite) TestGetFlowByIDNotFound() {
 	s.Error(err)
 	s.Nil(result)
 
+	// Verify nothing was cached for not-found
 	_, ok := s.cacheData["nonexistent"]
 	s.False(ok)
 }
@@ -236,8 +274,66 @@ func (s *CacheBackedFlowStoreTestSuite) TestGetFlowByIDNilFlow() {
 	s.False(ok)
 }
 
+// GetFlowByHandle Tests
+
+func (s *CacheBackedFlowStoreTestSuite) TestGetFlowByHandleFromCache() {
+	flow := s.createTestFlow()
+	s.handleCacheData[testAuthenticationHandleCacheKey] = flow
+
+	result, err := s.cachedStore.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.NotNil(result)
+	s.Equal(flow.ID, result.ID)
+	s.Equal(flow.Handle, result.Handle)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestGetFlowByHandleFromStoreAndCache() {
+	flow := s.createTestFlow()
+	s.mockStore.EXPECT().GetFlowByHandle("test-handle", common.FlowTypeAuthentication).Return(flow, nil)
+
+	result, err := s.cachedStore.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.NotNil(result)
+	s.Equal(flow.ID, result.ID)
+	s.Equal(flow.Handle, result.Handle)
+
+	cached, ok := s.handleCacheData[testAuthenticationHandleCacheKey]
+	s.True(ok)
+	s.Equal(flow.ID, cached.ID)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestGetFlowByHandleNotFound() {
+	s.mockStore.EXPECT().GetFlowByHandle("non-existent", common.FlowTypeAuthentication).
+		Return(nil, errFlowNotFound)
+
+	result, err := s.cachedStore.GetFlowByHandle("non-existent", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.ErrorIs(err, errFlowNotFound)
+	s.Nil(result)
+
+	cacheKey := "non-existent:AUTHENTICATION"
+	_, ok := s.handleCacheData[cacheKey]
+	s.False(ok)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestGetFlowByHandleNilFlow() {
+	s.mockStore.EXPECT().GetFlowByHandle("test-handle", common.FlowTypeAuthentication).Return(nil, nil)
+
+	result, err := s.cachedStore.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.Nil(result)
+
+	_, ok := s.handleCacheData[testAuthenticationHandleCacheKey]
+	s.False(ok)
+}
+
 func (s *CacheBackedFlowStoreTestSuite) TestUpdateFlowSuccess() {
 	flowDef := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "Updated Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{{ID: "node-1", Type: "basic-auth"}},
@@ -263,6 +359,7 @@ func (s *CacheBackedFlowStoreTestSuite) TestUpdateFlowSuccess() {
 
 func (s *CacheBackedFlowStoreTestSuite) TestUpdateFlowError() {
 	flowDef := &FlowDefinition{
+		Handle:   "test-handle",
 		Name:     "Updated Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{{ID: "node-1", Type: "basic-auth"}},
@@ -341,6 +438,144 @@ func (s *CacheBackedFlowStoreTestSuite) TestDeleteFlowNilFromStore() {
 	s.NoError(err)
 }
 
+// IsFlowExists Tests
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsFromCache() {
+	// Add flow to cache
+	flow := s.createTestFlow()
+	s.cacheData["flow-1"] = flow
+
+	exists, err := s.cachedStore.IsFlowExists("flow-1")
+
+	s.NoError(err)
+	s.True(exists)
+	// Verify store was not called since it's in cache
+	s.mockStore.AssertNotCalled(s.T(), "IsFlowExists", "flow-1")
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsFromStore() {
+	// Not in cache, should query store
+	s.mockStore.EXPECT().IsFlowExists("flow-2").Return(true, nil)
+
+	exists, err := s.cachedStore.IsFlowExists("flow-2")
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsNotFound() {
+	// Not in cache, store returns false
+	s.mockStore.EXPECT().IsFlowExists("non-existent").Return(false, nil)
+
+	exists, err := s.cachedStore.IsFlowExists("non-existent")
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsCacheNil() {
+	// Nil value in cache should query store
+	s.cacheData["flow-3"] = nil
+	s.mockStore.EXPECT().IsFlowExists("flow-3").Return(true, nil)
+
+	exists, err := s.cachedStore.IsFlowExists("flow-3")
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsStoreError() {
+	// Not in cache, store returns error
+	s.mockStore.EXPECT().IsFlowExists("flow-error").Return(false, errors.New("db connection error"))
+
+	exists, err := s.cachedStore.IsFlowExists("flow-error")
+
+	s.Error(err)
+	s.Contains(err.Error(), "db connection error")
+	s.False(exists)
+}
+
+// IsFlowExistsByHandle Tests
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsByHandleFromCache() {
+	// Add flow object to cache
+	s.handleCacheData[testAuthenticationHandleCacheKey] = &CompleteFlowDefinition{
+		ID:       "flow-id-1",
+		Handle:   "test-handle",
+		FlowType: common.FlowTypeAuthentication,
+	}
+
+	exists, err := s.cachedStore.IsFlowExistsByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.True(exists)
+	// Verify store was not called since it's in cache
+	s.mockStore.AssertNotCalled(s.T(), "IsFlowExistsByHandle", "test-handle", common.FlowTypeAuthentication)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsByHandleFromStore() {
+	// Not in cache, should query store
+	s.mockStore.EXPECT().IsFlowExistsByHandle("new-handle", common.FlowTypeAuthentication).Return(true, nil)
+
+	exists, err := s.cachedStore.IsFlowExistsByHandle("new-handle", common.FlowTypeAuthentication)
+
+	s.NoError(err)
+	s.True(exists)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsByHandleNotFound() {
+	// Not in cache, store returns false
+	s.mockStore.EXPECT().IsFlowExistsByHandle("non-existent", common.FlowTypeRegistration).Return(false, nil)
+
+	exists, err := s.cachedStore.IsFlowExistsByHandle("non-existent", common.FlowTypeRegistration)
+
+	s.NoError(err)
+	s.False(exists)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsByHandleStoreError() {
+	// Not in cache, store returns error
+	s.mockStore.EXPECT().IsFlowExistsByHandle("error-handle", common.FlowTypeAuthentication).
+		Return(false, errors.New("db connection error"))
+
+	exists, err := s.cachedStore.IsFlowExistsByHandle("error-handle", common.FlowTypeAuthentication)
+
+	s.Error(err)
+	s.Contains(err.Error(), "db connection error")
+	s.False(exists)
+}
+
+func (s *CacheBackedFlowStoreTestSuite) TestIsFlowExistsByHandleCompositeKey() {
+	// Test that different flow types with same handle are cached separately
+	authFlow := &CompleteFlowDefinition{
+		ID:       "flow-id-auth",
+		Handle:   "common-handle",
+		FlowType: common.FlowTypeAuthentication,
+	}
+	// Cache the auth flow
+	s.handleCacheData["common-handle:AUTHENTICATION"] = authFlow
+	// Registration not in cache, should query store
+	s.mockStore.EXPECT().IsFlowExistsByHandle("common-handle", common.FlowTypeRegistration).Return(false, nil)
+
+	// First call - authentication exists (from cache)
+	exists1, err1 := s.cachedStore.IsFlowExistsByHandle("common-handle", common.FlowTypeAuthentication)
+	s.NoError(err1)
+	s.True(exists1)
+
+	// Second call - registration doesn't exist
+	exists2, err2 := s.cachedStore.IsFlowExistsByHandle("common-handle", common.FlowTypeRegistration)
+	s.NoError(err2)
+	s.False(exists2)
+
+	// Verify both are cached with different keys
+	cachedAuthFlow := s.handleCacheData["common-handle:AUTHENTICATION"]
+	s.NotNil(cachedAuthFlow)
+	s.Equal("flow-id-auth", cachedAuthFlow.ID)
+
+	cachedRegFlow := s.handleCacheData["common-handle:REGISTRATION"]
+	s.Nil(cachedRegFlow) // nil marks non-existence
+}
+
 func (s *CacheBackedFlowStoreTestSuite) TestListFlowVersions() {
 	versions := []BasicFlowVersion{
 		{Version: 3, CreatedAt: "2025-01-03T00:00:00Z", IsActive: true},
@@ -370,6 +605,7 @@ func (s *CacheBackedFlowStoreTestSuite) TestListFlowVersionsError() {
 func (s *CacheBackedFlowStoreTestSuite) TestGetFlowVersion() {
 	version := &FlowVersion{
 		ID:        "flow-1",
+		Handle:    "test-handle",
 		Name:      "Test Flow",
 		FlowType:  string(common.FlowTypeAuthentication),
 		Version:   2,

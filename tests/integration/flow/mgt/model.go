@@ -20,6 +20,7 @@ package mgt
 
 type FlowDefinition struct {
 	Name     string           `json:"name"`
+	Handle   string           `json:"handle,omitempty"`
 	FlowType string           `json:"flowType"`
 	Nodes    []NodeDefinition `json:"nodes"`
 }
@@ -27,6 +28,7 @@ type FlowDefinition struct {
 type CompleteFlowDefinition struct {
 	ID            string           `json:"id"`
 	Name          string           `json:"name"`
+	Handle        string           `json:"handle"`
 	FlowType      string           `json:"flowType"`
 	ActiveVersion int              `json:"activeVersion"`
 	Nodes         []NodeDefinition `json:"nodes"`
@@ -38,6 +40,7 @@ type BasicFlowDefinition struct {
 	ID            string `json:"id"`
 	FlowType      string `json:"flowType"`
 	Name          string `json:"name"`
+	Handle        string `json:"handle"`
 	ActiveVersion int    `json:"activeVersion"`
 	CreatedAt     string `json:"createdAt"`
 	UpdatedAt     string `json:"updatedAt"`
@@ -54,6 +57,7 @@ type FlowListResponse struct {
 type FlowVersion struct {
 	ID        string           `json:"id"`
 	Name      string           `json:"name"`
+	Handle    string           `json:"handle"`
 	FlowType  string           `json:"flowType"`
 	Version   int              `json:"version"`
 	IsActive  bool             `json:"isActive"`

@@ -353,6 +353,57 @@ func (_c *FlowMgtServiceInterfaceMock_GetGraph_Call) RunAndReturn(run func(flowI
 	return _c
 }
 
+// IsValidFlow provides a mock function for the type FlowMgtServiceInterfaceMock
+func (_mock *FlowMgtServiceInterfaceMock) IsValidFlow(flowID string) bool {
+	ret := _mock.Called(flowID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsValidFlow")
+	}
+
+	var r0 bool
+	if returnFunc, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = returnFunc(flowID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	return r0
+}
+
+// FlowMgtServiceInterfaceMock_IsValidFlow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsValidFlow'
+type FlowMgtServiceInterfaceMock_IsValidFlow_Call struct {
+	*mock.Call
+}
+
+// IsValidFlow is a helper method to define mock.On call
+//   - flowID string
+func (_e *FlowMgtServiceInterfaceMock_Expecter) IsValidFlow(flowID interface{}) *FlowMgtServiceInterfaceMock_IsValidFlow_Call {
+	return &FlowMgtServiceInterfaceMock_IsValidFlow_Call{Call: _e.mock.On("IsValidFlow", flowID)}
+}
+
+func (_c *FlowMgtServiceInterfaceMock_IsValidFlow_Call) Run(run func(flowID string)) *FlowMgtServiceInterfaceMock_IsValidFlow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *FlowMgtServiceInterfaceMock_IsValidFlow_Call) Return(b bool) *FlowMgtServiceInterfaceMock_IsValidFlow_Call {
+	_c.Call.Return(b)
+	return _c
+}
+
+func (_c *FlowMgtServiceInterfaceMock_IsValidFlow_Call) RunAndReturn(run func(flowID string) bool) *FlowMgtServiceInterfaceMock_IsValidFlow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListFlowVersions provides a mock function for the type FlowMgtServiceInterfaceMock
 func (_mock *FlowMgtServiceInterfaceMock) ListFlowVersions(flowID string) (*FlowVersionListResponse, *serviceerror.ServiceError) {
 	ret := _mock.Called(flowID)

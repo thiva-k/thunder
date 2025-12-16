@@ -463,18 +463,21 @@ components:
           - id: "641af221-75ff-4247-ab1f-ff139040a91b"
             flowType: "AUTHENTICATION"
             name: "Basic Authentication Flow"
+            handle: "basic-auth-flow"
             activeVersion: 2
             createdAt: "2024-01-15T10:20:30Z"
             updatedAt: "2024-02-20T14:25:35Z"
           - id: "2sd4f6g7-h8i9-0j1k-2l3m-4n5o6p7q8r9s"
             flowType: "REGISTRATION"
             name: "Basic Registration Flow"
+            handle: "basic-registration-flow"
             activeVersion: 7
             createdAt: "2024-03-10T09:15:25Z"
             updatedAt: "2024-04-12T11:30:40Z"
           - id: "b12c3d45-6789-4e0f-9abc-def123456789"
             flowType: "REGISTRATION"
             name: "Google Registration Flow"
+            handle: "google-registration-flow"
             activeVersion: 1
             createdAt: "2024-05-05T08:10:20Z"
             updatedAt: "2024-06-01T12:00:00Z"
@@ -561,6 +564,7 @@ components:
         - id
         - flowType
         - name
+        - handle
         - activeVersion
         - createdAt
         - updatedAt
@@ -576,6 +580,14 @@ components:
         name:
           type: string
           description: Name of the flow
+          example: "Basic Authentication Flow"
+        handle:
+          type: string
+          description: |
+            URL-friendly handle for the flow (lowercase letters, numbers, hyphens, and underscores only)
+            Once set, the handle cannot be changed.
+          pattern: '^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$'
+          example: "basic-auth-flow"
         activeVersion:
           type: integer
           description: The version number that is currently active
@@ -594,12 +606,20 @@ components:
       required:
         - name
         - flowType
+        - handle
         - nodes
       properties:
         name:
           type: string
           description: Name of the flow
           example: "Basic Authentication Flow"
+        handle:
+          type: string
+          description: |
+            URL-friendly handle for the flow (lowercase letters, numbers, hyphens, and underscores only)
+            Once set, the handle cannot be changed.
+          pattern: '^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$'
+          example: "basic-auth-flow"
         flowType:
           type: string
           enum:
@@ -616,6 +636,7 @@ components:
           description: List of nodes that define the flow graph
       example:
         name: Basic Authentication Flow
+        handle: basic-auth-flow
         flowType: AUTHENTICATION
         nodes: &authFlowNodes
           - id: node_000
@@ -812,6 +833,7 @@ components:
         - id
         - name
         - flowType
+        - handle
         - activeVersion
         - nodes
         - createdAt
@@ -833,6 +855,13 @@ components:
           description: |
             Type of flow
           example: AUTHENTICATION
+        handle:
+          type: string
+          description: |
+            URL-friendly handle for the flow (lowercase letters, numbers, hyphens, and underscores only)
+            Once set, the handle cannot be changed.
+          pattern: '^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$'
+          example: "basic-auth-flow"
         activeVersion:
           type: integer
           description: The version number that is currently active
@@ -855,6 +884,7 @@ components:
         id: a23b45c6-d7e8-90f1-2345-6789abcdef01
         name: Basic Authentication Flow
         flowType: AUTHENTICATION
+        handle: basic-auth-flow
         activeVersion: 5
         nodes: *authFlowNodes
         createdAt: "2024-06-15T10:20:30Z"
@@ -866,6 +896,7 @@ components:
         - id
         - name
         - flowType
+        - handle
         - version
         - isActive
         - nodes
@@ -887,6 +918,13 @@ components:
           description: |
             Type of flow
           example: AUTHENTICATION
+        handle:
+          type: string
+          description: |
+            URL-friendly handle for the flow (lowercase letters, numbers, hyphens, and underscores only)
+            Once set, the handle cannot be changed.
+          pattern: '^[a-z0-9][a-z0-9_-]*[a-z0-9]$|^[a-z0-9]$'
+          example: "basic-auth-flow"
         version:
           type: integer
           description: Version number of this flow snapshot
@@ -909,6 +947,7 @@ components:
         id: a23b45c6-d7e8-90f1-2345-6789abcdef01
         name: Basic Authentication Flow
         flowType: AUTHENTICATION
+        handle: basic-auth-flow
         version: 3
         isActive: false
         nodes: *authFlowNodes

@@ -23,8 +23,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/asgardeo/thunder/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
@@ -38,6 +40,7 @@ const (
 var (
 	basicAuthFlow = FlowDefinition{
 		Name:     "Basic Authentication Flow",
+		Handle:   "basic-auth-flow",
 		FlowType: "AUTHENTICATION",
 		Nodes: []NodeDefinition{
 			{
@@ -62,6 +65,7 @@ var (
 
 	conditionalAuthFlow = FlowDefinition{
 		Name:     "Conditional Authentication Flow",
+		Handle:   "conditional-auth-flow",
 		FlowType: "AUTHENTICATION",
 		Nodes: []NodeDefinition{
 			{
@@ -100,6 +104,7 @@ var (
 
 	basicRegistrationFlow = FlowDefinition{
 		Name:     "Basic Registration Flow",
+		Handle:   "basic-registration-flow",
 		FlowType: "REGISTRATION",
 		Nodes: []NodeDefinition{
 			{
@@ -151,6 +156,26 @@ func (suite *FlowMgtAPITestSuite) trackFlow(flowID string) {
 	suite.createdFlowIDs = append(suite.createdFlowIDs, flowID)
 }
 
+// generateUniqueHandle generates a unique handle by appending a timestamp and random number
+func generateUniqueHandle(base string) string {
+	timestamp := time.Now().UnixNano()
+	random := rand.Intn(10000)
+	return fmt.Sprintf("%s-%d-%d", base, timestamp, random)
+}
+
+// cloneFlowWithUniqueHandle creates a deep copy of a flow definition with a unique handle
+func cloneFlowWithUniqueHandle(flow FlowDefinition) FlowDefinition {
+	// Marshal and unmarshal to create a deep copy
+	data, _ := json.Marshal(flow)
+	var cloned FlowDefinition
+	json.Unmarshal(data, &cloned)
+
+	// Generate unique handle based on the original
+	cloned.Handle = generateUniqueHandle(flow.Handle)
+
+	return cloned
+}
+
 func (suite *FlowMgtAPITestSuite) TestCreateFlow_Success() {
 	testCases := []struct {
 		name     string
@@ -163,6 +188,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_Success() {
 			testFunc: func(response *CompleteFlowDefinition) {
 				suite.NotEmpty(response.ID)
 				suite.Equal(basicAuthFlow.Name, response.Name)
+				suite.NotEmpty(response.Handle)
 				suite.Equal(basicAuthFlow.FlowType, response.FlowType)
 				suite.Equal(1, response.ActiveVersion)
 				suite.Len(response.Nodes, len(basicAuthFlow.Nodes))
@@ -177,6 +203,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_Success() {
 			testFunc: func(response *CompleteFlowDefinition) {
 				suite.NotEmpty(response.ID)
 				suite.Equal(conditionalAuthFlow.Name, response.Name)
+				suite.NotEmpty(response.Handle)
 				suite.Equal(conditionalAuthFlow.FlowType, response.FlowType)
 				suite.Equal(1, response.ActiveVersion)
 				suite.Len(response.Nodes, 4)
@@ -189,6 +216,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_Success() {
 			testFunc: func(response *CompleteFlowDefinition) {
 				suite.NotEmpty(response.ID)
 				suite.Equal(basicRegistrationFlow.Name, response.Name)
+				suite.NotEmpty(response.Handle)
 				suite.Equal(basicRegistrationFlow.FlowType, response.FlowType)
 				suite.Equal(1, response.ActiveVersion)
 				suite.Len(response.Nodes, len(basicRegistrationFlow.Nodes))
@@ -209,6 +237,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_WithLayout() {
 	// Create a flow with layout information
 	flowWithLayout := FlowDefinition{
 		Name:     "Flow with Layout",
+		Handle:   "flow-with-layout",
 		FlowType: "AUTHENTICATION",
 		Nodes: []NodeDefinition{
 			{
@@ -261,8 +290,8 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_WithLayout() {
 		},
 	}
 
-	// Create the flow
-	response := suite.createFlow(flowWithLayout)
+	// Create the flow with unique handle
+	response := suite.createFlow(cloneFlowWithUniqueHandle(flowWithLayout))
 	suite.trackFlow(response.ID)
 
 	// Verify layout is preserved in the response
@@ -313,6 +342,24 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_WithLayout() {
 	suite.Equal(50.0, retrievedFlow.Nodes[0].Layout.Position.X)
 }
 
+func (suite *FlowMgtAPITestSuite) TestCreateFlow_WithCustomHandle() {
+	flowDef := FlowDefinition{
+		Name:     "Custom Handle Flow",
+		Handle:   generateUniqueHandle("my-custom-handle"),
+		FlowType: "AUTHENTICATION",
+		Nodes:    basicAuthFlow.Nodes,
+	}
+
+	response := suite.createFlow(flowDef)
+	suite.trackFlow(response.ID)
+
+	suite.NotEmpty(response.ID)
+	suite.Equal(flowDef.Name, response.Name)
+	suite.Equal(flowDef.Handle, response.Handle)
+	suite.Equal(flowDef.FlowType, response.FlowType)
+	suite.Equal(1, response.ActiveVersion)
+}
+
 func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 	testCases := []struct {
 		name           string
@@ -324,16 +371,18 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 			name: "Missing flow name",
 			flowDef: FlowDefinition{
 				Name:     "",
+				Handle:   "missing-name-flow",
 				FlowType: "AUTHENTICATION",
 				Nodes:    basicAuthFlow.Nodes,
 			},
 			expectedStatus: http.StatusBadRequest,
-			expectedCode:   "FLM-1010",
+			expectedCode:   "FLM-1011",
 		},
 		{
 			name: "Invalid flow type",
 			flowDef: FlowDefinition{
 				Name:     "Test Flow",
+				Handle:   "invalid-type-flow",
 				FlowType: "INVALID_TYPE",
 				Nodes:    basicAuthFlow.Nodes,
 			},
@@ -344,6 +393,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 			name: "Missing START node",
 			flowDef: FlowDefinition{
 				Name:     "Test Flow",
+				Handle:   "missing-start-flow",
 				FlowType: "AUTHENTICATION",
 				Nodes: []NodeDefinition{
 					{
@@ -359,6 +409,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 			name: "Missing END node",
 			flowDef: FlowDefinition{
 				Name:     "Test Flow",
+				Handle:   "missing-end-flow",
 				FlowType: "AUTHENTICATION",
 				Nodes: []NodeDefinition{
 					{
@@ -371,9 +422,54 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 			expectedCode:   "FLM-1005",
 		},
 		{
+			name: "Invalid handle with uppercase",
+			flowDef: FlowDefinition{
+				Name:     "Test Flow",
+				Handle:   "InvalidHandle",
+				FlowType: "AUTHENTICATION",
+				Nodes:    basicAuthFlow.Nodes,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedCode:   "FLM-1015",
+		},
+		{
+			name: "Invalid handle with spaces",
+			flowDef: FlowDefinition{
+				Name:     "Test Flow",
+				Handle:   "invalid handle",
+				FlowType: "AUTHENTICATION",
+				Nodes:    basicAuthFlow.Nodes,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedCode:   "FLM-1015",
+		},
+		{
+			name: "Invalid handle starting with dash",
+			flowDef: FlowDefinition{
+				Name:     "Test Flow",
+				Handle:   "-invalid-handle",
+				FlowType: "AUTHENTICATION",
+				Nodes:    basicAuthFlow.Nodes,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedCode:   "FLM-1015",
+		},
+		{
+			name: "Invalid handle ending with underscore",
+			flowDef: FlowDefinition{
+				Name:     "Test Flow",
+				Handle:   "invalid-handle_",
+				FlowType: "AUTHENTICATION",
+				Nodes:    basicAuthFlow.Nodes,
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedCode:   "FLM-1015",
+		},
+		{
 			name: "Duplicate node IDs",
 			flowDef: FlowDefinition{
 				Name:     "Test Flow With Duplicate IDs",
+				Handle:   "duplicate-ids-flow",
 				FlowType: "AUTHENTICATION",
 				Nodes: []NodeDefinition{
 					{
@@ -401,6 +497,7 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 			name: "Invalid node reference",
 			flowDef: FlowDefinition{
 				Name:     "Test Flow With Invalid Ref",
+				Handle:   "invalid-ref-flow",
 				FlowType: "AUTHENTICATION",
 				Nodes: []NodeDefinition{
 					{
@@ -426,7 +523,8 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 	for _, tc := range testCases {
 		suite.Run(tc.name, func() {
 			if tc.expectedStatus == http.StatusCreated {
-				createdFlow := suite.createFlow(tc.flowDef)
+				flowWithUniqueHandle := cloneFlowWithUniqueHandle(tc.flowDef)
+				createdFlow := suite.createFlow(flowWithUniqueHandle)
 				suite.NotEmpty(createdFlow.ID)
 				suite.deleteFlow(createdFlow.ID)
 			} else {
@@ -437,12 +535,13 @@ func (suite *FlowMgtAPITestSuite) TestCreateFlow_ValidationErrors() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestGetFlow_Success() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	response := suite.getFlow(createdFlow.ID)
 
 	suite.Equal(createdFlow.ID, response.ID)
 	suite.Equal(createdFlow.Name, response.Name)
+	suite.Equal(createdFlow.Handle, response.Handle)
 	suite.Equal(createdFlow.FlowType, response.FlowType)
 	suite.Equal(createdFlow.ActiveVersion, response.ActiveVersion)
 	suite.Len(response.Nodes, len(createdFlow.Nodes))
@@ -453,8 +552,8 @@ func (suite *FlowMgtAPITestSuite) TestGetFlow_NotFound() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestListFlows_Success() {
-	flow1 := suite.createFlow(basicAuthFlow)
-	flow2 := suite.createFlow(conditionalAuthFlow)
+	flow1 := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
+	flow2 := suite.createFlow(cloneFlowWithUniqueHandle(conditionalAuthFlow))
 	defer suite.deleteFlow(flow1.ID)
 	defer suite.deleteFlow(flow2.ID)
 
@@ -470,11 +569,13 @@ func (suite *FlowMgtAPITestSuite) TestListFlows_Success() {
 		if flow.ID == flow1.ID {
 			foundFlow1 = true
 			suite.Equal(flow1.Name, flow.Name)
+			suite.Equal(flow1.Handle, flow.Handle)
 			suite.Equal(flow1.FlowType, flow.FlowType)
 		}
 		if flow.ID == flow2.ID {
 			foundFlow2 = true
 			suite.Equal(flow2.Name, flow.Name)
+			suite.Equal(flow2.Handle, flow.Handle)
 			suite.Equal(flow2.FlowType, flow.FlowType)
 		}
 	}
@@ -493,8 +594,8 @@ func (suite *FlowMgtAPITestSuite) TestListFlows_WithPagination() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestListFlows_FilterByFlowType() {
-	authFlow := suite.createFlow(basicAuthFlow)
-	regFlow := suite.createFlow(basicRegistrationFlow)
+	authFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
+	regFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicRegistrationFlow))
 	defer suite.deleteFlow(authFlow.ID)
 	defer suite.deleteFlow(regFlow.ID)
 
@@ -509,10 +610,11 @@ func (suite *FlowMgtAPITestSuite) TestListFlows_FilterByFlowType() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestUpdateFlow_Success() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	updatedFlow := FlowDefinition{
 		Name:     "Updated Flow Name",
+		Handle:   createdFlow.Handle,
 		FlowType: createdFlow.FlowType,
 		Nodes: []NodeDefinition{
 			{
@@ -539,26 +641,29 @@ func (suite *FlowMgtAPITestSuite) TestUpdateFlow_Success() {
 
 	suite.Equal(createdFlow.ID, response.ID)
 	suite.Equal(updatedFlow.Name, response.Name)
+	suite.NotEmpty(response.Handle)
 	suite.Equal(updatedFlow.FlowType, response.FlowType)
 	suite.Equal(2, response.ActiveVersion)
 	suite.Len(response.Nodes, len(updatedFlow.Nodes))
 }
 
 func (suite *FlowMgtAPITestSuite) TestUpdateFlow_ChangeFlowType() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	updatedFlow := FlowDefinition{
 		Name:     "Updated Flow",
+		Handle:   createdFlow.Handle,
 		FlowType: "REGISTRATION",
 		Nodes:    basicAuthFlow.Nodes,
 	}
 
-	suite.updateFlowExpectError(createdFlow.ID, updatedFlow, http.StatusBadRequest, "FLM-1011")
+	suite.updateFlowExpectError(createdFlow.ID, updatedFlow, http.StatusBadRequest, "FLM-1012")
 }
 
 func (suite *FlowMgtAPITestSuite) TestUpdateFlow_NotFound() {
 	updatedFlow := FlowDefinition{
 		Name:     "Updated Flow",
+		Handle:   "updated-flow",
 		FlowType: "AUTHENTICATION",
 		Nodes:    basicAuthFlow.Nodes,
 	}
@@ -567,7 +672,7 @@ func (suite *FlowMgtAPITestSuite) TestUpdateFlow_NotFound() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestDeleteFlow_Success() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.deleteFlow(createdFlow.ID)
 	suite.getFlowExpectError(createdFlow.ID, http.StatusNotFound, "FLM-1003")
 }
@@ -577,10 +682,11 @@ func (suite *FlowMgtAPITestSuite) TestDeleteFlow_NotFound() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestListFlowVersions_Success() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	updatedFlow := FlowDefinition{
 		Name:     "Updated Flow V2",
+		Handle:   createdFlow.Handle,
 		FlowType: createdFlow.FlowType,
 		Nodes:    basicAuthFlow.Nodes,
 	}
@@ -607,13 +713,14 @@ func (suite *FlowMgtAPITestSuite) TestListFlowVersions_Success() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestListFlowVersions_VersionHistoryLimit() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 
 	// Create multiple versions to exceed the limit (configured as 3)
 	for i := 2; i <= 5; i++ {
 		updatedFlow := FlowDefinition{
 			Name:     fmt.Sprintf("Updated Flow V%d", i),
+			Handle:   createdFlow.Handle,
 			FlowType: createdFlow.FlowType,
 			Nodes:    basicAuthFlow.Nodes,
 		}
@@ -648,10 +755,11 @@ func (suite *FlowMgtAPITestSuite) TestListFlowVersions_VersionHistoryLimit() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestGetFlowVersion_Success() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	updatedFlow := FlowDefinition{
 		Name:     "Updated Flow V2",
+		Handle:   createdFlow.Handle,
 		FlowType: createdFlow.FlowType,
 		Nodes:    basicAuthFlow.Nodes,
 	}
@@ -661,34 +769,37 @@ func (suite *FlowMgtAPITestSuite) TestGetFlowVersion_Success() {
 
 	suite.Equal(createdFlow.ID, response.ID)
 	suite.Equal("Updated Flow V2", response.Name)
+	suite.NotEmpty(response.Handle)
 	suite.Equal(1, response.Version)
 	suite.False(response.IsActive)
 	suite.Len(response.Nodes, len(basicAuthFlow.Nodes))
 }
 
 func (suite *FlowMgtAPITestSuite) TestGetFlowVersion_ActiveVersion() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 
 	response := suite.getFlowVersion(createdFlow.ID, 1)
 
 	suite.Equal(createdFlow.ID, response.ID)
+	suite.NotEmpty(response.Handle)
 	suite.Equal(1, response.Version)
 	suite.True(response.IsActive)
 }
 
 func (suite *FlowMgtAPITestSuite) TestGetFlowVersion_NotFound() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 
 	suite.getFlowVersionExpectError(createdFlow.ID, 999, http.StatusNotFound, "FLM-1008")
 }
 
 func (suite *FlowMgtAPITestSuite) TestRestoreFlowVersion_Success() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	updatedFlow := FlowDefinition{
 		Name:     "Updated Flow V2",
+		Handle:   createdFlow.Handle,
 		FlowType: createdFlow.FlowType,
 		Nodes:    basicAuthFlow.Nodes,
 	}
@@ -701,6 +812,7 @@ func (suite *FlowMgtAPITestSuite) TestRestoreFlowVersion_Success() {
 	suite.Equal(createdFlow.ID, response.ID)
 	suite.Equal(4, response.ActiveVersion)
 	suite.Equal("Updated Flow V3", response.Name)
+	suite.NotEmpty(response.Handle)
 
 	versions := suite.listFlowVersions(createdFlow.ID)
 	suite.Equal(3, versions.TotalVersions)
@@ -714,7 +826,7 @@ func (suite *FlowMgtAPITestSuite) TestRestoreFlowVersion_Success() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestRestoreFlowVersion_InvalidVersion() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	restoreReq := RestoreVersionRequest{Version: 0}
 
@@ -722,7 +834,7 @@ func (suite *FlowMgtAPITestSuite) TestRestoreFlowVersion_InvalidVersion() {
 }
 
 func (suite *FlowMgtAPITestSuite) TestRestoreFlowVersion_VersionNotFound() {
-	createdFlow := suite.createFlow(basicAuthFlow)
+	createdFlow := suite.createFlow(cloneFlowWithUniqueHandle(basicAuthFlow))
 	suite.trackFlow(createdFlow.ID)
 	restoreReq := RestoreVersionRequest{Version: 999}
 

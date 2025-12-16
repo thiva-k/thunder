@@ -89,19 +89,48 @@ var (
 		Error:            "Invalid flow version",
 		ErrorDescription: "The specified flow version is invalid",
 	}
+	// ErrorMissingFlowHandle is the error returned when flow handle is missing.
+	ErrorMissingFlowHandle = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "FLM-1010",
+		Error:            "Invalid flow handle",
+		ErrorDescription: "The flow handle must be provided",
+	}
 	// ErrorMissingFlowName is the error returned when flow name is missing.
 	ErrorMissingFlowName = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "FLM-1010",
+		Code:             "FLM-1011",
 		Error:            "Invalid flow name",
 		ErrorDescription: "The flow name must be provided",
 	}
 	// ErrorCannotUpdateFlowType is the error returned when trying to update flow type.
 	ErrorCannotUpdateFlowType = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "FLM-1011",
+		Code:             "FLM-1012",
 		Error:            "Invalid update request",
 		ErrorDescription: "The flow type cannot be changed once created",
+	}
+	// ErrorDuplicateFlowHandle is the error returned when a flow with the same handle and type already exists.
+	ErrorDuplicateFlowHandle = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "FLM-1013",
+		Error:            "Duplicate flow handle",
+		ErrorDescription: "A flow with this handle already exists for the given flow type",
+	}
+	// ErrorHandleUpdateNotAllowed is the error returned when attempting to update an immutable handle.
+	ErrorHandleUpdateNotAllowed = serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "FLM-1014",
+		Error:            "Invalid update request",
+		ErrorDescription: "The flow handle cannot be modified after creation",
+	}
+	// ErrorInvalidFlowHandleFormat is the error returned when handle format is invalid.
+	ErrorInvalidFlowHandleFormat = serviceerror.ServiceError{
+		Type:  serviceerror.ClientErrorType,
+		Code:  "FLM-1015",
+		Error: "Invalid flow handle format",
+		ErrorDescription: "The flow handle must be lowercase, alphanumeric, and can only contain " +
+			"underscores or dashes",
 	}
 
 	// ErrorGraphBuildFailure is the error returned when graph building fails.
@@ -110,7 +139,7 @@ var (
 	// flow creation/update to catch such errors early.
 	ErrorGraphBuildFailure = serviceerror.ServiceError{
 		Type:             serviceerror.ClientErrorType,
-		Code:             "FLM-1012",
+		Code:             "FLM-1016",
 		Error:            "Graph build failure",
 		ErrorDescription: "Failed to build executable graph from flow definition",
 	}

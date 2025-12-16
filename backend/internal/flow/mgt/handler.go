@@ -267,6 +267,7 @@ func parsePaginationParams(r *http.Request) (int, int, *serviceerror.ServiceErro
 // validate it properly.
 func sanitizeFlowDefinitionRequest(req *FlowDefinition) *FlowDefinition {
 	sanitized := &FlowDefinition{
+		Handle:   utils.SanitizeString(req.Handle),
 		Name:     utils.SanitizeString(req.Name),
 		FlowType: req.FlowType,
 		Nodes:    req.Nodes,

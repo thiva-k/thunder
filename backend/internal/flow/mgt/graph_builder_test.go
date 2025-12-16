@@ -75,6 +75,7 @@ func (s *GraphBuilderTestSuite) TestGetGraph_NilFlow() {
 func (s *GraphBuilderTestSuite) TestGetGraph_EmptyNodes() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes:    []NodeDefinition{},
@@ -91,6 +92,7 @@ func (s *GraphBuilderTestSuite) TestGetGraph_EmptyNodes() {
 func (s *GraphBuilderTestSuite) TestGetGraph_CacheHit() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -111,6 +113,7 @@ func (s *GraphBuilderTestSuite) TestGetGraph_CacheHit() {
 func (s *GraphBuilderTestSuite) TestGetGraph_BuildAndCache() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -160,6 +163,7 @@ func (s *GraphBuilderTestSuite) TestGetGraph_BuildAndCache() {
 func (s *GraphBuilderTestSuite) TestGetGraph_BuildFailure() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -186,6 +190,7 @@ func (s *GraphBuilderTestSuite) TestGetGraph_BuildFailure() {
 func (s *GraphBuilderTestSuite) TestGetGraph_CacheSetError() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -247,6 +252,7 @@ func (s *GraphBuilderTestSuite) TestInvalidateCache_Error() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_WithExecutor() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -299,6 +305,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithExecutor() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_ExecutorNotRegistered() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -334,6 +341,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_ExecutorNotRegistered() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_WithOnFailure() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -410,6 +418,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithOnFailure() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_OnFailureNotPromptNode() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -445,6 +454,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_OnFailureNotPromptNode() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_OnFailureTargetNotFound() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -478,6 +488,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_OnFailureTargetNotFound() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_WithInputs() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -534,6 +545,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithInputs() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_WithActions() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -610,6 +622,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithActions() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_WithMeta() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -662,6 +675,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithMeta() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_WithCondition() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -730,6 +744,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithCondition() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_NoStartNode() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -772,6 +787,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_NoStartNode() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_AddNodeError() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -803,6 +819,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_AddNodeError() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_AddEdgeError() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -842,6 +859,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_AddEdgeError() {
 func (s *GraphBuilderTestSuite) TestBuildGraph_SetStartNodeError() {
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{
@@ -882,6 +900,7 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithProperties() {
 
 	flow := &CompleteFlowDefinition{
 		ID:       "flow-1",
+		Handle:   "test-handle",
 		Name:     "Test Flow",
 		FlowType: common.FlowTypeAuthentication,
 		Nodes: []NodeDefinition{

@@ -35,6 +35,7 @@ import (
 // Database column names
 const (
 	colFlowID        = "flow_id"
+	colHandle        = "handle"
 	colName          = "name"
 	colFlowType      = "flow_type"
 	colActiveVersion = "active_version"
@@ -50,11 +51,14 @@ type flowStoreInterface interface {
 	ListFlows(limit, offset int, flowType string) ([]BasicFlowDefinition, int, error)
 	CreateFlow(flowID string, flow *FlowDefinition) (*CompleteFlowDefinition, error)
 	GetFlowByID(flowID string) (*CompleteFlowDefinition, error)
+	GetFlowByHandle(handle string, flowType common.FlowType) (*CompleteFlowDefinition, error)
 	UpdateFlow(flowID string, flow *FlowDefinition) (*CompleteFlowDefinition, error)
 	DeleteFlow(flowID string) error
 	ListFlowVersions(flowID string) ([]BasicFlowVersion, error)
 	GetFlowVersion(flowID string, version int) (*FlowVersion, error)
 	RestoreFlowVersion(flowID string, version int) (*CompleteFlowDefinition, error)
+	IsFlowExists(flowID string) (bool, error)
+	IsFlowExistsByHandle(handle string, flowType common.FlowType) (bool, error)
 }
 
 // flowStore is the default implementation of flowStoreInterface.
@@ -138,7 +142,7 @@ func (s *flowStore) CreateFlow(flowID string, flow *FlowDefinition) (*CompleteFl
 	}
 
 	err = s.withTransaction(func(tx model.TxInterface) error {
-		_, err := tx.Exec(queryCreateFlow, flowID, flow.Name, flow.FlowType, int64(1), s.deploymentID)
+		_, err := tx.Exec(queryCreateFlow, flowID, flow.Handle, flow.Name, flow.FlowType, int64(1), s.deploymentID)
 		if err != nil {
 			return fmt.Errorf("failed to create flow: %w", err)
 		}
@@ -169,6 +173,26 @@ func (s *flowStore) GetFlowByID(flowID string) (*CompleteFlowDefinition, error) 
 		results, err := dbClient.Query(queryGetFlow, flowID, s.deploymentID)
 		if err != nil {
 			return fmt.Errorf("failed to get flow: %w", err)
+		}
+
+		if len(results) == 0 {
+			return errFlowNotFound
+		}
+
+		flow, err = s.buildCompleteFlowDefinitionFromRow(results[0])
+		return err
+	})
+
+	return flow, err
+}
+
+// GetFlowByHandle retrieves a flow definition by handle and flow type.
+func (s *flowStore) GetFlowByHandle(handle string, flowType common.FlowType) (*CompleteFlowDefinition, error) {
+	var flow *CompleteFlowDefinition
+	err := s.withDBClient(func(dbClient provider.DBClientInterface) error {
+		results, err := dbClient.Query(queryGetFlowByHandle, handle, string(flowType), s.deploymentID)
+		if err != nil {
+			return fmt.Errorf("failed to get flow by handle: %w", err)
 		}
 
 		if len(results) == 0 {
@@ -239,6 +263,38 @@ func (s *flowStore) DeleteFlow(flowID string) error {
 		}
 		return nil
 	})
+}
+
+// IsFlowExists checks if a flow exists with a given flow ID.
+func (s *flowStore) IsFlowExists(flowID string) (bool, error) {
+	var exists bool
+	err := s.withDBClient(func(dbClient provider.DBClientInterface) error {
+		results, err := dbClient.Query(queryCheckFlowExistsByID, flowID, s.deploymentID)
+		if err != nil {
+			return fmt.Errorf("failed to check flow existence: %w", err)
+		}
+
+		exists = len(results) > 0
+		return nil
+	})
+
+	return exists, err
+}
+
+// IsFlowExistsByHandle checks if a flow exists with the given handle and flow type.
+func (s *flowStore) IsFlowExistsByHandle(handle string, flowType common.FlowType) (bool, error) {
+	var exists bool
+	err := s.withDBClient(func(dbClient provider.DBClientInterface) error {
+		results, err := dbClient.Query(queryCheckFlowExistsByHandle, handle, string(flowType), s.deploymentID)
+		if err != nil {
+			return fmt.Errorf("failed to check flow existence by handle: %w", err)
+		}
+
+		exists = len(results) > 0
+		return nil
+	})
+
+	return exists, err
 }
 
 // ListFlowVersions retrieves all versions of a flow definition.
@@ -511,8 +567,8 @@ func (s *flowStore) scanFlowMetadata(rows *sql.Rows) (flowName string, activeVer
 		return "", 0, fmt.Errorf("no flow found")
 	}
 
-	var flowID, flowType, nodes, createdAt, updatedAt string
-	err = rows.Scan(&flowID, &flowName, &flowType, &activeVersion, &nodes, &createdAt, &updatedAt)
+	var flowID, handle, flowType, nodes, createdAt, updatedAt string
+	err = rows.Scan(&flowID, &handle, &flowName, &flowType, &activeVersion, &nodes, &createdAt, &updatedAt)
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to scan flow metadata: %w", err)
 	}
@@ -581,6 +637,11 @@ func (s *flowStore) buildBasicFlowDefinitionFromRow(row map[string]interface{}) 
 		return BasicFlowDefinition{}, err
 	}
 
+	handle, err := s.getString(row, colHandle)
+	if err != nil {
+		return BasicFlowDefinition{}, err
+	}
+
 	name, err := s.getString(row, colName)
 	if err != nil {
 		return BasicFlowDefinition{}, err
@@ -608,6 +669,7 @@ func (s *flowStore) buildBasicFlowDefinitionFromRow(row map[string]interface{}) 
 
 	return BasicFlowDefinition{
 		ID:            flowID,
+		Handle:        handle,
 		Name:          name,
 		FlowType:      common.FlowType(flowTypeStr),
 		ActiveVersion: int(activeVersion),
@@ -620,6 +682,11 @@ func (s *flowStore) buildBasicFlowDefinitionFromRow(row map[string]interface{}) 
 func (s *flowStore) buildCompleteFlowDefinitionFromRow(row map[string]interface{}) (
 	*CompleteFlowDefinition, error) {
 	flowID, err := s.getString(row, colFlowID)
+	if err != nil {
+		return nil, err
+	}
+
+	handle, err := s.getString(row, colHandle)
 	if err != nil {
 		return nil, err
 	}
@@ -656,6 +723,7 @@ func (s *flowStore) buildCompleteFlowDefinitionFromRow(row map[string]interface{
 
 	flow := &CompleteFlowDefinition{
 		ID:            flowID,
+		Handle:        handle,
 		Name:          name,
 		FlowType:      common.FlowType(flowTypeStr),
 		ActiveVersion: int(activeVersion),
@@ -701,6 +769,11 @@ func (s *flowStore) buildFlowVersionFromRow(row map[string]interface{}) (*FlowVe
 		return nil, err
 	}
 
+	handle, err := s.getString(row, colHandle)
+	if err != nil {
+		return nil, err
+	}
+
 	name, err := s.getString(row, colName)
 	if err != nil {
 		return nil, err
@@ -733,6 +806,7 @@ func (s *flowStore) buildFlowVersionFromRow(row map[string]interface{}) (*FlowVe
 
 	flowVersion := &FlowVersion{
 		ID:        flowID,
+		Handle:    handle,
 		Name:      name,
 		FlowType:  flowTypeStr,
 		Version:   int(version),

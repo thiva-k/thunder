@@ -5,6 +5,7 @@
 package flowmgt
 
 import (
+	"github.com/asgardeo/thunder/internal/flow/common"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -154,6 +155,74 @@ func (_c *flowStoreInterfaceMock_DeleteFlow_Call) RunAndReturn(run func(flowID s
 	return _c
 }
 
+// GetFlowByHandle provides a mock function for the type flowStoreInterfaceMock
+func (_mock *flowStoreInterfaceMock) GetFlowByHandle(handle string, flowType common.FlowType) (*CompleteFlowDefinition, error) {
+	ret := _mock.Called(handle, flowType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFlowByHandle")
+	}
+
+	var r0 *CompleteFlowDefinition
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, common.FlowType) (*CompleteFlowDefinition, error)); ok {
+		return returnFunc(handle, flowType)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, common.FlowType) *CompleteFlowDefinition); ok {
+		r0 = returnFunc(handle, flowType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*CompleteFlowDefinition)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, common.FlowType) error); ok {
+		r1 = returnFunc(handle, flowType)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// flowStoreInterfaceMock_GetFlowByHandle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlowByHandle'
+type flowStoreInterfaceMock_GetFlowByHandle_Call struct {
+	*mock.Call
+}
+
+// GetFlowByHandle is a helper method to define mock.On call
+//   - handle string
+//   - flowType common.FlowType
+func (_e *flowStoreInterfaceMock_Expecter) GetFlowByHandle(handle interface{}, flowType interface{}) *flowStoreInterfaceMock_GetFlowByHandle_Call {
+	return &flowStoreInterfaceMock_GetFlowByHandle_Call{Call: _e.mock.On("GetFlowByHandle", handle, flowType)}
+}
+
+func (_c *flowStoreInterfaceMock_GetFlowByHandle_Call) Run(run func(handle string, flowType common.FlowType)) *flowStoreInterfaceMock_GetFlowByHandle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 common.FlowType
+		if args[1] != nil {
+			arg1 = args[1].(common.FlowType)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *flowStoreInterfaceMock_GetFlowByHandle_Call) Return(completeFlowDefinition *CompleteFlowDefinition, err error) *flowStoreInterfaceMock_GetFlowByHandle_Call {
+	_c.Call.Return(completeFlowDefinition, err)
+	return _c
+}
+
+func (_c *flowStoreInterfaceMock_GetFlowByHandle_Call) RunAndReturn(run func(handle string, flowType common.FlowType) (*CompleteFlowDefinition, error)) *flowStoreInterfaceMock_GetFlowByHandle_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetFlowByID provides a mock function for the type flowStoreInterfaceMock
 func (_mock *flowStoreInterfaceMock) GetFlowByID(flowID string) (*CompleteFlowDefinition, error) {
 	ret := _mock.Called(flowID)
@@ -280,6 +349,132 @@ func (_c *flowStoreInterfaceMock_GetFlowVersion_Call) Return(flowVersion *FlowVe
 }
 
 func (_c *flowStoreInterfaceMock_GetFlowVersion_Call) RunAndReturn(run func(flowID string, version int) (*FlowVersion, error)) *flowStoreInterfaceMock_GetFlowVersion_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsFlowExists provides a mock function for the type flowStoreInterfaceMock
+func (_mock *flowStoreInterfaceMock) IsFlowExists(flowID string) (bool, error) {
+	ret := _mock.Called(flowID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsFlowExists")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string) (bool, error)); ok {
+		return returnFunc(flowID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string) bool); ok {
+		r0 = returnFunc(flowID)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string) error); ok {
+		r1 = returnFunc(flowID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// flowStoreInterfaceMock_IsFlowExists_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsFlowExists'
+type flowStoreInterfaceMock_IsFlowExists_Call struct {
+	*mock.Call
+}
+
+// IsFlowExists is a helper method to define mock.On call
+//   - flowID string
+func (_e *flowStoreInterfaceMock_Expecter) IsFlowExists(flowID interface{}) *flowStoreInterfaceMock_IsFlowExists_Call {
+	return &flowStoreInterfaceMock_IsFlowExists_Call{Call: _e.mock.On("IsFlowExists", flowID)}
+}
+
+func (_c *flowStoreInterfaceMock_IsFlowExists_Call) Run(run func(flowID string)) *flowStoreInterfaceMock_IsFlowExists_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *flowStoreInterfaceMock_IsFlowExists_Call) Return(b bool, err error) *flowStoreInterfaceMock_IsFlowExists_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *flowStoreInterfaceMock_IsFlowExists_Call) RunAndReturn(run func(flowID string) (bool, error)) *flowStoreInterfaceMock_IsFlowExists_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// IsFlowExistsByHandle provides a mock function for the type flowStoreInterfaceMock
+func (_mock *flowStoreInterfaceMock) IsFlowExistsByHandle(handle string, flowType common.FlowType) (bool, error) {
+	ret := _mock.Called(handle, flowType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IsFlowExistsByHandle")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(string, common.FlowType) (bool, error)); ok {
+		return returnFunc(handle, flowType)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, common.FlowType) bool); ok {
+		r0 = returnFunc(handle, flowType)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, common.FlowType) error); ok {
+		r1 = returnFunc(handle, flowType)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// flowStoreInterfaceMock_IsFlowExistsByHandle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'IsFlowExistsByHandle'
+type flowStoreInterfaceMock_IsFlowExistsByHandle_Call struct {
+	*mock.Call
+}
+
+// IsFlowExistsByHandle is a helper method to define mock.On call
+//   - handle string
+//   - flowType common.FlowType
+func (_e *flowStoreInterfaceMock_Expecter) IsFlowExistsByHandle(handle interface{}, flowType interface{}) *flowStoreInterfaceMock_IsFlowExistsByHandle_Call {
+	return &flowStoreInterfaceMock_IsFlowExistsByHandle_Call{Call: _e.mock.On("IsFlowExistsByHandle", handle, flowType)}
+}
+
+func (_c *flowStoreInterfaceMock_IsFlowExistsByHandle_Call) Run(run func(handle string, flowType common.FlowType)) *flowStoreInterfaceMock_IsFlowExistsByHandle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 common.FlowType
+		if args[1] != nil {
+			arg1 = args[1].(common.FlowType)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *flowStoreInterfaceMock_IsFlowExistsByHandle_Call) Return(b bool, err error) *flowStoreInterfaceMock_IsFlowExistsByHandle_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *flowStoreInterfaceMock_IsFlowExistsByHandle_Call) RunAndReturn(run func(handle string, flowType common.FlowType) (bool, error)) *flowStoreInterfaceMock_IsFlowExistsByHandle_Call {
 	_c.Call.Return(run)
 	return _c
 }

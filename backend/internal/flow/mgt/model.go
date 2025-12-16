@@ -24,6 +24,7 @@ import (
 
 // FlowDefinition represents the structure of a flow definition.
 type FlowDefinition struct {
+	Handle   string           `json:"handle" validate:"required"`
 	Name     string           `json:"name" validate:"required"`
 	FlowType common.FlowType  `json:"flowType" validate:"required"`
 	Nodes    []NodeDefinition `json:"nodes" validate:"required"`
@@ -32,6 +33,7 @@ type FlowDefinition struct {
 // CompleteFlowDefinition represents a complete flow definition with all details.
 type CompleteFlowDefinition struct {
 	ID            string           `json:"id"`
+	Handle        string           `json:"handle"`
 	Name          string           `json:"name"`
 	FlowType      common.FlowType  `json:"flowType"`
 	ActiveVersion int              `json:"activeVersion"`
@@ -43,6 +45,7 @@ type CompleteFlowDefinition struct {
 // BasicFlowDefinition represents basic information about a flow definition.
 type BasicFlowDefinition struct {
 	ID            string          `json:"id"`
+	Handle        string          `json:"handle"`
 	FlowType      common.FlowType `json:"flowType"`
 	Name          string          `json:"name"`
 	ActiveVersion int             `json:"activeVersion"`
@@ -62,6 +65,7 @@ type FlowListResponse struct {
 // FlowVersion represents a specific version of a flow definition.
 type FlowVersion struct {
 	ID        string           `json:"id"`
+	Handle    string           `json:"handle"`
 	Name      string           `json:"name"`
 	FlowType  string           `json:"flowType"`
 	Version   int              `json:"version"`
