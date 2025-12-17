@@ -104,7 +104,7 @@ func registerServices(
 	// Initialize flow and executor services.
 	flowFactory := flowcore.Initialize()
 	execRegistry := executor.Initialize(flowFactory, userService, ouService,
-		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService)
+		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService, observabilitySvc)
 
 	flowMgtService, err := flowmgt.Initialize(flowFactory, execRegistry)
 	if err != nil {
@@ -127,7 +127,7 @@ func registerServices(
 	flowExecService := flowexec.Initialize(mux, flowMgtService, applicationService, execRegistry, observabilitySvc)
 
 	// Initialize OAuth services.
-	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService)
+	oauth.Initialize(mux, applicationService, userService, jwtService, flowExecService, observabilitySvc)
 
 	// TODO: Legacy way of initializing services. These need to be refactored in the future aligning to the
 	// dependency injection pattern used above.
