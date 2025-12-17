@@ -340,3 +340,11 @@ packages:
       structname: '{{.InterfaceName}}Mock'
       pkgname: hashmock
       filename: "{{.InterfaceName}}_mock.go"
+
+  github.com/asgardeo/thunder/internal/resource:
+    config:
+      all: true
+      dir: tests/mocks/resourcemock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: resourcemock
+      filename: "{{.InterfaceName}}_mock.go"

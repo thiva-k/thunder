@@ -34,7 +34,7 @@ if ($PSVersionTable.PSVersion.Major -lt 7) {
 }
 
 # Bootstrap Script: Default Resources Setup
-# Creates default organization unit, user schema, admin user, admin role, and DEVELOP application
+# Creates default organization unit, user schema, admin user, system resource server, system action, admin role, and DEVELOP application
 
 $ErrorActionPreference = 'Stop'
 
@@ -227,6 +227,102 @@ else {
 Write-Host ""
 
 # ============================================================================
+# Create System Resource Server
+# ============================================================================
+
+Log-Info "Creating system resource server..."
+
+if (-not $DEFAULT_OU_ID) {
+    Log-Error "Default OU ID is not available. Cannot create resource server."
+    exit 1
+}
+
+$resourceServerData = @{
+    name = "System"
+    description = "System resource server"
+    identifier = "system"
+    ouId = $DEFAULT_OU_ID
+} | ConvertTo-Json -Depth 10
+
+$response = Invoke-ThunderApi -Method POST -Endpoint "/resource-servers" -Data $resourceServerData
+
+if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
+    Log-Success "Resource server created successfully"
+    $body = $response.Body | ConvertFrom-Json
+    $SYSTEM_RS_ID = $body.id
+    if ($SYSTEM_RS_ID) {
+        Log-Info "System resource server ID: $SYSTEM_RS_ID"
+    }
+    else {
+        Log-Error "Could not extract resource server ID from response"
+        exit 1
+    }
+}
+elseif ($response.StatusCode -eq 409) {
+    Log-Warning "Resource server already exists, retrieving ID..."
+    # Get existing resource server ID
+    $response = Invoke-ThunderApi -Method GET -Endpoint "/resource-servers"
+
+    if ($response.StatusCode -eq 200) {
+        $body = $response.Body | ConvertFrom-Json
+        $systemRS = $body.resourceServers | Where-Object { $_.identifier -eq "system" } | Select-Object -First 1
+
+        if ($systemRS) {
+            $SYSTEM_RS_ID = $systemRS.id
+            Log-Success "Found resource server ID: $SYSTEM_RS_ID"
+        }
+        else {
+            Log-Error "Could not find resource server ID in response"
+            exit 1
+        }
+    }
+    else {
+        Log-Error "Failed to fetch resource servers (HTTP $($response.StatusCode))"
+        exit 1
+    }
+}
+else {
+    Log-Error "Failed to create resource server (HTTP $($response.StatusCode))"
+    Write-Host "Response: $($response.Body)"
+    exit 1
+}
+
+Write-Host ""
+
+# ============================================================================
+# Create System Action
+# ============================================================================
+
+Log-Info "Creating 'system' action on resource server..."
+
+if (-not $SYSTEM_RS_ID) {
+    Log-Error "System resource server ID is not available. Cannot create action."
+    exit 1
+}
+
+$actionData = @{
+    name = "System Access"
+    description = "Full system access permission"
+    handle = "system"
+} | ConvertTo-Json -Depth 10
+
+$response = Invoke-ThunderApi -Method POST -Endpoint "/resource-servers/$SYSTEM_RS_ID/actions" -Data $actionData
+
+if ($response.StatusCode -eq 201 -or $response.StatusCode -eq 200) {
+    Log-Success "System action created successfully"
+}
+elseif ($response.StatusCode -eq 409) {
+    Log-Warning "System action already exists, skipping"
+}
+else {
+    Log-Error "Failed to create system action (HTTP $($response.StatusCode))"
+    Write-Host "Response: $($response.Body)"
+    exit 1
+}
+
+Write-Host ""
+
+# ============================================================================
 # Create Admin Role
 # ============================================================================
 
@@ -242,11 +338,21 @@ if (-not $DEFAULT_OU_ID) {
     exit 1
 }
 
+if (-not $SYSTEM_RS_ID) {
+    Log-Error "System resource server ID is not available. Cannot create role."
+    exit 1
+}
+
 $roleData = @{
     name = "Administrator"
     description = "System administrator role with full permissions"
     ouId = $DEFAULT_OU_ID
-    permissions = @("system")
+    permissions = @(
+        @{
+            resourceServerId = $SYSTEM_RS_ID
+            permissions = @("system")
+        }
+    )
     assignments = @(
         @{
             id = $ADMIN_USER_ID

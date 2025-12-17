@@ -2,9 +2,10 @@
 // github.com/vektra/mockery
 // template: testify
 
-package resource
+package resourcemock
 
 import (
+	"github.com/asgardeo/thunder/internal/resource"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -486,7 +487,7 @@ func (_c *resourceStoreInterfaceMock_CheckResourceServerNameExists_Call) RunAndR
 }
 
 // CreateAction provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) CreateAction(uuid string, resServerInternalID int, resInternalID *int, action Action) error {
+func (_mock *resourceStoreInterfaceMock) CreateAction(uuid string, resServerInternalID int, resInternalID *int, action resource.Action) error {
 	ret := _mock.Called(uuid, resServerInternalID, resInternalID, action)
 
 	if len(ret) == 0 {
@@ -494,7 +495,7 @@ func (_mock *resourceStoreInterfaceMock) CreateAction(uuid string, resServerInte
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, int, *int, Action) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int, *int, resource.Action) error); ok {
 		r0 = returnFunc(uuid, resServerInternalID, resInternalID, action)
 	} else {
 		r0 = ret.Error(0)
@@ -511,12 +512,12 @@ type resourceStoreInterfaceMock_CreateAction_Call struct {
 //   - uuid string
 //   - resServerInternalID int
 //   - resInternalID *int
-//   - action Action
+//   - action resource.Action
 func (_e *resourceStoreInterfaceMock_Expecter) CreateAction(uuid interface{}, resServerInternalID interface{}, resInternalID interface{}, action interface{}) *resourceStoreInterfaceMock_CreateAction_Call {
 	return &resourceStoreInterfaceMock_CreateAction_Call{Call: _e.mock.On("CreateAction", uuid, resServerInternalID, resInternalID, action)}
 }
 
-func (_c *resourceStoreInterfaceMock_CreateAction_Call) Run(run func(uuid string, resServerInternalID int, resInternalID *int, action Action)) *resourceStoreInterfaceMock_CreateAction_Call {
+func (_c *resourceStoreInterfaceMock_CreateAction_Call) Run(run func(uuid string, resServerInternalID int, resInternalID *int, action resource.Action)) *resourceStoreInterfaceMock_CreateAction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -530,9 +531,9 @@ func (_c *resourceStoreInterfaceMock_CreateAction_Call) Run(run func(uuid string
 		if args[2] != nil {
 			arg2 = args[2].(*int)
 		}
-		var arg3 Action
+		var arg3 resource.Action
 		if args[3] != nil {
-			arg3 = args[3].(Action)
+			arg3 = args[3].(resource.Action)
 		}
 		run(
 			arg0,
@@ -549,13 +550,13 @@ func (_c *resourceStoreInterfaceMock_CreateAction_Call) Return(err error) *resou
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_CreateAction_Call) RunAndReturn(run func(uuid string, resServerInternalID int, resInternalID *int, action Action) error) *resourceStoreInterfaceMock_CreateAction_Call {
+func (_c *resourceStoreInterfaceMock_CreateAction_Call) RunAndReturn(run func(uuid string, resServerInternalID int, resInternalID *int, action resource.Action) error) *resourceStoreInterfaceMock_CreateAction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateResource provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) CreateResource(uuid string, resServerInternalID int, parentInternalID *int, res Resource) error {
+func (_mock *resourceStoreInterfaceMock) CreateResource(uuid string, resServerInternalID int, parentInternalID *int, res resource.Resource) error {
 	ret := _mock.Called(uuid, resServerInternalID, parentInternalID, res)
 
 	if len(ret) == 0 {
@@ -563,7 +564,7 @@ func (_mock *resourceStoreInterfaceMock) CreateResource(uuid string, resServerIn
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, int, *int, Resource) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int, *int, resource.Resource) error); ok {
 		r0 = returnFunc(uuid, resServerInternalID, parentInternalID, res)
 	} else {
 		r0 = ret.Error(0)
@@ -580,12 +581,12 @@ type resourceStoreInterfaceMock_CreateResource_Call struct {
 //   - uuid string
 //   - resServerInternalID int
 //   - parentInternalID *int
-//   - res Resource
+//   - res resource.Resource
 func (_e *resourceStoreInterfaceMock_Expecter) CreateResource(uuid interface{}, resServerInternalID interface{}, parentInternalID interface{}, res interface{}) *resourceStoreInterfaceMock_CreateResource_Call {
 	return &resourceStoreInterfaceMock_CreateResource_Call{Call: _e.mock.On("CreateResource", uuid, resServerInternalID, parentInternalID, res)}
 }
 
-func (_c *resourceStoreInterfaceMock_CreateResource_Call) Run(run func(uuid string, resServerInternalID int, parentInternalID *int, res Resource)) *resourceStoreInterfaceMock_CreateResource_Call {
+func (_c *resourceStoreInterfaceMock_CreateResource_Call) Run(run func(uuid string, resServerInternalID int, parentInternalID *int, res resource.Resource)) *resourceStoreInterfaceMock_CreateResource_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -599,9 +600,9 @@ func (_c *resourceStoreInterfaceMock_CreateResource_Call) Run(run func(uuid stri
 		if args[2] != nil {
 			arg2 = args[2].(*int)
 		}
-		var arg3 Resource
+		var arg3 resource.Resource
 		if args[3] != nil {
-			arg3 = args[3].(Resource)
+			arg3 = args[3].(resource.Resource)
 		}
 		run(
 			arg0,
@@ -618,13 +619,13 @@ func (_c *resourceStoreInterfaceMock_CreateResource_Call) Return(err error) *res
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_CreateResource_Call) RunAndReturn(run func(uuid string, resServerInternalID int, parentInternalID *int, res Resource) error) *resourceStoreInterfaceMock_CreateResource_Call {
+func (_c *resourceStoreInterfaceMock_CreateResource_Call) RunAndReturn(run func(uuid string, resServerInternalID int, parentInternalID *int, res resource.Resource) error) *resourceStoreInterfaceMock_CreateResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // CreateResourceServer provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) CreateResourceServer(id string, rs ResourceServer) error {
+func (_mock *resourceStoreInterfaceMock) CreateResourceServer(id string, rs resource.ResourceServer) error {
 	ret := _mock.Called(id, rs)
 
 	if len(ret) == 0 {
@@ -632,7 +633,7 @@ func (_mock *resourceStoreInterfaceMock) CreateResourceServer(id string, rs Reso
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, ResourceServer) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, resource.ResourceServer) error); ok {
 		r0 = returnFunc(id, rs)
 	} else {
 		r0 = ret.Error(0)
@@ -647,20 +648,20 @@ type resourceStoreInterfaceMock_CreateResourceServer_Call struct {
 
 // CreateResourceServer is a helper method to define mock.On call
 //   - id string
-//   - rs ResourceServer
+//   - rs resource.ResourceServer
 func (_e *resourceStoreInterfaceMock_Expecter) CreateResourceServer(id interface{}, rs interface{}) *resourceStoreInterfaceMock_CreateResourceServer_Call {
 	return &resourceStoreInterfaceMock_CreateResourceServer_Call{Call: _e.mock.On("CreateResourceServer", id, rs)}
 }
 
-func (_c *resourceStoreInterfaceMock_CreateResourceServer_Call) Run(run func(id string, rs ResourceServer)) *resourceStoreInterfaceMock_CreateResourceServer_Call {
+func (_c *resourceStoreInterfaceMock_CreateResourceServer_Call) Run(run func(id string, rs resource.ResourceServer)) *resourceStoreInterfaceMock_CreateResourceServer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 ResourceServer
+		var arg1 resource.ResourceServer
 		if args[1] != nil {
-			arg1 = args[1].(ResourceServer)
+			arg1 = args[1].(resource.ResourceServer)
 		}
 		run(
 			arg0,
@@ -675,7 +676,7 @@ func (_c *resourceStoreInterfaceMock_CreateResourceServer_Call) Return(err error
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_CreateResourceServer_Call) RunAndReturn(run func(id string, rs ResourceServer) error) *resourceStoreInterfaceMock_CreateResourceServer_Call {
+func (_c *resourceStoreInterfaceMock_CreateResourceServer_Call) RunAndReturn(run func(id string, rs resource.ResourceServer) error) *resourceStoreInterfaceMock_CreateResourceServer_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -852,22 +853,22 @@ func (_c *resourceStoreInterfaceMock_DeleteResourceServer_Call) RunAndReturn(run
 }
 
 // GetAction provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetAction(id string, resServerInternalID int, resInternalID *int) (Action, error) {
+func (_mock *resourceStoreInterfaceMock) GetAction(id string, resServerInternalID int, resInternalID *int) (resource.Action, error) {
 	ret := _mock.Called(id, resServerInternalID, resInternalID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAction")
 	}
 
-	var r0 Action
+	var r0 resource.Action
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(string, int, *int) (Action, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int, *int) (resource.Action, error)); ok {
 		return returnFunc(id, resServerInternalID, resInternalID)
 	}
-	if returnFunc, ok := ret.Get(0).(func(string, int, *int) Action); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int, *int) resource.Action); ok {
 		r0 = returnFunc(id, resServerInternalID, resInternalID)
 	} else {
-		r0 = ret.Get(0).(Action)
+		r0 = ret.Get(0).(resource.Action)
 	}
 	if returnFunc, ok := ret.Get(1).(func(string, int, *int) error); ok {
 		r1 = returnFunc(id, resServerInternalID, resInternalID)
@@ -913,34 +914,34 @@ func (_c *resourceStoreInterfaceMock_GetAction_Call) Run(run func(id string, res
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetAction_Call) Return(action Action, err error) *resourceStoreInterfaceMock_GetAction_Call {
+func (_c *resourceStoreInterfaceMock_GetAction_Call) Return(action resource.Action, err error) *resourceStoreInterfaceMock_GetAction_Call {
 	_c.Call.Return(action, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetAction_Call) RunAndReturn(run func(id string, resServerInternalID int, resInternalID *int) (Action, error)) *resourceStoreInterfaceMock_GetAction_Call {
+func (_c *resourceStoreInterfaceMock_GetAction_Call) RunAndReturn(run func(id string, resServerInternalID int, resInternalID *int) (resource.Action, error)) *resourceStoreInterfaceMock_GetAction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetActionList provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetActionList(resServerInternalID int, resInternalID *int, limit int, offset int) ([]Action, error) {
+func (_mock *resourceStoreInterfaceMock) GetActionList(resServerInternalID int, resInternalID *int, limit int, offset int) ([]resource.Action, error) {
 	ret := _mock.Called(resServerInternalID, resInternalID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetActionList")
 	}
 
-	var r0 []Action
+	var r0 []resource.Action
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) ([]Action, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) ([]resource.Action, error)); ok {
 		return returnFunc(resServerInternalID, resInternalID, limit, offset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) []Action); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) []resource.Action); ok {
 		r0 = returnFunc(resServerInternalID, resInternalID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]Action)
+			r0 = ret.Get(0).([]resource.Action)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(int, *int, int, int) error); ok {
@@ -993,12 +994,12 @@ func (_c *resourceStoreInterfaceMock_GetActionList_Call) Run(run func(resServerI
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetActionList_Call) Return(actions []Action, err error) *resourceStoreInterfaceMock_GetActionList_Call {
+func (_c *resourceStoreInterfaceMock_GetActionList_Call) Return(actions []resource.Action, err error) *resourceStoreInterfaceMock_GetActionList_Call {
 	_c.Call.Return(actions, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetActionList_Call) RunAndReturn(run func(resServerInternalID int, resInternalID *int, limit int, offset int) ([]Action, error)) *resourceStoreInterfaceMock_GetActionList_Call {
+func (_c *resourceStoreInterfaceMock_GetActionList_Call) RunAndReturn(run func(resServerInternalID int, resInternalID *int, limit int, offset int) ([]resource.Action, error)) *resourceStoreInterfaceMock_GetActionList_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1070,7 +1071,7 @@ func (_c *resourceStoreInterfaceMock_GetActionListCount_Call) RunAndReturn(run f
 }
 
 // GetResource provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetResource(id string, resServerInternalID int) (int, Resource, error) {
+func (_mock *resourceStoreInterfaceMock) GetResource(id string, resServerInternalID int) (int, resource.Resource, error) {
 	ret := _mock.Called(id, resServerInternalID)
 
 	if len(ret) == 0 {
@@ -1078,9 +1079,9 @@ func (_mock *resourceStoreInterfaceMock) GetResource(id string, resServerInterna
 	}
 
 	var r0 int
-	var r1 Resource
+	var r1 resource.Resource
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(string, int) (int, Resource, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int) (int, resource.Resource, error)); ok {
 		return returnFunc(id, resServerInternalID)
 	}
 	if returnFunc, ok := ret.Get(0).(func(string, int) int); ok {
@@ -1088,10 +1089,10 @@ func (_mock *resourceStoreInterfaceMock) GetResource(id string, resServerInterna
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string, int) Resource); ok {
+	if returnFunc, ok := ret.Get(1).(func(string, int) resource.Resource); ok {
 		r1 = returnFunc(id, resServerInternalID)
 	} else {
-		r1 = ret.Get(1).(Resource)
+		r1 = ret.Get(1).(resource.Resource)
 	}
 	if returnFunc, ok := ret.Get(2).(func(string, int) error); ok {
 		r2 = returnFunc(id, resServerInternalID)
@@ -1131,34 +1132,34 @@ func (_c *resourceStoreInterfaceMock_GetResource_Call) Run(run func(id string, r
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResource_Call) Return(n int, resource Resource, err error) *resourceStoreInterfaceMock_GetResource_Call {
-	_c.Call.Return(n, resource, err)
+func (_c *resourceStoreInterfaceMock_GetResource_Call) Return(n int, resource1 resource.Resource, err error) *resourceStoreInterfaceMock_GetResource_Call {
+	_c.Call.Return(n, resource1, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResource_Call) RunAndReturn(run func(id string, resServerInternalID int) (int, Resource, error)) *resourceStoreInterfaceMock_GetResource_Call {
+func (_c *resourceStoreInterfaceMock_GetResource_Call) RunAndReturn(run func(id string, resServerInternalID int) (int, resource.Resource, error)) *resourceStoreInterfaceMock_GetResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetResourceList provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetResourceList(resServerInternalID int, limit int, offset int) ([]Resource, error) {
+func (_mock *resourceStoreInterfaceMock) GetResourceList(resServerInternalID int, limit int, offset int) ([]resource.Resource, error) {
 	ret := _mock.Called(resServerInternalID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetResourceList")
 	}
 
-	var r0 []Resource
+	var r0 []resource.Resource
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int, int, int) ([]Resource, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, int, int) ([]resource.Resource, error)); ok {
 		return returnFunc(resServerInternalID, limit, offset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int, int, int) []Resource); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, int, int) []resource.Resource); ok {
 		r0 = returnFunc(resServerInternalID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]Resource)
+			r0 = ret.Get(0).([]resource.Resource)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(int, int, int) error); ok {
@@ -1205,34 +1206,34 @@ func (_c *resourceStoreInterfaceMock_GetResourceList_Call) Run(run func(resServe
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceList_Call) Return(resources []Resource, err error) *resourceStoreInterfaceMock_GetResourceList_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceList_Call) Return(resources []resource.Resource, err error) *resourceStoreInterfaceMock_GetResourceList_Call {
 	_c.Call.Return(resources, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceList_Call) RunAndReturn(run func(resServerInternalID int, limit int, offset int) ([]Resource, error)) *resourceStoreInterfaceMock_GetResourceList_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceList_Call) RunAndReturn(run func(resServerInternalID int, limit int, offset int) ([]resource.Resource, error)) *resourceStoreInterfaceMock_GetResourceList_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetResourceListByParent provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetResourceListByParent(resServerInternalID int, parentInternalID *int, limit int, offset int) ([]Resource, error) {
+func (_mock *resourceStoreInterfaceMock) GetResourceListByParent(resServerInternalID int, parentInternalID *int, limit int, offset int) ([]resource.Resource, error) {
 	ret := _mock.Called(resServerInternalID, parentInternalID, limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetResourceListByParent")
 	}
 
-	var r0 []Resource
+	var r0 []resource.Resource
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) ([]Resource, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) ([]resource.Resource, error)); ok {
 		return returnFunc(resServerInternalID, parentInternalID, limit, offset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) []Resource); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, *int, int, int) []resource.Resource); ok {
 		r0 = returnFunc(resServerInternalID, parentInternalID, limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]Resource)
+			r0 = ret.Get(0).([]resource.Resource)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(int, *int, int, int) error); ok {
@@ -1285,12 +1286,12 @@ func (_c *resourceStoreInterfaceMock_GetResourceListByParent_Call) Run(run func(
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceListByParent_Call) Return(resources []Resource, err error) *resourceStoreInterfaceMock_GetResourceListByParent_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceListByParent_Call) Return(resources []resource.Resource, err error) *resourceStoreInterfaceMock_GetResourceListByParent_Call {
 	_c.Call.Return(resources, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceListByParent_Call) RunAndReturn(run func(resServerInternalID int, parentInternalID *int, limit int, offset int) ([]Resource, error)) *resourceStoreInterfaceMock_GetResourceListByParent_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceListByParent_Call) RunAndReturn(run func(resServerInternalID int, parentInternalID *int, limit int, offset int) ([]resource.Resource, error)) *resourceStoreInterfaceMock_GetResourceListByParent_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1422,7 +1423,7 @@ func (_c *resourceStoreInterfaceMock_GetResourceListCountByParent_Call) RunAndRe
 }
 
 // GetResourceServer provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetResourceServer(id string) (int, ResourceServer, error) {
+func (_mock *resourceStoreInterfaceMock) GetResourceServer(id string) (int, resource.ResourceServer, error) {
 	ret := _mock.Called(id)
 
 	if len(ret) == 0 {
@@ -1430,9 +1431,9 @@ func (_mock *resourceStoreInterfaceMock) GetResourceServer(id string) (int, Reso
 	}
 
 	var r0 int
-	var r1 ResourceServer
+	var r1 resource.ResourceServer
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(string) (int, ResourceServer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(string) (int, resource.ResourceServer, error)); ok {
 		return returnFunc(id)
 	}
 	if returnFunc, ok := ret.Get(0).(func(string) int); ok {
@@ -1440,10 +1441,10 @@ func (_mock *resourceStoreInterfaceMock) GetResourceServer(id string) (int, Reso
 	} else {
 		r0 = ret.Get(0).(int)
 	}
-	if returnFunc, ok := ret.Get(1).(func(string) ResourceServer); ok {
+	if returnFunc, ok := ret.Get(1).(func(string) resource.ResourceServer); ok {
 		r1 = returnFunc(id)
 	} else {
-		r1 = ret.Get(1).(ResourceServer)
+		r1 = ret.Get(1).(resource.ResourceServer)
 	}
 	if returnFunc, ok := ret.Get(2).(func(string) error); ok {
 		r2 = returnFunc(id)
@@ -1477,34 +1478,34 @@ func (_c *resourceStoreInterfaceMock_GetResourceServer_Call) Run(run func(id str
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceServer_Call) Return(n int, resourceServer ResourceServer, err error) *resourceStoreInterfaceMock_GetResourceServer_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceServer_Call) Return(n int, resourceServer resource.ResourceServer, err error) *resourceStoreInterfaceMock_GetResourceServer_Call {
 	_c.Call.Return(n, resourceServer, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceServer_Call) RunAndReturn(run func(id string) (int, ResourceServer, error)) *resourceStoreInterfaceMock_GetResourceServer_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceServer_Call) RunAndReturn(run func(id string) (int, resource.ResourceServer, error)) *resourceStoreInterfaceMock_GetResourceServer_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // GetResourceServerList provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) GetResourceServerList(limit int, offset int) ([]ResourceServer, error) {
+func (_mock *resourceStoreInterfaceMock) GetResourceServerList(limit int, offset int) ([]resource.ResourceServer, error) {
 	ret := _mock.Called(limit, offset)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetResourceServerList")
 	}
 
-	var r0 []ResourceServer
+	var r0 []resource.ResourceServer
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(int, int) ([]ResourceServer, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, int) ([]resource.ResourceServer, error)); ok {
 		return returnFunc(limit, offset)
 	}
-	if returnFunc, ok := ret.Get(0).(func(int, int) []ResourceServer); ok {
+	if returnFunc, ok := ret.Get(0).(func(int, int) []resource.ResourceServer); ok {
 		r0 = returnFunc(limit, offset)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]ResourceServer)
+			r0 = ret.Get(0).([]resource.ResourceServer)
 		}
 	}
 	if returnFunc, ok := ret.Get(1).(func(int, int) error); ok {
@@ -1545,12 +1546,12 @@ func (_c *resourceStoreInterfaceMock_GetResourceServerList_Call) Run(run func(li
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceServerList_Call) Return(resourceServers []ResourceServer, err error) *resourceStoreInterfaceMock_GetResourceServerList_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceServerList_Call) Return(resourceServers []resource.ResourceServer, err error) *resourceStoreInterfaceMock_GetResourceServerList_Call {
 	_c.Call.Return(resourceServers, err)
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_GetResourceServerList_Call) RunAndReturn(run func(limit int, offset int) ([]ResourceServer, error)) *resourceStoreInterfaceMock_GetResourceServerList_Call {
+func (_c *resourceStoreInterfaceMock_GetResourceServerList_Call) RunAndReturn(run func(limit int, offset int) ([]resource.ResourceServer, error)) *resourceStoreInterfaceMock_GetResourceServerList_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -1681,7 +1682,7 @@ func (_c *resourceStoreInterfaceMock_IsActionExist_Call) RunAndReturn(run func(i
 }
 
 // UpdateAction provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) UpdateAction(id string, resServerInternalID int, resInternalID *int, action Action) error {
+func (_mock *resourceStoreInterfaceMock) UpdateAction(id string, resServerInternalID int, resInternalID *int, action resource.Action) error {
 	ret := _mock.Called(id, resServerInternalID, resInternalID, action)
 
 	if len(ret) == 0 {
@@ -1689,7 +1690,7 @@ func (_mock *resourceStoreInterfaceMock) UpdateAction(id string, resServerIntern
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, int, *int, Action) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int, *int, resource.Action) error); ok {
 		r0 = returnFunc(id, resServerInternalID, resInternalID, action)
 	} else {
 		r0 = ret.Error(0)
@@ -1706,12 +1707,12 @@ type resourceStoreInterfaceMock_UpdateAction_Call struct {
 //   - id string
 //   - resServerInternalID int
 //   - resInternalID *int
-//   - action Action
+//   - action resource.Action
 func (_e *resourceStoreInterfaceMock_Expecter) UpdateAction(id interface{}, resServerInternalID interface{}, resInternalID interface{}, action interface{}) *resourceStoreInterfaceMock_UpdateAction_Call {
 	return &resourceStoreInterfaceMock_UpdateAction_Call{Call: _e.mock.On("UpdateAction", id, resServerInternalID, resInternalID, action)}
 }
 
-func (_c *resourceStoreInterfaceMock_UpdateAction_Call) Run(run func(id string, resServerInternalID int, resInternalID *int, action Action)) *resourceStoreInterfaceMock_UpdateAction_Call {
+func (_c *resourceStoreInterfaceMock_UpdateAction_Call) Run(run func(id string, resServerInternalID int, resInternalID *int, action resource.Action)) *resourceStoreInterfaceMock_UpdateAction_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -1725,9 +1726,9 @@ func (_c *resourceStoreInterfaceMock_UpdateAction_Call) Run(run func(id string, 
 		if args[2] != nil {
 			arg2 = args[2].(*int)
 		}
-		var arg3 Action
+		var arg3 resource.Action
 		if args[3] != nil {
-			arg3 = args[3].(Action)
+			arg3 = args[3].(resource.Action)
 		}
 		run(
 			arg0,
@@ -1744,13 +1745,13 @@ func (_c *resourceStoreInterfaceMock_UpdateAction_Call) Return(err error) *resou
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_UpdateAction_Call) RunAndReturn(run func(id string, resServerInternalID int, resInternalID *int, action Action) error) *resourceStoreInterfaceMock_UpdateAction_Call {
+func (_c *resourceStoreInterfaceMock_UpdateAction_Call) RunAndReturn(run func(id string, resServerInternalID int, resInternalID *int, action resource.Action) error) *resourceStoreInterfaceMock_UpdateAction_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateResource provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) UpdateResource(id string, resServerInternalID int, res Resource) error {
+func (_mock *resourceStoreInterfaceMock) UpdateResource(id string, resServerInternalID int, res resource.Resource) error {
 	ret := _mock.Called(id, resServerInternalID, res)
 
 	if len(ret) == 0 {
@@ -1758,7 +1759,7 @@ func (_mock *resourceStoreInterfaceMock) UpdateResource(id string, resServerInte
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, int, Resource) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, int, resource.Resource) error); ok {
 		r0 = returnFunc(id, resServerInternalID, res)
 	} else {
 		r0 = ret.Error(0)
@@ -1774,12 +1775,12 @@ type resourceStoreInterfaceMock_UpdateResource_Call struct {
 // UpdateResource is a helper method to define mock.On call
 //   - id string
 //   - resServerInternalID int
-//   - res Resource
+//   - res resource.Resource
 func (_e *resourceStoreInterfaceMock_Expecter) UpdateResource(id interface{}, resServerInternalID interface{}, res interface{}) *resourceStoreInterfaceMock_UpdateResource_Call {
 	return &resourceStoreInterfaceMock_UpdateResource_Call{Call: _e.mock.On("UpdateResource", id, resServerInternalID, res)}
 }
 
-func (_c *resourceStoreInterfaceMock_UpdateResource_Call) Run(run func(id string, resServerInternalID int, res Resource)) *resourceStoreInterfaceMock_UpdateResource_Call {
+func (_c *resourceStoreInterfaceMock_UpdateResource_Call) Run(run func(id string, resServerInternalID int, res resource.Resource)) *resourceStoreInterfaceMock_UpdateResource_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
@@ -1789,9 +1790,9 @@ func (_c *resourceStoreInterfaceMock_UpdateResource_Call) Run(run func(id string
 		if args[1] != nil {
 			arg1 = args[1].(int)
 		}
-		var arg2 Resource
+		var arg2 resource.Resource
 		if args[2] != nil {
-			arg2 = args[2].(Resource)
+			arg2 = args[2].(resource.Resource)
 		}
 		run(
 			arg0,
@@ -1807,13 +1808,13 @@ func (_c *resourceStoreInterfaceMock_UpdateResource_Call) Return(err error) *res
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_UpdateResource_Call) RunAndReturn(run func(id string, resServerInternalID int, res Resource) error) *resourceStoreInterfaceMock_UpdateResource_Call {
+func (_c *resourceStoreInterfaceMock_UpdateResource_Call) RunAndReturn(run func(id string, resServerInternalID int, res resource.Resource) error) *resourceStoreInterfaceMock_UpdateResource_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // UpdateResourceServer provides a mock function for the type resourceStoreInterfaceMock
-func (_mock *resourceStoreInterfaceMock) UpdateResourceServer(id string, rs ResourceServer) error {
+func (_mock *resourceStoreInterfaceMock) UpdateResourceServer(id string, rs resource.ResourceServer) error {
 	ret := _mock.Called(id, rs)
 
 	if len(ret) == 0 {
@@ -1821,7 +1822,7 @@ func (_mock *resourceStoreInterfaceMock) UpdateResourceServer(id string, rs Reso
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(string, ResourceServer) error); ok {
+	if returnFunc, ok := ret.Get(0).(func(string, resource.ResourceServer) error); ok {
 		r0 = returnFunc(id, rs)
 	} else {
 		r0 = ret.Error(0)
@@ -1836,20 +1837,20 @@ type resourceStoreInterfaceMock_UpdateResourceServer_Call struct {
 
 // UpdateResourceServer is a helper method to define mock.On call
 //   - id string
-//   - rs ResourceServer
+//   - rs resource.ResourceServer
 func (_e *resourceStoreInterfaceMock_Expecter) UpdateResourceServer(id interface{}, rs interface{}) *resourceStoreInterfaceMock_UpdateResourceServer_Call {
 	return &resourceStoreInterfaceMock_UpdateResourceServer_Call{Call: _e.mock.On("UpdateResourceServer", id, rs)}
 }
 
-func (_c *resourceStoreInterfaceMock_UpdateResourceServer_Call) Run(run func(id string, rs ResourceServer)) *resourceStoreInterfaceMock_UpdateResourceServer_Call {
+func (_c *resourceStoreInterfaceMock_UpdateResourceServer_Call) Run(run func(id string, rs resource.ResourceServer)) *resourceStoreInterfaceMock_UpdateResourceServer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 string
 		if args[0] != nil {
 			arg0 = args[0].(string)
 		}
-		var arg1 ResourceServer
+		var arg1 resource.ResourceServer
 		if args[1] != nil {
-			arg1 = args[1].(ResourceServer)
+			arg1 = args[1].(resource.ResourceServer)
 		}
 		run(
 			arg0,
@@ -1864,7 +1865,7 @@ func (_c *resourceStoreInterfaceMock_UpdateResourceServer_Call) Return(err error
 	return _c
 }
 
-func (_c *resourceStoreInterfaceMock_UpdateResourceServer_Call) RunAndReturn(run func(id string, rs ResourceServer) error) *resourceStoreInterfaceMock_UpdateResourceServer_Call {
+func (_c *resourceStoreInterfaceMock_UpdateResourceServer_Call) RunAndReturn(run func(id string, rs resource.ResourceServer) error) *resourceStoreInterfaceMock_UpdateResourceServer_Call {
 	_c.Call.Return(run)
 	return _c
 }

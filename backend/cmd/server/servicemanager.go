@@ -84,11 +84,11 @@ func registerServices(
 	}
 	groupService := group.Initialize(mux, ouService, userService)
 
-	_, err = resource.Initialize(mux, ouService)
+	resourceService, err := resource.Initialize(mux, ouService)
 	if err != nil {
 		logger.Fatal("Failed to initialize Resource Service", log.Error(err))
 	}
-	roleService := role.Initialize(mux, userService, groupService, ouService)
+	roleService := role.Initialize(mux, userService, groupService, ouService, resourceService)
 	authZService := authz.Initialize(roleService)
 
 	idpService, idpExporter, err := idp.Initialize(mux)
