@@ -83,10 +83,7 @@
     }
   },
   "flow": {
-    "graph_directory": "repository/resources/graphs/",
-    "authn": {
-      "default_flow": "auth_flow_config_basic"
-    },
+    "default_auth_flow_handle": "default-basic-flow",
     "max_version_history": 10,
     "auto_infer_registration": true
   },

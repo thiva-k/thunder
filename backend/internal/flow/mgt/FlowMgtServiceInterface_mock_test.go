@@ -219,6 +219,76 @@ func (_c *FlowMgtServiceInterfaceMock_GetFlow_Call) RunAndReturn(run func(flowID
 	return _c
 }
 
+// GetFlowByHandle provides a mock function for the type FlowMgtServiceInterfaceMock
+func (_mock *FlowMgtServiceInterfaceMock) GetFlowByHandle(handle string, flowType common.FlowType) (*CompleteFlowDefinition, *serviceerror.ServiceError) {
+	ret := _mock.Called(handle, flowType)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetFlowByHandle")
+	}
+
+	var r0 *CompleteFlowDefinition
+	var r1 *serviceerror.ServiceError
+	if returnFunc, ok := ret.Get(0).(func(string, common.FlowType) (*CompleteFlowDefinition, *serviceerror.ServiceError)); ok {
+		return returnFunc(handle, flowType)
+	}
+	if returnFunc, ok := ret.Get(0).(func(string, common.FlowType) *CompleteFlowDefinition); ok {
+		r0 = returnFunc(handle, flowType)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*CompleteFlowDefinition)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(string, common.FlowType) *serviceerror.ServiceError); ok {
+		r1 = returnFunc(handle, flowType)
+	} else {
+		if ret.Get(1) != nil {
+			r1 = ret.Get(1).(*serviceerror.ServiceError)
+		}
+	}
+	return r0, r1
+}
+
+// FlowMgtServiceInterfaceMock_GetFlowByHandle_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetFlowByHandle'
+type FlowMgtServiceInterfaceMock_GetFlowByHandle_Call struct {
+	*mock.Call
+}
+
+// GetFlowByHandle is a helper method to define mock.On call
+//   - handle string
+//   - flowType common.FlowType
+func (_e *FlowMgtServiceInterfaceMock_Expecter) GetFlowByHandle(handle interface{}, flowType interface{}) *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call {
+	return &FlowMgtServiceInterfaceMock_GetFlowByHandle_Call{Call: _e.mock.On("GetFlowByHandle", handle, flowType)}
+}
+
+func (_c *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call) Run(run func(handle string, flowType common.FlowType)) *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		var arg1 common.FlowType
+		if args[1] != nil {
+			arg1 = args[1].(common.FlowType)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call) Return(completeFlowDefinition *CompleteFlowDefinition, serviceError *serviceerror.ServiceError) *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call {
+	_c.Call.Return(completeFlowDefinition, serviceError)
+	return _c
+}
+
+func (_c *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call) RunAndReturn(run func(handle string, flowType common.FlowType) (*CompleteFlowDefinition, *serviceerror.ServiceError)) *FlowMgtServiceInterfaceMock_GetFlowByHandle_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetFlowVersion provides a mock function for the type FlowMgtServiceInterfaceMock
 func (_mock *FlowMgtServiceInterfaceMock) GetFlowVersion(flowID string, version int) (*FlowVersion, *serviceerror.ServiceError) {
 	ret := _mock.Called(flowID, version)

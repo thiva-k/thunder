@@ -31,7 +31,6 @@ import (
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
-	"github.com/asgardeo/thunder/internal/flow/legacyflowmgt"
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	"github.com/asgardeo/thunder/internal/group"
 	"github.com/asgardeo/thunder/internal/idp"
@@ -89,13 +88,7 @@ func registerServices(
 	execRegistry := executor.Initialize(flowFactory, userService, ouService,
 		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService)
 
-	flowmgt.Initialize(mux, flowFactory, execRegistry, graphCache)
-
-	// TODO: Legacy flow mgt service should be removed
-	flowMgtService, err := legacyflowmgt.Initialize(flowFactory, execRegistry)
-	if err != nil {
-		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
-	}
+	flowMgtService := flowmgt.Initialize(mux, flowFactory, execRegistry, graphCache)
 
 	certservice := cert.Initialize()
 	brandingMgtService := brandingmgt.Initialize(mux)

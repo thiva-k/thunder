@@ -45,6 +45,7 @@ type FlowMgtServiceInterface interface {
 	ListFlows(limit, offset int, flowType common.FlowType) (*FlowListResponse, *serviceerror.ServiceError)
 	CreateFlow(flowDef *FlowDefinition) (*CompleteFlowDefinition, *serviceerror.ServiceError)
 	GetFlow(flowID string) (*CompleteFlowDefinition, *serviceerror.ServiceError)
+	GetFlowByHandle(handle string, flowType common.FlowType) (*CompleteFlowDefinition, *serviceerror.ServiceError)
 	UpdateFlow(flowID string, flowDef *FlowDefinition) (*CompleteFlowDefinition, *serviceerror.ServiceError)
 	DeleteFlow(flowID string) *serviceerror.ServiceError
 	ListFlowVersions(flowID string) (*FlowVersionListResponse, *serviceerror.ServiceError)
@@ -160,6 +161,29 @@ func (s *flowMgtService) GetFlow(flowID string) (*CompleteFlowDefinition, *servi
 			return nil, &ErrorFlowNotFound
 		}
 		s.logger.Error("Failed to get flow", log.String(logKeyFlowID, flowID), log.Error(err))
+		return nil, &serviceerror.InternalServerError
+	}
+
+	return flow, nil
+}
+
+// GetFlowByHandle retrieves a flow definition by its handle and type.
+func (s *flowMgtService) GetFlowByHandle(handle string, flowType common.FlowType) (
+	*CompleteFlowDefinition, *serviceerror.ServiceError) {
+	if handle == "" {
+		return nil, &ErrorMissingFlowHandle
+	}
+	if !isValidFlowType(flowType) {
+		return nil, &ErrorInvalidFlowType
+	}
+
+	flow, err := s.store.GetFlowByHandle(handle, flowType)
+	if err != nil {
+		if errors.Is(err, errFlowNotFound) {
+			return nil, &ErrorFlowNotFound
+		}
+		s.logger.Error("Failed to get flow by handle", log.String("handle", handle),
+			log.String("flowType", string(flowType)), log.Error(err))
 		return nil, &serviceerror.InternalServerError
 	}
 

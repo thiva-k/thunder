@@ -269,12 +269,12 @@ packages:
       pkgname: flowexecmock
       filename: "{{.InterfaceName}}_mock.go"
   
-  github.com/asgardeo/thunder/internal/flow/flowmgt_legacy:
+  github.com/asgardeo/thunder/internal/flow/mgt:
     config:
       all: true
-      dir: tests/mocks/flow/flowmgt_legacymock
+      dir: tests/mocks/flow/flowmgtmock
       structname: '{{.InterfaceName}}Mock'
-      pkgname: flowmgt_legacymock
+      pkgname: flowmgtmock
       filename: "{{.InterfaceName}}_mock.go"
   
   github.com/asgardeo/thunder/internal/flow/executor:

@@ -24,7 +24,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/flow/common"
-	"github.com/asgardeo/thunder/internal/flow/legacyflowmgt"
+	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -42,12 +42,12 @@ type FlowExecServiceInterface interface {
 // flowExecService is the implementation of FlowExecServiceInterface
 type flowExecService struct {
 	flowEngine     flowEngineInterface
-	flowMgtService legacyflowmgt.LegacyFlowMgtServiceInterface
+	flowMgtService flowmgt.FlowMgtServiceInterface
 	flowStore      flowStoreInterface
 	appService     application.ApplicationServiceInterface
 }
 
-func newFlowExecService(flowMgtService legacyflowmgt.LegacyFlowMgtServiceInterface,
+func newFlowExecService(flowMgtService flowmgt.FlowMgtServiceInterface,
 	flowStore flowStoreInterface, flowEngine flowEngineInterface,
 	applicationService application.ApplicationServiceInterface) FlowExecServiceInterface {
 	return &flowExecService{
@@ -156,11 +156,13 @@ func (s *flowExecService) initContext(appID string, flowType common.FlowType,
 	flowID := sysutils.GenerateUUID()
 	ctx.FlowID = flowID
 
-	graph, ok := s.flowMgtService.GetGraph(graphID)
-	if !ok {
-		logger.Error("Flow graph not found for the graph ID", log.String("graphID", graphID))
+	graph, svcErr := s.flowMgtService.GetGraph(graphID)
+	if svcErr != nil {
+		logger.Error("Error retrieving flow graph from flow management service",
+			log.String("graphID", graphID), log.String("error", svcErr.Error))
 		return nil, &serviceerror.InternalServerError
 	}
+
 	ctx.FlowType = graph.GetType()
 	ctx.Graph = graph
 	ctx.AppID = appID
@@ -204,9 +206,10 @@ func (s *flowExecService) loadContextFromStore(flowID string, logger *log.Logger
 		return nil, &ErrorInvalidFlowID
 	}
 
-	graph, exists := s.flowMgtService.GetGraph(dbModel.GraphID)
-	if !exists {
-		logger.Error("Flow graph not found for the graph ID", log.String("graphID", dbModel.GraphID))
+	graph, svcErr := s.flowMgtService.GetGraph(dbModel.GraphID)
+	if svcErr != nil {
+		logger.Error("Error retrieving flow graph from flow management service",
+			log.String("graphID", dbModel.GraphID), log.String("error", svcErr.Error))
 		return nil, &serviceerror.InternalServerError
 	}
 
@@ -217,7 +220,7 @@ func (s *flowExecService) loadContextFromStore(flowID string, logger *log.Logger
 		return nil, &serviceerror.InternalServerError
 	}
 
-	svcErr := s.setApplicationToContext(&engineContext, logger)
+	svcErr = s.setApplicationToContext(&engineContext, logger)
 	if svcErr != nil {
 		return nil, svcErr
 	}

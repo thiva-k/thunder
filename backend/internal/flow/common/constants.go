@@ -127,13 +127,6 @@ const (
 	DataIDPName = "idpName"
 )
 
-const (
-	// AuthFlowGraphPrefix defines the prefix for authentication flow graph IDs.
-	AuthFlowGraphPrefix = "auth_flow_config_"
-	// RegistrationFlowGraphPrefix defines the prefix for registration flow graph IDs.
-	RegistrationFlowGraphPrefix = "registration_flow_config_"
-)
-
 // DefaultHTTPTimeout defines the default timeout duration for HTTP requests.
 const DefaultHTTPTimeout = 5 * time.Second
 

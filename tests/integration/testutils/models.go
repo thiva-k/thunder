@@ -165,14 +165,25 @@ type FlowResponse struct {
 
 // FlowData represents the data returned by flow execution
 type FlowData struct {
-	Inputs []FlowInput `json:"inputs,omitempty"`
+	Inputs         []FlowInput            `json:"inputs,omitempty"`
+	Actions        []FlowAction           `json:"actions,omitempty"`
+	RedirectURL    string                 `json:"redirectUrl,omitempty"`
+	Meta           map[string]interface{} `json:"meta,omitempty"`
+	AdditionalData map[string]interface{} `json:"additionalData,omitempty"`
 }
 
 // FlowInput represents an input required by the flow
 type FlowInput struct {
-	Name     string `json:"name"`
-	Type     string `json:"type"`
-	Required bool   `json:"required"`
+	Ref        string `json:"ref,omitempty"`
+	Identifier string `json:"identifier"`
+	Type       string `json:"type"`
+	Required   bool   `json:"required"`
+}
+
+// FlowAction represents an action available in the flow
+type FlowAction struct {
+	Ref      string `json:"ref"`
+	NextNode string `json:"nextNode"`
 }
 
 // AuthorizationResponse represents the response from authorization completion
@@ -188,4 +199,28 @@ type FlowStep struct {
 	Data          *FlowData `json:"data,omitempty"`
 	Assertion     string    `json:"assertion,omitempty"`
 	FailureReason string    `json:"failureReason,omitempty"`
+}
+
+// Flow represents a flow definition
+type Flow struct {
+	Name     string      `json:"name"`
+	FlowType string      `json:"flowType"`
+	Handle   string      `json:"handle"`
+	Nodes    interface{} `json:"nodes"`
+}
+
+// NotificationSender represents a notification sender in the system
+type NotificationSender struct {
+	ID          string           `json:"id,omitempty"`
+	Name        string           `json:"name"`
+	Description string           `json:"description"`
+	Provider    string           `json:"provider"`
+	Properties  []SenderProperty `json:"properties"`
+}
+
+// SenderProperty represents a property of a notification sender
+type SenderProperty struct {
+	Name     string `json:"name"`
+	Value    string `json:"value"`
+	IsSecret bool   `json:"is_secret"`
 }
