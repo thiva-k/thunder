@@ -161,7 +161,7 @@ repository/conf/immutable_resources/
 │   ├── google-idp.yaml
 │   ├── github-idp.yaml
 │   └── oidc-idp.yaml
-├── organizational_units/
+├── organization_units/
 │   ├── production.yaml
 │   ├── staging.yaml
 │   └── development.yaml
@@ -174,11 +174,9 @@ repository/conf/immutable_resources/
 | Resource Type | Directory | Store Modes | Status |
 |---------------|-----------|-------------|--------|
 | Applications | `applications/` | Global only | ✅ Supported |
-| Identity Providers | `identity-providers/` | Global only | ✅ Supported |
+| Identity Providers | `identity_providers/` | Global only | ✅ Supported |
 | Organization Units | `organization_units/` | mutable / immutable / composite | ✅ Supported |
-| Notification Senders | `notification-senders/` | Global only | 🔜 Coming Soon |
-| Groups | `groups/` | TBD | 🔜 Coming Soon |
-| Roles | `roles/` | TBD | 🔜 Coming Soon |
+| Notification Senders | `notification_senders/` | Global only | ✅ Supported |
 
 ## Creating Configuration Files
 
