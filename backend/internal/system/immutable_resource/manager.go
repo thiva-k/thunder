@@ -118,11 +118,11 @@ func substituteEnvironmentVariables(content []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// GetConfigs reads all configuration files from the specified directory within the immutable_resources directory.
+// GetConfigs reads all configuration files from the specified directory within the resources directory.
 func GetConfigs(configDirectoryPath string) ([][]byte, error) {
 	logger := log.GetLogger().With(log.String("component", "FileBasedRuntime"))
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableConfigFilePath := path.Join(thunderHome, "repository/conf/immutable_resources/")
+	immutableConfigFilePath := path.Join(thunderHome, "repository/resources/")
 	absoluteDirectoryPath := filepath.Join(immutableConfigFilePath, configDirectoryPath)
 	files, err := os.ReadDir(absoluteDirectoryPath)
 	if err != nil {

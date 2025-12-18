@@ -104,7 +104,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) setEnvVar(key, value string) {
 // Helper function to create test files in the immutable resources directory
 func (suite *FileBasedRuntimeManagerTestSuite) createTestFile(configDir, filename, content string) string {
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableDir := filepath.Join(thunderHome, "repository", "conf", "immutable_resources", configDir)
+	immutableDir := filepath.Join(thunderHome, "repository", "resources", configDir)
 	err := os.MkdirAll(immutableDir, 0750)
 	suite.Require().NoError(err)
 
@@ -375,7 +375,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_EmptyDirectory() {
 	configDir := "empty-configs"
 	// Create empty directory
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableDir := filepath.Join(thunderHome, "repository", "conf", "immutable_resources", configDir)
+	immutableDir := filepath.Join(thunderHome, "repository", "resources", configDir)
 	err := os.MkdirAll(immutableDir, 0750)
 	suite.Require().NoError(err)
 
@@ -393,7 +393,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_DirectoryWithSubdi
 
 	// Create a subdirectory
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableDir := filepath.Join(thunderHome, "repository", "conf", "immutable_resources", configDir)
+	immutableDir := filepath.Join(thunderHome, "repository", "resources", configDir)
 	subDir := filepath.Join(immutableDir, "subdir")
 	err := os.MkdirAll(subDir, 0750)
 	suite.Require().NoError(err)
@@ -531,7 +531,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_DirectoryReadPermi
 
 	// Get the directory path and remove read permissions
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableDir := filepath.Join(thunderHome, "repository", "conf", "immutable_resources", configDir)
+	immutableDir := filepath.Join(thunderHome, "repository", "resources", configDir)
 
 	err := os.Chmod(immutableDir, 0000)
 	suite.NoError(err)
@@ -554,7 +554,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_CorruptedFile() {
 
 	// Create a file with invalid UTF-8 sequences using the file system directly
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableDir := filepath.Join(thunderHome, "repository", "conf", "immutable_resources", configDir)
+	immutableDir := filepath.Join(thunderHome, "repository", "resources", configDir)
 	err := os.MkdirAll(immutableDir, 0750)
 	suite.Require().NoError(err)
 
@@ -704,7 +704,7 @@ func (suite *FileBasedRuntimeManagerTestSuite) TestGetConfigs_BinaryFiles() {
 	// Create a binary file (non-text content)
 	binaryContent := []byte{0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD}
 	thunderHome := config.GetThunderRuntime().ThunderHome
-	immutableDir := filepath.Join(thunderHome, "repository", "conf", "immutable_resources", configDir)
+	immutableDir := filepath.Join(thunderHome, "repository", "resources", configDir)
 	err := os.MkdirAll(immutableDir, 0750)
 	suite.Require().NoError(err)
 
