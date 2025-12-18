@@ -736,6 +736,50 @@ const translations = {
     'view.values.yes': 'Yes',
     'view.values.no': 'No',
   },
+
+  // ============================================================================
+  // Sign In - Sign In page translations
+  // ============================================================================
+  signin: {
+    'errors.signin.failed.message': 'Error',
+    'errors.signin.failed.description': 'We are sorry, something has gone wrong here. Please try again.',
+    'redirect.to.signup': 'Don\'t have an account? <1>Sign up</1>',
+    heading: 'Sign In',
+  },
+
+  // ============================================================================
+  // Sign Up - Sign Up page translations
+  // ============================================================================
+  signup: {
+    'errors.signup.failed.message': 'Error',
+    'errors.signup.failed.description': 'We are sorry, but we were unable to create your account. Please try again.',
+    'redirect.to.signin': 'Already have an account? <1>Sign in</1>',
+    heading: 'Sign Up',
+  },
+
+  // ============================================================================
+  // Elements - Low level reusable element translations
+  // ============================================================================
+  elements: {
+    'buttons.submit.text': 'Continue',
+    'fields.first_name.label': 'First Name',
+    'fields.first_name.placeholder': 'Enter your first name',
+    'fields.last_name.label': 'Last Name',
+    'fields.last_name.placeholder': 'Enter your last name',
+    'fields.email.label': 'Email',
+    'fields.email.placeholder': 'Enter your email address',
+    'fields.password.label': 'Password',
+    'fields.password.placeholder': 'Enter your password',
+    'fields.username.label': 'Username',
+    'fields.username.placeholder': 'Enter your username',
+  },
+
+  // ============================================================================
+  // Validations - Form & other validation messages translations
+  // ============================================================================
+  validations: {
+    'form.field.required': '{{field}} is required.',
+  },
 } as const;
 
 export default translations;

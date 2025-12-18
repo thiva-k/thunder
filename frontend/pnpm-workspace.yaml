@@ -3,8 +3,8 @@ packages:
   - packages/*
 
 catalog:
-  '@asgardeo/react': 0.6.17
-  '@asgardeo/react-router': 1.0.17
+  '@asgardeo/react': 0.6.23
+  '@asgardeo/react-router': 1.0.23
   '@emotion/react': 11.14.0
   '@emotion/styled': 11.14.1
   '@hookform/resolvers': 5.2.2
