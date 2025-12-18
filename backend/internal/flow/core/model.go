@@ -26,15 +26,16 @@ import (
 
 // NodeContext holds the context for a specific node in the flow execution.
 type NodeContext struct {
-	FlowID          string
-	FlowType        common.FlowType
-	AppID           string
-	CurrentActionID string
-	CurrentNodeID   string
+	FlowID        string
+	FlowType      common.FlowType
+	AppID         string
+	Verbose       bool
+	CurrentAction string
+	CurrentNodeID string
 
 	NodeProperties map[string]interface{}
-	NodeInputData  []common.InputData
-	UserInputData  map[string]string
+	NodeInputs     []common.Input
+	UserInputs     map[string]string
 	RuntimeData    map[string]string
 
 	Application       appmodel.Application
@@ -44,7 +45,9 @@ type NodeContext struct {
 
 // NodeCondition represents a condition that must be met for a node to execute.
 // If specified, the node will only execute when the resolved value of key matches value.
+// OnSkip specifies which node to skip to if the condition is not met.
 type NodeCondition struct {
-	Key   string
-	Value string
+	Key    string
+	Value  string
+	OnSkip string
 }

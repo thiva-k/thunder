@@ -7,11 +7,11 @@ settings:
 catalogs:
   default:
     '@asgardeo/react':
-      specifier: 0.6.17
-      version: 0.6.17
+      specifier: 0.6.23
+      version: 0.6.23
     '@asgardeo/react-router':
-      specifier: 1.0.17
-      version: 1.0.17
+      specifier: 1.0.23
+      version: 1.0.23
     '@emotion/react':
       specifier: 11.14.0
       version: 11.14.0
@@ -175,10 +175,10 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.17(@types/react@19.2.7)(react@19.2.3)
+        version: 0.6.23(@types/react@19.2.7)(react@19.2.3)
       '@asgardeo/react-router':
         specifier: 'catalog:'
-        version: 1.0.17(@asgardeo/react@0.6.17(@types/react@19.2.7)(react@19.2.3))(react-router@7.9.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        version: 1.0.23(@asgardeo/react@0.6.23(@types/react@19.2.7)(react@19.2.3))(react-router@7.9.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.2.7)(react@19.2.3)
@@ -299,7 +299,7 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.17(@types/react@19.2.7)(react@19.2.3)
+        version: 0.6.23(@types/react@19.2.7)(react@19.2.3)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.2.7)(react@19.2.3)
@@ -312,18 +312,30 @@ importers:
       '@thunder/commons-contexts':
         specifier: workspace:^
         version: link:../../packages/thunder-commons-contexts
+      '@thunder/i18n':
+        specifier: workspace:^
+        version: link:../../packages/thunder-i18n
+      '@thunder/shared-hooks':
+        specifier: workspace:^
+        version: link:../../packages/thunder-shared-hooks
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.0.1-alpha.10(266af15ae52ebd448c22fca06ee48911)
       '@wso2/oxygen-ui-icons-react':
         specifier: 'catalog:'
         version: 0.0.1-alpha.10(lucide-react@0.545.0(react@19.2.3))(react@19.2.3)
+      i18next:
+        specifier: 'catalog:'
+        version: 25.6.0(typescript@5.9.3)
       react:
         specifier: 'catalog:'
         version: 19.2.3
       react-dom:
         specifier: 'catalog:'
         version: 19.2.3(react@19.2.3)
+      react-i18next:
+        specifier: 'catalog:'
+        version: 16.0.1(i18next@25.6.0(typescript@5.9.3))(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(typescript@5.9.3)
       react-router:
         specifier: 'catalog:'
         version: 7.9.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -625,6 +637,61 @@ importers:
         specifier: 'catalog:'
         version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
 
+  packages/thunder-shared-hooks:
+    dependencies:
+      '@emotion/react':
+        specifier: 'catalog:'
+        version: 11.14.0(@types/react@19.2.7)(react@19.2.3)
+      '@emotion/styled':
+        specifier: 'catalog:'
+        version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.7)(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)
+      '@mui/material':
+        specifier: 'catalog:'
+        version: 7.3.4(@emotion/react@11.14.0(@types/react@19.2.7)(react@19.2.3))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.7)(react@19.2.3))(@types/react@19.2.7)(react@19.2.3))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      lucide-react:
+        specifier: 'catalog:'
+        version: 0.545.0(react@19.2.3)
+      tslib:
+        specifier: 'catalog:'
+        version: 2.8.1
+    devDependencies:
+      '@thunder/eslint-plugin-thunder':
+        specifier: workspace:^
+        version: link:../thunder-eslint-plugin
+      '@thunder/prettier-config':
+        specifier: workspace:^
+        version: link:../thunder-prettier-config
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.7.2
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.7
+      eslint:
+        specifier: 'catalog:'
+        version: 8.57.1
+      prettier:
+        specifier: 'catalog:'
+        version: 3.6.2
+      react:
+        specifier: 'catalog:'
+        version: 19.2.3
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.3(react@19.2.3)
+      rimraf:
+        specifier: 'catalog:'
+        version: 6.0.1
+      rolldown:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.45
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/node@24.7.2)(esbuild@0.25.12)(jsdom@27.0.1(postcss@8.5.6))(terser@5.44.0)(yaml@2.8.1)
+
 packages:
 
   '@adobe/css-tools@4.4.4':
@@ -639,24 +706,24 @@ packages:
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
 
-  '@asgardeo/browser@0.1.34':
-    resolution: {integrity: sha512-Ue06qr3BY/GuXyo+xZyrcjVG+Yq8VSIX3Ll1txsifXnLoj5KCe0YjbROdduwZa/BH1FT8z9YGkwFyrVkvL9uDA==}
+  '@asgardeo/browser@0.1.38':
+    resolution: {integrity: sha512-DqThvyT5aOWmLfw3RQXUvrHA8f5TVaUptaKpqCtU50qh/EpzGzwAM9BO5N4tqapAw73gUaqFAg89rnCJRRaVUg==}
 
-  '@asgardeo/i18n@0.3.7':
-    resolution: {integrity: sha512-sVHpylVyY92nFnzFFkIq32A06B8xsKpImLST5ZUMGj+3MoGeRQTMiOux5b+3p9wntggrOdkX5hRt72knWTh6Fw==}
+  '@asgardeo/i18n@0.3.8':
+    resolution: {integrity: sha512-rgCx0EUcq89BqTJyOVbIFSp6j2u2E5xm4e2aJACYAPXDDyvqFnqwBoY5K9rVVt+BT0F34miGzmSGvLyVoKc/GQ==}
 
-  '@asgardeo/javascript@0.2.9':
-    resolution: {integrity: sha512-VaBJEIMVII91JktQ+fsWrm2fNAyJWdWCSetYHv7Aciu++FGwGFhSoMb4Gabt3Kx8ppN8P6IJM/F4Ip4OZhbq+A==}
+  '@asgardeo/javascript@0.2.13':
+    resolution: {integrity: sha512-1jwufNdejeI0BIHyMSneqHu1hkmwf3zbxmyuueQRmbINFjpRtSuK1x7j33ImxAFyCd2tqe9aCOV0OZhR3l8/eQ==}
 
-  '@asgardeo/react-router@1.0.17':
-    resolution: {integrity: sha512-Yqdjb9dc5LUrcxZiiXsn+Lf/4A7zKfi9niVaMZCBEQZGcqMC6VchCiHKHlXF8P2ScvJusjkmD0ybGjppDchRCA==}
+  '@asgardeo/react-router@1.0.23':
+    resolution: {integrity: sha512-TPPzVGQIbS1NzeslVsWVJNlBZCbbr4nky/NzNj8Bjqv7uV75Gs7gcB7Kq6OksYWgFplJ4ky/o6LYiNJtDSQcIw==}
     peerDependencies:
-      '@asgardeo/react': 0.6.17
+      '@asgardeo/react': 0.6.23
       react: '>=19.1.4'
       react-router: '>=6.30.1'
 
-  '@asgardeo/react@0.6.17':
-    resolution: {integrity: sha512-7xZENZqOYYc1Tzy1LlCQzICpyiDmfX7qg5WXYU1mYcNWuBpb4nwsYNB+VSVaN8ktdHOh2NUbozer2bkaxKlnYg==}
+  '@asgardeo/react@0.6.23':
+    resolution: {integrity: sha512-uLPBeKbzRRGO5YYd6qM3oN6X6ojO6JawXTeFT4HFCWLEIhA2EOaiUvxJ1Jvi2T18V2On81DQDxKrerkJLjwW/g==}
     peerDependencies:
       '@types/react': '>=19.1.5'
       react: '>=19.1.4'
@@ -3130,9 +3197,6 @@ packages:
     resolution: {integrity: sha512-g5PC9Aiph9eiczFpcgUhd9S4UUO3F+LHGRIi5NUMZ+4xtoIYbHNZwZnWA2JsFGe8OU8nl4WyaEFiZuGuxlutJQ==}
     engines: {node: '>=20'}
 
-  csstype@3.1.3:
-    resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
-
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
@@ -5365,9 +5429,9 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@asgardeo/browser@0.1.34(esbuild@0.25.9)':
+  '@asgardeo/browser@0.1.38(esbuild@0.25.9)':
     dependencies:
-      '@asgardeo/javascript': 0.2.9
+      '@asgardeo/javascript': 0.2.13
       axios: 0.30.2
       base64url: 3.0.1
       buffer: 6.0.3
@@ -5384,26 +5448,26 @@ snapshots:
       - debug
       - esbuild
 
-  '@asgardeo/i18n@0.3.7':
+  '@asgardeo/i18n@0.3.8':
     dependencies:
       tslib: 2.8.1
 
-  '@asgardeo/javascript@0.2.9':
+  '@asgardeo/javascript@0.2.13':
     dependencies:
-      '@asgardeo/i18n': 0.3.7
+      '@asgardeo/i18n': 0.3.8
       tslib: 2.8.1
 
-  '@asgardeo/react-router@1.0.17(@asgardeo/react@0.6.17(@types/react@19.2.7)(react@19.2.3))(react-router@7.9.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@asgardeo/react-router@1.0.23(@asgardeo/react@0.6.23(@types/react@19.2.7)(react@19.2.3))(react-router@7.9.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
-      '@asgardeo/react': 0.6.17(@types/react@19.2.7)(react@19.2.3)
+      '@asgardeo/react': 0.6.23(@types/react@19.2.7)(react@19.2.3)
       react: 19.2.3
       react-router: 7.9.4(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tslib: 2.8.1
 
-  '@asgardeo/react@0.6.17(@types/react@19.2.7)(react@19.2.3)':
+  '@asgardeo/react@0.6.23(@types/react@19.2.7)(react@19.2.3)':
     dependencies:
-      '@asgardeo/browser': 0.1.34(esbuild@0.25.9)
-      '@asgardeo/i18n': 0.3.7
+      '@asgardeo/browser': 0.1.38(esbuild@0.25.9)
+      '@asgardeo/i18n': 0.3.8
       '@emotion/css': 11.13.5
       '@floating-ui/react': 0.27.12(react-dom@19.1.4(react@19.2.3))(react@19.2.3)
       '@types/react': 19.2.7
@@ -6296,7 +6360,7 @@ snapshots:
       '@emotion/memoize': 0.9.0
       '@emotion/unitless': 0.10.0
       '@emotion/utils': 1.4.2
-      csstype: 3.1.3
+      csstype: 3.2.3
 
   '@emotion/sheet@1.4.0': {}
 
@@ -6639,7 +6703,7 @@ snapshots:
       '@popperjs/core': 2.11.8
       '@types/react-transition-group': 4.4.12(@types/react@19.2.7)
       clsx: 2.1.1
-      csstype: 3.1.3
+      csstype: 3.2.3
       prop-types: 15.8.1
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
@@ -6665,7 +6729,7 @@ snapshots:
       '@emotion/cache': 11.14.0
       '@emotion/serialize': 1.3.3
       '@emotion/sheet': 1.4.0
-      csstype: 3.1.3
+      csstype: 3.2.3
       prop-types: 15.8.1
       react: 19.2.3
     optionalDependencies:
@@ -6680,7 +6744,7 @@ snapshots:
       '@mui/types': 7.4.8(@types/react@19.2.7)
       '@mui/utils': 7.3.5(@types/react@19.2.7)(react@19.2.3)
       clsx: 2.1.1
-      csstype: 3.1.3
+      csstype: 3.2.3
       prop-types: 15.8.1
       react: 19.2.3
     optionalDependencies:
@@ -8069,8 +8133,6 @@ snapshots:
     transitivePeerDependencies:
       - postcss
 
-  csstype@3.1.3: {}
-
   csstype@3.2.3: {}
 
   d3-array@2.12.1:
@@ -8224,7 +8286,7 @@ snapshots:
   dom-helpers@5.2.1:
     dependencies:
       '@babel/runtime': 7.28.4
-      csstype: 3.1.3
+      csstype: 3.2.3
 
   dotenv-expand@11.0.7:
     dependencies:

@@ -31,7 +31,7 @@ import (
 	flowcore "github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/flow/flowexec"
-	"github.com/asgardeo/thunder/internal/flow/flowmgt"
+	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	"github.com/asgardeo/thunder/internal/group"
 	"github.com/asgardeo/thunder/internal/idp"
 	"github.com/asgardeo/thunder/internal/notification"
@@ -107,14 +107,12 @@ func registerServices(
 	_, authSvcRegistry := authn.Initialize(mux, idpService, jwtService, userService, otpService)
 
 	// Initialize flow and executor services.
-	flowFactory := flowcore.Initialize()
+	flowFactory, graphCache := flowcore.Initialize()
 	execRegistry := executor.Initialize(flowFactory, userService, ouService,
 		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService, observabilitySvc)
 
-	flowMgtService, err := flowmgt.Initialize(flowFactory, execRegistry)
-	if err != nil {
-		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
-	}
+	flowMgtService := flowmgt.Initialize(mux, flowFactory, execRegistry, graphCache)
+
 	certservice := cert.Initialize()
 	brandingMgtService := brandingmgt.Initialize(mux)
 	applicationService, applicationExporter, err := application.Initialize(mux, certservice, flowMgtService,

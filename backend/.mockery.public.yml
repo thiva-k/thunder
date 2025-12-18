@@ -261,7 +261,7 @@ packages:
       pkgname: flowexecmock
       filename: "{{.InterfaceName}}_mock.go"
   
-  github.com/asgardeo/thunder/internal/flow/flowmgt:
+  github.com/asgardeo/thunder/internal/flow/mgt:
     config:
       all: true
       dir: tests/mocks/flow/flowmgtmock

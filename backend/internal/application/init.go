@@ -24,7 +24,7 @@ import (
 
 	brandingmgt "github.com/asgardeo/thunder/internal/branding/mgt"
 	"github.com/asgardeo/thunder/internal/cert"
-	"github.com/asgardeo/thunder/internal/flow/flowmgt"
+	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	"github.com/asgardeo/thunder/internal/system/config"
 	immutableresource "github.com/asgardeo/thunder/internal/system/immutable_resource"
 	"github.com/asgardeo/thunder/internal/system/middleware"

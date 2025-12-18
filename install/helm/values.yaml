@@ -210,9 +210,9 @@ configuration:
 
   # Flow configuration
   flow:
-    graphDirectory: "repository/resources/graphs/"
-    authn:
-      defaultFlow: "auth_flow_config_basic"
+    defaultAuthFlowHandle: "default-basic-flow"
+    maxVersionHistory: 3
+    autoInferRegistration: true
 
   # CORS configuration
   cors:

@@ -126,15 +126,11 @@ type OAuthConfig struct {
 	AuthorizationCode AuthorizationCodeConfig `yaml:"authorization_code" json:"authorization_code"`
 }
 
-// FlowAuthnConfig holds the configuration details for the authentication flows.
-type FlowAuthnConfig struct {
-	DefaultFlow string `yaml:"default_flow" json:"default_flow"`
-}
-
 // FlowConfig holds the configuration details for the flow service.
 type FlowConfig struct {
-	GraphDirectory string          `yaml:"graph_directory" json:"graph_directory"`
-	Authn          FlowAuthnConfig `yaml:"authn" json:"authn"`
+	DefaultAuthFlowHandle string `yaml:"default_auth_flow_handle" json:"default_auth_flow_handle"`
+	MaxVersionHistory     int    `yaml:"max_version_history" json:"max_version_history"`
+	AutoInferRegistration bool   `yaml:"auto_infer_registration" json:"auto_infer_registration"`
 }
 
 // CryptoConfig holds the cryptographic configuration details.

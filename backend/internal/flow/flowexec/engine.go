@@ -87,20 +87,21 @@ func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.Servi
 			FlowID:            ctx.FlowID,
 			FlowType:          ctx.FlowType,
 			AppID:             ctx.AppID,
-			CurrentActionID:   ctx.CurrentActionID,
+			CurrentAction:     ctx.CurrentAction,
+			Verbose:           ctx.Verbose,
+			NodeInputs:        ctx.CurrentNode.GetInputs(),
+			UserInputs:        ctx.UserInputs,
 			CurrentNodeID:     ctx.CurrentNode.GetID(),
-			NodeInputData:     ctx.CurrentNode.GetInputData(),
-			UserInputData:     ctx.UserInputData,
 			RuntimeData:       ctx.RuntimeData,
 			Application:       ctx.Application,
 			AuthenticatedUser: ctx.AuthenticatedUser,
 			ExecutionHistory:  ctx.ExecutionHistory,
 		}
-		if nodeCtx.NodeInputData == nil {
-			nodeCtx.NodeInputData = make([]common.InputData, 0)
+		if nodeCtx.NodeInputs == nil {
+			nodeCtx.NodeInputs = make([]common.Input, 0)
 		}
-		if nodeCtx.UserInputData == nil {
-			nodeCtx.UserInputData = make(map[string]string)
+		if nodeCtx.UserInputs == nil {
+			nodeCtx.UserInputs = make(map[string]string)
 		}
 		if nodeCtx.RuntimeData == nil {
 			nodeCtx.RuntimeData = make(map[string]string)
@@ -146,8 +147,7 @@ func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.Servi
 
 		fe.updateContextWithNodeResponse(ctx, nodeResp)
 
-		nextNode, continueExecution, svcErr := fe.processNodeResponse(ctx, currentNode, nodeResp,
-			&flowStep, logger)
+		nextNode, continueExecution, svcErr := fe.processNodeResponse(ctx, nodeResp, &flowStep, logger)
 		if svcErr != nil {
 			// Publish flow failed event before returning error
 			publishFlowFailedEvent(ctx, svcErr, flowStartTime, time.Now().UnixMilli(), fe.observabilitySvc)
@@ -166,8 +166,8 @@ func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.Servi
 
 	// If we reach here, it means the flow has been executed successfully.
 	flowStep.Status = common.FlowStatusComplete
-	if ctx.CurrentNodeResponse != nil && ctx.CurrentNodeResponse.Assertion != "" {
-		flowStep.Assertion = ctx.CurrentNodeResponse.Assertion
+	if ctx.Assertion != "" {
+		flowStep.Assertion = ctx.Assertion
 	}
 
 	// Publish flow completed event
@@ -255,7 +255,7 @@ func (fe *flowEngine) getExecutorByName(executorName string) (core.ExecutorInter
 // updateContextWithNodeResponse updates the engine context with the node response and authenticated user.
 func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, nodeResp *common.NodeResponse) {
 	engineCtx.CurrentNodeResponse = nodeResp
-	engineCtx.CurrentActionID = ""
+	engineCtx.CurrentAction = ""
 
 	// Handle runtime data from the node response
 	if len(nodeResp.RuntimeData) > 0 {
@@ -291,6 +291,11 @@ func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, no
 				engineCtx.RuntimeData["userID"] = engineCtx.AuthenticatedUser.UserID
 			}
 		}
+	}
+
+	// Add assertion to the context
+	if nodeResp.Assertion != "" {
+		engineCtx.Assertion = nodeResp.Assertion
 	}
 }
 
@@ -344,8 +349,8 @@ func (fe *flowEngine) shouldUpdateAuthenticatedUser(engineCtx *EngineContext) bo
 // - The next node to execute.
 // - Whether to continue execution.
 // - Any service error.
-func (fe *flowEngine) processNodeResponse(ctx *EngineContext, currentNode core.NodeInterface,
-	nodeResp *common.NodeResponse, flowStep *FlowStep, logger *log.Logger) (
+func (fe *flowEngine) processNodeResponse(ctx *EngineContext, nodeResp *common.NodeResponse,
+	flowStep *FlowStep, logger *log.Logger) (
 	core.NodeInterface, bool, *serviceerror.ServiceError) {
 	if nodeResp.Status == "" {
 		logger.Error("Node response status not found in the flow graph")
@@ -354,7 +359,7 @@ func (fe *flowEngine) processNodeResponse(ctx *EngineContext, currentNode core.N
 
 	switch nodeResp.Status {
 	case common.NodeStatusComplete:
-		nextNode, svcErr := fe.handleCompletedResponse(ctx, currentNode, nodeResp, logger)
+		nextNode, svcErr := fe.handleCompletedResponse(ctx, nodeResp, logger)
 		if svcErr != nil {
 			return nil, false, svcErr
 		}
@@ -365,6 +370,12 @@ func (fe *flowEngine) processNodeResponse(ctx *EngineContext, currentNode core.N
 			return nil, false, svcErr
 		}
 		return nil, false, nil
+	case common.NodeStatusForward:
+		nextNode, svcErr := fe.handleForwardResponse(ctx, nodeResp, logger)
+		if svcErr != nil {
+			return nil, false, svcErr
+		}
+		return nextNode, true, nil
 	case common.NodeStatusFailure:
 		flowStep.Status = common.FlowStatusError
 		flowStep.FailureReason = nodeResp.FailureReason
@@ -378,25 +389,11 @@ func (fe *flowEngine) processNodeResponse(ctx *EngineContext, currentNode core.N
 
 // handleCompletedResponse handles the completed node and returns the next node to execute.
 func (fe *flowEngine) handleCompletedResponse(ctx *EngineContext,
-	currentNode core.NodeInterface, nodeResp *common.NodeResponse, logger *log.Logger) (
+	nodeResp *common.NodeResponse, logger *log.Logger) (
 	core.NodeInterface, *serviceerror.ServiceError) {
-	nextNode, err := fe.resolveToNextNode(ctx.Graph, currentNode, nodeResp)
+	nextNode, err := fe.resolveToNextNode(ctx.Graph, nodeResp)
 	if err != nil {
 		logger.Error("Error moving to the next node", log.Error(err))
-		return nil, &serviceerror.InternalServerError
-	}
-	ctx.CurrentNode = nextNode
-	return nextNode, nil
-}
-
-// skipToNextNode skips the current node and moves to the next node. It updates the context with the
-// next node and returns it.
-func (fe *flowEngine) skipToNextNode(ctx *EngineContext, currentNode core.NodeInterface,
-	logger *log.Logger) (core.NodeInterface, *serviceerror.ServiceError) {
-	// For skipped nodes, we pass nil for nodeResp since we're not executing the node.
-	nextNode, err := fe.resolveToNextNode(ctx.Graph, currentNode, nil)
-	if err != nil {
-		logger.Error("Error moving to the next node after skipping", log.Error(err))
 		return nil, &serviceerror.InternalServerError
 	}
 	ctx.CurrentNode = nextNode
@@ -431,33 +428,62 @@ func (fe *flowEngine) handleIncompleteResponse(nodeResp *common.NodeResponse, fl
 	// TODO: Handle retry scenarios with nodeResp.Type == common.NodeResponseTypeRetry
 }
 
-// resolveToNextNode resolves the next node to execute based on the current node.
-func (fe *flowEngine) resolveToNextNode(graph core.GraphInterface, currentNode core.NodeInterface,
-	nodeResp *common.NodeResponse) (core.NodeInterface, error) {
+// handleForwardResponse handles forwarding to the next node (e.g., onFailure handler)
+func (fe *flowEngine) handleForwardResponse(ctx *EngineContext,
+	nodeResp *common.NodeResponse, logger *log.Logger) (
+	core.NodeInterface, *serviceerror.ServiceError) {
+	logger.Debug("Forwarding to next node",
+		log.String("nextNodeID", nodeResp.NextNodeID),
+		log.String("failureReason", nodeResp.FailureReason))
+
+	nextNode, err := fe.resolveToNextNode(ctx.Graph, nodeResp)
+	if err != nil {
+		logger.Error("Error resolving to next node", log.Error(err))
+		return nil, &serviceerror.InternalServerError
+	}
+	ctx.CurrentNode = nextNode
+	return nextNode, nil
+}
+
+// skipToNextNode skips the current node and moves to the next node. It updates the context with the
+// next node and returns it.
+func (fe *flowEngine) skipToNextNode(ctx *EngineContext, currentNode core.NodeInterface,
+	logger *log.Logger) (core.NodeInterface, *serviceerror.ServiceError) {
+	condition := currentNode.GetCondition()
+
+	// Condition must specify where to skip to
+	if condition == nil || condition.OnSkip == "" {
+		logger.Error("Node has condition but onSkip is not specified",
+			log.String("nodeID", currentNode.GetID()))
+		return nil, &serviceerror.InternalServerError
+	}
+
+	logger.Debug("Using condition's onSkip for skipped node",
+		log.String("nodeID", currentNode.GetID()), log.String("onSkip", condition.OnSkip))
+
+	nodeResp := &common.NodeResponse{NextNodeID: condition.OnSkip}
+
+	// Resolve to the next node
+	nextNode, err := fe.resolveToNextNode(ctx.Graph, nodeResp)
+	if err != nil {
+		logger.Error("Error moving to the next node after skipping", log.Error(err))
+		return nil, &serviceerror.InternalServerError
+	}
+	ctx.CurrentNode = nextNode
+	return nextNode, nil
+}
+
+// resolveToNextNode resolves the next node to execute based on nodeResp.NextNodeID.
+func (fe *flowEngine) resolveToNextNode(graph core.GraphInterface, nodeResp *common.NodeResponse) (
+	core.NodeInterface, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowEngine"))
 
-	nextNodeID := ""
-	if currentNode.GetType() == common.NodeTypeDecision {
-		logger.Debug("Current node is a decision node. Trying to resolve next node based on decision.")
-		if nodeResp == nil || nodeResp.NextNodeID == "" {
-			logger.Debug("No next node ID found in the node response. Returning nil.")
-			return nil, nil
-		}
-		nextNodeID = nodeResp.NextNodeID
-	} else {
-		// Set the first element of the next node list assuming only decision nodes can have multiple next nodes.
-		if len(currentNode.GetNextNodeList()) == 0 {
-			logger.Debug("No next node found in the current node. Returning nil.")
-			return nil, nil
-		}
-		nextNodeID = currentNode.GetNextNodeList()[0]
-	}
-	if nextNodeID == "" {
-		logger.Debug("No next node found. Returning nil.")
+	if nodeResp == nil || nodeResp.NextNodeID == "" {
+		logger.Debug("No next node ID in response. Returning nil.")
 		return nil, nil
 	}
 
-	nextNode, ok := graph.GetNode(nextNodeID)
+	nextNode, ok := graph.GetNode(nodeResp.NextNodeID)
 	if !ok {
 		return nil, errors.New("next node not found in the graph")
 	}
@@ -488,11 +514,11 @@ func (fe *flowEngine) resolveStepForRedirection(nodeResp *common.NodeResponse, f
 	flowStep.Data.RedirectURL = nodeResp.RedirectURL
 
 	if flowStep.Data.Inputs == nil {
-		flowStep.Data.Inputs = make([]common.InputData, 0)
-		flowStep.Data.Inputs = nodeResp.RequiredData
+		flowStep.Data.Inputs = make([]common.Input, 0)
+		flowStep.Data.Inputs = nodeResp.Inputs
 	} else {
-		// Append to the existing input data
-		flowStep.Data.Inputs = append(flowStep.Data.Inputs, nodeResp.RequiredData...)
+		// Append to the existing inputs
+		flowStep.Data.Inputs = append(flowStep.Data.Inputs, nodeResp.Inputs...)
 	}
 
 	flowStep.Status = common.FlowStatusIncomplete
@@ -505,17 +531,17 @@ func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *common.NodeResponse,
 	if nodeResp == nil {
 		return errors.New("node response is nil")
 	}
-	if len(nodeResp.RequiredData) == 0 && len(nodeResp.Actions) == 0 {
+	if len(nodeResp.Inputs) == 0 && len(nodeResp.Actions) == 0 {
 		return errors.New("no required data or actions found in the node response")
 	}
 
-	if len(nodeResp.RequiredData) > 0 {
+	if len(nodeResp.Inputs) > 0 {
 		if flowStep.Data.Inputs == nil {
-			flowStep.Data.Inputs = make([]common.InputData, 0)
-			flowStep.Data.Inputs = nodeResp.RequiredData
+			flowStep.Data.Inputs = make([]common.Input, 0)
+			flowStep.Data.Inputs = nodeResp.Inputs
 		} else {
-			// Append to the existing input data
-			flowStep.Data.Inputs = append(flowStep.Data.Inputs, nodeResp.RequiredData...)
+			// Append to the existing inputs
+			flowStep.Data.Inputs = append(flowStep.Data.Inputs, nodeResp.Inputs...)
 		}
 	}
 
@@ -524,6 +550,16 @@ func (fe *flowEngine) resolveStepDetailsForPrompt(nodeResp *common.NodeResponse,
 			flowStep.Data.Actions = make([]common.Action, 0)
 		}
 		flowStep.Data.Actions = nodeResp.Actions
+	}
+
+	// Include meta in the flow step if present
+	if nodeResp.Meta != nil {
+		flowStep.Data.Meta = nodeResp.Meta
+	}
+
+	// Set failure reason if present (e.g., when handling onFailure)
+	if nodeResp.FailureReason != "" {
+		flowStep.FailureReason = nodeResp.FailureReason
 	}
 
 	flowStep.Status = common.FlowStatusIncomplete
