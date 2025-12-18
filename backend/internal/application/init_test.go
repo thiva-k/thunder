@@ -499,7 +499,7 @@ func TestInitialize_WithImmutableResources_Standalone(t *testing.T) {
 
 	// Create a temporary directory structure for file-based runtime
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	appDir := confDir + "/applications"
 
 	// Create the directory structure
