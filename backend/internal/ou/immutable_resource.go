@@ -173,7 +173,7 @@ func loadImmutableResources(fileStore organizationUnitStoreInterface, dbStore or
 
 	resourceConfig := immutableresource.ResourceConfig{
 		ResourceType:  "OrganizationUnit",
-		DirectoryName: "organizational_units",
+		DirectoryName: "organization_units",
 		Parser:        parseToOUWrapper,
 		Validator: func(data interface{}) error {
 			return validateOUWrapper(data, store, dbStore)
