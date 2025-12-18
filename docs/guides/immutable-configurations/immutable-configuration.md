@@ -136,7 +136,7 @@ organization_unit:
 
 ```
 repository/conf/immutable_resources/
-└── organizational_units/
+└── organization_units/
     ├── production.yaml      # Immutable OU from YAML
     ├── staging.yaml         # Immutable OU from YAML
     └── development.yaml     # Immutable OU from YAML
@@ -175,7 +175,7 @@ repository/conf/immutable_resources/
 |---------------|-----------|-------------|--------|
 | Applications | `applications/` | Global only | ✅ Supported |
 | Identity Providers | `identity-providers/` | Global only | ✅ Supported |
-| Organization Units | `organizational_units/` | mutable / immutable / composite | ✅ Supported |
+| Organization Units | `organization_units/` | mutable / immutable / composite | ✅ Supported |
 | Notification Senders | `notification-senders/` | Global only | 🔜 Coming Soon |
 | Groups | `groups/` | TBD | 🔜 Coming Soon |
 | Roles | `roles/` | TBD | 🔜 Coming Soon |
