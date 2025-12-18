@@ -722,7 +722,7 @@ this is not valid yaml:
 //nolint:dupl // Similar test setup required for different error scenarios
 func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	schemaDir := confDir + "/user_schemas"
 
 	err := os.MkdirAll(schemaDir, 0750)
@@ -736,6 +736,9 @@ func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Setup config
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
+	assert.NoError(t, err)
 	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
 	// Use testCryptoKey constant
 	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
@@ -769,10 +772,15 @@ func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 //nolint:dupl // Similar test setup required for different error scenarios
 func TestInitialize_WithImmutableResourcesEnabled_ValidationFailure(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	schemaDir := confDir + "/user_schemas"
 
 	err := os.MkdirAll(schemaDir, 0750)
+	assert.NoError(t, err)
+
+	// Create crypto directory
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
 	assert.NoError(t, err)
 
 	// Create a YAML file with invalid configuration (empty name)
@@ -819,10 +827,15 @@ schema: |
 // TestInitialize_WithImmutableResourcesEnabled_OUServiceError tests Initialize when OU service fails
 func TestInitialize_WithImmutableResourcesEnabled_OUServiceError(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	schemaDir := confDir + "/user_schemas"
 
 	err := os.MkdirAll(schemaDir, 0750)
+	assert.NoError(t, err)
+
+	// Create crypto directory
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
 	assert.NoError(t, err)
 
 	// Create a valid YAML file
@@ -883,10 +896,15 @@ schema: |
 //nolint:dupl // Similar test setup required for different error scenarios
 func TestInitialize_WithImmutableResourcesEnabled_InvalidJSONSchema(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	schemaDir := confDir + "/user_schemas"
 
 	err := os.MkdirAll(schemaDir, 0750)
+	assert.NoError(t, err)
+
+	// Create crypto directory
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
 	assert.NoError(t, err)
 
 	// Create a YAML file with invalid JSON in schema field

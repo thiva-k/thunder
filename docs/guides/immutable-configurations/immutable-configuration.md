@@ -16,7 +16,7 @@ Immutable Configuration Mode allows Thunder to load resource configurations from
 
 When immutable configuration mode is enabled:
 
-1. Thunder starts and reads YAML files from `repository/conf/immutable_resources/`
+1. Thunder starts and reads YAML files from `repository/resources/`
 2. Configurations are loaded into memory (not the database)
 3. Create, Update, and Delete operations are **disabled** via API
 4. Applications use the file-based configurations
@@ -135,7 +135,7 @@ organization_unit:
 ```
 
 ```
-repository/conf/immutable_resources/
+repository/resources/
 └── organization_units/
     ├── production.yaml      # Immutable OU from YAML
     ├── staging.yaml         # Immutable OU from YAML
@@ -149,10 +149,10 @@ At runtime:
 
 ## Directory Structure
 
-Place configuration files in the `repository/conf/immutable_resources/` directory:
+Place configuration files in the `repository/resources/` directory:
 
 ```
-repository/conf/immutable_resources/
+repository/resources/
 ├── applications/
 │   ├── my-web-app.yaml
 │   ├── mobile-app.yaml
@@ -190,14 +190,14 @@ curl -X POST https://localhost:8090/export \
   -H "Content-Type: application/json" \
   -d '{
     "applications": ["<application-id>"]
-  }' > repository/conf/immutable_resources/applications/my-app.yaml
+  }' > repository/resources/applications/my-app.yaml
 
 # Export an identity provider
 curl -X POST https://localhost:8090/export \
   -H "Content-Type: application/json" \
   -d '{
     "identity_providers": ["<idp-id>"]
-  }' > repository/conf/immutable_resources/identity-providers/google-idp.yaml
+  }' > repository/resources/identity_providers/google-idp.yaml
 ```
 
 See the [Export Configurations Guide](./export-configurations.md) for detailed export instructions.
@@ -207,7 +207,7 @@ See the [Export Configurations Guide](./export-configurations.md) for detailed e
 You can also create YAML files manually. Here's an example application configuration:
 
 ```yaml
-# repository/conf/immutable_resources/applications/my-app.yaml
+# repository/resources/applications/my-app.yaml
 name: My Application
 description: Production web application
 url: https://myapp.example.com
@@ -356,7 +356,7 @@ docker run \
   -e MY_APP_CLIENT_ID=client-id \
   -e MY_APP_CLIENT_SECRET=secret \
   -e MY_APP_REDIRECT_URIS_0=https://app.example.com/callback \
-  -v $(pwd)/immutable_resources:/app/repository/conf/immutable_resources \
+  -v $(pwd)/immutable_resources:/app/repository/resources \
   thunder:latest
 ```
 
@@ -364,7 +364,7 @@ Or use an env file:
 
 ```bash
 docker run --env-file production.env \
-  -v $(pwd)/immutable_resources:/app/repository/conf/immutable_resources \
+  -v $(pwd)/immutable_resources:/app/repository/resources \
   thunder:latest
 ```
 
@@ -446,7 +446,7 @@ When immutable configuration mode is enabled:
 Store configuration files in git:
 
 ```bash
-git add repository/conf/immutable_resources/
+git add repository/resources/
 git commit -m "Add production application configs"
 git tag v1.0.0
 ```
@@ -482,7 +482,7 @@ Validate configurations before deployment:
 
 ```bash
 # Check for syntax errors
-yamllint repository/conf/immutable_resources/**/*.yaml
+yamllint repository/resources/**/*.yaml
 
 # Verify all variables are set
 ./scripts/validate-env.sh production.env
@@ -529,7 +529,7 @@ export MY_APP_REDIRECT_URIS_1=https://example.com/logout
 **Cause:** File not in correct directory or invalid YAML.
 
 **Solution:**
-1. Verify file location: `repository/conf/immutable_resources/applications/`
+1. Verify file location: `repository/resources/applications/`
 2. Check YAML syntax: `yamllint my-app.yaml`
 3. Check server logs for parsing errors
 
@@ -541,7 +541,7 @@ export MY_APP_REDIRECT_URIS_1=https://example.com/logout
 
 **Solution:**
 This is expected behavior. To add new applications:
-1. Create a new YAML file in `immutable_resources/applications/`
+1. Create a new YAML file in `repository/resources/applications/`
 2. Restart Thunder
 3. Or disable immutable mode to use API
 
@@ -566,7 +566,7 @@ This is expected behavior. To add new applications:
 3. **Restrict file permissions:**
    ```bash
    chmod 600 environments/*.env
-   chmod 700 repository/conf/immutable_resources/
+   chmod 700 repository/resources/
    ```
 
 4. **Rotate secrets regularly:**

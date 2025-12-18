@@ -312,8 +312,8 @@ func TestInitialize_WithImmutableResourcesEnabled_EmptyDirectory(t *testing.T) {
 
 	// Create a temporary directory structure for file-based runtime
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
-	idpDir := confDir + "/identity-providers"
+	confDir := tmpDir + "/repository/resources"
+	idpDir := confDir + "/identity_providers"
 
 	// Create the directory structure
 	err := os.MkdirAll(idpDir, 0750)
@@ -347,7 +347,7 @@ func TestInitialize_WithImmutableResourcesEnabled_EmptyDirectory(t *testing.T) {
 func TestInitialize_WithImmutableResourcesEnabled_ValidConfigs(t *testing.T) {
 	// Create a temporary directory structure for file-based runtime
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	idpDir := confDir + "/identity_providers"
 
 	// Create the directory structure
@@ -355,6 +355,9 @@ func TestInitialize_WithImmutableResourcesEnabled_ValidConfigs(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Create crypto key file for encryption (relative to tmpDir)
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
+	assert.NoError(t, err)
 	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
 	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
 	assert.NoError(t, err)
@@ -471,7 +474,7 @@ properties:
 //nolint:dupl // Similar test setup required for different error scenarios
 func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	idpDir := confDir + "/identity_providers"
 
 	err := os.MkdirAll(idpDir, 0750)
@@ -485,6 +488,9 @@ func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Setup config
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
+	assert.NoError(t, err)
 	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
 	// Use testCryptoKey constant
 	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
@@ -517,7 +523,7 @@ func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 //nolint:dupl // Similar test setup required for different error scenarios
 func TestInitialize_WithImmutableResourcesEnabled_ValidationFailure(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	idpDir := confDir + "/identity_providers"
 
 	err := os.MkdirAll(idpDir, 0750)
@@ -536,6 +542,9 @@ properties:
 	assert.NoError(t, err)
 
 	// Setup config
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
+	assert.NoError(t, err)
 	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
 	// Use testCryptoKey constant
 	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
@@ -568,7 +577,7 @@ properties:
 //nolint:dupl // Similar test setup required for different error scenarios
 func TestInitialize_WithImmutableResourcesEnabled_InvalidIDPType(t *testing.T) {
 	tmpDir := t.TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	idpDir := confDir + "/identity_providers"
 
 	err := os.MkdirAll(idpDir, 0750)
@@ -587,6 +596,9 @@ properties:
 	assert.NoError(t, err)
 
 	// Setup config
+	cryptoDir := tmpDir + "/repository/conf"
+	err = os.MkdirAll(cryptoDir, 0750)
+	assert.NoError(t, err)
 	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
 	// Use testCryptoKey constant
 	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)

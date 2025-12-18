@@ -92,8 +92,8 @@ func (suite *ResourceLoaderTestSuite) SetupSuite() {
 	err := config.InitializeThunderRuntime(tempThunderHome, testConfig)
 	suite.Require().NoError(err, "Failed to initialize ThunderRuntime")
 
-	// Create the immutable_resources directory structure
-	suite.resourcesDir = filepath.Join(tempThunderHome, "repository", "conf", "immutable_resources")
+	// Create the resources directory structure
+	suite.resourcesDir = filepath.Join(tempThunderHome, "repository", "resources")
 	err = os.MkdirAll(suite.resourcesDir, 0750)
 	suite.Require().NoError(err)
 }
@@ -103,7 +103,7 @@ func (suite *ResourceLoaderTestSuite) TearDownSuite() {
 	// Temp directory cleanup is handled automatically by suite.T().TempDir()
 }
 
-// Helper function to create YAML file in immutable_resources directory
+// Helper function to create YAML file in resources directory
 func (suite *ResourceLoaderTestSuite) createYAMLFile(subdir, filename, content string) {
 	dirPath := filepath.Join(suite.resourcesDir, subdir)
 	err := os.MkdirAll(dirPath, 0750)
@@ -113,7 +113,7 @@ func (suite *ResourceLoaderTestSuite) createYAMLFile(subdir, filename, content s
 	suite.Require().NoError(err)
 }
 
-// Helper function to create resource directory in immutable_resources
+// Helper function to create resource directory in resources
 func (suite *ResourceLoaderTestSuite) createResourceDir(subdir string) string {
 	dirPath := filepath.Join(suite.resourcesDir, subdir)
 	err := os.MkdirAll(dirPath, 0750)

@@ -91,7 +91,7 @@ func (suite *InitTestSuite) TestInitialize() {
 func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled_FileLoading() {
 	// Create a temporary directory for immutable resources
 	tmpDir := suite.T().TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	senderDir := confDir + "/notification_senders"
 
 	// Create the directory structure
@@ -463,7 +463,7 @@ func (suite *InitTestSuite) TestParseProviderType_CaseSensitivity() {
 //nolint:dupl // Similar test setup required for different error scenarios
 func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled_InvalidYAML() {
 	tmpDir := suite.T().TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	senderDir := confDir + "/notification_senders"
 
 	err := os.MkdirAll(senderDir, 0750)
@@ -534,7 +534,7 @@ func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled_Invalid
 //nolint:dupl // Similar test setup required for different error scenarios
 func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled_ValidationFailure() {
 	tmpDir := suite.T().TempDir()
-	confDir := tmpDir + "/repository/conf/immutable_resources"
+	confDir := tmpDir + "/repository/resources"
 	senderDir := confDir + "/notification_senders"
 
 	err := os.MkdirAll(senderDir, 0750)
