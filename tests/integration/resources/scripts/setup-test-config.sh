@@ -92,8 +92,5 @@ cat >> tests/integration/resources/deployment.yaml <<EOF
 
 
 flow:
-  graph_directory: "repository/resources/graphs/"
   max_version_history: 3
-  authn:
-    default_flow: "auth_flow_config_basic"
 EOF

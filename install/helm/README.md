@@ -225,8 +225,10 @@ The following table lists the configurable parameters of the Thunder chart and t
 | `configuration.jwt.audience`           | Default audience for auth assertions                            | `application`                |
 | `configuration.oauth.refreshToken.renewOnGrant` | Renew refresh token on grant                           | `false`                      |
 | `configuration.oauth.refreshToken.validityPeriod` | Refresh token validity period in seconds             | `86400`                      |
+| `configuration.flow.defaultAuthFlowHandle` | Default authentication flow handle                          | `default-basic-flow`         |
+| `configuration.flow.maxVersionHistory` | Maximum flow version history to retain                          | `3`                          |
+| `configuration.flow.autoInferRegistration` | Enable auto-infer registration flow                         | `true`                       |
 | `configuration.flow.graphDirectory`    | Flow graph directory                                            | `repository/resources/graphs/` |
-| `configuration.flow.authn.defaultFlow` | Default authentication flow                                     | `auth_flow_config_basic`     |
 | `configuration.cors.allowedOrigins`    | CORS allowed origins                                            | See values.yaml              |
 
 ### Persistence Parameters

@@ -533,6 +533,85 @@ func (s *FlowMgtServiceTestSuite) TestGetFlow_StoreError() {
 	s.Equal(&serviceerror.InternalServerError, err)
 }
 
+// GetFlowByHandle tests
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_Success() {
+	expectedFlow := &CompleteFlowDefinition{
+		ID:       testFlowIDService,
+		Handle:   "test-auth-flow",
+		Name:     "Test Auth Flow",
+		FlowType: common.FlowTypeAuthentication,
+	}
+	s.mockStore.EXPECT().GetFlowByHandle("test-auth-flow", common.FlowTypeAuthentication).
+		Return(expectedFlow, nil)
+
+	result, err := s.service.GetFlowByHandle("test-auth-flow", common.FlowTypeAuthentication)
+
+	s.Nil(err)
+	s.Equal(expectedFlow, result)
+	s.Equal("test-auth-flow", result.Handle)
+	s.Equal(common.FlowTypeAuthentication, result.FlowType)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_SuccessRegistrationFlow() {
+	expectedFlow := &CompleteFlowDefinition{
+		ID:       "flow-reg-id",
+		Handle:   "test-reg-flow",
+		Name:     "Test Registration Flow",
+		FlowType: common.FlowTypeRegistration,
+	}
+	s.mockStore.EXPECT().GetFlowByHandle("test-reg-flow", common.FlowTypeRegistration).
+		Return(expectedFlow, nil)
+
+	result, err := s.service.GetFlowByHandle("test-reg-flow", common.FlowTypeRegistration)
+
+	s.Nil(err)
+	s.Equal(expectedFlow, result)
+	s.Equal("test-reg-flow", result.Handle)
+	s.Equal(common.FlowTypeRegistration, result.FlowType)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_EmptyHandle() {
+	result, err := s.service.GetFlowByHandle("", common.FlowTypeAuthentication)
+
+	s.Nil(result)
+	s.Equal(&ErrorMissingFlowHandle, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_InvalidFlowType() {
+	result, err := s.service.GetFlowByHandle("test-handle", "INVALID_TYPE")
+
+	s.Nil(result)
+	s.Equal(&ErrorInvalidFlowType, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_EmptyFlowType() {
+	result, err := s.service.GetFlowByHandle("test-handle", "")
+
+	s.Nil(result)
+	s.Equal(&ErrorInvalidFlowType, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_NotFound() {
+	s.mockStore.EXPECT().GetFlowByHandle("non-existent-handle", common.FlowTypeAuthentication).
+		Return(nil, errFlowNotFound)
+
+	result, err := s.service.GetFlowByHandle("non-existent-handle", common.FlowTypeAuthentication)
+
+	s.Nil(result)
+	s.Equal(&ErrorFlowNotFound, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestGetFlowByHandle_StoreError() {
+	s.mockStore.EXPECT().GetFlowByHandle("test-handle", common.FlowTypeAuthentication).
+		Return(nil, errors.New("database connection error"))
+
+	result, err := s.service.GetFlowByHandle("test-handle", common.FlowTypeAuthentication)
+
+	s.Nil(result)
+	s.Equal(&serviceerror.InternalServerError, err)
+}
+
 // UpdateFlow tests
 
 func (s *FlowMgtServiceTestSuite) TestUpdateFlow_Success() {

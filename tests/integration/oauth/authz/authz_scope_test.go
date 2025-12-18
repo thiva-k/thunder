@@ -218,7 +218,7 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_WithAuthorizedScopes() {
 		"password": "SecurePass123!",
 	}
 
-	flowStep, err := testutils.ExecuteAuthenticationFlow(flowID, flowInputs)
+	flowStep, err := testutils.ExecuteAuthenticationFlow(flowID, flowInputs, "")
 	ts.Require().NoError(err, "Failed to execute authentication flow")
 	ts.Require().NotNil(flowStep, "Flow step should not be nil")
 	ts.Require().Equal("COMPLETE", flowStep.FlowStatus, "Flow should be complete")
@@ -287,7 +287,7 @@ func (ts *OAuthAuthzScopeTestSuite) TestOAuthAuthzFlow_WithNoAuthorizedScopes() 
 		"password": "SecurePass123!",
 	}
 
-	flowStep, err := testutils.ExecuteAuthenticationFlow(flowID, flowInputs)
+	flowStep, err := testutils.ExecuteAuthenticationFlow(flowID, flowInputs, "")
 	ts.Require().NoError(err, "Failed to execute authentication flow")
 	ts.Require().NotNil(flowStep, "Flow step should not be nil")
 	ts.Require().Equal("COMPLETE", flowStep.FlowStatus, "Flow should be complete")
@@ -344,8 +344,6 @@ func (ts *OAuthAuthzScopeTestSuite) createOAuthApplication() (string, error) {
 	app := map[string]interface{}{
 		"name":                         scopeTestAppName,
 		"description":                  "OAuth application for scope authorization testing",
-		"auth_flow_graph_id":           "auth_flow_config_basic",
-		"registration_flow_graph_id":   "registration_flow_config_basic",
 		"is_registration_flow_enabled": false,
 		"allowed_user_types":           []string{"authz-test-person"},
 		"inbound_auth_config": []map[string]interface{}{

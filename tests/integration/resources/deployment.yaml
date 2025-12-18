@@ -22,7 +22,4 @@ database:
     options: "_journal_mode=WAL&_busy_timeout=60000"
 
 flow:
-  graph_directory: "repository/resources/graphs/"
   max_version_history: 3
-  authn:
-    default_flow: "auth_flow_config_basic"

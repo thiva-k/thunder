@@ -834,3 +834,177 @@ func SimulateFederatedOAuthFlow(redirectURL string) (string, error) {
 
 	return code, nil
 }
+
+// CreateFlow creates a flow via API and returns the flow ID
+func CreateFlow(flowDefinition Flow) (string, error) {
+	flowJSON, err := json.Marshal(flowDefinition)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal flow definition: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", TestServerURL+"/flows", bytes.NewReader(flowJSON))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var createdFlow map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &createdFlow)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
+	}
+
+	flowID, ok := createdFlow["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
+	}
+	return flowID, nil
+}
+
+// DeleteFlow deletes a flow by ID
+func DeleteFlow(flowID string) error {
+	req, err := http.NewRequest("DELETE", TestServerURL+"/flows/"+flowID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete flow: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 204, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
+	return nil
+}
+
+// GetFlowIDByHandle retrieves a flow ID by its handle and type
+func GetFlowIDByHandle(handle string, flowType string) (string, error) {
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/flows?flowType=%s&limit=200", TestServerURL, flowType), nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create flow list request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("flows list request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("failed to list flows, status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var flowsResp map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&flowsResp); err != nil {
+		return "", fmt.Errorf("failed to decode flows response: %w", err)
+	}
+
+	flows, ok := flowsResp["flows"].([]interface{})
+	if !ok {
+		return "", fmt.Errorf("flows list format invalid")
+	}
+
+	for _, f := range flows {
+		flow, ok := f.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if h, ok := flow["handle"].(string); ok && h == handle {
+			if id, ok := flow["id"].(string); ok {
+				return id, nil
+			}
+		}
+	}
+
+	return "", fmt.Errorf("flow with handle '%s' not found", handle)
+}
+
+// CreateNotificationSender creates a notification sender via API and returns the sender ID
+func CreateNotificationSender(sender NotificationSender) (string, error) {
+	senderJSON, err := json.Marshal(sender)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal notification sender: %w", err)
+	}
+
+	req, err := http.NewRequest("POST", TestServerURL+"/notification-senders/message",
+		bytes.NewReader(senderJSON))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var respBody map[string]interface{}
+	err = json.Unmarshal(bodyBytes, &respBody)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse response body: %w. Response: %s", err, string(bodyBytes))
+	}
+
+	id, ok := respBody["id"].(string)
+	if !ok {
+		return "", fmt.Errorf("response does not contain id or id is not a string. Response: %s", string(bodyBytes))
+	}
+
+	return id, nil
+}
+
+// DeleteNotificationSender deletes a notification sender by ID
+func DeleteNotificationSender(senderID string) error {
+	req, err := http.NewRequest("DELETE", TestServerURL+"/notification-senders/message/"+senderID, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create delete request: %w", err)
+	}
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to delete notification sender: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
+		responseBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("expected status 200 or 204, got %d. Response: %s", resp.StatusCode, string(responseBody))
+	}
+
+	return nil
+}

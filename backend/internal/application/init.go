@@ -25,7 +25,7 @@ import (
 	"github.com/asgardeo/thunder/internal/application/model"
 	brandingmgt "github.com/asgardeo/thunder/internal/branding/mgt"
 	"github.com/asgardeo/thunder/internal/cert"
-	"github.com/asgardeo/thunder/internal/flow/legacyflowmgt"
+	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	"github.com/asgardeo/thunder/internal/system/config"
 	filebasedruntime "github.com/asgardeo/thunder/internal/system/file_based_runtime"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -39,7 +39,7 @@ import (
 func Initialize(
 	mux *http.ServeMux,
 	certService cert.CertificateServiceInterface,
-	flowMgtService legacyflowmgt.LegacyFlowMgtServiceInterface,
+	flowMgtService flowmgt.FlowMgtServiceInterface,
 	brandingService brandingmgt.BrandingMgtServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
 ) ApplicationServiceInterface {
