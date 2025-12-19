@@ -627,6 +627,40 @@ func CreateGroup(group Group) (string, error) {
 	return groupID, nil
 }
 
+// GetGroupMembers retrieves all members of a group
+func GetGroupMembers(groupID string) ([]GroupMember, error) {
+	// Use a large limit to get all members in one request
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/groups/%s/members", TestServerURL, groupID), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create get members request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	client := GetHTTPClient()
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get group members: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("expected status 200, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var memberListResponse struct {
+		TotalResults int           `json:"totalResults"`
+		StartIndex   int           `json:"startIndex"`
+		Count        int           `json:"count"`
+		Members      []GroupMember `json:"members"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&memberListResponse); err != nil {
+		return nil, fmt.Errorf("failed to decode members response: %w", err)
+	}
+
+	return memberListResponse.Members, nil
+}
+
 // DeleteGroup deletes a group by ID
 func DeleteGroup(groupID string) error {
 	req, err := http.NewRequest("DELETE", TestServerURL+"/groups/"+groupID, nil)
@@ -725,6 +759,16 @@ type AssignmentListResponse struct {
 	StartIndex   int          `json:"startIndex"`
 	Count        int          `json:"count"`
 	Assignments  []Assignment `json:"assignments"`
+}
+
+// GetRoleAssignments fetches all assignments for a role
+func GetRoleAssignments(roleID string) ([]Assignment, error) {
+	client := GetHTTPClient()
+	resp, err := getRoleAssignments(roleID, client)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Assignments, nil
 }
 
 // getRoleAssignments fetches all assignments for a role
