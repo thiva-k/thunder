@@ -61,6 +61,12 @@ const (
 	dataValueTrue = "true"
 )
 
+// Executor property keys
+const (
+	propertyKeyAssignGroup = "assignGroup"
+	propertyKeyAssignRole  = "assignRole"
+)
+
 // nonSearchableInputs contains the list of user inputs/ attributes that are non-searchable.
 var nonSearchableInputs = []string{"password", "code", "nonce", "otp"}
 

@@ -111,6 +111,13 @@ type AuthenticationResponse struct {
 	Assertion        string `json:"assertion,omitempty"`
 }
 
+// GroupMember represents a member of a group
+type GroupMember struct {
+	ID      string `json:"id"`
+	Type    string `json:"type"`
+	Display string `json:"display,omitempty"`
+}
+
 // Group represents a group in the system
 type Group struct {
 	ID                 string `json:"id,omitempty"`

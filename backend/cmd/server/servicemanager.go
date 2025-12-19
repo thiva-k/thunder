@@ -109,7 +109,8 @@ func registerServices(
 	// Initialize flow and executor services.
 	flowFactory, graphCache := flowcore.Initialize()
 	execRegistry := executor.Initialize(flowFactory, userService, ouService,
-		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService, observabilitySvc)
+		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService, observabilitySvc,
+		groupService, roleService)
 
 	flowMgtService, flowMgtExporter, err := flowmgt.Initialize(mux, flowFactory, execRegistry, graphCache)
 	if err != nil {

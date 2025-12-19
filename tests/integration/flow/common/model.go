@@ -24,6 +24,8 @@ type TestSuiteConfig struct {
 	CreatedFlowIDs    []string
 	CreatedIdpIDs     []string
 	CreatedSenderIDs  []string
+	CreatedGroupIDs   []string
+	CreatedRoleIDs    []string
 	OriginalAppConfig map[string]interface{}
 	MockServer        interface{} // Can be cast to specific mock server type
 }

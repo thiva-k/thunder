@@ -29,19 +29,28 @@ import (
 	authncm "github.com/asgardeo/thunder/internal/authn/common"
 	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/group"
+	"github.com/asgardeo/thunder/internal/role"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/user"
 	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
+	"github.com/asgardeo/thunder/tests/mocks/groupmock"
+	"github.com/asgardeo/thunder/tests/mocks/rolemock"
 	"github.com/asgardeo/thunder/tests/mocks/usermock"
 )
 
-const testUserType = "INTERNAL"
+const (
+	testUserType  = "INTERNAL"
+	testNewUserID = "user-new"
+)
 
 type ProvisioningExecutorTestSuite struct {
 	suite.Suite
-	mockUserService *usermock.UserServiceInterfaceMock
-	mockFlowFactory *coremock.FlowFactoryInterfaceMock
-	executor        *provisioningExecutor
+	mockUserService  *usermock.UserServiceInterfaceMock
+	mockGroupService *groupmock.GroupServiceInterfaceMock
+	mockRoleService  *rolemock.RoleServiceInterfaceMock
+	mockFlowFactory  *coremock.FlowFactoryInterfaceMock
+	executor         *provisioningExecutor
 }
 
 func TestProvisioningExecutorSuite(t *testing.T) {
@@ -50,6 +59,8 @@ func TestProvisioningExecutorSuite(t *testing.T) {
 
 func (suite *ProvisioningExecutorTestSuite) SetupTest() {
 	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
+	suite.mockGroupService = groupmock.NewGroupServiceInterfaceMock(suite.T())
+	suite.mockRoleService = rolemock.NewRoleServiceInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 
 	// Mock the embedded identifying executor first
@@ -61,7 +72,8 @@ func (suite *ProvisioningExecutorTestSuite) SetupTest() {
 	suite.mockFlowFactory.On("CreateExecutor", ExecutorNameProvisioning, common.ExecutorTypeRegistration,
 		[]common.Input{}, []common.Input{}).Return(mockExec)
 
-	suite.executor = newProvisioningExecutor(suite.mockFlowFactory, suite.mockUserService)
+	suite.executor = newProvisioningExecutor(suite.mockFlowFactory, suite.mockUserService,
+		suite.mockGroupService, suite.mockRoleService)
 }
 
 func (suite *ProvisioningExecutorTestSuite) createMockIdentifyingExecutor() core.ExecutorInterface {
@@ -130,6 +142,10 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Success() {
 			{Identifier: "username", Type: "string", Required: true},
 			{Identifier: "email", Type: "string", Required: true},
 		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
 	}
 
 	suite.mockUserService.On("IdentifyUser", map[string]interface{}{
@@ -138,7 +154,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Success() {
 	}).Return(nil, &user.ErrorUserNotFound)
 
 	createdUser := &user.User{
-		ID:               "user-new",
+		ID:               testNewUserID,
 		OrganizationUnit: testOUID,
 		Type:             testUserType,
 		Attributes:       attrsJSON,
@@ -148,14 +164,40 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_Success() {
 		return u.OrganizationUnit == testOUID && u.Type == testUserType
 	})).Return(createdUser, nil)
 
+	// Mock group assignment
+	existingGroup := &group.Group{
+		ID:                 "test-group-id",
+		Name:               "Default Users",
+		Description:        "Default group for provisioned users",
+		OrganizationUnitID: testOUID,
+		Members:            []group.Member{},
+	}
+	suite.mockGroupService.On("GetGroup", "test-group-id").Return(existingGroup, nil)
+	suite.mockGroupService.On("UpdateGroup", "test-group-id",
+		mock.MatchedBy(func(req group.UpdateGroupRequest) bool {
+			return len(req.Members) == 1 &&
+				req.Members[0].ID == testNewUserID &&
+				req.Members[0].Type == group.MemberTypeUser
+		})).Return(existingGroup, nil)
+
+	// Mock role assignment
+	suite.mockRoleService.On("AddAssignments", "test-role-id",
+		mock.MatchedBy(func(assignments []role.RoleAssignment) bool {
+			return len(assignments) == 1 &&
+				assignments[0].ID == testNewUserID &&
+				assignments[0].Type == role.AssigneeTypeUser
+		})).Return(nil)
+
 	resp, err := suite.executor.Execute(ctx)
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), resp)
 	assert.Equal(suite.T(), common.ExecComplete, resp.Status)
 	assert.True(suite.T(), resp.AuthenticatedUser.IsAuthenticated)
-	assert.Equal(suite.T(), "user-new", resp.AuthenticatedUser.UserID)
+	assert.Equal(suite.T(), testNewUserID, resp.AuthenticatedUser.UserID)
 	suite.mockUserService.AssertExpectations(suite.T())
+	suite.mockGroupService.AssertExpectations(suite.T())
+	suite.mockRoleService.AssertExpectations(suite.T())
 }
 
 func (suite *ProvisioningExecutorTestSuite) TestExecute_UserAlreadyExists() {
@@ -473,6 +515,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_SkipProvisioning_Proceed
 			{Identifier: "username", Type: "string", Required: true},
 			{Identifier: "email", Type: "string", Required: true},
 		},
+		// No NodeProperties - should skip group/role assignment
 	}
 
 	attrs := map[string]interface{}{
@@ -482,7 +525,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_SkipProvisioning_Proceed
 	attrsJSON, _ := json.Marshal(attrs)
 
 	createdUser := &user.User{
-		ID:               "user-new",
+		ID:               testNewUserID,
 		OrganizationUnit: testOUID,
 		Type:             testUserType,
 		Attributes:       attrsJSON,
@@ -493,15 +536,21 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_SkipProvisioning_Proceed
 		return u.OrganizationUnit == testOUID && u.Type == testUserType
 	})).Return(createdUser, nil)
 
+	// No group/role assignment mocks - assignments should be skipped
+
 	resp, err := suite.executor.Execute(ctx)
 
 	assert.NoError(suite.T(), err)
 	assert.NotNil(suite.T(), resp)
 	assert.Equal(suite.T(), common.ExecComplete, resp.Status)
 	assert.True(suite.T(), resp.AuthenticatedUser.IsAuthenticated)
-	assert.Equal(suite.T(), "user-new", resp.AuthenticatedUser.UserID)
+	assert.Equal(suite.T(), testNewUserID, resp.AuthenticatedUser.UserID)
 	// userAutoProvisioned flag is not set in registration flows
 	suite.mockUserService.AssertExpectations(suite.T())
+
+	// Verify no group/role methods were called
+	suite.mockGroupService.AssertNotCalled(suite.T(), "GetGroup")
+	suite.mockRoleService.AssertNotCalled(suite.T(), "AddAssignments")
 }
 
 func (suite *ProvisioningExecutorTestSuite) TestExecute_UserEligibleForProvisioning() {
@@ -575,7 +624,7 @@ func (suite *ProvisioningExecutorTestSuite) TestExecute_UserAutoProvisionedFlag_
 	}
 
 	createdUser := &user.User{
-		ID:               "user-new",
+		ID:               testNewUserID,
 		OrganizationUnit: testOUID,
 		Type:             testUserType,
 		Attributes:       attrsJSON,
@@ -908,4 +957,396 @@ func (suite *ProvisioningExecutorTestSuite) TestHasRequiredInputs_AllAttributesI
 
 	assert.True(suite.T(), inputRequired)
 	assert.Equal(suite.T(), 0, len(execResp.Inputs))
+}
+
+// Test group assignment failure - provisioning should fail, but role assignment should still be attempted
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Failure_GroupAssignmentFails() {
+	attrs := map[string]interface{}{"username": "newuser"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"username": "newuser",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeInputs: []common.Input{
+			{Identifier: "username", Type: "string", Required: true},
+		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
+	}
+
+	suite.mockUserService.On("IdentifyUser", attrs).Return(nil, &user.ErrorUserNotFound)
+
+	createdUser := &user.User{
+		ID:               testNewUserID,
+		OrganizationUnit: testOUID,
+		Type:             testUserType,
+		Attributes:       attrsJSON,
+	}
+
+	suite.mockUserService.On("CreateUser", mock.Anything).Return(createdUser, nil)
+
+	// Mock group retrieval fails (e.g., group doesn't exist)
+	suite.mockGroupService.On("GetGroup", "test-group-id").
+		Return(nil, &serviceerror.ServiceError{Error: "Group not found"})
+
+	// Role assignment should still be attempted
+	suite.mockRoleService.On("AddAssignments", "test-role-id", mock.Anything).Return(nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
+	assert.Contains(suite.T(), resp.FailureReason, "Failed to assign groups and roles")
+	assert.Contains(suite.T(), resp.FailureReason, "group")
+
+	// Verify role assignment WAS attempted despite group failure
+	suite.mockRoleService.AssertExpectations(suite.T())
+}
+
+// Test both group and role assignment failure - provisioning should fail with combined error
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Failure_BothGroupAndRoleAssignmentFail() {
+	attrs := map[string]interface{}{"username": "newuser"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"username": "newuser",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeInputs: []common.Input{
+			{Identifier: "username", Type: "string", Required: true},
+		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
+	}
+
+	suite.mockUserService.On("IdentifyUser", attrs).Return(nil, &user.ErrorUserNotFound)
+
+	createdUser := &user.User{
+		ID:               testNewUserID,
+		OrganizationUnit: testOUID,
+		Type:             testUserType,
+		Attributes:       attrsJSON,
+	}
+
+	suite.mockUserService.On("CreateUser", mock.Anything).Return(createdUser, nil)
+
+	// Mock group retrieval fails
+	suite.mockGroupService.On("GetGroup", "test-group-id").
+		Return(nil, &serviceerror.ServiceError{Error: "Group not found"})
+
+	// Mock role assignment also fails
+	suite.mockRoleService.On("AddAssignments", "test-role-id", mock.Anything).
+		Return(&serviceerror.ServiceError{Error: "Role not found"})
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
+	assert.Equal(suite.T(), "Failed to assign groups and roles", resp.FailureReason)
+
+	// Verify both services were called (new behavior: try both even if one fails)
+	suite.mockGroupService.AssertExpectations(suite.T())
+	suite.mockRoleService.AssertExpectations(suite.T())
+}
+
+// Test role assignment failure - provisioning should fail, but group assignment succeeds
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Failure_RoleAssignmentFails() {
+	attrs := map[string]interface{}{"username": "newuser"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"username": "newuser",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeInputs: []common.Input{
+			{Identifier: "username", Type: "string", Required: true},
+		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
+	}
+
+	suite.mockUserService.On("IdentifyUser", attrs).Return(nil, &user.ErrorUserNotFound)
+
+	createdUser := &user.User{
+		ID:               testNewUserID,
+		OrganizationUnit: testOUID,
+		Type:             testUserType,
+		Attributes:       attrsJSON,
+	}
+
+	suite.mockUserService.On("CreateUser", mock.Anything).Return(createdUser, nil)
+
+	// Group assignment succeeds
+	existingGroup := &group.Group{
+		ID:                 "test-group-id",
+		Name:               "Default Users",
+		OrganizationUnitID: testOUID,
+		Members:            []group.Member{},
+	}
+	suite.mockGroupService.On("GetGroup", "test-group-id").Return(existingGroup, nil)
+	suite.mockGroupService.On("UpdateGroup", "test-group-id", mock.Anything).
+		Return(existingGroup, nil)
+
+	// Role assignment fails (e.g., role doesn't exist)
+	suite.mockRoleService.On("AddAssignments", "test-role-id", mock.Anything).
+		Return(&serviceerror.ServiceError{Error: "Role not found"})
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), common.ExecFailure, resp.Status)
+	assert.Contains(suite.T(), resp.FailureReason, "Failed to assign groups and roles")
+	assert.Contains(suite.T(), resp.FailureReason, "role")
+
+	// Verify both group and role services were called
+	suite.mockGroupService.AssertExpectations(suite.T())
+	suite.mockRoleService.AssertExpectations(suite.T())
+}
+
+// Test group with existing members - user should be appended
+func (suite *ProvisioningExecutorTestSuite) TestExecute_GroupWithExistingMembers() {
+	attrs := map[string]interface{}{"username": "newuser"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"username": "newuser",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeInputs: []common.Input{
+			{Identifier: "username", Type: "string", Required: true},
+		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
+	}
+
+	suite.mockUserService.On("IdentifyUser", attrs).Return(nil, &user.ErrorUserNotFound)
+
+	createdUser := &user.User{
+		ID:               testNewUserID,
+		OrganizationUnit: testOUID,
+		Type:             testUserType,
+		Attributes:       attrsJSON,
+	}
+
+	suite.mockUserService.On("CreateUser", mock.Anything).Return(createdUser, nil)
+
+	// Group has 2 existing members
+	existingGroup := &group.Group{
+		ID:                 "test-group-id",
+		Name:               "Default Users",
+		OrganizationUnitID: testOUID,
+		Members: []group.Member{
+			{ID: "existing-user-1", Type: group.MemberTypeUser},
+			{ID: "existing-user-2", Type: group.MemberTypeUser},
+		},
+	}
+	suite.mockGroupService.On("GetGroup", "test-group-id").Return(existingGroup, nil)
+
+	// Verify UpdateGroup is called with all 3 members (2 existing + 1 new)
+	suite.mockGroupService.On("UpdateGroup", "test-group-id",
+		mock.MatchedBy(func(req group.UpdateGroupRequest) bool {
+			if len(req.Members) != 3 {
+				return false
+			}
+			// Check existing members preserved
+			hasExisting1 := false
+			hasExisting2 := false
+			hasNewUser := false
+			for _, m := range req.Members {
+				if m.ID == "existing-user-1" {
+					hasExisting1 = true
+				}
+				if m.ID == "existing-user-2" {
+					hasExisting2 = true
+				}
+				if m.ID == testNewUserID {
+					hasNewUser = true
+				}
+			}
+			return hasExisting1 && hasExisting2 && hasNewUser
+		})).Return(existingGroup, nil)
+
+	suite.mockRoleService.On("AddAssignments", "test-role-id", mock.Anything).Return(nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), common.ExecComplete, resp.Status)
+	suite.mockGroupService.AssertExpectations(suite.T())
+}
+
+// Test authentication flow with auto-provisioning still assigns groups/roles
+func (suite *ProvisioningExecutorTestSuite) TestExecute_AuthFlow_AutoProvisioning_AssignsGroupsAndRoles() {
+	attrs := map[string]interface{}{"username": "provisioneduser"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeAuthentication,
+		UserInputs: map[string]string{
+			"username": "provisioneduser",
+		},
+		RuntimeData: map[string]string{
+			common.RuntimeKeyUserEligibleForProvisioning: dataValueTrue,
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeInputs: []common.Input{
+			{Identifier: "username", Type: "string", Required: true},
+		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
+	}
+
+	suite.mockUserService.On("IdentifyUser", attrs).Return(nil, &user.ErrorUserNotFound)
+
+	createdUser := &user.User{
+		ID:               "user-provisioned",
+		OrganizationUnit: testOUID,
+		Type:             testUserType,
+		Attributes:       attrsJSON,
+	}
+
+	suite.mockUserService.On("CreateUser", mock.Anything).Return(createdUser, nil)
+
+	// Mock successful group and role assignment
+	existingGroup := &group.Group{
+		ID:                 "test-group-id",
+		Name:               "Default Users",
+		OrganizationUnitID: testOUID,
+		Members:            []group.Member{},
+	}
+	suite.mockGroupService.On("GetGroup", "test-group-id").Return(existingGroup, nil)
+	suite.mockGroupService.On("UpdateGroup", "test-group-id", mock.Anything).
+		Return(existingGroup, nil)
+	suite.mockRoleService.On("AddAssignments", "test-role-id", mock.Anything).Return(nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), common.ExecComplete, resp.Status)
+	assert.Equal(suite.T(), dataValueTrue, resp.RuntimeData[common.RuntimeKeyUserAutoProvisioned])
+
+	// Verify assignments were made
+	suite.mockGroupService.AssertExpectations(suite.T())
+	suite.mockRoleService.AssertExpectations(suite.T())
+}
+
+// Test successful provisioning with both group and role assignment (detailed verification)
+func (suite *ProvisioningExecutorTestSuite) TestExecute_Success_WithGroupAndRoleAssignment() {
+	attrs := map[string]interface{}{"username": "newuser", "email": "new@example.com"}
+	attrsJSON, _ := json.Marshal(attrs)
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeRegistration,
+		UserInputs: map[string]string{
+			"username": "newuser",
+			"email":    "new@example.com",
+		},
+		RuntimeData: map[string]string{
+			ouIDKey:     testOUID,
+			userTypeKey: testUserType,
+		},
+		NodeInputs: []common.Input{
+			{Identifier: "username", Type: "string", Required: true},
+			{Identifier: "email", Type: "string", Required: true},
+		},
+		NodeProperties: map[string]interface{}{
+			"assignGroup": "test-group-id",
+			"assignRole":  "test-role-id",
+		},
+	}
+
+	suite.mockUserService.On("IdentifyUser", map[string]interface{}{
+		"username": "newuser",
+		"email":    "new@example.com",
+	}).Return(nil, &user.ErrorUserNotFound)
+
+	createdUser := &user.User{
+		ID:               testNewUserID,
+		OrganizationUnit: testOUID,
+		Type:             testUserType,
+		Attributes:       attrsJSON,
+	}
+
+	suite.mockUserService.On("CreateUser", mock.MatchedBy(func(u *user.User) bool {
+		return u.OrganizationUnit == testOUID && u.Type == testUserType
+	})).Return(createdUser, nil)
+
+	// Mock group assignment - GetGroup returns existing group
+	existingGroup := &group.Group{
+		ID:                 "test-group-id",
+		Name:               "Default Users",
+		Description:        "Default group for provisioned users",
+		OrganizationUnitID: testOUID,
+		Members:            []group.Member{},
+	}
+	suite.mockGroupService.On("GetGroup", "test-group-id").Return(existingGroup, nil)
+
+	// Mock UpdateGroup - should be called with user added to members
+	suite.mockGroupService.On("UpdateGroup", "test-group-id",
+		mock.MatchedBy(func(req group.UpdateGroupRequest) bool {
+			return len(req.Members) == 1 &&
+				req.Members[0].ID == testNewUserID &&
+				req.Members[0].Type == group.MemberTypeUser
+		})).Return(existingGroup, nil)
+
+	// Mock role assignment
+	suite.mockRoleService.On("AddAssignments", "test-role-id",
+		mock.MatchedBy(func(assignments []role.RoleAssignment) bool {
+			return len(assignments) == 1 &&
+				assignments[0].ID == testNewUserID &&
+				assignments[0].Type == role.AssigneeTypeUser
+		})).Return(nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), common.ExecComplete, resp.Status)
+	assert.Equal(suite.T(), testNewUserID, resp.AuthenticatedUser.UserID)
+
+	// Verify all mocks were called
+	suite.mockUserService.AssertExpectations(suite.T())
+	suite.mockGroupService.AssertExpectations(suite.T())
+	suite.mockRoleService.AssertExpectations(suite.T())
 }
