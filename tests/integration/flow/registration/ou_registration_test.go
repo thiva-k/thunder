@@ -138,30 +138,62 @@ var (
 				"executor": map[string]interface{}{
 					"name": "UserTypeResolver",
 				},
-				"onSuccess": "sms_auth",
+				"onSuccess": "prompt_mobile",
 			},
 			{
-				"id":   "sms_auth",
-				"type": "TASK_EXECUTION",
+				"id":   "prompt_mobile",
+				"type": "PROMPT",
 				"inputs": []map[string]interface{}{
 					{
-						"ref":        "input_000",
+						"ref":        "input_001",
 						"identifier": "mobileNumber",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_000_otp",
-						"identifier": "otp",
-						"type":       "string",
+						"type":       "TEXT_INPUT",
 						"required":   true,
 					},
 				},
+				"actions": []map[string]interface{}{
+					{
+						"ref":      "action_001",
+						"nextNode": "send_sms",
+					},
+				},
+			},
+			{
+				"id":   "send_sms",
+				"type": "TASK_EXECUTION",
 				"properties": map[string]interface{}{
 					"senderId": "placeholder-sender-id",
 				},
 				"executor": map[string]interface{}{
 					"name": "SMSOTPAuthExecutor",
+					"mode": "send",
+				},
+				"onSuccess": "prompt_otp",
+			},
+			{
+				"id":   "prompt_otp",
+				"type": "PROMPT",
+				"inputs": []map[string]interface{}{
+					{
+						"ref":        "input_002",
+						"identifier": "otp",
+						"type":       "TEXT_INPUT",
+						"required":   true,
+					},
+				},
+				"actions": []map[string]interface{}{
+					{
+						"ref":      "action_002",
+						"nextNode": "verify_sms",
+					},
+				},
+			},
+			{
+				"id":   "verify_sms",
+				"type": "TASK_EXECUTION",
+				"executor": map[string]interface{}{
+					"name": "SMSOTPAuthExecutor",
+					"mode": "verify",
 				},
 				"onSuccess": "ou_creation",
 			},
@@ -170,21 +202,21 @@ var (
 				"type": "TASK_EXECUTION",
 				"inputs": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "ouName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "ouHandle",
-						"type":       "string",
-						"required":   true,
-					},
-					{
 						"ref":        "input_003",
+						"identifier": "ouName",
+						"type":       "TEXT_INPUT",
+						"required":   true,
+					},
+					{
+						"ref":        "input_004",
+						"identifier": "ouHandle",
+						"type":       "TEXT_INPUT",
+						"required":   true,
+					},
+					{
+						"ref":        "input_005",
 						"identifier": "ouDescription",
-						"type":       "string",
+						"type":       "TEXT_INPUT",
 						"required":   false,
 					},
 				},
@@ -198,27 +230,27 @@ var (
 				"type": "TASK_EXECUTION",
 				"inputs": []map[string]interface{}{
 					{
-						"ref":        "input_004",
-						"identifier": "mobileNumber",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_005",
-						"identifier": "firstName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
 						"ref":        "input_006",
-						"identifier": "lastName",
-						"type":       "string",
+						"identifier": "mobileNumber",
+						"type":       "TEXT_INPUT",
 						"required":   true,
 					},
 					{
 						"ref":        "input_007",
+						"identifier": "firstName",
+						"type":       "TEXT_INPUT",
+						"required":   true,
+					},
+					{
+						"ref":        "input_008",
+						"identifier": "lastName",
+						"type":       "TEXT_INPUT",
+						"required":   true,
+					},
+					{
+						"ref":        "input_009",
 						"identifier": "email",
-						"type":       "string",
+						"type":       "TEXT_INPUT",
 						"required":   true,
 					},
 				},
@@ -387,7 +419,7 @@ func (ts *OURegistrationFlowTestSuite) SetupSuite() {
 
 	// Update SMS flow definition with created sender ID
 	smsNodes := smsRegistrationFlowWithOU.Nodes.([]map[string]interface{})
-	smsNodes[2]["properties"].(map[string]interface{})["senderId"] = senderID
+	smsNodes[3]["properties"].(map[string]interface{})["senderId"] = senderID
 	smsRegistrationFlowWithOU.Nodes = smsNodes
 
 	// Create SMS registration flow with OU
@@ -640,28 +672,54 @@ func (ts *OURegistrationFlowTestSuite) TestSMSRegistrationFlowWithOUCreation() {
 			ts.mockServer.ClearMessages()
 
 			mobileNumber := generateUniqueMobileNumber()
+
+			// Step 1: Initiate flow
+			flowStep, err := common.InitiateRegistrationFlow(ts.smsFlowTestAppID, false, nil, "")
+			ts.Require().NoError(err)
+			ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus)
+
+			// Step 2: Submit mobile number with action to trigger SMS send
 			inputs := map[string]string{
 				"mobileNumber": mobileNumber,
 			}
 
-			flowStep, err := common.InitiateRegistrationFlow(ts.smsFlowTestAppID, false, inputs, "")
+			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "action_001")
 			ts.Require().NoError(err)
 			ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus)
 
+			// Wait for OTP to be sent
 			time.Sleep(500 * time.Millisecond)
 
 			lastMessage := ts.mockServer.GetLastMessage()
 			ts.Require().NotNil(lastMessage)
 			ts.Require().NotEmpty(lastMessage.OTP)
 
+			// Step 3: Submit OTP with action
 			inputs = map[string]string{
-				"otp":           lastMessage.OTP,
+				"otp": lastMessage.OTP,
+			}
+
+			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "action_002")
+			ts.Require().NoError(err)
+			ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus)
+
+			// Step 4: Submit OU details
+			inputs = map[string]string{
 				"ouName":        tc.ouName,
 				"ouHandle":      tc.ouHandle,
 				"ouDescription": tc.ouDescription,
-				"firstName":     "Test",
-				"lastName":      "User",
-				"email":         mobileNumber + "@example.com",
+			}
+
+			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "")
+			ts.Require().NoError(err)
+			ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus)
+
+			// Step 5: Submit user details
+			inputs = map[string]string{
+				"mobileNumber": mobileNumber,
+				"firstName":    "Test",
+				"lastName":     "User",
+				"email":        mobileNumber + "@example.com",
 			}
 
 			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "")
@@ -743,31 +801,44 @@ func (ts *OURegistrationFlowTestSuite) TestSMSRegistrationFlowWithOUCreationDupl
 			ts.mockServer.ClearMessages()
 
 			mobileNumber := generateUniqueMobileNumber()
+
+			// Step 1: Initiate flow
+			flowStep, err := common.InitiateRegistrationFlow(ts.smsFlowTestAppID, false, nil, "")
+			ts.Require().NoError(err)
+
+			// Step 2: Submit mobile number with action to trigger SMS send
 			inputs := map[string]string{
 				"mobileNumber": mobileNumber,
 			}
-
-			flowStep, err := common.InitiateRegistrationFlow(ts.smsFlowTestAppID, false, inputs, "")
-			ts.Require().NoError(err)
-
+			// Wait for OTP to be sent
 			time.Sleep(500 * time.Millisecond)
+
+			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "action_001")
+			ts.Require().NoError(err)
+			ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus)
 
 			lastMessage := ts.mockServer.GetLastMessage()
 			ts.Require().NotNil(lastMessage)
 
+			// Step 3: Submit OTP with action
+			inputs = map[string]string{
+				"otp": lastMessage.OTP,
+			}
+
+			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "action_002")
+			ts.Require().NoError(err)
+			ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus)
+
+			// Step 4: Submit OU details (should fail with duplicate error)
 			newHandle := tc.newOUHandle
 			if newHandle == "" {
 				newHandle = tc.existingOUHandle
 			}
 
 			inputs = map[string]string{
-				"otp":           lastMessage.OTP,
 				"ouName":        tc.newOUName,
 				"ouHandle":      newHandle,
 				"ouDescription": "Should fail due to duplicate",
-				"firstName":     "Test",
-				"lastName":      "User",
-				"email":         mobileNumber + "@example.com",
 			}
 
 			flowStep, err = common.CompleteFlow(flowStep.FlowID, inputs, "")

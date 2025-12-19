@@ -426,6 +426,12 @@ func (f *fakeExecutorBackedNode) GetOnFailure() string {
 
 func (f *fakeExecutorBackedNode) SetOnFailure(nodeID string) {}
 
+func (f *fakeExecutorBackedNode) GetMode() string {
+	return ""
+}
+
+func (f *fakeExecutorBackedNode) SetMode(mode string) {}
+
 func (s *FlowFactoryTestSuite) TestCloneNodeMismatchExecutorBacked() {
 	// source claims to be executor-backed but GetType returns Prompt which
 	// CreateNode maps to a non-executor-backed node. This should trigger the

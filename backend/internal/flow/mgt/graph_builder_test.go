@@ -967,3 +967,180 @@ func (s *GraphBuilderTestSuite) TestValidateExecutorName_Success() {
 
 	s.Nil(err)
 }
+
+func (s *GraphBuilderTestSuite) TestBuildGraph_WithExecutorMode() {
+	flow := &CompleteFlowDefinition{
+		ID:       "flow-1",
+		Handle:   "test-handle",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "task"},
+			{
+				ID:       "task",
+				Type:     "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{Name: "SMSOTPAuthExecutor", Mode: "send"},
+			},
+		},
+	}
+
+	mockGraph := coremock.NewGraphInterfaceMock(s.T())
+	mockStartNode := coremock.NewNodeInterfaceMock(s.T())
+	mockTaskNode := coremock.NewExecutorBackedNodeInterfaceMock(s.T())
+
+	s.mockFlowFactory.EXPECT().CreateGraph(
+		"flow-1", common.FlowTypeAuthentication).Return(
+		mockGraph)
+	s.mockFlowFactory.EXPECT().CreateNode(
+		"start", "START", map[string]interface{}(nil), false, false).Return(
+		mockStartNode, nil)
+	s.mockFlowFactory.EXPECT().CreateNode(
+		"task", "TASK_EXECUTION", map[string]interface{}(nil), false, true).Return(
+		mockTaskNode, nil)
+
+	mockStartNode.EXPECT().SetInputs([]common.Input{})
+	mockTaskNode.EXPECT().SetInputs([]common.Input{})
+
+	s.mockExecutorRegistry.EXPECT().IsRegistered("SMSOTPAuthExecutor").Return(true)
+	mockTaskNode.EXPECT().SetExecutorName("SMSOTPAuthExecutor")
+	mockTaskNode.EXPECT().SetMode("send") // Verify mode is set
+
+	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
+	mockGraph.EXPECT().AddNode(mockTaskNode).Return(nil)
+	mockGraph.EXPECT().AddEdge("start", "task").Return(nil)
+	mockGraph.EXPECT().GetNodes().Return(
+		map[string]core.NodeInterface{"start": mockStartNode, "task": mockTaskNode})
+	mockStartNode.EXPECT().GetType().Return(common.NodeTypeStart)
+	mockTaskNode.EXPECT().GetType().Return(common.NodeTypeTaskExecution).Maybe()
+	mockStartNode.EXPECT().GetID().Return("start")
+	mockGraph.EXPECT().SetStartNode("start").Return(nil)
+
+	graph, err := s.builder.buildGraph(flow)
+
+	s.NotNil(graph)
+	s.Nil(err)
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_NilExecutor() {
+	nodeDef := &NodeDefinition{
+		ID:       "task",
+		Type:     "TASK_EXECUTION",
+		Executor: nil, // Nil executor
+	}
+
+	mockTaskNode := coremock.NewExecutorBackedNodeInterfaceMock(s.T())
+
+	err := s.builder.configureNodeExecutor(nodeDef, mockTaskNode)
+
+	s.Nil(err)
+	// No mock expectations should be called
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_EmptyExecutorName() {
+	nodeDef := &NodeDefinition{
+		ID:   "task",
+		Type: "TASK_EXECUTION",
+		Executor: &ExecutorDefinition{
+			Name: "", // Empty executor name
+			Mode: "send",
+		},
+	}
+
+	mockTaskNode := coremock.NewExecutorBackedNodeInterfaceMock(s.T())
+
+	err := s.builder.configureNodeExecutor(nodeDef, mockTaskNode)
+
+	s.Nil(err)
+	// No mock expectations should be called since name is empty
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_NodeDoesNotSupportExecutors() {
+	nodeDef := &NodeDefinition{
+		ID:   "prompt",
+		Type: "PROMPT",
+		Executor: &ExecutorDefinition{
+			Name: "test-executor",
+		},
+	}
+
+	// Use a regular NodeInterface that doesn't support executors
+	mockPromptNode := coremock.NewNodeInterfaceMock(s.T())
+
+	s.mockExecutorRegistry.EXPECT().IsRegistered("test-executor").Return(true)
+
+	err := s.builder.configureNodeExecutor(nodeDef, mockPromptNode)
+
+	s.NotNil(err)
+	s.Contains(err.Error(), "does not support executors")
+	s.Contains(err.Error(), "prompt")
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_ExecutorNameValidationFails() {
+	nodeDef := &NodeDefinition{
+		ID:   "task",
+		Type: "TASK_EXECUTION",
+		Executor: &ExecutorDefinition{
+			Name: "unregistered-executor",
+		},
+	}
+
+	mockTaskNode := coremock.NewExecutorBackedNodeInterfaceMock(s.T())
+
+	s.mockExecutorRegistry.EXPECT().IsRegistered("unregistered-executor").Return(false)
+
+	err := s.builder.configureNodeExecutor(nodeDef, mockTaskNode)
+
+	s.NotNil(err)
+	s.Contains(err.Error(), "error while validating executor")
+	s.Contains(err.Error(), "executor with name unregistered-executor not registered")
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_WithModeSuccess() {
+	nodeDef := &NodeDefinition{
+		ID:   "task",
+		Type: "TASK_EXECUTION",
+		Executor: &ExecutorDefinition{
+			Name: "test-executor",
+			Mode: "verify",
+		},
+	}
+
+	mockTaskNode := coremock.NewExecutorBackedNodeInterfaceMock(s.T())
+
+	s.mockExecutorRegistry.EXPECT().IsRegistered("test-executor").Return(true)
+	mockTaskNode.EXPECT().SetExecutorName("test-executor")
+	mockTaskNode.EXPECT().SetMode("verify")
+
+	err := s.builder.configureNodeExecutor(nodeDef, mockTaskNode)
+
+	s.Nil(err)
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_WithoutModeSuccess() {
+	nodeDef := &NodeDefinition{
+		ID:   "task",
+		Type: "TASK_EXECUTION",
+		Executor: &ExecutorDefinition{
+			Name: "test-executor",
+			Mode: "", // Empty mode - should not call SetMode
+		},
+	}
+
+	mockTaskNode := coremock.NewExecutorBackedNodeInterfaceMock(s.T())
+
+	s.mockExecutorRegistry.EXPECT().IsRegistered("test-executor").Return(true)
+	mockTaskNode.EXPECT().SetExecutorName("test-executor")
+	// SetMode should NOT be called when mode is empty
+
+	err := s.builder.configureNodeExecutor(nodeDef, mockTaskNode)
+
+	s.Nil(err)
+}
+
+func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_EmptyExecutorNameInValidation() {
+	// This tests the validateExecutorName method with empty name
+	err := s.builder.validateExecutorName("")
+
+	s.NotNil(err)
+	s.Contains(err.Error(), "executor name cannot be empty")
+}

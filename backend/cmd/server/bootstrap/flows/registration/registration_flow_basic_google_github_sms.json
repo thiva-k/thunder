@@ -44,7 +44,7 @@
             "executor": {
                 "name": "BasicAuthExecutor"
             },
-            "onSuccess": "sms_otp_auth_basic"
+            "onSuccess": "send_sms_for_basic"
         },
         {
             "id": "google_auth",
@@ -82,29 +82,85 @@
             "actions": [
                 {
                     "ref": "action_001",
-                    "nextNode": "sms_otp_auth"
+                    "nextNode": "send_sms"
                 }
             ]
         },
         {
-            "id": "sms_otp_auth",
+            "id": "send_sms",
             "type": "TASK_EXECUTION",
             "properties": {
                 "senderId": "<your-sender-id>"
             },
             "executor": {
-                "name": "SMSOTPAuthExecutor"
+                "name": "SMSOTPAuthExecutor",
+                "mode": "send"
+            },
+            "onSuccess": "prompt_otp"
+        },
+        {
+            "id": "prompt_otp",
+            "type": "PROMPT",
+            "inputs": [
+                {
+                    "ref": "input_002",
+                    "identifier": "otp",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                }
+            ],
+            "actions": [
+                {
+                    "ref": "action_001",
+                    "nextNode": "verify_sms"
+                }
+            ]
+        },
+        {
+            "id": "verify_sms",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "SMSOTPAuthExecutor",
+                "mode": "verify"
             },
             "onSuccess": "provisioning_local_sms"
         },
         {
-            "id": "sms_otp_auth_basic",
+            "id": "send_sms_for_basic",
             "type": "TASK_EXECUTION",
             "properties": {
                 "senderId": "<your-sender-id>"
             },
             "executor": {
-                "name": "SMSOTPAuthExecutor"
+                "name": "SMSOTPAuthExecutor",
+                "mode": "send"
+            },
+            "onSuccess": "prompt_otp_for_basic"
+        },
+        {
+            "id": "prompt_otp_for_basic",
+            "type": "PROMPT",
+            "inputs": [
+                {
+                    "ref": "input_003",
+                    "identifier": "otp",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                }
+            ],
+            "actions": [
+                {
+                    "ref": "action_001",
+                    "nextNode": "verify_sms_for_basic"
+                }
+            ]
+        },
+        {
+            "id": "verify_sms_for_basic",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "SMSOTPAuthExecutor",
+                "mode": "verify"
             },
             "onSuccess": "provisioning_local_basic"
         },

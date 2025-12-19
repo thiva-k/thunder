@@ -291,6 +291,11 @@ func (b *graphBuilder) configureNodeExecutor(nodeDef *NodeDefinition, node core.
 			return fmt.Errorf("node %s of type %s does not support executors", nodeDef.ID, nodeDef.Type)
 		}
 		executableNode.SetExecutorName(executorName)
+
+		// Set executor mode if specified
+		if nodeDef.Executor.Mode != "" {
+			executableNode.SetMode(nodeDef.Executor.Mode)
+		}
 	}
 
 	return nil

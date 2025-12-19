@@ -68,6 +68,8 @@ type ExecutorBackedNodeInterface interface {
 	SetOnSuccess(nodeID string)
 	GetOnFailure() string
 	SetOnFailure(nodeID string)
+	GetMode() string
+	SetMode(mode string)
 }
 
 // PromptNodeInterface extends NodeInterface for nodes that require user interaction.

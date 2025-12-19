@@ -31,6 +31,7 @@ type taskExecutionNode struct {
 	*node
 	executorName string
 	executor     ExecutorInterface
+	mode         string
 	onSuccess    string
 	onFailure    string
 }
@@ -75,6 +76,9 @@ func (n *taskExecutionNode) Execute(ctx *NodeContext) (*common.NodeResponse, *se
 	} else {
 		ctx.NodeProperties = make(map[string]interface{})
 	}
+
+	// Set executor mode in context
+	ctx.ExecutorMode = n.mode
 
 	execResp, svcErr := n.triggerExecutor(ctx, logger)
 	if svcErr != nil {
@@ -208,4 +212,14 @@ func (n *taskExecutionNode) GetOnFailure() string {
 // SetOnFailure sets the onFailure node ID
 func (n *taskExecutionNode) SetOnFailure(nodeID string) {
 	n.onFailure = nodeID
+}
+
+// GetMode returns the mode for the executor that supports multi-step execution
+func (n *taskExecutionNode) GetMode() string {
+	return n.mode
+}
+
+// SetMode sets the mode for the executor that supports multi-step execution
+func (n *taskExecutionNode) SetMode(mode string) {
+	n.mode = mode
 }

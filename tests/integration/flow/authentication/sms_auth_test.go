@@ -57,18 +57,49 @@ var (
 				"actions": []map[string]interface{}{
 					{
 						"ref":      "action_001",
-						"nextNode": "sms_otp_auth",
+						"nextNode": "sms_otp_send",
 					},
 				},
 			},
 			{
-				"id":   "sms_otp_auth",
+				"id":   "sms_otp_send",
 				"type": "TASK_EXECUTION",
 				"properties": map[string]interface{}{
 					"senderId": "placeholder-sender-id",
 				},
 				"executor": map[string]interface{}{
 					"name": "SMSOTPAuthExecutor",
+					"mode": "send",
+				},
+				"onSuccess": "prompt_otp",
+			},
+			{
+				"id":   "prompt_otp",
+				"type": "PROMPT",
+				"inputs": []map[string]interface{}{
+					{
+						"ref":        "input_002",
+						"identifier": "otp",
+						"type":       "string",
+						"required":   true,
+					},
+				},
+				"actions": []map[string]interface{}{
+					{
+						"ref":      "action_002",
+						"nextNode": "sms_otp_verify",
+					},
+				},
+			},
+			{
+				"id":   "sms_otp_verify",
+				"type": "TASK_EXECUTION",
+				"properties": map[string]interface{}{
+					"senderId": "placeholder-sender-id",
+				},
+				"executor": map[string]interface{}{
+					"name": "SMSOTPAuthExecutor",
+					"mode": "verify",
 				},
 				"onSuccess": "auth_assert",
 			},
@@ -111,18 +142,49 @@ var (
 				"actions": []map[string]interface{}{
 					{
 						"ref":      "action_001",
-						"nextNode": "sms_otp_auth",
+						"nextNode": "sms_otp_send",
 					},
 				},
 			},
 			{
-				"id":   "sms_otp_auth",
+				"id":   "sms_otp_send",
 				"type": "TASK_EXECUTION",
 				"properties": map[string]interface{}{
 					"senderId": "placeholder-sender-id",
 				},
 				"executor": map[string]interface{}{
 					"name": "SMSOTPAuthExecutor",
+					"mode": "send",
+				},
+				"onSuccess": "prompt_otp",
+			},
+			{
+				"id":   "prompt_otp",
+				"type": "PROMPT",
+				"inputs": []map[string]interface{}{
+					{
+						"ref":        "input_002",
+						"identifier": "otp",
+						"type":       "string",
+						"required":   true,
+					},
+				},
+				"actions": []map[string]interface{}{
+					{
+						"ref":      "action_002",
+						"nextNode": "sms_otp_verify",
+					},
+				},
+			},
+			{
+				"id":   "sms_otp_verify",
+				"type": "TASK_EXECUTION",
+				"properties": map[string]interface{}{
+					"senderId": "placeholder-sender-id",
+				},
+				"executor": map[string]interface{}{
+					"name": "SMSOTPAuthExecutor",
+					"mode": "verify",
 				},
 				"onSuccess": "auth_assert",
 			},
@@ -281,13 +343,15 @@ func (ts *SMSAuthFlowTestSuite) SetupSuite() {
 	ts.config.CreatedSenderIDs = append(ts.config.CreatedSenderIDs, senderID)
 
 	// Update flow definitions with created sender ID
-	nodesMobile := smsAuthFlowWithMobile.Nodes.([]map[string]interface{})
-	nodesMobile[2]["properties"].(map[string]interface{})["senderId"] = senderID
-	smsAuthFlowWithMobile.Nodes = nodesMobile
+	nodesSendSMS := smsAuthFlowWithMobile.Nodes.([]map[string]interface{})
+	nodesSendSMS[2]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_send node
+	nodesSendSMS[4]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_verify node
+	smsAuthFlowWithMobile.Nodes = nodesSendSMS
 
-	nodesUsername := smsAuthFlowWithUsername.Nodes.([]map[string]interface{})
-	nodesUsername[2]["properties"].(map[string]interface{})["senderId"] = senderID
-	smsAuthFlowWithUsername.Nodes = nodesUsername
+	nodesUNSendSMS := smsAuthFlowWithUsername.Nodes.([]map[string]interface{})
+	nodesUNSendSMS[2]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_send node
+	nodesUNSendSMS[4]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_verify node
+	smsAuthFlowWithUsername.Nodes = nodesUNSendSMS
 
 	// Create flows
 	flowMobileID, err := testutils.CreateFlow(smsAuthFlowWithMobile)
@@ -416,7 +480,7 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithMobileNumber() {
 		"otp": lastMessage.OTP,
 	}
 
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_002")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete authentication flow with OTP: %v", err)
 	}
@@ -517,7 +581,7 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowWithUsername() {
 		"otp": lastMessage.OTP,
 	}
 
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_002")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete authentication flow with OTP: %v", err)
 	}
@@ -575,7 +639,7 @@ func (ts *SMSAuthFlowTestSuite) TestSMSAuthFlowInvalidOTP() {
 		"otp": "000000", // Invalid OTP
 	}
 
-	completeFlowStep, err := common.CompleteFlow(otpFlowStep.FlowID, invalidOTPInputs, "")
+	completeFlowStep, err := common.CompleteFlow(otpFlowStep.FlowID, invalidOTPInputs, "action_002")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete authentication flow with invalid OTP: %v", err)
 	}

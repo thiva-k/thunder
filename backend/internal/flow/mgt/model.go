@@ -148,6 +148,7 @@ type ActionDefinition struct {
 // ExecutorDefinition represents the executor configuration for a node.
 type ExecutorDefinition struct {
 	Name string `json:"name" yaml:"name"`
+	Mode string `json:"mode,omitempty" yaml:"mode,omitempty"` // Execution mode for multi-step executors
 }
 
 // ConditionDefinition represents a condition for node execution.
