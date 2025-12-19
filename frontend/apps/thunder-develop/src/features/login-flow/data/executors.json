@@ -1,0 +1,299 @@
+[
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Identifier + Password",
+      "image": "assets/images/icons/password.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "BasicAuthExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Send SMS OTP",
+      "image": "assets/images/icons/mobile-message.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "SendSMSExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Verify SMS OTP",
+      "image": "assets/images/icons/mobile-message.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "VerifySMSOTPExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "OAuth",
+      "image": "assets/images/icons/link.svg",
+      "showOnResourcePanel": false
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "OAuthExecutor",
+          "meta": {
+            "idpName": "{{IDP_NAME}}"
+          }
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "OIDC Auth",
+      "image": "assets/images/icons/link.svg",
+      "showOnResourcePanel": false
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "OIDCAuthExecutor",
+          "meta": {
+            "idpName": "{{IDP_NAME}}"
+          }
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "GitHub",
+      "image": "assets/images/icons/github.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "GithubOAuthExecutor",
+          "meta": {
+            "idpName": "{{IDP_NAME}}"
+          }
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Google",
+      "image": "assets/images/icons/google-generic.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "GoogleOIDCAuthExecutor",
+          "meta": {
+            "idpName": "{{IDP_NAME}}"
+          }
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Identifying",
+      "image": "assets/images/icons/magnifying-glass.svg",
+      "showOnResourcePanel": false
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "IdentifyingExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Auth Assert",
+      "image": "assets/images/icons/check-mark-inside-a-black-box.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "AuthAssertExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Provisioning",
+      "image": "assets/images/icons/user.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "ProvisioningExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Attribute Collector",
+      "image": "assets/images/icons/form.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "AttributeCollector"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "Authorization",
+      "image": "assets/images/icons/stamp.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "AuthorizationExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "OU Creation",
+      "image": "assets/images/icons/form.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "OUExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "HTTP Request",
+      "image": "assets/images/icons/link.svg",
+      "showOnResourcePanel": false
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "HTTPRequestExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "EXECUTION",
+    "display": {
+      "label": "User Type Resolver",
+      "image": "assets/images/icons/user.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "UserTypeResolver"
+        },
+        "next": ""
+      }
+    }
+  }
+]
