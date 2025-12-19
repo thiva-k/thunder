@@ -22,18 +22,46 @@
             "actions": [
                 {
                     "ref": "action_001",
-                    "nextNode": "sms_otp_auth"
+                    "nextNode": "send_sms"
                 }
             ]
         },
         {
-            "id": "sms_otp_auth",
+            "id": "send_sms",
             "type": "TASK_EXECUTION",
             "properties": {
                 "senderId": "<your-sender-id>"
             },
             "executor": {
-                "name": "SMSOTPAuthExecutor"
+                "name": "SMSOTPAuthExecutor",
+                "mode": "send"
+            },
+            "onSuccess": "prompt_otp"
+        },
+        {
+            "id": "prompt_otp",
+            "type": "PROMPT",
+            "inputs": [
+                {
+                    "ref": "input_002",
+                    "identifier": "otp",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                }
+            ],
+            "actions": [
+                {
+                    "ref": "action_001",
+                    "nextNode": "verify_sms"
+                }
+            ]
+        },
+        {
+            "id": "verify_sms",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "SMSOTPAuthExecutor",
+                "mode": "verify"
             },
             "onSuccess": "auth_assert"
         },

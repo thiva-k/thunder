@@ -39,6 +39,8 @@ const (
 	smsAuthLoggerComponentName = "SMSOTPAuthExecutor"
 	userInputOTP               = "otp"
 	errorInvalidOTP            = "invalid OTP provided"
+	smsOTPExecutorModeSend     = "send"
+	smsOTPExecutorModeVerify   = "verify"
 )
 
 // smsOTPAuthExecutor implements the ExecutorInterface for SMS OTP authentication.
@@ -123,19 +125,49 @@ func (s *smsOTPAuthExecutor) Execute(ctx *core.NodeContext) (*common.ExecutorRes
 		return execResp, nil
 	}
 
-	if !s.HasRequiredInputs(ctx, execResp) {
-		err := s.InitiateOTP(ctx, execResp)
-		if err != nil {
-			return execResp, err
-		}
-	} else {
-		err := s.ProcessAuthFlowResponse(ctx, execResp)
-		if err != nil {
-			return execResp, err
-		}
+	// Determine the executor mode
+	switch ctx.ExecutorMode {
+	case smsOTPExecutorModeSend:
+		return s.executeSend(ctx, execResp)
+	case smsOTPExecutorModeVerify:
+		return s.executeVerify(ctx, execResp)
+	default:
+		return execResp, fmt.Errorf("invalid executor mode: %s", ctx.ExecutorMode)
+	}
+}
+
+// executeSend executes the OTP sending step.
+func (s *smsOTPAuthExecutor) executeSend(ctx *core.NodeContext,
+	execResp *common.ExecutorResponse) (*common.ExecutorResponse, error) {
+	logger := s.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
+	err := s.InitiateOTP(ctx, execResp)
+	if err != nil {
+		return execResp, err
 	}
 
-	logger.Debug("SMS OTP authentication executor execution completed",
+	logger.Debug("SMS OTP send completed", log.String("status", string(execResp.Status)))
+
+	return execResp, nil
+}
+
+// executeVerify executes the OTP verification step.
+func (s *smsOTPAuthExecutor) executeVerify(ctx *core.NodeContext,
+	execResp *common.ExecutorResponse) (*common.ExecutorResponse, error) {
+	logger := s.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
+
+	if !s.HasRequiredInputs(ctx, execResp) {
+		logger.Debug("Required inputs for SMS OTP verification are not provided")
+		execResp.Status = common.ExecUserInputRequired
+		return execResp, nil
+	}
+
+	err := s.ProcessAuthFlowResponse(ctx, execResp)
+	if err != nil {
+		return execResp, err
+	}
+
+	logger.Debug("SMS OTP verify completed",
 		log.String("status", string(execResp.Status)),
 		log.Bool("isAuthenticated", execResp.AuthenticatedUser.IsAuthenticated))
 
@@ -194,7 +226,7 @@ func (s *smsOTPAuthExecutor) InitiateOTP(ctx *core.NodeContext,
 		if execResp.Status == common.ExecFailure {
 			return nil
 		}
-		ctx.RuntimeData[userAttributeUserID] = *userID
+		execResp.RuntimeData[userAttributeUserID] = *userID
 	}
 
 	// Send the OTP to the user's mobile number.
@@ -207,12 +239,12 @@ func (s *smsOTPAuthExecutor) InitiateOTP(ctx *core.NodeContext,
 	}
 
 	logger.Debug("SMS OTP sent successfully")
-	execResp.Status = common.ExecUserInputRequired
+	execResp.Status = common.ExecComplete
 
 	if s.observabilitySvc.IsEnabled() {
 		evt := event.NewEvent(
 			ctx.FlowID,
-			string(event.EventTypeFlowUserInputRequired),
+			string(event.EventTypeFlowNodeExecutionCompleted),
 			event.ComponentFlowEngine,
 		).
 			WithStatus(event.StatusPending).
@@ -266,24 +298,16 @@ func (s *smsOTPAuthExecutor) ValidatePrerequisites(ctx *core.NodeContext,
 	}
 
 	logger := s.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
-	logger.Debug("Trying to satisfy prerequisites for SMS OTP authentication executor")
 
-	// If the flow type is registration, skip the prerequisite validation.
 	if ctx.FlowType == common.FlowTypeRegistration {
-		logger.Debug("Mobile number not provided in registration flow, prompting user for input")
-		execResp.Status = common.ExecUserInputRequired
-		execResp.Inputs = []common.Input{
-			{
-				Identifier: userAttributeMobileNumber,
-				Type:       "string",
-				Required:   true,
-			},
-		}
+		logger.Debug("Enforcing prerequisite satisfaction for registration flow")
 		return false
 	}
 
+	logger.Debug("Trying to satisfy prerequisites for SMS OTP authentication executor")
+
 	s.satisfyPrerequisites(ctx, execResp)
-	if execResp.Status == common.ExecFailure || execResp.Status == common.ExecUserInputRequired {
+	if execResp.Status == common.ExecFailure {
 		return false
 	}
 
@@ -338,7 +362,7 @@ func (s *smsOTPAuthExecutor) satisfyPrerequisites(ctx *core.NodeContext,
 		execResp.FailureReason = "Failed to retrieve mobile number"
 		return
 	}
-	if execResp.Status == common.ExecFailure || execResp.Status == common.ExecUserInputRequired {
+	if execResp.Status == common.ExecFailure {
 		return
 	}
 
@@ -462,19 +486,12 @@ func (s *smsOTPAuthExecutor) getUserMobileNumber(userID string, ctx *core.NodeCo
 			return "", nil
 		}
 
-		// If the user is authenticated, try to retrieve the mobile number from context or prompt for user input.
+		// If the user is authenticated, try to retrieve the mobile number from context.
 		mobileNumber, err = s.getUserMobileFromContext(ctx)
 		if err != nil {
-			logger.Debug("Mobile number not found in user attributes or context. Prompting user for input")
-			execResp.Status = common.ExecUserInputRequired
-			// Here mobile number is treated as a special attribute. Hence rest of the data will be overridden.
-			execResp.Inputs = []common.Input{
-				{
-					Identifier: userAttributeMobileNumber,
-					Type:       "string",
-					Required:   true,
-				},
-			}
+			logger.Debug("Mobile number not found in user attributes or context")
+			execResp.Status = common.ExecFailure
+			execResp.FailureReason = "Mobile number not found in user attributes or context"
 			return "", nil
 		}
 	}

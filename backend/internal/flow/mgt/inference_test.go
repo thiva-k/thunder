@@ -90,6 +90,122 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_Success() {
 	s.Equal(userTypeResolverNodeID, startNode.OnSuccess)
 }
 
+func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithAuthAssert() {
+	authFlow := &FlowDefinition{
+		Handle:   "sms-auth-handle",
+		Name:     "SMS Authentication",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "prompt"},
+			{ID: "prompt", Type: "PROMPT", OnSuccess: "auth"},
+			{
+				ID:   "auth",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameSMSAuth,
+				},
+				OnSuccess: "auth_assert",
+			},
+			{
+				ID:   "auth_assert",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameAuthAssert,
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	regFlow, err := s.service.InferRegistrationFlow(authFlow)
+
+	s.NoError(err)
+	s.NotNil(regFlow)
+	s.Equal("SMS Registration", regFlow.Name)
+	s.Equal(common.FlowTypeRegistration, regFlow.FlowType)
+
+	// Verify provisioning node was inserted BEFORE AuthAssertExecutor
+	s.True(s.hasNode(regFlow.Nodes, provisioningNodeID))
+	provNode := s.getNode(regFlow.Nodes, provisioningNodeID)
+	s.Equal(executor.ExecutorNameProvisioning, provNode.Executor.Name)
+	s.Equal("auth_assert", provNode.OnSuccess, "Provisioning should point to AuthAssert")
+
+	// Verify auth node now points to provisioning instead of auth_assert
+	authNode := s.getNode(regFlow.Nodes, "auth")
+	s.Equal(provisioningNodeID, authNode.OnSuccess, "Auth node should point to provisioning")
+
+	// Verify auth_assert still points to end
+	authAssertNode := s.getNode(regFlow.Nodes, "auth_assert")
+	s.Equal("end", authAssertNode.OnSuccess)
+
+	// Verify user type resolver was inserted
+	s.True(s.hasNode(regFlow.Nodes, userTypeResolverNodeID))
+	resolverNode := s.getNode(regFlow.Nodes, userTypeResolverNodeID)
+	s.Equal(executor.ExecutorNameUserTypeResolver, resolverNode.Executor.Name)
+}
+
+func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithAuthAssertAndMultiplePaths() {
+	authFlow := &FlowDefinition{
+		Handle:   "multi-path-auth",
+		Name:     "Multi-Path Authentication",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "decision"},
+			{
+				ID:   "decision",
+				Type: "DECISION",
+				Actions: []ActionDefinition{
+					{Ref: "path1", NextNode: "auth1"},
+					{Ref: "path2", NextNode: "auth2"},
+				},
+			},
+			{
+				ID:   "auth1",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameBasicAuth,
+				},
+				OnSuccess: "auth_assert",
+			},
+			{
+				ID:   "auth2",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameSMSAuth,
+				},
+				OnSuccess: "auth_assert",
+			},
+			{
+				ID:   "auth_assert",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameAuthAssert,
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	regFlow, err := s.service.InferRegistrationFlow(authFlow)
+
+	s.NoError(err)
+	s.NotNil(regFlow)
+
+	// Verify provisioning node was inserted before AuthAssert
+	s.True(s.hasNode(regFlow.Nodes, provisioningNodeID))
+	provNode := s.getNode(regFlow.Nodes, provisioningNodeID)
+	s.Equal("auth_assert", provNode.OnSuccess)
+
+	// Verify both auth nodes now point to provisioning
+	auth1Node := s.getNode(regFlow.Nodes, "auth1")
+	s.Equal(provisioningNodeID, auth1Node.OnSuccess)
+
+	auth2Node := s.getNode(regFlow.Nodes, "auth2")
+	s.Equal(provisioningNodeID, auth2Node.OnSuccess)
+}
+
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithExistingProvisioning() {
 	authFlow := &FlowDefinition{
 		Handle:   "auth-flow-handle",
@@ -234,7 +350,7 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithActions() 
 	s.NoError(err)
 	promptNode := s.getNode(regFlow.Nodes, "prompt")
 	s.Len(promptNode.Actions, 2)
-	// Actions should now point to provisioning node instead of end
+	// Actions should now point to provisioning node instead of end (since no AuthAssert exists)
 	s.Equal(provisioningNodeID, promptNode.Actions[0].NextNode)
 	s.Equal(provisioningNodeID, promptNode.Actions[1].NextNode)
 }
@@ -260,9 +376,9 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithOnFailure(
 
 	s.NoError(err)
 	taskNode := s.getNode(regFlow.Nodes, "task")
-	// OnSuccess should point to provisioning
+	// OnSuccess should point to provisioning (since no AuthAssert exists)
 	s.Equal(provisioningNodeID, taskNode.OnSuccess)
-	// OnFailure should also point to provisioning (was pointing to end)
+	// OnFailure should also point to provisioning (was pointing to end, no AuthAssert exists)
 	s.Equal(provisioningNodeID, taskNode.OnFailure)
 }
 
@@ -749,9 +865,9 @@ func (s *FlowInferenceServiceTestSuite) TestCreateUserTypeResolverNode() {
 	s.Nil(nodeWithoutLayout.Layout)
 }
 
-// Test insertNodeBeforeEnd
+// Test insertNodeBefore
 
-func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithOnSuccess() {
+func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_WithOnSuccess() {
 	service := s.service.(*flowInferenceService)
 	nodes := []NodeDefinition{
 		{ID: "start", Type: "START", OnSuccess: "task"},
@@ -760,7 +876,7 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithOnSuccess() 
 	}
 	newNode := NodeDefinition{ID: "new", Type: "TASK_EXECUTION", OnSuccess: "end"}
 
-	err := service.insertNodeBeforeEnd(&nodes, newNode, "end")
+	err := service.insertNodeBefore(&nodes, newNode, "end")
 
 	s.NoError(err)
 	s.Len(nodes, 4)
@@ -768,7 +884,7 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithOnSuccess() 
 	s.Equal("end", nodes[3].OnSuccess) // new node points to end
 }
 
-func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithOnFailure() {
+func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_WithOnFailure() {
 	service := s.service.(*flowInferenceService)
 	nodes := []NodeDefinition{
 		{ID: "start", Type: "START", OnSuccess: "task"},
@@ -778,13 +894,13 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithOnFailure() 
 	}
 	newNode := NodeDefinition{ID: "new", Type: "TASK_EXECUTION", OnSuccess: "end"}
 
-	err := service.insertNodeBeforeEnd(&nodes, newNode, "end")
+	err := service.insertNodeBefore(&nodes, newNode, "end")
 
 	s.NoError(err)
 	s.Equal("new", nodes[1].OnFailure)
 }
 
-func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithActions() {
+func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_WithActions() {
 	service := s.service.(*flowInferenceService)
 	nodes := []NodeDefinition{
 		{ID: "start", Type: "START", OnSuccess: "prompt"},
@@ -801,14 +917,14 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_WithActions() {
 	}
 	newNode := NodeDefinition{ID: "new", Type: "TASK_EXECUTION", OnSuccess: "end"}
 
-	err := service.insertNodeBeforeEnd(&nodes, newNode, "end")
+	err := service.insertNodeBefore(&nodes, newNode, "end")
 
 	s.NoError(err)
 	s.Equal("new", nodes[1].Actions[0].NextNode)
 	s.Equal("task", nodes[1].Actions[1].NextNode) // unchanged
 }
 
-func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_NoNodesPointingToEnd() {
+func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_NoNodesPointingToTarget() {
 	service := s.service.(*flowInferenceService)
 	nodes := []NodeDefinition{
 		{ID: "start", Type: "START", OnSuccess: "task"},
@@ -817,10 +933,10 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBeforeEnd_NoNodesPointingT
 	}
 	newNode := NodeDefinition{ID: "new", Type: "TASK_EXECUTION", OnSuccess: "end"}
 
-	err := service.insertNodeBeforeEnd(&nodes, newNode, "end")
+	err := service.insertNodeBefore(&nodes, newNode, "end")
 
 	s.Error(err)
-	s.Contains(err.Error(), "no nodes pointing to END node found")
+	s.Contains(err.Error(), "no nodes pointing to target node")
 }
 
 // Test insertNodeAfterStart
@@ -867,6 +983,60 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeAfterStart_StartNodeNotFou
 
 	s.Error(err)
 	s.Contains(err.Error(), "START node not found")
+}
+
+func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_InsertProvisioningNodeError() {
+	authFlow := &FlowDefinition{
+		Handle:   "basic-auth",
+		Name:     "Basic Authentication",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "prompt"},
+			{ID: "prompt", Type: "PROMPT", OnSuccess: "auth"},
+			{
+				ID:   "auth",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameBasicAuth,
+				},
+				OnSuccess: "orphan", // Points to non-existent node
+			},
+			// Missing END node - will cause insertProvisioningNode to fail
+		},
+	}
+
+	regFlow, err := s.service.InferRegistrationFlow(authFlow)
+
+	s.Error(err)
+	s.Nil(regFlow)
+	s.Contains(err.Error(), "no END node found")
+}
+
+func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_InsertUserTypeResolverError() {
+	authFlow := &FlowDefinition{
+		Handle:   "basic-auth",
+		Name:     "Basic Authentication",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START"}, // No OnSuccess - will cause error in insertNodeAfterStart
+			{ID: "task", Type: "TASK_EXECUTION", OnSuccess: "end"},
+			{ID: "end", Type: "END"},
+			{
+				ID:   provisioningNodeID,
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: executor.ExecutorNameProvisioning,
+				},
+				OnSuccess: "end",
+			},
+		},
+	}
+
+	regFlow, err := s.service.InferRegistrationFlow(authFlow)
+
+	s.Error(err)
+	s.Nil(regFlow)
+	s.Contains(err.Error(), "START node has no onSuccess defined")
 }
 
 // Helper methods

@@ -56,9 +56,6 @@ func (suite *BasicAuthExecutorTestSuite) SetupTest() {
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 	suite.mockObservability = observabilitymock.NewObservabilityServiceInterfaceMock(suite.T())
 
-	// Default behavior for observability: disabled
-	suite.mockObservability.On("IsEnabled").Return(false).Maybe()
-
 	defaultInputs := []common.Input{
 		{Identifier: userAttributeUsername, Type: "string", Required: true},
 		{Identifier: userAttributePassword, Type: inputDataTypePassword, Required: true},
@@ -75,6 +72,11 @@ func (suite *BasicAuthExecutorTestSuite) SetupTest() {
 
 	suite.executor = newBasicAuthExecutor(suite.mockFlowFactory, suite.mockUserService, suite.mockCredsService,
 		suite.mockObservability)
+}
+
+func (suite *BasicAuthExecutorTestSuite) BeforeTest(suiteName, testName string) {
+	suite.mockObservability.ExpectedCalls = nil
+	suite.mockObservability.On("IsEnabled").Return(false).Maybe()
 }
 
 func createMockIdentifyingExecutor(t *testing.T) core.ExecutorInterface {

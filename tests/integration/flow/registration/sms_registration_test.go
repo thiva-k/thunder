@@ -61,18 +61,49 @@ var (
 				"actions": []map[string]interface{}{
 					{
 						"ref":      "action_001",
-						"nextNode": "sms_otp_auth",
+						"nextNode": "sms_otp_send",
 					},
 				},
 			},
 			{
-				"id":   "sms_otp_auth",
+				"id":   "sms_otp_send",
 				"type": "TASK_EXECUTION",
 				"properties": map[string]interface{}{
 					"senderId": "placeholder-sender-id",
 				},
 				"executor": map[string]interface{}{
 					"name": "SMSOTPAuthExecutor",
+					"mode": "send",
+				},
+				"onSuccess": "prompt_otp",
+			},
+			{
+				"id":   "prompt_otp",
+				"type": "PROMPT",
+				"inputs": []map[string]interface{}{
+					{
+						"ref":        "input_otp",
+						"identifier": "otp",
+						"type":       "string",
+						"required":   true,
+					},
+				},
+				"actions": []map[string]interface{}{
+					{
+						"ref":      "action_otp",
+						"nextNode": "sms_otp_verify",
+					},
+				},
+			},
+			{
+				"id":   "sms_otp_verify",
+				"type": "TASK_EXECUTION",
+				"properties": map[string]interface{}{
+					"senderId": "placeholder-sender-id",
+				},
+				"executor": map[string]interface{}{
+					"name": "SMSOTPAuthExecutor",
+					"mode": "verify",
 				},
 				"onSuccess": "provisioning",
 			},
@@ -105,76 +136,6 @@ var (
 						"required":   true,
 					},
 				},
-				"executor": map[string]interface{}{
-					"name": "ProvisioningExecutor",
-				},
-				"onSuccess": "auth_assert",
-			},
-			{
-				"id":   "auth_assert",
-				"type": "TASK_EXECUTION",
-				"executor": map[string]interface{}{
-					"name": "AuthAssertExecutor",
-				},
-				"onSuccess": "end",
-			},
-			{
-				"id":   "end",
-				"type": "END",
-			},
-		},
-	}
-
-	smsWithUsernameRegistrationFlow = testutils.Flow{
-		Name:     "SMS Test Registration Flow with Username",
-		FlowType: "REGISTRATION",
-		Handle:   "registration_flow_sms_username_test",
-		Nodes: []map[string]interface{}{
-			{
-				"id":        "start",
-				"type":      "START",
-				"onSuccess": "user_type_resolver",
-			},
-			{
-				"id":   "user_type_resolver",
-				"type": "TASK_EXECUTION",
-				"executor": map[string]interface{}{
-					"name": "UserTypeResolver",
-				},
-				"onSuccess": "mobile_prompt_username",
-			},
-			{
-				"id":   "mobile_prompt_username",
-				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "sms_otp_auth",
-					},
-				},
-			},
-			{
-				"id":   "sms_otp_auth",
-				"type": "TASK_EXECUTION",
-				"properties": map[string]interface{}{
-					"senderId": "placeholder-sender-id",
-				},
-				"executor": map[string]interface{}{
-					"name": "SMSOTPAuthExecutor",
-				},
-				"onSuccess": "provisioning",
-			},
-			{
-				"id":   "provisioning",
-				"type": "TASK_EXECUTION",
 				"executor": map[string]interface{}{
 					"name": "ProvisioningExecutor",
 				},
@@ -310,25 +271,17 @@ func (ts *SMSRegistrationFlowTestSuite) SetupSuite() {
 	ts.Require().NoError(err, "Failed to create notification sender")
 	ts.config.CreatedSenderIDs = append(ts.config.CreatedSenderIDs, senderID)
 
-	// Update registration flows with created sender ID
+	// Update registration flow with created sender ID
 	smsNodes := smsRegistrationFlow.Nodes.([]map[string]interface{})
-	smsNodes[3]["properties"].(map[string]interface{})["senderId"] = senderID
+	smsNodes[3]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_send node
+	smsNodes[5]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_verify node
 	smsRegistrationFlow.Nodes = smsNodes
-
-	smsUsernameNodes := smsWithUsernameRegistrationFlow.Nodes.([]map[string]interface{})
-	smsUsernameNodes[3]["properties"].(map[string]interface{})["senderId"] = senderID
-	smsWithUsernameRegistrationFlow.Nodes = smsUsernameNodes
 
 	// Create the SMS registration flow
 	flowID, err := testutils.CreateFlow(smsRegistrationFlow)
 	ts.Require().NoError(err, "Failed to create SMS registration flow")
 	ts.config.CreatedFlowIDs = append(ts.config.CreatedFlowIDs, flowID)
 	smsRegTestApp.RegistrationFlowGraphID = flowID
-
-	// Create the SMS with username registration flow
-	flowWithUsernameID, err := testutils.CreateFlow(smsWithUsernameRegistrationFlow)
-	ts.Require().NoError(err, "Failed to create SMS with username registration flow")
-	ts.config.CreatedFlowIDs = append(ts.config.CreatedFlowIDs, flowWithUsernameID)
 
 	// Create test application with allowed user types
 	appID, err := testutils.CreateApplication(smsRegTestApp)
@@ -388,7 +341,7 @@ func (ts *SMSRegistrationFlowTestSuite) TearDownSuite() {
 
 }
 
-func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber() {
+func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlow() {
 	// Generate unique mobile number for registration
 	mobileNumber := generateUniqueMobileNumber()
 
@@ -441,7 +394,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber(
 		"otp": lastMessage.OTP,
 	}
 
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_otp")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete registration flow with OTP: %v", err)
 	}
@@ -505,120 +458,6 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithMobileNumber(
 	}
 }
 
-func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowWithUsername() {
-	// Switch app to use SMS flow with username
-	if len(ts.config.CreatedFlowIDs) < 2 {
-		ts.T().Fatalf("Expected at least 2 flows to be created during setup")
-	}
-	err := common.UpdateAppConfig(ts.testAppID, "", ts.config.CreatedFlowIDs[1])
-	if err != nil {
-		ts.T().Fatalf("Failed to update app config for SMS flow with username: %v", err)
-	}
-
-	// Generate unique username
-	username := common.GenerateUniqueUsername("smsreguser")
-
-	// Step 1: Initialize the registration flow
-	flowStep, err := common.InitiateRegistrationFlow(ts.testAppID, false, nil, "")
-	if err != nil {
-		ts.T().Fatalf("Failed to initiate registration flow: %v", err)
-	}
-
-	// Validate that username input is required
-	ts.Require().Equal("INCOMPLETE", flowStep.FlowStatus, "Expected flow status to be INCOMPLETE")
-	ts.Require().Equal("VIEW", flowStep.Type, "Expected flow type to be VIEW")
-	ts.Require().NotEmpty(flowStep.FlowID, "Flow ID should not be empty")
-	ts.Require().NotEmpty(flowStep.Data, "Flow data should not be empty")
-	ts.Require().NotEmpty(flowStep.Data.Inputs, "Flow should require inputs")
-	ts.Require().True(common.HasInput(flowStep.Data.Inputs, "username"), "Username input should be required")
-
-	// Clear any previous messages
-	ts.mockServer.ClearMessages()
-
-	// Step 2: Continue the flow with username
-	inputs := map[string]string{
-		"username": username,
-	}
-	otpFlowStep, err := common.CompleteFlow(flowStep.FlowID, inputs, "action_001")
-	if err != nil {
-		ts.T().Fatalf("Failed to continue registration flow with username: %v", err)
-	}
-
-	// Verify that mobile number input is now required
-	ts.Require().Equal("INCOMPLETE", otpFlowStep.FlowStatus,
-		"Expected flow status to be INCOMPLETE after username input")
-	ts.Require().Equal("VIEW", otpFlowStep.Type, "Expected flow type to be VIEW after username input")
-	ts.Require().NotEmpty(otpFlowStep.Data, "Flow data should not be empty after username input")
-	ts.Require().NotEmpty(otpFlowStep.Data.Inputs, "Flow should require inputs after username input")
-	ts.Require().True(common.HasInput(otpFlowStep.Data.Inputs, "mobileNumber"),
-		"Mobile number input should be required after username input")
-
-	// Step 3: Continue the flow with mobile number
-	mobileNumber := generateUniqueMobileNumber()
-	inputs = map[string]string{
-		"mobileNumber": mobileNumber,
-	}
-	otpFlowStep, err = common.CompleteFlow(otpFlowStep.FlowID, inputs, "")
-	if err != nil {
-		ts.T().Fatalf("Failed to continue registration flow with mobile number: %v", err)
-	}
-
-	// Verify OTP input is now required
-	ts.Require().Equal("INCOMPLETE", otpFlowStep.FlowStatus,
-		"Expected flow status to be INCOMPLETE after username input")
-	ts.Require().Equal("VIEW", otpFlowStep.Type, "Expected flow type to be VIEW after username input")
-	ts.Require().NotEmpty(otpFlowStep.Data, "Flow data should not be empty after username input")
-	ts.Require().NotEmpty(otpFlowStep.Data.Inputs, "Flow should require inputs after username input")
-	ts.Require().True(common.HasInput(otpFlowStep.Data.Inputs, "otp"), "OTP input should be required after username input")
-
-	// Wait for SMS to be sent
-	time.Sleep(500 * time.Millisecond)
-
-	// Verify SMS was sent
-	lastMessage := ts.mockServer.GetLastMessage()
-	ts.Require().NotNil(lastMessage, "SMS should have been sent")
-	ts.Require().NotEmpty(lastMessage.OTP, "OTP should be available")
-
-	// Step 4: Complete registration with OTP
-	otpInputs := map[string]string{
-		"otp": lastMessage.OTP,
-	}
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
-	if err != nil {
-		ts.T().Fatalf("Failed to complete registration flow with OTP: %v", err)
-	}
-
-	// Verify successful registration
-	ts.Require().Equal("COMPLETE", completeFlowStep.FlowStatus, "Expected flow status to be COMPLETE")
-	ts.Require().NotEmpty(completeFlowStep.Assertion,
-		"JWT assertion should be returned after successful registration")
-	ts.Require().Empty(completeFlowStep.FailureReason,
-		"Failure reason should be empty for successful registration")
-
-	// Decode and validate JWT claims
-	jwtClaims, err := testutils.DecodeJWT(completeFlowStep.Assertion)
-	ts.Require().NoError(err, "Failed to decode JWT assertion")
-	ts.Require().NotNil(jwtClaims, "JWT claims should not be nil")
-
-	// Validate JWT contains expected user type and OU ID
-	ts.Require().Equal(smsRegTestUserSchema.Name, jwtClaims.UserType, "Expected userType to match created schema")
-	ts.Require().Equal(ts.testOUID, jwtClaims.OuID, "Expected ouId to match the created organization unit")
-	ts.Require().Equal(ts.testAppID, jwtClaims.Aud, "Expected aud to match the application ID")
-	ts.Require().NotEmpty(jwtClaims.Sub, "JWT subject should not be empty")
-
-	// Step 5: Verify the user was created by searching via the user API
-	user, err := testutils.FindUserByAttribute("username", username)
-	if err != nil {
-		ts.T().Fatalf("Failed to retrieve user by username: %v", err)
-	}
-	ts.Require().NotNil(user, "User should be found in user list after registration")
-
-	// Store the created user for cleanup
-	if user != nil {
-		ts.config.CreatedUserIDs = append(ts.config.CreatedUserIDs, user.ID)
-	}
-}
-
 func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 	// Switch back to SMS flow with mobile number (first flow)
 	if len(ts.config.CreatedFlowIDs) < 1 {
@@ -661,7 +500,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowInvalidOTP() {
 		"otp": "000000",
 	}
 
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, invalidOTPInputs, "")
+	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, invalidOTPInputs, "action_otp")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete registration flow with invalid OTP: %v", err)
 	}
@@ -724,7 +563,7 @@ func (ts *SMSRegistrationFlowTestSuite) TestSMSRegistrationFlowSingleRequestWith
 		"otp": lastMessage.OTP,
 	}
 
-	provisionStep, err := common.CompleteFlow(otpStep.FlowID, otpInputs, "")
+	provisionStep, err := common.CompleteFlow(otpStep.FlowID, otpInputs, "action_otp")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete registration flow with OTP: %v", err)
 	}

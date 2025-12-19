@@ -408,6 +408,50 @@ func (_c *ExecutorBackedNodeInterfaceMock_GetInputs_Call) RunAndReturn(run func(
 	return _c
 }
 
+// GetMode provides a mock function for the type ExecutorBackedNodeInterfaceMock
+func (_mock *ExecutorBackedNodeInterfaceMock) GetMode() string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMode")
+	}
+
+	var r0 string
+	if returnFunc, ok := ret.Get(0).(func() string); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+	return r0
+}
+
+// ExecutorBackedNodeInterfaceMock_GetMode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMode'
+type ExecutorBackedNodeInterfaceMock_GetMode_Call struct {
+	*mock.Call
+}
+
+// GetMode is a helper method to define mock.On call
+func (_e *ExecutorBackedNodeInterfaceMock_Expecter) GetMode() *ExecutorBackedNodeInterfaceMock_GetMode_Call {
+	return &ExecutorBackedNodeInterfaceMock_GetMode_Call{Call: _e.mock.On("GetMode")}
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_GetMode_Call) Run(run func()) *ExecutorBackedNodeInterfaceMock_GetMode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_GetMode_Call) Return(s string) *ExecutorBackedNodeInterfaceMock_GetMode_Call {
+	_c.Call.Return(s)
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_GetMode_Call) RunAndReturn(run func() string) *ExecutorBackedNodeInterfaceMock_GetMode_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetNextNodeList provides a mock function for the type ExecutorBackedNodeInterfaceMock
 func (_mock *ExecutorBackedNodeInterfaceMock) GetNextNodeList() []string {
 	ret := _mock.Called()
@@ -1068,6 +1112,46 @@ func (_c *ExecutorBackedNodeInterfaceMock_SetInputs_Call) Return() *ExecutorBack
 }
 
 func (_c *ExecutorBackedNodeInterfaceMock_SetInputs_Call) RunAndReturn(run func(inputs []common.Input)) *ExecutorBackedNodeInterfaceMock_SetInputs_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetMode provides a mock function for the type ExecutorBackedNodeInterfaceMock
+func (_mock *ExecutorBackedNodeInterfaceMock) SetMode(mode string) {
+	_mock.Called(mode)
+	return
+}
+
+// ExecutorBackedNodeInterfaceMock_SetMode_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMode'
+type ExecutorBackedNodeInterfaceMock_SetMode_Call struct {
+	*mock.Call
+}
+
+// SetMode is a helper method to define mock.On call
+//   - mode string
+func (_e *ExecutorBackedNodeInterfaceMock_Expecter) SetMode(mode interface{}) *ExecutorBackedNodeInterfaceMock_SetMode_Call {
+	return &ExecutorBackedNodeInterfaceMock_SetMode_Call{Call: _e.mock.On("SetMode", mode)}
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_SetMode_Call) Run(run func(mode string)) *ExecutorBackedNodeInterfaceMock_SetMode_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 string
+		if args[0] != nil {
+			arg0 = args[0].(string)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_SetMode_Call) Return() *ExecutorBackedNodeInterfaceMock_SetMode_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_SetMode_Call) RunAndReturn(run func(mode string)) *ExecutorBackedNodeInterfaceMock_SetMode_Call {
 	_c.Run(run)
 	return _c
 }

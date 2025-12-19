@@ -93,7 +93,7 @@ var (
 				"executor": map[string]interface{}{
 					"name": "AttributeCollector",
 				},
-				"onSuccess": "sms_otp_auth",
+				"onSuccess": "sms_otp_send",
 			},
 			{
 				"id":   "prompt_mobile",
@@ -109,13 +109,25 @@ var (
 				"actions": []map[string]interface{}{
 					{
 						"ref":      "action_mobile",
-						"nextNode": "sms_otp_auth",
+						"nextNode": "sms_otp_send",
 					},
 				},
 			},
 			{
-				"id":   "sms_otp_auth",
+				"id":   "sms_otp_send",
 				"type": "TASK_EXECUTION",
+				"properties": map[string]interface{}{
+					"senderId": "placeholder-sender-id",
+				},
+				"executor": map[string]interface{}{
+					"name": "SMSOTPAuthExecutor",
+					"mode": "send",
+				},
+				"onSuccess": "prompt_otp",
+			},
+			{
+				"id":   "prompt_otp",
+				"type": "PROMPT",
 				"inputs": []map[string]interface{}{
 					{
 						"ref":        "input_005",
@@ -124,11 +136,22 @@ var (
 						"required":   true,
 					},
 				},
+				"actions": []map[string]interface{}{
+					{
+						"ref":      "action_otp",
+						"nextNode": "sms_otp_verify",
+					},
+				},
+			},
+			{
+				"id":   "sms_otp_verify",
+				"type": "TASK_EXECUTION",
 				"properties": map[string]interface{}{
 					"senderId": "placeholder-sender-id",
 				},
 				"executor": map[string]interface{}{
 					"name": "SMSOTPAuthExecutor",
+					"mode": "verify",
 				},
 				"onSuccess": "auth_assert",
 			},
@@ -301,7 +324,8 @@ func (ts *PromptActionsAndMFAFlowTestSuite) SetupSuite() {
 
 	// Update flow definition with created sender ID
 	nodes := promptActionsFlow.Nodes.([]map[string]interface{})
-	nodes[5]["properties"].(map[string]interface{})["senderId"] = senderID
+	nodes[5]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_send node
+	nodes[7]["properties"].(map[string]interface{})["senderId"] = senderID // sms_otp_verify node
 	promptActionsFlow.Nodes = nodes
 
 	// Create flow
@@ -445,7 +469,7 @@ func (ts *PromptActionsAndMFAFlowTestSuite) TestBasicAuthWithMobileUserSMSOTP() 
 		"otp": lastMessage.OTP,
 	}
 
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_otp")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete authentication flow with OTP: %v", err)
 	}
@@ -563,7 +587,7 @@ func (ts *PromptActionsAndMFAFlowTestSuite) TestBasicAuthWithoutMobileUserSMSOTP
 			"otp": lastMessage.OTP,
 		}
 
-		completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+		completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_otp")
 		if err != nil {
 			ts.T().Fatalf("Failed to complete authentication flow with OTP: %v", err)
 		}
@@ -670,7 +694,7 @@ func (ts *PromptActionsAndMFAFlowTestSuite) TestBasicAuthWithoutMobileUserSMSOTP
 			"otp": lastMessage.OTP,
 		}
 
-		completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+		completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_otp")
 		if err != nil {
 			ts.T().Fatalf("Failed to complete authentication flow with OTP: %v", err)
 		}
@@ -776,7 +800,7 @@ func (ts *PromptActionsAndMFAFlowTestSuite) TestSMSOTPAuthWithValidMobile() {
 		"otp": lastMessage.OTP,
 	}
 
-	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "")
+	completeFlowStep, err := common.CompleteFlow(flowStep.FlowID, otpInputs, "action_otp")
 	if err != nil {
 		ts.T().Fatalf("Failed to complete authentication flow with OTP: %v", err)
 	}

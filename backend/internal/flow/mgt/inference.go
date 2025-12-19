@@ -61,14 +61,8 @@ func (s *flowInferenceService) InferRegistrationFlow(authFlow *FlowDefinition) (
 
 	s.cleanAuthenticationProperties(regNodes)
 
-	endNodeID, err := s.findEndNode(regNodes)
-	if err != nil {
-		return nil, err
-	}
-
 	if !s.hasProvisioningNode(regNodes) {
-		provisioningNode := s.createProvisioningNode(endNodeID, hasLayout)
-		if err := s.insertNodeBeforeEnd(&regNodes, provisioningNode, endNodeID); err != nil {
+		if err := s.insertProvisioningNode(&regNodes, hasLayout); err != nil {
 			return nil, err
 		}
 		s.logger.Debug("Inserted provisioning node into registration flow")
@@ -196,6 +190,16 @@ func (s *flowInferenceService) addDefaultLayout(node *NodeDefinition) {
 	}
 }
 
+// findAuthAssertNode finds the AuthAssertExecutor node in the flow and returns its ID
+func (s *flowInferenceService) findAuthAssertNode(nodes []NodeDefinition) (string, bool) {
+	for _, node := range nodes {
+		if node.Executor != nil && node.Executor.Name == executor.ExecutorNameAuthAssert {
+			return node.ID, true
+		}
+	}
+	return "", false
+}
+
 // hasProvisioningNode checks if a provisioning node already exists in the flow
 func (s *flowInferenceService) hasProvisioningNode(nodes []NodeDefinition) bool {
 	for _, node := range nodes {
@@ -206,15 +210,38 @@ func (s *flowInferenceService) hasProvisioningNode(nodes []NodeDefinition) bool 
 	return false
 }
 
+// insertProvisioningNode inserts the provisioning node before AuthAssertExecutor if it exists,
+// otherwise before the END node
+func (s *flowInferenceService) insertProvisioningNode(nodes *[]NodeDefinition, includeLayout bool) error {
+	authAssertNodeID, hasAuthAssert := s.findAuthAssertNode(*nodes)
+
+	var targetNodeID string
+	if hasAuthAssert {
+		targetNodeID = authAssertNodeID
+		s.logger.Debug("Found AuthAssertExecutor, inserting provisioning node before it")
+	} else {
+		endNodeID, err := s.findEndNode(*nodes)
+		if err != nil {
+			return err
+		}
+		targetNodeID = endNodeID
+		s.logger.Debug("No AuthAssertExecutor found, inserting provisioning node before END")
+	}
+
+	provisioningNode := s.createProvisioningNode(targetNodeID, includeLayout)
+
+	return s.insertNodeBefore(nodes, provisioningNode, targetNodeID)
+}
+
 // createProvisioningNode creates a TASK_EXECUTION node with ProvisioningExecutor
-func (s *flowInferenceService) createProvisioningNode(endNodeID string, includeLayout bool) NodeDefinition {
+func (s *flowInferenceService) createProvisioningNode(nextNodeID string, includeLayout bool) NodeDefinition {
 	node := NodeDefinition{
 		ID:   provisioningNodeID,
 		Type: string(common.NodeTypeTaskExecution),
 		Executor: &ExecutorDefinition{
 			Name: executor.ExecutorNameProvisioning,
 		},
-		OnSuccess: endNodeID,
+		OnSuccess: nextNodeID,
 	}
 
 	if includeLayout {
@@ -251,28 +278,28 @@ func (s *flowInferenceService) createUserTypeResolverNode(includeLayout bool) No
 	return node
 }
 
-// insertNodeBeforeEnd inserts a node before the END node by updating all nodes that point to END
-func (s *flowInferenceService) insertNodeBeforeEnd(nodes *[]NodeDefinition,
-	newNode NodeDefinition, endNodeID string) error {
+// insertNodeBefore inserts a node before the target node by updating all nodes that point to the target
+func (s *flowInferenceService) insertNodeBefore(nodes *[]NodeDefinition,
+	newNode NodeDefinition, targetNodeID string) error {
 	modified := false
 	for i := range *nodes {
 		node := &(*nodes)[i]
 
-		// Update onSuccess if it points to END
-		if node.OnSuccess != "" && node.OnSuccess == endNodeID {
+		// Update onSuccess if it points to target
+		if node.OnSuccess != "" && node.OnSuccess == targetNodeID {
 			node.OnSuccess = newNode.ID
 			modified = true
 		}
 
-		// Update onFailure if it points to END
-		if node.OnFailure != "" && node.OnFailure == endNodeID {
+		// Update onFailure if it points to target
+		if node.OnFailure != "" && node.OnFailure == targetNodeID {
 			node.OnFailure = newNode.ID
 			modified = true
 		}
 
-		// Update actions that point to END
+		// Update actions that point to target
 		for j := range node.Actions {
-			if node.Actions[j].NextNode == endNodeID {
+			if node.Actions[j].NextNode == targetNodeID {
 				node.Actions[j].NextNode = newNode.ID
 				modified = true
 			}
@@ -280,7 +307,7 @@ func (s *flowInferenceService) insertNodeBeforeEnd(nodes *[]NodeDefinition,
 	}
 
 	if !modified {
-		return fmt.Errorf("no nodes pointing to END node found")
+		return fmt.Errorf("no nodes pointing to target node %s found", targetNodeID)
 	}
 
 	// Append the new node to the array
