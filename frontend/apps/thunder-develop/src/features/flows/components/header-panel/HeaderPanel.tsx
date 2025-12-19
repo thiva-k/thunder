@@ -33,6 +33,7 @@ import {
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Save, LayoutGrid, Edit, X, Check} from '@wso2/oxygen-ui-icons-react';
 import ValidationStatusLabels from '../validation-panel/ValidationStatusLabels';
+import EdgeStyleSelector from './EdgeStyleSelector';
 
 /**
  * Props interface of {@link HeaderPanel}
@@ -227,6 +228,7 @@ function HeaderPanel({
                 </IconButton>
               </Tooltip>
             )}
+            <EdgeStyleSelector />
             <ColorSchemeToggle data-testid="theme-toggle" />
             <Button variant="contained" startIcon={<Save size={20} />} onClick={handleSaveClick}>
               {t('flows:core.headerPanel.save')}

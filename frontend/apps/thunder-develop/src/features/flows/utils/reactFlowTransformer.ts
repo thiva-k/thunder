@@ -22,6 +22,7 @@ import {ElementCategories, ElementTypes, InputVariants, ActionEventTypes, Button
 import type {StepData} from '../models/steps';
 import {StepTypes, StaticStepTypes} from '../models/steps';
 import {ActionTypes} from '../models/actions';
+import generateResourceId from './generateResourceId';
 
 /**
  * Suffix used in edge sourceHandle to identify the connection point
@@ -268,9 +269,7 @@ function extractActions(components: Element[], nodeId: string, edges: Edge[]): F
       // First try to find the next node from edges (source of truth for connections)
       // The sourceHandle includes a suffix (e.g., "button_id_NEXT")
       const expectedHandle = `${component.id}${NEXT_HANDLE_SUFFIX}`;
-      const connectedEdge = edges.find(
-        (edge) => edge.source === nodeId && edge.sourceHandle === expectedHandle,
-      );
+      const connectedEdge = edges.find((edge) => edge.source === nodeId && edge.sourceHandle === expectedHandle);
 
       if (connectedEdge) {
         action.nextNode = connectedEdge.target;
@@ -478,9 +477,30 @@ function findPrecedingPromptNode(
 }
 
 /**
+ * List of OAuth/OIDC executor names that require a 'code' input for OAuth callback.
+ * These executors handle external authentication and don't inherit form inputs.
+ */
+const OAUTH_EXECUTOR_NAMES = new Set(['GoogleOIDCAuthExecutor', 'GithubOAuthExecutor']);
+
+/**
+ * Creates the standard OAuth code input for OAuth/OIDC executors.
+ */
+function createOAuthCodeInput(): FlowInput {
+  return {
+    ref: generateResourceId('input'),
+    type: 'TEXT_INPUT',
+    identifier: 'code',
+    required: true,
+  };
+}
+
+/**
  * Collects inputs for TASK_EXECUTION nodes from their preceding PROMPT nodes.
  * This is done in a second pass after all nodes are transformed.
  * Returns a new array of flow nodes with inputs added where applicable.
+ *
+ * Note: OAuth/OIDC executors (Google, GitHub, etc.) receive a standard 'code' input
+ * for handling the OAuth callback, rather than inheriting form inputs.
  */
 function collectInputsForExecutionNodes(
   flowNodes: FlowNode[],
@@ -490,6 +510,16 @@ function collectInputsForExecutionNodes(
   return flowNodes.map((flowNode) => {
     if (flowNode.type !== 'TASK_EXECUTION') {
       return flowNode;
+    }
+
+    const executorName = flowNode.executor?.name;
+
+    // OAuth/OIDC executors get a standard 'code' input for OAuth callback
+    if (executorName && OAUTH_EXECUTOR_NAMES.has(executorName)) {
+      return {
+        ...flowNode,
+        inputs: [createOAuthCodeInput()],
+      };
     }
 
     // Find the preceding PROMPT node
@@ -521,9 +551,7 @@ function collectInputsForExecutionNodes(
  */
 export function transformReactFlow(canvasData: ReactFlowCanvasData): FlowGraph {
   // Transform each React Flow canvas node to a flow node
-  const flowNodes: FlowNode[] = canvasData.nodes.map((canvasNode) =>
-    transformNode(canvasNode, canvasData.edges),
-  );
+  const flowNodes: FlowNode[] = canvasData.nodes.map((canvasNode) => transformNode(canvasNode, canvasData.edges));
 
   // Second pass: collect inputs for TASK_EXECUTION nodes from preceding PROMPT nodes
   const nodesWithInputs = collectInputsForExecutionNodes(flowNodes, canvasData.nodes, canvasData.edges);

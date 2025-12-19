@@ -18,6 +18,7 @@
 
 import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
 import {useMemo, type ReactNode} from 'react';
+import {useTranslation} from 'react-i18next';
 import {
   Alert,
   CircularProgress,
@@ -43,6 +44,14 @@ const EXECUTOR_TO_IDP_TYPE_MAP: Record<string, IdentityProviderType> = {
 };
 
 /**
+ * Available modes for SMS OTP executor.
+ */
+const SMS_OTP_MODES = [
+  {value: 'send', translationKey: 'flows:core.executions.smsOtp.mode.send'},
+  {value: 'verify', translationKey: 'flows:core.executions.smsOtp.mode.verify'},
+] as const;
+
+/**
  * Props interface of {@link ExecutionExtendedProperties}
  */
 export type ExecutionExtendedPropertiesPropsInterface = CommonResourcePropertiesPropsInterface;
@@ -55,6 +64,7 @@ export type ExecutionExtendedPropertiesPropsInterface = CommonResourceProperties
  * @returns The ExecutionExtendedProperties component.
  */
 function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedPropertiesPropsInterface): ReactNode {
+  const {t} = useTranslation();
   const {selectedNotification} = useValidationStatus();
   const {data: identityProviders, isLoading: isLoadingIdps} = useIdentityProviders();
 
@@ -64,11 +74,20 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     return stepData?.action?.executor?.name;
   }, [resource]);
 
-  // Get the current IDP name from the resource
-  const currentIdpName = useMemo(() => {
+  // Get the current IDP ID from the resource properties
+  const currentIdpId = useMemo(() => {
     const stepData = resource?.data as StepData | undefined;
-    return (stepData?.action?.executor?.meta as {idpName?: string})?.idpName ?? '';
+    return (stepData?.properties as {idpId?: string})?.idpId ?? '';
   }, [resource]);
+
+  // Get the current mode for SMS OTP executor
+  const currentMode = useMemo(() => {
+    const stepData = resource?.data as StepData | undefined;
+    return (stepData?.action?.executor as {mode?: string})?.mode ?? '';
+  }, [resource]);
+
+  // Check if this is an SMS OTP executor
+  const isSmsOtpExecutor = executorName === ExecutionTypes.SMSOTPAuth;
 
   // Get the IDP type for the current executor
   const idpType = useMemo(() => {
@@ -87,14 +106,14 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     return identityProviders.filter((idp) => idp.type === idpType);
   }, [idpType, identityProviders]);
 
-  // Check if current value is a placeholder
-  const isPlaceholder = currentIdpName === '{{IDP_NAME}}' || currentIdpName === '';
+  // Check if current value is a placeholder or empty
+  const isPlaceholder = currentIdpId === '{{IDP_ID}}' || currentIdpId === '';
 
   /**
    * Get the error message for the connection field.
    */
   const errorMessage: string = useMemo(() => {
-    const key = `${resource?.id}_data.action.executor.meta.idpName`;
+    const key = `${resource?.id}_data.properties.idpId`;
 
     if (selectedNotification?.hasResourceFieldNotification(key)) {
       return selectedNotification?.getResourceFieldNotification(key);
@@ -103,10 +122,46 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     return '';
   }, [resource, selectedNotification]);
 
-  // Handle connection selection
-  const handleConnectionChange = (newConnection: string): void => {
-    onChange('data.action.executor.meta.idpName', newConnection, resource);
+  // Handle connection selection - store the IDP ID in properties.idpId
+  const handleConnectionChange = (selectedIdpId: string): void => {
+    onChange('data.properties.idpId', selectedIdpId, resource);
   };
+
+  // Handle mode selection for SMS OTP executor
+  const handleModeChange = (selectedMode: string): void => {
+    onChange('data.action.executor.mode', selectedMode, resource);
+  };
+
+  // Render SMS OTP mode selector
+  if (isSmsOtpExecutor) {
+    return (
+      <Stack gap={2}>
+        <Typography variant="body2" color="text.secondary">
+          {t('flows:core.executions.smsOtp.description')}
+        </Typography>
+
+        <div>
+          <FormLabel htmlFor="mode-select">{t('flows:core.executions.smsOtp.mode.label')}</FormLabel>
+          <Select
+            id="mode-select"
+            value={currentMode}
+            onChange={(e) => handleModeChange(e.target.value)}
+            displayEmpty
+            fullWidth
+          >
+            <MenuItem value="" disabled>
+              {t('flows:core.executions.smsOtp.mode.placeholder')}
+            </MenuItem>
+            {SMS_OTP_MODES.map((mode) => (
+              <MenuItem key={mode.value} value={mode.value}>
+                {t(mode.translationKey)}
+              </MenuItem>
+            ))}
+          </Select>
+        </div>
+      </Stack>
+    );
+  }
 
   // If no executor name or no matching IDP type, don't render
   if (!executorName || !idpType) {
@@ -129,7 +184,7 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
         ) : (
           <Select
             id="connection-select"
-            value={isPlaceholder ? '' : currentIdpName}
+            value={isPlaceholder ? '' : currentIdpId}
             onChange={(e) => handleConnectionChange(e.target.value)}
             displayEmpty
             fullWidth
@@ -140,7 +195,7 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
               Select a connection
             </MenuItem>
             {availableConnections.map((idp) => (
-              <MenuItem key={idp.id} value={idp.name}>
+              <MenuItem key={idp.id} value={idp.id}>
                 {idp.name}
               </MenuItem>
             ))}

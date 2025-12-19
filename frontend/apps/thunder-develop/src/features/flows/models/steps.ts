@@ -72,7 +72,7 @@ export const StepCategories = {
 export const StepTypes = {
   View: 'VIEW',
   Rule: 'RULE',
-  Execution: 'EXECUTION',
+  Execution: 'TASK_EXECUTION',
   End: 'END',
 } as const;
 
@@ -92,8 +92,7 @@ export const ExecutionTypes = {
   MagicLinkExecutor: 'MagicLinkExecutor',
   SendEmailOTP: 'SendEmailOTPExecutor',
   VerifyEmailOTP: 'VerifyEmailOTPExecutor',
-  SendSMS: 'SendSMSExecutor',
-  VerifySMSOTP: 'VerifySMSOTPExecutor',
+  SMSOTPAuth: 'SMSOTPAuthExecutor',
 } as const;
 
 export const ExecutionStepViewTypes = {

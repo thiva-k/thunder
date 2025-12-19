@@ -18,7 +18,7 @@
 
 import merge from 'lodash-es/merge';
 import type {Resources} from '../models/resources';
-import type {Step} from '../models/steps';
+import type {Step, StepData} from '../models/steps';
 
 /**
  * Type-safe wrapper for lodash merge function.
@@ -36,6 +36,28 @@ const resolveStepMetadata = (resources: Resources, steps: Step[]): Step[] => {
 
     if (stepWithMeta) {
       updatedStep = safeMerge<Step>({}, stepWithMeta, updatedStep);
+    }
+
+    // For EXECUTION type steps, also check executors for metadata based on executor name
+    const stepData = step.data as StepData | undefined;
+    const executorName = stepData?.action?.executor?.name;
+
+    if (executorName && resources?.executors) {
+      const executorWithMeta = resources.executors.find(
+        (executor) => (executor.data as StepData | undefined)?.action?.executor?.name === executorName,
+      );
+
+      if (executorWithMeta) {
+        // Merge executor display metadata into the step (at root level and in data for React Flow access)
+        updatedStep = {
+          ...updatedStep,
+          display: executorWithMeta.display,
+          data: {
+            ...updatedStep.data,
+            display: executorWithMeta.display,
+          },
+        };
+      }
     }
 
     return updatedStep;
