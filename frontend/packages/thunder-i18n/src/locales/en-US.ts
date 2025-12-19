@@ -777,6 +777,7 @@ const translations = {
   // ============================================================================
   elements: {
     'buttons.submit.text': 'Continue',
+    'display.divider.or_separator': 'OR',
     'fields.first_name.label': 'First Name',
     'fields.first_name.placeholder': 'Enter your first name',
     'fields.last_name.label': 'Last Name',
