@@ -23,6 +23,8 @@ import (
 
 	"github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/flow/executor"
+	"github.com/asgardeo/thunder/internal/system/config"
+	immutableresource "github.com/asgardeo/thunder/internal/system/immutable_resource"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 )
 
@@ -32,14 +34,30 @@ func Initialize(
 	flowFactory core.FlowFactoryInterface,
 	executorRegistry executor.ExecutorRegistryInterface,
 	graphCache core.GraphCacheInterface,
-) FlowMgtServiceInterface {
-	store := newCacheBackedFlowStore()
+) (FlowMgtServiceInterface, immutableresource.ResourceExporter, error) {
+	var store flowStoreInterface
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		store = newFileBasedStore()
+	} else {
+		store = newCacheBackedFlowStore()
+	}
+
 	inferenceService := newFlowInferenceService()
 	graphBuilder := newGraphBuilder(flowFactory, executorRegistry, graphCache)
 	service := newFlowMgtService(store, inferenceService, graphBuilder)
+
+	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
+		if err := loadImmutableResources(store); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	handler := newFlowMgtHandler(service)
 	registerRoutes(mux, handler)
-	return service
+
+	// Create and return exporter
+	exporter := newFlowGraphExporter(service)
+	return service, exporter, nil
 }
 
 // registerRoutes registers the HTTP routes for flow management.

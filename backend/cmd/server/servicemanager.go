@@ -111,8 +111,11 @@ func registerServices(
 	execRegistry := executor.Initialize(flowFactory, userService, ouService,
 		idpService, otpService, jwtService, authSvcRegistry, authZService, userSchemaService, observabilitySvc)
 
-	flowMgtService := flowmgt.Initialize(mux, flowFactory, execRegistry, graphCache)
-
+	flowMgtService, flowMgtExporter, err := flowmgt.Initialize(mux, flowFactory, execRegistry, graphCache)
+	if err != nil {
+		logger.Fatal("Failed to initialize FlowMgtService", log.Error(err))
+	}
+	exporters = append(exporters, flowMgtExporter)
 	certservice := cert.Initialize()
 	brandingMgtService := brandingmgt.Initialize(mux)
 	applicationService, applicationExporter, err := application.Initialize(mux, certservice, flowMgtService,

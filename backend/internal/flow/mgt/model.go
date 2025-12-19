@@ -32,14 +32,14 @@ type FlowDefinition struct {
 
 // CompleteFlowDefinition represents a complete flow definition with all details.
 type CompleteFlowDefinition struct {
-	ID            string           `json:"id"`
-	Handle        string           `json:"handle"`
-	Name          string           `json:"name"`
-	FlowType      common.FlowType  `json:"flowType"`
-	ActiveVersion int              `json:"activeVersion"`
-	Nodes         []NodeDefinition `json:"nodes"`
-	CreatedAt     string           `json:"createdAt"`
-	UpdatedAt     string           `json:"updatedAt"`
+	ID            string           `json:"id" yaml:"id"`
+	Handle        string           `json:"handle" yaml:"handle"`
+	Name          string           `json:"name" yaml:"name"`
+	FlowType      common.FlowType  `json:"flowType" yaml:"flowType"`
+	ActiveVersion int              `json:"activeVersion" yaml:"activeVersion"`
+	Nodes         []NodeDefinition `json:"nodes" yaml:"nodes"`
+	CreatedAt     string           `json:"createdAt" yaml:"createdAt"`
+	UpdatedAt     string           `json:"updatedAt" yaml:"updatedAt"`
 }
 
 // BasicFlowDefinition represents basic information about a flow definition.
@@ -100,59 +100,59 @@ type Link struct {
 
 // NodeLayout represents the layout information for a node in the flow composer UI.
 type NodeLayout struct {
-	Size     *NodeSize     `json:"size,omitempty"`
-	Position *NodePosition `json:"position,omitempty"`
+	Size     *NodeSize     `json:"size,omitempty" yaml:"size,omitempty"`
+	Position *NodePosition `json:"position,omitempty" yaml:"position,omitempty"`
 }
 
 // NodeSize represents the dimensions of a node.
 type NodeSize struct {
-	Width  float64 `json:"width"`
-	Height float64 `json:"height"`
+	Width  float64 `json:"width" yaml:"width"`
+	Height float64 `json:"height" yaml:"height"`
 }
 
 // NodePosition represents the position of a node on the canvas.
 type NodePosition struct {
-	X float64 `json:"x"`
-	Y float64 `json:"y"`
+	X float64 `json:"x" yaml:"x"`
+	Y float64 `json:"y" yaml:"y"`
 }
 
 // NodeDefinition represents a single node in a flow definition.
 type NodeDefinition struct {
-	ID         string                 `json:"id"`
-	Type       string                 `json:"type"`
-	Layout     *NodeLayout            `json:"layout,omitempty"`
-	Meta       interface{}            `json:"meta,omitempty"`
-	Inputs     []InputDefinition      `json:"inputs,omitempty"`
-	Actions    []ActionDefinition     `json:"actions,omitempty"`
-	Properties map[string]interface{} `json:"properties,omitempty"`
-	Executor   *ExecutorDefinition    `json:"executor,omitempty"`
-	OnSuccess  string                 `json:"onSuccess,omitempty"`
-	OnFailure  string                 `json:"onFailure,omitempty"`
-	Condition  *ConditionDefinition   `json:"condition,omitempty"`
+	ID         string                 `json:"id" yaml:"id"`
+	Type       string                 `json:"type" yaml:"type"`
+	Layout     *NodeLayout            `json:"layout,omitempty" yaml:"layout,omitempty"`
+	Meta       interface{}            `json:"meta,omitempty" yaml:"meta,omitempty"`
+	Inputs     []InputDefinition      `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Actions    []ActionDefinition     `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Properties map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty"`
+	Executor   *ExecutorDefinition    `json:"executor,omitempty" yaml:"executor,omitempty"`
+	OnSuccess  string                 `json:"onSuccess,omitempty" yaml:"onSuccess,omitempty"`
+	OnFailure  string                 `json:"onFailure,omitempty" yaml:"onFailure,omitempty"`
+	Condition  *ConditionDefinition   `json:"condition,omitempty" yaml:"condition,omitempty"`
 }
 
 // InputDefinition represents an input parameter for a node.
 type InputDefinition struct {
-	Ref        string `json:"ref,omitempty"`
-	Type       string `json:"type"`
-	Identifier string `json:"identifier"`
-	Required   bool   `json:"required"`
+	Ref        string `json:"ref,omitempty" yaml:"ref,omitempty"`
+	Type       string `json:"type" yaml:"type"`
+	Identifier string `json:"identifier" yaml:"identifier"`
+	Required   bool   `json:"required" yaml:"required"`
 }
 
 // ActionDefinition represents an action to be executed by a node.
 type ActionDefinition struct {
-	Ref      string `json:"ref"`
-	NextNode string `json:"nextNode"`
+	Ref      string `json:"ref" yaml:"ref"`
+	NextNode string `json:"nextNode" yaml:"nextNode"`
 }
 
 // ExecutorDefinition represents the executor configuration for a node.
 type ExecutorDefinition struct {
-	Name string `json:"name"`
+	Name string `json:"name" yaml:"name"`
 }
 
 // ConditionDefinition represents a condition for node execution.
 type ConditionDefinition struct {
-	Key    string `json:"key"`
-	Value  string `json:"value"`
-	OnSkip string `json:"onSkip"`
+	Key    string `json:"key" yaml:"key"`
+	Value  string `json:"value" yaml:"value"`
+	OnSkip string `json:"onSkip" yaml:"onSkip"`
 }
