@@ -32,6 +32,10 @@ import (
 	"github.com/asgardeo/thunder/tests/mocks/jwtmock"
 )
 
+const (
+	testCryptoKey = "0579f866ac7c9273580d0ff163fa01a7b2401a7ff3ddc3e3b14ae3136fa6025e"
+)
+
 type InitTestSuite struct {
 	suite.Suite
 	mockJWTService *jwtmock.JWTServiceInterfaceMock
@@ -43,28 +47,18 @@ func TestInitTestSuite(t *testing.T) {
 }
 
 func (suite *InitTestSuite) SetupSuite() {
-	// Get the current working directory.
-	cwd, err := os.Getwd()
-	if err != nil {
-		suite.T().Fatalf("Failed to get working directory: %v", err)
-	}
-	suite.T().Logf("Current working directory: %s", cwd)
-	cryptoFile := filepath.Join(cwd, "..", "..", "tests", "resources", "testKey")
-
-	if _, err := os.Stat(cryptoFile); os.IsNotExist(err) {
-		suite.T().Fatalf("Crypto file not found at expected path: %s", cryptoFile)
-	}
-
 	testConfig := &config.Config{
 		JWT: config.JWTConfig{
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: cryptoFile,
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
-	err = config.InitializeThunderRuntime("", testConfig)
+	err := config.InitializeThunderRuntime("", testConfig)
 	if err != nil {
 		suite.T().Fatalf("Failed to initialize ThunderRuntime: %v", err)
 	}
@@ -135,22 +129,9 @@ properties:
 	err = os.WriteFile(filepath.Join(senderDir, "vonage-sender.yaml"), []byte(vonageYAML), 0600)
 	suite.NoError(err)
 
-	// Copy the crypto key file to temp directory
-	cwd, err := os.Getwd()
-	suite.NoError(err)
-	srcCryptoFile := filepath.Join(cwd, "..", "..", "tests", "resources", "testKey")
-
 	// Create tests/resources directory in tmpDir
 	testsResourcesDir := filepath.Join(tmpDir, "tests", "resources")
 	err = os.MkdirAll(testsResourcesDir, 0750)
-	suite.NoError(err)
-
-	// Copy crypto key file
-	cryptoFilePath := filepath.Clean(srcCryptoFile)
-	cryptoData, err := os.ReadFile(cryptoFilePath)
-	suite.NoError(err)
-	destCryptoFile := filepath.Join(testsResourcesDir, "testKey")
-	err = os.WriteFile(destCryptoFile, cryptoData, 0600)
 	suite.NoError(err)
 
 	// Reset and initialize config with immutable resources enabled
@@ -160,8 +141,10 @@ properties:
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "tests/resources/testKey", // Relative to tmpDir (thunderHome)
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
@@ -199,15 +182,15 @@ properties:
 
 	// Clean up - reset config and reinitialize with suite's test config
 	config.ResetThunderRuntime()
-	cwd, err = os.Getwd()
-	suite.NoError(err)
 	suiteConfig := &config.Config{
 		JWT: config.JWTConfig{
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: filepath.Join(cwd, "..", "..", "tests", "resources", "testKey"),
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 	err = config.InitializeThunderRuntime("", suiteConfig)
@@ -476,27 +459,16 @@ func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled_Invalid
 	err = os.WriteFile(filepath.Join(senderDir, "invalid-sender.yaml"), []byte(invalidYAML), 0600)
 	suite.NoError(err)
 
-	// Copy crypto key file
-	cwd, err := os.Getwd()
-	suite.NoError(err)
-	srcCryptoFile := filepath.Join(cwd, "..", "..", "tests", "resources", "testKey")
-	testsResourcesDir := filepath.Join(tmpDir, "tests", "resources")
-	err = os.MkdirAll(testsResourcesDir, 0750)
-	suite.NoError(err)
-	cryptoData, err := os.ReadFile(filepath.Clean(srcCryptoFile))
-	suite.NoError(err)
-	destCryptoFile := filepath.Join(testsResourcesDir, "testKey")
-	err = os.WriteFile(destCryptoFile, cryptoData, 0600)
-	suite.NoError(err)
-
 	config.ResetThunderRuntime()
 	testConfig := &config.Config{
 		JWT: config.JWTConfig{
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "tests/resources/testKey",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
@@ -514,14 +486,15 @@ func (suite *InitTestSuite) TestInitialize_WithImmutableResourcesEnabled_Invalid
 
 	// Clean up
 	config.ResetThunderRuntime()
-	cwd, _ = os.Getwd()
 	suiteConfig := &config.Config{
 		JWT: config.JWTConfig{
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: filepath.Join(cwd, "..", "..", "tests", "resources", "testKey"),
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 	err = config.InitializeThunderRuntime("", suiteConfig)
@@ -552,27 +525,16 @@ properties:
 	err = os.WriteFile(filepath.Join(senderDir, "invalid-sender.yaml"), []byte(invalidSenderYAML), 0600)
 	suite.NoError(err)
 
-	// Copy crypto key file
-	cwd, err := os.Getwd()
-	suite.NoError(err)
-	srcCryptoFile := filepath.Join(cwd, "..", "..", "tests", "resources", "testKey")
-	testsResourcesDir := filepath.Join(tmpDir, "tests", "resources")
-	err = os.MkdirAll(testsResourcesDir, 0750)
-	suite.NoError(err)
-	cryptoData, err := os.ReadFile(filepath.Clean(srcCryptoFile))
-	suite.NoError(err)
-	destCryptoFile := filepath.Join(testsResourcesDir, "testKey")
-	err = os.WriteFile(destCryptoFile, cryptoData, 0600)
-	suite.NoError(err)
-
 	config.ResetThunderRuntime()
 	testConfig := &config.Config{
 		JWT: config.JWTConfig{
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "tests/resources/testKey",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
@@ -590,14 +552,15 @@ properties:
 
 	// Clean up
 	config.ResetThunderRuntime()
-	cwd, _ = os.Getwd()
 	suiteConfig := &config.Config{
 		JWT: config.JWTConfig{
 			Issuer:         "test-issuer",
 			ValidityPeriod: 3600,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: filepath.Join(cwd, "..", "..", "tests", "resources", "testKey"),
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 	err = config.InitializeThunderRuntime("", suiteConfig)

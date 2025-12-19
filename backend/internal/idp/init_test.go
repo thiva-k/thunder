@@ -354,14 +354,6 @@ func TestInitialize_WithImmutableResourcesEnabled_ValidConfigs(t *testing.T) {
 	err := os.MkdirAll(idpDir, 0750)
 	assert.NoError(t, err)
 
-	// Create crypto key file for encryption (relative to tmpDir)
-	cryptoDir := tmpDir + "/repository/conf"
-	err = os.MkdirAll(cryptoDir, 0750)
-	assert.NoError(t, err)
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	// Setup config with encryption support (path relative to thunderHome)
 	testConfig := &config.Config{
 		Database: config.DatabaseConfig{
@@ -377,8 +369,10 @@ func TestInitialize_WithImmutableResourcesEnabled_ValidConfigs(t *testing.T) {
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
@@ -487,21 +481,14 @@ func TestInitialize_WithImmutableResourcesEnabled_InvalidYAML(t *testing.T) {
 	err = os.WriteFile(idpDir+"/invalid-idp.yaml", []byte(invalidYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoDir := tmpDir + "/repository/conf"
-	err = os.MkdirAll(cryptoDir, 0750)
-	assert.NoError(t, err)
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
@@ -541,21 +528,14 @@ properties:
 	err = os.WriteFile(idpDir+"/invalid-idp.yaml", []byte(invalidIDPYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoDir := tmpDir + "/repository/conf"
-	err = os.MkdirAll(cryptoDir, 0750)
-	assert.NoError(t, err)
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
@@ -595,21 +575,14 @@ properties:
 	err = os.WriteFile(idpDir+"/invalid-type.yaml", []byte(invalidTypeYAML), 0600)
 	assert.NoError(t, err)
 
-	// Setup config
-	cryptoDir := tmpDir + "/repository/conf"
-	err = os.MkdirAll(cryptoDir, 0750)
-	assert.NoError(t, err)
-	cryptoFilePath := tmpDir + "/repository/conf/crypto.key"
-	// Use testCryptoKey constant
-	err = os.WriteFile(cryptoFilePath, []byte(testCryptoKey), 0600)
-	assert.NoError(t, err)
-
 	testConfig := &config.Config{
 		ImmutableResources: config.ImmutableResources{
 			Enabled: true,
 		},
-		Security: config.SecurityConfig{
-			CryptoFile: "repository/conf/crypto.key",
+		Crypto: config.CryptoConfig{
+			Encryption: config.EncryptionConfig{
+				Key: testCryptoKey,
+			},
 		},
 	}
 
