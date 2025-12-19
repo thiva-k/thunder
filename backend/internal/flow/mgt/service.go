@@ -28,6 +28,7 @@ import (
 	"github.com/asgardeo/thunder/internal/flow/core"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	immutableresource "github.com/asgardeo/thunder/internal/system/immutable_resource"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/utils"
 )
@@ -116,6 +117,10 @@ func (s *flowMgtService) ListFlows(limit, offset int, flowType common.FlowType) 
 // CreateFlow creates a new flow definition with version 1.
 func (s *flowMgtService) CreateFlow(flowDef *FlowDefinition) (
 	*CompleteFlowDefinition, *serviceerror.ServiceError) {
+	if err := immutableresource.CheckImmutableCreate(); err != nil {
+		return nil, err
+	}
+
 	if err := validateFlowDefinition(flowDef); err != nil {
 		return nil, err
 	}
@@ -194,6 +199,10 @@ func (s *flowMgtService) GetFlowByHandle(handle string, flowType common.FlowType
 // Old versions are retained up to the configured max_version_history limit.
 func (s *flowMgtService) UpdateFlow(flowID string, flowDef *FlowDefinition) (
 	*CompleteFlowDefinition, *serviceerror.ServiceError) {
+	if err := immutableresource.CheckImmutableUpdate(); err != nil {
+		return nil, err
+	}
+
 	if flowID == "" {
 		return nil, &ErrorMissingFlowID
 	}
@@ -239,6 +248,10 @@ func (s *flowMgtService) UpdateFlow(flowID string, flowDef *FlowDefinition) (
 
 // DeleteFlow deletes a flow definition and all its version history.
 func (s *flowMgtService) DeleteFlow(flowID string) *serviceerror.ServiceError {
+	if err := immutableresource.CheckImmutableDelete(); err != nil {
+		return err
+	}
+
 	if flowID == "" {
 		return &ErrorMissingFlowID
 	}

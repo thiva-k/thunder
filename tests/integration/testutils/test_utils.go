@@ -37,7 +37,6 @@ const (
 	ServerBinary                = "thunder"
 	TestDeploymentYamlPath      = "./resources/deployment.yaml"
 	TestDatabaseSchemaDirectory = "resources/dbscripts"
-	TestGraphsDirectory         = "resources/graphs"
 	InitScriptPath              = "./scripts/init_script.sh"
 	DBScriptPath                = "./scripts/setup_db.sh"
 	DatabaseFileBasePath        = "repository/database/"

@@ -35,6 +35,7 @@ const (
 	KeyTypeNotificationSender KeyType = "notification-sender"
 	KeyTypeUserSchema         KeyType = "user-schema"
 	KeyTypeOU                 KeyType = "ou"
+	KeyTypeFlow               KeyType = "flow"
 )
 
 // String returns the string representation of KeyType
@@ -45,7 +46,8 @@ func (kt KeyType) String() string {
 // IsValid checks if the KeyType is one of the predefined types
 func (kt KeyType) IsValid() bool {
 	switch kt {
-	case KeyTypeApplication, KeyTypeNotification, KeyTypeIDP, KeyTypeNotificationSender, KeyTypeUserSchema, KeyTypeOU:
+	case KeyTypeApplication, KeyTypeNotification, KeyTypeIDP, KeyTypeNotificationSender,
+		KeyTypeUserSchema, KeyTypeOU, KeyTypeFlow:
 		return true
 	default:
 		return false
