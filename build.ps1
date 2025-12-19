@@ -1217,17 +1217,15 @@ function Ensure-Crypto-File {
         [string]$conf_dir
     )
 
-    $DEPLOYMENT_FILE = Join-Path $conf_dir "deployment.yaml"
     # Resolve the .. path segment to get a clean key directory path
     $KEY_DIR_Temp = Join-Path $conf_dir ".." "resources/security"
     $KEY_DIR = (Resolve-Path -Path $KEY_DIR_Temp).Path
     $KEY_FILE = Join-Path $KEY_DIR "crypto.key"
-    $KEY_PATH_IN_YAML = "repository/resources/security/crypto.key"
 
     Write-Host "================================================================"
     Write-Host "Ensuring crypto key file exists..."
 
-    # 1. Check if the key file exists
+    # Check Whether the key file exists
     if (Test-Path $KEY_FILE) {
         Write-Host "Default crypto key file already present in $KEY_FILE. Skipping generation."
     }
@@ -1309,51 +1307,6 @@ function Ensure-Crypto-File {
         Write-Host "Successfully generated and added new crypto key to $KEY_FILE."
     }
 
-    # 2. Check and update deployment.yaml
-    if (-not (Test-Path $DEPLOYMENT_FILE)) {
-        throw "ERROR: $DEPLOYMENT_FILE not found. Cannot configure crypto key."
-    }
-    
-    $configLines = Get-Content $DEPLOYMENT_FILE
-    $cryptoLine = $configLines | Select-String -Pattern "^\s*crypto_file\s*:" -ErrorAction SilentlyContinue
-
-   
-    $ANCHOR_LINE_PATTERN = '^\s*key_file\s*:\s*".*server\.key"'
-    $KEY_FILE_LINE_TO_INSERT = '  crypto_file: "{0}"' -f $KEY_PATH_IN_YAML
-    
-    if ($cryptoLine) {
-        # Config exists, check if it's correct
-        $expected_line_pattern = '^\s*crypto_file\s*:\s*"{0}"' -f $KEY_PATH_IN_YAML
-        if ($cryptoLine -match $expected_line_pattern) {
-            Write-Host "Crypto key file is already configured in $DEPLOYMENT_FILE."
-        }
-        else {
-            throw "ERROR: 'crypto_file' is defined in $DEPLOYMENT_FILE but does not match the default path '$KEY_PATH_IN_YAML'. Please fix or remove the line."
-        }
-    }
-    else {
-        # Config is missing, add it
-        Write-Host "Crypto key file is not configured in $DEPLOYMENT_FILE. Inserting entry..."
-        
-        $newConfigLines = @()
-        $lineInserted = $false
-
-        foreach ($line in $configLines) {
-            $newConfigLines += $line
-            if ($line -match $ANCHOR_LINE_PATTERN) {
-                $newConfigLines += $KEY_FILE_LINE_TO_INSERT
-                $lineInserted = $true
-            }
-        }
-
-        if (-not $lineInserted) {
-            throw "ERROR: Could not insert crypto_file line into $DEPLOYMENT_FILE. Anchor line (pattern '$ANCHOR_LINE_PATTERN') not found."
-        }
-
-        # Save the file (YAML should use UTF-8)
-        Set-Content -Path $DEPLOYMENT_FILE -Value $newConfigLines -Encoding UTF8
-        Write-Host "Successfully updated $DEPLOYMENT_FILE to use the default key file."
-    }
     Write-Host "================================================================"
 }
 
