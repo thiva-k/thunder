@@ -48,6 +48,8 @@ function Execution({data, resources}: ExecutionPropsInterface): ReactElement | n
   const {setLastInteractedResource, setLastInteractedStepId} = useFlowBuilderCore();
 
   const executorName = (data?.action as StepAction | undefined)?.executor?.name ?? 'Executor';
+  // Get display metadata from data (set by resolveStepMetadata)
+  const displayFromData = data?.display as {label?: string; image?: string; showOnResourcePanel?: boolean} | undefined;
 
   const hasComponents = useMemo(() => {
     const components = (data?.components as Element[]) ?? [];
@@ -63,12 +65,12 @@ function Execution({data, resources}: ExecutionPropsInterface): ReactElement | n
         resourceType: ResourceTypes.Step,
         data,
         display: {
-          label: executorName,
-          image: '',
-          showOnResourcePanel: false,
+          label: displayFromData?.label ?? executorName,
+          image: displayFromData?.image ?? '',
+          showOnResourcePanel: displayFromData?.showOnResourcePanel ?? false,
         },
       }) as Step,
-    [stepId, data, executorName],
+    [stepId, data, executorName, displayFromData],
   );
 
   const handleActionPanelDoubleClick = useMemo(

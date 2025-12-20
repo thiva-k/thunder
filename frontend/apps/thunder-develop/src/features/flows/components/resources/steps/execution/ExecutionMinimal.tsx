@@ -49,6 +49,9 @@ function ExecutionMinimal({resource}: ExecutionMinimalPropsInterface): ReactElem
 
   const {t} = useTranslation();
 
+  // Get the executor name from the action data (e.g., "BasicAuthExecutor")
+  const executorName = resource.data?.action?.executor?.name ?? 'Executor';
+
   const handleConfigClick = (): void => {
     if (stepId !== null) {
       setLastInteractedStepId(stepId);
@@ -85,7 +88,7 @@ function ExecutionMinimal({resource}: ExecutionMinimalPropsInterface): ReactElem
             fontWeight: 500,
           }}
         >
-          {(resource.display as {displayname?: string})?.displayname ?? resource.display?.label ?? 'Execution'}
+          {executorName}
         </Typography>
         <Tooltip title={t('flows:core.executions.tooltip.configurationHint')}>
           <IconButton

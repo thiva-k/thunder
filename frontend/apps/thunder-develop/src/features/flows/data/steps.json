@@ -140,7 +140,7 @@
   {
     "resourceType": "STEP",
     "category": "WORKFLOW",
-    "type": "EXECUTION",
+    "type": "TASK_EXECUTION",
     "display": {
       "label": "Execution",
       "image": "assets/images/icons/play.svg",
@@ -150,7 +150,7 @@
   {
     "resourceType": "STEP",
     "category": "WORKFLOW",
-    "type": "EXECUTION",
+    "type": "TASK_EXECUTION",
     "display": {
       "label": "Magic Link View",
       "image": "assets/images/icons/link.svg",

@@ -25,6 +25,7 @@ import useValidationStatus from './useValidationStatus';
 import ValidationConstants from '../constants/ValidationConstants';
 
 const IDP_NAME_PLACEHOLDER = '{{IDP_NAME}}';
+const IDP_ID_PLACEHOLDER = '{{IDP_ID}}';
 
 /**
  * Interface for the required field.
@@ -81,7 +82,7 @@ const useRequiredFields = (
 
     const value: string | null = get(obj, path, null);
 
-    return value === IDP_NAME_PLACEHOLDER ? '' : (value ?? '');
+    return value === IDP_NAME_PLACEHOLDER || value === IDP_ID_PLACEHOLDER ? '' : (value ?? '');
   }, []);
 
   useEffect(() => {

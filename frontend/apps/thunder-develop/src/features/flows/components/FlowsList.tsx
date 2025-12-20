@@ -49,14 +49,11 @@ export default function FlowsList(): JSX.Element {
   const [selectedFlow, setSelectedFlow] = useState<BasicFlowDefinition | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
 
-  const handleMenuOpen = useCallback(
-    (event: React.MouseEvent<HTMLElement>, flow: BasicFlowDefinition) => {
-      event.stopPropagation();
-      setAnchorEl(event.currentTarget);
-      setSelectedFlow(flow);
-    },
-    [],
-  );
+  const handleMenuOpen = useCallback((event: React.MouseEvent<HTMLElement>, flow: BasicFlowDefinition) => {
+    event.stopPropagation();
+    setAnchorEl(event.currentTarget);
+    setSelectedFlow(flow);
+  }, []);
 
   const handleMenuClose = (): void => {
     setAnchorEl(null);
@@ -133,7 +130,7 @@ export default function FlowsList(): JSX.Element {
           <Chip
             label={params.row.flowType}
             size="small"
-            color={params.row.flowType === 'AUTHENTICATION' ? 'primary' : 'secondary'}
+            color="primary"
             variant="outlined"
             sx={{
               fontSize: '0.7rem',

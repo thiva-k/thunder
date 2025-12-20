@@ -18,8 +18,9 @@
 
 import type {ReactElement} from 'react';
 import {ExecutionTypes} from '@/features/flows/models/steps';
-import {Box, Typography} from '@wso2/oxygen-ui';
+import {Box, Typography, useColorScheme} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
+import resolveStaticResourcePath from '@/features/flows/utils/resolveStaticResourcePath';
 import type {ExecutionMinimalPropsInterface} from '../ExecutionMinimal';
 import GoogleExecution from './GoogleExecution';
 import GithubExecution from './GithubExecution';
@@ -37,10 +38,17 @@ export type ExecutionFactoryPropsInterface = ExecutionMinimalPropsInterface;
  */
 function ExecutionFactory({resource}: ExecutionFactoryPropsInterface): ReactElement {
   const {t} = useTranslation();
+  const {mode, systemMode} = useColorScheme();
+
+  // Determine the effective mode - if mode is 'system', use systemMode
+  const effectiveMode = mode === 'system' ? systemMode : mode;
 
   const action = resource.data?.action;
   const executorName = action?.executor?.name;
+  const displayImage = resource.display?.image;
+  const displayLabel = resource.display?.label;
 
+  // Google and GitHub executors have special validation logic
   if (executorName === ExecutionTypes.GoogleFederation) {
     return <GoogleExecution resource={resource} />;
   }
@@ -49,68 +57,25 @@ function ExecutionFactory({resource}: ExecutionFactoryPropsInterface): ReactElem
     return <GithubExecution resource={resource} />;
   }
 
-  if (executorName === ExecutionTypes.PasskeyEnrollment) {
+  // For all other executors, render with icon from display.image if available
+  if (displayImage) {
     return (
-      <Box display="flex" gap={1}>
-        <img src="https://www.svgrepo.com/show/246819/fingerprint.svg" alt="fingerprint-icon" height="20" />
-        <Typography variant="body1">{t('flows:core.executions.names.passkeyEnrollment')}</Typography>
+      <Box display="flex" gap={1} alignItems="center" className="flow-builder-execution">
+        <img
+          src={resolveStaticResourcePath(displayImage)}
+          alt={`${displayLabel ?? 'executor'}-icon`}
+          height="20"
+          style={{filter: effectiveMode === 'dark' ? 'brightness(0.9) invert(1)' : 'none'}}
+        />
+        <Typography variant="body1">{displayLabel ?? t('flows:core.executions.names.default')}</Typography>
       </Box>
     );
   }
 
-  if (executorName === ExecutionTypes.MagicLinkExecutor) {
-    return (
-      <Box display="flex" gap={1} className="flow-builder-execution magic-link">
-        <img src="https://www.svgrepo.com/show/524687/link.svg" alt="link-icon" height="20" />
-        <Typography variant="body1">{t('flows:core.executions.names.magicLink')}</Typography>
-      </Box>
-    );
-  }
-
-  if (executorName === ExecutionTypes.ConfirmationCode) {
-    return (
-      <Box display="flex" gap={1} className="flow-builder-execution confirmation-code">
-        <img src="https://www.svgrepo.com/show/468264/check-mark-square-2.svg" alt="check-mark-icon" height="20" />
-        <Typography variant="body1">{t('flows:core.executions.names.confirmationCode')}</Typography>
-      </Box>
-    );
-  }
-
-  if (executorName === ExecutionTypes.SendEmailOTP) {
-    return (
-      <Box display="flex" gap={1} className="flow-builder-execution send-email-otp">
-        <Typography variant="body1">{t('flows:core.executions.names.sendEmailOTP')}</Typography>
-      </Box>
-    );
-  }
-
-  if (executorName === ExecutionTypes.VerifyEmailOTP) {
-    return (
-      <Box display="flex" gap={1} className="flow-builder-execution verify-email-otp">
-        <Typography variant="body1">{t('flows:core.executions.names.verifyEmailOTP')}</Typography>
-      </Box>
-    );
-  }
-
-  if (executorName === ExecutionTypes.SendSMS) {
-    return (
-      <Box display="flex" gap={1} className="flow-builder-execution send-sms">
-        <Typography variant="body1">{t('flows:core.executions.names.sendSMS')}</Typography>
-      </Box>
-    );
-  }
-
-  if (executorName === ExecutionTypes.VerifySMSOTP) {
-    return (
-      <Box display="flex" gap={1} className="flow-builder-execution verify-sms-otp">
-        <Typography variant="body1">{t('flows:core.executions.names.verifySMSOTP')}</Typography>
-      </Box>
-    );
-  }
-
+  // Fallback for executors without display metadata
   return (
     <Box display="flex" gap={1}>
-      <Typography variant="body1">{t('flows:core.executions.names.default')}</Typography>
+      <Typography variant="body1">{displayLabel ?? t('flows:core.executions.names.default')}</Typography>
     </Box>
   );
 }

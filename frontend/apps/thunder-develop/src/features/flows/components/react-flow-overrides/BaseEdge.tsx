@@ -17,9 +17,10 @@
  */
 
 import {BaseEdge as XYFlowBaseEdge, EdgeLabelRenderer, useReactFlow, useNodes, type EdgeProps} from '@xyflow/react';
-import {useState, type ReactElement, type SyntheticEvent} from 'react';
+import {useState, useContext, type ReactElement, type SyntheticEvent} from 'react';
 import {XIcon} from '@wso2/oxygen-ui-icons-react';
-import {calculateEdgePath} from '../../utils/calculateEdgePath';
+import {calculateEdgePath, type EdgeStyle} from '../../utils/calculateEdgePath';
+import FlowBuilderCoreContext from '../../context/FlowBuilderCoreContext';
 import './BaseEdge.scss';
 
 /**
@@ -28,8 +29,14 @@ import './BaseEdge.scss';
 export type BaseEdgePropsInterface = EdgeProps;
 
 /**
+ * Border radius for smooth step edges in pixels.
+ */
+const SMOOTH_STEP_BORDER_RADIUS = 20;
+
+/**
  * Enhanced edge component with custom routing algorithm to avoid nodes.
  * Includes custom delete button and label functionality with hover effects.
+ * Supports multiple edge styles: Bezier, Smooth Step (with rounded corners), and Step.
  */
 function BaseEdge({
   id,
@@ -49,13 +56,24 @@ function BaseEdge({
   const {deleteElements} = useReactFlow();
   const [isHovered, setIsHovered] = useState<boolean>(false);
   const nodes = useNodes();
+  const {edgeStyle} = useContext(FlowBuilderCoreContext);
 
-  // Calculate smart path that routes around nodes
+  // Calculate smart path that routes around nodes with the selected edge style
   const {
     path: edgePath,
     centerX: labelX,
     centerY: labelY,
-  } = calculateEdgePath(sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, nodes);
+  } = calculateEdgePath(
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    nodes,
+    edgeStyle as EdgeStyle,
+    SMOOTH_STEP_BORDER_RADIUS,
+  );
 
   const handleDelete = (event: SyntheticEvent) => {
     event.stopPropagation();

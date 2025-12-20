@@ -44,8 +44,8 @@ function GithubExecution({resource}: GithubExecutionPropsInterface): ReactElemen
   const fields: RequiredFieldInterface[] = useMemo(
     () => [
       {
-        errorMessage: t('flows:core.validation.fields.input.idpName'),
-        name: 'data.action.executor.meta.idpName',
+        errorMessage: t('flows:core.validation.fields.input.idpId'),
+        name: 'data.properties.idpId',
       },
     ],
     [t],

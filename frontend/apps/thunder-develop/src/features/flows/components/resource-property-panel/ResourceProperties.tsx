@@ -239,7 +239,9 @@ function ResourceProperties(): ReactElement {
         if (!isEmpty(node?.data?.components)) {
           data.components = updateComponent(cloneDeep(node?.data?.components) ?? []);
         } else {
-          set(data as Record<string, unknown>, propertyKey, newValue);
+          // Strip 'data.' prefix if present since we're already setting on the data object
+          const actualKey = propertyKey.startsWith('data.') ? propertyKey.slice(5) : propertyKey;
+          set(data as Record<string, unknown>, actualKey, newValue);
         }
 
         return {...data};
@@ -255,7 +257,8 @@ function ResourceProperties(): ReactElement {
         const topLevelEditableProps = ['label', 'hint', 'placeholder', 'required', 'src', 'alt'];
         if (topLevelEditableProps.includes(propertyKey)) {
           set(updatedResource as unknown as Record<string, unknown>, propertyKey, newValue);
-        } else if (propertyKey.startsWith('config.')) {
+        } else if (propertyKey.startsWith('config.') || propertyKey.startsWith('data.')) {
+          // Properties starting with 'config.' or 'data.' should be set on the resource directly
           set(updatedResource, propertyKey, newValue);
         } else {
           set(updatedResource.data as Record<string, unknown>, propertyKey, newValue);

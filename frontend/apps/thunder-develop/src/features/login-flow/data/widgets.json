@@ -124,7 +124,7 @@
           },
           {
             "id": "{{GOOGLE_EXECUTION_STEP_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 350,
               "height": 291
@@ -137,12 +137,12 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "GoogleOIDCAuthExecutor",
-                  "meta": {
-                    "idpName": "{{IDP_NAME}}"
-                  }
+                  "name": "GoogleOIDCAuthExecutor"
                 },
                 "next": "END"
+              },
+              "properties": {
+                "idpId": "{{IDP_ID}}"
               }
             }
           }
@@ -197,7 +197,7 @@
           },
           {
             "id": "{{GITHUB_EXECUTION_STEP_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 350,
               "height": 291
@@ -210,12 +210,12 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "GithubOAuthExecutor",
-                  "meta": {
-                    "idpName": "{{IDP_NAME}}"
-                  }
+                  "name": "GithubOAuthExecutor"
                 },
                 "next": "END"
+              },
+              "properties": {
+                "idpId": "{{IDP_ID}}"
               }
             }
           }
@@ -276,7 +276,7 @@
           },
           {
             "id": "{{EMAIL_SEND_EXECUTOR_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 200,
               "height": 100
@@ -364,7 +364,7 @@
           },
           {
             "id": "{{EMAIL_VERIFY_EXECUTOR_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 200,
               "height": 100
@@ -440,7 +440,7 @@
           },
           {
             "id": "{{SMS_SEND_EXECUTOR_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 200,
               "height": 100
@@ -453,7 +453,8 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "SendSMSExecutor"
+                  "name": "SMSOTPAuthExecutor",
+                  "mode": "send"
                 },
                 "next": "{{SMS_OTP_VERIFICATION_STEP_ID}}"
               }
@@ -528,7 +529,7 @@
           },
           {
             "id": "{{SMS_VERIFY_EXECUTOR_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 200,
               "height": 100
@@ -541,7 +542,8 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "VerifySMSOTPExecutor"
+                  "name": "SMSOTPAuthExecutor",
+                  "mode": "verify"
                 },
                 "next": "END"
               }
@@ -598,7 +600,7 @@
           },
           {
             "id": "{{PASSKEY_EXECUTION_STEP_ID}}",
-            "type": "EXECUTION",
+            "type": "TASK_EXECUTION",
             "size": {
               "width": 350,
               "height": 291

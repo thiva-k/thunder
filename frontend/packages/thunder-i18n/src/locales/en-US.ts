@@ -851,6 +851,13 @@ const translations = {
     'core.executions.names.verifySMSOTP': 'Verify SMS OTP',
     'core.executions.names.default': 'Execution',
 
+    // SMS OTP executor modes
+    'core.executions.smsOtp.mode.send': 'Send OTP',
+    'core.executions.smsOtp.mode.verify': 'Verify OTP',
+    'core.executions.smsOtp.mode.label': 'Mode',
+    'core.executions.smsOtp.mode.placeholder': 'Select a mode',
+    'core.executions.smsOtp.description': 'Configure the SMS OTP executor mode.',
+
     // Execution steps - tooltips and messages
     'core.executions.tooltip.configurationHint': 'Click to configure this step',
     'core.executions.landing.message': 'This {{executor}} step will redirect users to a landing page.',
@@ -862,6 +869,7 @@ const translations = {
     'core.validation.fields.input.general':
       'Required fields are not properly configured for the input field with ID <code>{{id}}</code>.',
     'core.validation.fields.input.idpName': 'Identity provider name is required',
+    'core.validation.fields.input.idpId': 'Connection is required',
     'core.validation.fields.input.label': 'Label is required',
     'core.validation.fields.input.identifier': 'Identifier is required',
 
@@ -979,6 +987,10 @@ const translations = {
     'core.headerPanel.editTitle': 'Edit flow name',
     'core.headerPanel.saveTitle': 'Save flow name',
     'core.headerPanel.cancelEdit': 'Cancel',
+    'core.headerPanel.edgeStyleTooltip': 'Change edge style',
+    'core.headerPanel.edgeStyles.bezier': 'Bezier',
+    'core.headerPanel.edgeStyles.smoothStep': 'Smooth Step',
+    'core.headerPanel.edgeStyles.step': 'Step',
 
     // Resource panel
     'core.resourcePanel.title': 'Resources',
