@@ -42,7 +42,7 @@ import {
 } from '@wso2/oxygen-ui-icons-react';
 import useFlowBuilderCore from '../../hooks/useFlowBuilderCore';
 import ResourcePanelStatic from './ResourcePanelStatic';
-import {type Element, ElementTypes} from '../../models/elements';
+import type {Element} from '../../models/elements';
 import type {Resource, Resources} from '../../models/resources';
 import type {Step} from '../../models/steps';
 import type {Template} from '../../models/templates';
@@ -448,11 +448,7 @@ function ResourcePanel({
               {elements?.map((element: Element, index: number) => (
                 <ResourcePanelDraggable
                   id={`${element.resourceType}-${element.type}-${index}`}
-                  key={
-                    element.type === ElementTypes.Input
-                      ? `${element.type}_${String(element.variant)}_${index}`
-                      : `${element.type}_${index}`
-                  }
+                  key={`${element.resourceType}-${element.category}-${element.type}`}
                   resource={element}
                   onAdd={onAdd}
                   disabled={false}

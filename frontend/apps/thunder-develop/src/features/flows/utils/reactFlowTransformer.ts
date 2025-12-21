@@ -18,7 +18,7 @@
 
 import type {Edge, Node} from '@xyflow/react';
 import type {Element} from '../models/elements';
-import {ElementCategories, ElementTypes, InputVariants, ActionEventTypes, ButtonTypes} from '../models/elements';
+import {ElementCategories, ElementTypes, ActionEventTypes, ButtonTypes} from '../models/elements';
 import type {StepData} from '../models/steps';
 import {StepTypes, StaticStepTypes} from '../models/steps';
 import {ActionTypes} from '../models/actions';
@@ -137,17 +137,19 @@ const STEP_TO_NODE_TYPE_MAP: Record<string, string> = {
 };
 
 /**
- * Maps input variants to flow input types
+ * Set of input element types for quick lookup
  */
-const INPUT_VARIANT_TO_TYPE_MAP: Record<string, string> = {
-  [InputVariants.Text]: 'TEXT_INPUT',
-  [InputVariants.Password]: 'PASSWORD_INPUT',
-  [InputVariants.Email]: 'EMAIL_INPUT',
-  [InputVariants.Telephone]: 'PHONE_INPUT',
-  [InputVariants.Number]: 'NUMBER_INPUT',
-  [InputVariants.Checkbox]: 'CHECKBOX',
-  [InputVariants.OTP]: 'OTP_INPUT',
-};
+const INPUT_ELEMENT_TYPES = new Set<string>([
+  ElementTypes.TextInput,
+  ElementTypes.PasswordInput,
+  ElementTypes.EmailInput,
+  ElementTypes.PhoneInput,
+  ElementTypes.NumberInput,
+  ElementTypes.DateInput,
+  ElementTypes.OtpInput,
+  ElementTypes.Checkbox,
+  ElementTypes.Dropdown,
+]);
 
 /**
  * Derives the eventType for ACTION category components based on buttonType
@@ -189,6 +191,13 @@ function cleanComponents(components: Element[]): Record<string, unknown>[] {
       ...rest,
     };
 
+    // For input field components, add ref property matching the identifier
+    if (INPUT_ELEMENT_TYPES.has(component.type)) {
+      const componentWithProps = component as Element & {name?: string; identifier?: string};
+      const identifier = componentWithProps.name ?? componentWithProps.identifier ?? component.id;
+      cleanedComponent.ref = identifier;
+    }
+
     // For ACTION category components, ensure eventType is set
     if (component.category === ElementCategories.Action && !cleanedComponent.eventType) {
       cleanedComponent.eventType = deriveEventType(component as Element & {buttonType?: string});
@@ -211,12 +220,8 @@ function extractInputs(components: Element[]): FlowInput[] {
   const inputs: FlowInput[] = [];
 
   function processComponent(component: Element): void {
-    // Check if this is an input field
-    if (component.type === ElementTypes.Input) {
-      const variantValue = component.variant;
-      const variant = typeof variantValue === 'string' ? variantValue : InputVariants.Text;
-      const inputType = INPUT_VARIANT_TO_TYPE_MAP[variant] ?? 'TEXT_INPUT';
-
+    // Check if this is an input field (type is now directly the input type like TEXT_INPUT, PASSWORD_INPUT, etc.)
+    if (INPUT_ELEMENT_TYPES.has(component.type)) {
       // Extract identifier from top-level properties
       const componentWithProps = component as Element & {name?: string; identifier?: string; required?: boolean};
       let identifier: string;
@@ -231,8 +236,8 @@ function extractInputs(components: Element[]): FlowInput[] {
       const isRequired = componentWithProps.required ?? false;
 
       inputs.push({
-        ref: component.id,
-        type: inputType,
+        ref: identifier,
+        type: component.type, // The type is already the API type (TEXT_INPUT, PASSWORD_INPUT, etc.)
         identifier,
         required: isRequired,
       });
@@ -259,7 +264,7 @@ function extractActions(components: Element[], nodeId: string, edges: Edge[]): F
 
   function processComponent(component: Element): void {
     // Check if this is a button/action element
-    if (component.type === ElementTypes.Button || component.type === ElementTypes.Resend) {
+    if (component.type === ElementTypes.Action || component.type === ElementTypes.Resend) {
       // Build the action object
       const action: FlowAction = {
         ref: component.id,

@@ -28,7 +28,7 @@ import {
 } from '@wso2/oxygen-ui';
 import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/ResourceProperties';
 import useValidationStatus from '@/features/flows/hooks/useValidationStatus';
-import {InputVariants, type Element} from '@/features/flows/models/elements';
+import {ElementTypes, type Element} from '@/features/flows/models/elements';
 
 /**
  * Props interface of {@link FieldExtendedProperties}
@@ -73,7 +73,7 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
     return '';
   }, [resource, selectedNotification]);
 
-  if (resource.variant === InputVariants.Password) {
+  if (resource.type === ElementTypes.PasswordInput) {
     return null;
   }
 

@@ -164,15 +164,18 @@ const useEdgeGeneration = (props?: UseEdgeGenerationProps): UseEdgeGenerationRet
           // Process components with actions
           if (step.data?.components) {
             step.data.components.forEach((component) => {
-              // Process buttons inside forms
+              // Process buttons inside forms (including Action and Resend buttons)
               if (component.type === BlockTypes.Form && component.components) {
                 component.components
-                  .filter((formComponent) => formComponent.type === ElementTypes.Button)
+                  .filter(
+                    (formComponent) =>
+                      formComponent.type === ElementTypes.Action || formComponent.type === ElementTypes.Resend,
+                  )
                   .forEach((formComponent) => createEdgesForButton(step, formComponent));
               }
 
-              // Process direct button components
-              if (component.type === ElementTypes.Button) {
+              // Process direct button components (including Action and Resend buttons)
+              if (component.type === ElementTypes.Action || component.type === ElementTypes.Resend) {
                 createEdgesForButton(step, component);
               }
             });
@@ -213,7 +216,7 @@ const useEdgeGeneration = (props?: UseEdgeGenerationProps): UseEdgeGenerationRet
             );
 
             if (formComponent?.components) {
-              const button = formComponent.components.find((elem: Element) => elem.type === ElementTypes.Button);
+              const button = formComponent.components.find((elem: Element) => elem.type === ElementTypes.Action);
               if (button) {
                 buttonId = button.id;
               }

@@ -238,6 +238,9 @@ function ResourceProperties(): ReactElement {
 
         if (!isEmpty(node?.data?.components)) {
           data.components = updateComponent(cloneDeep(node?.data?.components) ?? []);
+        } else if (propertyKey === 'data') {
+          // When propertyKey is exactly 'data', replace the entire data object
+          return {...(newValue as StepData)};
         } else {
           // Strip 'data.' prefix if present since we're already setting on the data object
           const actualKey = propertyKey.startsWith('data.') ? propertyKey.slice(5) : propertyKey;
@@ -255,7 +258,10 @@ function ResourceProperties(): ReactElement {
 
         // Top-level editable properties are set directly on the resource
         const topLevelEditableProps = ['label', 'hint', 'placeholder', 'required', 'src', 'alt'];
-        if (topLevelEditableProps.includes(propertyKey)) {
+        if (propertyKey === 'data') {
+          // When propertyKey is exactly 'data', replace the entire data object
+          updatedResource.data = newValue as StepData;
+        } else if (topLevelEditableProps.includes(propertyKey)) {
           set(updatedResource as unknown as Record<string, unknown>, propertyKey, newValue);
         } else if (propertyKey.startsWith('config.') || propertyKey.startsWith('data.')) {
           // Properties starting with 'config.' or 'data.' should be set on the resource directly

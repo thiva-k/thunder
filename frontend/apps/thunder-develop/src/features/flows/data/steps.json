@@ -23,20 +23,19 @@
         {
           "id": "{{ID}}",
           "category": "DISPLAY",
-          "type": "TYPOGRAPHY",
-          "variant": "H3",
+          "type": "TEXT",
+          "variant": "HEADING_3",
           "label": "Verify OTP"
         },
         {
           "id": "{{ID}}",
           "category": "BLOCK",
-          "type": "FORM",
+          "type": "BLOCK",
           "components": [
             {
               "id": "{{ID}}",
               "category": "FIELD",
-              "type": "INPUT",
-              "variant": "OTP",
+              "type": "OTP_INPUT",
               "inputType": "text",
               "hint": "",
               "identifier": "otp",
@@ -46,7 +45,7 @@
             {
               "id": "{{ID}}",
               "category": "ACTION",
-              "type": "BUTTON",
+              "type": "ACTION",
               "variant": "PRIMARY",
               "label": "Verify",
               "action": {
@@ -82,20 +81,19 @@
         {
           "id": "{{ID}}",
           "category": "DISPLAY",
-          "type": "TYPOGRAPHY",
-          "variant": "H3",
+          "type": "TEXT",
+          "variant": "HEADING_3",
           "label": "Verify OTP"
         },
         {
           "id": "{{ID}}",
           "category": "BLOCK",
-          "type": "FORM",
+          "type": "BLOCK",
           "components": [
             {
               "id": "{{ID}}",
               "category": "FIELD",
-              "type": "INPUT",
-              "variant": "OTP",
+              "type": "OTP_INPUT",
               "inputType": "text",
               "hint": "",
               "identifier": "otp",
@@ -105,7 +103,7 @@
             {
               "id": "{{ID}}",
               "category": "ACTION",
-              "type": "BUTTON",
+              "type": "ACTION",
               "variant": "PRIMARY",
               "label": "Verify",
               "action": {
