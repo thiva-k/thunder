@@ -131,7 +131,7 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
 
   // Check if user has completed onboarding by checking if they have any applications
   useEffect(() => {
-    if (applicationsData?.applications && applicationsData.applications.length > 0) {
+    if (applicationsData?.applications && applicationsData.applications.length > 1) {
       setHasCompletedOnboarding(true);
     } else if (applicationsData?.applications && applicationsData.applications.length === 0) {
       setHasCompletedOnboarding(false);
