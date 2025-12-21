@@ -26,13 +26,13 @@
               "label": "Username",
               "required": true,
               "placeholder": "Enter your username",
-              "identifier": "username"
+              "ref": "username"
             },
             {
               "id": "{{ID}}",
               "category": "FIELD",
               "type": "PASSWORD_INPUT",
-              "identifier": "password",
+              "ref": "password",
               "inputType": "password",
               "hint": "",
               "label": "Password",

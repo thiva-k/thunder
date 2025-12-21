@@ -181,11 +181,13 @@ function FlowContextWrapper({
   );
 
   const setLastInteractedResource = useCallback((resource: Resource, openPanel = true): void => {
-    // TODO: Internationalize this string and get from a mapping.
+    // Use display.header if available, otherwise fall back to the type
+    const headerText = resource?.display?.header ?? startCase(resource?.type?.toLowerCase());
+
     setResourcePropertiesPanelHeadingRef.current(
       <Stack direction="row" className="sub-title" gap={1} alignItems="center">
         <Settings />
-        <Typography variant="h5">{startCase(resource?.type?.toLowerCase())} Properties</Typography>
+        <Typography variant="h5">{headerText} Properties</Typography>
       </Stack>,
     );
     setLastInteractedElementInternalRef.current(resource);

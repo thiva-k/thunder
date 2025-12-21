@@ -16,17 +16,12 @@
  * under the License.
  */
 
-.flow-builder-step {
-  .flow-builder-step-content {
-    .adapter.block-adapter {
-      width: 100%;
-      display: block;
+/**
+ * Query keys for notification sender related queries
+ */
+const NotificationSenderQueryKeys = {
+  NOTIFICATION_SENDERS: 'notification-senders',
+  MESSAGE_SENDERS: 'message-senders',
+} as const;
 
-      // Style for button adapters directly inside block-adapter
-      .adapter.button-adapter {
-        width: 100%;
-        position: relative;
-      }
-    }
-  }
-}
+export default NotificationSenderQueryKeys;

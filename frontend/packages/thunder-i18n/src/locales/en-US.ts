@@ -876,7 +876,13 @@ const translations = {
     'core.executions.smsOtp.mode.verify': 'Verify OTP',
     'core.executions.smsOtp.mode.label': 'Mode',
     'core.executions.smsOtp.mode.placeholder': 'Select a mode',
-    'core.executions.smsOtp.description': 'Configure the SMS OTP executor mode.',
+    'core.executions.smsOtp.description': 'Configure the SMS OTP executor settings.',
+
+    // SMS OTP sender selection
+    'core.executions.smsOtp.sender.label': 'Notification Sender',
+    'core.executions.smsOtp.sender.placeholder': 'Select a notification sender',
+    'core.executions.smsOtp.sender.required': 'Notification sender is required and must be selected.',
+    'core.executions.smsOtp.sender.noSenders': 'No notification senders available. Please create a notification sender first.',
 
     // Execution steps - tooltips and messages
     'core.executions.tooltip.configurationHint': 'Click to configure this step',
@@ -890,8 +896,9 @@ const translations = {
       'Required fields are not properly configured for the input field with ID <code>{{id}}</code>.',
     'core.validation.fields.input.idpName': 'Identity provider name is required',
     'core.validation.fields.input.idpId': 'Connection is required',
+    'core.validation.fields.input.senderId': 'Notification sender is required',
     'core.validation.fields.input.label': 'Label is required',
-    'core.validation.fields.input.identifier': 'Identifier is required',
+    'core.validation.fields.input.ref': 'Attribute is required',
 
     // Validation messages - executor
     'core.validation.fields.executor.general': 'The executor <0>{{id}}</0> is not properly configured.',
@@ -908,7 +915,7 @@ const translations = {
     'core.validation.fields.checkbox.general':
       'Required fields are not properly configured for the checkbox with ID <code>{{id}}</code>.',
     'core.validation.fields.checkbox.label': 'Label is required',
-    'core.validation.fields.checkbox.identifier': 'Identifier is required',
+    'core.validation.fields.checkbox.ref': 'Attribute is required',
 
     // Validation messages - divider
     'core.validation.fields.divider.general':
@@ -942,7 +949,7 @@ const translations = {
 
     // Validation messages - phone number input
     'core.validation.fields.phoneNumberInput.label': 'Phone number label is required',
-    'core.validation.fields.phoneNumberInput.identifier': 'Phone number identifier is required',
+    'core.validation.fields.phoneNumberInput.ref': 'Phone number attribute is required',
 
     // Elements - rich text
     'core.elements.richText.placeholder': 'Enter text here...',

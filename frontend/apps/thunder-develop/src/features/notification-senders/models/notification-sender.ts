@@ -16,17 +16,32 @@
  * under the License.
  */
 
-.flow-builder-step {
-  .flow-builder-step-content {
-    .adapter.block-adapter {
-      width: 100%;
-      display: block;
+/**
+ * Supported notification sender providers
+ */
+export type NotificationSenderProvider = 'twilio' | 'vonage' | 'custom';
 
-      // Style for button adapters directly inside block-adapter
-      .adapter.button-adapter {
-        width: 100%;
-        position: relative;
-      }
-    }
-  }
+/**
+ * Property of a notification sender
+ */
+export interface NotificationSenderProperty {
+  name: string;
+  value: string;
+  is_secret?: boolean;
 }
+
+/**
+ * Message notification sender model
+ */
+export interface NotificationSender {
+  id: string;
+  name: string;
+  description?: string;
+  provider: NotificationSenderProvider;
+  properties?: NotificationSenderProperty[];
+}
+
+/**
+ * Response type for listing notification senders
+ */
+export type NotificationSenderListResponse = NotificationSender[];

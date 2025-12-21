@@ -38,7 +38,7 @@
               "type": "OTP_INPUT",
               "inputType": "text",
               "hint": "",
-              "identifier": "otp",
+              "ref": "otp",
               "label": "Enter the code sent to your email",
               "placeholder": ""
             },
@@ -96,7 +96,7 @@
               "type": "OTP_INPUT",
               "inputType": "text",
               "hint": "",
-              "identifier": "otp",
+              "ref": "otp",
               "label": "Enter the code sent to your mobile",
               "placeholder": ""
             },

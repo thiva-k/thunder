@@ -38,7 +38,8 @@ const resolveComponentMetadata = (resources: Resources, components?: Element[]):
     let updatedComponent = {...component};
 
     resources?.elements?.forEach((componentWithMeta: Element) => {
-      if (component.category === componentWithMeta.category && component.type === componentWithMeta.type) {
+      // Match by type - each element type (TEXT_INPUT, PASSWORD_INPUT, etc.) has its own properties
+      if (component.type === componentWithMeta.type) {
         if (component.variant) {
           // If the component metadata has a variants array, merge.
           if (componentWithMeta.variants) {

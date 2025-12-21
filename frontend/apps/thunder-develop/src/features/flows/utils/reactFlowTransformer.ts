@@ -191,11 +191,12 @@ function cleanComponents(components: Element[]): Record<string, unknown>[] {
       ...rest,
     };
 
-    // For input field components, add ref property matching the identifier
+    // For input field components, ensure ref property is set
+    // ref is the attribute selected from the dropdown (e.g., 'username', 'email')
     if (INPUT_ELEMENT_TYPES.has(component.type)) {
-      const componentWithProps = component as Element & {name?: string; identifier?: string};
-      const identifier = componentWithProps.name ?? componentWithProps.identifier ?? component.id;
-      cleanedComponent.ref = identifier;
+      const componentWithProps = component as Element & {name?: string; ref?: string};
+      const ref = componentWithProps.name ?? componentWithProps.ref ?? component.id;
+      cleanedComponent.ref = ref;
     }
 
     // For ACTION category components, ensure eventType is set
@@ -222,13 +223,14 @@ function extractInputs(components: Element[]): FlowInput[] {
   function processComponent(component: Element): void {
     // Check if this is an input field (type is now directly the input type like TEXT_INPUT, PASSWORD_INPUT, etc.)
     if (INPUT_ELEMENT_TYPES.has(component.type)) {
-      // Extract identifier from top-level properties
-      const componentWithProps = component as Element & {name?: string; identifier?: string; required?: boolean};
+      // Extract ref (attribute) from top-level properties
+      // ref is the attribute selected from the dropdown (e.g., 'username', 'email')
+      const componentWithProps = component as Element & {name?: string; ref?: string; required?: boolean};
       let identifier: string;
       if (typeof componentWithProps.name === 'string') {
         identifier = componentWithProps.name;
-      } else if (typeof componentWithProps.identifier === 'string') {
-        identifier = componentWithProps.identifier;
+      } else if (typeof componentWithProps.ref === 'string') {
+        identifier = componentWithProps.ref;
       } else {
         identifier = component.id;
       }
@@ -236,7 +238,7 @@ function extractInputs(components: Element[]): FlowInput[] {
       const isRequired = componentWithProps.required ?? false;
 
       inputs.push({
-        ref: identifier,
+        ref: component.id,
         type: component.type, // The type is already the API type (TEXT_INPUT, PASSWORD_INPUT, etc.)
         identifier,
         required: isRequired,
