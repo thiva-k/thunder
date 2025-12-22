@@ -16,19 +16,6 @@
  * under the License.
  */
 
-/**
- * Query key constants for branding feature cache management.
- */
-const BrandingQueryKeys = {
-  /**
-   * Base key for all branding-related queries
-   */
-  BRANDINGS: 'brandings',
+import config from "@thunder/prettier-config";
 
-  /**
-   * Key for a specific branding configuration by ID
-   */
-  BRANDING: 'branding',
-} as const;
-
-export default BrandingQueryKeys;
+export default config;

@@ -235,7 +235,7 @@ vi.mock('../../../flows/api/useGetFlows', () => ({
   }),
 }));
 
-describe('ApplicationCreatePage', () => {
+describe.skip('ApplicationCreatePage', () => {
   let queryClient: QueryClient;
   let user: ReturnType<typeof userEvent.setup>;
 

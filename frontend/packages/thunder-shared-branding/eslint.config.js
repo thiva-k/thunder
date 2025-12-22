@@ -16,23 +16,11 @@
  * under the License.
  */
 
-import type {JSX} from 'react';
-import {AsgardeoProvider} from '@asgardeo/react';
-import {useConfig} from '@thunder/commons-contexts';
-import {BrandingProvider} from '@thunder/shared-branding';
-import AppWithTheme from './AppWithTheme';
+import thunderPlugin from '@thunder/eslint-plugin-thunder';
 
-export default function AppWithConfig(): JSX.Element {
-  const {getServerUrl} = useConfig();
-
-  return (
-    <AsgardeoProvider
-      baseUrl={getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string)}
-      platform="AsgardeoV2"
-    >
-      <BrandingProvider>
-        <AppWithTheme />
-      </BrandingProvider>
-    </AsgardeoProvider>
-  );
-}
+export default [
+  {
+    ignores: ['dist/**', 'build/**', 'node_modules/**', 'coverage/**'],
+  },
+  ...thunderPlugin.configs.react,
+];

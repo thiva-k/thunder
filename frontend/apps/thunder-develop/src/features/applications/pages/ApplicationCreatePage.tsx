@@ -23,6 +23,7 @@ import {useNavigate} from 'react-router';
 import {useState, useCallback, useMemo, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
+import {useCreateBranding, type CreateBrandingRequest, type Branding, LayoutType} from '@thunder/shared-branding';
 import ConfigureSignInOptions from '../components/create-applications/configure-signin-options/ConfigureSignInOptions';
 import ConfigureDesign from '../components/create-applications/ConfigureDesign';
 import ConfigureName from '../components/create-applications/ConfigureName';
@@ -37,9 +38,6 @@ import resolveAuthFlowGraphId from '../utils/resolveAuthFlowGraphId';
 import useIdentityProviders from '../../integrations/api/useIdentityProviders';
 import type {CreateApplicationRequest} from '../models/requests';
 import type {OAuth2Config} from '../models/oauth';
-import useCreateBranding from '../../branding/api/useCreateBranding';
-import type {CreateBrandingRequest} from '../../branding/models/requests';
-import type {Branding} from '../../branding/models/branding';
 import BrandingConstants from '../constants/branding-contants';
 import type {Application} from '../models/application';
 import useApplicationCreate from '../contexts/ApplicationCreate/useApplicationCreate';
@@ -243,6 +241,9 @@ export default function ApplicationCreatePage(): JSX.Element {
     const brandingData: CreateBrandingRequest = {
       displayName: brandingName,
       preferences: {
+        layout: {
+          type: LayoutType.CENTERED,
+        },
         theme: {
           activeColorScheme: 'light',
           colorSchemes: {
@@ -259,6 +260,52 @@ export default function ApplicationCreatePage(): JSX.Element {
                   contrastText: '#ffffff',
                 },
               },
+              ...(appLogo && {
+                images: {
+                  logo: {
+                    primary: {
+                      url: appLogo,
+                      alt: `${appName} Logo`,
+                      width: 128,
+                      height: 64,
+                    },
+                    favicon: {
+                      url: appLogo,
+                      type: 'image/png',
+                    },
+                  },
+                },
+              }),
+            },
+            dark: {
+              colors: {
+                primary: {
+                  main: selectedColor,
+                  dark: selectedColor,
+                  contrastText: '#ffffff',
+                },
+                secondary: {
+                  main: selectedColor,
+                  dark: selectedColor,
+                  contrastText: '#ffffff',
+                },
+              },
+              ...(appLogo && {
+                images: {
+                  logo: {
+                    primary: {
+                      url: appLogo,
+                      alt: `${appName} Logo`,
+                      width: 128,
+                      height: 64,
+                    },
+                    favicon: {
+                      url: appLogo,
+                      type: 'image/png',
+                    },
+                  },
+                },
+              }),
             },
           },
         },
@@ -664,7 +711,7 @@ export default function ApplicationCreatePage(): JSX.Element {
         {/* Right side - Preview (show from design step onwards, but not on summary) */}
         {currentStep !== ApplicationCreateFlowStep.NAME && currentStep !== ApplicationCreateFlowStep.SUMMARY && (
           <Box sx={{flex: '0 0 50%', display: 'flex', flexDirection: 'column', p: 5}}>
-            <Preview appName={appName} appLogo={appLogo} selectedColor={selectedColor} integrations={integrations} />
+            <Preview appLogo={appLogo} selectedColor={selectedColor} integrations={integrations} />
           </Box>
         )}
       </Box>

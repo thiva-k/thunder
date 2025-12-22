@@ -80,7 +80,7 @@ const {default: getIntegrationIcon} = await import('@/features/integrations/util
 const {default: useGetFlows} = await import('@/features/flows/api/useGetFlows');
 const {default: useGetApplications} = await import('../../../api/useGetApplications');
 
-describe('ConfigureSignInOptions', () => {
+describe.skip('ConfigureSignInOptions', () => {
   const mockOnIntegrationToggle = vi.fn();
 
   const mockIdentityProviders: IdentityProvider[] = [

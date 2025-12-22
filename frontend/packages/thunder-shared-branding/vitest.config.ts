@@ -16,23 +16,15 @@
  * under the License.
  */
 
-import type {JSX} from 'react';
-import {AsgardeoProvider} from '@asgardeo/react';
-import {useConfig} from '@thunder/commons-contexts';
-import {BrandingProvider} from '@thunder/shared-branding';
-import AppWithTheme from './AppWithTheme';
+import {defineConfig} from 'vitest/config';
 
-export default function AppWithConfig(): JSX.Element {
-  const {getServerUrl} = useConfig();
-
-  return (
-    <AsgardeoProvider
-      baseUrl={getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string)}
-      platform="AsgardeoV2"
-    >
-      <BrandingProvider>
-        <AppWithTheme />
-      </BrandingProvider>
-    </AsgardeoProvider>
-  );
-}
+export default defineConfig({
+  test: {
+    browser: {
+      enabled: true,
+      headless: true,
+      instances: [{browser: 'chromium'}],
+      provider: 'playwright',
+    },
+  },
+});

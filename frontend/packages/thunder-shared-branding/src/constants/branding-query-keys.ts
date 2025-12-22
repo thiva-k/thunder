@@ -16,23 +16,24 @@
  * under the License.
  */
 
-import type {JSX} from 'react';
-import {AsgardeoProvider} from '@asgardeo/react';
-import {useConfig} from '@thunder/commons-contexts';
-import {BrandingProvider} from '@thunder/shared-branding';
-import AppWithTheme from './AppWithTheme';
+/**
+ * Query key constants for branding feature cache management.
+ */
+const BrandingQueryKeys = {
+  /**
+   * Base key for all branding-related queries
+   */
+  BRANDINGS: 'brandings',
 
-export default function AppWithConfig(): JSX.Element {
-  const {getServerUrl} = useConfig();
+  /**
+   * Key for a specific branding configuration by ID
+   */
+  BRANDING: 'branding',
 
-  return (
-    <AsgardeoProvider
-      baseUrl={getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string)}
-      platform="AsgardeoV2"
-    >
-      <BrandingProvider>
-        <AppWithTheme />
-      </BrandingProvider>
-    </AsgardeoProvider>
-  );
-}
+  /**
+   * Key for resolving branding configuration by type and ID
+   */
+  BRANDING_RESOLVE: 'branding-resolve',
+} as const;
+
+export default BrandingQueryKeys;

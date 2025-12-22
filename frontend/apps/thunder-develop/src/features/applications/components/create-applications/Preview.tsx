@@ -46,11 +46,6 @@ import useIdentityProviders from '../../../integrations/api/useIdentityProviders
  */
 export interface PreviewProps {
   /**
-   * The name of the application to display in the preview
-   */
-  appName: string | null;
-
-  /**
    * URL of the application logo to display in the preview
    */
   appLogo: string | null;
@@ -112,7 +107,7 @@ export interface PreviewProps {
  *
  * @public
  */
-export default function Preview({appName, appLogo, selectedColor, integrations}: PreviewProps): JSX.Element {
+export default function Preview({appLogo, selectedColor, integrations}: PreviewProps): JSX.Element {
   const {t} = useTranslation();
   const {mode} = useColorScheme();
   const theme = useTheme();
@@ -208,10 +203,9 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
                 {() => (
                   <Box sx={{display: 'flex', flexDirection: 'column', gap: 2, p: 4}}>
                     <Stack alignItems="center" spacing={1} sx={{mb: 2}}>
-                      <Typography component="h1" variant="h5" sx={{width: '100%', mb: 2, textAlign: 'center'}}>
-                        {t('applications:onboarding.preview.signInTo', {appName})}
+                      <Typography variant="h2" sx={{width: '100%', mb: 2, textAlign: 'center'}}>
+                        {t('applications:onboarding.preview.signin')}
                       </Typography>
-                      <Typography variant="caption">{t('applications:onboarding.preview.welcomeMessage')}</Typography>
                     </Stack>
 
                     {/* Username/Password form - Conditionally rendered */}
