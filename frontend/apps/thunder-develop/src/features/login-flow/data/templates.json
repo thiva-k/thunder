@@ -5,7 +5,7 @@
     "type": "BLANK",
     "display": {
       "label": "Blank",
-      "description": "Start a new flow from scratch",
+      "description": "Start a new login flow from scratch",
       "image": "assets/images/icons/refresh-ccw.svg",
       "showOnResourcePanel": true
     },
@@ -113,8 +113,8 @@
     "category": "STARTER",
     "type": "BASIC",
     "display": {
-      "label": "Basic Login",
-      "description": "Basic login experience with username and password",
+      "label": "Password Login",
+      "description": "Login experience with an identifier and a password",
       "image": "assets/images/icons/password.svg",
       "showOnResourcePanel": true
     },
@@ -276,8 +276,8 @@
     "category": "STARTER",
     "type": "BASIC_FEDERATED",
     "display": {
-      "label": "Basic + Google",
-      "description": "Basic login experience with Google as an additional option",
+      "label": "Password Login or Google",
+      "description": "Login experience with Google as an additional option",
       "image": "assets/images/icons/google-generic.svg",
       "showOnResourcePanel": true
     },
@@ -361,6 +361,13 @@
                       }
                     }
                   ]
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "DIVIDER",
+                  "variant": "HORIZONTAL",
+                  "label": "Or"
                 },
                 {
                   "id": "{{ID}}",

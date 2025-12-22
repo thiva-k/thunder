@@ -29,7 +29,7 @@ import {
   useUpdateNodeInternals,
 } from '@xyflow/react';
 import type {UpdateNodeInternals} from '@xyflow/system';
-import {type Dispatch, useCallback, useRef, useState, type ReactElement, type SetStateAction} from 'react';
+import {type Dispatch, useCallback, useEffect, useRef, useState, type ReactElement, type SetStateAction} from 'react';
 import {Box} from '@wso2/oxygen-ui';
 import classNames from 'classnames';
 import VisualFlow, {type VisualFlowPropsInterface} from './VisualFlow';
@@ -92,6 +92,11 @@ export interface DecoratedVisualFlowPropsInterface extends Omit<VisualFlowPropsI
   headerPanelContent?: ReactElement | null;
   onBack?: () => void;
   onSave?: (canvasData: {nodes: Node[]; edges: Edge[]; viewport: {x: number; y: number; zoom: number}}) => void;
+  /**
+   * When true, triggers auto-layout on initial render if nodes lack proper layout data.
+   * This is useful when loading flows that don't have saved canvas positions.
+   */
+  triggerAutoLayoutOnLoad?: boolean;
 }
 
 /**
@@ -118,6 +123,7 @@ function DecoratedVisualFlow({
   flowTitle,
   flowHandle,
   onFlowTitleChange,
+  triggerAutoLayoutOnLoad = false,
   ...rest
 }: DecoratedVisualFlowPropsInterface): ReactElement {
   useDeleteExecutionResource();
@@ -220,6 +226,40 @@ function DecoratedVisualFlow({
         // Layout failed, keep original positions
       });
   }, [getNodes, getEdges, setNodes, fitView]);
+
+  // Track whether auto-layout has been triggered to prevent multiple triggers
+  const autoLayoutTriggeredRef = useRef<boolean>(false);
+
+  // Effect to trigger auto-layout on initial load when nodes lack proper layout data
+  useEffect(() => {
+    if (!triggerAutoLayoutOnLoad || autoLayoutTriggeredRef.current) {
+      return;
+    }
+
+    const currentNodes = getNodes();
+
+    // Skip if no nodes or only one node (nothing to layout)
+    if (currentNodes.length <= 1) {
+      return;
+    }
+
+    // Check if nodes need auto-layout by detecting if multiple nodes are at the same position
+    // (which happens when layout data is missing and all default to {x: 0, y: 0})
+    const nodesAtOrigin = currentNodes.filter(
+      (node) => node.position.x === 0 && node.position.y === 0,
+    );
+
+    // If more than one node is at the origin, we need auto-layout
+    const needsAutoLayout = nodesAtOrigin.length > 1;
+
+    if (needsAutoLayout) {
+      autoLayoutTriggeredRef.current = true;
+      // Delay slightly to ensure nodes are fully rendered with their measured dimensions
+      requestAnimationFrame(() => {
+        handleAutoLayout();
+      });
+    }
+  }, [triggerAutoLayoutOnLoad, getNodes, handleAutoLayout]);
 
   const handleNodeDragStop = useCallback((): void => {
     const currentNodes = getNodes();
