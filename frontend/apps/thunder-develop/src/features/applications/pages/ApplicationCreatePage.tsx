@@ -190,6 +190,7 @@ export default function ApplicationCreatePage(): JSX.Element {
         auth_flow_graph_id: authFlowGraphId,
         user_attributes: ['given_name', 'family_name', 'email', 'groups'],
         branding_id: brandingId,
+        is_registration_flow_enabled: true,
         ...(allowedUserTypes && {allowed_user_types: allowedUserTypes}),
         // Only include OAuth config if not skipping
         ...(!skipOAuthConfig && {

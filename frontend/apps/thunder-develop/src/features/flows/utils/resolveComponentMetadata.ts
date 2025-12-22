@@ -38,7 +38,9 @@ const resolveComponentMetadata = (resources: Resources, components?: Element[]):
     let updatedComponent = {...component};
 
     resources?.elements?.forEach((componentWithMeta: Element) => {
-      // Match by type - each element type (TEXT_INPUT, PASSWORD_INPUT, etc.) has its own properties
+      // Match by type only - element types are unique across categories (e.g., TEXT_INPUT only exists
+      // in FIELD category, ACTION only in ACTION category). This allows proper metadata resolution
+      // when components from templates have correct type but different category values.
       if (component.type === componentWithMeta.type) {
         if (component.variant) {
           // If the component metadata has a variants array, merge.
