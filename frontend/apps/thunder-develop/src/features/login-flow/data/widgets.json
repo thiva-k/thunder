@@ -30,27 +30,23 @@
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "TEXT_INPUT",
-                      "config": {
-                        "type": "text",
-                        "hint": "",
-                        "label": "Username",
-                        "required": true,
-                        "placeholder": "Enter your username",
-                        "identifier": "username"
-                      }
+                      "inputType": "text",
+                      "hint": "",
+                      "label": "Username",
+                      "required": true,
+                      "placeholder": "Enter your username",
+                      "ref": "username"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "PASSWORD_INPUT",
-                      "config": {
-                        "identifier": "password",
-                        "type": "password",
-                        "hint": "",
-                        "label": "Password",
-                        "required": true,
-                        "placeholder": "Enter your password"
-                      }
+                      "inputType": "password",
+                      "ref": "password",
+                      "hint": "",
+                      "label": "Password",
+                      "required": true,
+                      "placeholder": "Enter your password"
                     },
                     {
                       "id": "{{ID}}",
@@ -58,12 +54,10 @@
                       "type": "ACTION",
                       "variant": "PRIMARY",
                       "eventType": "SUBMIT",
-                      "label": "Continue",
+                      "label": "Sign In",
                       "action": {
-                        "type": "EXECUTOR",
-                        "executor": {
-                          "name": "BasicAuthExecutor"
-                        }
+                        "type": "NEXT",
+                        "next": "{{BASIC_AUTH_EXECUTION_STEP_ID}}"
                       }
                     }
                   ]
@@ -397,14 +391,11 @@
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "OTP_INPUT",
-                      "config": {
-                        "type": "text",
-                        "hint": "",
-                        "identifier": "otp",
-                        "label": "Enter the OTP code",
-                        "required": true,
-                        "placeholder": ""
-                      }
+                      "hint": "",
+                      "ref": "otp",
+                      "label": "Enter the OTP code",
+                      "required": true,
+                      "placeholder": ""
                     },
                     {
                       "id": "{{ID}}",
@@ -593,14 +584,11 @@
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "OTP_INPUT",
-                      "config": {
-                        "type": "text",
-                        "hint": "",
-                        "identifier": "otp",
-                        "label": "Enter the OTP code",
-                        "required": true,
-                        "placeholder": ""
-                      }
+                      "hint": "",
+                      "ref": "otp",
+                      "label": "Enter the OTP code",
+                      "required": true,
+                      "placeholder": ""
                     },
                     {
                       "id": "{{ID}}",

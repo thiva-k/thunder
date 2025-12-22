@@ -168,14 +168,14 @@
                       "label": "Username",
                       "required": true,
                       "placeholder": "Enter your username",
-                      "identifier": "username"
+                      "ref": "username"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "PASSWORD_INPUT",
                       "inputType": "password",
-                      "identifier": "password",
+                      "ref": "password",
                       "hint": "",
                       "label": "Password",
                       "required": true,
@@ -335,14 +335,14 @@
                       "label": "Username",
                       "required": true,
                       "placeholder": "Enter your username",
-                      "identifier": "username"
+                      "ref": "username"
                     },
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
                       "type": "PASSWORD_INPUT",
                       "inputType": "password",
-                      "identifier": "password",
+                      "ref": "password",
                       "hint": "",
                       "label": "Password",
                       "required": true,
@@ -678,7 +678,7 @@
                       "label": "Mobile Number",
                       "required": true,
                       "placeholder": "Enter your mobile number",
-                      "identifier": "mobileNumber"
+                      "ref": "mobileNumber"
                     },
                     {
                       "id": "{{ID}}",
@@ -757,7 +757,7 @@
                       "type": "OTP_INPUT",
                       "inputType": "text",
                       "hint": "",
-                      "identifier": "otp",
+                      "ref": "otp",
                       "label": "Enter the OTP code",
                       "required": true,
                       "placeholder": ""

@@ -30,7 +30,7 @@
       "label": "Password Input",
       "image": "assets/images/icons/password-input.svg"
     },
-    "identifier": "password",
+    "ref": "password",
     "inputType": "password",
     "hint": "",
     "label": "Password",
@@ -103,7 +103,7 @@
     },
     "inputType": "text",
     "hint": "",
-    "identifier": "otp",
+    "ref": "otp",
     "label": "OTP",
     "required": false,
     "placeholder": ""

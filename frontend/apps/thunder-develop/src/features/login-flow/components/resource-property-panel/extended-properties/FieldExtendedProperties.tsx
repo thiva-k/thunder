@@ -47,24 +47,22 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
 
   const attributes: string[] = useMemo(() => ['email', 'username', 'firstName'], []);
 
-  const resourceIdentifier = (resource as Element & {identifier?: string})?.identifier;
+  const resourceRef = (resource as Element & {ref?: string})?.ref;
 
   // Use local state to track the selected value immediately (avoids revert on blur due to debounced updates)
-  const [localSelectedValue, setLocalSelectedValue] = useState<string | null>(() =>
-    attributes?.find((attribute: string) => attribute === resourceIdentifier) ?? null,
-  );
+  // Initialize with the resourceRef value directly (supports free-solo values not in the predefined list)
+  const [localSelectedValue, setLocalSelectedValue] = useState<string | null>(() => resourceRef ?? null);
 
   // Sync local state when resource changes (e.g., when switching to a different element)
   useEffect(() => {
-    const newValue = attributes?.find((attribute: string) => attribute === resourceIdentifier) ?? null;
-    setLocalSelectedValue(newValue);
-  }, [resourceIdentifier, attributes]);
+    setLocalSelectedValue(resourceRef ?? null);
+  }, [resourceRef]);
 
   /**
-   * Get the error message for the identifier field.
+   * Get the error message for the ref field.
    */
   const errorMessage: string = useMemo(() => {
-    const key = `${resource?.id}_identifier`;
+    const key = `${resource?.id}_ref`;
 
     if (selectedNotification?.hasResourceFieldNotification(key)) {
       return selectedNotification?.getResourceFieldNotification(key);
@@ -80,6 +78,7 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
   return (
     <Stack>
       <Autocomplete
+        freeSolo
         disablePortal
         key={resource.id}
         options={attributes ?? []}
@@ -94,7 +93,14 @@ function FieldExtendedProperties({resource, onChange}: FieldExtendedPropertiesPr
         value={localSelectedValue}
         onChange={(_: SyntheticEvent, attribute: string | null) => {
           setLocalSelectedValue(attribute);
-          onChange('identifier', attribute ?? '', resource);
+          onChange('ref', attribute ?? '', resource);
+        }}
+        onInputChange={(_: SyntheticEvent, value: string, reason: string) => {
+          // Handle free-form input (when user types a custom value)
+          if (reason === 'input') {
+            setLocalSelectedValue(value);
+            onChange('ref', value, resource);
+          }
         }}
       />
       {errorMessage && <FormHelperText error>{errorMessage}</FormHelperText>}
