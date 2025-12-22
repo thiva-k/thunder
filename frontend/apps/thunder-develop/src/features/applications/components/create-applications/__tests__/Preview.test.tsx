@@ -352,4 +352,143 @@ describe('Preview', () => {
     expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
     expect(screen.getByRole('button', {name: /Continue with GitHub/i})).toBeInTheDocument();
   });
+
+  describe('SMS OTP functionality', () => {
+    it('should render mobile number field when SMS OTP is enabled', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+        },
+      });
+
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter your mobile number')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Send OTP'})).toBeInTheDocument();
+    });
+
+    it('should not render mobile number field when SMS OTP is disabled', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'sms-otp': false,
+        },
+      });
+
+      expect(screen.queryByText('Mobile Number')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Enter your mobile number')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', {name: 'Send OTP'})).not.toBeInTheDocument();
+    });
+
+    it('should render divider when SMS OTP and social logins are enabled', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+          'google-idp': true,
+        },
+      });
+
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should render divider when username/password and SMS OTP are enabled', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'sms-otp': true,
+        },
+      });
+
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should not render divider when only SMS OTP is enabled', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+        },
+      });
+
+      expect(screen.queryByText('or')).not.toBeInTheDocument();
+    });
+
+    it('should render divider when all authentication methods are enabled', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'sms-otp': true,
+          'google-idp': true,
+        },
+      });
+
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should apply selected color to Send OTP button', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+        },
+        selectedColor: '#00FF00',
+      });
+
+      const sendOtpButton = screen.getByRole('button', {name: 'Send OTP'});
+      expect(sendOtpButton).toHaveStyle({backgroundColor: '#00FF00'});
+    });
+
+    it('should render mobile number input as disabled', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+        },
+      });
+
+      const mobileInput = screen.getByPlaceholderText('Enter your mobile number');
+      expect(mobileInput).toBeDisabled();
+    });
+
+    it('should render SMS OTP with username/password combination', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'sms-otp': true,
+        },
+      });
+
+      // Username/password fields
+      expect(screen.getByText('Username')).toBeInTheDocument();
+      expect(screen.getByText('Password')).toBeInTheDocument();
+
+      // SMS OTP fields
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Enter your mobile number')).toBeInTheDocument();
+
+      // Both buttons
+      expect(screen.getByRole('button', {name: 'Sign In'})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Send OTP'})).toBeInTheDocument();
+
+      // Divider should be present
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should render SMS OTP with social logins combination', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+          'google-idp': true,
+          'github-idp': true,
+        },
+      });
+
+      // SMS OTP fields
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Send OTP'})).toBeInTheDocument();
+
+      // Social login buttons
+      expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: /Continue with GitHub/i})).toBeInTheDocument();
+
+      // Divider should be present
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+  });
 });

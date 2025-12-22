@@ -23,7 +23,7 @@ import {useNavigate} from 'react-router';
 import {useState, useCallback, useMemo, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
-import ConfigureSignInOptions from '../components/create-applications/ConfigureSignInOptions';
+import ConfigureSignInOptions from '../components/create-applications/configure-signin-options/ConfigureSignInOptions';
 import ConfigureDesign from '../components/create-applications/ConfigureDesign';
 import ConfigureName from '../components/create-applications/ConfigureName';
 import ConfigureApproach from '../components/create-applications/ConfigureApproach';
@@ -65,6 +65,7 @@ export default function ApplicationCreatePage(): JSX.Element {
     setAppLogo,
     integrations,
     toggleIntegration,
+    selectedAuthFlow,
     signInApproach,
     setSignInApproach,
     selectedTechnology,
@@ -160,10 +161,14 @@ export default function ApplicationCreatePage(): JSX.Element {
 
     const hasUsernamePassword = integrations[AuthenticatorTypes.BASIC_AUTH] ?? false;
     const selectedIdentityProviders = identityProviders?.filter((idp) => integrations[idp.id]) ?? [];
-    const authFlowGraphId = resolveAuthFlowGraphId({
-      hasUsernamePassword,
-      identityProviders: selectedIdentityProviders,
-    });
+
+    // Use selected flow if available, otherwise resolve based on integrations
+    const authFlowGraphId =
+      selectedAuthFlow?.id ??
+      resolveAuthFlowGraphId({
+        hasUsernamePassword,
+        identityProviders: selectedIdentityProviders,
+      });
     const createApplicationWithBranding = (brandingId: string): void => {
       const userTypes = userTypesData?.schemas ?? [];
       const allowedUserTypes = (() => {
