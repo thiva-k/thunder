@@ -550,6 +550,9 @@ const translations = {
     'onboarding.preview.password': 'Password',
     'onboarding.preview.passwordPlaceholder': 'Enter your Password',
     'onboarding.preview.signInButton': 'Sign In',
+    'onboarding.preview.mobileNumber': 'Mobile Number',
+    'onboarding.preview.mobileNumberPlaceholder': 'Enter your mobile number',
+    'onboarding.preview.sendOtpButton': 'Send OTP',
     'onboarding.preview.dividerText': 'or',
     'onboarding.preview.continueWith': 'Continue with {{providerName}}',
     'onboarding.steps.name': 'Create an Application',
@@ -584,6 +587,23 @@ const translations = {
       'No social sign-in integrations available. Please configure an integration first.',
     'onboarding.configure.SignInOptions.hint':
       'You can always change these settings later in the application settings.',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.title': 'Pre-configured Authentication Flows',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.subtitle':
+      'Choose from pre-built authentication flows that combine multiple methods.',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.none': 'None - Use individual integrations',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.version': 'Version {{version}}',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow': 'Select authentication flow',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows': 'Search flows...',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.disabledMessage':
+      'Flow selection is disabled when individual authentication methods are selected.',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.switchToIndividual': 'Switch to individual methods',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.hint':
+      'You can also configure options <switchLink>one by one</switchLink>. These can be always changed later in the application settings.',
+    'onboarding.configure.SignInOptions.individualMethods.title': 'Individual Authentication Methods',
+    'onboarding.configure.SignInOptions.individualMethods.subtitle': 'Configure individual authentication providers.',
+    'onboarding.configure.SignInOptions.individualMethods.hint':
+      'You can also pick from an <switchLink>already defined flow</switchLink>. These can be always changed later in the application settings.',
+    'onboarding.configure.SignInOptions.smsOtp': 'SMS OTP',
     'onboarding.configure.SignInOptions.loading': 'Loading...',
     'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
     'onboarding.configure.approach.title': 'Sign-In Experience',
@@ -955,7 +975,8 @@ const translations = {
     'core.dialogs.formRequiresView.formOnCanvas.title': 'Form Requires a View',
     'core.dialogs.formRequiresView.formOnCanvas.description':
       'Form components cannot be placed directly on the canvas. They must be inside a View component.',
-    'core.dialogs.formRequiresView.formOnCanvas.alertMessage': 'Would you like to create a View and add the Form inside it?',
+    'core.dialogs.formRequiresView.formOnCanvas.alertMessage':
+      'Would you like to create a View and add the Form inside it?',
     'core.dialogs.formRequiresView.formOnCanvas.confirmButton': 'Add View with Form',
     'core.dialogs.formRequiresView.inputOnCanvas.title': 'Input Requires a Form and View',
     'core.dialogs.formRequiresView.inputOnCanvas.description':
@@ -966,7 +987,8 @@ const translations = {
     'core.dialogs.formRequiresView.inputOnView.title': 'Input Requires a Form',
     'core.dialogs.formRequiresView.inputOnView.description':
       'Input components cannot be placed directly inside a View. They must be inside a Form component.',
-    'core.dialogs.formRequiresView.inputOnView.alertMessage': 'Would you like to create a Form and add the Input inside it?',
+    'core.dialogs.formRequiresView.inputOnView.alertMessage':
+      'Would you like to create a Form and add the Input inside it?',
     'core.dialogs.formRequiresView.inputOnView.confirmButton': 'Add Form with Input',
     'core.dialogs.formRequiresView.widgetOnCanvas.title': 'Widget Requires a View',
     'core.dialogs.formRequiresView.widgetOnCanvas.description':
@@ -997,7 +1019,8 @@ const translations = {
     'core.resourcePanel.showResources': 'Show Resources',
     'core.resourcePanel.hideResources': 'Hide Resources',
     'core.resourcePanel.starterTemplates.title': 'Starter Templates',
-    'core.resourcePanel.starterTemplates.description': 'Choose one of these templates to start building registration experience',
+    'core.resourcePanel.starterTemplates.description':
+      'Choose one of these templates to start building registration experience',
     'core.resourcePanel.widgets.title': 'Widgets',
     'core.resourcePanel.widgets.description': 'Use these widgets to build up the flow using pre-created flow blocks',
     'core.resourcePanel.steps.title': 'Steps',

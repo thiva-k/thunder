@@ -122,6 +122,7 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
   const selectedProviders: IdentityProvider[] =
     identityProviders?.filter((idp: IdentityProvider): boolean => integrations[idp.id]) ?? [];
   const hasSocialLogins: boolean = selectedProviders.length > 0;
+  const hasSmsOtp: boolean = integrations['sms-otp'] ?? false;
 
   return (
     <Box
@@ -264,8 +265,53 @@ export default function Preview({appName, appLogo, selectedColor, integrations}:
                       </Box>
                     )}
 
-                    {/* Divider - Show only when both username/password and social logins exist */}
-                    {hasUsernamePassword && hasSocialLogins && (
+                    {/* SMS OTP option - Conditionally rendered */}
+                    {hasSmsOtp && (
+                      <Box
+                        component="form"
+                        onSubmit={(e) => e.preventDefault()}
+                        sx={{display: 'flex', flexDirection: 'column', gap: 2, mb: hasSocialLogins ? 2 : 0}}
+                      >
+                        <FormControl required>
+                          <FormLabel htmlFor="preview-mobile">
+                            {t('applications:onboarding.preview.mobileNumber', {
+                              defaultValue: 'Mobile Number',
+                            })}
+                          </FormLabel>
+                          <TextField
+                            id="preview-mobile"
+                            type="tel"
+                            placeholder={t('applications:onboarding.preview.mobileNumberPlaceholder', {
+                              defaultValue: 'Enter your mobile number',
+                            })}
+                            fullWidth
+                            variant="outlined"
+                            disabled
+                          />
+                        </FormControl>
+                        <Button
+                          type="submit"
+                          fullWidth
+                          variant="contained"
+                          color="secondary"
+                          sx={{
+                            color: '#fff',
+                            backgroundColor: selectedColor,
+                            '&:hover': {
+                              backgroundColor: selectedColor,
+                            },
+                          }}
+                        >
+                          {t('applications:onboarding.preview.sendOtpButton', {
+                            defaultValue: 'Send OTP',
+                          })}
+                        </Button>
+                      </Box>
+                    )}
+
+                    {/* Divider - Show when multiple auth methods exist */}
+                    {((hasUsernamePassword && hasSmsOtp) ||
+                      ((hasUsernamePassword || hasSmsOtp) && hasSocialLogins)) && (
                       <Divider>{t('applications:onboarding.preview.dividerText')}</Divider>
                     )}
 

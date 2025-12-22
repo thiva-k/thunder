@@ -78,7 +78,7 @@ vi.mock('../../components/create-applications/ConfigureDesign', () => ({
   ),
 }));
 
-vi.mock('../../components/create-applications/ConfigureSignInOptions', () => ({
+vi.mock('../../components/create-applications/configure-signin-options/ConfigureSignInOptions', () => ({
   default: ({
     integrations,
     onIntegrationToggle,
@@ -217,6 +217,21 @@ vi.mock('../../../integrations/api/useIdentityProviders', () => ({
       {id: 'google', name: 'Google', type: 'social'},
       {id: 'github', name: 'GitHub', type: 'social'},
     ],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('../../../flows/api/useGetFlows', () => ({
+  default: () => ({
+    data: {
+      flows: [
+        {id: 'flow1', name: 'Basic Auth Flow', handle: 'basic-auth'},
+        {id: 'flow2', name: 'Google Flow', handle: 'google-flow'},
+      ],
+    },
+    isLoading: false,
+    error: null,
   }),
 }));
 
