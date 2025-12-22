@@ -230,6 +230,9 @@ function LoginFlowBuilder() {
   const [flowName, setFlowName] = useState<string>('Login Flow');
   const [flowHandle, setFlowHandle] = useState<string>('login-flow');
 
+  // Track whether loaded flow needs auto-layout (when nodes lack layout data)
+  const [needsAutoLayout, setNeedsAutoLayout] = useState<boolean>(false);
+
   /**
    * Generate a URL-friendly handle from a name.
    * Converts to lowercase, replaces spaces with hyphens, removes special characters.
@@ -744,6 +747,12 @@ function LoginFlowBuilder() {
     // If we have an existing flow, transform and load it
     if (flowId && existingFlowData) {
       const canvasData = transformFlowToCanvas(existingFlowData);
+
+      // Check if any nodes lack layout data (position at origin indicates missing layout)
+      // When layout data is missing, transformFlowToCanvas defaults positions to {x: 0, y: 0}
+      const nodesWithoutLayout = existingFlowData.nodes.filter((node) => !node.layout?.position);
+      const flowNeedsAutoLayout = nodesWithoutLayout.length > 1;
+      setNeedsAutoLayout(flowNeedsAutoLayout);
 
       // Process nodes to resolve metadata without adding a new START node
       // (the transformed data already contains the START node from the API)
@@ -1270,6 +1279,7 @@ function LoginFlowBuilder() {
         flowTitle={flowName}
         flowHandle={flowHandle}
         onFlowTitleChange={handleFlowNameChange}
+        triggerAutoLayoutOnLoad={needsAutoLayout}
       />
       <Snackbar
         open={errorSnackbar.open}
