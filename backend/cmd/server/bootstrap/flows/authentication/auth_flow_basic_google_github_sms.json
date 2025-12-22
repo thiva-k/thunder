@@ -1,6 +1,6 @@
 {
-    "name": "Basic + Google + GitHub + SMS Authentication Flow",
-    "handle": "basic-google-github-sms-flow",
+    "name": "Default Basic + Google + GitHub + SMS Authentication Flow",
+    "handle": "default-basic-google-github-sms-flow",
     "flowType": "AUTHENTICATION",
     "nodes": [
         {
@@ -133,6 +133,9 @@
         {
             "id": "verify_sms",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "senderId": "<your-sender-id>"
+            },
             "executor": {
                 "name": "SMSOTPAuthExecutor",
                 "mode": "verify"

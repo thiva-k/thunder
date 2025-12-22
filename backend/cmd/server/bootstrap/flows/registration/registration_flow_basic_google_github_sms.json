@@ -1,6 +1,6 @@
 {
-    "name": "Basic + Google + GitHub + SMS Registration Flow",
-    "handle": "basic-google-github-sms-flow",
+    "name": "Default Basic + Google + GitHub + SMS Registration Flow",
+    "handle": "default-basic-google-github-sms-flow",
     "flowType": "REGISTRATION",
     "nodes": [
         {
@@ -119,6 +119,9 @@
         {
             "id": "verify_sms",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "senderId": "<your-sender-id>"
+            },
             "executor": {
                 "name": "SMSOTPAuthExecutor",
                 "mode": "verify"
@@ -158,6 +161,9 @@
         {
             "id": "verify_sms_for_basic",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "senderId": "<your-sender-id>"
+            },
             "executor": {
                 "name": "SMSOTPAuthExecutor",
                 "mode": "verify"

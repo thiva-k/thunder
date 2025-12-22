@@ -1,6 +1,6 @@
 {
-    "name": "Default Basic + Google Authentication Flow",
-    "handle": "default-basic-google-flow",
+    "name": "Default Google + GitHub Authentication Flow",
+    "handle": "default-google-github-flow",
     "flowType": "AUTHENTICATION",
     "nodes": [
         {
@@ -14,21 +14,13 @@
             "actions": [
                 {
                     "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "nextNode": "google_auth"
                 },
                 {
                     "ref": "action_002",
-                    "nextNode": "google_auth"
+                    "nextNode": "github_auth"
                 }
             ]
-        },
-        {
-            "id": "basic_auth",
-            "type": "TASK_EXECUTION",
-            "executor": {
-                "name": "BasicAuthExecutor"
-            },
-            "onSuccess": "auth_assert"
         },
         {
             "id": "google_auth",
@@ -46,6 +38,25 @@
             ],
             "executor": {
                 "name": "GoogleOIDCAuthExecutor"
+            },
+            "onSuccess": "auth_assert"
+        },
+        {
+            "id": "github_auth",
+            "type": "TASK_EXECUTION",
+            "properties": {
+                "idpId": "<github-idp-id>"
+            },
+            "inputs": [
+                {
+                    "ref": "input_004",
+                    "type": "TEXT_INPUT",
+                    "identifier": "code",
+                    "required": true
+                }
+            ],
+            "executor": {
+                "name": "GithubOAuthExecutor"
             },
             "onSuccess": "auth_assert"
         },
