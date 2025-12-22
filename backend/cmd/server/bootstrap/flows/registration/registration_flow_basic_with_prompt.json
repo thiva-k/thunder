@@ -1,6 +1,6 @@
 {
-    "name": "Basic Registration with Prompt Flow",
-    "handle": "basic-with-prompt-flow",
+    "name": "Default Basic Registration with Prompt Flow",
+    "handle": "default-basic-with-prompt-flow",
     "flowType": "REGISTRATION",
     "nodes": [
         {

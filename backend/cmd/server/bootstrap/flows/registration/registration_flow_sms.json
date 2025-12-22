@@ -1,5 +1,5 @@
 {
-    "name": "SMS OTP Registration Flow",
+    "name": "Default SMS OTP Registration Flow",
     "handle": "default-sms-otp-flow",
     "flowType": "REGISTRATION",
     "nodes": [
@@ -67,6 +67,9 @@
         {
             "id": "verify_sms",
             "type": "TASK_EXECUTION",
+            "properties": {
+                "senderId": "<your-sender-id>"
+            },
             "executor": {
                 "name": "SMSOTPAuthExecutor",
                 "mode": "verify"

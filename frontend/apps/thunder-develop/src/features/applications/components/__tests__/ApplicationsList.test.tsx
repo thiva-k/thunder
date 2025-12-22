@@ -105,7 +105,7 @@ describe('ApplicationsList', () => {
         description: 'First test application',
         logo_url: 'https://example.com/logo1.png',
         client_id: 'client_id_1',
-        auth_flow_graph_id: 'auth_flow_basic',
+        auth_flow_graph_id: 'edc013d0-e893-4dc0-990c-3e1d203e005b',
         registration_flow_graph_id: 'reg_flow_basic',
         is_registration_flow_enabled: true,
       },
