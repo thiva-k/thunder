@@ -47,8 +47,8 @@ const EXECUTOR_TO_IDP_TYPE_MAP: Record<string, IdentityProviderType> = {
  * Available modes for SMS OTP executor.
  */
 const SMS_OTP_MODES = [
-  {value: 'send', translationKey: 'flows:core.executions.smsOtp.mode.send'},
-  {value: 'verify', translationKey: 'flows:core.executions.smsOtp.mode.verify'},
+  {value: 'send', translationKey: 'flows:core.executions.smsOtp.mode.send', displayLabel: 'Send SMS OTP'},
+  {value: 'verify', translationKey: 'flows:core.executions.smsOtp.mode.verify', displayLabel: 'Verify SMS OTP'},
 ] as const;
 
 /**
@@ -129,7 +129,28 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
 
   // Handle mode selection for SMS OTP executor
   const handleModeChange = (selectedMode: string): void => {
-    onChange('data.action.executor.mode', selectedMode, resource);
+    // Update the display label based on the selected mode
+    const modeConfig = SMS_OTP_MODES.find((mode) => mode.value === selectedMode);
+
+    // Build the updated data object with both mode and display label
+    // This avoids the debounce issue where multiple rapid onChange calls would drop intermediate values
+    const updatedData = {
+      ...((resource?.data as StepData) ?? {}),
+      action: {
+        ...((resource?.data as StepData)?.action ?? {}),
+        executor: {
+          ...((resource?.data as StepData)?.action?.executor ?? {}),
+          mode: selectedMode,
+        },
+      },
+      display: {
+        ...((resource?.data as StepData)?.display ?? {}),
+        label: modeConfig?.displayLabel ?? 'SMS OTP',
+      },
+    };
+
+    // Single update call with the complete data object
+    onChange('data', updatedData, resource);
   };
 
   // Render SMS OTP mode selector

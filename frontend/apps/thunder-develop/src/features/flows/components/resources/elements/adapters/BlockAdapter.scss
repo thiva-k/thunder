@@ -16,14 +16,18 @@
  * under the License.
  */
 
-@use "../../../../styles/variables";
+.flow-builder-step {
+  .flow-builder-step-content {
+    .adapter.block-adapter {
+      width: 100%;
+      display: block;
+      padding: 8px 16px;
 
-.flow-builder-display-field-i18n-placeholder {
-
-    .flow-builder-display-field-i18n-placeholder-key {
-        font-family: monospace;
-        font-size: 13px;
-        padding: 2px 4px;
-        border-radius: var(--flow-builder-border-radius);
+      // Style for button adapters directly inside block-adapter
+      .adapter.button-adapter {
+        width: 100%;
+        position: relative;
+      }
     }
+  }
 }

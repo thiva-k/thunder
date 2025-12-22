@@ -13,15 +13,14 @@
       "components": [
         {
           "category": "BLOCK",
-          "type": "FORM",
+          "type": "BLOCK",
           "config": {},
           "id": "{{ID}}",
           "components": [
             {
               "id": "{{ID}}",
               "category": "FIELD",
-              "type": "INPUT",
-              "variant": "TEXT",
+              "type": "TEXT_INPUT",
               "inputType": "text",
               "hint": "",
               "label": "Username",
@@ -32,8 +31,7 @@
             {
               "id": "{{ID}}",
               "category": "FIELD",
-              "type": "INPUT",
-              "variant": "PASSWORD",
+              "type": "PASSWORD_INPUT",
               "identifier": "password",
               "inputType": "password",
               "hint": "",
@@ -44,7 +42,7 @@
             {
               "id": "{{ID}}",
               "category": "ACTION",
-              "type": "BUTTON",
+              "type": "ACTION",
               "variant": "PRIMARY",
               "buttonType": "submit",
               "label": "Continue",

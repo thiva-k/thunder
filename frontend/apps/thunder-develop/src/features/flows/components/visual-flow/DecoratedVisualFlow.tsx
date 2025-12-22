@@ -36,7 +36,7 @@ import VisualFlow, {type VisualFlowPropsInterface} from './VisualFlow';
 import Droppable from '../dnd/droppable';
 import VisualFlowConstants from '../../constants/VisualFlowConstants';
 import generateResourceId from '../../utils/generateResourceId';
-import {BlockTypes, ElementTypes, type Element} from '../../models/elements';
+import {BlockTypes, type Element} from '../../models/elements';
 import type {DragSourceData, DragTargetData, DragEventWithNative} from '../../models/drag-drop';
 import {ResourceTypes, type Resource, type Resources} from '../../models/resources';
 import FormRequiresViewDialog from '../form-requires-view-dialog/FormRequiresViewDialog';
@@ -254,7 +254,7 @@ function DecoratedVisualFlow({
 
       // Check for components that need containers
       const isFormDrop = sourceData.dragged?.type === BlockTypes.Form;
-      const isInputDrop = sourceData.dragged?.type === ElementTypes.Input;
+      const isInputDrop = sourceData.dragged?.category === 'FIELD';
       const isWidgetDrop = sourceData.dragged?.resourceType === ResourceTypes.Widget;
       const isCanvasTarget =
         typeof target?.id === 'string' && target.id.startsWith(VisualFlowConstants.FLOW_BUILDER_CANVAS_ID);

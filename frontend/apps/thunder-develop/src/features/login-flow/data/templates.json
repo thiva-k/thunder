@@ -11,6 +11,14 @@
     },
     "config": {
       "data": {
+        "__generationMeta__": {
+          "replacers": [
+            {
+              "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
+            }
+          ]
+        },
         "steps": [
           {
             "id": "{{ID}}",
@@ -28,30 +36,51 @@
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
                   "label": "Heading"
                 },
                 {
                   "category": "BLOCK",
-                  "type": "FORM",
+                  "type": "BLOCK",
                   "id": "{{ID}}",
                   "components": [
                     {
                       "category": "ACTION",
-                      "type": "BUTTON",
+                      "type": "ACTION",
                       "id": "{{ID}}",
                       "variant": "PRIMARY",
                       "eventType": "SUBMIT",
                       "label": "Continue",
                       "action": {
-                        "next": "END",
+                        "next": "{{AUTH_ASSERT_EXECUTOR_ID}}",
                         "type": "NEXT"
                       }
                     }
                   ]
                 }
               ]
+            }
+          },
+          {
+            "id": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 690,
+              "y": 270
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AuthAssertExecutor"
+                },
+                "next": "END"
+              }
             }
           },
           {
@@ -62,8 +91,8 @@
               "height": 220
             },
             "position": {
-              "x": 790,
-              "y": 330
+              "x": 1080,
+              "y": 270
             },
             "config": {},
             "data": {
@@ -97,6 +126,10 @@
             {
               "key": "BASIC_AUTH_EXECUTION_STEP_ID",
               "type": "ID"
+            },
+            {
+              "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
             }
           ]
         },
@@ -117,20 +150,19 @@
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
                   "label": "Sign In"
                 },
                 {
                   "category": "BLOCK",
-                  "type": "FORM",
+                  "type": "BLOCK",
                   "id": "{{ID}}",
                   "components": [
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "TEXT",
+                      "type": "TEXT_INPUT",
                       "inputType": "text",
                       "hint": "",
                       "label": "Username",
@@ -141,8 +173,7 @@
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "PASSWORD",
+                      "type": "PASSWORD_INPUT",
                       "inputType": "password",
                       "identifier": "password",
                       "hint": "",
@@ -153,7 +184,7 @@
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
-                      "type": "BUTTON",
+                      "type": "ACTION",
                       "variant": "PRIMARY",
                       "eventType": "SUBMIT",
                       "label": "Sign In",
@@ -190,6 +221,27 @@
                 "executor": {
                   "name": "BasicAuthExecutor"
                 },
+                "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1080,
+              "y": 270
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AuthAssertExecutor"
+                },
                 "next": "END"
               }
             }
@@ -202,7 +254,7 @@
               "height": 220
             },
             "position": {
-              "x": 1080,
+              "x": 1470,
               "y": 200
             },
             "config": {},
@@ -241,6 +293,10 @@
             {
               "key": "BASIC_AUTH_EXECUTION_STEP_ID",
               "type": "ID"
+            },
+            {
+              "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
             }
           ]
         },
@@ -261,20 +317,19 @@
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
                   "label": "Login"
                 },
                 {
                   "category": "BLOCK",
-                  "type": "FORM",
+                  "type": "BLOCK",
                   "id": "{{ID}}",
                   "components": [
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "TEXT",
+                      "type": "TEXT_INPUT",
                       "inputType": "text",
                       "hint": "",
                       "label": "Username",
@@ -285,8 +340,7 @@
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "PASSWORD",
+                      "type": "PASSWORD_INPUT",
                       "inputType": "password",
                       "identifier": "password",
                       "hint": "",
@@ -297,7 +351,7 @@
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
-                      "type": "BUTTON",
+                      "type": "ACTION",
                       "variant": "PRIMARY",
                       "eventType": "SUBMIT",
                       "label": "Continue",
@@ -311,15 +365,22 @@
                 {
                   "id": "{{ID}}",
                   "category": "ACTION",
-                  "type": "BUTTON",
-                  "variant": "SOCIAL",
-                  "eventType": "TRIGGER",
-                  "label": "Continue with Google",
-                  "image": "assets/images/icons/google.svg",
-                  "action": {
-                    "type": "NEXT",
-                    "next": "{{GOOGLE_EXECUTION_STEP_ID}}"
-                  }
+                  "type": "BLOCK",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "SOCIAL",
+                      "eventType": "TRIGGER",
+                      "label": "Continue with Google",
+                      "image": "assets/images/icons/google.svg",
+                      "action": {
+                        "type": "NEXT",
+                        "next": "{{GOOGLE_EXECUTION_STEP_ID}}"
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -341,7 +402,7 @@
                 "executor": {
                   "name": "BasicAuthExecutor"
                 },
-                "next": "END"
+                "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
               }
             }
           },
@@ -362,10 +423,31 @@
                 "executor": {
                   "name": "GoogleOIDCAuthExecutor"
                 },
-                "next": "END"
+                "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
               },
               "properties": {
                 "idpId": "{{IDP_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 970,
+              "y": 330
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AuthAssertExecutor"
+                },
+                "next": "END"
               }
             }
           },
@@ -377,7 +459,7 @@
               "height": 220
             },
             "position": {
-              "x": 970,
+              "x": 1360,
               "y": 330
             },
             "config": {},
@@ -412,6 +494,10 @@
             {
               "key": "PASSKEY_ENROLLMENT_STEP_ID",
               "type": "ID"
+            },
+            {
+              "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
             }
           ]
         },
@@ -432,19 +518,19 @@
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
                   "label": "Login"
                 },
                 {
-                  "category": "BLOCK",
-                  "type": "FORM",
                   "id": "{{ID}}",
+                  "category": "ACTION",
+                  "type": "BLOCK",
                   "components": [
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
-                      "type": "BUTTON",
+                      "type": "ACTION",
                       "variant": "PRIMARY",
                       "eventType": "TRIGGER",
                       "label": "Login with Passkey",
@@ -467,13 +553,34 @@
             },
             "position": {
               "x": 500,
-              "y": 900
+              "y": 330
             },
             "data": {
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
                   "name": "FIDO2Executor"
+                },
+                "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 890,
+              "y": 400
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AuthAssertExecutor"
                 },
                 "next": "END"
               }
@@ -487,8 +594,8 @@
               "height": 220
             },
             "position": {
-              "x": 880,
-              "y": 800
+              "x": 1280,
+              "y": 330
             },
             "config": {},
             "data": {
@@ -529,6 +636,10 @@
             {
               "key": "SMS_VERIFY_EXECUTOR_ID",
               "type": "ID"
+            },
+            {
+              "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
             }
           ]
         },
@@ -549,20 +660,19 @@
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
                   "label": "Sign In with SMS"
                 },
                 {
                   "category": "BLOCK",
-                  "type": "FORM",
+                  "type": "BLOCK",
                   "id": "{{ID}}",
                   "components": [
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "TELEPHONE",
+                      "type": "PHONE_INPUT",
                       "inputType": "tel",
                       "hint": "",
                       "label": "Mobile Number",
@@ -573,7 +683,7 @@
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
-                      "type": "BUTTON",
+                      "type": "ACTION",
                       "variant": "PRIMARY",
                       "eventType": "SUBMIT",
                       "label": "Send OTP",
@@ -625,27 +735,26 @@
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "H3",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
                   "label": "Verify OTP"
                 },
                 {
                   "id": "{{ID}}",
                   "category": "DISPLAY",
-                  "type": "TYPOGRAPHY",
-                  "variant": "BODY1",
+                  "type": "TEXT",
+                  "variant": "BODY_1",
                   "label": "Enter the verification code sent to your mobile number"
                 },
                 {
                   "id": "{{ID}}",
                   "category": "BLOCK",
-                  "type": "FORM",
+                  "type": "BLOCK",
                   "components": [
                     {
                       "id": "{{ID}}",
                       "category": "FIELD",
-                      "type": "INPUT",
-                      "variant": "OTP",
+                      "type": "OTP_INPUT",
                       "inputType": "text",
                       "hint": "",
                       "identifier": "otp",
@@ -656,7 +765,7 @@
                     {
                       "id": "{{ID}}",
                       "category": "ACTION",
-                      "type": "BUTTON",
+                      "type": "ACTION",
                       "variant": "PRIMARY",
                       "eventType": "SUBMIT",
                       "label": "Verify",
@@ -699,6 +808,27 @@
                   "name": "SMSOTPAuthExecutor",
                   "mode": "verify"
                 },
+                "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1860,
+              "y": 270
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AuthAssertExecutor"
+                },
                 "next": "END"
               }
             }
@@ -711,7 +841,7 @@
               "height": 220
             },
             "position": {
-              "x": 1860,
+              "x": 2250,
               "y": 200
             },
             "config": {},
