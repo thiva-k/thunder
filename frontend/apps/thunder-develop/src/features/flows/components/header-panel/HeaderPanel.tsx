@@ -32,7 +32,6 @@ import {
   TextField,
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Save, LayoutGrid, Edit, X, Check} from '@wso2/oxygen-ui-icons-react';
-import ValidationStatusLabels from '../validation-panel/ValidationStatusLabels';
 import EdgeStyleSelector from './EdgeStyleSelector';
 
 /**
@@ -220,7 +219,6 @@ function HeaderPanel({
 
           {/* Right section - Action buttons */}
           <Stack direction="row" alignItems="center" spacing={1} ml="auto">
-            <ValidationStatusLabels />
             {onAutoLayout && (
               <Tooltip title={t('flows:core.headerPanel.autoLayout')}>
                 <IconButton size="small" onClick={onAutoLayout}>

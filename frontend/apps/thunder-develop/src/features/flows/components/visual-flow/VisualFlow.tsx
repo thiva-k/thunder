@@ -21,6 +21,7 @@ import {type ReactElement} from 'react';
 import {useColorScheme} from '@wso2/oxygen-ui';
 import '@xyflow/react/dist/style.css';
 import './VisualFlow.scss';
+import CanvasValidationIndicator from '../validation-panel/CanvasValidationIndicator';
 
 /**
  * Props interface of {@link VisualFlow}
@@ -77,6 +78,7 @@ function VisualFlow({
     >
       <Controls position="top-center" orientation="horizontal" />
       <Background gap={20} />
+      <CanvasValidationIndicator />
     </ReactFlow>
   );
 }
