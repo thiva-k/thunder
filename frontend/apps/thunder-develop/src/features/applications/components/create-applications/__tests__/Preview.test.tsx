@@ -50,7 +50,6 @@ describe('Preview', () => {
   ];
 
   const defaultProps: PreviewProps = {
-    appName: 'My Application',
     appLogo: 'https://example.com/logo.png',
     selectedColor: '#FF5733',
     integrations: {
@@ -87,18 +86,6 @@ describe('Preview', () => {
     renderComponent({appLogo: null});
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
-  });
-
-  it('should render sign in heading with app name', () => {
-    renderComponent();
-
-    expect(screen.getByText('Sign in to My Application')).toBeInTheDocument();
-  });
-
-  it('should render welcome message', () => {
-    renderComponent();
-
-    expect(screen.getByText('Welcome back! Please sign in to continue.')).toBeInTheDocument();
   });
 
   it('should render username and password fields when username/password is enabled', () => {
@@ -205,13 +192,6 @@ describe('Preview', () => {
     // Username/password should not be shown when integrations is empty (defaults to false)
     expect(screen.queryByText('Username')).not.toBeInTheDocument();
     expect(screen.queryByText('Password')).not.toBeInTheDocument();
-  });
-
-  it('should handle null app name', () => {
-    renderComponent({appName: null});
-
-    // Should still render but with null in the heading
-    expect(screen.getByText('Sign in to')).toBeInTheDocument();
   });
 
   it('should apply selected color to sign in button', () => {

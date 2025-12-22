@@ -355,19 +355,8 @@ export default function ConfigureSignInOptions({
 
       {/* Conditional rendering based on view and onboarding status */}
       {(() => {
-        if (!hasCompletedOnboarding) {
-          // New users: show only toggles
-          return (
-            <IndividualMethodsToggleView
-              integrations={integrations}
-              availableIntegrations={availableIntegrations}
-              flowsByType={flowsByType}
-              onIntegrationToggle={handleIntegrationToggle}
-            />
-          );
-        }
         if (currentView === 'flows') {
-          // Returning users: show flows first with link to toggles
+          // Show flows view
           return (
             <FlowsListView
               availableFlows={availableFlows}
@@ -379,7 +368,7 @@ export default function ConfigureSignInOptions({
             />
           );
         }
-        // Returning users: show toggles with link to flows
+        // Show toggles view
         return (
           <IndividualMethodsToggleView
             integrations={integrations}
@@ -391,51 +380,49 @@ export default function ConfigureSignInOptions({
       })()}
 
       {/* Hint for view switching */}
-      {hasCompletedOnboarding && (
-        <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Lightbulb size={20} color={theme?.vars?.palette.warning.main} />
-            <Typography variant="body2" color="text.secondary">
-              <Trans
-                i18nKey={
-                  currentView === 'toggles'
-                    ? 'applications:onboarding.configure.SignInOptions.individualMethods.hint'
-                    : 'applications:onboarding.configure.SignInOptions.preConfiguredFlows.hint'
-                }
-                defaults={
-                  currentView === 'toggles'
-                    ? 'You can also pick from an <switchLink>already defined flow</switchLink>. These can be always changed later in the application settings.'
-                    : 'You can also configure <switchLink>individual authentication methods</switchLink>. These can be always changed later in the application settings.'
-                }
-                components={{
-                  switchLink: (
-                    <Box
-                      component="span"
-                      role="button"
-                      tabIndex={0}
-                      onClick={currentView === 'toggles' ? handleSwitchToFlows : handleSwitchToToggles}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          (currentView === 'toggles' ? handleSwitchToFlows : handleSwitchToToggles)();
-                        }
-                      }}
-                      sx={{
-                        cursor: 'pointer',
-                        color: 'primary.main',
-                        textDecoration: 'underline',
-                        '&:hover': {
-                          textDecoration: 'none',
-                        },
-                      }}
-                    />
-                  ),
-                }}
-              />
-            </Typography>
-          </Stack>
+      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Lightbulb size={20} color={theme?.vars?.palette.warning.main} />
+          <Typography variant="body2" color="text.secondary">
+            <Trans
+              i18nKey={
+                currentView === 'toggles'
+                  ? 'applications:onboarding.configure.SignInOptions.individualMethods.hint'
+                  : 'applications:onboarding.configure.SignInOptions.preConfiguredFlows.hint'
+              }
+              defaults={
+                currentView === 'toggles'
+                  ? 'You can also pick from an <switchLink>already defined flow</switchLink>. These can be always changed later in the application settings.'
+                  : 'You can also configure <switchLink>individual authentication methods</switchLink>. These can be always changed later in the application settings.'
+              }
+              components={{
+                switchLink: (
+                  <Box
+                    component="span"
+                    role="button"
+                    tabIndex={0}
+                    onClick={currentView === 'toggles' ? handleSwitchToFlows : handleSwitchToToggles}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        (currentView === 'toggles' ? handleSwitchToFlows : handleSwitchToToggles)();
+                      }
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      color: 'primary.main',
+                      textDecoration: 'underline',
+                      '&:hover': {
+                        textDecoration: 'none',
+                      },
+                    }}
+                  />
+                ),
+              }}
+            />
+          </Typography>
         </Stack>
-      )}
+      </Stack>
     </Stack>
   );
 }

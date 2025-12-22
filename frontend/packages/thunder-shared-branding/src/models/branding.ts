@@ -17,6 +17,7 @@
  */
 
 import type {Theme} from './theme';
+import type {LayoutConfig} from './layout';
 
 /**
  * Branding preferences stored as flexible JSON
@@ -27,6 +28,11 @@ export interface BrandingPreferences {
    * Theme configuration
    */
   theme?: Theme;
+
+  /**
+   * Global layout configuration that applies across all themes
+   */
+  layout?: LayoutConfig;
 
   /**
    * Additional properties can be added as needed
@@ -55,3 +61,21 @@ export interface Branding {
    */
   preferences: BrandingPreferences;
 }
+
+/**
+ * Enumeration of supported branding resolution types.
+ * Used to specify the type of entity for which branding configuration should be resolved.
+ */
+export const BrandingType = {
+  /** Application-level branding */
+  APP: 'APP',
+
+  /** Organizational Unit-level branding */
+  OU: 'OU',
+} as const;
+
+/**
+ * Union type representing the possible branding resolution types.
+ * @example 'APP' | 'OU'
+ */
+export type BrandingType = (typeof BrandingType)[keyof typeof BrandingType];

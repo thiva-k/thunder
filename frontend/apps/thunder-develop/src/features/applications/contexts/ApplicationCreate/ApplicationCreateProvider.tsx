@@ -131,12 +131,12 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
 
   // Check if user has completed onboarding by checking if they have any applications
   useEffect(() => {
-    if (applicationsData?.applications && applicationsData.applications.length > 1) {
+    if (applicationsData?.applications && applicationsData.totalResults > 1) {
       setHasCompletedOnboarding(true);
-    } else if (applicationsData?.applications && applicationsData.applications.length === 0) {
+    } else if (applicationsData?.applications && applicationsData.totalResults === 0) {
       setHasCompletedOnboarding(false);
     }
-  }, [applicationsData?.applications]);
+  }, [applicationsData?.applications, applicationsData?.totalResults]);
 
   const toggleIntegration = useCallback((integrationId: string): void => {
     setIntegrations((prev) => ({

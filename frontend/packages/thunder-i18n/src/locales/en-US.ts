@@ -543,8 +543,7 @@ const translations = {
     'delete.message': 'Are you sure you want to delete this application? This action cannot be undone.',
     'delete.disclaimer': 'Warning: All associated data, configurations, and access tokens will be permanently removed.',
     'onboarding.preview.title': 'Preview',
-    'onboarding.preview.signInTo': 'Sign in to {{appName}}',
-    'onboarding.preview.welcomeMessage': 'Welcome back! Please sign in to continue.',
+    'onboarding.preview.signin': 'Sign In',
     'onboarding.preview.username': 'Username',
     'onboarding.preview.usernamePlaceholder': 'Enter your Username',
     'onboarding.preview.password': 'Password',
@@ -796,6 +795,8 @@ const translations = {
   // Elements - Low level reusable element translations
   // ============================================================================
   elements: {
+    'buttons.github.text': 'Continue with GitHub',
+    'buttons.google.text': 'Continue with Google',
     'buttons.submit.text': 'Continue',
     'display.divider.or_separator': 'OR',
     'fields.first_name.label': 'First Name',
