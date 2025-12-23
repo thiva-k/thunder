@@ -23,7 +23,6 @@ import {useTranslation} from 'react-i18next';
 import {type IdentityProvider, IdentityProviderTypes} from '@/features/integrations/models/identity-provider';
 import getIntegrationIcon from '@/features/integrations/utils/getIntegrationIcon';
 import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
-import {type BasicFlowDefinition} from '../../../../flows/models/responses';
 import AuthenticationMethodItem from './AuthenticationMethodItem';
 
 /**
@@ -41,17 +40,6 @@ export interface IndividualMethodsToggleViewProps {
   availableIntegrations: IdentityProvider[];
 
   /**
-   * Flows organized by type
-   */
-  flowsByType: {
-    basic: BasicFlowDefinition | null;
-    google: BasicFlowDefinition | null;
-    github: BasicFlowDefinition | null;
-    smsOtp: BasicFlowDefinition | null;
-    other: BasicFlowDefinition[];
-  };
-
-  /**
    * Callback when an integration is toggled
    */
   onIntegrationToggle: (integrationId: string) => void;
@@ -63,7 +51,6 @@ export interface IndividualMethodsToggleViewProps {
 export default function IndividualMethodsToggleView({
   integrations,
   availableIntegrations,
-  flowsByType,
   onIntegrationToggle,
 }: IndividualMethodsToggleViewProps): JSX.Element {
   const {t} = useTranslation();
@@ -89,7 +76,6 @@ export default function IndividualMethodsToggleView({
         <AuthenticationMethodItem
           id={AuthenticatorTypes.BASIC_AUTH}
           name={t('applications:onboarding.configure.SignInOptions.usernamePassword')}
-          secondary={hasUsernamePassword && flowsByType.basic ? `Flow: ${flowsByType.basic.name}` : undefined}
           icon={<UserRound size={24} />}
           isEnabled={hasUsernamePassword}
           isAvailable
@@ -102,11 +88,6 @@ export default function IndividualMethodsToggleView({
         <AuthenticationMethodItem
           id={googleProvider?.id ?? 'google'}
           name={t('applications:onboarding.configure.SignInOptions.google')}
-          secondary={
-            googleProvider && (integrations[googleProvider.id] ?? false) && flowsByType.google
-              ? `Flow: ${flowsByType.google.name}`
-              : undefined
-          }
           icon={<Google size={24} />}
           isEnabled={googleProvider ? (integrations[googleProvider.id] ?? false) : false}
           isAvailable={!!googleProvider}
@@ -119,11 +100,6 @@ export default function IndividualMethodsToggleView({
         <AuthenticationMethodItem
           id={githubProvider?.id ?? 'github'}
           name={t('applications:onboarding.configure.SignInOptions.github')}
-          secondary={
-            githubProvider && (integrations[githubProvider.id] ?? false) && flowsByType.github
-              ? `Flow: ${flowsByType.github.name}`
-              : undefined
-          }
           icon={<GitHub size={24} />}
           isEnabled={githubProvider ? (integrations[githubProvider.id] ?? false) : false}
           isAvailable={!!githubProvider}

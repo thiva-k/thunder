@@ -22,7 +22,6 @@ import type {JSX} from 'react';
 import {useNavigate} from 'react-router';
 import {useState, useCallback, useMemo, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
-import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
 import {useCreateBranding, type CreateBrandingRequest, type Branding, LayoutType} from '@thunder/shared-branding';
 import ConfigureSignInOptions from '../components/create-applications/configure-signin-options/ConfigureSignInOptions';
 import ConfigureDesign from '../components/create-applications/ConfigureDesign';
@@ -34,8 +33,6 @@ import {getDefaultOAuthConfig} from '../models/oauth';
 import Preview from '../components/create-applications/Preview';
 import ApplicationSummary from '../components/create-applications/ApplicationSummary';
 import useCreateApplication from '../api/useCreateApplication';
-import resolveAuthFlowGraphId from '../utils/resolveAuthFlowGraphId';
-import useIdentityProviders from '../../integrations/api/useIdentityProviders';
 import type {CreateApplicationRequest} from '../models/requests';
 import type {OAuth2Config} from '../models/oauth';
 import BrandingConstants from '../constants/branding-contants';
@@ -91,7 +88,6 @@ export default function ApplicationCreatePage(): JSX.Element {
   const navigate = useNavigate();
   const createApplication = useCreateApplication();
   const createBranding = useCreateBranding();
-  const {data: identityProviders} = useIdentityProviders();
   const {data: userTypesData} = useGetUserTypes();
 
   const [selectedUserTypes, setSelectedUserTypes] = useState<string[]>([]);
@@ -157,16 +153,15 @@ export default function ApplicationCreatePage(): JSX.Element {
     const oauthConfigSelected = !skipOAuthConfig && oauthConfig !== null;
     setHasOAuthConfig(oauthConfigSelected);
 
-    const hasUsernamePassword = integrations[AuthenticatorTypes.BASIC_AUTH] ?? false;
-    const selectedIdentityProviders = identityProviders?.filter((idp) => integrations[idp.id]) ?? [];
+    const authFlowGraphId: string | undefined = selectedAuthFlow?.id;
 
-    // Use selected flow if available, otherwise resolve based on integrations
-    const authFlowGraphId =
-      selectedAuthFlow?.id ??
-      resolveAuthFlowGraphId({
-        hasUsernamePassword,
-        identityProviders: selectedIdentityProviders,
-      });
+    // Validate that we have a valid flow selected
+    if (!authFlowGraphId) {
+      setError(t('onboarding.configure.SignInOptions.noFlowFound'));
+
+      return;
+    }
+
     const createApplicationWithBranding = (brandingId: string): void => {
       const userTypes = userTypesData?.schemas ?? [];
       const allowedUserTypes = (() => {
