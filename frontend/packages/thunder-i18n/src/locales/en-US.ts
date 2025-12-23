@@ -84,6 +84,7 @@ const translations = {
     create: 'Create',
     update: 'Update',
     save: 'Save',
+    or: 'or',
 
     // Status messages
     status: {
@@ -586,33 +587,20 @@ const translations = {
       'No social sign-in integrations available. Please configure an integration first.',
     'onboarding.configure.SignInOptions.hint':
       'You can always change these settings later in the application settings.',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.title': 'Pre-configured Authentication Flows',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.subtitle':
-      'Choose from pre-built authentication flows that combine multiple methods.',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.none': 'None - Use individual integrations',
     'onboarding.configure.SignInOptions.preConfiguredFlows.version': 'Version {{version}}',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow': 'Select authentication flow',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow': 'Select already configured flow',
     'onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows': 'Search flows...',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.disabledMessage':
-      'Flow selection is disabled when individual authentication methods are selected.',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.switchToIndividual': 'Switch to individual methods',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.hint':
-      'You can also configure options <switchLink>one by one</switchLink>. These can be always changed later in the application settings.',
-    'onboarding.configure.SignInOptions.individualMethods.title': 'Individual Authentication Methods',
-    'onboarding.configure.SignInOptions.individualMethods.subtitle': 'Configure individual authentication providers.',
-    'onboarding.configure.SignInOptions.individualMethods.hint':
-      'You can also pick from an <switchLink>already defined flow</switchLink>. These can be always changed later in the application settings.',
     'onboarding.configure.SignInOptions.smsOtp': 'SMS OTP',
     'onboarding.configure.SignInOptions.loading': 'Loading...',
     'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
     'onboarding.configure.approach.title': 'Sign-In Experience',
     'onboarding.configure.approach.subtitle': 'Select how users will authenticate in your application',
-    'onboarding.configure.approach.inbuilt.title': 'Redirect to {{product}} Default Pages',
+    'onboarding.configure.approach.inbuilt.title': 'Redirect to {{product}} sign-in/sign-up handling pages',
     'onboarding.configure.approach.inbuilt.description':
-      "Users are redirected to {{product}}'s default sign-in pages. Easy to set up and you can customize the look and feel.",
-    'onboarding.configure.approach.native.title': 'Bring Your Own Sign-In',
+      'Users will be redirected to system-hosted sign-in and sign-up pages, which can be customized and branded using the Flow Designer and easily integrated with SDKs in just a few steps.',
+    'onboarding.configure.approach.native.title': 'Embedded sign-in/sign-up components in your app',
     'onboarding.configure.approach.native.description':
-      'Build a fully custom authentication experience within your application. Gives you maximum flexibility over the user journey.',
+      'Users will sign in or sign up through your app using the UI components or APIs provided by {{product}}. You can customize and brand the flows using the designer or through code.',
     'onboarding.configure.stack.technology.title': 'Technology',
     'onboarding.configure.stack.technology.subtitle': 'What technology are you using to build your application?',
     'onboarding.configure.stack.technology.react.title': 'React',
@@ -735,6 +723,8 @@ const translations = {
     'onboarding.summary.appDetails': 'Application is ready to use',
     'onboarding.summary.viewApplication': 'View Application',
     'onboarding.summary.viewAppAriaLabel': 'View application details',
+    'onboarding.summary.guides.subtitle': 'Choose how you want to integrate sign-in to your application',
+    'onboarding.summary.guides.divider': 'or',
     'clientSecret.warning': 'Please copy your client credentials now. The client secret will not be shown again.',
     'clientSecret.clientIdLabel': 'Client ID',
     'clientSecret.clientSecretLabel': 'Client Secret',
@@ -883,7 +873,8 @@ const translations = {
     'core.executions.smsOtp.sender.label': 'Notification Sender',
     'core.executions.smsOtp.sender.placeholder': 'Select a notification sender',
     'core.executions.smsOtp.sender.required': 'Notification sender is required and must be selected.',
-    'core.executions.smsOtp.sender.noSenders': 'No notification senders available. Please create a notification sender first.',
+    'core.executions.smsOtp.sender.noSenders':
+      'No notification senders available. Please create a notification sender first.',
 
     // Execution steps - tooltips and messages
     'core.executions.tooltip.configurationHint': 'Click to configure this step',

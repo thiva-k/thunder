@@ -18,7 +18,7 @@
 
 import {List, Divider} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
-import {UserRound, Google, GitHub, Workflow} from '@wso2/oxygen-ui-icons-react';
+import {UserRound, Google, GitHub} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import {type IdentityProvider, IdentityProviderTypes} from '@/features/integrations/models/identity-provider';
 import getIntegrationIcon from '@/features/integrations/utils/getIntegrationIcon';
@@ -130,26 +130,6 @@ export default function IndividualMethodsToggleView({
           onToggle={onIntegrationToggle}
         />
 
-        {/* SMS OTP */}
-        {flowsByType.smsOtp && (
-          <>
-            <Divider component="li" />
-            <AuthenticationMethodItem
-              id="sms-otp"
-              name={t('applications:onboarding.configure.SignInOptions.smsOtp')}
-              secondary={
-                (integrations['sms-otp'] ?? false) && flowsByType.smsOtp
-                  ? `Flow: ${flowsByType.smsOtp.name}`
-                  : undefined
-              }
-              icon={<Workflow size={24} />}
-              isEnabled={integrations['sms-otp'] ?? false}
-              isAvailable
-              onToggle={onIntegrationToggle}
-            />
-          </>
-        )}
-
         {/* Other Social Login Providers */}
         {otherProviders.map((provider: IdentityProvider) => (
           <div key={provider.id}>
@@ -159,22 +139,6 @@ export default function IndividualMethodsToggleView({
               name={provider.name}
               icon={getIntegrationIcon(provider.type)}
               isEnabled={integrations[provider.id] ?? false}
-              isAvailable
-              onToggle={onIntegrationToggle}
-            />
-          </div>
-        ))}
-
-        {/* Other flows */}
-        {flowsByType.other.map((flow: BasicFlowDefinition) => (
-          <div key={flow.id}>
-            <Divider component="li" />
-            <AuthenticationMethodItem
-              id={flow.handle}
-              name={flow.name}
-              secondary={(integrations[flow.handle] ?? false) ? `Flow: ${flow.name}` : undefined}
-              icon={<Workflow size={24} />}
-              isEnabled={integrations[flow.handle] ?? false}
               isAvailable
               onToggle={onIntegrationToggle}
             />
