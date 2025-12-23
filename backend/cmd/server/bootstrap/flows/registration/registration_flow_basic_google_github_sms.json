@@ -44,7 +44,7 @@
             "executor": {
                 "name": "BasicAuthExecutor"
             },
-            "onSuccess": "send_sms_for_basic"
+            "onSuccess": "prompt_mobile_for_basic"
         },
         {
             "id": "google_auth",
@@ -127,6 +127,24 @@
                 "mode": "verify"
             },
             "onSuccess": "provisioning_local_sms"
+        },
+        {
+            "id": "prompt_mobile_for_basic",
+            "type": "PROMPT",
+            "inputs": [
+                {
+                    "ref": "input_001",
+                    "identifier": "mobileNumber",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                }
+            ],
+            "actions": [
+                {
+                    "ref": "action_001",
+                    "nextNode": "send_sms_for_basic"
+                }
+            ]
         },
         {
             "id": "send_sms_for_basic",

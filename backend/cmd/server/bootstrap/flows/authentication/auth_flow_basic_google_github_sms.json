@@ -36,7 +36,7 @@
             "executor": {
                 "name": "BasicAuthExecutor"
             },
-            "onSuccess": "sms_otp_auth"
+            "onSuccess": "send_sms"
         },
         {
             "id": "google_auth",
