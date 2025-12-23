@@ -89,7 +89,7 @@
                 {
                     "ref": "input_004",
                     "identifier": "mobileNumber",
-                    "type": "TEXT_INPUT",
+                    "type": "PHONE_INPUT",
                     "required": true
                 }
             ],
@@ -119,7 +119,7 @@
                 {
                     "ref": "input_005",
                     "identifier": "otp",
-                    "type": "TEXT_INPUT",
+                    "type": "OTP_INPUT",
                     "required": true
                 }
             ],
@@ -149,7 +149,7 @@
                 {
                     "ref": "input_005",
                     "identifier": "mobileNumber",
-                    "type": "TEXT_INPUT",
+                    "type": "PHONE_INPUT",
                     "required": false
                 }
             ],
