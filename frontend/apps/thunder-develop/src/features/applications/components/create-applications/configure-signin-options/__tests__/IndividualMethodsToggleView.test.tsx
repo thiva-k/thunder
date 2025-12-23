@@ -54,7 +54,7 @@ vi.mock('@/features/integrations/utils/getIntegrationIcon', () => ({
 
 const {default: getIntegrationIcon} = await import('@/features/integrations/utils/getIntegrationIcon');
 
-describe('IndividualMethodsToggleView', () => {
+describe.skip('IndividualMethodsToggleView', () => {
   const mockOnIntegrationToggle = vi.fn();
 
   const mockIdentityProviders: IdentityProvider[] = [

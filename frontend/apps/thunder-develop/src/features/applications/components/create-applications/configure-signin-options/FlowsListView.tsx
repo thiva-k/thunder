@@ -16,17 +16,7 @@
  * under the License.
  */
 
-import {
-  Box,
-  Typography,
-  Stack,
-  Radio,
-  RadioGroup,
-  FormControlLabel,
-  FormControl,
-  Autocomplete,
-  TextField,
-} from '@wso2/oxygen-ui';
+import {Box, Typography, Stack, Autocomplete, TextField} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {Workflow} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
@@ -47,24 +37,19 @@ export interface FlowsListViewProps {
   selectedAuthFlow: BasicFlowDefinition | null;
 
   /**
-   * Whether the user has completed onboarding
-   */
-  hasCompletedOnboarding: boolean;
-
-  /**
    * Callback when a flow is selected
    */
   onFlowSelect: (flowId: string) => void;
 
   /**
-   * Callback when switching to toggles view
-   */
-  onSwitchToToggles: () => void;
-
-  /**
    * Callback when clearing flow selection
    */
   onClearSelection: () => void;
+
+  /**
+   * Whether the flows list should be disabled
+   */
+  disabled?: boolean;
 }
 
 /**
@@ -75,100 +60,53 @@ export default function FlowsListView({
   selectedAuthFlow,
   onFlowSelect,
   onClearSelection,
+  disabled = false,
 }: FlowsListViewProps): JSX.Element {
   const {t} = useTranslation();
 
   return (
     <Stack direction="column" spacing={2}>
-      {availableFlows.length > 10 ? (
-        // Use Autocomplete for more than 10 flows
-        <Stack direction="column" spacing={2}>
-          <Autocomplete
-            options={[
-              {
-                id: '',
-                name: t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.none'),
-                activeVersion: null,
-              },
-              ...availableFlows,
-            ]}
-            getOptionLabel={(option) => option.name}
-            value={
-              availableFlows.find((flow) => flow.id === selectedAuthFlow?.id) ?? {
-                id: '',
-                name: t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.none'),
-                activeVersion: null,
-              }
+      <Stack direction="column" spacing={2}>
+        <Autocomplete
+          disabled={disabled}
+          options={availableFlows}
+          getOptionLabel={(option) => option.name}
+          value={availableFlows.find((flow) => flow.id === selectedAuthFlow?.id)}
+          onChange={(_, newValue) => {
+            if (newValue?.id) {
+              onFlowSelect(newValue.id);
+            } else {
+              onClearSelection();
             }
-            onChange={(_, newValue) => {
-              if (newValue?.id) {
-                onFlowSelect(newValue.id);
-              } else {
-                onClearSelection();
-              }
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label={t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow')}
-                placeholder={t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows')}
-              />
-            )}
-            renderOption={(props, option) => (
-              <Box component="li" {...props}>
-                <Box sx={{display: 'flex', alignItems: 'center', gap: 1, width: '100%'}}>
-                  <Workflow size={20} />
-                  <Box>
-                    <Typography variant="body2" fontWeight="medium">
-                      {option.name}
+          }}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label={t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow')}
+              placeholder={t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows')}
+            />
+          )}
+          renderOption={(props, option) => (
+            <Box component="li" {...props}>
+              <Box sx={{display: 'flex', alignItems: 'center', gap: 1, width: '100%'}}>
+                <Workflow size={20} />
+                <Box>
+                  <Typography variant="body2" fontWeight="medium">
+                    {option.name}
+                  </Typography>
+                  {option.activeVersion && (
+                    <Typography variant="caption" color="text.secondary">
+                      {t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.version', {
+                        version: option.activeVersion,
+                      })}
                     </Typography>
-                    {option.activeVersion && (
-                      <Typography variant="caption" color="text.secondary">
-                        {t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.version', {
-                          version: option.activeVersion,
-                        })}
-                      </Typography>
-                    )}
-                  </Box>
+                  )}
                 </Box>
               </Box>
-            )}
-          />
-        </Stack>
-      ) : (
-        // Use RadioGroup for 10 or fewer flows
-        <FormControl component="fieldset">
-          <RadioGroup value={selectedAuthFlow?.id ?? ''} onChange={(e) => onFlowSelect(e.target.value)}>
-            <FormControlLabel
-              value=""
-              control={<Radio />}
-              label={t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.none')}
-            />
-            {availableFlows.map((flow: BasicFlowDefinition) => (
-              <FormControlLabel
-                key={flow.id}
-                value={flow.id}
-                control={<Radio />}
-                label={
-                  <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-                    <Workflow size={20} />
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">
-                        {flow.name}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {t('applications:onboarding.configure.SignInOptions.preConfiguredFlows.version', {
-                          version: flow.activeVersion,
-                        })}
-                      </Typography>
-                    </Box>
-                  </Box>
-                }
-              />
-            ))}
-          </RadioGroup>
-        </FormControl>
-      )}
+            </Box>
+          )}
+        />
+      </Stack>
     </Stack>
   );
 }

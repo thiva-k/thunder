@@ -212,7 +212,7 @@ export default function ApplicationCreatePage(): JSX.Element {
 
           // Always store client_id if available (public clients still have client_id)
           if (oauthConfigFromResponse?.config?.client_id) {
-            setClientId(oauthConfigFromResponse?.config?.client_id);
+            setClientId(oauthConfigFromResponse.config.client_id);
           }
 
           // Only store client_secret for confidential clients (public clients don't have secrets)
@@ -335,15 +335,17 @@ export default function ApplicationCreatePage(): JSX.Element {
         setCurrentStep(ApplicationCreateFlowStep.APPROACH);
         break;
       case ApplicationCreateFlowStep.APPROACH:
-        // If inbuilt, go to technology selection, otherwise create app
-        if (signInApproach === ApplicationCreateFlowSignInApproach.INBUILT) {
-          setCurrentStep(ApplicationCreateFlowStep.STACK);
-        } else {
-          handleCreateApplication(true); // Skip OAuth for native
-        }
+        // Always go to technology selection to set selectedTemplateConfig
+        setCurrentStep(ApplicationCreateFlowStep.STACK);
         break;
       case ApplicationCreateFlowStep.STACK: {
-        // Technology selected, check if configuration is needed based on template
+        // For CUSTOM approach, create app immediately after technology selection
+        if (signInApproach === ApplicationCreateFlowSignInApproach.CUSTOM) {
+          handleCreateApplication(true); // Skip OAuth for custom
+          break;
+        }
+
+        // For INBUILT approach, check if configuration is needed based on template
         const needsConfiguration: boolean =
           getConfigurationTypeFromTemplate(selectedTemplateConfig) !== ApplicationCreateFlowConfiguration.NONE;
 
@@ -484,7 +486,7 @@ export default function ApplicationCreatePage(): JSX.Element {
             oauthConfig={oauthConfig}
             onOAuthConfigChange={setOAuthConfig}
             onReadyChange={handleTechnologyStepReadyChange}
-            stackTypes={{technology: false, platform: true}}
+            stackTypes={{technology: true, platform: true}}
           />
         );
 
@@ -627,8 +629,7 @@ export default function ApplicationCreatePage(): JSX.Element {
               <Box
                 sx={{
                   width: '100%',
-                  maxWidth: currentStep === ApplicationCreateFlowStep.SUMMARY ? 600 : 800,
-                  textAlign: currentStep === ApplicationCreateFlowStep.SUMMARY ? 'center' : 'left',
+                  maxWidth: currentStep === ApplicationCreateFlowStep.SUMMARY ? 900 : 800,
                   display: 'flex',
                   flexDirection: 'column',
                 }}

@@ -16,11 +16,10 @@
  * under the License.
  */
 
-import {Typography, Stack, CircularProgress, Alert, useTheme, Box} from '@wso2/oxygen-ui';
+import {Typography, Stack, CircularProgress, Alert, Divider, Box} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
-import {useEffect, useMemo, useState, useCallback} from 'react';
-import {useTranslation, Trans} from 'react-i18next';
-import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
+import {useEffect, useMemo, useCallback} from 'react';
+import {useTranslation} from 'react-i18next';
 import {type IdentityProvider, IdentityProviderTypes} from '@/features/integrations/models/identity-provider';
 import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
 import useIdentityProviders from '../../../../integrations/api/useIdentityProviders';
@@ -143,31 +142,7 @@ export default function ConfigureSignInOptions({
   onReadyChange = undefined,
 }: ConfigureSignInOptionsProps): JSX.Element {
   const {t} = useTranslation();
-  const theme = useTheme();
-  const {selectedAuthFlow, setSelectedAuthFlow, hasCompletedOnboarding} = useApplicationCreateContext();
-
-  // State to track which view to show: 'flows' or 'toggles'
-  const [currentView, setCurrentView] = useState<'flows' | 'toggles'>(() =>
-    hasCompletedOnboarding ? 'flows' : 'toggles',
-  );
-
-  // Update view when onboarding status changes - only on initial load
-  useEffect(() => {
-    // Only set initial view, don't override manual changes
-    setCurrentView((prev) => {
-      // If this is the first time hasCompletedOnboarding is set to true,
-      // and we're still showing toggles, switch to flows
-      if (hasCompletedOnboarding && prev === 'toggles') {
-        return 'flows';
-      }
-      // If onboarding status changes to false, always show toggles
-      if (!hasCompletedOnboarding) {
-        return 'toggles';
-      }
-      // Otherwise, keep the current view
-      return prev;
-    });
-  }, [hasCompletedOnboarding]);
+  const {selectedAuthFlow, setSelectedAuthFlow} = useApplicationCreateContext();
 
   const {data, isLoading, error} = useIdentityProviders();
   const {
@@ -181,7 +156,9 @@ export default function ConfigureSignInOptions({
   const availableIntegrations: IdentityProvider[] = useMemo(() => data ?? [], [data]);
   const availableFlows: BasicFlowDefinition[] = useMemo(
     (): BasicFlowDefinition[] =>
-      flowsData?.flows?.filter((flow: BasicFlowDefinition) => flow.handle !== 'develop-app-flow') ?? [],
+      flowsData?.flows?.filter(
+        (flow: BasicFlowDefinition) => flow.handle !== 'develop-app-flow' && !flow.handle?.startsWith('default-'),
+      ) ?? [],
     [flowsData?.flows],
   );
 
@@ -321,18 +298,19 @@ export default function ConfigureSignInOptions({
     const selectedFlow: BasicFlowDefinition | null =
       availableFlows?.find((flow: BasicFlowDefinition) => flow.id === flowId) ?? null;
     setSelectedAuthFlow(selectedFlow);
+
+    // Clear all individual integrations when a flow is selected
+    if (selectedFlow) {
+      Object.keys(integrations).forEach((integrationId) => {
+        if (integrations[integrationId]) {
+          onIntegrationToggle(integrationId);
+        }
+      });
+    }
   };
 
   const handleClearFlowSelection = (): void => {
     setSelectedAuthFlow(null);
-  };
-
-  const handleSwitchToFlows = (): void => {
-    setCurrentView('flows');
-  };
-
-  const handleSwitchToToggles = (): void => {
-    setCurrentView('toggles');
   };
 
   return (
@@ -353,76 +331,32 @@ export default function ConfigureSignInOptions({
         </Alert>
       )}
 
-      {/* Conditional rendering based on view and onboarding status */}
-      {(() => {
-        if (currentView === 'flows') {
-          // Show flows view
-          return (
-            <FlowsListView
-              availableFlows={availableFlows}
-              selectedAuthFlow={selectedAuthFlow}
-              hasCompletedOnboarding={hasCompletedOnboarding}
-              onFlowSelect={handleFlowSelect}
-              onSwitchToToggles={handleSwitchToToggles}
-              onClearSelection={handleClearFlowSelection}
-            />
-          );
-        }
-        // Show toggles view
-        return (
-          <IndividualMethodsToggleView
-            integrations={integrations}
-            availableIntegrations={availableIntegrations}
-            flowsByType={flowsByType}
-            onIntegrationToggle={handleIntegrationToggle}
-          />
-        );
-      })()}
+      {/* Individual Authentication Methods */}
+      <IndividualMethodsToggleView
+        integrations={integrations}
+        availableIntegrations={availableIntegrations}
+        flowsByType={flowsByType}
+        onIntegrationToggle={handleIntegrationToggle}
+      />
 
-      {/* Hint for view switching */}
-      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Lightbulb size={20} color={theme?.vars?.palette.warning.main} />
-          <Typography variant="body2" color="text.secondary">
-            <Trans
-              i18nKey={
-                currentView === 'toggles'
-                  ? 'applications:onboarding.configure.SignInOptions.individualMethods.hint'
-                  : 'applications:onboarding.configure.SignInOptions.preConfiguredFlows.hint'
-              }
-              defaults={
-                currentView === 'toggles'
-                  ? 'You can also pick from an <switchLink>already defined flow</switchLink>. These can be always changed later in the application settings.'
-                  : 'You can also configure <switchLink>individual authentication methods</switchLink>. These can be always changed later in the application settings.'
-              }
-              components={{
-                switchLink: (
-                  <Box
-                    component="span"
-                    role="button"
-                    tabIndex={0}
-                    onClick={currentView === 'toggles' ? handleSwitchToFlows : handleSwitchToToggles}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        (currentView === 'toggles' ? handleSwitchToFlows : handleSwitchToToggles)();
-                      }
-                    }}
-                    sx={{
-                      cursor: 'pointer',
-                      color: 'primary.main',
-                      textDecoration: 'underline',
-                      '&:hover': {
-                        textDecoration: 'none',
-                      },
-                    }}
-                  />
-                ),
-              }}
-            />
-          </Typography>
-        </Stack>
-      </Stack>
+      {/* Divider with "or" and Pre-configured Flows - only show if there are flows */}
+      {availableFlows.length > 0 && (
+        <>
+          <Divider sx={{my: 2}}>
+            <Typography variant="body2" color="text.secondary" sx={{px: 2}}>
+              {t('common:or')}
+            </Typography>
+          </Divider>
+
+          <FlowsListView
+            availableFlows={availableFlows}
+            selectedAuthFlow={selectedAuthFlow}
+            onFlowSelect={handleFlowSelect}
+            onClearSelection={handleClearFlowSelection}
+            disabled={false}
+          />
+        </>
+      )}
     </Stack>
   );
 }

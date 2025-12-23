@@ -55,6 +55,11 @@ export interface AuthenticationMethodItemProps {
   isAvailable: boolean;
 
   /**
+   * Whether this method should be disabled
+   */
+  isDisabled?: boolean;
+
+  /**
    * Callback when the method is toggled
    */
   onToggle: (id: string) => void;
@@ -70,6 +75,7 @@ export default function AuthenticationMethodItem({
   icon,
   isEnabled,
   isAvailable,
+  isDisabled = false,
   onToggle,
 }: AuthenticationMethodItemProps): JSX.Element {
   const {t} = useTranslation();
@@ -90,10 +96,10 @@ export default function AuthenticationMethodItem({
     <ListItem
       disablePadding
       secondaryAction={
-        <Switch edge="end" checked={isEnabled} onChange={handleToggle} color="primary"/>
+        <Switch edge="end" checked={isEnabled} onChange={handleToggle} disabled={isDisabled} color="primary" />
       }
     >
-      <ListItemButton onClick={handleToggle}>
+      <ListItemButton onClick={handleToggle} disabled={isDisabled}>
         <ListItemIcon>{icon}</ListItemIcon>
         <ListItemText primary={name} secondary={secondary} />
       </ListItemButton>
