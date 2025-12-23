@@ -56,14 +56,13 @@ import useDragDropHandlers from '../../hooks/useDragDropHandlers';
 import applyAutoLayout from '../../utils/applyAutoLayout';
 import {resolveCollisions} from '../../utils/resolveCollisions';
 import ResourcePanel from '../resource-panel/ResourcePanel';
-import HeaderPanel from '../header-panel/HeaderPanel';
 import ResourcePropertyPanel from '../resource-property-panel/ResourcePropertyPanel';
 import ValidationPanel from '../validation-panel/ValidationPanel';
 
 /**
  * Props interface of {@link DecoratedVisualFlow}
  */
-export interface DecoratedVisualFlowPropsInterface extends Omit<VisualFlowPropsInterface, 'edgeTypes'> {
+export interface DecoratedVisualFlowPropsInterface extends Omit<VisualFlowPropsInterface, 'edgeTypes' | 'onSave'> {
   resources: Resources;
   edgeTypes?: VisualFlowPropsInterface['edgeTypes'];
   onEdgeResolve?: (connection: Connection, nodes: Node[]) => Edge;
@@ -88,9 +87,6 @@ export interface DecoratedVisualFlowPropsInterface extends Omit<VisualFlowPropsI
   flowTitle: string;
   flowHandle: string;
   onFlowTitleChange: (newTitle: string) => void;
-  isHeaderPanelOpen?: boolean;
-  headerPanelContent?: ReactElement | null;
-  onBack?: () => void;
   onSave?: (canvasData: {nodes: Node[]; edges: Edge[]; viewport: {x: number; y: number; zoom: number}}) => void;
   /**
    * When true, triggers auto-layout on initial render if nodes lack proper layout data.
@@ -245,9 +241,7 @@ function DecoratedVisualFlow({
 
     // Check if nodes need auto-layout by detecting if multiple nodes are at the same position
     // (which happens when layout data is missing and all default to {x: 0, y: 0})
-    const nodesAtOrigin = currentNodes.filter(
-      (node) => node.position.x === 0 && node.position.y === 0,
-    );
+    const nodesAtOrigin = currentNodes.filter((node) => node.position.x === 0 && node.position.y === 0);
 
     // If more than one node is at the origin, we need auto-layout
     const needsAutoLayout = nodesAtOrigin.length > 1;
@@ -482,14 +476,6 @@ function DecoratedVisualFlow({
         }),
       })}
     >
-      <HeaderPanel
-        title={flowTitle}
-        handle={flowHandle}
-        onTitleChange={onFlowTitleChange}
-        onSave={handleSave}
-        onAutoLayout={handleAutoLayout}
-      />
-
       <Box sx={{flexGrow: 1, minHeight: 0}}>
         <DragDropProvider onDragEnd={handleDragEnd} onDragOver={handleDragOver}>
           <ResourcePanel
@@ -497,6 +483,9 @@ function DecoratedVisualFlow({
             open={isResourcePanelOpen}
             onAdd={handleOnAdd}
             disabled={isFlowMetadataLoading}
+            flowTitle={flowTitle}
+            flowHandle={flowHandle}
+            onFlowTitleChange={onFlowTitleChange}
           >
             <ResourcePropertyPanel open={isResourcePropertiesPanelOpen} onComponentDelete={deleteComponent}>
               <Droppable
@@ -515,6 +504,8 @@ function DecoratedVisualFlow({
                   onNodesDelete={handleNodesDelete}
                   onEdgesDelete={handleEdgesDelete}
                   onNodeDragStop={handleNodeDragStop}
+                  handleAutoLayout={handleAutoLayout}
+                  onSave={handleSave}
                   {...rest}
                 />
               </Droppable>

@@ -127,6 +127,9 @@ function FlowContextWrapper({
   const setIsOpenResourcePropertiesPanelRef = useRef<Dispatch<SetStateAction<boolean>>>(setIsOpenResourcePropertiesPanel);
   const setLastInteractedStepIdRef = useRef(setLastInteractedStepId);
 
+  // Ref to store the callback to close the validation panel (for mutual exclusion)
+  const closeValidationPanelRef = useRef<(() => void) | null>(null);
+
   // Keep refs in sync (this is cheap - just pointer assignment)
   setResourcePropertiesPanelHeadingRef.current = setResourcePropertiesPanelHeading;
   setLastInteractedElementInternalRef.current = setLastInteractedElementInternal;
@@ -217,7 +220,19 @@ function FlowContextWrapper({
   }, []);
 
   const setIsOpenResourcePropertiesPanelStable = useCallback((isOpen: boolean): void => {
+    if (isOpen) {
+      // Close validation panel when opening resource properties panel (mutual exclusion)
+      closeValidationPanelRef.current?.();
+    }
     setIsOpenResourcePropertiesPanelRef.current(isOpen);
+  }, []);
+
+  /**
+   * Registers a callback to close the validation panel.
+   * Called by ValidationProvider to enable mutual exclusion between panels.
+   */
+  const registerCloseValidationPanel = useCallback((callback: () => void): void => {
+    closeValidationPanelRef.current = callback;
   }, []);
 
   const onResourceDropOnCanvas = useCallback(
@@ -272,6 +287,7 @@ function FlowContextWrapper({
       setFlowEdgeTypes,
       setFlowNodeTypes,
       setIsOpenResourcePropertiesPanel: setIsOpenResourcePropertiesPanelStable,
+      registerCloseValidationPanel,
       setIsResourcePanelOpen,
       setIsVersionHistoryPanelOpen,
       setLanguage,
@@ -313,6 +329,7 @@ function FlowContextWrapper({
       setLastInteractedResource,
       setLastInteractedStepIdStable,
       setIsOpenResourcePropertiesPanelStable,
+      registerCloseValidationPanel,
       supportedLocales,
       textPreferenceLoading,
       updateI18nKey,
