@@ -16,7 +16,11 @@
  * under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 
 import type {JSX} from 'react';
 import {
@@ -91,8 +95,6 @@ export default function SignUpBox(): JSX.Element {
   const theme = useTheme();
 
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
-  const [formInputs, setFormInputs] = useState<Record<string, string>>({});
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const currentParams = searchParams.toString();
   const signInUrl = currentParams ? `${ROUTES.AUTH.SIGN_IN}?${currentParams}` : ROUTES.AUTH.SIGN_IN;
@@ -102,42 +104,6 @@ export default function SignUpBox(): JSX.Element {
       ...prev,
       [identifier]: !prev[identifier],
     }));
-  };
-
-  const validateForm = (components: EmbeddedFlowComponent[]): boolean => {
-    const errors: Record<string, string> = {};
-    let isValid = true;
-
-    components.forEach((component) => {
-      if (
-        ((component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.TextInput ||
-          (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PasswordInput ||
-          component.type === 'PHONE_INPUT' ||
-          component.type === 'OTP_INPUT') &&
-        component.required &&
-        component.ref &&
-        typeof component.ref === 'string' &&
-        typeof component.label === 'string'
-      ) {
-        const value = formInputs[component.ref] ?? '';
-        if (!value.trim()) {
-          errors[component.ref] = `${t('validations:form.field.required', {field: t(resolve(component.label)!)})}`;
-          isValid = false;
-        }
-      }
-    });
-
-    setFormErrors(errors);
-    return isValid;
-  };
-
-  const updateInput = (ref: string, value: string): void => {
-    setFormInputs((prev) => ({...prev, [ref]: value}));
-
-    // Clear error when user starts typing
-    if (formErrors[ref]) {
-      setFormErrors((prev) => ({...prev, [ref]: ''}));
-    }
   };
 
   return (
@@ -185,7 +151,7 @@ export default function SignUpBox(): JSX.Element {
             navigate(signInUrl);
           }}
         >
-          {({errors, handleSubmit, isLoading, components}) => (
+          {({values, fieldErrors, error, touched, handleInputChange, handleSubmit, isLoading, components}: any) => (
             <>
               {!components ? (
                 <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
@@ -193,14 +159,10 @@ export default function SignUpBox(): JSX.Element {
                 </Box>
               ) : (
                 <>
-                  {errors && Object.keys(errors).length > 0 && (
+                  {error && (
                     <Alert severity="error" sx={{mb: 2}}>
-                      <AlertTitle>{t('Error')}</AlertTitle>
-                      {Object.entries(errors).map(([key, error]: [string, unknown]) => (
-                        <Typography key={key} variant="body2">
-                          {String(error)}
-                        </Typography>
-                      ))}
+                      <AlertTitle>{t('signup:errors.signup.failed.message')}</AlertTitle>
+                      {error.message ?? t('signup:errors.signup.failed.description')}
                     </Alert>
                   )}
 
@@ -262,10 +224,17 @@ export default function SignUpBox(): JSX.Element {
                                       component="form"
                                       onSubmit={(event) => {
                                         event.preventDefault();
-                                        if (validateForm(blockComponents)) {
+                                        // Find submit action
+                                        const submitAction: EmbeddedFlowComponent = blockComponents.find(
+                                          (blockComponent: EmbeddedFlowComponent) =>
+                                            (blockComponent.type as EmbeddedFlowComponentType) ===
+                                              EmbeddedFlowComponentType.Action &&
+                                            blockComponent.eventType === EmbeddedFlowEventType.Submit,
+                                        )!;
+                                        if (submitAction) {
                                           // Tracker: https://github.com/asgardeo/javascript/issues/222
-                                          handleSubmit(component, formInputs).catch(() => {
-                                            // Error handled by onError callback
+                                          handleSubmit(submitAction, values).catch(() => {
+                                            // Error handled by error prop
                                           });
                                         }
                                       }}
@@ -302,14 +271,17 @@ export default function SignUpBox(): JSX.Element {
                                               EmbeddedFlowComponentType.TextInput &&
                                             subComponent.ref
                                           ) {
+                                            const fieldName = subComponent.ref;
+                                            const hasError: boolean = touched?.[fieldName] && fieldErrors?.[fieldName];
+
                                             return (
                                               <FormControl key={subComponent.id ?? compIndex}>
                                                 <FormLabel htmlFor={subComponent.ref}>
                                                   {t(resolve(subComponent.label)!)}
                                                 </FormLabel>
                                                 <TextField
-                                                  error={!!formErrors[subComponent.ref]}
-                                                  helperText={formErrors[subComponent.ref]}
+                                                  error={!!hasError}
+                                                  helperText={hasError ? fieldErrors?.[fieldName] : undefined}
                                                   id={subComponent.ref}
                                                   name={subComponent.ref}
                                                   type="text"
@@ -323,10 +295,10 @@ export default function SignUpBox(): JSX.Element {
                                                   required={subComponent.required}
                                                   fullWidth
                                                   variant="outlined"
-                                                  color={formErrors[subComponent.ref] ? 'error' : 'primary'}
+                                                  color={hasError ? 'error' : 'primary'}
                                                   disabled={isLoading}
-                                                  value={formInputs[subComponent.ref] ?? ''}
-                                                  onChange={(e) => updateInput(subComponent.ref, e.target.value)}
+                                                  value={values?.[fieldName] ?? ''}
+                                                  onChange={(e) => handleInputChange(fieldName, e.target.value)}
                                                 />
                                               </FormControl>
                                             );
@@ -338,6 +310,8 @@ export default function SignUpBox(): JSX.Element {
                                               EmbeddedFlowComponentType.PasswordInput &&
                                             subComponent.ref
                                           ) {
+                                            const fieldName = subComponent.ref;
+                                            const hasError = touched?.[fieldName] && fieldErrors?.[fieldName];
                                             const showPasswordForField = showPasswordMap[subComponent.ref] ?? false;
 
                                             return (
@@ -346,8 +320,8 @@ export default function SignUpBox(): JSX.Element {
                                                   {t(resolve(subComponent.label)!)}
                                                 </FormLabel>
                                                 <TextField
-                                                  error={!!formErrors[subComponent.ref]}
-                                                  helperText={formErrors[subComponent.ref]}
+                                                  error={!!hasError}
+                                                  helperText={hasError ? fieldErrors?.[fieldName] : undefined}
                                                   id={subComponent.ref}
                                                   name={subComponent.ref}
                                                   type={showPasswordForField ? 'text' : 'password'}
@@ -358,10 +332,10 @@ export default function SignUpBox(): JSX.Element {
                                                   required={subComponent.required}
                                                   fullWidth
                                                   variant="outlined"
-                                                  color={formErrors[subComponent.ref] ? 'error' : 'primary'}
+                                                  color={hasError ? 'error' : 'primary'}
                                                   disabled={isLoading}
-                                                  value={formInputs[subComponent.ref] ?? ''}
-                                                  onChange={(e) => updateInput(subComponent.ref, e.target.value)}
+                                                  value={values?.[fieldName] ?? ''}
+                                                  onChange={(e) => handleInputChange(fieldName, e.target.value)}
                                                   slotProps={{
                                                     input: {
                                                       endAdornment: (
@@ -383,12 +357,45 @@ export default function SignUpBox(): JSX.Element {
                                             );
                                           }
 
+                                          // Handle EMAIL_INPUT components
+                                          if (subComponent.type === 'EMAIL_INPUT' && subComponent.ref) {
+                                            const fieldName = subComponent.ref;
+                                            const hasError: boolean = touched?.[fieldName] && fieldErrors?.[fieldName];
+
+                                            return (
+                                              <FormControl key={subComponent.id ?? compIndex}>
+                                                <FormLabel htmlFor={subComponent.ref}>
+                                                  {t(resolve(subComponent.label)!)}
+                                                </FormLabel>
+                                                <TextField
+                                                  error={!!hasError}
+                                                  helperText={hasError ? fieldErrors?.[fieldName] : undefined}
+                                                  id={subComponent.ref}
+                                                  name={subComponent.ref}
+                                                  type="email"
+                                                  placeholder={t(resolve(subComponent.placeholder)!)}
+                                                  autoComplete="email"
+                                                  required={subComponent.required}
+                                                  fullWidth
+                                                  variant="outlined"
+                                                  color={hasError ? 'error' : 'primary'}
+                                                  disabled={isLoading}
+                                                  value={values?.[fieldName] ?? ''}
+                                                  onChange={(e) => handleInputChange(fieldName, e.target.value)}
+                                                />
+                                              </FormControl>
+                                            );
+                                          }
+
                                           // Handle SELECT components
                                           if (
                                             subComponent.type === 'SELECT' &&
                                             subComponent.options &&
                                             subComponent.ref
                                           ) {
+                                            const fieldName = subComponent.ref;
+                                            const hasError = touched?.[fieldName] && fieldErrors?.[fieldName];
+
                                             return (
                                               <FormControl key={subComponent.id ?? compIndex} fullWidth>
                                                 <FormLabel htmlFor={subComponent.ref}>
@@ -402,9 +409,9 @@ export default function SignUpBox(): JSX.Element {
                                                   required={subComponent.required}
                                                   fullWidth
                                                   disabled={isLoading}
-                                                  error={!!formErrors[subComponent.ref]}
-                                                  value={formInputs[subComponent.ref] ?? ''}
-                                                  onChange={(e) => updateInput(subComponent.ref, e.target.value)}
+                                                  error={!!hasError}
+                                                  value={values?.[fieldName] ?? ''}
+                                                  onChange={(e) => handleInputChange(fieldName, e.target.value)}
                                                 >
                                                   <MenuItem value="" disabled>
                                                     {subComponent.placeholder ?? 'Select an option'}
@@ -415,9 +422,9 @@ export default function SignUpBox(): JSX.Element {
                                                     </MenuItem>
                                                   ))}
                                                 </Select>
-                                                {formErrors[subComponent.ref] && (
+                                                {hasError && fieldErrors?.[fieldName] && (
                                                   <Typography variant="caption" color="error.main" sx={{mt: 0.5}}>
-                                                    {formErrors[subComponent.ref]}
+                                                    {fieldErrors[fieldName]}
                                                   </Typography>
                                                 )}
                                                 {subComponent.hint && (
@@ -435,6 +442,9 @@ export default function SignUpBox(): JSX.Element {
                                             subComponent.ref &&
                                             typeof subComponent.ref === 'string'
                                           ) {
+                                            const fieldName = subComponent.ref;
+                                            const hasError = touched?.[fieldName] && fieldErrors?.[fieldName];
+
                                             return (
                                               <FormControl
                                                 key={subComponent.id ?? compIndex}
@@ -445,10 +455,8 @@ export default function SignUpBox(): JSX.Element {
                                                 </FormLabel>
                                                 <TextField
                                                   fullWidth
-                                                  error={!!(subComponent.ref && formErrors[subComponent.ref])}
-                                                  helperText={
-                                                    subComponent.ref ? formErrors[subComponent.ref] : undefined
-                                                  }
+                                                  error={!!hasError}
+                                                  helperText={hasError ? fieldErrors?.[fieldName] : undefined}
                                                   id={subComponent.ref}
                                                   name={subComponent.ref}
                                                   type="tel"
@@ -458,14 +466,10 @@ export default function SignUpBox(): JSX.Element {
                                                   autoComplete="tel"
                                                   required={subComponent.required}
                                                   variant="outlined"
-                                                  color={
-                                                    subComponent.ref && formErrors[subComponent.ref]
-                                                      ? 'error'
-                                                      : 'primary'
-                                                  }
+                                                  color={hasError ? 'error' : 'primary'}
                                                   disabled={isLoading}
-                                                  value={subComponent.ref ? (formInputs[subComponent.ref] ?? '') : ''}
-                                                  onChange={(e) => updateInput(subComponent.ref, e.target.value)}
+                                                  value={values?.[fieldName] ?? ''}
+                                                  onChange={(e) => handleInputChange(fieldName, e.target.value)}
                                                 />
                                               </FormControl>
                                             );
@@ -477,8 +481,10 @@ export default function SignUpBox(): JSX.Element {
                                             subComponent.ref &&
                                             typeof subComponent.ref === 'string'
                                           ) {
+                                            const fieldName = subComponent.ref;
+                                            const hasError = touched?.[fieldName] && fieldErrors?.[fieldName];
                                             const otpLength = 6;
-                                            const otpValue = formInputs[subComponent.ref] ?? '';
+                                            const otpValue = values?.[fieldName] ?? '';
                                             const otpDigits = otpValue
                                               .padEnd(otpLength, ' ')
                                               .split('')
@@ -500,7 +506,7 @@ export default function SignUpBox(): JSX.Element {
                                                     mt: 1,
                                                   }}
                                                 >
-                                                  {otpDigits.map((digit, idx) => (
+                                                  {otpDigits.map((digit: string, idx: number) => (
                                                     <TextField
                                                       key={`otp-${subComponent.ref}`}
                                                       slotProps={{
@@ -515,10 +521,10 @@ export default function SignUpBox(): JSX.Element {
                                                         const {value} = e.target;
                                                         if (!/^\d*$/.test(value)) return;
 
-                                                        const newOtp = otpDigits.map((d, i) =>
+                                                        const newOtp = otpDigits.map((d: string, i: number) =>
                                                           i === idx ? value : d.trim(),
                                                         );
-                                                        updateInput(subComponent.ref, newOtp.join(''));
+                                                        handleInputChange(subComponent.ref, newOtp.join(''));
 
                                                         // Auto-focus next input
                                                         if (value && idx < otpLength - 1) {
@@ -549,7 +555,7 @@ export default function SignUpBox(): JSX.Element {
                                                         const digits = pastedData
                                                           .replace(/\D/g, '')
                                                           .slice(0, otpLength);
-                                                        updateInput(subComponent.ref, digits);
+                                                        handleInputChange(subComponent.ref, digits);
 
                                                         // Focus last filled input
                                                         const lastIdx = Math.min(digits.length, otpLength - 1);
@@ -559,7 +565,7 @@ export default function SignUpBox(): JSX.Element {
                                                         )! as HTMLInputElement;
                                                         lastInput.focus();
                                                       }}
-                                                      error={!!(subComponent.ref && formErrors[subComponent.ref])}
+                                                      error={!!hasError}
                                                       disabled={isLoading}
                                                       variant="outlined"
                                                       sx={{
@@ -571,11 +577,12 @@ export default function SignUpBox(): JSX.Element {
                                                     />
                                                   ))}
                                                 </Box>
-                                                {subComponent.ref && formErrors[subComponent.ref] && (
+                                                {hasError && fieldErrors?.[fieldName] && (
                                                   <Typography variant="caption" color="error" sx={{mt: 0.5, ml: 1.75}}>
-                                                    {formErrors[subComponent.ref]}
+                                                    {fieldErrors[fieldName]}
                                                   </Typography>
                                                 )}
+                                                )
                                               </FormControl>
                                             );
                                           }
@@ -632,12 +639,10 @@ export default function SignUpBox(): JSX.Element {
                                                 variant={subComponent.variant === 'PRIMARY' ? 'contained' : 'outlined'}
                                                 disabled={isLoading}
                                                 onClick={() => {
-                                                  if (validateForm(blockComponents)) {
-                                                    // Tracker: https://github.com/asgardeo/javascript/issues/222
-                                                    handleSubmit(component, formInputs).catch(() => {
-                                                      // Error handled by onError callback
-                                                    });
-                                                  }
+                                                  // Tracker: https://github.com/asgardeo/javascript/issues/222
+                                                  handleSubmit(subComponent, values).catch(() => {
+                                                    // Error handled by error prop
+                                                  });
                                                 }}
                                                 sx={{mt: 2}}
                                               >
@@ -684,8 +689,8 @@ export default function SignUpBox(): JSX.Element {
                                                 disabled={isLoading}
                                                 onClick={() => {
                                                   // Tracker: https://github.com/asgardeo/javascript/issues/222
-                                                  handleSubmit(component, {}).catch(() => {
-                                                    // Error handled by onError callback
+                                                  handleSubmit(actionComponent, values ?? {}).catch(() => {
+                                                    // Error handled by error prop
                                                   });
                                                 }}
                                                 startIcon={getIntegrationIcon(

@@ -17,6 +17,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type {JSX} from 'react';
 import {
@@ -96,7 +97,7 @@ export default function SignInBox(): JSX.Element {
 
   const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
   const [formInputs, setFormInputs] = useState<Record<string, string>>({});
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const togglePasswordVisibilityForField = (identifier: string): void => {
     setShowPasswordMap((prev: Record<string, boolean>) => ({
@@ -128,19 +129,16 @@ export default function SignInBox(): JSX.Element {
       }
     });
 
-    setFormErrors(errors);
-
+    setFieldErrors(errors);
     return isValid;
   };
 
   const updateInput = (ref: string | undefined, value: string): void => {
     if (!ref) return;
-
     setFormInputs((prev) => ({...prev, [ref]: value}));
-
     // Clear error when user starts typing
-    if (formErrors[ref]) {
-      setFormErrors((prev) => ({...prev, [ref]: ''}));
+    if (fieldErrors[ref]) {
+      setFieldErrors((prev) => ({...prev, [ref]: ''}));
     }
   };
 
@@ -182,12 +180,7 @@ export default function SignInBox(): JSX.Element {
         </Box>
       )}
       <StyledPaper variant="outlined">
-        <SignIn
-          onError={() => {
-            // Handle authentication errors
-            // Error will be displayed in the UI via the error prop
-          }}
-        >
+        <SignIn>
           {({onSubmit, isLoading, components, error, isInitialized}) =>
             (isLoading ?? !isInitialized) ? (
               <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
@@ -198,7 +191,7 @@ export default function SignInBox(): JSX.Element {
                 {error && (
                   <Alert severity="error" sx={{mb: 2}}>
                     <AlertTitle>{t('signin:errors.signin.failed.message')}</AlertTitle>
-                    {t('signin:errors.signin.failed.description')}
+                    {error.message ?? t('signin:errors.signin.failed.description')}
                   </Alert>
                 )}
                 {(() => {
@@ -307,8 +300,10 @@ export default function SignInBox(): JSX.Element {
                                             </FormLabel>
                                             <TextField
                                               fullWidth
-                                              error={!!(subComponent.ref && formErrors[subComponent.ref])}
-                                              helperText={subComponent.ref ? formErrors[subComponent.ref] : undefined}
+                                              error={!!(subComponent.ref && fieldErrors?.[subComponent.ref])}
+                                              helperText={
+                                                subComponent.ref ? fieldErrors?.[subComponent.ref] : undefined
+                                              }
                                               id={subComponent.ref}
                                               name={subComponent.ref}
                                               type="text"
@@ -320,7 +315,9 @@ export default function SignInBox(): JSX.Element {
                                               required={subComponent.required}
                                               variant="outlined"
                                               color={
-                                                subComponent.ref && formErrors[subComponent.ref] ? 'error' : 'primary'
+                                                subComponent.ref && fieldErrors?.[subComponent.ref]
+                                                  ? 'error'
+                                                  : 'primary'
                                               }
                                               disabled={isLoading}
                                               value={subComponent.ref ? (formInputs[subComponent.ref] ?? '') : ''}
@@ -350,8 +347,10 @@ export default function SignInBox(): JSX.Element {
                                             </FormLabel>
                                             <TextField
                                               fullWidth
-                                              error={!!(subComponent.ref && formErrors[subComponent.ref])}
-                                              helperText={subComponent.ref ? formErrors[subComponent.ref] : undefined}
+                                              error={!!(subComponent.ref && fieldErrors?.[subComponent.ref])}
+                                              helperText={
+                                                subComponent.ref ? fieldErrors?.[subComponent.ref] : undefined
+                                              }
                                               id={subComponent.ref}
                                               name={subComponent.ref}
                                               type={showPasswordForField ? 'text' : 'password'}
@@ -364,7 +363,9 @@ export default function SignInBox(): JSX.Element {
                                               required={subComponent.required}
                                               variant="outlined"
                                               color={
-                                                subComponent.ref && formErrors[subComponent.ref] ? 'error' : 'primary'
+                                                subComponent.ref && fieldErrors?.[subComponent.ref]
+                                                  ? 'error'
+                                                  : 'primary'
                                               }
                                               disabled={isLoading}
                                               value={subComponent.ref ? (formInputs[subComponent.ref] ?? '') : ''}
@@ -408,8 +409,10 @@ export default function SignInBox(): JSX.Element {
                                             </FormLabel>
                                             <TextField
                                               fullWidth
-                                              error={!!(subComponent.ref && formErrors[subComponent.ref])}
-                                              helperText={subComponent.ref ? formErrors[subComponent.ref] : undefined}
+                                              error={!!(subComponent.ref && fieldErrors?.[subComponent.ref])}
+                                              helperText={
+                                                subComponent.ref ? fieldErrors?.[subComponent.ref] : undefined
+                                              }
                                               id={subComponent.ref}
                                               name={subComponent.ref}
                                               type="tel"
@@ -420,7 +423,9 @@ export default function SignInBox(): JSX.Element {
                                               required={subComponent.required}
                                               variant="outlined"
                                               color={
-                                                subComponent.ref && formErrors[subComponent.ref] ? 'error' : 'primary'
+                                                subComponent.ref && fieldErrors?.[subComponent.ref]
+                                                  ? 'error'
+                                                  : 'primary'
                                               }
                                               disabled={isLoading}
                                               value={subComponent.ref ? (formInputs[subComponent.ref] ?? '') : ''}
@@ -509,7 +514,7 @@ export default function SignInBox(): JSX.Element {
                                                     )! as HTMLInputElement;
                                                     lastInput.focus();
                                                   }}
-                                                  error={!!(subComponent.ref && formErrors[subComponent.ref])}
+                                                  error={!!(subComponent.ref && fieldErrors?.[subComponent.ref])}
                                                   disabled={isLoading}
                                                   variant="outlined"
                                                   sx={{
@@ -521,9 +526,9 @@ export default function SignInBox(): JSX.Element {
                                                 />
                                               ))}
                                             </Box>
-                                            {subComponent.ref && formErrors[subComponent.ref] && (
+                                            {subComponent.ref && fieldErrors?.[subComponent.ref] && (
                                               <Typography variant="caption" color="error" sx={{mt: 0.5, ml: 1.75}}>
-                                                {formErrors[subComponent.ref]}
+                                                {fieldErrors[subComponent.ref]}
                                               </Typography>
                                             )}
                                           </FormControl>
@@ -677,7 +682,7 @@ export default function SignInBox(): JSX.Element {
         </SignIn>
 
         <SignUp>
-          {({components}) => {
+          {({components}: any) => {
             if (components && components.length > 0) {
               return (
                 <Typography sx={{textAlign: 'center', mt: 2}}>
