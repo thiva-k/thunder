@@ -55,7 +55,7 @@
                 {
                     "ref": "input_005",
                     "identifier": "email",
-                    "type": "TEXT_INPUT",
+                    "type": "EMAIL_INPUT",
                     "required": true
                 }
             ],

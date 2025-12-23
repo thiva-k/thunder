@@ -23,7 +23,7 @@
                 {
                     "ref": "input_001",
                     "identifier": "mobileNumber",
-                    "type": "TEXT_INPUT",
+                    "type": "PHONE_INPUT",
                     "required": true
                 }
             ],
@@ -53,7 +53,7 @@
                 {
                     "ref": "input_002",
                     "identifier": "otp",
-                    "type": "TEXT_INPUT",
+                    "type": "OTP_INPUT",
                     "required": true
                 }
             ],
@@ -95,13 +95,13 @@
                 {
                     "ref": "input_004",
                     "identifier": "email",
-                    "type": "TEXT_INPUT",
+                    "type": "EMAIL_INPUT",
                     "required": true
                 },
                 {
                     "ref": "input_005",
                     "identifier": "mobileNumber",
-                    "type": "TEXT_INPUT",
+                    "type": "PHONE_INPUT",
                     "required": true
                 }
             ],
