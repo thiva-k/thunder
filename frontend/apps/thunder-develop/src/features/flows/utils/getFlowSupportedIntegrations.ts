@@ -17,7 +17,6 @@
  */
 
 import {AuthenticatorTypes} from '../../integrations/models/authenticators';
-import type {FlowIntegrationType} from './flowIntegrationMapping';
 
 /**
  * Determines which integrations are supported by a given flow
@@ -34,11 +33,11 @@ import type {FlowIntegrationType} from './flowIntegrationMapping';
  * // Returns: ['basic_auth', 'google', 'github']
  * ```
  */
-function getFlowSupportedIntegrations(flowHandle: string): FlowIntegrationType[] {
-  const integrations: FlowIntegrationType[] = [];
+function getFlowSupportedIntegrations(flowHandle: string): string[] {
+  const integrations: string[] = [];
 
   // Check for basic auth
-  if (flowHandle.includes('basic') || flowHandle === 'login-flow') {
+  if (flowHandle.includes('basic')) {
     integrations.push(AuthenticatorTypes.BASIC_AUTH);
   }
 

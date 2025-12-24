@@ -25,12 +25,11 @@ import FlowsListView, {type FlowsListViewProps} from '../FlowsListView';
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: {version?: number}) => {
+    t: (key: string) => {
       const translations: Record<string, string> = {
         'applications:onboarding.configure.SignInOptions.preConfiguredFlows.none': 'None',
         'applications:onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow': 'Select a flow',
         'applications:onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows': 'Search flows...',
-        'applications:onboarding.configure.SignInOptions.preConfiguredFlows.version': `Version ${options?.version ?? ''}`,
       };
       return translations[key] || key;
     },

@@ -581,13 +581,13 @@ const translations = {
     'onboarding.configure.SignInOptions.google': 'Google',
     'onboarding.configure.SignInOptions.github': 'GitHub',
     'onboarding.configure.SignInOptions.notConfigured': 'Not configured',
+    'onboarding.configure.SignInOptions.noFlowFound': 'No flow found for the selected sign-in options. Please try a different combination.',
     'onboarding.configure.SignInOptions.noSelectionWarning':
       'At least one sign-in option is required. Please select at least one authentication method.',
     'onboarding.configure.SignInOptions.noIntegrations':
       'No social sign-in integrations available. Please configure an integration first.',
     'onboarding.configure.SignInOptions.hint':
       'You can always change these settings later in the application settings.',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.version': 'Version {{version}}',
     'onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow': 'Select already configured flow',
     'onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows': 'Search flows...',
     'onboarding.configure.SignInOptions.smsOtp': 'SMS OTP',

@@ -21,7 +21,6 @@ import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {IdentityProviderTypes, type IdentityProvider} from '@/features/integrations/models/identity-provider';
 import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
-import {type BasicFlowDefinition} from '@/features/flows/models/responses';
 import IndividualMethodsToggleView, {type IndividualMethodsToggleViewProps} from '../IndividualMethodsToggleView';
 
 // Mock react-i18next
@@ -84,62 +83,11 @@ describe.skip('IndividualMethodsToggleView', () => {
     },
   ];
 
-  const mockFlowsByType = {
-    basic: {
-      id: 'basic-flow',
-      name: 'Basic Authentication Flow',
-      activeVersion: 1,
-      handle: 'basic-auth-flow',
-      flowType: 'AUTHENTICATION',
-      createdAt: '2023-01-01T00:00:00Z',
-      updatedAt: '2023-01-01T00:00:00Z',
-    } as BasicFlowDefinition,
-    google: {
-      id: 'google-flow',
-      name: 'Google OAuth Flow',
-      activeVersion: 1,
-      handle: 'google-oauth-flow',
-      flowType: 'AUTHENTICATION',
-      createdAt: '2023-01-01T00:00:00Z',
-      updatedAt: '2023-01-01T00:00:00Z',
-    } as BasicFlowDefinition,
-    github: {
-      id: 'github-flow',
-      name: 'GitHub OAuth Flow',
-      activeVersion: 1,
-      handle: 'github-oauth-flow',
-      flowType: 'AUTHENTICATION',
-      createdAt: '2023-01-01T00:00:00Z',
-      updatedAt: '2023-01-01T00:00:00Z',
-    } as BasicFlowDefinition,
-    smsOtp: {
-      id: 'sms-flow',
-      name: 'SMS OTP Flow',
-      activeVersion: 1,
-      handle: 'sms-otp-flow',
-      flowType: 'AUTHENTICATION',
-      createdAt: '2023-01-01T00:00:00Z',
-      updatedAt: '2023-01-01T00:00:00Z',
-    } as BasicFlowDefinition,
-    other: [
-      {
-        id: 'custom-flow',
-        name: 'Custom Authentication Flow',
-        activeVersion: 1,
-        handle: 'custom-auth-flow',
-        flowType: 'AUTHENTICATION',
-        createdAt: '2023-01-01T00:00:00Z',
-        updatedAt: '2023-01-01T00:00:00Z',
-      } as BasicFlowDefinition,
-    ],
-  };
-
   const defaultProps: IndividualMethodsToggleViewProps = {
     integrations: {
       [AuthenticatorTypes.BASIC_AUTH]: false,
     },
     availableIntegrations: mockIdentityProviders,
-    flowsByType: mockFlowsByType,
     onIntegrationToggle: mockOnIntegrationToggle,
   };
 
@@ -280,10 +228,6 @@ describe.skip('IndividualMethodsToggleView', () => {
         integrations: {
           [AuthenticatorTypes.BASIC_AUTH]: true,
         },
-        flowsByType: {
-          ...mockFlowsByType,
-          basic: null,
-        },
       });
 
       expect(screen.queryByText(/Flow: Basic Authentication Flow/)).not.toBeInTheDocument();
@@ -298,12 +242,7 @@ describe.skip('IndividualMethodsToggleView', () => {
     });
 
     it('should not render SMS OTP when flow is not available', () => {
-      renderComponent({
-        flowsByType: {
-          ...mockFlowsByType,
-          smsOtp: null,
-        },
-      });
+      renderComponent({});
 
       expect(screen.queryByText('SMS OTP')).not.toBeInTheDocument();
     });
@@ -498,15 +437,7 @@ describe.skip('IndividualMethodsToggleView', () => {
     });
 
     it('should handle flows with missing or null values', () => {
-      renderComponent({
-        flowsByType: {
-          basic: null,
-          google: null,
-          github: null,
-          smsOtp: null,
-          other: [],
-        },
-      });
+      renderComponent({});
 
       // Should still render basic options
       expect(screen.getByText('Username & Password')).toBeInTheDocument();

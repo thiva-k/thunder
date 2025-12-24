@@ -18,7 +18,6 @@
 
 import {AuthenticatorTypes} from '../../integrations/models/authenticators';
 import type {BasicFlowDefinition} from '../models/responses';
-import type {FlowIntegrationType} from './flowIntegrationMapping';
 import getFlowSupportedIntegrations from './getFlowSupportedIntegrations';
 
 /**
@@ -70,7 +69,7 @@ function findMatchingFlowForIntegrations(
 
     // Check if all enabled integrations are supported by this flow
     const allIntegrationsSupported = normalizedIntegrations.every((integration) =>
-      normalizedFlowIntegrations.includes(integration as FlowIntegrationType),
+      normalizedFlowIntegrations.includes(integration),
     );
 
     // Prefer flows that match exactly (same number of integrations)
@@ -92,7 +91,7 @@ function findMatchingFlowForIntegrations(
         });
 
         return normalizedIntegrations.every((integration) =>
-          normalizedFlowIntegrations.includes(integration as FlowIntegrationType),
+          normalizedFlowIntegrations.includes(integration),
         );
       }) ?? null
     );

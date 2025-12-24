@@ -16,19 +16,19 @@
  * under the License.
  */
 
-import {Typography, Stack, CircularProgress, Alert, Divider, Box} from '@wso2/oxygen-ui';
+import {Typography, Stack, CircularProgress, Alert, Box, useTheme} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useEffect, useMemo, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import {type IdentityProvider, IdentityProviderTypes} from '@/features/integrations/models/identity-provider';
 import {AuthenticatorTypes} from '@/features/integrations/models/authenticators';
+import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
 import useIdentityProviders from '../../../../integrations/api/useIdentityProviders';
 import useGetFlows from '../../../../flows/api/useGetFlows';
 import {FlowType} from '../../../../flows/models/flows';
 import {type BasicFlowDefinition} from '../../../../flows/models/responses';
 import useApplicationCreateContext from '../../../hooks/useApplicationCreateContext';
 import findMatchingFlowForIntegrations from '../../../../flows/utils/findMatchingFlowForIntegrations';
-import getFlowSupportedIntegrations from '../../../../flows/utils/getFlowSupportedIntegrations';
 import FlowsListView from './FlowsListView';
 import IndividualMethodsToggleView from './IndividualMethodsToggleView';
 
@@ -53,19 +53,6 @@ export interface ConfigureSignInOptionsProps {
    * Callback function to broadcast whether this step is ready to proceed
    */
   onReadyChange?: (isReady: boolean) => void;
-}
-
-/**
- * Type definition for grouped flows by authentication type
- *
- * @internal
- */
-interface FlowsByType {
-  basic: BasicFlowDefinition | null;
-  google: BasicFlowDefinition | null;
-  github: BasicFlowDefinition | null;
-  smsOtp: BasicFlowDefinition | null;
-  other: BasicFlowDefinition[];
 }
 
 /**
@@ -142,6 +129,7 @@ export default function ConfigureSignInOptions({
   onReadyChange = undefined,
 }: ConfigureSignInOptionsProps): JSX.Element {
   const {t} = useTranslation();
+  const theme = useTheme();
   const {selectedAuthFlow, setSelectedAuthFlow} = useApplicationCreateContext();
 
   const {data, isLoading, error} = useIdentityProviders();
@@ -154,13 +142,7 @@ export default function ConfigureSignInOptions({
   });
 
   const availableIntegrations: IdentityProvider[] = useMemo(() => data ?? [], [data]);
-  const availableFlows: BasicFlowDefinition[] = useMemo(
-    (): BasicFlowDefinition[] =>
-      flowsData?.flows?.filter(
-        (flow: BasicFlowDefinition) => flow.handle !== 'develop-app-flow' && !flow.handle?.startsWith('default-'),
-      ) ?? [],
-    [flowsData?.flows],
-  );
+  const availableFlows: BasicFlowDefinition[] = useMemo(() => flowsData?.flows ?? [], [flowsData?.flows]);
 
   /**
    * Map enabled integrations to flow-compatible types and find matching flow
@@ -254,59 +236,12 @@ export default function ConfigureSignInOptions({
 
   const hasAtLeastOneSelectedOption: boolean = hasAtLeastOneSelected(integrations, selectedAuthFlow);
 
-  const flowsByType: FlowsByType = availableFlows.reduce(
-    (acc: FlowsByType, flow: BasicFlowDefinition) => {
-      if (!flow.handle) {
-        acc.other.push(flow);
-        return acc;
-      }
-
-      const supportedIntegrations = getFlowSupportedIntegrations(flow.handle);
-
-      // Prioritize flows based on their primary integration type
-      if (
-        supportedIntegrations.includes(AuthenticatorTypes.BASIC_AUTH) &&
-        (flow.handle.includes('basic') || flow.handle === 'login-flow')
-      ) {
-        // Prefer single basic auth flows over combined flows
-        if (!acc.basic || supportedIntegrations.length === 1) {
-          acc.basic = flow;
-        }
-      } else if (supportedIntegrations.includes('google') && flow.handle.includes('google')) {
-        // Prefer single Google flows
-        if (!acc.google || supportedIntegrations.length === 1) {
-          acc.google = flow;
-        }
-      } else if (supportedIntegrations.includes('github') && flow.handle.includes('github')) {
-        // Prefer single GitHub flows
-        if (!acc.github || supportedIntegrations.length === 1) {
-          acc.github = flow;
-        }
-      } else if (supportedIntegrations.includes('sms-otp')) {
-        acc.smsOtp ??= flow;
-      } else {
-        acc.other.push(flow);
-      }
-
-      return acc;
-    },
-    {basic: null, google: null, github: null, smsOtp: null, other: [] as BasicFlowDefinition[]},
-  );
-
   // Event handlers
   const handleFlowSelect = (flowId: string): void => {
     const selectedFlow: BasicFlowDefinition | null =
       availableFlows?.find((flow: BasicFlowDefinition) => flow.id === flowId) ?? null;
-    setSelectedAuthFlow(selectedFlow);
 
-    // Clear all individual integrations when a flow is selected
-    if (selectedFlow) {
-      Object.keys(integrations).forEach((integrationId) => {
-        if (integrations[integrationId]) {
-          onIntegrationToggle(integrationId);
-        }
-      });
-    }
+    setSelectedAuthFlow(selectedFlow);
   };
 
   const handleClearFlowSelection = (): void => {
@@ -335,28 +270,26 @@ export default function ConfigureSignInOptions({
       <IndividualMethodsToggleView
         integrations={integrations}
         availableIntegrations={availableIntegrations}
-        flowsByType={flowsByType}
         onIntegrationToggle={handleIntegrationToggle}
       />
 
-      {/* Divider with "or" and Pre-configured Flows - only show if there are flows */}
-      {availableFlows.length > 0 && (
-        <>
-          <Divider sx={{my: 2}}>
-            <Typography variant="body2" color="text.secondary" sx={{px: 2}}>
-              {t('common:or')}
-            </Typography>
-          </Divider>
+      {/* Pre-configured Authentication Flows */}
+      <FlowsListView
+        availableFlows={availableFlows}
+        selectedAuthFlow={selectedAuthFlow}
+        onFlowSelect={handleFlowSelect}
+        onClearSelection={handleClearFlowSelection}
+        disabled={false}
+      />
 
-          <FlowsListView
-            availableFlows={availableFlows}
-            selectedAuthFlow={selectedAuthFlow}
-            onFlowSelect={handleFlowSelect}
-            onClearSelection={handleClearFlowSelection}
-            disabled={false}
-          />
-        </>
-      )}
+      <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
+          <Typography variant="body2" color="text.secondary">
+            {t('applications:onboarding.configure.SignInOptions.hint')}
+          </Typography>
+        </Stack>
+      </Stack>
     </Stack>
   );
 }
