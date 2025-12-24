@@ -251,7 +251,7 @@ To try out the Client Credentials flow, follow these steps:
 
 1. Create a Client Application
 
-   Application creation is secured functionality, so you first need to obtain a system API token as mentioned in the "Obtaining System API Token" section above.
+   Application creation is secured functionality, so you first need to obtain a system API token as mentioned in the "Obtain System API Token" section above.
 
    Run the following command, replacing `<assertion>` with the assertion value obtained from the previous step.
 
@@ -261,7 +261,6 @@ To try out the Client Credentials flow, follow these steps:
     -d '{
         "name": "Test Sample App",
         "description": "Initial testing App",
-        "auth_flow_graph_id": "auth_flow_config_basic",
         "inbound_auth_config": [
             {
                 "type": "oauth2",
