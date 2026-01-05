@@ -18,7 +18,7 @@
 
 import type {CSSProperties, HTMLAttributes, ReactNode, Ref} from 'react';
 import {Tooltip} from '@wso2/oxygen-ui';
-import Action from './action';
+import Action from './Action';
 
 export interface HandleProps extends HTMLAttributes<HTMLButtonElement> {
   cursor?: CSSProperties['cursor'];

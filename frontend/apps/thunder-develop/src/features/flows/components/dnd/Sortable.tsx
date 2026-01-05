@@ -28,9 +28,22 @@ import {
 } from 'react';
 import {type UseSortableInput, useSortable} from '@dnd-kit/react/sortable';
 import {RestrictToVerticalAxis} from '@dnd-kit/abstract/modifiers';
-import {useDragDropManager} from '@dnd-kit/react';
-import classNames from 'classnames';
-import './sortable.scss';
+import {useDragDropManager, useDragOperation} from '@dnd-kit/react';
+
+/**
+ * Keyframe animation for drop indicator pulse effect.
+ * Defined once as a constant to avoid recreation on every render.
+ */
+const DROP_INDICATOR_KEYFRAMES = {
+  '@keyframes dropIndicatorPulse': {
+    '0%, 100%': {
+      opacity: 1,
+    },
+    '50%': {
+      opacity: 0.6,
+    },
+  },
+};
 
 interface DragOperationState {
   isDragging: boolean;
@@ -125,9 +138,6 @@ export interface SortableProps extends UseSortableInput {
  */
 interface SortablePresentationProps {
   children: ReactNode;
-  isDragging: boolean;
-  showIndicatorBefore: boolean;
-  showIndicatorAfter: boolean;
   elementStyle: CSSProperties;
 }
 
@@ -140,22 +150,9 @@ interface SortablePresentationProps {
  * @param props - Props injected to the component.
  * @returns SortablePresentation component.
  */
-function SortablePresentation({
-  children,
-  isDragging,
-  showIndicatorBefore,
-  showIndicatorAfter,
-  elementStyle,
-}: SortablePresentationProps): ReactElement {
+function SortablePresentation({children, elementStyle}: SortablePresentationProps): ReactElement {
   return (
-    <Box
-      sx={{height: '100%', width: '100%', ...elementStyle}}
-      className={classNames('dnd-sortable-content', {
-        'is-dragging': isDragging,
-        'show-drop-indicator-before': showIndicatorBefore,
-        'show-drop-indicator-after': showIndicatorAfter,
-      })}
-    >
+    <Box sx={{height: '100%', width: '100%', ...elementStyle}}>
       {children}
     </Box>
   );
@@ -180,7 +177,7 @@ function Sortable({
   collisionDetector,
   ...rest
 }: PropsWithChildren<SortableProps>) {
-  const {ref, isDragging, isDropTarget} = useSortable({
+  const {ref, sortable, isDragging, isDropTarget} = useSortable({
     collisionDetector,
     handle: handleRef,
     id,
@@ -188,6 +185,8 @@ function Sortable({
     modifiers: [RestrictToVerticalAxis],
     ...rest,
   });
+
+  const {source} = useDragOperation();
 
   useDragOperationMonitorSetup();
 
@@ -198,11 +197,19 @@ function Sortable({
     isReordering: isReorderingOperation,
   } = useGlobalDragOperationState();
 
+  // Check if this sortable can accept the current draggable
+  const canAcceptDrop = useMemo(() => {
+    if (!source) {
+      return true;
+    }
+    return sortable.accepts(source);
+  }, [source, sortable]);
+
   const {showIndicatorBefore, showIndicatorAfter} = useMemo(() => {
     // Determine if the drop indicator should be shown above this element
     // Show indicator when: dragging is active, this element is the drop target,
-    // and we're not the element being dragged
-    const showDropIndicator = isDragActive && isDropTarget && !isDragging;
+    // we're not the element being dragged, and the drop is valid
+    const showDropIndicator = isDragActive && isDropTarget && !isDragging && canAcceptDrop;
 
     // Determine indicator position (before or after this element)
     // For reordering: If dragging from below (higher index) to above (lower index), show indicator at top
@@ -220,7 +227,7 @@ function Sortable({
       dragSourceIndex < index;
 
     return {showIndicatorBefore: indicatorBefore, showIndicatorAfter: indicatorAfter};
-  }, [isDragActive, isDropTarget, isDragging, isReorderingOperation, dragSourceIndex, index]);
+  }, [isDragActive, isDropTarget, isDragging, isReorderingOperation, dragSourceIndex, index, canAcceptDrop]);
 
   const elementStyle: CSSProperties = useMemo(
     () => ({
@@ -231,21 +238,70 @@ function Sortable({
     [isDragging],
   );
 
+  const dropIndicatorStyles = useMemo(() => ({
+    position: 'relative' as const,
+    marginTop: '4px',
+    marginBottom: '4px',
+    ...(showIndicatorBefore && {
+      '&::before': {
+        content: '""',
+        position: 'absolute' as const,
+        left: 0,
+        right: 0,
+        top: '-8px',
+        height: '3px',
+        backgroundColor: 'primary.main',
+        borderRadius: '2px',
+        zIndex: 100,
+        pointerEvents: 'none' as const,
+        animation: 'dropIndicatorPulse 1s ease-in-out infinite',
+      },
+      '&::after': {
+        content: '""',
+        position: 'absolute' as const,
+        left: '-4px',
+        right: '-4px',
+        top: '-16px',
+        height: 'calc(8px * 2)',
+        backgroundColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+        borderRadius: '4px',
+        zIndex: 99,
+        pointerEvents: 'none' as const,
+      },
+    }),
+    ...(showIndicatorAfter && !showIndicatorBefore && {
+      '&::before': {
+        content: '""',
+        position: 'absolute' as const,
+        left: 0,
+        right: 0,
+        bottom: '-8px',
+        height: '3px',
+        backgroundColor: 'primary.main',
+        borderRadius: '2px',
+        zIndex: 100,
+        pointerEvents: 'none' as const,
+        animation: 'dropIndicatorPulse 1s ease-in-out infinite',
+      },
+      '&::after': {
+        content: '""',
+        position: 'absolute' as const,
+        left: '-4px',
+        right: '-4px',
+        bottom: '-16px',
+        height: 'calc(8px * 2)',
+        backgroundColor: 'rgba(var(--mui-palette-primary-mainChannel) / 0.1)',
+        borderRadius: '4px',
+        zIndex: 99,
+        pointerEvents: 'none' as const,
+      },
+    }),
+    ...DROP_INDICATOR_KEYFRAMES,
+  }), [showIndicatorBefore, showIndicatorAfter]);
+
   return (
-    <Box
-      ref={ref}
-      className={classNames('dnd-sortable', {
-        'is-dragging': isDragging,
-        'show-drop-indicator-before': showIndicatorBefore,
-        'show-drop-indicator-after': showIndicatorAfter,
-      })}
-    >
-      <MemoizedSortablePresentation
-        isDragging={isDragging}
-        showIndicatorBefore={showIndicatorBefore}
-        showIndicatorAfter={showIndicatorAfter}
-        elementStyle={elementStyle}
-      >
+    <Box ref={ref} sx={dropIndicatorStyles}>
+      <MemoizedSortablePresentation elementStyle={elementStyle}>
         {children}
       </MemoizedSortablePresentation>
     </Box>

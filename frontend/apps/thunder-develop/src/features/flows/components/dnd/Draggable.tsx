@@ -19,7 +19,7 @@
 import {type UseDraggableInput, useDraggable} from '@dnd-kit/react';
 import {Box} from '@wso2/oxygen-ui';
 import type {BoxProps} from '@wso2/oxygen-ui';
-import {type CSSProperties, type PropsWithChildren, type ReactElement} from 'react';
+import {type PropsWithChildren, type ReactElement} from 'react';
 
 /**
  * Props interface of {@link Draggable}
@@ -38,21 +38,13 @@ export interface DraggableProps extends UseDraggableInput {
  * @returns Draggable component.
  */
 function Draggable({id, children = null, ...rest}: PropsWithChildren<DraggableProps>): ReactElement {
-  const {ref, isDragging} = useDraggable({
+  const {ref} = useDraggable({
     id,
     ...rest,
   });
 
-  const style: CSSProperties = {
-    opacity: isDragging ? 0.4 : 1,
-    transform: isDragging ? 'scale(1.01)' : 'none',
-    transition: isDragging ? 'none' : 'transform 0.2s ease, opacity 0.2s ease',
-  };
-
-  const className = ['dnd-draggable', isDragging && 'is-dragging'].filter(Boolean).join(' ');
-
   return (
-    <Box ref={ref as BoxProps['ref']} sx={{height: '100%', width: '100%', ...style}} className={className}>
+    <Box ref={ref as BoxProps['ref']} sx={{height: '100%', width: '100%'}}>
       {children}
     </Box>
   );
