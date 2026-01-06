@@ -60,6 +60,15 @@ Implement user registration and self-service onboarding:
 
 - **[Server Orchestrated Flows](registration/server-orchestrated-flow/)** - Self-registration using server orchestrated flows
 
+### [Flows](flows/)
+
+Design and manage orchestrate identity flows:
+
+- **[Flow Creation Guide](flows/flow-creation-guide.md)** - Create flows using Visual Flow Builder or API
+- **[Flow Management](flows/flow-management.md)** - Update, version, and delete flows
+- **[Flow Examples](flows/flow-examples.md)** - Example flows
+- **[Flow Execution](flows/flow-execution.md)** - Execute flows with verbose/non-verbose modes
+
 ### [Identity Providers](identity-provider/)
 
 Configure external identity providers for social login and enterprise SSO:
@@ -101,7 +110,8 @@ Thunder provides comprehensive RESTful APIs for managing identity and access:
 - [User Management API](/api/user.yaml)
 - [Application Management API](/api/application.yaml)
 - [Authentication APIs](/api/authentication.yaml)
-- [Flow Execution API](/api/flow.yaml)
+- [Flow Management API](/api/flow-management.yaml)
+- [Flow Execution API](/api/flow-execution.yaml)
 - [Identity Provider Management API](/api/idp.yaml)
 - [Notification Sender Management API](/api/notification-sender.yaml)
 - [Group Management API](/api/group.yaml)
