@@ -31,6 +31,10 @@ security:
   cert_file: {{ .Values.configuration.security.certFile | quote }}
   key_file: {{ .Values.configuration.security.keyFile | quote }}
 
+crypto:
+  encryption:
+    key: {{ .Values.configuration.crypto.encryption.key | quote }}
+
 database:
   identity:
     type: {{ .Values.configuration.database.identity.type | quote }}
@@ -96,9 +100,6 @@ flow:
   default_auth_flow_handle: {{ .Values.configuration.flow.defaultAuthFlowHandle | quote }}
   max_version_history: {{ .Values.configuration.flow.maxVersionHistory }}
   auto_infer_registration: {{ .Values.configuration.flow.autoInferRegistration }}
-
-  authn:
-    default_flow: {{ .Values.configuration.flow.authn.defaultFlow | quote }}
 
 cors:
   allowed_origins:
