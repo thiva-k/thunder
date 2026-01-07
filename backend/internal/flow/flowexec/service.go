@@ -27,6 +27,7 @@ import (
 	"github.com/asgardeo/thunder/internal/flow/common"
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 
+	"github.com/asgardeo/thunder/internal/system/config"
 	sysContext "github.com/asgardeo/thunder/internal/system/context"
 
 	"github.com/asgardeo/thunder/internal/observability"
@@ -116,9 +117,9 @@ func (s *flowExecService) Execute(ctx context.Context,
 		}
 	}
 
-	// Set trace ID and context to engine context
+	// Set trace ID and HTTP context to context
 	context.TraceID = traceID
-	context.Context = ctx
+	context.HTTPContext = ctx
 
 	flowStep, flowErr := s.flowEngine.Execute(context)
 
@@ -202,9 +203,9 @@ func (s *flowExecService) initContext(appID string, flowType common.FlowType,
 	ctx.AppID = appID
 	ctx.Verbose = verbose
 
-	svcErr = s.setApplicationToContext(&ctx, logger)
-	if svcErr != nil {
-		return nil, svcErr
+	// Set application context if required
+	if err := s.setApplicationToContext(&ctx, logger); err != nil {
+		return nil, err
 	}
 
 	return &ctx, nil
@@ -254,9 +255,9 @@ func (s *flowExecService) loadContextFromStore(flowID string, logger *log.Logger
 		return nil, &serviceerror.InternalServerError
 	}
 
-	svcErr = s.setApplicationToContext(&engineContext, logger)
-	if svcErr != nil {
-		return nil, svcErr
+	// Set application context if required
+	if err := s.setApplicationToContext(&engineContext, logger); err != nil {
+		return nil, err
 	}
 
 	return &engineContext, nil
@@ -265,6 +266,11 @@ func (s *flowExecService) loadContextFromStore(flowID string, logger *log.Logger
 // setApplicationToContext retrieves the application and sets it to the flow context.
 func (s *flowExecService) setApplicationToContext(ctx *EngineContext,
 	logger *log.Logger) *serviceerror.ServiceError {
+	// Skip application loading for app-independent flows
+	if ctx.FlowType == common.FlowTypeUserOnboarding {
+		return nil
+	}
+
 	app, err := s.appService.GetApplication(ctx.AppID)
 	if err != nil {
 		if err.Code == application.ErrorApplicationNotFound.Code {
@@ -343,6 +349,11 @@ func (s *flowExecService) storeContext(ctx *EngineContext, logger *log.Logger) e
 // getFlowGraph checks if the provided application ID is valid and returns the associated flow ID.
 func (s *flowExecService) getFlowGraph(appID string, flowType common.FlowType,
 	logger *log.Logger) (string, *serviceerror.ServiceError) {
+	// Handle app-independent system flows
+	if flowType == common.FlowTypeUserOnboarding {
+		return s.getSystemFlowGraph(flowType, logger)
+	}
+
 	if appID == "" {
 		return "", &ErrorInvalidAppID
 	}
@@ -388,7 +399,7 @@ func (s *flowExecService) getFlowGraph(appID string, flowType common.FlowType,
 // validateFlowType validates the provided flow type string and returns the corresponding FlowType.
 func validateFlowType(flowTypeStr string) (common.FlowType, *serviceerror.ServiceError) {
 	switch common.FlowType(flowTypeStr) {
-	case common.FlowTypeAuthentication, common.FlowTypeRegistration:
+	case common.FlowTypeAuthentication, common.FlowTypeRegistration, common.FlowTypeUserOnboarding:
 		return common.FlowType(flowTypeStr), nil
 	default:
 		return "", &ErrorInvalidFlowType
@@ -398,6 +409,26 @@ func validateFlowType(flowTypeStr string) (common.FlowType, *serviceerror.Servic
 // isNewFlow checks if the flow is a new flow based on the provided input.
 func isNewFlow(flowID string) bool {
 	return flowID == ""
+}
+
+// getSystemFlowGraph retrieves the flow graph for system flows by handle.
+func (s *flowExecService) getSystemFlowGraph(flowType common.FlowType,
+	logger *log.Logger) (string, *serviceerror.ServiceError) {
+	handle := ""
+	switch flowType {
+	case common.FlowTypeUserOnboarding:
+		handle = config.GetThunderRuntime().Config.Flow.UserOnboardingFlowHandle
+	default:
+		return "", &ErrorInvalidFlowType
+	}
+
+	flow, err := s.flowMgtService.GetFlowByHandle(handle, flowType)
+	if err != nil {
+		logger.Error("Failed to get system flow by handle",
+			log.String("handle", handle), log.String("flowType", string(flowType)))
+		return "", err
+	}
+	return flow.ID, nil
 }
 
 // isComplete checks if the flow step status indicates completion.
@@ -430,7 +461,7 @@ func prepareContext(ctx *EngineContext, action string, inputs map[string]string)
 func (s *flowExecService) InitiateFlow(initContext *FlowInitContext) (string, *serviceerror.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "FlowExecService"))
 
-	if initContext == nil || initContext.ApplicationID == "" || initContext.FlowType == "" {
+	if initContext == nil || initContext.FlowType == "" {
 		return "", &ErrorInvalidFlowInitContext
 	}
 
@@ -438,6 +469,11 @@ func (s *flowExecService) InitiateFlow(initContext *FlowInitContext) (string, *s
 	flowType, err := validateFlowType(initContext.FlowType)
 	if err != nil {
 		return "", err
+	}
+
+	// Application ID is required for all flows except Invite Registration
+	if flowType != common.FlowTypeUserOnboarding && initContext.ApplicationID == "" {
+		return "", &ErrorInvalidFlowInitContext
 	}
 
 	// Initialize the engine context

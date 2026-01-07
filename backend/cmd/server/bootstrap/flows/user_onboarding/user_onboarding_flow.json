@@ -1,0 +1,207 @@
+{
+    "name": "User Onboarding Flow",
+    "handle": "default-user-onboarding",
+    "flowType": "USER_ONBOARDING",
+    "nodes": [
+        {
+            "id": "start",
+            "type": "START",
+            "onSuccess": "permission_validator"
+        },
+        {
+            "id": "permission_validator",
+            "type": "TASK_EXECUTION",
+            "properties": {
+                "requiredScopes": [
+                    "system"
+                ]
+            },
+            "executor": {
+                "name": "PermissionValidator"
+            },
+            "onSuccess": "user_type_resolver"
+        },
+        {
+            "id": "user_type_resolver",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "UserTypeResolver"
+            },
+            "onSuccess": "prompt_user_details"
+        },
+        {
+            "id": "prompt_user_details",
+            "type": "PROMPT",
+            "meta": {
+                "components": [
+                    {
+                        "type": "TEXT",
+                        "id": "text_header_details",
+                        "label": "User Details",
+                        "variant": "HEADING_1"
+                    },
+                    {
+                        "type": "BLOCK",
+                        "id": "block_user_details",
+                        "components": [
+                            {
+                                "id": "input_prompt_001",
+                                "ref": "username",
+                                "type": "TEXT_INPUT",
+                                "label": "Username",
+                                "required": true,
+                                "placeholder": "Enter username"
+                            },
+                            {
+                                "id": "input_prompt_002",
+                                "ref": "email",
+                                "type": "EMAIL_INPUT",
+                                "label": "Email",
+                                "required": true,
+                                "placeholder": "Enter email"
+                            },
+                            {
+                                "type": "ACTION",
+                                "id": "action_submit_details",
+                                "label": "Next",
+                                "variant": "PRIMARY",
+                                "eventType": "SUBMIT"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "prompts": [
+                {
+                    "inputs": [
+                        {
+                            "ref": "input_prompt_001",
+                            "identifier": "username",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        },
+                        {
+                            "ref": "input_prompt_002",
+                            "identifier": "email",
+                            "type": "EMAIL_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_submit_details",
+                        "nextNode": "provisioning"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "provisioning",
+            "type": "TASK_EXECUTION",
+            "inputs": [
+                {
+                    "ref": "input_001",
+                    "identifier": "username",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                },
+                {
+                    "ref": "input_002",
+                    "identifier": "email",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                }
+            ],
+            "executor": {
+                "name": "ProvisioningExecutor"
+            },
+            "onSuccess": "invite"
+        },
+        {
+            "id": "invite",
+            "type": "TASK_EXECUTION",
+            "inputs": [
+                {
+                    "ref": "input_003",
+                    "identifier": "inviteToken",
+                    "type": "HIDDEN",
+                    "required": true
+                }
+            ],
+            "executor": {
+                "name": "InviteExecutor"
+            },
+            "onSuccess": "prompt_credential"
+        },
+        {
+            "id": "prompt_credential",
+            "type": "PROMPT",
+            "meta": {
+                "components": [
+                    {
+                        "type": "TEXT",
+                        "id": "text_header_pwd",
+                        "label": "Set Password",
+                        "variant": "HEADING_1"
+                    },
+                    {
+                        "type": "BLOCK",
+                        "id": "block_pwd",
+                        "components": [
+                            {
+                                "id": "input_prompt_003",
+                                "ref": "password",
+                                "type": "PASSWORD_INPUT",
+                                "label": "Password",
+                                "required": true,
+                                "placeholder": "Enter password"
+                            },
+                            {
+                                "type": "ACTION",
+                                "id": "action_submit_pwd",
+                                "label": "Set Password",
+                                "variant": "PRIMARY",
+                                "eventType": "SUBMIT"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "prompts": [
+                {
+                    "inputs": [
+                        {
+                            "ref": "input_prompt_003",
+                            "identifier": "password",
+                            "type": "PASSWORD_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_submit_pwd",
+                        "nextNode": "credential_setter"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "credential_setter",
+            "type": "TASK_EXECUTION",
+            "inputs": [
+                {
+                    "ref": "input_004",
+                    "identifier": "password",
+                    "type": "PASSWORD_INPUT",
+                    "required": true
+                }
+            ],
+            "executor": {
+                "name": "CredentialSetter"
+            },
+            "onSuccess": "end"
+        },
+        {
+            "id": "end",
+            "type": "END"
+        }
+    ]
+}

@@ -86,23 +86,13 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 
 	// If no authenticator found
 	if authenticator == nil {
-		// For public paths, allow access without authentication
-		if isPublic {
-			return r.Context(), nil
-		}
-		// For protected paths, block access
-		return nil, errNoHandlerFound
+		return s.handleAuthError(r, errNoHandlerFound, isPublic)
 	}
 
 	// Authenticate the request
 	securityCtx, err := authenticator.Authenticate(r)
 	if err != nil {
-		// For public paths, allow access even if authentication fails
-		if isPublic {
-			return r.Context(), nil
-		}
-		// For protected paths, block access on authentication failure
-		return nil, err
+		return s.handleAuthError(r, err, isPublic)
 	}
 
 	// Add authentication context to request context if available
@@ -113,12 +103,7 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 
 	// Authorize the authenticated principal
 	if err := authenticator.Authorize(r.WithContext(ctx), securityCtx); err != nil {
-		// For public paths, allow access even if authorization fails
-		if isPublic {
-			return ctx, nil
-		}
-		// For protected paths, block access on authorization failure
-		return nil, err
+		return s.handleAuthError(r, err, isPublic)
 	}
 
 	return ctx, nil
@@ -183,4 +168,15 @@ func compilePathPatterns(patterns []string) ([]*regexp.Regexp, error) {
 	}
 
 	return compiled, nil
+}
+
+// handleAuthError handles authentication/authorization errors based on whether the path is public.
+func (s *securityService) handleAuthError(r *http.Request, err error, isPublic bool) (context.Context, error) {
+	if isPublic {
+		s.logger.Debug("Authentication failed on public path, proceeding without authentication",
+			log.Error(err),
+			log.String("path", r.URL.Path))
+		return r.Context(), nil
+	}
+	return nil, err
 }

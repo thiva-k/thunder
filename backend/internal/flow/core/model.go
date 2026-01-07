@@ -43,6 +43,7 @@ type NodeContext struct {
 	UserInputs     map[string]string
 	RuntimeData    map[string]string
 
+	HTTPContext       context.Context
 	Application       appmodel.Application
 	AuthenticatedUser authncm.AuthenticatedUser
 	ExecutionHistory  map[string]*common.NodeExecutionRecord
