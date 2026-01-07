@@ -684,12 +684,14 @@ func (s *ImmutableResourceTestSuite) TestNodeDefinitionMarshalYAML_WithComplexMe
 		ID:   "prompt_credentials",
 		Type: "PROMPT",
 		Meta: complexMeta,
-		Inputs: []InputDefinition{
-			{Ref: "input_001", Type: "TEXT_INPUT", Identifier: "username", Required: true},
-			{Ref: "input_002", Type: "PASSWORD_INPUT", Identifier: "password", Required: true},
-		},
-		Actions: []ActionDefinition{
-			{Ref: "action_001", NextNode: "basic_auth"},
+		Prompts: []PromptDefinition{
+			{
+				Inputs: []InputDefinition{
+					{Ref: "input_001", Type: "TEXT_INPUT", Identifier: "username", Required: true},
+					{Ref: "input_002", Type: "PASSWORD_INPUT", Identifier: "password", Required: true},
+				},
+				Action: &ActionDefinition{Ref: "action_001", NextNode: "basic_auth"},
+			},
 		},
 	}
 
@@ -735,14 +737,15 @@ func (s *ImmutableResourceTestSuite) TestNodeDefinitionUnmarshalYAML_WithComplex
 id: prompt_credentials
 type: PROMPT
 meta: '%s'
-inputs:
-  - ref: input_001
-    type: TEXT_INPUT
-    identifier: username
-    required: true
-actions:
-  - ref: action_001
-    nextNode: basic_auth
+prompts:
+  - inputs:
+      - ref: input_001
+        type: TEXT_INPUT
+        identifier: username
+        required: true
+    action:
+      ref: action_001
+      nextNode: basic_auth
 `, metaJSON))
 
 	// Parse the actual YAML
@@ -826,12 +829,14 @@ func (s *ImmutableResourceTestSuite) TestCompleteFlowDefinition_MarshalUnmarshal
 						},
 					},
 				},
-				Inputs: []InputDefinition{
-					{Ref: "input_001", Type: "TEXT_INPUT", Identifier: "username", Required: true},
-					{Ref: "input_002", Type: "PASSWORD_INPUT", Identifier: "password", Required: true},
-				},
-				Actions: []ActionDefinition{
-					{Ref: "action_001", NextNode: "basic_auth"},
+				Prompts: []PromptDefinition{
+					{
+						Inputs: []InputDefinition{
+							{Ref: "input_001", Type: "TEXT_INPUT", Identifier: "username", Required: true},
+							{Ref: "input_002", Type: "PASSWORD_INPUT", Identifier: "password", Required: true},
+						},
+						Action: &ActionDefinition{Ref: "action_001", NextNode: "basic_auth"},
+					},
 				},
 			},
 			{
@@ -1310,16 +1315,21 @@ func (s *ImmutableResourceTestSuite) TestNodeDefinitionMarshalYAML_RoundTrip() {
 					Position: &NodePosition{X: 100, Y: 200},
 					Size:     &NodeSize{Width: 300, Height: 400},
 				},
-				Inputs: []InputDefinition{
-					{Type: "TEXT", Identifier: "input1", Required: true},
+				Executor: &ExecutorDefinition{
+					Name: "test-executor",
+					Inputs: []InputDefinition{
+						{Type: "TEXT", Identifier: "input1", Required: true},
+					},
 				},
-				Actions: []ActionDefinition{
-					{Ref: "action1", NextNode: "next"},
+				Prompts: []PromptDefinition{
+					{
+						Action: &ActionDefinition{Ref: "action1", NextNode: "next"},
+					},
 				},
 				Properties: map[string]interface{}{
 					"prop1": "value1",
 				},
-				Executor:  &ExecutorDefinition{Name: "test-executor"},
+
 				OnSuccess: "success-node",
 				OnFailure: "failure-node",
 			},
@@ -1328,8 +1338,9 @@ func (s *ImmutableResourceTestSuite) TestNodeDefinitionMarshalYAML_RoundTrip() {
 				assert.Equal(t, "EXECUTOR", nd.Type)
 				assert.NotNil(t, nd.Layout)
 				assert.Equal(t, float64(100), nd.Layout.Position.X)
-				assert.Len(t, nd.Inputs, 1)
-				assert.Len(t, nd.Actions, 1)
+				assert.NotNil(t, nd.Executor)
+				assert.Len(t, nd.Executor.Inputs, 1)
+				assert.Len(t, nd.Prompts, 1)
 				metaMap := nd.Meta.(map[string]interface{})
 				assert.Equal(t, "value", metaMap["config"])
 			},

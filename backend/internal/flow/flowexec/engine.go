@@ -89,7 +89,7 @@ func (fe *flowEngine) Execute(ctx *EngineContext) (FlowStep, *serviceerror.Servi
 			AppID:             ctx.AppID,
 			CurrentAction:     ctx.CurrentAction,
 			Verbose:           ctx.Verbose,
-			NodeInputs:        ctx.CurrentNode.GetInputs(),
+			NodeInputs:        getNodeInputs(ctx.CurrentNode),
 			UserInputs:        ctx.UserInputs,
 			CurrentNodeID:     ctx.CurrentNode.GetID(),
 			RuntimeData:       ctx.RuntimeData,
@@ -206,6 +206,21 @@ func (fe *flowEngine) setCurrentExecutionNode(ctx *EngineContext, logger *log.Lo
 	return currentNode, nil
 }
 
+// getNodeInputs extracts required inputs for a node.
+func getNodeInputs(node core.NodeInterface) []common.Input {
+	if execNode, ok := node.(core.ExecutorBackedNodeInterface); ok {
+		return execNode.GetInputs()
+	}
+	if promptNode, ok := node.(core.PromptNodeInterface); ok {
+		var inputs []common.Input
+		for _, prompt := range promptNode.GetPrompts() {
+			inputs = append(inputs, prompt.Inputs...)
+		}
+		return inputs
+	}
+	return nil
+}
+
 // setNodeExecutor sets the executor for the given node if it is not already set.
 func (fe *flowEngine) setNodeExecutor(node core.NodeInterface, logger *log.Logger) *serviceerror.ServiceError {
 	if node.GetType() != common.NodeTypeTaskExecution {
@@ -255,7 +270,11 @@ func (fe *flowEngine) getExecutorByName(executorName string) (core.ExecutorInter
 // updateContextWithNodeResponse updates the engine context with the node response and authenticated user.
 func (fe *flowEngine) updateContextWithNodeResponse(engineCtx *EngineContext, nodeResp *common.NodeResponse) {
 	engineCtx.CurrentNodeResponse = nodeResp
-	engineCtx.CurrentAction = ""
+
+	// Clear action only when node completes or forwards
+	if nodeResp.Status == common.NodeStatusComplete || nodeResp.Status == common.NodeStatusForward {
+		engineCtx.CurrentAction = ""
+	}
 
 	// Handle runtime data from the node response
 	if len(nodeResp.RuntimeData) > 0 {

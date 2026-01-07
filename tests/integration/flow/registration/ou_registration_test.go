@@ -70,40 +70,40 @@ var (
 			{
 				"id":   "provisioning",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_003",
-						"identifier": "firstName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_004",
-						"identifier": "lastName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_005",
-						"identifier": "email",
-						"type":       "string",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "ProvisioningExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_001",
+							"identifier": "username",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_002",
+							"identifier": "password",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_003",
+							"identifier": "firstName",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_004",
+							"identifier": "lastName",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_005",
+							"identifier": "email",
+							"type":       "string",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "auth_assert",
 			},
@@ -143,18 +143,20 @@ var (
 			{
 				"id":   "prompt_mobile",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "mobileNumber",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "send_sms",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_001",
+								"identifier": "mobileNumber",
+								"type":       "TEXT_INPUT",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_001",
+							"nextNode": "send_sms",
+						},
 					},
 				},
 			},
@@ -173,18 +175,20 @@ var (
 			{
 				"id":   "prompt_otp",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_002",
-						"identifier": "otp",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_002",
-						"nextNode": "verify_sms",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_002",
+								"identifier": "otp",
+								"type":       "TEXT_INPUT",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_002",
+							"nextNode": "verify_sms",
+						},
 					},
 				},
 			},
@@ -200,62 +204,62 @@ var (
 			{
 				"id":   "ou_creation",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_003",
-						"identifier": "ouName",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_004",
-						"identifier": "ouHandle",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_005",
-						"identifier": "ouDescription",
-						"type":       "TEXT_INPUT",
-						"required":   false,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "OUExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_003",
+							"identifier": "ouName",
+							"type":       "TEXT_INPUT",
+							"required":   true,
+						},
+						{
+							"ref":        "input_004",
+							"identifier": "ouHandle",
+							"type":       "TEXT_INPUT",
+							"required":   true,
+						},
+						{
+							"ref":        "input_005",
+							"identifier": "ouDescription",
+							"type":       "TEXT_INPUT",
+							"required":   false,
+						},
+					},
 				},
 				"onSuccess": "provisioning",
 			},
 			{
 				"id":   "provisioning",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_006",
-						"identifier": "mobileNumber",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_007",
-						"identifier": "firstName",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_008",
-						"identifier": "lastName",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_009",
-						"identifier": "email",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "ProvisioningExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_006",
+							"identifier": "mobileNumber",
+							"type":       "TEXT_INPUT",
+							"required":   true,
+						},
+						{
+							"ref":        "input_007",
+							"identifier": "firstName",
+							"type":       "TEXT_INPUT",
+							"required":   true,
+						},
+						{
+							"ref":        "input_008",
+							"identifier": "lastName",
+							"type":       "TEXT_INPUT",
+							"required":   true,
+						},
+						{
+							"ref":        "input_009",
+							"identifier": "email",
+							"type":       "TEXT_INPUT",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "auth_assert",
 			},

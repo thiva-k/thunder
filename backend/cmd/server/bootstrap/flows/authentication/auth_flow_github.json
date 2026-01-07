@@ -14,16 +14,16 @@
             "properties": {
                 "idpId": "<github-idp-id>"
             },
-            "inputs": [
-                {
-                    "ref": "input_001",
-                    "identifier": "code",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "GithubOAuthExecutor"
+                "name": "GithubOAuthExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_001",
+                        "identifier": "code",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },

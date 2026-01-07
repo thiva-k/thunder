@@ -11,22 +11,30 @@
         {
             "id": "choose_auth",
             "type": "PROMPT",
-            "actions": [
+            "prompts": [
                 {
-                    "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "basic_auth"
+                    }
                 },
                 {
-                    "ref": "action_002",
-                    "nextNode": "google_auth"
+                    "action": {
+                        "ref": "action_002",
+                        "nextNode": "google_auth"
+                    }
                 },
                 {
-                    "ref": "action_003",
-                    "nextNode": "github_auth"
+                    "action": {
+                        "ref": "action_003",
+                        "nextNode": "github_auth"
+                    }
                 },
                 {
-                    "ref": "action_004",
-                    "nextNode": "prompt_mobile"
+                    "action": {
+                        "ref": "action_004",
+                        "nextNode": "prompt_mobile"
+                    }
                 }
             ]
         },
@@ -41,25 +49,22 @@
         {
             "id": "google_auth",
             "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_001",
-                    "identifier": "code",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_002",
-                    "identifier": "nonce",
-                    "type": "TEXT_INPUT",
-                    "required": false
-                }
-            ],
-            "properties": {
-                "idpId": "<google-idp-id>"
-            },
             "executor": {
-                "name": "GoogleOIDCAuthExecutor"
+                "name": "GoogleOIDCAuthExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_001",
+                        "identifier": "code",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_002",
+                        "identifier": "nonce",
+                        "type": "TEXT_INPUT",
+                        "required": false
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },
@@ -69,34 +74,36 @@
             "properties": {
                 "idpId": "<github-idp-id>"
             },
-            "inputs": [
-                {
-                    "ref": "input_003",
-                    "identifier": "code",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "GithubOAuthExecutor"
+                "name": "GithubOAuthExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_003",
+                        "identifier": "code",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },
         {
             "id": "prompt_mobile",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_004",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "send_sms"
+                    "inputs": [
+                        {
+                            "ref": "input_004",
+                            "identifier": "mobileNumber",
+                            "type": "PHONE_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "send_sms"
+                    }
                 }
             ]
         },
@@ -115,18 +122,20 @@
         {
             "id": "prompt_otp",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_005",
-                    "identifier": "otp",
-                    "type": "OTP_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "verify_sms"
+                    "inputs": [
+                        {
+                            "ref": "input_005",
+                            "identifier": "otp",
+                            "type": "OTP_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "verify_sms"
+                    }
                 }
             ]
         },
@@ -145,16 +154,16 @@
         {
             "id": "attr_collector",
             "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_005",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": false
-                }
-            ],
             "executor": {
-                "name": "AttributeCollector"
+                "name": "AttributeCollector",
+                "inputs": [
+                    {
+                        "ref": "input_005",
+                        "identifier": "mobileNumber",
+                        "type": "PHONE_INPUT",
+                        "required": false
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },

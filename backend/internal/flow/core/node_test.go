@@ -116,7 +116,11 @@ func (s *NodeTestSuite) TestInputsAndProperties() {
 
 	s.Equal(props, node.GetProperties())
 
+	// Cast to ExecutorBackedNodeInterface to access inputs
+	execNode, ok := node.(ExecutorBackedNodeInterface)
+	s.True(ok)
+
 	inputs := []common.Input{{Identifier: "i1", Required: true}}
-	node.SetInputs(inputs)
-	s.Equal(inputs, node.GetInputs())
+	execNode.SetInputs(inputs)
+	s.Equal(inputs, execNode.GetInputs())
 }

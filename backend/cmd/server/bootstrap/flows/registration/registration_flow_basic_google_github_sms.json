@@ -19,22 +19,30 @@
         {
             "id": "choose_auth",
             "type": "PROMPT",
-            "actions": [
+            "prompts": [
                 {
-                    "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "basic_auth"
+                    }
                 },
                 {
-                    "ref": "action_002",
-                    "nextNode": "google_auth"
+                    "action": {
+                        "ref": "action_002",
+                        "nextNode": "google_auth"
+                    }
                 },
                 {
-                    "ref": "action_003",
-                    "nextNode": "github_auth"
+                    "action": {
+                        "ref": "action_003",
+                        "nextNode": "github_auth"
+                    }
                 },
                 {
-                    "ref": "action_004",
-                    "nextNode": "prompt_mobile"
+                    "action": {
+                        "ref": "action_004",
+                        "nextNode": "prompt_mobile"
+                    }
                 }
             ]
         },
@@ -71,18 +79,20 @@
         {
             "id": "prompt_mobile",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_001",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "send_sms"
+                    "inputs": [
+                        {
+                            "ref": "input_001",
+                            "identifier": "mobileNumber",
+                            "type": "PHONE_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "send_sms"
+                    }
                 }
             ]
         },
@@ -101,18 +111,20 @@
         {
             "id": "prompt_otp",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_002",
-                    "identifier": "otp",
-                    "type": "OTP_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "verify_sms"
+                    "inputs": [
+                        {
+                            "ref": "input_002",
+                            "identifier": "otp",
+                            "type": "OTP_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "verify_sms"
+                    }
                 }
             ]
         },
@@ -131,18 +143,20 @@
         {
             "id": "prompt_mobile_for_basic",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_001",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "send_sms_for_basic"
+                    "inputs": [
+                        {
+                            "ref": "input_001",
+                            "identifier": "mobileNumber",
+                            "type": "PHONE_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "send_sms_for_basic"
+                    }
                 }
             ]
         },
@@ -161,18 +175,20 @@
         {
             "id": "prompt_otp_for_basic",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_003",
-                    "identifier": "otp",
-                    "type": "OTP_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "verify_sms_for_basic"
+                    "inputs": [
+                        {
+                            "ref": "input_003",
+                            "identifier": "otp",
+                            "type": "OTP_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "verify_sms_for_basic"
+                    }
                 }
             ]
         },
@@ -191,68 +207,68 @@
         {
             "id": "provisioning_local_basic",
             "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_002",
-                    "identifier": "username",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_003",
-                    "identifier": "password",
-                    "type": "PASSWORD_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_004",
-                    "identifier": "firstName",
-                    "type": "TEXT_INPUT",
-                    "required": false
-                },
-                {
-                    "ref": "input_005",
-                    "identifier": "lastName",
-                    "type": "TEXT_INPUT",
-                    "required": false
-                },
-                {
-                    "ref": "input_006",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": false
-                }
-            ],
             "executor": {
-                "name": "ProvisioningExecutor"
+                "name": "ProvisioningExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_002",
+                        "identifier": "username",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_003",
+                        "identifier": "password",
+                        "type": "PASSWORD_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_004",
+                        "identifier": "firstName",
+                        "type": "TEXT_INPUT",
+                        "required": false
+                    },
+                    {
+                        "ref": "input_005",
+                        "identifier": "lastName",
+                        "type": "TEXT_INPUT",
+                        "required": false
+                    },
+                    {
+                        "ref": "input_006",
+                        "identifier": "mobileNumber",
+                        "type": "PHONE_INPUT",
+                        "required": false
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },
         {
             "id": "provisioning_local_sms",
             "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_007",
-                    "identifier": "firstName",
-                    "type": "TEXT_INPUT",
-                    "required": false
-                },
-                {
-                    "ref": "input_008",
-                    "identifier": "lastName",
-                    "type": "TEXT_INPUT",
-                    "required": false
-                },
-                {
-                    "ref": "input_009",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "ProvisioningExecutor"
+                "name": "ProvisioningExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_007",
+                        "identifier": "firstName",
+                        "type": "TEXT_INPUT",
+                        "required": false
+                    },
+                    {
+                        "ref": "input_008",
+                        "identifier": "lastName",
+                        "type": "TEXT_INPUT",
+                        "required": false
+                    },
+                    {
+                        "ref": "input_009",
+                        "identifier": "mobileNumber",
+                        "type": "PHONE_INPUT",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },

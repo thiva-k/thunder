@@ -121,7 +121,6 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 	// Copy node connections and metadata
 	nodeCopy.SetNextNodeList(append([]string{}, source.GetNextNodeList()...))
 	nodeCopy.SetPreviousNodeList(append([]string{}, source.GetPreviousNodeList()...))
-	nodeCopy.SetInputs(append([]common.Input{}, source.GetInputs()...))
 
 	// Copy condition if present
 	if sourceCondition := source.GetCondition(); sourceCondition != nil {
@@ -138,10 +137,11 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 		}
 	}
 
-	// Copy executor name, onSuccess, and onFailure if the node is executor-backed
+	// Copy executor name, inputs, onSuccess, and onFailure if the node is executor-backed
 	if executableSource, ok := source.(ExecutorBackedNodeInterface); ok {
 		if executableCopy, ok := nodeCopy.(ExecutorBackedNodeInterface); ok {
 			executableCopy.SetExecutorName(executableSource.GetExecutorName())
+			executableCopy.SetInputs(append([]common.Input{}, executableSource.GetInputs()...))
 			executableCopy.SetOnSuccess(executableSource.GetOnSuccess())
 			executableCopy.SetOnFailure(executableSource.GetOnFailure())
 		} else {
@@ -149,10 +149,10 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 		}
 	}
 
-	// Copy actions and meta if the node is a prompt node
+	// Copy prompts and meta if the node is a prompt node
 	if promptSource, ok := source.(PromptNodeInterface); ok {
 		if promptCopy, ok := nodeCopy.(PromptNodeInterface); ok {
-			promptCopy.SetActions(append([]common.Action{}, promptSource.GetActions()...))
+			promptCopy.SetPrompts(append([]common.Prompt{}, promptSource.GetPrompts()...))
 			promptCopy.SetMeta(promptSource.GetMeta())
 		} else {
 			return nil, errors.New("mismatch in node types during cloning. copy is not a prompt node")

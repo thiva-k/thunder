@@ -11,18 +11,24 @@
         {
             "id": "choose_auth",
             "type": "PROMPT",
-            "actions": [
+            "prompts": [
                 {
-                    "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "basic_auth"
+                    }
                 },
                 {
-                    "ref": "action_002",
-                    "nextNode": "google_auth"
+                    "action": {
+                        "ref": "action_002",
+                        "nextNode": "google_auth"
+                    }
                 },
                 {
-                    "ref": "action_003",
-                    "nextNode": "github_auth"
+                    "action": {
+                        "ref": "action_003",
+                        "nextNode": "github_auth"
+                    }
                 }
             ]
         },
@@ -40,16 +46,16 @@
             "properties": {
                 "idpId": "<google-idp-id>"
             },
-            "inputs": [
-                {
-                    "ref": "input_001",
-                    "identifier": "code",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "GoogleOIDCAuthExecutor"
+                "name": "GoogleOIDCAuthExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_001",
+                        "identifier": "code",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },
@@ -59,16 +65,16 @@
             "properties": {
                 "idpId": "<github-idp-id>"
             },
-            "inputs": [
-                {
-                    "ref": "input_002",
-                    "identifier": "code",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "GithubOAuthExecutor"
+                "name": "GithubOAuthExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_002",
+                        "identifier": "code",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },

@@ -42,8 +42,6 @@ type NodeInterface interface {
 	SetPreviousNodeList(previousNodeIDList []string)
 	AddPreviousNode(previousNodeID string)
 	RemovePreviousNode(previousNodeID string)
-	GetInputs() []common.Input
-	SetInputs(inputs []common.Input)
 	GetCondition() *NodeCondition
 	SetCondition(condition *NodeCondition)
 }
@@ -64,6 +62,8 @@ type ExecutorBackedNodeInterface interface {
 	SetExecutorName(name string)
 	GetExecutor() ExecutorInterface
 	SetExecutor(executor ExecutorInterface)
+	GetInputs() []common.Input
+	SetInputs(inputs []common.Input)
 	GetOnSuccess() string
 	SetOnSuccess(nodeID string)
 	GetOnFailure() string
@@ -75,8 +75,8 @@ type ExecutorBackedNodeInterface interface {
 // PromptNodeInterface extends NodeInterface for nodes that require user interaction.
 type PromptNodeInterface interface {
 	NodeInterface
-	GetActions() []common.Action
-	SetActions(actions []common.Action)
+	GetPrompts() []common.Prompt
+	SetPrompts(prompts []common.Prompt)
 	GetMeta() interface{}
 	SetMeta(meta interface{})
 }
@@ -90,7 +90,6 @@ type node struct {
 	isFinalNode      bool
 	nextNodeList     []string
 	previousNodeList []string
-	inputs           []common.Input
 	condition        *NodeCondition
 }
 
@@ -241,16 +240,6 @@ func (n *node) RemovePreviousNode(previousNodeID string) {
 			return
 		}
 	}
-}
-
-// GetInputs returns the inputs required for the node
-func (n *node) GetInputs() []common.Input {
-	return n.inputs
-}
-
-// SetInputs sets the inputs required for the node
-func (n *node) SetInputs(inputs []common.Input) {
-	n.inputs = inputs
 }
 
 // GetCondition returns the execution condition for the node

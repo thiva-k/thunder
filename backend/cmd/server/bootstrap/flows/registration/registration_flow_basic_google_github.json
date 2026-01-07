@@ -19,18 +19,24 @@
         {
             "id": "choose_auth",
             "type": "PROMPT",
-            "actions": [
+            "prompts": [
                 {
-                    "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "basic_auth"
+                    }
                 },
                 {
-                    "ref": "action_002",
-                    "nextNode": "google_auth"
+                    "action": {
+                        "ref": "action_002",
+                        "nextNode": "google_auth"
+                    }
                 },
                 {
-                    "ref": "action_003",
-                    "nextNode": "github_auth"
+                    "action": {
+                        "ref": "action_003",
+                        "nextNode": "github_auth"
+                    }
                 }
             ]
         },

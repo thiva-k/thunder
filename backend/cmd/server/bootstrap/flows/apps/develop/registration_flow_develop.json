@@ -82,42 +82,44 @@
                     }
                 ]
             },
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_001",
-                    "identifier": "username",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_002",
-                    "identifier": "password",
-                    "type": "PASSWORD_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_003",
-                    "identifier": "firstName",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_004",
-                    "identifier": "lastName",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_005",
-                    "identifier": "email",
-                    "type": "EMAIL_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "inputs": [
+                        {
+                            "ref": "input_001",
+                            "identifier": "username",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        },
+                        {
+                            "ref": "input_002",
+                            "identifier": "password",
+                            "type": "PASSWORD_INPUT",
+                            "required": true
+                        },
+                        {
+                            "ref": "input_003",
+                            "identifier": "firstName",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        },
+                        {
+                            "ref": "input_004",
+                            "identifier": "lastName",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        },
+                        {
+                            "ref": "input_005",
+                            "identifier": "email",
+                            "type": "EMAIL_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "basic_auth"
+                    }
                 }
             ]
         },
@@ -132,40 +134,40 @@
         {
             "id": "provisioning",
             "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_001",
-                    "identifier": "username",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_002",
-                    "identifier": "password",
-                    "type": "PASSWORD_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_003",
-                    "identifier": "firstName",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_004",
-                    "identifier": "lastName",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_005",
-                    "identifier": "email",
-                    "type": "EMAIL_INPUT",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "ProvisioningExecutor"
+                "name": "ProvisioningExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_001",
+                        "identifier": "username",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_002",
+                        "identifier": "password",
+                        "type": "PASSWORD_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_003",
+                        "identifier": "firstName",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_004",
+                        "identifier": "lastName",
+                        "type": "TEXT_INPUT",
+                        "required": true
+                    },
+                    {
+                        "ref": "input_005",
+                        "identifier": "email",
+                        "type": "EMAIL_INPUT",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },

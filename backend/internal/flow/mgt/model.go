@@ -126,8 +126,7 @@ type NodeDefinition struct {
 	Type       string                 `json:"type" yaml:"type"`
 	Layout     *NodeLayout            `json:"layout,omitempty" yaml:"layout,omitempty"`
 	Meta       interface{}            `json:"meta,omitempty" yaml:"meta,omitempty"`
-	Inputs     []InputDefinition      `json:"inputs,omitempty" yaml:"inputs,omitempty"`
-	Actions    []ActionDefinition     `json:"actions,omitempty" yaml:"actions,omitempty"`
+	Prompts    []PromptDefinition     `json:"prompts,omitempty" yaml:"prompts,omitempty"`
 	Properties map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty"`
 	Executor   *ExecutorDefinition    `json:"executor,omitempty" yaml:"executor,omitempty"`
 	OnSuccess  string                 `json:"onSuccess,omitempty" yaml:"onSuccess,omitempty"`
@@ -149,10 +148,17 @@ type ActionDefinition struct {
 	NextNode string `json:"nextNode" yaml:"nextNode"`
 }
 
+// PromptDefinition groups inputs with an action for prompt nodes.
+type PromptDefinition struct {
+	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Action *ActionDefinition `json:"action,omitempty" yaml:"action,omitempty"`
+}
+
 // ExecutorDefinition represents the executor configuration for a node.
 type ExecutorDefinition struct {
-	Name string `json:"name" yaml:"name"`
-	Mode string `json:"mode,omitempty" yaml:"mode,omitempty"` // Execution mode for multi-step executors
+	Name   string            `json:"name" yaml:"name"`
+	Mode   string            `json:"mode,omitempty" yaml:"mode,omitempty"`
+	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty"`
 }
 
 // ConditionDefinition represents a condition for node execution.

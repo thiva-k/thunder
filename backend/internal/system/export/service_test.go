@@ -2231,12 +2231,14 @@ func (suite *ExportServiceTestSuite) TestExportResourcesWithExporter_FlowWithCom
 				ID:   "prompt",
 				Type: "PROMPT",
 				Meta: complexMeta,
-				Inputs: []flowmgt.InputDefinition{
-					{Ref: "input_001", Type: "TEXT_INPUT", Identifier: "username", Required: true},
-					{Ref: "input_002", Type: "PASSWORD_INPUT", Identifier: "password", Required: true},
-				},
-				Actions: []flowmgt.ActionDefinition{
-					{Ref: "action_001", NextNode: "end"},
+				Prompts: []flowmgt.PromptDefinition{
+					{
+						Inputs: []flowmgt.InputDefinition{
+							{Ref: "input_001", Type: "TEXT_INPUT", Identifier: "username", Required: true},
+							{Ref: "input_002", Type: "PASSWORD_INPUT", Identifier: "password", Required: true},
+						},
+						Action: &flowmgt.ActionDefinition{Ref: "action_001", NextNode: "end"},
+					},
 				},
 			},
 			{

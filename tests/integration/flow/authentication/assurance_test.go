@@ -53,18 +53,20 @@ var (
 			{
 				"id":   "prompt_mobile",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "mobileNumber",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "sms_otp_send",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_001",
+								"identifier": "mobileNumber",
+								"type":       "string",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_001",
+							"nextNode": "sms_otp_send",
+						},
 					},
 				},
 			},
@@ -83,18 +85,20 @@ var (
 			{
 				"id":   "prompt_otp",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_002",
-						"identifier": "otp",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_002",
-						"nextNode": "sms_otp_verify",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_002",
+								"identifier": "otp",
+								"type":       "string",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_002",
+							"nextNode": "sms_otp_verify",
+						},
 					},
 				},
 			},
@@ -139,24 +143,26 @@ var (
 			{
 				"id":   "prompt_credentials",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "basic_auth",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_001",
+								"identifier": "username",
+								"type":       "string",
+								"required":   true,
+							},
+							{
+								"ref":        "input_002",
+								"identifier": "password",
+								"type":       "string",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_001",
+							"nextNode": "basic_auth",
+						},
 					},
 				},
 			},
@@ -183,18 +189,20 @@ var (
 			{
 				"id":   "prompt_otp",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_003",
-						"identifier": "otp",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_002",
-						"nextNode": "sms_otp_verify",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_003",
+								"identifier": "otp",
+								"type":       "string",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_002",
+							"nextNode": "sms_otp_verify",
+						},
 					},
 				},
 			},
@@ -239,24 +247,26 @@ var (
 			{
 				"id":   "prompt_credentials",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "basic_auth",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_001",
+								"identifier": "username",
+								"type":       "string",
+								"required":   true,
+							},
+							{
+								"ref":        "input_002",
+								"identifier": "password",
+								"type":       "string",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_001",
+							"nextNode": "basic_auth",
+						},
 					},
 				},
 			},

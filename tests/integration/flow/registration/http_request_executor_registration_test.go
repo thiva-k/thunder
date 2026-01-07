@@ -53,40 +53,40 @@ var (
 			{
 				"id":   "provision_user",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_003",
-						"identifier": "email",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_004",
-						"identifier": "firstName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_005",
-						"identifier": "lastName",
-						"type":       "string",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "ProvisioningExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_001",
+							"identifier": "username",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_002",
+							"identifier": "password",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_003",
+							"identifier": "email",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_004",
+							"identifier": "firstName",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_005",
+							"identifier": "lastName",
+							"type":       "string",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "create_external_profile",
 			},

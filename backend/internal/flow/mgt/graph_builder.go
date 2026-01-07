@@ -131,7 +131,7 @@ func (b *graphBuilder) buildGraph(flow *CompleteFlowDefinition) (core.GraphInter
 // processNode processes a single node definition and adds it to the graph.
 func (b *graphBuilder) processNode(nodeDef *NodeDefinition, allNodes []NodeDefinition,
 	graph core.GraphInterface, edges map[string][]string) error {
-	isFinalNode := nodeDef.OnSuccess == "" && nodeDef.OnFailure == "" && len(nodeDef.Actions) == 0
+	isFinalNode := nodeDef.OnSuccess == "" && nodeDef.OnFailure == "" && len(nodeDef.Prompts) == 0
 
 	// Construct a new node. Here we set isStartNode to false by default
 	node, err := b.flowFactory.CreateNode(nodeDef.ID, nodeDef.Type, nodeDef.Properties,
@@ -148,7 +148,7 @@ func (b *graphBuilder) processNode(nodeDef *NodeDefinition, allNodes []NodeDefin
 	b.configureNodeMeta(nodeDef, node)
 	b.configureNodeCondition(nodeDef, node)
 
-	if err := b.configureNodeActions(nodeDef, node, edges); err != nil {
+	if err := b.configureNodePrompts(nodeDef, node, edges); err != nil {
 		return err
 	}
 	if err := b.configureNodeExecutor(nodeDef, node); err != nil {
@@ -211,10 +211,25 @@ func (b *graphBuilder) validateOnFailureTarget(nodes []NodeDefinition, targetNod
 	return errors.New("onFailure target node not found")
 }
 
-// configureNodeInputs configures the inputs for a node.
+// configureNodeInputs configures the inputs for executor-backed nodes.
 func (b *graphBuilder) configureNodeInputs(nodeDef *NodeDefinition, node core.NodeInterface) {
-	inputs := make([]common.Input, len(nodeDef.Inputs))
-	for i, input := range nodeDef.Inputs {
+	logger := b.logger.With(log.String("nodeID", nodeDef.ID))
+
+	executorNode, ok := node.(core.ExecutorBackedNodeInterface)
+	if !ok {
+		logger.Debug("Node is not executor-backed; skipping input configuration")
+		return
+	}
+
+	// Get inputs from executor definition if available
+	if nodeDef.Executor == nil || len(nodeDef.Executor.Inputs) == 0 {
+		logger.Debug("No inputs defined for executor; setting empty input list")
+		executorNode.SetInputs([]common.Input{})
+		return
+	}
+
+	inputs := make([]common.Input, len(nodeDef.Executor.Inputs))
+	for i, input := range nodeDef.Executor.Inputs {
 		inputs[i] = common.Input{
 			Ref:        input.Ref,
 			Identifier: input.Identifier,
@@ -222,7 +237,7 @@ func (b *graphBuilder) configureNodeInputs(nodeDef *NodeDefinition, node core.No
 			Required:   input.Required,
 		}
 	}
-	node.SetInputs(inputs)
+	executorNode.SetInputs(inputs)
 }
 
 // configureNodeMeta configures the meta object for a prompt node.
@@ -248,36 +263,68 @@ func (b *graphBuilder) configureNodeCondition(nodeDef *NodeDefinition, node core
 	}
 }
 
-// configureNodeActions configures the actions for a prompt node.
-func (b *graphBuilder) configureNodeActions(nodeDef *NodeDefinition, node core.NodeInterface,
+// configureNodePrompts configures the prompts for a prompt node.
+func (b *graphBuilder) configureNodePrompts(nodeDef *NodeDefinition, node core.NodeInterface,
 	edges map[string][]string) error {
-	if len(nodeDef.Actions) == 0 {
+	logger := b.logger.With(log.String("nodeID", nodeDef.ID))
+
+	if len(nodeDef.Prompts) == 0 {
+		logger.Debug("No prompts to configure for this node")
 		return nil
 	}
 
-	actions := make([]common.Action, len(nodeDef.Actions))
-	for i, action := range nodeDef.Actions {
-		actions[i] = common.Action{
-			Ref:      action.Ref,
-			NextNode: action.NextNode,
-		}
-		if _, exists := edges[nodeDef.ID]; !exists {
-			edges[nodeDef.ID] = []string{}
-		}
-		edges[nodeDef.ID] = append(edges[nodeDef.ID], action.NextNode)
+	promptNode, ok := node.(core.PromptNodeInterface)
+	if !ok {
+		logger.Debug("Node is not a prompt node; skipping prompt configuration")
+		return nil
 	}
 
-	// Set actions only if the node is a prompt node
-	if promptNode, ok := node.(core.PromptNodeInterface); ok {
-		promptNode.SetActions(actions)
+	prompts := make([]common.Prompt, len(nodeDef.Prompts))
+	for i, promptDef := range nodeDef.Prompts {
+		// Convert inputs
+		inputs := make([]common.Input, len(promptDef.Inputs))
+		for j, inputDef := range promptDef.Inputs {
+			inputs[j] = common.Input{
+				Ref:        inputDef.Ref,
+				Identifier: inputDef.Identifier,
+				Type:       inputDef.Type,
+				Required:   inputDef.Required,
+			}
+		}
+		prompts[i].Inputs = inputs
+
+		// Convert action if present
+		if promptDef.Action != nil {
+			prompts[i].Action = &common.Action{
+				Ref:      promptDef.Action.Ref,
+				NextNode: promptDef.Action.NextNode,
+			}
+
+			// Add edge for the action's next node
+			if _, exists := edges[nodeDef.ID]; !exists {
+				edges[nodeDef.ID] = []string{}
+			}
+			edges[nodeDef.ID] = append(edges[nodeDef.ID], promptDef.Action.NextNode)
+		}
 	}
+
+	promptNode.SetPrompts(prompts)
 
 	return nil
 }
 
 // configureNodeExecutor configures the executor for a node.
 func (b *graphBuilder) configureNodeExecutor(nodeDef *NodeDefinition, node core.NodeInterface) error {
+	logger := b.logger.With(log.String("nodeID", nodeDef.ID))
+
 	if nodeDef.Executor == nil {
+		logger.Debug("No executor to configure for this node")
+		return nil
+	}
+
+	executableNode, ok := node.(core.ExecutorBackedNodeInterface)
+	if !ok {
+		logger.Debug("Node does not support executors; skipping executor configuration")
 		return nil
 	}
 
@@ -286,10 +333,7 @@ func (b *graphBuilder) configureNodeExecutor(nodeDef *NodeDefinition, node core.
 		if err := b.validateExecutorName(executorName); err != nil {
 			return fmt.Errorf("error while validating executor %s: %w", executorName, err)
 		}
-		executableNode, ok := node.(core.ExecutorBackedNodeInterface)
-		if !ok {
-			return fmt.Errorf("node %s of type %s does not support executors", nodeDef.ID, nodeDef.Type)
-		}
+
 		executableNode.SetExecutorName(executorName)
 
 		// Set executor mode if specified

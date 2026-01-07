@@ -11,14 +11,18 @@
         {
             "id": "choose_auth",
             "type": "PROMPT",
-            "actions": [
+            "prompts": [
                 {
-                    "ref": "action_001",
-                    "nextNode": "basic_auth"
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "basic_auth"
+                    }
                 },
                 {
-                    "ref": "action_002",
-                    "nextNode": "github_auth"
+                    "action": {
+                        "ref": "action_002",
+                        "nextNode": "github_auth"
+                    }
                 }
             ]
         },
@@ -36,16 +40,16 @@
             "properties": {
                 "idpId": "<github-idp-id>"
             },
-            "inputs": [
-                {
-                    "ref": "input_003",
-                    "type": "TEXT_INPUT",
-                    "identifier": "code",
-                    "required": true
-                }
-            ],
             "executor": {
-                "name": "GithubOAuthExecutor"
+                "name": "GithubOAuthExecutor",
+                "inputs": [
+                    {
+                        "ref": "input_003",
+                        "type": "TEXT_INPUT",
+                        "identifier": "code",
+                        "required": true
+                    }
+                ]
             },
             "onSuccess": "auth_assert"
         },

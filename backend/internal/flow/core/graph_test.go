@@ -299,9 +299,8 @@ func (s *GraphTestSuite) TestToJSON() {
 
 	if execNode, ok := node1.(ExecutorBackedNodeInterface); ok {
 		execNode.SetExecutorName("test-executor")
+		execNode.SetInputs([]common.Input{{Identifier: "username", Type: "string", Required: true}})
 	}
-
-	node1.SetInputs([]common.Input{{Identifier: "username", Type: "string", Required: true}})
 
 	_ = s.graph.AddNode(node1)
 	_ = s.graph.AddNode(node2)
