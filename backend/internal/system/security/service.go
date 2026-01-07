@@ -115,7 +115,7 @@ func (s *securityService) Process(r *http.Request) (context.Context, error) {
 	if err := authenticator.Authorize(r.WithContext(ctx), securityCtx); err != nil {
 		// For public paths, allow access even if authorization fails
 		if isPublic {
-			return ctx, nil
+			return r.Context(), nil
 		}
 		// For protected paths, block access on authorization failure
 		return nil, err
