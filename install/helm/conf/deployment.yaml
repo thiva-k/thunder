@@ -27,7 +27,8 @@ gate_client:
   login_path: {{ .Values.configuration.gateClient.loginPath | quote }}
   error_path: {{ .Values.configuration.gateClient.errorPath | quote }}
 
-security:
+tls:
+  min_version: {{ .Values.configuration.tls.minVersion | quote }}
   cert_file: {{ .Values.configuration.security.certFile | quote }}
   key_file: {{ .Values.configuration.security.keyFile | quote }}
 
