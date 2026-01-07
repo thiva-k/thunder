@@ -23,10 +23,6 @@ import React, {type CSSProperties, type HTMLAttributes, type ReactElement, type 
  */
 export interface ActionProps extends HTMLAttributes<HTMLButtonElement> {
   /**
-   * Variant of the action button.
-   */
-  variant?: 'light' | 'dark' | 'destructive';
-  /**
    * Cursor style for the action button.
    */
   cursor?: CSSProperties['cursor'];
@@ -39,18 +35,14 @@ export interface ActionProps extends HTMLAttributes<HTMLButtonElement> {
  * @returns The Action component.
  */
 function Action(
-  {className, cursor = 'pointer', style, variant = 'light', ...rest}: ActionProps,
+  {className, cursor = 'pointer', style, ...rest}: ActionProps,
   ref: Ref<HTMLButtonElement>,
 ): ReactElement {
-  const classes = ['flow-builder-dnd-action', variant && `flow-builder-dnd-action--${variant}`, className]
-    .filter(Boolean)
-    .join(' ');
-
   return (
     <button
       ref={ref}
       type="button"
-      className={classes}
+      className={className}
       style={
         {
           ...style,

@@ -21,7 +21,7 @@ import {Menu, MenuItem, ListItemIcon, ListItemText} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
 import useFlowBuilderCore from '../../hooks/useFlowBuilderCore';
 import {EdgeStyleTypes, type EdgeStyleTypes as EdgeStyleTypesType} from '../../models/steps';
-import {BezierEdgeIcon, SmoothStepEdgeIcon, StepEdgeIcon} from '../EdgeStyleIcons';
+import {BezierEdgeIcon, SmoothStepEdgeIcon, StepEdgeIcon} from './EdgeStyleIcons';
 
 /**
  * Props interface of {@link EdgeStyleMenu}
