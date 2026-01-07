@@ -10,18 +10,34 @@ Thunder is a modern, open-source identity management service designed for teams 
 
 System APIs of Thunder are secured by default. You need to obtain an access token with `system` scope by authenticating as an admin user. Follow these steps:
 
-1. **Authenticate and obtain an access token:**
+1. **Initiate the authentication flow:**
 
-   Replace `<application_id>` with the sample app ID generated during "Setup the product."
+   Run the following command, replacing `<application_id>` with the sample app ID generated during "Setup the product."
 
    ```bash
    curl -k -X POST 'https://localhost:8090/flow/execute' \
-     -d '{"applicationId":"<application_id>","flowType":"AUTHENTICATION", "inputs":{"username":"admin","password":"admin", "requested_permissions":"system"}}'
+     -d '{"applicationId":"<application_id>","flowType":"AUTHENTICATION"}'
    ```
 
-2. **Extract the assertion from the response:**
+2. **Extract the flowId from the response:**
 
-   The response will contain an `assertion` field:
+   ```json
+   {"flowId":"<flow_id>","flowStatus":"INCOMPLETE", ...}
+   ```
+
+3. **Submit credentials:**
+
+   Run the following command, replacing `<flow_id>` with the `flowId` value you extracted above.
+
+   ```bash
+   curl -k -X POST 'https://localhost:8090/flow/execute' \
+     -d '{"flowId":"<flow_id>", "inputs":{"username":"admin","password":"admin","requested_permissions":"system"},"action":"action_001"}'
+   ```
+
+4. **Extract the assertion from the response:**
+
+   Obtain the system API token by extracting the `assertion` value from the response.
+
    ```json
    {"flowId":"<flow_id>","flowStatus":"COMPLETE","data":{},"assertion":"<assertion>"}
    ```

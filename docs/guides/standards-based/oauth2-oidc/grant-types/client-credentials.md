@@ -27,21 +27,26 @@ The Client Credentials grant type allows applications to authenticate using thei
 
 ### Step 1: Obtain Admin Token
 
-First, obtain an admin token to create applications:
+First, obtain an admin token to create applications.
+
+#### 1.1: Initiate the Authentication Flow
+
+Run the following command, replacing `<application_id>` with your sample app ID (created during Thunder setup).
 
 ```bash
-# Replace <application_id> with your sample app ID (created during Thunder setup)
+FLOW_RESPONSE=$(curl -k -s -X POST 'https://localhost:8090/flow/execute' \
+  -d '{"applicationId":"<application_id>","flowType":"AUTHENTICATION"}')
+
+FLOW_ID=$(echo $FLOW_RESPONSE | jq -r '.flowId')
+```
+
+#### 1.2: Submit Admin Credentials
+
+Run the following command with the extracted `flowId`.
+
+```bash
 ADMIN_TOKEN_RESPONSE=$(curl -k -s -X POST 'https://localhost:8090/flow/execute' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "applicationId": "<application_id>",
-    "flowType": "AUTHENTICATION",
-    "inputs": {
-      "username": "admin",
-      "password": "admin",
-      "requested_permissions": "system"
-    }
-  }')
+  -d '{"flowId":"'$FLOW_ID'", "inputs":{"username":"admin","password":"admin","requested_permissions":"system"},"action": "action_001"}')
 
 ADMIN_TOKEN=$(echo $ADMIN_TOKEN_RESPONSE | jq -r '.assertion')
 ```
