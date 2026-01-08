@@ -479,7 +479,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('Variant Not Found (line 142)', () => {
+  describe('Variant Not Found', () => {
     it('should return early when selected variant is not found', () => {
       const resourceWithVariants: Base = {
         ...mockBaseResource,
@@ -531,7 +531,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('Preserve Label on Variant Change (line 152)', () => {
+  describe('Preserve Label on Variant Change', () => {
     it('should preserve current label value when changing variants', () => {
       const resourceWithLabelAndVariants: Base = {
         ...mockBaseResource,
@@ -562,7 +562,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('Preserve Text on Variant Change (line 158)', () => {
+  describe('Preserve Text on Variant Change', () => {
     it('should preserve current text value when changing variants with selectedVariant.config', () => {
       const resourceWithTextAndVariants: Base = {
         ...mockBaseResource,
@@ -595,7 +595,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('Update Component Recursive Mapping (lines 162-174)', () => {
+  describe('Update Component Recursive Mapping', () => {
     it('should update component when id matches', () => {
       const resourceWithComponents: Base = {
         ...mockBaseResource,
@@ -662,7 +662,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('handlePropertyChange with Plugin Result False (lines 208-214)', () => {
+  describe('handlePropertyChange with Plugin Result False', () => {
     it('should still update resource when plugin returns false', async () => {
       vi.mock('../../../plugins/PluginRegistry', () => ({
         default: {
@@ -712,7 +712,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('handlePropertyChange with data Property (lines 242-244, 262-264)', () => {
+  describe('handlePropertyChange with data Property', () => {
     it('should handle propertyKey === data to replace entire data object', async () => {
       const MockComponentWithDataChange = vi.fn(
         ({
@@ -753,7 +753,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('handlePropertyChange with config/data prefix (lines 267-269)', () => {
+  describe('handlePropertyChange with config/data prefix', () => {
     it('should handle propertyKey starting with config.', async () => {
       const MockComponentWithConfigChange = vi.fn(
         ({
@@ -833,7 +833,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('handlePropertyChange for action property (line 257)', () => {
+  describe('handlePropertyChange for action property', () => {
     it('should not update lastInteractedResource when propertyKey is action', async () => {
       const MockComponentWithActionChange = vi.fn(
         ({
@@ -876,7 +876,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('handlePropertyChange with Non-Top-Level Property (lines 270-271)', () => {
+  describe('handlePropertyChange with Non-Top-Level Property', () => {
     it('should set property on resource.data for non-top-level properties', async () => {
       const MockComponentWithCustomProperty = vi.fn(
         ({
@@ -967,7 +967,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('Empty Node Components (line 240)', () => {
+  describe('Empty Node Components', () => {
     it('should handle empty node components gracefully', async () => {
       // Setup updateNodeData to simulate empty components
       mockUpdateNodeData.mockImplementation((_stepId: string, callback: (node: {data: {components?: unknown[]}}) => unknown) => {
@@ -1013,7 +1013,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('handlePropertyChange with Different Element ID (line 257)', () => {
+  describe('handlePropertyChange with Different Element ID', () => {
     it('should not update lastInteractedResource when element.id differs from current', async () => {
       const differentResource: Base = {
         ...mockBaseResource,
@@ -1059,7 +1059,7 @@ describe('ResourceProperties', () => {
     });
   });
 
-  describe('Strip data. prefix (lines 246-248)', () => {
+  describe('Strip data. prefix', () => {
     it('should strip data. prefix when setting property on data object', async () => {
       mockUpdateNodeData.mockImplementation((_stepId: string, callback: (node: {data: {components?: unknown[]}}) => unknown) => {
         callback({data: {}});

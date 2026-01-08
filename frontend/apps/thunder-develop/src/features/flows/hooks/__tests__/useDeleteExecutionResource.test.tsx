@@ -490,9 +490,7 @@ describe('useDeleteExecutionResource', () => {
         type: 'VIEW',
         position: {x: 0, y: 0},
         data: {
-          components: [
-            {id: 'button-1', type: 'ACTION'},
-          ],
+          components: [{id: 'button-1', type: 'ACTION'}],
         },
       };
 
@@ -603,6 +601,249 @@ describe('useDeleteExecutionResource', () => {
 
       const result = await deleteEdgeHandler(edges);
       expect(result).toBe(true);
+    });
+
+    it('should execute updateNodeData callback to filter components in deleteComponentAndNode', async () => {
+      const executionNode: Node = {
+        id: 'execution-1',
+        type: 'TASK_EXECUTION',
+        position: {x: 100, y: 0},
+        data: {},
+      };
+
+      const actionNode: Node = {
+        id: 'action-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {id: 'button-1', type: 'ACTION'},
+            {id: 'button-2', type: 'ACTION'},
+          ],
+        },
+      };
+
+      mockGetNodes.mockReturnValue([actionNode, executionNode]);
+
+      // Capture the callback passed to updateNodeData
+      let capturedCallback: ((node: Node) => {components: unknown[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: unknown[]}) => {
+        capturedCallback = callback;
+      });
+
+      renderHook(() => useDeleteExecutionResource(), {
+        wrapper: createWrapper(),
+      });
+
+      const deleteEdgeHandler = registeredHandlers[FlowEventTypes.ON_EDGE_DELETE]?.[0];
+
+      const edges = [
+        {
+          id: 'edge-1',
+          source: 'action-1',
+          target: 'execution-1',
+          sourceHandle: 'button-1-next',
+        },
+      ];
+
+      await deleteEdgeHandler(edges);
+
+      expect(capturedCallback).not.toBeNull();
+
+      const result = capturedCallback!(actionNode);
+      expect(result.components).toHaveLength(1);
+      expect(result.components[0]).toEqual({id: 'button-2', type: 'ACTION'});
+    });
+  });
+
+  describe('deleteExecutionActionNode Handler - Callback Execution', () => {
+    it('should execute updateNodeData callback to filter action components', async () => {
+      const executionNode: Node = {
+        id: 'execution-1',
+        type: 'TASK_EXECUTION',
+        position: {x: 100, y: 0},
+        data: {},
+      };
+
+      const actionNode: Node = {
+        id: 'action-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {id: 'button-1', type: 'ACTION'},
+            {id: 'button-2', type: 'ACTION'},
+          ],
+        },
+      };
+
+      mockGetNodes.mockReturnValue([actionNode, executionNode]);
+      mockGetEdges.mockReturnValue([
+        {
+          id: 'edge-1',
+          source: 'action-1',
+          target: 'execution-1',
+          sourceHandle: 'button-1_NEXT', // Use correct suffix format
+        },
+      ]);
+
+      // Capture the callback passed to updateNodeData
+      let capturedCallback: ((node: Node) => {components: unknown[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: unknown[]}) => {
+        capturedCallback = callback;
+      });
+
+      renderHook(() => useDeleteExecutionResource(), {
+        wrapper: createWrapper(),
+      });
+
+      const deleteNodeHandler = registeredHandlers[FlowEventTypes.ON_NODE_DELETE]?.[0];
+      await deleteNodeHandler([executionNode]);
+
+      expect(mockUpdateNodeData).toHaveBeenCalledWith('action-1', expect.any(Function));
+      expect(capturedCallback).not.toBeNull();
+
+      const result = capturedCallback!(actionNode);
+      expect(result.components).toHaveLength(1);
+      expect(result.components[0]).toEqual({id: 'button-2', type: 'ACTION'});
+    });
+
+    it('should close properties panel after updating node data', async () => {
+      const executionNode: Node = {
+        id: 'execution-1',
+        type: 'TASK_EXECUTION',
+        position: {x: 100, y: 0},
+        data: {},
+      };
+
+      const actionNode: Node = {
+        id: 'action-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [{id: 'button-1', type: 'ACTION'}],
+        },
+      };
+
+      mockGetNodes.mockReturnValue([actionNode, executionNode]);
+      mockGetEdges.mockReturnValue([
+        {
+          id: 'edge-1',
+          source: 'action-1',
+          target: 'execution-1',
+          sourceHandle: 'button-1_NEXT', // Use correct suffix format
+        },
+      ]);
+
+      renderHook(() => useDeleteExecutionResource(), {
+        wrapper: createWrapper(),
+      });
+
+      const deleteNodeHandler = registeredHandlers[FlowEventTypes.ON_NODE_DELETE]?.[0];
+      await deleteNodeHandler([executionNode]);
+
+      expect(mockSetIsOpenResourcePropertiesPanel).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('deleteExecutionNode Handler - Callback Execution', () => {
+    it('should execute setNodes callback to filter execution nodes', async () => {
+      const executionNode: Node = {
+        id: 'execution-1',
+        type: 'TASK_EXECUTION',
+        position: {x: 100, y: 0},
+        data: {},
+      };
+
+      const viewNode: Node = {
+        id: 'view-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {},
+      };
+
+      mockGetNodes.mockReturnValue([viewNode, executionNode]);
+
+      // Capture the callback passed to setNodes
+      let capturedCallback: ((nodes: Node[]) => Node[]) | null = null;
+      mockSetNodes.mockImplementation((callback: (nodes: Node[]) => Node[]) => {
+        capturedCallback = callback;
+      });
+
+      renderHook(() => useDeleteExecutionResource(), {
+        wrapper: createWrapper(),
+      });
+
+      const deleteElementHandler = registeredHandlers[FlowEventTypes.ON_NODE_ELEMENT_DELETE]?.[0];
+
+      const element = {
+        id: 'button-1',
+        type: 'ACTION',
+        category: 'ACTION',
+        action: {
+          type: 'NEXT',
+          next: 'execution-1',
+        },
+      };
+
+      await deleteElementHandler('step-1', element);
+
+      expect(mockSetNodes).toHaveBeenCalled();
+      expect(capturedCallback).not.toBeNull();
+
+      // Execute the callback
+      const result = capturedCallback!([viewNode, executionNode]);
+
+      // Should filter out the execution node with matching id and type
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(viewNode);
+    });
+
+    it('should keep nodes that do not match both id and type', async () => {
+      const executionNode: Node = {
+        id: 'execution-1',
+        type: 'TASK_EXECUTION',
+        position: {x: 100, y: 0},
+        data: {},
+      };
+
+      const otherExecutionNode: Node = {
+        id: 'execution-2',
+        type: 'TASK_EXECUTION',
+        position: {x: 200, y: 0},
+        data: {},
+      };
+
+      mockGetNodes.mockReturnValue([executionNode, otherExecutionNode]);
+
+      let capturedCallback: ((nodes: Node[]) => Node[]) | null = null;
+      mockSetNodes.mockImplementation((callback: (nodes: Node[]) => Node[]) => {
+        capturedCallback = callback;
+      });
+
+      renderHook(() => useDeleteExecutionResource(), {
+        wrapper: createWrapper(),
+      });
+
+      const deleteElementHandler = registeredHandlers[FlowEventTypes.ON_NODE_ELEMENT_DELETE]?.[0];
+
+      const element = {
+        id: 'button-1',
+        type: 'ACTION',
+        category: 'ACTION',
+        action: {
+          type: 'NEXT',
+          next: 'execution-1',
+        },
+      };
+
+      await deleteElementHandler('step-1', element);
+
+      const result = capturedCallback!([executionNode, otherExecutionNode]);
+
+      // Should only filter out execution-1, keep execution-2
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('execution-2');
     });
   });
 });

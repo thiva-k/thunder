@@ -820,7 +820,7 @@ describe('ToolbarPlugin', () => {
     });
   });
 
-  describe('Format Paragraph with Selection (line 137)', () => {
+  describe('Format Paragraph with Selection', () => {
     it('should call editor update when formatting to paragraph', () => {
       render(<ToolbarPlugin typography />);
 
