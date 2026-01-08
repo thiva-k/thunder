@@ -204,4 +204,21 @@ describe('useValidationStatus', () => {
     expect(result.current.validationConfig?.isOTPValidationEnabled).toBe(true);
     expect(result.current.validationConfig?.isRecoveryFactorValidationEnabled).toBe(true);
   });
+
+  it('should throw an error when used outside of ValidationProvider with falsy context', () => {
+    // Create a wrapper that provides null/undefined as the context value
+    function NullContextWrapper({children}: {children: ReactNode}) {
+      return (
+        <ValidationContext.Provider value={null as unknown as ValidationContextProps}>
+          {children}
+        </ValidationContext.Provider>
+      );
+    }
+
+    expect(() => {
+      renderHook(() => useValidationStatus(), {
+        wrapper: NullContextWrapper,
+      });
+    }).toThrow('useValidationStatus must be used within a ValidationProvider');
+  });
 });

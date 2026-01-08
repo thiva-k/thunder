@@ -198,4 +198,21 @@ describe('useFlowBuilderCore', () => {
 
     expect(result.current.publishFlow).toBe(mockPublishFlow);
   });
+
+  it('should throw an error when used outside of FlowBuilderCoreProvider with undefined context', () => {
+    // Create a wrapper that provides undefined as the context value
+    function UndefinedContextWrapper({children}: {children: ReactNode}) {
+      return (
+        <FlowBuilderCoreContext.Provider value={undefined as unknown as FlowBuilderCoreContextProps}>
+          {children}
+        </FlowBuilderCoreContext.Provider>
+      );
+    }
+
+    expect(() => {
+      renderHook(() => useFlowBuilderCore(), {
+        wrapper: UndefinedContextWrapper,
+      });
+    }).toThrow('useFlowBuilderCore must be used within a FlowBuilderCoreProvider');
+  });
 });
