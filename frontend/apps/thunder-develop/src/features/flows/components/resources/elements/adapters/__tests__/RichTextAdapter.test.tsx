@@ -146,4 +146,48 @@ describe('RichTextAdapter', () => {
       expect(container2.querySelector('.rich-text-content')).toBeInTheDocument();
     });
   });
+
+  describe('Anchor Tag Security', () => {
+    it('should handle anchor tags with target="_blank"', () => {
+      const resource = createMockElement({
+        label: '<a href="https://example.com" target="_blank">External Link</a>',
+      });
+
+      render(<RichTextAdapter resource={resource} />);
+
+      // The content should be sanitized and rendered
+      expect(screen.getByTestId('placeholder')).toBeInTheDocument();
+    });
+
+    it('should handle anchor tags without target attribute', () => {
+      const resource = createMockElement({
+        label: '<a href="https://example.com">Regular Link</a>',
+      });
+
+      render(<RichTextAdapter resource={resource} />);
+
+      expect(screen.getByTestId('placeholder')).toBeInTheDocument();
+    });
+
+    it('should handle anchor tags with target="_self"', () => {
+      const resource = createMockElement({
+        label: '<a href="https://example.com" target="_self">Same Window Link</a>',
+      });
+
+      render(<RichTextAdapter resource={resource} />);
+
+      expect(screen.getByTestId('placeholder')).toBeInTheDocument();
+    });
+
+    it('should handle multiple anchor tags', () => {
+      const resource = createMockElement({
+        label:
+          '<a href="https://link1.com" target="_blank">Link 1</a> and <a href="https://link2.com">Link 2</a>',
+      });
+
+      render(<RichTextAdapter resource={resource} />);
+
+      expect(screen.getByTestId('placeholder')).toBeInTheDocument();
+    });
+  });
 });
