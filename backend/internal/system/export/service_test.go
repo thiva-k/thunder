@@ -1588,7 +1588,7 @@ func (suite *ExportServiceTestSuite) TestExportUserSchemas_Wildcard() {
 		},
 	}
 
-	suite.mockUserSchemaService.EXPECT().GetUserSchemaList(0, 1000).Return(mockSchemaList, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchemaList(100, 0).Return(mockSchemaList, nil)
 	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema1").Return(mockSchema1, nil)
 	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema2").Return(mockSchema2, nil)
 
@@ -1718,7 +1718,7 @@ func (suite *ExportServiceTestSuite) TestExportUserSchemas_WildcardPartialFailur
 		Error: "User schema not found",
 	}
 
-	suite.mockUserSchemaService.EXPECT().GetUserSchemaList(0, 1000).Return(mockSchemaList, nil)
+	suite.mockUserSchemaService.EXPECT().GetUserSchemaList(100, 0).Return(mockSchemaList, nil)
 	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema1").Return(mockSchema1, nil)
 	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema2").Return(nil, schemaError)
 	suite.mockUserSchemaService.EXPECT().GetUserSchema("schema3").Return(mockSchema3, nil)

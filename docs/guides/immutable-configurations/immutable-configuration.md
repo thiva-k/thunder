@@ -203,9 +203,25 @@ curl -X POST https://localhost:8090/export \
   -d '{
     "identity_providers": ["<idp-id>"]
   }' > repository/resources/identity_providers/google-idp.yaml
+
+# Export specific organization units
+curl -X POST https://localhost:8090/export \
+  -H "Content-Type: application/json" \
+  -d '{
+    "organization_units": ["<ou-id-1>", "<ou-id-2>"]
+  }' > repository/resources/organization_units/my-ous.yaml
 ```
 
 See the [Export Configurations Guide](./export-configurations.md) for detailed export instructions.
+
+**⚠️ Organization Units Export Limitation:**
+
+When using wildcard export for organization units (`"organization_units": ["*"]`), only the first 100 organization units will be retrieved due to pagination limits. If you have more than 100 OUs at the root level, they will not be included in the export. 
+
+To export all organization units:
+- Export specific OUs by ID rather than using wildcards
+- Make multiple export requests with specific OU IDs
+- Consider implementing pagination loop logic in your export script to fetch all pages
 
 ### Manual Creation
 
