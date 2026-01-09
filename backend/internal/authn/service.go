@@ -209,7 +209,7 @@ func (as *authenticationService) StartIDPAuthentication(requestedType idp.IDPTyp
 	// Generate session token
 	sessionToken, err := as.createSessionToken(idpID, identityProvider.Type)
 	if err != nil {
-		logger.Error("Failed to create session token", log.String("idpId", idpID), log.Error(err))
+		logger.Error("Failed to create session token", log.String("idpId", idpID), log.String("error", err.Error))
 		return nil, &serviceerror.InternalServerError
 	}
 
@@ -349,7 +349,7 @@ func (as *authenticationService) validateAndAppendAuthAssertion(authResponse *co
 	token, _, err := as.jwtService.GenerateJWT(user.ID, jwtConfig.Audience, jwtConfig.Issuer,
 		jwtConfig.ValidityPeriod, jwtClaims)
 	if err != nil {
-		logger.Error("Failed to generate auth assertion", log.Error(err))
+		logger.Error("Failed to generate auth assertion", log.String("error", err.Error))
 		return &serviceerror.InternalServerError
 	}
 
@@ -382,7 +382,7 @@ func (as *authenticationService) extractClaimsFromAssertion(assertion string,
 	jwtConfig := config.GetThunderRuntime().Config.JWT
 
 	if err := as.jwtService.VerifyJWT(assertion, "", jwtConfig.Issuer); err != nil {
-		logger.Debug("Failed to verify JWT signature of the assertion", log.Error(err))
+		logger.Debug("Failed to verify JWT signature of the assertion", log.String("error", err.Error))
 		return nil, "", &common.ErrorInvalidAssertion
 	}
 
@@ -569,7 +569,8 @@ func (as *authenticationService) validateIDPType(requestedType, actualType idp.I
 }
 
 // createSessionToken creates a JWT session token with authentication session data.
-func (as *authenticationService) createSessionToken(idpID string, idpType idp.IDPType) (string, error) {
+func (as *authenticationService) createSessionToken(idpID string, idpType idp.IDPType) (
+	string, *serviceerror.ServiceError) {
 	sessionData := AuthSessionData{
 		IDPID:   idpID,
 		IDPType: idpType,
@@ -592,9 +593,9 @@ func (as *authenticationService) verifyAndDecodeSessionToken(token string, logge
 	*AuthSessionData, *serviceerror.ServiceError) {
 	// Verify JWT signature and claims
 	jwtConfig := config.GetThunderRuntime().Config.JWT
-	err := as.jwtService.VerifyJWT(token, "auth-svc", jwtConfig.Issuer)
-	if err != nil {
-		logger.Debug("Error verifying session token", log.Error(err))
+	svcErr := as.jwtService.VerifyJWT(token, "auth-svc", jwtConfig.Issuer)
+	if svcErr != nil {
+		logger.Debug("Error verifying session token", log.String("error", svcErr.Error))
 		return nil, &common.ErrorInvalidSessionToken
 	}
 
