@@ -27,7 +27,7 @@
  * - Application configuration
  */
 
-import { APIRequestContext } from "@playwright/test";
+import { APIRequestContext, request as playwrightRequest } from "@playwright/test";
 
 export interface SetupConfig {
   thunderUrl: string;
@@ -119,9 +119,8 @@ export class ThunderMFASetup {
       const userId = userResult.replace("created:", "");
 
       // Step 5: Update application with MFA flow
-      await this.updateApplicationFlow(adminToken, this.config.applicationId, actualFlowId);
+      const actualAppId = await this.updateApplicationFlow(adminToken, actualFlowId);
       console.log(`✓ Application updated with MFA flow`);
-
       console.log("=== Thunder MFA Setup Completed ===\n");
 
       return {
@@ -129,7 +128,7 @@ export class ThunderMFASetup {
         notificationSenderId: senderId,
         flowId: actualFlowId,
         userId,
-        applicationId: this.config.applicationId,
+        applicationId: actualAppId,
         cleanupFunctions,
         resourcesCreated,
       };
@@ -429,9 +428,30 @@ export class ThunderMFASetup {
   /**
    * Update application with MFA flow
    */
-  private async updateApplicationFlow(adminToken: string, applicationId: string, flowId: string): Promise<void> {
+  private async updateApplicationFlow(adminToken: string, flowId: string): Promise<string> {
+    // First, get all applications and find the one with clientId = "REACT_SDK_SAMPLE"
+    const listResponse = await this.request.get(`${this.config.thunderUrl}/applications`, {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+      },
+      ignoreHTTPSErrors: true,
+    });
+
+    if (!listResponse.ok()) {
+      throw new Error(`Failed to fetch applications: ${await listResponse.text()}`);
+    }
+
+    const listData = await listResponse.json();
+    const targetApp = listData.applications?.find((app: any) => app.client_id === "REACT_SDK_SAMPLE");
+
+    if (!targetApp) {
+      throw new Error(`Application with clientId "REACT_SDK_SAMPLE" not found`);
+    }
+
+    const actualAppId = targetApp.id;
+
     // Get current application details
-    const getResponse = await this.request.get(`${this.config.thunderUrl}/applications/${applicationId}`, {
+    const getResponse = await this.request.get(`${this.config.thunderUrl}/applications/${actualAppId}`, {
       headers: {
         Authorization: `Bearer ${adminToken}`,
       },
@@ -450,7 +470,7 @@ export class ThunderMFASetup {
       auth_flow_id: flowId,
     };
 
-    const updateResponse = await this.request.put(`${this.config.thunderUrl}/applications/${applicationId}`, {
+    const updateResponse = await this.request.put(`${this.config.thunderUrl}/applications/${actualAppId}`, {
       data: updatedApp,
       headers: {
         Authorization: `Bearer ${adminToken}`,
@@ -462,19 +482,29 @@ export class ThunderMFASetup {
     if (!updateResponse.ok()) {
       throw new Error(`Failed to update application: ${await updateResponse.text()}`);
     }
+
+    return actualAppId;
   }
 
   /**
    * Delete notification sender
    */
   private async deleteNotificationSender(adminToken: string, senderId: string): Promise<void> {
+    let requestContext: APIRequestContext | null = null;
     try {
-      const response = await this.request.delete(`${this.config.thunderUrl}/notification-senders/message/${senderId}`, {
-        headers: {
-          Authorization: `Bearer ${adminToken}`,
-        },
+      // Create a new request context for cleanup
+      requestContext = await playwrightRequest.newContext({
         ignoreHTTPSErrors: true,
       });
+
+      const response = await requestContext.delete(
+        `${this.config.thunderUrl}/notification-senders/message/${senderId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${adminToken}`,
+          },
+        }
+      );
 
       if (response.ok()) {
         console.log(`✓ Notification sender deleted: ${senderId}`);
@@ -483,6 +513,10 @@ export class ThunderMFASetup {
       }
     } catch (error) {
       console.log(`⚠️  Error deleting notification sender: ${error}`);
+    } finally {
+      if (requestContext) {
+        await requestContext.dispose();
+      }
     }
   }
 
@@ -490,12 +524,17 @@ export class ThunderMFASetup {
    * Delete flow
    */
   private async deleteFlow(adminToken: string, flowId: string): Promise<void> {
+    let requestContext: APIRequestContext | null = null;
     try {
-      const response = await this.request.delete(`${this.config.thunderUrl}/flows/${flowId}`, {
+      // Create a new request context for cleanup
+      requestContext = await playwrightRequest.newContext({
+        ignoreHTTPSErrors: true,
+      });
+
+      const response = await requestContext.delete(`${this.config.thunderUrl}/flows/${flowId}`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
-        ignoreHTTPSErrors: true,
       });
 
       if (response.ok()) {
@@ -505,6 +544,10 @@ export class ThunderMFASetup {
       }
     } catch (error) {
       console.log(`⚠️  Error deleting flow: ${error}`);
+    } finally {
+      if (requestContext) {
+        await requestContext.dispose();
+      }
     }
   }
 
@@ -512,12 +555,17 @@ export class ThunderMFASetup {
    * Delete user
    */
   private async deleteUser(adminToken: string, userId: string): Promise<void> {
+    let requestContext: APIRequestContext | null = null;
     try {
-      const response = await this.request.delete(`${this.config.thunderUrl}/users/${userId}`, {
+      // Create a new request context for cleanup
+      requestContext = await playwrightRequest.newContext({
+        ignoreHTTPSErrors: true,
+      });
+
+      const response = await requestContext.delete(`${this.config.thunderUrl}/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${adminToken}`,
         },
-        ignoreHTTPSErrors: true,
       });
 
       if (response.ok()) {
@@ -527,6 +575,10 @@ export class ThunderMFASetup {
       }
     } catch (error) {
       console.log(`⚠️  Error deleting user: ${error}`);
+    } finally {
+      if (requestContext) {
+        await requestContext.dispose();
+      }
     }
   }
 
@@ -598,21 +650,27 @@ export class ThunderMFASetup {
             },
           ],
         },
-        inputs: [
-          { ref: "input_001", type: "TEXT_INPUT", identifier: "username", required: true },
-          { ref: "input_002", type: "PASSWORD_INPUT", identifier: "password", required: true },
+        prompts: [
+          {
+            inputs: [
+              { ref: "input_001", type: "TEXT_INPUT", identifier: "username", required: true },
+              { ref: "input_002", type: "PASSWORD_INPUT", identifier: "password", required: true },
+            ],
+            action: { ref: "action_001", nextNode: "basic_auth" },
+          },
         ],
-        actions: [{ ref: "action_001", nextNode: "basic_auth" }],
       },
       {
         id: "basic_auth",
         type: "TASK_EXECUTION",
         layout: { size: { width: 217, height: 113 }, position: { x: 1062, y: 62 } },
-        inputs: [
-          { ref: "input_001", type: "TEXT_INPUT", identifier: "username", required: true },
-          { ref: "input_002", type: "PASSWORD_INPUT", identifier: "password", required: true },
-        ],
-        executor: { name: "BasicAuthExecutor" },
+        executor: {
+          name: "BasicAuthExecutor",
+          inputs: [
+            { ref: "input_001", type: "TEXT_INPUT", identifier: "username", required: true },
+            { ref: "input_002", type: "PASSWORD_INPUT", identifier: "password", required: true },
+          ],
+        },
         onSuccess: "authorization_check",
       },
       {
@@ -626,18 +684,24 @@ export class ThunderMFASetup {
         id: "send_otp",
         type: "TASK_EXECUTION",
         layout: { size: { width: 200, height: 113 }, position: { x: 2062, y: 62 } },
-        inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
         properties: { senderId },
-        executor: { name: "SMSOTPAuthExecutor", mode: "send" },
+        executor: {
+          name: "SMSOTPAuthExecutor",
+          mode: "send",
+          inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
+        },
         onSuccess: "view_s2t2",
       },
       {
         id: "verify_otp",
         type: "TASK_EXECUTION",
         layout: { size: { width: 200, height: 113 }, position: { x: 3062, y: 62 } },
-        inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
         properties: { senderId },
-        executor: { name: "SMSOTPAuthExecutor", mode: "verify" },
+        executor: {
+          name: "SMSOTPAuthExecutor",
+          mode: "verify",
+          inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
+        },
         onSuccess: "auth_assert",
       },
       {
@@ -705,10 +769,15 @@ export class ThunderMFASetup {
             },
           ],
         },
-        inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
-        actions: [
-          { ref: "action_s76e", nextNode: "verify_otp" },
-          { ref: "resend_6o42", nextNode: "send_otp" },
+        prompts: [
+          {
+            inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
+            action: { ref: "action_s76e", nextNode: "verify_otp" },
+          },
+          {
+            inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
+            action: { ref: "resend_6o42", nextNode: "send_otp" },
+          },
         ],
       },
     ];
