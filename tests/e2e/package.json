@@ -35,11 +35,13 @@
   "type": "commonjs",
   "devDependencies": {
     "@playwright/test": "1.57.0",
+    "@types/express": "^5.0.6",
     "@types/node": "25.0.2",
     "@typescript-eslint/eslint-plugin": "8.0.0",
     "@typescript-eslint/parser": "8.0.0",
     "eslint": "9.0.0",
     "eslint-plugin-playwright": "2.1.0",
+    "express": "^5.2.1",
     "prettier": "3.4.2",
     "typescript": "5.7.3"
   },
