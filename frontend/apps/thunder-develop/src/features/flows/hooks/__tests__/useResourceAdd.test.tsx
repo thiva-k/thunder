@@ -117,6 +117,8 @@ describe('useResourceAdd', () => {
     mockGenerateStepElement.mockImplementation((element: Element) => ({...element, id: 'generated-element-id'}));
     mockGetNodes.mockReturnValue([]);
     mockGetEdges.mockReturnValue([]);
+    // Reset fitView to return a resolved promise by default after clearAllMocks
+    mockFitView.mockResolvedValue(undefined);
   });
 
   describe('Hook Initialization', () => {
