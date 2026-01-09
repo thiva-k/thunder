@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {renderHook, act} from '@testing-library/react';
+import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
+import {renderHook, act, cleanup} from '@testing-library/react';
 import type {ReactNode} from 'react';
 import {ReactFlowProvider} from '@xyflow/react';
 import type {Node, Edge} from '@xyflow/react';
@@ -134,6 +134,14 @@ describe('useDragDropHandlers', () => {
     vi.clearAllMocks();
     mockGetNodes.mockReturnValue([]);
     mockGetEdges.mockReturnValue([]);
+  });
+
+  afterEach(async () => {
+    // Clean up any pending timers/requestAnimationFrame callbacks to prevent test pollution
+    vi.useFakeTimers();
+    await vi.runAllTimersAsync();
+    vi.useRealTimers();
+    cleanup();
   });
 
   describe('Hook Initialization', () => {
