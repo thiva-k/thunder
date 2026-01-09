@@ -92,8 +92,13 @@ vi.mock('../../../hooks/useContainerDialogConfirm', () => ({
   default: () => vi.fn(),
 }));
 
+// Use vi.hoisted for applyAutoLayout mock to ensure it's always available
+const {mockApplyAutoLayout} = vi.hoisted(() => ({
+  mockApplyAutoLayout: vi.fn().mockResolvedValue([]),
+}));
+
 vi.mock('../../../utils/applyAutoLayout', () => ({
-  default: vi.fn().mockResolvedValue([]),
+  default: mockApplyAutoLayout,
 }));
 
 vi.mock('../../../utils/resolveCollisions', () => ({
@@ -368,6 +373,10 @@ describe('DecoratedVisualFlow', () => {
     vi.clearAllMocks();
     mockGetNodes.mockReturnValue([]);
     mockGetEdges.mockReturnValue([]);
+    // Reset applyAutoLayout to return a resolved promise by default
+    mockApplyAutoLayout.mockResolvedValue([]);
+    // Reset fitView to return a resolved promise by default
+    mockFitView.mockResolvedValue(undefined);
   });
 
   describe('Rendering', () => {
@@ -522,8 +531,6 @@ describe('DecoratedVisualFlow', () => {
 
   describe('Auto Layout', () => {
     it('should handle auto layout trigger', async () => {
-      const applyAutoLayout = await import('../../../utils/applyAutoLayout');
-      const mockApplyAutoLayout = vi.mocked(applyAutoLayout.default);
       mockApplyAutoLayout.mockResolvedValue([{id: 'node-1', position: {x: 100, y: 100}, data: {}}]);
 
       render(<DecoratedVisualFlow {...defaultProps} />, {
@@ -604,9 +611,6 @@ describe('DecoratedVisualFlow', () => {
 
   describe('Auto Layout on Load', () => {
     it('should not trigger auto layout when triggerAutoLayoutOnLoad is false', () => {
-      const applyAutoLayout = vi.fn().mockResolvedValue([]);
-      vi.doMock('../../../utils/applyAutoLayout', () => ({default: applyAutoLayout}));
-
       render(<DecoratedVisualFlow {...defaultProps} triggerAutoLayoutOnLoad={false} />, {
         wrapper: createWrapper(),
       });
@@ -1435,8 +1439,6 @@ describe('DecoratedVisualFlow', () => {
 
   describe('Auto Layout Error Handling', () => {
     it('should handle auto layout failure gracefully', async () => {
-      const applyAutoLayout = await import('../../../utils/applyAutoLayout');
-      const mockApplyAutoLayout = vi.mocked(applyAutoLayout.default);
       mockApplyAutoLayout.mockRejectedValue(new Error('Layout failed'));
 
       mockGetNodes.mockReturnValue([
@@ -1455,8 +1457,6 @@ describe('DecoratedVisualFlow', () => {
     });
 
     it('should handle fitView failure gracefully', async () => {
-      const applyAutoLayout = await import('../../../utils/applyAutoLayout');
-      const mockApplyAutoLayout = vi.mocked(applyAutoLayout.default);
       mockApplyAutoLayout.mockResolvedValue([{id: 'node-1', position: {x: 100, y: 100}, data: {}}]);
       mockFitView.mockRejectedValue(new Error('FitView failed'));
 
