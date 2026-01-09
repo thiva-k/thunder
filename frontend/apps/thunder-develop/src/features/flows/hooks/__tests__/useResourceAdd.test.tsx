@@ -241,6 +241,202 @@ describe('useResourceAdd', () => {
 
       expect(mockSetNodes).toHaveBeenCalledWith(newNodes);
     });
+
+    it('should call updateNodeInternals for nodes, components and nested components via requestAnimationFrame', async () => {
+      vi.useFakeTimers();
+
+      const newNodes: Node[] = [
+        {
+          id: 'node-1',
+          type: 'VIEW',
+          position: {x: 0, y: 0},
+          data: {
+            components: [
+              {
+                id: 'component-1',
+                type: 'FORM',
+                components: [
+                  {id: 'nested-1', type: 'INPUT'},
+                ],
+              },
+            ],
+          },
+        },
+      ];
+
+      mockOnTemplateLoad.mockReturnValue([newNodes, []]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const template = {
+        id: 'template-1',
+        type: 'BASIC',
+        resourceType: ResourceTypes.Template,
+      } as Template;
+
+      act(() => {
+        result.current(template);
+      });
+
+      // Trigger the first requestAnimationFrame callback (updateAllNodeInternals)
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      // updateNodeInternals should be called for node, component, and nested component
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('node-1');
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('component-1');
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('nested-1');
+
+      vi.useRealTimers();
+    });
+
+    it('should call fitView after updating node internals', async () => {
+      vi.useFakeTimers();
+
+      const newNodes: Node[] = [
+        {id: 'node-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      ];
+
+      mockOnTemplateLoad.mockReturnValue([newNodes, []]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const template = {
+        id: 'template-1',
+        type: 'BASIC',
+        resourceType: ResourceTypes.Template,
+      } as Template;
+
+      act(() => {
+        result.current(template);
+      });
+
+      // Trigger both requestAnimationFrame callbacks
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      expect(mockFitView).toHaveBeenCalledWith({padding: 0.2, duration: 300});
+
+      vi.useRealTimers();
+    });
+
+    it('should handle fitView rejection gracefully', async () => {
+      vi.useFakeTimers();
+
+      mockFitView.mockRejectedValueOnce(new Error('fitView failed'));
+
+      const newNodes: Node[] = [
+        {id: 'node-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      ];
+
+      mockOnTemplateLoad.mockReturnValue([newNodes, []]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const template = {
+        id: 'template-1',
+        type: 'BASIC',
+        resourceType: ResourceTypes.Template,
+      } as Template;
+
+      // Should not throw
+      act(() => {
+        result.current(template);
+      });
+
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      expect(mockFitView).toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+
+    it('should handle nodes without components in updateAllNodeInternals', async () => {
+      vi.useFakeTimers();
+
+      const newNodes: Node[] = [
+        {id: 'node-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+        {id: 'node-2', type: 'VIEW', position: {x: 100, y: 0}, data: {components: []}},
+      ];
+
+      mockOnTemplateLoad.mockReturnValue([newNodes, []]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const template = {
+        id: 'template-1',
+        type: 'BASIC',
+        resourceType: ResourceTypes.Template,
+      } as Template;
+
+      act(() => {
+        result.current(template);
+      });
+
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      // Should only call updateNodeInternals for node ids, not for undefined components
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('node-1');
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('node-2');
+
+      vi.useRealTimers();
+    });
+
+    it('should handle components without nested components', async () => {
+      vi.useFakeTimers();
+
+      const newNodes: Node[] = [
+        {
+          id: 'node-1',
+          type: 'VIEW',
+          position: {x: 0, y: 0},
+          data: {
+            components: [
+              {id: 'component-1', type: 'BUTTON'}, // No nested components
+            ],
+          },
+        },
+      ];
+
+      mockOnTemplateLoad.mockReturnValue([newNodes, []]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const template = {
+        id: 'template-1',
+        type: 'BASIC',
+        resourceType: ResourceTypes.Template,
+      } as Template;
+
+      act(() => {
+        result.current(template);
+      });
+
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('node-1');
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('component-1');
+
+      vi.useRealTimers();
+    });
   });
 
   describe('Widget Handling', () => {
@@ -333,6 +529,90 @@ describe('useResourceAdd', () => {
       });
 
       expect(mockOnWidgetLoad).toHaveBeenCalled();
+    });
+
+    it('should call updateNodeInternals for widgets with nested components via requestAnimationFrame', async () => {
+      vi.useFakeTimers();
+
+      const newNodes: Node[] = [
+        {
+          id: 'view-1',
+          type: StepTypes.View,
+          position: {x: 0, y: 0},
+          data: {
+            components: [
+              {
+                id: 'form-1',
+                type: 'FORM',
+                components: [
+                  {id: 'input-1', type: 'INPUT'},
+                ],
+              },
+            ],
+          },
+        },
+      ];
+
+      mockGetNodes.mockReturnValue([]);
+      mockOnWidgetLoad.mockReturnValue([newNodes, [], null, null]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const widget = {
+        id: 'widget-1',
+        type: 'SIGNIN',
+        resourceType: ResourceTypes.Widget,
+      } as Widget;
+
+      act(() => {
+        result.current(widget);
+      });
+
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      // updateNodeInternals should be called for node, component, and nested component
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('view-1');
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('form-1');
+      expect(mockUpdateNodeInternals).toHaveBeenCalledWith('input-1');
+
+      vi.useRealTimers();
+    });
+
+    it('should call fitView after updating widget node internals', async () => {
+      vi.useFakeTimers();
+
+      const newNodes: Node[] = [
+        {id: 'view-1', type: StepTypes.View, position: {x: 0, y: 0}, data: {}},
+      ];
+
+      mockGetNodes.mockReturnValue([]);
+      mockOnWidgetLoad.mockReturnValue([newNodes, [], null, null]);
+
+      const {result} = renderHook(() => useResourceAdd(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const widget = {
+        id: 'widget-1',
+        type: 'SIGNIN',
+        resourceType: ResourceTypes.Widget,
+      } as Widget;
+
+      act(() => {
+        result.current(widget);
+      });
+
+      await act(async () => {
+        vi.runAllTimers();
+      });
+
+      expect(mockFitView).toHaveBeenCalledWith({padding: 0.2, duration: 300});
+
+      vi.useRealTimers();
     });
   });
 

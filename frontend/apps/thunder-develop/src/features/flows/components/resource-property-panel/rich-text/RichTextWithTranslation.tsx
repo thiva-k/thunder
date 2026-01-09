@@ -49,7 +49,11 @@ export interface RichTextWithTranslationProps {
   resource: Resource;
 }
 
-function TranslationRichText({onChange, value, disabled}: LanguageTextFieldProps): ReactElement {
+/**
+ * Rich text component used within I18nConfigurationCard for translation editing.
+ * Exported for testing purposes.
+ */
+export function TranslationRichText({onChange, value, disabled}: LanguageTextFieldProps): ReactElement {
   /**
    * Resource object to hold the rich text editor content.
    * Note: This is a partial mock object that contains the `label` property (new format)

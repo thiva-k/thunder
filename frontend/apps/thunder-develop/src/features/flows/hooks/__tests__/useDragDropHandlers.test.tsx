@@ -606,4 +606,496 @@ describe('useDragDropHandlers', () => {
       );
     });
   });
+
+  describe('addToView - Callback Execution', () => {
+    it('should execute updateNodeData callback to add element to components', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+      const targetData: DragTargetData = {
+        stepId: 'step-1',
+        droppedOn: createMockResource(),
+      };
+      const event = createMockDragEvent(100, 200);
+
+      act(() => {
+        result.current.addToView(
+          event as unknown as Parameters<typeof result.current.addToView>[0],
+          sourceData,
+          targetData,
+        );
+      });
+
+      expect(capturedCallback).not.toBeNull();
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [{id: 'existing-1', type: 'BUTTON'}],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      expect(callbackResult.components).toBeDefined();
+      expect(callbackResult.components.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('addToForm - Callback Execution', () => {
+    it('should execute updateNodeData callback to add element to form components', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const targetFormResource = createMockResource({id: 'form-1', type: 'FORM'});
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+      const targetData: DragTargetData = {
+        stepId: 'step-1',
+        droppedOn: targetFormResource,
+      };
+      const event = createMockDragEvent(100, 200);
+
+      act(() => {
+        result.current.addToForm(
+          event as unknown as Parameters<typeof result.current.addToForm>[0],
+          sourceData,
+          targetData,
+        );
+      });
+
+      expect(capturedCallback).not.toBeNull();
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {id: 'form-1', type: 'FORM', components: [{id: 'input-1', type: 'INPUT'}]},
+            {id: 'button-1', type: 'BUTTON'},
+          ],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      expect(callbackResult.components).toBeDefined();
+      expect(callbackResult.components.length).toBe(2);
+      // The form should have the new element added
+      const form = callbackResult.components.find((c: Element) => c.id === 'form-1') as Element & {
+        components?: Element[];
+      };
+      expect(form?.components?.length).toBeGreaterThan(1);
+    });
+
+    it('should handle node with no existing components', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const targetFormResource = createMockResource({id: 'form-1', type: 'FORM'});
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+      const targetData: DragTargetData = {
+        stepId: 'step-1',
+        droppedOn: targetFormResource,
+      };
+      const event = createMockDragEvent(100, 200);
+
+      act(() => {
+        result.current.addToForm(
+          event as unknown as Parameters<typeof result.current.addToForm>[0],
+          sourceData,
+          targetData,
+        );
+      });
+
+      // Execute the callback with a node that has no components
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {},
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      expect(callbackResult.components).toEqual([]);
+    });
+  });
+
+  describe('addToViewAtIndex - Callback Execution', () => {
+    it('should execute updateNodeData callback to insert element at target index', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToViewAtIndex(sourceData, 'step-1', 'element-2');
+      });
+
+      expect(capturedCallback).not.toBeNull();
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {id: 'element-1', type: 'BUTTON'},
+            {id: 'element-2', type: 'INPUT'},
+            {id: 'element-3', type: 'BUTTON'},
+          ],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      expect(callbackResult.components).toBeDefined();
+      // The new element should be inserted at index 1 (before element-2)
+      expect(callbackResult.components.length).toBe(4);
+    });
+
+    it('should append element when target index is not found', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToViewAtIndex(sourceData, 'step-1', 'non-existent-element');
+      });
+
+      // Execute the callback with a node where target element doesn't exist
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [{id: 'element-1', type: 'BUTTON'}],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      // Element should be appended at the end
+      expect(callbackResult.components.length).toBe(2);
+    });
+
+    it('should handle node with empty components array', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToViewAtIndex(sourceData, 'step-1', 'element-2');
+      });
+
+      // Execute the callback with a node that has no components
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {},
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      expect(callbackResult.components.length).toBe(1);
+    });
+
+    it('should handle widget drop at index with empty components', () => {
+      const mockTargetNode: Node = {
+        id: 'step-1',
+        position: {x: 0, y: 0},
+        data: {components: []},
+      };
+      mockGetNodes.mockReturnValue([mockTargetNode]);
+      mockGetEdges.mockReturnValue([]);
+      mockOnWidgetLoad.mockReturnValue([[{...mockTargetNode, data: {components: []}}], [], null, null]);
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const widgetResource: Resource = createMockResource({
+        resourceType: ResourceTypes.Widget,
+        type: 'IDENTIFIER_PASSWORD',
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: widgetResource,
+      };
+
+      act(() => {
+        result.current.addToViewAtIndex(sourceData, 'step-1', 'element-2');
+      });
+
+      expect(mockOnWidgetLoad).toHaveBeenCalled();
+      expect(mockSetNodes).toHaveBeenCalled();
+    });
+  });
+
+  describe('addToFormAtIndex - Callback Execution', () => {
+    it('should execute updateNodeData callback to insert element at target index in form', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToFormAtIndex(sourceData, 'step-1', 'form-1', 'input-2');
+      });
+
+      expect(capturedCallback).not.toBeNull();
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {
+              id: 'form-1',
+              type: 'FORM',
+              components: [
+                {id: 'input-1', type: 'INPUT'},
+                {id: 'input-2', type: 'INPUT'},
+                {id: 'input-3', type: 'INPUT'},
+              ],
+            },
+            {id: 'button-1', type: 'BUTTON'},
+          ],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      expect(callbackResult.components).toBeDefined();
+      expect(callbackResult.components.length).toBe(2);
+      // The form should have the new element inserted before input-2
+      const form = callbackResult.components.find((c: Element) => c.id === 'form-1') as Element & {
+        components?: Element[];
+      };
+      expect(form?.components?.length).toBe(4);
+    });
+
+    it('should append element when target index is not found in form', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToFormAtIndex(sourceData, 'step-1', 'form-1', 'non-existent');
+      });
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [{id: 'form-1', type: 'FORM', components: [{id: 'input-1', type: 'INPUT'}]}],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      const form = callbackResult.components.find((c: Element) => c.id === 'form-1') as Element & {
+        components?: Element[];
+      };
+      // Should append at the end
+      expect(form?.components?.length).toBe(2);
+    });
+
+    it('should handle form with no existing components', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToFormAtIndex(sourceData, 'step-1', 'form-1', 'input-2');
+      });
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {id: 'form-1', type: 'FORM'}, // Form without components
+          ],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      const form = callbackResult.components.find((c: Element) => c.id === 'form-1') as Element & {
+        components?: Element[];
+      };
+      expect(form?.components?.length).toBe(1);
+    });
+
+    it('should not modify components that do not match the form id', () => {
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation((_id: string, callback: (node: Node) => {components: Element[]}) => {
+        capturedCallback = callback;
+      });
+
+      const {result} = renderHook(() => useDragDropHandlers(defaultProps), {
+        wrapper: createWrapper(),
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: createMockResource({resourceType: ResourceTypes.Element, type: 'TEXT_INPUT'}),
+      };
+
+      act(() => {
+        result.current.addToFormAtIndex(sourceData, 'step-1', 'form-1', 'input-2');
+      });
+
+      const mockNode: Node = {
+        id: 'step-1',
+        type: 'VIEW',
+        position: {x: 0, y: 0},
+        data: {
+          components: [
+            {id: 'form-1', type: 'FORM', components: [{id: 'input-1', type: 'INPUT'}]},
+            {id: 'other-component', type: 'BUTTON', components: []},
+          ],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+      // The other-component should remain unchanged
+      const otherComponent = callbackResult.components.find((c: Element) => c.id === 'other-component') as Element & {
+        components?: Element[];
+      };
+      expect(otherComponent?.components?.length).toBe(0);
+    });
+  });
+
+  describe('addToViewAtIndex - Widget handling with metadata', () => {
+    it('should call autoAssignConnections when dropping widget at index with metadata', () => {
+      const mockAutoAssignConnections = vi.mocked(autoAssignConnections);
+
+      const propsWithMetadata: UseDragDropHandlersProps = {
+        ...defaultProps,
+        metadata: {
+          flowType: 'LOGIN',
+          supportedExecutors: [],
+          connectorConfigs: {
+            multiAttributeLoginEnabled: false,
+            accountVerificationEnabled: false,
+          },
+          attributeProfile: 'default',
+          attributeMetadata: [],
+          executorConnections: [{executorName: 'executor1', connections: ['step-2']}],
+        },
+      };
+
+      const mockTargetNode: Node = {
+        id: 'step-1',
+        position: {x: 0, y: 0},
+        data: {components: [{id: 'element-1'}, {id: 'element-2'}]},
+      };
+      mockGetNodes.mockReturnValue([mockTargetNode]);
+      mockGetEdges.mockReturnValue([]);
+      mockOnWidgetLoad.mockReturnValue([
+        [{...mockTargetNode, data: {components: [{id: 'element-1'}, {id: 'element-2'}, {id: 'widget-button'}]}}],
+        [],
+        null,
+        null,
+      ]);
+
+      const {result} = renderHook(() => useDragDropHandlers(propsWithMetadata), {
+        wrapper: createWrapper(),
+      });
+
+      const widgetResource: Resource = createMockResource({
+        resourceType: ResourceTypes.Widget,
+        type: 'IDENTIFIER_PASSWORD',
+      });
+
+      const sourceData: DragSourceData = {
+        dragged: widgetResource,
+      };
+
+      act(() => {
+        result.current.addToViewAtIndex(sourceData, 'step-1', 'element-2');
+      });
+
+      expect(mockAutoAssignConnections).toHaveBeenCalledWith(
+        expect.any(Array),
+        propsWithMetadata.metadata?.executorConnections,
+      );
+    });
+  });
 });

@@ -335,6 +335,88 @@ describe('useContainerDialogConfirm', () => {
       expect(mockHandleContainerDialogClose).toHaveBeenCalled();
     });
 
+    it('should execute updateNodeData callback correctly to add form to existing components', () => {
+      const inputResource = createMockResource({
+        type: 'TEXT_INPUT',
+        category: ElementCategories.Field,
+      });
+      const pendingDropRef = createPendingDropRef(100, 200, inputResource, 'existing-step-id');
+      const props = createDefaultProps('input-on-view', pendingDropRef);
+
+      // Capture the callback passed to updateNodeData
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation(
+        (_id: string, callback: (node: Node) => {components: Element[]}) => {
+          capturedCallback = callback;
+        },
+      );
+
+      const {result} = renderHook(() => useContainerDialogConfirm(props), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current();
+      });
+
+      expect(capturedCallback).not.toBeNull();
+
+      // Test the callback with a node that has existing components
+      const mockNode: Node = {
+        id: 'existing-step-id',
+        type: StepTypes.View,
+        position: {x: 0, y: 0},
+        data: {
+          components: [{id: 'existing-1', type: 'BUTTON'}],
+        },
+      };
+
+      const callbackResult = capturedCallback!(mockNode);
+
+      // Should add the new form to the existing components
+      expect(callbackResult.components).toHaveLength(2);
+      expect(callbackResult.components[0]).toEqual({id: 'existing-1', type: 'BUTTON'});
+      expect(callbackResult.components[1].type).toBe(BlockTypes.Form);
+    });
+
+    it('should handle updateNodeData callback with node having no existing components', () => {
+      const inputResource = createMockResource({
+        type: 'TEXT_INPUT',
+        category: ElementCategories.Field,
+      });
+      const pendingDropRef = createPendingDropRef(100, 200, inputResource, 'existing-step-id');
+      const props = createDefaultProps('input-on-view', pendingDropRef);
+
+      let capturedCallback: ((node: Node) => {components: Element[]}) | null = null;
+      mockUpdateNodeData.mockImplementation(
+        (_id: string, callback: (node: Node) => {components: Element[]}) => {
+          capturedCallback = callback;
+        },
+      );
+
+      const {result} = renderHook(() => useContainerDialogConfirm(props), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current();
+      });
+
+      // Test with a node that has no components (undefined)
+      const mockNodeNoComponents: Node = {
+        id: 'existing-step-id',
+        type: StepTypes.View,
+        position: {x: 0, y: 0},
+        data: {},
+      };
+
+      const callbackResult = capturedCallback!(mockNodeNoComponents);
+
+      // Should create components array with just the form
+      expect(callbackResult.components).toHaveLength(1);
+      expect(callbackResult.components[0].type).toBe(BlockTypes.Form);
+    });
+
     it('should not update node when target step id is missing', () => {
       const inputResource = createMockResource({
         type: 'TEXT_INPUT',
@@ -452,6 +534,41 @@ describe('useContainerDialogConfirm', () => {
       expect(mockOnResourceDropOnCanvas).toHaveBeenCalledWith(
         expect.objectContaining({type: 'IDENTIFIER_PASSWORD'}),
         expect.any(String),
+      );
+    });
+
+    it('should use defaultPropertySectorStepId from onWidgetLoad when available', () => {
+      const widgetResource = createMockResource({
+        resourceType: ResourceTypes.Widget,
+        type: 'IDENTIFIER_PASSWORD',
+      });
+      const defaultPropertySelector = createMockResource({type: 'PASSWORD_INPUT'});
+      const customStepId = 'custom-step-id-from-widget-load';
+
+      mockGetNodes.mockReturnValue([]);
+      mockGetEdges.mockReturnValue([]);
+      mockOnWidgetLoad.mockReturnValue([
+        [{id: 'node-1', position: {x: 0, y: 0}, data: {}}],
+        [],
+        defaultPropertySelector,
+        customStepId,
+      ]);
+
+      const pendingDropRef = createPendingDropRef(100, 200, widgetResource);
+      const props = createDefaultProps('widget-on-canvas', pendingDropRef);
+
+      const {result} = renderHook(() => useContainerDialogConfirm(props), {
+        wrapper: createWrapper(),
+      });
+
+      act(() => {
+        result.current();
+      });
+
+      // Should use the customStepId from onWidgetLoad, not generatedViewStep.id
+      expect(mockOnResourceDropOnCanvas).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'PASSWORD_INPUT'}),
+        customStepId,
       );
     });
   });

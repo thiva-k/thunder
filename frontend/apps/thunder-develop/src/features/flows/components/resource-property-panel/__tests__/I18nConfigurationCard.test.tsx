@@ -658,9 +658,15 @@ describe('I18nConfigurationCard', () => {
   describe('Custom Language TextField', () => {
     it('should render custom LanguageTextField when provided', async () => {
       const CustomTextField = vi.fn(
-        ({value, onChange, disabled}: {value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void; disabled?: boolean}) => (
-          <input data-testid="custom-language-text-field" value={value} onChange={onChange} disabled={disabled} />
-        ),
+        ({
+          value,
+          onChange,
+          disabled,
+        }: {
+          value: string;
+          onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+          disabled?: boolean;
+        }) => <input data-testid="custom-language-text-field" value={value} onChange={onChange} disabled={disabled} />,
       );
 
       render(
@@ -758,7 +764,7 @@ describe('I18nConfigurationCard', () => {
       const customKeyContext = createContextValue({
         isCustomI18nKey: vi.fn().mockImplementation((key: string) =>
           // Return true for custom keys (that can be deleted)
-           key.startsWith('login.')
+          key.startsWith('login.'),
         ),
       });
 
@@ -1229,7 +1235,7 @@ describe('I18nConfigurationCard', () => {
       expect(card).toBeInTheDocument();
     });
 
-    it('should adjust horizontal position when card would go off-screen left (line 205)', async () => {
+    it('should adjust horizontal position when card would go off-screen left', async () => {
       // Set anchor so that when card is positioned to the right, it would go off-screen
       // and when repositioned to the left, the left value would be negative
       anchorEl.getBoundingClientRect = vi.fn().mockReturnValue({
@@ -1345,7 +1351,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Simple View Autocomplete onChange (line 464)', () => {
+  describe('Simple View Autocomplete onChange', () => {
     it('should call onChange with empty string when selection is cleared', async () => {
       render(
         <I18nConfigurationCard
@@ -1363,7 +1369,7 @@ describe('I18nConfigurationCard', () => {
       const autocomplete = document.querySelector('.MuiAutocomplete-root');
       expect(autocomplete).toBeInTheDocument();
 
-      // The autocomplete onChange should handle null value (line 464)
+      // The autocomplete onChange should handle null value
       const clearButton = document.querySelector('.MuiAutocomplete-clearIndicator');
       if (clearButton) {
         fireEvent.click(clearButton);
@@ -1374,7 +1380,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Deleted I18n Keys Filtering (lines 292, 298)', () => {
+  describe('Deleted I18n Keys Filtering', () => {
     it('should filter out deleted keys from available options', async () => {
       const customKeyContext = createContextValue({
         isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
@@ -1410,7 +1416,7 @@ describe('I18nConfigurationCard', () => {
       expect(autocomplete).toBeInTheDocument();
     });
 
-    it('should return null for keys in deletedI18nKeys array (line 298)', async () => {
+    it('should return null for keys in deletedI18nKeys array', async () => {
       // This tests the mapping function that returns null for deleted keys
       const contextWithDeletedKeys = createContextValue({
         i18nText: {
@@ -1439,7 +1445,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('handleDeleteI18nKey Function (lines 317-397)', () => {
+  describe('handleDeleteI18nKey Function', () => {
     it('should add key to deletedI18nKeys when delete is triggered', async () => {
       const customKeyContext = createContextValue({
         isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
@@ -1511,7 +1517,7 @@ describe('I18nConfigurationCard', () => {
       });
     });
 
-    it('should handle deletion when primaryI18nScreen or selectedLanguage is undefined (line 320)', async () => {
+    it('should handle deletion when primaryI18nScreen or selectedLanguage is undefined', async () => {
       const contextWithNoScreen = createContextValue({
         primaryI18nScreen: undefined,
         language: undefined,
@@ -1535,7 +1541,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Customize View Autocomplete onChange (lines 555-561)', () => {
+  describe('Customize View Autocomplete onChange', () => {
     it('should set i18nKeyInputValue when option is selected', async () => {
       render(
         <I18nConfigurationCard
@@ -1562,7 +1568,7 @@ describe('I18nConfigurationCard', () => {
       expect(autocomplete).toBeInTheDocument();
     });
 
-    it('should set i18nKeyInputValue to null when selection is cleared (lines 560-561)', async () => {
+    it('should set i18nKeyInputValue to null when selection is cleared', async () => {
       render(
         <I18nConfigurationCard
           open
@@ -1591,7 +1597,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Render Option with Delete Button (lines 576-623)', () => {
+  describe('Render Option with Delete Button', () => {
     it('should render delete button for custom keys in primary screen', async () => {
       const customKeyContext = createContextValue({
         isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
@@ -1685,7 +1691,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Edit Button Setting i18nKeyInputValue to null (line 794)', () => {
+  describe('Edit Button Setting i18nKeyInputValue to null', () => {
     it('should set i18nKeyInputValue to null when no selectedI18nKey', async () => {
       render(
         <I18nConfigurationCard
@@ -1717,7 +1723,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('handleSaveCustomize with Deleted Keys (lines 393-396)', () => {
+  describe('handleSaveCustomize with Deleted Keys', () => {
     it('should call onChange with empty string when selected key was deleted', async () => {
       const customKeyContext = createContextValue({
         isCustomI18nKey: vi.fn().mockReturnValue(true),
@@ -1795,7 +1801,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Simple View Render Option (line 477)', () => {
+  describe('Simple View Render Option', () => {
     it('should render option with tooltip in simple view autocomplete', async () => {
       render(
         <I18nConfigurationCard
@@ -1884,7 +1890,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Language Selection onChange (lines 621-624)', () => {
+  describe('Language Selection onChange', () => {
     it('should call setSelectedLanguage when language is changed', async () => {
       render(
         <I18nConfigurationCard
@@ -1919,7 +1925,7 @@ describe('I18nConfigurationCard', () => {
       });
     });
 
-    it('should not call setSelectedLanguage when value is empty (line 622)', async () => {
+    it('should not call setSelectedLanguage when value is empty', async () => {
       render(
         <I18nConfigurationCard
           open
@@ -1945,7 +1951,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('Screen texts not found (line 292)', () => {
+  describe('Screen texts not found', () => {
     it('should handle empty screenTexts gracefully', async () => {
       const contextWithEmptyScreen = createContextValue({
         i18nText: {
@@ -1971,7 +1977,7 @@ describe('I18nConfigurationCard', () => {
     });
   });
 
-  describe('handleDeleteI18nKey with originalTexts (lines 333-353)', () => {
+  describe('handleDeleteI18nKey with originalTexts', () => {
     it('should handle deletion when key not in prevTexts but in originalTexts', async () => {
       const contextWithOriginalTexts = createContextValue({
         isCustomI18nKey: vi.fn().mockImplementation((_key: string, checkPrimary?: boolean) => {
@@ -2009,7 +2015,7 @@ describe('I18nConfigurationCard', () => {
       });
     });
 
-    it('should handle deletion when originalTexts is undefined (line 336)', async () => {
+    it('should handle deletion when originalTexts is undefined', async () => {
       const contextWithNoOriginalTexts = createContextValue({
         isCustomI18nKey: vi.fn().mockReturnValue(true),
         i18nText: undefined,
