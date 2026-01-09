@@ -86,12 +86,19 @@ packages:
       filename: "{{.InterfaceName}}_mock.go"
 
   github.com/asgardeo/thunder/internal/oauth/oauth2/authz:
-    config:
-      all: true
-      dir: tests/mocks/oauth/oauth2/authzmock
-      structname: '{{.InterfaceName}}Mock'
-      pkgname: authzmock
-      filename: "{{.InterfaceName}}_mock.go"
+    interfaces:
+      AuthorizeHandlerInterface:
+        config:
+          dir: tests/mocks/oauth/oauth2/authzmock
+          structname: '{{.InterfaceName}}Mock'
+          pkgname: authzmock
+          filename: "{{.InterfaceName}}_mock.go"
+      AuthorizeServiceInterface:
+        config:
+          dir: tests/mocks/oauth/oauth2/authzmock
+          structname: '{{.InterfaceName}}Mock'
+          pkgname: authzmock
+          filename: "{{.InterfaceName}}_mock.go"
 
   github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers:
     config:
