@@ -5,8 +5,32 @@ body:
   - type: textarea
     id: problem
     attributes:
-      label: Problem
-      description: What is the problem this feature will solve?
+      label: "What problem are we solving?"
+      description: "Be specific about the problem, not the solution."
+      placeholder: |
+        When [user type] wants to [goal], they [current limitation/problem], which causes [negative impact].
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: "Who are we solving this for?"
+      description: "Identify user personas and their goals."
+      placeholder: |
+        Primary: [Persona]
+        - Goal: [Goal]
+        - Pain: [Pain point]
+    validations:
+      required: true
+  - type: textarea
+    id: why_now
+    attributes:
+      label: "Why should we solve this now?"
+      description: "Provide justification for prioritization. Focus on value, not the solution."
+      placeholder: |
+        Why now:
+        - Value to Persona: [Value they get]
+        - Value to Org: [Revenue, Efficiency, etc.]
     validations:
       required: true
   - type: textarea
@@ -20,13 +44,6 @@ body:
     id: alternatives
     attributes:
       label: Alternatives
-      description: Describe any alternatives have you considered
-    validations:
-      required: false
-  - type: input
-    id: version
-    attributes:
-      label: Version
-      description: Enter product version or commit.
+      description: Describe any alternatives you have considered.
     validations:
       required: false
