@@ -49,34 +49,34 @@ var (
 			{
 				"id":   "attribute_collect",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_003",
-						"identifier": "firstName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_004",
-						"identifier": "lastName",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_005",
-						"identifier": "email",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_006",
-						"identifier": "mobileNumber",
-						"type":       "string",
-						"required":   false,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "AttributeCollector",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_003",
+							"identifier": "firstName",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_004",
+							"identifier": "lastName",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_005",
+							"identifier": "email",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_006",
+							"identifier": "mobileNumber",
+							"type":       "string",
+							"required":   false,
+						},
+					},
 				},
 				"onSuccess": "auth_assert",
 			},

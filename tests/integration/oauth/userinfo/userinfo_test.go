@@ -178,46 +178,48 @@ func (ts *UserInfoTestSuite) createTestAuthenticationFlow() string {
 			{
 				"id":   "prompt_credentials",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "PASSWORD_INPUT",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "basic_auth",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_001",
+								"identifier": "username",
+								"type":       "TEXT_INPUT",
+								"required":   true,
+							},
+							{
+								"ref":        "input_002",
+								"identifier": "password",
+								"type":       "PASSWORD_INPUT",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_001",
+							"nextNode": "basic_auth",
+						},
 					},
 				},
 			},
 			{
 				"id":   "basic_auth",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "string",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "BasicAuthExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_001",
+							"identifier": "username",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_002",
+							"identifier": "password",
+							"type":       "string",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "auth_assert",
 			},

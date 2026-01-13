@@ -11,18 +11,20 @@
         {
             "id": "prompt_mobile",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_001",
-                    "identifier": "mobileNumber",
-                    "type": "PHONE_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "send_sms"
+                    "inputs": [
+                        {
+                            "ref": "input_001",
+                            "identifier": "mobileNumber",
+                            "type": "PHONE_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "send_sms"
+                    }
                 }
             ]
         },
@@ -41,18 +43,20 @@
         {
             "id": "prompt_otp",
             "type": "PROMPT",
-            "inputs": [
+            "prompts": [
                 {
-                    "ref": "input_002",
-                    "identifier": "otp",
-                    "type": "OTP_INPUT",
-                    "required": true
-                }
-            ],
-            "actions": [
-                {
-                    "ref": "action_001",
-                    "nextNode": "verify_sms"
+                    "inputs": [
+                        {
+                            "ref": "input_002",
+                            "identifier": "otp",
+                            "type": "OTP_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "verify_sms"
+                    }
                 }
             ]
         },

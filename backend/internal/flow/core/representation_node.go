@@ -47,7 +47,6 @@ func newRepresentationNode(id string, nodeType common.NodeType, properties map[s
 			isFinalNode:      isFinalNode,
 			nextNodeList:     []string{},
 			previousNodeList: []string{},
-			inputs:           []common.Input{},
 		},
 		onSuccess: "",
 	}

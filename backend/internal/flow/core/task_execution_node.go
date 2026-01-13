@@ -32,6 +32,7 @@ type taskExecutionNode struct {
 	executorName string
 	executor     ExecutorInterface
 	mode         string
+	inputs       []common.Input
 	onSuccess    string
 	onFailure    string
 }
@@ -51,10 +52,10 @@ func newTaskExecutionNode(id string, properties map[string]interface{}, isStartN
 			isFinalNode:      isFinalNode,
 			nextNodeList:     []string{},
 			previousNodeList: []string{},
-			inputs:           []common.Input{},
 		},
 		executorName: "",
 		executor:     nil,
+		inputs:       []common.Input{},
 	}
 }
 
@@ -222,4 +223,14 @@ func (n *taskExecutionNode) GetMode() string {
 // SetMode sets the mode for the executor that supports multi-step execution
 func (n *taskExecutionNode) SetMode(mode string) {
 	n.mode = mode
+}
+
+// GetInputs returns the inputs required for the task execution node
+func (n *taskExecutionNode) GetInputs() []common.Input {
+	return n.inputs
+}
+
+// SetInputs sets the inputs required for the task execution node
+func (n *taskExecutionNode) SetInputs(inputs []common.Input) {
+	n.inputs = inputs
 }

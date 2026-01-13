@@ -37,6 +37,12 @@ type Action struct {
 	NextNode string `json:"nextNode,omitempty"`
 }
 
+// Prompt groups inputs with an action for prompt nodes.
+type Prompt struct {
+	Inputs []Input `json:"inputs,omitempty"`
+	Action *Action `json:"action,omitempty"`
+}
+
 // NodeResponse represents the response from a node execution
 type NodeResponse struct {
 	Status            NodeStatus                `json:"status"`

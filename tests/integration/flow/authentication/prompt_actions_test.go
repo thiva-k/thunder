@@ -46,70 +46,76 @@ var (
 			{
 				"id":   "choose_auth",
 				"type": "PROMPT",
-				"actions": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":      "basic_auth",
-						"nextNode": "basic_auth",
+						"action": map[string]interface{}{
+							"ref":      "basic_auth",
+							"nextNode": "basic_auth",
+						},
 					},
 					{
-						"ref":      "prompt_mobile",
-						"nextNode": "prompt_mobile",
+						"action": map[string]interface{}{
+							"ref":      "prompt_mobile",
+							"nextNode": "prompt_mobile",
+						},
 					},
 				},
 			},
 			{
 				"id":   "basic_auth",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "string",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "string",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "BasicAuthExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_001",
+							"identifier": "username",
+							"type":       "string",
+							"required":   true,
+						},
+						{
+							"ref":        "input_002",
+							"identifier": "password",
+							"type":       "string",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "attr_collector",
 			},
 			{
 				"id":   "attr_collector",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_003",
-						"identifier": "mobileNumber",
-						"type":       "string",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "AttributeCollector",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_003",
+							"identifier": "mobileNumber",
+							"type":       "string",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "sms_otp_send",
 			},
 			{
 				"id":   "prompt_mobile",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_004",
-						"identifier": "mobileNumber",
-						"type":       "string",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_mobile",
-						"nextNode": "sms_otp_send",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_004",
+								"identifier": "mobileNumber",
+								"type":       "string",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_mobile",
+							"nextNode": "sms_otp_send",
+						},
 					},
 				},
 			},
@@ -128,18 +134,20 @@ var (
 			{
 				"id":   "prompt_otp",
 				"type": "PROMPT",
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_005",
-						"identifier": "otp",
-						"type":       "number",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_otp",
-						"nextNode": "sms_otp_verify",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_005",
+								"identifier": "otp",
+								"type":       "number",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_otp",
+							"nextNode": "sms_otp_verify",
+						},
 					},
 				},
 			},

@@ -155,9 +155,9 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithAuthAssert
 			{
 				ID:   "decision",
 				Type: "DECISION",
-				Actions: []ActionDefinition{
-					{Ref: "path1", NextNode: "auth1"},
-					{Ref: "path2", NextNode: "auth2"},
+				Prompts: []PromptDefinition{
+					{Action: &ActionDefinition{Ref: "path1", NextNode: "auth1"}},
+					{Action: &ActionDefinition{Ref: "path2", NextNode: "auth2"}},
 				},
 			},
 			{
@@ -336,9 +336,9 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithActions() 
 			{
 				ID:   "prompt",
 				Type: "PROMPT",
-				Actions: []ActionDefinition{
-					{Ref: "login", NextNode: "end"},
-					{Ref: "signup", NextNode: "end"},
+				Prompts: []PromptDefinition{
+					{Action: &ActionDefinition{Ref: "login", NextNode: "end"}},
+					{Action: &ActionDefinition{Ref: "signup", NextNode: "end"}},
 				},
 			},
 			{ID: "end", Type: "END"},
@@ -349,10 +349,10 @@ func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithActions() 
 
 	s.NoError(err)
 	promptNode := s.getNode(regFlow.Nodes, "prompt")
-	s.Len(promptNode.Actions, 2)
+	s.Len(promptNode.Prompts, 2)
 	// Actions should now point to provisioning node instead of end (since no AuthAssert exists)
-	s.Equal(provisioningNodeID, promptNode.Actions[0].NextNode)
-	s.Equal(provisioningNodeID, promptNode.Actions[1].NextNode)
+	s.Equal(provisioningNodeID, promptNode.Prompts[0].Action.NextNode)
+	s.Equal(provisioningNodeID, promptNode.Prompts[1].Action.NextNode)
 }
 
 func (s *FlowInferenceServiceTestSuite) TestInferRegistrationFlow_WithOnFailure() {
@@ -907,9 +907,9 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_WithActions() {
 		{
 			ID:   "prompt",
 			Type: "PROMPT",
-			Actions: []ActionDefinition{
-				{Ref: "action1", NextNode: "end"},
-				{Ref: "action2", NextNode: "task"},
+			Prompts: []PromptDefinition{
+				{Action: &ActionDefinition{Ref: "action1", NextNode: "end"}},
+				{Action: &ActionDefinition{Ref: "action2", NextNode: "task"}},
 			},
 		},
 		{ID: "task", Type: "TASK_EXECUTION"},
@@ -920,8 +920,8 @@ func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_WithActions() {
 	err := service.insertNodeBefore(&nodes, newNode, "end")
 
 	s.NoError(err)
-	s.Equal("new", nodes[1].Actions[0].NextNode)
-	s.Equal("task", nodes[1].Actions[1].NextNode) // unchanged
+	s.Equal("new", nodes[1].Prompts[0].Action.NextNode)
+	s.Equal("task", nodes[1].Prompts[1].Action.NextNode) // unchanged
 }
 
 func (s *FlowInferenceServiceTestSuite) TestInsertNodeBefore_NoNodesPointingToTarget() {

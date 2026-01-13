@@ -188,11 +188,11 @@ func (s *FlowFactoryTestSuite) TestCreateExecutor() {
 func (s *FlowFactoryTestSuite) TestCloneNodeSuccess() {
 	node, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
 		map[string]interface{}{"key": "value"}, true, false)
-	node.SetInputs([]common.Input{{Identifier: "input1", Required: true}})
 	node.AddNextNode("next-1")
 	node.AddPreviousNode("prev-1")
 	if execNode, ok := node.(ExecutorBackedNodeInterface); ok {
 		execNode.SetExecutorName("test-executor")
+		execNode.SetInputs([]common.Input{{Identifier: "input1", Required: true}})
 	}
 
 	clonedNode, err := s.factory.CloneNode(node)
@@ -205,11 +205,11 @@ func (s *FlowFactoryTestSuite) TestCloneNodeSuccess() {
 	s.Equal(node.IsFinalNode(), clonedNode.IsFinalNode())
 	s.Equal(node.GetNextNodeList(), clonedNode.GetNextNodeList())
 	s.Equal(node.GetPreviousNodeList(), clonedNode.GetPreviousNodeList())
-	s.Len(clonedNode.GetInputs(), len(node.GetInputs()))
 
 	if sourceExecNode, ok := node.(ExecutorBackedNodeInterface); ok {
 		if clonedExecNode, ok := clonedNode.(ExecutorBackedNodeInterface); ok {
 			s.Equal(sourceExecNode.GetExecutorName(), clonedExecNode.GetExecutorName())
+			s.Len(clonedExecNode.GetInputs(), len(sourceExecNode.GetInputs()))
 		}
 	}
 

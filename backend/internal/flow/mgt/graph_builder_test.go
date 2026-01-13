@@ -22,6 +22,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/asgardeo/thunder/internal/flow/common"
@@ -137,8 +138,6 @@ func (s *GraphBuilderTestSuite) TestGetGraph_BuildAndCache() {
 		mockEndNode, nil)
 
 	mockStartNode.EXPECT().SetOnSuccess("end")
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
-	mockEndNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockEndNode).Return(nil)
@@ -209,8 +208,6 @@ func (s *GraphBuilderTestSuite) TestGetGraph_CacheSetError() {
 		"start", "START", map[string]interface{}(nil), false, true).Return(
 		mockStartNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
-
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().GetNodes().Return(map[string]core.NodeInterface{"start": mockStartNode})
 	mockStartNode.EXPECT().GetType().Return(common.NodeTypeStart)
@@ -279,11 +276,9 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithExecutor() {
 		"task", "TASK_EXECUTION", map[string]interface{}(nil), false, true).Return(
 		mockTaskNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
-	mockTaskNode.EXPECT().SetInputs([]common.Input{})
-
 	s.mockExecutorRegistry.EXPECT().IsRegistered("test-executor").Return(true)
 	mockTaskNode.EXPECT().SetExecutorName("test-executor")
+	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockTaskNode).Return(nil)
@@ -326,7 +321,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_ExecutorNotRegistered() {
 	s.mockFlowFactory.EXPECT().CreateNode(
 		"task", "TASK_EXECUTION", map[string]interface{}(nil), false, true).Return(
 		mockTaskNode, nil)
-
 	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 
 	s.mockExecutorRegistry.EXPECT().IsRegistered("unknown-executor").Return(false)
@@ -381,12 +375,9 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithOnFailure() {
 		mockEndNode, nil)
 
 	mockStartNode.EXPECT().SetOnSuccess("task")
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 	mockTaskNode.EXPECT().SetOnSuccess("end")
-	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 	mockTaskNode.EXPECT().SetOnFailure("error-prompt")
-	mockPromptNode.EXPECT().SetInputs([]common.Input{})
-	mockEndNode.EXPECT().SetInputs([]common.Input{})
+	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 
 	s.mockExecutorRegistry.EXPECT().IsRegistered("test-executor").Return(true)
 	mockTaskNode.EXPECT().SetExecutorName("test-executor")
@@ -496,9 +487,11 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithInputs() {
 			{
 				ID:   "task",
 				Type: "TASK_EXECUTION",
-				Inputs: []InputDefinition{
-					{Ref: "username", Type: "string", Identifier: "user", Required: true},
-					{Ref: "password", Type: "string", Identifier: "pass", Required: true},
+				Executor: &ExecutorDefinition{
+					Inputs: []InputDefinition{
+						{Ref: "username", Type: "string", Identifier: "user", Required: true},
+						{Ref: "password", Type: "string", Identifier: "pass", Required: true},
+					},
 				},
 			},
 		},
@@ -518,7 +511,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithInputs() {
 		"task", "TASK_EXECUTION", map[string]interface{}(nil), false, true).Return(
 		mockTaskNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 	mockStartNode.EXPECT().SetOnSuccess("task")
 	mockTaskNode.EXPECT().SetInputs([]common.Input{
 		{Ref: "username", Type: "string", Identifier: "user", Required: true},
@@ -553,9 +545,9 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithActions() {
 			{
 				ID:   "prompt",
 				Type: "PROMPT",
-				Actions: []ActionDefinition{
-					{Ref: "login", NextNode: "task1"},
-					{Ref: "signup", NextNode: "task2"},
+				Prompts: []PromptDefinition{
+					{Action: &ActionDefinition{Ref: "login", NextNode: "task1"}},
+					{Action: &ActionDefinition{Ref: "signup", NextNode: "task2"}},
 				},
 			},
 			{ID: "task1", Type: "TASK_EXECUTION"},
@@ -585,13 +577,20 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithActions() {
 		"task2", "TASK_EXECUTION", map[string]interface{}(nil), false, true).Return(
 		mockTask2Node, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 	mockStartNode.EXPECT().SetOnSuccess("prompt")
-	mockPromptNode.EXPECT().SetInputs([]common.Input{})
-	mockPromptNode.EXPECT().SetActions([]common.Action{
-		{Ref: "login", NextNode: "task1"},
-		{Ref: "signup", NextNode: "task2"},
-	})
+
+	mockPromptNode.EXPECT().SetPrompts(mock.MatchedBy(func(prompts []common.Prompt) bool {
+		if len(prompts) != 2 {
+			return false
+		}
+		if prompts[0].Action.Ref != "login" || prompts[0].Action.NextNode != "task1" {
+			return false
+		}
+		if prompts[1].Action.Ref != "signup" || prompts[1].Action.NextNode != "task2" {
+			return false
+		}
+		return true
+	}))
 	mockTask1Node.EXPECT().SetInputs([]common.Input{})
 	mockTask2Node.EXPECT().SetInputs([]common.Input{})
 
@@ -649,9 +648,8 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithMeta() {
 		"prompt", "PROMPT", map[string]interface{}(nil), false, true).Return(
 		mockPromptNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 	mockStartNode.EXPECT().SetOnSuccess("prompt")
-	mockPromptNode.EXPECT().SetInputs([]common.Input{})
+
 	mockPromptNode.EXPECT().SetMeta(map[string]interface{}{
 		"title": "Login", "description": "Enter credentials"})
 
@@ -711,7 +709,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithCondition() {
 		"end", "END", map[string]interface{}(nil), false, true).Return(
 		mockEndNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 	mockStartNode.EXPECT().SetOnSuccess("task")
 	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 	mockTaskNode.EXPECT().SetCondition(&core.NodeCondition{
@@ -719,7 +716,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithCondition() {
 		Value:  "premium",
 		OnSkip: "end",
 	})
-	mockEndNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockTaskNode).Return(nil)
@@ -767,9 +763,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_NoStartNode() {
 		"end", "END", map[string]interface{}(nil), false, true).Return(
 		mockEndNode, nil)
 
-	mockTaskNode.EXPECT().SetInputs([]common.Input{})
-	mockEndNode.EXPECT().SetInputs([]common.Input{})
-
 	mockGraph.EXPECT().AddNode(mockTaskNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockEndNode).Return(nil)
 	mockGraph.EXPECT().GetNodes().Return(
@@ -804,8 +797,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_AddNodeError() {
 	s.mockFlowFactory.EXPECT().CreateNode(
 		"start", "START", map[string]interface{}(nil), false, true).Return(
 		mockStartNode, nil)
-
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(errors.New("duplicate node"))
 
@@ -842,9 +833,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_AddEdgeError() {
 		"end", "END", map[string]interface{}(nil), false, true).Return(
 		mockEndNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
-	mockEndNode.EXPECT().SetInputs([]common.Input{})
-
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockEndNode).Return(nil)
 	mockGraph.EXPECT().AddEdge("start", "end").Return(errors.New("edge creation error"))
@@ -876,8 +864,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_SetStartNodeError() {
 	s.mockFlowFactory.EXPECT().CreateNode(
 		"start", "START", map[string]interface{}(nil), false, true).Return(
 		mockStartNode, nil)
-
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().GetNodes().Return(map[string]core.NodeInterface{"start": mockStartNode})
@@ -924,8 +910,6 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithProperties() {
 		mockTaskNode, nil)
 
 	mockStartNode.EXPECT().SetOnSuccess("task")
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
-	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockTaskNode).Return(nil)
@@ -998,12 +982,10 @@ func (s *GraphBuilderTestSuite) TestBuildGraph_WithExecutorMode() {
 		"task", "TASK_EXECUTION", map[string]interface{}(nil), false, true).Return(
 		mockTaskNode, nil)
 
-	mockStartNode.EXPECT().SetInputs([]common.Input{})
-	mockTaskNode.EXPECT().SetInputs([]common.Input{})
-
 	s.mockExecutorRegistry.EXPECT().IsRegistered("SMSOTPAuthExecutor").Return(true)
 	mockTaskNode.EXPECT().SetExecutorName("SMSOTPAuthExecutor")
 	mockTaskNode.EXPECT().SetMode("send") // Verify mode is set
+	mockTaskNode.EXPECT().SetInputs([]common.Input{})
 
 	mockGraph.EXPECT().AddNode(mockStartNode).Return(nil)
 	mockGraph.EXPECT().AddNode(mockTaskNode).Return(nil)
@@ -1066,13 +1048,9 @@ func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_NodeDoesNotSupportExec
 	// Use a regular NodeInterface that doesn't support executors
 	mockPromptNode := coremock.NewNodeInterfaceMock(s.T())
 
-	s.mockExecutorRegistry.EXPECT().IsRegistered("test-executor").Return(true)
-
+	// Should silently skip executor configuration for non-executor nodes
 	err := s.builder.configureNodeExecutor(nodeDef, mockPromptNode)
-
-	s.NotNil(err)
-	s.Contains(err.Error(), "does not support executors")
-	s.Contains(err.Error(), "prompt")
+	s.Nil(err)
 }
 
 func (s *GraphBuilderTestSuite) TestConfigureNodeExecutor_ExecutorNameValidationFails() {

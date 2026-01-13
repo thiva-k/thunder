@@ -76,24 +76,26 @@ var (
 						},
 					},
 				},
-				"inputs": []map[string]interface{}{
+				"prompts": []map[string]interface{}{
 					{
-						"ref":        "input_001",
-						"identifier": "username",
-						"type":       "TEXT_INPUT",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"identifier": "password",
-						"type":       "PASSWORD_INPUT",
-						"required":   true,
-					},
-				},
-				"actions": []map[string]interface{}{
-					{
-						"ref":      "action_001",
-						"nextNode": "basic_auth",
+						"inputs": []map[string]interface{}{
+							{
+								"ref":        "input_001",
+								"identifier": "username",
+								"type":       "TEXT_INPUT",
+								"required":   true,
+							},
+							{
+								"ref":        "input_002",
+								"identifier": "password",
+								"type":       "PASSWORD_INPUT",
+								"required":   true,
+							},
+						},
+						"action": map[string]interface{}{
+							"ref":      "action_001",
+							"nextNode": "basic_auth",
+						},
 					},
 				},
 			},
@@ -133,22 +135,22 @@ var (
 			{
 				"id":   "basic_auth",
 				"type": "TASK_EXECUTION",
-				"inputs": []map[string]interface{}{
-					{
-						"ref":        "input_001",
-						"type":       "TEXT_INPUT",
-						"identifier": "username",
-						"required":   true,
-					},
-					{
-						"ref":        "input_002",
-						"type":       "PASSWORD_INPUT",
-						"identifier": "password",
-						"required":   true,
-					},
-				},
 				"executor": map[string]interface{}{
 					"name": "BasicAuthExecutor",
+					"inputs": []map[string]interface{}{
+						{
+							"ref":        "input_001",
+							"type":       "TEXT_INPUT",
+							"identifier": "username",
+							"required":   true,
+						},
+						{
+							"ref":        "input_002",
+							"type":       "PASSWORD_INPUT",
+							"identifier": "password",
+							"required":   true,
+						},
+					},
 				},
 				"onSuccess": "auth_assert",
 			},

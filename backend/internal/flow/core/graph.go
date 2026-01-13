@@ -242,19 +242,19 @@ func (g *graph) ToJSON() (string, error) {
 			PreviousNodeIDList: node.GetPreviousNodeList(),
 		}
 
-		// Set executor name if the node is executor-backed
+		// Set executor name and inputs if the node is executor-backed
 		if executableNode, ok := node.(ExecutorBackedNodeInterface); ok {
 			executorName := executableNode.GetExecutorName()
 			if executorName != "" {
 				jsonNode.Executor = executorName
 			}
-		}
 
-		inputs := node.GetInputs()
-		if len(inputs) > 0 {
-			jsonNode.Inputs = make([]JSONInputs, len(inputs))
-			for i, input := range inputs {
-				jsonNode.Inputs[i] = JSONInputs(input)
+			inputs := executableNode.GetInputs()
+			if len(inputs) > 0 {
+				jsonNode.Inputs = make([]JSONInputs, len(inputs))
+				for i, input := range inputs {
+					jsonNode.Inputs[i] = JSONInputs(input)
+				}
 			}
 		}
 

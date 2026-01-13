@@ -29,8 +29,9 @@ const promptNodeLoggerComponentName = "PromptNode"
 // promptNode represents a node that prompts for user input/ action in the flow execution.
 type promptNode struct {
 	*node
-	actions []common.Action
+	prompts []common.Prompt
 	meta    interface{}
+	logger  *log.Logger
 }
 
 // newPromptNode creates a new instance of PromptNode with the given details.
@@ -45,17 +46,16 @@ func newPromptNode(id string, properties map[string]interface{},
 			isFinalNode:      isFinalNode,
 			nextNodeList:     []string{},
 			previousNodeList: []string{},
-			inputs:           []common.Input{},
 		},
-		actions: []common.Action{},
+		prompts: []common.Prompt{},
+		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, promptNodeLoggerComponentName),
+			log.String(log.LoggerKeyNodeID, id)),
 	}
 }
 
 // Execute executes the prompt node logic based on the current context.
 func (n *promptNode) Execute(ctx *NodeContext) (*common.NodeResponse, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, promptNodeLoggerComponentName),
-		log.String(log.LoggerKeyNodeID, n.GetID()),
-		log.String(log.LoggerKeyFlowID, ctx.FlowID))
+	logger := n.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing prompt node")
 
 	nodeResp := &common.NodeResponse{
@@ -112,16 +112,6 @@ func (n *promptNode) Execute(ctx *NodeContext) (*common.NodeResponse, *serviceer
 	return nodeResp, nil
 }
 
-// GetActions returns the actions available for the prompt node
-func (n *promptNode) GetActions() []common.Action {
-	return n.actions
-}
-
-// SetActions sets the actions available for the prompt node
-func (n *promptNode) SetActions(actions []common.Action) {
-	n.actions = actions
-}
-
 // GetMeta returns the meta object for the prompt node
 func (n *promptNode) GetMeta() interface{} {
 	return n.meta
@@ -132,25 +122,46 @@ func (n *promptNode) SetMeta(meta interface{}) {
 	n.meta = meta
 }
 
+// GetPrompts returns the prompts for the prompt node
+func (n *promptNode) GetPrompts() []common.Prompt {
+	return n.prompts
+}
+
+// SetPrompts sets the prompts for the prompt node
+func (n *promptNode) SetPrompts(prompts []common.Prompt) {
+	n.prompts = prompts
+}
+
 // hasRequiredInputs checks if all required inputs are available in the context. Adds missing
-// inputs to the node response.
-// Returns true if all required inputs are available, otherwise false.
+// inputs to the node response. Returns true if all required inputs are available, otherwise false.
 func (n *promptNode) hasRequiredInputs(ctx *NodeContext, nodeResp *common.NodeResponse) bool {
-	requiredInputs := n.GetInputs()
-	if len(requiredInputs) == 0 {
-		return true
-	}
+	logger := n.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	if nodeResp.Inputs == nil {
 		nodeResp.Inputs = make([]common.Input, 0)
 	}
 
-	if len(ctx.UserInputs) == 0 {
-		nodeResp.Inputs = append(nodeResp.Inputs, requiredInputs...)
-		return false
+	// Check if an action is selected
+	if ctx.CurrentAction != "" {
+		// If the selected action matches a prompt, validate inputs for that prompt only
+		for _, prompt := range n.prompts {
+			if prompt.Action != nil && prompt.Action.Ref == ctx.CurrentAction {
+				return !n.appendMissingInputs(ctx, nodeResp, prompt.Inputs)
+			}
+		}
+		logger.Debug("Selected action not found in prompts, treating as no action selected",
+			log.String("action", ctx.CurrentAction))
+	} else {
+		logger.Debug("No action selected, checking inputs from all prompts")
 	}
 
-	return !n.appendMissingInputs(ctx, nodeResp, requiredInputs)
+	// If no action selected or action not found, validate inputs from all prompts
+	allInputs := make([]common.Input, 0)
+	for _, prompt := range n.prompts {
+		allInputs = append(allInputs, prompt.Inputs...)
+	}
+
+	return !n.appendMissingInputs(ctx, nodeResp, allInputs)
 }
 
 // appendMissingInputs appends the missing required inputs to the node response.
@@ -176,28 +187,43 @@ func (n *promptNode) appendMissingInputs(ctx *NodeContext, nodeResp *common.Node
 	return requireInputs
 }
 
-// hasSelectedAction checks if an action has been selected when actions are defined. Adds actions
+// hasSelectedAction checks if a valid action has been selected when actions are defined. Adds actions
 // to the response if they haven't been selected yet.
 // Returns true if an action is already selected or no actions are defined, otherwise false.
 func (n *promptNode) hasSelectedAction(ctx *NodeContext, nodeResp *common.NodeResponse) bool {
-	actions := n.GetActions()
+	actions := n.getAllActions()
 	if len(actions) == 0 {
 		return true
 	}
 
-	// Returns true if an action is already selected
+	// Check if a valid action is selected
 	if ctx.CurrentAction != "" {
-		return true
+		for _, action := range actions {
+			if action.Ref == ctx.CurrentAction {
+				return true
+			}
+		}
 	}
 
-	// If not yet selected, add actions to response
+	// If no action selected or invalid action, add actions to response
 	nodeResp.Actions = append(nodeResp.Actions, actions...)
 	return false
 }
 
-// getNextNodeForActionRef finds the next node for the given action reference
+// getAllActions returns all actions from prompts.
+func (n *promptNode) getAllActions() []common.Action {
+	actions := make([]common.Action, 0)
+	for _, prompt := range n.prompts {
+		if prompt.Action != nil {
+			actions = append(actions, *prompt.Action)
+		}
+	}
+	return actions
+}
+
+// getNextNodeForActionRef finds the next node for the given action reference.
 func (n *promptNode) getNextNodeForActionRef(actionRef string, logger *log.Logger) string {
-	actions := n.GetActions()
+	actions := n.getAllActions()
 	for i := range actions {
 		if actions[i].Ref == actionRef {
 			logger.Debug("Action selected successfully", log.String("actionRef", actions[i].Ref),

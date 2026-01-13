@@ -272,52 +272,6 @@ func (_c *NodeInterfaceMock_GetID_Call) RunAndReturn(run func() string) *NodeInt
 	return _c
 }
 
-// GetInputs provides a mock function for the type NodeInterfaceMock
-func (_mock *NodeInterfaceMock) GetInputs() []common.Input {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetInputs")
-	}
-
-	var r0 []common.Input
-	if returnFunc, ok := ret.Get(0).(func() []common.Input); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]common.Input)
-		}
-	}
-	return r0
-}
-
-// NodeInterfaceMock_GetInputs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetInputs'
-type NodeInterfaceMock_GetInputs_Call struct {
-	*mock.Call
-}
-
-// GetInputs is a helper method to define mock.On call
-func (_e *NodeInterfaceMock_Expecter) GetInputs() *NodeInterfaceMock_GetInputs_Call {
-	return &NodeInterfaceMock_GetInputs_Call{Call: _e.mock.On("GetInputs")}
-}
-
-func (_c *NodeInterfaceMock_GetInputs_Call) Run(run func()) *NodeInterfaceMock_GetInputs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *NodeInterfaceMock_GetInputs_Call) Return(inputs []common.Input) *NodeInterfaceMock_GetInputs_Call {
-	_c.Call.Return(inputs)
-	return _c
-}
-
-func (_c *NodeInterfaceMock_GetInputs_Call) RunAndReturn(run func() []common.Input) *NodeInterfaceMock_GetInputs_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // GetNextNodeList provides a mock function for the type NodeInterfaceMock
 func (_mock *NodeInterfaceMock) GetNextNodeList() []string {
 	ret := _mock.Called()
@@ -770,46 +724,6 @@ func (_c *NodeInterfaceMock_SetCondition_Call) Return() *NodeInterfaceMock_SetCo
 }
 
 func (_c *NodeInterfaceMock_SetCondition_Call) RunAndReturn(run func(condition *core.NodeCondition)) *NodeInterfaceMock_SetCondition_Call {
-	_c.Run(run)
-	return _c
-}
-
-// SetInputs provides a mock function for the type NodeInterfaceMock
-func (_mock *NodeInterfaceMock) SetInputs(inputs []common.Input) {
-	_mock.Called(inputs)
-	return
-}
-
-// NodeInterfaceMock_SetInputs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetInputs'
-type NodeInterfaceMock_SetInputs_Call struct {
-	*mock.Call
-}
-
-// SetInputs is a helper method to define mock.On call
-//   - inputs []common.Input
-func (_e *NodeInterfaceMock_Expecter) SetInputs(inputs interface{}) *NodeInterfaceMock_SetInputs_Call {
-	return &NodeInterfaceMock_SetInputs_Call{Call: _e.mock.On("SetInputs", inputs)}
-}
-
-func (_c *NodeInterfaceMock_SetInputs_Call) Run(run func(inputs []common.Input)) *NodeInterfaceMock_SetInputs_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 []common.Input
-		if args[0] != nil {
-			arg0 = args[0].([]common.Input)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *NodeInterfaceMock_SetInputs_Call) Return() *NodeInterfaceMock_SetInputs_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *NodeInterfaceMock_SetInputs_Call) RunAndReturn(run func(inputs []common.Input)) *NodeInterfaceMock_SetInputs_Call {
 	_c.Run(run)
 	return _c
 }

@@ -297,10 +297,10 @@ func (s *flowInferenceService) insertNodeBefore(nodes *[]NodeDefinition,
 			modified = true
 		}
 
-		// Update actions that point to target
-		for j := range node.Actions {
-			if node.Actions[j].NextNode == targetNodeID {
-				node.Actions[j].NextNode = newNode.ID
+		// Update prompts that have actions pointing to target
+		for j := range node.Prompts {
+			if node.Prompts[j].Action != nil && node.Prompts[j].Action.NextNode == targetNodeID {
+				node.Prompts[j].Action.NextNode = newNode.ID
 				modified = true
 			}
 		}
