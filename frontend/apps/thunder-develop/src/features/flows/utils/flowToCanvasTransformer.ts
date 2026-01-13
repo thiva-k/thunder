@@ -18,7 +18,7 @@
 
 import type {Edge, Node} from '@xyflow/react';
 import {MarkerType} from '@xyflow/react';
-import type {FlowDefinitionResponse, FlowNode, FlowNodeAction} from '../models/responses';
+import type {FlowDefinitionResponse, FlowNode, FlowNodeAction, FlowPrompt} from '../models/responses';
 import type {Element} from '../models/elements';
 import {ElementTypes} from '../models/elements';
 import type {StepData} from '../models/steps';
@@ -134,6 +134,30 @@ function restoreButtonAction(
 }
 
 /**
+ * Extracts actions from the prompts array.
+ * Flattens the prompts structure into a simple list of actions.
+ */
+function extractActionsFromPrompts(prompts: FlowPrompt[] | undefined): FlowNodeAction[] {
+  if (!prompts || prompts.length === 0) {
+    return [];
+  }
+
+  return prompts
+    .filter((prompt) => prompt.action !== undefined)
+    .map((prompt) => prompt.action!);
+}
+
+/**
+ * Gets actions from a node's prompts array.
+ */
+function getNodeActions(apiNode: FlowNode): FlowNodeAction[] | undefined {
+  if (apiNode.prompts && apiNode.prompts.length > 0) {
+    return extractActionsFromPrompts(apiNode.prompts);
+  }
+  return undefined;
+}
+
+/**
  * Recursively restores components from the API format to canvas format.
  * This handles nested components (like forms containing inputs and buttons).
  */
@@ -208,9 +232,11 @@ function transformNodeToCanvas(apiNode: FlowNode): CanvasNode {
 
   // Handle PROMPT/VIEW nodes with UI components
   if (stepType === StepTypes.View && apiNode.meta?.components) {
+    // Get actions from prompts
+    const nodeActions = getNodeActions(apiNode);
     const restoredComponents = restoreComponents(
       apiNode.meta.components,
-      apiNode.actions,
+      nodeActions,
     );
 
     canvasNode.data = {
@@ -243,9 +269,10 @@ function transformNodeToCanvas(apiNode: FlowNode): CanvasNode {
   // Handle END nodes
   if (stepType === StepTypes.End) {
     if (apiNode.meta?.components) {
+      const nodeActions = getNodeActions(apiNode);
       const restoredComponents = restoreComponents(
         apiNode.meta.components,
-        apiNode.actions,
+        nodeActions,
       );
       canvasNode.data = {
         components: restoredComponents,
@@ -298,22 +325,25 @@ function generateEdgesFromNodes(apiNodes: FlowNode[]): Edge[] {
     }
 
     // Handle PROMPT/VIEW node button actions
-    if (stepType === StepTypes.View && node.actions) {
-      node.actions.forEach((action) => {
-        if (action.nextNode && nodeIds.has(action.nextNode)) {
-          edges.push({
-            id: action.ref,
-            source: node.id,
-            sourceHandle: `${action.ref}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
-            target: action.nextNode,
-            type: 'smoothstep',
-            animated: false,
-            markerEnd: {
-              type: MarkerType.Arrow,
-            },
-          });
-        }
-      });
+    if (stepType === StepTypes.View) {
+      const nodeActions = getNodeActions(node);
+      if (nodeActions) {
+        nodeActions.forEach((action) => {
+          if (action.nextNode && nodeIds.has(action.nextNode)) {
+            edges.push({
+              id: action.ref,
+              source: node.id,
+              sourceHandle: `${action.ref}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`,
+              target: action.nextNode,
+              type: 'smoothstep',
+              animated: false,
+              markerEnd: {
+                type: MarkerType.Arrow,
+              },
+            });
+          }
+        });
+      }
     }
 
     // Handle TASK_EXECUTION node -> next step connection

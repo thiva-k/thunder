@@ -166,6 +166,29 @@ export interface FlowNodeAction {
 }
 
 /**
+ * A {@link FlowPrompt} represents a single logical prompt within a PROMPT node.
+ * Inputs are associated with actions based on their shared container (BLOCK) in the
+ * layout/metadata structure: only the inputs that are placed in the same BLOCK as
+ * a given action (or its ancestors) are considered to belong to that action.
+ *
+ * This scoping rule is important when a PROMPT node contains multiple actions
+ * (for example, several buttons) and different subsets of inputs should be
+ * submitted or validated with each action.
+ */
+export interface FlowPrompt {
+  /**
+   * Input fields associated with this action. These are the inputs that share the
+   * same container (BLOCK) hierarchy as the {@link FlowNodeAction} in the prompt structure.
+   */
+  inputs?: FlowNodeInput[];
+  /**
+   * The action for this prompt. This action is scoped to, and operates on, the
+   * inputs defined in the same container (BLOCK) ancestry as this prompt.
+   */
+  action?: FlowNodeAction;
+}
+
+/**
  * Executor configuration for TASK_EXECUTION nodes.
  */
 export interface FlowExecutor {
@@ -173,6 +196,10 @@ export interface FlowExecutor {
    * Name of the registered executor
    */
   name: string;
+  /**
+   * Input definitions for this executor
+   */
+  inputs?: FlowNodeInput[];
   /**
    * Additional executor properties
    */
@@ -200,13 +227,10 @@ export interface FlowNode {
    */
   meta?: FlowNodeMeta;
   /**
-   * Input definitions
+   * Prompt definitions for PROMPT nodes.
+   * Each prompt groups inputs with an action button.
    */
-  inputs?: FlowNodeInput[];
-  /**
-   * Action definitions for PROMPT nodes
-   */
-  actions?: FlowNodeAction[];
+  prompts?: FlowPrompt[];
   /**
    * Node-level properties for configuration
    */
