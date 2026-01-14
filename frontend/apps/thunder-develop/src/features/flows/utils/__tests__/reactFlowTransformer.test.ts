@@ -180,34 +180,53 @@ describe('reactFlowTransformer', () => {
       it('should extract inputs from VIEW components', () => {
         const components: Element[] = [
           {
-            id: 'text-input-1',
-            type: ElementTypes.TextInput,
-            category: ElementCategories.Field,
-            name: 'username',
-            required: true,
-          } as unknown as Element,
-          {
-            id: 'password-input-1',
-            type: ElementTypes.PasswordInput,
-            category: ElementCategories.Field,
-            name: 'password',
-            required: true,
+            id: 'block-1',
+            type: 'BLOCK',
+            category: ElementCategories.Block,
+            components: [
+              {
+                id: 'text-input-1',
+                type: ElementTypes.TextInput,
+                category: ElementCategories.Field,
+                name: 'username',
+                required: true,
+              } as unknown as Element,
+              {
+                id: 'password-input-1',
+                type: ElementTypes.PasswordInput,
+                category: ElementCategories.Field,
+                name: 'password',
+                required: true,
+              } as unknown as Element,
+              {
+                id: 'button-1',
+                type: ElementTypes.Action,
+                category: ElementCategories.Action,
+                action: {next: 'next-node'},
+              } as Element,
+            ],
           } as unknown as Element,
         ];
 
         const canvasData: ReactFlowCanvasData = {
           nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
-          edges: [],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'button-1_NEXT')],
         };
 
         const result = transformReactFlow(canvasData);
 
-        expect(result.nodes[0].inputs).toHaveLength(2);
-        expect(result.nodes[0].inputs?.[0]).toEqual({
+        // Inputs should be in the prompts array (associated with the action in the same BLOCK)
+        expect(result.nodes[0].prompts).toHaveLength(1);
+        expect(result.nodes[0].prompts?.[0].inputs).toHaveLength(2);
+        expect(result.nodes[0].prompts?.[0].inputs?.[0]).toEqual({
           ref: 'text-input-1',
           type: ElementTypes.TextInput,
           identifier: 'username',
           required: true,
+        });
+        expect(result.nodes[0].prompts?.[0].action).toEqual({
+          ref: 'button-1',
+          nextNode: 'next-node',
         });
       });
 
@@ -228,8 +247,9 @@ describe('reactFlowTransformer', () => {
 
         const result = transformReactFlow(canvasData);
 
-        expect(result.nodes[0].actions).toHaveLength(1);
-        expect(result.nodes[0].actions?.[0]).toEqual({
+        // Actions should be in the prompts array
+        expect(result.nodes[0].prompts).toHaveLength(1);
+        expect(result.nodes[0].prompts?.[0].action).toEqual({
           ref: 'button-1',
           nextNode: 'next-node',
         });
@@ -247,18 +267,85 @@ describe('reactFlowTransformer', () => {
               category: ElementCategories.Field,
               name: 'email',
             } as unknown as Element,
+            {
+              id: 'button-1',
+              type: ElementTypes.Action,
+              category: ElementCategories.Action,
+              action: {next: 'next-node'},
+            } as Element,
           ],
         } as unknown as Element;
 
         const canvasData: ReactFlowCanvasData = {
           nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [formComponent]})],
-          edges: [],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'button-1_NEXT')],
         };
 
         const result = transformReactFlow(canvasData);
 
-        expect(result.nodes[0].inputs).toHaveLength(1);
-        expect(result.nodes[0].inputs?.[0].identifier).toBe('email');
+        // Inputs from nested components appear in prompts (associated with the action in the same BLOCK)
+        expect(result.nodes[0].prompts).toHaveLength(1);
+        expect(result.nodes[0].prompts?.[0].inputs).toHaveLength(1);
+        expect(result.nodes[0].prompts?.[0].inputs?.[0].identifier).toBe('email');
+        expect(result.nodes[0].prompts?.[0].action?.ref).toBe('button-1');
+      });
+
+      it('should extract inputs from deeply nested block structures (Block A -> Block B -> Action)', () => {
+        // Structure: 
+        // Outer Block (contains email input)
+        //   -> Inner Block (contains password input and submit button)
+        // Expected: Submit action should have BOTH email and password inputs
+        const complexComponent: Element = {
+          id: 'outer-block',
+          type: 'BLOCK',
+          category: ElementCategories.Block,
+          components: [
+            {
+              id: 'input-email',
+              type: ElementTypes.TextInput,
+              category: ElementCategories.Field,
+              name: 'email',
+            } as unknown as Element,
+            {
+              id: 'inner-block',
+              type: 'BLOCK',
+              category: ElementCategories.Block,
+              components: [
+                {
+                  id: 'input-password',
+                  type: ElementTypes.PasswordInput,
+                  category: ElementCategories.Field,
+                  name: 'password',
+                } as unknown as Element,
+                {
+                  id: 'submit-btn',
+                  type: ElementTypes.Action,
+                  category: ElementCategories.Action,
+                  action: {next: 'next-node'},
+                } as Element,
+              ],
+            } as unknown as Element,
+          ],
+        } as unknown as Element;
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: [complexComponent]})],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'submit-btn_NEXT')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        // Verification
+        expect(result.nodes[0].prompts).toHaveLength(1);
+        const prompt = result.nodes[0].prompts?.[0];
+        
+        // Should have inputs from both blocks
+        expect(prompt?.inputs).toHaveLength(2);
+        
+        const identifiers = prompt?.inputs?.map(i => i.identifier).sort();
+        expect(identifiers).toEqual(['email', 'password'].sort());
+        
+        expect(prompt?.action?.ref).toBe('submit-btn');
       });
 
       it('should handle components in END nodes', () => {
@@ -363,7 +450,7 @@ describe('reactFlowTransformer', () => {
         const result = transformReactFlow(canvasData);
 
         // Should use edge target, not action.next
-        expect(result.nodes[0].actions?.[0].nextNode).toBe('current-node');
+        expect(result.nodes[0].prompts?.[0].action?.nextNode).toBe('current-node');
       });
     });
 
@@ -444,8 +531,9 @@ describe('reactFlowTransformer', () => {
         const result = transformReactFlow(canvasData);
 
         const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
-        expect(execNode?.inputs).toHaveLength(1);
-        expect(execNode?.inputs?.[0].identifier).toBe('username');
+        // Inputs are now inside executor
+        expect(execNode?.executor?.inputs).toHaveLength(1);
+        expect(execNode?.executor?.inputs?.[0].identifier).toBe('username');
       });
 
       it('should use code input for OAuth executors', () => {
@@ -466,9 +554,10 @@ describe('reactFlowTransformer', () => {
         const result = transformReactFlow(canvasData);
 
         const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
-        expect(execNode?.inputs).toHaveLength(1);
-        expect(execNode?.inputs?.[0].identifier).toBe('code');
-        expect(execNode?.inputs?.[0].type).toBe('TEXT_INPUT');
+        // Inputs are now inside executor
+        expect(execNode?.executor?.inputs).toHaveLength(1);
+        expect(execNode?.executor?.inputs?.[0].identifier).toBe('code');
+        expect(execNode?.executor?.inputs?.[0].type).toBe('TEXT_INPUT');
       });
 
       it('should use code input for GitHub OAuth executor', () => {
@@ -489,7 +578,8 @@ describe('reactFlowTransformer', () => {
         const result = transformReactFlow(canvasData);
 
         const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
-        expect(execNode?.inputs?.[0].identifier).toBe('code');
+        // Inputs are now inside executor
+        expect(execNode?.executor?.inputs?.[0].identifier).toBe('code');
       });
     });
 
@@ -607,21 +697,41 @@ describe('reactFlowTransformer', () => {
           ElementTypes.Dropdown,
         ];
 
-        const components: Element[] = inputTypes.map((type, index) => ({
+        const inputComponents: Element[] = inputTypes.map((type, index) => ({
           id: `input-${index}`,
           type,
           category: ElementCategories.Field,
           name: `field-${index}`,
         })) as unknown as Element[];
 
+        // Wrap inputs in a BLOCK with an action button
+        const components: Element[] = [
+          {
+            id: 'block-1',
+            type: 'BLOCK',
+            category: ElementCategories.Block,
+            components: [
+              ...inputComponents,
+              {
+                id: 'submit-btn',
+                type: ElementTypes.Action,
+                category: ElementCategories.Action,
+                action: {next: 'next-node'},
+              } as Element,
+            ],
+          } as unknown as Element,
+        ];
+
         const canvasData: ReactFlowCanvasData = {
           nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
-          edges: [],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'submit-btn_NEXT')],
         };
 
         const result = transformReactFlow(canvasData);
 
-        expect(result.nodes[0].inputs).toHaveLength(inputTypes.length);
+        // All inputs are in the prompts array (associated with the action in the same BLOCK)
+        expect(result.nodes[0].prompts).toHaveLength(1);
+        expect(result.nodes[0].prompts?.[0].inputs).toHaveLength(inputTypes.length);
       });
     });
   });
@@ -727,7 +837,7 @@ describe('reactFlowTransformer', () => {
             id: 'prompt-1',
             type: 'PROMPT',
             layout: {size: {width: 100, height: 50}, position: {x: 50, y: 0}},
-            actions: [{ref: 'button-1', nextNode: 'non-existent'}],
+            prompts: [{action: {ref: 'button-1', nextNode: 'non-existent'}}],
           },
           {id: 'end-1', type: 'END', layout: {size: {width: 100, height: 50}, position: {x: 100, y: 0}}},
         ],
@@ -817,8 +927,7 @@ describe('reactFlowTransformer', () => {
       const result = transformReactFlow(canvasData);
 
       expect(result.nodes[0].meta).toBeUndefined();
-      expect(result.nodes[0].inputs).toBeUndefined();
-      expect(result.nodes[0].actions).toBeUndefined();
+      expect(result.nodes[0].prompts).toBeUndefined();
     });
 
     it('should round position values', () => {
@@ -849,8 +958,8 @@ describe('reactFlowTransformer', () => {
 
       const result = transformReactFlow(canvasData);
 
-      // Action without next should not be included
-      expect(result.nodes[0].actions).toBeUndefined();
+      // Action without next should not be included, so prompts is undefined
+      expect(result.nodes[0].prompts).toBeUndefined();
     });
 
     it('should include executor in action when present', () => {
@@ -873,7 +982,8 @@ describe('reactFlowTransformer', () => {
 
       const result = transformReactFlow(canvasData);
 
-      expect(result.nodes[0].actions?.[0].executor).toEqual({name: 'TestExecutor'});
+      // Executor should be in the prompts array action
+      expect(result.nodes[0].prompts?.[0].action?.executor).toEqual({name: 'TestExecutor'});
     });
   });
 });

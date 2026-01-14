@@ -61,11 +61,11 @@ interface FlowNode {
   meta?: {
     components?: Record<string, unknown>[];
   };
-  inputs?: FlowInput[];
-  actions?: FlowAction[];
+  prompts?: FlowPrompt[];
   properties?: Record<string, unknown>;
   executor?: {
     name: string;
+    inputs?: FlowInput[];
     [key: string]: unknown;
   };
   onSuccess?: string;
@@ -92,6 +92,14 @@ interface FlowAction {
     name: string;
     [key: string]: unknown;
   };
+}
+
+/**
+ * Flow prompt definition - groups inputs with an action
+ */
+interface FlowPrompt {
+  inputs?: FlowInput[];
+  action?: FlowAction;
 }
 
 /**
@@ -255,55 +263,133 @@ function extractInputs(components: Element[]): FlowInput[] {
   return inputs;
 }
 
-/**
- * Extracts action definitions from UI components and edges.
- * Edges are the source of truth for connections - they represent the current
- * state of the canvas. The action.next property may be stale from when the
- * flow was loaded.
- */
-function extractActions(components: Element[], nodeId: string, edges: Edge[]): FlowAction[] {
-  const actions: FlowAction[] = [];
 
-  function processComponent(component: Element): void {
-    // Check if this is a button/action element
+/**
+ * Extracts prompts from UI components.
+ * Each prompt groups an action with its associated inputs based on container structure.
+ *
+ * Scoping Rules:
+ * 1. Inputs are scoped to their container block hierarchy.
+ * 2. An action receives all inputs defined in its immediate container block AND any ancestor blocks.
+ * 3. Actions without inputs (at top level or in a block with no inputs) get no inputs.
+ *
+ * Example Structure:
+ * BLOCK A (Input 1)
+ *   -> BLOCK B (Input 2, Action Submit)
+ * Result: Prompt { action: Submit, inputs: [Input 1, Input 2] }
+ */
+function extractPrompts(components: Element[], nodeId: string, edges: Edge[]): FlowPrompt[] {
+  const prompts: FlowPrompt[] = [];
+
+  /**
+   * Extracts inputs from a component tree (for a specific container)
+   */
+  function extractInputsFromContainer(containerComponents: Element[]): FlowInput[] {
+    const inputs: FlowInput[] = [];
+
+    function processForInputs(component: Element): void {
+      if (INPUT_ELEMENT_TYPES.has(component.type)) {
+        const componentWithProps = component as Element & {name?: string; ref?: string; required?: boolean};
+        let identifier: string;
+        if (typeof componentWithProps.name === 'string') {
+          identifier = componentWithProps.name;
+        } else if (typeof componentWithProps.ref === 'string') {
+          identifier = componentWithProps.ref;
+        } else {
+          identifier = component.id;
+        }
+
+        inputs.push({
+          ref: component.id,
+          type: component.type,
+          identifier,
+          required: componentWithProps.required ?? false,
+        });
+      }
+
+      if (component.components && component.components.length > 0) {
+        component.components.forEach(processForInputs);
+      }
+    }
+
+    containerComponents.forEach(processForInputs);
+    return inputs;
+  }
+
+  /**
+   * Extracts action from a component (single action only)
+   */
+  function extractActionFromComponent(component: Element): FlowAction | undefined {
     if (component.type === ElementTypes.Action || component.type === ElementTypes.Resend) {
-      // Build the action object
       const action: FlowAction = {
         ref: component.id,
         nextNode: '',
       };
 
-      // First try to find the next node from edges (source of truth for connections)
-      // The sourceHandle includes a suffix (e.g., "button_id_NEXT")
       const expectedHandle = `${component.id}${NEXT_HANDLE_SUFFIX}`;
       const connectedEdge = edges.find((edge) => edge.source === nodeId && edge.sourceHandle === expectedHandle);
 
       if (connectedEdge) {
         action.nextNode = connectedEdge.target;
       } else if (component.action?.next) {
-        // Fall back to action.next only if no edge exists
         action.nextNode = component.action.next;
       }
 
-      // Include executor information if present (for EXECUTOR action type)
       if (component.action?.executor) {
         action.executor = component.action.executor as {name: string; [key: string]: unknown};
       }
 
-      // Only add the action if we have a valid nextNode
-      if (action.nextNode) {
-        actions.push(action);
+      return action.nextNode ? action : undefined;
+    }
+    return undefined;
+  }
+
+  /**
+   * Processes a component and its children to extract prompts
+   */
+  function processComponent(component: Element, parentInputs: FlowInput[] = []): void {
+    // Check if this component is an action
+    const action = extractActionFromComponent(component);
+    if (action) {
+      // This action gets the parent's inputs (all accumulated up to this point)
+      const prompt: FlowPrompt = { action };
+      if (parentInputs.length > 0) {
+        prompt.inputs = parentInputs;
       }
+      prompts.push(prompt);
+      return;
     }
 
-    // Recursively process nested components
+    // If this is a BLOCK or container, extract its inputs and process children
     if (component.components && component.components.length > 0) {
-      component.components.forEach(processComponent);
+      // Extract inputs strictly defined at this level (not deep recursive yet, as recursion happens via processComponent)
+      // Note: extractInputsFromContainer is deep recursive, effectively grabbing all inputs in the subtree.
+      // But for scoping, we want to pass these down.
+      // Logic:
+      // 1. Get inputs from this block (and sub-blocks if any, effectively "this container's inputs")
+      // 2. Combine with parent inputs
+      // 3. Pass to children
+      const currentLevelInputs = extractInputsFromContainer([component]);
+      
+      // Combine parent inputs with current level inputs to support deep nesting (Block A -> Block B)
+      const combinedInputs = [...parentInputs, ...currentLevelInputs];
+
+      // Remove duplicates if any (though unlikely given unique IDs, strict accumulation is safer)
+      const uniqueInputs = Array.from(new Map(combinedInputs.map(item => [item.ref, item])).values());
+
+      // Process each child component, passing the combined inputs
+      component.components.forEach((child) => {
+        processComponent(child, uniqueInputs);
+      });
     }
   }
 
-  components.forEach(processComponent);
-  return actions;
+  // Process top-level components
+  components.forEach((component) => {
+    processComponent(component, []);
+  });
+
+  return prompts;
 }
 
 /**
@@ -366,16 +452,12 @@ function transformNode(canvasNode: Node<StepData>, edges: Edge[]): FlowNode {
       components: cleanComponents(stepData.components),
     };
 
-    // Extract input field definitions
-    const inputs = extractInputs(stepData.components);
-    if (inputs.length > 0) {
-      flowNode.inputs = inputs;
-    }
-
-    // Extract action definitions from buttons
-    const actions = extractActions(stepData.components, canvasNode.id, edges);
-    if (actions.length > 0) {
-      flowNode.actions = actions;
+    // Extract prompts with proper input-action association
+    // Each action inside a BLOCK gets the inputs from that BLOCK
+    // Actions without associated inputs (e.g. OAuth buttons) get no inputs
+    const prompts = extractPrompts(stepData.components, canvasNode.id, edges);
+    if (prompts.length > 0) {
+      flowNode.prompts = prompts;
     }
   }
 
@@ -525,7 +607,11 @@ function collectInputsForExecutionNodes(
     if (executorName && OAUTH_EXECUTOR_NAMES.has(executorName)) {
       return {
         ...flowNode,
-        inputs: [createOAuthCodeInput()],
+        executor: {
+          ...flowNode.executor,
+          name: executorName,
+          inputs: [createOAuthCodeInput()],
+        },
       };
     }
 
@@ -539,10 +625,14 @@ function collectInputsForExecutionNodes(
     // Extract inputs from the PROMPT node's components
     const inputs = extractInputs(precedingPromptNode.data.components);
 
-    if (inputs.length > 0) {
+    if (inputs.length > 0 && flowNode.executor?.name) {
       return {
         ...flowNode,
-        inputs,
+        executor: {
+          ...flowNode.executor,
+          name: flowNode.executor.name,
+          inputs,
+        },
       };
     }
 
@@ -597,12 +687,12 @@ export function validateFlowGraph(flowGraph: FlowGraph): string[] {
       errors.push(`Node ${node.id}: onFailure references non-existent node ${node.onFailure}`);
     }
 
-    // Check action nextNode references
-    if (node.actions) {
-      node.actions.forEach((action) => {
-        if (!nodeIds.has(action.nextNode)) {
+    // Check action nextNode references (via prompts)
+    if (node.prompts) {
+      node.prompts.forEach((prompt: FlowPrompt) => {
+        if (prompt.action && !nodeIds.has(prompt.action.nextNode)) {
           errors.push(
-            `Node ${node.id}, action ${action.ref}: nextNode references non-existent node ${action.nextNode}`,
+            `Node ${node.id}, action ${prompt.action.ref}: nextNode references non-existent node ${prompt.action.nextNode}`,
           );
         }
       });

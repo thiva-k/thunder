@@ -234,9 +234,9 @@ describe('flowToCanvasTransformer', () => {
           {
             id: 'prompt-node',
             type: 'PROMPT',
-            actions: [
-              {ref: 'button-1', nextNode: 'next-node-1'},
-              {ref: 'button-2', nextNode: 'next-node-2'},
+            prompts: [
+              {action: {ref: 'button-1', nextNode: 'next-node-1'}},
+              {action: {ref: 'button-2', nextNode: 'next-node-2'}},
             ],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },
@@ -336,8 +336,8 @@ describe('flowToCanvasTransformer', () => {
                 {id: 'submit-btn', type: 'ACTION', label: 'Submit'},
               ],
             },
-            actions: [
-              {ref: 'submit-btn', nextNode: 'next-node', executor: {name: 'SomeExecutor'}},
+            prompts: [
+              {action: {ref: 'submit-btn', nextNode: 'next-node', executor: {name: 'SomeExecutor'}}},
             ],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },
@@ -393,8 +393,8 @@ describe('flowToCanvasTransformer', () => {
                 },
               ],
             },
-            actions: [
-              {ref: 'button-1', nextNode: 'next-node'},
+            prompts: [
+              {action: {ref: 'button-1', nextNode: 'next-node'}},
             ],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },

@@ -54,8 +54,7 @@ describe('useGetFlowById', () => {
         meta: {
           components: [],
         },
-        inputs: [],
-        actions: [],
+        prompts: []
       },
       {
         id: 'node-end',
@@ -283,7 +282,7 @@ describe('useGetFlowById', () => {
       ...mockFlowResponse,
       nodes: [
         {id: 'start', type: FlowNodeType.START, onSuccess: 'prompt'},
-        {id: 'prompt', type: FlowNodeType.PROMPT, actions: [{ref: 'btn', nextNode: 'exec'}]},
+        {id: 'prompt', type: FlowNodeType.PROMPT, prompts: [{action: {ref: 'btn', nextNode: 'exec'}}]},
         {id: 'exec', type: FlowNodeType.TASK_EXECUTION, executor: {name: 'TestExecutor'}, onSuccess: 'end'},
         {id: 'end', type: FlowNodeType.END},
       ],
