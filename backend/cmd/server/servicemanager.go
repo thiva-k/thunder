@@ -34,6 +34,7 @@ import (
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	"github.com/asgardeo/thunder/internal/group"
 	"github.com/asgardeo/thunder/internal/idp"
+	"github.com/asgardeo/thunder/internal/mcp"
 	"github.com/asgardeo/thunder/internal/notification"
 	"github.com/asgardeo/thunder/internal/oauth"
 	"github.com/asgardeo/thunder/internal/observability"
@@ -108,7 +109,7 @@ func registerServices(
 	}
 	exporters = append(exporters, idpExporter)
 
-	_, otpService, notificationExporter, err := notification.Initialize(mux, jwtService)
+	notificationMgtService, otpService, notificationExporter, err := notification.Initialize(mux, jwtService)
 	if err != nil {
 		logger.Fatal("Failed to initialize NotificationService", log.Error(err))
 	}
@@ -152,6 +153,9 @@ func registerServices(
 
 	// Register the health service.
 	services.NewHealthCheckService(mux)
+
+	// Initialize MCP server with application, flow, and notification sender tools.
+	mcp.Initialize(mux, applicationService, flowMgtService, notificationMgtService)
 }
 
 // unregisterServices unregisters all services that require cleanup during shutdown.

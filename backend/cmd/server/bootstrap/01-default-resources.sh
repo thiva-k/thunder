@@ -126,7 +126,7 @@ RESPONSE=$(thunder_api_call POST "/user-schemas" '{
       "type": "string",
       "required": false
     },
-    "phone_number": {
+    "mobileNumber": {
       "type": "string",
       "required": false
     },
@@ -169,7 +169,7 @@ RESPONSE=$(thunder_api_call POST "/users" '{
     "given_name": "Admin",
     "family_name": "User",
     "picture": "https://example.com/avatar.jpg",
-    "phone_number": "+12345678920",
+    "mobileNumber": "+12345678920",
     "phone_number_verified": true
   }
 }')

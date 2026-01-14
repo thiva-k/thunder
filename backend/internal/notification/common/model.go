@@ -48,10 +48,10 @@ type NotificationSenderDTO struct {
 
 // NotificationSenderRequest represents the request structure for creating or updating a notification sender.
 type NotificationSenderRequest struct {
-	Name        string                `json:"name"`
-	Description string                `json:"description"`
-	Provider    string                `json:"provider"`
-	Properties  []cmodels.PropertyDTO `json:"properties"`
+	Name        string                `json:"name" jsonschema:"Name of the notification sender"`
+	Description string                `json:"description,omitempty" jsonschema:"Description of the notification sender"`
+	Provider    string                `json:"provider" jsonschema:"Provider type: twilio, vonage, or custom"`
+	Properties  []cmodels.PropertyDTO `json:"properties,omitempty" jsonschema:"Provider-specific configuration properties"`
 }
 
 // NotificationSenderResponse represents the response structure for a notification sender.
@@ -123,9 +123,9 @@ type OTPSessionData struct {
 // NotificationSenderRequestWithID represents the request structure for creating a notification sender
 // from file-based config.
 type NotificationSenderRequestWithID struct {
-	ID          string                `yaml:"id"`
-	Name        string                `yaml:"name"`
-	Description string                `yaml:"description,omitempty"`
-	Provider    string                `yaml:"provider"`
-	Properties  []cmodels.PropertyDTO `yaml:"properties,omitempty"`
+	ID          string                `yaml:"id" json:"id" jsonschema:"The unique identifier of the notification sender"`
+	Name        string                `yaml:"name" json:"name" jsonschema:"Name of the notification sender"`
+	Description string                `yaml:"description,omitempty" json:"description,omitempty" jsonschema:"Description of the notification sender"`
+	Provider    string                `yaml:"provider" json:"provider" jsonschema:"Provider type: twilio, vonage, or custom"`
+	Properties  []cmodels.PropertyDTO `yaml:"properties,omitempty" json:"properties,omitempty" jsonschema:"Provider-specific configuration properties"`
 }

@@ -28,10 +28,10 @@ import (
 
 // FlowDefinition represents the structure of a flow definition.
 type FlowDefinition struct {
-	Handle   string           `json:"handle" validate:"required"`
-	Name     string           `json:"name" validate:"required"`
-	FlowType common.FlowType  `json:"flowType" validate:"required"`
-	Nodes    []NodeDefinition `json:"nodes" validate:"required"`
+	Handle   string           `json:"handle" validate:"required" jsonschema:"Unique handle/identifier for the flow (e.g., mfa-auth-flow)"`
+	Name     string           `json:"name" validate:"required" jsonschema:"Human-readable name of the flow"`
+	FlowType common.FlowType  `json:"flowType" validate:"required" jsonschema:"Type of flow: AUTHENTICATION or REGISTRATION"`
+	Nodes    []NodeDefinition `json:"nodes" validate:"required" jsonschema:"Array of nodes defining the flow logic"`
 }
 
 // CompleteFlowDefinition represents a complete flow definition with all details.
@@ -122,43 +122,43 @@ type NodePosition struct {
 
 // NodeDefinition represents a single node in a flow definition.
 type NodeDefinition struct {
-	ID         string                 `json:"id" yaml:"id"`
-	Type       string                 `json:"type" yaml:"type"`
-	Layout     *NodeLayout            `json:"layout,omitempty" yaml:"layout,omitempty"`
-	Meta       interface{}            `json:"meta,omitempty" yaml:"meta,omitempty"`
-	Prompts    []PromptDefinition     `json:"prompts,omitempty" yaml:"prompts,omitempty"`
-	Properties map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty"`
-	Executor   *ExecutorDefinition    `json:"executor,omitempty" yaml:"executor,omitempty"`
-	OnSuccess  string                 `json:"onSuccess,omitempty" yaml:"onSuccess,omitempty"`
-	OnFailure  string                 `json:"onFailure,omitempty" yaml:"onFailure,omitempty"`
-	Condition  *ConditionDefinition   `json:"condition,omitempty" yaml:"condition,omitempty"`
+	ID         string                 `json:"id" yaml:"id" jsonschema:"Unique node identifier within the flow"`
+	Type       string                 `json:"type" yaml:"type" jsonschema:"Node type: START, END, PROMPT, TASK_EXECUTION, DECISION"`
+	Layout     *NodeLayout            `json:"layout,omitempty" yaml:"layout,omitempty" jsonschema:"UI layout information for the node"`
+	Meta       interface{}            `json:"meta,omitempty" yaml:"meta,omitempty" jsonschema:"Metadata for PROMPT nodes (components configuration)"`
+	Prompts    []PromptDefinition     `json:"prompts,omitempty" yaml:"prompts,omitempty" jsonschema:"Prompt definitions for PROMPT nodes"`
+	Properties map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty" jsonschema:"Node properties (e.g., senderId for SMS OTP)"`
+	Executor   *ExecutorDefinition    `json:"executor,omitempty" yaml:"executor,omitempty" jsonschema:"Executor configuration for TASK_EXECUTION nodes"`
+	OnSuccess  string                 `json:"onSuccess,omitempty" yaml:"onSuccess,omitempty" jsonschema:"Next node ID on success"`
+	OnFailure  string                 `json:"onFailure,omitempty" yaml:"onFailure,omitempty" jsonschema:"Next node ID on failure"`
+	Condition  *ConditionDefinition   `json:"condition,omitempty" yaml:"condition,omitempty" jsonschema:"Condition for DECISION nodes"`
 }
 
 // InputDefinition represents an input parameter for a node.
 type InputDefinition struct {
-	Ref        string `json:"ref,omitempty" yaml:"ref,omitempty"`
-	Type       string `json:"type" yaml:"type"`
-	Identifier string `json:"identifier" yaml:"identifier"`
-	Required   bool   `json:"required" yaml:"required"`
+	Ref        string `json:"ref,omitempty" yaml:"ref,omitempty" jsonschema:"Reference to UI component ID"`
+	Type       string `json:"type" yaml:"type" jsonschema:"Input type: TEXT_INPUT, PASSWORD_INPUT, etc."`
+	Identifier string `json:"identifier" yaml:"identifier" jsonschema:"Input identifier (e.g., username, password, otp)"`
+	Required   bool   `json:"required" yaml:"required" jsonschema:"Whether this input is required"`
 }
 
 // ActionDefinition represents an action to be executed by a node.
 type ActionDefinition struct {
-	Ref      string `json:"ref" yaml:"ref"`
-	NextNode string `json:"nextNode" yaml:"nextNode"`
+	Ref      string `json:"ref" yaml:"ref" jsonschema:"Reference to UI action component ID"`
+	NextNode string `json:"nextNode" yaml:"nextNode" jsonschema:"Next node ID when action is triggered"`
 }
 
 // PromptDefinition groups inputs with an action for prompt nodes.
 type PromptDefinition struct {
-	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty"`
-	Action *ActionDefinition `json:"action,omitempty" yaml:"action,omitempty"`
+	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty" jsonschema:"Input fields for this prompt"`
+	Action *ActionDefinition `json:"action,omitempty" yaml:"action,omitempty" jsonschema:"Action definition for form submission"`
 }
 
 // ExecutorDefinition represents the executor configuration for a node.
 type ExecutorDefinition struct {
-	Name   string            `json:"name" yaml:"name"`
-	Mode   string            `json:"mode,omitempty" yaml:"mode,omitempty"`
-	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Name   string            `json:"name" yaml:"name" jsonschema:"Executor name (e.g., BasicAuthExecutor, SMSOTPAuthExecutor)"`
+	Mode   string            `json:"mode,omitempty" yaml:"mode,omitempty" jsonschema:"Execution mode for multi-step executors (e.g., send, verify)"`
+	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty" jsonschema:"Input definitions for the executor"`
 }
 
 // ConditionDefinition represents a condition for node execution.

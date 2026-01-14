@@ -7,6 +7,13 @@ tls:
   cert_file: "repository/resources/security/server.cert"
   key_file: "repository/resources/security/server.key"
 
+gate_client:
+  hostname: "localhost"
+  port: 5190
+  scheme: "https"
+  login_path: "gate/signin"
+  error_path: "gate/error"
+
 database:
   identity:
     type: "sqlite"
@@ -39,3 +46,6 @@ crypto:
 cors:
   allowed_origins:
     - "https://localhost:3000"
+    - "https://localhost:5190"
+    - "https://localhost:5191"
+
