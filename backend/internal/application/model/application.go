@@ -25,9 +25,9 @@ import (
 
 // TokenConfig represents the token configuration structure for application-level (root) token configs.
 type TokenConfig struct {
-	Issuer         string   `json:"issuer" yaml:"issuer,omitempty" jsonschema:"Token issuer URL"`
-	ValidityPeriod int64    `json:"validity_period" yaml:"validity_period,omitempty" jsonschema:"Token validity period in seconds"`
-	UserAttributes []string `json:"user_attributes" yaml:"user_attributes,omitempty" jsonschema:"User attributes to include in token"`
+	Issuer         string   `json:"issuer,omitempty" yaml:"issuer,omitempty" jsonschema:"Token issuer URL"`
+	ValidityPeriod int64    `json:"validity_period,omitempty" yaml:"validity_period,omitempty" jsonschema:"Token validity period in seconds"`
+	UserAttributes []string `json:"user_attributes,omitempty" yaml:"user_attributes,omitempty" jsonschema:"User attributes to include in token"`
 }
 
 // AccessTokenConfig represents the access token configuration structure.
@@ -58,7 +58,7 @@ type ApplicationDTO struct {
 	Description               string `json:"description,omitempty" jsonschema:"Application description"`
 	AuthFlowID                string `json:"auth_flow_id,omitempty" jsonschema:"Authentication flow ID to assign to this application"`
 	RegistrationFlowID        string `json:"registration_flow_id,omitempty" jsonschema:"Registration flow ID to assign to this application"`
-	IsRegistrationFlowEnabled bool   `json:"is_registration_flow_enabled" jsonschema:"Enable registration flow for this application"`
+	IsRegistrationFlowEnabled bool   `json:"is_registration_flow_enabled,omitempty" jsonschema:"Enable registration flow for this application"`
 	BrandingID                string `json:"branding_id,omitempty" jsonschema:"Branding configuration ID"`
 	Template                  string `json:"template,omitempty" jsonschema:"Application template"`
 
@@ -140,7 +140,7 @@ type ApplicationProcessedDTO struct {
 // TODO: Need to refactor when supporting other/multiple inbound auth types.
 type InboundAuthConfigDTO struct {
 	Type           InboundAuthType    `json:"type" jsonschema:"Inbound authentication type (e.g., oauth2)"`
-	OAuthAppConfig *OAuthAppConfigDTO `json:"oauth_app_config,omitempty" jsonschema:"OAuth/OIDC application configuration"`
+	OAuthAppConfig *OAuthAppConfigDTO `json:"config,omitempty" jsonschema:"OAuth/OIDC application configuration"`
 }
 
 // InboundAuthConfigProcessedDTO represents the processed data transfer object for inbound authentication
@@ -161,10 +161,10 @@ type ApplicationCertificate struct {
 //nolint:lll
 type ApplicationRequest struct {
 	Name                      string                      `json:"name" yaml:"name" jsonschema:"required" jsonschema_description:"The name of the application"`
-	Description               string                      `json:"description" yaml:"description" jsonschema_description:"A description of the application"`
+	Description               string                      `json:"description,omitempty" yaml:"description,omitempty" jsonschema_description:"A description of the application"`
 	AuthFlowID                string                      `json:"auth_flow_id,omitempty" yaml:"auth_flow_id,omitempty" jsonschema_description:"Authentication flow ID to use"`
 	RegistrationFlowID        string                      `json:"registration_flow_id,omitempty" yaml:"registration_flow_id,omitempty" jsonschema_description:"Registration flow ID to use"`
-	IsRegistrationFlowEnabled bool                        `json:"is_registration_flow_enabled" yaml:"is_registration_flow_enabled" jsonschema_description:"Whether registration flow is enabled"`
+	IsRegistrationFlowEnabled bool                        `json:"is_registration_flow_enabled,omitempty" yaml:"is_registration_flow_enabled,omitempty" jsonschema_description:"Whether registration flow is enabled"`
 	BrandingID                string                      `json:"branding_id,omitempty" yaml:"branding_id,omitempty" jsonschema_description:"Branding configuration ID"`
 	Template                  string                      `json:"template,omitempty" yaml:"template,omitempty" jsonschema_description:"Application template"`
 	URL                       string                      `json:"url,omitempty" yaml:"url,omitempty" jsonschema_description:"Application URL"`

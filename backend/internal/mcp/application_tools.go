@@ -21,9 +21,12 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/application/model"
+	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
+	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -42,11 +45,6 @@ func NewApplicationTools(appService application.ApplicationServiceInterface) *Ap
 // ListApplicationsInput represents the input for the list_applications tool.
 type ListApplicationsInput struct{}
 
-// ApplicationIDInput represents an input that requires only an application ID.
-// Used for get_application and delete_application tools.
-type ApplicationIDInput struct {
-	ID string `json:"id" jsonschema:"The unique identifier of the application"`
-}
 
 // ApplicationListOutput represents the output for list_applications tool.
 type ApplicationListOutput struct {
@@ -59,11 +57,15 @@ func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 	// Generate schema with enum support for ApplicationDTO
 	appDTOSchema := generateApplicationDTOSchema()
 	// Generate schema for update with 'id' as required
-	updateAppDTOSchema := generateUpdateApplicationDTOSchema()
+	updateAppDTOSchema := generateApplicationDTOSchema()
+	updateAppDTOSchema.Required = append([]string{"id"}, updateAppDTOSchema.Required...)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_applications",
-		Description: "List all registered applications in Thunder",
+		Name: "list_applications",
+		Description: `List all registered OAuth applications.
+		
+Outputs: A list of applications containing ID, Name, ClientID, and associated Flow IDs.
+Next Steps: Use the returned 'id' with get_application or update_application.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Applications",
 			ReadOnlyHint: true,
@@ -71,8 +73,11 @@ func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 	}, t.ListApplications)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "get_application",
-		Description: "Get detailed information about a specific application by its ID",
+		Name: "get_application",
+		Description: `Retrieve full details of a specific application.
+		
+Inputs: 'id' (UUID of the application).
+Outputs: Complete application configuration including OAuth settings, branding, and flow associations.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Application",
 			ReadOnlyHint: true,
@@ -80,8 +85,38 @@ func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 	}, t.GetApplication)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "create_application",
-		Description: "Create a new application in Thunder with OAuth configuration",
+		Name: "create_application",
+		Description: `Create a new OAuth application.
+
+Prerequisites:
+- Authentication/Registration flows should be created first if custom flows are needed.
+
+Inputs:
+- name (Required): Application display name.
+- auth_flow_id: ID of the authentication flow (default flow used if omitted).
+- registration_flow_id: ID of the registration flow.
+- inbound_auth_config: An array containing the OAuth configuration.
+  Example Structure:
+  [
+    {
+      "type": "oauth2",
+      "config": {
+        "grant_types": ["authorization_code", "refresh_token"],
+        "response_types": ["code"],
+        "pkce_required": true,
+        "redirect_uris": ["https://myapp.com/callback"],
+        "public_client": false
+      }
+    }
+  ]
+
+  Supported Enums:
+  - grant_types: "authorization_code", "refresh_token", "client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"
+  - response_types: "code"
+
+Outputs: Created application including generated 'client_id' and 'client_secret'.
+
+Next Steps: Configure your OIDC client (Gate/Frontend) with the returned credentials.`,
 		InputSchema: appDTOSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Application",
@@ -90,8 +125,22 @@ func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 	}, t.CreateApplication)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "update_application",
-		Description: "Update an existing application in Thunder. Requires the application ID.",
+		Name: "update_application",
+		Description: `Update an existing OAuth application configuration.
+
+Inputs:
+- id (Required): The application UUID.
+- All other fields from 'create_application' (Full Replacement).
+  IMPORTANT: You must provide the COMPLETE object. Missing fields will be reset to defaults/nil.
+  
+  Example Update:
+  {
+    "id": "...",
+    "name": "New Name",
+    "inbound_auth_config": [ { "type": "oauth2", "config": { ... } } ]
+  }
+
+Outputs: The updated application configuration.`,
 		InputSchema: updateAppDTOSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Application",
@@ -100,8 +149,11 @@ func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 	}, t.UpdateApplication)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "delete_application",
-		Description: "Delete an application from Thunder",
+		Name: "delete_application",
+		Description: `Permanently delete an application.
+		
+Inputs: 'id' (UUID).
+Impact: Invalidates all active tokens and client credentials associated with this app.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Delete Application",
 			DestructiveHint: ptr(true),
@@ -135,11 +187,8 @@ func (t *ApplicationTools) ListApplications(
 func (t *ApplicationTools) GetApplication(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
-	input ApplicationIDInput,
+	input IDInput,
 ) (*mcp.CallToolResult, *model.Application, error) {
-	if input.ID == "" {
-		return nil, nil, fmt.Errorf("application ID is required")
-	}
 
 	app, svcErr := t.appService.GetApplication(input.ID)
 	if svcErr != nil {
@@ -156,9 +205,6 @@ func (t *ApplicationTools) CreateApplication(
 	req *mcp.CallToolRequest,
 	input model.ApplicationDTO,
 ) (*mcp.CallToolResult, *model.ApplicationDTO, error) {
-	if input.Name == "" {
-		return nil, nil, fmt.Errorf("application name is required")
-	}
 
 	createdApp, svcErr := t.appService.CreateApplication(&input)
 	if svcErr != nil {
@@ -175,9 +221,6 @@ func (t *ApplicationTools) UpdateApplication(
 	req *mcp.CallToolRequest,
 	input model.ApplicationDTO,
 ) (*mcp.CallToolResult, *model.ApplicationDTO, error) {
-	if input.ID == "" {
-		return nil, nil, fmt.Errorf("application ID is required for update")
-	}
 
 	// Verify existence
 	_, svcErr := t.appService.GetApplication(input.ID)
@@ -197,11 +240,8 @@ func (t *ApplicationTools) UpdateApplication(
 func (t *ApplicationTools) DeleteApplication(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
-	input ApplicationIDInput,
+	input IDInput,
 ) (*mcp.CallToolResult, DeleteOutput, error) {
-	if input.ID == "" {
-		return nil, DeleteOutput{}, fmt.Errorf("application ID is required")
-	}
 
 	svcErr := t.appService.DeleteApplication(input.ID)
 	if svcErr != nil {
@@ -215,4 +255,34 @@ func (t *ApplicationTools) DeleteApplication(
 		Success: true,
 		Message: fmt.Sprintf("Application %s deleted successfully", input.ID),
 	}, nil
+}
+
+// generateApplicationDTOSchema generates a JSON Schema for ApplicationDTO with enum support.
+// Used for create_application tool.
+func generateApplicationDTOSchema() *jsonschema.Schema {
+	typeSchemas := GenerateTypeSchemas(
+		EnumDefinition{
+			Type:        reflect.TypeFor[oauth2const.GrantType](),
+			Values:      oauth2const.GetSupportedGrantTypes(),
+			Description: "OAuth grant type",
+		},
+		EnumDefinition{
+			Type:        reflect.TypeFor[oauth2const.ResponseType](),
+			Values:      oauth2const.GetSupportedResponseTypes(),
+			Description: "OAuth response type",
+		},
+		EnumDefinition{
+			Type:        reflect.TypeFor[oauth2const.TokenEndpointAuthMethod](),
+			Values:      oauth2const.GetSupportedTokenEndpointAuthMethods(),
+			Description: "Token endpoint authentication method",
+		},
+	)
+
+	opts := &jsonschema.ForOptions{TypeSchemas: typeSchemas}
+	schema, err := jsonschema.For[model.ApplicationDTO](opts)
+	if err != nil {
+		// Fall back to auto-inference if custom schema fails
+		schema, _ = jsonschema.For[model.ApplicationDTO](nil)
+	}
+	return schema
 }

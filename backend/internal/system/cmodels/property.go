@@ -35,9 +35,9 @@ type Property struct {
 
 // PropertyDTO represents a property for API communication.
 type PropertyDTO struct {
-	Name     string `json:"name" yaml:"name" jsonschema:"Property name"`
-	Value    string `json:"value" yaml:"value" jsonschema:"Property value"`
-	IsSecret bool   `json:"is_secret,omitempty" yaml:"is_secret,omitempty" jsonschema:"Whether the property value is secret"`
+	Name     string `json:"name" yaml:"name" jsonschema:"Property key name (e.g., 'url', 'account_sid', 'http_method')"`
+	Value    string `json:"value" yaml:"value" jsonschema:"Property value (e.g., 'https://webhook.site/xxx', 'POST', 'JSON')"`
+	IsSecret bool   `json:"is_secret,omitempty" yaml:"is_secret,omitempty" jsonschema:"Set to true for sensitive values like API keys and tokens (will be encrypted)"`
 }
 
 // NewProperty creates a new Property instance with the given parameters.

@@ -41,14 +41,8 @@ func NewFlowTools(flowService flowmgt.FlowMgtServiceInterface) *FlowTools {
 
 // ListFlowsInput represents the input for the list_flows tool.
 type ListFlowsInput struct {
+	PaginationInput
 	FlowType string `json:"flow_type,omitempty" jsonschema:"Filter by flow type: AUTHENTICATION or REGISTRATION"`
-	Limit    int    `json:"limit,omitempty" jsonschema:"Maximum number of flows to return (default: 20)"`
-	Offset   int    `json:"offset,omitempty" jsonschema:"Offset for pagination (default: 0)"`
-}
-
-// FlowIDInput represents an input that requires only a flow ID.
-type FlowIDInput struct {
-	ID string `json:"id" jsonschema:"The unique identifier of the flow"`
 }
 
 // FlowListOutput represents the output for list_flows tool.
@@ -60,8 +54,14 @@ type FlowListOutput struct {
 // RegisterTools registers all flow tools with the MCP server.
 func (t *FlowTools) RegisterTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_flows",
-		Description: "List all authentication and registration flows in Thunder",
+		Name: "list_flows",
+		Description: `List all available flows.
+
+Inputs:
+- flow_type (Enum): "AUTHENTICATION" (Login) or "REGISTRATION" (Signup).
+- limit/offset: For pagination.
+
+Outputs: List of flows with ID, Name, and Type.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Flows",
 			ReadOnlyHint: true,
@@ -69,8 +69,11 @@ func (t *FlowTools) RegisterTools(server *mcp.Server) {
 	}, t.ListFlows)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "get_flow",
-		Description: "Get detailed information about a specific flow by its ID, including all nodes and configuration",
+		Name: "get_flow",
+		Description: `Retrieve the complete definition of a flow.
+
+Inputs: 'id' (UUID).
+Outputs: Full flow structure including all Nodes, Executors, and UI metadata.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Flow",
 			ReadOnlyHint: true,
@@ -78,8 +81,27 @@ func (t *FlowTools) RegisterTools(server *mcp.Server) {
 	}, t.GetFlow)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "create_flow",
-		Description: "Create a new authentication or registration flow with nodes defining the flow logic. Nodes can include authenticators like BasicAuthenticator, SMSOTPAuthenticator, etc.",
+		Name: "create_flow",
+		Description: `Create a new authentication or registration flow.
+
+Refer similar existing flows if needed. Add meta field if needed based on this.
+
+Prerequisites:
+- Notification Senders: Required if using SMS/Email OTP executors.
+
+Inputs:
+- name (Required): Unique flow name.
+- flow_type (Enum): "AUTHENTICATION", "REGISTRATION".
+- nodes: Array of flow nodes (START, END, TASK_EXECUTION, PROMPT, DECISION).
+
+Node Types:
+- TASK_EXECUTION: Runs backend logic (e.g., "SMSOTPAuthExecutor").
+- PROMPT: Renders UI to user (requires 'meta.components').
+- DECISION: Branching logic.
+
+Outputs: Created flow definition with ID.
+
+Next Steps: Assign this flow to an Application via create_application or update_application.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Flow",
 			IdempotentHint: true,
@@ -87,8 +109,14 @@ func (t *FlowTools) RegisterTools(server *mcp.Server) {
 	}, t.CreateFlow)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "update_flow",
-		Description: "Update an existing flow. Requires the flow ID. Updates create a new version of the flow.",
+		Name: "update_flow",
+		Description: `Update an existing flow definition.
+
+Inputs:
+- id (Required): Flow UUID.
+- Complete flow definition (replaces existingNodes).
+
+Outputs: Updated flow definition.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Flow",
 			IdempotentHint: true,
@@ -96,8 +124,11 @@ func (t *FlowTools) RegisterTools(server *mcp.Server) {
 	}, t.UpdateFlow)
 
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "delete_flow",
-		Description: "Delete a flow from Thunder. This action is irreversible.",
+		Name: "delete_flow",
+		Description: `Permanently delete a flow.
+
+Inputs: 'id' (UUID).
+Prerequisites: Ensure this flow is not assigned to any Application.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Delete Flow",
 			DestructiveHint: ptr(true),
@@ -133,11 +164,8 @@ func (t *FlowTools) ListFlows(
 func (t *FlowTools) GetFlow(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
-	input FlowIDInput,
+	input IDInput,
 ) (*mcp.CallToolResult, *flowmgt.CompleteFlowDefinition, error) {
-	if input.ID == "" {
-		return nil, nil, fmt.Errorf("flow ID is required")
-	}
 
 	flow, svcErr := t.flowService.GetFlow(input.ID)
 	if svcErr != nil {
@@ -153,19 +181,6 @@ func (t *FlowTools) CreateFlow(
 	req *mcp.CallToolRequest,
 	input flowmgt.FlowDefinition,
 ) (*mcp.CallToolResult, *flowmgt.CompleteFlowDefinition, error) {
-	if input.Handle == "" {
-		return nil, nil, fmt.Errorf("flow handle is required")
-	}
-	if input.Name == "" {
-		return nil, nil, fmt.Errorf("flow name is required")
-	}
-	if input.FlowType == "" {
-		return nil, nil, fmt.Errorf("flow type is required (AUTHENTICATION or REGISTRATION)")
-	}
-	if len(input.Nodes) == 0 {
-		return nil, nil, fmt.Errorf("at least one node is required")
-	}
-
 	createdFlow, svcErr := t.flowService.CreateFlow(&input)
 	if svcErr != nil {
 		return nil, nil, fmt.Errorf("failed to create flow: %s", svcErr.ErrorDescription)
@@ -186,9 +201,6 @@ func (t *FlowTools) UpdateFlow(
 	req *mcp.CallToolRequest,
 	input UpdateFlowInput,
 ) (*mcp.CallToolResult, *flowmgt.CompleteFlowDefinition, error) {
-	if input.ID == "" {
-		return nil, nil, fmt.Errorf("flow ID is required for update")
-	}
 
 	// Verify existence
 	_, svcErr := t.flowService.GetFlow(input.ID)
@@ -208,11 +220,8 @@ func (t *FlowTools) UpdateFlow(
 func (t *FlowTools) DeleteFlow(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
-	input FlowIDInput,
+	input IDInput,
 ) (*mcp.CallToolResult, DeleteOutput, error) {
-	if input.ID == "" {
-		return nil, DeleteOutput{}, fmt.Errorf("flow ID is required")
-	}
 
 	svcErr := t.flowService.DeleteFlow(input.ID)
 	if svcErr != nil {

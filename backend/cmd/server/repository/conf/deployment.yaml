@@ -1,6 +1,7 @@
 server:
   hostname: "localhost"
   port: 8090
+  http_only: true
 
 tls:
   min_version: "1.3"

@@ -48,10 +48,10 @@ type NotificationSenderDTO struct {
 
 // NotificationSenderRequest represents the request structure for creating or updating a notification sender.
 type NotificationSenderRequest struct {
-	Name        string                `json:"name" jsonschema:"Name of the notification sender"`
-	Description string                `json:"description,omitempty" jsonschema:"Description of the notification sender"`
-	Provider    string                `json:"provider" jsonschema:"Provider type: twilio, vonage, or custom"`
-	Properties  []cmodels.PropertyDTO `json:"properties,omitempty" jsonschema:"Provider-specific configuration properties"`
+	Name        string                `json:"name" jsonschema:"Display name for the notification sender"`
+	Description string                `json:"description,omitempty" jsonschema:"Optional description of the sender's purpose"`
+	Provider    string                `json:"provider" jsonschema:"Provider type: 'twilio', 'vonage', or 'custom' (webhook)"`
+	Properties  []cmodels.PropertyDTO `json:"properties" jsonschema:"Provider configuration. For 'custom' webhook: url, http_method (POST), content_type (JSON). For 'twilio': account_sid, auth_token (secret), from_number"`
 }
 
 // NotificationSenderResponse represents the response structure for a notification sender.
@@ -120,12 +120,12 @@ type OTPSessionData struct {
 	ExpiryTime int64  `json:"expiry_time"`
 }
 
-// NotificationSenderRequestWithID represents the request structure for creating a notification sender
-// from file-based config.
+// NotificationSenderRequestWithID represents the request structure for updating a notification sender.
+// Used for update operations where the ID is required.
 type NotificationSenderRequestWithID struct {
-	ID          string                `yaml:"id" json:"id" jsonschema:"The unique identifier of the notification sender"`
-	Name        string                `yaml:"name" json:"name" jsonschema:"Name of the notification sender"`
-	Description string                `yaml:"description,omitempty" json:"description,omitempty" jsonschema:"Description of the notification sender"`
-	Provider    string                `yaml:"provider" json:"provider" jsonschema:"Provider type: twilio, vonage, or custom"`
-	Properties  []cmodels.PropertyDTO `yaml:"properties,omitempty" json:"properties,omitempty" jsonschema:"Provider-specific configuration properties"`
+	ID          string                `yaml:"id" json:"id" jsonschema:"The unique identifier of the notification sender to update (required)"`
+	Name        string                `yaml:"name" json:"name" jsonschema:"Display name for the notification sender"`
+	Description string                `yaml:"description,omitempty" json:"description,omitempty" jsonschema:"Optional description of the sender's purpose"`
+	Provider    string                `yaml:"provider" json:"provider" jsonschema:"Provider type: 'twilio', 'vonage', or 'custom' (webhook)"`
+	Properties  []cmodels.PropertyDTO `yaml:"properties,omitempty" json:"properties" jsonschema:"Provider configuration. For 'custom' webhook: url, http_method (POST), content_type (JSON). For 'twilio': account_sid, auth_token (secret), from_number"`
 }

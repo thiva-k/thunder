@@ -47,14 +47,14 @@ type OAuthAppConfig struct {
 //
 //nolint:lll
 type OAuthAppConfigComplete struct {
-	ClientID                string                              `json:"client_id" yaml:"client_id" jsonschema_description:"OAuth client ID (auto-generated if not provided)"`
-	ClientSecret            string                              `json:"client_secret,omitempty" yaml:"client_secret" jsonschema_description:"OAuth client secret (auto-generated if not provided)"`
-	RedirectURIs            []string                            `json:"redirect_uris" yaml:"redirect_uris" jsonschema_description:"Allowed redirect URIs for OAuth flows"`
-	GrantTypes              []oauth2const.GrantType             `json:"grant_types" yaml:"grant_types" jsonschema_description:"Allowed OAuth grant types (e.g., authorization_code, refresh_token, client_credentials)"`
-	ResponseTypes           []oauth2const.ResponseType          `json:"response_types" yaml:"response_types" jsonschema_description:"Allowed OAuth response types (e.g., code, token, id_token)"`
-	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method" yaml:"token_endpoint_auth_method" jsonschema_description:"Token endpoint authentication method (client_secret_basic, client_secret_post, none)"`
-	PKCERequired            bool                                `json:"pkce_required" yaml:"pkce_required" jsonschema_description:"Whether PKCE is required for authorization code flow"`
-	PublicClient            bool                                `json:"public_client" yaml:"public_client" jsonschema_description:"Whether this is a public client (no client secret)"`
+	ClientID                string                              `json:"client_id,omitempty" yaml:"client_id,omitempty" jsonschema_description:"OAuth client ID (auto-generated if not provided)"`
+	ClientSecret            string                              `json:"client_secret,omitempty" yaml:"client_secret,omitempty" jsonschema_description:"OAuth client secret (auto-generated if not provided)"`
+	RedirectURIs            []string                            `json:"redirect_uris,omitempty" yaml:"redirect_uris,omitempty" jsonschema_description:"Allowed redirect URIs for OAuth flows"`
+	GrantTypes              []oauth2const.GrantType             `json:"grant_types,omitempty" yaml:"grant_types,omitempty" jsonschema_description:"Allowed OAuth grant types (e.g., authorization_code, refresh_token, client_credentials)"`
+	ResponseTypes           []oauth2const.ResponseType          `json:"response_types,omitempty" yaml:"response_types,omitempty" jsonschema_description:"Allowed OAuth response types (e.g., code, token, id_token)"`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" yaml:"token_endpoint_auth_method,omitempty" jsonschema_description:"Token endpoint authentication method (client_secret_basic, client_secret_post, none)"`
+	PKCERequired            bool                                `json:"pkce_required,omitempty" yaml:"pkce_required,omitempty" jsonschema_description:"Whether PKCE is required for authorization code flow"`
+	PublicClient            bool                                `json:"public_client,omitempty" yaml:"public_client,omitempty" jsonschema_description:"Whether this is a public client (no client secret)"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty" yaml:"token,omitempty" jsonschema_description:"Token configuration"`
 	Scopes                  []string                            `json:"scopes,omitempty" yaml:"scopes,omitempty" jsonschema_description:"Allowed OAuth scopes (e.g., openid, profile, email)"`
 }
@@ -68,8 +68,8 @@ type OAuthAppConfigDTO struct {
 	GrantTypes              []oauth2const.GrantType             `json:"grant_types,omitempty" jsonschema:"Allowed grant types"`
 	ResponseTypes           []oauth2const.ResponseType          `json:"response_types,omitempty" jsonschema:"Allowed response types"`
 	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" jsonschema:"Token endpoint authentication method"`
-	PKCERequired            bool                                `json:"pkce_required" jsonschema:"Whether PKCE is required"`
-	PublicClient            bool                                `json:"public_client" jsonschema:"Whether this is a public client"`
+	PKCERequired            bool                                `json:"pkce_required,omitempty" jsonschema:"Whether PKCE is required"`
+	PublicClient            bool                                `json:"public_client,omitempty" jsonschema:"Whether this is a public client"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty" jsonschema:"Token configuration"`
 	Scopes                  []string                            `json:"scopes,omitempty" jsonschema:"Allowed scopes"`
 }
