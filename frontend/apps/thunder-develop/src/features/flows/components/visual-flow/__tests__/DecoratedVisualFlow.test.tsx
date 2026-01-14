@@ -18,8 +18,8 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, react/button-has-type, react/require-default-props */
 
-import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {render, screen, fireEvent, waitFor} from '@testing-library/react';
+import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
+import {render, screen, fireEvent, waitFor, cleanup} from '@testing-library/react';
 import type {ReactNode} from 'react';
 import type {Node, Edge} from '@xyflow/react';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
@@ -377,6 +377,18 @@ describe('DecoratedVisualFlow', () => {
     mockApplyAutoLayout.mockResolvedValue([]);
     // Reset fitView to return a resolved promise by default
     mockFitView.mockResolvedValue(undefined);
+  });
+
+  afterEach(async () => {
+    // Flush pending requestAnimationFrame callbacks before cleanup to prevent
+    // "Cannot read properties of undefined (reading 'catch')" errors from
+    // callbacks firing after component unmount
+    await new Promise((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(resolve);
+      });
+    });
+    cleanup();
   });
 
   describe('Rendering', () => {
