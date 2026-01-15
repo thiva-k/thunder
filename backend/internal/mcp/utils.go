@@ -19,36 +19,129 @@
 package mcp
 
 import (
-	"reflect"
+	"encoding/json"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
 
-// EnumDefinition defines the metadata for an enum type.
-type EnumDefinition struct {
-	Type        reflect.Type
-	Values      []string
-	Description string
+// GenerateSchema creates a JSON schema for a given type T and applies the provided modifiers.
+func GenerateSchema[T any](modifiers ...func(*jsonschema.Schema)) *jsonschema.Schema {
+	schema, _ := jsonschema.For[T](&jsonschema.ForOptions{})
+
+	for _, mod := range modifiers {
+		mod(schema)
+	}
+
+	return schema
 }
 
-// GenerateTypeSchemas creates a map of custom schemas for the given enums.
-func GenerateTypeSchemas(enums ...EnumDefinition) map[reflect.Type]*jsonschema.Schema {
-	schemas := make(map[reflect.Type]*jsonschema.Schema)
-	for _, enum := range enums {
-		schemas[enum.Type] = &jsonschema.Schema{
-			Type:        "string",
-			Enum:        stringSliceToAny(enum.Values),
-			Description: enum.Description,
+// WithDefaults applies default values to the generated schema properties, recursively.
+func WithDefaults(defaults map[string]any) func(*jsonschema.Schema) {
+	return func(root *jsonschema.Schema) {
+		WalkSchema(root, func(s *jsonschema.Schema) {
+			for key, value := range defaults {
+				if prop, ok := s.Properties[key]; ok {
+					raw, err := json.Marshal(value)
+					if err == nil {
+						prop.Default = raw
+						s.Properties[key] = prop
+					}
+				}
+			}
+		})
+	}
+}
+
+// WalkSchema recursively visits the schema and its children, invoking the callback for each.
+func WalkSchema(root *jsonschema.Schema, visit func(*jsonschema.Schema)) {
+	visited := make(map[*jsonschema.Schema]bool)
+
+	var walker func(*jsonschema.Schema)
+	walker = func(s *jsonschema.Schema) {
+		if s == nil || visited[s] {
+			return
+		}
+		visited[s] = true
+
+		visit(s)
+
+		// Traverse children
+		for _, p := range s.Properties {
+			walker(p)
+		}
+		if s.Items != nil {
+			walker(s.Items)
+		}
+		for _, d := range s.Definitions {
+			walker(d)
+		}
+		// Traverse logical composition
+		for _, sub := range s.AllOf {
+			walker(sub)
+		}
+		for _, sub := range s.AnyOf {
+			walker(sub)
+		}
+		for _, sub := range s.OneOf {
+			walker(sub)
 		}
 	}
-	return schemas
+
+	walker(root)
 }
 
-// stringSliceToAny converts a string slice to an any slice.
-func stringSliceToAny(s []string) []any {
-	result := make([]any, len(s))
-	for i, v := range s {
-		result[i] = v
+// WithEnum applies enum constraints to a specific property in the schema, recursively.
+func WithEnum(property string, values []string) func(*jsonschema.Schema) {
+	return func(root *jsonschema.Schema) {
+		WalkSchema(root, func(s *jsonschema.Schema) {
+			if prop, ok := s.Properties[property]; ok {
+				if prop.Items != nil {
+					prop.Items.Enum = stringSliceToAny(values)
+				} else {
+					prop.Enum = stringSliceToAny(values)
+				}
+				s.Properties[property] = prop
+			}
+		})
 	}
-	return result
+}
+
+// WithRequired marks the specified fields as required in the schema, recursively.
+// It will try to find the field in properties and mark it as required in the parent structure.
+func WithRequired(fields ...string) func(*jsonschema.Schema) {
+	return func(root *jsonschema.Schema) {
+		WalkSchema(root, func(s *jsonschema.Schema) {
+			requiredMap := make(map[string]struct{})
+			for _, f := range s.Required {
+				requiredMap[f] = struct{}{}
+			}
+			
+			// Only add if the field actually exists in this schema's properties
+			changed := false
+			for _, f := range fields {
+				if _, ok := s.Properties[f]; ok {
+					if _, exists := requiredMap[f]; !exists {
+						requiredMap[f] = struct{}{}
+						changed = true
+					}
+				}
+			}
+
+			if changed {
+				newRequired := make([]string, 0, len(requiredMap))
+				for f := range requiredMap {
+					newRequired = append(newRequired, f)
+				}
+				s.Required = newRequired
+			}
+		})
+	}
+}
+
+func stringSliceToAny(strings []string) []any {
+	anys := make([]any, len(strings))
+	for i, s := range strings {
+		anys[i] = s
+	}
+	return anys
 }

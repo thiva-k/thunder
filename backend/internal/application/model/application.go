@@ -99,11 +99,11 @@ type Application struct {
 	BrandingID                string `yaml:"branding_id,omitempty" json:"branding_id,omitempty"`
 	Template                  string `yaml:"template,omitempty" json:"template,omitempty"`
 
-	URL       string `yaml:"url,omitempty" json:"url,omitempty"`
-	LogoURL   string `yaml:"logo_url,omitempty" json:"logo_url,omitempty"`
-	TosURI    string `yaml:"tos_uri,omitempty" json:"tos_uri,omitempty"`
-	PolicyURI string `yaml:"policy_uri,omitempty" json:"policy_uri,omitempty"`
-	Contacts  []string
+	URL       string   `yaml:"url,omitempty" json:"url,omitempty"`
+	LogoURL   string   `yaml:"logo_url,omitempty" json:"logo_url,omitempty"`
+	TosURI    string   `yaml:"tos_uri,omitempty" json:"tos_uri,omitempty"`
+	PolicyURI string   `yaml:"policy_uri,omitempty" json:"policy_uri,omitempty"`
+	Contacts  []string `json:"contacts,omitempty"`
 
 	Token             *TokenConfig                `yaml:"token,omitempty" json:"token,omitempty"`
 	Certificate       *ApplicationCertificate     `yaml:"certificate,omitempty" json:"certificate,omitempty"`

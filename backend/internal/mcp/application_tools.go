@@ -21,12 +21,10 @@ package mcp
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/asgardeo/thunder/internal/application"
 	"github.com/asgardeo/thunder/internal/application/model"
 	oauth2const "github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
-	"github.com/google/jsonschema-go/jsonschema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -45,7 +43,6 @@ func NewApplicationTools(appService application.ApplicationServiceInterface) *Ap
 // ListApplicationsInput represents the input for the list_applications tool.
 type ListApplicationsInput struct{}
 
-
 // ApplicationListOutput represents the output for list_applications tool.
 type ApplicationListOutput struct {
 	TotalCount   int                              `json:"total_count"`
@@ -55,10 +52,18 @@ type ApplicationListOutput struct {
 // RegisterTools registers all application tools with the MCP server.
 func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 	// Generate schema with enum support for ApplicationDTO
-	appDTOSchema := generateApplicationDTOSchema()
+	appDTOSchema := GenerateSchema[model.ApplicationDTO](
+		WithEnum("grant_types", oauth2const.GetSupportedGrantTypes()),
+		WithEnum("response_types", oauth2const.GetSupportedResponseTypes()),
+		WithEnum("token_endpoint_auth_method", oauth2const.GetSupportedTokenEndpointAuthMethods()),
+	)
 	// Generate schema for update with 'id' as required
-	updateAppDTOSchema := generateApplicationDTOSchema()
-	updateAppDTOSchema.Required = append([]string{"id"}, updateAppDTOSchema.Required...)
+	updateAppDTOSchema := GenerateSchema[model.ApplicationDTO](
+		WithEnum("grant_types", oauth2const.GetSupportedGrantTypes()),
+		WithEnum("response_types", oauth2const.GetSupportedResponseTypes()),
+		WithEnum("token_endpoint_auth_method", oauth2const.GetSupportedTokenEndpointAuthMethods()),
+		WithRequired("id"),
+	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_applications",
@@ -255,34 +260,4 @@ func (t *ApplicationTools) DeleteApplication(
 		Success: true,
 		Message: fmt.Sprintf("Application %s deleted successfully", input.ID),
 	}, nil
-}
-
-// generateApplicationDTOSchema generates a JSON Schema for ApplicationDTO with enum support.
-// Used for create_application tool.
-func generateApplicationDTOSchema() *jsonschema.Schema {
-	typeSchemas := GenerateTypeSchemas(
-		EnumDefinition{
-			Type:        reflect.TypeFor[oauth2const.GrantType](),
-			Values:      oauth2const.GetSupportedGrantTypes(),
-			Description: "OAuth grant type",
-		},
-		EnumDefinition{
-			Type:        reflect.TypeFor[oauth2const.ResponseType](),
-			Values:      oauth2const.GetSupportedResponseTypes(),
-			Description: "OAuth response type",
-		},
-		EnumDefinition{
-			Type:        reflect.TypeFor[oauth2const.TokenEndpointAuthMethod](),
-			Values:      oauth2const.GetSupportedTokenEndpointAuthMethods(),
-			Description: "Token endpoint authentication method",
-		},
-	)
-
-	opts := &jsonschema.ForOptions{TypeSchemas: typeSchemas}
-	schema, err := jsonschema.For[model.ApplicationDTO](opts)
-	if err != nil {
-		// Fall back to auto-inference if custom schema fails
-		schema, _ = jsonschema.For[model.ApplicationDTO](nil)
-	}
-	return schema
 }

@@ -27,6 +27,8 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+var flowTypeValues = []string{string(common.FlowTypeAuthentication), string(common.FlowTypeRegistration)}
+
 // FlowTools provides MCP tools for managing Thunder authentication flows.
 type FlowTools struct {
 	flowService flowmgt.FlowMgtServiceInterface
@@ -53,6 +55,11 @@ type FlowListOutput struct {
 
 // RegisterTools registers all flow tools with the MCP server.
 func (t *FlowTools) RegisterTools(server *mcp.Server) {
+	listFlowsSchema := GenerateSchema[ListFlowsInput](
+		WithEnum("flow_type", []string{"AUTHENTICATION", "REGISTRATION"}),
+		WithDefaults(map[string]any{"limit": 20, "offset": 0}),
+	)
+
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_flows",
 		Description: `List all available flows.
@@ -62,6 +69,7 @@ Inputs:
 - limit/offset: For pagination.
 
 Outputs: List of flows with ID, Name, and Type.`,
+		InputSchema: listFlowsSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Flows",
 			ReadOnlyHint: true,
@@ -79,6 +87,10 @@ Outputs: Full flow structure including all Nodes, Executors, and UI metadata.`,
 			ReadOnlyHint: true,
 		},
 	}, t.GetFlow)
+
+	creatFlowSchema := GenerateSchema[flowmgt.FlowDefinition](
+		WithEnum("flowType", flowTypeValues), // FlowDefinition uses json:"flowType"
+	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "create_flow",
@@ -102,11 +114,17 @@ Node Types:
 Outputs: Created flow definition with ID.
 
 Next Steps: Assign this flow to an Application via create_application or update_application.`,
+		InputSchema: creatFlowSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Flow",
 			IdempotentHint: true,
 		},
 	}, t.CreateFlow)
+
+	updateFlowSchema := GenerateSchema[UpdateFlowInput](
+		WithEnum("flow_type", flowTypeValues), // UpdateFlowInput uses json:"flow_type"
+		WithRequired("id"),
+	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "update_flow",
@@ -117,6 +135,7 @@ Inputs:
 - Complete flow definition (replaces existingNodes).
 
 Outputs: Updated flow definition.`,
+		InputSchema: updateFlowSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Flow",
 			IdempotentHint: true,

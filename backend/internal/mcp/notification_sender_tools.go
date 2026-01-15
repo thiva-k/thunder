@@ -55,9 +55,7 @@ func (t *NotificationSenderTools) RegisterTools(server *mcp.Server) {
 		Name: "list_notification_senders",
 		Description: `List all configured notification senders (SMS, Email providers).
 
-Inputs:
-- limit (optional): Max number of results.
-- offset (optional): Pagination offset.
+Inputs: None.
 
 Outputs:
 - Returns a list of senders with their IDs, names, and providers.
@@ -87,6 +85,11 @@ Next Steps:
 			ReadOnlyHint: true,
 		},
 	}, t.GetSender)
+
+	providerEnum := []string{"twilio", "vonage", "custom"}
+	createSenderSchema := GenerateSchema[notifcommon.NotificationSenderRequest](
+		WithEnum("provider", providerEnum),
+	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "create_notification_sender",
@@ -119,11 +122,17 @@ Outputs:
 
 Next Steps:
 - Use the returned 'id' in authentication flows (e.g., set 'senderId' property in SMSOTPAuthExecutor).`,
+		InputSchema: createSenderSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Notification Sender",
 			IdempotentHint: true,
 		},
 	}, t.CreateSender)
+
+	updateSenderSchema := GenerateSchema[notifcommon.NotificationSenderRequestWithID](
+		WithEnum("provider", providerEnum),
+		WithRequired("id"),
+	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "update_notification_sender",
@@ -144,6 +153,7 @@ Outputs:
 
 Next Steps:
 - Verify the update by listing or getting the sender.`,
+		InputSchema: updateSenderSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Notification Sender",
 			IdempotentHint: true,
