@@ -17,7 +17,7 @@
  */
 
 // Package mcp provides MCP (Model Context Protocol) server functionality for Thunder.
-package mcp
+package tools
 
 // DeleteOutput represents the output for delete operations.
 type DeleteOutput struct {

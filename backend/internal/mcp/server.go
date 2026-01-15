@@ -21,6 +21,7 @@ package mcp
 import (
 	"github.com/asgardeo/thunder/internal/application"
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
+	"github.com/asgardeo/thunder/internal/mcp/tools"
 	"github.com/asgardeo/thunder/internal/notification"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -43,15 +44,15 @@ func NewServer(
 	}, nil)
 
 	// Register application tools.
-	appTools := NewApplicationTools(appService)
+	appTools := tools.NewApplicationTools(appService)
 	appTools.RegisterTools(mcpServer)
 
 	// Register flow tools.
-	flowTools := NewFlowTools(flowService)
+	flowTools := tools.NewFlowTools(flowService)
 	flowTools.RegisterTools(mcpServer)
 
 	// Register notification sender tools.
-	notifTools := NewNotificationSenderTools(notifService)
+	notifTools := tools.NewNotificationSenderTools(notifService)
 	notifTools.RegisterTools(mcpServer)
 
 	return &Server{

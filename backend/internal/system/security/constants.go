@@ -40,4 +40,5 @@ var publicPaths = []string{
 	"/i18n/languages",
 	"/i18n/languages/*/translations/resolve",
 	"/i18n/languages/*/translations/ns/*/keys/*/resolve",
+	"/mcp/**",
 }

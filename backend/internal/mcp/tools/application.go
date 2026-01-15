@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package mcp
+package tools
 
 import (
 	"context"

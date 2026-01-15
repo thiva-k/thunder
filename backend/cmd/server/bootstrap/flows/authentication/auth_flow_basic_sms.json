@@ -1,0 +1,194 @@
+{
+  "name": "Basic SMS Authentication Flow",
+  "handle": "auth-flow-basic-sms",
+  "flowType": "AUTHENTICATION",
+  "nodes": [
+    {
+      "id": "start",
+      "type": "START",
+      "onSuccess": "prompt_credentials"
+    },
+    {
+      "id": "prompt_credentials",
+      "type": "PROMPT",
+      "meta": {
+        "components": [
+          {
+            "id": "text_001",
+            "type": "TEXT",
+            "label": "{{ t(signin:heading) }}",
+            "variant": "HEADING_1"
+          },
+          {
+            "id": "block_001",
+            "type": "BLOCK",
+            "components": [
+              {
+                "id": "input_001",
+                "ref": "username",
+                "type": "TEXT_INPUT",
+                "label": "{{ t(elements:fields.username.label) }}",
+                "required": true,
+                "placeholder": "{{ t(elements:fields.username.placeholder) }}"
+              },
+              {
+                "id": "input_002",
+                "ref": "password",
+                "type": "PASSWORD_INPUT",
+                "label": "{{ t(elements:fields.password.label) }}",
+                "required": true,
+                "placeholder": "{{ t(elements:fields.password.placeholder) }}"
+              },
+              {
+                "id": "action_001",
+                "type": "ACTION",
+                "label": "{{ t(elements:buttons.submit.text) }}",
+                "variant": "PRIMARY",
+                "eventType": "SUBMIT"
+              }
+            ]
+          }
+        ]
+      },
+      "prompts": [
+        {
+          "action": {
+            "ref": "action_001",
+            "nextNode": "basic_auth"
+          },
+          "inputs": [
+            {
+              "ref": "input_001",
+              "type": "TEXT_INPUT",
+              "required": true,
+              "identifier": "username"
+            },
+            {
+              "ref": "input_002",
+              "type": "PASSWORD_INPUT",
+              "required": true,
+              "identifier": "password"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "basic_auth",
+      "type": "TASK_EXECUTION",
+      "executor": {
+        "name": "BasicAuthExecutor"
+      },
+      "onSuccess": "send_otp"
+    },
+    {
+      "id": "send_otp",
+      "type": "TASK_EXECUTION",
+      "executor": {
+        "mode": "send",
+        "name": "SMSOTPAuthExecutor"
+      },
+      "onSuccess": "prompt_otp",
+      "properties": {
+        "senderId": "<sender_id>"
+      }
+    },
+    {
+      "id": "prompt_otp",
+      "type": "PROMPT",
+      "meta": {
+        "components": [
+          {
+            "id": "text_otp_001",
+            "type": "TEXT",
+            "label": "Enter OTP",
+            "variant": "HEADING_1"
+          },
+          {
+            "id": "text_otp_002",
+            "type": "TEXT",
+            "label": "Please enter the OTP sent to your mobile number",
+            "variant": "BODY"
+          },
+          {
+            "id": "block_otp_001",
+            "type": "BLOCK",
+            "components": [
+              {
+                "id": "input_otp_001",
+                "ref": "otp",
+                "type": "TEXT_INPUT",
+                "label": "OTP Code",
+                "required": true,
+                "placeholder": "Enter 6-digit code"
+              },
+              {
+                "id": "action_otp_001",
+                "type": "ACTION",
+                "label": "Verify",
+                "variant": "PRIMARY",
+                "eventType": "SUBMIT"
+              }
+            ]
+          }
+        ]
+      },
+      "prompts": [
+        {
+          "action": {
+            "ref": "action_otp_001",
+            "nextNode": "verify_otp"
+          },
+          "inputs": [
+            {
+              "ref": "input_otp_001",
+              "type": "TEXT_INPUT",
+              "required": true,
+              "identifier": "otp"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "verify_otp",
+      "type": "TASK_EXECUTION",
+      "executor": {
+        "mode": "verify",
+        "name": "SMSOTPAuthExecutor",
+        "inputs": [
+          {
+            "type": "TEXT_INPUT",
+            "required": true,
+            "identifier": "otp"
+          }
+        ]
+      },
+      "onFailure": "prompt_otp",
+      "onSuccess": "authorization_check",
+      "properties": {
+        "senderId": "<sender_id>"
+      }
+    },
+    {
+      "id": "authorization_check",
+      "type": "TASK_EXECUTION",
+      "executor": {
+        "name": "AuthorizationExecutor"
+      },
+      "onSuccess": "auth_assert"
+    },
+    {
+      "id": "auth_assert",
+      "type": "TASK_EXECUTION",
+      "executor": {
+        "name": "AuthAssertExecutor"
+      },
+      "onSuccess": "end"
+    },
+    {
+      "id": "end",
+      "type": "END"
+    }
+  ]
+}
