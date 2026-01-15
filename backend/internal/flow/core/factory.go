@@ -130,6 +130,11 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 		})
 	}
 
+	// Copy meta if present
+	if sourceMeta := source.GetMeta(); sourceMeta != nil {
+		nodeCopy.SetMeta(sourceMeta)
+	}
+
 	// Copy onSuccess for representation nodes (START/END)
 	if repSource, ok := source.(RepresentationNodeInterface); ok {
 		if repCopy, ok := nodeCopy.(RepresentationNodeInterface); ok {
@@ -149,11 +154,10 @@ func (f *flowFactory) CloneNode(source NodeInterface) (NodeInterface, error) {
 		}
 	}
 
-	// Copy prompts and meta if the node is a prompt node
+	// Copy prompts if the node is a prompt node
 	if promptSource, ok := source.(PromptNodeInterface); ok {
 		if promptCopy, ok := nodeCopy.(PromptNodeInterface); ok {
 			promptCopy.SetPrompts(append([]common.Prompt{}, promptSource.GetPrompts()...))
-			promptCopy.SetMeta(promptSource.GetMeta())
 		} else {
 			return nil, errors.New("mismatch in node types during cloning. copy is not a prompt node")
 		}

@@ -44,39 +44,6 @@ type NodeInterface interface {
 	RemovePreviousNode(previousNodeID string)
 	GetCondition() *NodeCondition
 	SetCondition(condition *NodeCondition)
-}
-
-// RepresentationNodeInterface extends NodeInterface for representation nodes (START/END).
-// These nodes use simple onSuccess navigation for linear flow.
-type RepresentationNodeInterface interface {
-	NodeInterface
-	GetOnSuccess() string
-	SetOnSuccess(nodeID string)
-}
-
-// ExecutorBackedNodeInterface extends NodeInterface for nodes backed by executors.
-// Only task execution nodes implement this interface to delegate their execution logic to executors.
-type ExecutorBackedNodeInterface interface {
-	NodeInterface
-	GetExecutorName() string
-	SetExecutorName(name string)
-	GetExecutor() ExecutorInterface
-	SetExecutor(executor ExecutorInterface)
-	GetInputs() []common.Input
-	SetInputs(inputs []common.Input)
-	GetOnSuccess() string
-	SetOnSuccess(nodeID string)
-	GetOnFailure() string
-	SetOnFailure(nodeID string)
-	GetMode() string
-	SetMode(mode string)
-}
-
-// PromptNodeInterface extends NodeInterface for nodes that require user interaction.
-type PromptNodeInterface interface {
-	NodeInterface
-	GetPrompts() []common.Prompt
-	SetPrompts(prompts []common.Prompt)
 	GetMeta() interface{}
 	SetMeta(meta interface{})
 }
@@ -91,6 +58,7 @@ type node struct {
 	nextNodeList     []string
 	previousNodeList []string
 	condition        *NodeCondition
+	meta             interface{}
 }
 
 var _ NodeInterface = (*node)(nil)
@@ -250,4 +218,14 @@ func (n *node) GetCondition() *NodeCondition {
 // SetCondition sets the execution condition for the node
 func (n *node) SetCondition(condition *NodeCondition) {
 	n.condition = condition
+}
+
+// GetMeta returns the meta object for the node
+func (n *node) GetMeta() interface{} {
+	return n.meta
+}
+
+// SetMeta sets the meta object for the node
+func (n *node) SetMeta(meta interface{}) {
+	n.meta = meta
 }

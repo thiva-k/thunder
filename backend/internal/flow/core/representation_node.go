@@ -23,6 +23,14 @@ import (
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 )
 
+// RepresentationNodeInterface extends NodeInterface for representation nodes (START/END).
+// These nodes use simple onSuccess navigation for linear flow.
+type RepresentationNodeInterface interface {
+	NodeInterface
+	GetOnSuccess() string
+	SetOnSuccess(nodeID string)
+}
+
 // representationNode implements the RepresentationNodeInterface
 type representationNode struct {
 	*node
