@@ -21,7 +21,6 @@ package authn
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"testing"
 
@@ -277,7 +276,12 @@ func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentialsJWTG
 			},
 		}, nil).Once()
 	suite.mockJWTService.On("GenerateJWT", testUserID, "application", mock.Anything, mock.Anything, mock.Anything).
-		Return("", int64(0), errors.New("JWT generation failed"))
+		Return("", int64(0), &serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "JWT_GENERATION_FAILED",
+			Error:            "JWT generation failed",
+			ErrorDescription: "Failed to generate JWT token",
+		})
 
 	result, err := suite.service.AuthenticateWithCredentials(attributes, false, "")
 
@@ -322,7 +326,12 @@ func (suite *AuthenticationServiceTestSuite) TestAuthenticateWithCredentialsInva
 	}
 
 	suite.mockCredentialsService.On("Authenticate", attributes).Return(testUser, nil)
-	suite.mockJWTService.On("VerifyJWT", invalidAssertion, "", mock.Anything).Return(errors.New("invalid JWT"))
+	suite.mockJWTService.On("VerifyJWT", invalidAssertion, "", mock.Anything).Return(&serviceerror.ServiceError{
+		Type:             serviceerror.ServerErrorType,
+		Code:             "INVALID_JWT",
+		Error:            "Invalid JWT",
+		ErrorDescription: "The JWT signature is invalid",
+	})
 
 	result, err := suite.service.AuthenticateWithCredentials(attributes, false, invalidAssertion)
 
@@ -659,7 +668,12 @@ func (suite *AuthenticationServiceTestSuite) TestStartIDPAuthenticationJWTGenera
 	suite.mockIDPService.On("GetIdentityProvider", idpID).Return(identityProvider, nil)
 	suite.mockOAuthService.On("BuildAuthorizeURL", idpID).Return(redirectURL, nil)
 	suite.mockJWTService.On("GenerateJWT", "auth-svc", "auth-svc", mock.Anything, mock.Anything, mock.Anything).
-		Return("", int64(0), errors.New("JWT generation failed"))
+		Return("", int64(0), &serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "JWT_GENERATION_FAILED",
+			Error:            "JWT generation failed",
+			ErrorDescription: "Failed to generate session token",
+		})
 
 	result, err := suite.service.StartIDPAuthentication(idp.IDPTypeOAuth, idpID)
 
@@ -827,7 +841,12 @@ func (suite *AuthenticationServiceTestSuite) TestFinishIDPAuthenticationEmptyAut
 
 func (suite *AuthenticationServiceTestSuite) TestFinishIDPAuthenticationInvalidSessionToken() {
 	suite.mockJWTService.On("VerifyJWT", "invalid_token", "auth-svc", mock.Anything).
-		Return(errors.New("invalid token"))
+		Return(&serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "INVALID_TOKEN",
+			Error:            "Invalid token",
+			ErrorDescription: "The session token is invalid",
+		})
 
 	result, err := suite.service.FinishIDPAuthentication(idp.IDPTypeOAuth, "invalid_token", false, "", testAuthCode)
 
@@ -1222,7 +1241,12 @@ func (suite *AuthenticationServiceTestSuite) TestFinishIDPAuthenticationAssertio
 
 	// Create invalid existing assertion that will fail JWT verification
 	suite.mockJWTService.On("VerifyJWT", invalidAssertion, "", mock.Anything).
-		Return(errors.New("invalid signature")).Once()
+		Return(&serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "INVALID_SIGNATURE",
+			Error:            "Invalid signature",
+			ErrorDescription: "The JWT signature is invalid",
+		}).Once()
 
 	result, err := suite.service.FinishIDPAuthentication(idp.IDPTypeOAuth, sessionToken, false,
 		invalidAssertion, testAuthCode)
@@ -1446,7 +1470,12 @@ func (suite *AuthenticationServiceTestSuite) TestVerifyOTPJWTGenerationError() {
 			},
 		}, nil).Once()
 	suite.mockJWTService.On("GenerateJWT", testUserID, "application", mock.Anything, mock.Anything, mock.Anything).
-		Return("", int64(0), errors.New("JWT generation failed"))
+		Return("", int64(0), &serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "JWT_GENERATION_FAILED",
+			Error:            "JWT generation failed",
+			ErrorDescription: "Failed to generate JWT token",
+		})
 
 	result, err := suite.service.VerifyOTP(sessionToken, false, "", otpCode)
 
@@ -1459,7 +1488,12 @@ func (suite *AuthenticationServiceTestSuite) TestExtractClaimsFromAssertionInval
 	logger := log.GetLogger()
 
 	suite.mockJWTService.On("VerifyJWT", invalidAssertion, "", mock.Anything).
-		Return(errors.New("invalid signature"))
+		Return(&serviceerror.ServiceError{
+			Type:             serviceerror.ServerErrorType,
+			Code:             "INVALID_SIGNATURE",
+			Error:            "Invalid signature",
+			ErrorDescription: "The JWT signature is invalid",
+		})
 
 	assuranceCtx, sub, err := suite.service.extractClaimsFromAssertion(invalidAssertion, logger)
 
