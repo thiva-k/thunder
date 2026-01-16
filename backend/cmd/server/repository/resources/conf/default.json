@@ -3,7 +3,8 @@
     "hostname": "localhost",
     "port": 8090,
     "http_only": false,
-    "identifier": "default-deployment"
+    "identifier": "default-deployment",
+    "mcp": false
   },
   "gate_client": {
     "hostname": "localhost",

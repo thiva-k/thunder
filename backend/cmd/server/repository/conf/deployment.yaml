@@ -2,6 +2,7 @@ server:
   hostname: "localhost"
   port: 8090
   http_only: true
+  mcp: true
 
 tls:
   min_version: "1.3"
@@ -49,4 +50,5 @@ cors:
     - "https://localhost:3000"
     - "https://localhost:5190"
     - "https://localhost:5191"
+    - "http://localhost:5173"
 

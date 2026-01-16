@@ -67,7 +67,7 @@ type OAuthAppConfigDTO struct {
 	RedirectURIs            []string                            `json:"redirect_uris,omitempty" jsonschema:"Allowed redirect URIs"`
 	GrantTypes              []oauth2const.GrantType             `json:"grant_types,omitempty" jsonschema:"Allowed grant types"`
 	ResponseTypes           []oauth2const.ResponseType          `json:"response_types,omitempty" jsonschema:"Allowed response types"`
-	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" jsonschema:"Token endpoint authentication method"`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" jsonschema:"Token endpoint authentication method. Use none for public clients"`
 	PKCERequired            bool                                `json:"pkce_required,omitempty" jsonschema:"Whether PKCE is required"`
 	PublicClient            bool                                `json:"public_client,omitempty" jsonschema:"Whether this is a public client"`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty" jsonschema:"Token configuration"`

@@ -27,8 +27,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-var flowTypeValues = []string{string(common.FlowTypeAuthentication), string(common.FlowTypeRegistration)}
-
 // FlowTools provides MCP tools for managing Thunder authentication flows.
 type FlowTools struct {
 	flowService flowmgt.FlowMgtServiceInterface
@@ -57,18 +55,16 @@ type FlowListOutput struct {
 func (t *FlowTools) RegisterTools(server *mcp.Server) {
 	listFlowsSchema := GenerateSchema[ListFlowsInput](
 		WithEnum("flow_type", []string{"AUTHENTICATION", "REGISTRATION"}),
-		WithDefaults(map[string]any{"limit": 20, "offset": 0}),
+		WithDefaults(map[string]any{"limit": 30, "offset": 0}),
 	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_flows",
-		Description: `List all available flows.
+		Description: `List all available authentication and registration flows.
 
-Inputs:
-- flow_type (Enum): "AUTHENTICATION" (Login) or "REGISTRATION" (Signup).
-- limit/offset: For pagination.
+Behavior: Returns paginated results. Filter by flow_type to see only login or signup flows.
 
-Outputs: List of flows with ID, Name, and Type.`,
+Related: Use returned 'id' with get_flow, update_flow, or assign to applications.`,
 		InputSchema: listFlowsSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Flows",
@@ -78,10 +74,9 @@ Outputs: List of flows with ID, Name, and Type.`,
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "get_flow",
-		Description: `Retrieve the complete definition of a flow.
+		Description: `Retrieve the complete definition of a flow including nodes, executors, and UI metadata.
 
-Inputs: 'id' (UUID).
-Outputs: Full flow structure including all Nodes, Executors, and UI metadata.`,
+Related: Use before update_flow to understand current structure. Reference existing flows when creating new ones.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Flow",
 			ReadOnlyHint: true,
@@ -89,31 +84,23 @@ Outputs: Full flow structure including all Nodes, Executors, and UI metadata.`,
 	}, t.GetFlow)
 
 	creatFlowSchema := GenerateSchema[flowmgt.FlowDefinition](
-		WithEnum("flowType", flowTypeValues), // FlowDefinition uses json:"flowType"
+		WithEnum("flowType", []string{string(common.FlowTypeAuthentication), string(common.FlowTypeRegistration)}),
 	)
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "create_flow",
 		Description: `Create a new authentication or registration flow.
 
-Refer similar existing flows if needed. Add meta field if needed based on this.
-
 Prerequisites:
-- Notification Senders: Required if using SMS/Email OTP executors.
+- For SMS/Email OTP: Create notification sender first using create_notification_sender.
+- Reference existing flows using get_flow to understand node structure.
 
-Inputs:
-- name (Required): Unique flow name.
-- flow_type (Enum): "AUTHENTICATION", "REGISTRATION".
-- nodes: Array of flow nodes (START, END, TASK_EXECUTION, PROMPT, DECISION).
+Behavior:
+- Handle must be unique per flow type (lowercase, alphanumeric with dashes/underscores).
+- Node types: START, END, TASK_EXECUTION, PROMPT.
+- PROMPT nodes require 'meta.components' for UI rendering.
 
-Node Types:
-- TASK_EXECUTION: Runs backend logic (e.g., "SMSOTPAuthExecutor").
-- PROMPT: Renders UI to user (requires 'meta.components').
-- DECISION: Branching logic.
-
-Outputs: Created flow definition with ID.
-
-Next Steps: Assign this flow to an Application via create_application or update_application.`,
+Related: Assign flow to application using create_application or update_application.`,
 		InputSchema: creatFlowSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Flow",
@@ -122,7 +109,7 @@ Next Steps: Assign this flow to an Application via create_application or update_
 	}, t.CreateFlow)
 
 	updateFlowSchema := GenerateSchema[UpdateFlowInput](
-		WithEnum("flow_type", flowTypeValues), // UpdateFlowInput uses json:"flow_type"
+		WithEnum("flow_type", []string{string(common.FlowTypeAuthentication), string(common.FlowTypeRegistration)}),
 		WithRequired("id"),
 	)
 
@@ -130,11 +117,10 @@ Next Steps: Assign this flow to an Application via create_application or update_
 		Name: "update_flow",
 		Description: `Update an existing flow definition.
 
-Inputs:
-- id (Required): Flow UUID.
-- Complete flow definition (replaces existingNodes).
+Prerequisites: Use get_flow first to retrieve current structure.
 
-Outputs: Updated flow definition.`,
+IMPORTANT: This is a full replacement. Provide complete node array.
+Flow versions are automatically tracked (up to 50 versions retained).`,
 		InputSchema: updateFlowSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Flow",
@@ -144,10 +130,11 @@ Outputs: Updated flow definition.`,
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "delete_flow",
-		Description: `Permanently delete a flow.
+		Description: `Permanently delete a flow and all its version history.
 
-Inputs: 'id' (UUID).
-Prerequisites: Ensure this flow is not assigned to any Application.`,
+Prerequisites: Ensure flow is not assigned to any application (check via list_applications).
+
+Impact: Deletion is irreversible. All version history is also deleted.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Delete Flow",
 			DestructiveHint: ptr(true),
@@ -163,7 +150,7 @@ func (t *FlowTools) ListFlows(
 ) (*mcp.CallToolResult, FlowListOutput, error) {
 	limit := input.Limit
 	if limit <= 0 {
-		limit = 20
+		limit = 30
 	}
 
 	flowType := common.FlowType(input.FlowType)

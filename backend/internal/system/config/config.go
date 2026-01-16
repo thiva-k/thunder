@@ -41,6 +41,7 @@ type ServerConfig struct {
 	HTTPOnly   bool   `yaml:"http_only" json:"http_only"`
 	PublicURL  string `yaml:"public_url" json:"public_url"`
 	Identifier string `yaml:"identifier" json:"identifier"`
+	MCP        bool   `yaml:"mcp" json:"mcp"`
 }
 
 // GateClientConfig holds the client configuration details.

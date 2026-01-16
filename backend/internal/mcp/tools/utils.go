@@ -20,6 +20,7 @@ package tools
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/google/jsonschema-go/jsonschema"
 )
@@ -38,13 +39,11 @@ func GenerateSchema[T any](modifiers ...func(*jsonschema.Schema)) *jsonschema.Sc
 // WithDefaults applies default values to the generated schema properties, recursively.
 func WithDefaults(defaults map[string]any) func(*jsonschema.Schema) {
 	return func(root *jsonschema.Schema) {
-		WalkSchema(root, func(s *jsonschema.Schema) {
+		walkSchema(root, func(s *jsonschema.Schema) {
 			for key, value := range defaults {
 				if prop, ok := s.Properties[key]; ok {
-					raw, err := json.Marshal(value)
-					if err == nil {
+					if raw, err := json.Marshal(value); err == nil {
 						prop.Default = raw
-						s.Properties[key] = prop
 					}
 				}
 			}
@@ -52,8 +51,37 @@ func WithDefaults(defaults map[string]any) func(*jsonschema.Schema) {
 	}
 }
 
+// WithEnum applies enum constraints to a specific property in the schema, recursively.
+func WithEnum(property string, values []string) func(*jsonschema.Schema) {
+	return func(root *jsonschema.Schema) {
+		walkSchema(root, func(s *jsonschema.Schema) {
+			if prop, ok := s.Properties[property]; ok {
+				if prop.Items != nil {
+					prop.Items.Enum = stringSliceToAny(values)
+				} else {
+					prop.Enum = stringSliceToAny(values)
+				}
+				s.Properties[property] = prop
+			}
+		})
+	}
+}
+
+// WithRequired marks the specified fields as required in the schema, recursively.
+func WithRequired(fields ...string) func(*jsonschema.Schema) {
+	return func(root *jsonschema.Schema) {
+		walkSchema(root, func(s *jsonschema.Schema) {
+			for _, f := range fields {
+				if _, ok := s.Properties[f]; ok && !slices.Contains(s.Required, f) {
+					s.Required = append(s.Required, f)
+				}
+			}
+		})
+	}
+}
+
 // WalkSchema recursively visits the schema and its children, invoking the callback for each.
-func WalkSchema(root *jsonschema.Schema, visit func(*jsonschema.Schema)) {
+func walkSchema(root *jsonschema.Schema, visit func(*jsonschema.Schema)) {
 	visited := make(map[*jsonschema.Schema]bool)
 
 	var walker func(*jsonschema.Schema)
@@ -88,54 +116,6 @@ func WalkSchema(root *jsonschema.Schema, visit func(*jsonschema.Schema)) {
 	}
 
 	walker(root)
-}
-
-// WithEnum applies enum constraints to a specific property in the schema, recursively.
-func WithEnum(property string, values []string) func(*jsonschema.Schema) {
-	return func(root *jsonschema.Schema) {
-		WalkSchema(root, func(s *jsonschema.Schema) {
-			if prop, ok := s.Properties[property]; ok {
-				if prop.Items != nil {
-					prop.Items.Enum = stringSliceToAny(values)
-				} else {
-					prop.Enum = stringSliceToAny(values)
-				}
-				s.Properties[property] = prop
-			}
-		})
-	}
-}
-
-// WithRequired marks the specified fields as required in the schema, recursively.
-// It will try to find the field in properties and mark it as required in the parent structure.
-func WithRequired(fields ...string) func(*jsonschema.Schema) {
-	return func(root *jsonschema.Schema) {
-		WalkSchema(root, func(s *jsonschema.Schema) {
-			requiredMap := make(map[string]struct{})
-			for _, f := range s.Required {
-				requiredMap[f] = struct{}{}
-			}
-			
-			// Only add if the field actually exists in this schema's properties
-			changed := false
-			for _, f := range fields {
-				if _, ok := s.Properties[f]; ok {
-					if _, exists := requiredMap[f]; !exists {
-						requiredMap[f] = struct{}{}
-						changed = true
-					}
-				}
-			}
-
-			if changed {
-				newRequired := make([]string, 0, len(requiredMap))
-				for f := range requiredMap {
-					newRequired = append(newRequired, f)
-				}
-				s.Required = newRequired
-			}
-		})
-	}
 }
 
 func stringSliceToAny(strings []string) []any {

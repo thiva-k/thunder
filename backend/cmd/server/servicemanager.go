@@ -41,6 +41,7 @@ import (
 	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/resource"
 	"github.com/asgardeo/thunder/internal/role"
+	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/crypto/pki"
 	"github.com/asgardeo/thunder/internal/system/export"
@@ -61,6 +62,7 @@ func registerServices(
 	mux *http.ServeMux,
 	jwtService jwt.JWTServiceInterface,
 	pkiService pki.PKIServiceInterface,
+	cfg *config.Config,
 ) {
 	logger := log.GetLogger()
 
@@ -154,8 +156,11 @@ func registerServices(
 	// Register the health service.
 	services.NewHealthCheckService(mux)
 
-	// Initialize MCP server with application, flow, and notification sender tools.
-	mcp.Initialize(mux, applicationService, flowMgtService, notificationMgtService)
+	// Initialize MCP server if enabled in config.
+	if cfg.Server.MCP {
+		logger.Info("MCP server enabled, initializing...")
+		mcp.Initialize(mux, applicationService, flowMgtService, notificationMgtService)
+	}
 }
 
 // unregisterServices unregisters all services that require cleanup during shutdown.

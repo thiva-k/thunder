@@ -55,6 +55,10 @@ func NewServer(
 	notifTools := tools.NewNotificationSenderTools(notifService)
 	notifTools.RegisterTools(mcpServer)
 
+	// Register React SDK integration tools.
+	reactTools := tools.NewReactSDKTools()
+	reactTools.RegisterTools(mcpServer)
+
 	return &Server{
 		mcpServer: mcpServer,
 	}

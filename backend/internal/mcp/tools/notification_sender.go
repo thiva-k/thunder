@@ -40,9 +40,6 @@ func NewNotificationSenderTools(notifService notification.NotificationSenderMgtS
 	}
 }
 
-// ListSendersInput represents the input for the list_notification_senders tool.
-type ListSendersInput struct{}
-
 // SenderListOutput represents the output for list_notification_senders tool.
 type SenderListOutput struct {
 	TotalCount int                                      `json:"total_count"`
@@ -53,15 +50,9 @@ type SenderListOutput struct {
 func (t *NotificationSenderTools) RegisterTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_notification_senders",
-		Description: `List all configured notification senders (SMS, Email providers).
+		Description: `List all configured notification senders (SMS/Email providers).
 
-Inputs: None.
-
-Outputs:
-- Returns a list of senders with their IDs, names, and providers.
-
-Next Steps:
-- Use the returned 'id' to configure flow nodes (e.g., SMSOTPAuthExecutor) or to get detailed sender info.`,
+Related: Use returned 'id' with get_notification_sender for details, or in flow executor configurations.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Notification Senders",
 			ReadOnlyHint: true,
@@ -70,16 +61,9 @@ Next Steps:
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "get_notification_sender",
-		Description: `Get detailed information about a specific notification sender by its ID.
+		Description: `Get detailed configuration of a notification sender (secrets are masked).
 
-Inputs:
-- id (required): The unique identifier of the notification sender.
-
-Outputs:
-- Returns the full sender configuration including name, provider, and properties (masked secrets).
-
-Next Steps:
-- Use this information to review configuration or prepare for an update.`,
+Related: Use before update_notification_sender to review current configuration.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Notification Sender",
 			ReadOnlyHint: true,
@@ -95,33 +79,15 @@ Next Steps:
 		Name: "create_notification_sender",
 		Description: `Create a new notification sender for SMS/message delivery.
 
-Inputs:
-- name (required): Display name for the sender.
-- provider (required): Type of provider.
-  - "twilio": Twilio SMS service
-  - "vonage": Vonage/Nexmo SMS service
-  - "custom": Custom webhook endpoint
-- properties (required): Configuration properties based on provider.
-  - Twilio: account_sid, auth_token (secret), from_number
-  - Vonage: api_key, api_secret (secret), from_number
-  - Custom: url, http_method (POST), content_type (JSON)
+Prerequisites: None - this is typically the first step before creating OTP-based flows.
 
-Example (Custom Webhook):
-{
-  "name": "My Webhook Sender",
-  "provider": "custom",
-  "properties": [
-    {"name": "url", "value": "https://api.example.com/send", "is_secret": false},
-    {"name": "http_method", "value": "POST", "is_secret": false},
-    {"name": "content_type", "value": "JSON", "is_secret": false}
-  ]
-}
+Provider-specific properties:
+- twilio: account_sid, auth_token (secret), from_number
+- vonage: api_key, api_secret (secret), from_number  
+- custom: url, http_method, content_type
 
-Outputs:
-- Returns the created sender with its assigned ID.
-
-Next Steps:
-- Use the returned 'id' in authentication flows (e.g., set 'senderId' property in SMSOTPAuthExecutor).`,
+Related: Use returned 'id' as 'senderId' property in SMSOTPAuthExecutor flow nodes.
+Prompt for any user credentials if not provided. Do not make assumptions about the values.`,
 		InputSchema: createSenderSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Notification Sender",
@@ -138,21 +104,10 @@ Next Steps:
 		Name: "update_notification_sender",
 		Description: `Update an existing notification sender configuration.
 
-Prerequisites:
-- Obtain the current configuration using 'get_notification_sender'.
+Prerequisites: Use get_notification_sender first to retrieve current properties.
 
-Inputs:
-- id (required): The unique identifier of the sender to update.
-- name (required): Display name.
-- provider (required): Provider type (twilio, vonage, custom).
-- properties (required): Full list of properties.
-  Note: This is a full replacement. Include ALL current properties (and any new ones).
-
-Outputs:
-- Returns the updated sender configuration.
-
-Next Steps:
-- Verify the update by listing or getting the sender.`,
+IMPORTANT: This is a full replacement.
+Include ALL properties including unchanged ones. Missing properties will be removed.`,
 		InputSchema: updateSenderSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Notification Sender",
@@ -162,16 +117,11 @@ Next Steps:
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "delete_notification_sender",
-		Description: `Delete a notification sender.
+		Description: `Permanently delete a notification sender.
 
-Inputs:
-- id (required): The unique identifier of the sender to delete.
+Prerequisites: Ensure no flows reference this sender ID to avoid runtime errors.
 
-Outputs:
-- Success message if deleted.
-
-Next Steps:
-- Ensure no flows are currently referencing this sender ID before deletion to avoid runtime errors.`,
+Impact: Flows using this sender will fail to send messages after deletion.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Delete Notification Sender",
 			DestructiveHint: ptr(true),
@@ -183,7 +133,7 @@ Next Steps:
 func (t *NotificationSenderTools) ListSenders(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
-	input ListSendersInput,
+	_ any,
 ) (*mcp.CallToolResult, SenderListOutput, error) {
 	senders, svcErr := t.notifService.ListSenders()
 	if svcErr != nil {
@@ -193,7 +143,7 @@ func (t *NotificationSenderTools) ListSenders(
 	// Convert to response type for proper JSON serialization
 	responses := make([]notifcommon.NotificationSenderResponse, 0, len(senders))
 	for _, s := range senders {
-		resp, err := convertDTOToResponse(&s)
+		resp, err := senderDTOToResponse(&s)
 		if err != nil {
 			return nil, SenderListOutput{}, err
 		}
@@ -218,46 +168,12 @@ func (t *NotificationSenderTools) GetSender(
 		return nil, nil, fmt.Errorf("failed to get notification sender: %s", svcErr.ErrorDescription)
 	}
 
-	response, err := convertDTOToResponse(sender)
+	response, err := senderDTOToResponse(sender)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	return nil, response, nil
-}
-
-// convertPropertiesToDomain converts PropertyDTO slice to Property slice.
-func convertPropertiesToDomain(props []cmodels.PropertyDTO) ([]cmodels.Property, error) {
-	properties := make([]cmodels.Property, 0, len(props))
-	for _, p := range props {
-		prop, err := cmodels.NewProperty(p.Name, p.Value, p.IsSecret)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create property %s: %w", p.Name, err)
-		}
-		properties = append(properties, *prop)
-	}
-	return properties, nil
-}
-
-// convertDTOToResponse converts NotificationSenderDTO to NotificationSenderResponse.
-// This is needed because Property has private fields and cannot be JSON-serialized.
-func convertDTOToResponse(dto *notifcommon.NotificationSenderDTO) (*notifcommon.NotificationSenderResponse, error) {
-	props := make([]cmodels.PropertyDTO, 0, len(dto.Properties))
-	for _, p := range dto.Properties {
-		propDTO, err := p.ToPropertyDTO()
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert property: %w", err)
-		}
-		props = append(props, *propDTO)
-	}
-
-	return &notifcommon.NotificationSenderResponse{
-		ID:          dto.ID,
-		Name:        dto.Name,
-		Description: dto.Description,
-		Provider:    dto.Provider,
-		Properties:  props,
-	}, nil
 }
 
 // CreateSender handles the create_notification_sender tool call.
@@ -268,7 +184,7 @@ func (t *NotificationSenderTools) CreateSender(
 ) (*mcp.CallToolResult, *notifcommon.NotificationSenderResponse, error) {
 
 	// Convert properties
-	properties, err := convertPropertiesToDomain(input.Properties)
+	properties, err := propertyDTOsToProperties(input.Properties)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -287,7 +203,7 @@ func (t *NotificationSenderTools) CreateSender(
 		return nil, nil, fmt.Errorf("failed to create notification sender: %s", svcErr.ErrorDescription)
 	}
 
-	response, err := convertDTOToResponse(createdSender)
+	response, err := senderDTOToResponse(createdSender)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -309,7 +225,7 @@ func (t *NotificationSenderTools) UpdateSender(
 	}
 
 	// Convert properties
-	properties, err := convertPropertiesToDomain(input.Properties)
+	properties, err := propertyDTOsToProperties(input.Properties)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -329,7 +245,7 @@ func (t *NotificationSenderTools) UpdateSender(
 		return nil, nil, fmt.Errorf("failed to update notification sender: %s", svcErr.ErrorDescription)
 	}
 
-	response, err := convertDTOToResponse(updatedSender)
+	response, err := senderDTOToResponse(updatedSender)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -355,5 +271,38 @@ func (t *NotificationSenderTools) DeleteSender(
 	return nil, DeleteOutput{
 		Success: true,
 		Message: fmt.Sprintf("Notification sender %s deleted successfully", input.ID),
+	}, nil
+}
+
+// propertyDTOsToProperties converts a slice of PropertyDTO to domain Property objects.
+func propertyDTOsToProperties(props []cmodels.PropertyDTO) ([]cmodels.Property, error) {
+	properties := make([]cmodels.Property, 0, len(props))
+	for _, p := range props {
+		prop, err := cmodels.NewProperty(p.Name, p.Value, p.IsSecret)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create property %s: %w", p.Name, err)
+		}
+		properties = append(properties, *prop)
+	}
+	return properties, nil
+}
+
+// senderDTOToResponse converts NotificationSenderDTO to NotificationSenderResponse.
+func senderDTOToResponse(dto *notifcommon.NotificationSenderDTO) (*notifcommon.NotificationSenderResponse, error) {
+	props := make([]cmodels.PropertyDTO, 0, len(dto.Properties))
+	for _, p := range dto.Properties {
+		propDTO, err := p.ToPropertyDTO()
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert property: %w", err)
+		}
+		props = append(props, *propDTO)
+	}
+
+	return &notifcommon.NotificationSenderResponse{
+		ID:          dto.ID,
+		Name:        dto.Name,
+		Description: dto.Description,
+		Provider:    dto.Provider,
+		Properties:  props,
 	}, nil
 }

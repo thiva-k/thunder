@@ -40,9 +40,6 @@ func NewApplicationTools(appService application.ApplicationServiceInterface) *Ap
 	}
 }
 
-// ListApplicationsInput represents the input for the list_applications tool.
-type ListApplicationsInput struct{}
-
 // ApplicationListOutput represents the output for list_applications tool.
 type ApplicationListOutput struct {
 	TotalCount   int                              `json:"total_count"`
@@ -51,14 +48,14 @@ type ApplicationListOutput struct {
 
 // RegisterTools registers all application tools with the MCP server.
 func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
-	// Generate schema with enum support for ApplicationDTO
-	appDTOSchema := GenerateSchema[model.ApplicationDTO](
+	// Generate schema with enum support for Application
+	appSchema := GenerateSchema[model.ApplicationDTO](
 		WithEnum("grant_types", oauth2const.GetSupportedGrantTypes()),
 		WithEnum("response_types", oauth2const.GetSupportedResponseTypes()),
 		WithEnum("token_endpoint_auth_method", oauth2const.GetSupportedTokenEndpointAuthMethods()),
 	)
 	// Generate schema for update with 'id' as required
-	updateAppDTOSchema := GenerateSchema[model.ApplicationDTO](
+	updateAppSchema := GenerateSchema[model.ApplicationDTO](
 		WithEnum("grant_types", oauth2const.GetSupportedGrantTypes()),
 		WithEnum("response_types", oauth2const.GetSupportedResponseTypes()),
 		WithEnum("token_endpoint_auth_method", oauth2const.GetSupportedTokenEndpointAuthMethods()),
@@ -67,10 +64,9 @@ func (t *ApplicationTools) RegisterTools(server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "list_applications",
-		Description: `List all registered OAuth applications.
-		
-Outputs: A list of applications containing ID, Name, ClientID, and associated Flow IDs.
-Next Steps: Use the returned 'id' with get_application or update_application.`,
+		Description: `List all registered applications.
+
+Related: Use returned 'id' with get_application, update_application, or delete_application.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "List Applications",
 			ReadOnlyHint: true,
@@ -79,10 +75,9 @@ Next Steps: Use the returned 'id' with get_application or update_application.`,
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "get_application",
-		Description: `Retrieve full details of a specific application.
-		
-Inputs: 'id' (UUID of the application).
-Outputs: Complete application configuration including OAuth settings, branding, and flow associations.`,
+		Description: `Retrieve full details of an application including OAuth settings, branding, and flow associations.
+
+Related: Use before update_application to review current configuration.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Application",
 			ReadOnlyHint: true,
@@ -91,38 +86,18 @@ Outputs: Complete application configuration including OAuth settings, branding, 
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "create_application",
-		Description: `Create a new OAuth application.
+		Description: `Create a new application optionally with OAuth configuration.
 
-Prerequisites:
-- Authentication/Registration flows should be created first if custom flows are needed.
+Prerequisites: Create flows first using create_flow if custom authentication/registration flows are needed.
 
-Inputs:
-- name (Required): Application display name.
-- auth_flow_id: ID of the authentication flow (default flow used if omitted).
-- registration_flow_id: ID of the registration flow.
-- inbound_auth_config: An array containing the OAuth configuration.
-  Example Structure:
-  [
-    {
-      "type": "oauth2",
-      "config": {
-        "grant_types": ["authorization_code", "refresh_token"],
-        "response_types": ["code"],
-        "pkce_required": true,
-        "redirect_uris": ["https://myapp.com/callback"],
-        "public_client": false
-      }
-    }
-  ]
+Behavior:
+- If auth_flow_id is omitted, the default authentication flow is used.
+- OAuth config structure and allowed enums are defined in the inputSchema.
 
-  Supported Enums:
-  - grant_types: "authorization_code", "refresh_token", "client_credentials", "urn:ietf:params:oauth:grant-type:token-exchange"
-  - response_types: "code"
+Outputs: Created application with generated 'client_id' and 'client_secret'.
 
-Outputs: Created application including generated 'client_id' and 'client_secret'.
-
-Next Steps: Configure your OIDC client (Gate/Frontend) with the returned credentials.`,
-		InputSchema: appDTOSchema,
+Related: Use list_flows to find available flow IDs.`,
+		InputSchema: appSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Application",
 			IdempotentHint: true,
@@ -131,22 +106,13 @@ Next Steps: Configure your OIDC client (Gate/Frontend) with the returned credent
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "update_application",
-		Description: `Update an existing OAuth application configuration.
+		Description: `Update an existing application configuration (PUT semantics).
 
-Inputs:
-- id (Required): The application UUID.
-- All other fields from 'create_application' (Full Replacement).
-  IMPORTANT: You must provide the COMPLETE object. Missing fields will be reset to defaults/nil.
-  
-  Example Update:
-  {
-    "id": "...",
-    "name": "New Name",
-    "inbound_auth_config": [ { "type": "oauth2", "config": { ... } } ]
-  }
+Prerequisites: Use get_application first to retrieve current configuration.
 
-Outputs: The updated application configuration.`,
-		InputSchema: updateAppDTOSchema,
+IMPORTANT: This is a full replacement. 
+Missing fields will be reset to defaults/nil which is not desirable for existing fields. Provide the complete existing object.`,
+		InputSchema: updateAppSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Update Application",
 			IdempotentHint: true,
@@ -156,9 +122,8 @@ Outputs: The updated application configuration.`,
 	mcp.AddTool(server, &mcp.Tool{
 		Name: "delete_application",
 		Description: `Permanently delete an application.
-		
-Inputs: 'id' (UUID).
-Impact: Invalidates all active tokens and client credentials associated with this app.`,
+
+Impact: Invalidates all active tokens and client credentials.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:           "Delete Application",
 			DestructiveHint: ptr(true),
@@ -175,7 +140,7 @@ func ptr[T any](v T) *T {
 func (t *ApplicationTools) ListApplications(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
-	input ListApplicationsInput,
+	_ any,
 ) (*mcp.CallToolResult, ApplicationListOutput, error) {
 	listResponse, svcErr := t.appService.GetApplicationList()
 	if svcErr != nil {
@@ -220,7 +185,6 @@ func (t *ApplicationTools) CreateApplication(
 }
 
 // UpdateApplication handles the update_application tool call.
-// Uses ApplicationDTO directly - ID field is required for update.
 func (t *ApplicationTools) UpdateApplication(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
