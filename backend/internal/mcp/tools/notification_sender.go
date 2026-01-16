@@ -114,19 +114,6 @@ Include ALL properties including unchanged ones. Missing properties will be remo
 			IdempotentHint: true,
 		},
 	}, t.UpdateSender)
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "delete_notification_sender",
-		Description: `Permanently delete a notification sender.
-
-Prerequisites: Ensure no flows reference this sender ID to avoid runtime errors.
-
-Impact: Flows using this sender will fail to send messages after deletion.`,
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Delete Notification Sender",
-			DestructiveHint: ptr(true),
-		},
-	}, t.DeleteSender)
 }
 
 // ListSenders handles the list_notification_senders tool call.
@@ -251,27 +238,6 @@ func (t *NotificationSenderTools) UpdateSender(
 	}
 
 	return nil, response, nil
-}
-
-// DeleteSender handles the delete_notification_sender tool call.
-func (t *NotificationSenderTools) DeleteSender(
-	ctx context.Context,
-	req *mcp.CallToolRequest,
-	input IDInput,
-) (*mcp.CallToolResult, DeleteOutput, error) {
-
-	svcErr := t.notifService.DeleteSender(input.ID)
-	if svcErr != nil {
-		return nil, DeleteOutput{
-			Success: false,
-			Message: fmt.Sprintf("Failed to delete notification sender: %s", svcErr.ErrorDescription),
-		}, nil
-	}
-
-	return nil, DeleteOutput{
-		Success: true,
-		Message: fmt.Sprintf("Notification sender %s deleted successfully", input.ID),
-	}, nil
 }
 
 // propertyDTOsToProperties converts a slice of PropertyDTO to domain Property objects.

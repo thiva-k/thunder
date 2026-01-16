@@ -127,19 +127,6 @@ Flow versions are automatically tracked (up to 50 versions retained).`,
 			IdempotentHint: true,
 		},
 	}, t.UpdateFlow)
-
-	mcp.AddTool(server, &mcp.Tool{
-		Name: "delete_flow",
-		Description: `Permanently delete a flow and all its version history.
-
-Prerequisites: Ensure flow is not assigned to any application (check via list_applications).
-
-Impact: Deletion is irreversible. All version history is also deleted.`,
-		Annotations: &mcp.ToolAnnotations{
-			Title:           "Delete Flow",
-			DestructiveHint: ptr(true),
-		},
-	}, t.DeleteFlow)
 }
 
 // ListFlows handles the list_flows tool call.
@@ -220,25 +207,4 @@ func (t *FlowTools) UpdateFlow(
 	}
 
 	return nil, updatedFlow, nil
-}
-
-// DeleteFlow handles the delete_flow tool call.
-func (t *FlowTools) DeleteFlow(
-	ctx context.Context,
-	req *mcp.CallToolRequest,
-	input IDInput,
-) (*mcp.CallToolResult, DeleteOutput, error) {
-
-	svcErr := t.flowService.DeleteFlow(input.ID)
-	if svcErr != nil {
-		return nil, DeleteOutput{
-			Success: false,
-			Message: fmt.Sprintf("Failed to delete flow: %s", svcErr.ErrorDescription),
-		}, nil
-	}
-
-	return nil, DeleteOutput{
-		Success: true,
-		Message: fmt.Sprintf("Flow %s deleted successfully", input.ID),
-	}, nil
 }
