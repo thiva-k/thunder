@@ -19,7 +19,7 @@ on:
         description: 'Set as a pre-release'
         required: false
         type: boolean
-        default: false
+        default: true
       run_performance_test:
         description: 'Run performance tests after release'
         required: false
@@ -483,6 +483,12 @@ jobs:
           pnpm version $NEXT_VERSION --no-git-tag-version --allow-same-version
 
           cd "$GITHUB_WORKSPACE"
+
+          # Update the react-api-based sample app package.json
+          cd samples/apps/react-api-based-sample
+          pnpm version $NEXT_VERSION --no-git-tag-version --allow-same-version
+
+          cd "$GITHUB_WORKSPACE"
           echo "✅ Updated sample apps version to $NEXT_VERSION"
 
       # - name: 📈 Commit and Push Version Update
@@ -565,6 +571,12 @@ jobs:
 
           # Update the react-sdk sample app package.json
           cd samples/apps/react-sdk-sample
+          pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
+
+          cd "$GITHUB_WORKSPACE"
+
+          # Update the react-api-based sample app package.json
+          cd samples/apps/react-api-based-sample
           pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
 
           cd "$GITHUB_WORKSPACE"
@@ -655,6 +667,12 @@ jobs:
 
           # Update the react-sdk sample app package.json
           cd samples/apps/react-sdk-sample
+          pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
+
+          cd "$GITHUB_WORKSPACE"
+
+          # Update the react-api-based sample app package.json
+          cd samples/apps/react-api-based-sample
           pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
 
           cd "$GITHUB_WORKSPACE"
@@ -885,7 +903,17 @@ jobs:
             "   | Linux | x64 | [sample-app-react-sdk-${RELEASE_VERSION}-linux-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-sdk-${RELEASE_VERSION}-linux-x64.zip) |" \
             "   | Linux | ARM64 | [sample-app-react-sdk-${RELEASE_VERSION}-linux-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-sdk-${RELEASE_VERSION}-linux-arm64.zip) |" \
             "   | Windows | x64 | [sample-app-react-sdk-${RELEASE_VERSION}-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-sdk-${RELEASE_VERSION}-win-x64.zip) |")
-          
+
+          # Create the React API-based Sample App downloads table with proper newlines using printf
+          API_SAMPLE_TABLE=$(printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s" \
+            "   | OS | Architecture | Download Link |" \
+            "   |-------|-------------|-------------|" \
+            "   | macOS | ARM64 (Apple Silicon) | [sample-app-react-api-based-${RELEASE_VERSION}-macos-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-macos-arm64.zip) |" \
+            "   | macOS | x64 (Intel) | [sample-app-react-api-based-${RELEASE_VERSION}-macos-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-macos-x64.zip) |" \
+            "   | Linux | x64 | [sample-app-react-api-based-${RELEASE_VERSION}-linux-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-linux-x64.zip) |" \
+            "   | Linux | ARM64 | [sample-app-react-api-based-${RELEASE_VERSION}-linux-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-linux-arm64.zip) |" \
+            "   | Windows | x64 | [sample-app-react-api-based-${RELEASE_VERSION}-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-win-x64.zip) |")
+
           # Replace the vanilla sample app download instruction with its table
           QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$VANILLA_SAMPLE_TABLE" '
             /Download `sample-app-react-vanilla-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
@@ -898,6 +926,15 @@ jobs:
           # Replace the SDK sample app download instruction with its table
           QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$SDK_SAMPLE_TABLE" '
             /Download `sample-app-react-sdk-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
+              print table
+              next
+            }
+            { print }
+          ')
+
+          # Replace the API-based sample app download instruction with its table
+          QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$API_SAMPLE_TABLE" '
+            /Download `sample-app-react-api-based-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
               print table
               next
             }
