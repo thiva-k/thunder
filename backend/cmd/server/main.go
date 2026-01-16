@@ -46,6 +46,11 @@ import (
 // shutdownTimeout defines the timeout duration for graceful shutdown.
 const shutdownTimeout = 5 * time.Second
 
+var (
+	netListen = net.Listen
+	tlsListen = tls.Listen
+)
+
 func main() {
 	startupStartedAt := time.Now()
 	logger := log.GetLogger()
@@ -213,7 +218,7 @@ func createHTTPServer(logger *log.Logger, cfg *config.Config, mux *http.ServeMux
 
 // createListener creates and returns a listener for the HTTP server.
 func createListener(logger *log.Logger, server *http.Server) net.Listener {
-	ln, err := net.Listen("tcp", server.Addr)
+	ln, err := netListen("tcp", server.Addr)
 	if err != nil {
 		logger.Fatal("Failed to start HTTP listener", log.Error(err))
 	}
@@ -222,7 +227,7 @@ func createListener(logger *log.Logger, server *http.Server) net.Listener {
 
 // createTLSListener creates and returns a TLS listener for the HTTPS server.
 func createTLSListener(logger *log.Logger, server *http.Server, tlsConfig *tls.Config) net.Listener {
-	ln, err := tls.Listen("tcp", server.Addr, tlsConfig)
+	ln, err := tlsListen("tcp", server.Addr, tlsConfig)
 	if err != nil {
 		logger.Fatal("Failed to start TLS listener", log.Error(err))
 	}
