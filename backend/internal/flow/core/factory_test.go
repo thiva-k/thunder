@@ -297,6 +297,54 @@ func (s *FlowFactoryTestSuite) TestCloneTaskExecutionNodeWithOnSuccess() {
 	}
 }
 
+func (s *FlowFactoryTestSuite) TestCloneNodeWithMeta() {
+	// Test meta cloning on task execution node
+	taskNode, _ := s.factory.CreateNode("task-1", string(common.NodeTypeTaskExecution),
+		map[string]interface{}{}, false, false)
+	taskMeta := map[string]interface{}{"title": "Task Title", "description": "Task Description"}
+	taskNode.SetMeta(taskMeta)
+
+	clonedTaskNode, err := s.factory.CloneNode(taskNode)
+
+	s.NoError(err)
+	s.NotNil(clonedTaskNode)
+	s.Equal(taskMeta, clonedTaskNode.GetMeta())
+
+	// Test meta cloning on prompt node
+	promptNode, _ := s.factory.CreateNode("prompt-1", string(common.NodeTypePrompt),
+		map[string]interface{}{}, false, false)
+	promptMeta := map[string]interface{}{"components": []string{"input1", "button1"}}
+	promptNode.SetMeta(promptMeta)
+
+	clonedPromptNode, err := s.factory.CloneNode(promptNode)
+
+	s.NoError(err)
+	s.NotNil(clonedPromptNode)
+	s.Equal(promptMeta, clonedPromptNode.GetMeta())
+
+	// Test meta cloning on representation node (START)
+	startNode, _ := s.factory.CreateNode("start-1", string(common.NodeTypeStart),
+		map[string]interface{}{}, true, false)
+	startMeta := "start-meta"
+	startNode.SetMeta(startMeta)
+
+	clonedStartNode, err := s.factory.CloneNode(startNode)
+
+	s.NoError(err)
+	s.NotNil(clonedStartNode)
+	s.Equal(startMeta, clonedStartNode.GetMeta())
+
+	// Verify that nil meta is not copied (stays nil)
+	nodeWithoutMeta, _ := s.factory.CreateNode("task-2", string(common.NodeTypeTaskExecution),
+		map[string]interface{}{}, false, false)
+	s.Nil(nodeWithoutMeta.GetMeta())
+
+	clonedNodeWithoutMeta, err := s.factory.CloneNode(nodeWithoutMeta)
+
+	s.NoError(err)
+	s.Nil(clonedNodeWithoutMeta.GetMeta())
+}
+
 func (s *FlowFactoryTestSuite) TestCloneNodesSuccess() {
 	nodes := make(map[string]NodeInterface)
 	node1, _ := s.factory.CreateNode("node-1", string(common.NodeTypeTaskExecution),
@@ -431,6 +479,12 @@ func (f *fakeExecutorBackedNode) GetMode() string {
 }
 
 func (f *fakeExecutorBackedNode) SetMode(mode string) {}
+
+func (f *fakeExecutorBackedNode) GetMeta() interface{} {
+	return nil
+}
+
+func (f *fakeExecutorBackedNode) SetMeta(meta interface{}) {}
 
 func (s *FlowFactoryTestSuite) TestCloneNodeMismatchExecutorBacked() {
 	// source claims to be executor-backed but GetType returns Prompt which

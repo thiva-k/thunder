@@ -407,6 +407,52 @@ func (_c *ExecutorBackedNodeInterfaceMock_GetInputs_Call) RunAndReturn(run func(
 	return _c
 }
 
+// GetMeta provides a mock function for the type ExecutorBackedNodeInterfaceMock
+func (_mock *ExecutorBackedNodeInterfaceMock) GetMeta() interface{} {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMeta")
+	}
+
+	var r0 interface{}
+	if returnFunc, ok := ret.Get(0).(func() interface{}); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(interface{})
+		}
+	}
+	return r0
+}
+
+// ExecutorBackedNodeInterfaceMock_GetMeta_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetMeta'
+type ExecutorBackedNodeInterfaceMock_GetMeta_Call struct {
+	*mock.Call
+}
+
+// GetMeta is a helper method to define mock.On call
+func (_e *ExecutorBackedNodeInterfaceMock_Expecter) GetMeta() *ExecutorBackedNodeInterfaceMock_GetMeta_Call {
+	return &ExecutorBackedNodeInterfaceMock_GetMeta_Call{Call: _e.mock.On("GetMeta")}
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_GetMeta_Call) Run(run func()) *ExecutorBackedNodeInterfaceMock_GetMeta_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_GetMeta_Call) Return(ifaceVal interface{}) *ExecutorBackedNodeInterfaceMock_GetMeta_Call {
+	_c.Call.Return(ifaceVal)
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_GetMeta_Call) RunAndReturn(run func() interface{}) *ExecutorBackedNodeInterfaceMock_GetMeta_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetMode provides a mock function for the type ExecutorBackedNodeInterfaceMock
 func (_mock *ExecutorBackedNodeInterfaceMock) GetMode() string {
 	ret := _mock.Called()
@@ -1111,6 +1157,46 @@ func (_c *ExecutorBackedNodeInterfaceMock_SetInputs_Call) Return() *ExecutorBack
 }
 
 func (_c *ExecutorBackedNodeInterfaceMock_SetInputs_Call) RunAndReturn(run func(inputs []common.Input)) *ExecutorBackedNodeInterfaceMock_SetInputs_Call {
+	_c.Run(run)
+	return _c
+}
+
+// SetMeta provides a mock function for the type ExecutorBackedNodeInterfaceMock
+func (_mock *ExecutorBackedNodeInterfaceMock) SetMeta(meta interface{}) {
+	_mock.Called(meta)
+	return
+}
+
+// ExecutorBackedNodeInterfaceMock_SetMeta_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetMeta'
+type ExecutorBackedNodeInterfaceMock_SetMeta_Call struct {
+	*mock.Call
+}
+
+// SetMeta is a helper method to define mock.On call
+//   - meta interface{}
+func (_e *ExecutorBackedNodeInterfaceMock_Expecter) SetMeta(meta interface{}) *ExecutorBackedNodeInterfaceMock_SetMeta_Call {
+	return &ExecutorBackedNodeInterfaceMock_SetMeta_Call{Call: _e.mock.On("SetMeta", meta)}
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_SetMeta_Call) Run(run func(meta interface{})) *ExecutorBackedNodeInterfaceMock_SetMeta_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 interface{}
+		if args[0] != nil {
+			arg0 = args[0].(interface{})
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_SetMeta_Call) Return() *ExecutorBackedNodeInterfaceMock_SetMeta_Call {
+	_c.Call.Return()
+	return _c
+}
+
+func (_c *ExecutorBackedNodeInterfaceMock_SetMeta_Call) RunAndReturn(run func(meta interface{})) *ExecutorBackedNodeInterfaceMock_SetMeta_Call {
 	_c.Run(run)
 	return _c
 }

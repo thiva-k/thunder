@@ -24,13 +24,17 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-const promptNodeLoggerComponentName = "PromptNode"
+// PromptNodeInterface extends NodeInterface for nodes that require user interaction.
+type PromptNodeInterface interface {
+	NodeInterface
+	GetPrompts() []common.Prompt
+	SetPrompts(prompts []common.Prompt)
+}
 
 // promptNode represents a node that prompts for user input/ action in the flow execution.
 type promptNode struct {
 	*node
 	prompts []common.Prompt
-	meta    interface{}
 	logger  *log.Logger
 }
 
@@ -48,7 +52,7 @@ func newPromptNode(id string, properties map[string]interface{},
 			previousNodeList: []string{},
 		},
 		prompts: []common.Prompt{},
-		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, promptNodeLoggerComponentName),
+		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, "PromptNode"),
 			log.String(log.LoggerKeyNodeID, id)),
 	}
 }
@@ -103,23 +107,13 @@ func (n *promptNode) Execute(ctx *NodeContext) (*common.NodeResponse, *serviceer
 		log.Any("inputs", nodeResp.Inputs), log.Any("actions", nodeResp.Actions))
 
 	// Include meta in the response if verbose mode is enabled
-	if ctx.Verbose && n.meta != nil {
-		nodeResp.Meta = n.meta
+	if ctx.Verbose && n.GetMeta() != nil {
+		nodeResp.Meta = n.GetMeta()
 	}
 
 	nodeResp.Status = common.NodeStatusIncomplete
 	nodeResp.Type = common.NodeResponseTypeView
 	return nodeResp, nil
-}
-
-// GetMeta returns the meta object for the prompt node
-func (n *promptNode) GetMeta() interface{} {
-	return n.meta
-}
-
-// SetMeta sets the meta object for the prompt node
-func (n *promptNode) SetMeta(meta interface{}) {
-	n.meta = meta
 }
 
 // GetPrompts returns the prompts for the prompt node
@@ -168,9 +162,7 @@ func (n *promptNode) hasRequiredInputs(ctx *NodeContext, nodeResp *common.NodeRe
 // Returns true if any required data is found missing, otherwise false.
 func (n *promptNode) appendMissingInputs(ctx *NodeContext, nodeResp *common.NodeResponse,
 	requiredInputs []common.Input) bool {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, promptNodeLoggerComponentName),
-		log.String(log.LoggerKeyNodeID, n.GetID()),
-		log.String(log.LoggerKeyFlowID, ctx.FlowID))
+	logger := log.GetLogger().With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	requireInputs := false
 	for _, input := range requiredInputs {

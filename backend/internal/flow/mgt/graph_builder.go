@@ -240,16 +240,12 @@ func (b *graphBuilder) configureNodeInputs(nodeDef *NodeDefinition, node core.No
 	executorNode.SetInputs(inputs)
 }
 
-// configureNodeMeta configures the meta object for a prompt node.
+// configureNodeMeta configures the meta object for a node.
 func (b *graphBuilder) configureNodeMeta(nodeDef *NodeDefinition, node core.NodeInterface) {
 	if nodeDef.Meta == nil {
 		return
 	}
-
-	// Set meta only if the node is a prompt node
-	if promptNode, ok := node.(core.PromptNodeInterface); ok {
-		promptNode.SetMeta(nodeDef.Meta)
-	}
+	node.SetMeta(nodeDef.Meta)
 }
 
 // configureNodeCondition configures the condition for a node.

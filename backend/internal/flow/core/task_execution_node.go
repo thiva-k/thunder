@@ -24,7 +24,23 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-const taskExecNodeLoggerComponentName = "TaskExecutionNode"
+// ExecutorBackedNodeInterface extends NodeInterface for nodes backed by executors.
+// Only task execution nodes implement this interface to delegate their execution logic to executors.
+type ExecutorBackedNodeInterface interface {
+	NodeInterface
+	GetExecutorName() string
+	SetExecutorName(name string)
+	GetExecutor() ExecutorInterface
+	SetExecutor(executor ExecutorInterface)
+	GetInputs() []common.Input
+	SetInputs(inputs []common.Input)
+	GetOnSuccess() string
+	SetOnSuccess(nodeID string)
+	GetOnFailure() string
+	SetOnFailure(nodeID string)
+	GetMode() string
+	SetMode(mode string)
+}
 
 // taskExecutionNode represents a node that executes a task via an executor
 type taskExecutionNode struct {
@@ -35,6 +51,7 @@ type taskExecutionNode struct {
 	inputs       []common.Input
 	onSuccess    string
 	onFailure    string
+	logger       *log.Logger
 }
 
 // Ensure taskExecutionNode implements ExecutorBackedNodeInterface
@@ -56,14 +73,14 @@ func newTaskExecutionNode(id string, properties map[string]interface{}, isStartN
 		executorName: "",
 		executor:     nil,
 		inputs:       []common.Input{},
+		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, "TaskExecutionNode"),
+			log.String(log.LoggerKeyNodeID, id)),
 	}
 }
 
 // Execute executes the node's executor.
 func (n *taskExecutionNode) Execute(ctx *NodeContext) (*common.NodeResponse, *serviceerror.ServiceError) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, taskExecNodeLoggerComponentName),
-		log.String(log.LoggerKeyNodeID, n.GetID()),
-		log.String(log.LoggerKeyFlowID, ctx.FlowID))
+	logger := log.GetLogger().With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
 	logger.Debug("Executing task execution node")
 
 	if n.executor == nil {
@@ -86,7 +103,7 @@ func (n *taskExecutionNode) Execute(ctx *NodeContext) (*common.NodeResponse, *se
 		return nil, svcErr
 	}
 
-	nodeResp := buildNodeResponse(execResp)
+	nodeResp := n.buildNodeResponse(execResp, ctx)
 
 	// Set the next node ID based on execution outcome
 	if nodeResp.Status == common.NodeStatusComplete {
@@ -125,7 +142,8 @@ func (n *taskExecutionNode) triggerExecutor(ctx *NodeContext, logger *log.Logger
 }
 
 // buildNodeResponse constructs a NodeResponse from the ExecutorResponse.
-func buildNodeResponse(execResp *common.ExecutorResponse) *common.NodeResponse {
+func (n *taskExecutionNode) buildNodeResponse(execResp *common.ExecutorResponse,
+	ctx *NodeContext) *common.NodeResponse {
 	nodeResp := &common.NodeResponse{
 		FailureReason:     execResp.FailureReason,
 		Inputs:            execResp.Inputs,
@@ -155,6 +173,11 @@ func buildNodeResponse(execResp *common.ExecutorResponse) *common.NodeResponse {
 	case common.ExecUserInputRequired:
 		nodeResp.Status = common.NodeStatusIncomplete
 		nodeResp.Type = common.NodeResponseTypeView
+
+		// Include meta in the response if verbose mode is enabled
+		if ctx.Verbose && n.GetMeta() != nil {
+			nodeResp.Meta = n.GetMeta()
+		}
 	case common.ExecExternalRedirection:
 		nodeResp.Status = common.NodeStatusIncomplete
 		nodeResp.Type = common.NodeResponseTypeRedirection
