@@ -101,6 +101,10 @@ VANILLA_SAMPLE_APP_FOLDER="sample-app-react-vanilla-${VANILLA_SAMPLE_APP_VERSION
 REACT_SDK_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/react-sdk-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
 REACT_SDK_SAMPLE_APP_FOLDER="sample-app-react-sdk-${REACT_SDK_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
+# React API-based Sample
+REACT_API_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/react-api-based-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
+REACT_API_SAMPLE_APP_FOLDER="sample-app-react-api-based-${REACT_API_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
+
 # Directories
 TARGET_DIR=target
 OUTPUT_DIR=$TARGET_DIR/out
@@ -474,6 +478,23 @@ function build_sample_app() {
     cd - || exit 1
     echo "✅ React SDK sample app built successfully."
 
+    # Build React API-based sample
+    echo "=== Building React API-based sample app ==="
+
+    # Ensure certificates exist for React API-based sample
+    echo "=== Ensuring React API-based sample app certificates exist ==="
+    ensure_certificates "$REACT_API_SAMPLE_APP_DIR"
+
+    cd "$REACT_API_SAMPLE_APP_DIR" || exit 1
+    echo "Installing React API-based sample dependencies..."
+    pnpm install --frozen-lockfile
+
+    echo "Building React API-based sample app..."
+    pnpm run build
+
+    cd - || exit 1
+    echo "✅ React API-based sample app built successfully."
+
     echo "================================================================"
 }
 
@@ -488,6 +509,10 @@ function package_sample_app() {
     # Package React SDK sample
     echo "=== Packaging React SDK sample app ==="
     package_react_sdk_sample
+
+    # Package React API-based sample
+    echo "=== Packaging React API-based sample app ==="
+    package_react_api_based_sample
 
     echo "================================================================"
 }
@@ -578,6 +603,43 @@ function package_react_sdk_sample() {
     rm -rf "${DIST_DIR:?}/$REACT_SDK_SAMPLE_APP_FOLDER"
 
     echo "✅ React SDK sample app packaged successfully as $DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER.zip"
+}
+
+function package_react_api_based_sample() {
+    mkdir -p "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER"
+
+    # Copy the built React app (dist folder)
+    if [ -d "$REACT_API_SAMPLE_APP_DIR/dist" ]; then
+        echo "Copying React API-based sample build output..."
+        cp -r "$REACT_API_SAMPLE_APP_DIR/dist" "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER/"
+    else
+        echo "Warning: React API-based sample build output not found at $REACT_API_SAMPLE_APP_DIR/dist"
+        exit 1
+    fi
+
+    # Copy README if it exists
+    if [ -f "$REACT_API_SAMPLE_APP_DIR/README.md" ]; then
+        cp "$REACT_API_SAMPLE_APP_DIR/README.md" "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER/"
+    fi
+
+    # Ensure the certificates exist in the sample app dist directory
+    echo "=== Ensuring certificates exist in the React API-based sample distribution ==="
+    ensure_certificates "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER/dist"
+
+    # Copy the appropriate startup script based on the target OS
+    if [ "$SAMPLE_DIST_OS" = "win" ]; then
+        echo "Including Windows start script (start.ps1)..."
+        cp -r "$REACT_API_SAMPLE_APP_DIR/start.ps1" "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER"
+    else
+        echo "Including Unix start script (start.sh)..."
+        cp -r "$REACT_API_SAMPLE_APP_DIR/start.sh" "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER"
+    fi
+
+    echo "Creating React API-based sample zip file..."
+    (cd "$DIST_DIR" && zip -r "$REACT_API_SAMPLE_APP_FOLDER.zip" "$REACT_API_SAMPLE_APP_FOLDER")
+    rm -rf "${DIST_DIR:?}/$REACT_API_SAMPLE_APP_FOLDER"
+
+    echo "✅ React API-based sample app packaged successfully as $DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER.zip"
 }
 
 function test_unit() {
