@@ -24,6 +24,17 @@
 # 3. Stops Thunder server
 # 4. Exits cleanly
 
+# Ensure the script runs with Bash even if invoked via `sh`
+if [ -z "${BASH_VERSION:-}" ]; then
+    exec /usr/bin/env bash "$0" "$@"
+fi
+
+# Guard against Bash POSIX mode (e.g., Bash started with --posix or POSIXLY_CORRECT);
+# use a guard to avoid re-exec loops if POSIX stays enabled.
+if [ -z "${SETUP_SH_POSIX_REEXEC:-}" ] && set -o | grep -q 'posix.*on'; then
+    SETUP_SH_POSIX_REEXEC=1 exec /usr/bin/env bash "$0" "$@"
+fi
+
 set -e
 
 # Default settings
