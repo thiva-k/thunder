@@ -25,53 +25,53 @@ import (
 
 // TokenConfig represents the token configuration structure for application-level (root) token configs.
 type TokenConfig struct {
-	Issuer         string   `json:"issuer" yaml:"issuer,omitempty"`
-	ValidityPeriod int64    `json:"validity_period" yaml:"validity_period,omitempty"`
-	UserAttributes []string `json:"user_attributes" yaml:"user_attributes,omitempty"`
+	Issuer         string   `json:"issuer,omitempty" yaml:"issuer,omitempty" jsonschema:"Token issuer. The entity that issues the token (typically your authorization server URL)."`
+	ValidityPeriod int64    `json:"validity_period,omitempty" yaml:"validity_period,omitempty" jsonschema:"Token validity period in seconds. How long the token remains valid before expiring. Common values: 3600 (1 hour), 86400 (1 day)."`
+	UserAttributes []string `json:"user_attributes,omitempty" yaml:"user_attributes,omitempty" jsonschema:"User attributes to include in the token. List of user claim names to embed in the token (e.g., email, username, roles)."`
 }
 
 // AccessTokenConfig represents the access token configuration structure.
 type AccessTokenConfig struct {
-	ValidityPeriod int64    `json:"validity_period" yaml:"validity_period,omitempty"`
-	UserAttributes []string `json:"user_attributes" yaml:"user_attributes,omitempty"`
+	ValidityPeriod int64    `json:"validity_period,omitempty" yaml:"validity_period,omitempty" jsonschema:"Access token validity period in seconds. Recommended: 3600 (1 hour) for security. Shorter for sensitive operations, longer for trusted clients."`
+	UserAttributes []string `json:"user_attributes,omitempty" yaml:"user_attributes,omitempty" jsonschema:"User attributes to include in access token. Claims embedded in the access token for authorization decisions."`
 }
 
 // IDTokenConfig represents the ID token configuration structure.
 type IDTokenConfig struct {
-	ValidityPeriod int64               `json:"validity_period" yaml:"validity_period,omitempty"`
-	UserAttributes []string            `json:"user_attributes" yaml:"user_attributes,omitempty"`
-	ScopeClaims    map[string][]string `json:"scope_claims,omitempty" yaml:"scope_claims,omitempty"`
+	ValidityPeriod int64               `json:"validity_period,omitempty" yaml:"validity_period,omitempty" jsonschema:"ID token validity period in seconds. Recommended: 3600 (1 hour). ID tokens are used for authentication, not long-lived sessions."`
+	UserAttributes []string            `json:"user_attributes,omitempty" yaml:"user_attributes,omitempty" jsonschema:"User attributes to include in ID token. Standard OIDC claims: sub, name, email, picture, etc."`
+	ScopeClaims    map[string][]string `json:"scope_claims,omitempty" yaml:"scope_claims,omitempty" jsonschema:"Scope-to-claims mapping. Maps OAuth scopes to user claims. Example: {profile: [name, picture], email: [email, email_verified]}."`
 }
 
 // OAuthTokenConfig represents the OAuth token configuration structure with access_token and id_token wrappers.
 // The Issuer field at this level is used by both access and ID tokens.
 type OAuthTokenConfig struct {
-	Issuer      string             `json:"issuer,omitempty" yaml:"issuer,omitempty"`
-	AccessToken *AccessTokenConfig `json:"access_token,omitempty" yaml:"access_token,omitempty"`
-	IDToken     *IDTokenConfig     `json:"id_token,omitempty" yaml:"id_token,omitempty"`
+	Issuer      string             `json:"issuer,omitempty" yaml:"issuer,omitempty" jsonschema:"Token issuer URL. The authorization server URL that issues tokens. Used by both access and ID tokens."`
+	AccessToken *AccessTokenConfig `json:"access_token,omitempty" yaml:"access_token,omitempty" jsonschema:"Access token configuration. Configure validity period and user attributes for access tokens used in API authorization."`
+	IDToken     *IDTokenConfig     `json:"id_token,omitempty" yaml:"id_token,omitempty" jsonschema:"ID token configuration. Configure validity period, user attributes, and scope-to-claims mapping for OIDC ID tokens."`
 }
 
 // ApplicationDTO represents the data transfer object for application service operations.
 type ApplicationDTO struct {
-	ID                        string
-	Name                      string
-	Description               string
-	AuthFlowID                string
-	RegistrationFlowID        string
-	IsRegistrationFlowEnabled bool
-	BrandingID                string
-	Template                  string
+	ID                        string `json:"id,omitempty" jsonschema:"Application ID. Leave empty for create (auto-generated), required for update/delete operations."`
+	Name                      string `json:"name" jsonschema:"Application name. Required. This is the display name shown to users."`
+	Description               string `json:"description,omitempty" jsonschema:"Optional description of the application's purpose or functionality."`
+	AuthFlowID                string `json:"auth_flow_id,omitempty" jsonschema:"Authentication flow ID. Optional. Specifies which login flow to use (e.g., MFA, passwordless). Use list_flows to find available flows. If omitted, the default authentication flow is used."`
+	RegistrationFlowID        string `json:"registration_flow_id,omitempty" jsonschema:"Registration flow ID. Optional. Specifies the user registration/signup flow. Use list_flows to find available flows."`
+	IsRegistrationFlowEnabled bool   `json:"is_registration_flow_enabled,omitempty" jsonschema:"Enable self-service registration. Set to true to allow users to sign up themselves. Requires registration_flow_id to be set."`
+	BrandingID                string `json:"branding_id,omitempty" jsonschema:"Branding configuration ID. Optional. Customizes the look and feel of login pages for this application."`
+	Template                  string `json:"template,omitempty" jsonschema:"Application template. Optional. Pre-configured application type template."`
 
-	URL       string
-	LogoURL   string
-	TosURI    string
-	PolicyURI string
-	Contacts  []string
+	URL       string   `json:"url,omitempty" jsonschema:"Application home URL. Optional. The main URL where your application is hosted."`
+	LogoURL   string   `json:"logo_url,omitempty" jsonschema:"Logo image URL. Optional. Displayed in login pages and application listings."`
+	TosURI    string   `json:"tos_uri,omitempty" jsonschema:"Terms of Service URI. Optional. Link to your application's terms of service."`
+	PolicyURI string   `json:"policy_uri,omitempty" jsonschema:"Privacy Policy URI. Optional. Link to your application's privacy policy."`
+	Contacts  []string `json:"contacts,omitempty" jsonschema:"Contact email addresses. Optional. Administrative contact emails for this application."`
 
-	Token             *TokenConfig
-	Certificate       *ApplicationCertificate
-	InboundAuthConfig []InboundAuthConfigDTO
-	AllowedUserTypes  []string
+	Token             *TokenConfig            `json:"token,omitempty" jsonschema:"Token configuration. Optional. Customize token validity periods and included user attributes."`
+	Certificate       *ApplicationCertificate `json:"certificate,omitempty" jsonschema:"Application certificate. Optional. For certificate-based authentication or JWT validation."`
+	InboundAuthConfig []InboundAuthConfigDTO  `json:"inbound_auth_config,omitempty" jsonschema:"OAuth/OIDC authentication configuration. Required for OAuth-enabled applications. Configure OAuth grant types, redirect URIs, and client authentication methods."`
+	AllowedUserTypes  []string                `json:"allowed_user_types,omitempty" jsonschema:"Allowed user types. Optional. Restricts which types of users can access this application."`
 }
 
 // BasicApplicationDTO represents a simplified data transfer object for application service operations.
@@ -137,8 +137,8 @@ type ApplicationProcessedDTO struct {
 // InboundAuthConfigDTO represents the data transfer object for inbound authentication configuration.
 // TODO: Need to refactor when supporting other/multiple inbound auth types.
 type InboundAuthConfigDTO struct {
-	Type           InboundAuthType    `json:"type"`
-	OAuthAppConfig *OAuthAppConfigDTO `json:"oauth_app_config,omitempty"`
+	Type           InboundAuthType    `json:"type" jsonschema:"Inbound authentication type. Use 'oauth2' for OAuth/OIDC applications. This determines the authentication protocol."`
+	OAuthAppConfig *OAuthAppConfigDTO `json:"oauth_app_config,omitempty" jsonschema:"OAuth/OIDC configuration. Required when type is 'oauth2'. Defines OAuth grant types, redirect URIs, client authentication, and PKCE settings. See oauth_app_config field descriptions for detailed guidance on configuring different application types (SPA, Mobile, Server, M2M)."`
 }
 
 // InboundAuthConfigProcessedDTO represents the processed data transfer object for inbound authentication
@@ -150,8 +150,8 @@ type InboundAuthConfigProcessedDTO struct {
 
 // ApplicationCertificate represents the certificate structure in the application request response.
 type ApplicationCertificate struct {
-	Type  cert.CertificateType `json:"type" yaml:"type,omitempty"`
-	Value string               `json:"value" yaml:"value,omitempty"`
+	Type  cert.CertificateType `json:"type" yaml:"type,omitempty" jsonschema:"Certificate type. Specifies the certificate format (e.g., PEM, JWK). Used for certificate-based client authentication or JWT signature validation."`
+	Value string               `json:"value" yaml:"value,omitempty" jsonschema:"Certificate value. The actual certificate content in the format specified by type. For PEM: base64-encoded certificate. For JWK: JSON Web Key."`
 }
 
 // ApplicationRequest represents the request structure for creating or updating an application.
