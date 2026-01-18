@@ -16,6 +16,9 @@
  * under the License.
  */
 
+// Package flowmgt provides flow management data structures.
+//
+//nolint:lll
 package flowmgt
 
 import (
@@ -49,22 +52,22 @@ type CompleteFlowDefinition struct {
 
 // BasicFlowDefinition represents basic information about a flow definition.
 type BasicFlowDefinition struct {
-	ID            string          `json:"id"`
-	Handle        string          `json:"handle"`
-	FlowType      common.FlowType `json:"flowType"`
-	Name          string          `json:"name"`
-	ActiveVersion int             `json:"activeVersion"`
-	CreatedAt     string          `json:"createdAt"`
-	UpdatedAt     string          `json:"updatedAt"`
+	ID            string          `json:"id" jsonschema:"Unique identifier of the flow."`
+	Handle        string          `json:"handle" jsonschema:"URL-friendly handle."`
+	FlowType      common.FlowType `json:"flowType" jsonschema:"Type of flow (AUTHENTICATION or REGISTRATION)."`
+	Name          string          `json:"name" jsonschema:"Display name of the flow."`
+	ActiveVersion int             `json:"activeVersion" jsonschema:"Current active version number."`
+	CreatedAt     string          `json:"createdAt" jsonschema:"Creation timestamp."`
+	UpdatedAt     string          `json:"updatedAt" jsonschema:"Last update timestamp."`
 }
 
 // FlowListResponse represents a paginated list of flow definitions.
 type FlowListResponse struct {
-	TotalResults int                   `json:"totalResults"`
-	StartIndex   int                   `json:"startIndex"`
-	Count        int                   `json:"count"`
-	Flows        []BasicFlowDefinition `json:"flows"`
-	Links        []Link                `json:"links"`
+	TotalResults int                   `json:"totalResults" jsonschema:"Total number of flows available."`
+	StartIndex   int                   `json:"startIndex" jsonschema:"Starting index of the current page."`
+	Count        int                   `json:"count" jsonschema:"Number of flows in the current page."`
+	Flows        []BasicFlowDefinition `json:"flows" jsonschema:"List of flow definitions."`
+	Links        []Link                `json:"links" jsonschema:"Pagination links."`
 }
 
 // FlowVersion represents a specific version of a flow definition.

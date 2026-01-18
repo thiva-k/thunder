@@ -16,6 +16,9 @@
  * under the License.
  */
 
+// Package model defines the data structures for the application module.
+//
+//nolint:lll
 package model
 
 import (
@@ -64,14 +67,14 @@ type OAuthAppConfigDTO struct {
 	AppID                   string                              `json:"app_id,omitempty" jsonschema:"The unique identifier of the OAuth application"`
 	ClientID                string                              `json:"client_id,omitempty" jsonschema:"OAuth client ID (auto-generated if not provided)"`
 	ClientSecret            string                              `json:"client_secret,omitempty" jsonschema:"OAuth client secret (auto-generated if not provided)"`
-	RedirectURIs            []string                            `json:"redirect_uris,omitempty" jsonschema:"Allowed redirect URIs. PUBLIC CLIENTS (SPA/Mobile): Required. Use http://localhost:PORT for local SPAs, custom schemes like myapp://callback for mobile apps. CONFIDENTIAL CLIENTS (Server): Required. Use https:// URLs only. M2M: Not needed (omit or leave empty)."`
-	GrantTypes              []oauth2const.GrantType             `json:"grant_types,omitempty" jsonschema:"OAuth grant types. PUBLIC CLIENTS (SPA/Mobile): [authorization_code, refresh_token]. CONFIDENTIAL CLIENTS (Server): [authorization_code, refresh_token]. M2M: [client_credentials]."`
-	ResponseTypes           []oauth2const.ResponseType          `json:"response_types,omitempty" jsonschema:"OAuth response types. PUBLIC CLIENTS (SPA/Mobile): [code]. CONFIDENTIAL CLIENTS (Server): [code]. M2M: Not needed (omit or leave empty)."`
-	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" jsonschema:"Token endpoint authentication method. PUBLIC CLIENTS (SPA/Mobile): none (cannot store secrets). CONFIDENTIAL CLIENTS (Server/M2M): client_secret_basic (recommended) or client_secret_post."`
-	PKCERequired            bool                                `json:"pkce_required,omitempty" jsonschema:"Whether PKCE is required. PUBLIC CLIENTS (SPA/Mobile): true (required for security). CONFIDENTIAL CLIENTS (Server): true (best practice). M2M: false (not applicable for client_credentials flow)."`
-	PublicClient            bool                                `json:"public_client,omitempty" jsonschema:"Whether this is a public client (cannot securely store secrets). PUBLIC CLIENTS (SPA/Mobile): true. CONFIDENTIAL CLIENTS (Server/M2M): false."`
+	RedirectURIs            []string                            `json:"redirect_uris,omitempty" jsonschema:"Allowed redirect URIs. Required for Public (SPA/Mobile) and Confidential (Server) clients. Omit for M2M."`
+	GrantTypes              []oauth2const.GrantType             `json:"grant_types,omitempty" jsonschema:"OAuth grant types. Common: [authorization_code, refresh_token] for user apps, [client_credentials] for M2M."`
+	ResponseTypes           []oauth2const.ResponseType          `json:"response_types,omitempty" jsonschema:"OAuth response types. Common: [code] for user apps. Omit for M2M."`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" jsonschema:"Client authentication method. Use 'none' for Public clients, 'client_secret_basic' for Confidential/M2M."`
+	PKCERequired            bool                                `json:"pkce_required,omitempty" jsonschema:"Require PKCE for security. Recommended for all user-interactive flows."`
+	PublicClient            bool                                `json:"public_client,omitempty" jsonschema:"Identify if client is public (cannot store secrets). Set true for SPA/Mobile."`
 	Token                   *OAuthTokenConfig                   `json:"token,omitempty" jsonschema:"Token configuration for access tokens and ID tokens"`
-	Scopes                  []string                            `json:"scopes,omitempty" jsonschema:"Allowed OAuth scopes. Common scopes: openid (required for OIDC), profile, email, address, phone. Add custom scopes as needed for your application."`
+	Scopes                  []string                            `json:"scopes,omitempty" jsonschema:"Allowed OAuth scopes. Add custom scopes as needed for your application."`
 }
 
 // IsAllowedGrantType checks if the provided grant type is allowed.

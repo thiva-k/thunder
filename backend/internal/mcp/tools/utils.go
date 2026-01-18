@@ -16,6 +16,7 @@
  * under the License.
  */
 
+// Package tools provides utility functions for MCP schema generation and manipulation.
 package tools
 
 import (
@@ -36,7 +37,7 @@ func GenerateSchema[T any](modifiers ...func(*jsonschema.Schema)) *jsonschema.Sc
 	return schema
 }
 
-// WithDefaults applies default values to the generated schema properties, recursively.
+// WithDefaults applies default values to the generated schema properties.
 func WithDefaults(defaults map[string]any) func(*jsonschema.Schema) {
 	return func(root *jsonschema.Schema) {
 		walkSchema(root, func(s *jsonschema.Schema) {
@@ -51,23 +52,41 @@ func WithDefaults(defaults map[string]any) func(*jsonschema.Schema) {
 	}
 }
 
-// WithEnum applies enum constraints to a specific property in the schema, recursively.
-func WithEnum(property string, values []string) func(*jsonschema.Schema) {
+// WithEnum applies enum constraints to a property in the schema.
+func WithEnum(parent, child string, values []string) func(*jsonschema.Schema) {
 	return func(root *jsonschema.Schema) {
 		walkSchema(root, func(s *jsonschema.Schema) {
-			if prop, ok := s.Properties[property]; ok {
-				if prop.Items != nil {
-					prop.Items.Enum = stringSliceToAny(values)
-				} else {
-					prop.Enum = stringSliceToAny(values)
+			// Targeted parent of property provided
+			if parent != "" {
+				if parentProp, ok := s.Properties[parent]; ok {
+					var targetProps map[string]*jsonschema.Schema
+
+					// Handle array of objects (lists) or nested objects
+					if parentProp.Items != nil && parentProp.Items.Properties != nil {
+						targetProps = parentProp.Items.Properties
+					} else if parentProp.Properties != nil {
+						targetProps = parentProp.Properties
+					}
+
+					if targetProps != nil {
+						if childProp, ok := targetProps[child]; ok {
+							applyEnum(childProp, values)
+							targetProps[child] = childProp
+						}
+					}
 				}
-				s.Properties[property] = prop
+			} else {
+				// No parent provided
+				if prop, ok := s.Properties[child]; ok {
+					applyEnum(prop, values)
+					s.Properties[child] = prop
+				}
 			}
 		})
 	}
 }
 
-// WithRequired marks the specified fields as required in the schema, recursively.
+// WithRequired marks the specified fields as required in the schema.
 func WithRequired(fields ...string) func(*jsonschema.Schema) {
 	return func(root *jsonschema.Schema) {
 		walkSchema(root, func(s *jsonschema.Schema) {
@@ -77,6 +96,18 @@ func WithRequired(fields ...string) func(*jsonschema.Schema) {
 				}
 			}
 		})
+	}
+}
+
+// WithRemove removes specified fields from the schema properties.
+func WithRemove(fields ...string) func(*jsonschema.Schema) {
+	return func(root *jsonschema.Schema) {
+		for _, f := range fields {
+			delete(root.Properties, f)
+			root.Required = slices.DeleteFunc(root.Required, func(r string) bool {
+				return r == f
+			})
+		}
 	}
 }
 
@@ -124,4 +155,13 @@ func stringSliceToAny(strings []string) []any {
 		anys[i] = s
 	}
 	return anys
+}
+
+// Helper to apply enum values to a schema property
+func applyEnum(prop *jsonschema.Schema, values []string) {
+	if prop.Items != nil {
+		prop.Items.Enum = stringSliceToAny(values)
+	} else {
+		prop.Enum = stringSliceToAny(values)
+	}
 }

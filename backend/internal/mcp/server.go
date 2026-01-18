@@ -19,10 +19,12 @@
 package mcp
 
 import (
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/asgardeo/thunder/internal/application"
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
-	"github.com/asgardeo/thunder/internal/mcp/tools"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	apptools "github.com/asgardeo/thunder/internal/mcp/tools/application"
+	flowtools "github.com/asgardeo/thunder/internal/mcp/tools/flow"
 )
 
 // Server wraps the MCP server and its tool registrations.
@@ -42,11 +44,11 @@ func NewServer(
 	}, nil)
 
 	// Register application tools.
-	appTools := tools.NewApplicationTools(appService)
+	appTools := apptools.NewApplicationTools(appService)
 	appTools.RegisterTools(mcpServer)
 
 	// Register flow tools.
-	flowTools := tools.NewFlowTools(flowService)
+	flowTools := flowtools.NewFlowTools(flowService)
 	flowTools.RegisterTools(mcpServer)
 
 	return &Server{

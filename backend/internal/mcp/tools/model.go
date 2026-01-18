@@ -19,12 +19,6 @@
 // Package tools provides MCP (Model Context Protocol) tool implementations for Thunder.
 package tools
 
-// DeleteOutput represents the output for delete operations.
-type DeleteOutput struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
 // IDInput represents a generic input that requires only a resource ID.
 type IDInput struct {
 	ID string `json:"id" jsonschema:"The unique identifier of the resource"`

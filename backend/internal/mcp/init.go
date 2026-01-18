@@ -22,9 +22,10 @@ package mcp
 import (
 	"net/http"
 
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
+
 	"github.com/asgardeo/thunder/internal/application"
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
-	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Initialize initializes the MCP server and registers its routes with the provided mux.
