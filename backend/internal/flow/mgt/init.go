@@ -44,7 +44,7 @@ func Initialize(
 
 	inferenceService := newFlowInferenceService()
 	graphBuilder := newGraphBuilder(flowFactory, executorRegistry, graphCache)
-	service := newFlowMgtService(store, inferenceService, graphBuilder)
+	service := newFlowMgtService(store, inferenceService, graphBuilder, executorRegistry)
 
 	if config.GetThunderRuntime().Config.ImmutableResources.Enabled {
 		if err := loadImmutableResources(store); err != nil {

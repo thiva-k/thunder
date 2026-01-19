@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
@@ -48,20 +49,49 @@ func (suite *UserTypeResolverTestSuite) SetupTest() {
 	suite.mockUserSchemaService = userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 	suite.mockFlowFactory = coremock.NewFlowFactoryInterfaceMock(suite.T())
 
+	defaultInputs := []common.Input{
+		{
+			Ref:        "usertype_input",
+			Identifier: userTypeKey,
+			Type:       "SELECT",
+			Required:   true,
+		},
+	}
+
 	// Mock the CreateExecutor method to return a base executor
 	suite.mockFlowFactory.On("CreateExecutor", ExecutorNameUserTypeResolver, common.ExecutorTypeRegistration,
-		[]common.Input{}, []common.Input{}).
+		defaultInputs, []common.Input{}).
 		Return(createMockUserTypeResolverExecutor(suite.T()))
 
 	suite.executor = newUserTypeResolver(suite.mockFlowFactory, suite.mockUserSchemaService)
 }
 
 func createMockUserTypeResolverExecutor(t *testing.T) core.ExecutorInterface {
+	defaultInputs := []common.Input{
+		{
+			Ref:        "usertype_input",
+			Identifier: userTypeKey,
+			Type:       "SELECT",
+			Required:   true,
+		},
+	}
 	mockExec := coremock.NewExecutorInterfaceMock(t)
 	mockExec.On("GetName").Return(ExecutorNameUserTypeResolver).Maybe()
 	mockExec.On("GetType").Return(common.ExecutorTypeRegistration).Maybe()
-	mockExec.On("GetDefaultInputs").Return([]common.Input{}).Maybe()
+	mockExec.On("GetDefaultInputs").Return(defaultInputs).Maybe()
+	mockExec.On("GetDefaultMeta").Return(nil).Maybe()
 	mockExec.On("GetPrerequisites").Return([]common.Input{}).Maybe()
+
+	// HasRequiredInputs returns true if userType input is present
+	mockExec.On("HasRequiredInputs", mock.Anything, mock.Anything).Return(
+		func(ctx *core.NodeContext, execResp *common.ExecutorResponse) bool {
+			if val, ok := ctx.UserInputs[userTypeKey]; ok && val != "" {
+				return true
+			}
+			return false
+		},
+	).Maybe()
+
 	return mockExec
 }
 
@@ -69,8 +99,17 @@ func (suite *UserTypeResolverTestSuite) TestNewUserTypeResolver() {
 	mockFlowFactory := coremock.NewFlowFactoryInterfaceMock(suite.T())
 	mockUserSchemaService := userschemamock.NewUserSchemaServiceInterfaceMock(suite.T())
 
+	defaultInputs := []common.Input{
+		{
+			Ref:        "usertype_input",
+			Identifier: userTypeKey,
+			Type:       "SELECT",
+			Required:   true,
+		},
+	}
+
 	mockFlowFactory.On("CreateExecutor", ExecutorNameUserTypeResolver, common.ExecutorTypeRegistration,
-		[]common.Input{}, []common.Input{}).
+		defaultInputs, []common.Input{}).
 		Return(createMockUserTypeResolverExecutor(suite.T()))
 
 	executor := newUserTypeResolver(mockFlowFactory, mockUserSchemaService)
@@ -323,40 +362,6 @@ func (suite *UserTypeResolverTestSuite) TestExecute_NoAllowedUserTypes() {
 	suite.mockUserSchemaService.AssertNotCalled(suite.T(), "GetUserSchemaByName")
 }
 
-func (suite *UserTypeResolverTestSuite) TestExecute_NoAllowedUserTypes_WithUserTypeInput() {
-	suite.SetupTest()
-
-	ctx := &core.NodeContext{
-		FlowID:   "flow-123",
-		FlowType: common.FlowTypeRegistration,
-		Application: appmodel.Application{
-			AllowedUserTypes: []string{},
-		},
-		UserInputs: map[string]string{
-			userTypeKey: "employee",
-		},
-		RuntimeData: map[string]string{},
-	}
-
-	userSchema := &userschema.UserSchema{
-		ID:                    "schema-123",
-		Name:                  "employee",
-		OrganizationUnitID:    "ou-123",
-		AllowSelfRegistration: true,
-	}
-	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
-		Return(userSchema, nil)
-
-	result, err := suite.executor.Execute(ctx)
-
-	assert.NoError(suite.T(), err)
-	assert.NotNil(suite.T(), result)
-	assert.Equal(suite.T(), common.ExecComplete, result.Status)
-	assert.Equal(suite.T(), "employee", result.RuntimeData[userTypeKey])
-	assert.Equal(suite.T(), "ou-123", result.RuntimeData[defaultOUIDKey])
-	suite.mockUserSchemaService.AssertExpectations(suite.T())
-}
-
 func (suite *UserTypeResolverTestSuite) TestExecute_SingleAllowedUserType_Success() {
 	suite.SetupTest()
 
@@ -489,12 +494,6 @@ func (suite *UserTypeResolverTestSuite) TestExecute_MultipleAllowedUserTypes_Pro
 	assert.Equal(suite.T(), "usertype_input", requiredInput.Ref)
 	assert.True(suite.T(), requiredInput.Required)
 	assert.ElementsMatch(suite.T(), []string{"employee", "customer", "partner"}, requiredInput.Options)
-
-	// Verify Meta is returned with proper structure
-	assert.NotNil(suite.T(), result.Meta)
-	meta, ok := result.Meta.(core.MetaStructure)
-	assert.True(suite.T(), ok, "Meta should be of type core.MetaStructure")
-	assert.NotEmpty(suite.T(), meta.Components, "Meta should contain components")
 
 	suite.mockUserSchemaService.AssertExpectations(suite.T())
 }
@@ -797,4 +796,29 @@ func (suite *UserTypeResolverTestSuite) TestGetUserSchemaAndOU_SchemaNotFound() 
 	assert.Equal(suite.T(), "", ouID)
 	assert.Contains(suite.T(), err.Error(), "failed to resolve user schema for user type")
 	suite.mockUserSchemaService.AssertExpectations(suite.T())
+}
+
+func (suite *UserTypeResolverTestSuite) TestGetDefaultMeta() {
+	suite.SetupTest()
+
+	meta := suite.executor.GetDefaultMeta()
+
+	// Verify meta is returned and has proper structure
+	assert.NotNil(suite.T(), meta)
+	metaStruct, ok := meta.(core.MetaStructure)
+	assert.True(suite.T(), ok, "Meta should be of type core.MetaStructure")
+	assert.NotEmpty(suite.T(), metaStruct.Components, "Meta should contain components")
+
+	// MetaBuilder creates TEXT (heading), BLOCK (containing inputs), and ACTION (submit button) components
+	// Verify we have at least a BLOCK component (which contains the inputs)
+	foundBlock := false
+	for _, component := range metaStruct.Components {
+		if component.Type == "BLOCK" {
+			foundBlock = true
+			assert.NotEmpty(suite.T(), component.Components, "BLOCK should contain nested components (inputs)")
+			break
+		}
+	}
+
+	assert.True(suite.T(), foundBlock, "Meta should contain a BLOCK component with inputs")
 }

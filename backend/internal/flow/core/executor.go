@@ -33,6 +33,7 @@ type ExecutorInterface interface {
 	GetName() string
 	GetType() common.ExecutorType
 	GetDefaultInputs() []common.Input
+	GetDefaultMeta() interface{}
 	GetPrerequisites() []common.Input
 	HasRequiredInputs(ctx *NodeContext, execResp *common.ExecutorResponse) bool
 	ValidatePrerequisites(ctx *NodeContext, execResp *common.ExecutorResponse) bool
@@ -86,6 +87,11 @@ func (e *executor) GetDefaultInputs() []common.Input {
 // GetPrerequisites returns the prerequisites for the executor.
 func (e *executor) GetPrerequisites() []common.Input {
 	return e.Prerequisites
+}
+
+// GetDefaultMeta returns the default meta structure for the executor.
+func (e *executor) GetDefaultMeta() interface{} {
+	return nil
 }
 
 // HasRequiredInputs checks if the required inputs are provided in the context and appends any

@@ -26,6 +26,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/core"
+	"github.com/asgardeo/thunder/internal/flow/executor"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	immutableresource "github.com/asgardeo/thunder/internal/system/immutable_resource"
@@ -61,6 +62,7 @@ type flowMgtService struct {
 	store            flowStoreInterface
 	inferenceService flowInferenceServiceInterface
 	graphBuilder     graphBuilderInterface
+	executorRegistry executor.ExecutorRegistryInterface
 	logger           *log.Logger
 }
 
@@ -69,11 +71,13 @@ func newFlowMgtService(
 	store flowStoreInterface,
 	inferenceService flowInferenceServiceInterface,
 	graphBuilder graphBuilderInterface,
+	executorRegistry executor.ExecutorRegistryInterface,
 ) FlowMgtServiceInterface {
 	return &flowMgtService{
 		store:            store,
 		inferenceService: inferenceService,
 		graphBuilder:     graphBuilder,
+		executorRegistry: executorRegistry,
 		logger:           log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName)),
 	}
 }
@@ -133,6 +137,11 @@ func (s *flowMgtService) CreateFlow(flowDef *FlowDefinition) (
 	}
 	if exists {
 		return nil, &ErrorDuplicateFlowHandle
+	}
+
+	svcErr := s.applyExecutorDefaultMeta(flowDef)
+	if svcErr != nil {
+		return nil, svcErr
 	}
 
 	flowID, genErr := utils.GenerateUUIDv7()
@@ -230,6 +239,11 @@ func (s *flowMgtService) UpdateFlow(flowID string, flowDef *FlowDefinition) (
 	// Prevent changing the handle
 	if existingFlow.Handle != flowDef.Handle {
 		return nil, &ErrorHandleUpdateNotAllowed
+	}
+
+	svcErr := s.applyExecutorDefaultMeta(flowDef)
+	if svcErr != nil {
+		return nil, svcErr
 	}
 
 	updatedFlow, err := s.store.UpdateFlow(flowID, flowDef)
@@ -508,42 +522,83 @@ func isValidHandleFormat(handle string) bool {
 
 // tryInferRegistrationFlow attempts to infer and create a registration flow from an authentication flow
 func (s *flowMgtService) tryInferRegistrationFlow(authFlowID string, authFlowDef *FlowDefinition) {
+	logger := s.logger.With(log.String("authFlowID", authFlowID))
+
 	if !config.GetThunderRuntime().Config.Flow.AutoInferRegistration {
-		s.logger.Debug("Automatic registration flow inference is disabled")
+		logger.Debug("Automatic registration flow inference is disabled")
 		return
 	}
 
 	if authFlowDef.FlowType != common.FlowTypeAuthentication {
-		s.logger.Debug("Flow is not an authentication flow, skipping registration inference",
+		logger.Debug("Flow is not an authentication flow, skipping registration inference",
 			log.String("flowType", string(authFlowDef.FlowType)))
 		return
 	}
 
-	s.logger.Debug("Inferring registration flow from authentication flow",
-		log.String(logKeyFlowID, authFlowID),
+	logger.Debug("Inferring registration flow from authentication flow",
 		log.String("flowName", authFlowDef.Name))
 
 	regFlowDef, inferErr := s.inferenceService.InferRegistrationFlow(authFlowDef)
 	if inferErr != nil {
-		s.logger.Error("Failed to infer registration flow", log.String(logKeyFlowID, authFlowID),
-			log.Error(inferErr))
+		logger.Error("Failed to infer registration flow", log.Error(inferErr))
+		return
+	}
+
+	metaErr := s.applyExecutorDefaultMeta(regFlowDef)
+	if metaErr != nil {
+		logger.Error("Failed to apply executor default meta to inferred registration flow",
+			log.String("error", metaErr.Code))
 		return
 	}
 
 	regFlowID, uuidErr := utils.GenerateUUIDv7()
 	if uuidErr != nil {
-		s.logger.Error("Failed to generate UUID for inferred registration flow", log.Error(uuidErr))
+		logger.Error("Failed to generate UUID for inferred registration flow", log.Error(uuidErr))
 		return
 	}
 
 	_, storeErr := s.store.CreateFlow(regFlowID, regFlowDef)
 	if storeErr != nil {
-		s.logger.Error("Failed to create inferred registration flow",
-			log.String("regFlowID", regFlowID), log.Error(storeErr))
+		logger.Error("Failed to create inferred registration flow", log.Error(storeErr))
 		return
 	}
 
-	s.logger.Debug("Successfully inferred and created registration flow",
-		log.String("authFlowID", authFlowID), log.String("authFlowName", authFlowDef.Name),
-		log.String("regFlowID", regFlowID), log.String("regFlowName", regFlowDef.Name))
+	logger.Debug("Successfully inferred and created registration flow",
+		log.String("authFlowName", authFlowDef.Name), log.String("regFlowID", regFlowID),
+		log.String("regFlowName", regFlowDef.Name))
+}
+
+// applyExecutorDefaultMeta applies default meta from executors to TASK_EXECUTION nodes.
+func (s *flowMgtService) applyExecutorDefaultMeta(flowDef *FlowDefinition) *serviceerror.ServiceError {
+	if s.executorRegistry == nil {
+		s.logger.Error("Executor registry is nil, cannot apply default meta")
+		return &serviceerror.InternalServerError
+	}
+
+	for i := range flowDef.Nodes {
+		node := &flowDef.Nodes[i]
+
+		if node.Type != string(common.NodeTypeTaskExecution) || node.Executor == nil {
+			continue
+		}
+		if node.Meta != nil {
+			s.logger.Debug("Node already has meta, skipping default meta application",
+				log.String("nodeID", node.ID), log.String("executorName", node.Executor.Name))
+			continue
+		}
+
+		exec, err := s.executorRegistry.GetExecutor(node.Executor.Name)
+		if err != nil {
+			s.logger.Error("Failed to get executor for default meta application",
+				log.String("nodeID", node.ID), log.String("executorName", node.Executor.Name), log.Error(err))
+			return &serviceerror.InternalServerError
+		}
+
+		meta := exec.GetDefaultMeta()
+		if meta != nil {
+			node.Meta = meta
+		}
+	}
+
+	return nil
 }
