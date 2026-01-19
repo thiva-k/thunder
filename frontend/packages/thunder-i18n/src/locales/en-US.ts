@@ -958,6 +958,8 @@ const translations = {
     // Elements - text property field
     'core.elements.textPropertyField.placeholder': 'Enter {{propertyName}}',
     'core.elements.textPropertyField.tooltip.configureTranslation': 'Configure translation',
+    'core.elements.textPropertyField.i18nKey': 'Translation Key',
+    'core.elements.textPropertyField.resolvedValue': 'Resolved Value',
 
     // Elements - i18n card
     'core.elements.textPropertyField.i18nCard.title': 'Translation for {{field}}',

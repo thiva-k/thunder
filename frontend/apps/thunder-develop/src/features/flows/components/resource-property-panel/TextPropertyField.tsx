@@ -18,12 +18,12 @@
 
 import {useMemo, useRef, useState, type ChangeEvent, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Box, FormControl, FormHelperText, FormLabel, TextField} from '@wso2/oxygen-ui';
+import {Box, FormControl, FormHelperText, FormLabel, TextField, Typography} from '@wso2/oxygen-ui';
 import startCase from 'lodash-es/startCase';
 import useValidationStatus from '../../hooks/useValidationStatus';
 import type {Resource} from '../../models/resources';
 import I18nConfigurationCard from './I18nConfigurationCard';
-import {isI18nPattern as checkIsI18nPattern, extractI18nKey} from '../../utils/i18nPatternUtils';
+import {isI18nPattern as checkIsI18nPattern, extractI18nKey, resolveI18nValue} from '../../utils/i18nPatternUtils';
 
 /**
  * Props interface of {@link TextPropertyField}
@@ -78,6 +78,17 @@ function TextPropertyField({
   const isI18nPattern: boolean = useMemo(() => checkIsI18nPattern(propertyValue), [propertyValue]);
 
   /**
+   * Resolve the i18n value if the pattern is detected.
+   */
+  const resolvedI18nValue: string = useMemo(() => {
+    if (isI18nPattern) {
+      return resolveI18nValue(propertyValue, t);
+    }
+
+    return '';
+  }, [propertyValue, isI18nPattern, t]);
+
+  /**
    * Get the error message for the text property field.
    */
   const errorMessage: string = useMemo(() => {
@@ -111,22 +122,31 @@ function TextPropertyField({
         <TextField
           fullWidth
           defaultValue={propertyValue}
-          value={isI18nPattern ? '' : undefined}
           error={!!errorMessage}
           onChange={(e: ChangeEvent<HTMLInputElement>) => onChange(propertyKey, e.target.value, resource)}
-          placeholder={
-            isI18nPattern
-              ? ''
-              : t('flows:core.elements.textPropertyField.placeholder', {propertyName: startCase(propertyKey)})
-          }
+          placeholder={t('flows:core.elements.textPropertyField.placeholder', {propertyName: startCase(propertyKey)})}
           {...rest}
         />
       </FormControl>
       {errorMessage && <FormHelperText error>{errorMessage}</FormHelperText>}
-      {isI18nPattern && (
-        <div className="text-property-field-i18n-placeholder">
-          <div className="text-property-field-i18n-placeholder-key">{propertyValue}</div>
-        </div>
+      {isI18nPattern && resolvedI18nValue && (
+        <Box
+          sx={{
+            mt: 1,
+            p: 1.5,
+            backgroundColor: 'action.hover',
+            borderRadius: 1,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>
+            {t('flows:core.elements.textPropertyField.resolvedValue')}
+          </Typography>
+          <Typography variant="body2" sx={{wordBreak: 'break-word'}}>
+            {resolvedI18nValue}
+          </Typography>
+        </Box>
       )}
       {isI18nCardOpen && (
         <I18nConfigurationCard

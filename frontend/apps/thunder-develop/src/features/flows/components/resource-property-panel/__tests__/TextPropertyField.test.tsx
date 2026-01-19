@@ -199,7 +199,7 @@ describe('TextPropertyField', () => {
   });
 
   describe('I18n Pattern', () => {
-    it('should display i18n placeholder when value matches i18n pattern', () => {
+    it('should display resolved value box when value matches i18n pattern', () => {
       render(
         <TextPropertyField
           resource={mockResource}
@@ -210,10 +210,15 @@ describe('TextPropertyField', () => {
         {wrapper: createWrapper()},
       );
 
-      expect(screen.getByText('{{t(common.submit)}}')).toBeInTheDocument();
+      // The text field should have the i18n key
+      expect(screen.getByRole('textbox')).toHaveValue('{{t(common.submit)}}');
+      // The resolved value label should be displayed
+      expect(screen.getByText('flows:core.elements.textPropertyField.resolvedValue')).toBeInTheDocument();
+      // The resolved value should be displayed (mock returns the key itself)
+      expect(screen.getByText('common.submit')).toBeInTheDocument();
     });
 
-    it('should not display i18n placeholder for regular text', () => {
+    it('should not display resolved value box for regular text', () => {
       render(
         <TextPropertyField
           resource={mockResource}
@@ -224,8 +229,8 @@ describe('TextPropertyField', () => {
         {wrapper: createWrapper()},
       );
 
-      // Should not have the i18n placeholder container
-      expect(screen.queryByText('{{t(common.submit)}}')).not.toBeInTheDocument();
+      // Should not have the resolved value label
+      expect(screen.queryByText('flows:core.elements.textPropertyField.resolvedValue')).not.toBeInTheDocument();
     });
   });
 
@@ -265,7 +270,7 @@ describe('TextPropertyField', () => {
   });
 
   describe('TextField Props', () => {
-    it('should clear text field value when i18n pattern is detected', () => {
+    it('should keep i18n key in text field when i18n pattern is detected', () => {
       render(
         <TextPropertyField
           resource={mockResource}
@@ -277,8 +282,8 @@ describe('TextPropertyField', () => {
       );
 
       const textField = screen.getByRole('textbox');
-      // When i18n pattern is detected, value is set to empty string
-      expect(textField).toHaveValue('');
+      // When i18n pattern is detected, value is kept in the text field
+      expect(textField).toHaveValue('{{t(common.button)}}');
     });
 
     it('should render placeholder when not i18n pattern', () => {
@@ -297,7 +302,7 @@ describe('TextPropertyField', () => {
       expect(textField).toHaveAttribute('placeholder', 'Enter Title');
     });
 
-    it('should not render placeholder when i18n pattern is detected', () => {
+    it('should render placeholder even when i18n pattern is detected', () => {
       render(
         <TextPropertyField
           resource={mockResource}
@@ -309,8 +314,8 @@ describe('TextPropertyField', () => {
       );
 
       const textField = screen.getByRole('textbox');
-      // When i18n pattern is detected, placeholder is empty
-      expect(textField).toHaveAttribute('placeholder', '');
+      // The placeholder should still be shown for i18n patterns
+      expect(textField).toHaveAttribute('placeholder', 'Enter Label');
     });
   });
 
@@ -362,8 +367,10 @@ describe('TextPropertyField', () => {
         {wrapper: createWrapper()},
       );
 
-      // The i18n pattern should be displayed
-      expect(screen.getByText('{{t(login.submit)}}')).toBeInTheDocument();
+      // The i18n key should be kept in the input field
+      expect(screen.getByRole('textbox')).toHaveValue('{{t(login.submit)}}');
+      // The resolved value should be displayed below
+      expect(screen.getByText('login.submit')).toBeInTheDocument();
     });
 
     it('should extract i18n key from pattern with nested key', () => {
@@ -377,7 +384,10 @@ describe('TextPropertyField', () => {
         {wrapper: createWrapper()},
       );
 
-      expect(screen.getByText('{{t(flows.login.welcome.message)}}')).toBeInTheDocument();
+      // The i18n key should be kept in the input field
+      expect(screen.getByRole('textbox')).toHaveValue('{{t(flows.login.welcome.message)}}');
+      // The resolved value should be displayed below
+      expect(screen.getByText('flows.login.welcome.message')).toBeInTheDocument();
     });
   });
 
