@@ -23,6 +23,13 @@ import PlaceholderComponent from '../PlaceholderComponent';
 // Mock the SCSS file
 vi.mock('../PlaceholderComponent.scss', () => ({}));
 
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => `translated_${key}`,
+  }),
+}));
+
 describe('PlaceholderComponent', () => {
   describe('Regular Text Rendering', () => {
     it('should render plain text value in a span', () => {
@@ -47,46 +54,50 @@ describe('PlaceholderComponent', () => {
   });
 
   describe('i18n Pattern Detection', () => {
-    it('should detect i18n pattern {{key}}', () => {
-      const {container} = render(<PlaceholderComponent value="{{i18n.key}}" />);
+    it('should detect i18n pattern {{t(key)}}', () => {
+      render(<PlaceholderComponent value="{{t(i18n.key)}}" />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).toBeInTheDocument();
+      // Should render the resolved value
+      expect(screen.getByText('translated_i18n.key')).toBeInTheDocument();
     });
 
     it('should detect i18n pattern with simple key', () => {
-      const {container} = render(<PlaceholderComponent value="{{label}}" />);
+      render(<PlaceholderComponent value="{{t(label)}}" />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).toBeInTheDocument();
+      expect(screen.getByText('translated_label')).toBeInTheDocument();
     });
 
-    it('should display the i18n key in placeholder', () => {
-      render(<PlaceholderComponent value="{{my.translation.key}}" />);
+    it('should display the resolved value for i18n pattern', () => {
+      render(<PlaceholderComponent value="{{t(my.translation.key)}}" />);
 
-      expect(screen.getByText('{{my.translation.key}}')).toBeInTheDocument();
+      expect(screen.getByText('translated_my.translation.key')).toBeInTheDocument();
     });
 
     it('should detect i18n pattern with whitespace around', () => {
-      const {container} = render(<PlaceholderComponent value="  {{key}}  " />);
+      render(<PlaceholderComponent value="  {{t(key)}}  " />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).toBeInTheDocument();
+      expect(screen.getByText('translated_key')).toBeInTheDocument();
     });
 
     it('should not detect i18n pattern for partial match', () => {
-      const {container} = render(<PlaceholderComponent value="text {{key}} more text" />);
+      render(<PlaceholderComponent value="text {{t(key)}} more text" />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).not.toBeInTheDocument();
+      // Should render the raw value since it's not a pure i18n pattern
+      expect(screen.getByText('text {{t(key)}} more text')).toBeInTheDocument();
     });
 
-    it('should not detect i18n pattern with single braces', () => {
-      const {container} = render(<PlaceholderComponent value="{key}" />);
+    it('should not detect old i18n pattern with double braces only', () => {
+      render(<PlaceholderComponent value="{{key}}" />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).not.toBeInTheDocument();
+      // The old {{key}} pattern should NOT be detected, so it renders as-is
+      expect(screen.getByText('{{key}}')).toBeInTheDocument();
     });
 
-    it('should not detect i18n pattern with empty braces', () => {
-      const {container} = render(<PlaceholderComponent value="{{}}" />);
+    it('should not detect i18n pattern with empty key', () => {
+      render(<PlaceholderComponent value="{{t()}}" />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).not.toBeInTheDocument();
+      // Empty key should not match
+      expect(screen.getByText('{{t()}}')).toBeInTheDocument();
     });
   });
 
@@ -104,13 +115,13 @@ describe('PlaceholderComponent', () => {
 
     it('should not render children when value is i18n pattern', () => {
       render(
-        <PlaceholderComponent value="{{i18n.key}}">
+        <PlaceholderComponent value="{{t(i18n.key)}}">
           <div data-testid="child">Child Content</div>
         </PlaceholderComponent>,
       );
 
       expect(screen.queryByTestId('child')).not.toBeInTheDocument();
-      expect(screen.getByText('{{i18n.key}}')).toBeInTheDocument();
+      expect(screen.getByText('translated_i18n.key')).toBeInTheDocument();
     });
 
     it('should prefer children over value when not i18n pattern', () => {
@@ -131,26 +142,13 @@ describe('PlaceholderComponent', () => {
     });
   });
 
-  describe('CSS Classes', () => {
-    it('should apply i18n placeholder class for i18n pattern', () => {
-      const {container} = render(<PlaceholderComponent value="{{key}}" />);
-
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).toBeInTheDocument();
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder-key')).toBeInTheDocument();
-    });
-
-    it('should not apply i18n classes for regular text', () => {
-      const {container} = render(<PlaceholderComponent value="regular text" />);
-
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).not.toBeInTheDocument();
-    });
-  });
-
   describe('Edge Cases', () => {
     it('should handle undefined-like empty value', () => {
       const {container} = render(<PlaceholderComponent value="" />);
 
-      expect(container.querySelector('.flow-builder-display-field-i18n-placeholder')).not.toBeInTheDocument();
+      const span = container.querySelector('span');
+      expect(span).toBeInTheDocument();
+      expect(span?.textContent).toBe('');
     });
 
     it('should handle numeric-like strings', () => {

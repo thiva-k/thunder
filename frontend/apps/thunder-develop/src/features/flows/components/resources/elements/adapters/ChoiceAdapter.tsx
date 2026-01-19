@@ -20,6 +20,7 @@ import type {ReactElement} from 'react';
 import type {Element as FlowElement} from '@/features/flows/models/elements';
 import type {FieldOption} from '@/features/flows/models/base';
 import {FormControl, FormControlLabel, FormHelperText, FormLabel, Radio, RadioGroup} from '@wso2/oxygen-ui';
+import PlaceholderComponent from './PlaceholderComponent';
 import {Hint} from '../hint';
 
 /**
@@ -53,10 +54,17 @@ function ChoiceAdapter({resource}: ChoiceAdapterPropsInterface): ReactElement {
 
   return (
     <FormControl sx={{my: 2}}>
-      <FormLabel id={choiceElement?.id}>{choiceElement?.label}</FormLabel>
+      <FormLabel id={choiceElement?.id}>
+        <PlaceholderComponent value={choiceElement?.label ?? ''} />
+      </FormLabel>
       <RadioGroup defaultValue={choiceElement?.defaultValue}>
         {choiceElement?.options?.map((option: FieldOption) => (
-          <FormControlLabel key={option?.key} value={option?.value} control={<Radio />} label={option?.label} />
+          <FormControlLabel
+            key={option?.key}
+            value={option?.value}
+            control={<Radio />}
+            label={<PlaceholderComponent value={option?.label ?? ''} />}
+          />
         ))}
       </RadioGroup>
       {choiceElement?.hint && (

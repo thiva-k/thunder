@@ -657,6 +657,295 @@
   {
     "resourceType": "TEMPLATE",
     "category": "STARTER",
+    "type": "BASIC_SMS_OTP_MFA",
+    "display": {
+      "label": "Password + SMS OTP",
+      "description": "Password login with SMS OTP as second factor authentication",
+      "image": "assets/images/icons/mobile-message.svg",
+      "showOnResourcePanel": true
+    },
+    "config": {
+      "data": {
+        "__generationMeta__": {
+          "defaultPropertySelectorId": "{{SMS_SEND_EXECUTOR_ID}}",
+          "replacers": [
+            {
+              "key": "BASIC_AUTH_EXECUTION_STEP_ID",
+              "type": "ID"
+            },
+            {
+              "key": "SMS_SEND_EXECUTOR_ID",
+              "type": "ID"
+            },
+            {
+              "key": "SMS_OTP_VERIFICATION_STEP_ID",
+              "type": "ID"
+            },
+            {
+              "key": "SMS_VERIFY_EXECUTOR_ID",
+              "type": "ID"
+            },
+            {
+              "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
+            }
+          ]
+        },
+        "steps": [
+          {
+            "id": "start",
+            "type": "START",
+            "size": {
+              "width": 101,
+              "height": 34
+            },
+            "position": {
+              "x": 62,
+              "y": 330
+            }
+          },
+          {
+            "id": "{{ID}}",
+            "type": "VIEW",
+            "size": {
+              "width": 350,
+              "height": 569
+            },
+            "position": {
+              "x": 310,
+              "y": 63
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
+                  "label": "Sign In"
+                },
+                {
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "id": "{{ID}}",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "FIELD",
+                      "type": "TEXT_INPUT",
+                      "inputType": "text",
+                      "hint": "",
+                      "label": "Username",
+                      "required": true,
+                      "placeholder": "Enter your username",
+                      "ref": "username"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "FIELD",
+                      "type": "PASSWORD_INPUT",
+                      "inputType": "password",
+                      "ref": "password",
+                      "hint": "",
+                      "label": "Password",
+                      "required": true,
+                      "placeholder": "Enter your password"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Sign In",
+                      "action": {
+                        "type": "NEXT",
+                        "next": "{{BASIC_AUTH_EXECUTION_STEP_ID}}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "{{BASIC_AUTH_EXECUTION_STEP_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 217,
+              "height": 113
+            },
+            "position": {
+              "x": 820,
+              "y": 291
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "BasicAuthExecutor"
+                },
+                "next": "{{SMS_SEND_EXECUTOR_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{SMS_SEND_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1200,
+              "y": 291
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "SMSOTPAuthExecutor",
+                  "mode": "send"
+                },
+                "next": "{{SMS_OTP_VERIFICATION_STEP_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{SMS_OTP_VERIFICATION_STEP_ID}}",
+            "type": "VIEW",
+            "size": {
+              "width": 350,
+              "height": 556
+            },
+            "position": {
+              "x": 1550,
+              "y": 69
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
+                  "label": "Verify OTP"
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "FIELD",
+                      "type": "OTP_INPUT",
+                      "inputType": "text",
+                      "hint": "",
+                      "ref": "otp",
+                      "label": "Enter the OTP code",
+                      "required": true,
+                      "placeholder": ""
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Verify",
+                      "action": {
+                        "type": "NEXT",
+                        "next": "{{SMS_VERIFY_EXECUTOR_ID}}"
+                      }
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "RESEND",
+                      "eventType": "SUBMIT",
+                      "label": "Resend OTP",
+                      "action": {
+                        "type": "NEXT",
+                        "next": "{{SMS_SEND_EXECUTOR_ID}}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "{{SMS_VERIFY_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 2050,
+              "y": 291
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "SMSOTPAuthExecutor",
+                  "mode": "verify"
+                },
+                "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 244,
+              "height": 113
+            },
+            "position": {
+              "x": 2400,
+              "y": 291
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "AuthAssertExecutor"
+                },
+                "next": "END"
+              }
+            }
+          },
+          {
+            "id": "END",
+            "type": "END",
+            "size": {
+              "width": 85,
+              "height": 34
+            },
+            "position": {
+              "x": 2800,
+              "y": 330
+            },
+            "config": {},
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "LoginCompletionExecutor"
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "resourceType": "TEMPLATE",
+    "category": "STARTER",
     "type": "SMS_OTP",
     "display": {
       "label": "SMS OTP",

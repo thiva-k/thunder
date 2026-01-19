@@ -21,6 +21,7 @@ import {Trans, useTranslation} from 'react-i18next';
 import {TextField} from '@wso2/oxygen-ui';
 import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
+import useResolveI18n from '@/features/flows/hooks/useResolveI18n';
 import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Hint} from '../../hint';
 import PlaceholderComponent from '../PlaceholderComponent';
@@ -92,6 +93,7 @@ function DefaultInputAdapter({resource}: DefaultInputAdapterPropsInterface): Rea
   useRequiredFields(resource, generalMessage, validationFields);
 
   const inputElement = resource as InputElement;
+  const resolvedPlaceholder = useResolveI18n(inputElement?.placeholder);
 
   return (
     <TextField
@@ -105,7 +107,7 @@ function DefaultInputAdapter({resource}: DefaultInputAdapterPropsInterface): Rea
       }}
       label={<PlaceholderComponent value={inputElement?.label ?? ''} />}
       multiline={inputElement?.multiline}
-      placeholder={inputElement?.placeholder ?? ''}
+      placeholder={resolvedPlaceholder}
       required={inputElement?.required}
       InputLabelProps={{
         required: inputElement?.required,

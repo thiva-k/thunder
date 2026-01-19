@@ -21,6 +21,7 @@ import type {Element as FlowElement} from '@/features/flows/models/elements';
 import {Trans, useTranslation} from 'react-i18next';
 import type {RequiredFieldInterface} from '@/features/flows/hooks/useRequiredFields';
 import useRequiredFields from '@/features/flows/hooks/useRequiredFields';
+import useResolveI18n from '@/features/flows/hooks/useResolveI18n';
 import {Box, FormHelperText, InputLabel, OutlinedInput} from '@wso2/oxygen-ui';
 import PlaceholderComponent from '../PlaceholderComponent';
 import {Hint} from '../../hint';
@@ -79,6 +80,7 @@ function OTPInputAdapter({resource}: OTPInputAdapterPropsInterface): ReactElemen
   useRequiredFields(resource, generalMessage, fields);
 
   const otpElement = resource as OTPInputElement;
+  const resolvedPlaceholder = useResolveI18n(otpElement?.placeholder);
 
   return (
     <div className={otpElement?.className}>
@@ -93,7 +95,7 @@ function OTPInputAdapter({resource}: OTPInputAdapterPropsInterface): ReactElemen
             id="otp-input-adapter"
             type={otpElement?.inputType}
             style={otpElement?.styles}
-            placeholder={otpElement?.placeholder ?? ''}
+            placeholder={resolvedPlaceholder}
           />
         ))}
       </Box>

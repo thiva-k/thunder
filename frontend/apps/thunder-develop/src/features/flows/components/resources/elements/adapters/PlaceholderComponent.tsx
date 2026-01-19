@@ -17,6 +17,8 @@
  */
 
 import {useMemo, type PropsWithChildren, type ReactElement} from 'react';
+import {useTranslation} from 'react-i18next';
+import {isI18nPattern as checkIsI18nPattern, resolveI18nValue} from '@/features/flows/utils/i18nPatternUtils';
 import './PlaceholderComponent.scss';
 
 /**
@@ -28,28 +30,37 @@ export interface PlaceholderComponentProps {
 
 /**
  * Placeholder component for displaying a placeholder text.
+ * If the value matches the i18n pattern {{t(key)}}, it resolves and displays the translated value.
+ * Otherwise, it displays the raw text content.
  *
  * @param props - Props injected to the component.
  * @returns The PlaceholderComponent component.
  */
 function PlaceholderComponent({value, children = null}: PropsWithChildren<PlaceholderComponentProps>): ReactElement {
+  const {t} = useTranslation();
+
   /**
-   * Check if the value matches the i18n pattern.
+   * Check if the value matches the i18n pattern and resolve it if so.
+   * Returns an object with isI18nPattern flag and the resolved/original value.
    */
-  const isI18nPattern: boolean = useMemo(() => {
-    if (!value) return false;
+  const {isI18nPattern, displayValue} = useMemo(() => {
+    const isPattern = checkIsI18nPattern(value);
 
-    const i18nPattern = /^\{\{[^}]+\}\}$/;
+    if (isPattern) {
+      return {
+        isI18nPattern: true,
+        displayValue: resolveI18nValue(value, t),
+      };
+    }
 
-    return i18nPattern.test(value.trim());
-  }, [value]);
+    return {
+      isI18nPattern: false,
+      displayValue: value,
+    };
+  }, [value, t]);
 
   if (isI18nPattern) {
-    return (
-      <span className="flow-builder-display-field-i18n-placeholder">
-        <span className="flow-builder-display-field-i18n-placeholder-key">{value}</span>
-      </span>
-    );
+    return <span>{displayValue}</span>;
   }
 
   if (children) {
