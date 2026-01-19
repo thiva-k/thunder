@@ -16,7 +16,7 @@
                     {
                         "type": "TEXT",
                         "id": "text_001",
-                        "label": "{{ t(signin:heading) }}",
+                        "label": "Sign In",
                         "variant": "HEADING_1"
                     },
                     {
@@ -27,22 +27,22 @@
                                 "id": "input_001",
                                 "ref": "username",
                                 "type": "TEXT_INPUT",
-                                "label": "{{ t(elements:fields.username.label) }}",
+                                "label": "Username",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.username.placeholder) }}"
+                                "placeholder": "Enter your username"
                             },
                             {
                                 "id": "input_002",
                                 "ref": "password",
                                 "type": "PASSWORD_INPUT",
-                                "label": "{{ t(elements:fields.password.label) }}",
+                                "label": "Password",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.password.placeholder) }}"
+                                "placeholder": "Enter your password"
                             },
                             {
                                 "type": "ACTION",
                                 "id": "action_001",
-                                "label": "{{ t(elements:buttons.submit.text) }}",
+                                "label": "Sign In",
                                 "variant": "PRIMARY",
                                 "eventType": "SUBMIT"
                             }

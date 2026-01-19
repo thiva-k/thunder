@@ -24,7 +24,7 @@
                     {
                         "type": "TEXT",
                         "id": "heading_credentials",
-                        "label": "{{ t(signup:heading) }}",
+                        "label": "Sign Up",
                         "variant": "HEADING_2"
                     },
                     {
@@ -35,22 +35,22 @@
                                 "type": "TEXT_INPUT",
                                 "id": "input_username",
                                 "ref": "username",
-                                "label": "{{ t(elements:fields.username.label) }}",
-                                "placeholder": "{{ t(elements:fields.username.placeholder) }}",
+                                "label": "Username",
+                                "placeholder": "Enter your username",
                                 "required": true
                             },
                             {
                                 "type": "PASSWORD_INPUT",
                                 "id": "input_password",
                                 "ref": "password",
-                                "label": "{{ t(elements:fields.password.label) }}",
-                                "placeholder": "{{ t(elements:fields.password.placeholder) }}",
+                                "label": "Password",
+                                "placeholder": "Enter your password",
                                 "required": true
                             },
                             {
                                 "type": "ACTION",
                                 "id": "action_credentials",
-                                "label": "{{ t(elements:buttons.submit.text) }}",
+                                "label": "Continue",
                                 "variant": "PRIMARY",
                                 "eventType": "SUBMIT"
                             }
@@ -97,7 +97,7 @@
                     {
                         "type": "TEXT",
                         "id": "heading_user_info",
-                        "label": "{{ t(signup:heading) }}",
+                        "label": "Sign Up",
                         "variant": "HEADING_2"
                     },
                     {
@@ -108,30 +108,30 @@
                                 "type": "TEXT_INPUT",
                                 "id": "input_firstName",
                                 "ref": "firstName",
-                                "label": "{{ t(elements:fields.first_name.label) }}",
-                                "placeholder": "{{ t(elements:fields.first_name.placeholder) }}",
+                                "label": "First Name",
+                                "placeholder": "Enter your first name",
                                 "required": true
                             },
                             {
                                 "type": "TEXT_INPUT",
                                 "id": "input_lastName",
                                 "ref": "lastName",
-                                "label": "{{ t(elements:fields.last_name.label) }}",
-                                "placeholder": "{{ t(elements:fields.last_name.placeholder) }}",
+                                "label": "Last Name",
+                                "placeholder": "Enter your last name",
                                 "required": true
                             },
                             {
                                 "type": "EMAIL_INPUT",
                                 "id": "input_email",
                                 "ref": "email",
-                                "label": "{{ t(elements:fields.email.label) }}",
-                                "placeholder": "{{ t(elements:fields.email.placeholder) }}",
+                                "label": "Email Address",
+                                "placeholder": "Enter your email address",
                                 "required": true
                             },
                             {
                                 "type": "ACTION",
                                 "id": "action_user_info",
-                                "label": "{{ t(elements:buttons.submit.text) }}",
+                                "label": "Sign Up",
                                 "variant": "PRIMARY",
                                 "eventType": "SUBMIT"
                             }

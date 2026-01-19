@@ -24,7 +24,7 @@
                     {
                         "type": "TEXT",
                         "id": "text_001",
-                        "label": "{{ t(signup:heading) }}",
+                        "label": "Sign Up",
                         "variant": "HEADING_1"
                     },
                     {
@@ -35,46 +35,46 @@
                                 "id": "input_001",
                                 "ref": "username",
                                 "type": "TEXT_INPUT",
-                                "label": "{{ t(elements:fields.username.label) }}",
+                                "label": "Username",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.username.placeholder) }}"
+                                "placeholder": "Enter your username"
                             },
                             {
                                 "id": "input_002",
                                 "ref": "password",
                                 "type": "PASSWORD_INPUT",
-                                "label": "{{ t(elements:fields.password.label) }}",
+                                "label": "Password",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.password.placeholder) }}"
+                                "placeholder": "Enter your password"
                             },
                             {
                                 "id": "input_003",
                                 "ref": "firstName",
                                 "type": "TEXT_INPUT",
-                                "label": "{{ t(elements:fields.first_name.label) }}",
+                                "label": "First Name",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.first_name.placeholder) }}"
+                                "placeholder": "Enter your first name"
                             },
                             {
                                 "id": "input_004",
                                 "ref": "lastName",
                                 "type": "TEXT_INPUT",
-                                "label": "{{ t(elements:fields.last_name.label) }}",
+                                "label": "Last Name",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.last_name.placeholder) }}"
+                                "placeholder": "Enter your last name"
                             },
                             {
                                 "id": "input_005",
                                 "ref": "email",
                                 "type": "EMAIL_INPUT",
-                                "label": "{{ t(elements:fields.email.label) }}",
+                                "label": "Email Address",
                                 "required": true,
-                                "placeholder": "{{ t(elements:fields.email.placeholder) }}"
+                                "placeholder": "Enter your email address"
                             },
                             {
                                 "type": "ACTION",
                                 "id": "action_001",
-                                "label": "{{ t(elements:buttons.submit.text) }}",
+                                "label": "Sign Up",
                                 "variant": "PRIMARY",
                                 "eventType": "SUBMIT"
                             }
