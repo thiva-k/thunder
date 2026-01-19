@@ -16,13 +16,25 @@
  * under the License.
  */
 
-package application
+package mcp
 
-// defaults holds default values for application management tool schemas.
-var defaults = map[string]any{
-	"user_attributes": []string{
-		"sub", "email", "name", "given_name", "family_name",
-		"profile", "picture", "phone_number", "address", "created_at",
-	},
-	"scopes": []string{"openid", "profile", "email"},
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/flowmgtmock"
+)
+
+func TestNewServer(t *testing.T) {
+	// Create mocks
+	mockAppService := applicationmock.NewApplicationServiceInterfaceMock(t)
+	mockFlowService := flowmgtmock.NewFlowMgtServiceInterfaceMock(t)
+
+	// Test server creation
+	serverInstance := newServer(mockAppService, mockFlowService)
+
+	assert.NotNil(t, serverInstance)
+	assert.NotNil(t, serverInstance.getMCPServer())
 }

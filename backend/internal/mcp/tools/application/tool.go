@@ -46,17 +46,27 @@ func NewApplicationTools(appService appsvc.ApplicationServiceInterface) *applica
 	}
 }
 
-// RegisterTools registers all application tools with the MCP server.
-func (t *applicationTools) RegisterTools(server *mcp.Server) {
+// Schema definitions
+var (
 	// Common schema modifiers for ApplicationDTO
-	appSchemaModifiers := []func(*jsonschema.Schema){
+	appSchemaModifiers []func(*jsonschema.Schema)
+
+	// Modified input schema for create_application tool
+	createAppInputSchema *jsonschema.Schema
+
+	// Modified input schema for update_application tool
+	updateAppInputSchema *jsonschema.Schema
+)
+
+func init() {
+	appSchemaModifiers = []func(*jsonschema.Schema){
 		common.WithEnum("inbound_auth_config.config", "grant_types", oauth2const.GetSupportedGrantTypes()),
 		common.WithEnum("inbound_auth_config.config", "response_types", oauth2const.GetSupportedResponseTypes()),
 		common.WithEnum("inbound_auth_config.config", "token_endpoint_auth_method", oauth2const.GetSupportedTokenEndpointAuthMethods()),
 		common.WithEnum("inbound_auth_config", "type", []string{string(model.OAuthInboundAuthType)}),
 	}
 
-	createAppInputSchema := common.GenerateSchema[model.ApplicationDTO](
+	createAppInputSchema = common.GenerateSchema[model.ApplicationDTO](
 		append(appSchemaModifiers,
 			common.WithRemove("", "id"),
 			common.WithDefault("token", "user_attributes", defaults["user_attributes"]),
@@ -66,10 +76,13 @@ func (t *applicationTools) RegisterTools(server *mcp.Server) {
 		)...,
 	)
 
-	updateAppInputSchema := common.GenerateSchema[model.ApplicationDTO](
+	updateAppInputSchema = common.GenerateSchema[model.ApplicationDTO](
 		append(appSchemaModifiers, common.WithRequired("", "id"))...,
 	)
+}
 
+// RegisterTools registers all application tools with the MCP server.
+func (t *applicationTools) RegisterTools(server *mcp.Server) {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "thunder_list_applications",
 		Description: `List all registered applications.`,
@@ -90,7 +103,7 @@ func (t *applicationTools) RegisterTools(server *mcp.Server) {
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "thunder_get_application_by_client_id",
-		Description: `Retrieve full details of an application by client_id including OAuth settings, branding, and flow associations`,
+		Description: `Retrieve full details of an application by client_id including OAuth settings, branding, and flow associations.`,
 		Annotations: &mcp.ToolAnnotations{
 			Title:        "Get Application by Client ID",
 			ReadOnlyHint: true,
@@ -107,7 +120,7 @@ Prerequisites: Create flows first using create_flow if custom authentication/reg
 
 Behavior:
 - If auth_flow_id is omitted, the default authentication flow is used.
-- If user_attributes are omitted in token configs, defaults to ["sub", "email", "name"].`,
+- If user_attributes are omitted in token configs, defaults are applied.`,
 		InputSchema: createAppInputSchema,
 		Annotations: &mcp.ToolAnnotations{
 			Title:          "Create Application",

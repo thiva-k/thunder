@@ -16,6 +16,9 @@
  * under the License.
  */
 
+// Package flowmgt provides flow management data structures.
+//
+//nolint:lll
 package flowmgt
 
 import (
@@ -28,42 +31,42 @@ import (
 
 // FlowDefinition represents the structure of a flow definition.
 type FlowDefinition struct {
-	Handle   string           `json:"handle" validate:"required"`
-	Name     string           `json:"name" validate:"required"`
-	FlowType common.FlowType  `json:"flowType" validate:"required"`
-	Nodes    []NodeDefinition `json:"nodes" validate:"required"`
+	Handle   string           `json:"handle" validate:"required" jsonschema:"Unique identifier for the flow (lowercase, alphanumeric with dashes/underscores). Example: 'basic-login', 'invite-registration'"`
+	Name     string           `json:"name" validate:"required" jsonschema:"Display name for the flow. Example: 'Basic Login Flow', 'Invite Registration'"`
+	FlowType common.FlowType  `json:"flowType" validate:"required" jsonschema:"Type of flow: 'AUTHENTICATION' for login flows or 'REGISTRATION' for signup flows"`
+	Nodes    []NodeDefinition `json:"nodes" validate:"required" jsonschema:"Array of nodes defining the flow steps. Must include START and END nodes. Use get_flow on existing flows to see node structure examples."`
 }
 
 // CompleteFlowDefinition represents a complete flow definition with all details.
 type CompleteFlowDefinition struct {
-	ID            string           `json:"id" yaml:"id"`
-	Handle        string           `json:"handle" yaml:"handle"`
-	Name          string           `json:"name" yaml:"name"`
-	FlowType      common.FlowType  `json:"flowType" yaml:"flowType"`
-	ActiveVersion int              `json:"activeVersion" yaml:"activeVersion"`
-	Nodes         []NodeDefinition `json:"nodes" yaml:"nodes"`
-	CreatedAt     string           `json:"createdAt" yaml:"createdAt"`
-	UpdatedAt     string           `json:"updatedAt" yaml:"updatedAt"`
+	ID            string           `json:"id" yaml:"id" jsonschema:"Unique identifier of the flow. UUID format."`
+	Handle        string           `json:"handle" yaml:"handle" jsonschema:"URL-friendly handle for the flow."`
+	Name          string           `json:"name" yaml:"name" jsonschema:"Display name of the flow."`
+	FlowType      common.FlowType  `json:"flowType" yaml:"flowType" jsonschema:"Type of flow (AUTHENTICATION or REGISTRATION)."`
+	ActiveVersion int              `json:"activeVersion,omitempty" yaml:"activeVersion" jsonschema:"Current active version number of the flow."`
+	Nodes         []NodeDefinition `json:"nodes,omitempty" yaml:"nodes" jsonschema:"List of nodes defining the flow logic."`
+	CreatedAt     string           `json:"createdAt,omitempty" yaml:"createdAt" jsonschema:"Timestamp when the flow was created."`
+	UpdatedAt     string           `json:"updatedAt,omitempty" yaml:"updatedAt" jsonschema:"Timestamp when the flow was last updated."`
 }
 
 // BasicFlowDefinition represents basic information about a flow definition.
 type BasicFlowDefinition struct {
-	ID            string          `json:"id"`
-	Handle        string          `json:"handle"`
-	FlowType      common.FlowType `json:"flowType"`
-	Name          string          `json:"name"`
-	ActiveVersion int             `json:"activeVersion"`
-	CreatedAt     string          `json:"createdAt"`
-	UpdatedAt     string          `json:"updatedAt"`
+	ID            string          `json:"id" jsonschema:"Unique identifier of the flow."`
+	Handle        string          `json:"handle" jsonschema:"URL-friendly handle."`
+	FlowType      common.FlowType `json:"flowType" jsonschema:"Type of flow (AUTHENTICATION or REGISTRATION)."`
+	Name          string          `json:"name" jsonschema:"Display name of the flow."`
+	ActiveVersion int             `json:"activeVersion" jsonschema:"Current active version number."`
+	CreatedAt     string          `json:"createdAt" jsonschema:"Creation timestamp."`
+	UpdatedAt     string          `json:"updatedAt" jsonschema:"Last update timestamp."`
 }
 
 // FlowListResponse represents a paginated list of flow definitions.
 type FlowListResponse struct {
-	TotalResults int                   `json:"totalResults"`
-	StartIndex   int                   `json:"startIndex"`
-	Count        int                   `json:"count"`
-	Flows        []BasicFlowDefinition `json:"flows"`
-	Links        []Link                `json:"links"`
+	TotalResults int                   `json:"totalResults" jsonschema:"Total number of flows available."`
+	StartIndex   int                   `json:"startIndex" jsonschema:"Starting index of the current page."`
+	Count        int                   `json:"count" jsonschema:"Number of flows in the current page."`
+	Flows        []BasicFlowDefinition `json:"flows" jsonschema:"List of flow definitions."`
+	Links        []Link                `json:"links" jsonschema:"Pagination links."`
 }
 
 // FlowVersion represents a specific version of a flow definition.
@@ -104,68 +107,68 @@ type Link struct {
 
 // NodeLayout represents the layout information for a node in the flow composer UI.
 type NodeLayout struct {
-	Size     *NodeSize     `json:"size,omitempty" yaml:"size,omitempty"`
-	Position *NodePosition `json:"position,omitempty" yaml:"position,omitempty"`
+	Size     *NodeSize     `json:"size,omitempty" yaml:"size,omitempty" jsonschema:"Dimensions of the node."`
+	Position *NodePosition `json:"position,omitempty" yaml:"position,omitempty" jsonschema:"Coordinates of the node on the canvas."`
 }
 
 // NodeSize represents the dimensions of a node.
 type NodeSize struct {
-	Width  float64 `json:"width" yaml:"width"`
-	Height float64 `json:"height" yaml:"height"`
+	Width  float64 `json:"width" yaml:"width" jsonschema:"Width of the node in pixels."`
+	Height float64 `json:"height" yaml:"height" jsonschema:"Height of the node in pixels."`
 }
 
 // NodePosition represents the position of a node on the canvas.
 type NodePosition struct {
-	X float64 `json:"x" yaml:"x"`
-	Y float64 `json:"y" yaml:"y"`
+	X float64 `json:"x" yaml:"x" jsonschema:"X-coordinate of the node."`
+	Y float64 `json:"y" yaml:"y" jsonschema:"Y-coordinate of the node."`
 }
 
 // NodeDefinition represents a single node in a flow definition.
 type NodeDefinition struct {
-	ID         string                 `json:"id" yaml:"id"`
-	Type       string                 `json:"type" yaml:"type"`
-	Layout     *NodeLayout            `json:"layout,omitempty" yaml:"layout,omitempty"`
-	Meta       interface{}            `json:"meta,omitempty" yaml:"meta,omitempty"`
-	Prompts    []PromptDefinition     `json:"prompts,omitempty" yaml:"prompts,omitempty"`
-	Properties map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty"`
-	Executor   *ExecutorDefinition    `json:"executor,omitempty" yaml:"executor,omitempty"`
-	OnSuccess  string                 `json:"onSuccess,omitempty" yaml:"onSuccess,omitempty"`
-	OnFailure  string                 `json:"onFailure,omitempty" yaml:"onFailure,omitempty"`
-	Condition  *ConditionDefinition   `json:"condition,omitempty" yaml:"condition,omitempty"`
+	ID         string                 `json:"id" yaml:"id" jsonschema:"Unique node identifier within the flow. Example: 'start', 'username-password', 'end'"`
+	Type       string                 `json:"type" yaml:"type" jsonschema:"Node type: 'START' (entry point), 'END' (exit point), 'TASK_EXECUTION' (backend logic), or 'PROMPT' (user input)"`
+	Layout     *NodeLayout            `json:"layout,omitempty" yaml:"layout,omitempty" jsonschema:"Optional UI layout information for flow composer (position and size on canvas)"`
+	Meta       interface{}            `json:"meta,omitempty" yaml:"meta,omitempty" jsonschema:"Optional metadata. For PROMPT nodes, must include 'components' array for UI rendering. See existing flows for examples."`
+	Prompts    []PromptDefinition     `json:"prompts,omitempty" yaml:"prompts,omitempty" jsonschema:"For PROMPT nodes: defines user inputs and actions. Each prompt has inputs (form fields) and an action (what happens on submit)."`
+	Properties map[string]interface{} `json:"properties,omitempty" yaml:"properties,omitempty" jsonschema:"Optional node-specific properties for configuration"`
+	Executor   *ExecutorDefinition    `json:"executor,omitempty" yaml:"executor,omitempty" jsonschema:"For TASK_EXECUTION nodes: defines which executor to run (e.g., 'UsernamePasswordAuthenticator', 'OTPGenerator')"`
+	OnSuccess  string                 `json:"onSuccess,omitempty" yaml:"onSuccess,omitempty" jsonschema:"ID of the next node to execute on successful completion"`
+	OnFailure  string                 `json:"onFailure,omitempty" yaml:"onFailure,omitempty" jsonschema:"ID of the next node to execute on failure"`
+	Condition  *ConditionDefinition   `json:"condition,omitempty" yaml:"condition,omitempty" jsonschema:"Optional condition to determine if this node should execute"`
 }
 
 // InputDefinition represents an input parameter for a node.
 type InputDefinition struct {
-	Ref        string `json:"ref,omitempty" yaml:"ref,omitempty"`
-	Type       string `json:"type" yaml:"type"`
-	Identifier string `json:"identifier" yaml:"identifier"`
-	Required   bool   `json:"required" yaml:"required"`
+	Ref        string `json:"ref,omitempty" yaml:"ref,omitempty" jsonschema:"Reference ID for the input."`
+	Type       string `json:"type" yaml:"type" jsonschema:"Input type (e.g., 'text', 'password', 'email')."`
+	Identifier string `json:"identifier" yaml:"identifier" jsonschema:"Field identifier or name."`
+	Required   bool   `json:"required" yaml:"required" jsonschema:"Whether this input is mandatory."`
 }
 
 // ActionDefinition represents an action to be executed by a node.
 type ActionDefinition struct {
-	Ref      string `json:"ref" yaml:"ref"`
-	NextNode string `json:"nextNode" yaml:"nextNode"`
+	Ref      string `json:"ref" yaml:"ref" jsonschema:"Reference ID for the action."`
+	NextNode string `json:"nextNode" yaml:"nextNode" jsonschema:"ID of the node to transition to when this action is taken."`
 }
 
 // PromptDefinition groups inputs with an action for prompt nodes.
 type PromptDefinition struct {
-	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty"`
-	Action *ActionDefinition `json:"action,omitempty" yaml:"action,omitempty"`
+	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty" jsonschema:"List of input fields shown to the user."`
+	Action *ActionDefinition `json:"action,omitempty" yaml:"action,omitempty" jsonschema:"Action to take upon submission."`
 }
 
 // ExecutorDefinition represents the executor configuration for a node.
 type ExecutorDefinition struct {
-	Name   string            `json:"name" yaml:"name"`
-	Mode   string            `json:"mode,omitempty" yaml:"mode,omitempty"`
-	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty"`
+	Name   string            `json:"name" yaml:"name" jsonschema:"Name of the executor (e.g., 'UsernamePasswordAuthenticator')."`
+	Mode   string            `json:"mode,omitempty" yaml:"mode,omitempty" jsonschema:"Execution mode or configuration."`
+	Inputs []InputDefinition `json:"inputs,omitempty" yaml:"inputs,omitempty" jsonschema:"Static inputs or configuration parameters for the executor."`
 }
 
 // ConditionDefinition represents a condition for node execution.
 type ConditionDefinition struct {
-	Key    string `json:"key" yaml:"key"`
-	Value  string `json:"value" yaml:"value"`
-	OnSkip string `json:"onSkip" yaml:"onSkip"`
+	Key    string `json:"key" yaml:"key" jsonschema:"Attribute key to check."`
+	Value  string `json:"value" yaml:"value" jsonschema:"Value to match."`
+	OnSkip string `json:"onSkip" yaml:"onSkip" jsonschema:"Node ID to skip to if condition is not met."`
 }
 
 // nodeDefinitionAlias is used to avoid infinite recursion during marshaling/unmarshaling.

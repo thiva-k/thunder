@@ -21,16 +21,25 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 
 	"github.com/google/jsonschema-go/jsonschema"
+
+	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 // GenerateSchema creates a JSON schema for a given type T and applies the provided modifiers.
 func GenerateSchema[T any](modifiers ...func(*jsonschema.Schema)) *jsonschema.Schema {
-	schema, _ := jsonschema.For[T](&jsonschema.ForOptions{})
+	schema, err := jsonschema.For[T](&jsonschema.ForOptions{})
+	if err != nil {
+		log.GetLogger().Error("Failed to generate schema",
+			log.String("type", fmt.Sprintf("%T", *new(T))),
+			log.Error(err))
+		return nil
+	}
 
 	for _, mod := range modifiers {
 		mod(schema)
@@ -183,6 +192,10 @@ func applyDefaultsRecursive(v reflect.Value, defaults map[string]any) {
 					valToSet := reflect.ValueOf(defaultVal)
 					if valToSet.Type().AssignableTo(field.Type()) {
 						field.Set(valToSet)
+					} else if field.Kind() == reflect.Ptr && valToSet.Type().AssignableTo(field.Type().Elem()) {
+						newPtr := reflect.New(field.Type().Elem())
+						newPtr.Elem().Set(valToSet)
+						field.Set(newPtr)
 					}
 				}
 			}

@@ -27,12 +27,12 @@ import (
 	flowtools "github.com/asgardeo/thunder/internal/mcp/tools/flow"
 )
 
-// Server wraps the MCP server and its tool registrations.
+// server wraps the MCP server and its tool registrations.
 type server struct {
 	mcpServer *mcp.Server
 }
 
-// NewServer creates a new MCP server with application tools registered.
+// newServer creates a new MCP server with application tools registered.
 func newServer(
 	appService application.ApplicationServiceInterface,
 	flowService flowmgt.FlowMgtServiceInterface,
@@ -54,7 +54,7 @@ func newServer(
 	}
 }
 
-// GetMCPServer returns the underlying MCP server instance.
+// getMCPServer returns the underlying MCP server instance.
 func (s *server) getMCPServer() *mcp.Server {
 	return s.mcpServer
 }
