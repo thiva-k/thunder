@@ -16,6 +16,9 @@
  * under the License.
  */
 
+// Package model defines the data structures for the application module.
+//
+//nolint:lll
 package model
 
 import (
@@ -61,17 +64,17 @@ type OAuthAppConfigComplete struct {
 
 // OAuthAppConfigDTO represents the data transfer object for OAuth application configuration.
 type OAuthAppConfigDTO struct {
-	AppID                   string
-	ClientID                string
-	ClientSecret            string
-	RedirectURIs            []string
-	GrantTypes              []oauth2const.GrantType
-	ResponseTypes           []oauth2const.ResponseType
-	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod
-	PKCERequired            bool
-	PublicClient            bool
-	Token                   *OAuthTokenConfig
-	Scopes                  []string
+	AppID                   string                              `json:"app_id,omitempty" jsonschema:"The unique identifier of the OAuth application"`
+	ClientID                string                              `json:"client_id,omitempty" jsonschema:"OAuth client ID (auto-generated if not provided)"`
+	ClientSecret            string                              `json:"client_secret,omitempty" jsonschema:"OAuth client secret (auto-generated if not provided)"`
+	RedirectURIs            []string                            `json:"redirect_uris,omitempty" jsonschema:"Allowed redirect URIs. Required for Public (SPA/Mobile) and Confidential (Server) clients. Omit for M2M."`
+	GrantTypes              []oauth2const.GrantType             `json:"grant_types,omitempty" jsonschema:"OAuth grant types. Common: [authorization_code, refresh_token] for user apps, [client_credentials] for M2M."`
+	ResponseTypes           []oauth2const.ResponseType          `json:"response_types,omitempty" jsonschema:"OAuth response types. Common: [code] for user apps. Omit for M2M."`
+	TokenEndpointAuthMethod oauth2const.TokenEndpointAuthMethod `json:"token_endpoint_auth_method,omitempty" jsonschema:"Client authentication method. Use 'none' for Public clients, 'client_secret_basic' for Confidential/M2M."`
+	PKCERequired            bool                                `json:"pkce_required,omitempty" jsonschema:"Require PKCE for security. Recommended for all user-interactive flows."`
+	PublicClient            bool                                `json:"public_client,omitempty" jsonschema:"Identify if client is public (cannot store secrets). Set true for SPA/Mobile."`
+	Token                   *OAuthTokenConfig                   `json:"token,omitempty" jsonschema:"Token configuration for access tokens and ID tokens"`
+	Scopes                  []string                            `json:"scopes,omitempty" jsonschema:"Allowed OAuth scopes. Add custom scopes as needed for your application."`
 }
 
 // IsAllowedGrantType checks if the provided grant type is allowed.
