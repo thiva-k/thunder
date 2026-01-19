@@ -29,16 +29,19 @@ import (
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/utils"
+	"github.com/asgardeo/thunder/tests/mocks/flow/coremock"
+	"github.com/asgardeo/thunder/tests/mocks/flow/executormock"
 )
 
 const testFlowIDService = "test-flow-id"
 
 type FlowMgtServiceTestSuite struct {
 	suite.Suite
-	service          FlowMgtServiceInterface
-	mockStore        *flowStoreInterfaceMock
-	mockInference    *flowInferenceServiceInterfaceMock
-	mockGraphBuilder *graphBuilderInterfaceMock
+	service              FlowMgtServiceInterface
+	mockStore            *flowStoreInterfaceMock
+	mockInference        *flowInferenceServiceInterfaceMock
+	mockGraphBuilder     *graphBuilderInterfaceMock
+	mockExecutorRegistry *executormock.ExecutorRegistryInterfaceMock
 }
 
 func TestFlowMgtServiceTestSuite(t *testing.T) {
@@ -49,13 +52,15 @@ func (s *FlowMgtServiceTestSuite) SetupTest() {
 	s.mockStore = newFlowStoreInterfaceMock(s.T())
 	s.mockInference = newFlowInferenceServiceInterfaceMock(s.T())
 	s.mockGraphBuilder = newGraphBuilderInterfaceMock(s.T())
-	s.service = newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder)
+	s.mockExecutorRegistry = executormock.NewExecutorRegistryInterfaceMock(s.T())
+	s.service = newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, s.mockExecutorRegistry)
 
 	testConfig := &config.Config{
 		Flow: config.FlowConfig{
 			AutoInferRegistration: false,
 		},
 	}
+	config.ResetThunderRuntime()
 	_ = config.InitializeThunderRuntime("test", testConfig)
 }
 
@@ -391,8 +396,8 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_WithAutoInference() {
 			AutoInferRegistration: true,
 		},
 	}
+	config.ResetThunderRuntime()
 	_ = config.InitializeThunderRuntime("test", testConfig)
-	defer config.ResetThunderRuntime()
 
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
@@ -432,8 +437,8 @@ func (s *FlowMgtServiceTestSuite) TestCreateFlow_AutoInferenceFailure() {
 			AutoInferRegistration: true,
 		},
 	}
+	config.ResetThunderRuntime()
 	_ = config.InitializeThunderRuntime("test", testConfig)
-	defer config.ResetThunderRuntime()
 
 	flowDef := &FlowDefinition{
 		Handle:   "test-handle",
@@ -1002,4 +1007,477 @@ func (s *FlowMgtServiceTestSuite) TestIsValidFlow_StoreError() {
 	result := s.service.IsValidFlow(testFlowIDService)
 
 	s.False(result)
+}
+
+// ApplyExecutorDefaultMeta Tests
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_Success() {
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	mockExecutor := coremock.NewExecutorInterfaceMock(s.T())
+
+	// Create service with executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	defaultMeta := map[string]interface{}{
+		"components": []interface{}{
+			map[string]interface{}{"id": "test", "type": "HEADING"},
+		},
+	}
+	mockExecutor.On("GetDefaultMeta").Return(defaultMeta)
+	mockExecutorRegistry.On("GetExecutor", "TestExecutor").Return(mockExecutor, nil)
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "exec_node"},
+			{
+				ID:   "exec_node",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "TestExecutor",
+				},
+				OnSuccess: "end",
+				// Meta is nil - should be auto-generated
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.Nil(err)
+	// Verify meta was applied to the TASK_EXECUTION node
+	found := false
+	for _, node := range flowDef.Nodes {
+		if node.Type == string(common.NodeTypeTaskExecution) && node.Meta != nil {
+			found = true
+			s.Equal(defaultMeta, node.Meta)
+			break
+		}
+	}
+	s.True(found, "Meta should be applied to TASK_EXECUTION node")
+	mockExecutorRegistry.AssertExpectations(s.T())
+	mockExecutor.AssertExpectations(s.T())
+}
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_PreservesExistingMeta() {
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+
+	// Create service with executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	customMeta := map[string]interface{}{
+		"components": []interface{}{
+			map[string]interface{}{"id": "custom", "type": "CUSTOM"},
+		},
+	}
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "exec_node"},
+			{
+				ID:   "exec_node",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "TestExecutor",
+				},
+				Meta:      customMeta, // Custom meta already provided
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.Nil(err)
+	// Verify existing meta was preserved
+	for _, node := range flowDef.Nodes {
+		if node.Type == "TASK_EXECUTION" {
+			s.Equal(customMeta, node.Meta)
+		}
+	}
+	// GetExecutor should NOT be called because meta already exists
+	mockExecutorRegistry.AssertNotCalled(s.T(), "GetExecutor")
+}
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_SkipsNonTaskExecutionNodes() {
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+
+	// Create service with executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "prompt"},
+			{ID: "prompt", Type: "PROMPT", OnSuccess: "end"},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.Nil(err)
+	// GetExecutor should NOT be called for PROMPT nodes
+	mockExecutorRegistry.AssertNotCalled(s.T(), "GetExecutor")
+}
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_HandlesGetExecutorError() {
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+
+	// Create service with executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	mockExecutorRegistry.On("GetExecutor", "UnknownExecutor").
+		Return(nil, errors.New("executor not found"))
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "exec_node"},
+			{
+				ID:   "exec_node",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "UnknownExecutor",
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.NotNil(err)
+	s.Equal(&serviceerror.InternalServerError, err)
+	mockExecutorRegistry.AssertExpectations(s.T())
+}
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_NilExecutorRegistry() {
+	// Create service WITHOUT executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, nil)
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "exec_node"},
+			{
+				ID:   "exec_node",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "TestExecutor",
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.NotNil(err)
+	s.Equal(&serviceerror.InternalServerError, err)
+}
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_ExecutorReturnsNilMeta() {
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	mockExecutor := coremock.NewExecutorInterfaceMock(s.T())
+
+	// Create service with executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	// Executor returns nil meta
+	mockExecutor.On("GetDefaultMeta").Return(nil)
+	mockExecutorRegistry.On("GetExecutor", "TestExecutor").Return(mockExecutor, nil)
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "exec_node"},
+			{
+				ID:   "exec_node",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "TestExecutor",
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.Nil(err)
+	// Verify meta remains nil when executor returns nil
+	for _, node := range flowDef.Nodes {
+		if node.Type == "TASK_EXECUTION" {
+			s.Nil(node.Meta)
+		}
+	}
+	mockExecutorRegistry.AssertExpectations(s.T())
+	mockExecutor.AssertExpectations(s.T())
+}
+
+func (s *FlowMgtServiceTestSuite) TestApplyExecutorDefaultMeta_MultipleTaskExecutionNodes() {
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	mockExecutor1 := coremock.NewExecutorInterfaceMock(s.T())
+	mockExecutor2 := coremock.NewExecutorInterfaceMock(s.T())
+
+	// Create service with executor registry
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	meta1 := map[string]interface{}{"executor": "Executor1"}
+	meta2 := map[string]interface{}{"executor": "Executor2"}
+
+	mockExecutor1.On("GetDefaultMeta").Return(meta1)
+	mockExecutor2.On("GetDefaultMeta").Return(meta2)
+	mockExecutorRegistry.On("GetExecutor", "Executor1").Return(mockExecutor1, nil)
+	mockExecutorRegistry.On("GetExecutor", "Executor2").Return(mockExecutor2, nil)
+
+	flowDef := &FlowDefinition{
+		Handle:   "test-flow",
+		Name:     "Test Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "exec1"},
+			{
+				ID:   "exec1",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "Executor1",
+				},
+				OnSuccess: "exec2",
+			},
+			{
+				ID:   "exec2",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "Executor2",
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	err := service.(*flowMgtService).applyExecutorDefaultMeta(flowDef)
+
+	s.Nil(err)
+	// Verify meta was applied to both TASK_EXECUTION nodes
+	s.Equal(meta1, flowDef.Nodes[1].Meta)
+	s.Equal(meta2, flowDef.Nodes[2].Meta)
+	mockExecutorRegistry.AssertExpectations(s.T())
+	mockExecutor1.AssertExpectations(s.T())
+	mockExecutor2.AssertExpectations(s.T())
+}
+
+// TryInferRegistrationFlow Tests
+
+func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_Success_WithMetaGeneration() {
+	// Enable auto-inference for this test
+	testConfig := &config.Config{
+		Flow: config.FlowConfig{
+			AutoInferRegistration: true,
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	mockExecutor := coremock.NewExecutorInterfaceMock(s.T())
+
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	authFlowDef := &FlowDefinition{
+		Handle:   "auth-flow",
+		Name:     "Auth Flow",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "end"},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	inferredRegFlow := &FlowDefinition{
+		Handle:   "auth-flow-registration",
+		Name:     "Auth Flow Registration",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "executor"},
+			{
+				ID:   "executor",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "UserTypeResolver",
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	defaultMeta := map[string]interface{}{
+		"components": []interface{}{
+			map[string]interface{}{"id": "usertype_test", "type": "HEADING"},
+		},
+	}
+
+	mockExecutor.On("GetDefaultMeta").Return(defaultMeta)
+	mockExecutorRegistry.On("GetExecutor", "UserTypeResolver").Return(mockExecutor, nil)
+	s.mockInference.On("InferRegistrationFlow", authFlowDef).Return(inferredRegFlow, nil)
+
+	completeFlow := &CompleteFlowDefinition{
+		Handle:   inferredRegFlow.Handle,
+		Name:     inferredRegFlow.Name,
+		FlowType: inferredRegFlow.FlowType,
+		Nodes:    inferredRegFlow.Nodes,
+	}
+	s.mockStore.On("CreateFlow", mock.AnythingOfType("string"), inferredRegFlow).Return(completeFlow, nil)
+
+	service.(*flowMgtService).tryInferRegistrationFlow("auth-flow-id", authFlowDef)
+
+	s.Equal(defaultMeta, inferredRegFlow.Nodes[1].Meta)
+	s.mockInference.AssertExpectations(s.T())
+	s.mockStore.AssertExpectations(s.T())
+	mockExecutorRegistry.AssertExpectations(s.T())
+	mockExecutor.AssertExpectations(s.T())
+}
+
+func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_SkipsNonAuthFlow() {
+	// Enable auto-inference
+	testConfig := &config.Config{
+		Flow: config.FlowConfig{
+			AutoInferRegistration: true,
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	regFlowDef := &FlowDefinition{
+		Handle:   "reg-flow",
+		Name:     "Registration Flow",
+		FlowType: common.FlowTypeRegistration,
+		Nodes:    []NodeDefinition{},
+	}
+
+	service.(*flowMgtService).tryInferRegistrationFlow("reg-flow-id", regFlowDef)
+
+	s.mockInference.AssertNotCalled(s.T(), "InferRegistrationFlow")
+	s.mockStore.AssertNotCalled(s.T(), "CreateFlow")
+	mockExecutorRegistry.AssertNotCalled(s.T(), "GetExecutor")
+}
+
+func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_HandlesInferenceError() {
+	// Enable auto-inference
+	testConfig := &config.Config{
+		Flow: config.FlowConfig{
+			AutoInferRegistration: true,
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	authFlowDef := &FlowDefinition{
+		Handle:   "auth-flow",
+		Name:     "Auth Flow",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes:    []NodeDefinition{},
+	}
+
+	s.mockInference.On("InferRegistrationFlow", authFlowDef).Return(nil, errors.New("inference failed"))
+
+	service.(*flowMgtService).tryInferRegistrationFlow("auth-flow-id", authFlowDef)
+
+	s.mockInference.AssertExpectations(s.T())
+	s.mockStore.AssertNotCalled(s.T(), "CreateFlow")
+	mockExecutorRegistry.AssertNotCalled(s.T(), "GetExecutor")
+}
+
+func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_HandlesMetaApplicationError() {
+	// Enable auto-inference
+	testConfig := &config.Config{
+		Flow: config.FlowConfig{
+			AutoInferRegistration: true,
+		},
+	}
+	config.ResetThunderRuntime()
+	_ = config.InitializeThunderRuntime("test", testConfig)
+
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	authFlowDef := &FlowDefinition{
+		Handle:   "auth-flow",
+		Name:     "Auth Flow",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes:    []NodeDefinition{},
+	}
+
+	inferredRegFlow := &FlowDefinition{
+		Handle:   "auth-flow-registration",
+		Name:     "Auth Flow Registration",
+		FlowType: common.FlowTypeRegistration,
+		Nodes: []NodeDefinition{
+			{ID: "start", Type: "START", OnSuccess: "executor"},
+			{
+				ID:   "executor",
+				Type: "TASK_EXECUTION",
+				Executor: &ExecutorDefinition{
+					Name: "UnknownExecutor",
+				},
+				OnSuccess: "end",
+			},
+			{ID: "end", Type: "END"},
+		},
+	}
+
+	mockExecutorRegistry.On("GetExecutor", "UnknownExecutor").Return(nil, errors.New("executor not found"))
+	s.mockInference.On("InferRegistrationFlow", authFlowDef).Return(inferredRegFlow, nil)
+
+	service.(*flowMgtService).tryInferRegistrationFlow("auth-flow-id", authFlowDef)
+
+	s.mockInference.AssertExpectations(s.T())
+	mockExecutorRegistry.AssertExpectations(s.T())
+	s.mockStore.AssertNotCalled(s.T(), "CreateFlow")
+}
+
+func (s *FlowMgtServiceTestSuite) TestTryInferRegistrationFlow_DisabledAutoInference() {
+	// Auto-inference is disabled in SetupTest, so just verify early return
+	mockExecutorRegistry := executormock.NewExecutorRegistryInterfaceMock(s.T())
+	service := newFlowMgtService(s.mockStore, s.mockInference, s.mockGraphBuilder, mockExecutorRegistry)
+
+	authFlowDef := &FlowDefinition{
+		Handle:   "auth-flow",
+		Name:     "Auth Flow",
+		FlowType: common.FlowTypeAuthentication,
+		Nodes:    []NodeDefinition{},
+	}
+
+	service.(*flowMgtService).tryInferRegistrationFlow("auth-flow-id", authFlowDef)
+
+	s.mockInference.AssertNotCalled(s.T(), "InferRegistrationFlow")
+	s.mockStore.AssertNotCalled(s.T(), "CreateFlow")
+	mockExecutorRegistry.AssertNotCalled(s.T(), "GetExecutor")
 }

@@ -52,11 +52,21 @@ func newUserTypeResolver(
 	flowFactory core.FlowFactoryInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
 ) *userTypeResolver {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, userTypeResolverLoggerComponentName),
+	logger := log.GetLogger().With(
+		log.String(log.LoggerKeyComponentName, userTypeResolverLoggerComponentName),
 		log.String(log.LoggerKeyExecutorName, ExecutorNameUserTypeResolver))
 
+	defaultInputs := []common.Input{
+		{
+			Ref:        "usertype_input",
+			Identifier: userTypeKey,
+			Type:       "SELECT",
+			Required:   true,
+		},
+	}
+
 	base := flowFactory.CreateExecutor(ExecutorNameUserTypeResolver, common.ExecutorTypeRegistration,
-		[]common.Input{}, []common.Input{})
+		defaultInputs, []common.Input{})
 
 	return &userTypeResolver{
 		ExecutorInterface: base,
@@ -94,12 +104,6 @@ func (u *userTypeResolver) Execute(ctx *core.NodeContext) (*common.ExecutorRespo
 		return execResp, nil
 	}
 
-	// If a userType is provided in inputs, validate and accept it
-	if userType, ok := ctx.UserInputs[userTypeKey]; ok && userType != "" {
-		err := u.resolveUserTypeFromInput(execResp, userType, allowed)
-		return execResp, err
-	}
-
 	// Check for allowed user types to decide next steps
 	if len(allowed) == 0 {
 		// TODO: This should be improved to fallback to the application's ou when the support is available.
@@ -112,6 +116,12 @@ func (u *userTypeResolver) Execute(ctx *core.NodeContext) (*common.ExecutorRespo
 		return execResp, nil
 	}
 
+	// Check if userType is provided in inputs
+	if u.HasRequiredInputs(ctx, execResp) {
+		err := u.resolveUserTypeFromInput(execResp, ctx.UserInputs[userTypeKey], allowed)
+		return execResp, err
+	}
+
 	if len(allowed) == 1 {
 		err := u.resolveUserTypeFromSingleAllowed(execResp, allowed[0])
 		return execResp, err
@@ -121,11 +131,24 @@ func (u *userTypeResolver) Execute(ctx *core.NodeContext) (*common.ExecutorRespo
 	return execResp, err
 }
 
-// resolveUserTypeFromInput resolves the user type from input and updates the executor response accordingly.
+// GetDefaultMeta returns the default meta structure for the user type selection page.
+func (u *userTypeResolver) GetDefaultMeta() interface{} {
+	return core.NewMetaBuilder().
+		WithIDPrefix("usertype").
+		WithHeading("{{ t(signup:heading) }}").
+		WithInput(u.GetDefaultInputs()[0], core.MetaInputConfig{
+			Label:       "{{ t(elements:fields.usertype.label) }}",
+			Placeholder: "{{ t(elements:fields.usertype.placeholder) }}",
+		}).
+		WithSubmitButton("{{ t(elements:buttons.submit.text) }}").
+		Build()
+}
+
+// resolveUserTypeFromInput resolves the user type from input and updates the executor response.
 func (u *userTypeResolver) resolveUserTypeFromInput(execResp *common.ExecutorResponse,
 	userType string, allowed []string) error {
 	logger := u.logger
-	if len(allowed) == 0 || slices.Contains(allowed, userType) {
+	if slices.Contains(allowed, userType) {
 		logger.Debug("User type resolved from input", log.String(userTypeKey, userType))
 
 		userSchema, ouID, err := u.getUserSchemaAndOU(userType)
@@ -228,15 +251,11 @@ func (u *userTypeResolver) resolveUserTypeFromMultipleAllowed(execResp *common.E
 	logger.Debug("Prompting for user type selection as multiple user types are available for self registration",
 		log.Any("userTypes", selfRegUserTypes))
 
+	input := u.GetDefaultInputs()[0]
+	input.Options = selfRegUserTypes
 	execResp.Status = common.ExecUserInputRequired
-	execResp.Inputs = []common.Input{
-		{
-			Identifier: userTypeKey,
-			Type:       "dropdown",
-			Required:   true,
-			Options:    selfRegUserTypes,
-		},
-	}
+	execResp.Inputs = []common.Input{input}
+
 	return nil
 }
 
