@@ -25,9 +25,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-webauthn/webauthn/protocol"
-	"github.com/go-webauthn/webauthn/webauthn"
-
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -153,137 +150,6 @@ func decodeBase64(s string) ([]byte, error) {
 	return base64.StdEncoding.DecodeString(s)
 }
 
-// parseAssertionResponse converts raw string parameters to ParsedCredentialAssertionData.
-func parseAssertionResponse(credentialID, credentialType, clientDataJSON,
-	authenticatorData, signature, userHandle string) (*ParsedCredentialAssertionData, error) {
-	// Decode all base64url encoded parameters
-	rawID, err := decodeBase64(credentialID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode credential ID: %w", err)
-	}
-
-	clientData, err := decodeBase64(clientDataJSON)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode client data JSON: %w", err)
-	}
-
-	authData, err := decodeBase64(authenticatorData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode authenticator data: %w", err)
-	}
-
-	sig, err := decodeBase64(signature)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode signature: %w", err)
-	}
-
-	var userHandleBytes []byte
-	if userHandle != "" {
-		userHandleBytes, err = decodeBase64(userHandle)
-		if err != nil {
-			// User handle is optional, so we can continue without it
-			userHandleBytes = nil
-		}
-	}
-
-	// Parse client data JSON to extract required fields
-	var clientDataParsed protocol.CollectedClientData
-	if err := json.Unmarshal(clientData, &clientDataParsed); err != nil {
-		return nil, fmt.Errorf("failed to parse client data JSON: %w", err)
-	}
-
-	// Parse authenticator data
-	authDataParsed := protocol.AuthenticatorData{}
-	if err := authDataParsed.Unmarshal(authData); err != nil {
-		return nil, fmt.Errorf("failed to parse authenticator data: %w", err)
-	}
-
-	// Create the parsed credential assertion data structure
-	parsed := &ParsedCredentialAssertionData{
-		ParsedPublicKeyCredential: protocol.ParsedPublicKeyCredential{
-			RawID: rawID,
-			ParsedCredential: protocol.ParsedCredential{
-				ID:   credentialID,
-				Type: credentialType,
-			},
-		},
-		Response: protocol.ParsedAssertionResponse{
-			CollectedClientData: clientDataParsed,
-			AuthenticatorData:   authDataParsed,
-			Signature:           sig,
-			UserHandle:          userHandleBytes,
-		},
-		Raw: protocol.CredentialAssertionResponse{
-			PublicKeyCredential: protocol.PublicKeyCredential{
-				Credential: protocol.Credential{
-					ID:   credentialID,
-					Type: credentialType,
-				},
-				RawID: rawID,
-			},
-			AssertionResponse: protocol.AuthenticatorAssertionResponse{
-				AuthenticatorResponse: protocol.AuthenticatorResponse{
-					ClientDataJSON: clientData,
-				},
-				AuthenticatorData: authData,
-				Signature:         sig,
-				UserHandle:        userHandleBytes,
-			},
-		},
-	}
-
-	return parsed, nil
-}
-
-// parseAttestationResponse converts raw credential data to ParsedCredentialCreationData.
-// This function uses the protocol package's ParseCredentialCreationResponseBytes to properly
-// parse the credential data with all required fields populated.
-func parseAttestationResponse(
-	credentialID, credentialType, clientDataJSON, attestationObject string,
-) (*ParsedCredentialCreationData, error) {
-	// Decode inputs to ensure we have valid bytes, regardless of input encoding
-	clientDataBytes, err := decodeBase64(clientDataJSON)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode client data JSON: %w", err)
-	}
-
-	attestationBytes, err := decodeBase64(attestationObject)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode attestation object: %w", err)
-	}
-
-	// Re-encode to RawURLEncoding to ensure consistent format for the protocol parser
-	// The protocol package expects RawURLEncoding for these fields in the JSON
-	clientDataEncoded := base64.RawURLEncoding.EncodeToString(clientDataBytes)
-	attestationEncoded := base64.RawURLEncoding.EncodeToString(attestationBytes)
-
-	// Construct the JSON payload for the protocol parser
-	// The protocol package expects the data in this format
-	payload := map[string]interface{}{
-		"id":    credentialID,
-		"rawId": credentialID,
-		"type":  credentialType,
-		"response": map[string]interface{}{
-			"clientDataJSON":    clientDataEncoded,
-			"attestationObject": attestationEncoded,
-		},
-	}
-
-	jsonData, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal credential: %w", err)
-	}
-
-	// Parse the attestation response using the protocol package's byte parser
-	// This properly parses the CBOR-encoded attestation object and populates all fields
-	parsed, err := protocol.ParseCredentialCreationResponseBytes(jsonData)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse credential creation response: %w", err)
-	}
-
-	return parsed, nil
-}
-
 // validateRegistrationStartRequest validates the registration start request.
 func validateRegistrationStartRequest(req *PasskeyRegistrationStartRequest) *serviceerror.ServiceError {
 	if strings.TrimSpace(req.UserID) == "" {
@@ -364,42 +230,42 @@ func handleUserRetrievalError(
 }
 
 // buildRegistrationOptions builds registration options from the request.
-func buildRegistrationOptions(req *PasskeyRegistrationStartRequest) []RegistrationOption {
-	var registrationOptions []RegistrationOption
+func buildRegistrationOptions(req *PasskeyRegistrationStartRequest) []registrationOption {
+	var registrationOptions []registrationOption
 
 	// Set authenticator selection if provided
 	if req.AuthenticatorSelection != nil {
 		authSelection := buildAuthenticatorSelection(req.AuthenticatorSelection)
-		registrationOptions = append(registrationOptions, webauthn.WithAuthenticatorSelection(authSelection))
+		registrationOptions = append(registrationOptions, withAuthenticatorSelection(authSelection))
 	}
 
 	// Set attestation conveyance preference
 	if req.Attestation != "" {
-		conveyance := protocol.ConveyancePreference(req.Attestation)
-		registrationOptions = append(registrationOptions, webauthn.WithConveyancePreference(conveyance))
+		conveyance := conveyancePreference(req.Attestation)
+		registrationOptions = append(registrationOptions, withConveyancePreference(conveyance))
 	}
 
 	return registrationOptions
 }
 
 // buildAuthenticatorSelection builds authenticator selection from request.
-func buildAuthenticatorSelection(sel *AuthenticatorSelection) protocol.AuthenticatorSelection {
-	authSelection := protocol.AuthenticatorSelection{}
+func buildAuthenticatorSelection(sel *AuthenticatorSelection) authenticatorSelection {
+	authSelection := authenticatorSelection{}
 
 	if sel.AuthenticatorAttachment != "" {
-		attachment := protocol.AuthenticatorAttachment(sel.AuthenticatorAttachment)
+		attachment := authenticatorAttachment(sel.AuthenticatorAttachment)
 		authSelection.AuthenticatorAttachment = attachment
 	}
 
 	if sel.ResidentKey != "" {
-		residentKey := protocol.ResidentKeyRequirement(sel.ResidentKey)
+		residentKey := residentKeyRequirement(sel.ResidentKey)
 		authSelection.ResidentKey = residentKey
 	}
 
 	if sel.UserVerification != "" {
-		authSelection.UserVerification = protocol.UserVerificationRequirement(sel.UserVerification)
+		authSelection.UserVerification = userVerificationRequirement(sel.UserVerification)
 	} else {
-		authSelection.UserVerification = protocol.VerificationPreferred
+		authSelection.UserVerification = verificationPreferred
 	}
 
 	return authSelection

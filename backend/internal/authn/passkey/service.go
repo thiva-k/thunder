@@ -26,8 +26,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-webauthn/webauthn/webauthn"
-
 	"github.com/asgardeo/thunder/internal/authn/common"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/internal/system/log"
@@ -473,7 +471,7 @@ func (w *passkeyService) getMetadata() common.AuthenticatorMeta {
 }
 
 // getStoredPasskeyCredentials retrieves passkey credentials for a user from the database.
-func (w *passkeyService) getStoredPasskeyCredentials(userID string) ([]WebauthnCredential, error) {
+func (w *passkeyService) getStoredPasskeyCredentials(userID string) ([]webauthnCredential, error) {
 	logger := w.logger.With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 
 	// Get passkey credentials from user service
@@ -485,7 +483,7 @@ func (w *passkeyService) getStoredPasskeyCredentials(userID string) ([]WebauthnC
 		return nil, fmt.Errorf("failed to get passkey credentials: %s", svcErr.Error)
 	}
 
-	// Convert user.WebauthnCredential to generic maps for processing
+	// Convert passkey credentials to generic maps for processing
 	storedCreds := make([]map[string]interface{}, 0, len(passkeyCredentials))
 	for _, cred := range passkeyCredentials {
 		storedCreds = append(storedCreds, map[string]interface{}{
@@ -497,7 +495,7 @@ func (w *passkeyService) getStoredPasskeyCredentials(userID string) ([]WebauthnC
 	}
 
 	// Convert stored credentials to passkey credentials
-	credentials := make([]WebauthnCredential, 0, len(storedCreds))
+	credentials := make([]webauthnCredential, 0, len(storedCreds))
 	for _, storedCred := range storedCreds {
 		// Get the credential value
 		credValueStr, ok := storedCred["value"].(string)
@@ -507,7 +505,7 @@ func (w *passkeyService) getStoredPasskeyCredentials(userID string) ([]WebauthnC
 			continue
 		}
 
-		var credential WebauthnCredential
+		var credential webauthnCredential
 		if err := json.Unmarshal([]byte(credValueStr), &credential); err != nil {
 			// Log error but continue processing other credentials
 			logger.Error("Failed to unmarshal passkey credential",
@@ -526,7 +524,7 @@ func (w *passkeyService) getStoredPasskeyCredentials(userID string) ([]WebauthnC
 }
 
 // storePasskeyCredential stores a passkey credential in the database.
-func (w *passkeyService) storePasskeyCredential(userID string, credential *webauthn.Credential) error {
+func (w *passkeyService) storePasskeyCredential(userID string, credential *webauthnCredential) error {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 
 	// Serialize the passkey credential to JSON for storage in the Value field
@@ -585,7 +583,7 @@ func (w *passkeyService) storePasskeyCredential(userID string, credential *webau
 
 // updatePasskeyCredential updates an existing passkey credential in the database.
 func (w *passkeyService) updatePasskeyCredential(
-	userID string, updatedCredential *WebauthnCredential,
+	userID string, updatedCredential *webauthnCredential,
 ) error {
 	logger := w.logger.With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 
@@ -603,7 +601,7 @@ func (w *passkeyService) updatePasskeyCredential(
 	updatedCredentials := make([]user.Credential, 0, len(existingCredentials))
 
 	for _, storedCred := range existingCredentials {
-		var credential WebauthnCredential
+		var credential webauthnCredential
 		if err := json.Unmarshal([]byte(storedCred.Value), &credential); err != nil {
 			// Keep the credential as-is if we can't unmarshal it
 			logger.Warn("Failed to unmarshal credential, keeping original",
@@ -645,7 +643,7 @@ func (w *passkeyService) updatePasskeyCredential(
 	}
 
 	if !found {
-		logger.Warn("WebauthnCredential not found for update",
+		logger.Warn("Passkey credential not found for update",
 			log.String("userID", userID),
 			log.String("credentialID", base64.StdEncoding.EncodeToString(updatedCredential.ID)))
 		return fmt.Errorf("credential not found for update")

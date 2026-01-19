@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/protocol/webauthncose"
 
 	"github.com/asgardeo/thunder/internal/system/config"
@@ -36,10 +35,10 @@ import (
 type sessionStoreInterface interface {
 	storeSession(
 		sessionKey, userID, relyingPartyID string,
-		sessionData *SessionData,
+		sessionData *sessionData,
 		expiryTime time.Time,
 	) error
-	retrieveSession(sessionKey string) (*SessionData, string, string, error)
+	retrieveSession(sessionKey string) (*sessionData, string, string, error)
 	deleteSession(sessionKey string) error
 	deleteExpiredSessions() error
 }
@@ -62,7 +61,7 @@ func newSessionStore() sessionStoreInterface {
 
 // storeSession stores a WebAuthn session in the database.
 func (s *sessionStore) storeSession(sessionKey, userID, relyingPartyID string,
-	sessionData *SessionData, expiryTime time.Time) error {
+	sessionData *sessionData, expiryTime time.Time) error {
 	dbClient, err := s.dbProvider.GetRuntimeDBClient()
 	if err != nil {
 		s.logger.Error("Failed to get database client", log.Error(err))
@@ -98,7 +97,7 @@ func (s *sessionStore) storeSession(sessionKey, userID, relyingPartyID string,
 }
 
 // retrieveSession retrieves a WebAuthn session from the database.
-func (s *sessionStore) retrieveSession(sessionKey string) (*SessionData, string, string, error) {
+func (s *sessionStore) retrieveSession(sessionKey string) (*sessionData, string, string, error) {
 	if sessionKey == "" {
 		return nil, "", "", nil
 	}
@@ -189,7 +188,7 @@ func (s *sessionStore) deleteExpiredSessions() error {
 }
 
 // serializeSessionData converts WebAuthn session data to JSON bytes.
-func (s *sessionStore) serializeSessionData(sessionData *SessionData) ([]byte, error) {
+func (s *sessionStore) serializeSessionData(sessionData *sessionData) ([]byte, error) {
 	jsonData := map[string]interface{}{
 		jsonKeyChallenge:        sessionData.Challenge,
 		jsonKeyUserVerification: string(sessionData.UserVerification),
@@ -240,7 +239,7 @@ func (s *sessionStore) serializeSessionData(sessionData *SessionData) ([]byte, e
 // buildSessionDataFromResultRow builds WebAuthn session data from database result row.
 func (s *sessionStore) buildSessionDataFromResultRow(
 	row map[string]interface{},
-) (*SessionData, string, string, error) {
+) (*sessionData, string, string, error) {
 	userID, _ := row[dbColumnUserID].(string)
 	relyingPartyID, _ := row[dbColumnRelyingPartyID].(string)
 
@@ -267,7 +266,7 @@ func (s *sessionStore) buildSessionDataFromResultRow(
 	// Extract challenge
 	challengeStr, _ := jsonData[jsonKeyChallenge].(string)
 
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: challengeStr,
 	}
 
@@ -293,7 +292,7 @@ func (s *sessionStore) buildSessionDataFromResultRow(
 
 	// Decode user verification
 	if userVerificationStr, ok := jsonData[jsonKeyUserVerification].(string); ok {
-		sessionData.UserVerification = protocol.UserVerificationRequirement(userVerificationStr)
+		sessionData.UserVerification = userVerificationRequirement(userVerificationStr)
 	}
 
 	// Decode extensions if present
@@ -317,12 +316,12 @@ func (s *sessionStore) buildSessionDataFromResultRow(
 
 	// Decode credential parameters if present (for registration)
 	if credParamsJSON, ok := jsonData[jsonKeyCredParams].([]interface{}); ok {
-		credParams := make([]protocol.CredentialParameter, len(credParamsJSON))
+		credParams := make([]credentialParameter, len(credParamsJSON))
 		for i, paramJSON := range credParamsJSON {
 			paramMap, _ := paramJSON.(map[string]interface{})
 			if paramMap != nil {
 				if typ, ok := paramMap["type"].(string); ok {
-					credParams[i].Type = protocol.CredentialType(typ)
+					credParams[i].Type = credentialType(typ)
 				}
 				if alg, ok := paramMap["alg"].(float64); ok {
 					credParams[i].Algorithm = webauthncose.COSEAlgorithmIdentifier(int(alg))
@@ -334,7 +333,7 @@ func (s *sessionStore) buildSessionDataFromResultRow(
 
 	// Decode mediation if present
 	if mediationStr, ok := jsonData[jsonKeyMediation].(string); ok {
-		sessionData.Mediation = protocol.CredentialMediationRequirement(mediationStr)
+		sessionData.Mediation = credentialMediationRequirement(mediationStr)
 	}
 
 	return sessionData, userID, relyingPartyID, nil

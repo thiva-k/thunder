@@ -22,9 +22,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"testing"
-	"time"
 
-	"github.com/go-webauthn/webauthn/webauthn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
@@ -46,42 +44,6 @@ const (
 	testCredentialID = "credential_123"
 	testSessionKey   = "test-session-key"
 )
-
-// sessionStoreInterfaceMock is a mock implementation of sessionStoreInterface.
-type sessionStoreInterfaceMock struct {
-	mock.Mock
-}
-
-func (m *sessionStoreInterfaceMock) storeSession(
-	sessionKey, userID, relyingPartyID string,
-	sessionData *SessionData,
-	expiryTime time.Time,
-) error {
-	args := m.Called(sessionKey, userID, relyingPartyID, sessionData, expiryTime)
-
-	return args.Error(0)
-}
-
-func (m *sessionStoreInterfaceMock) retrieveSession(sessionKey string) (*SessionData, string, string, error) {
-	args := m.Called(sessionKey)
-	if args.Get(0) == nil {
-		return nil, "", "", args.Error(3)
-	}
-
-	return args.Get(0).(*SessionData), args.String(1), args.String(2), args.Error(3)
-}
-
-func (m *sessionStoreInterfaceMock) deleteSession(sessionKey string) error {
-	args := m.Called(sessionKey)
-
-	return args.Error(0)
-}
-
-func (m *sessionStoreInterfaceMock) deleteExpiredSessions() error {
-	args := m.Called()
-
-	return args.Error(0)
-}
 
 type WebAuthnServiceTestSuite struct {
 	suite.Suite
@@ -110,7 +72,7 @@ func (suite *WebAuthnServiceTestSuite) SetupSuite() {
 
 func (suite *WebAuthnServiceTestSuite) SetupTest() {
 	suite.mockUserService = usermock.NewUserServiceInterfaceMock(suite.T())
-	suite.mockSessionStore = &sessionStoreInterfaceMock{}
+	suite.mockSessionStore = newSessionStoreInterfaceMock(suite.T())
 
 	suite.service = &passkeyService{
 		userService:  suite.mockUserService,
@@ -608,10 +570,10 @@ func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_EmptyCre
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_Success() {
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:    []byte("aaguid123"),
 			SignCount: 0,
 		},
@@ -638,7 +600,7 @@ func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_Success()
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_GetCredentialsError() {
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID: []byte("credential123"),
 	}
 
@@ -658,7 +620,7 @@ func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_GetCreden
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_UpdateCredentialsError() {
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
 	}
@@ -685,19 +647,19 @@ func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_UpdateCre
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Success() {
 	credentialID := []byte("credential123")
-	existingCredential := WebauthnCredential{
+	existingCredential := webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
 	existingCredJSON, _ := json.Marshal(existingCredential)
 
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 6,
 		},
 	}
@@ -721,7 +683,7 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Success(
 			if !ok || len(creds) != 1 {
 				return false
 			}
-			var cred WebauthnCredential
+			var cred webauthnCredential
 			_ = json.Unmarshal([]byte(creds[0].Value), &cred)
 
 			return cred.Authenticator.SignCount == 6
@@ -734,12 +696,12 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Success(
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_CredentialNotFound() {
 	credentialID := []byte("credential123")
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
 	}
 
-	differentCredential := WebauthnCredential{
+	differentCredential := webauthnCredential{
 		ID:        []byte("different_id"),
 		PublicKey: []byte("publickey456"),
 	}
@@ -761,7 +723,7 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Credenti
 }
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_GetCredentialsError() {
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID: []byte("credential123"),
 	}
 
@@ -782,13 +744,13 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_GetCrede
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_UpdateError() {
 	credentialID := []byte("credential123")
-	existingCredential := WebauthnCredential{
+	existingCredential := webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
 	}
 	existingCredJSON, _ := json.Marshal(existingCredential)
 
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
 	}
@@ -819,7 +781,7 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_UpdateEr
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_InvalidExistingCredential() {
 	credentialID := []byte("credential123")
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
 	}
@@ -843,7 +805,7 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_InvalidE
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreSessionData_Success() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:            "challenge123",
 		UserID:               []byte(testUserID),
 		AllowedCredentialIDs: [][]byte{},
@@ -865,7 +827,7 @@ func (suite *WebAuthnServiceTestSuite) TestStoreSessionData_Success() {
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreSessionData_StoreError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
@@ -886,7 +848,7 @@ func (suite *WebAuthnServiceTestSuite) TestStoreSessionData_StoreError() {
 }
 
 func (suite *WebAuthnServiceTestSuite) TestRetrieveSessionData_Success() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
@@ -967,14 +929,6 @@ func (suite *WebAuthnServiceTestSuite) TestFinishRegistration_InvalidCredentialT
 		SessionToken:      testSessionToken,
 	}
 
-	sessionData := &SessionData{
-		Challenge: "challenge123",
-		UserID:    []byte(testUserID),
-	}
-
-	suite.mockSessionStore.On("retrieveSession", testSessionToken).
-		Return(sessionData, testUserID, testRelyingPartyID, nil).Once()
-
 	result, svcErr := suite.service.FinishRegistration(req)
 
 	suite.Nil(result)
@@ -990,9 +944,6 @@ func (suite *WebAuthnServiceTestSuite) TestFinishRegistration_RetrieveSessionErr
 		AttestationObject: "attestationdata",
 		SessionToken:      testSessionToken,
 	}
-
-	suite.mockSessionStore.On("retrieveSession", testSessionToken).
-		Return(nil, "", "", assert.AnError).Once()
 
 	result, svcErr := suite.service.FinishRegistration(req)
 
@@ -1023,7 +974,7 @@ func (suite *WebAuthnServiceTestSuite) TestGenerateAssertionWithAttributes() {
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetUserError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
@@ -1056,7 +1007,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetUserError() {
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetCredentialsError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
@@ -1074,7 +1025,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetCredentialsEr
 	credErr := &serviceerror.ServiceError{
 		Type:  serviceerror.ServerErrorType,
 		Code:  "CRED_ERROR",
-		Error: "WebauthnCredential retrieval error",
+		Error: "webauthnCredential retrieval error",
 	}
 
 	suite.mockUserService.On("GetUserCredentialsByType", testUserID, "passkey").
@@ -1097,7 +1048,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetCredentialsEr
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_NoCredentialsError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
@@ -1131,12 +1082,12 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_NoCredentialsErr
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_InvalidAssertionResponse() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
 	}
@@ -1246,10 +1197,10 @@ func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_MixedVal
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_WithExistingCredentials() {
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID:        []byte("new-credential"),
 		PublicKey: []byte("new-publickey"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:    []byte("new-aaguid"),
 			SignCount: 0,
 		},
@@ -1286,10 +1237,10 @@ func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_WithExist
 }
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_MarshalError() {
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:    []byte("aaguid123"),
 			SignCount: 0,
 		},
@@ -1313,17 +1264,17 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Multiple
 	credentialID1 := []byte("credential1")
 	credentialID2 := []byte("credential2")
 
-	existingCredential1 := WebauthnCredential{
+	existingCredential1 := webauthnCredential{
 		ID:        credentialID1,
 		PublicKey: []byte("publickey1"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
-	existingCredential2 := WebauthnCredential{
+	existingCredential2 := webauthnCredential{
 		ID:        credentialID2,
 		PublicKey: []byte("publickey2"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 10,
 		},
 	}
@@ -1331,10 +1282,10 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Multiple
 	existingCred1JSON, _ := json.Marshal(existingCredential1)
 	existingCred2JSON, _ := json.Marshal(existingCredential2)
 
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID1, // Update first credential
 		PublicKey: []byte("publickey1"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 6, // Incremented
 		},
 	}
@@ -1358,11 +1309,11 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Multiple
 				return false
 			}
 			// Verify first credential was updated
-			var cred1 WebauthnCredential
+			var cred1 webauthnCredential
 			_ = json.Unmarshal([]byte(creds[0].Value), &cred1)
 
 			// Verify second credential unchanged
-			var cred2 WebauthnCredential
+			var cred2 webauthnCredential
 			_ = json.Unmarshal([]byte(creds[1].Value), &cred2)
 
 			return cred1.Authenticator.SignCount == 6 && cred2.Authenticator.SignCount == 10
@@ -1375,19 +1326,19 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Multiple
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_PreserveStorageFields() {
 	credentialID := []byte("credential123")
-	existingCredential := WebauthnCredential{
+	existingCredential := webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
 	existingCredJSON, _ := json.Marshal(existingCredential)
 
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 6,
 		},
 	}
@@ -1424,7 +1375,7 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_Preserve
 }
 
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_EmptyCredentialList() {
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID: []byte("credential123"),
 	}
 
@@ -1439,7 +1390,7 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_EmptyCre
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_EmptyCredential() {
 	// Test with an empty but valid credential structure
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID:        []byte{}, // Empty ID
 		PublicKey: []byte{}, // Empty public key
 	}
@@ -1493,10 +1444,10 @@ func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_Partiall
 
 func (suite *WebAuthnServiceTestSuite) TestStartAuthentication_CredentialsValidation() {
 	// Test with a valid credential structure
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:    []byte("aaguid123"),
 			SignCount: 5,
 		},
@@ -1543,10 +1494,10 @@ func (suite *WebAuthnServiceTestSuite) TestStartAuthentication_CredentialsValida
 
 func (suite *WebAuthnServiceTestSuite) TestStartAuthentication_CredentialWithZeroSignCount() {
 	// Test credential with zero sign count (new credential)
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("new-credential"),
 		PublicKey: []byte("publickey"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:    []byte("aaguid"),
 			SignCount: 0, // Zero sign count
 		},
@@ -1591,10 +1542,10 @@ func (suite *WebAuthnServiceTestSuite) TestStartRegistration_WithExistingValidCr
 	}
 
 	// Create a properly structured credential
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("existing-credential-id"),
 		PublicKey: []byte("existing-publickey"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:       []byte("existing-aaguid"),
 			SignCount:    10,
 			CloneWarning: false,
@@ -1631,7 +1582,7 @@ func (suite *WebAuthnServiceTestSuite) TestStartRegistration_WithExistingValidCr
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_UpdateCredentialError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
@@ -1639,10 +1590,10 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_UpdateCredential
 	// Use valid base64url encoded credential ID
 	validCredentialID := base64.RawURLEncoding.EncodeToString([]byte("credential123"))
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
@@ -1681,12 +1632,12 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_UpdateCredential
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_SkipAssertion() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge: "challenge123",
 		UserID:    []byte(testUserID),
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
 	}
@@ -1745,10 +1696,10 @@ func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_NonStrin
 
 func (suite *WebAuthnServiceTestSuite) TestStoreWebAuthnCredentialInDB_MarshalSuccess() {
 	// Test successful marshal with complete credential
-	mockCredential := &WebauthnCredential{
+	mockCredential := &webauthnCredential{
 		ID:        []byte("credential-with-all-fields"),
 		PublicKey: []byte("complete-public-key"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			AAGUID:       []byte("complete-aaguid"),
 			SignCount:    100,
 			CloneWarning: false,
@@ -1781,19 +1732,19 @@ func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_MarshalU
 	// In practice this is rare, but we test the code path exists
 	credentialID := []byte("credential123")
 
-	existingCredential := WebauthnCredential{
+	existingCredential := webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
 	existingCredJSON, _ := json.Marshal(existingCredential)
 
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 6,
 		},
 	}
@@ -1891,17 +1842,17 @@ func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_SuccessW
 
 func (suite *WebAuthnServiceTestSuite) TestStartAuthentication_WithMultipleCredentials() {
 	// Test authentication start with multiple credentials
-	mockCredential1 := WebauthnCredential{
+	mockCredential1 := webauthnCredential{
 		ID:        []byte("credential1"),
 		PublicKey: []byte("publickey1"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
-	mockCredential2 := WebauthnCredential{
+	mockCredential2 := webauthnCredential{
 		ID:        []byte("credential2"),
 		PublicKey: []byte("publickey2"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 10,
 		},
 	}
@@ -1949,7 +1900,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishRegistration_StoreCredentialErr
 		ClientDataJSON:    base64.RawURLEncoding.EncodeToString([]byte(`{"type":"passkey.create"}`)),
 		AttestationObject: base64.RawURLEncoding.EncodeToString([]byte("attestation-data")),
 		SessionToken:      testSessionToken,
-		CredentialName:    "Test WebauthnCredential",
+		CredentialName:    "Test webauthnCredential",
 	}
 
 	// This test validates that the error handling path for credential storage exists
@@ -2015,16 +1966,16 @@ func (suite *WebAuthnServiceTestSuite) TestFinishRegistration_CreatewebAuthnUser
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ValidateLoginFailure() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
@@ -2066,13 +2017,13 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ValidateLoginFai
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ClearSessionAfterSuccess() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
 	}
@@ -2112,13 +2063,13 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ClearSessionAfte
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_BuildAuthResponseWithCoreUser() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
 	}
@@ -2156,16 +2107,16 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_BuildAuthRespons
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_UpdateCredentialSignCountFailure() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
@@ -2202,13 +2153,13 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_UpdateCredential
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_InitializeWebAuthnLibraryError() {
 	// This test validates that WebAuthn library initialization error handling exists
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: "invalid-rp-id",
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("credential123"),
 		PublicKey: []byte("publickey123"),
 	}
@@ -2417,7 +2368,7 @@ func (suite *WebAuthnServiceTestSuite) TestStartAuthentication_BeginLoginError()
 		Type: "person",
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("cred123"),
 		PublicKey: []byte("pubkey123"),
 	}
@@ -2450,7 +2401,7 @@ func (suite *WebAuthnServiceTestSuite) TestStartAuthentication_BeginLoginError()
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetWebAuthnCredentialsError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
@@ -2491,7 +2442,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_GetWebAuthnCrede
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ParseAssertionResponseError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
@@ -2502,7 +2453,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ParseAssertionRe
 		Type: "person",
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("cred123"),
 		PublicKey: []byte("pubkey123"),
 	}
@@ -2532,7 +2483,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ParseAssertionRe
 }
 
 func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ValidateLoginError() {
-	sessionData := &SessionData{
+	sessionData := &sessionData{
 		Challenge:      "challenge123",
 		UserID:         []byte(testUserID),
 		RelyingPartyID: testRelyingPartyID,
@@ -2543,7 +2494,7 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ValidateLoginErr
 		Type: "person",
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("cred123"),
 		PublicKey: []byte("pubkey123"),
 	}
@@ -2574,10 +2525,10 @@ func (suite *WebAuthnServiceTestSuite) TestFinishAuthentication_ValidateLoginErr
 }
 
 func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_UnmarshalError() {
-	validCredential := WebauthnCredential{
+	validCredential := webauthnCredential{
 		ID:        []byte("validcredid"),
 		PublicKey: []byte("validpubkey"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 5,
 		},
 	}
@@ -2602,10 +2553,10 @@ func (suite *WebAuthnServiceTestSuite) TestGetWebAuthnCredentialsFromDB_Unmarsha
 func (suite *WebAuthnServiceTestSuite) TestUpdateWebAuthnCredentialInDB_UnmarshalError() {
 	credentialID := []byte("cred123")
 
-	updatedCredential := &WebauthnCredential{
+	updatedCredential := &webauthnCredential{
 		ID:        credentialID,
 		PublicKey: []byte("pubkey123"),
-		Authenticator: webauthn.Authenticator{
+		Authenticator: authenticator{
 			SignCount: 10,
 		},
 	}
@@ -2667,7 +2618,7 @@ func (suite *WebAuthnServiceTestSuite) TestStartRegistration_WithExistingCredent
 		RelyingPartyID: testRelyingPartyID,
 	}
 
-	mockCredential := WebauthnCredential{
+	mockCredential := webauthnCredential{
 		ID:        []byte("existing-cred"),
 		PublicKey: []byte("publickey123"),
 	}

@@ -248,52 +248,57 @@ func (_c *DBClientInterfaceMock_ExecuteContext_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
-// GetTransactioner provides a mock function with given fields:
-func (_m *DBClientInterfaceMock) GetTransactioner() (transaction.Transactioner, error) {
-	ret := _m.Called()
+// GetTransactioner provides a mock function for the type DBClientInterfaceMock
+func (_mock *DBClientInterfaceMock) GetTransactioner() (transaction.Transactioner, error) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTransactioner")
+	}
 
 	var r0 transaction.Transactioner
-	if rf, ok := ret.Get(0).(func() transaction.Transactioner); ok {
-		r0 = rf()
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() (transaction.Transactioner, error)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() transaction.Transactioner); ok {
+		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(transaction.Transactioner)
 		}
 	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
 	} else {
 		r1 = ret.Error(1)
 	}
-
 	return r0, r1
 }
 
-// MockDBClientInterface_GetTransactioner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTransactioner'
-type MockDBClientInterface_GetTransactioner_Call struct {
+// DBClientInterfaceMock_GetTransactioner_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTransactioner'
+type DBClientInterfaceMock_GetTransactioner_Call struct {
 	*mock.Call
 }
 
 // GetTransactioner is a helper method to define mock.On call
-func (_e *DBClientInterfaceMock_Expecter) GetTransactioner() *MockDBClientInterface_GetTransactioner_Call {
-	return &MockDBClientInterface_GetTransactioner_Call{Call: _e.mock.On("GetTransactioner")}
+func (_e *DBClientInterfaceMock_Expecter) GetTransactioner() *DBClientInterfaceMock_GetTransactioner_Call {
+	return &DBClientInterfaceMock_GetTransactioner_Call{Call: _e.mock.On("GetTransactioner")}
 }
 
-func (_c *MockDBClientInterface_GetTransactioner_Call) Run(run func()) *MockDBClientInterface_GetTransactioner_Call {
+func (_c *DBClientInterfaceMock_GetTransactioner_Call) Run(run func()) *DBClientInterfaceMock_GetTransactioner_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *MockDBClientInterface_GetTransactioner_Call) Return(_a0 transaction.Transactioner, _a1 error) *MockDBClientInterface_GetTransactioner_Call {
-	_c.Call.Return(_a0, _a1)
+func (_c *DBClientInterfaceMock_GetTransactioner_Call) Return(transactioner transaction.Transactioner, err error) *DBClientInterfaceMock_GetTransactioner_Call {
+	_c.Call.Return(transactioner, err)
 	return _c
 }
 
-func (_c *MockDBClientInterface_GetTransactioner_Call) RunAndReturn(run func() (transaction.Transactioner, error)) *MockDBClientInterface_GetTransactioner_Call {
+func (_c *DBClientInterfaceMock_GetTransactioner_Call) RunAndReturn(run func() (transaction.Transactioner, error)) *DBClientInterfaceMock_GetTransactioner_Call {
 	_c.Call.Return(run)
 	return _c
 }
