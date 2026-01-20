@@ -400,9 +400,10 @@ Log-Info "Creating default flows..."
 # Path to flow definitions directories
 $AUTH_FLOWS_DIR = Join-Path $PSScriptRoot "flows" "authentication"
 $REG_FLOWS_DIR = Join-Path $PSScriptRoot "flows" "registration"
+$USER_ONBOARDING_FLOWS_DIR = Join-Path $PSScriptRoot "flows" "user_onboarding"
 
 # Check if flows directories exist
-if (-not (Test-Path $AUTH_FLOWS_DIR) -and -not (Test-Path $REG_FLOWS_DIR)) {
+if (-not (Test-Path $AUTH_FLOWS_DIR) -and -not (Test-Path $REG_FLOWS_DIR) -and -not (Test-Path $USER_ONBOARDING_FLOWS_DIR)) {
     Log-Warning "Flow definitions directories not found, skipping flow creation"
 }
 else {
@@ -515,6 +516,60 @@ else {
         }
         else {
             Log-Info "No registration flow files found"
+        }
+    }
+
+    # Process user onboarding flows
+    if (Test-Path $USER_ONBOARDING_FLOWS_DIR) {
+        $onboardingFlowFiles = Get-ChildItem -Path $USER_ONBOARDING_FLOWS_DIR -Filter "*.json" -File -ErrorAction SilentlyContinue
+        
+        if ($onboardingFlowFiles.Count -gt 0) {
+            Log-Info "Processing user onboarding flows..."
+            
+            # Fetch existing user onboarding flows
+            $listResponse = Invoke-ThunderApi -Method GET -Endpoint "/flows?flowType=USER_ONBOARDING&limit=200"
+            
+            # Store existing onboarding flows by handle in a hashtable
+            $existingOnboardingFlows = @{}
+            if ($listResponse.StatusCode -eq 200) {
+                $listBody = $listResponse.Body | ConvertFrom-Json
+                foreach ($flow in $listBody.flows) {
+                    $existingOnboardingFlows[$flow.handle] = $flow.id
+                }
+            }
+            
+            foreach ($flowFile in $onboardingFlowFiles) {
+                $flowCount++
+                
+                # Get flow handle and name from file
+                $flowContent = Get-Content -Path $flowFile.FullName -Raw | ConvertFrom-Json
+                $flowHandle = $flowContent.handle
+                $flowName = $flowContent.name
+                
+                # Check if flow exists by handle
+                if ($existingOnboardingFlows.ContainsKey($flowHandle)) {
+                    # Update existing flow
+                    $flowId = $existingOnboardingFlows[$flowHandle]
+                    Log-Info "Updating existing user onboarding flow: $flowName (handle: $flowHandle)"
+                    $result = Update-Flow -FlowId $flowId -FlowFilePath $flowFile.FullName
+                    if ($result) {
+                        $flowSuccess++
+                    }
+                }
+                else {
+                    # Create new flow
+                    $flowId = Create-Flow -FlowFilePath $flowFile.FullName
+                    if ($flowId) {
+                        $flowSuccess++
+                    }
+                    elseif ($flowId -eq "") {
+                        $flowSkipped++
+                    }
+                }
+            }
+        }
+        else {
+            Log-Info "No user onboarding flow files found"
         }
     }
 

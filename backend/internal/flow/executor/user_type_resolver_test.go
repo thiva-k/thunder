@@ -819,6 +819,151 @@ func (suite *UserTypeResolverTestSuite) TestGetDefaultMeta() {
 			break
 		}
 	}
-
 	assert.True(suite.T(), foundBlock, "Meta should contain a BLOCK component with inputs")
+}
+
+func (suite *UserTypeResolverTestSuite) TestExecute_UserOnboardingFlow_UserTypeProvided_Success() {
+	suite.SetupTest()
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeUserOnboarding, // User Onboarding Flow
+		UserInputs: map[string]string{
+			userTypeKey: "employee",
+		},
+		RuntimeData: map[string]string{},
+	}
+
+	userSchema := &userschema.UserSchema{
+		ID:                 "schema-123",
+		Name:               "employee",
+		OrganizationUnitID: "ou-123",
+	}
+	suite.mockUserSchemaService.On("GetUserSchemaByName", "employee").
+		Return(userSchema, nil)
+
+	result, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), common.ExecComplete, result.Status)
+	assert.Equal(suite.T(), "employee", result.RuntimeData[userTypeKey])
+	assert.Equal(suite.T(), "ou-123", result.RuntimeData[defaultOUIDKey])
+
+	suite.mockUserSchemaService.AssertExpectations(suite.T())
+}
+
+func (suite *UserTypeResolverTestSuite) TestExecute_UserOnboardingFlow_UserTypeProvided_Invalid() {
+	suite.SetupTest()
+
+	ctx := &core.NodeContext{
+		FlowID:   "flow-123",
+		FlowType: common.FlowTypeUserOnboarding,
+		UserInputs: map[string]string{
+			userTypeKey: "invalid_user",
+		},
+		RuntimeData: map[string]string{},
+	}
+
+	// Mock schema retrieval failing
+	svcErr := &serviceerror.ServiceError{
+		Type:             serviceerror.ClientErrorType,
+		Code:             "SCHEMA-404",
+		Error:            "Not Found",
+		ErrorDescription: "User schema not found",
+	}
+	suite.mockUserSchemaService.On("GetUserSchemaByName", "invalid_user").
+		Return(nil, svcErr)
+
+	result, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err) // Logic returns ExecFailure, not error
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), common.ExecFailure, result.Status)
+	assert.Equal(suite.T(), "Invalid user type", result.FailureReason)
+
+	suite.mockUserSchemaService.AssertExpectations(suite.T())
+}
+
+func (suite *UserTypeResolverTestSuite) TestExecute_UserOnboardingFlow_NoUserType_SchemaListEmpty() {
+	suite.SetupTest()
+
+	ctx := &core.NodeContext{
+		FlowID:      "flow-123",
+		FlowType:    common.FlowTypeUserOnboarding,
+		UserInputs:  map[string]string{},
+		RuntimeData: map[string]string{},
+	}
+
+	// Mock GetUserSchemaList returning empty list
+	emptyList := &userschema.UserSchemaListResponse{
+		Schemas: []userschema.UserSchemaListItem{},
+	}
+	suite.mockUserSchemaService.On("GetUserSchemaList", 100, 0).
+		Return(emptyList, nil)
+
+	result, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), common.ExecFailure, result.Status)
+	assert.Equal(suite.T(), "No user types available", result.FailureReason)
+}
+
+func (suite *UserTypeResolverTestSuite) TestExecute_UserOnboardingFlow_NoUserType_SchemaListError() {
+	suite.SetupTest()
+
+	ctx := &core.NodeContext{
+		FlowID:      "flow-123",
+		FlowType:    common.FlowTypeUserOnboarding,
+		UserInputs:  map[string]string{},
+		RuntimeData: map[string]string{},
+	}
+
+	svcErr := &serviceerror.ServiceError{
+		Type:  serviceerror.ServerErrorType,
+		Error: "Simulated Error",
+	}
+	suite.mockUserSchemaService.On("GetUserSchemaList", 100, 0).
+		Return(nil, svcErr)
+
+	result, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), common.ExecFailure, result.Status)
+	assert.Equal(suite.T(), "Failed to retrieve user types", result.FailureReason)
+}
+
+func (suite *UserTypeResolverTestSuite) TestExecute_UserOnboardingFlow_NoUserType_PromptUser() {
+	suite.SetupTest()
+
+	ctx := &core.NodeContext{
+		FlowID:      "flow-123",
+		FlowType:    common.FlowTypeUserOnboarding,
+		UserInputs:  map[string]string{},
+		RuntimeData: map[string]string{},
+	}
+
+	// Mock GetUserSchemaList returning schemas
+	schemaList := &userschema.UserSchemaListResponse{
+		Schemas: []userschema.UserSchemaListItem{
+			{Name: "employee"},
+			{Name: "customer"},
+		},
+	}
+	suite.mockUserSchemaService.On("GetUserSchemaList", 100, 0).
+		Return(schemaList, nil)
+
+	result, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), common.ExecUserInputRequired, result.Status)
+	assert.Len(suite.T(), result.Inputs, 1)
+
+	// Verify options in the prompt
+	requiredInput := result.Inputs[0]
+	assert.Equal(suite.T(), userTypeKey, requiredInput.Identifier)
+	assert.ElementsMatch(suite.T(), []string{"employee", "customer"}, requiredInput.Options)
 }

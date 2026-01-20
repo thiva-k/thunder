@@ -27,6 +27,7 @@ import (
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	"github.com/asgardeo/thunder/internal/flow/common"
 	"github.com/asgardeo/thunder/internal/flow/core"
+	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
 	"github.com/asgardeo/thunder/tests/mocks/applicationmock"
@@ -167,6 +168,16 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 				return ctx.RuntimeData == nil
 			},
 		},
+		{
+			name: "user onboarding flow (system flow)",
+			runtimeData: map[string]string{
+				"email": "test@example.com",
+			},
+			setRuntimeDataField: true,
+			expectedRuntimeDataCheck: func(ctx EngineContext) bool {
+				return ctx.RuntimeData != nil && ctx.RuntimeData["email"] == "test@example.com"
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -195,26 +206,60 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 			}
 
 			// Setup expectations
-			mockAppService.EXPECT().GetApplication(appID).Return(mockApp, nil)
-			mockFlowMgtSvc.EXPECT().GetGraph("auth-graph-1").Return(testGraph, nil)
-			mockStore.EXPECT().StoreFlowContext(mock.MatchedBy(func(ctx EngineContext) bool {
-				// Verify flowID is generated
-				if ctx.FlowID == "" {
-					return false
-				}
-				// Verify runtime data according to test case expectation
-				if !tt.expectedRuntimeDataCheck(ctx) {
-					return false
-				}
-				// Verify AppID and FlowType
-				if ctx.AppID != appID {
-					return false
-				}
-				if ctx.FlowType != common.FlowTypeAuthentication {
-					return false
-				}
-				return true
-			})).Return(nil)
+			if tt.name == "user onboarding flow (system flow)" {
+				initContext.FlowType = string(common.FlowTypeUserOnboarding)
+				initContext.ApplicationID = "" // System flows don't need app ID
+
+				// Mock flow management service to return flow by handle
+				mockFlow := &flowmgt.CompleteFlowDefinition{ID: "onboarding-flow-123"}
+				mockFlowMgtSvc.EXPECT().GetFlowByHandle(mock.Anything,
+					common.FlowTypeUserOnboarding).Return(mockFlow, nil)
+
+				// Mock GetGraph call which is made during initContext
+				inviteGraph := flowFactory.CreateGraph("onboarding-flow-123", common.FlowTypeUserOnboarding)
+				mockFlowMgtSvc.EXPECT().GetGraph("onboarding-flow-123").Return(inviteGraph, nil)
+
+				// For system flows, StoreFlowContext is called with empty AppID
+				mockStore.EXPECT().StoreFlowContext(mock.MatchedBy(func(ctx EngineContext) bool {
+					// Verify flowID is generated
+					if ctx.FlowID == "" {
+						return false
+					}
+					// Verify runtime data according to test case expectation
+					if !tt.expectedRuntimeDataCheck(ctx) {
+						return false
+					}
+					// Verify AppID is empty for system flow
+					if ctx.AppID != "" {
+						return false
+					}
+					if ctx.FlowType != common.FlowTypeUserOnboarding {
+						return false
+					}
+					return true
+				})).Return(nil)
+			} else {
+				mockAppService.EXPECT().GetApplication(appID).Return(mockApp, nil)
+				mockFlowMgtSvc.EXPECT().GetGraph("auth-graph-1").Return(testGraph, nil)
+				mockStore.EXPECT().StoreFlowContext(mock.MatchedBy(func(ctx EngineContext) bool {
+					// Verify flowID is generated
+					if ctx.FlowID == "" {
+						return false
+					}
+					// Verify runtime data according to test case expectation
+					if !tt.expectedRuntimeDataCheck(ctx) {
+						return false
+					}
+					// Verify AppID and FlowType
+					if ctx.AppID != appID {
+						return false
+					}
+					if ctx.FlowType != common.FlowTypeAuthentication {
+						return false
+					}
+					return true
+				})).Return(nil)
+			}
 
 			// Execute
 			flowID, svcErr := service.InitiateFlow(initContext)
