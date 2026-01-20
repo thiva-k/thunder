@@ -797,6 +797,8 @@ const translations = {
     'fields.last_name.placeholder': 'Enter your last name',
     'fields.email.label': 'Email',
     'fields.email.placeholder': 'Enter your email address',
+    'fields.mobile.label': 'Mobile Number',
+    'fields.mobile.placeholder': 'Enter your mobile number',
     'fields.password.label': 'Password',
     'fields.password.placeholder': 'Enter your password',
     'fields.username.label': 'Username',
