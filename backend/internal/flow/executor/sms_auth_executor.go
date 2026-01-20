@@ -42,6 +42,14 @@ const (
 	smsOTPExecutorModeVerify   = "verify"
 )
 
+// mobileNumberInput is the input definition for mobile number collection.
+var mobileNumberInput = common.Input{
+	Ref:        "mobile_number_input",
+	Identifier: userAttributeMobileNumber,
+	Type:       "PHONE_INPUT",
+	Required:   true,
+}
+
 // smsOTPAuthExecutor implements the ExecutorInterface for SMS OTP authentication.
 type smsOTPAuthExecutor struct {
 	core.ExecutorInterface
@@ -64,17 +72,14 @@ func newSMSOTPAuthExecutor(
 ) *smsOTPAuthExecutor {
 	defaultInputs := []common.Input{
 		{
+			Ref:        "otp_input",
 			Identifier: userInputOTP,
-			Type:       "string",
+			Type:       "OTP_INPUT",
 			Required:   true,
 		},
 	}
 	prerequisites := []common.Input{
-		{
-			Identifier: userAttributeMobileNumber,
-			Type:       "string",
-			Required:   true,
-		},
+		mobileNumberInput,
 	}
 
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, smsAuthLoggerComponentName),
@@ -267,7 +272,10 @@ func (s *smsOTPAuthExecutor) ValidatePrerequisites(ctx *core.NodeContext,
 	logger := s.logger.With(log.String(log.LoggerKeyFlowID, ctx.FlowID))
 
 	if ctx.FlowType == common.FlowTypeRegistration {
-		logger.Debug("Enforcing prerequisite satisfaction for registration flow")
+		logger.Debug("Prerequisites not met for registration flow, prompting for mobile number")
+		execResp.Status = common.ExecUserInputRequired
+		execResp.Inputs = []common.Input{mobileNumberInput}
+		execResp.Meta = s.getMobileInputMeta()
 		return false
 	}
 
@@ -640,4 +648,17 @@ func (s *smsOTPAuthExecutor) getAuthenticatedUser(ctx *core.NodeContext,
 	}
 
 	return authenticatedUser, nil
+}
+
+// getMobileInputMeta returns the meta structure for mobile number input prompt.
+func (s *smsOTPAuthExecutor) getMobileInputMeta() interface{} {
+	return core.NewMetaBuilder().
+		WithIDPrefix("mobile_number").
+		WithHeading("{{ t(signup:heading) }}").
+		WithInput(mobileNumberInput, core.MetaInputConfig{
+			Label:       "{{ t(elements:fields.mobile.label) }}",
+			Placeholder: "{{ t(elements:fields.mobile.placeholder) }}",
+		}).
+		WithSubmitButton("{{ t(elements:buttons.submit.text) }}").
+		Build()
 }
