@@ -69,10 +69,6 @@ func init() {
 	createAppInputSchema = common.GenerateSchema[model.ApplicationDTO](
 		append(appSchemaModifiers,
 			common.WithRemove("", "id"),
-			common.WithDefault("token", "user_attributes", defaults["user_attributes"]),
-			common.WithDefault("inbound_auth_config.config.token.access_token", "user_attributes", defaults["user_attributes"]),
-			common.WithDefault("inbound_auth_config.config.token.id_token", "user_attributes", defaults["user_attributes"]),
-			common.WithDefault("inbound_auth_config.config", "scopes", defaults["scopes"]),
 		)...,
 	)
 
@@ -218,9 +214,6 @@ func (t *applicationTools) createApplication(
 	req *mcp.CallToolRequest,
 	input model.ApplicationDTO,
 ) (*mcp.CallToolResult, *model.ApplicationDTO, error) {
-	// Apply defaults before creation
-	common.ApplyDefaults(&input, defaults)
-
 	createdApp, svcErr := t.appService.CreateApplication(&input)
 	if svcErr != nil {
 		return nil, nil, fmt.Errorf("failed to create application: %s", svcErr.ErrorDescription)
@@ -253,6 +246,9 @@ func (t *applicationTools) getApplicationTemplates(
 	templates := map[string]interface{}{
 		"spa": map[string]interface{}{
 			"name": "<APP_NAME>",
+			"token": map[string]interface{}{
+				"user_attributes": defaultUserAttributes,
+			},
 			"inbound_auth_config": []map[string]interface{}{
 				{
 					"type": "oauth2",
@@ -262,12 +258,24 @@ func (t *applicationTools) getApplicationTemplates(
 						"token_endpoint_auth_method": "none",
 						"pkce_required":              true,
 						"public_client":              true,
+						"scopes":                     defaultScopes,
+						"token": map[string]interface{}{
+							"access_token": map[string]interface{}{
+								"user_attributes": defaultUserAttributes,
+							},
+							"id_token": map[string]interface{}{
+								"user_attributes": defaultUserAttributes,
+							},
+						},
 					},
 				},
 			},
 		},
 		"mobile": map[string]interface{}{
 			"name": "<APP_NAME>",
+			"token": map[string]interface{}{
+				"user_attributes": defaultUserAttributes,
+			},
 			"inbound_auth_config": []map[string]interface{}{
 				{
 					"type": "oauth2",
@@ -277,12 +285,24 @@ func (t *applicationTools) getApplicationTemplates(
 						"token_endpoint_auth_method": "none",
 						"pkce_required":              true,
 						"public_client":              true,
+						"scopes":                     defaultScopes,
+						"token": map[string]interface{}{
+							"access_token": map[string]interface{}{
+								"user_attributes": defaultUserAttributes,
+							},
+							"id_token": map[string]interface{}{
+								"user_attributes": defaultUserAttributes,
+							},
+						},
 					},
 				},
 			},
 		},
 		"server": map[string]interface{}{
 			"name": "<APP_NAME>",
+			"token": map[string]interface{}{
+				"user_attributes": defaultUserAttributes,
+			},
 			"inbound_auth_config": []map[string]interface{}{
 				{
 					"type": "oauth2",
@@ -290,6 +310,15 @@ func (t *applicationTools) getApplicationTemplates(
 						"redirect_uris": []string{"<REDIRECT_URI>"},
 						"grant_types":   []string{"authorization_code", "refresh_token"},
 						"pkce_required": true,
+						"scopes":        defaultScopes,
+						"token": map[string]interface{}{
+							"access_token": map[string]interface{}{
+								"user_attributes": defaultUserAttributes,
+							},
+							"id_token": map[string]interface{}{
+								"user_attributes": defaultUserAttributes,
+							},
+						},
 					},
 				},
 			},
