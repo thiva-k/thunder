@@ -18,11 +18,11 @@
 
 package application
 
-// defaults holds default values for application management tool schemas.
-var defaults = map[string]any{
-	"user_attributes": []string{
-		"sub", "email", "name", "given_name", "family_name",
+// Standard defaults for user-facing applications
+var (
+	defaultUserAttributes = []string{
+		"email", "name", "given_name", "family_name",
 		"profile", "picture", "phone_number", "address", "created_at",
-	},
-	"scopes": []string{"openid", "profile", "email"},
-}
+	}
+	defaultScopes = []string{"openid", "profile", "email"}
+)

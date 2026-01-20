@@ -79,8 +79,10 @@ This project intentionally avoids custom logic, hooks, or advanced configuration
 ## CRITICAL: Provider Configuration Rules (MUST FOLLOW EXACTLY)
 
 The ~AsgardeoProvider~ **MUST** be configured using **ONLY** the following four props.
-Always create a NEW public application with token endpoint method as none via thunder_create_app tool and use the 
+Always create a NEW public SPA application with token endpoint method as none and use the 
 client id. Use the application's URL as the redirect URL.
+Use the thunder_get_application_templates tool to get the template and defaults(e.g. user attributes and scopes)
+before creating the application.
 No variations, no abstractions, no helper objects.
 
 ### ✅ REQUIRED Provider Configuration

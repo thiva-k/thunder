@@ -22,7 +22,6 @@ package common
 import (
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 
@@ -155,77 +154,4 @@ func stringSliceToAny(strings []string) []any {
 		anys[i] = s
 	}
 	return anys
-}
-
-// ApplyDefaults applies default values to the target struct using the provided defaults map.
-// It recursively traverses the struct and matches fields based on their JSON tag name.
-// If a matching field is empty/zero, it is set to the default value.
-func ApplyDefaults(target any, defaults map[string]any) {
-	v := reflect.ValueOf(target)
-	applyDefaultsRecursive(v, defaults)
-}
-
-func applyDefaultsRecursive(v reflect.Value, defaults map[string]any) {
-	if v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			return
-		}
-		v = v.Elem()
-	}
-
-	if v.Kind() != reflect.Struct {
-		return
-	}
-
-	t := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-		fieldType := t.Field(i)
-
-		// Try to apply default if field matches JSON tag
-		jsonTag := fieldType.Tag.Get("json")
-		if jsonTag != "" {
-			tagName, _, _ := strings.Cut(jsonTag, ",")
-			if defaultVal, ok := defaults[tagName]; ok {
-				// Only set if currently empty and can be set
-				if field.CanSet() && isEmpty(field) {
-					valToSet := reflect.ValueOf(defaultVal)
-					if valToSet.Type().AssignableTo(field.Type()) {
-						field.Set(valToSet)
-					} else if field.Kind() == reflect.Ptr && valToSet.Type().AssignableTo(field.Type().Elem()) {
-						newPtr := reflect.New(field.Type().Elem())
-						newPtr.Elem().Set(valToSet)
-						field.Set(newPtr)
-					}
-				}
-			}
-		}
-
-		// Recurse into children
-		switch field.Kind() {
-		case reflect.Struct:
-			applyDefaultsRecursive(field, defaults)
-		case reflect.Ptr:
-			if !field.IsNil() {
-				applyDefaultsRecursive(field, defaults)
-			}
-		case reflect.Slice:
-			for j := 0; j < field.Len(); j++ {
-				applyDefaultsRecursive(field.Index(j), defaults)
-			}
-		}
-	}
-}
-
-// isEmpty checks if a reflect.Value is empty or zero.
-func isEmpty(v reflect.Value) bool {
-	switch v.Kind() {
-	case reflect.Slice, reflect.Map:
-		return v.Len() == 0
-	case reflect.String:
-		return v.Len() == 0
-	case reflect.Ptr, reflect.Interface:
-		return v.IsNil()
-	}
-	return v.IsZero()
 }
