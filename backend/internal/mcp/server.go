@@ -25,6 +25,7 @@ import (
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	apptools "github.com/asgardeo/thunder/internal/mcp/tools/application"
 	flowtools "github.com/asgardeo/thunder/internal/mcp/tools/flow"
+	"github.com/asgardeo/thunder/internal/mcp/tools/reactsdk"
 )
 
 // server wraps the MCP server and its tool registrations.
@@ -48,6 +49,9 @@ func newServer(
 
 	// Register flow tools.
 	flowtools.NewFlowTools(flowService).RegisterTools(mcpServer)
+
+	// Register React SDK tools.
+	reactsdk.NewReactSDKTools().RegisterTools(mcpServer)
 
 	return &server{
 		mcpServer: mcpServer,
