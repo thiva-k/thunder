@@ -13,6 +13,7 @@ This sample application demonstrates how to integrate Thunder authentication int
 
 ## Prerequisites
 
+- Node.js 20+
 - A running Thunder server instance (default: `https://localhost:8090`)
 - Thunder server configured with appropriate CORS settings
 - SSL certificates (`server.key` and `server.cert`) in the project root
@@ -36,9 +37,14 @@ Edit `public/config.json` with your Thunder server settings:
 
 ### 2. Set Up SSL Certificates
 
-The application runs on HTTPS. Certificates are automatically generated when running `./build.sh run_backend` from the project root. Alternatively, copy them manually:
+The application runs on HTTPS. Copy the SSL certificates from your Thunder distribution:
 
 ```bash
+# From Thunder distribution
+cp /path/to/thunder/repository/resources/security/server.key .
+cp /path/to/thunder/repository/resources/security/server.cert .
+
+# Or from build output (if building from source)
 cp ../../target/out/.cert/server.key .
 cp ../../target/out/.cert/server.cert .
 ```
@@ -55,25 +61,25 @@ Run the bootstrap script to create the required "Customer" user schema and "cust
 ### 4. Install Dependencies
 
 ```bash
-pnpm install
+npm install
 ```
 
 ### 5. Start the Development Server
 
 ```bash
-pnpm dev
+npm run dev
 ```
 
 The application will be available at [https://localhost:3000](https://localhost:3000)
 
-### 6. Run the Built Application
+### Available Scripts
 
-To serve the production build:
-
-```bash
-pnpm build
-pnpm preview
-```
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reloading |
+| `npm run build` | Build for production (outputs to `dist/`) |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint to check code quality |
 
 ## Important: Sign-Up Requirements
 
@@ -176,7 +182,7 @@ This sample interacts with the following Thunder APIs:
 ## Building for Production
 
 ```bash
-pnpm build
+npm run build
 ```
 
 The built files will be in the `dist` directory.

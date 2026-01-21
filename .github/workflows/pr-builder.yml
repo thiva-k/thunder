@@ -13,6 +13,67 @@ env:
   GOFLAGS: "-mod=readonly"
 
 jobs:
+  security-audit:
+    name: 🔒 Security Audit
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+
+      - name: 📦 Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '9.x'
+          run_install: false
+
+      - name: 🔍 Run pnpm audit (Frontend)
+        working-directory: frontend
+        run: |
+          echo "🔍 Running pnpm audit for frontend dependencies..."
+          pnpm audit --audit-level=high
+
+      - name: 🔍 Run npm audit (E2E Tests)
+        working-directory: tests/e2e
+        run: |
+          echo "🔍 Running npm audit for E2E test dependencies..."
+          npm audit --audit-level=high
+
+      - name: 🔍 Run npm audit (Sample Apps)
+        run: |
+          echo "🔍 Running npm audit for sample app dependencies..."
+          for app in samples/apps/*/; do
+            if [ -f "${app}package-lock.json" ]; then
+              echo "Auditing $app..."
+              cd "$app"
+              npm audit --audit-level=high
+              cd - > /dev/null
+            fi
+          done
+
+  dependency-review:
+    name: 🔎 Dependency Review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🔎 Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0-only,GPL-3.0-or-later,AGPL-3.0-only,AGPL-3.0-or-later
+          comment-summary-in-pr: always
+
   lint:
     name: 🧹 Lint Code
     if: ${{ github.event_name == 'pull_request' }}
@@ -38,7 +99,7 @@ jobs:
       - name: 📦 Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 'latest'
+          version: '9.x'
           run_install: false
           cache: true
           cache-dependency-path: frontend/pnpm-lock.yaml
