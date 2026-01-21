@@ -41,6 +41,7 @@ type PKIServiceInterface interface {
 	GetPrivateKey(id string) (crypto.PrivateKey, *serviceerror.ServiceError)
 	GetCertThumbprint(id string) string
 	GetX509Certificate(id string) (*x509.Certificate, *serviceerror.ServiceError)
+	GetAllX509Certificates() (map[string]*x509.Certificate, *serviceerror.ServiceError)
 }
 
 // pkiService stores loaded certificates indexed by their ID
@@ -142,6 +143,24 @@ func (s *pkiService) GetX509Certificate(id string) (*x509.Certificate, *servicee
 		return nil, &serviceerror.InternalServerError
 	}
 	return parsedCert, nil
+}
+
+// GetAllX509Certificates retrieves all x509 certificates as a map indexed by their ID.
+func (s *pkiService) GetAllX509Certificates() (map[string]*x509.Certificate, *serviceerror.ServiceError) {
+	result := make(map[string]*x509.Certificate)
+	for id, cert := range s.certificates {
+		if len(cert.Certificate.Certificate) == 0 {
+			s.logger.Error("Certificate data is empty for certificate ID: " + id)
+			return nil, &serviceerror.InternalServerError
+		}
+		parsedCert, err := x509.ParseCertificate(cert.Certificate.Certificate[0])
+		if err != nil {
+			s.logger.Error("Failed to parse x509 certificate for ID: " + id + " Error: " + err.Error())
+			return nil, &serviceerror.InternalServerError
+		}
+		result[id] = parsedCert
+	}
+	return result, nil
 }
 
 // getAlgorithmFromKey determines the PKIAlgorithm based on the type of the private key.

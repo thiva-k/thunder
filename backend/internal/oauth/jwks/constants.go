@@ -20,42 +20,10 @@ package jwks
 
 import "github.com/asgardeo/thunder/internal/system/error/serviceerror"
 
-// ErrorTLSConfigNotFound is returned when the TLS configuration is not set.
-var ErrorTLSConfigNotFound = &serviceerror.ServiceError{
+// ErrorNoCertificateFound is returned when no certificate is found to generate JWKS.
+var ErrorNoCertificateFound = &serviceerror.ServiceError{
 	Code:             "JWKS-5001",
 	Type:             serviceerror.ServerErrorType,
-	Error:            "Error retrieving TLS configuration.",
-	ErrorDescription: "TLS configuration is not set.",
-}
-
-// ErrorWhileParsingCertificate is returned when there is an error parsing the server certificate.
-var ErrorWhileParsingCertificate = &serviceerror.ServiceError{
-	Code:             "JWKS-5002",
-	Type:             serviceerror.ServerErrorType,
-	Error:            "Error while parsing certificate.",
-	ErrorDescription: "An error occurred while parsing the server certificate.",
-}
-
-// ErrorNoCertificateFound is returned when no certificate is found in the TLS configuration.
-var ErrorNoCertificateFound = &serviceerror.ServiceError{
-	Code:             "JWKS-5003",
-	Type:             serviceerror.ServerErrorType,
 	Error:            "No certificate found.",
-	ErrorDescription: "No certificate found in TLS config.",
-}
-
-// ErrorUnsupportedPublicKeyType is returned when the public key type is not supported for JWKS.
-var ErrorUnsupportedPublicKeyType = &serviceerror.ServiceError{
-	Code:             "JWKS-5004",
-	Type:             serviceerror.ServerErrorType,
-	Error:            "Unsupported public key type.",
-	ErrorDescription: "The certificate public key type is not supported for JWKS.",
-}
-
-// ErrorCertificateKidNotFound is returned when the certificate Key ID (kid) is not found.
-var ErrorCertificateKidNotFound = &serviceerror.ServiceError{
-	Code:             "JWKS-5005",
-	Type:             serviceerror.ServerErrorType,
-	Error:            "Error while retrieving certificate Key ID (kid).",
-	ErrorDescription: "Certificate Key ID (kid) not found.",
+	ErrorDescription: "No certificate found to generate JWKS.",
 }

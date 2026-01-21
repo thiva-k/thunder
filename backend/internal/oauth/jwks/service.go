@@ -21,6 +21,7 @@ package jwks
 
 import (
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rsa"
 	"encoding/base64"
 	"strings"
@@ -28,10 +29,10 @@ import (
 	// Use crypto/sha1 only for JWKS x5t as required by spec for thumbprint.
 	"crypto/sha1" //nolint:gosec
 
-	"github.com/asgardeo/thunder/internal/system/config"
 	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/crypto/pki"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 // JWKSServiceInterface defines the interface for JWKS service.
@@ -42,104 +43,142 @@ type JWKSServiceInterface interface {
 // jwksService implements the JWKSServiceInterface.
 type jwksService struct {
 	pkiService pki.PKIServiceInterface
+	logger     *log.Logger
 }
 
 // newJWKSService creates a new instance of JWKSService.
 func newJWKSService(pkiService pki.PKIServiceInterface) JWKSServiceInterface {
 	return &jwksService{
 		pkiService: pkiService,
+		logger:     log.GetLogger().With(log.String(log.LoggerKeyComponentName, "JWKSService")),
 	}
 }
 
-// GetJWKS retrieves the JSON Web Key Set (JWKS) from the server's TLS certificate.
+// GetJWKS retrieves the JSON Web Key Set (JWKS) from all server certificates.
 func (s *jwksService) GetJWKS() (*JWKSResponse, *serviceerror.ServiceError) {
-	preferredKeyID := config.GetThunderRuntime().Config.JWT.PreferredKeyID
-
-	// Parse certificate
-	parsedCert, err := s.pkiService.GetX509Certificate(preferredKeyID)
+	// Get all certificates
+	allCerts, err := s.pkiService.GetAllX509Certificates()
 	if err != nil {
 		return nil, err
 	}
 
-	// Generate KID from certificate thumbprint
-	kid := s.pkiService.GetCertThumbprint(preferredKeyID)
-	if kid == "" {
-		return nil, ErrorCertificateKidNotFound
+	if len(allCerts) == 0 {
+		return nil, ErrorNoCertificateFound
 	}
 
-	// x5c: base64 DER encoding
-	x5c := []string{base64.StdEncoding.EncodeToString(parsedCert.Raw)}
+	var jwksKeys []JWKS
 
-	// x5t: SHA-1 thumbprint, x5t#S256: SHA-256 thumbprint
-	sha1Sum := sha1.Sum(parsedCert.Raw) //nolint:gosec // x5t (SHA-1 thumbprint) is required by spec
-	x5t := base64.StdEncoding.EncodeToString(sha1Sum[:])
-	x5tS256 := hash.GenerateThumbprint(parsedCert.Raw)
+	for certID, parsedCert := range allCerts {
+		// Generate KID from certificate thumbprint
+		kid := s.pkiService.GetCertThumbprint(certID)
 
-	var jwks JWKS
-	switch pub := parsedCert.PublicKey.(type) {
-	case *rsa.PublicKey:
-		encodeBase64URL := func(b []byte) string {
-			return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
-		}
+		// x5c: base64 DER encoding
+		x5c := []string{base64.StdEncoding.EncodeToString(parsedCert.Raw)}
 
-		n := encodeBase64URL(pub.N.Bytes())
-		// Properly encode the exponent as a big-endian byte slice, trimmed of leading zeros
-		eBytes := make([]byte, 0, 8)
-		e := pub.E
-		for e > 0 {
-			eBytes = append([]byte{byte(e & 0xff)}, eBytes...)
-			e >>= 8
-		}
-		if len(eBytes) == 0 {
-			eBytes = []byte{0}
-		}
-		eEnc := encodeBase64URL(eBytes)
+		// x5t: SHA-1 thumbprint, x5t#S256: SHA-256 thumbprint
+		sha1Sum := sha1.Sum(parsedCert.Raw) //nolint:gosec // x5t (SHA-1 thumbprint) is required by spec
+		x5t := base64.StdEncoding.EncodeToString(sha1Sum[:])
+		x5tS256 := hash.GenerateThumbprint(parsedCert.Raw)
 
-		jwks = JWKS{
-			Kid:     kid,
-			Kty:     "RSA",
-			Use:     "sig",
-			Alg:     "RS256",
-			N:       n,
-			E:       eEnc,
-			X5c:     x5c,
-			X5t:     x5t,
-			X5tS256: x5tS256,
+		switch pub := parsedCert.PublicKey.(type) {
+		case *rsa.PublicKey:
+			jwk := getRSAPublicKeyJWKS(pub, kid, x5c, x5t, x5tS256)
+			jwksKeys = append(jwksKeys, jwk)
+		case *ecdsa.PublicKey:
+			jwk := getECDSAPublicKeyJWKS(pub, kid, x5c, x5t, x5tS256)
+			jwksKeys = append(jwksKeys, jwk)
+		case ed25519.PublicKey:
+			jwk := getEdDSAPublicKeyJWKS(pub, kid, x5c, x5t, x5tS256)
+			jwksKeys = append(jwksKeys, jwk)
+		default:
+			s.logger.Debug("Unsupported public key type for JWKS", log.String("certID", certID))
+			// Skip unsupported public key types
+			continue
 		}
-	case *ecdsa.PublicKey:
-		encodeBase64URL := func(b []byte) string {
-			return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
-		}
+	}
 
-		crv := pub.Curve.Params().Name
-		x := encodeBase64URL(pub.X.Bytes())
-		y := encodeBase64URL(pub.Y.Bytes())
-
-		alg := "ES256"
-		switch crv {
-		case "P-384":
-			alg = "ES384"
-		case "P-521":
-			alg = "ES512"
-		}
-
-		jwks = JWKS{
-			Kid:     kid,
-			Kty:     "EC",
-			Use:     "sig",
-			Alg:     alg,
-			Crv:     crv,
-			X:       x,
-			Y:       y,
-			X5c:     x5c,
-			X5t:     x5t,
-			X5tS256: x5tS256,
-		}
-	default:
-		return nil, ErrorUnsupportedPublicKeyType
+	if len(jwksKeys) == 0 {
+		return nil, ErrorNoCertificateFound
 	}
 
 	return &JWKSResponse{
-		Keys: []JWKS{jwks},
+		Keys: jwksKeys,
 	}, nil
+}
+
+// getRSAPublicKeyJWKS converts an RSA public key to JWKS format.
+func getRSAPublicKeyJWKS(pub *rsa.PublicKey, kid string, x5c []string, x5t, x5tS256 string) JWKS {
+	n := encodeBase64URL(pub.N.Bytes())
+	// Properly encode the exponent as a big-endian byte slice, trimmed of leading zeros
+	eBytes := make([]byte, 0, 8)
+	e := pub.E
+	for e > 0 {
+		eBytes = append([]byte{byte(e & 0xff)}, eBytes...)
+		e >>= 8
+	}
+	if len(eBytes) == 0 {
+		eBytes = []byte{0}
+	}
+	eEnc := encodeBase64URL(eBytes)
+
+	return JWKS{
+		Kid:     kid,
+		Kty:     "RSA",
+		Use:     "sig",
+		Alg:     "RS256",
+		N:       n,
+		E:       eEnc,
+		X5c:     x5c,
+		X5t:     x5t,
+		X5tS256: x5tS256,
+	}
+}
+
+// getECDSAPublicKeyJWKS converts an ECDSA public key to JWKS format.
+func getECDSAPublicKeyJWKS(pub *ecdsa.PublicKey, kid string, x5c []string, x5t, x5tS256 string) JWKS {
+	crv := pub.Curve.Params().Name
+	x := encodeBase64URL(pub.X.Bytes())
+	y := encodeBase64URL(pub.Y.Bytes())
+
+	alg := "ES256"
+	switch crv {
+	case "P-384":
+		alg = "ES384"
+	case "P-521":
+		alg = "ES512"
+	}
+
+	return JWKS{
+		Kid:     kid,
+		Kty:     "EC",
+		Use:     "sig",
+		Alg:     alg,
+		Crv:     crv,
+		X:       x,
+		Y:       y,
+		X5c:     x5c,
+		X5t:     x5t,
+		X5tS256: x5tS256,
+	}
+}
+
+// getEdDSAPublicKeyJWKS converts an EdDSA public key to JWKS format.
+func getEdDSAPublicKeyJWKS(pub ed25519.PublicKey, kid string, x5c []string, x5t, x5tS256 string) JWKS {
+	x := encodeBase64URL(pub)
+
+	return JWKS{
+		Kid:     kid,
+		Kty:     "OKP",
+		Use:     "sig",
+		Alg:     "EdDSA",
+		Crv:     "Ed25519",
+		X:       x,
+		X5c:     x5c,
+		X5t:     x5t,
+		X5tS256: x5tS256,
+	}
+}
+
+func encodeBase64URL(b []byte) string {
+	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
 }

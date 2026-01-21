@@ -132,6 +132,29 @@ func (suite *PKIUtilsTestSuite) TestLoadTLSConfig_MissingKeyFile() {
 	assert.Contains(suite.T(), err.Error(), "key file not found")
 }
 
+func (suite *PKIUtilsTestSuite) TestLoadTLSConfig_InvalidContent() {
+	// Create invalid cert file
+	invalidCertFile, err := os.CreateTemp("", "invalid_cert_*.pem")
+	assert.NoError(suite.T(), err)
+	defer func() { _ = os.Remove(invalidCertFile.Name()) }()
+	_, err = invalidCertFile.WriteString("invalid-pem-content")
+	assert.NoError(suite.T(), err)
+	_ = invalidCertFile.Close()
+
+	// Create invalid key file
+	invalidKeyFile, err := os.CreateTemp("", "invalid_key_*.pem")
+	assert.NoError(suite.T(), err)
+	defer func() { _ = os.Remove(invalidKeyFile.Name()) }()
+	_, err = invalidKeyFile.WriteString("invalid-pem-content")
+	assert.NoError(suite.T(), err)
+	_ = invalidKeyFile.Close()
+
+	tlsConfig, err := LoadTLSConfig(suite.cfg, invalidCertFile.Name(), invalidKeyFile.Name())
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), tlsConfig)
+	assert.Contains(suite.T(), err.Error(), "failed to find any PEM data")
+}
+
 func createTestSelfSignedCert(privateKey *rsa.PrivateKey) (*x509.Certificate, []byte, error) {
 	template := x509.Certificate{
 		SerialNumber:          big.NewInt(1),

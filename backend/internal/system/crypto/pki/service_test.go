@@ -42,10 +42,13 @@ import (
 
 type PKIServiceTestSuite struct {
 	suite.Suite
-	testPrivateKey *rsa.PrivateKey
-	testKeyPath    string
-	testCertPath   string
-	tempFiles      []string
+	testPrivateKeyRSA   *rsa.PrivateKey
+	testPrivateKeyECDSA *ecdsa.PrivateKey
+	testKeyPathRSA      string
+	testCertPathRSA     string
+	testKeyPathECDSA    string
+	testCertPathECDSA   string
+	tempFiles           []string
 }
 
 func TestPKIServiceSuite(t *testing.T) {
@@ -54,43 +57,82 @@ func TestPKIServiceSuite(t *testing.T) {
 
 func (suite *PKIServiceTestSuite) SetupSuite() {
 	// Generate a test RSA private key
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NoError(suite.T(), err)
-	suite.testPrivateKey = privateKey
+	suite.testPrivateKeyRSA = rsaKey
 
-	// Create a self-signed certificate
-	cert, certPEM, err := createSelfSignedCert(privateKey)
-	assert.NoError(suite.T(), err)
-
-	// Create temporary certificate file
-	certFile, err := os.CreateTemp("", "test_cert_*.pem")
-	assert.NoError(suite.T(), err)
-	suite.testCertPath = certFile.Name()
-	suite.tempFiles = append(suite.tempFiles, suite.testCertPath)
-
-	_, err = certFile.Write(certPEM)
-	assert.NoError(suite.T(), err)
-	err = certFile.Close()
+	// Create a self-signed certificate with RSA key
+	certRSA, certPEMRSA, err := createSelfSignedCert(rsaKey)
 	assert.NoError(suite.T(), err)
 
-	// Create temporary private key file
-	keyFile, err := os.CreateTemp("", "test_key_*.pem")
+	// Create temporary certificate file for RSA
+	certFileRSA, err := os.CreateTemp("", "test_cert_rsa_*.pem")
 	assert.NoError(suite.T(), err)
-	suite.testKeyPath = keyFile.Name()
-	suite.tempFiles = append(suite.tempFiles, suite.testKeyPath)
+	suite.testCertPathRSA = certFileRSA.Name()
+	suite.tempFiles = append(suite.tempFiles, suite.testCertPathRSA)
 
-	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
-	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+	_, err = certFileRSA.Write(certPEMRSA)
+	assert.NoError(suite.T(), err)
+	err = certFileRSA.Close()
+	assert.NoError(suite.T(), err)
+
+	// Create temporary private key file for RSA
+	keyFileRSA, err := os.CreateTemp("", "test_key_rsa_*.pem")
+	assert.NoError(suite.T(), err)
+	suite.testKeyPathRSA = keyFileRSA.Name()
+	suite.tempFiles = append(suite.tempFiles, suite.testKeyPathRSA)
+
+	privateKeyBytesRSA := x509.MarshalPKCS1PrivateKey(rsaKey)
+	privateKeyPEMRSA := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
-		Bytes: privateKeyBytes,
+		Bytes: privateKeyBytesRSA,
 	})
 
-	_, err = keyFile.Write(privateKeyPEM)
+	_, err = keyFileRSA.Write(privateKeyPEMRSA)
 	assert.NoError(suite.T(), err)
-	err = keyFile.Close()
+	err = keyFileRSA.Close()
 	assert.NoError(suite.T(), err)
 
-	_ = cert // silence unused
+	// Generate a test ECDSA private key (P-256)
+	ecdsaKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	assert.NoError(suite.T(), err)
+	suite.testPrivateKeyECDSA = ecdsaKey
+
+	// Create a self-signed certificate with ECDSA key
+	certECDSA, certPEMECDSA, err := createSelfSignedCertEC(ecdsaKey)
+	assert.NoError(suite.T(), err)
+
+	// Create temporary certificate file for ECDSA
+	certFileECDSA, err := os.CreateTemp("", "test_cert_ecdsa_*.pem")
+	assert.NoError(suite.T(), err)
+	suite.testCertPathECDSA = certFileECDSA.Name()
+	suite.tempFiles = append(suite.tempFiles, suite.testCertPathECDSA)
+
+	_, err = certFileECDSA.Write(certPEMECDSA)
+	assert.NoError(suite.T(), err)
+	err = certFileECDSA.Close()
+	assert.NoError(suite.T(), err)
+
+	// Create temporary private key file for ECDSA
+	keyFileECDSA, err := os.CreateTemp("", "test_key_ecdsa_*.pem")
+	assert.NoError(suite.T(), err)
+	suite.testKeyPathECDSA = keyFileECDSA.Name()
+	suite.tempFiles = append(suite.tempFiles, suite.testKeyPathECDSA)
+
+	privateKeyBytesECDSA, err := x509.MarshalPKCS8PrivateKey(ecdsaKey)
+	assert.NoError(suite.T(), err)
+	privateKeyPEMECDSA := pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: privateKeyBytesECDSA,
+	})
+
+	_, err = keyFileECDSA.Write(privateKeyPEMECDSA)
+	assert.NoError(suite.T(), err)
+	err = keyFileECDSA.Close()
+	assert.NoError(suite.T(), err)
+
+	_ = certRSA   // silence unused
+	_ = certECDSA // silence unused
 }
 
 func (suite *PKIServiceTestSuite) TearDownSuite() {
@@ -108,7 +150,7 @@ func (suite *PKIServiceTestSuite) SetupTest() {
 
 func (suite *PKIServiceTestSuite) TestGetX509Certificate_Success() {
 	// Build a pkiService with an in-memory certificate
-	cert, _, err := createSelfSignedCert(suite.testPrivateKey)
+	cert, _, err := createSelfSignedCert(suite.testPrivateKeyRSA)
 	assert.NoError(suite.T(), err)
 
 	tlsCert := tls.Certificate{Certificate: [][]byte{cert.Raw}}
@@ -172,8 +214,13 @@ func (suite *PKIServiceTestSuite) TestInitialize_Success() {
 			Keys: []config.KeyConfig{
 				{
 					ID:       "test-key",
-					CertFile: suite.testCertPath,
-					KeyFile:  suite.testKeyPath,
+					CertFile: suite.testCertPathRSA,
+					KeyFile:  suite.testKeyPathRSA,
+				},
+				{
+					ID:       "test-key-2",
+					CertFile: suite.testCertPathECDSA,
+					KeyFile:  suite.testKeyPathECDSA,
 				},
 			},
 		},
@@ -209,7 +256,7 @@ func (suite *PKIServiceTestSuite) TestInitialize_MissingCertFile() {
 				{
 					ID:       "test-key",
 					CertFile: "non_existent_cert.pem",
-					KeyFile:  suite.testKeyPath,
+					KeyFile:  suite.testKeyPathRSA,
 				},
 			},
 		},
@@ -229,7 +276,7 @@ func (suite *PKIServiceTestSuite) TestInitialize_MissingKeyFile() {
 			Keys: []config.KeyConfig{
 				{
 					ID:       "test-key",
-					CertFile: suite.testCertPath,
+					CertFile: suite.testCertPathRSA,
 					KeyFile:  "non_existent_key.pem",
 				},
 			},
@@ -250,8 +297,8 @@ func (suite *PKIServiceTestSuite) TestGetPrivateKey_Success() {
 			Keys: []config.KeyConfig{
 				{
 					ID:       "test-key",
-					CertFile: suite.testCertPath,
-					KeyFile:  suite.testKeyPath,
+					CertFile: suite.testCertPathRSA,
+					KeyFile:  suite.testKeyPathRSA,
 				},
 			},
 		},
@@ -274,8 +321,8 @@ func (suite *PKIServiceTestSuite) TestGetPrivateKey_NotFound() {
 			Keys: []config.KeyConfig{
 				{
 					ID:       "test-key",
-					CertFile: suite.testCertPath,
-					KeyFile:  suite.testKeyPath,
+					CertFile: suite.testCertPathRSA,
+					KeyFile:  suite.testKeyPathRSA,
 				},
 			},
 		},
@@ -298,8 +345,8 @@ func (suite *PKIServiceTestSuite) TestGetCertThumbprint_Success() {
 			Keys: []config.KeyConfig{
 				{
 					ID:       "test-key",
-					CertFile: suite.testCertPath,
-					KeyFile:  suite.testKeyPath,
+					CertFile: suite.testCertPathRSA,
+					KeyFile:  suite.testKeyPathRSA,
 				},
 			},
 		},
@@ -320,8 +367,8 @@ func (suite *PKIServiceTestSuite) TestGetCertThumbprint_NotFound() {
 			Keys: []config.KeyConfig{
 				{
 					ID:       "test-key",
-					CertFile: suite.testCertPath,
-					KeyFile:  suite.testKeyPath,
+					CertFile: suite.testCertPathRSA,
+					KeyFile:  suite.testKeyPathRSA,
 				},
 			},
 		},
@@ -410,8 +457,8 @@ func (suite *PKIServiceTestSuite) TestInitialize_SkipsEmptyIDButLoadsOthers() {
 	testConfig := &config.Config{
 		Crypto: config.CryptoConfig{
 			Keys: []config.KeyConfig{
-				{ID: "", CertFile: suite.testCertPath, KeyFile: suite.testKeyPath},
-				{ID: "valid", CertFile: suite.testCertPath, KeyFile: suite.testKeyPath},
+				{ID: "", CertFile: suite.testCertPathRSA, KeyFile: suite.testKeyPathRSA},
+				{ID: "valid", CertFile: suite.testCertPathECDSA, KeyFile: suite.testKeyPathECDSA},
 			},
 		},
 	}
@@ -421,6 +468,90 @@ func (suite *PKIServiceTestSuite) TestInitialize_SkipsEmptyIDButLoadsOthers() {
 	assert.Error(suite.T(), err)
 	assert.Nil(suite.T(), pkiService)
 	assert.Contains(suite.T(), err.Error(), "empty ID")
+}
+
+func (suite *PKIServiceTestSuite) TestInitialize_InvalidCertContent() {
+	// Create invalid cert file
+	invalidCertFile, err := os.CreateTemp("", "invalid_cert_*.pem")
+	assert.NoError(suite.T(), err)
+	defer func() { _ = os.Remove(invalidCertFile.Name()) }()
+	_, err = invalidCertFile.WriteString("invalid-pem-content")
+	assert.NoError(suite.T(), err)
+	_ = invalidCertFile.Close()
+
+	testConfig := &config.Config{
+		Crypto: config.CryptoConfig{
+			Keys: []config.KeyConfig{
+				{
+					ID:       "test-key",
+					CertFile: invalidCertFile.Name(), // Invalid file
+					KeyFile:  suite.testKeyPathRSA,   // Valid file
+				},
+			},
+		},
+	}
+	err = config.InitializeThunderRuntime("", testConfig)
+	assert.NoError(suite.T(), err)
+
+	pkiService, err := Initialize()
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), pkiService)
+	// tls.LoadX509KeyPair returns "failed to find any PEM data" or similar
+	assert.Contains(suite.T(), err.Error(), "failed to find any PEM data")
+}
+
+func (suite *PKIServiceTestSuite) TestInitialize_UnsupportedCurve() {
+	// Generate ECDSA P-224 key (unsupported)
+	key, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
+	assert.NoError(suite.T(), err)
+
+	// Create self-signed cert
+	_, certPEM, err := createSelfSignedCertEC(key)
+	assert.NoError(suite.T(), err)
+
+	certFile, err := os.CreateTemp("", "test_p224_cert_*.pem")
+	assert.NoError(suite.T(), err)
+	defer func() { _ = os.Remove(certFile.Name()) }()
+	_, err = certFile.Write(certPEM)
+	assert.NoError(suite.T(), err)
+	_ = certFile.Close()
+
+	keyBytes, err := x509.MarshalECPrivateKey(key)
+	assert.NoError(suite.T(), err)
+	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyBytes})
+
+	keyFile, err := os.CreateTemp("", "test_p224_key_*.pem")
+	assert.NoError(suite.T(), err)
+	defer func() { _ = os.Remove(keyFile.Name()) }()
+	_, err = keyFile.Write(keyPEM)
+	assert.NoError(suite.T(), err)
+	_ = keyFile.Close()
+
+	testConfig := &config.Config{
+		Crypto: config.CryptoConfig{
+			Keys: []config.KeyConfig{
+				{
+					ID:       "p224-key",
+					CertFile: certFile.Name(),
+					KeyFile:  keyFile.Name(),
+				},
+			},
+		},
+	}
+	err = config.InitializeThunderRuntime("", testConfig)
+	assert.NoError(suite.T(), err)
+
+	pkiService, err := Initialize()
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), pkiService)
+	assert.Contains(suite.T(), err.Error(), "unsupported ECDSA curve")
+}
+
+func (suite *PKIServiceTestSuite) TestGetThumbprint_Error() {
+	badCert := tls.Certificate{Certificate: [][]byte{[]byte("not-a-certificate")}}
+	thumbprint, err := getThumbprint(badCert)
+	assert.Error(suite.T(), err)
+	assert.Empty(suite.T(), thumbprint)
 }
 
 func (suite *PKIServiceTestSuite) TestInitialize_WithEd25519Key() {
@@ -493,6 +624,87 @@ func (suite *PKIServiceTestSuite) TestInitialize_WithEd25519Key() {
 	assert.IsType(suite.T(), ed25519.PrivateKey{}, privKeyRetrieved)
 
 	_ = pubKey // silence unused
+}
+
+func (suite *PKIServiceTestSuite) TestGetAllX509Certificates_Success() {
+	// Create multiple test certificates
+	cert1, _, err := createSelfSignedCert(suite.testPrivateKeyRSA)
+	assert.NoError(suite.T(), err)
+
+	cert2, _, err := createSelfSignedCertEC(suite.testPrivateKeyECDSA)
+	assert.NoError(suite.T(), err)
+
+	// Build a pkiService with multiple in-memory certificates
+	tlsCert1 := tls.Certificate{Certificate: [][]byte{cert1.Raw}}
+	tlsCert2 := tls.Certificate{Certificate: [][]byte{cert2.Raw}}
+	pkiSvc := &pkiService{
+		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, "PKIService")),
+		certificates: map[string]PKI{
+			"id-1": {
+				Certificate: tlsCert1,
+			},
+			"id-2": {
+				Certificate: tlsCert2,
+			},
+		},
+	}
+
+	allCerts, svcErr := pkiSvc.GetAllX509Certificates()
+	assert.Nil(suite.T(), svcErr)
+	assert.NotNil(suite.T(), allCerts)
+	assert.Equal(suite.T(), 2, len(allCerts))
+	assert.Equal(suite.T(), cert1.Raw, allCerts["id-1"].Raw)
+	assert.Equal(suite.T(), cert2.Raw, allCerts["id-2"].Raw)
+}
+
+func (suite *PKIServiceTestSuite) TestGetAllX509Certificates_Empty() {
+	pkiSvc := &pkiService{
+		logger:       log.GetLogger().With(log.String(log.LoggerKeyComponentName, "PKIService")),
+		certificates: map[string]PKI{},
+	}
+
+	allCerts, svcErr := pkiSvc.GetAllX509Certificates()
+	assert.Nil(suite.T(), svcErr)
+	assert.Equal(suite.T(), map[string]*x509.Certificate{}, allCerts)
+}
+
+func (suite *PKIServiceTestSuite) TestGetAllX509Certificates_NoData() {
+	pkiSvc := &pkiService{
+		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, "PKIService")),
+		certificates: map[string]PKI{
+			"id-1": {
+				Certificate: tls.Certificate{Certificate: [][]byte{}},
+			},
+		},
+	}
+
+	allCerts, svcErr := pkiSvc.GetAllX509Certificates()
+	assert.NotNil(suite.T(), svcErr)
+	assert.Nil(suite.T(), allCerts)
+	assert.Equal(suite.T(), &serviceerror.InternalServerError, svcErr)
+}
+
+func (suite *PKIServiceTestSuite) TestGetAllX509Certificates_ParseError() {
+	cert1, _, err := createSelfSignedCert(suite.testPrivateKeyRSA)
+	assert.NoError(suite.T(), err)
+
+	tlsCert1 := tls.Certificate{Certificate: [][]byte{cert1.Raw}}
+	pkiSvc := &pkiService{
+		logger: log.GetLogger().With(log.String(log.LoggerKeyComponentName, "PKIService")),
+		certificates: map[string]PKI{
+			"id-1": {
+				Certificate: tlsCert1,
+			},
+			"id-2": {
+				Certificate: tls.Certificate{Certificate: [][]byte{[]byte("bad-cert-bytes")}},
+			},
+		},
+	}
+
+	allCerts, svcErr := pkiSvc.GetAllX509Certificates()
+	assert.NotNil(suite.T(), svcErr)
+	assert.Nil(suite.T(), allCerts)
+	assert.Equal(suite.T(), &serviceerror.InternalServerError, svcErr)
 }
 
 func (suite *PKIServiceTestSuite) TestGetAlgorithmFromKey_VariantsAndErrors() {
