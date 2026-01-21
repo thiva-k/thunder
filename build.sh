@@ -536,7 +536,7 @@ function package_vanilla_sample() {
 
     mkdir -p "executables"
 
-    npx pkg . -t "$SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH" -o "executables/$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH"
+    npm run build:sea
 
     cd "$SCRIPT_DIR" || exit 1
 

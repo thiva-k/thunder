@@ -24,8 +24,18 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Detect if running as a Single Executable Application (SEA)
+// node:sea requires Node.js 20+, wrap in try-catch for compatibility
+let isRunningAsExecutable = false;
+try {
+  const { isSea } = require('node:sea');
+  isRunningAsExecutable = isSea();
+} catch {
+  // node:sea not available (Node.js < 20), not running as SEA
+  isRunningAsExecutable = false;
+}
+
 // Use actual working directory to access certs
-const isRunningAsExecutable = process.pkg !== undefined;
 const certDir = isRunningAsExecutable
   ? path.dirname(process.execPath)
   : path.join(process.cwd());
