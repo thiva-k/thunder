@@ -28,6 +28,8 @@
  */
 
 import { APIRequestContext, request as playwrightRequest } from "@playwright/test";
+import mfaFlowNodesTemplate from "./mfa-flow-nodes.json";
+import mfaRegistrationFlowNodesTemplate from "./mfa-registration-flow-nodes.json";
 
 export interface SetupConfig {
   thunderUrl: string;
@@ -47,13 +49,15 @@ export interface SetupConfig {
 export interface SetupResult {
   adminToken: string;
   notificationSenderId: string;
-  flowId: string;
+  authFlowId: string;
+  registrationFlowId: string;
   userId: string;
   applicationId: string;
   cleanupFunctions: Array<() => Promise<void>>;
   resourcesCreated: {
     notificationSender: boolean;
-    flow: boolean;
+    authFlow: boolean;
+    registrationFlow: boolean;
     user: boolean;
   };
 }
@@ -73,7 +77,8 @@ export class ThunderMFASetup {
     const cleanupFunctions: Array<() => Promise<void>> = [];
     const resourcesCreated = {
       notificationSender: false,
-      flow: false,
+      authFlow: false,
+      registrationFlow: false,
       user: false,
     };
 
@@ -94,19 +99,31 @@ export class ThunderMFASetup {
       }
       const senderId = notificationSenderId.replace("created:", "");
 
-      // Step 3: Create MFA flow
-      const flowId = await this.createOrGetMFAFlow(adminToken, senderId);
-      if (flowId.startsWith("created:")) {
-        const id = flowId.replace("created:", "");
-        console.log(`✓ MFA flow created: ${id}`);
+      // Step 3: Create MFA authentication flow
+      const authFlowId = await this.createOrGetMFAAuthFlow(adminToken, senderId);
+      if (authFlowId.startsWith("created:")) {
+        const id = authFlowId.replace("created:", "");
+        console.log(`✓ MFA authentication flow created: ${id}`);
         cleanupFunctions.push(() => this.deleteFlow(adminToken, id));
-        resourcesCreated.flow = true;
+        resourcesCreated.authFlow = true;
       } else {
-        console.log(`✓ Using existing MFA flow: ${flowId}`);
+        console.log(`✓ Using existing MFA authentication flow: ${authFlowId}`);
       }
-      const actualFlowId = flowId.replace("created:", "");
+      const actualAuthFlowId = authFlowId.replace("created:", "");
 
-      // Step 4: Create test user
+      // Step 4: Create MFA registration flow
+      const regFlowId = await this.createOrGetMFARegistrationFlow(adminToken);
+      if (regFlowId.startsWith("created:")) {
+        const id = regFlowId.replace("created:", "");
+        console.log(`✓ MFA registration flow created: ${id}`);
+        cleanupFunctions.push(() => this.deleteFlow(adminToken, id));
+        resourcesCreated.registrationFlow = true;
+      } else {
+        console.log(`✓ Using existing MFA registration flow: ${regFlowId}`);
+      }
+      const actualRegFlowId = regFlowId.replace("created:", "");
+
+      // Step 5: Create test user
       const userResult = await this.createOrGetTestUser(adminToken);
       if (userResult.startsWith("created:")) {
         const id = userResult.replace("created:", "");
@@ -118,15 +135,16 @@ export class ThunderMFASetup {
       }
       const userId = userResult.replace("created:", "");
 
-      // Step 5: Update application with MFA flow
-      const actualAppId = await this.updateApplicationFlow(adminToken, actualFlowId);
-      console.log(`✓ Application updated with MFA flow`);
+      // Step 6: Update application with MFA flows
+      const actualAppId = await this.updateApplicationFlows(adminToken, actualAuthFlowId, actualRegFlowId);
+      console.log(`✓ Application updated with MFA flows`);
       console.log("=== Thunder MFA Setup Completed ===\n");
 
       return {
         adminToken,
         notificationSenderId: senderId,
-        flowId: actualFlowId,
+        authFlowId: actualAuthFlowId,
+        registrationFlowId: actualRegFlowId,
         userId,
         applicationId: actualAppId,
         cleanupFunctions,
@@ -281,7 +299,7 @@ export class ThunderMFASetup {
   /**
    * Create or get existing MFA authentication flow
    */
-  private async createOrGetMFAFlow(adminToken: string, senderId: string): Promise<string> {
+  private async createOrGetMFAAuthFlow(adminToken: string, senderId: string): Promise<string> {
     const flowHandle = "e2e-mfa-auth-flow";
 
     const response = await this.request.post(`${this.config.thunderUrl}/flows`, {
@@ -311,29 +329,77 @@ export class ThunderMFASetup {
       return existingId; // Return without "created:" prefix
     }
 
-    throw new Error(`Failed to create MFA flow: ${errorText}`);
+    throw new Error(`Failed to create MFA authentication flow: ${errorText}`);
+  }
+
+  /**
+   * Create or get existing MFA registration flow
+   */
+  private async createOrGetMFARegistrationFlow(adminToken: string): Promise<string> {
+    const flowHandle = "e2e-mfa-reg-flow";
+
+    const response = await this.request.post(`${this.config.thunderUrl}/flows`, {
+      data: {
+        handle: flowHandle,
+        name: "E2E MFA Registration Flow",
+        flowType: "REGISTRATION",
+        activeVersion: 2,
+        nodes: this.getMFARegistrationFlowNodes(),
+      },
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        "Content-Type": "application/json",
+      },
+      ignoreHTTPSErrors: true,
+    });
+
+    if (response.ok()) {
+      const data = await response.json();
+      return `created:${data.id}`;
+    }
+
+    // Check if it's a duplicate error
+    const errorText = await response.text();
+    if (errorText.includes("duplicate") || errorText.includes("already exists") || response.status() === 409) {
+      const existingId = await this.getExistingFlow(adminToken, flowHandle, "REGISTRATION");
+      return existingId; // Return without "created:" prefix
+    }
+
+    throw new Error(`Failed to create MFA registration flow: ${errorText}`);
   }
 
   /**
    * Get existing flow by handle
    */
-  private async getExistingFlow(adminToken: string, handle: string): Promise<string> {
-    const response = await this.request.get(`${this.config.thunderUrl}/flows?filter=handle eq "${handle}"`, {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-      },
-      ignoreHTTPSErrors: true,
-    });
+  private async getExistingFlow(adminToken: string, handle: string, flowType?: string): Promise<string> {
+    let filterQuery = `handle eq "${handle}"`;
+    if (flowType) {
+      filterQuery += ` and flowType eq "${flowType}"`;
+    }
+
+    const response = await this.request.get(
+      `${this.config.thunderUrl}/flows?filter=${encodeURIComponent(filterQuery)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+        ignoreHTTPSErrors: true,
+      }
+    );
 
     if (!response.ok()) {
       throw new Error(`Failed to fetch flows: ${await response.text()}`);
     }
 
     const data = await response.json();
-    const flow = data.flows?.find((f: any) => f.handle === handle);
+    const flow = flowType
+      ? data.flows?.find((f: any) => f.handle === handle && f.flowType === flowType)
+      : data.flows?.find((f: any) => f.handle === handle);
 
     if (!flow) {
-      throw new Error(`Flow '${handle}' exists but could not be found in the list`);
+      throw new Error(
+        `Flow '${handle}' ${flowType ? `with type '${flowType}'` : ""} exists but could not be found in the list`
+      );
     }
 
     return flow.id;
@@ -426,9 +492,13 @@ export class ThunderMFASetup {
   }
 
   /**
-   * Update application with MFA flow
+   * Update application with MFA authentication and registration flows
    */
-  private async updateApplicationFlow(adminToken: string, flowId: string): Promise<string> {
+  private async updateApplicationFlows(
+    adminToken: string,
+    authFlowId: string,
+    registrationFlowId: string
+  ): Promise<string> {
     // First, get all applications and find the one with clientId = "REACT_SDK_SAMPLE"
     const listResponse = await this.request.get(`${this.config.thunderUrl}/applications`, {
       headers: {
@@ -464,10 +534,12 @@ export class ThunderMFASetup {
 
     const appData = await getResponse.json();
 
-    // Update with new flow ID
+    // Update with new flow IDs
     const updatedApp = {
       ...appData,
-      auth_flow_id: flowId,
+      auth_flow_id: authFlowId,
+      registration_flow_id: registrationFlowId,
+      is_registration_flow_enabled: true,
     };
 
     const updateResponse = await this.request.put(`${this.config.thunderUrl}/applications/${actualAppId}`, {
@@ -583,203 +655,19 @@ export class ThunderMFASetup {
   }
 
   /**
-   * Get MFA flow node definitions
+   * Get MFA flow node definitions with senderId injected
    */
   private getMFAFlowNodes(senderId: string): any[] {
-    return [
-      {
-        id: "start",
-        type: "START",
-        layout: { size: { width: 101, height: 34 }, position: { x: 62, y: 87 } },
-        onSuccess: "prompt_credentials",
-      },
-      {
-        id: "prompt_credentials",
-        type: "PROMPT",
-        layout: { size: { width: 350, height: 560 }, position: { x: 562, y: 62 } },
-        meta: {
-          components: [
-            {
-              category: "DISPLAY",
-              id: "text_001",
-              label: "{{ t(signin:heading) }}",
-              resourceType: "ELEMENT",
-              type: "TEXT",
-              variant: "HEADING_1",
-            },
-            {
-              category: "BLOCK",
-              id: "block_001",
-              resourceType: "ELEMENT",
-              type: "BLOCK",
-              components: [
-                {
-                  category: "FIELD",
-                  hint: "",
-                  id: "input_001",
-                  inputType: "text",
-                  label: "{{ t(elements:fields.username.label) }}",
-                  placeholder: "{{ t(elements:fields.username.placeholder) }}",
-                  ref: "username",
-                  required: true,
-                  resourceType: "ELEMENT",
-                  type: "TEXT_INPUT",
-                },
-                {
-                  category: "FIELD",
-                  hint: "",
-                  id: "input_002",
-                  inputType: "text",
-                  label: "{{ t(elements:fields.password.label) }}",
-                  placeholder: "{{ t(elements:fields.password.placeholder) }}",
-                  ref: "password",
-                  required: true,
-                  resourceType: "ELEMENT",
-                  type: "PASSWORD_INPUT",
-                },
-                {
-                  category: "ACTION",
-                  eventType: "SUBMIT",
-                  id: "action_001",
-                  label: "{{ t(elements:buttons.submit.text) }}",
-                  resourceType: "ELEMENT",
-                  type: "ACTION",
-                  variant: "PRIMARY",
-                },
-              ],
-            },
-          ],
-        },
-        prompts: [
-          {
-            inputs: [
-              { ref: "input_001", type: "TEXT_INPUT", identifier: "username", required: true },
-              { ref: "input_002", type: "PASSWORD_INPUT", identifier: "password", required: true },
-            ],
-            action: { ref: "action_001", nextNode: "basic_auth" },
-          },
-        ],
-      },
-      {
-        id: "basic_auth",
-        type: "TASK_EXECUTION",
-        layout: { size: { width: 217, height: 113 }, position: { x: 1062, y: 62 } },
-        executor: {
-          name: "BasicAuthExecutor",
-          inputs: [
-            { ref: "input_001", type: "TEXT_INPUT", identifier: "username", required: true },
-            { ref: "input_002", type: "PASSWORD_INPUT", identifier: "password", required: true },
-          ],
-        },
-        onSuccess: "authorization_check",
-      },
-      {
-        id: "authorization_check",
-        type: "TASK_EXECUTION",
-        layout: { size: { width: 200, height: 113 }, position: { x: 1562, y: 62 } },
-        executor: { name: "AuthorizationExecutor" },
-        onSuccess: "send_otp",
-      },
-      {
-        id: "send_otp",
-        type: "TASK_EXECUTION",
-        layout: { size: { width: 200, height: 113 }, position: { x: 2062, y: 62 } },
-        properties: { senderId },
-        executor: {
-          name: "SMSOTPAuthExecutor",
-          mode: "send",
-          inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
-        },
-        onSuccess: "view_s2t2",
-      },
-      {
-        id: "verify_otp",
-        type: "TASK_EXECUTION",
-        layout: { size: { width: 200, height: 113 }, position: { x: 3062, y: 62 } },
-        properties: { senderId },
-        executor: {
-          name: "SMSOTPAuthExecutor",
-          mode: "verify",
-          inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
-        },
-        onSuccess: "auth_assert",
-      },
-      {
-        id: "auth_assert",
-        type: "TASK_EXECUTION",
-        layout: { size: { width: 244, height: 113 }, position: { x: 3562, y: 62 } },
-        executor: { name: "AuthAssertExecutor" },
-        onSuccess: "end",
-      },
-      {
-        id: "end",
-        type: "END",
-        layout: { size: { width: 85, height: 34 }, position: { x: 4062, y: 87 } },
-      },
-      {
-        id: "view_s2t2",
-        type: "PROMPT",
-        layout: { size: { width: 350, height: 522 }, position: { x: 2591, y: 37 } },
-        meta: {
-          components: [
-            {
-              category: "DISPLAY",
-              id: "text_nwu6",
-              label: "Verify OTP",
-              resourceType: "ELEMENT",
-              type: "TEXT",
-              variant: "HEADING_3",
-            },
-            {
-              category: "BLOCK",
-              id: "block_gwme",
-              resourceType: "ELEMENT",
-              type: "BLOCK",
-              components: [
-                {
-                  category: "FIELD",
-                  hint: "",
-                  id: "otp_input_24ux",
-                  inputType: "text",
-                  label: "Enter the code sent to your mobile",
-                  placeholder: "",
-                  ref: "otp",
-                  required: false,
-                  resourceType: "ELEMENT",
-                  type: "OTP_INPUT",
-                },
-                {
-                  category: "ACTION",
-                  eventType: "TRIGGER",
-                  id: "action_s76e",
-                  label: "Verify",
-                  resourceType: "ELEMENT",
-                  type: "ACTION",
-                  variant: "PRIMARY",
-                },
-                {
-                  category: "ACTION",
-                  eventType: "SUBMIT",
-                  id: "resend_6o42",
-                  label: "Resend OTP",
-                  resourceType: "ELEMENT",
-                  type: "RESEND",
-                },
-              ],
-            },
-          ],
-        },
-        prompts: [
-          {
-            inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
-            action: { ref: "action_s76e", nextNode: "verify_otp" },
-          },
-          {
-            inputs: [{ ref: "otp_input_24ux", type: "OTP_INPUT", identifier: "otp", required: false }],
-            action: { ref: "resend_6o42", nextNode: "send_otp" },
-          },
-        ],
-      },
-    ];
+    // Deep clone the template and replace senderId placeholder
+    const nodesJson = JSON.stringify(mfaFlowNodesTemplate);
+    const nodesWithSenderId = nodesJson.replace(/\{\{SENDER_ID\}\}/g, senderId);
+    return JSON.parse(nodesWithSenderId);
+  }
+
+  /**
+   * Get MFA registration flow node definitions
+   */
+  private getMFARegistrationFlowNodes(): any[] {
+    return mfaRegistrationFlowNodesTemplate;
   }
 }
