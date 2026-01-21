@@ -1536,3 +1536,261 @@ func TestHandleInterfaceValue_WithUnmarshallableType(t *testing.T) {
 	err := json.Unmarshal([]byte(node.Value), &parsed)
 	assert.Error(t, err, "Should not be valid JSON since it used fmt.Sprintf fallback")
 }
+
+// TestFieldToNode_JSONRawMessage tests that json.RawMessage fields are properly converted to JSON strings.
+func TestFieldToNode_JSONRawMessage(t *testing.T) {
+	p := newParameterizer(templatingRules{})
+
+	// Test with a JSON object - should be exported as a JSON string
+	jsonObj := json.RawMessage(
+		`{"username":{"type":"string","required":true},"email":{"type":"string","required":true}}`)
+	v := reflect.ValueOf(jsonObj)
+	node, err := p.fieldToNode(v, nil, "", "TestSchema")
+
+	require.NoError(t, err)
+	require.NotNil(t, node)
+	assert.Equal(t, yaml.ScalarNode, node.Kind)
+	assert.Equal(t, "!!str", node.Tag)
+
+	// Verify it's a valid JSON string
+	assert.JSONEq(t,
+		`{"username":{"type":"string","required":true},"email":{"type":"string","required":true}}`, node.Value)
+}
+
+// TestFieldToNode_JSONRawMessageArray tests that json.RawMessage with JSON array is properly converted to JSON string.
+func TestFieldToNode_JSONRawMessageArray(t *testing.T) {
+	p := newParameterizer(templatingRules{})
+
+	// Test with a JSON array - should be exported as a JSON string
+	jsonArr := json.RawMessage(`["item1","item2","item3"]`)
+	v := reflect.ValueOf(jsonArr)
+	node, err := p.fieldToNode(v, nil, "", "TestSchema")
+
+	require.NoError(t, err)
+	require.NotNil(t, node)
+	assert.Equal(t, yaml.ScalarNode, node.Kind)
+	assert.Equal(t, "!!str", node.Tag)
+
+	// Verify it's a valid JSON string
+	assert.JSONEq(t, `["item1","item2","item3"]`, node.Value)
+}
+
+// TestFieldToNode_JSONRawMessageEmpty tests that empty json.RawMessage is handled correctly.
+func TestFieldToNode_JSONRawMessageEmpty(t *testing.T) {
+	p := newParameterizer(templatingRules{})
+
+	// Test with empty JSON
+	jsonEmpty := json.RawMessage(``)
+	v := reflect.ValueOf(jsonEmpty)
+	node, err := p.fieldToNode(v, nil, "", "TestSchema")
+
+	require.NoError(t, err)
+	require.NotNil(t, node)
+	assert.Equal(t, yaml.ScalarNode, node.Kind)
+	// Empty json.RawMessage should return null
+	assert.Equal(t, "!!null", node.Tag)
+	assert.Equal(t, "null", node.Value)
+}
+
+// TestFieldToNode_JSONRawMessageNil tests that nil json.RawMessage is handled correctly.
+func TestFieldToNode_JSONRawMessageNil(t *testing.T) {
+	p := newParameterizer(templatingRules{})
+
+	// Test with nil json.RawMessage (nil slice)
+	var jsonNil json.RawMessage // nil slice
+	v := reflect.ValueOf(jsonNil)
+	node, err := p.fieldToNode(v, nil, "", "TestSchema")
+
+	require.NoError(t, err)
+	require.NotNil(t, node)
+	assert.Equal(t, yaml.ScalarNode, node.Kind)
+	// Nil json.RawMessage (nil slice with Len() == 0) should return null
+	assert.Equal(t, "!!null", node.Tag)
+	assert.Equal(t, "null", node.Value)
+}
+
+// TestFieldToNode_JSONRawMessageInvalid tests that invalid JSON in RawMessage returns an error.
+func TestFieldToNode_JSONRawMessageInvalid(t *testing.T) {
+	p := newParameterizer(templatingRules{})
+
+	// Test with invalid JSON
+	jsonInvalid := json.RawMessage(`{invalid json}`)
+	v := reflect.ValueOf(jsonInvalid)
+	node, err := p.fieldToNode(v, nil, "", "TestSchema")
+
+	// Should return an error for invalid JSON
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid JSON in RawMessage")
+	assert.Nil(t, node)
+}
+
+// TestToParameterizedYAML_JSONRawMessageInvalid tests that ToParameterizedYAML propagates
+// errors when a struct contains invalid json.RawMessage
+func TestToParameterizedYAML_JSONRawMessageInvalid(t *testing.T) {
+	type TestSchema struct {
+		ID     string          `yaml:"id"`
+		Name   string          `yaml:"name"`
+		Schema json.RawMessage `yaml:"schema"`
+	}
+
+	p := newParameterizer(templatingRules{})
+
+	// Create a schema with invalid JSON
+	schema := TestSchema{
+		ID:     "test-id",
+		Name:   "TestSchema",
+		Schema: json.RawMessage(`{invalid json}`),
+	}
+
+	// Should return an error
+	result, err := p.ToParameterizedYAML(schema, "UserSchema", "TestSchema", nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid JSON in RawMessage")
+	assert.Empty(t, result)
+}
+
+// TestToParameterizedYAML_NestedStructWithInvalidJSON tests error propagation
+// when a nested struct contains invalid json.RawMessage
+func TestToParameterizedYAML_NestedStructWithInvalidJSON(t *testing.T) {
+	type NestedConfig struct {
+		Name   string          `yaml:"name"`
+		Config json.RawMessage `yaml:"config"`
+	}
+
+	type OuterStruct struct {
+		ID     string        `yaml:"id"`
+		Nested *NestedConfig `yaml:"nested"`
+	}
+
+	p := newParameterizer(templatingRules{})
+
+	// Create a struct with nested invalid JSON
+	obj := OuterStruct{
+		ID: "test-id",
+		Nested: &NestedConfig{
+			Name:   "NestedConfig",
+			Config: json.RawMessage(`{corrupted: json without quotes}`),
+		},
+	}
+
+	// Should return an error from the nested structure
+	result, err := p.ToParameterizedYAML(obj, "Config", "TestConfig", nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid JSON in RawMessage")
+	assert.Empty(t, result)
+}
+
+// =============================================================================
+// User Schema Import/Export Symmetry Tests
+// =============================================================================
+
+// TestUserSchemaImportExportSymmetry verifies that exported user schemas can be re-imported
+// This test ensures alignment between the export format and the import format used in
+// userschema.UserSchemaRequestWithID
+func TestUserSchemaImportExportSymmetry(t *testing.T) {
+	// Define the export format (UserSchema struct)
+	type UserSchema struct {
+		ID                    string          `yaml:"id"`
+		Name                  string          `yaml:"name"`
+		OrganizationUnitID    string          `yaml:"organization_unit_id"`
+		AllowSelfRegistration bool            `yaml:"allow_self_registration,omitempty"`
+		Schema                json.RawMessage `yaml:"schema"`
+	}
+
+	// Define the import format (UserSchemaRequestWithID struct)
+	type UserSchemaRequestWithID struct {
+		ID                    string `yaml:"id"`
+		Name                  string `yaml:"name"`
+		OrganizationUnitID    string `yaml:"organization_unit_id"`
+		AllowSelfRegistration bool   `yaml:"allow_self_registration,omitempty"`
+		Schema                string `yaml:"schema"` // Note: This is a string, not json.RawMessage
+	}
+
+	// Original schema with json.RawMessage
+	originalSchema := UserSchema{
+		ID:                    "93e861d5-531a-4495-b373-e3db5250e76a",
+		Name:                  "Person",
+		OrganizationUnitID:    "14abcc09-4a7f-417e-be47-88e332148a82",
+		AllowSelfRegistration: true,
+		Schema: json.RawMessage(
+			`{"username":{"type":"string","required":true,"unique":true},"email":{"type":"string","required":true}}`),
+	}
+
+	// Export using the parameterizer
+	p := newParameterizer(templatingRules{})
+	yamlOutput, err := p.ToParameterizedYAML(originalSchema, "UserSchema", "Person", nil)
+	require.NoError(t, err)
+
+	t.Logf("Exported YAML:\n%s", yamlOutput)
+
+	// Parse the exported YAML back as if importing (using UserSchemaRequestWithID format)
+	var importedSchema UserSchemaRequestWithID
+	err = yaml.Unmarshal([]byte(yamlOutput), &importedSchema)
+	require.NoError(t, err)
+
+	// Verify the imported values match the original
+	assert.Equal(t, originalSchema.ID, importedSchema.ID)
+	assert.Equal(t, originalSchema.Name, importedSchema.Name)
+	assert.Equal(t, originalSchema.OrganizationUnitID, importedSchema.OrganizationUnitID)
+	assert.Equal(t, originalSchema.AllowSelfRegistration, importedSchema.AllowSelfRegistration)
+
+	// Verify the schema is a string (as required by import format)
+	assert.IsType(t, "", importedSchema.Schema)
+
+	// Verify the schema string contains valid JSON
+	assert.True(t, json.Valid([]byte(importedSchema.Schema)), "Schema should be valid JSON")
+
+	// Verify the JSON content is equivalent
+	var originalJSON, importedJSON map[string]interface{}
+	err = json.Unmarshal(originalSchema.Schema, &originalJSON)
+	require.NoError(t, err)
+	err = json.Unmarshal([]byte(importedSchema.Schema), &importedJSON)
+	require.NoError(t, err)
+
+	assert.Equal(t, originalJSON, importedJSON, "Schema JSON content should match")
+
+	// Verify the schema is NOT an array (the original bug)
+	var yamlParsed map[string]interface{}
+	err = yaml.Unmarshal([]byte(yamlOutput), &yamlParsed)
+	require.NoError(t, err)
+
+	_, isArray := yamlParsed["schema"].([]interface{})
+	assert.False(t, isArray, "Schema should NOT be exported as an array of bytes")
+
+	_, isString := yamlParsed["schema"].(string)
+	assert.True(t, isString, "Schema should be exported as a string")
+}
+
+// TestUserSchemaExportFormat verifies the exact export format
+func TestUserSchemaExportFormat(t *testing.T) {
+	type UserSchema struct {
+		ID                    string          `yaml:"id"`
+		Name                  string          `yaml:"name"`
+		OrganizationUnitID    string          `yaml:"organization_unit_id"`
+		AllowSelfRegistration bool            `yaml:"allow_self_registration,omitempty"`
+		Schema                json.RawMessage `yaml:"schema"`
+	}
+
+	schema := UserSchema{
+		ID:                    "test-id",
+		Name:                  "TestSchema",
+		OrganizationUnitID:    "test-ou",
+		AllowSelfRegistration: false,
+		Schema:                json.RawMessage(`{"field1":"value1"}`),
+	}
+
+	p := newParameterizer(templatingRules{})
+	yamlOutput, err := p.ToParameterizedYAML(schema, "UserSchema", "TestSchema", nil)
+	require.NoError(t, err)
+
+	// Verify the schema field is a plain string in the YAML, not a structured object
+	// This ensures it can be imported using the string type in UserSchemaRequestWithID
+	assert.Contains(t, yamlOutput, `schema: '{"field1":"value1"}'`,
+		"Schema should be exported as a quoted JSON string")
+	assert.NotContains(t, yamlOutput, "schema:\n  field1:",
+		"Schema should NOT be exported as a nested YAML structure")
+	assert.NotContains(t, yamlOutput, "schema:\n  - ",
+		"Schema should NOT be exported as a YAML array")
+}
