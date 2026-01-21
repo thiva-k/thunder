@@ -13,10 +13,13 @@ This sample application demonstrates how to integrate Thunder authentication int
 
 ## Prerequisites
 
+- Node.js 20+
 - A running Thunder server instance (default: `https://localhost:8090`)
 - An OAuth application registered in Thunder with appropriate redirect URIs
 
-## Quick Start
+## Quick Start (Pre-built Application)
+
+If you have the pre-built distribution, you can run it directly:
 
 ### 1. Configure the Application
 
@@ -48,6 +51,47 @@ The start script will:
 ### 3. Access the Application
 
 Open your browser and navigate to [https://localhost:3000](https://localhost:3000) (or `http://localhost:3000` if running without SSL)
+
+## Development
+
+To run the application in development mode with hot reloading:
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set Up SSL Certificates
+
+For HTTPS support during development, copy the SSL certificates from your Thunder distribution to the project root:
+
+```bash
+# From Thunder distribution
+cp /path/to/thunder/repository/resources/security/server.key .
+cp /path/to/thunder/repository/resources/security/server.cert .
+
+# Or from build output (if building from source)
+cp ../../target/out/.cert/server.key .
+cp ../../target/out/.cert/server.cert .
+```
+
+### 3. Start Development Server
+
+```bash
+npm run dev
+```
+
+The application will be available at [https://localhost:3000](https://localhost:3000)
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reloading |
+| `npm run build` | Build for production (outputs to `dist/`) |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint to check code quality |
 
 ## Configuration Reference
 

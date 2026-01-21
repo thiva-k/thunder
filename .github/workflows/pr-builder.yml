@@ -44,17 +44,12 @@ jobs:
           echo "🔍 Running npm audit for E2E test dependencies..."
           npm audit --audit-level=high
 
-      - name: 🔍 Run audit (Sample Apps)
+      - name: 🔍 Run npm audit (Sample Apps)
         run: |
-          echo "🔍 Running security audit for sample app dependencies..."
+          echo "🔍 Running npm audit for sample app dependencies..."
           for app in samples/apps/*/; do
-            if [ -f "${app}pnpm-lock.yaml" ]; then
-              echo "Auditing $app (pnpm)..."
-              cd "$app"
-              pnpm audit --audit-level=high
-              cd - > /dev/null
-            elif [ -f "${app}package-lock.json" ]; then
-              echo "Auditing $app (npm)..."
+            if [ -f "${app}package-lock.json" ]; then
+              echo "Auditing $app..."
               cd "$app"
               npm audit --audit-level=high
               cd - > /dev/null

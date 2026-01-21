@@ -453,7 +453,7 @@ function build_sample_app() {
 
     cd "$VANILLA_SAMPLE_APP_DIR" || exit 1
     echo "Installing React Vanilla sample dependencies..."
-    npm install
+    npm ci
 
     echo "Building React Vanilla sample app..."
     npm run build
@@ -470,10 +470,10 @@ function build_sample_app() {
 
     cd "$REACT_SDK_SAMPLE_APP_DIR" || exit 1
     echo "Installing React SDK sample dependencies..."
-    pnpm install --frozen-lockfile
+    npm ci
 
     echo "Building React SDK sample app..."
-    pnpm run build
+    npm run build
 
     cd - || exit 1
     echo "✅ React SDK sample app built successfully."
@@ -487,10 +487,10 @@ function build_sample_app() {
 
     cd "$REACT_API_SAMPLE_APP_DIR" || exit 1
     echo "Installing React API-based sample dependencies..."
-    pnpm install --frozen-lockfile
+    npm ci
 
     echo "Building React API-based sample app..."
-    pnpm run build
+    npm run build
 
     cd - || exit 1
     echo "✅ React API-based sample app built successfully."

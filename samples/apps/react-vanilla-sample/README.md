@@ -7,10 +7,13 @@ This sample React application demonstrates integrating Thunder authentication in
 
 ## Prerequisites
 
+- Node.js 20+
 - A running Thunder server instance (default: `https://localhost:8090`)
 - An application registered in Thunder
 
-## Quick Start
+## Quick Start (Pre-built Application)
+
+If you have the pre-built distribution, you can run it directly:
 
 ### 1. Configure the Application
 
@@ -87,6 +90,54 @@ sh start.sh
 
 Open your browser and navigate to [https://localhost:3000](https://localhost:3000)
 
+## Development
+
+To run the application in development mode with hot reloading:
+
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set Up SSL Certificates
+
+For HTTPS support, copy the SSL certificates from your Thunder distribution to the project root:
+
+```bash
+# From Thunder distribution
+cp /path/to/thunder/repository/resources/security/server.key .
+cp /path/to/thunder/repository/resources/security/server.cert .
+
+# Or from build output (if building from source)
+cp ../../target/out/.cert/server.key .
+cp ../../target/out/.cert/server.cert .
+```
+
+Or generate self-signed certificates:
+
+```bash
+openssl req -nodes -new -x509 -keyout server.key -out server.cert
+```
+
+### 3. Start Development Server
+
+```bash
+npm run dev
+```
+
+The application will be available at [https://localhost:3000](https://localhost:3000)
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reloading |
+| `npm run build` | Build for production (outputs to `dist/` and prepares server) |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint to check code quality |
+| `npm start` | Build and preview the production application |
+
 ## Hosting Options
 
 This sample includes a pre-built application with a simple Node.js server. You can also host the application on your own web server.
@@ -95,30 +146,25 @@ This sample includes a pre-built application with a simple Node.js server. You c
 
 The sample comes with a built-in Node.js server that serves the React app over HTTPS.
 
-**Prerequisites:** Node.js 20+
-
-1. Install dependencies:
+1. Install dependencies and build:
    ```bash
    npm install
+   npm run build
    ```
 
 2. Start the server:
    ```bash
+   cd server
    npm start
    ```
 
 ### Using Your Own Web Server
 
-The `app` folder contains the built application that can be hosted on any web server. Configure your server to:
+The `app` folder (or `dist` after building) contains the built application that can be hosted on any web server. Configure your server to:
 
-1. Serve the static files from the `app` folder
+1. Serve the static files from the `app` or `dist` folder
 2. Set up HTTPS with valid certificates
 3. Ensure `runtime.json` is accessible and editable for configuration
-
-**Generate self-signed certificates (for testing):**
-```bash
-openssl req -nodes -new -x509 -keyout server.key -out server.cert
-```
 
 ## License
 
