@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {describe, it, expect, vi} from 'vitest';
+import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {renderHook} from '@testing-library/react';
 import useGetLoginFlowBuilderResources from '../useGetLoginFlowBuilderResources';
 
@@ -122,5 +122,68 @@ describe('useGetLoginFlowBuilderResources', () => {
     const {result} = renderHook(() => useGetLoginFlowBuilderResources<CustomResources>());
 
     expect(result.current.data).toBeDefined();
+  });
+
+  describe('when coreResources is undefined', () => {
+    beforeEach(async () => {
+      vi.resetModules();
+      vi.doMock('@/features/flows/api/useGetFlowBuilderCoreResources', () => ({
+        default: vi.fn(() => ({
+          data: undefined,
+          error: null,
+          isLoading: true,
+          isValidating: false,
+          mutate: () => null,
+        })),
+      }));
+    });
+
+    it('should handle undefined coreResources by using empty arrays as fallback', async () => {
+      const {default: useGetLoginFlowBuilderResourcesModule} = await import('../useGetLoginFlowBuilderResources');
+      const {result} = renderHook(() => useGetLoginFlowBuilderResourcesModule());
+
+      // When coreResources is undefined, the hook should still work with fallback empty arrays
+      expect(result.current.data).toBeDefined();
+      expect(result.current.data.steps).toBeDefined();
+      expect(result.current.data.templates).toBeDefined();
+      expect(result.current.data.widgets).toBeDefined();
+      expect(result.current.data.executors).toBeDefined();
+    });
+  });
+
+  describe('when coreResources has null/undefined arrays', () => {
+    beforeEach(async () => {
+      vi.resetModules();
+      vi.doMock('@/features/flows/api/useGetFlowBuilderCoreResources', () => ({
+        default: vi.fn(() => ({
+          data: {
+            elements: [{id: 'core-element'}],
+            steps: undefined,
+            templates: null,
+            widgets: undefined,
+            executors: null,
+          },
+          error: null,
+          isLoading: false,
+          isValidating: false,
+          mutate: () => null,
+        })),
+      }));
+    });
+
+    it('should fallback to empty array when coreResources arrays are undefined/null', async () => {
+      const {default: useGetLoginFlowBuilderResourcesModule} = await import('../useGetLoginFlowBuilderResources');
+      const {result} = renderHook(() => useGetLoginFlowBuilderResourcesModule());
+
+      // The nullish coalescing operator should provide empty arrays as fallback
+      expect(result.current.data.steps).toBeDefined();
+      expect(Array.isArray(result.current.data.steps)).toBe(true);
+      expect(result.current.data.templates).toBeDefined();
+      expect(Array.isArray(result.current.data.templates)).toBe(true);
+      expect(result.current.data.widgets).toBeDefined();
+      expect(Array.isArray(result.current.data.widgets)).toBe(true);
+      expect(result.current.data.executors).toBeDefined();
+      expect(Array.isArray(result.current.data.executors)).toBe(true);
+    });
   });
 });

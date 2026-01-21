@@ -94,4 +94,30 @@ describe('StaticStepFactory', () => {
       expect(screen.getByTestId('common-static-step-factory')).toBeInTheDocument();
     });
   });
+
+  describe('Type Handling', () => {
+    it('should handle undefined type gracefully', () => {
+      const props = createNodeProps({type: undefined});
+
+      render(<StaticStepFactory {...props} />);
+
+      expect(screen.getByTestId('common-static-step-factory')).toBeInTheDocument();
+    });
+
+    it('should handle empty string type', () => {
+      const props = createNodeProps({type: ''});
+
+      render(<StaticStepFactory {...props} />);
+
+      expect(screen.getByTestId('common-static-step-factory')).toHaveAttribute('data-type', '');
+    });
+
+    it('should handle custom type string', () => {
+      const props = createNodeProps({type: 'CUSTOM_TYPE'});
+
+      render(<StaticStepFactory {...props} />);
+
+      expect(screen.getByTestId('common-static-step-factory')).toHaveAttribute('data-type', 'CUSTOM_TYPE');
+    });
+  });
 });

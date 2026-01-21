@@ -38,15 +38,22 @@ const {
   mockFitView,
   mockUpdateNodeInternals,
   mockExecuteSync,
-} = vi.hoisted(() => ({
-  mockScreenToFlowPosition: vi.fn().mockReturnValue({x: 100, y: 100}),
-  mockGetNodes: vi.fn().mockReturnValue([]),
-  mockGetEdges: vi.fn().mockReturnValue([]),
-  mockUpdateNodeData: vi.fn(),
-  mockFitView: vi.fn().mockResolvedValue(undefined),
-  mockUpdateNodeInternals: vi.fn(),
-  mockExecuteSync: vi.fn(),
-}));
+} = vi.hoisted(() => {
+  // Create a fitView mock that always returns a promise, even after clearAllMocks
+  const fitViewMock = vi.fn();
+  // Set a default implementation that persists through clearAllMocks
+  fitViewMock.mockImplementation(() => Promise.resolve(undefined));
+
+  return {
+    mockScreenToFlowPosition: vi.fn().mockReturnValue({x: 100, y: 100}),
+    mockGetNodes: vi.fn().mockReturnValue([]),
+    mockGetEdges: vi.fn().mockReturnValue([]),
+    mockUpdateNodeData: vi.fn(),
+    mockFitView: fitViewMock,
+    mockUpdateNodeInternals: vi.fn(),
+    mockExecuteSync: vi.fn(),
+  };
+});
 
 // Mock @xyflow/react
 vi.mock('@xyflow/react', async () => {
@@ -118,12 +125,15 @@ describe('useResourceAdd', () => {
     mockGetNodes.mockReturnValue([]);
     mockGetEdges.mockReturnValue([]);
     // Reset fitView to return a resolved promise by default after clearAllMocks
-    mockFitView.mockResolvedValue(undefined);
+    // Use mockImplementation to ensure it persists and always returns a promise
+    mockFitView.mockImplementation(() => Promise.resolve(undefined));
   });
 
   afterEach(async () => {
     // Clean up any pending timers/requestAnimationFrame callbacks to prevent test pollution
-    // First, switch to fake timers if not already using them, then flush all pending callbacks
+    // First, ensure fitView mock returns a promise before running pending callbacks
+    mockFitView.mockImplementation(() => Promise.resolve(undefined));
+    // Switch to fake timers if not already using them, then flush all pending callbacks
     vi.useFakeTimers();
     await vi.runAllTimersAsync();
     vi.useRealTimers();

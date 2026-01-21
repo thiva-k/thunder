@@ -240,6 +240,118 @@ describe('useEdgeGeneration', () => {
       expect(endEdge).toBeDefined();
     });
 
+    it('should connect button to END step when button action.next is StepTypes.End', () => {
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [
+              createMockElement({
+                id: 'button-1',
+                type: ElementTypes.Action,
+                action: {next: StepTypes.End},
+              }),
+            ],
+          },
+        }),
+        createMockStep({id: 'END', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // Should have edge from button to END step
+      const buttonEdge = edges.find((e) => e.id === 'button-1');
+      expect(buttonEdge).toBeDefined();
+      expect(buttonEdge?.target).toBe('END');
+    });
+
+    it('should create fallback edge to END when no button has explicit action', () => {
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [
+              createMockElement({
+                id: 'text-1',
+                type: ElementTypes.Text,
+                // No action property - not a button
+              }),
+            ],
+          },
+        }),
+        createMockStep({id: 'END', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // Should have a fallback edge from view-step-1 to END
+      const fallbackEdge = edges.find((e) => e.source === 'view-step-1' && e.target === 'END');
+      expect(fallbackEdge).toBeDefined();
+    });
+
+    it('should find first action button in nested structures for fallback edge', () => {
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [
+              createMockElement({
+                id: 'block-1',
+                type: 'BLOCK',
+                components: [
+                  createMockElement({
+                    id: 'nested-button',
+                    type: ElementTypes.Action,
+                    // No explicit next - should still create edge
+                  }),
+                ],
+              }),
+            ],
+          },
+        }),
+        createMockStep({id: 'END', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // Should have an edge from nested-button to END
+      const buttonEdge = edges.find((e) => e.id === 'nested-button');
+      expect(buttonEdge).toBeDefined();
+      expect(buttonEdge?.target).toBe('END');
+    });
+
+    it('should create step-level edge to END when step.data.action.next is StepTypes.End', () => {
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [],
+            action: {next: StepTypes.End},
+          },
+        }),
+        createMockStep({id: 'END', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // Should have step-level edge from view-step-1 to END
+      const stepEdge = edges.find((e) => e.id === 'view-step-1-to-END');
+      expect(stepEdge).toBeDefined();
+      expect(stepEdge?.target).toBe('END');
+    });
+
     it('should use custom startStepId from props', () => {
       const {result} = renderHook(() => useEdgeGeneration({startStepId: 'custom-start'}));
 
@@ -421,6 +533,120 @@ describe('useEdgeGeneration', () => {
 
       expect(result.current.generateEdges).toBe(initialGenerateEdges);
       expect(result.current.validateEdges).toBe(initialValidateEdges);
+    });
+  });
+
+  describe('Edge cases for branch coverage', () => {
+    it('should connect button to actual END step when button action.next equals StepTypes.End string and END step has different id', () => {
+      // This test covers lines 147-150: when button.action.next === StepTypes.End (the string 'END')
+      // but there's no step with id 'END' in the flow (the end step has a different id like 'user-onboard')
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [
+              createMockElement({
+                id: 'submit-button',
+                type: ElementTypes.Action,
+                // action.next is 'END' string (StepTypes.End value)
+                // but there's no step with id 'END' - the end step has id 'user-onboard'
+                action: {next: 'END'},
+              }),
+            ],
+          },
+        }),
+        // End step has a DIFFERENT id than 'END'
+        createMockStep({id: 'user-onboard', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // Should have edge from button to the actual end step (user-onboard)
+      const buttonEdge = edges.find((e) => e.id === 'submit-button');
+      expect(buttonEdge).toBeDefined();
+      expect(buttonEdge?.target).toBe('user-onboard');
+    });
+
+    it('should connect step-level action to actual END step when action.next equals StepTypes.End string and END step has different id', () => {
+      // This test covers lines 204-208: when step.data.action.next === StepTypes.End (the string 'END')
+      // but there's no step with id 'END' in the flow
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [],
+            // action.next is 'END' string but there's no step with that id
+            action: {next: 'END'},
+          },
+        }),
+        // End step has a DIFFERENT id than 'END'
+        createMockStep({id: 'user-onboard', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // Should have step-level edge to the actual end step (user-onboard)
+      const stepEdge = edges.find((e) => e.id === 'view-step-1-to-user-onboard');
+      expect(stepEdge).toBeDefined();
+      expect(stepEdge?.target).toBe('user-onboard');
+    });
+
+    it('should use button ID from nested component when creating fallback edge with no prior edges to END', () => {
+      // This test specifically covers line 227: using buttonId for fallback edge
+      const {result} = renderHook(() => useEdgeGeneration());
+
+      // We need a scenario where:
+      // 1. A view step has components but none create edges to END
+      // 2. userOnboardEdgeCreated remains false
+      // 3. Fallback logic kicks in and finds a button
+      const steps: Step[] = [
+        createMockStep({
+          id: 'view-step-1',
+          type: StepTypes.View,
+          data: {
+            components: [
+              createMockElement({
+                id: 'continue-btn',
+                type: ElementTypes.Action,
+                // This points to view-step-2, NOT to END
+                action: {next: 'view-step-2'},
+              }),
+            ],
+          },
+        }),
+        createMockStep({
+          id: 'view-step-2',
+          type: StepTypes.View,
+          data: {
+            components: [
+              // This step has a button that will be found in fallback
+              createMockElement({
+                id: 'final-btn',
+                type: ElementTypes.Action,
+                // Also points away from END
+                action: {next: 'view-step-1'},
+              }),
+            ],
+          },
+        }),
+        createMockStep({id: 'END', type: StepTypes.End}),
+      ];
+
+      const edges = result.current.generateEdges(steps);
+
+      // No edges to END were created in the main loop
+      // The fallback should create an edge using the last view step's button
+      // which is 'final-btn' from view-step-2
+      const fallbackEdge = edges.find((e) => e.source === 'view-step-2' && e.target === 'END');
+      expect(fallbackEdge).toBeDefined();
+      // The edge ID should be the button ID (line 231)
+      expect(fallbackEdge?.id).toBe('final-btn');
     });
   });
 });

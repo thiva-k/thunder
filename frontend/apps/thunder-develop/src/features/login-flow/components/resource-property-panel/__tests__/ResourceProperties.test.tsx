@@ -30,10 +30,12 @@ vi.mock('../ResourcePropertyFactory', () => ({
     resource,
     propertyKey,
     propertyValue,
+    onChange,
   }: {
     resource: Resource;
     propertyKey: string;
     propertyValue: unknown;
+    onChange?: (key: string, value: unknown, resource: Resource) => void;
   }) => (
     <div
       data-testid={`resource-property-factory-${propertyKey}`}
@@ -41,6 +43,15 @@ vi.mock('../ResourcePropertyFactory', () => ({
       data-property-value={String(propertyValue)}
     >
       {propertyKey}: {String(propertyValue)}
+      {onChange && (
+        <button
+          type="button"
+          data-testid={`trigger-change-${propertyKey}`}
+          onClick={() => onChange(propertyKey, propertyValue, resource)}
+        >
+          Trigger Change
+        </button>
+      )}
     </div>
   ),
 }));
@@ -966,6 +977,131 @@ describe('ResourceProperties', () => {
       expect(screen.getByTestId('resource-property-factory-id')).toBeInTheDocument();
       expect(screen.getByTestId('resource-property-factory-href')).toBeInTheDocument();
       expect(screen.queryByTestId('button-extended-properties')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('handleChange Type Processing', () => {
+    it('should preserve boolean values and call onChange with boolean', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Field,
+      });
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{enabled: true}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      // Trigger the change via the mocked button
+      const triggerButton = screen.getByTestId('trigger-change-enabled');
+      fireEvent.click(triggerButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('enabled', true, resource);
+    });
+
+    it('should preserve object values and call onChange with object', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Field,
+      });
+
+      const objectValue = {nested: 'value', count: 5};
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{config: objectValue}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const triggerButton = screen.getByTestId('trigger-change-config');
+      fireEvent.click(triggerButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('config', objectValue, resource);
+    });
+
+    it('should convert string values to string in onChange', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Field,
+      });
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{label: 'test string'}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const triggerButton = screen.getByTestId('trigger-change-label');
+      fireEvent.click(triggerButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('label', 'test string', resource);
+    });
+
+    it('should convert number values to string in onChange', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Field,
+      });
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{maxLength: 100}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const triggerButton = screen.getByTestId('trigger-change-maxLength');
+      fireEvent.click(triggerButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('maxLength', '100', resource);
+    });
+
+    it('should convert null values to empty string in onChange', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Field,
+      });
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{optionalProp: null as unknown as string}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const triggerButton = screen.getByTestId('trigger-change-optionalProp');
+      fireEvent.click(triggerButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('optionalProp', '', resource);
+    });
+
+    it('should convert undefined values to empty string in onChange', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Field,
+      });
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{undefinedProp: undefined as unknown as string}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const triggerButton = screen.getByTestId('trigger-change-undefinedProp');
+      fireEvent.click(triggerButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('undefinedProp', '', resource);
     });
   });
 });

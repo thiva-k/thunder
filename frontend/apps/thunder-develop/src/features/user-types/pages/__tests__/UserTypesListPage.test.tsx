@@ -92,4 +92,16 @@ describe('UserTypesListPage', () => {
 
     expect(mockNavigate).toHaveBeenCalledWith('/user-types/create');
   });
+
+  it('handles navigation error when create button is clicked', async () => {
+    const user = userEvent.setup();
+    mockNavigate.mockRejectedValue(new Error('Navigation failed'));
+
+    render(<UserTypesListPage />);
+
+    const createButton = screen.getByRole('button', {name: /create user type/i});
+    await user.click(createButton);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/user-types/create');
+  });
 });

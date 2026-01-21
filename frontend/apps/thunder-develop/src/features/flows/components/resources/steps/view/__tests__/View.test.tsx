@@ -258,6 +258,23 @@ describe('View', () => {
       expect(onAddElement).toHaveBeenCalledWith(mockElements[0], 'view-node-id');
     });
 
+    it('should close menu when clicking outside', () => {
+      render(<View availableElements={mockElements} deletable={false} />);
+
+      const addButton = screen.getAllByRole('button')[0];
+      fireEvent.click(addButton);
+
+      // Menu should be open
+      expect(screen.getByText('Text Input')).toBeInTheDocument();
+
+      // Find the menu backdrop/overlay and click it to close
+      const menu = screen.getByRole('menu');
+      fireEvent.keyDown(menu, {key: 'Escape'});
+
+      // Menu should be closed after escape
+      expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    });
+
     it('should filter out elements with showOnResourcePanel=false', () => {
       const elementsWithHidden: Element[] = [
         ...mockElements,
@@ -347,6 +364,67 @@ describe('View', () => {
       rerender(<View heading="Test View" />);
 
       expect(screen.getByText('Test View')).toBeInTheDocument();
+    });
+
+    it('should re-render when data prop changes', () => {
+      const data1 = {components: []};
+      const data2 = {
+        components: [
+          {id: 'new-comp', type: 'TEXT', category: 'INPUT', resourceType: 'ELEMENT', display: {label: 'New'}},
+        ],
+      };
+
+      const {rerender} = render(<View data={data1} />);
+      expect(screen.queryByTestId('reorderable-element-0')).not.toBeInTheDocument();
+
+      rerender(<View data={data2 as {components: Element[]}} />);
+      expect(screen.getByTestId('reorderable-element-0')).toBeInTheDocument();
+    });
+
+    it('should re-render when heading prop changes', () => {
+      const {rerender} = render(<View heading="Initial Heading" />);
+      expect(screen.getByText('Initial Heading')).toBeInTheDocument();
+
+      rerender(<View heading="Updated Heading" />);
+      expect(screen.getByText('Updated Heading')).toBeInTheDocument();
+    });
+
+    it('should re-render when deletable prop changes', () => {
+      const {rerender} = render(<View deletable={false} configurable={false} />);
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+
+      rerender(<View deletable configurable={false} />);
+      // Delete button should now be visible
+      expect(screen.queryAllByRole('button').length).toBeGreaterThan(0);
+    });
+
+    it('should re-render when configurable prop changes', () => {
+      const {rerender} = render(<View deletable={false} configurable={false} />);
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+
+      rerender(<View deletable={false} configurable />);
+      // Configure button should now be visible
+      expect(screen.queryAllByRole('button').length).toBeGreaterThan(0);
+    });
+
+    it('should re-render when enableSourceHandle prop changes', () => {
+      const {rerender} = render(<View enableSourceHandle={false} />);
+      expect(screen.queryByTestId('handle-source')).not.toBeInTheDocument();
+
+      rerender(<View enableSourceHandle />);
+      expect(screen.getByTestId('handle-source')).toBeInTheDocument();
+    });
+
+    it('should not re-render when only callback props change', () => {
+      const onAddElement1 = vi.fn();
+      const onAddElement2 = vi.fn();
+
+      const {rerender} = render(<View heading="Same Heading" onAddElement={onAddElement1} />);
+      expect(screen.getByText('Same Heading')).toBeInTheDocument();
+
+      // Changing only the callback should not cause visual changes (memoized)
+      rerender(<View heading="Same Heading" onAddElement={onAddElement2} />);
+      expect(screen.getByText('Same Heading')).toBeInTheDocument();
     });
   });
 });

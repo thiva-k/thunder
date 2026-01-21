@@ -194,35 +194,35 @@ describe('Rule', () => {
   });
 
   describe('Drag and Drop', () => {
-    it('should handle drag over event', () => {
+    it('should handle drag event and set dropEffect to move', () => {
       render(<Rule {...createMockProps({id: 'rule-1', data: {}})} />);
 
       const ruleElement = screen.getByText('Conditional Rule').closest('.flow-builder-rule');
-      if (ruleElement) {
-        const event = {
-          preventDefault: vi.fn(),
-          dataTransfer: {dropEffect: ''},
-        };
+      expect(ruleElement).toBeInTheDocument();
 
-        fireEvent.dragOver(ruleElement, event);
+      const dataTransfer = {dropEffect: ''};
+      fireEvent.drag(ruleElement!, {dataTransfer});
 
-        // Drag over should set dropEffect to 'move'
-      }
+      expect(dataTransfer.dropEffect).toBe('move');
+    });
+
+    it('should handle drag event when dataTransfer is not provided', () => {
+      render(<Rule {...createMockProps({id: 'rule-1', data: {}})} />);
+
+      const ruleElement = screen.getByText('Conditional Rule').closest('.flow-builder-rule');
+      expect(ruleElement).toBeInTheDocument();
+
+      // Should not throw when dataTransfer is undefined
+      fireEvent.drag(ruleElement!);
     });
 
     it('should handle drop event', () => {
       render(<Rule {...createMockProps({id: 'rule-1', data: {}})} />);
 
       const ruleElement = screen.getByText('Conditional Rule').closest('.flow-builder-rule');
-      if (ruleElement) {
-        const event = {
-          preventDefault: vi.fn(),
-        };
+      expect(ruleElement).toBeInTheDocument();
 
-        fireEvent.drop(ruleElement, event);
-
-        // Drop event should be prevented
-      }
+      fireEvent.drop(ruleElement!);
     });
   });
 
@@ -269,6 +269,45 @@ describe('Rule', () => {
 
       // Rerender with same props
       rerender(<Rule {...props} />);
+
+      expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
+    });
+
+    it('should re-render when data prop changes', () => {
+      const initialData = {value: 1};
+      const props = createMockProps({id: 'rule-1', data: initialData});
+      const {rerender} = render(<Rule {...props} />);
+
+      expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
+
+      // Rerender with different data - should trigger re-render
+      const newData = {value: 2};
+      rerender(<Rule {...createMockProps({id: 'rule-1', data: newData})} />);
+
+      expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
+    });
+
+    it('should re-render when id prop changes', () => {
+      const props = createMockProps({id: 'rule-1', data: {value: 1}});
+      const {rerender} = render(<Rule {...props} />);
+
+      expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
+
+      // Rerender with different id - should trigger re-render
+      rerender(<Rule {...createMockProps({id: 'rule-2', data: {value: 1}})} />);
+
+      expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
+    });
+
+    it('should not re-render when other props change but data and id remain the same', () => {
+      const data = {value: 1};
+      const props = createMockProps({id: 'rule-1', data, zIndex: 1});
+      const {rerender} = render(<Rule {...props} />);
+
+      expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
+
+      // Rerender with same data and id but different zIndex - should not trigger re-render
+      rerender(<Rule {...createMockProps({id: 'rule-1', data, zIndex: 2})} />);
 
       expect(screen.getByText('Conditional Rule')).toBeInTheDocument();
     });

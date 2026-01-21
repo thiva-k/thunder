@@ -476,4 +476,51 @@ describe('UserTypesList', () => {
     const grid = screen.getByTestId('data-grid');
     expect(grid).toBeInTheDocument();
   });
+
+  it('closes delete dialog on delete error', async () => {
+    const user = userEvent.setup();
+    mockDeleteUserType.mockRejectedValue(new Error('Delete failed'));
+
+    render(<UserTypesList />);
+
+    const actionButtons = screen.getAllByRole('button', {name: /open actions menu/i});
+    await user.click(actionButtons[0]);
+
+    const deleteButton = screen.getByText('Delete');
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.getByText('Delete User Type')).toBeInTheDocument();
+    });
+
+    const confirmButton = screen.getByRole('button', {name: /delete/i});
+    await user.click(confirmButton);
+
+    await waitFor(() => {
+      expect(mockDeleteUserType).toHaveBeenCalledWith('schema1');
+      // Dialog should be closed on error
+      expect(screen.queryByText('Delete User Type')).not.toBeInTheDocument();
+    });
+  });
+
+  it('displays error from organization units in snackbar', async () => {
+    const orgError: ApiError = {
+      code: 'ORG_ERROR',
+      message: 'Failed to load organization units',
+      description: 'Error description',
+    };
+
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: null,
+      loading: false,
+      error: orgError,
+      refetch: mockRefetchOrganizationUnits,
+    });
+
+    render(<UserTypesList />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to load organization units')).toBeInTheDocument();
+    });
+  });
 });

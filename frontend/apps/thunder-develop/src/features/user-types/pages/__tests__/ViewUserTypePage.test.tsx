@@ -1195,4 +1195,285 @@ describe('ViewUserTypePage', () => {
       });
     });
   });
+
+  describe('Validation and Snackbar', () => {
+    it('shows validation error when saving with empty organization unit', async () => {
+      const user = userEvent.setup();
+      const userTypeWithEmptyOu: ApiUserSchema = {
+        id: 'schema-123',
+        name: 'Test Schema',
+        ouId: '',
+        allowSelfRegistration: false,
+        schema: {
+          email: {
+            type: 'string',
+            required: true,
+          },
+        },
+      };
+
+      mockUseGetUserType.mockReturnValue({
+        data: userTypeWithEmptyOu,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+      await user.click(screen.getByRole('button', {name: /save changes/i}));
+
+      await waitFor(() => {
+        expect(screen.getByText('Please provide an organization unit ID')).toBeInTheDocument();
+      });
+
+      expect(mockUpdateUserType).not.toHaveBeenCalled();
+    });
+
+    it('closes validation error snackbar when close button is clicked', async () => {
+      const user = userEvent.setup();
+      const userTypeWithEmptyOu: ApiUserSchema = {
+        id: 'schema-123',
+        name: 'Test Schema',
+        ouId: '',
+        allowSelfRegistration: false,
+        schema: {
+          email: {
+            type: 'string',
+            required: true,
+          },
+        },
+      };
+
+      mockUseGetUserType.mockReturnValue({
+        data: userTypeWithEmptyOu,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+      await user.click(screen.getByRole('button', {name: /save changes/i}));
+
+      await waitFor(() => {
+        expect(screen.getByText('Please provide an organization unit ID')).toBeInTheDocument();
+      });
+
+      const closeButton = screen.getByLabelText(/close/i);
+      await user.click(closeButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText('Please provide an organization unit ID')).not.toBeInTheDocument();
+      });
+    });
+
+    it('allows toggling allowSelfRegistration checkbox in edit mode', async () => {
+      const user = userEvent.setup();
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const selfRegCheckbox = screen.getByRole('checkbox', {name: /allow self registration/i});
+      expect(selfRegCheckbox).not.toBeChecked();
+
+      await user.click(selfRegCheckbox);
+
+      await waitFor(() => {
+        expect(selfRegCheckbox).toBeChecked();
+      });
+    });
+
+    it('displays organization unit placeholder when value is empty in edit mode', async () => {
+      const user = userEvent.setup();
+      const userTypeWithEmptyOu: ApiUserSchema = {
+        id: 'schema-123',
+        name: 'Test Schema',
+        ouId: '',
+        allowSelfRegistration: false,
+        schema: {
+          email: {
+            type: 'string',
+            required: true,
+          },
+        },
+      };
+
+      mockUseGetUserType.mockReturnValue({
+        data: userTypeWithEmptyOu,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const ouSelect = getOrganizationUnitSelect();
+      expect(ouSelect).toHaveTextContent('Select an organization unit');
+    });
+
+    it('displays organization unit id in select when unit is not found in lookup', async () => {
+      const user = userEvent.setup();
+      const userTypeWithUnknownOu: ApiUserSchema = {
+        id: 'schema-123',
+        name: 'Test Schema',
+        ouId: 'unknown-ou-id',
+        allowSelfRegistration: false,
+        schema: {
+          email: {
+            type: 'string',
+            required: true,
+          },
+        },
+      };
+
+      mockUseGetUserType.mockReturnValue({
+        data: userTypeWithUnknownOu,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const ouSelect = getOrganizationUnitSelect();
+      expect(ouSelect).toHaveTextContent('unknown-ou-id');
+    });
+
+    it('shows loading state in organization unit dropdown', async () => {
+      const user = userEvent.setup();
+
+      mockUseGetOrganizationUnits.mockReturnValue({
+        data: null,
+        loading: true,
+        error: null,
+        refetch: mockRefetchOrganizationUnits,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const ouSelect = getOrganizationUnitSelect();
+      await user.click(ouSelect);
+
+      await waitFor(() => {
+        expect(screen.getByText('Loading...')).toBeInTheDocument();
+      });
+    });
+
+    it('shows error message in organization unit dropdown when fetch fails', async () => {
+      const user = userEvent.setup();
+      const orgError: ApiError = {
+        code: 'ORG_ERROR',
+        message: 'Failed to load organization units',
+        description: 'Error',
+      };
+
+      mockUseGetOrganizationUnits.mockReturnValue({
+        data: null,
+        loading: false,
+        error: orgError,
+        refetch: mockRefetchOrganizationUnits,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const ouSelect = getOrganizationUnitSelect();
+      await user.click(ouSelect);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load organization units')).toBeInTheDocument();
+      });
+    });
+
+    it('shows no organization units message when list is empty', async () => {
+      const user = userEvent.setup();
+
+      mockUseGetOrganizationUnits.mockReturnValue({
+        data: {...mockOrganizationUnitsResponse, organizationUnits: []},
+        loading: false,
+        error: null,
+        refetch: mockRefetchOrganizationUnits,
+      });
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      const ouSelect = getOrganizationUnitSelect();
+      await user.click(ouSelect);
+
+      await waitFor(() => {
+        expect(screen.getByText('No organization units available')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Schema Property Handling with Enum Type', () => {
+    it('saves schema with enum type converted to string', async () => {
+      const user = userEvent.setup();
+      const userTypeWithEnum: ApiUserSchema = {
+        id: 'schema-123',
+        name: 'Test Schema',
+        ouId: 'root-ou',
+        allowSelfRegistration: false,
+        schema: {
+          status: {
+            type: 'string',
+            required: true,
+            enum: ['ACTIVE', 'INACTIVE'],
+          },
+        },
+      };
+
+      mockUseGetUserType.mockReturnValue({
+        data: userTypeWithEnum,
+        loading: false,
+        error: null,
+        refetch: mockRefetch,
+      });
+
+      mockUpdateUserType.mockResolvedValue(undefined);
+
+      render(<ViewUserTypePage />);
+
+      await user.click(screen.getByRole('button', {name: /edit/i}));
+
+      // Add a new enum value
+      const enumInput = screen.getByPlaceholderText(/add value and press enter/i);
+      await user.type(enumInput, 'PENDING');
+
+      const addButton = screen.getByRole('button', {name: /^add$/i});
+      await user.click(addButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('PENDING')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', {name: /save changes/i}));
+
+      await waitFor(() => {
+        expect(mockUpdateUserType).toHaveBeenCalledWith(
+          'schema-123',
+          expect.objectContaining({
+            schema: expect.objectContaining({
+              status: expect.objectContaining({
+                type: 'string',
+                enum: ['ACTIVE', 'INACTIVE', 'PENDING'],
+              }) as Record<string, unknown>,
+            }) as Record<string, unknown>,
+          }),
+        );
+      });
+    });
+  });
 });

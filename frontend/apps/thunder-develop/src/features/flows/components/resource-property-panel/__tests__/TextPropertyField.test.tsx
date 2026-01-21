@@ -482,4 +482,92 @@ describe('TextPropertyField', () => {
       expect(screen.queryByText('Title is required')).not.toBeInTheDocument();
     });
   });
+
+  describe('I18n Configuration Card', () => {
+    it('should render component with i18n pattern value', () => {
+      // The I18nConfigurationCard is conditionally rendered based on isI18nCardOpen state
+      // which is currently not toggleable (toggle is commented out in the component)
+      // This test verifies the component still works correctly with i18n patterns
+
+      render(
+        <TextPropertyField
+          resource={mockResource}
+          propertyKey="label"
+          propertyValue="{{t(common.test)}}"
+          onChange={mockOnChange}
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Verify the component renders with i18n pattern
+      expect(screen.getByRole('textbox')).toHaveValue('{{t(common.test)}}');
+      expect(screen.getByText('flows:core.elements.textPropertyField.resolvedValue')).toBeInTheDocument();
+    });
+
+    it('should not render i18n resolved value box when pattern has empty key', () => {
+      render(
+        <TextPropertyField
+          resource={mockResource}
+          propertyKey="label"
+          propertyValue="{{t()}}"
+          onChange={mockOnChange}
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // When the pattern {{t()}} has no key inside, resolved value should be empty
+      // so the resolved value box should not render
+      expect(screen.getByRole('textbox')).toHaveValue('{{t()}}');
+      // The resolved value box should not be displayed since there's no resolved value
+      expect(screen.queryByText('flows:core.elements.textPropertyField.resolvedValue')).not.toBeInTheDocument();
+    });
+
+    it('should not render i18n card when isI18nCardOpen is false (default)', () => {
+      render(
+        <TextPropertyField
+          resource={mockResource}
+          propertyKey="label"
+          propertyValue="{{t(common.test)}}"
+          onChange={mockOnChange}
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // The I18nConfigurationCard should not be rendered as isI18nCardOpen is false by default
+      // and there's no UI element to toggle it (toggle is commented out)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('I18n Pattern Edge Cases', () => {
+    it('should handle i18n pattern with special characters in key', () => {
+      render(
+        <TextPropertyField
+          resource={mockResource}
+          propertyKey="message"
+          propertyValue="{{t(auth.login.error_message)}}"
+          onChange={mockOnChange}
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      expect(screen.getByRole('textbox')).toHaveValue('{{t(auth.login.error_message)}}');
+      expect(screen.getByText('auth.login.error_message')).toBeInTheDocument();
+    });
+
+    it('should handle i18n pattern with deeply nested key', () => {
+      render(
+        <TextPropertyField
+          resource={mockResource}
+          propertyKey="title"
+          propertyValue="{{t(app.module.feature.component.label)}}"
+          onChange={mockOnChange}
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      expect(screen.getByRole('textbox')).toHaveValue('{{t(app.module.feature.component.label)}}');
+      expect(screen.getByText('app.module.feature.component.label')).toBeInTheDocument();
+    });
+  });
 });
