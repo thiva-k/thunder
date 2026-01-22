@@ -17,7 +17,8 @@
  */
 
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {render, screen, waitFor, act} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import TechnologyGuide, {type TechnologyGuideProps} from '../TechnologyGuide';
 import type {IntegrationGuides} from '../../../models/application-templates';
 import {ApplicationCreateFlowSignInApproach} from '../../../models/application-create-flow';
@@ -301,6 +302,287 @@ describe('TechnologyGuide', () => {
       const allButtons = screen.getAllByRole('button');
       // At least Copy Prompt + 3 code blocks = 4 buttons
       expect(allButtons.length).toBeGreaterThanOrEqual(4);
+    });
+
+    it('should copy prompt content to clipboard when Copy Prompt button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      renderComponent({clientId: 'my-client-id', applicationId: 'my-app-id'});
+
+      const copyButton = screen.getByRole('button', {name: /copy prompt/i});
+      await user.click(copyButton);
+
+      expect(mockWriteText).toHaveBeenCalledWith(expect.stringContaining('my-client-id'));
+      expect(mockWriteText).toHaveBeenCalledWith(expect.stringContaining('my-app-id'));
+    });
+
+    it('should show "Copied!" tooltip after copying prompt', async () => {
+      vi.useFakeTimers({shouldAdvanceTime: true});
+      try {
+        const user = userEvent.setup({advanceTimers: vi.advanceTimersByTime});
+        const mockWriteText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', {
+          ...navigator,
+          clipboard: {
+            writeText: mockWriteText,
+          },
+        });
+
+        renderComponent();
+
+        const copyButton = screen.getByRole('button', {name: /copy prompt/i});
+        await user.click(copyButton);
+
+        await waitFor(() => {
+          expect(screen.getByText('Copied!')).toBeInTheDocument();
+        });
+
+        // Advance timer to hide the tooltip
+        await act(async () => {
+          vi.advanceTimersByTime(2500);
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should copy code to clipboard when code copy button is clicked', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      renderComponent();
+
+      // Get the first code copy button using data-testid
+      const codeCopyButton = screen.getByTestId('copy-code-button-1');
+
+      await user.click(codeCopyButton);
+
+      expect(mockWriteText).toHaveBeenCalled();
+    });
+
+    it('should show "Copied!" message after copying code', async () => {
+      vi.useFakeTimers({shouldAdvanceTime: true});
+      try {
+        const user = userEvent.setup({advanceTimers: vi.advanceTimersByTime});
+        const mockWriteText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', {
+          ...navigator,
+          clipboard: {
+            writeText: mockWriteText,
+          },
+        });
+
+        renderComponent();
+
+        // Get the first code copy button using data-testid
+        const codeCopyButton = screen.getByTestId('copy-code-button-1');
+        await user.click(codeCopyButton);
+
+        await waitFor(() => {
+          expect(screen.getByText('Copied!')).toBeInTheDocument();
+        });
+
+        // Advance timer to hide the message
+        await act(async () => {
+          vi.advanceTimersByTime(2500);
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('should use fallback copy method when clipboard API fails', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockRejectedValue(new Error('Clipboard not supported'));
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      // Mock execCommand on document object with try-finally for cleanup
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalExecCommand = document.execCommand;
+      const mockExecCommand = vi.fn().mockReturnValue(true);
+      document.execCommand = mockExecCommand;
+
+      try {
+        renderComponent();
+
+        const copyButton = screen.getByRole('button', {name: /copy prompt/i});
+        await user.click(copyButton);
+
+        // The clipboard API should have been attempted
+        expect(mockWriteText).toHaveBeenCalled();
+
+        // Wait for fallback to execute
+        await waitFor(() => {
+          expect(mockExecCommand).toHaveBeenCalledWith('copy');
+        });
+      } finally {
+        document.execCommand = originalExecCommand;
+      }
+    });
+
+    it('should not copy when llm_prompt has no content', async () => {
+      const mockWriteText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      const guidesWithoutContent: IntegrationGuides = {
+        inbuilt: {
+          llm_prompt: {
+            id: 'no-content',
+            title: 'No Content Prompt',
+            description: 'This prompt has no content',
+            type: 'llm',
+            icon: 'sparkles',
+          },
+          manual_steps: [],
+        },
+      };
+
+      renderComponent({guides: guidesWithoutContent});
+
+      // Copy button should not be present
+      expect(screen.queryByRole('button', {name: /copy prompt/i})).not.toBeInTheDocument();
+    });
+
+    it('should replace placeholders when copying code', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockResolvedValue(undefined);
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      renderComponent({clientId: 'test-client-123'});
+
+      // Click the button for the .env code block (step 3 which has {{clientId}})
+      const codeCopyButton = screen.getByTestId('copy-code-button-3');
+      await user.click(codeCopyButton);
+
+      expect(mockWriteText).toHaveBeenCalledWith('CLIENT_ID=test-client-123');
+    });
+
+    it('should use fallback copy method for code when clipboard API fails', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockRejectedValue(new Error('Clipboard not supported'));
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      // Mock execCommand on document object with try-finally for cleanup
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalExecCommand = document.execCommand;
+      const mockExecCommand = vi.fn().mockReturnValue(true);
+      document.execCommand = mockExecCommand;
+
+      try {
+        renderComponent();
+
+        // Get the first code copy button using data-testid
+        const codeCopyButton = screen.getByTestId('copy-code-button-1');
+        await user.click(codeCopyButton);
+
+        // The clipboard API should have been attempted
+        expect(mockWriteText).toHaveBeenCalled();
+
+        // Wait for fallback to execute
+        await waitFor(() => {
+          expect(mockExecCommand).toHaveBeenCalledWith('copy');
+        });
+      } finally {
+        document.execCommand = originalExecCommand;
+      }
+    });
+
+    it('should handle failed fallback execCommand for prompt', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockRejectedValue(new Error('Clipboard not supported'));
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      // Mock execCommand to fail with try-finally for cleanup
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalExecCommand = document.execCommand;
+      document.execCommand = vi.fn().mockImplementation(() => {
+        throw new Error('execCommand failed');
+      });
+
+      try {
+        renderComponent();
+
+        const copyButton = screen.getByRole('button', {name: /copy prompt/i});
+        await user.click(copyButton);
+
+        // Should not throw, error is silently caught
+        expect(mockWriteText).toHaveBeenCalled();
+      } finally {
+        document.execCommand = originalExecCommand;
+      }
+    });
+
+    it('should handle failed fallback execCommand for code', async () => {
+      const user = userEvent.setup();
+      const mockWriteText = vi.fn().mockRejectedValue(new Error('Clipboard not supported'));
+
+      vi.stubGlobal('navigator', {
+        ...navigator,
+        clipboard: {
+          writeText: mockWriteText,
+        },
+      });
+
+      // Mock execCommand to fail with try-finally for cleanup
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      const originalExecCommand = document.execCommand;
+      document.execCommand = vi.fn().mockImplementation(() => {
+        throw new Error('execCommand failed');
+      });
+
+      try {
+        renderComponent();
+
+        // Get the first code copy button using data-testid
+        const codeCopyButton = screen.getByTestId('copy-code-button-1');
+        await user.click(codeCopyButton);
+
+        // Should not throw, error is silently caught
+        expect(mockWriteText).toHaveBeenCalled();
+      } finally {
+        document.execCommand = originalExecCommand;
+      }
     });
   });
 

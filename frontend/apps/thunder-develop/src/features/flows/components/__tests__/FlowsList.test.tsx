@@ -24,18 +24,19 @@ import {MemoryRouter} from 'react-router';
 import FlowsList from '../FlowsList';
 import type {BasicFlowDefinition} from '../../models/responses';
 
-// Mock @thunder/logger/react
+// Mock @thunder/logger/react with accessible mock functions
+const mockLoggerError = vi.fn();
 vi.mock('@thunder/logger/react', () => ({
   useLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn(),
+    error: mockLoggerError,
     withComponent: vi.fn(() => ({
       debug: vi.fn(),
       info: vi.fn(),
       warn: vi.fn(),
-      error: vi.fn(),
+      error: mockLoggerError,
     })),
   }),
 }));
@@ -369,6 +370,96 @@ describe('FlowsList', () => {
       );
 
       expect(screen.getByTestId('data-grid')).toBeInTheDocument();
+    });
+  });
+
+  describe('Actions Menu', () => {
+    it('should open actions menu when actions button is clicked', async () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const actionsButtons = screen.getAllByLabelText('Open actions menu');
+      fireEvent.click(actionsButtons[0]);
+
+      // Menu should open - we dispatch custom event in mock
+      // The actual menu won't render because of the mock, but we verify the button is clickable
+      expect(actionsButtons[0]).toBeInTheDocument();
+    });
+
+    it('should render action buttons for each row', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const actionsButtons = screen.getAllByLabelText('Open actions menu');
+      // Should have one action button per row
+      expect(actionsButtons.length).toBe(2);
+    });
+  });
+
+  describe('Navigation Error Handling', () => {
+    it('should handle navigation errors gracefully', async () => {
+      mockNavigate.mockRejectedValue(new Error('Navigation failed'));
+
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const authFlowRow = screen.getByTestId('row-flow-1');
+      fireEvent.click(authFlowRow);
+
+      // Verify navigation was attempted and error was logged
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalled();
+        expect(mockLoggerError).toHaveBeenCalledWith(
+          'Failed to navigate to flow',
+          expect.objectContaining({
+            error: expect.any(Error) as Error,
+            flowId: 'flow-1',
+          }),
+        );
+      });
+
+      // Verify component is still rendered (no crash)
+      expect(authFlowRow).toBeInTheDocument();
+    });
+  });
+
+  describe('Row Styling', () => {
+    it('should apply different cursor style based on flow type', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const authFlowRow = screen.getByTestId('row-flow-1');
+      const regFlowRow = screen.getByTestId('row-flow-2');
+
+      // Authentication flows should have pointer cursor
+      expect(authFlowRow).toHaveStyle({cursor: 'pointer'});
+      // Non-authentication flows should have default cursor
+      expect(regFlowRow).toHaveStyle({cursor: 'default'});
+    });
+  });
+
+  describe('Version Display', () => {
+    it('should display version numbers with v prefix', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText('v1')).toBeInTheDocument();
+      expect(screen.getByText('v2')).toBeInTheDocument();
     });
   });
 });

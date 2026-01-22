@@ -232,6 +232,7 @@ export default function TechnologyGuide({
             {codeWithReplacements}
           </SyntaxHighlighter>
           <IconButton
+            data-testid={`copy-code-button-${step.step}`}
             size="small"
             onClick={() => {
               handleCopyCode(step.code!.content, step.step).catch(() => {
@@ -313,6 +314,7 @@ export default function TechnologyGuide({
               {llmPrompt.content && (
                 <Tooltip title={copiedPrompt ? t('applications:clientSecret.copied') : ''} open={copiedPrompt} arrow>
                   <Button
+                    data-testid="copy-prompt-button"
                     onClick={(e) => {
                       handleCopyPrompt(e).catch(() => {
                         /* Error already handled */
