@@ -154,6 +154,11 @@ $reactSdkPackageJson = Get-Content "samples/apps/react-sdk-sample/package.json" 
 $REACT_SDK_SAMPLE_APP_VERSION = $reactSdkPackageJson.version
 $REACT_SDK_SAMPLE_APP_FOLDER = "sample-app-react-sdk-${REACT_SDK_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
+# React API-based Sample
+$reactApiPackageJson = Get-Content "samples/apps/react-api-based-sample/package.json" -Raw | ConvertFrom-Json
+$REACT_API_SAMPLE_APP_VERSION = $reactApiPackageJson.version
+$REACT_API_SAMPLE_APP_FOLDER = "sample-app-react-api-based-${REACT_API_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
+
 # Directories
 $TARGET_DIR = "target"
 $OUTPUT_DIR = Join-Path $TARGET_DIR "out"
@@ -176,6 +181,7 @@ $SAMPLE_BASE_DIR = "samples"
 $VANILLA_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-vanilla-sample"
 $VANILLA_SAMPLE_APP_SERVER_DIR = Join-Path $VANILLA_SAMPLE_APP_DIR "server"
 $REACT_SDK_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-sdk-sample"
+$REACT_API_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-api-based-sample"
 
 # ============================================================================
 # Read Configuration from deployment.yaml
@@ -313,6 +319,10 @@ function Clean {
     Write-Host "Removing certificates in $REACT_SDK_SAMPLE_APP_DIR"
     Remove-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
     Remove-Item -Path (Join-Path $REACT_SDK_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
+
+    Write-Host "Removing certificates in $REACT_API_SAMPLE_APP_DIR"
+    Remove-Item -Path (Join-Path $REACT_API_SAMPLE_APP_DIR "server.cert") -Force -ErrorAction SilentlyContinue
+    Remove-Item -Path (Join-Path $REACT_API_SAMPLE_APP_DIR "server.key") -Force -ErrorAction SilentlyContinue
     Write-Host "================================================================"
 }
 
@@ -679,6 +689,33 @@ function Build-Sample-App {
     }
 
     Write-Host "✅ React SDK sample app built successfully."
+
+    # Build React API-based sample
+    Write-Host "=== Building React API-based sample app ==="
+
+    # Ensure certificates exist for React API-based sample
+    Write-Host "=== Ensuring React API-based sample app certificates exist ==="
+    Ensure-Certificates -cert_dir $REACT_API_SAMPLE_APP_DIR
+
+    Push-Location $REACT_API_SAMPLE_APP_DIR
+    try {
+        Write-Host "Installing React API-based sample dependencies..."
+        & npm ci
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm ci failed with exit code $LASTEXITCODE"
+        }
+
+        Write-Host "Building React API-based sample app..."
+        & npm run build
+        if ($LASTEXITCODE -ne 0) {
+            throw "npm run build failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+
+    Write-Host "✅ React API-based sample app built successfully."
     Write-Host "================================================================"
 }
 
@@ -693,6 +730,10 @@ function Package-Sample-App {
     # Package React SDK sample
     Write-Host "=== Packaging React SDK sample app ==="
     Package-React-SDK-Sample
+
+    # Package React API-based sample
+    Write-Host "=== Packaging React API-based sample app ==="
+    Package-React-API-Based-Sample
 
     Write-Host "================================================================"
 }
@@ -728,9 +769,9 @@ function Package-Vanilla-Sample {
     try {
         New-Item -Path "executables" -ItemType Directory -Force | Out-Null
 
-        & npx pkg . -t $SAMPLE_DIST_NODE_VERSION-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH -o executables/$VANILLA_SAMPLE_APP_SERVER_BINARY_NAME-$SAMPLE_DIST_OS-$SAMPLE_DIST_ARCH
+        & npm run build:sea
         if ($LASTEXITCODE -ne 0) {
-            throw "npx pkg failed with exit code $LASTEXITCODE"
+            throw "npm run build:sea failed with exit code $LASTEXITCODE"
         }
     }
     finally {
@@ -820,6 +861,54 @@ function Package-React-SDK-Sample {
     Remove-Item -Path $react_sdk_sample_app_folder_t -Recurse -Force
 
     Write-Host "✅ React SDK sample app packaged successfully as $zipFile"
+}
+
+function Package-React-API-Based-Sample {
+    $react_api_sample_app_folder_t = Join-Path $DIST_DIR $REACT_API_SAMPLE_APP_FOLDER
+    New-Item -Path $react_api_sample_app_folder_t -ItemType Directory -Force | Out-Null
+
+    # Copy the built React app (dist folder)
+    if (Test-Path (Join-Path $REACT_API_SAMPLE_APP_DIR "dist")) {
+        Write-Host "Copying React API-based sample build output..."
+        Copy-Item -Path (Join-Path $REACT_API_SAMPLE_APP_DIR "dist") -Destination $react_api_sample_app_folder_t -Recurse -Force
+    }
+    else {
+        Write-Host "Warning: React API-based sample build output not found at $((Join-Path $REACT_API_SAMPLE_APP_DIR 'dist'))"
+        throw "React API-based sample build output not found"
+    }
+
+    # Copy README if it exists
+    if (Test-Path (Join-Path $REACT_API_SAMPLE_APP_DIR "README.md")) {
+        Copy-Item -Path (Join-Path $REACT_API_SAMPLE_APP_DIR "README.md") -Destination $react_api_sample_app_folder_t -Force
+    }
+
+    # Ensure the certificates exist in the sample app dist directory
+    Write-Host "=== Ensuring certificates exist in the React API-based sample distribution ==="
+    Ensure-Certificates -cert_dir (Join-Path $react_api_sample_app_folder_t "dist")
+
+    # Copy the appropriate startup script based on the target OS
+    if ($SAMPLE_DIST_OS -eq "win") {
+        Write-Host "Including Windows start script (start.ps1)..."
+        Copy-Item -Path (Join-Path $REACT_API_SAMPLE_APP_DIR "start.ps1") -Destination $react_api_sample_app_folder_t -Force
+    }
+    else {
+        Write-Host "Including Unix start script (start.sh)..."
+        Copy-Item -Path (Join-Path $REACT_API_SAMPLE_APP_DIR "start.sh") -Destination $react_api_sample_app_folder_t -Force
+    }
+
+    Write-Host "Creating React API-based sample zip file..."
+    $distAbs = (Resolve-Path -Path $DIST_DIR).Path
+    $zipFile = [System.IO.Path]::Combine($distAbs, "$REACT_API_SAMPLE_APP_FOLDER.zip")
+    if (Test-Path $zipFile) {
+        Remove-Item $zipFile -Force
+    }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::CreateFromDirectory($react_api_sample_app_folder_t, $zipFile)
+
+    Remove-Item -Path $react_api_sample_app_folder_t -Recurse -Force
+
+    Write-Host "✅ React API-based sample app packaged successfully as $zipFile"
 }
 
 function Test-Unit {
