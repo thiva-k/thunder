@@ -18,6 +18,7 @@
 
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {render, screen, fireEvent} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {ElementTypes} from '@/features/flows/models/elements';
 import type {Resource} from '@/features/flows/models/resources';
 import FieldExtendedProperties from '../FieldExtendedProperties';
@@ -29,11 +30,14 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+const mockHasResourceFieldNotification = vi.fn().mockReturnValue(false);
+const mockGetResourceFieldNotification = vi.fn().mockReturnValue('');
+
 vi.mock('@/features/flows/hooks/useValidationStatus', () => ({
   default: () => ({
     selectedNotification: {
-      hasResourceFieldNotification: vi.fn().mockReturnValue(false),
-      getResourceFieldNotification: vi.fn().mockReturnValue(''),
+      hasResourceFieldNotification: mockHasResourceFieldNotification,
+      getResourceFieldNotification: mockGetResourceFieldNotification,
     },
   }),
 }));
@@ -131,6 +135,78 @@ describe('FieldExtendedProperties', () => {
 
       input = screen.getByRole('combobox');
       expect(input).toHaveValue('username');
+    });
+
+    it('should sync to empty when resource ref changes to undefined (same id)', () => {
+      const resourceWithRef = createMockResource(ElementTypes.TextInput, {
+        id: 'field-1',
+        ref: 'email',
+      } as Partial<Resource>);
+      const resourceWithoutRef = createMockResource(ElementTypes.TextInput, {id: 'field-1'} as Partial<Resource>);
+
+      const {rerender} = render(<FieldExtendedProperties resource={resourceWithRef} onChange={mockOnChange} />);
+
+      let input = screen.getByRole('combobox');
+      expect(input).toHaveValue('email');
+
+      rerender(<FieldExtendedProperties resource={resourceWithoutRef} onChange={mockOnChange} />);
+
+      input = screen.getByRole('combobox');
+      expect(input).toHaveValue('email');
+    });
+  });
+
+  describe('onChange Handling', () => {
+    it('should call onChange when selecting an attribute from dropdown', async () => {
+      const user = userEvent.setup();
+      const resource = createMockResource(ElementTypes.TextInput);
+
+      render(<FieldExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      const input = screen.getByRole('combobox');
+      await user.click(input);
+
+      // Wait for dropdown to open and select an option
+      const option = await screen.findByRole('option', {name: 'email'});
+      await user.click(option);
+
+      expect(mockOnChange).toHaveBeenCalledWith('ref', 'email', resource);
+    });
+
+    it('should call onChange with empty string when clearing selection', () => {
+      const resource = createMockResource(ElementTypes.TextInput, {ref: 'email'} as Partial<Resource>);
+
+      render(<FieldExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      // Clear the input by clicking the clear button
+      const clearButton = screen.getByTitle('Clear');
+      fireEvent.click(clearButton);
+
+      expect(mockOnChange).toHaveBeenCalledWith('ref', '', resource);
+    });
+
+    it('should call onChange when typing a custom value (free-solo)', () => {
+      const resource = createMockResource(ElementTypes.TextInput);
+
+      render(<FieldExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      const input = screen.getByRole('combobox');
+      fireEvent.change(input, {target: {value: 'customAttribute'}});
+
+      expect(mockOnChange).toHaveBeenCalledWith('ref', 'customAttribute', resource);
+    });
+  });
+
+  describe('Error Message Handling', () => {
+    it('should display error message when validation error exists', () => {
+      mockHasResourceFieldNotification.mockReturnValue(true);
+      mockGetResourceFieldNotification.mockReturnValue('This field is required');
+
+      const resource = createMockResource(ElementTypes.TextInput);
+
+      render(<FieldExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      expect(screen.getByText('This field is required')).toBeInTheDocument();
     });
   });
 });

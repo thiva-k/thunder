@@ -366,6 +366,95 @@ describe('reactFlowTransformer', () => {
 
         expect(result.nodes[0].meta?.components).toHaveLength(1);
       });
+
+      it('should recursively extract inputs from deeply nested components without action', () => {
+        // This test covers the recursive processing in extractInputs
+        const components: Element[] = [
+          {
+            id: 'outer-container',
+            type: 'BLOCK',
+            category: ElementCategories.Block,
+            components: [
+              {
+                id: 'inner-container',
+                type: 'BLOCK',
+                category: ElementCategories.Block,
+                components: [
+                  {
+                    id: 'deep-input',
+                    type: ElementTypes.TextInput,
+                    category: ElementCategories.Field,
+                    name: 'deepField',
+                  } as unknown as Element,
+                ],
+              } as unknown as Element,
+            ],
+          } as unknown as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components}),
+            createNode(
+              'exec-1',
+              StepTypes.Execution,
+              {x: 100, y: 0},
+              {
+                action: {executor: {name: 'TestExecutor'}},
+              },
+            ),
+          ],
+          edges: [createEdge('edge-1', 'view-1', 'exec-1')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        // The execution node should have collected the deeply nested input
+        const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
+        expect(execNode?.executor?.inputs).toHaveLength(1);
+        expect(execNode?.executor?.inputs?.[0].identifier).toBe('deepField');
+      });
+
+      it('should use action.next as fallback when no edge exists for action', () => {
+        const components: Element[] = [
+          {
+            id: 'button-1',
+            type: ElementTypes.Action,
+            category: ElementCategories.Action,
+            action: {next: 'fallback-target'},
+          } as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
+          edges: [], // No edge for this button, so action.next should be used
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        expect(result.nodes[0].prompts?.[0].action?.nextNode).toBe('fallback-target');
+      });
+
+      it('should handle RESEND element type in extractPrompts', () => {
+        const components: Element[] = [
+          {
+            id: 'resend-1',
+            type: ElementTypes.Resend,
+            category: ElementCategories.Action,
+            action: {next: 'resend-target'},
+          } as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
+          edges: [],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        expect(result.nodes[0].prompts?.[0].action?.ref).toBe('resend-1');
+        expect(result.nodes[0].prompts?.[0].action?.nextNode).toBe('resend-target');
+      });
     });
 
     describe('Edge Connections', () => {
@@ -430,6 +519,76 @@ describe('reactFlowTransformer', () => {
 
         const ruleNode = result.nodes.find((n) => n.type === 'DECISION');
         expect(ruleNode?.onSuccess).toBe('view-1');
+      });
+
+      it('should include properties for DECISION nodes', () => {
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode(
+              'rule-1',
+              StepTypes.Rule,
+              {x: 0, y: 0},
+              {
+                properties: {
+                  condition: 'user.role === "admin"',
+                  operator: 'equals',
+                },
+              },
+            ),
+          ],
+          edges: [],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const ruleNode = result.nodes.find((n) => n.type === 'DECISION');
+        expect(ruleNode?.properties).toEqual({
+          condition: 'user.role === "admin"',
+          operator: 'equals',
+        });
+      });
+
+      it('should use first edge target when no default edge exists (all edges have sourceHandle)', () => {
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode('start-1', StaticStepTypes.Start),
+            createNode('view-1', StepTypes.View),
+            createNode('view-2', StepTypes.View),
+          ],
+          // Both edges have sourceHandle, so no "default" edge exists
+          edges: [
+            createEdge('edge-1', 'start-1', 'view-1', 'handle-a'),
+            createEdge('edge-2', 'start-1', 'view-2', 'handle-b'),
+          ],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const startNode = result.nodes.find((n) => n.type === 'START');
+        // Should use the first edge's target when no default edge found
+        expect(startNode?.onSuccess).toBe('view-1');
+      });
+
+      it('should fall back to action.next for START node when no edges exist', () => {
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode(
+              'start-1',
+              StaticStepTypes.Start,
+              {x: 0, y: 0},
+              {
+                action: {next: 'fallback-view'},
+              },
+            ),
+            createNode('fallback-view', StepTypes.View),
+          ],
+          edges: [], // No edges
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const startNode = result.nodes.find((n) => n.type === 'START');
+        expect(startNode?.onSuccess).toBe('fallback-view');
       });
 
       it('should prefer edges over action.next for button connections', () => {
@@ -581,6 +740,141 @@ describe('reactFlowTransformer', () => {
         // Inputs are now inside executor
         expect(execNode?.executor?.inputs?.[0].identifier).toBe('code');
       });
+
+      it('should collect inputs from PROMPT node connected via START node', () => {
+        // Scenario: START -> PROMPT -> EXECUTION
+        // The EXECUTION node should collect inputs from the PROMPT node
+        const promptComponents: Element[] = [
+          {
+            id: 'input-1',
+            type: ElementTypes.TextInput,
+            category: ElementCategories.Field,
+            name: 'username',
+          } as unknown as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode('start-1', StaticStepTypes.Start),
+            createNode('view-1', StepTypes.View, {x: 100, y: 0}, {components: promptComponents}),
+            createNode(
+              'exec-1',
+              StepTypes.Execution,
+              {x: 200, y: 0},
+              {
+                action: {executor: {name: 'TestExecutor'}},
+              },
+            ),
+          ],
+          edges: [
+            createEdge('edge-1', 'start-1', 'view-1'),
+            createEdge('edge-2', 'view-1', 'exec-1'),
+          ],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
+        expect(execNode?.executor?.inputs).toHaveLength(1);
+        expect(execNode?.executor?.inputs?.[0].identifier).toBe('username');
+      });
+
+      it('should find PROMPT node through START node indirection', () => {
+        // Scenario: START connects to PROMPT, and EXECUTION connects from START
+        // This tests the findPrecedingPromptNode logic for START -> PROMPT path
+        const promptComponents: Element[] = [
+          {
+            id: 'email-input',
+            type: ElementTypes.EmailInput,
+            category: ElementCategories.Field,
+            name: 'email',
+          } as unknown as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode('start-1', StaticStepTypes.Start),
+            createNode('view-1', StepTypes.View, {x: 100, y: 0}, {components: promptComponents}),
+            createNode(
+              'exec-1',
+              StepTypes.Execution,
+              {x: 200, y: 0},
+              {
+                action: {executor: {name: 'EmailValidator'}},
+              },
+            ),
+          ],
+          // START -> PROMPT and START -> EXECUTION (execution coming from start)
+          edges: [
+            createEdge('edge-1', 'start-1', 'view-1'),
+            createEdge('edge-2', 'start-1', 'exec-1'),
+          ],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
+        // Should find the PROMPT node via the START node path
+        expect(execNode?.executor?.inputs).toHaveLength(1);
+        expect(execNode?.executor?.inputs?.[0].identifier).toBe('email');
+      });
+
+      it('should not add inputs when execution node has no executor name', () => {
+        const promptComponents: Element[] = [
+          {
+            id: 'input-1',
+            type: ElementTypes.TextInput,
+            category: ElementCategories.Field,
+            name: 'username',
+          } as unknown as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components: promptComponents}),
+            createNode(
+              'exec-1',
+              StepTypes.Execution,
+              {x: 100, y: 0},
+              {
+                // No executor defined, or executor without name
+                action: {},
+              },
+            ),
+          ],
+          edges: [createEdge('edge-1', 'view-1', 'exec-1')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
+        // Should not have inputs since there's no executor name
+        expect(execNode?.executor).toBeUndefined();
+      });
+
+      it('should not add inputs when preceding PROMPT node has no components', () => {
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [
+            createNode('view-1', StepTypes.View, {x: 0, y: 0}, {}), // No components
+            createNode(
+              'exec-1',
+              StepTypes.Execution,
+              {x: 100, y: 0},
+              {
+                action: {executor: {name: 'TestExecutor'}},
+              },
+            ),
+          ],
+          edges: [createEdge('edge-1', 'view-1', 'exec-1')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        const execNode = result.nodes.find((n) => n.type === 'TASK_EXECUTION');
+        // Should have executor but no inputs
+        expect(execNode?.executor?.name).toBe('TestExecutor');
+        expect(execNode?.executor?.inputs).toBeUndefined();
+      });
     });
 
     describe('Event Type Derivation', () => {
@@ -682,6 +976,75 @@ describe('reactFlowTransformer', () => {
         const result = transformReactFlow(canvasData);
 
         expect(result.nodes[0].meta?.components?.[0].ref).toBe('input-1');
+      });
+
+      it('should use ref property as identifier fallback when name is not a string', () => {
+        const components: Element[] = [
+          {
+            id: 'block-1',
+            type: 'BLOCK',
+            category: ElementCategories.Block,
+            components: [
+              {
+                id: 'input-1',
+                type: ElementTypes.TextInput,
+                category: ElementCategories.Field,
+                ref: 'usernameRef',
+                // name is not defined
+              } as unknown as Element,
+              {
+                id: 'submit-btn',
+                type: ElementTypes.Action,
+                category: ElementCategories.Action,
+                action: {next: 'next-node'},
+              } as Element,
+            ],
+          } as unknown as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'submit-btn_NEXT')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        // The input should use ref as the identifier since name is not defined
+        expect(result.nodes[0].prompts?.[0].inputs?.[0].identifier).toBe('usernameRef');
+      });
+
+      it('should fall back to component id when both name and ref are not strings', () => {
+        const components: Element[] = [
+          {
+            id: 'block-1',
+            type: 'BLOCK',
+            category: ElementCategories.Block,
+            components: [
+              {
+                id: 'input-fallback-id',
+                type: ElementTypes.TextInput,
+                category: ElementCategories.Field,
+                // Neither name nor ref are defined
+              } as unknown as Element,
+              {
+                id: 'submit-btn',
+                type: ElementTypes.Action,
+                category: ElementCategories.Action,
+                action: {next: 'next-node'},
+              } as Element,
+            ],
+          } as unknown as Element,
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'submit-btn_NEXT')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        // The input should use id as the identifier fallback
+        expect(result.nodes[0].prompts?.[0].inputs?.[0].identifier).toBe('input-fallback-id');
       });
 
       it('should handle all input element types', () => {

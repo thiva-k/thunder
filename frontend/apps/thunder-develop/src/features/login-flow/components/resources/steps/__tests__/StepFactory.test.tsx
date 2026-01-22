@@ -295,4 +295,188 @@ describe('StepFactory', () => {
       expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
     });
   });
+
+  describe('Memo Comparison', () => {
+    it('should not re-render when props are the same', () => {
+      const resources = [createMockStep()];
+      const data = {test: 'value'};
+      const allResources: Resources = {
+        elements: [],
+        steps: [],
+        widgets: [],
+        templates: [],
+        executors: [],
+      };
+      const onAddElement = vi.fn();
+      const onAddElementToForm = vi.fn();
+
+      const props = {
+        ...createNodeProps({data}),
+        resourceId: 'resource-1',
+        resources,
+        allResources,
+        onAddElement,
+        onAddElementToForm,
+      };
+
+      const {rerender} = render(<StepFactory {...props} />);
+      expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
+
+      rerender(<StepFactory {...props} />);
+      expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
+    });
+
+    it('should re-render when id changes', () => {
+      const resources = [createMockStep()];
+      const props1 = {
+        ...createNodeProps({id: 'node-1'}),
+        resourceId: 'resource-1',
+        resources,
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
+
+      const props2 = {
+        ...props1,
+        id: 'node-2',
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
+    });
+
+    it('should re-render when data changes', () => {
+      const resources = [createMockStep()];
+      const props1 = {
+        ...createNodeProps({data: {value: 1}}),
+        resourceId: 'resource-1',
+        resources,
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
+
+      const props2 = {
+        ...props1,
+        data: {value: 2},
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toBeInTheDocument();
+    });
+
+    it('should re-render when resources change', () => {
+      const props1 = {
+        ...createNodeProps(),
+        resourceId: 'resource-1',
+        resources: [createMockStep()],
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-resources-count', '1');
+
+      const props2 = {
+        ...props1,
+        resources: [createMockStep(), createMockStep({id: 'step-2'})],
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-resources-count', '2');
+    });
+
+    it('should re-render when allResources changes', () => {
+      const props1 = {
+        ...createNodeProps(),
+        resourceId: 'resource-1',
+        resources: [createMockStep()],
+        allResources: undefined,
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-all-resources', 'false');
+
+      const props2 = {
+        ...props1,
+        allResources: {
+          elements: [],
+          steps: [],
+          widgets: [],
+          templates: [],
+          executors: [],
+        },
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-all-resources', 'true');
+    });
+
+    it('should re-render when onAddElement changes', () => {
+      const onAddElement1 = vi.fn();
+      const props1 = {
+        ...createNodeProps(),
+        resourceId: 'resource-1',
+        resources: [createMockStep()],
+        onAddElement: onAddElement1,
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element', 'true');
+
+      const onAddElement2 = vi.fn();
+      const props2 = {
+        ...props1,
+        onAddElement: onAddElement2,
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element', 'true');
+    });
+
+    it('should re-render when onAddElementToForm changes', () => {
+      const onAddElementToForm1 = vi.fn();
+      const props1 = {
+        ...createNodeProps(),
+        resourceId: 'resource-1',
+        resources: [createMockStep()],
+        onAddElementToForm: onAddElementToForm1,
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element-to-form', 'true');
+
+      const onAddElementToForm2 = vi.fn();
+      const props2 = {
+        ...props1,
+        onAddElementToForm: onAddElementToForm2,
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element-to-form', 'true');
+    });
+
+    it('should handle transition from undefined to defined callbacks', () => {
+      const props1 = {
+        ...createNodeProps(),
+        resourceId: 'resource-1',
+        resources: [createMockStep()],
+        onAddElement: undefined,
+        onAddElementToForm: undefined,
+      };
+
+      const {rerender} = render(<StepFactory {...props1} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element', 'false');
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element-to-form', 'false');
+
+      const props2 = {
+        ...props1,
+        onAddElement: vi.fn(),
+        onAddElementToForm: vi.fn(),
+      };
+
+      rerender(<StepFactory {...props2} />);
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element', 'true');
+      expect(screen.getByTestId('common-step-factory')).toHaveAttribute('data-has-on-add-element-to-form', 'true');
+    });
+  });
 });

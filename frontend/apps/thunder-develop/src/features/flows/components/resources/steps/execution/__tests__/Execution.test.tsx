@@ -22,10 +22,12 @@ import Execution from '../Execution';
 import type {CommonStepFactoryPropsInterface} from '../../CommonStepFactory';
 
 // Mock @xyflow/react
-const mockUseNodeId = vi.fn(() => 'execution-node-id');
+const mockUseNodeId = vi.fn(() => 'execution-node-id') as ReturnType<typeof vi.fn> & {
+  mockReturnValue: (value: string | null) => void;
+};
 
 vi.mock('@xyflow/react', () => ({
-  useNodeId: () => mockUseNodeId(),
+  useNodeId: (): string | null => mockUseNodeId() as string | null,
 }));
 
 // Mock useFlowBuilderCore
@@ -49,28 +51,35 @@ vi.mock('../../../validation-panel/ValidationErrorBoundary', () => ({
 }));
 
 // Mock View component
+let capturedOnActionPanelDoubleClick: (() => void) | undefined;
+
 vi.mock('../../view/View', () => ({
   default: ({
     heading,
     enableSourceHandle,
     deletable,
     configurable,
+    onActionPanelDoubleClick,
   }: {
     heading: string;
     enableSourceHandle: boolean;
     deletable: boolean;
     configurable: boolean;
-  }) => (
-    <div
-      data-testid="view-component"
-      data-heading={heading}
-      data-enable-source-handle={enableSourceHandle}
-      data-deletable={deletable}
-      data-configurable={configurable}
-    >
-      View Component: {heading}
-    </div>
-  ),
+    onActionPanelDoubleClick?: () => void;
+  }) => {
+    capturedOnActionPanelDoubleClick = onActionPanelDoubleClick;
+    return (
+      <div
+        data-testid="view-component"
+        data-heading={heading}
+        data-enable-source-handle={enableSourceHandle}
+        data-deletable={deletable}
+        data-configurable={configurable}
+      >
+        View Component: {heading}
+      </div>
+    );
+  },
 }));
 
 // Mock ExecutionMinimal component
@@ -83,9 +92,7 @@ vi.mock('../ExecutionMinimal', () => ({
 }));
 
 // Default mock props for Execution component
-const createMockProps = (
-  overrides: Partial<CommonStepFactoryPropsInterface> = {},
-): CommonStepFactoryPropsInterface =>
+const createMockProps = (overrides: Partial<CommonStepFactoryPropsInterface> = {}): CommonStepFactoryPropsInterface =>
   ({
     id: 'execution-node-1',
     resourceId: 'execution-resource-1',
@@ -336,6 +343,100 @@ describe('Execution', () => {
       rerender(<Execution {...props} />);
 
       expect(screen.getByTestId('execution-minimal')).toBeInTheDocument();
+    });
+
+    it('should re-render when data prop changes', () => {
+      const initialProps = createMockProps({
+        data: {
+          action: {executor: {name: 'Initial Executor'}},
+          components: [],
+        },
+      });
+
+      const {rerender} = render(<Execution {...initialProps} />);
+
+      expect(screen.getByTestId('execution-minimal')).toHaveAttribute('data-label', 'Initial Executor');
+
+      const updatedProps = createMockProps({
+        data: {
+          action: {executor: {name: 'Updated Executor'}},
+          components: [],
+        },
+      });
+
+      rerender(<Execution {...updatedProps} />);
+
+      expect(screen.getByTestId('execution-minimal')).toHaveAttribute('data-label', 'Updated Executor');
+    });
+
+    it('should re-render when resources prop changes', () => {
+      const initialProps = createMockProps({
+        data: {
+          action: {executor: {name: 'Test Executor'}},
+          components: [],
+        },
+        resources: [],
+      });
+
+      const {rerender} = render(<Execution {...initialProps} />);
+
+      expect(screen.getByTestId('execution-minimal')).toBeInTheDocument();
+
+      const updatedProps = createMockProps({
+        data: {
+          action: {executor: {name: 'Test Executor'}},
+          components: [],
+        },
+        resources: [{id: 'new-resource', type: 'BUTTON'}] as unknown as CommonStepFactoryPropsInterface['resources'],
+      });
+
+      rerender(<Execution {...updatedProps} />);
+
+      expect(screen.getByTestId('execution-minimal')).toBeInTheDocument();
+    });
+  });
+
+  describe('Action Panel Double Click Handler', () => {
+    it('should call setLastInteractedStepId and setLastInteractedResource when onActionPanelDoubleClick is triggered', () => {
+      render(
+        <Execution
+          {...createMockProps({
+            data: {
+              action: {executor: {name: 'Click Test'}},
+              components: [{id: 'comp-1', type: 'BUTTON'}],
+            },
+          })}
+        />,
+      );
+
+      expect(screen.getByTestId('view-component')).toBeInTheDocument();
+
+      // Trigger the captured double click handler
+      capturedOnActionPanelDoubleClick?.();
+
+      expect(mockSetLastInteractedStepId).toHaveBeenCalledWith('execution-node-id');
+      expect(mockSetLastInteractedResource).toHaveBeenCalled();
+    });
+
+    it('should not call setLastInteractedStepId when stepId is null', () => {
+      mockUseNodeId.mockReturnValue(null);
+
+      render(
+        <Execution
+          {...createMockProps({
+            data: {
+              action: {executor: {name: 'Null StepId Test'}},
+              components: [{id: 'comp-1', type: 'BUTTON'}],
+            },
+          })}
+        />,
+      );
+
+      // Trigger the captured double click handler
+      capturedOnActionPanelDoubleClick?.();
+
+      expect(mockSetLastInteractedStepId).not.toHaveBeenCalled();
+      expect(mockSetLastInteractedResource).toHaveBeenCalled();
     });
   });
 });

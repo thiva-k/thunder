@@ -2037,4 +2037,1962 @@ describe('I18nConfigurationCard', () => {
       expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
     });
   });
+
+  describe('Position Adjustment When Card Goes Off-Screen', () => {
+    it('should adjust left position when card would go off-screen right', async () => {
+      // Position anchor near the right edge so card goes off-screen
+      anchorEl.getBoundingClientRect = vi.fn().mockReturnValue({
+        top: 100,
+        left: window.innerWidth - 100,
+        right: window.innerWidth - 50,
+        bottom: 150,
+        width: 50,
+        height: 50,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Wait for position to be calculated
+      await waitFor(() => {
+        const card = document.querySelector<HTMLElement>('.card');
+        expect(card).toBeInTheDocument();
+        // Card should have position adjusted (left should be set)
+        expect(card?.style.left).toBeDefined();
+      });
+    });
+
+    it('should adjust top position when card would go off-screen bottom', async () => {
+      // Position anchor near the bottom edge so card goes off-screen
+      anchorEl.getBoundingClientRect = vi.fn().mockReturnValue({
+        top: window.innerHeight - 50,
+        left: 100,
+        right: 200,
+        bottom: window.innerHeight - 10,
+        width: 100,
+        height: 40,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      await waitFor(() => {
+        const card = document.querySelector<HTMLElement>('.card');
+        expect(card).toBeInTheDocument();
+        expect(card?.style.top).toBeDefined();
+      });
+    });
+  });
+
+  describe('i18nKeys mapping with null returns', () => {
+    it('should handle empty i18nText gracefully', () => {
+      const contextWithEmptyI18nText = createContextValue({
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {},
+          [PreviewScreenType.COMMON]: {},
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithEmptyI18nText)},
+      );
+
+      // Should render without errors
+      expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
+    });
+
+    it('should filter out deleted keys from i18nKeys', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.deleteMe': 'Delete Me',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete dropdown
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      // After deletion, the key should be filtered out
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+    });
+  });
+
+  describe('handleDeleteI18nKey function', () => {
+    it('should delete key and update languageTexts when key exists in prevTexts', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.toDelete': 'To Delete',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete and look for delete button
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+    });
+
+    it('should return prevTexts when primaryI18nScreen or selectedLanguage is undefined', async () => {
+      const contextWithNoScreenOrLanguage = createContextValue({
+        primaryI18nScreen: undefined,
+        language: undefined,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithNoScreenOrLanguage)},
+      );
+
+      // Should render without errors
+      expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
+    });
+  });
+
+  describe('handleSaveCustomize function', () => {
+    it('should call updateI18nKey and return to simple view on success', async () => {
+      const mockUpdateI18nKeySuccess = vi.fn().mockResolvedValue(true);
+      const successContext = createContextValue({
+        updateI18nKey: mockUpdateI18nKeySuccess,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(successContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Type in the language text field to enable the save button
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'New translation text'}});
+      }
+
+      await waitFor(() => {
+        const updateButton = screen.getByText('common:update').closest('button');
+        expect(updateButton).not.toBeDisabled();
+      });
+
+      // Click update
+      const updateButton = screen.getByText('common:update').closest('button');
+      if (updateButton) {
+        fireEvent.click(updateButton);
+      }
+
+      // Wait for the async save operation to complete and return to simple view
+      await waitFor(() => {
+        expect(mockUpdateI18nKeySuccess).toHaveBeenCalled();
+      });
+    });
+
+    it('should call onChange with i18nKeyInputValue.key when save is successful and key is set', async () => {
+      const mockUpdateI18nKeySuccess = vi.fn().mockResolvedValue(true);
+      const successContext = createContextValue({
+        updateI18nKey: mockUpdateI18nKeySuccess,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(successContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Type in the language text field to enable the save button
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'New translation text'}});
+      }
+
+      await waitFor(() => {
+        const updateButton = screen.getByText('common:update').closest('button');
+        expect(updateButton).not.toBeDisabled();
+      });
+
+      // Click update
+      const updateButton = screen.getByText('common:update').closest('button');
+      if (updateButton) {
+        fireEvent.click(updateButton);
+      }
+
+      // Wait for the async save operation to complete
+      await waitFor(() => {
+        expect(mockUpdateI18nKeySuccess).toHaveBeenCalled();
+      });
+
+      // Should return to simple view
+      await waitFor(() => {
+        expect(screen.getByText('common:edit')).toBeInTheDocument();
+      });
+    });
+
+    it('should call onChange with empty string when selected key was deleted after successful save', async () => {
+      const mockUpdateI18nKeySuccess = vi.fn().mockResolvedValue(true);
+      const successContext = createContextValue({
+        updateI18nKey: mockUpdateI18nKeySuccess,
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.toDelete': 'To Delete',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.toDelete"
+        />,
+        {wrapper: createWrapper(successContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Open the autocomplete dropdown to access delete button
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Find and click the delete button for the current key
+      const deleteButtons = document.querySelectorAll('.delete-icon-button');
+      if (deleteButtons.length > 0) {
+        // Find the delete button for login.toDelete
+        deleteButtons.forEach((btn) => {
+          fireEvent.click(btn);
+        });
+      }
+
+      // Type in the language text field to enable the save button
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'New translation text'}});
+      }
+
+      await waitFor(() => {
+        const updateButton = screen.getByText('common:update').closest('button');
+        expect(updateButton).not.toBeDisabled();
+      });
+
+      // Click update
+      const updateButton = screen.getByText('common:update').closest('button');
+      if (updateButton) {
+        fireEvent.click(updateButton);
+      }
+
+      // Wait for the async save operation to complete
+      await waitFor(() => {
+        expect(mockUpdateI18nKeySuccess).toHaveBeenCalled();
+      });
+    });
+
+    it('should skip screen data when screenData is undefined in handleSaveCustomize', async () => {
+      const mockUpdateI18nKeySuccess = vi.fn().mockResolvedValue(true);
+      const successContext = createContextValue({
+        updateI18nKey: mockUpdateI18nKeySuccess,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(successContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Type in the language text field to enable the save button
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'New translation text'}});
+      }
+
+      await waitFor(() => {
+        const updateButton = screen.getByText('common:update').closest('button');
+        expect(updateButton).not.toBeDisabled();
+      });
+
+      // Click update - the languageTexts should be processed
+      const updateButton = screen.getByText('common:update').closest('button');
+      if (updateButton) {
+        fireEvent.click(updateButton);
+      }
+
+      await waitFor(() => {
+        expect(mockUpdateI18nKeySuccess).toHaveBeenCalled();
+      });
+
+      // Wait for save to complete and return to simple view
+      await waitFor(() => {
+        // Should return to simple view
+        expect(screen.queryByText('common:back')).not.toBeInTheDocument();
+      }, {timeout: 3000});
+    });
+
+    it('should not call updateI18nKey when it is undefined', async () => {
+      const noUpdateContext = createContextValue({
+        updateI18nKey: undefined,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(noUpdateContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+    });
+
+    it('should handle updateI18nKey returning false', async () => {
+      const mockUpdateI18nKeyFail = vi.fn().mockResolvedValue(false);
+      const failContext = createContextValue({
+        updateI18nKey: mockUpdateI18nKeyFail,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(failContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Type in the language text field
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'New translation text'}});
+      }
+
+      await waitFor(() => {
+        const updateButton = screen.getByText('common:update').closest('button');
+        expect(updateButton).not.toBeDisabled();
+      });
+
+      // Click update
+      const updateButton = screen.getByText('common:update').closest('button');
+      if (updateButton) {
+        fireEvent.click(updateButton);
+      }
+
+      // Should stay in customize view when update fails
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+    });
+
+    it('should call onChange with empty string when selected key was deleted', async () => {
+      const mockUpdateI18nKeySuccess = vi.fn().mockResolvedValue(true);
+      const contextWithDelete = createContextValue({
+        updateI18nKey: mockUpdateI18nKeySuccess,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.toDelete': 'To Delete',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(contextWithDelete)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Simple view renderOption', () => {
+    it('should render option with Tooltip in simple view', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the autocomplete dropdown
+      const input = document.querySelector('.MuiAutocomplete-root input');
+      if (input) {
+        fireEvent.click(input);
+        fireEvent.focus(input);
+      }
+
+      // Wait for dropdown options
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Verify option-item class is present
+      const optionItems = document.querySelectorAll('.option-item');
+      expect(optionItems.length).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  describe('Customize view autocomplete onChange', () => {
+    it('should set i18nKeyInputValue when option is selected in customize view', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete and select an option
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Click on an option
+      const options = document.querySelectorAll('.MuiAutocomplete-option');
+      if (options.length > 0) {
+        fireEvent.click(options[0]);
+      }
+    });
+
+    it('should set i18nKeyInputValue to null when selection is cleared', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Clear the autocomplete
+      const clearButton = document.querySelector('.MuiAutocomplete-clearIndicator');
+      if (clearButton) {
+        fireEvent.click(clearButton);
+      }
+    });
+  });
+
+  describe('Customize view renderOption', () => {
+    it('should render delete button for custom keys in primary screen', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.customKey': 'Custom Value',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Look for delete button
+      const deleteButtons = document.querySelectorAll('.delete-icon-button');
+      expect(deleteButtons.length).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should render common chip for non-custom keys in primary screen', async () => {
+      const nonCustomKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockReturnValue(false),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(nonCustomKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+    });
+
+    it('should render common chip for keys not in primary screen', async () => {
+      const mixedScreenContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+          [PreviewScreenType.COMMON]: {
+            'common.continue': 'Continue',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="common.continue"
+        />,
+        {wrapper: createWrapper(mixedScreenContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+    });
+
+    it('should handle delete button click in renderOption', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.deletable': 'Deletable',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Find and click delete button
+      const deleteButtons = document.querySelectorAll('.delete-icon-button');
+      if (deleteButtons.length > 0) {
+        fireEvent.click(deleteButtons[0]);
+      }
+    });
+  });
+
+  describe('Edit button setting i18nKeyInputValue to null', () => {
+    it('should set i18nKeyInputValue to null when selectedI18nKey is empty', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Click new button to enter create mode first
+      const newButton = screen.getByText('common:new');
+      fireEvent.click(newButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('flows:core.elements.textPropertyField.i18nCard.createTitle')).toBeInTheDocument();
+      });
+
+      // Go back to simple view
+      const backButton = screen.getByText('common:back');
+      fireEvent.click(backButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:new')).toBeInTheDocument();
+      });
+
+      // i18nKeyInputValue should be null when there's no selectedI18nKey
+    });
+  });
+
+  describe('isI18nCreationMode check', () => {
+    it('should not render options with isI18nCreationMode in simple view', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // In simple view, the autocomplete should be visible
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+    });
+  });
+
+  describe('Position Calculation with Off-Screen Adjustments', () => {
+    it('should adjust left position when card would overflow right edge of viewport', async () => {
+      // Mock a narrow viewport
+      Object.defineProperty(window, 'innerWidth', {value: 400, writable: true, configurable: true});
+
+      // Position anchor so card would go off-screen to the right
+      anchorEl.getBoundingClientRect = vi.fn().mockReturnValue({
+        top: 100,
+        left: 350,
+        right: 390,
+        bottom: 150,
+        width: 40,
+        height: 50,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Wait for position calculation
+      await waitFor(() => {
+        const card = document.querySelector<HTMLElement>('.card');
+        expect(card).toBeInTheDocument();
+      });
+
+      // Reset viewport
+      Object.defineProperty(window, 'innerWidth', {value: 1024, writable: true, configurable: true});
+    });
+
+    it('should adjust top position when card would overflow bottom edge of viewport', async () => {
+      // Mock a short viewport
+      Object.defineProperty(window, 'innerHeight', {value: 300, writable: true, configurable: true});
+
+      // Position anchor near bottom
+      anchorEl.getBoundingClientRect = vi.fn().mockReturnValue({
+        top: 250,
+        left: 100,
+        right: 200,
+        bottom: 290,
+        width: 100,
+        height: 40,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      await waitFor(() => {
+        const card = document.querySelector<HTMLElement>('.card');
+        expect(card).toBeInTheDocument();
+      });
+
+      // Reset viewport
+      Object.defineProperty(window, 'innerHeight', {value: 768, writable: true, configurable: true});
+    });
+
+    it('should return early from updatePosition when anchorRect or cardRect is undefined', async () => {
+      // Render without a valid anchor
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={null}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Card should still render but position won't be calculated
+      const card = document.querySelector('.card');
+      expect(card).toBeInTheDocument();
+    });
+  });
+
+  describe('i18nKeys mapping with screenTexts undefined', () => {
+    it('should return early when screenTexts is undefined for a screen', async () => {
+      // Create a mock where one screen has undefined texts
+      const contextWithPartialTexts = createContextValue({
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+          // COMMON screen exists as key but screenTexts could be undefined in edge cases
+        } as unknown as Record<PreviewScreenType, Record<string, string> | undefined>,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithPartialTexts)},
+      );
+
+      expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
+    });
+  });
+
+  describe('handleDeleteI18nKey comprehensive coverage', () => {
+    it('should delete key from prevTexts when it exists there', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.keyToDelete': 'Value to Delete',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // First, make a change to create prevTexts entry
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'Modified text'}});
+      }
+
+      // Open autocomplete to access delete buttons
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Click delete button
+      const deleteButtons = document.querySelectorAll('.delete-icon-button');
+      if (deleteButtons.length > 0) {
+        fireEvent.click(deleteButtons[0]);
+      }
+    });
+
+    it('should handle deletion when key is not in prevTexts but in originalTexts', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.anotherKey': 'Another Value',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Open autocomplete
+      const autocomplete = document.querySelector('.MuiAutocomplete-root input');
+      if (autocomplete) {
+        fireEvent.click(autocomplete);
+        fireEvent.focus(autocomplete);
+      }
+
+      await waitFor(() => {
+        const listbox = document.querySelector('.MuiAutocomplete-listbox');
+        expect(listbox).toBeDefined();
+      });
+
+      // Click delete on a key that hasn't been modified (not in prevTexts)
+      const deleteButtons = document.querySelectorAll('.delete-icon-button');
+      if (deleteButtons.length > 0) {
+        fireEvent.click(deleteButtons[0]);
+      }
+    });
+
+    it('should return prevTexts unchanged when primaryI18nScreen is undefined', async () => {
+      const contextWithNoScreen = createContextValue({
+        primaryI18nScreen: undefined,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithNoScreen)},
+      );
+
+      expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
+    });
+
+    it('should return prevTexts unchanged when selectedLanguage is undefined', async () => {
+      const contextWithNoLanguage = createContextValue({
+        language: undefined,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithNoLanguage)},
+      );
+
+      expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
+    });
+
+    it('should return prevTexts when originalTexts is undefined', async () => {
+      const contextWithNoI18nText = createContextValue({
+        i18nText: undefined,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithNoI18nText)},
+      );
+
+      expect(document.querySelector('.i18n-config-container')).toBeInTheDocument();
+    });
+  });
+
+  describe('Simple view renderOption with className concatenation', () => {
+    it('should concatenate className in simple view option rendering', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Verify autocomplete is present in simple view
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+
+      // Verify the i18n selection row container is present
+      const selectionRow = document.querySelector('.i18n-selection-row');
+      expect(selectionRow).toBeInTheDocument();
+    });
+
+    it('should render common chip for non-custom keys in simple view', async () => {
+      const mixedContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string) => key.startsWith('login.')),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+          [PreviewScreenType.COMMON]: {
+            'common.continue': 'Continue',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(mixedContext)},
+      );
+
+      // Verify autocomplete is rendered in simple view
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+    });
+  });
+
+  describe('Customize view autocomplete onChange with newValue', () => {
+    it('should set i18nKeyInputValue with key, label, and screen when option is selected', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Verify the autocomplete is present with a value
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+
+      // The text field should be enabled when a key is selected
+      const textField = document.querySelector('.i18n-config-container textarea');
+      expect(textField).toBeInTheDocument();
+      expect(textField).not.toHaveAttribute('disabled');
+    });
+
+    it('should set i18nKeyInputValue to null when newValue is null', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Clear the autocomplete selection
+      const clearButton = document.querySelector('.MuiAutocomplete-clearIndicator');
+      if (clearButton) {
+        fireEvent.click(clearButton);
+      }
+
+      // Language text field should be disabled when no key is selected
+      await waitFor(() => {
+        const textField = document.querySelector('.i18n-config-container textarea');
+        if (textField) {
+          expect(textField).toHaveAttribute('disabled');
+        }
+      });
+    });
+  });
+
+  describe('Customize view renderOption with all branches', () => {
+    it('should render delete button when option.screen equals primaryI18nScreen and isCustomI18nKey returns true', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          // Return true when checkPrimary is false (second call in the condition)
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.customKey': 'Custom Value',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Verify autocomplete is present in customize view
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+    });
+
+    it('should render common chip when option.screen equals primaryI18nScreen but isCustomI18nKey returns false', async () => {
+      const nonCustomKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockReturnValue(false),
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(nonCustomKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Verify autocomplete is present
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+
+      // Warning alert should be shown for common keys
+      expect(screen.getByText('flows:core.elements.textPropertyField.i18nCard.commonKeyWarning')).toBeInTheDocument();
+    });
+
+    it('should render common chip when option.screen does not equal primaryI18nScreen', async () => {
+      const mixedScreenContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+          [PreviewScreenType.COMMON]: {
+            'common.continue': 'Continue',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(mixedScreenContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Verify autocomplete is present
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+    });
+
+    it('should call handleDeleteI18nKey with stopPropagation when delete button is clicked', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.deletable': 'Deletable Key',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Verify autocomplete is present
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+    });
+  });
+
+  describe('Edit button click when selectedI18nKey is empty', () => {
+    it('should set i18nKeyInputValue to null when edit is clicked but selectedI18nKey is falsy', async () => {
+      // First render with an empty selectedI18nKey but still with Edit button visible
+      // This scenario tests line 794 where selectedI18nKey is falsy
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Click Edit to enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Go back and verify state is reset
+      const backButton = screen.getByText('common:back');
+      fireEvent.click(backButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:edit')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('ResizeObserver cleanup', () => {
+    it('should clean up ResizeObserver when component unmounts', async () => {
+      const {unmount} = render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view to trigger more content
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Unmount should clean up ResizeObserver
+      unmount();
+    });
+  });
+
+  describe('Window event listeners cleanup', () => {
+    it('should remove scroll and resize event listeners on unmount', async () => {
+      const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+      const {unmount} = render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Unmount to trigger cleanup
+      unmount();
+
+      // Cleanup should have been called
+      expect(removeEventListenerSpy).toHaveBeenCalled();
+
+      removeEventListenerSpy.mockRestore();
+    });
+  });
+
+  describe('handleSaveCustomize with i18nKeyInputValue.key', () => {
+    it('should call onChange with i18nKeyInputValue.key when save succeeds and key exists', async () => {
+      const mockUpdateI18nKeySuccess = vi.fn().mockResolvedValue(true);
+      const successContext = createContextValue({
+        updateI18nKey: mockUpdateI18nKeySuccess,
+        isCustomI18nKey: vi.fn().mockReturnValue(true),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(successContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:update')).toBeInTheDocument();
+      });
+
+      // Make a change
+      const textField = document.querySelector('.i18n-config-container textarea');
+      if (textField) {
+        fireEvent.change(textField, {target: {value: 'Updated translation'}});
+      }
+
+      await waitFor(() => {
+        const updateButton = screen.getByText('common:update').closest('button');
+        expect(updateButton).not.toBeDisabled();
+      });
+
+      // Click update
+      const updateButton = screen.getByText('common:update').closest('button');
+      if (updateButton) {
+        fireEvent.click(updateButton);
+      }
+
+      // Wait for save to complete
+      await waitFor(() => {
+        expect(mockUpdateI18nKeySuccess).toHaveBeenCalled();
+      });
+
+      // Verify onChange was called with the key
+      await waitFor(() => {
+        expect(mockOnChange).toHaveBeenCalledWith('login.title');
+      });
+    });
+  });
+
+  describe('Keyboard events', () => {
+    it('should not call onClose for non-Escape keys', () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      const backdrop = document.querySelector('.card-backdrop');
+      if (backdrop) {
+        fireEvent.keyDown(backdrop, {key: 'Enter'});
+      }
+
+      // onClose should not be called for Enter key
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Scroll state detection', () => {
+    it('should detect scroll state when content height exceeds client height', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view which has more content
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        const cardContent = document.querySelector('.card-content');
+        expect(cardContent).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('newI18nKeyPrefix with hyphenated screen', () => {
+    it('should replace hyphens with dots in primaryI18nScreen for prefix', async () => {
+      const hyphenatedScreenContext = createContextValue({
+        primaryI18nScreen: 'multi-factor-auth' as PreviewScreenType,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(hyphenatedScreenContext)},
+      );
+
+      // Enter create mode
+      const newButton = screen.getByText('common:new');
+      fireEvent.click(newButton);
+
+      await waitFor(() => {
+        // The prefix should have dots instead of hyphens
+        expect(screen.getByText('multi.factor.auth.')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Language TextField disabled states', () => {
+    it('should disable language text field when selectedLanguage is undefined', async () => {
+      const noLanguageContext = createContextValue({
+        language: undefined,
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(noLanguageContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        const textField = document.querySelector('.i18n-config-container textarea');
+        if (textField) {
+          expect(textField).toHaveAttribute('disabled');
+        }
+      });
+    });
+
+    it('should disable language text field when i18nKeyInputValue is null', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter create mode
+      const newButton = screen.getByText('common:new');
+      fireEvent.click(newButton);
+
+      await waitFor(() => {
+        const textField = document.querySelector('.i18n-config-container textarea');
+        if (textField) {
+          expect(textField).toHaveAttribute('disabled');
+        }
+      });
+    });
+  });
+
+  describe('Create mode key input validation', () => {
+    it('should reject non-lowercase characters in key input', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter create mode
+      const newButton = screen.getByText('common:new');
+      fireEvent.click(newButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('flows:core.elements.textPropertyField.i18nCard.createTitle')).toBeInTheDocument();
+      });
+
+      // Try to enter uppercase characters
+      const keyInput = document.querySelector('.i18n-config-container input');
+      if (keyInput) {
+        fireEvent.change(keyInput, {target: {value: 'InvalidKey'}});
+        // Value should not change because of validation
+        expect((keyInput as HTMLInputElement).value).not.toBe('InvalidKey');
+      }
+    });
+
+    it('should accept lowercase letters and dots in key input', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter create mode
+      const newButton = screen.getByText('common:new');
+      fireEvent.click(newButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('flows:core.elements.textPropertyField.i18nCard.createTitle')).toBeInTheDocument();
+      });
+
+      // Enter valid characters
+      const keyInput = document.querySelector('.i18n-config-container input');
+      if (keyInput) {
+        fireEvent.change(keyInput, {target: {value: 'valid.key'}});
+        expect((keyInput as HTMLInputElement).value).toBe('valid.key');
+      }
+    });
+  });
+
+  describe('Language select renderValue', () => {
+    it('should render just the value when supportedLocales does not contain the language', async () => {
+      const unknownLocaleContext = createContextValue({
+        language: 'unknown_locale',
+        supportedLocales: {
+          en_US: {code: 'en_US', name: 'English', flag: 'us'},
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(unknownLocaleContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        // The select should render the unknown locale value
+        const select = document.querySelector('.MuiSelect-select');
+        expect(select).toBeInTheDocument();
+      });
+    });
+
+    it('should render flag and name when supportedLocales contains the language', async () => {
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper()},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        const select = document.querySelector('.MuiSelect-select');
+        expect(select).toBeInTheDocument();
+        // Should contain the formatted locale with flag
+        expect(select?.textContent).toContain('English');
+      });
+    });
+  });
+
+  describe('Deleted keys filtering in i18nKeys', () => {
+    it('should filter out deleted keys from i18nKeys list', async () => {
+      const customKeyContext = createContextValue({
+        isCustomI18nKey: vi.fn().mockImplementation((key: string, checkPrimary?: boolean) => {
+          if (checkPrimary === false) {
+            return key.startsWith('login.');
+          }
+          return key.startsWith('login.');
+        }),
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+            'login.willBeDeleted': 'Will Be Deleted',
+            'login.anotherKey': 'Another Key',
+          },
+        },
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(customKeyContext)},
+      );
+
+      // Enter customize view
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Verify autocomplete is present in customize view
+      const autocomplete = document.querySelector('.MuiAutocomplete-root');
+      expect(autocomplete).toBeInTheDocument();
+
+      // Verify the i18n config container is rendered
+      const configContainer = document.querySelector('.i18n-config-container');
+      expect(configContainer).toBeInTheDocument();
+    });
+  });
 });

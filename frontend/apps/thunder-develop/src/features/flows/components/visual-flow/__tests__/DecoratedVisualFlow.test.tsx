@@ -1068,6 +1068,93 @@ describe('DecoratedVisualFlow', () => {
       expect(mockUpdateNodeData).toHaveBeenCalled();
     });
 
+    it('should handle reordering with nested components in handleDragEnd', () => {
+      render(<DecoratedVisualFlow {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Capture the callback passed to updateNodeData
+      mockUpdateNodeData.mockImplementation((stepId: string, callback: (node: Node) => { components: unknown[] }) => {
+        // Simulate a node with nested components (form with children)
+        const mockNode: Node = {
+          id: stepId,
+          position: {x: 0, y: 0},
+          data: {
+            components: [
+              {id: 'button-1', type: 'BUTTON'},
+              {id: 'form-1', type: 'FORM', components: [{id: 'input-1', type: 'TEXT_INPUT'}, {id: 'input-2', type: 'TEXT_INPUT'}]},
+              {id: 'text-1', type: 'TEXT'},
+            ],
+          },
+        };
+        // Execute the callback to cover lines 371-382
+        const result = callback(mockNode);
+        expect(result.components).toBeDefined();
+      });
+
+      // Simulate reordering drag event
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          operation: {
+            source: {
+              data: {
+                isReordering: true,
+                stepId: 'step-1',
+                dragged: {},
+              },
+            },
+            target: {
+              id: 'element-1',
+              data: {},
+            },
+          },
+          canceled: false,
+        });
+      }
+
+      expect(mockUpdateNodeData).toHaveBeenCalledWith('step-1', expect.any(Function));
+    });
+
+    it('should handle reordering with empty components in handleDragEnd', () => {
+      render(<DecoratedVisualFlow {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Capture the callback passed to updateNodeData
+      mockUpdateNodeData.mockImplementation((stepId: string, callback: (node: Node) => { components: unknown[] }) => {
+        // Simulate a node with no components
+        const mockNode: Node = {
+          id: stepId,
+          position: {x: 0, y: 0},
+          data: {},
+        };
+        const result = callback(mockNode);
+        expect(result.components).toBeDefined();
+      });
+
+      // Simulate reordering drag event
+      if (capturedOnDragEnd) {
+        capturedOnDragEnd({
+          operation: {
+            source: {
+              data: {
+                isReordering: true,
+                stepId: 'step-1',
+                dragged: {},
+              },
+            },
+            target: {
+              id: 'element-1',
+              data: {},
+            },
+          },
+          canceled: false,
+        });
+      }
+
+      expect(mockUpdateNodeData).toHaveBeenCalled();
+    });
+
     it('should handle reordering without stepId', () => {
       render(<DecoratedVisualFlow {...defaultProps} />, {
         wrapper: createWrapper(),
@@ -1202,12 +1289,13 @@ describe('DecoratedVisualFlow', () => {
     });
 
     it('should handle drop on element inside form for reordering', () => {
+      // Use 'BLOCK' which is the actual value of BlockTypes.Form
       const targetNode: Node = {
         id: 'step-1',
         position: {x: 0, y: 0},
         data: {
           components: [
-            {id: 'form-1', type: 'FORM', components: [{id: 'input-1', type: 'TEXT_INPUT'}]},
+            {id: 'form-1', type: 'BLOCK', components: [{id: 'input-1', type: 'TEXT_INPUT'}]},
           ],
         },
       };
@@ -1217,7 +1305,7 @@ describe('DecoratedVisualFlow', () => {
         wrapper: createWrapper(),
       });
 
-      // Simulate drop on element inside form
+      // Simulate drop on element inside form (input-1 is inside form-1)
       if (capturedOnDragEnd) {
         capturedOnDragEnd({
           operation: {
@@ -1410,6 +1498,132 @@ describe('DecoratedVisualFlow', () => {
       }
 
       // updateNodeData should be called
+      expect(mockUpdateNodeData).toHaveBeenCalled();
+    });
+
+    it('should execute updateNodeData callback with nested components during drag over', () => {
+      render(<DecoratedVisualFlow {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Capture the callback passed to updateNodeData
+      mockUpdateNodeData.mockImplementation((stepId: string, callback: (node: Node) => { components: unknown[] }) => {
+        // Simulate a node with nested components (form with children) to cover lines 468-480
+        const mockNode: Node = {
+          id: stepId,
+          position: {x: 0, y: 0},
+          data: {
+            components: [
+              {id: 'button-1', type: 'BUTTON'},
+              {id: 'form-1', type: 'FORM', components: [{id: 'input-1', type: 'TEXT_INPUT'}, {id: 'input-2', type: 'TEXT_INPUT'}]},
+              {id: 'divider-1', type: 'DIVIDER'},
+            ],
+          },
+        };
+        // Execute the callback to cover nested component handling
+        const result = callback(mockNode);
+        expect(result.components).toBeDefined();
+      });
+
+      // Simulate drag over with reordering
+      if (capturedOnDragOver) {
+        capturedOnDragOver({
+          operation: {
+            source: {
+              data: {
+                isReordering: true,
+                stepId: 'step-1',
+              },
+            },
+            target: {
+              id: 'input-1',
+              data: {},
+            },
+          },
+        });
+      }
+
+      expect(mockUpdateNodeData).toHaveBeenCalledWith('step-1', expect.any(Function));
+    });
+
+    it('should handle drag over with components that have no nested children', () => {
+      render(<DecoratedVisualFlow {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Capture the callback passed to updateNodeData
+      mockUpdateNodeData.mockImplementation((stepId: string, callback: (node: Node) => { components: unknown[] }) => {
+        // Simulate a node with components that have no nested children
+        const mockNode: Node = {
+          id: stepId,
+          position: {x: 0, y: 0},
+          data: {
+            components: [
+              {id: 'button-1', type: 'BUTTON'},
+              {id: 'text-1', type: 'TEXT'},
+            ],
+          },
+        };
+        const result = callback(mockNode);
+        expect(result.components).toBeDefined();
+      });
+
+      // Simulate drag over with reordering
+      if (capturedOnDragOver) {
+        capturedOnDragOver({
+          operation: {
+            source: {
+              data: {
+                isReordering: true,
+                stepId: 'step-1',
+              },
+            },
+            target: {
+              id: 'button-1',
+              data: {},
+            },
+          },
+        });
+      }
+
+      expect(mockUpdateNodeData).toHaveBeenCalled();
+    });
+
+    it('should handle drag over with undefined node data', () => {
+      render(<DecoratedVisualFlow {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+
+      // Capture the callback passed to updateNodeData
+      mockUpdateNodeData.mockImplementation((stepId: string, callback: (node: Node) => { components: unknown[] }) => {
+        // Simulate a node with undefined data
+        const mockNode: Node = {
+          id: stepId,
+          position: {x: 0, y: 0},
+          data: undefined as unknown as Record<string, unknown>,
+        };
+        const result = callback(mockNode);
+        expect(result.components).toBeDefined();
+      });
+
+      // Simulate drag over with reordering
+      if (capturedOnDragOver) {
+        capturedOnDragOver({
+          operation: {
+            source: {
+              data: {
+                isReordering: true,
+                stepId: 'step-1',
+              },
+            },
+            target: {
+              id: 'element-1',
+              data: {},
+            },
+          },
+        });
+      }
+
       expect(mockUpdateNodeData).toHaveBeenCalled();
     });
   });

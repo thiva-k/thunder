@@ -472,4 +472,20 @@ describe('useGetUserTypes', () => {
     // Data should remain from previous successful fetch
     expect(result.current.data).toEqual(mockUserSchemaList);
   });
+
+  it('should handle non-Error thrown in initial fetch', async () => {
+    mockHttpRequest.mockRejectedValueOnce('String error in fetch');
+
+    const {result} = renderHook(() => useGetUserTypes());
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_USER_TYPES_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to fetch user types',
+      });
+      expect(result.current.data).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });
