@@ -27,6 +27,73 @@
             "executor": {
                 "name": "UserTypeResolver"
             },
+            "onSuccess": "prompt_email"
+        },
+        {
+            "id": "prompt_email",
+            "type": "PROMPT",
+            "meta": {
+                "components": [
+                    {
+                        "type": "TEXT",
+                        "id": "text_header_email",
+                        "label": "User Email",
+                        "variant": "HEADING_1"
+                    },
+                    {
+                        "type": "BLOCK",
+                        "id": "block_email",
+                        "components": [
+                            {
+                                "id": "input_prompt_email",
+                                "ref": "email",
+                                "type": "EMAIL_INPUT",
+                                "label": "Email",
+                                "required": true,
+                                "placeholder": "Enter email"
+                            },
+                            {
+                                "type": "ACTION",
+                                "id": "action_submit_email",
+                                "label": "Next",
+                                "variant": "PRIMARY",
+                                "eventType": "SUBMIT"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "prompts": [
+                {
+                    "inputs": [
+                        {
+                            "ref": "input_prompt_email",
+                            "identifier": "email",
+                            "type": "EMAIL_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_submit_email",
+                        "nextNode": "invite"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "invite",
+            "type": "TASK_EXECUTION",
+            "inputs": [
+                {
+                    "ref": "input_003",
+                    "identifier": "inviteToken",
+                    "type": "HIDDEN",
+                    "required": true
+                }
+            ],
+            "executor": {
+                "name": "InviteExecutor"
+            },
             "onSuccess": "prompt_user_details"
         },
         {
@@ -38,14 +105,14 @@
                         "type": "TEXT",
                         "id": "text_header_details",
                         "label": "User Details",
-                        "variant": "HEADING_1"
+                        "variant": "HEADING_2"
                     },
                     {
                         "type": "BLOCK",
                         "id": "block_user_details",
                         "components": [
                             {
-                                "id": "input_prompt_001",
+                                "id": "input_prompt_username",
                                 "ref": "username",
                                 "type": "TEXT_INPUT",
                                 "label": "Username",
@@ -53,12 +120,28 @@
                                 "placeholder": "Enter username"
                             },
                             {
-                                "id": "input_prompt_002",
-                                "ref": "email",
-                                "type": "EMAIL_INPUT",
-                                "label": "Email",
-                                "required": true,
-                                "placeholder": "Enter email"
+                                "id": "input_prompt_given_name",
+                                "ref": "given_name",
+                                "type": "TEXT_INPUT",
+                                "label": "First Name",
+                                "required": false,
+                                "placeholder": "Enter first name"
+                            },
+                            {
+                                "id": "input_prompt_family_name",
+                                "ref": "family_name",
+                                "type": "TEXT_INPUT",
+                                "label": "Last Name",
+                                "required": false,
+                                "placeholder": "Enter last name"
+                            },
+                            {
+                                "id": "input_prompt_phone",
+                                "ref": "phone_number",
+                                "type": "TEXT_INPUT",
+                                "label": "Phone Number",
+                                "required": false,
+                                "placeholder": "Enter phone number"
                             },
                             {
                                 "type": "ACTION",
@@ -75,62 +158,36 @@
                 {
                     "inputs": [
                         {
-                            "ref": "input_prompt_001",
+                            "ref": "input_prompt_username",
                             "identifier": "username",
                             "type": "TEXT_INPUT",
                             "required": true
                         },
                         {
-                            "ref": "input_prompt_002",
-                            "identifier": "email",
-                            "type": "EMAIL_INPUT",
-                            "required": true
+                            "ref": "input_prompt_given_name",
+                            "identifier": "given_name",
+                            "type": "TEXT_INPUT",
+                            "required": false
+                        },
+                        {
+                            "ref": "input_prompt_family_name",
+                            "identifier": "family_name",
+                            "type": "TEXT_INPUT",
+                            "required": false
+                        },
+                        {
+                            "ref": "input_prompt_phone",
+                            "identifier": "phone_number",
+                            "type": "TEXT_INPUT",
+                            "required": false
                         }
                     ],
                     "action": {
                         "ref": "action_submit_details",
-                        "nextNode": "provisioning"
+                        "nextNode": "prompt_credential"
                     }
                 }
             ]
-        },
-        {
-            "id": "provisioning",
-            "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_001",
-                    "identifier": "username",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                },
-                {
-                    "ref": "input_002",
-                    "identifier": "email",
-                    "type": "TEXT_INPUT",
-                    "required": true
-                }
-            ],
-            "executor": {
-                "name": "ProvisioningExecutor"
-            },
-            "onSuccess": "invite"
-        },
-        {
-            "id": "invite",
-            "type": "TASK_EXECUTION",
-            "inputs": [
-                {
-                    "ref": "input_003",
-                    "identifier": "inviteToken",
-                    "type": "HIDDEN",
-                    "required": true
-                }
-            ],
-            "executor": {
-                "name": "InviteExecutor"
-            },
-            "onSuccess": "prompt_credential"
         },
         {
             "id": "prompt_credential",
@@ -141,14 +198,14 @@
                         "type": "TEXT",
                         "id": "text_header_pwd",
                         "label": "Set Password",
-                        "variant": "HEADING_1"
+                        "variant": "HEADING_2"
                     },
                     {
                         "type": "BLOCK",
                         "id": "block_pwd",
                         "components": [
                             {
-                                "id": "input_prompt_003",
+                                "id": "input_prompt_password",
                                 "ref": "password",
                                 "type": "PASSWORD_INPUT",
                                 "label": "Password",
@@ -170,7 +227,7 @@
                 {
                     "inputs": [
                         {
-                            "ref": "input_prompt_003",
+                            "ref": "input_prompt_password",
                             "identifier": "password",
                             "type": "PASSWORD_INPUT",
                             "required": true
@@ -178,24 +235,54 @@
                     ],
                     "action": {
                         "ref": "action_submit_pwd",
-                        "nextNode": "credential_setter"
+                        "nextNode": "provisioning"
                     }
                 }
             ]
         },
         {
-            "id": "credential_setter",
+            "id": "provisioning",
             "type": "TASK_EXECUTION",
             "inputs": [
                 {
-                    "ref": "input_004",
+                    "ref": "input_email",
+                    "identifier": "email",
+                    "type": "EMAIL_INPUT",
+                    "required": true
+                },
+                {
+                    "ref": "input_username",
+                    "identifier": "username",
+                    "type": "TEXT_INPUT",
+                    "required": true
+                },
+                {
+                    "ref": "input_password",
                     "identifier": "password",
                     "type": "PASSWORD_INPUT",
                     "required": true
+                },
+                {
+                    "ref": "input_given_name",
+                    "identifier": "given_name",
+                    "type": "TEXT_INPUT",
+                    "required": false
+                },
+                {
+                    "ref": "input_family_name",
+                    "identifier": "family_name",
+                    "type": "TEXT_INPUT",
+                    "required": false
+                },
+                {
+                    "ref": "input_phone",
+                    "identifier": "phone_number",
+                    "type": "TEXT_INPUT",
+                    "required": false
                 }
             ],
             "executor": {
-                "name": "CredentialSetter"
+                "name": "ProvisioningExecutor"
             },
             "onSuccess": "end"
         },
