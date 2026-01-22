@@ -80,7 +80,7 @@ const {default: getIntegrationIcon} = await import('@/features/integrations/util
 const {default: useGetFlows} = await import('@/features/flows/api/useGetFlows');
 const {default: useGetApplications} = await import('../../../api/useGetApplications');
 
-describe.skip('ConfigureSignInOptions', () => {
+describe('ConfigureSignInOptions', () => {
   const mockOnIntegrationToggle = vi.fn();
 
   const mockIdentityProviders: IdentityProvider[] = [
@@ -722,6 +722,199 @@ describe.skip('ConfigureSignInOptions', () => {
         .queryAllByRole('alert')
         .filter((alert) => alert.textContent?.includes('at least one'));
       expect(warningAlerts.length).toBe(0);
+    });
+  });
+
+  describe('onReadyChange callback', () => {
+    it('should call onReadyChange with true when integrations are selected', () => {
+      const onReadyChange = vi.fn();
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+        },
+        onReadyChange,
+      });
+
+      expect(onReadyChange).toHaveBeenCalledWith(true);
+    });
+
+    it('should call onReadyChange with false when no integrations are selected', () => {
+      const onReadyChange = vi.fn();
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent({
+        integrations: {},
+        onReadyChange,
+      });
+
+      expect(onReadyChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('Flow loading states', () => {
+    it('should render loading state when flows are loading', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      vi.mocked(useGetFlows).mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        isError: false,
+        isSuccess: false,
+        isFetching: true,
+        isStale: false,
+        isPending: true,
+        error: null,
+        status: 'pending',
+        fetchStatus: 'fetching',
+      } as unknown as ReturnType<typeof useGetFlows>);
+
+      renderComponent();
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('should render error state when flows fail to load', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      const flowsError = new Error('Failed to load flows');
+      vi.mocked(useGetFlows).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isError: true,
+        isSuccess: false,
+        isFetching: false,
+        isStale: false,
+        isPending: false,
+        error: flowsError,
+        status: 'error',
+        fetchStatus: 'idle',
+      } as unknown as ReturnType<typeof useGetFlows>);
+
+      renderComponent();
+
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText(/Failed to load authentication methods/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Flow data handling', () => {
+    it('should handle when flows data is empty', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      vi.mocked(useGetFlows).mockReturnValue({
+        data: {
+          totalResults: 0,
+          startIndex: 1,
+          count: 0,
+          flows: [],
+          links: [],
+        },
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        isFetching: false,
+        isStale: false,
+        isPending: false,
+        error: null,
+        status: 'success',
+        fetchStatus: 'idle',
+      } as unknown as ReturnType<typeof useGetFlows>);
+
+      renderComponent();
+
+      // Component should still render without flows
+      expect(screen.getByText('Username & Password')).toBeInTheDocument();
+    });
+
+    it('should handle when flows data is null', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      vi.mocked(useGetFlows).mockReturnValue({
+        data: null,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        isFetching: false,
+        isStale: false,
+        isPending: false,
+        error: null,
+        status: 'success',
+        fetchStatus: 'idle',
+      } as unknown as ReturnType<typeof useGetFlows>);
+
+      renderComponent();
+
+      // Component should still render without flows
+      expect(screen.getByText('Username & Password')).toBeInTheDocument();
+    });
+  });
+
+  describe('Integration type mapping', () => {
+    it('should handle OIDC type providers', async () => {
+      const user = userEvent.setup();
+      const oidcProvider: IdentityProvider = {
+        id: 'oidc-idp',
+        name: 'OIDC Provider',
+        type: 'OIDC',
+        description: 'Generic OIDC provider',
+      };
+
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: [oidcProvider, ...mockIdentityProviders],
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      const oidcButton = screen.getByText('OIDC Provider').closest('.MuiListItemButton-root');
+      if (oidcButton) {
+        await user.click(oidcButton);
+      }
+
+      expect(mockOnIntegrationToggle).toHaveBeenCalledWith('oidc-idp');
+    });
+  });
+
+  describe('Hint text', () => {
+    it('should render hint text with lightbulb icon', () => {
+      vi.mocked(useIdentityProviders).mockReturnValue({
+        data: mockIdentityProviders,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useIdentityProviders>);
+
+      renderComponent();
+
+      expect(
+        screen.getByText('You can always change these settings later in the application settings.'),
+      ).toBeInTheDocument();
     });
   });
 });

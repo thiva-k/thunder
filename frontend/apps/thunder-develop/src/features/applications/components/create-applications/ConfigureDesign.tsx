@@ -355,6 +355,7 @@ export default function ConfigureDesign({
                   <Grid key={color}>
                     <Tooltip title={color} placement="top">
                       <Chip
+                        data-testid={`color-chip-${color.replace('#', '')}`}
                         label=""
                         onClick={(): void => handleColorSelect(color)}
                         sx={{

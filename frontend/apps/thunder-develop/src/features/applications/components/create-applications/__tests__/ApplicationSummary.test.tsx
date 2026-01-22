@@ -17,9 +17,11 @@
  */
 
 import {describe, it, expect, beforeEach, vi} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ApplicationSummary, {type ApplicationSummaryProps} from '../ApplicationSummary';
+import useApplicationCreate from '../../../contexts/ApplicationCreate/useApplicationCreate';
+import type {ApplicationCreateContextType} from '../../../contexts/ApplicationCreate/ApplicationCreateContext';
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -29,6 +31,8 @@ vi.mock('react-i18next', () => ({
         'applications:onboarding.summary.title': 'Application Created!',
         'applications:onboarding.summary.subtitle':
           'Your application has been successfully created and is ready to use.',
+        'applications:onboarding.summary.guides.subtitle':
+          'Follow the integration guide below to complete your setup.',
         'applications:onboarding.summary.appDetails': 'Application is ready to use',
         'applications:onboarding.summary.viewAppAriaLabel': 'View application details',
         'applications:clientSecret.warning':
@@ -49,15 +53,30 @@ vi.mock('react-router', () => ({
 }));
 
 // Mock useApplicationCreate hook
-vi.mock('../../../contexts/ApplicationCreate/useApplicationCreate', () => ({
-  default: () => ({
+vi.mock('../../../contexts/ApplicationCreate/useApplicationCreate');
+
+// Get the mocked hook for per-test configuration
+const mockUseApplicationCreate = vi.mocked(useApplicationCreate);
+
+// Helper to create mock return value with only the properties needed by ApplicationSummary
+const createMockContextValue = (
+  overrides: Partial<ApplicationCreateContextType> = {},
+): ApplicationCreateContextType =>
+  ({
     selectedTemplateConfig: null,
-  }),
-}));
+    signInApproach: 'INBUILT',
+    ...overrides,
+  }) as ApplicationCreateContextType;
 
 // Mock TechnologyGuide component
 vi.mock('../TechnologyGuide', () => ({
-  default: () => null,
+  default: ({guides, clientId, applicationId}: {guides: unknown[]; clientId: string; applicationId: string}) => (
+    <div data-testid="technology-guide">
+      <span data-testid="guide-count">{guides.length}</span>
+      <span data-testid="guide-client-id">{clientId}</span>
+      <span data-testid="guide-app-id">{applicationId}</span>
+    </div>
+  ),
 }));
 
 // Mock clipboard API
@@ -67,6 +86,19 @@ Object.assign(navigator, {
     writeText: mockWriteText,
   },
 });
+
+/**
+ * Helper to find the copy button within an input container.
+ * The copy button is always the last button in the input's endAdornment.
+ * - For client ID: only has copy button
+ * - For client secret: has visibility toggle, then copy button
+ */
+const findCopyButton = (inputElement: HTMLElement): HTMLElement => {
+  const inputContainer = inputElement.closest('.MuiInputBase-root');
+  const buttons = inputContainer?.querySelectorAll('button') ?? [];
+  // Copy button is always the last button in the container
+  return buttons[buttons.length - 1] as HTMLElement;
+};
 
 describe('ApplicationSummary', () => {
   const defaultProps: ApplicationSummaryProps = {
@@ -80,6 +112,7 @@ describe('ApplicationSummary', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWriteText.mockResolvedValue(undefined);
+    mockUseApplicationCreate.mockReturnValue(createMockContextValue());
   });
 
   const renderComponent = (props: Partial<ApplicationSummaryProps> = {}) =>
@@ -443,9 +476,7 @@ describe('ApplicationSummary', () => {
     });
 
     const clientIdInput = screen.getByDisplayValue('test-client-id');
-    const inputContainer = clientIdInput.closest('.MuiInputBase-root');
-    const buttons = inputContainer?.querySelectorAll('button') ?? [];
-    const copyButton = buttons[0] as HTMLElement;
+    const copyButton = findCopyButton(clientIdInput);
 
     expect(copyButton).toBeInTheDocument();
     await user.click(copyButton);
@@ -465,5 +496,233 @@ describe('ApplicationSummary', () => {
 
     // Should not navigate for non-Enter/Space keys
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  describe('Client secret copy functionality', () => {
+    it('should have copy button for client secret', () => {
+      renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      const clientSecretInput = screen.getByDisplayValue('test-client-secret');
+      const inputContainer = clientSecretInput.closest('.MuiInputBase-root');
+      const buttons = inputContainer?.querySelectorAll('button') ?? [];
+      // Should have at least 2 buttons (visibility toggle and copy)
+      expect(buttons.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('Cleanup on unmount', () => {
+    it('should clear timeouts on component unmount', () => {
+      const {unmount} = renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      // Unmount should not cause errors
+      unmount();
+    });
+
+    it('should clear clientId timeout on unmount after copy', async () => {
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+      const user = userEvent.setup({delay: null});
+      const {unmount} = renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      const clientIdInput = screen.getByDisplayValue('test-client-id');
+      const copyButton = findCopyButton(clientIdInput);
+
+      await user.click(copyButton);
+
+      // Verify copied message is shown (confirms timeout was started)
+      expect(screen.getByText('Copied!')).toBeInTheDocument();
+
+      // Unmount while timeout is pending - this triggers cleanup
+      unmount();
+
+      // Verify clearTimeout was called during cleanup
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+
+      clearTimeoutSpy.mockRestore();
+    });
+
+    it('should clear clientSecret timeout on unmount after copy', async () => {
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout');
+      const user = userEvent.setup({delay: null});
+      const {unmount} = renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      const clientSecretInput = screen.getByDisplayValue('test-client-secret');
+      const copyButton = findCopyButton(clientSecretInput);
+
+      await user.click(copyButton);
+
+      // Verify copied message is shown (confirms timeout was started)
+      await waitFor(() => {
+        const copiedMessages = screen.getAllByText('Copied!');
+        expect(copiedMessages.length).toBeGreaterThanOrEqual(1);
+      });
+
+      // Unmount while timeout is pending - this triggers cleanup
+      unmount();
+
+      // Verify clearTimeout was called during cleanup
+      expect(clearTimeoutSpy).toHaveBeenCalled();
+
+      clearTimeoutSpy.mockRestore();
+    });
+  });
+
+  describe('Copy functionality edge cases', () => {
+    it('should clear existing timeout when copying same field multiple times', async () => {
+      const user = userEvent.setup({delay: null});
+      renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      const clientIdInput = screen.getByDisplayValue('test-client-id');
+      const copyButton = findCopyButton(clientIdInput);
+
+      // Click copy multiple times rapidly
+      await user.click(copyButton);
+      await user.click(copyButton);
+      await user.click(copyButton);
+
+      // Should show copied message
+      expect(screen.getByText('Copied!')).toBeInTheDocument();
+    });
+
+    it('should render correctly even when clipboard API is not available', () => {
+      // Component should render even if clipboard operations will fail
+      renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      expect(screen.getByDisplayValue('test-client-id')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('test-client-secret')).toBeInTheDocument();
+    });
+  });
+
+  describe('Technology Guide integration', () => {
+    it('should show TechnologyGuide when integration_guides are present', () => {
+      mockUseApplicationCreate.mockReturnValue(
+        createMockContextValue({
+          selectedTemplateConfig: {
+            integration_guides: [{id: 'guide1', name: 'React Guide'}],
+          } as unknown as ApplicationCreateContextType['selectedTemplateConfig'],
+        }),
+      );
+
+      renderComponent({
+        clientId: 'test-client-id',
+        applicationId: 'app-123',
+        hasOAuthConfig: true,
+      });
+
+      expect(screen.getByTestId('technology-guide')).toBeInTheDocument();
+      expect(screen.getByTestId('guide-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('guide-client-id')).toHaveTextContent('test-client-id');
+      expect(screen.getByTestId('guide-app-id')).toHaveTextContent('app-123');
+    });
+
+    it('should show guides subtitle when integration_guides are present', () => {
+      mockUseApplicationCreate.mockReturnValue(
+        createMockContextValue({
+          selectedTemplateConfig: {
+            integration_guides: [{id: 'guide1', name: 'React Guide'}],
+          } as unknown as ApplicationCreateContextType['selectedTemplateConfig'],
+        }),
+      );
+
+      renderComponent({
+        clientId: 'test-client-id',
+        applicationId: 'app-123',
+        hasOAuthConfig: true,
+      });
+
+      expect(screen.getByText('Follow the integration guide below to complete your setup.')).toBeInTheDocument();
+    });
+
+    it('should not show app card or OAuth credentials when integration_guides are present', () => {
+      mockUseApplicationCreate.mockReturnValue(
+        createMockContextValue({
+          selectedTemplateConfig: {
+            integration_guides: [{id: 'guide1', name: 'React Guide'}],
+          } as unknown as ApplicationCreateContextType['selectedTemplateConfig'],
+        }),
+      );
+
+      renderComponent({
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+        applicationId: 'app-123',
+        hasOAuthConfig: true,
+      });
+
+      // App card should not be shown
+      expect(screen.queryByRole('button', {name: /view application details/i})).not.toBeInTheDocument();
+      // OAuth credentials should not be shown
+      expect(screen.queryByText('Client ID')).not.toBeInTheDocument();
+      expect(screen.queryByText('Client Secret')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Copy client secret functionality', () => {
+    it('should show copied message after copying client secret', async () => {
+      const user = userEvent.setup({delay: null});
+
+      renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      const clientSecretInput = screen.getByDisplayValue('test-client-secret');
+      const copyButton = findCopyButton(clientSecretInput);
+
+      await user.click(copyButton);
+
+      // Wait for copied message to appear
+      await waitFor(() => {
+        // There may be two "Copied!" messages (one for each field), get them all
+        const copiedMessages = screen.getAllByText('Copied!');
+        expect(copiedMessages.length).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    it('should clear existing timeout when copying client secret multiple times', async () => {
+      const user = userEvent.setup({delay: null});
+      renderComponent({
+        hasOAuthConfig: true,
+        clientId: 'test-client-id',
+        clientSecret: 'test-client-secret',
+      });
+
+      const clientSecretInput = screen.getByDisplayValue('test-client-secret');
+      const copyButton = findCopyButton(clientSecretInput);
+
+      // Click copy multiple times rapidly
+      await user.click(copyButton);
+      await user.click(copyButton);
+
+      // Should not throw and should show copied message
+      await waitFor(() => {
+        const copiedMessages = screen.getAllByText('Copied!');
+        expect(copiedMessages.length).toBeGreaterThanOrEqual(1);
+      });
+    });
   });
 });

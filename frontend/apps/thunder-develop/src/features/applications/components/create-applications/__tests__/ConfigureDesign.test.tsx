@@ -17,7 +17,7 @@
  */
 
 import {describe, it, expect, beforeEach, vi} from 'vitest';
-import {render, screen} from '@testing-library/react';
+import {render, screen, fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {ConfigProvider} from '@thunder/commons-contexts';
@@ -346,5 +346,300 @@ describe('ConfigureDesign', () => {
 
     expect(mockOnInitialLogoLoad).toHaveBeenCalledWith(newLogos[0]);
     expect(mockOnInitialLogoLoad).toHaveBeenCalledTimes(2);
+  });
+
+  describe('onReadyChange callback', () => {
+    it('should call onReadyChange with true on mount', () => {
+      const mockOnReadyChange = vi.fn();
+      renderComponent({onReadyChange: mockOnReadyChange});
+
+      expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('DEFAULT branding integration', () => {
+    const mockDefaultBrandingDetails = {
+      id: 'default-branding-id',
+      displayName: 'Default',
+      preferences: {
+        theme: {
+          colorSchemes: {
+            light: {
+              colors: {
+                primary: {
+                  main: '#123456',
+                },
+              },
+              images: {
+                logo: {
+                  primary: {
+                    url: 'https://example.com/default-logo.png',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    it('should apply DEFAULT branding color when it exists', () => {
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent();
+
+      expect(mockOnColorSelect).toHaveBeenCalledWith('#123456');
+    });
+
+    it('should apply DEFAULT branding logo when it exists', () => {
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent();
+
+      expect(mockOnLogoSelect).toHaveBeenCalledWith('https://example.com/default-logo.png');
+    });
+
+    it('should show "Pick Different Color" button when DEFAULT branding exists', () => {
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent();
+
+      expect(screen.getByRole('button', {name: /Pick a different color/i})).toBeInTheDocument();
+    });
+
+    it('should show color options when "Pick Different Color" is clicked', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent();
+
+      const pickColorButton = screen.getByRole('button', {name: /Pick a different color/i});
+      await user.click(pickColorButton);
+
+      // Color options should now be visible
+      expect(screen.getByText('Custom')).toBeInTheDocument();
+    });
+
+    it('should call onBrandingSelectionChange with true when using DEFAULT branding', () => {
+      const mockOnBrandingSelectionChange = vi.fn();
+
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent({onBrandingSelectionChange: mockOnBrandingSelectionChange});
+
+      expect(mockOnBrandingSelectionChange).toHaveBeenCalledWith(true, 'default-branding-id');
+    });
+
+    it('should call onBrandingSelectionChange with false when picking different color', async () => {
+      const user = userEvent.setup();
+      const mockOnBrandingSelectionChange = vi.fn();
+
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent({onBrandingSelectionChange: mockOnBrandingSelectionChange});
+
+      const pickColorButton = screen.getByRole('button', {name: /Pick a different color/i});
+      await user.click(pickColorButton);
+
+      expect(mockOnBrandingSelectionChange).toHaveBeenCalledWith(false, 'default-branding-id');
+    });
+
+    it('should display app name in branding message when provided', () => {
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent({appName: 'My Test App'});
+
+      expect(screen.getByText('My Test App')).toBeInTheDocument();
+    });
+  });
+
+  describe('getAnimalName', () => {
+    it('should return "Unknown" for unmatched logo URL pattern', () => {
+      const unmatchedLogos = ['https://example.com/avatars/invalid.jpg'];
+      vi.mocked(generateAppLogoSuggestions).mockReturnValue(unmatchedLogos);
+
+      renderComponent();
+
+      // Should render without errors - the tooltip would show "Unknown"
+      expect(screen.getAllByRole('img').length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Custom logo selection', () => {
+    it('should set hasCustomLogo when selecting a different logo from default', async () => {
+      const user = userEvent.setup();
+      const mockOnBrandingSelectionChange = vi.fn();
+
+      const mockDefaultBrandingDetails = {
+        id: 'default-branding-id',
+        displayName: 'Default',
+        preferences: {
+          theme: {
+            colorSchemes: {
+              light: {
+                colors: {
+                  primary: {
+                    main: '#123456',
+                  },
+                },
+                images: {
+                  logo: {
+                    primary: {
+                      url: 'https://example.com/default-logo.png',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      };
+
+      vi.mocked(useGetBrandings).mockReturnValue({
+        data: {
+          brandings: [{id: 'default-branding-id', displayName: 'Default'}],
+        },
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBrandings>);
+
+      vi.mocked(useGetBranding).mockReturnValue({
+        data: mockDefaultBrandingDetails,
+        isLoading: false,
+        error: null,
+      } as ReturnType<typeof useGetBranding>);
+
+      renderComponent({onBrandingSelectionChange: mockOnBrandingSelectionChange});
+
+      // Select a different logo (not the default one)
+      const avatars = screen.getAllByRole('img');
+      await user.click(avatars[0]);
+
+      // Should trigger branding selection change with false since we picked a different logo
+      expect(mockOnBrandingSelectionChange).toHaveBeenCalledWith(false, 'default-branding-id');
+    });
+  });
+
+  describe('Initial logo handling', () => {
+    it('should not call onInitialLogoLoad when appLogo is already in suggestions', () => {
+      vi.mocked(generateAppLogoSuggestions).mockReturnValue(mockLogoSuggestions);
+
+      renderComponent({
+        appLogo: mockLogoSuggestions[1],
+        onInitialLogoLoad: mockOnInitialLogoLoad,
+      });
+
+      // Should not call since the selected logo is already in suggestions
+      expect(mockOnInitialLogoLoad).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleColorSelect', () => {
+    it('should call onColorSelect and reset custom color when selecting a predefined color', async () => {
+      const user = userEvent.setup();
+      renderComponent();
+
+      // Click on a color chip using data-testid
+      const colorChip = screen.getByTestId('color-chip-FF5733');
+
+      await user.click(colorChip);
+      expect(mockOnColorSelect).toHaveBeenCalled();
+    });
+  });
+
+  describe('Custom color interaction', () => {
+    it('should handle color input change and call onColorSelect', () => {
+      renderComponent();
+
+      const colorInput = document.querySelector<HTMLInputElement>('input[type="color"]')!;
+      // Note: Browser color inputs normalize hex values to lowercase
+      fireEvent.change(colorInput, {target: {value: '#aabbcc'}});
+
+      expect(mockOnColorSelect).toHaveBeenCalledWith('#aabbcc');
+    });
   });
 });

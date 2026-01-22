@@ -24,6 +24,7 @@ import ApplicationCreateContext, {
   type ApplicationCreateContextType,
 } from '../../../contexts/ApplicationCreate/ApplicationCreateContext';
 import {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../../../models/application-templates';
+import {ApplicationCreateFlowSignInApproach} from '../../../models/application-create-flow';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -76,7 +77,7 @@ const renderWithContext = (
   );
 };
 
-describe.skip('ConfigureStack', () => {
+describe('ConfigureStack', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -97,9 +98,9 @@ describe.skip('ConfigureStack', () => {
       {setSelectedTechnology},
     );
 
-    await user.click(screen.getByText('applications:onboarding.configure.stack.technology.nextjs.title'));
+    await user.click(screen.getByText('applications:onboarding.configure.stack.technology.react.title'));
 
-    expect(setSelectedTechnology).toHaveBeenCalledWith(TechnologyApplicationTemplate.NEXTJS);
+    expect(setSelectedTechnology).toHaveBeenCalledWith(TechnologyApplicationTemplate.REACT);
   });
 
   it('calls setSelectedPlatform when a platform card is clicked', async () => {
@@ -320,5 +321,290 @@ describe.skip('ConfigureStack', () => {
     });
 
     expect(screen.queryByText('applications:onboarding.configure.stack.dividerLabel')).not.toBeInTheDocument();
+  });
+
+  it('shows "Coming Soon" badge for disabled technology options', () => {
+    renderWithContext({
+      oauthConfig: null,
+      onOAuthConfigChange: vi.fn(),
+      onReadyChange: vi.fn(),
+    });
+
+    expect(screen.getByText('Coming Soon')).toBeInTheDocument();
+  });
+
+  it('does not call setSelectedTechnology when clicking disabled technology card', async () => {
+    const user = userEvent.setup({pointerEventsCheck: 0});
+    const setSelectedTechnology = vi.fn();
+
+    renderWithContext(
+      {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+      {setSelectedTechnology},
+    );
+
+    // Next.js is disabled, clicking should not trigger the handler
+    const nextjsCard = screen.getByText('applications:onboarding.configure.stack.technology.nextjs.title');
+    await user.click(nextjsCard);
+
+    // setSelectedTechnology should not have been called with NEXTJS
+    expect(setSelectedTechnology).not.toHaveBeenCalledWith(TechnologyApplicationTemplate.NEXTJS);
+  });
+
+  it('hides platform section and divider when signInApproach is CUSTOM', () => {
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: vi.fn(),
+        onReadyChange: vi.fn(),
+        stackTypes: {technology: true, platform: true},
+      },
+      {signInApproach: ApplicationCreateFlowSignInApproach.CUSTOM},
+    );
+
+    expect(screen.getByText('applications:onboarding.configure.stack.technology.title')).toBeInTheDocument();
+    expect(screen.queryByText('applications:onboarding.configure.stack.platform.title')).not.toBeInTheDocument();
+    expect(screen.queryByText('applications:onboarding.configure.stack.dividerLabel')).not.toBeInTheDocument();
+  });
+
+  it('auto-selects first platform when technology section is hidden and no platform selected', () => {
+    const setSelectedPlatform = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: vi.fn(),
+        onReadyChange: vi.fn(),
+        stackTypes: {technology: false, platform: true},
+      },
+      {setSelectedPlatform, selectedPlatform: null},
+    );
+
+    expect(setSelectedPlatform).toHaveBeenCalledWith(PlatformApplicationTemplate.BROWSER);
+  });
+
+  it('does not auto-select platform when technology section is visible', () => {
+    const setSelectedPlatform = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: vi.fn(),
+        onReadyChange: vi.fn(),
+        stackTypes: {technology: true, platform: true},
+      },
+      {setSelectedPlatform, selectedPlatform: null},
+    );
+
+    expect(setSelectedPlatform).not.toHaveBeenCalled();
+  });
+
+  it('selects server platform when clicked', async () => {
+    const user = userEvent.setup();
+    const setSelectedPlatform = vi.fn();
+    const setSelectedTechnology = vi.fn();
+
+    renderWithContext(
+      {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+      {setSelectedPlatform, setSelectedTechnology},
+    );
+
+    await user.click(screen.getByText('applications:onboarding.configure.stack.platform.server.title'));
+
+    expect(setSelectedPlatform).toHaveBeenCalledWith(PlatformApplicationTemplate.SERVER);
+    expect(setSelectedTechnology).toHaveBeenCalledWith(null);
+  });
+
+  it('selects backend platform when clicked', async () => {
+    const user = userEvent.setup();
+    const setSelectedPlatform = vi.fn();
+    const setSelectedTechnology = vi.fn();
+
+    renderWithContext(
+      {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+      {setSelectedPlatform, setSelectedTechnology},
+    );
+
+    await user.click(screen.getByText('applications:onboarding.configure.stack.platform.backend.title'));
+
+    expect(setSelectedPlatform).toHaveBeenCalledWith(PlatformApplicationTemplate.BACKEND);
+    expect(setSelectedTechnology).toHaveBeenCalledWith(null);
+  });
+
+  it('uses platform template when technology is OTHER', () => {
+    const setSelectedTemplateConfig = vi.fn();
+    const mockOnOAuthConfigChange = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: mockOnOAuthConfigChange,
+        onReadyChange: vi.fn(),
+      },
+      {
+        setSelectedTemplateConfig,
+        selectedTechnology: TechnologyApplicationTemplate.OTHER,
+        selectedPlatform: PlatformApplicationTemplate.MOBILE,
+      },
+    );
+
+    expect(setSelectedTemplateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Mobile Application',
+      }),
+    );
+  });
+
+  it('uses inferred technology from existing oauthConfig', () => {
+    const setSelectedTemplateConfig = vi.fn();
+    const mockOnOAuthConfigChange = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: {
+          public_client: true,
+          pkce_required: true,
+          grant_types: ['authorization_code'],
+          response_types: ['code'],
+          redirect_uris: ['http://localhost:3000/callback'],
+          token_endpoint_auth_method: 'none',
+          scopes: ['openid', 'profile'],
+        },
+        onOAuthConfigChange: mockOnOAuthConfigChange,
+        onReadyChange: vi.fn(),
+      },
+      {setSelectedTemplateConfig, selectedTechnology: null, selectedPlatform: null},
+    );
+
+    expect(setSelectedTemplateConfig).toHaveBeenCalled();
+  });
+
+  it('resolves technology to OTHER when platform is selected but no technology', () => {
+    const setSelectedTemplateConfig = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: vi.fn(),
+        onReadyChange: vi.fn(),
+      },
+      {
+        setSelectedTemplateConfig,
+        selectedTechnology: null,
+        selectedPlatform: PlatformApplicationTemplate.SERVER,
+      },
+    );
+
+    expect(setSelectedTemplateConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Server Application',
+      }),
+    );
+  });
+
+  it('calls onReadyChange true when OTHER technology with platform selected', () => {
+    const onReadyChange = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: vi.fn(),
+        onReadyChange,
+      },
+      {
+        selectedTechnology: TechnologyApplicationTemplate.OTHER,
+        selectedPlatform: PlatformApplicationTemplate.BROWSER,
+      },
+    );
+
+    expect(onReadyChange).toHaveBeenCalledWith(true);
+  });
+
+  it('clears technology and sets platform when platform card is clicked', async () => {
+    const user = userEvent.setup();
+    const setSelectedTechnology = vi.fn();
+    const setSelectedPlatform = vi.fn();
+
+    renderWithContext(
+      {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+      {
+        setSelectedTechnology,
+        setSelectedPlatform,
+        selectedTechnology: TechnologyApplicationTemplate.REACT,
+      },
+    );
+
+    await user.click(screen.getByText('applications:onboarding.configure.stack.platform.browser.title'));
+
+    expect(setSelectedTechnology).toHaveBeenCalledWith(null);
+    expect(setSelectedPlatform).toHaveBeenCalledWith(PlatformApplicationTemplate.BROWSER);
+  });
+
+  it('clears platform when technology card is clicked', async () => {
+    const user = userEvent.setup();
+    const setSelectedTechnology = vi.fn();
+    const setSelectedPlatform = vi.fn();
+
+    renderWithContext(
+      {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+      {
+        setSelectedTechnology,
+        setSelectedPlatform,
+        selectedPlatform: PlatformApplicationTemplate.BROWSER,
+      },
+    );
+
+    await user.click(screen.getByText('applications:onboarding.configure.stack.technology.react.title'));
+
+    expect(setSelectedTechnology).toHaveBeenCalledWith(TechnologyApplicationTemplate.REACT);
+    expect(setSelectedPlatform).toHaveBeenCalledWith(null);
+  });
+
+  it('renders without onReadyChange callback', () => {
+    renderWithContext({
+      oauthConfig: null,
+      onOAuthConfigChange: vi.fn(),
+    });
+
+    expect(screen.getByText('applications:onboarding.configure.stack.technology.title')).toBeInTheDocument();
+  });
+
+  it('syncs OAuth config with correct structure including all fields', () => {
+    const mockOnOAuthConfigChange = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: mockOnOAuthConfigChange,
+        onReadyChange: vi.fn(),
+      },
+      {selectedTechnology: TechnologyApplicationTemplate.REACT},
+    );
+
+    expect(mockOnOAuthConfigChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        public_client: expect.any(Boolean) as boolean,
+        pkce_required: expect.any(Boolean) as boolean,
+        grant_types: expect.any(Array) as string[],
+        response_types: expect.any(Array) as string[],
+        redirect_uris: expect.any(Array) as string[],
+        scopes: ['openid', 'profile', 'email'],
+      }),
+    );
+  });
+
+  it('does not auto-select platform when already selected', () => {
+    const setSelectedPlatform = vi.fn();
+
+    renderWithContext(
+      {
+        oauthConfig: null,
+        onOAuthConfigChange: vi.fn(),
+        onReadyChange: vi.fn(),
+        stackTypes: {technology: false, platform: true},
+      },
+      {setSelectedPlatform, selectedPlatform: PlatformApplicationTemplate.MOBILE},
+    );
+
+    expect(setSelectedPlatform).not.toHaveBeenCalled();
   });
 });
