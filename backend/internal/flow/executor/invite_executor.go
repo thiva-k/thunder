@@ -127,5 +127,5 @@ func (e *inviteExecutor) generateInviteLink(ctx *core.NodeContext, inviteToken s
 		gateConfig.Port,
 		gateConfig.Path)
 
-	return fmt.Sprintf("%s?flowId=%s&inviteToken=%s", gateAppURL, ctx.FlowID, inviteToken)
+	return fmt.Sprintf("%s/invite?flowId=%s&inviteToken=%s", gateAppURL, ctx.FlowID, inviteToken)
 }
