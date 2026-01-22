@@ -343,6 +343,47 @@ describe('IndividualMethodsToggleView', () => {
       expect(switches[0]).not.toBeChecked();
     });
 
+    it('should handle undefined integration value for Google provider', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: false,
+          'google-idp': undefined as unknown as boolean,
+        },
+      });
+
+      const switches = screen.getAllByRole('switch');
+      // Google switch should be unchecked when undefined
+      expect(switches[1]).not.toBeChecked();
+    });
+
+    it('should handle undefined integration value for GitHub provider', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: false,
+          'github-idp': undefined as unknown as boolean,
+        },
+      });
+
+      const switches = screen.getAllByRole('switch');
+      // GitHub switch should be unchecked when undefined
+      expect(switches[2]).not.toBeChecked();
+    });
+
+    it('should handle undefined integration value for other providers', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: false,
+          'oauth-idp-1': undefined as unknown as boolean,
+        },
+      });
+
+      const oauthItem = screen.getByText('OAuth Provider').closest('li');
+      const oauthSwitch = oauthItem?.querySelector('input[type="checkbox"]');
+
+      // OAuth provider switch should be unchecked when undefined
+      expect(oauthSwitch).not.toBeChecked();
+    });
+
     it('should use default ID for Google when provider not found', () => {
       renderComponent({
         availableIntegrations: [],

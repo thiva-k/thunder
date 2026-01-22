@@ -322,6 +322,28 @@ describe('useCreateApplication', () => {
     });
   });
 
+  it('should handle invalidateQueries rejection gracefully', async () => {
+    mockHttpRequest.mockResolvedValueOnce({
+      data: mockApplication,
+    });
+
+    // Mock invalidateQueries to reject
+    vi.spyOn(queryClient, 'invalidateQueries').mockRejectedValueOnce(new Error('Invalidation failed'));
+
+    const {result} = renderHook(() => useCreateApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(mockRequest);
+
+    // The mutation should still succeed even if invalidateQueries fails
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toEqual(mockApplication);
+  });
+
   it('should support mutateAsync for promise-based workflows', async () => {
     mockHttpRequest.mockResolvedValueOnce({
       data: mockApplication,

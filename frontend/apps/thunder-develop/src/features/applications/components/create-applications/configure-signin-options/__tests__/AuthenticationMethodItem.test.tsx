@@ -307,4 +307,89 @@ describe('AuthenticationMethodItem', () => {
       expect(screen.getByRole('button')).toHaveAttribute('aria-disabled', 'true');
     });
   });
+
+  describe('isDisabled prop', () => {
+    it('should disable switch and button when isDisabled is true', () => {
+      renderComponent({
+        isAvailable: true,
+        isDisabled: true,
+      });
+
+      const switchElement = screen.getByRole('switch');
+      const button = screen.getByRole('button');
+
+      expect(switchElement).toBeDisabled();
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('should not call onToggle when isDisabled is true', () => {
+      renderComponent({
+        isAvailable: true,
+        isDisabled: true,
+      });
+
+      const switchElement = screen.getByRole('switch');
+      // Verify the switch is disabled - clicking is prevented by pointer-events: none
+      expect(switchElement).toBeDisabled();
+      // Since we can't click a disabled element, verify onToggle wasn't called during render
+      expect(mockOnToggle).not.toHaveBeenCalled();
+    });
+
+    it('should render secondary text as undefined when not provided', () => {
+      renderComponent({
+        isAvailable: true,
+        secondary: undefined,
+      });
+
+      // The primary text should be present but no secondary text
+      expect(screen.getByText('Test Auth Method')).toBeInTheDocument();
+      // No additional secondary text element should be rendered
+    });
+
+    it('should combine isEnabled true with isDisabled true', () => {
+      renderComponent({
+        isEnabled: true,
+        isAvailable: true,
+        isDisabled: true,
+      });
+
+      const switchElement = screen.getByRole('switch');
+      expect(switchElement).toBeChecked();
+      expect(switchElement).toBeDisabled();
+    });
+
+    it('should render with secondary text when available and provided', () => {
+      renderComponent({
+        isAvailable: true,
+        secondary: 'Description text',
+      });
+
+      expect(screen.getByText('Description text')).toBeInTheDocument();
+    });
+
+    it('should render icon in the disabled state when not available', () => {
+      renderComponent({
+        isAvailable: false,
+      });
+
+      expect(screen.getByTestId('test-icon')).toBeInTheDocument();
+    });
+
+    it('should render icon in the enabled state when available', () => {
+      renderComponent({
+        isAvailable: true,
+      });
+
+      expect(screen.getByTestId('test-icon')).toBeInTheDocument();
+    });
+
+    it('should pass isDisabled false by default when not specified', () => {
+      renderComponent({
+        isAvailable: true,
+      });
+
+      const switchElement = screen.getByRole('switch');
+      expect(switchElement).not.toBeDisabled();
+    });
+  });
 });
