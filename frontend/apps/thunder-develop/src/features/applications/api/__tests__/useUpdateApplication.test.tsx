@@ -353,6 +353,30 @@ describe('useUpdateApplication', () => {
     );
   });
 
+  it('should handle invalidateQueries rejection gracefully', async () => {
+    mockHttpRequest.mockResolvedValueOnce({
+      data: mockApplication,
+    });
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+
+    // Mock invalidateQueries to reject
+    vi.spyOn(queryClient, 'invalidateQueries').mockRejectedValue(new Error('Invalidation failed'));
+
+    const {result} = renderHook(() => useUpdateApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate({applicationId, data: mockUpdateRequest});
+
+    // The mutation should still succeed even if invalidateQueries fails
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toEqual(mockApplication);
+  });
+
   it('should handle 404 Not Found error for non-existent application', async () => {
     const notFoundError = new Error('Application not found');
     mockHttpRequest.mockRejectedValueOnce(notFoundError);

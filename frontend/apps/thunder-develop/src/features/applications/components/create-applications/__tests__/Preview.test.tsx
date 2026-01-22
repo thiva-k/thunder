@@ -31,6 +31,16 @@ vi.mock('@asgardeo/react', () => ({
 // Mock the useIdentityProviders hook
 vi.mock('@/features/integrations/api/useIdentityProviders');
 
+// Mock useColorScheme to test dark mode
+const mockUseColorScheme = vi.fn<() => {mode: 'light' | 'dark'}>();
+vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@wso2/oxygen-ui')>();
+  return {
+    ...actual,
+    useColorScheme: () => mockUseColorScheme(),
+  };
+});
+
 const {default: useIdentityProviders} = await import('@/features/integrations/api/useIdentityProviders');
 
 describe('Preview', () => {
@@ -64,6 +74,7 @@ describe('Preview', () => {
       isLoading: false,
       error: null,
     } as ReturnType<typeof useIdentityProviders>);
+    mockUseColorScheme.mockReturnValue({mode: 'light'});
   });
 
   const renderComponent = (props: Partial<PreviewProps> = {}) => render(<Preview {...defaultProps} {...props} />);
@@ -469,6 +480,211 @@ describe('Preview', () => {
 
       // Divider should be present
       expect(screen.getByText('or')).toBeInTheDocument();
+    });
+  });
+
+  describe('dark mode', () => {
+    it('should render in dark mode', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'dark'});
+
+      renderComponent();
+
+      // Component should render without errors in dark mode
+      expect(screen.getByText('Preview')).toBeInTheDocument();
+    });
+
+    it('should render with username/password in dark mode', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'dark'});
+
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+        },
+      });
+
+      expect(screen.getByText('Username')).toBeInTheDocument();
+      expect(screen.getByText('Password')).toBeInTheDocument();
+    });
+
+    it('should render with social logins in dark mode', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'dark'});
+
+      renderComponent({
+        integrations: {
+          'google-idp': true,
+        },
+      });
+
+      expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+    });
+
+    it('should render logo in dark mode', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'dark'});
+
+      renderComponent({
+        appLogo: 'https://example.com/logo.png',
+      });
+
+      const logo = screen.getByRole('img');
+      expect(logo).toBeInTheDocument();
+    });
+  });
+
+  describe('edge cases', () => {
+    it('should handle undefined integration values gracefully', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: undefined as unknown as boolean,
+        },
+      });
+
+      // Should not render username/password when value is undefined (falsy)
+      expect(screen.queryByText('Username')).not.toBeInTheDocument();
+    });
+
+    it('should handle undefined sms-otp value gracefully', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': undefined as unknown as boolean,
+        },
+      });
+
+      // Should not render SMS OTP when value is undefined
+      expect(screen.queryByText('Mobile Number')).not.toBeInTheDocument();
+    });
+
+    it('should render only username/password form with no margin when no social logins', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+        },
+      });
+
+      // Username/password should be present
+      expect(screen.getByText('Username')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Sign In'})).toBeInTheDocument();
+      // No divider because no social logins
+      expect(screen.queryByText('or')).not.toBeInTheDocument();
+    });
+
+    it('should render only SMS OTP form with no margin when no social logins', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+        },
+      });
+
+      // SMS OTP should be present
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Send OTP'})).toBeInTheDocument();
+      // No divider because no social logins
+      expect(screen.queryByText('or')).not.toBeInTheDocument();
+    });
+
+    it('should render username/password with margin when social logins exist', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'google-idp': true,
+        },
+      });
+
+      // Both username/password and social login should be present
+      expect(screen.getByText('Username')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+      // Divider should be present
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should render SMS OTP with margin when social logins exist', () => {
+      renderComponent({
+        integrations: {
+          'sms-otp': true,
+          'google-idp': true,
+        },
+      });
+
+      // Both SMS OTP and social login should be present
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+      // Divider should be present
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should render all three auth methods with divider', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'sms-otp': true,
+          'google-idp': true,
+        },
+      });
+
+      // All three should be present
+      expect(screen.getByText('Username')).toBeInTheDocument();
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: /Continue with Google/i})).toBeInTheDocument();
+      // Divider should be present
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+
+    it('should render username/password and SMS OTP without social logins', () => {
+      renderComponent({
+        integrations: {
+          [AuthenticatorTypes.BASIC_AUTH]: true,
+          'sms-otp': true,
+        },
+      });
+
+      // Both should be present
+      expect(screen.getByText('Username')).toBeInTheDocument();
+      expect(screen.getByText('Mobile Number')).toBeInTheDocument();
+      // Divider should be present when both methods exist
+      expect(screen.getByText('or')).toBeInTheDocument();
+    });
+  });
+
+  describe('theme mode handling', () => {
+    it('should use normal blend mode in light mode', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'light'});
+
+      renderComponent();
+
+      expect(screen.getByText('Preview')).toBeInTheDocument();
+    });
+
+    it('should use screen blend mode in dark mode', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'dark'});
+
+      renderComponent();
+
+      expect(screen.getByText('Preview')).toBeInTheDocument();
+    });
+
+    it('should apply dark mode styles to avatar', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'dark'});
+
+      renderComponent({
+        appLogo: 'https://example.com/logo.png',
+        selectedColor: '#00FF00',
+      });
+
+      const logo = screen.getByRole('img');
+      const avatarContainer = logo.closest('.MuiAvatar-root');
+      expect(avatarContainer).toBeInTheDocument();
+    });
+
+    it('should apply light mode styles to avatar', () => {
+      mockUseColorScheme.mockReturnValue({mode: 'light'});
+
+      renderComponent({
+        appLogo: 'https://example.com/logo.png',
+        selectedColor: '#00FF00',
+      });
+
+      const logo = screen.getByRole('img');
+      const avatarContainer = logo.closest('.MuiAvatar-root');
+      expect(avatarContainer).toHaveStyle({backgroundColor: '#00FF00'});
     });
   });
 });

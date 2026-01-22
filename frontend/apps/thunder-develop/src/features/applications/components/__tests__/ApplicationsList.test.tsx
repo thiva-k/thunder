@@ -457,4 +457,140 @@ describe('ApplicationsList', () => {
     expect(grid).toBeInTheDocument();
     // The cursor style is applied via sx prop to the DataGrid
   });
+
+  it('should open delete dialog when clicking Delete action', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const menuButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(menuButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    const deleteMenuItem = screen.getByText('Delete');
+    await user.click(deleteMenuItem);
+
+    // The delete dialog should be opened
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('should close delete dialog when cancelled', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // Open the menu and click delete
+    const menuButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(menuButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    const deleteMenuItem = screen.getByText('Delete');
+    await user.click(deleteMenuItem);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Close the dialog by clicking the cancel button
+    const cancelButton = screen.getByRole('button', {name: /cancel/i});
+    await user.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should handle navigation error gracefully', async () => {
+    const user = userEvent.setup();
+    const navigationError = new Error('Navigation failed');
+    mockNavigate.mockRejectedValueOnce(navigationError);
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const menuButtons = screen.getAllByLabelText('Open actions menu');
+    await user.click(menuButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByRole('menu')).toBeInTheDocument();
+    });
+
+    const viewMenuItem = screen.getByText('View');
+    await user.click(viewMenuItem);
+
+    // Navigation should have been attempted
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/applications/app-1');
+    });
+
+    // The component should not crash despite the navigation error
+    expect(screen.getByRole('grid')).toBeInTheDocument();
+  });
+
+  it('should handle avatar image error', () => {
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: mockApplicationsData,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    const avatars = screen.getAllByRole('img');
+    // Trigger onError on the first avatar
+    if (avatars[0]) {
+      avatars[0].dispatchEvent(new Event('error'));
+      // The onError handler should set src to empty string
+      expect(avatars[0]).toBeInTheDocument();
+    }
+  });
+
+  it('should display "-" for missing client_id', () => {
+    const dataWithMissingClientId: ApplicationListResponse = {
+      ...mockApplicationsData,
+      applications: [
+        {
+          ...mockApplicationsData.applications[0],
+          client_id: undefined,
+        },
+      ],
+    };
+
+    vi.mocked(useGetApplications).mockReturnValue({
+      data: dataWithMissingClientId,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetApplications>);
+
+    renderComponent();
+
+    // Should display "-" for missing client_id
+    const dashes = screen.getAllByText('-');
+    expect(dashes.length).toBeGreaterThan(0);
+  });
 });

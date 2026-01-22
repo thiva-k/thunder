@@ -301,6 +301,26 @@ describe('useDeleteApplication', () => {
     );
   });
 
+  it('should handle invalidateQueries rejection gracefully', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+
+    // Mock invalidateQueries to reject
+    vi.spyOn(queryClient, 'invalidateQueries').mockRejectedValueOnce(new Error('Invalidation failed'));
+
+    const {result} = renderHook(() => useDeleteApplication(), {
+      wrapper: createWrapper(),
+    });
+
+    result.current.mutate(applicationId);
+
+    // The mutation should still succeed even if invalidateQueries fails
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
+
   it('should handle multiple sequential deletions', async () => {
     mockHttpRequest.mockResolvedValue(undefined);
 

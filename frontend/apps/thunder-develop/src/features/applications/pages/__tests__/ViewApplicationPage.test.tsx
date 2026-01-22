@@ -1495,6 +1495,131 @@ describe('ViewApplicationPage', () => {
       const noTexts = screen.getAllByText('No');
       expect(noTexts.length).toBeGreaterThan(0);
     });
+
+    it('should handle isError true with error object having message', () => {
+      const error = new Error('Specific error message');
+      mockUseGetApplication.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error,
+        isError: true,
+      });
+
+      renderComponent();
+
+      expect(screen.getByText('Specific error message')).toBeInTheDocument();
+    });
+
+    it('should handle navigation failure from back button on success page', async () => {
+      const user = userEvent.setup();
+      mockUseGetApplication.mockReturnValue({
+        data: mockApplication,
+        isLoading: false,
+        error: null,
+        isError: false,
+      });
+
+      mockNavigate.mockRejectedValueOnce(new Error('Nav error'));
+
+      renderComponent();
+
+      const backButton = screen.getByText('Back to Applications');
+      await user.click(backButton);
+
+      // Should not throw even if navigation fails
+      expect(mockNavigate).toHaveBeenCalledWith('/applications');
+    });
+
+    it('should handle navigation failure from back button on not found page', async () => {
+      const user = userEvent.setup();
+      mockUseGetApplication.mockReturnValue({
+        data: null,
+        isLoading: false,
+        error: null,
+        isError: false,
+      });
+
+      mockNavigate.mockRejectedValueOnce(new Error('Nav error'));
+
+      renderComponent();
+
+      const backButton = screen.getByText('Back to Applications');
+      await user.click(backButton);
+
+      // Should not throw even if navigation fails
+      expect(mockNavigate).toHaveBeenCalledWith('/applications');
+    });
+
+    it('should handle application with contacts as empty array', () => {
+      const appWithEmptyContacts: Application = {
+        ...mockApplication,
+        contacts: [],
+      };
+
+      mockUseGetApplication.mockReturnValue({
+        data: appWithEmptyContacts,
+        isLoading: false,
+        error: null,
+        isError: false,
+      });
+
+      renderComponent();
+
+      expect(screen.queryByText('Contacts')).not.toBeInTheDocument();
+    });
+
+    it('should handle error with no message property', () => {
+      // Create error object without message
+      const errorWithoutMessage = {} as Error;
+      mockUseGetApplication.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: errorWithoutMessage,
+        isError: true,
+      });
+
+      renderComponent();
+
+      // Should fall back to default error message
+      expect(screen.getByText('Failed to load application information')).toBeInTheDocument();
+    });
+
+    it('should handle flowsError message fallback', () => {
+      const flowsError = new Error('Flows error message');
+      mockUseGetApplication.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: flowsError,
+        isError: true,
+      });
+
+      renderComponent();
+
+      expect(screen.getByText('Flows error message')).toBeInTheDocument();
+    });
+
+    it('should render application with only inbound auth config but no OAuth2 type', () => {
+      const appWithNonOAuthConfig: Application = {
+        ...mockApplication,
+        inbound_auth_config: [
+          {
+            type: 'saml' as const,
+            config: mockApplication.inbound_auth_config![0].config,
+          },
+        ] as unknown as Application['inbound_auth_config'],
+      };
+
+      mockUseGetApplication.mockReturnValue({
+        data: appWithNonOAuthConfig,
+        isLoading: false,
+        error: null,
+        isError: false,
+      });
+
+      renderComponent();
+
+      expect(screen.queryByText('OAuth2 Configuration')).not.toBeInTheDocument();
+    });
   });
 });
 

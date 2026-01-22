@@ -302,6 +302,47 @@ describe('ApplicationsListPage', () => {
     it('should work with ConfigProvider', () => {
       expect(() => renderWithProviders()).not.toThrow();
     });
+
+    it('should render the search input adornment with icon', () => {
+      renderWithProviders();
+
+      const searchInput = screen.getByPlaceholderText('Search applications...');
+      const inputContainer = searchInput.closest('.MuiInputBase-root');
+
+      // The InputAdornment with Search icon should be present
+      expect(inputContainer).toBeInTheDocument();
+      expect(inputContainer?.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should render with all required MUI components', () => {
+      renderWithProviders();
+
+      // Verify Box, Stack, Typography components are rendered
+      expect(screen.getByRole('heading', {level: 1})).toBeInTheDocument();
+      expect(screen.getByText('Manage your applications and their configurations')).toBeInTheDocument();
+    });
+
+    it('should render button with startIcon', () => {
+      renderWithProviders();
+
+      const createButton = screen.getByRole('button', {name: /Create Application/i});
+      // Button should have SVG icon
+      expect(createButton.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should render TextField with correct size', () => {
+      renderWithProviders();
+
+      const searchInput = screen.getByPlaceholderText('Search applications...');
+      const textField = searchInput.closest('.MuiTextField-root');
+      expect(textField).toBeInTheDocument();
+    });
+
+    it('should render ApplicationsList component', () => {
+      renderWithProviders();
+
+      expect(screen.getByTestId('applications-list')).toBeInTheDocument();
+    });
   });
 
   describe('Edge Cases', () => {

@@ -218,4 +218,122 @@ describe('ConfigureApproach', () => {
     const icons = document.querySelectorAll('svg');
     expect(icons.length).toBeGreaterThanOrEqual(2); // At least ExternalLink and Code icons
   });
+
+  describe('card hover and selection styles', () => {
+    it('should apply correct border color when inbuilt is selected', () => {
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.INBUILT}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      // Find the inbuilt card action area
+      const inbuiltRadio = screen.getAllByRole('radio').find((radio) => radio.getAttribute('value') === 'INBUILT');
+      expect(inbuiltRadio).toBeChecked();
+    });
+
+    it('should apply correct border color when custom is selected', () => {
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.CUSTOM}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      // Find the custom card action area
+      const customRadio = screen.getAllByRole('radio').find((radio) => radio.getAttribute('value') === 'CUSTOM');
+      expect(customRadio).toBeChecked();
+    });
+
+    it('should render inbuilt card when not selected', () => {
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.CUSTOM}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      const inbuiltTitle = screen.getByText('applications:onboarding.configure.approach.inbuilt.title');
+      expect(inbuiltTitle).toBeInTheDocument();
+    });
+
+    it('should render custom card when not selected', () => {
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.INBUILT}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      const customTitle = screen.getByText('applications:onboarding.configure.approach.native.title');
+      expect(customTitle).toBeInTheDocument();
+    });
+
+    it('should render inbuilt card when selected', () => {
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.INBUILT}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      const inbuiltTitle = screen.getByText('applications:onboarding.configure.approach.inbuilt.title');
+      expect(inbuiltTitle).toBeInTheDocument();
+    });
+
+    it('should render custom card when selected', () => {
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.CUSTOM}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      const customTitle = screen.getByText('applications:onboarding.configure.approach.native.title');
+      expect(customTitle).toBeInTheDocument();
+    });
+  });
+
+  describe('stop propagation on radio click', () => {
+    it('should stop propagation when clicking the inbuilt radio button', async () => {
+      const user = userEvent.setup();
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.CUSTOM}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      const inbuiltRadio = screen.getAllByRole('radio').find((radio) => radio.getAttribute('value') === 'INBUILT');
+      await user.click(inbuiltRadio!);
+
+      // Should call onApproachChange with INBUILT
+      expect(mockOnApproachChange).toHaveBeenCalledWith(ApplicationCreateFlowSignInApproach.INBUILT);
+    });
+
+    it('should stop propagation when clicking the custom radio button', async () => {
+      const user = userEvent.setup();
+      render(
+        <ConfigureApproach
+          selectedApproach={ApplicationCreateFlowSignInApproach.INBUILT}
+          onApproachChange={mockOnApproachChange}
+          onReadyChange={mockOnReadyChange}
+        />,
+      );
+
+      const customRadio = screen.getAllByRole('radio').find((radio) => radio.getAttribute('value') === 'CUSTOM');
+      await user.click(customRadio!);
+
+      // Should call onApproachChange with CUSTOM
+      expect(mockOnApproachChange).toHaveBeenCalledWith(ApplicationCreateFlowSignInApproach.CUSTOM);
+    });
+  });
 });

@@ -607,4 +607,138 @@ describe('ConfigureStack', () => {
 
     expect(setSelectedPlatform).not.toHaveBeenCalled();
   });
+
+  describe('hover states and conditional styling', () => {
+    it('should render technology card with correct structure when not selected', () => {
+      renderWithContext(
+        {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+        {selectedTechnology: TechnologyApplicationTemplate.OTHER},
+      );
+
+      const reactTitle = screen.getByText('applications:onboarding.configure.stack.technology.react.title');
+      expect(reactTitle).toBeInTheDocument();
+    });
+
+    it('should render technology card with correct structure when selected', () => {
+      renderWithContext(
+        {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+        {selectedTechnology: TechnologyApplicationTemplate.REACT},
+      );
+
+      const reactTitle = screen.getByText('applications:onboarding.configure.stack.technology.react.title');
+      expect(reactTitle).toBeInTheDocument();
+    });
+
+    it('should render platform card with correct structure when not selected', () => {
+      renderWithContext(
+        {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+        {selectedPlatform: PlatformApplicationTemplate.SERVER},
+      );
+
+      const browserTitle = screen.getByText('applications:onboarding.configure.stack.platform.browser.title');
+      expect(browserTitle).toBeInTheDocument();
+    });
+
+    it('should render platform card with correct structure when selected', () => {
+      renderWithContext(
+        {oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()},
+        {selectedPlatform: PlatformApplicationTemplate.BROWSER},
+      );
+
+      const browserTitle = screen.getByText('applications:onboarding.configure.stack.platform.browser.title');
+      expect(browserTitle).toBeInTheDocument();
+    });
+
+    it('should render disabled technology card with correct structure', () => {
+      renderWithContext({oauthConfig: null, onOAuthConfigChange: vi.fn(), onReadyChange: vi.fn()});
+
+      const nextjsTitle = screen.getByText('applications:onboarding.configure.stack.technology.nextjs.title');
+      expect(nextjsTitle).toBeInTheDocument();
+      expect(screen.getByText('Coming Soon')).toBeInTheDocument();
+    });
+  });
+
+  describe('technology resolution logic', () => {
+    it('should use default technology when stackTypes.technology is true and nothing selected', () => {
+      const setSelectedTemplateConfig = vi.fn();
+
+      renderWithContext(
+        {
+          oauthConfig: null,
+          onOAuthConfigChange: vi.fn(),
+          onReadyChange: vi.fn(),
+          stackTypes: {technology: true, platform: true},
+        },
+        {setSelectedTemplateConfig, selectedTechnology: null, selectedPlatform: null},
+      );
+
+      // Should use default technology (React)
+      expect(setSelectedTemplateConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'React Application',
+        }),
+      );
+    });
+
+    it('should use OTHER technology when stackTypes.technology is false', () => {
+      const setSelectedTemplateConfig = vi.fn();
+
+      renderWithContext(
+        {
+          oauthConfig: null,
+          onOAuthConfigChange: vi.fn(),
+          onReadyChange: vi.fn(),
+          stackTypes: {technology: false, platform: true},
+        },
+        {setSelectedTemplateConfig, selectedTechnology: null, selectedPlatform: PlatformApplicationTemplate.BROWSER},
+      );
+
+      // Should use platform template since technology is hidden
+      expect(setSelectedTemplateConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'Browser Application',
+        }),
+      );
+    });
+  });
+
+  describe('OAuth config template handling', () => {
+    it('should handle template with empty redirect_uris', () => {
+      const mockOnOAuthConfigChange = vi.fn();
+
+      renderWithContext(
+        {
+          oauthConfig: null,
+          onOAuthConfigChange: mockOnOAuthConfigChange,
+          onReadyChange: vi.fn(),
+        },
+        {selectedPlatform: PlatformApplicationTemplate.BACKEND},
+      );
+
+      expect(mockOnOAuthConfigChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          redirect_uris: expect.any(Array) as string[],
+        }),
+      );
+    });
+
+    it('should handle template with response_types', () => {
+      const mockOnOAuthConfigChange = vi.fn();
+
+      renderWithContext(
+        {
+          oauthConfig: null,
+          onOAuthConfigChange: mockOnOAuthConfigChange,
+          onReadyChange: vi.fn(),
+        },
+        {selectedTechnology: TechnologyApplicationTemplate.REACT},
+      );
+
+      expect(mockOnOAuthConfigChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_types: expect.any(Array) as string[],
+        }),
+      );
+    });
+  });
 });
