@@ -85,6 +85,7 @@ export default function useGetOrganizationUnits(params?: OrganizationUnitListPar
           description: 'Failed to fetch organization units',
         };
         setError(apiError);
+        throw err;
       } finally {
         setLoading(false);
       }

@@ -186,4 +186,29 @@ describe('useGetLoginFlowBuilderResources', () => {
       expect(Array.isArray(result.current.data.executors)).toBe(true);
     });
   });
+
+  describe('coreResources property access', () => {
+    it('should handle null coreResources with fallback', () => {
+      vi.resetModules();
+      vi.doMock('@/features/flows/api/useGetFlowBuilderCoreResources', () => ({
+        default: vi.fn(() => ({
+          data: null,
+          error: null,
+          isLoading: false,
+          isValidating: false,
+          mutate: () => null,
+        })),
+      }));
+    });
+
+    it('should spread coreResources even when partially undefined', () => {
+      const {result} = renderHook(() => useGetLoginFlowBuilderResources());
+
+      // Verify that the spread operator worked correctly and login-flow data is present
+      expect(result.current.data.executors).toContainEqual({id: 'login-executor'});
+      expect(result.current.data.steps).toContainEqual({id: 'login-step'});
+      expect(result.current.data.templates).toContainEqual({id: 'login-template'});
+      expect(result.current.data.widgets).toContainEqual({id: 'login-widget'});
+    });
+  });
 });

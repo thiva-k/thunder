@@ -22,18 +22,14 @@ import {MemoryRouter} from 'react-router';
 import FlowsListPage from '../FlowsListPage';
 
 // Mock @thunder/logger/react
+const mockLoggerError = vi.fn();
+
 vi.mock('@thunder/logger/react', () => ({
   useLogger: () => ({
     debug: vi.fn(),
     info: vi.fn(),
     warn: vi.fn(),
-    error: vi.fn(),
-    withComponent: vi.fn(() => ({
-      debug: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    })),
+    error: mockLoggerError,
   }),
 }));
 
@@ -162,6 +158,36 @@ describe('FlowsListPage', () => {
 
       // Check that the page has a box container
       expect(container.querySelector('.MuiBox-root')).toBeInTheDocument();
+    });
+  });
+
+  describe('Navigation Error Handling', () => {
+    it('should handle navigation errors when add flow button is clicked', async () => {
+      const navigationError = new Error('Navigation failed');
+      mockNavigate.mockRejectedValueOnce(navigationError);
+
+      render(
+        <MemoryRouter>
+          <FlowsListPage />
+        </MemoryRouter>,
+      );
+
+      const addButton = screen.getByRole('button', {name: /add flow/i});
+      fireEvent.click(addButton);
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin');
+      });
+
+      // Verify that the error was caught and logged
+      await waitFor(() => {
+        expect(mockLoggerError).toHaveBeenCalledWith('Failed to navigate to flow builder page', {
+          error: navigationError,
+        });
+      });
+
+      // Component should still be rendered (no crash)
+      expect(addButton).toBeInTheDocument();
     });
   });
 });

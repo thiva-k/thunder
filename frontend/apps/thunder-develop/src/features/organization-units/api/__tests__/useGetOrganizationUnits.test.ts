@@ -443,8 +443,8 @@ describe('useGetOrganizationUnits', () => {
     const error = new Error('Refetch failed');
     mockHttpRequest.mockRejectedValue(error);
 
-    // refetch doesn't throw - it handles errors internally and sets error state
-    await result.current.refetch();
+    // refetch throws for non-abort errors
+    await expect(result.current.refetch()).rejects.toThrow('Refetch failed');
 
     await waitFor(() => {
       expect(result.current.error).toEqual({
@@ -508,6 +508,30 @@ describe('useGetOrganizationUnits', () => {
             (call[0] as {url?: string})?.url === 'https://localhost:8090/organization-units?limit=10',
         ),
       ).toBe(true);
+    });
+  });
+
+  it('should throw error for non-abort errors in refetch', async () => {
+    mockHttpRequest.mockResolvedValue({data: mockOrganizationUnitList});
+
+    const {result} = renderHook(() => useGetOrganizationUnits());
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockOrganizationUnitList);
+    });
+
+    const error = new Error('Server error');
+    mockHttpRequest.mockRejectedValue(error);
+
+    // refetch should throw for non-abort errors
+    await expect(result.current.refetch()).rejects.toThrow('Server error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'FETCH_ERROR',
+        message: 'Server error',
+        description: 'Failed to fetch organization units',
+      });
     });
   });
 });

@@ -1972,7 +1972,6 @@ describe('CustomLinkPlugin', () => {
 
       const card = document.querySelector('.MuiCard-root')!;
       expect(card).toBeInTheDocument();
-      // The left adjustment code (line 84) should set left to 10
     });
 
     it('should adjust left position when editor would overflow right edge', () => {
@@ -2018,7 +2017,6 @@ describe('CustomLinkPlugin', () => {
 
       const card = document.querySelector('.MuiCard-root')!;
       expect(card).toBeInTheDocument();
-      // The right adjustment code (lines 85-88) should align to right edge
     });
 
     it('should position editor above selection when near bottom of viewport', () => {
@@ -2064,7 +2062,6 @@ describe('CustomLinkPlugin', () => {
 
       const card = document.querySelector('.MuiCard-root')!;
       expect(card).toBeInTheDocument();
-      // The bottom adjustment code (lines 91-94) should position above selection
     });
 
     it('should ensure top position is not negative after bottom adjustment', () => {
@@ -2110,7 +2107,6 @@ describe('CustomLinkPlugin', () => {
 
       const card = document.querySelector('.MuiCard-root')!;
       expect(card).toBeInTheDocument();
-      // The negative top adjustment code (lines 96-98) should ensure top >= pageYOffset + 10
     });
   });
 
@@ -2551,7 +2547,6 @@ describe('CustomLinkPlugin', () => {
 
       const card = document.querySelector('.MuiCard-root')!;
       expect(card).toBeInTheDocument();
-      // Line 84-85: if (left < 0) { left = 10; } should be executed
     });
 
     it('should ensure top is not less than pageYOffset after bottom adjustment', () => {
@@ -2600,14 +2595,12 @@ describe('CustomLinkPlugin', () => {
 
       const card = document.querySelector('.MuiCard-root')!;
       expect(card).toBeInTheDocument();
-      // Lines 97-99: if (top < window.pageYOffset) { top = window.pageYOffset + 10; } should be executed
     });
   });
 
   describe('editorElem null check in updateLinkEditor', () => {
     it('should return early when editorRef.current is null during update', () => {
-      // This test verifies line 192: if (editorElem === null) { return; }
-      // We need to trigger updateLinkEditor when editorRef.current is null
+      // This test verifies the early return when editorElem is null
       mockIsRangeSelection.mockReturnValue(true);
       mockGetSelection.mockReturnValue({type: 'range'});
 
@@ -2630,7 +2623,7 @@ describe('CustomLinkPlugin', () => {
 
   describe('rootElement null check in updateLinkEditor', () => {
     it('should return early when getRootElement returns null after editorElem check', () => {
-      // This test verifies line 198: if (!rootElement) { return; }
+      // This test verifies the early return when rootElement is null
       mockGetRootElement.mockReturnValue(null as unknown as HTMLElement);
       mockIsRangeSelection.mockReturnValue(true);
       mockGetSelection.mockReturnValue({type: 'range'});
@@ -2653,8 +2646,7 @@ describe('CustomLinkPlugin', () => {
 
   describe('positionEditorElement right edge overflow', () => {
     it('should adjust left position to right edge when editor would overflow right side of viewport', () => {
-      // This test targets line 87: left = viewportWidth - editorWidth - 10
-      // We need: left + editorWidth > viewportWidth (after initial calculation)
+      // This test verifies the adjustment when editor would overflow right edge
       Object.defineProperty(window, 'innerWidth', {value: 400, writable: true});
       Object.defineProperty(window, 'innerHeight', {value: 800, writable: true});
       Object.defineProperty(window, 'pageXOffset', {value: 0, writable: true});
@@ -2705,8 +2697,7 @@ describe('CustomLinkPlugin', () => {
 
   describe('positionEditorElement negative top adjustment', () => {
     it('should ensure top is at least pageYOffset + 10 when calculated top is negative', () => {
-      // This test targets line 98: top = window.pageYOffset + 10
-      // We need: top < window.pageYOffset after bottom adjustment
+      // This test verifies the adjustment when top is less than pageYOffset
       Object.defineProperty(window, 'innerWidth', {value: 1000, writable: true});
       Object.defineProperty(window, 'innerHeight', {value: 100, writable: true}); // Small viewport height
       Object.defineProperty(window, 'pageXOffset', {value: 0, writable: true});
@@ -2757,8 +2748,7 @@ describe('CustomLinkPlugin', () => {
 
   describe('editorElem null handling in updateLinkEditor', () => {
     it('should return early from updateLinkEditor when editorElem is null and not a link node', () => {
-      // This tests line 192: if (editorElem === null) { return; }
-      // This path is reached when we have a valid range selection but editorRef.current is null
+      // This verifies early return with valid range selection but null editorRef
       mockIsRangeSelection.mockReturnValue(true);
       mockGetSelection.mockReturnValue({type: 'range'});
 

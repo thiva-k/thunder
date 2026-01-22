@@ -523,6 +523,134 @@ describe('ExecutionExtendedProperties', () => {
       const modeSelect = comboboxes[0];
       expect(modeSelect).toHaveTextContent('Verify SMS OTP');
     });
+
+    it('should update display label when mode changes to verify', async () => {
+      const user = userEvent.setup();
+      mockNotificationSenders.mockReturnValue({
+        data: [{id: 'sender-1', name: 'Twilio Sender'}],
+        isLoading: false,
+      });
+
+      render(<ExecutionExtendedProperties resource={smsOtpResource} onChange={mockOnChange} />);
+
+      const comboboxes = screen.getAllByRole('combobox');
+      const modeSelect = comboboxes[0];
+      await user.click(modeSelect);
+      await user.click(screen.getByText('Verify SMS OTP'));
+
+      expect(mockOnChange).toHaveBeenCalledWith(
+        'data',
+        expect.objectContaining({
+          display: expect.objectContaining({
+            label: 'Verify SMS OTP',
+          }) as unknown,
+        }),
+        smsOtpResource,
+      );
+    });
+
+    it('should preserve existing data properties when mode changes', async () => {
+      const user = userEvent.setup();
+      mockNotificationSenders.mockReturnValue({
+        data: [{id: 'sender-1', name: 'Twilio Sender'}],
+        isLoading: false,
+      });
+
+      const resourceWithExistingData = {
+        ...smsOtpResource,
+        data: {
+          ...(smsOtpResource as unknown as {data: object}).data,
+          properties: {senderId: 'sender-1', someOtherProp: 'value'},
+          display: {label: 'Old Label', icon: 'icon.png'},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={resourceWithExistingData} onChange={mockOnChange} />);
+
+      const comboboxes = screen.getAllByRole('combobox');
+      const modeSelect = comboboxes[0];
+      await user.click(modeSelect);
+      await user.click(screen.getByText('Send SMS OTP'));
+
+      expect(mockOnChange).toHaveBeenCalledWith(
+        'data',
+        expect.objectContaining({
+          properties: expect.objectContaining({
+            senderId: 'sender-1',
+            someOtherProp: 'value',
+          }) as unknown,
+          display: expect.objectContaining({
+            label: 'Send SMS OTP',
+            icon: 'icon.png',
+          }) as unknown,
+        }),
+        resourceWithExistingData,
+      );
+    });
+
+    it('should preserve display properties when mode changes', async () => {
+      const user = userEvent.setup();
+      mockNotificationSenders.mockReturnValue({
+        data: [{id: 'sender-1', name: 'Twilio Sender'}],
+        isLoading: false,
+      });
+
+      const resourceWithDisplay = {
+        ...smsOtpResource,
+        data: {
+          ...(smsOtpResource as unknown as {data: object}).data,
+          display: {icon: 'sms-icon.png'},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={resourceWithDisplay} onChange={mockOnChange} />);
+
+      const comboboxes = screen.getAllByRole('combobox');
+      const modeSelect = comboboxes[0];
+      await user.click(modeSelect);
+      await user.click(screen.getByText('Send SMS OTP'));
+
+      // Should preserve existing display properties while updating label
+      expect(mockOnChange).toHaveBeenCalledWith(
+        'data',
+        expect.objectContaining({
+          display: expect.objectContaining({
+            label: 'Send SMS OTP',
+            icon: 'sms-icon.png',
+          }) as unknown,
+        }),
+        resourceWithDisplay,
+      );
+    });
+
+    it('should show validation error for sender field', () => {
+      (mockSelectedNotification.hasResourceFieldNotification as unknown as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'sms-otp-executor-1_data.properties.senderId'
+      );
+      (mockSelectedNotification.getResourceFieldNotification as unknown as ReturnType<typeof vi.fn>).mockImplementation((key: string) =>
+        key === 'sms-otp-executor-1_data.properties.senderId' ? 'Sender ID is invalid' : ''
+      );
+      mockNotificationSenders.mockReturnValue({
+        data: [{id: 'sender-1', name: 'Twilio Sender'}],
+        isLoading: false,
+      });
+
+      render(<ExecutionExtendedProperties resource={smsOtpResource} onChange={mockOnChange} />);
+
+      expect(screen.getByText('Sender ID is invalid')).toBeInTheDocument();
+    });
+
+    it('should not show warning when senders are still loading', () => {
+      mockSelectedNotification.hasResourceFieldNotification.mockReturnValue(false);
+      mockNotificationSenders.mockReturnValue({
+        data: [],
+        isLoading: true,
+      });
+
+      render(<ExecutionExtendedProperties resource={smsOtpResource} onChange={mockOnChange} />);
+
+      expect(screen.queryByText('No SMS senders configured')).not.toBeInTheDocument();
+    });
   });
 
   describe('Edge Cases', () => {

@@ -3554,7 +3554,7 @@ describe('I18nConfigurationCard', () => {
   describe('Edit button click when selectedI18nKey is empty', () => {
     it('should set i18nKeyInputValue to null when edit is clicked but selectedI18nKey is falsy', async () => {
       // First render with an empty selectedI18nKey but still with Edit button visible
-      // This scenario tests line 794 where selectedI18nKey is falsy
+      // This scenario tests the behavior when selectedI18nKey is falsy
       render(
         <I18nConfigurationCard
           open
@@ -3993,6 +3993,174 @@ describe('I18nConfigurationCard', () => {
       // Verify the i18n config container is rendered
       const configContainer = document.querySelector('.i18n-config-container');
       expect(configContainer).toBeInTheDocument();
+    });
+  });
+
+  describe('handleSaveCustomize - Error Paths', () => {
+    it('should handle save failures and not clear state', async () => {
+      const mockFailingUpdateI18nKey = vi.fn().mockResolvedValue(false);
+
+      const failingSaveContext = createContextValue({
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+        },
+        language: 'en_US',
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        updateI18nKey: mockFailingUpdateI18nKey,
+        isCustomI18nKey: vi.fn().mockReturnValue(false),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(failingSaveContext)},
+      );
+
+      // Enter customize mode
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      await waitFor(() => {
+        const languageTextField = screen.getByPlaceholderText('flows:core.elements.textPropertyField.i18nCard.languageTextPlaceholder');
+        expect(languageTextField).toBeInTheDocument();
+      });
+
+      // Make a change
+      const languageTextField = screen.getByPlaceholderText('flows:core.elements.textPropertyField.i18nCard.languageTextPlaceholder');
+      fireEvent.change(languageTextField, {target: {value: 'New value'}});
+
+      // Try to save - should hit error path
+      const updateButton = screen.getByText('common:update');
+      fireEvent.click(updateButton);
+
+      await waitFor(() => {
+        expect(mockFailingUpdateI18nKey).toHaveBeenCalled();
+      });
+
+      // Should still be in customize view (error path)
+      expect(screen.queryByText('common:back')).toBeInTheDocument();
+    });
+
+    it('should handle partial save failures with multiple locales', async () => {
+      let callCount = 0;
+      const mockMixedUpdateI18nKey = vi.fn().mockImplementation(() => {
+        callCount += 1;
+        return Promise.resolve(callCount % 2 === 0);
+      });
+
+      const mixedSaveContext = createContextValue({
+        i18nText: {
+          [PreviewScreenType.LOGIN]: {
+            'login.title': 'Sign In',
+          },
+        },
+        language: 'en_US',
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        updateI18nKey: mockMixedUpdateI18nKey,
+        isCustomI18nKey: vi.fn().mockReturnValue(false),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(mixedSaveContext)},
+      );
+
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      const languageTextField = await screen.findByPlaceholderText('flows:core.elements.textPropertyField.i18nCard.languageTextPlaceholder');
+      fireEvent.change(languageTextField, {target: {value: 'Test'}});
+
+      const updateButton = screen.getByText('common:update');
+      fireEvent.click(updateButton);
+
+      // Mixed results should trigger error path
+      await waitFor(() => {
+        expect(mockMixedUpdateI18nKey).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('handleLanguageTextChange - Coverage', () => {
+    it('should disable language text field when i18nKeyInputValue is null', async () => {
+      const contextWithLanguage = createContextValue({
+        language: 'en_US',
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey=""
+        />,
+        {wrapper: createWrapper(contextWithLanguage)},
+      );
+
+      // Click New to enter create mode but don't select a key
+      const newButton = screen.getByText('common:new');
+      fireEvent.click(newButton);
+
+      await waitFor(() => {
+        expect(screen.getByText('common:back')).toBeInTheDocument();
+      });
+
+      // Language text field should be disabled when no key is selected
+      const languageTextField = screen.getByPlaceholderText(
+        'flows:core.elements.textPropertyField.i18nCard.languageTextPlaceholder',
+      );
+      expect(languageTextField).toBeDisabled();
+    });
+
+    it('should enable language text field when both key and language are selected', async () => {
+      const updateContext = createContextValue({
+        language: 'en_US',
+        primaryI18nScreen: PreviewScreenType.LOGIN,
+        updateI18nKey: mockUpdateI18nKey,
+        isCustomI18nKey: vi.fn().mockReturnValue(false),
+      });
+
+      render(
+        <I18nConfigurationCard
+          open
+          anchorEl={anchorEl}
+          propertyKey="label"
+          onClose={mockOnClose}
+          onChange={mockOnChange}
+          i18nKey="login.title"
+        />,
+        {wrapper: createWrapper(updateContext)},
+      );
+
+      const editButton = screen.getByText('common:edit');
+      fireEvent.click(editButton);
+
+      // When key is selected and language is available, text field should be enabled
+      const languageTextField = await screen.findByPlaceholderText(
+        'flows:core.elements.textPropertyField.i18nCard.languageTextPlaceholder',
+      );
+      expect(languageTextField).not.toBeDisabled();
+
+      // Should be able to change the value
+      fireEvent.change(languageTextField, {target: {value: 'Updated Sign In'}});
+      expect(languageTextField).toHaveValue('Updated Sign In');
     });
   });
 });

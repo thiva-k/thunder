@@ -67,4 +67,16 @@ describe('Search', () => {
     const searchInput = screen.getByPlaceholderText('Search...');
     expect(searchInput).not.toBeDisabled();
   });
+
+  it('clears input when value is deleted', async () => {
+    const user = userEvent.setup();
+    render(<Search />);
+
+    const searchInput = screen.getByPlaceholderText('Search...');
+    await user.type(searchInput, 'test');
+    expect(searchInput).toHaveValue('test');
+
+    await user.clear(searchInput);
+    expect(searchInput).toHaveValue('');
+  });
 });

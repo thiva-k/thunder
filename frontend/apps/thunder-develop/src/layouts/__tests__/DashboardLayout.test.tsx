@@ -23,7 +23,11 @@ import DashboardLayout from '../DashboardLayout';
 
 // Mock components
 vi.mock('../../components/Sidebar/SideMenu', () => ({
-  default: () => <div data-testid="side-menu">SideMenu</div>,
+  default: ({defaultExpanded}: {defaultExpanded?: boolean}) => (
+    <div data-testid="side-menu" data-default-expanded={defaultExpanded}>
+      SideMenu
+    </div>
+  ),
 }));
 
 vi.mock('../../components/Header/Header', () => ({
@@ -108,5 +112,19 @@ describe('DashboardLayout', () => {
     expect(screen.getByTestId('side-menu')).toBeInTheDocument();
     expect(screen.getByTestId('header')).toBeInTheDocument();
     expect(screen.getByTestId('outlet')).toBeInTheDocument();
+  });
+
+  it('passes defaultExpanded=true to SideMenu when dense=false by default', () => {
+    render(<DashboardLayout />);
+
+    const sideMenu = screen.getByTestId('side-menu');
+    expect(sideMenu).toHaveAttribute('data-default-expanded', 'true');
+  });
+
+  it('passes defaultExpanded=false to SideMenu when dense=true', () => {
+    render(<DashboardLayout dense />);
+
+    const sideMenu = screen.getByTestId('side-menu');
+    expect(sideMenu).toHaveAttribute('data-default-expanded', 'false');
   });
 });

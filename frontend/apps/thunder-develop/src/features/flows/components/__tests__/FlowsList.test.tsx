@@ -143,7 +143,7 @@ interface MockDataGridProps {
   getRowId: (row: MockRow) => string;
 }
 
-// Mock DataGrid
+// Mock DataGrid - DO NOT mock Menu, let it render normally
 vi.mock('@wso2/oxygen-ui', async () => {
   const actual = await vi.importActual('@wso2/oxygen-ui');
   return {
@@ -192,15 +192,6 @@ vi.mock('@wso2/oxygen-ui', async () => {
         </div>
       ),
     },
-    useTheme: () => ({
-      vars: {
-        palette: {
-          grey: {500: '#9e9e9e', 900: '#212121'},
-          error: {main: '#f44336'},
-        },
-      },
-      applyStyles: () => ({}),
-    }),
   };
 });
 

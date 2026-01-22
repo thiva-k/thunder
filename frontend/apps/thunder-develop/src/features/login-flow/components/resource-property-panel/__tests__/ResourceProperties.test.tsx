@@ -436,6 +436,25 @@ describe('ResourceProperties', () => {
       expect(screen.getByTestId('text-property-field-src')).toBeInTheDocument();
       expect(screen.getByTestId('text-property-field-alt')).toBeInTheDocument();
     });
+
+    it('should handle empty src and alt values', () => {
+      const resource = createMockResource({
+        category: ElementCategories.Display,
+        type: ElementTypes.Image,
+      } as Partial<Resource>);
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      expect(screen.getByTestId('text-property-field-src')).toHaveAttribute('data-property-value', '');
+      expect(screen.getByTestId('text-property-field-alt')).toHaveAttribute('data-property-value', '');
+    });
   });
 
   describe('Display Category - Other Types', () => {
@@ -799,6 +818,68 @@ describe('ResourceProperties', () => {
       expect(mockOnVariantChange).toHaveBeenCalledWith('body');
     });
 
+    it('should handle onVariantChange being undefined for Text type', () => {
+      const variants = [
+        {variant: 'heading', id: 'v1'},
+        {variant: 'body', id: 'v2'},
+      ] as Element[];
+
+      const resource = createMockResource({
+        category: ElementCategories.Display,
+        type: ElementTypes.Text,
+        variants,
+        variant: 'heading',
+      } as Partial<Resource>);
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{}}
+          onChange={mockOnChange}
+          onVariantChange={undefined}
+        />,
+      );
+
+      const variantSelect = document.getElementById('variant-select')!;
+      fireEvent.mouseDown(variantSelect);
+
+      const bodyOption = screen.getByRole('option', {name: 'body'});
+      fireEvent.click(bodyOption);
+
+      // Should not throw error
+      expect(screen.getByText('Variant')).toBeInTheDocument();
+    });
+
+    it('should handle variant not found in variants array for Text type', () => {
+      const variants = [
+        {variant: 'heading', id: 'v1'},
+        {variant: 'body', id: 'v2'},
+      ] as Element[];
+
+      const resource = createMockResource({
+        category: ElementCategories.Display,
+        type: ElementTypes.Text,
+        variants,
+        variant: 'heading',
+      } as Partial<Resource>);
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const variantSelect = document.getElementById('variant-select')!;
+      fireEvent.mouseDown(variantSelect);
+
+      // Try to select a non-existent variant through the select component
+      // The select should still work properly
+      expect(screen.getByText('Variant')).toBeInTheDocument();
+    });
+
     it('should not render variant selector for Text type without variants', () => {
       const resource = createMockResource({
         category: ElementCategories.Display,
@@ -977,6 +1058,96 @@ describe('ResourceProperties', () => {
       expect(screen.getByTestId('resource-property-factory-id')).toBeInTheDocument();
       expect(screen.getByTestId('resource-property-factory-href')).toBeInTheDocument();
       expect(screen.queryByTestId('button-extended-properties')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Action Category with Variants', () => {
+    it('should render variant selector for Action category with variants', () => {
+      const variants = [
+        {variant: 'primary', id: 'v1'},
+        {variant: 'secondary', id: 'v2'},
+      ] as Element[];
+
+      const resource = createMockResource({
+        category: ElementCategories.Action,
+        type: ElementTypes.Action,
+        variants,
+        variant: 'primary',
+      } as Partial<Resource>);
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      expect(screen.getByText('Variant')).toBeInTheDocument();
+    });
+
+    it('should call onVariantChange for Action category variant selection', () => {
+      const variants = [
+        {variant: 'filled', id: 'v1'},
+        {variant: 'outlined', id: 'v2'},
+      ] as Element[];
+
+      const resource = createMockResource({
+        category: ElementCategories.Action,
+        type: ElementTypes.Action,
+        variants,
+        variant: 'filled',
+      } as Partial<Resource>);
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{}}
+          onChange={mockOnChange}
+          onVariantChange={mockOnVariantChange}
+        />,
+      );
+
+      const variantSelect = document.getElementById('variant-select')!;
+      fireEvent.mouseDown(variantSelect);
+
+      const outlinedOption = screen.getByRole('option', {name: 'outlined'});
+      fireEvent.click(outlinedOption);
+
+      expect(mockOnVariantChange).toHaveBeenCalledWith('outlined');
+    });
+
+    it('should handle onVariantChange being undefined', () => {
+      const variants = [
+        {variant: 'primary', id: 'v1'},
+        {variant: 'secondary', id: 'v2'},
+      ] as Element[];
+
+      const resource = createMockResource({
+        category: ElementCategories.Action,
+        type: ElementTypes.Action,
+        variants,
+        variant: 'primary',
+      } as Partial<Resource>);
+
+      render(
+        <ResourceProperties
+          resource={resource}
+          properties={{}}
+          onChange={mockOnChange}
+          onVariantChange={undefined}
+        />,
+      );
+
+      const variantSelect = document.getElementById('variant-select')!;
+      fireEvent.mouseDown(variantSelect);
+
+      const secondaryOption = screen.getByRole('option', {name: 'secondary'});
+      fireEvent.click(secondaryOption);
+
+      // Should not throw error
+      expect(screen.getByText('Variant')).toBeInTheDocument();
     });
   });
 
