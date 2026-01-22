@@ -18,8 +18,6 @@
 
 package passkey
 
-import "github.com/go-webauthn/webauthn/protocol"
-
 // AuthenticatorSelection represents criteria for selecting authenticators during registration.
 type AuthenticatorSelection struct {
 	AuthenticatorAttachment string
@@ -45,15 +43,15 @@ type PasskeyRegistrationStartData struct {
 
 // PublicKeyCredentialCreationOptions represents the options for credential creation.
 type PublicKeyCredentialCreationOptions struct {
-	Challenge              string                            `json:"challenge"`
-	RelyingParty           protocol.RelyingPartyEntity       `json:"rp"`
-	User                   protocol.UserEntity               `json:"user"`
-	Parameters             []protocol.CredentialParameter    `json:"pubKeyCredParams"`
-	AuthenticatorSelection protocol.AuthenticatorSelection   `json:"authenticatorSelection,omitempty"`
-	Timeout                int                               `json:"timeout,omitempty"`
-	CredentialExcludeList  []protocol.CredentialDescriptor   `json:"excludeCredentials,omitempty"`
-	Extensions             protocol.AuthenticationExtensions `json:"extensions,omitempty"`
-	Attestation            protocol.ConveyancePreference     `json:"attestation,omitempty"`
+	Challenge              string                   `json:"challenge"`
+	RelyingParty           relyingPartyEntity       `json:"rp"`
+	User                   userEntity               `json:"user"`
+	Parameters             []credentialParameter    `json:"pubKeyCredParams"`
+	AuthenticatorSelection authenticatorSelection   `json:"authenticatorSelection,omitempty"`
+	Timeout                int                      `json:"timeout,omitempty"`
+	CredentialExcludeList  []credentialDescriptor   `json:"excludeCredentials,omitempty"`
+	Extensions             authenticationExtensions `json:"extensions,omitempty"`
+	Attestation            conveyancePreference     `json:"attestation,omitempty"`
 }
 
 // PasskeyRegistrationFinishRequest represents the request to finish passkey credential registration.
@@ -87,12 +85,12 @@ type PasskeyAuthenticationStartData struct {
 
 // PublicKeyCredentialRequestOptions represents the options for credential assertion.
 type PublicKeyCredentialRequestOptions struct {
-	Challenge        string                               `json:"challenge"`
-	Timeout          int                                  `json:"timeout,omitempty"`
-	RelyingPartyID   string                               `json:"rpId,omitempty"`
-	AllowCredentials []protocol.CredentialDescriptor      `json:"allowCredentials,omitempty"`
-	UserVerification protocol.UserVerificationRequirement `json:"userVerification,omitempty"`
-	Extensions       protocol.AuthenticationExtensions    `json:"extensions,omitempty"`
+	Challenge        string                      `json:"challenge"`
+	Timeout          int                         `json:"timeout,omitempty"`
+	RelyingPartyID   string                      `json:"rpId,omitempty"`
+	AllowCredentials []credentialDescriptor      `json:"allowCredentials,omitempty"`
+	UserVerification userVerificationRequirement `json:"userVerification,omitempty"`
+	Extensions       authenticationExtensions    `json:"extensions,omitempty"`
 }
 
 // CredentialDescriptor represents a WebAuthn credential descriptor.
@@ -115,7 +113,7 @@ type PasskeyAuthenticationFinishRequest struct {
 
 // PasskeyFinishRequest represents the request to complete passkey authentication.
 type PasskeyFinishRequest struct {
-	PublicKeyCredential *ParsedCredentialAssertionData
+	PublicKeyCredential *parsedCredentialAssertionData
 	SessionToken        string
 	SkipAssertion       bool
 	Assertion           string
@@ -126,5 +124,5 @@ type webauthnUserInterface interface {
 	WebAuthnID() []byte
 	WebAuthnName() string
 	WebAuthnDisplayName() string
-	WebAuthnCredentials() []WebauthnCredential
+	WebAuthnCredentials() []webauthnCredential
 }

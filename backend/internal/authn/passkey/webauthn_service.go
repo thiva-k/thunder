@@ -19,59 +19,113 @@
 package passkey
 
 import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+
 	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
-// Wrapper types to abstract the underlying WebAuthn library. .
+// Wrapper types to abstract the underlying WebAuthn library.
 
-// RegistrationOption wraps library-specific registration options.
-type RegistrationOption = webauthn.RegistrationOption
+// registrationOption wraps library-specific registration options.
+type registrationOption = webauthn.RegistrationOption
 
-// SessionData wraps library-specific session data.
-type SessionData = webauthn.SessionData
+// sessionData wraps library-specific session data.
+type sessionData = webauthn.SessionData
 
-// CredentialCreation wraps library-specific credential creation options.
-type CredentialCreation = protocol.CredentialCreation
+// credentialCreation wraps library-specific credential creation options.
+type credentialCreation = protocol.CredentialCreation
 
-// CredentialAssertion wraps library-specific credential assertion options.
-type CredentialAssertion = protocol.CredentialAssertion
+// credentialAssertion wraps library-specific credential assertion options.
+type credentialAssertion = protocol.CredentialAssertion
 
-// ParsedCredentialCreationData wraps library-specific parsed credential creation data.
-type ParsedCredentialCreationData = protocol.ParsedCredentialCreationData
+// parsedCredentialCreationData wraps library-specific parsed credential creation data.
+type parsedCredentialCreationData = protocol.ParsedCredentialCreationData
 
-// ParsedCredentialAssertionData wraps library-specific parsed credential assertion data.
-type ParsedCredentialAssertionData = protocol.ParsedCredentialAssertionData
+// parsedCredentialAssertionData wraps library-specific parsed credential assertion data.
+type parsedCredentialAssertionData = protocol.ParsedCredentialAssertionData
 
-// WebauthnCredential wraps library-specific credential data.
-type WebauthnCredential = webauthn.Credential
+// webauthnCredential wraps library-specific credential data.
+type webauthnCredential = webauthn.Credential
+
+// authenticator wraps library-specific authenticator data.
+type authenticator = webauthn.Authenticator
+
+// relyingPartyEntity wraps library-specific relying party entity.
+type relyingPartyEntity = protocol.RelyingPartyEntity
+
+// userEntity wraps library-specific user entity.
+type userEntity = protocol.UserEntity
+
+// credentialParameter wraps library-specific credential parameter.
+type credentialParameter = protocol.CredentialParameter
+
+// authenticatorSelection wraps library-specific authenticator selection criteria.
+type authenticatorSelection = protocol.AuthenticatorSelection
+
+// credentialDescriptor wraps library-specific credential descriptor.
+type credentialDescriptor = protocol.CredentialDescriptor
+
+// authenticationExtensions wraps library-specific authentication extensions.
+type authenticationExtensions = protocol.AuthenticationExtensions
+
+// conveyancePreference wraps library-specific attestation conveyance preference.
+type conveyancePreference = protocol.ConveyancePreference
+
+// userVerificationRequirement wraps library-specific user verification requirement.
+type userVerificationRequirement = protocol.UserVerificationRequirement
+
+// authenticatorAttachment wraps library-specific authenticator attachment.
+type authenticatorAttachment = protocol.AuthenticatorAttachment
+
+// residentKeyRequirement wraps library-specific resident key requirement.
+type residentKeyRequirement = protocol.ResidentKeyRequirement
+
+// credentialType wraps library-specific credential type.
+type credentialType = protocol.CredentialType
+
+// credentialMediationRequirement wraps library-specific credential mediation requirement.
+type credentialMediationRequirement = protocol.CredentialMediationRequirement
+
+// Wrapper constants for protocol constants.
+var (
+	verificationPreferred = protocol.VerificationPreferred
+)
+
+// Wrapper functions for webauthn library functions.
+var (
+	withAuthenticatorSelection = webauthn.WithAuthenticatorSelection
+	withConveyancePreference   = webauthn.WithConveyancePreference
+)
 
 // webAuthnService provides an abstraction layer over the WebAuthn library.
 type webAuthnService interface {
 	// BeginRegistration initiates the registration ceremony and returns credential creation options.
 	BeginRegistration(
 		user webauthnUserInterface,
-		options []RegistrationOption,
-	) (*CredentialCreation, *SessionData, error)
+		options []registrationOption,
+	) (*credentialCreation, *sessionData, error)
 
 	// CreateCredential validates the registration response and creates a credential.
 	CreateCredential(
 		user webauthnUserInterface,
-		session SessionData,
-		response *ParsedCredentialCreationData,
-	) (*WebauthnCredential, error)
+		session sessionData,
+		response *parsedCredentialCreationData,
+	) (*webauthnCredential, error)
 
 	// BeginLogin initiates the authentication ceremony and returns credential request options.
 	BeginLogin(
 		user webauthnUserInterface,
-	) (*CredentialAssertion, *SessionData, error)
+	) (*credentialAssertion, *sessionData, error)
 
 	// ValidateLogin validates the authentication response and returns the verified credential.
 	ValidateLogin(
 		user webauthnUserInterface,
-		session SessionData,
-		response *ParsedCredentialAssertionData,
-	) (*WebauthnCredential, error)
+		session sessionData,
+		response *parsedCredentialAssertionData,
+	) (*webauthnCredential, error)
 }
 
 // defaultWebAuthnService is the default implementation using the GO-WebAuthn library.
@@ -103,32 +157,163 @@ func newDefaultWebAuthnService(
 // BeginRegistration wraps the WebAuthn library's BeginRegistration method.
 func (a *defaultWebAuthnService) BeginRegistration(
 	user webauthnUserInterface,
-	options []RegistrationOption,
-) (*CredentialCreation, *SessionData, error) {
+	options []registrationOption,
+) (*credentialCreation, *sessionData, error) {
 	return a.webAuthnLib.BeginRegistration(user, options...)
 }
 
 // CreateCredential wraps the WebAuthn library's CreateCredential method.
 func (a *defaultWebAuthnService) CreateCredential(
 	user webauthnUserInterface,
-	session SessionData,
-	response *ParsedCredentialCreationData,
-) (*WebauthnCredential, error) {
+	session sessionData,
+	response *parsedCredentialCreationData,
+) (*webauthnCredential, error) {
 	return a.webAuthnLib.CreateCredential(user, session, response)
 }
 
 // BeginLogin wraps the WebAuthn library's BeginLogin method.
 func (a *defaultWebAuthnService) BeginLogin(
 	user webauthnUserInterface,
-) (*CredentialAssertion, *SessionData, error) {
+) (*credentialAssertion, *sessionData, error) {
 	return a.webAuthnLib.BeginLogin(user)
 }
 
 // ValidateLogin wraps the WebAuthn library's ValidateLogin method.
 func (a *defaultWebAuthnService) ValidateLogin(
 	user webauthnUserInterface,
-	session SessionData,
-	response *ParsedCredentialAssertionData,
-) (*WebauthnCredential, error) {
+	session sessionData,
+	response *parsedCredentialAssertionData,
+) (*webauthnCredential, error) {
 	return a.webAuthnLib.ValidateLogin(user, session, response)
+}
+
+// parseAssertionResponse converts raw string parameters to parsedCredentialAssertionData.
+func parseAssertionResponse(credentialID, credentialType, clientDataJSON,
+	authenticatorData, signature, userHandle string) (*parsedCredentialAssertionData, error) {
+	// Decode all base64url encoded parameters
+	rawID, err := decodeBase64(credentialID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode credential ID: %w", err)
+	}
+
+	clientData, err := decodeBase64(clientDataJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode client data JSON: %w", err)
+	}
+
+	authData, err := decodeBase64(authenticatorData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode authenticator data: %w", err)
+	}
+
+	sig, err := decodeBase64(signature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode signature: %w", err)
+	}
+
+	var userHandleBytes []byte
+	if userHandle != "" {
+		userHandleBytes, err = decodeBase64(userHandle)
+		if err != nil {
+			// User handle is optional, so we can continue without it
+			userHandleBytes = nil
+		}
+	}
+
+	// Parse client data JSON to extract required fields
+	var clientDataParsed protocol.CollectedClientData
+	if err := json.Unmarshal(clientData, &clientDataParsed); err != nil {
+		return nil, fmt.Errorf("failed to parse client data JSON: %w", err)
+	}
+
+	// Parse authenticator data
+	authDataParsed := protocol.AuthenticatorData{}
+	if err := authDataParsed.Unmarshal(authData); err != nil {
+		return nil, fmt.Errorf("failed to parse authenticator data: %w", err)
+	}
+
+	// Create the parsed credential assertion data structure
+	parsed := &parsedCredentialAssertionData{
+		ParsedPublicKeyCredential: protocol.ParsedPublicKeyCredential{
+			RawID: rawID,
+			ParsedCredential: protocol.ParsedCredential{
+				ID:   credentialID,
+				Type: credentialType,
+			},
+		},
+		Response: protocol.ParsedAssertionResponse{
+			CollectedClientData: clientDataParsed,
+			AuthenticatorData:   authDataParsed,
+			Signature:           sig,
+			UserHandle:          userHandleBytes,
+		},
+		Raw: protocol.CredentialAssertionResponse{
+			PublicKeyCredential: protocol.PublicKeyCredential{
+				Credential: protocol.Credential{
+					ID:   credentialID,
+					Type: credentialType,
+				},
+				RawID: rawID,
+			},
+			AssertionResponse: protocol.AuthenticatorAssertionResponse{
+				AuthenticatorResponse: protocol.AuthenticatorResponse{
+					ClientDataJSON: clientData,
+				},
+				AuthenticatorData: authData,
+				Signature:         sig,
+				UserHandle:        userHandleBytes,
+			},
+		},
+	}
+
+	return parsed, nil
+}
+
+// parseAttestationResponse converts raw credential data to parsedCredentialCreationData.
+// This function uses the protocol package's ParseCredentialCreationResponseBytes to properly
+// parse the credential data with all required fields populated.
+func parseAttestationResponse(
+	credentialID, credentialType, clientDataJSON, attestationObject string,
+) (*parsedCredentialCreationData, error) {
+	// Decode inputs to ensure we have valid bytes, regardless of input encoding
+	clientDataBytes, err := decodeBase64(clientDataJSON)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode client data JSON: %w", err)
+	}
+
+	attestationBytes, err := decodeBase64(attestationObject)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode attestation object: %w", err)
+	}
+
+	// Re-encode to RawURLEncoding to ensure consistent format for the protocol parser
+	// The protocol package expects RawURLEncoding for these fields in the JSON
+	clientDataEncoded := base64.RawURLEncoding.EncodeToString(clientDataBytes)
+	attestationEncoded := base64.RawURLEncoding.EncodeToString(attestationBytes)
+
+	// Construct the JSON payload for the protocol parser
+	// The protocol package expects the data in this format
+	payload := map[string]interface{}{
+		"id":    credentialID,
+		"rawId": credentialID,
+		"type":  credentialType,
+		"response": map[string]interface{}{
+			"clientDataJSON":    clientDataEncoded,
+			"attestationObject": attestationEncoded,
+		},
+	}
+
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal credential: %w", err)
+	}
+
+	// Parse the attestation response using the protocol package's byte parser
+	// This properly parses the CBOR-encoded attestation object and populates all fields
+	parsed, err := protocol.ParseCredentialCreationResponseBytes(jsonData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse credential creation response: %w", err)
+	}
+
+	return parsed, nil
 }
