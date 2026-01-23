@@ -30,8 +30,10 @@ import {
   Typography,
   Grid,
   IconButton,
+  FormControl,
+  FormHelperText,
 } from '@wso2/oxygen-ui';
-import {X, RefreshCcw, AppWindow} from '@wso2/oxygen-ui-icons-react';
+import {X, AppWindow, Shuffle} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import generateAppLogoSuggestions from '../utils/generateAppLogoSuggestion';
 
@@ -51,14 +53,14 @@ export default function LogoUpdateModal({open, onClose, currentLogoUrl = '', onL
   useEffect(() => {
     if (open) {
       // Generate new suggestions when modal opens
-      setSuggestions(generateAppLogoSuggestions(8));
+      setSuggestions(generateAppLogoSuggestions(12));
       setSelectedLogo(currentLogoUrl);
       setCustomUrl(currentLogoUrl);
     }
   }, [open, currentLogoUrl]);
 
-  const handleRefreshSuggestions = useCallback(() => {
-    setSuggestions(generateAppLogoSuggestions(8));
+  const handleRotateLogos = useCallback(() => {
+    setSuggestions(generateAppLogoSuggestions(12));
   }, []);
 
   const handleSave = useCallback(() => {
@@ -134,26 +136,34 @@ export default function LogoUpdateModal({open, onClose, currentLogoUrl = '', onL
             <Typography variant="subtitle2" gutterBottom>
               {t('applications:logoModal.customUrl.title')}
             </Typography>
-            <TextField
-              fullWidth
-              placeholder={t('applications:logoModal.customUrl.placeholder')}
-              value={customUrl}
-              onChange={(e) => handleCustomUrlChange(e.target.value)}
-              helperText={t('applications:logoModal.customUrl.hint')}
-            />
+            <FormControl fullWidth>
+              <TextField
+                fullWidth
+                placeholder={t('applications:logoModal.customUrl.placeholder')}
+                value={customUrl}
+                onChange={(e) => handleCustomUrlChange(e.target.value)}
+              />
+              <FormHelperText>{t('applications:logoModal.customUrl.hint')}</FormHelperText>
+            </FormControl>
           </Box>
 
           {/* Suggestions */}
           <Box>
             <Stack direction="row" alignItems="center" justifyContent="space-between" mb={2}>
-              <Typography variant="subtitle2">{t('applications:logoModal.suggestions.title')}</Typography>
-              <Button size="small" startIcon={<RefreshCcw size={14} />} onClick={handleRefreshSuggestions}>
-                {t('applications:logoModal.refresh')}
+              <Typography variant="h6">{t('applications:logoModal.logos.title')}</Typography>
+              <Button
+                size="small"
+                variant="text"
+                startIcon={<Shuffle size={14} />}
+                onClick={handleRotateLogos}
+                sx={{minWidth: 'auto'}}
+              >
+                {t('applications:logoModal.logos.shuffle')}
               </Button>
             </Stack>
             <Grid container spacing={2}>
               {suggestions.map((logoUrl) => (
-                <Grid size={{xs: 3}} key={logoUrl}>
+                <Grid size={{xs: 2}} key={logoUrl}>
                   <Box
                     onClick={() => handleLogoSelect(logoUrl)}
                     sx={{

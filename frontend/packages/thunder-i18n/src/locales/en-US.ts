@@ -804,8 +804,8 @@ const translations = {
     'logoModal.customUrl.title': 'Custom Logo URL',
     'logoModal.customUrl.placeholder': 'https://example.com/logo.png',
     'logoModal.customUrl.hint': 'Enter a direct URL to your custom logo image',
-    'logoModal.suggestions.title': 'Suggested Logos',
-    'logoModal.refresh': 'Refresh',
+    'logoModal.logos.title': 'Application Logo',
+    'logoModal.logos.shuffle': 'Shuffle',
     'logoModal.cancel': 'Cancel',
     'logoModal.update': 'Update Logo',
     // Edit page
