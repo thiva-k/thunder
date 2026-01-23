@@ -22,16 +22,49 @@ import {useState, useEffect, useMemo, useRef} from 'react';
 import {useForm} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import {z} from 'zod';
+import {useQuery} from '@tanstack/react-query';
 import {useAsgardeo} from '@asgardeo/react';
 import {useConfig} from '@thunder/commons-contexts';
 import {useLogger} from '@thunder/logger';
 import type {OAuth2Config} from '../../../models/oauth';
 import type {Application} from '../../../models/application';
 import type {PropertyDefinition, ApiUserSchema} from '../../../../user-types/types/user-types';
-import useGetUserTypes from '../../../../user-types/api/useGetUserTypes';
 import TokenIssuerSection from './TokenIssuerSection';
 import TokenUserAttributesSection from './TokenUserAttributesSection';
 import TokenValidationSection from './TokenValidationSection';
+
+interface UserSchemaListResponse {
+  totalResults: number;
+  startIndex: number;
+  count: number;
+  schemas: {
+    id: string;
+    name: string;
+  }[];
+}
+
+/**
+ * Temporary local hook to fetch user types list.
+ * TODO: Remove this once the parent hooks are fixed.
+ * Tracker: https://github.com/asgardeo/thunder/issues/1159
+ */
+function useGetUserTypes() {
+  const {http} = useAsgardeo();
+  const {getServerUrl} = useConfig();
+
+  return useQuery<UserSchemaListResponse>({
+    queryKey: ['user-types-list'],
+    queryFn: async (): Promise<UserSchemaListResponse> => {
+      const serverUrl = getServerUrl();
+      const response = await http.request({
+        url: `${serverUrl}/user-schemas?limit=100`,
+        method: 'GET',
+      } as unknown as Parameters<typeof http.request>[0]);
+
+      return response.data as UserSchemaListResponse;
+    },
+  });
+}
 
 /**
  * Props for the {@link EditTokenSettings} component.
@@ -98,23 +131,29 @@ export default function EditTokenSettings({
   const applyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['user', 'default']));
   const [userSchemas, setUserSchemas] = useState<ApiUserSchema[]>([]);
-  const [schemasLoading, setSchemasLoading] = useState(false);
 
-  const {data: userTypesData, loading: userTypesLoading} = useGetUserTypes({limit: 100});
+  const {data: userTypesData, isLoading: userTypesLoading} = useGetUserTypes();
   const [activeTokenType, setActiveTokenType] = useState<'access' | 'id'>('access');
   const [pendingAdditions, setPendingAdditions] = useState<Set<string>>(new Set());
   const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
   const [highlightedAttributes, setHighlightedAttributes] = useState<Set<string>>(new Set());
 
+  // Stabilize allowed_user_types array reference
+  const allowedUserTypes = useMemo(() => application.allowed_user_types ?? [], [application.allowed_user_types]);
+
+  // Get schema IDs for allowed user types
+  const schemaIds = useMemo(() => {
+    if (!userTypesData?.schemas || allowedUserTypes.length === 0) {
+      return [];
+    }
+
+    return userTypesData.schemas.filter((schema) => allowedUserTypes.includes(schema.name)).map((schema) => schema.id);
+  }, [userTypesData, allowedUserTypes]);
+
   // Determine if this is OAuth/OIDC mode (has separate token configs) or Native mode
   const isOAuthMode = useMemo(
     () => oauth2Config?.token?.access_token !== undefined || oauth2Config?.token?.id_token !== undefined,
     [oauth2Config],
-  );
-
-  const API_BASE_URL = useMemo(
-    () => getServerUrl() ?? (import.meta.env.VITE_ASGARDEO_BASE_URL as string),
-    [getServerUrl],
   );
 
   const tokenConfigSchema = useMemo(() => createTokenConfigSchema(t), [t]);
@@ -207,37 +246,22 @@ export default function EditTokenSettings({
   ]);
 
   /**
-   * Fetch allowed user types and their schemas
+   * Fetch user schemas for all allowed user types
    */
   useEffect(() => {
-    const fetchUserSchemas = async () => {
-      if (!application.allowed_user_types || application.allowed_user_types.length === 0) {
-        setUserSchemas([]);
-        return;
-      }
+    if (schemaIds.length === 0) {
+      setUserSchemas([]);
+      return;
+    }
 
-      if (!userTypesData?.schemas) {
-        return;
-      }
+    const fetchSchemas = async () => {
+      const serverUrl = getServerUrl();
 
-      setSchemasLoading(true);
       try {
-        // Find matching IDs for allowed user types
-        const allowedIds = userTypesData.schemas
-          .filter((schema) => application.allowed_user_types?.includes(schema.name))
-          .map((schema) => schema.id);
-
-        if (allowedIds.length === 0) {
-          setUserSchemas([]);
-          setSchemasLoading(false);
-          return;
-        }
-
-        // Fetch full schemas for allowed user types in parallel
-        const schemaPromises = allowedIds.map(async (id) => {
+        const schemaPromises = schemaIds.map(async (id) => {
           try {
             const response = await http.request({
-              url: `${API_BASE_URL}/user-schemas/${id}`,
+              url: `${serverUrl}/user-schemas/${id}`,
               method: 'GET',
             } as unknown as Parameters<typeof http.request>[0]);
             return response.data as ApiUserSchema;
@@ -248,22 +272,18 @@ export default function EditTokenSettings({
         });
 
         const responses = await Promise.all(schemaPromises);
-        // Filter out null values from failed requests
         const schemas = responses.filter((schema): schema is ApiUserSchema => schema !== null);
         setUserSchemas(schemas);
       } catch (err) {
         logger.error('Failed to fetch user schemas', {error: err});
         setUserSchemas([]);
-      } finally {
-        setSchemasLoading(false);
       }
     };
 
-    fetchUserSchemas().catch((err) => {
+    fetchSchemas().catch((err) => {
       logger.error('Unexpected error in fetchUserSchemas', {error: err});
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userTypesData, application.allowed_user_types]);
+  }, [schemaIds, http, getServerUrl, logger]);
 
   const userAttributes = useMemo(() => {
     if (userSchemas.length === 0) return [];
@@ -296,7 +316,7 @@ export default function EditTokenSettings({
     return Array.from(allAttributes).sort();
   }, [userSchemas]);
 
-  const isLoadingUserAttributes = userTypesLoading || schemasLoading;
+  const isLoadingUserAttributes = userTypesLoading;
 
   const sharedUserAttributes = useMemo(() => {
     if (isOAuthMode) {
