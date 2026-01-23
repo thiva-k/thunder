@@ -22,15 +22,15 @@ import type {JSX} from 'react';
 import {useState, useEffect, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
-import TechnologyGuide from './TechnologyGuide';
-import useApplicationCreate from '../../contexts/ApplicationCreate/useApplicationCreate';
+import TechnologyGuide from '../edit-application/integration-guides/TechnologyGuide';
+import type {IntegrationGuides} from '../../models/application-templates';
 
 /**
- * Props for the {@link ApplicationSummary} component.
+ * Props for the {@link IntegrationGuide} component.
  *
  * @public
  */
-export interface ApplicationSummaryProps {
+export interface IntegrationGuideProps {
   /**
    * The name of the created application
    */
@@ -59,45 +59,44 @@ export interface ApplicationSummaryProps {
    * The ID of the created application
    */
   applicationId?: string | null;
+  /**
+   * Integration guides configuration (optional - if not provided, won't show guides)
+   */
+  integrationGuides?: IntegrationGuides | null;
 }
 
 /**
- * React component that displays a success summary after application creation,
- * showing the application details and OAuth credentials if applicable.
+ * React component that displays integration guides and setup instructions
+ * for newly created applications.
  *
- * This final step in the onboarding flow presents:
- * 1. Success confirmation with application name and logo
- * 2. OAuth2 credentials (Client ID and Secret) with copy functionality
- * 3. Security warnings and best practices for credential management
- * 4. Next steps guidance with links to quick start guides
+ * This component provides:
+ * 1. Technology-specific integration guides with code snippets
+ * 2. OAuth2 credentials (Client ID and Secret) when applicable
+ * 3. Step-by-step instructions for integrating with various frameworks
  *
  * The component handles different scenarios:
- * - Public clients (show Client ID only, no secret)
- * - Confidential clients (show both Client ID and Secret with visibility toggle)
- * - Applications without OAuth configuration (success message only)
- *
- * Credentials are displayed in copyable text fields with visual feedback. A countdown
- * timer alerts users that credentials won't be shown again. The component provides
- * links to documentation and the application detail page.
+ * - Applications with integration guides (shows TechnologyGuide)
+ * - Applications with OAuth configuration (displays credentials)
+ * - Public vs confidential client configurations
  *
  * @param props - The component props
- * @param props.appName - Name of the created application
+ * @param props.appName - Name of the application
  * @param props.appLogo - URL of the application logo
  * @param props.selectedColor - Brand color for visual elements
  * @param props.clientId - OAuth2 client ID (if applicable)
  * @param props.clientSecret - OAuth2 client secret (if applicable)
  * @param props.hasOAuthConfig - Whether OAuth was configured
- * @param props.applicationId - ID of the created application for navigation
+ * @param props.applicationId - ID of the application
  *
- * @returns JSX element displaying the application creation summary
+ * @returns JSX element displaying the integration guide
  *
  * @example
  * ```tsx
- * import ApplicationSummary from './ApplicationSummary';
+ * import IntegrationGuide from './IntegrationGuide';
  *
- * function OnboardingComplete() {
+ * function ApplicationOverview() {
  *   return (
- *     <ApplicationSummary
+ *     <IntegrationGuide
  *       appName="My Application"
  *       appLogo="https://example.com/logo.png"
  *       selectedColor="#FF5733"
@@ -112,7 +111,7 @@ export interface ApplicationSummaryProps {
  *
  * @public
  */
-export default function ApplicationSummary({
+export default function IntegrationGuide({
   appName,
   appLogo,
   selectedColor,
@@ -120,10 +119,10 @@ export default function ApplicationSummary({
   clientSecret = '',
   hasOAuthConfig,
   applicationId = null,
-}: ApplicationSummaryProps): JSX.Element {
+  integrationGuides = null,
+}: IntegrationGuideProps): JSX.Element {
   const {t} = useTranslation();
   const navigate = useNavigate();
-  const {selectedTemplateConfig, signInApproach} = useApplicationCreate();
 
   const [showSecret, setShowSecret] = useState(false);
   const [copied, setCopied] = useState<{clientId: boolean; clientSecret: boolean}>({
@@ -221,14 +220,14 @@ export default function ApplicationSummary({
         <Typography variant="h3" component="h1" gutterBottom>
           {t('applications:onboarding.summary.title')}
         </Typography>
-        {selectedTemplateConfig?.integration_guides ? (
+        {integrationGuides ? (
           <Typography variant="subtitle1">{t('applications:onboarding.summary.guides.subtitle')}</Typography>
         ) : (
           <Typography variant="subtitle1">{t('applications:onboarding.summary.subtitle')}</Typography>
         )}
       </Stack>
 
-      {!selectedTemplateConfig?.integration_guides && (
+      {!integrationGuides && (
         <>
           <Paper
             sx={{
@@ -380,13 +379,8 @@ export default function ApplicationSummary({
       )}
 
       {/* Technology Integration Guides */}
-      {selectedTemplateConfig?.integration_guides && (
-        <TechnologyGuide
-          guides={selectedTemplateConfig.integration_guides}
-          signInApproach={signInApproach}
-          clientId={clientId}
-          applicationId={applicationId!}
-        />
+      {integrationGuides && (
+        <TechnologyGuide guides={integrationGuides} clientId={clientId} applicationId={applicationId ?? undefined} />
       )}
     </Stack>
   );

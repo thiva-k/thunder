@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import type {TokenConfig} from './token';
+
 /**
  * OAuth2 Grant Type
  *
@@ -114,37 +116,6 @@ export const TokenEndpointAuthMethods = {
   /** No authentication (public clients) */
   NONE: 'none',
 } as const;
-
-/**
- * Token Configuration
- *
- * Base configuration for OAuth2 tokens including validity period and user attributes.
- * This configuration is shared between access tokens and ID tokens.
- *
- * @public
- * @example
- * ```typescript
- * const accessTokenConfig: TokenConfig = {
- *   validity_period: 3600, // 1 hour
- *   user_attributes: ['email', 'username', 'roles']
- * };
- * ```
- */
-export interface TokenConfig {
-  /**
-   * Token validity period in seconds
-   * Determines how long the token remains valid after issuance
-   * @example 3600 (1 hour)
-   */
-  validity_period: number;
-
-  /**
-   * User attributes to include in the token
-   * List of user profile attributes that should be included in the token claims
-   * @example ['email', 'username', 'given_name', 'family_name']
-   */
-  user_attributes: string[];
-}
 
 /**
  * Scope Claims Mapping
@@ -269,14 +240,6 @@ export interface IDTokenConfig extends TokenConfig {
  * ```
  */
 export interface OAuth2Token {
-  /**
-   * Token issuer identifier
-   * The entity that issues the tokens (typically your authorization server URL)
-   * This value appears in the 'iss' claim of JWT tokens
-   * @example 'https://auth.example.com' or 'thunder'
-   */
-  issuer?: string;
-
   /**
    * Access token configuration
    * Defines the validity period and included user attributes for access tokens
@@ -434,7 +397,7 @@ export interface OAuth2Config {
    * Token configuration
    * Defines how access tokens and ID tokens are generated
    */
-  token?: OAuth2Token;
+  token?: OAuth2Token & Partial<TokenConfig>;
 }
 
 /**

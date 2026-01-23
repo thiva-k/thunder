@@ -44,10 +44,9 @@ export const ApplicationCreateFlowStep = {
   NAME: 'NAME',
   DESIGN: 'DESIGN',
   OPTIONS: 'OPTIONS',
-  APPROACH: 'APPROACH',
+  EXPERIENCE: 'EXPERIENCE',
   STACK: 'STACK',
-  CONFIGURE: 'CONFIGURE',
-  SUMMARY: 'SUMMARY',
+  CONFIGURE: 'CONFIGURE'
 } as const;
 
 /**
@@ -57,7 +56,7 @@ export const ApplicationCreateFlowStep = {
  */
 export const ApplicationCreateFlowSignInApproach = {
   INBUILT: 'INBUILT',
-  CUSTOM: 'CUSTOM',
+  EMBEDDED: 'EMBEDDED',
 } as const;
 
 /**

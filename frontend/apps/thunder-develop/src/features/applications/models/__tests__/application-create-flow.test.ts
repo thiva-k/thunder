@@ -37,8 +37,8 @@ describe('application-create-flow models', () => {
       expect(ApplicationCreateFlowStep.OPTIONS).toBe('OPTIONS');
     });
 
-    it('should have APPROACH step', () => {
-      expect(ApplicationCreateFlowStep.APPROACH).toBe('APPROACH');
+    it('should have EXPERIENCE step', () => {
+      expect(ApplicationCreateFlowStep.EXPERIENCE).toBe('EXPERIENCE');
     });
 
     it('should have STACK step', () => {
@@ -49,12 +49,8 @@ describe('application-create-flow models', () => {
       expect(ApplicationCreateFlowStep.CONFIGURE).toBe('CONFIGURE');
     });
 
-    it('should have SUMMARY step', () => {
-      expect(ApplicationCreateFlowStep.SUMMARY).toBe('SUMMARY');
-    });
-
-    it('should have exactly 7 steps', () => {
-      expect(Object.keys(ApplicationCreateFlowStep)).toHaveLength(7);
+    it('should have exactly 6 steps', () => {
+      expect(Object.keys(ApplicationCreateFlowStep)).toHaveLength(6);
     });
   });
 
@@ -63,8 +59,8 @@ describe('application-create-flow models', () => {
       expect(ApplicationCreateFlowSignInApproach.INBUILT).toBe('INBUILT');
     });
 
-    it('should have CUSTOM approach', () => {
-      expect(ApplicationCreateFlowSignInApproach.CUSTOM).toBe('CUSTOM');
+    it('should have EMBEDDED approach', () => {
+      expect(ApplicationCreateFlowSignInApproach.EMBEDDED).toBe('EMBEDDED');
     });
 
     it('should have exactly 2 approaches', () => {
