@@ -95,4 +95,85 @@ describe('NavbarBreadcrumbs', () => {
     const separator = container.querySelector('svg');
     expect(separator).toBeInTheDocument();
   });
+
+  it('renders breadcrumbs for user-types page', async () => {
+    const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
+    vi.mocked(mockUseNavigation.default).mockReturnValue({
+      currentPage: 'user-types',
+      setCurrentPage: vi.fn(),
+      sidebarOpen: false,
+      setSidebarOpen: vi.fn(),
+      toggleSidebar: vi.fn(),
+    });
+
+    render(<NavbarBreadcrumbs />);
+
+    expect(screen.getByText('Develop')).toBeInTheDocument();
+    expect(screen.getByText('User Types')).toBeInTheDocument();
+  });
+
+  it('renders breadcrumbs for integrations page', async () => {
+    const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
+    vi.mocked(mockUseNavigation.default).mockReturnValue({
+      currentPage: 'integrations',
+      setCurrentPage: vi.fn(),
+      sidebarOpen: false,
+      setSidebarOpen: vi.fn(),
+      toggleSidebar: vi.fn(),
+    });
+
+    render(<NavbarBreadcrumbs />);
+
+    expect(screen.getByText('Develop')).toBeInTheDocument();
+    expect(screen.getByText('Integrations')).toBeInTheDocument();
+  });
+
+  it('renders breadcrumbs for applications page', async () => {
+    const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
+    vi.mocked(mockUseNavigation.default).mockReturnValue({
+      currentPage: 'applications',
+      setCurrentPage: vi.fn(),
+      sidebarOpen: false,
+      setSidebarOpen: vi.fn(),
+      toggleSidebar: vi.fn(),
+    });
+
+    render(<NavbarBreadcrumbs />);
+
+    expect(screen.getByText('Develop')).toBeInTheDocument();
+    expect(screen.getByText('Applications')).toBeInTheDocument();
+  });
+
+  it('falls back to page ID when translation key not found', async () => {
+    const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
+    vi.mocked(mockUseNavigation.default).mockReturnValue({
+      currentPage: 'unknown-page',
+      setCurrentPage: vi.fn(),
+      sidebarOpen: false,
+      setSidebarOpen: vi.fn(),
+      toggleSidebar: vi.fn(),
+    });
+
+    render(<NavbarBreadcrumbs />);
+
+    expect(screen.getByText('Develop')).toBeInTheDocument();
+    // Should display the page ID when translation not found
+    expect(screen.getByText('unknown-page')).toBeInTheDocument();
+  });
+
+  it('applies correct styling for styled breadcrumbs', async () => {
+    const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
+    vi.mocked(mockUseNavigation.default).mockReturnValue({
+      currentPage: 'users',
+      setCurrentPage: vi.fn(),
+      sidebarOpen: false,
+      setSidebarOpen: vi.fn(),
+      toggleSidebar: vi.fn(),
+    });
+
+    const {container} = render(<NavbarBreadcrumbs />);
+
+    const breadcrumbs = container.querySelector('.MuiBreadcrumbs-root');
+    expect(breadcrumbs).toBeInTheDocument();
+  });
 });

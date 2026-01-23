@@ -245,4 +245,37 @@ describe('AppWithConfig', () => {
     expect(provider).toHaveAttribute('data-after-sign-in-url', 'https://default-signin.example.com');
     expect(provider).toHaveAttribute('data-scopes', '["openid","profile","email"]');
   });
+
+  it('properly evaluates falsy values for config options', () => {
+    // Test that falsy values (null, undefined, empty string, etc.) are properly handled
+    // Empty strings are truthy in JavaScript, so they will be used as-is
+    mockGetClientId.mockReturnValue('');
+    mockGetServerUrl.mockReturnValue('');
+    mockGetClientUrl.mockReturnValue('');
+    mockGetScopes.mockReturnValue([]);
+
+    render(<AppWithConfig />);
+
+    const provider = screen.getByTestId('asgardeo-provider');
+    // Empty strings are truthy, so they will be passed through (not fallback to env vars)
+    expect(provider).toHaveAttribute('data-base-url', '');
+    expect(provider).toHaveAttribute('data-client-id', '');
+    expect(provider).toHaveAttribute('data-after-sign-in-url', '');
+    expect(provider).not.toHaveAttribute('data-scopes');
+  });
+
+  it('handles all config values as truthy strings', () => {
+    mockGetClientId.mockReturnValue('client-123');
+    mockGetServerUrl.mockReturnValue('https://server.test');
+    mockGetClientUrl.mockReturnValue('https://client.test');
+    mockGetScopes.mockReturnValue(['scope1', 'scope2', 'scope3']);
+
+    render(<AppWithConfig />);
+
+    const provider = screen.getByTestId('asgardeo-provider');
+    expect(provider).toHaveAttribute('data-base-url', 'https://server.test');
+    expect(provider).toHaveAttribute('data-client-id', 'client-123');
+    expect(provider).toHaveAttribute('data-after-sign-in-url', 'https://client.test');
+    expect(provider).toHaveAttribute('data-scopes', '["scope1","scope2","scope3"]');
+  });
 });

@@ -170,7 +170,7 @@ describe('CustomLinkPlugin - URL Type Detection Functions', () => {
     });
 
     it('should exercise determineUrlType when URL matches no predefined option', () => {
-      // This tests line 111-115: the find() returns undefined, so returns 'CUSTOM'
+      // This tests the behavior when find() returns undefined and returns 'CUSTOM'
       const mockLinkNode = {
         type: 'link',
         getParent: () => ({type: 'paragraph'}),
@@ -190,7 +190,7 @@ describe('CustomLinkPlugin - URL Type Detection Functions', () => {
 
   describe('getPlaceholderUrl function behavior', () => {
     it('should return URL itself when selectedType is CUSTOM', () => {
-      // This tests line 134: return url; (when selectedType !== 'CUSTOM' is false)
+      // This tests the behavior when selectedType is CUSTOM
       const testUrl = 'https://my-custom-placeholder.com';
       const mockLinkNode = {
         type: 'link',
@@ -233,7 +233,7 @@ describe('CustomLinkPlugin - URL Type Detection Functions', () => {
 
   describe('handleUrlTypeChange function behavior', () => {
     it('should set URL to https:// when switching to CUSTOM type', async () => {
-      // This tests lines 253-255: else branch when newType === 'CUSTOM'
+      // This tests the else branch behavior when newType is CUSTOM
       render(<CustomLinkPlugin />);
 
       // Enter edit mode
@@ -255,7 +255,7 @@ describe('CustomLinkPlugin - URL Type Detection Functions', () => {
 
   describe('getCurrentUrl function behavior', () => {
     it('should return linkUrl when selectedUrlType is CUSTOM', async () => {
-      // This tests line 271: return linkUrl; (the else branch)
+      // This tests the else branch that returns linkUrl
       render(<CustomLinkPlugin />);
 
       // Enter edit mode
@@ -292,8 +292,7 @@ describe('CustomLinkPlugin - URL Type Detection Functions', () => {
 
   describe('Select component rendering', () => {
     it('should not render Select when PREDEFINED_URLS is empty', async () => {
-      // This tests line 419: {PREDEFINED_URLS.length > 0 && (...)}
-      // Since PREDEFINED_URLS.length === 0, the Select should not render
+      // This tests the conditional rendering when PREDEFINED_URLS is empty
       render(<CustomLinkPlugin />);
 
       // Enter edit mode

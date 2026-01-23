@@ -335,4 +335,31 @@ describe('useCreateUser', () => {
       expect(result.current.data).toEqual(mockResponse2);
     });
   });
+
+  it('should handle non-Error rejection', async () => {
+    const mockRequest: CreateUserRequest = {
+      organizationUnit: '/sales',
+      type: 'customer',
+      attributes: {
+        name: 'John Doe',
+        email: 'john@example.com',
+      },
+    };
+
+    mockHttpRequest.mockRejectedValueOnce('String error');
+
+    const {result} = renderHook(() => useCreateUser());
+
+    await expect(result.current.createUser(mockRequest)).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'CREATE_USER_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to create user',
+      });
+      expect(result.current.data).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });

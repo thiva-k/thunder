@@ -1087,7 +1087,7 @@ describe('DecoratedVisualFlow', () => {
             ],
           },
         };
-        // Execute the callback to cover lines 371-382
+        // Execute the callback to verify it processes nested components correctly
         const result = callback(mockNode);
         expect(result.components).toBeDefined();
       });
@@ -1508,7 +1508,7 @@ describe('DecoratedVisualFlow', () => {
 
       // Capture the callback passed to updateNodeData
       mockUpdateNodeData.mockImplementation((stepId: string, callback: (node: Node) => { components: unknown[] }) => {
-        // Simulate a node with nested components (form with children) to cover lines 468-480
+        // Simulate a node with nested components (form with children)
         const mockNode: Node = {
           id: stepId,
           position: {x: 0, y: 0},

@@ -5090,7 +5090,7 @@ describe('Verbose Mode Filtering Logic', () => {
 
     const isVerboseMode = false;
 
-    // This is the filtering logic from the component (lines 1073-1079)
+    // This replicates the filtering logic from the component
     const filteredNodes = isVerboseMode ? nodes : nodes.filter((node) => node.type !== 'EXECUTION');
 
     expect(filteredNodes).toHaveLength(2);
@@ -5126,7 +5126,7 @@ describe('Verbose Mode Filtering Logic', () => {
 
     const isVerboseMode = false;
 
-    // This is the filtering logic from the component (lines 1081-1088)
+    // This replicates the filtering logic from the component
     let filteredEdges: Edge[];
     if (isVerboseMode) {
       filteredEdges = edges;

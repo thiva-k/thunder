@@ -56,40 +56,7 @@ describe('Header', () => {
     expect(screen.getByTestId('navbar-breadcrumbs')).toBeInTheDocument();
     expect(screen.getByTestId('search')).toBeInTheDocument();
     expect(screen.getByTestId('theme-toggle')).toBeInTheDocument();
-  });
-
-  it('renders notifications button with badge', () => {
-    render(<Header />);
-
-    const notificationsButton = screen.getByRole('button', {name: /open notifications/i});
-    expect(notificationsButton).toBeInTheDocument();
-  });
-
-  it('renders notifications icon', () => {
-    const {container} = render(<Header />);
-
-    const notificationIcon = container.querySelector('svg.lucide-bell');
-    expect(notificationIcon).toBeInTheDocument();
-  });
-
-  it('has correct layout structure', () => {
-    const {container} = render(<Header />);
-
-    const stack = container.querySelector('.MuiStack-root');
-    expect(stack).toBeInTheDocument();
-  });
-
-  it('contains search functionality', () => {
-    render(<Header />);
-
-    const searchInput = screen.getByTestId('search');
-    expect(searchInput).toBeInTheDocument();
-  });
-
-  it('contains theme toggle', () => {
-    render(<Header />);
-
-    const themeToggle = screen.getByTestId('theme-toggle');
-    expect(themeToggle).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /open notifications/i})).toBeInTheDocument();
+    expect(screen.getByRole('button', {name: /change language/i})).toBeInTheDocument();
   });
 });

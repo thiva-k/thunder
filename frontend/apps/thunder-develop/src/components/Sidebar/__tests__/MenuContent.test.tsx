@@ -101,4 +101,79 @@ describe('MenuContent', () => {
     const applicationsLink = screen.getByText('Applications').closest('a');
     expect(applicationsLink).toBeInTheDocument();
   });
+
+  it('hides text labels in mini mode', async () => {
+    const mockContext = {
+      mini: true,
+      fullyExpanded: false,
+      fullyCollapsed: true,
+      hasDrawerTransitions: true,
+    };
+
+    const {default: SidebarContext} = await import('../context/SidebarContext');
+
+    const {container} = render(
+      <SidebarContext.Provider value={mockContext}>
+        <MenuContent />
+      </SidebarContext.Provider>
+    );
+
+    // Text elements should have display: none in mini mode
+    const listItemText = container.querySelector('.MuiListItemText-root');
+    expect(listItemText).toHaveStyle({display: 'none'});
+  });
+
+  it('shows text labels in expanded mode', async () => {
+    const mockContext = {
+      mini: false,
+      fullyExpanded: true,
+      fullyCollapsed: false,
+      hasDrawerTransitions: true,
+    };
+
+    const {default: SidebarContext} = await import('../context/SidebarContext');
+
+    const {container} = render(
+      <SidebarContext.Provider value={mockContext}>
+        <MenuContent />
+      </SidebarContext.Provider>
+    );
+
+    // Text elements should have display: block in expanded mode
+    const listItemText = container.querySelector('.MuiListItemText-root');
+    expect(listItemText).toHaveStyle({display: 'block'});
+  });
+
+  it('calls setCurrentPage with correct id for each menu item', async () => {
+    const user = userEvent.setup();
+    render(<MenuContent />);
+
+    const userTypesLink = screen.getByText('User Types');
+    await user.click(userTypesLink);
+    expect(mockSetCurrentPage).toHaveBeenCalledWith('user-types');
+
+    const integrationsLink = screen.getByText('Integrations');
+    await user.click(integrationsLink);
+    expect(mockSetCurrentPage).toHaveBeenCalledWith('integrations');
+
+    const applicationsLink = screen.getByText('Applications');
+    await user.click(applicationsLink);
+    expect(mockSetCurrentPage).toHaveBeenCalledWith('applications');
+  });
+
+  it('marks different page as selected', async () => {
+    const mockUseNavigation = await import('@/layouts/contexts/useNavigation');
+    vi.mocked(mockUseNavigation.default).mockReturnValue({
+      currentPage: 'integrations',
+      setCurrentPage: mockSetCurrentPage,
+      sidebarOpen: false,
+      setSidebarOpen: vi.fn(),
+      toggleSidebar: vi.fn(),
+    });
+
+    render(<MenuContent />);
+
+    const integrationsButton = screen.getByText('Integrations').closest('a');
+    expect(integrationsButton).toHaveClass('Mui-selected');
+  });
 });

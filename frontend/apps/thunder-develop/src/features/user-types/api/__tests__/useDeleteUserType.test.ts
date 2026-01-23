@@ -183,4 +183,21 @@ describe('useDeleteUserType', () => {
       expect(result.current.error).toBeNull();
     });
   });
+
+  it('should handle non-Error rejection', async () => {
+    mockHttpRequest.mockRejectedValueOnce('String error');
+
+    const {result} = renderHook(() => useDeleteUserType());
+
+    await expect(result.current.deleteUserType(mockUserTypeId)).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'DELETE_USER_TYPE_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to delete user type',
+      });
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });

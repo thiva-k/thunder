@@ -206,4 +206,22 @@ describe('useUpdateUserType', () => {
       expect(result.current.data).toEqual(secondSchema);
     });
   });
+
+  it('should handle non-Error rejection', async () => {
+    mockHttpRequest.mockRejectedValueOnce('String error');
+
+    const {result} = renderHook(() => useUpdateUserType());
+
+    await expect(result.current.updateUserType(mockUserTypeId, mockRequest)).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'UPDATE_USER_TYPE_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to update user type',
+      });
+      expect(result.current.data).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });

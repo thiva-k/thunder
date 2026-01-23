@@ -210,4 +210,22 @@ describe('useCreateUserType', () => {
       expect(result.current.error).toBeNull();
     });
   });
+
+  it('should handle non-Error rejection', async () => {
+    mockHttpRequest.mockRejectedValueOnce('String error');
+
+    const {result} = renderHook(() => useCreateUserType());
+
+    await expect(result.current.createUserType(mockRequest)).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'CREATE_USER_TYPE_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to create user type',
+      });
+      expect(result.current.data).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });
