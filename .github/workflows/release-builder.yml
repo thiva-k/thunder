@@ -237,63 +237,13 @@ jobs:
           cd ../tests/integration
           go mod download
 
-      - name: 🔐 Generate Shared Certificates
-        run: |
-          echo "🔐 Generating shared SSL certificates for all components..."
-          # Ensure the certificate directory exists
-          mkdir -p target/out/.cert
-          
-          # Generate certificates 
-          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-            -keyout target/out/.cert/server.key \
-            -out target/out/.cert/server.cert \
-            -subj "/O=WSO2/OU=Thunder/CN=localhost"
-          
-          echo "✅ Shared certificates generated:"
-          ls -la target/out/.cert/
-          echo "📄 Certificate info:"
-          openssl x509 -in target/out/.cert/server.cert -text -noout | head -10
-
-      - name: 📦 Upload Shared Certificates 
-        uses: actions/upload-artifact@v4
+      - name: 🔐 Generate and Upload Certificates
+        uses: ./.github/actions/generate-certificates
         with:
-          name: thunder-certificates
-          path: |
-            target/out/.cert/server.cert
-            target/out/.cert/server.key
-          if-no-files-found: error
+          show-cert-info: 'true'
 
       - name: 🔨 Build Thunder Release Artifacts
-        run: |
-          # Define platform matrix as arrays
-          PLATFORMS=(
-            "windows:amd64"
-            "linux:amd64"
-            "linux:arm64"
-            "darwin:amd64"
-            "darwin:arm64"
-          )
-          
-          echo "🏗️ Building Thunder for ${#PLATFORMS[@]} platforms..."
-          
-          # Build frontend once (platform-agnostic, same output for all platforms)
-          echo "🔨 Building frontend..."
-          make build_frontend
-          
-          # Loop through the platform matrix and build backend for each platform
-          for platform in "${PLATFORMS[@]}"; do
-            # Split the platform string into OS and ARCH
-            OS="${platform%%:*}"
-            ARCH="${platform#*:}"
-            
-            echo "🔨 Building Thunder backend for $OS/$ARCH..."
-            make build_backend OS=$OS ARCH=$ARCH
-            
-            # Optional: Add a small delay to prevent resource contention
-            sleep 1
-          done
-          
-          echo "✅ Thunder built for all platforms successfully!"
+        uses: ./.github/actions/build-thunder-multiplatform
 
       - name: 📝 Read Updated Version
         id: version
@@ -519,84 +469,21 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: ⚙️ Set up Go Environment
-        uses: ./.github/actions/setup-go
-
-      - name: ⚙️ Set up Node.js Environment
-        uses: ./.github/actions/setup-node
-        with:
-          node-version: 'lts/*'
-          package-manager: 'npm'
-          dependency-path: 'samples/apps/react-vanilla-sample'
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: 📥 Download Shared Certificates
-        uses: actions/download-artifact@v4
-        with:
-          name: thunder-certificates
-          path: target/out/.cert/
-
-      - name: 🏷️ Set Sample Apps Version
-        run: |
-          # Get the product version from the previous job
-          SAMPLE_VERSION="${{ needs.build-thunder.outputs.version }}"
-
-          # Remove 'v' prefix if present
-          if [[ $SAMPLE_VERSION == v* ]]; then
-            SAMPLE_VERSION="${SAMPLE_VERSION#v}"
-          fi
-
-          echo "✅ Sample version set to '$SAMPLE_VERSION'"
-          echo "SAMPLE_VERSION=$SAMPLE_VERSION" >> $GITHUB_ENV
+      - name: ⚙️ Setup Samples Environment
+        uses: ./.github/actions/setup-samples-environment
 
       - name: 📝 Update Sample Apps Version
+        uses: ./.github/actions/update-sample-versions
+        with:
+          version: ${{ needs.build-thunder.outputs.version }}
+
+      - name: 📦 Build and Package Linux Samples
         run: |
-          # Get the clean sample version without v prefix
-          SAMPLE_VERSION="${{ env.SAMPLE_VERSION }}"
-          echo "📝 Setting sample apps version to $SAMPLE_VERSION"
+          ./scripts/package-samples.sh linux x64
+          ./scripts/package-samples.sh linux arm64
 
-          # Update the react-vanilla sample app package.json
-          cd samples/apps/react-vanilla-sample
-          npm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          # Update the server package.json
-          cd server
-          npm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          cd "$GITHUB_WORKSPACE"
-
-          # Update the react-sdk sample app package.json
-          cd samples/apps/react-sdk-sample
-          pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          cd "$GITHUB_WORKSPACE"
-
-          # Update the react-api-based sample app package.json
-          cd samples/apps/react-api-based-sample
-          pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          cd "$GITHUB_WORKSPACE"
-          echo "✅ Updated sample apps version to $SAMPLE_VERSION"
-
-      - name: 🔨 Build Sample Apps (Once)
-        run: |
-          echo "🔨 Building sample apps (shared for all platforms)..."
-          make build_samples
-
-      - name: 📦 Package Linux Samples
-        run: |
-          echo "📦 Packaging Linux samples..."
-          make package_samples OS=linux ARCH=x64
-          make package_samples OS=linux ARCH=arm64
-
-      - name: 📦 Package Windows Samples
-        run: |
-          echo "📦 Packaging Windows samples..."
-          make package_samples OS=win ARCH=x64
+      - name: 📦 Build and Package Windows Samples
+        run: ./scripts/package-samples.sh win x64
 
       - name: 📦 Upload Linux & Windows Sample Artifacts
         uses: actions/upload-artifact@v4
@@ -615,76 +502,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: ⚙️ Set up Go Environment
-        uses: ./.github/actions/setup-go
-
-      - name: ⚙️ Set up Node.js Environment
-        uses: ./.github/actions/setup-node
-        with:
-          node-version: 'lts/*'
-          package-manager: 'npm'
-          dependency-path: 'samples/apps/react-vanilla-sample'
-
-      - name: 📦 Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - name: 📥 Download Shared Certificates
-        uses: actions/download-artifact@v4
-        with:
-          name: thunder-certificates
-          path: target/out/.cert/
-
-      - name: 🏷️ Set Sample Apps Version
-        run: |
-          # Get the product version from the previous job
-          SAMPLE_VERSION="${{ needs.build-thunder.outputs.version }}"
-
-          # Remove 'v' prefix if present
-          if [[ $SAMPLE_VERSION == v* ]]; then
-            SAMPLE_VERSION="${SAMPLE_VERSION#v}"
-          fi
-
-          echo "✅ Sample version set to '$SAMPLE_VERSION'"
-          echo "SAMPLE_VERSION=$SAMPLE_VERSION" >> $GITHUB_ENV
+      - name: ⚙️ Setup Samples Environment
+        uses: ./.github/actions/setup-samples-environment
 
       - name: 📝 Update Sample Apps Version
+        uses: ./.github/actions/update-sample-versions
+        with:
+          version: ${{ needs.build-thunder.outputs.version }}
+
+      - name: 📦 Build and Package macOS Samples
         run: |
-          # Get the clean sample version without v prefix
-          SAMPLE_VERSION="${{ env.SAMPLE_VERSION }}"
-          echo "📝 Setting sample apps version to $SAMPLE_VERSION"
-
-          # Update the react-vanilla sample app package.json
-          cd samples/apps/react-vanilla-sample
-          npm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          # Update the server package.json
-          cd server
-          npm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          cd "$GITHUB_WORKSPACE"
-
-          # Update the react-sdk sample app package.json
-          cd samples/apps/react-sdk-sample
-          pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          cd "$GITHUB_WORKSPACE"
-
-          # Update the react-api-based sample app package.json
-          cd samples/apps/react-api-based-sample
-          pnpm version $SAMPLE_VERSION --no-git-tag-version --allow-same-version
-
-          cd "$GITHUB_WORKSPACE"
-          echo "✅ Updated sample apps version to $SAMPLE_VERSION"
-
-      - name: 🔨 Build and Package macOS Samples
-        run: |
-          make build_samples
-          
-          # Package for both x64 and arm64
-          make package_samples OS=macos ARCH=x64
-          make package_samples OS=macos ARCH=arm64
+          ./scripts/package-samples.sh macos x64
+          ./scripts/package-samples.sh macos arm64
 
       - name: 📦 Upload macOS Sample Artifacts
         uses: actions/upload-artifact@v4

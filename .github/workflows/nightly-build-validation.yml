@@ -1,0 +1,317 @@
+# This workflow validates platform-wise packaging nightly to catch build issues early
+name: 🌙 Nightly Build Validation
+
+on:
+  schedule:
+    # Runs every day at 12:00 AM IST (which is 18:30 UTC of the previous day)
+    - cron: '30 18 * * *'
+  workflow_dispatch:  # Allow manual triggering
+
+# Add permissions
+permissions:
+  contents: read
+  issues: write
+
+env:
+  GOFLAGS: "-mod=readonly"
+
+jobs:
+  validate-complete-build:
+    name: 🔨 Validate Complete Build (All Platforms)
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Set up Go Environment
+        uses: ./.github/actions/setup-go
+
+      - name: 🗄️ Cache Go Modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-modules-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-modules-
+
+      - name: 🔨 Build Thunder for All Platforms
+        uses: ./.github/actions/build-thunder-multiplatform
+
+      - name: 🔐 Generate and Upload Certificates
+        uses: ./.github/actions/generate-certificates
+
+      - name: ✅ Verify All Build Artifacts
+        run: ./scripts/verify-build-artifacts.sh
+
+  validate-sample-packaging-linux:
+    name: 📦 Validate Linux & Windows Sample Packaging
+    runs-on: ubuntu-latest
+    needs: validate-complete-build
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: x64
+          - os: linux
+            arch: arm64
+          - os: win
+            arch: x64
+      fail-fast: false
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Samples Environment
+        uses: ./.github/actions/setup-samples-environment
+
+      - name: 📦 Build and Package Samples for ${{ matrix.os }}/${{ matrix.arch }}
+        run: ./scripts/package-samples.sh ${{ matrix.os }} ${{ matrix.arch }}
+
+  validate-sample-packaging-macos:
+    name: 📦 Validate macOS Sample Packaging
+    runs-on: macos-latest
+    needs: validate-complete-build
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+      fail-fast: false
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Samples Environment
+        uses: ./.github/actions/setup-samples-environment
+
+      - name: 📦 Build and Package Samples for macOS/${{ matrix.arch }}
+        run: ./scripts/package-samples.sh macos ${{ matrix.arch }}
+
+  report-results:
+    name: 📊 Report Results
+    runs-on: ubuntu-latest
+    needs: [validate-complete-build, validate-sample-packaging-linux, validate-sample-packaging-macos]
+    if: always()
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📊 Check Overall Status
+        id: check_status
+        run: |
+          BUILD_STATUS="${{ needs.validate-complete-build.result }}"
+          LINUX_STATUS="${{ needs.validate-sample-packaging-linux.result }}"
+          MACOS_STATUS="${{ needs.validate-sample-packaging-macos.result }}"
+
+          echo "Complete build: $BUILD_STATUS"
+          echo "Linux/Windows samples: $LINUX_STATUS"
+          echo "macOS samples: $MACOS_STATUS"
+
+          # Check if all jobs succeeded
+          if [ "$BUILD_STATUS" = "success" ] && [ "$LINUX_STATUS" = "success" ] && [ "$MACOS_STATUS" = "success" ]; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "message=✅ All nightly build validations passed successfully!" >> $GITHUB_OUTPUT
+          # Check if any job was cancelled
+          elif [ "$BUILD_STATUS" = "cancelled" ] || [ "$LINUX_STATUS" = "cancelled" ] || [ "$MACOS_STATUS" = "cancelled" ]; then
+            echo "status=cancelled" >> $GITHUB_OUTPUT
+            echo "message=⚠️ Nightly build validation was cancelled." >> $GITHUB_OUTPUT
+          # Check if any job was skipped
+          elif [ "$BUILD_STATUS" = "skipped" ] || [ "$LINUX_STATUS" = "skipped" ] || [ "$MACOS_STATUS" = "skipped" ]; then
+            echo "status=skipped" >> $GITHUB_OUTPUT
+            echo "message=⚠️ Some nightly build validation jobs were skipped." >> $GITHUB_OUTPUT
+          # Otherwise, treat as failure
+          else
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "message=❌ Some nightly build validations failed. Please check the workflow logs." >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📝 Generate Summary
+        run: |
+          echo "# 🌙 Nightly Build Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.check_status.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Message:** ${{ steps.check_status.outputs.message }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Job Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Complete Build (All Platforms): ${{ needs.validate-complete-build.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Linux/Windows Samples: ${{ needs.validate-sample-packaging-linux.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- macOS Samples: ${{ needs.validate-sample-packaging-macos.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔔 Notify on Failure
+        if: steps.check_status.outputs.status == 'failure'
+        uses: actions/github-script@v7
+        env:
+          BUILD_RESULT: ${{ needs.validate-complete-build.result }}
+          LINUX_RESULT: ${{ needs.validate-sample-packaging-linux.result }}
+          MACOS_RESULT: ${{ needs.validate-sample-packaging-macos.result }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+        with:
+          script: |
+            const issue_title = '🌙 Nightly Build Validation Failed';
+            const issue_body = `## Nightly Build Validation Failure
+
+            The nightly build validation workflow has detected failures in platform-wise packaging.
+
+            **Workflow Run:** ${process.env.WORKFLOW_URL}
+            **Branch:** ${process.env.BRANCH_NAME}
+            **Commit:** ${process.env.COMMIT_SHA}
+
+            ### Failed Jobs
+            - Complete Build (All Platforms): ${process.env.BUILD_RESULT}
+            - Linux/Windows Samples: ${process.env.LINUX_RESULT}
+            - macOS Samples: ${process.env.MACOS_RESULT}
+
+            Please investigate and fix the build issues.
+
+            ---
+            *This issue was automatically created by the nightly build validation workflow.*`;
+
+            // Check if there's already an open issue for nightly build failures
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'nightly-build-failure',
+              per_page: 1
+            });
+
+            if (issues.data.length === 0) {
+              // Create a new issue
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: issue_title,
+                body: issue_body,
+                labels: ['nightly-build-failure', 'bug']
+              });
+              console.log('Created new issue for nightly build failure');
+            } else {
+              // Add a comment to the existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issues.data[0].number,
+                body: issue_body
+              });
+              console.log('Added comment to existing nightly build failure issue');
+            }
+
+      - name: 🔔 Send Google Chat Notification on Failure
+        if: steps.check_status.outputs.status == 'failure'
+        shell: bash
+        env:
+          GOOGLE_CHAT_WEBHOOK: ${{ secrets.GOOGLE_CHAT_WEBHOOK }}
+          WORKFLOW_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          BUILD_STATUS: ${{ needs.validate-complete-build.result }}
+          LINUX_STATUS: ${{ needs.validate-sample-packaging-linux.result }}
+          MACOS_STATUS: ${{ needs.validate-sample-packaging-macos.result }}
+          BRANCH: ${{ github.ref_name }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          if [ -z "$GOOGLE_CHAT_WEBHOOK" ]; then
+            echo "GOOGLE_CHAT_WEBHOOK secret is not set. Skipping Google Chat notification."
+            exit 0
+          fi
+
+          # Determine status emoji and color
+          get_status_emoji() {
+            case "$1" in
+              success) echo "✅" ;;
+              failure) echo "❌" ;;
+              *) echo "⚠️" ;;
+            esac
+          }
+
+          BUILD_EMOJI=$(get_status_emoji "$BUILD_STATUS")
+          LINUX_EMOJI=$(get_status_emoji "$LINUX_STATUS")
+          MACOS_EMOJI=$(get_status_emoji "$MACOS_STATUS")
+
+          # Create JSON payload for Google Chat using jq for proper escaping
+          jq -n \
+            --arg branch "$BRANCH" \
+            --arg build_status "$BUILD_EMOJI $BUILD_STATUS" \
+            --arg linux_status "$LINUX_EMOJI $LINUX_STATUS" \
+            --arg macos_status "$MACOS_EMOJI $MACOS_STATUS" \
+            --arg commit "${COMMIT:0:8}" \
+            --arg workflow_url "$WORKFLOW_URL" \
+            --arg issues_url "${{ github.server_url }}/${{ github.repository }}/issues?q=is%3Aissue+is%3Aopen+label%3Anightly-build-failure" \
+            '{
+              "cards": [{
+                "header": {
+                  "title": "🌙 Nightly Build Validation Failed",
+                  "subtitle": ("Branch: " + $branch),
+                  "imageUrl": "https://cdn-icons-png.flaticon.com/512/595/595067.png",
+                  "imageStyle": "AVATAR"
+                },
+                "sections": [
+                  {
+                    "header": "Job Results",
+                    "widgets": [
+                      {
+                        "keyValue": {
+                          "topLabel": "Complete Build (All Platforms)",
+                          "content": $build_status
+                        }
+                      },
+                      {
+                        "keyValue": {
+                          "topLabel": "Linux/Windows Samples",
+                          "content": $linux_status
+                        }
+                      },
+                      {
+                        "keyValue": {
+                          "topLabel": "macOS Samples",
+                          "content": $macos_status
+                        }
+                      },
+                      {
+                        "keyValue": {
+                          "topLabel": "Commit",
+                          "content": $commit
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "widgets": [
+                      {
+                        "buttons": [
+                          {
+                            "textButton": {
+                              "text": "VIEW WORKFLOW RUN",
+                              "onClick": {
+                                "openLink": {
+                                  "url": $workflow_url
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "textButton": {
+                              "text": "VIEW ISSUES",
+                              "onClick": {
+                                "openLink": {
+                                  "url": $issues_url
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }]
+            }' > payload.json
+
+          # Send the payload to Google Chat
+          if curl -f -X POST -H "Content-Type: application/json" -d @payload.json "$GOOGLE_CHAT_WEBHOOK"; then
+            echo "✅ Google Chat notification sent successfully"
+          else
+            echo "⚠️ Failed to send Google Chat notification"
+          fi

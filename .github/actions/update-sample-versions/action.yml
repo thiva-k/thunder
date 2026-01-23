@@ -1,0 +1,51 @@
+name: 'Update Sample Apps Version'
+description: 'Updates version for all sample applications'
+author: 'WSO2'
+
+inputs:
+  version:
+    description: 'Version to set (can include or exclude v prefix)'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: 📝 Update Sample Apps Version
+      shell: bash
+      run: |
+        SAMPLE_VERSION="${{ inputs.version }}"
+
+        # Remove 'v' prefix if present
+        if [[ "$SAMPLE_VERSION" == v* ]]; then
+          SAMPLE_VERSION="${SAMPLE_VERSION#v}"
+        fi
+
+        echo "📝 Setting sample apps version to $SAMPLE_VERSION"
+
+        # Update react-vanilla sample
+        echo "Updating react-vanilla-sample..."
+        cd samples/apps/react-vanilla-sample
+        npm version "$SAMPLE_VERSION" --no-git-tag-version --allow-same-version
+
+        # Update server package.json
+        echo "Updating react-vanilla-sample/server..."
+        cd server
+        npm version "$SAMPLE_VERSION" --no-git-tag-version --allow-same-version
+
+        cd "$GITHUB_WORKSPACE"
+
+        # Update react-sdk sample
+        echo "Updating react-sdk-sample..."
+        cd samples/apps/react-sdk-sample
+        pnpm version "$SAMPLE_VERSION" --no-git-tag-version --allow-same-version
+
+        cd "$GITHUB_WORKSPACE"
+
+        # Update react-api-based sample
+        echo "Updating react-api-based-sample..."
+        cd samples/apps/react-api-based-sample
+        pnpm version "$SAMPLE_VERSION" --no-git-tag-version --allow-same-version
+
+        cd "$GITHUB_WORKSPACE"
+
+        echo "✅ Updated all sample apps to version $SAMPLE_VERSION"

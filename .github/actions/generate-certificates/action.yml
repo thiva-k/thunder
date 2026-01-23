@@ -1,0 +1,44 @@
+name: 'Generate SSL Certificates'
+description: 'Generates shared SSL certificates and uploads them as artifacts'
+author: 'WSO2'
+
+inputs:
+  show-cert-info:
+    description: 'Whether to display certificate information'
+    required: false
+    default: 'false'
+  artifact-name:
+    description: 'Name for the uploaded artifact'
+    required: false
+    default: 'thunder-certificates'
+
+runs:
+  using: composite
+  steps:
+    - name: 🔐 Generate Shared Certificates
+      shell: bash
+      run: |
+        echo "🔐 Generating shared SSL certificates for all components..."
+        mkdir -p target/out/.cert
+
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -keyout target/out/.cert/server.key \
+          -out target/out/.cert/server.cert \
+          -subj "/O=WSO2/OU=Thunder/CN=localhost"
+
+        echo "✅ Shared certificates generated:"
+        ls -la target/out/.cert/
+
+        if [ "${{ inputs.show-cert-info }}" = "true" ]; then
+          echo "📄 Certificate info:"
+          openssl x509 -in target/out/.cert/server.cert -text -noout | head -10
+        fi
+
+    - name: 📦 Upload Shared Certificates
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}
+        path: |
+          target/out/.cert/server.cert
+          target/out/.cert/server.key
+        if-no-files-found: error

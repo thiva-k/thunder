@@ -1,0 +1,47 @@
+name: 'Setup Samples Environment'
+description: 'Sets up complete environment for sample app building and packaging'
+author: 'WSO2'
+
+inputs:
+  node-version:
+    description: 'Node.js version to use'
+    required: false
+    default: 'lts/*'
+  pnpm-version:
+    description: 'pnpm version to use'
+    required: false
+    default: '9.x'
+  download-certificates:
+    description: 'Whether to download shared certificates'
+    required: false
+    default: 'true'
+  certificate-artifact-name:
+    description: 'Name of certificate artifact to download'
+    required: false
+    default: 'thunder-certificates'
+
+runs:
+  using: composite
+  steps:
+    - name: ⚙️ Set up Go Environment
+      uses: ./.github/actions/setup-go
+
+    - name: ⚙️ Set up Node.js Environment
+      uses: ./.github/actions/setup-node
+      with:
+        node-version: ${{ inputs.node-version }}
+        package-manager: 'npm'
+        dependency-path: 'samples/apps/react-vanilla-sample'
+
+    - name: 📦 Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+        run_install: false
+
+    - name: 📥 Download Shared Certificates
+      if: inputs.download-certificates == 'true'
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.certificate-artifact-name }}
+        path: target/out/.cert/
