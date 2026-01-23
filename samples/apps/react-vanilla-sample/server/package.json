@@ -1,21 +1,26 @@
 {
-    "name": "server",
-    "version": "0.16.0",
-    "description": "Sample App Server for Thunder",
-    "bin": "server.js",
-    "main": "server.js",
-    "scripts": {
-        "start": "node server.js",
-        "build:bundle": "esbuild server.js --bundle --platform=node --outfile=dist/server.bundle.js",
-        "build:blob": "node --experimental-sea-config sea-config.json",
-        "build:sea": "npm run build:bundle && npm run build:blob && npm run build:executable",
-        "build:executable": "node scripts/build-sea.js"
-    },
-    "dependencies": {
-        "express": "4.22.1"
-    },
-    "devDependencies": {
-        "esbuild": "0.27.2",
-        "postject": "1.0.0-alpha.6"
-    }
+  "name": "server",
+  "version": "0.16.0",
+  "description": "Sample App Server for Thunder",
+  "bin": "server.js",
+  "main": "server.js",
+  "pkg": {
+    "assets": [
+      "server.key",
+      "server.cert"
+    ],
+    "scripts": [
+      "server.js"
+    ],
+    "outputPath": "executables"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "4.22.1"
+  },
+  "devDependencies": {
+    "pkg": "5.8.1"
+  }
 }
