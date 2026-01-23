@@ -1,0 +1,108 @@
+{
+    "name": "Passkey Only Authentication Flow",
+    "handle": "passkey-authentication-flow",
+    "flowType": "AUTHENTICATION",
+    "nodes": [
+        {
+            "id": "start",
+            "type": "START",
+            "onSuccess": "prompt_identifier"
+        },
+        {
+            "id": "prompt_identifier",
+            "type": "PROMPT",
+            "meta": {
+                "components": [
+                    {
+                        "type": "TEXT",
+                        "id": "text_001",
+                        "label": "{{ t(signin:heading) }}",
+                        "variant": "HEADING_1"
+                    },
+                    {
+                        "type": "BLOCK",
+                        "id": "block_001",
+                        "components": [
+                            {
+                                "id": "input_001",
+                                "ref": "username",
+                                "type": "TEXT_INPUT",
+                                "label": "{{ t(elements:fields.username.label) }}",
+                                "required": true,
+                                "placeholder": "{{ t(elements:fields.username.placeholder) }}"
+                            },
+                            {
+                                "type": "ACTION",
+                                "id": "action_001",
+                                "label": "{{ t(elements:buttons.submit.text) }}",
+                                "variant": "PRIMARY",
+                                "eventType": "SUBMIT"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "prompts": [
+                {
+                    "inputs": [
+                        {
+                            "ref": "input_001",
+                            "identifier": "username",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "identity_resolver"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "identity_resolver",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "IdentityResolver"
+            },
+            "onSuccess": "passkey_challenge",
+            "onFailure": "prompt_identifier"
+        },
+        {
+            "id": "passkey_challenge",
+            "type": "TASK_EXECUTION",
+            "properties": {
+                "relyingPartyId": "localhost",
+                "relyingPartyName": "Thunder"
+            },
+            "executor": {
+                "name": "PasskeyAuthExecutor",
+                "mode": "challenge"
+            },
+            "onSuccess": "passkey_verify",
+            "onFailure": "prompt_identifier"
+        },
+        {
+            "id": "passkey_verify",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "PasskeyAuthExecutor",
+                "mode": "verify"
+            },
+            "onSuccess": "auth_assert",
+            "onFailure": "prompt_identifier"
+        },
+        {
+            "id": "auth_assert",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "AuthAssertExecutor"
+            },
+            "onSuccess": "end"
+        },
+        {
+            "id": "end",
+            "type": "END"
+        }
+    ]
+}
