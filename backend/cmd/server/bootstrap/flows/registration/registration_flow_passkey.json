@@ -1,0 +1,134 @@
+{
+    "name": "Passkey Registration Flow",
+    "flowType": "REGISTRATION",
+    "handle": "passkey_registration_flow",
+    "nodes": [
+        {
+            "id": "start",
+            "type": "START",
+            "onSuccess": "user_type_resolver"
+        },
+        {
+            "id": "user_type_resolver",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "UserTypeResolver"
+            },
+            "onSuccess": "collect_user_info"
+        },
+        {
+            "id": "collect_user_info",
+            "type": "PROMPT",
+            "meta": {
+                "components": [
+                    {
+                        "type": "TEXT",
+                        "id": "text_001",
+                        "label": "{{ t(signup:heading) }}",
+                        "variant": "HEADING_1"
+                    },
+                    {
+                        "type": "BLOCK",
+                        "id": "block_001",
+                        "components": [
+                            {
+                                "id": "input_001",
+                                "ref": "username",
+                                "type": "TEXT_INPUT",
+                                "label": "{{ t(elements:fields.username.label) }}",
+                                "required": true,
+                                "placeholder": "{{ t(elements:fields.username.placeholder) }}"
+                            },
+                            {
+                                "id": "input_002",
+                                "ref": "email",
+                                "type": "TEXT_INPUT",
+                                "label": "{{ t(elements:fields.email.label) }}",
+                                "required": true,
+                                "placeholder": "{{ t(elements:fields.email.placeholder) }}"
+                            },
+                            {
+                                "type": "ACTION",
+                                "id": "action_001",
+                                "label": "{{ t(elements:buttons.submit.text) }}",
+                                "variant": "PRIMARY",
+                                "eventType": "SUBMIT"
+                            }
+                        ]
+                    }
+                ]
+            },
+            "prompts": [
+                {
+                    "inputs": [
+                        {
+                            "ref": "input_001",
+                            "identifier": "username",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        },
+                        {
+                            "ref": "input_002",
+                            "identifier": "email",
+                            "type": "TEXT_INPUT",
+                            "required": true
+                        }
+                    ],
+                    "action": {
+                        "ref": "action_001",
+                        "nextNode": "provisioning"
+                    }
+                }
+            ]
+        },
+        {
+            "id": "provisioning",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "ProvisioningExecutor"
+            },
+            "onSuccess": "passkey_reg_start"
+        },
+        {
+            "id": "passkey_reg_start",
+            "type": "TASK_EXECUTION",
+            "properties": {
+                "relyingPartyId": "localhost",
+                "relyingPartyName": "Thunder",
+                "authenticatorSelection": {
+                  "authenticatorAttachment": "platform",
+                  "requireResidentKey": true,
+                  "residentKey": "required",
+                  "userVerification": "required"
+                },
+                "attestation": "direct"
+            },
+            "executor": {
+                "name": "PasskeyAuthExecutor",
+                "mode": "register_start"
+            },
+            "onSuccess": "passkey_reg_finish"
+        },
+        {
+            "id": "passkey_reg_finish",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "PasskeyAuthExecutor",
+                "mode": "register_finish"
+            },
+            "onSuccess": "auth_assert"
+        },
+        {
+            "id": "auth_assert",
+            "type": "TASK_EXECUTION",
+            "executor": {
+                "name": "AuthAssertExecutor"
+            },
+            "onSuccess": "end"
+        },
+        {
+            "id": "end",
+            "type": "END"
+        }
+    ]
+}

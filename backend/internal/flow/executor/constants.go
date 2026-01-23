@@ -22,8 +22,10 @@ import "github.com/asgardeo/thunder/internal/flow/common"
 
 // Executor name constants
 const (
-	ExecutorNameBasicAuth           = "BasicAuthExecutor"
-	ExecutorNameSMSAuth             = "SMSOTPAuthExecutor"
+	ExecutorNameBasicAuth = "BasicAuthExecutor"
+	ExecutorNameSMSAuth   = "SMSOTPAuthExecutor"
+	// nolint:gosec // G101: This is an executor name, not a credential
+	ExecutorNamePasskeyAuth         = "PasskeyAuthExecutor"
 	ExecutorNameOAuth               = "OAuthExecutor"
 	ExecutorNameOIDCAuth            = "OIDCAuthExecutor"
 	ExecutorNameGitHubAuth          = "GithubOAuthExecutor"
@@ -39,6 +41,7 @@ const (
 	ExecutorNameUserTypeResolver    = "UserTypeResolver"
 	ExecutorNameInviteExecutor      = "InviteExecutor"
 	ExecutorNameCredentialSetter    = "CredentialSetter"
+	ExecutorNameIdentityResolver    = "IdentityResolver"
 )
 
 // User attribute and input constants
@@ -89,4 +92,5 @@ const runtimeKeyStoredInviteToken = "storedInviteToken"
 const (
 	failureReasonUserNotAuthenticated = "User is not authenticated"
 	failureReasonUserNotFound         = "User not found"
+	failureReasonFailedToIdentifyUser = "Failed to identify user"
 )

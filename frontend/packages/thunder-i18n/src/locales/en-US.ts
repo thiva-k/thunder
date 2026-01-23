@@ -984,8 +984,14 @@ const translations = {
   signin: {
     'errors.signin.failed.message': 'Error',
     'errors.signin.failed.description': 'We are sorry, something has gone wrong here. Please try again.',
+    'errors.passkey.failed': 'Passkey authentication failed. Please try again.',
     'redirect.to.signup': "Don't have an account? <1>Sign up</1>",
     heading: 'Sign In',
+    // Passkey authentication
+    'passkey.button.use': 'Sign in with Passkey',
+    'passkey.signin.heading': 'Sign in with Passkey',
+    'passkey.register.heading': 'Register Passkey',
+    'passkey.register.description': 'Create a passkey to securely sign in to your account without a password.',
   },
 
   // ============================================================================
@@ -996,6 +1002,12 @@ const translations = {
     'errors.signup.failed.description': 'We are sorry, but we were unable to create your account. Please try again.',
     'redirect.to.signin': 'Already have an account? <1>Sign in</1>',
     heading: 'Sign Up',
+    // Passkey registration translations
+    'passkey.setup.heading': 'Set Up Passkey',
+    'passkey.setup.description': 'Create a passkey to securely sign in to your account without a password.',
+    'passkey.button.create': 'Create Passkey',
+    'passkey.registering': 'Creating passkey...',
+    'errors.passkey.failed': 'Failed to create passkey. Please try again.',
   },
 
   // ============================================================================
