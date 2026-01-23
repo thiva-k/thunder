@@ -507,8 +507,10 @@ describe('ViewUserTypePage', () => {
       await user.click(screen.getByRole('button', {name: /edit/i}));
       await user.click(screen.getByRole('button', {name: /save changes/i}));
 
-      expect(screen.getByText('Saving...')).toBeInTheDocument();
-      expect(screen.getByRole('button', {name: /saving.../i})).toBeDisabled();
+      await waitFor(() => {
+        expect(screen.getByText('Saving...')).toBeInTheDocument();
+        expect(screen.getByRole('button', {name: /saving.../i})).toBeDisabled();
+      });
     });
 
     it('displays update error', async () => {

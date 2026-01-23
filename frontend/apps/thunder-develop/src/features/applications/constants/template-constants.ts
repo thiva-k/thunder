@@ -17,13 +17,14 @@
  */
 
 /**
- * Branding-related constants
+ * Application template constants.
  */
-const BrandingConstants = {
+const TemplateConstants = {
   /**
-   * Default branding display name
+   * Template modifier suffix for embedded (inbuilt) approach.
+   * Appended to technology template IDs when INBUILT approach is selected.
    */
-  DEFAULT_BRANDING_NAME: 'Default',
+  EMBEDDED_SUFFIX: '-embedded',
 } as const;
 
-export default BrandingConstants;
+export default TemplateConstants;

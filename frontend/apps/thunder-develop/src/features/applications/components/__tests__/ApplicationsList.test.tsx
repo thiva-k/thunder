@@ -281,7 +281,8 @@ describe('ApplicationsList', () => {
 
     renderComponent();
 
-    expect(screen.getByText('-')).toBeInTheDocument();
+    const dashElements = screen.getAllByText('-');
+    expect(dashElements.length).toBeGreaterThan(0);
   });
 
   it('should open actions menu when clicking menu button', async () => {

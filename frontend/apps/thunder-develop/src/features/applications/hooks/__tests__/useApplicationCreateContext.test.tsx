@@ -170,10 +170,9 @@ describe('useApplicationCreateContext', () => {
       ApplicationCreateFlowStep.NAME,
       ApplicationCreateFlowStep.DESIGN,
       ApplicationCreateFlowStep.OPTIONS,
-      ApplicationCreateFlowStep.APPROACH,
+      ApplicationCreateFlowStep.EXPERIENCE,
       ApplicationCreateFlowStep.STACK,
-      ApplicationCreateFlowStep.CONFIGURE,
-      ApplicationCreateFlowStep.SUMMARY,
+      ApplicationCreateFlowStep.CONFIGURE
     ];
 
     steps.forEach((step) => {
@@ -191,7 +190,7 @@ describe('useApplicationCreateContext', () => {
   });
 
   it('should return sign-in approach values', () => {
-    const approaches = [ApplicationCreateFlowSignInApproach.INBUILT, ApplicationCreateFlowSignInApproach.CUSTOM];
+    const approaches = [ApplicationCreateFlowSignInApproach.INBUILT, ApplicationCreateFlowSignInApproach.EMBEDDED];
 
     approaches.forEach((approach) => {
       const contextWithApproach: ApplicationCreateContextType = {

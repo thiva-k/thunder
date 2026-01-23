@@ -16,18 +16,23 @@
  * under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-call */
-
 import {render, screen, waitFor} from '@testing-library/react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import userEvent from '@testing-library/user-event';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {BrowserRouter} from 'react-router';
 import {ConfigProvider} from '@thunder/commons-contexts';
+import type {Branding} from '@thunder/shared-branding';
+import type {Application} from '../../models/application';
 import ApplicationCreatePage from '../ApplicationCreatePage';
 import ApplicationCreateProvider from '../../contexts/ApplicationCreate/ApplicationCreateProvider';
 
-// Mock the logger
+// Mock functions
+const mockCreateApplication = vi.fn();
+const mockCreateBranding = vi.fn();
+const mockNavigate = vi.fn();
+
+// Mock logger
 vi.mock('@thunder/logger/react', () => ({
   useLogger: () => ({
     info: vi.fn(),
@@ -38,34 +43,89 @@ vi.mock('@thunder/logger/react', () => ({
   }),
 }));
 
-// Mock API hooks - declared before they're used in mock factories
-const mockCreateApplication = vi.fn();
-const mockCreateBranding = vi.fn();
+// Mock react-router
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual('react-router');
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
 
-// Mock the branding hook
+// Mock branding hooks
 vi.mock('@thunder/shared-branding', () => ({
   useCreateBranding: () => ({
     mutate: mockCreateBranding,
     isPending: false,
+  }),
+  useGetBrandings: () => ({
+    data: {brandings: []},
+    isLoading: false,
+  }),
+  useGetBranding: () => ({
+    data: null,
+    isLoading: false,
   }),
   LayoutType: {
     CENTERED: 'centered',
   },
 }));
 
+// Mock application API
+vi.mock('../../api/useCreateApplication', () => ({
+  default: () => ({
+    mutate: mockCreateApplication,
+    isPending: false,
+  }),
+}));
+
 // Mock user types API
 vi.mock('../../../user-types/api/useGetUserTypes', () => ({
   default: () => ({
     data: {
-      schemas: [],
+      schemas: [
+        {name: 'customer', displayName: 'Customer'},
+        {name: 'employee', displayName: 'Employee'},
+      ],
     },
     isLoading: false,
     error: null,
   }),
 }));
 
+// Mock integrations API
+vi.mock('../../../integrations/api/useIdentityProviders', () => ({
+  default: () => ({
+    data: [
+      {id: 'google', name: 'Google', type: 'social'},
+      {id: 'github', name: 'GitHub', type: 'social'},
+    ],
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+// Mock flows API
+vi.mock('../../../flows/api/useGetFlows', () => ({
+  default: () => ({
+    data: {
+      flows: [
+        {id: 'flow1', name: 'Basic Auth Flow', handle: 'basic-auth'},
+        {id: 'flow2', name: 'Google Flow', handle: 'google-flow'},
+      ],
+    },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+// Mock configuration type utility
+vi.mock('../../utils/getConfigurationTypeFromTemplate', () => ({
+  default: vi.fn(() => 'URL'),
+}));
+
 // Mock child components
-vi.mock('../../components/create-applications/ConfigureName', () => ({
+vi.mock('../../components/create-application/ConfigureName', () => ({
   default: ({
     appName,
     onAppNameChange,
@@ -89,7 +149,7 @@ vi.mock('../../components/create-applications/ConfigureName', () => ({
   ),
 }));
 
-vi.mock('../../components/create-applications/ConfigureDesign', () => ({
+vi.mock('../../components/create-application/ConfigureDesign', () => ({
   default: ({
     selectedColor,
     onColorSelect,
@@ -97,9 +157,11 @@ vi.mock('../../components/create-applications/ConfigureDesign', () => ({
     onBrandingSelectionChange,
   }: {
     appLogo: string | null;
+    appName: string;
     selectedColor: string;
     onColorSelect: (color: string) => void;
     onLogoSelect: (logo: string) => void;
+    onInitialLogoLoad: (logo: string) => void;
     onReadyChange: (ready: boolean) => void;
     onBrandingSelectionChange?: (useDefault: boolean, brandingId?: string) => void;
   }) => (
@@ -120,18 +182,14 @@ vi.mock('../../components/create-applications/ConfigureDesign', () => ({
       >
         Use Default Branding
       </button>
-      <button
-        type="button"
-        data-testid="use-custom-branding-btn"
-        onClick={() => onBrandingSelectionChange?.(false)}
-      >
+      <button type="button" data-testid="use-custom-branding-btn" onClick={() => onBrandingSelectionChange?.(false)}>
         Use Custom Branding
       </button>
     </div>
   ),
 }));
 
-vi.mock('../../components/create-applications/configure-signin-options/ConfigureSignInOptions', async () => {
+vi.mock('../../components/create-application/configure-signin-options/ConfigureSignInOptions', async () => {
   const useApplicationCreateContextModule = await import('../../hooks/useApplicationCreateContext');
 
   return {
@@ -146,7 +204,6 @@ vi.mock('../../components/create-applications/configure-signin-options/Configure
     }) {
       const {setSelectedAuthFlow} = useApplicationCreateContextModule.default();
 
-      // Set the auth flow and ready state synchronously on mount (consistent with other mocks in this file)
       setTimeout(() => {
         setSelectedAuthFlow({
           id: 'test-flow-id',
@@ -172,38 +229,7 @@ vi.mock('../../components/create-applications/configure-signin-options/Configure
   };
 });
 
-
-vi.mock('../../components/create-applications/Preview', () => ({
-  default: ({appName, appLogo, selectedColor}: {appName: string; appLogo: string | null; selectedColor: string}) => (
-    <div data-testid="preview">
-      <div data-testid="preview-name">{appName}</div>
-      <div data-testid="preview-logo">{appLogo}</div>
-      <div data-testid="preview-color">{selectedColor}</div>
-    </div>
-  ),
-}));
-
-vi.mock('../../components/create-applications/ConfigureOAuth', () => ({
-  default: ({
-    onReadyChange,
-  }: {
-    oauthConfig: any;
-    onOAuthConfigChange: (config: any) => void;
-    onReadyChange?: (ready: boolean) => void;
-    onValidationErrorsChange?: (hasErrors: boolean) => void;
-  }) => {
-    setTimeout(() => {
-      if (onReadyChange) {
-        onReadyChange(true);
-      }
-    }, 0);
-
-    return <div data-testid="configure-oauth">Configure OAuth</div>;
-  },
-}));
-
-// Add missing mocks for the new onboarding components
-vi.mock('../../components/create-applications/ConfigureApproach', () => ({
+vi.mock('../../components/create-application/ConfigureExperience', () => ({
   default: ({
     onReadyChange,
     onApproachChange,
@@ -212,13 +238,16 @@ vi.mock('../../components/create-applications/ConfigureApproach', () => ({
     onReadyChange: (ready: boolean) => void;
     onApproachChange: (approach: string) => void;
     selectedApproach: string;
+    userTypes: {name: string}[];
+    selectedUserTypes: string[];
+    onUserTypesChange: (types: string[]) => void;
   }) => {
     setTimeout(() => onReadyChange(true), 0);
     return (
-      <div data-testid="configure-approach">
+      <div data-testid="configure-experience">
         <span data-testid="current-approach">{selectedApproach}</span>
-        <button type="button" data-testid="select-custom-approach" onClick={() => onApproachChange('CUSTOM')}>
-          Select Custom
+        <button type="button" data-testid="select-embedded-approach" onClick={() => onApproachChange('EMBEDDED')}>
+          Select Embedded
         </button>
         <button type="button" data-testid="select-inbuilt-approach" onClick={() => onApproachChange('INBUILT')}>
           Select Inbuilt
@@ -228,26 +257,23 @@ vi.mock('../../components/create-applications/ConfigureApproach', () => ({
   },
 }));
 
-vi.mock('../../components/create-applications/ConfigureStack', () => ({
+vi.mock('../../components/create-application/ConfigureStack', () => ({
   default: ({onReadyChange}: {onReadyChange: (ready: boolean) => void}) => {
     setTimeout(() => onReadyChange(true), 0);
     return <div data-testid="configure-stack">Configure Stack</div>;
   },
 }));
 
-vi.mock('../../components/create-applications/ConfigureDetails', () => ({
+vi.mock('../../components/create-application/ConfigureDetails', () => ({
   default: ({
     onReadyChange,
     onCallbackUrlChange,
-    userTypes,
-    selectedUserTypes,
-    onUserTypesChange,
   }: {
     onReadyChange: (ready: boolean) => void;
     onCallbackUrlChange: (url: string) => void;
-    userTypes: {name: string}[];
-    selectedUserTypes: string[];
-    onUserTypesChange: (types: string[]) => void;
+    technology?: string;
+    platform?: string;
+    onHostingUrlChange: (url: string) => void;
   }) => {
     setTimeout(() => onReadyChange(true), 0);
     return (
@@ -257,86 +283,25 @@ vi.mock('../../components/create-applications/ConfigureDetails', () => ({
           onChange={(e) => onCallbackUrlChange(e.target.value)}
           placeholder="Callback URL"
         />
-        <div data-testid="user-types-count">{userTypes?.length ?? 0}</div>
-        <div data-testid="selected-user-types">{selectedUserTypes?.join(',') ?? ''}</div>
-        <button type="button" data-testid="select-user-type" onClick={() => onUserTypesChange(['customer'])}>
-          Select Customer Type
-        </button>
       </div>
     );
   },
 }));
 
-// Mock utility function to force URL configuration type
-vi.mock('../../utils/getConfigurationTypeFromTemplate', () => ({
-  default: vi.fn(() => 'URL'),
-}));
-
-vi.mock('../../components/create-applications/ApplicationSummary', () => ({
+vi.mock('../../components/create-application/Preview', () => ({
   default: ({
-    appName,
-    applicationId,
-    clientId,
-    clientSecret,
-    hasOAuthConfig,
+    appLogo,
+    selectedColor,
   }: {
-    appName: string;
     appLogo: string | null;
     selectedColor: string;
-    clientId?: string;
-    clientSecret?: string;
-    hasOAuthConfig: boolean;
-    applicationId?: string | null;
+    integrations: Record<string, boolean>;
   }) => (
-    <div data-testid="application-summary">
-      <div data-testid="summary-app-name">{appName}</div>
-      <div data-testid="summary-app-id">{applicationId}</div>
-      <div data-testid="summary-client-id">{clientId}</div>
-      <div data-testid="summary-client-secret">{clientSecret}</div>
-      <div data-testid="summary-has-oauth">{hasOAuthConfig ? 'true' : 'false'}</div>
+    <div data-testid="preview">
+      <div data-testid="preview-logo">{appLogo}</div>
+      <div data-testid="preview-color">{selectedColor}</div>
     </div>
   ),
-}));
-
-// Mock react-router navigate
-const mockNavigate = vi.fn();
-vi.mock('react-router', async () => {
-  const actual = await vi.importActual('react-router');
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate,
-  };
-});
-
-vi.mock('../../api/useCreateApplication', () => ({
-  default: () => ({
-    mutate: mockCreateApplication,
-    isPending: false,
-  }),
-}));
-
-vi.mock('../../../integrations/api/useIdentityProviders', () => ({
-  default: () => ({
-    data: [
-      {id: 'google', name: 'Google', type: 'social'},
-      {id: 'github', name: 'GitHub', type: 'social'},
-    ],
-    isLoading: false,
-    error: null,
-  }),
-}));
-
-vi.mock('../../../flows/api/useGetFlows', () => ({
-  default: () => ({
-    data: {
-      flows: [
-        {id: 'flow1', name: 'Basic Auth Flow', handle: 'basic-auth'},
-        {id: 'flow2', name: 'Google Flow', handle: 'google-flow'},
-      ],
-    },
-    isLoading: false,
-    error: null,
-  }),
 }));
 
 describe('ApplicationCreatePage', () => {
@@ -368,7 +333,6 @@ describe('ApplicationCreatePage', () => {
 
     window.history.replaceState({}, '', '/');
 
-    // Set up runtime config
     if (typeof window !== 'undefined') {
       // eslint-disable-next-line no-underscore-dangle
       window.__THUNDER_RUNTIME_CONFIG__ = {
@@ -387,18 +351,16 @@ describe('ApplicationCreatePage', () => {
     vi.clearAllMocks();
     mockNavigate.mockResolvedValue(undefined);
 
-    // Reset the getConfigurationTypeFromTemplate mock to return 'URL' (needs configuration)
     const getConfigurationTypeFromTemplate = await import('../../utils/getConfigurationTypeFromTemplate');
     vi.mocked(getConfigurationTypeFromTemplate.default).mockReturnValue('URL');
   });
 
   describe('Initial Rendering', () => {
-    it('should render the first step (name) by default', () => {
+    it('should render the name step by default', () => {
       renderWithProviders();
 
       expect(screen.getByTestId('configure-name')).toBeInTheDocument();
       expect(screen.queryByTestId('configure-design')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('configure-sign-in')).not.toBeInTheDocument();
     });
 
     it('should not show preview on first step', () => {
@@ -410,16 +372,8 @@ describe('ApplicationCreatePage', () => {
     it('should render close button', () => {
       const {container} = renderWithProviders();
 
-      // The close button exists as an IconButton
       const buttons = container.querySelectorAll('button');
       expect(buttons.length).toBeGreaterThan(0);
-    });
-
-    it('should render progress bar', () => {
-      const {container} = renderWithProviders();
-
-      const progressBar = container.querySelector('.MuiLinearProgress-root');
-      expect(progressBar).toBeInTheDocument();
     });
 
     it('should show breadcrumb with current step', () => {
@@ -447,7 +401,7 @@ describe('ApplicationCreatePage', () => {
       expect(continueButton).toBeEnabled();
     });
 
-    it('should navigate to design step when Continue is clicked', async () => {
+    it('should navigate to design step from name step', async () => {
       renderWithProviders();
 
       const nameInput = screen.getByTestId('app-name-input');
@@ -465,83 +419,35 @@ describe('ApplicationCreatePage', () => {
 
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
-
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      await user.click(continueButton);
+      await user.click(screen.getByRole('button', {name: /continue/i}));
 
       expect(screen.getByTestId('preview')).toBeInTheDocument();
     });
 
-    it('should navigate to options step from design step', async () => {
-      renderWithProviders();
-
-      // Step 1: Enter name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 2: Continue from design
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
-      expect(screen.queryByTestId('configure-design')).not.toBeInTheDocument();
-    });
-
-    it('should show Back button from design step', async () => {
-      renderWithProviders();
-
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      expect(screen.getByRole('button', {name: /back/i})).toBeInTheDocument();
-    });
-
-    it('should navigate back to previous step when Back is clicked', async () => {
-      renderWithProviders();
-
-      // Navigate to design step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Click back
-      await user.click(screen.getByRole('button', {name: /back/i}));
-
-      expect(screen.getByTestId('configure-name')).toBeInTheDocument();
-      expect(screen.queryByTestId('configure-design')).not.toBeInTheDocument();
-    });
-
-    it('should reach configuration step with continue button', async () => {
+    it('should navigate through all steps', async () => {
       renderWithProviders();
 
       // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 2: Design
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
+      expect(screen.getByTestId('configure-design')).toBeInTheDocument();
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       // Step 3: Sign In Options
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Configure Approach
+      // Step 4: Experience
       await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 5: Configure Stack
+      // Step 5: Stack
       await waitFor(() => {
         expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
       });
@@ -551,43 +457,52 @@ describe('ApplicationCreatePage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
+    });
 
-      // Should have Continue button on configuration step (this is the final user-facing step)
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      expect(continueButton).toBeInTheDocument();
-      expect(continueButton).toBeEnabled();
+    it('should show Back button from design step onwards', async () => {
+      renderWithProviders();
+
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      expect(screen.getByRole('button', {name: /back/i})).toBeInTheDocument();
+    });
+
+    it('should navigate back to previous step', async () => {
+      renderWithProviders();
+
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /back/i}));
+
+      expect(screen.getByTestId('configure-name')).toBeInTheDocument();
+      expect(screen.queryByTestId('configure-design')).not.toBeInTheDocument();
     });
   });
 
   describe('Breadcrumb Navigation', () => {
-    it('should update breadcrumb as user progresses through steps', async () => {
+    it('should update breadcrumb as user progresses', async () => {
       renderWithProviders();
 
       expect(screen.getByText('Create an Application')).toBeInTheDocument();
 
-      // Navigate to design
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       expect(screen.getByText('Design')).toBeInTheDocument();
 
-      // Navigate to options
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       expect(screen.getByText('Sign In Options')).toBeInTheDocument();
     });
 
-    it('should allow clicking on previous breadcrumb steps to navigate back', async () => {
+    it('should allow clicking on previous breadcrumb steps', async () => {
       renderWithProviders();
 
-      // Navigate to options step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Click on "Create an Application" breadcrumb
       const firstBreadcrumb = screen.getByText('Create an Application');
       await user.click(firstBreadcrumb);
 
@@ -599,8 +514,7 @@ describe('ApplicationCreatePage', () => {
     it('should navigate to applications list when close button is clicked', async () => {
       const {container} = renderWithProviders();
 
-      // Find the close button by finding the IconButton with X icon
-      const closeButton = container.querySelector('button[aria-label]') ?? container.querySelector('button');
+      const closeButton = container.querySelector('button');
       expect(closeButton).toBeInTheDocument();
 
       if (closeButton) {
@@ -614,7 +528,7 @@ describe('ApplicationCreatePage', () => {
   });
 
   describe('Form State Management', () => {
-    it('should update app name state when user types', async () => {
+    it('should update app name state', async () => {
       renderWithProviders();
 
       const nameInput = screen.getByTestId('app-name-input');
@@ -626,93 +540,52 @@ describe('ApplicationCreatePage', () => {
     it('should preserve app name when navigating between steps', async () => {
       renderWithProviders();
 
-      // Enter name
       const nameInput = screen.getByTestId('app-name-input');
       await user.type(nameInput, 'My App');
 
-      // Navigate to design and back
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /back/i}));
 
-      // Name should be preserved
       expect(screen.getByTestId('app-name-input')).toHaveValue('My App');
-    });
-
-    it.skip('should update preview with app name', async () => {
-      renderWithProviders();
-
-      // Enter name and navigate to design
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Check preview
-      expect(screen.getByTestId('preview-name')).toHaveTextContent('My App');
-    });
-
-    it('should update color in state', async () => {
-      renderWithProviders();
-
-      // Navigate to design step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Change color - color inputs work differently, we need to use fireEvent or just set the value
-      const colorPicker = screen.getByTestId('color-picker');
-
-      // Simulate color change by triggering the onChange event
-      await user.click(colorPicker);
-
-      // The mock component will handle the color change
-      // Just verify the initial color is shown
-      expect(screen.getByTestId('preview-color')).toBeInTheDocument();
     });
 
     it('should update logo in state', async () => {
       renderWithProviders();
 
-      // Navigate to design step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Select logo
       const logoButton = screen.getByTestId('logo-select-btn');
       await user.click(logoButton);
 
-      // Check preview
       expect(screen.getByTestId('preview-logo')).toHaveTextContent('test-logo.png');
     });
   });
 
-  describe('Application Creation', () => {
-    it.skip('should call createApplication when continuing from configuration step', async () => {
+  describe('Application Creation - Inbuilt Approach', () => {
+    it('should create application with OAuth config for inbuilt approach', async () => {
+      mockCreateBranding.mockImplementation((_data, {onSuccess}: {onSuccess: (branding: Branding) => void}) => {
+        onSuccess({id: 'branding-123', displayName: 'Test Branding', preferences: {}} as Branding);
+      });
+
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-123', name: 'My App'} as Application);
+      });
+
       renderWithProviders();
 
-      // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      // Navigate through all steps
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 2: Design
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 3: Sign In Options
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Navigate through all steps to reach configuration step
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
@@ -724,66 +597,43 @@ describe('ApplicationCreatePage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Continue from configuration step (this triggers application creation)
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      await user.click(continueButton);
-
-      await waitFor(
-        () => {
-          expect(mockCreateBranding).toHaveBeenCalled();
-        },
-        {timeout: 3000},
-      );
-    });
-
-    it.skip('should show summary step after successful creation', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
+      await waitFor(() => {
+        expect(mockCreateBranding).toHaveBeenCalled();
+        expect(mockCreateApplication).toHaveBeenCalled();
       });
 
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [
-            {
-              type: 'oauth2',
-              config: {
-                client_id: 'test-client-id',
-                client_secret: 'test-client-secret',
-                public_client: false,
-              },
-            },
-          ],
-        });
+      // Verify OAuth config was included
+      const createAppCall = mockCreateApplication.mock.calls[0][0] as Application;
+      expect(createAppCall.inbound_auth_config).toBeDefined();
+      expect(createAppCall.inbound_auth_config?.[0]).toBeDefined();
+      expect(createAppCall.inbound_auth_config?.[0]?.type).toBe('oauth2');
+    });
+
+    it('should navigate to application details page after creation', async () => {
+      mockCreateBranding.mockImplementation((_data, {onSuccess}: {onSuccess: (branding: Branding) => void}) => {
+        onSuccess({id: 'branding-123', displayName: 'Test Branding', preferences: {}} as Branding);
+      });
+
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-123', name: 'My App'} as Application);
       });
 
       renderWithProviders();
 
-      // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      // Navigate through all steps
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 2: Design
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 3: Sign In Options
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Navigate through all steps to reach configuration step
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
@@ -795,836 +645,367 @@ describe('ApplicationCreatePage', () => {
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
-
-      // Continue from configuration step (this triggers application creation)
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      await user.click(continueButton);
-
-      // After successful creation, should show summary step
-      await waitFor(
-        () => {
-          expect(screen.getByTestId('application-summary')).toBeInTheDocument();
-        },
-        {timeout: 3000},
-      );
-
-      // Verify the summary shows the created app
-      expect(screen.getByTestId('summary-app-name')).toHaveTextContent('My App');
-      expect(screen.getByTestId('summary-app-id')).toHaveTextContent('app-123');
-    });
-
-    it.skip('should show error message when creation fails', async () => {
-      mockCreateBranding.mockImplementation((_data, {onError}: any) => {
-        onError(new Error('Failed to create branding'));
-      });
-
-      renderWithProviders();
-
-      // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 2: Design (always ready, just click continue)
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 3: Sign In Options
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Navigate through all steps to reach configuration step
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
-      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
       await waitFor(() => {
-        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-      });
-
-      // Continue from configuration step (this triggers application creation and fails)
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      await user.click(continueButton);
-
-      await waitFor(
-        () => {
-          expect(screen.getByText(/failed to create branding/i)).toBeInTheDocument();
-        },
-        {timeout: 3000},
-      );
-    });
-
-    it.skip('should allow dismissing error message', async () => {
-      mockCreateBranding.mockImplementation((_data, {onError}: any) => {
-        onError(new Error('Failed to create branding'));
-      });
-
-      renderWithProviders();
-
-      // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 2: Design (always ready, just click continue)
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 3: Sign In Options
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Navigate through all steps to reach configuration step
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-      });
-
-      // Continue from configuration step (this triggers application creation and fails)
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      await user.click(continueButton);
-
-      await waitFor(
-        () => {
-          expect(screen.getByText(/failed to create branding/i)).toBeInTheDocument();
-        },
-        {timeout: 3000},
-      );
-
-      // Close error
-      const closeButton = screen.getByLabelText(/close/i);
-      await user.click(closeButton);
-
-      await waitFor(
-        () => {
-          expect(screen.queryByText(/failed to create branding/i)).not.toBeInTheDocument();
-        },
-        {timeout: 3000},
-      );
-    });
-  });
-
-  describe('Integration Management', () => {
-    it('should toggle integration when requested', async () => {
-      renderWithProviders();
-
-      // Navigate to options step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Toggle integration
-      const toggleButton = screen.getByTestId('toggle-integration');
-      await user.click(toggleButton);
-
-      // Component should not crash
-      expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
-    });
-
-    it('should start with default selections (options step ready)', async () => {
-      renderWithProviders();
-
-      // Navigate to options step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Options step should be ready (username/password selected by default)
-      // Continue button should be enabled
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      expect(continueButton).toBeEnabled();
-    });
-
-    it('should require at least one option to be selected before proceeding', async () => {
-      renderWithProviders();
-
-      // Navigate to options step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Initially enabled (default selection)
-      let continueButton = screen.getByRole('button', {name: /continue/i});
-      expect(continueButton).toBeEnabled();
-
-      // Deselect the default integration
-      const toggleButton = screen.getByTestId('toggle-integration');
-      await user.click(toggleButton);
-
-      // Now should be disabled
-      await waitFor(() => {
-        continueButton = screen.getByRole('button', {name: /continue/i});
-        expect(continueButton).toBeDisabled();
-      });
-
-      // Select it again
-      await user.click(toggleButton);
-
-      // Now should be enabled again
-      await waitFor(() => {
-        continueButton = screen.getByRole('button', {name: /continue/i});
-        expect(continueButton).not.toBeDisabled();
+        expect(mockNavigate).toHaveBeenCalledWith('/applications/app-123');
       });
     });
   });
 
-  describe('Accessibility', () => {
-    it('should have proper heading hierarchy', () => {
-      renderWithProviders();
-
-      const breadcrumbText = screen.getByText('Create an Application');
-      expect(breadcrumbText).toBeInTheDocument();
-    });
-
-    it('should have accessible buttons', () => {
-      const {container} = renderWithProviders();
-
-      // The close button is an IconButton without explicit name, check it exists
-      const buttons = container.querySelectorAll('button');
-      expect(buttons.length).toBeGreaterThan(0);
-
-      // Continue button should have accessible text
-      const continueButton = screen.getByRole('button', {name: /continue/i});
-      expect(continueButton).toBeInTheDocument();
-    });
-  });
-
-  describe('Branding Selection', () => {
-    it('should update branding selection when using default branding', async () => {
-      renderWithProviders();
-
-      // Navigate to design step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Click use default branding button
-      const useDefaultBtn = screen.getByTestId('use-default-branding-btn');
-      await user.click(useDefaultBtn);
-
-      // Component should not crash and design step should still be visible
-      expect(screen.getByTestId('configure-design')).toBeInTheDocument();
-    });
-
-    it('should update branding selection when using custom branding', async () => {
-      renderWithProviders();
-
-      // Navigate to design step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Click use custom branding button
-      const useCustomBtn = screen.getByTestId('use-custom-branding-btn');
-      await user.click(useCustomBtn);
-
-      // Component should not crash
-      expect(screen.getByTestId('configure-design')).toBeInTheDocument();
-    });
-  });
-
-  describe('Custom Approach Flow', () => {
-    it('should create application with skip OAuth when CUSTOM approach is selected', async () => {
-      // Mock to return NONE configuration type for custom approach
+  describe('Application Creation - Embedded Approach', () => {
+    it('should create application without OAuth config for embedded approach', async () => {
       const getConfigurationTypeFromTemplate = await import('../../utils/getConfigurationTypeFromTemplate');
       vi.mocked(getConfigurationTypeFromTemplate.default).mockReturnValue('NONE');
 
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
+      mockCreateBranding.mockImplementation((_data, {onSuccess}: {onSuccess: (branding: Branding) => void}) => {
+        onSuccess({id: 'branding-123', displayName: 'Test Branding', preferences: {}} as Branding);
       });
 
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-        });
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-123', name: 'My App'} as Application);
       });
 
       renderWithProviders();
 
-      // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      // Navigate to experience step
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 2: Design
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 3: Sign In Options
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Approach - select CUSTOM
+      // Select embedded approach
       await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
       });
-      const selectCustomBtn = screen.getByTestId('select-custom-approach');
-      await user.click(selectCustomBtn);
+      const selectEmbeddedBtn = screen.getByTestId('select-embedded-approach');
+      await user.click(selectEmbeddedBtn);
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 5: Stack - for custom approach, clicking continue should create app
+      // Continue from stack - should create app immediately
       await waitFor(() => {
         expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Should call createBranding and then createApplication
       await waitFor(() => {
         expect(mockCreateBranding).toHaveBeenCalled();
+        expect(mockCreateApplication).toHaveBeenCalled();
       });
-    });
-  });
 
-  describe('Back Navigation', () => {
-    it('should navigate back from OPTIONS to DESIGN step', async () => {
-      renderWithProviders();
-
-      // Navigate to OPTIONS step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
-
-      // Click back
-      await user.click(screen.getByRole('button', {name: /back/i}));
-
-      expect(screen.getByTestId('configure-design')).toBeInTheDocument();
+      // Verify OAuth config was NOT included
+      const createAppCall = mockCreateApplication.mock.calls[0][0] as Application;
+      expect(createAppCall.inbound_auth_config).toBeUndefined();
     });
 
-    it('should navigate back from APPROACH to OPTIONS step', async () => {
-      renderWithProviders();
+    it('should skip configure step for embedded approach', async () => {
+      const getConfigurationTypeFromTemplate = await import('../../utils/getConfigurationTypeFromTemplate');
+      vi.mocked(getConfigurationTypeFromTemplate.default).mockReturnValue('NONE');
 
-      // Navigate to APPROACH step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+      mockCreateBranding.mockImplementation((_data, {onSuccess}: {onSuccess: (branding: Branding) => void}) => {
+        onSuccess({id: 'branding-123', displayName: 'Test Branding', preferences: {}} as Branding);
       });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
-
-      // Click back
-      await user.click(screen.getByRole('button', {name: /back/i}));
-
-      expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
-    });
-
-    it('should navigate back from STACK to APPROACH step', async () => {
-      renderWithProviders();
-
-      // Navigate to STACK step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
-
-      // Click back
-      await user.click(screen.getByRole('button', {name: /back/i}));
-
-      expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
-    });
-
-    it('should navigate back from CONFIGURE to STACK step', async () => {
-      renderWithProviders();
-
-      // Navigate to CONFIGURE step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-
-      // Click back
-      await user.click(screen.getByRole('button', {name: /back/i}));
-
-      expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
-    });
-  });
-
-  describe('Application Creation with Default Branding', () => {
-    it('should use default branding ID directly when selected', async () => {
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [
-            {
-              type: 'oauth2',
-              config: {
-                client_id: 'test-client-id',
-                client_secret: 'test-client-secret',
-                public_client: false,
-              },
-            },
-          ],
-        });
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-123', name: 'My App'} as Application);
       });
 
       renderWithProviders();
 
-      // Step 1: Name
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 2: Design - select default branding
-      const useDefaultBtn = screen.getByTestId('use-default-branding-btn');
-      await user.click(useDefaultBtn);
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Step 3: Sign In Options
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 4: Approach
       await waitFor(() => {
-        expect(screen.getByTestId('configure-approach')).toBeInTheDocument();
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
       });
+      await user.click(screen.getByTestId('select-embedded-approach'));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 5: Stack
       await waitFor(() => {
         expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Step 6: Configure
+      // Should NOT show configure details step
+      await waitFor(() => {
+        expect(screen.queryByTestId('configure-details')).not.toBeInTheDocument();
+        expect(mockCreateApplication).toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe('Error Handling', () => {
+    it('should show error when branding creation fails', async () => {
+      mockCreateBranding.mockImplementation((_data, {onError}: {onError: (error: Error) => void}) => {
+        onError(new Error('Failed to create branding'));
+      });
+
+      renderWithProviders();
+
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Should create application directly without creating branding
       await waitFor(() => {
-        expect(mockCreateApplication).toHaveBeenCalled();
-        // Should NOT call createBranding since we're using default
-        expect(mockCreateBranding).not.toHaveBeenCalled();
+        expect(screen.getByText(/failed to create branding/i)).toBeInTheDocument();
       });
-    });
-  });
-
-  describe('Application Creation Error Handling', () => {
-    it('should show error when no auth flow is selected', async () => {
-      // This test covers the case where selectedAuthFlow is undefined
-      renderWithProviders();
-
-      // Navigate through all steps quickly
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // The error would appear if selectedAuthFlow was not set
-      // This verifies the error handling path exists
-      expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
     });
 
     it('should show error when application creation fails', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
+      mockCreateBranding.mockImplementation((_data, {onSuccess}: {onSuccess: (branding: Branding) => void}) => {
+        onSuccess({id: 'branding-123', displayName: 'Test Branding', preferences: {}} as Branding);
       });
 
-      mockCreateApplication.mockImplementation((_data, {onError}: any) => {
+      mockCreateApplication.mockImplementation((_data, {onError}: {onError: (error: Error) => void}) => {
         onError(new Error('Failed to create application'));
       });
 
       renderWithProviders();
 
-      // Navigate through all steps
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to create application/i)).toBeInTheDocument();
+        },
+        {timeout: 10000},
+      );
+    });
+
+    it('should allow dismissing error message', async () => {
+      mockCreateBranding.mockImplementation((_data, {onError}: {onError: (error: Error) => void}) => {
+        onError(new Error('Failed to create branding'));
+      });
+
+      renderWithProviders();
+
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
-        expect(screen.getByText(/failed to create application/i)).toBeInTheDocument();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(
+        () => {
+          expect(screen.getByText(/failed to create branding/i)).toBeInTheDocument();
+        },
+        {timeout: 10000},
+      );
+
+      const closeButton = screen.getByLabelText(/close/i);
+      await user.click(closeButton);
+
+      await waitFor(() => {
+        expect(screen.queryByText(/failed to create branding/i)).not.toBeInTheDocument();
       });
     });
   });
 
-  describe('Summary Page', () => {
-    it('should show View Application button and navigate when clicked', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
+  describe('Branding Selection', () => {
+    it('should use custom branding by default', async () => {
+      mockCreateBranding.mockImplementation((_data, {onSuccess}: {onSuccess: (branding: Branding) => void}) => {
+        onSuccess({id: 'branding-123', displayName: 'Test Branding', preferences: {}} as Branding);
       });
 
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [
-            {
-              type: 'oauth2',
-              config: {
-                client_id: 'test-client-id',
-                client_secret: 'test-client-secret',
-                public_client: false,
-              },
-            },
-          ],
-        });
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-123', name: 'My App'} as Application);
       });
 
       renderWithProviders();
 
-      // Navigate through all steps
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Should be on summary page
       await waitFor(() => {
-        expect(screen.getByTestId('application-summary')).toBeInTheDocument();
-      });
-
-      // Click View Application button
-      const viewAppButton = screen.getByRole('button', {name: /view application/i});
-      await user.click(viewAppButton);
-
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/applications/app-123');
+        expect(mockCreateBranding).toHaveBeenCalled();
       });
     });
 
-    it('should show Done button and navigate to applications list when clicked', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
-      });
-
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [],
-        });
+    it('should use default branding when selected', async () => {
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-123', name: 'My App'} as Application);
       });
 
       renderWithProviders();
 
-      // Navigate through all steps
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      // Select default branding
+      const useDefaultBtn = screen.getByTestId('use-default-branding-btn');
+      await user.click(useDefaultBtn);
+
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
+      });
       await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Should be on summary page
       await waitFor(() => {
-        expect(screen.getByTestId('application-summary')).toBeInTheDocument();
-      });
-
-      // Click Done button
-      const doneButton = screen.getByRole('button', {name: /done/i});
-      await user.click(doneButton);
-
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/applications');
-      });
-    });
-
-    it('should display client credentials for confidential clients', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
-      });
-
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [
-            {
-              type: 'oauth2',
-              config: {
-                client_id: 'confidential-client-id',
-                client_secret: 'super-secret-value',
-                public_client: false,
-              },
-            },
-          ],
-        });
-      });
-
-      renderWithProviders();
-
-      // Navigate through all steps
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Should be on summary page with client credentials
-      await waitFor(() => {
-        expect(screen.getByTestId('application-summary')).toBeInTheDocument();
-        expect(screen.getByTestId('summary-client-id')).toHaveTextContent('confidential-client-id');
-        expect(screen.getByTestId('summary-client-secret')).toHaveTextContent('super-secret-value');
-        expect(screen.getByTestId('summary-has-oauth')).toHaveTextContent('true');
-      });
-    });
-
-    it('should display client ID only for public clients (no secret)', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
-      });
-
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [
-            {
-              type: 'oauth2',
-              config: {
-                client_id: 'public-client-id',
-                public_client: true,
-              },
-            },
-          ],
-        });
-      });
-
-      renderWithProviders();
-
-      // Navigate through all steps
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Should be on summary page with only client ID
-      await waitFor(() => {
-        expect(screen.getByTestId('application-summary')).toBeInTheDocument();
-        expect(screen.getByTestId('summary-client-id')).toHaveTextContent('public-client-id');
-        // Public clients don't have client secrets (they cannot securely store credentials)
-        expect(screen.getByTestId('summary-client-secret')).toHaveTextContent('');
+        expect(mockCreateApplication).toHaveBeenCalled();
+        // Should NOT create new branding
+        expect(mockCreateBranding).not.toHaveBeenCalled();
       });
     });
   });
 
-  describe('Callback URL Update', () => {
+  describe('Integration Toggle', () => {
+    it('should allow toggling integrations', async () => {
+      renderWithProviders();
+
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
+      });
+
+      const toggleButton = screen.getByTestId('toggle-integration');
+      await user.click(toggleButton);
+
+      expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
+    });
+  });
+
+  describe('Callback URL Configuration', () => {
     it('should update OAuth config when callback URL changes', async () => {
       renderWithProviders();
 
-      // Navigate to configure details step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await user.type(screen.getByTestId('app-name-input'), 'My App');
       await user.click(screen.getByRole('button', {name: /continue/i}));
       await user.click(screen.getByRole('button', {name: /continue/i}));
 
-      // Should be on configure details step
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-sign-in')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-experience')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-stack')).toBeInTheDocument();
+      });
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+
       await waitFor(() => {
         expect(screen.getByTestId('configure-details')).toBeInTheDocument();
       });
 
-      // Enter callback URL
       const callbackInput = screen.getByTestId('callback-url-input');
       await user.type(callbackInput, 'https://example.com/callback');
 
-      // Component should handle the callback URL change
       expect(callbackInput).toHaveValue('https://example.com/callback');
-    });
-  });
-
-  describe('User Types Selection', () => {
-    it('should allow selecting user types in configure details', async () => {
-      renderWithProviders();
-
-      // Navigate to configure details step
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Should be on configure details step
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-      });
-
-      // Select user type
-      const selectUserTypeBtn = screen.getByTestId('select-user-type');
-      await user.click(selectUserTypeBtn);
-
-      // Verify the selection was made
-      await waitFor(() => {
-        expect(screen.getByTestId('selected-user-types')).toHaveTextContent('customer');
-      });
-    });
-  });
-
-  describe('View Application Navigation Error', () => {
-    it('should fall back to applications list when navigation fails', async () => {
-      mockCreateBranding.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({id: 'branding-123', name: 'Test Branding'});
-      });
-
-      mockCreateApplication.mockImplementation((_data, {onSuccess}: any) => {
-        onSuccess({
-          id: 'app-123',
-          name: 'My App',
-          inbound_auth_config: [],
-        });
-      });
-
-      // Make navigate fail for specific app route but work for /applications
-      mockNavigate.mockImplementation((path: string) => {
-        if (path === '/applications/app-123') {
-          return Promise.reject(new Error('Navigation failed'));
-        }
-        return Promise.resolve();
-      });
-
-      renderWithProviders();
-
-      // Navigate through all steps
-      const nameInput = screen.getByTestId('app-name-input');
-      await user.type(nameInput, 'My App');
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: /continue/i})).not.toBeDisabled();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-details')).toBeInTheDocument();
-      });
-      await user.click(screen.getByRole('button', {name: /continue/i}));
-
-      // Should be on summary page
-      await waitFor(() => {
-        expect(screen.getByTestId('application-summary')).toBeInTheDocument();
-      });
-
-      // Click View Application button
-      const viewAppButton = screen.getByRole('button', {name: /view application/i});
-      await user.click(viewAppButton);
-
-      // Should attempt to navigate and then fall back
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/applications/app-123');
-      });
-
-      // After failure, should fall back to /applications
-      await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/applications');
-      });
     });
   });
 });

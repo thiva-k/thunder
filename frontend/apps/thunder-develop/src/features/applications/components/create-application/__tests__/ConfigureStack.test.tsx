@@ -350,7 +350,7 @@ describe('ConfigureStack', () => {
     expect(setSelectedTechnology).not.toHaveBeenCalledWith(TechnologyApplicationTemplate.NEXTJS);
   });
 
-  it('hides platform section and divider when signInApproach is CUSTOM', () => {
+  it('hides platform section and divider when signInApproach is EMBEDDED', () => {
     renderWithContext(
       {
         oauthConfig: null,
@@ -358,7 +358,7 @@ describe('ConfigureStack', () => {
         onReadyChange: vi.fn(),
         stackTypes: {technology: true, platform: true},
       },
-      {signInApproach: ApplicationCreateFlowSignInApproach.CUSTOM},
+      {signInApproach: ApplicationCreateFlowSignInApproach.EMBEDDED},
     );
 
     expect(screen.getByText('applications:onboarding.configure.stack.technology.title')).toBeInTheDocument();

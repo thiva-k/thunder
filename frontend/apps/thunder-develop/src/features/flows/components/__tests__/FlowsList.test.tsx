@@ -320,7 +320,7 @@ describe('FlowsList', () => {
       fireEvent.click(authFlowRow);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/flows/login/flow-1');
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-1');
       });
     });
 

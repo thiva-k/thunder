@@ -109,7 +109,7 @@ export default function ConfigureName({
   };
 
   return (
-    <Stack direction="column" spacing={4}>
+    <Stack direction="column" spacing={4} data-testid="configure-name">
       <Typography variant="h1" gutterBottom>
         {t('applications:onboarding.configure.name.title')}
       </Typography>
@@ -122,6 +122,9 @@ export default function ConfigureName({
           value={appName}
           onChange={(e: ChangeEvent<HTMLInputElement>): void => onAppNameChange(e.target.value)}
           placeholder={t('applications:onboarding.configure.name.placeholder')}
+          inputProps={{
+            'data-testid': 'app-name-input',
+          }}
         />
       </FormControl>
 

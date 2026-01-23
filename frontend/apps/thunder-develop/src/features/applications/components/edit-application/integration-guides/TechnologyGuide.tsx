@@ -16,15 +16,18 @@
  * under the License.
  */
 
-import {Box, Typography, Stack, Card, CardContent, Divider, Paper, IconButton, Button, Tooltip} from '@wso2/oxygen-ui';
+import {Box, Typography, Stack, Card, CardContent, Divider, Paper, IconButton, Tooltip} from '@wso2/oxygen-ui';
 import {Sparkles, Copy} from '@wso2/oxygen-ui-icons-react';
-import type {JSX} from 'react';
+import type {JSX, MouseEvent} from 'react';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
+import {useLogger} from '@thunder/logger';
 import {Prism as SyntaxHighlighter} from 'react-syntax-highlighter';
 import {vscDarkPlus} from 'react-syntax-highlighter/dist/esm/styles/prism';
-import type {IntegrationGuides, IntegrationStep} from '../../models/application-templates';
-import {ApplicationCreateFlowSignInApproach} from '../../models/application-create-flow';
+import type {IntegrationGuides, IntegrationStep} from '../../../models/application-templates';
+import {ApplicationCreateFlowSignInApproach} from '../../../models/application-create-flow';
+import GradientBorderButton from '../../GradientBorderButton';
+import TemplateConstants from '../../../constants/template-constants';
 
 /**
  * Props for the {@link TechnologyGuide} component.
@@ -37,9 +40,9 @@ export interface TechnologyGuideProps {
    */
   guides: IntegrationGuides | null;
   /**
-   * The selected sign-in approach (INBUILT or CUSTOM)
+   * The template ID used to create the application (e.g., 'react', 'react-embedded')
    */
-  signInApproach: ApplicationCreateFlowSignInApproach;
+  templateId?: string | null;
   /**
    * The OAuth2 client ID to replace {{clientId}} placeholders
    */
@@ -58,14 +61,13 @@ export interface TechnologyGuideProps {
  * 2. Divider with "or" text
  * 3. Step-by-step integration guide using custom timeline layout
  *
- * The displayed steps vary based on the sign-in approach:
- * - INBUILT: Shows SDK integration steps for Thunder-hosted login
- * - CUSTOM: Shows API integration steps for custom login implementation
+ * The displayed steps vary based on the template ID:
+ * - Templates with '-embedded' suffix (e.g., 'react-embedded'): Shows 'embedded' guide for custom login UI
+ * - Templates without '-embedded' suffix (e.g., 'react'): Shows 'inbuilt' guide for Thunder-hosted login
  *
  * @param props - The component props
  * @param props.guides - Integration guides structure
- * @param props.onLLMGuideSelect - Callback invoked when user selects LLM guide
- * @param props.signInApproach - The selected sign-in approach
+ * @param props.templateId - The template ID used to create the application
  *
  * @returns JSX element displaying the integration guide options
  *
@@ -73,21 +75,27 @@ export interface TechnologyGuideProps {
  */
 export default function TechnologyGuide({
   guides,
-  signInApproach,
+  templateId = null,
   clientId = '',
   applicationId = '',
 }: TechnologyGuideProps): JSX.Element | null {
+  const logger = useLogger('TechnologyGuide');
   const {t} = useTranslation();
+
   const [copiedStep, setCopiedStep] = useState<number | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState<boolean>(false);
 
-  // Don't render anything if there are no guides
   if (!guides) {
     return null;
   }
 
-  // Get the guide key based on sign-in approach
-  const guideKey = signInApproach === ApplicationCreateFlowSignInApproach.INBUILT ? 'inbuilt' : 'custom';
+  // Get the guide key based on template ID - check if it contains embedded suffix
+  // Templates with -embedded suffix (e.g., react-embedded) → use 'embedded' guide
+  // Templates without -embedded suffix (e.g., react) → use 'inbuilt' guide
+  const isEmbedded = templateId?.includes(TemplateConstants.EMBEDDED_SUFFIX) ?? false;
+  const guideKey = isEmbedded
+    ? ApplicationCreateFlowSignInApproach.EMBEDDED
+    : ApplicationCreateFlowSignInApproach.INBUILT;
   const selectedGuide = guides[guideKey];
 
   if (!selectedGuide) {
@@ -96,10 +104,6 @@ export default function TechnologyGuide({
 
   const {llm_prompt: llmPrompt, manual_steps: manualSteps} = selectedGuide;
 
-  /**
-   * Replace placeholders in text with actual values
-   * If clientId or applicationId is not available, keep the placeholder
-   */
   const replacePlaceholders = (text: string): string => {
     let result = text;
 
@@ -116,7 +120,7 @@ export default function TechnologyGuide({
     return result;
   };
 
-  const handleCopyPrompt = async (e: React.MouseEvent): Promise<void> => {
+  const handleCopyPrompt = async (e: MouseEvent): Promise<void> => {
     e.stopPropagation();
     if (!llmPrompt.content) return;
 
@@ -129,18 +133,21 @@ export default function TechnologyGuide({
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
+
       textArea.value = contentWithReplacements;
       textArea.style.position = 'fixed';
       textArea.style.opacity = '0';
       document.body.appendChild(textArea);
       textArea.select();
+
       try {
         document.execCommand('copy');
         setCopiedPrompt(true);
         setTimeout(() => setCopiedPrompt(false), 2000);
       } catch {
-        // Ignore copy errors
+        logger.error('Failed to copy the prompt to clipboard.');
       }
+
       document.body.removeChild(textArea);
     }
   };
@@ -155,18 +162,21 @@ export default function TechnologyGuide({
     } catch {
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
+
       textArea.value = codeWithReplacements;
       textArea.style.position = 'fixed';
       textArea.style.opacity = '0';
       document.body.appendChild(textArea);
       textArea.select();
+
       try {
         document.execCommand('copy');
         setCopiedStep(stepNumber);
         setTimeout(() => setCopiedStep(null), 2000);
       } catch {
-        // Ignore copy errors
+        logger.error('Failed to copy the code snippet to clipboard.');
       }
+
       document.body.removeChild(textArea);
     }
   };
@@ -176,7 +186,6 @@ export default function TechnologyGuide({
       return null;
     }
 
-    // Map language aliases to Prism language identifiers
     const getLanguage = (lang: string): string => {
       const languageMap: Record<string, string> = {
         terminal: 'bash',
@@ -236,7 +245,7 @@ export default function TechnologyGuide({
             size="small"
             onClick={() => {
               handleCopyCode(step.code!.content, step.step).catch(() => {
-                // Error already handled
+                logger.error('Failed to copy the code snippet to clipboard.');
               });
             }}
             sx={{
@@ -278,18 +287,9 @@ export default function TechnologyGuide({
     <Stack direction="column" spacing={3} sx={{width: '100%'}}>
       {/* LLM Prompt Option */}
       {llmPrompt && (
-        <Card
-          variant="outlined"
-          sx={{
-            position: 'relative',
-            background:
-              'linear-gradient(white, white) padding-box, linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%) border-box',
-            border: '2px solid transparent',
-            borderRadius: 2,
-          }}
-        >
+        <Card variant="outlined">
           <CardContent sx={{p: 3}}>
-            <Stack direction="row" spacing={2} alignItems="flex-start">
+            <Stack direction="row" spacing={2} alignItems="center">
               <Box
                 sx={{
                   display: 'flex',
@@ -313,19 +313,17 @@ export default function TechnologyGuide({
               </Box>
               {llmPrompt.content && (
                 <Tooltip title={copiedPrompt ? t('applications:clientSecret.copied') : ''} open={copiedPrompt} arrow>
-                  <Button
+                  <GradientBorderButton
                     data-testid="copy-prompt-button"
                     onClick={(e) => {
                       handleCopyPrompt(e).catch(() => {
                         /* Error already handled */
                       });
                     }}
-                    variant="contained"
-                    color="primary"
                     startIcon={<Copy size={16} />}
                   >
                     Copy Prompt
-                  </Button>
+                  </GradientBorderButton>
                 </Tooltip>
               )}
             </Stack>
