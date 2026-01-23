@@ -343,6 +343,18 @@ const translations = {
     title: 'User Management',
     subtitle: 'Manage users, roles, and permissions across your organization',
     addUser: 'Add User',
+    inviteUser: 'Invite User',
+    inviteUserDescription: 'Send an invite link to a new user to complete their registration',
+    inviteLinkGenerated: 'Invite Link Generated!',
+    inviteLinkDescription: 'Share this link with the user to complete their registration.',
+    inviteLink: 'Invite Link',
+    inviteAnother: 'Invite Another User',
+    invite: {
+      steps: {
+        userdetails: 'User Details',
+        invitelink: 'Invite Link',
+      },
+    },
     editUser: 'Edit User',
     deleteUser: 'Delete User',
     userDetails: 'User Details',
@@ -361,6 +373,12 @@ const translations = {
     userCreatedSuccess: 'User created successfully',
     userUpdatedSuccess: 'User updated successfully',
     userDeletedSuccess: 'User deleted successfully',
+    errors: {
+      failed: {
+        title: 'Error',
+        description: 'An error occurred. Please try again.',
+      },
+    },
   },
 
   // ============================================================================
@@ -978,6 +996,47 @@ const translations = {
     'errors.signup.failed.description': 'We are sorry, but we were unable to create your account. Please try again.',
     'redirect.to.signin': 'Already have an account? <1>Sign in</1>',
     heading: 'Sign Up',
+  },
+
+  // ============================================================================
+  // Invite namespace - Invite acceptance feature translations (for Thunder Gate)
+  // ============================================================================
+  invite: {
+    validating: 'Validating your invite link...',
+    'complete.title': 'Welcome Aboard!',
+    'complete.description': 'Your account has been successfully set up.',
+    'errors.invalid.title': 'Unable to verify invite',
+    'errors.invalid.description': 'This invite link is invalid or has expired.',
+    'errors.failed.title': 'Error',
+    'errors.failed.description': 'An error occurred. Please try again.',
+    goToSignIn: 'Go to Sign In',
+    signIn: 'Sign In',
+  },
+
+  // ============================================================================
+  // Components namespace - SDK component error translations
+  // ============================================================================
+  components: {
+    signIn: {
+      errors: {
+        generic: 'An error occurred during sign in. Please try again.',
+      },
+    },
+    signUp: {
+      errors: {
+        generic: 'An error occurred during sign up. Please try again.',
+      },
+    },
+    inviteUser: {
+      errors: {
+        generic: 'An error occurred while inviting the user. Please try again.',
+      },
+    },
+    acceptInvite: {
+      errors: {
+        generic: 'An error occurred while accepting the invite. Please try again.',
+      },
+    },
   },
 
   // ============================================================================

@@ -7,8 +7,8 @@ settings:
 catalogs:
   default:
     '@asgardeo/react':
-      specifier: 0.6.31
-      version: 0.6.31
+      specifier: 0.8.0
+      version: 0.8.0
     '@asgardeo/react-router':
       specifier: 1.0.27
       version: 1.0.27
@@ -184,10 +184,10 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.31(@types/react@19.2.7)(react@19.2.3)
+        version: 0.8.0(@types/react@19.2.7)(react@19.2.3)
       '@asgardeo/react-router':
         specifier: 'catalog:'
-        version: 1.0.27(@asgardeo/react@0.6.31(@types/react@19.2.7)(react@19.2.3))(react-router@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
+        version: 1.0.27(@asgardeo/react@0.8.0(@types/react@19.2.7)(react@19.2.3))(react-router@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)
       '@dnd-kit/abstract':
         specifier: 0.1.21
         version: 0.1.21
@@ -254,6 +254,9 @@ importers:
       '@thunder/shared-branding':
         specifier: workspace:^
         version: link:../../packages/thunder-shared-branding
+      '@thunder/shared-hooks':
+        specifier: workspace:^
+        version: link:../../packages/thunder-shared-hooks
       '@wso2/oxygen-ui':
         specifier: 'catalog:'
         version: 0.0.1-alpha.10(e0168aaba1e8acc273a614d5b4d984c8)
@@ -392,7 +395,7 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.31(@types/react@19.2.7)(react@19.2.3)
+        version: 0.8.0(@types/react@19.2.7)(react@19.2.3)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.2.7)(react@19.2.3)
@@ -752,7 +755,7 @@ importers:
     dependencies:
       '@asgardeo/react':
         specifier: 'catalog:'
-        version: 0.6.31(@types/react@19.2.7)(react@19.2.3)
+        version: 0.8.0(@types/react@19.2.7)(react@19.2.3)
       '@emotion/react':
         specifier: 'catalog:'
         version: 11.14.0(@types/react@19.2.7)(react@19.2.3)
@@ -899,14 +902,14 @@ packages:
   '@asamuzakjp/nwsapi@2.3.9':
     resolution: {integrity: sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q==}
 
-  '@asgardeo/browser@0.1.42':
-    resolution: {integrity: sha512-/lQoVbI9wVpIUt3+IZKMEcQuH/s5SW9O8HKIvrPG3ZVESwjmjU0bDo8yhtBKleetueSPEBfDnQtFbnXp0gFmsQ==}
+  '@asgardeo/browser@0.2.1':
+    resolution: {integrity: sha512-gXvQLoF/QGmKIdmlsqZB5a7wjygBd7FDqCoGo4THVyyFtpA8QC34PPAYVoG71OzIGigFkMv5LDKY2nPNBgsxCw==}
 
   '@asgardeo/i18n@0.3.9':
     resolution: {integrity: sha512-IEK3vN1t/5cJCWYhRJ71kE2heiczvqemJfK/pCFFBhMrVTPqy7+SoT7Wvf0oeORFWMDwEVXAALHJP+7blN+nHg==}
 
-  '@asgardeo/javascript@0.2.17':
-    resolution: {integrity: sha512-mPQzPCkzyHbSeKXRkgG01J/QH3jw0v8mmD/Qf87lbTy2AHJlwI5BI1TrHM6aAlw0AyBWzomEdGLa/VlKiyOkHQ==}
+  '@asgardeo/javascript@0.4.0':
+    resolution: {integrity: sha512-0Bek7Y7p6g+HnBKudCViOzZwhjd9PxBXpzXA1Y7iACy0iLVBs4U9PErWTphBzcaN76drfv2y8e64UT5ewDKfxg==}
 
   '@asgardeo/react-router@1.0.27':
     resolution: {integrity: sha512-/xb29w82Wj7Gsgx75/SrIx6UYcMfHm4njuss62eQkufXp1BWYvJuG52esRJsggn68Cv5eL7/E5Ke2r3MzaW7hQ==}
@@ -915,8 +918,8 @@ packages:
       react: '>=19.1.4'
       react-router: '>=6.30.1'
 
-  '@asgardeo/react@0.6.31':
-    resolution: {integrity: sha512-N0XWJsCJbHdCPorgqYJwv4KlczPweZt7Rvoy7CAiq1hDqQ28seN7/Ah9BiD9Vd31+fKMOeOXrXGNgYCU4WZX0Q==}
+  '@asgardeo/react@0.8.0':
+    resolution: {integrity: sha512-Vu8U50ku8e/uKqDfh+LAqLLMJOhVOpviJ/QKMKbVtS3mpTq1p43nHXQ2TfmAOhnEB+INqQeNEkI6H6vF1FQyCg==}
     peerDependencies:
       '@types/react': '>=19.1.5'
       react: '>=19.1.4'
@@ -6009,6 +6012,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -6156,9 +6160,9 @@ snapshots:
 
   '@asamuzakjp/nwsapi@2.3.9': {}
 
-  '@asgardeo/browser@0.1.42(esbuild@0.25.9)':
+  '@asgardeo/browser@0.2.1(esbuild@0.25.9)':
     dependencies:
-      '@asgardeo/javascript': 0.2.17
+      '@asgardeo/javascript': 0.4.0
       axios: 0.30.2
       base64url: 3.0.1
       buffer: 6.0.3
@@ -6179,21 +6183,21 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@asgardeo/javascript@0.2.17':
+  '@asgardeo/javascript@0.4.0':
     dependencies:
       '@asgardeo/i18n': 0.3.9
       tslib: 2.8.1
 
-  '@asgardeo/react-router@1.0.27(@asgardeo/react@0.6.31(@types/react@19.2.7)(react@19.2.3))(react-router@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
+  '@asgardeo/react-router@1.0.27(@asgardeo/react@0.8.0(@types/react@19.2.7)(react@19.2.3))(react-router@7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(react@19.2.3)':
     dependencies:
-      '@asgardeo/react': 0.6.31(@types/react@19.2.7)(react@19.2.3)
+      '@asgardeo/react': 0.8.0(@types/react@19.2.7)(react@19.2.3)
       react: 19.2.3
       react-router: 7.12.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       tslib: 2.8.1
 
-  '@asgardeo/react@0.6.31(@types/react@19.2.7)(react@19.2.3)':
+  '@asgardeo/react@0.8.0(@types/react@19.2.7)(react@19.2.3)':
     dependencies:
-      '@asgardeo/browser': 0.1.42(esbuild@0.25.9)
+      '@asgardeo/browser': 0.2.1(esbuild@0.25.9)
       '@asgardeo/i18n': 0.3.9
       '@emotion/css': 11.13.5
       '@floating-ui/react': 0.27.12(react-dom@19.1.4(react@19.2.3))(react@19.2.3)

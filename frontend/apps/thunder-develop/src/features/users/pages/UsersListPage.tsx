@@ -19,12 +19,13 @@
 import {useNavigate} from 'react-router';
 import {Box, Stack, Typography, TextField, Button, InputAdornment, Select, MenuItem} from '@wso2/oxygen-ui';
 import {useMemo, useState} from 'react';
-import {Plus, Search} from '@wso2/oxygen-ui-icons-react';
+import {Plus, Search, Mail} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import {useLogger} from '@thunder/logger/react';
 import UsersList from '../components/UsersList';
 import useGetUserSchemas from '../api/useGetUserSchemas';
 import type {SchemaInterface} from '../types/users';
+import InviteUserDialog from '../components/InviteUserDialog';
 
 export default function UsersListPage() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export default function UsersListPage() {
   const logger = useLogger('UsersListPage');
 
   const [selectedSchema, setSelectedSchema] = useState<string>();
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
 
   const {data: originalUserSchemas} = useGetUserSchemas();
 
@@ -45,6 +47,18 @@ export default function UsersListPage() {
     return originalUserSchemas?.schemas;
   }, [originalUserSchemas]);
 
+  const handleOpenInviteDialog = () => {
+    setIsInviteDialogOpen(true);
+  };
+
+  const handleCloseInviteDialog = () => {
+    setIsInviteDialogOpen(false);
+  };
+
+  const handleInviteSuccess = (inviteLink: string) => {
+    logger.info('Invite link generated successfully', {inviteLink});
+  };
+
   return (
     <Box>
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4} flexWrap="wrap" gap={2}>
@@ -57,6 +71,9 @@ export default function UsersListPage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={2}>
+          <Button variant="outlined" startIcon={<Mail size={18} />} onClick={handleOpenInviteDialog}>
+            {t('users:inviteUser', 'Invite User')}
+          </Button>
           <Button
             variant="contained"
             startIcon={<Plus size={18} />}
@@ -102,6 +119,13 @@ export default function UsersListPage() {
         </Select>
       </Stack>
       <UsersList selectedSchema={selectedSchema ?? ''} />
+
+      {/* User Onboarding Dialog */}
+      <InviteUserDialog
+        open={isInviteDialogOpen}
+        onClose={handleCloseInviteDialog}
+        onSuccess={handleInviteSuccess}
+      />
     </Box>
   );
 }

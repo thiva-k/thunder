@@ -19,11 +19,50 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {JSX} from 'react';
+import type {InviteUserRenderProps} from '@asgardeo/react';
 import render from '@/test/test-utils';
 import UsersListPage from '../UsersListPage';
 import type {UserSchemaListResponse} from '../../types/users';
 
 const mockNavigate = vi.fn();
+
+// Mock InviteUser component
+const mockHandleInputChange = vi.fn();
+const mockHandleInputBlur = vi.fn();
+const mockHandleSubmit = vi.fn();
+const mockCopyInviteLink = vi.fn();
+const mockResetFlow = vi.fn();
+
+const mockInviteUserRenderProps: InviteUserRenderProps = {
+  values: {},
+  fieldErrors: {},
+  touched: {},
+  error: null,
+  isLoading: false,
+  components: [],
+  handleInputChange: mockHandleInputChange,
+  handleInputBlur: mockHandleInputBlur,
+  handleSubmit: mockHandleSubmit,
+  isInviteGenerated: false,
+  inviteLink: undefined,
+  copyInviteLink: mockCopyInviteLink,
+  inviteLinkCopied: false,
+  resetFlow: mockResetFlow,
+  isValid: false,
+};
+
+vi.mock('@asgardeo/react', async () => {
+  const actual = await vi.importActual<typeof import('@asgardeo/react')>('@asgardeo/react');
+  return {
+    ...actual,
+    InviteUser: ({children}: {
+      children: (props: InviteUserRenderProps) => JSX.Element;
+      onInviteLinkGenerated?: (link: string) => void;
+      onError?: (error: Error) => void;
+    }) => children(mockInviteUserRenderProps),
+  };
+});
 
 // Mock react-router
 vi.mock('react-router', async () => {
@@ -52,6 +91,13 @@ interface UseGetUserSchemasReturn {
 const mockUseGetUserSchemas = vi.fn<() => UseGetUserSchemasReturn>();
 vi.mock('../../api/useGetUserSchemas', () => ({
   default: () => mockUseGetUserSchemas(),
+}));
+
+// Mock useTemplateLiteralResolver
+vi.mock('@thunder/shared-hooks', () => ({
+  useTemplateLiteralResolver: () => ({
+    resolve: (key: string) => key,
+  }),
 }));
 
 describe('UsersListPage', () => {
