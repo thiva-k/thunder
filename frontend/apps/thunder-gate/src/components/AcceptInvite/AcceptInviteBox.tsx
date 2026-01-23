@@ -55,7 +55,7 @@ import ROUTES from '../../constants/routes';
 type FlowSubComponent = EmbeddedFlowComponent & {
   placeholder?: string;
   required?: boolean;
-  options?: any[];
+  options?: unknown[];
   hint?: string;
   variant?: string;
   eventType?: string;
@@ -93,16 +93,24 @@ export default function AcceptInviteBox(): JSX.Element {
     if (result instanceof Promise) result.catch(() => {});
   };
 
-  const getOptionValue = (option: any): string => {
+  const getOptionValue = (option: unknown): string => {
     if (typeof option === 'string') return option;
-    if (typeof option?.value === 'string') return option.value;
-    return JSON.stringify(option?.value ?? option);
+    if (typeof option === 'object' && option !== null && 'value' in option) {
+      const {value} = option as {value: unknown};
+      if (typeof value === 'string') return value;
+      return JSON.stringify(value ?? option);
+    }
+    return JSON.stringify(option);
   };
 
-  const getOptionLabel = (option: any): string => {
+  const getOptionLabel = (option: unknown): string => {
     if (typeof option === 'string') return option;
-    if (typeof option?.label === 'string') return option.label;
-    return JSON.stringify(option?.label ?? option);
+    if (typeof option === 'object' && option !== null && 'label' in option) {
+      const {label} = option as {label: unknown};
+      if (typeof label === 'string') return label;
+      return JSON.stringify(label ?? option);
+    }
+    return JSON.stringify(option);
   };
 
   const renderFormField = (
@@ -121,7 +129,7 @@ export default function AcceptInviteBox(): JSX.Element {
     const value = values?.[ref] ?? '';
 
     // TEXT_INPUT
-    if (type === EmbeddedFlowComponentType.TextInput) {
+    if (String(type) === String(EmbeddedFlowComponentType.TextInput) || type === 'TEXT_INPUT') {
       return (
         <FormControl key={component.id ?? index} required={required}>
           <FormLabel htmlFor={ref}>{t(resolve(label)!)}</FormLabel>
@@ -171,7 +179,7 @@ export default function AcceptInviteBox(): JSX.Element {
     }
 
     // PASSWORD_INPUT
-    if (type === EmbeddedFlowComponentType.PasswordInput) {
+    if (String(type) === String(EmbeddedFlowComponentType.PasswordInput) || type === 'PASSWORD_INPUT') {
       const showPassword = showPasswordMap[ref] ?? false;
       return (
         <FormControl key={component.id ?? index} required={required}>
@@ -232,7 +240,7 @@ export default function AcceptInviteBox(): JSX.Element {
             <MenuItem value="" disabled>
               {t(resolve(placeholder) ?? 'Select an option')}
             </MenuItem>
-            {options.map((option: any) => (
+            {options.map((option: unknown) => (
               <MenuItem key={getOptionValue(option)} value={getOptionValue(option)}>
                 {getOptionLabel(option)}
               </MenuItem>
@@ -293,7 +301,10 @@ export default function AcceptInviteBox(): JSX.Element {
         <AcceptInvite
           baseUrl={baseUrl}
           onGoToSignIn={handleGoToSignIn}
-          onError={(error: Error) => console.error('Invite acceptance error:', error)}
+          onError={(error: Error) => {
+            // eslint-disable-next-line no-console
+            console.error('Invite acceptance error:', error);
+          }}
         >
           {({values, fieldErrors, error, touched, isLoading, components, handleInputChange, handleSubmit, isComplete, isValidatingToken, isTokenInvalid, isValid}) => {
             // Validating token
@@ -346,25 +357,29 @@ export default function AcceptInviteBox(): JSX.Element {
                 )}
                 {components?.length > 0 && (
                   <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                    {components.map((component, index) => {
+                    {components.map((component: EmbeddedFlowComponent, index: number) => {
                       // TEXT
-                      if (component.type === EmbeddedFlowComponentType.Text) {
+                      if (String(component.type) === String(EmbeddedFlowComponentType.Text) || component.type === 'TEXT') {
+                        const variant = typeof component.variant === 'string' ? component.variant : undefined;
+                        const labelText = typeof component.label === 'string' ? component.label : '';
                         return (
                           <Typography
                             key={component.id ?? index}
-                            variant={mapEmbeddedFlowTextVariant(component.variant)}
+                            variant={mapEmbeddedFlowTextVariant(variant)}
                             sx={{mb: 1, textAlign: isBrandingEnabled ? 'center' : 'left'}}
                           >
-                            {t(resolve(component.label)!)}
+                            {t(resolve(labelText) ?? labelText)}
                           </Typography>
                         );
                       }
 
                       // BLOCK
-                      if (component.type === EmbeddedFlowComponentType.Block) {
+                      if (String(component.type) === String(EmbeddedFlowComponentType.Block) || component.type === 'BLOCK') {
                         const blockComponents = (component.components ?? []) as FlowSubComponent[];
                         const submitAction = blockComponents.find(
-                          (c) => c.type === EmbeddedFlowComponentType.Action && c.eventType === EmbeddedFlowEventType.Submit,
+                          (c) =>
+                            (String(c.type) === String(EmbeddedFlowComponentType.Action) || c.type === 'ACTION') &&
+                            (String(c.eventType) === String(EmbeddedFlowEventType.Submit) || c.eventType === 'SUBMIT'),
                         );
 
                         if (!submitAction) return null;
@@ -386,7 +401,10 @@ export default function AcceptInviteBox(): JSX.Element {
                               if (field) return field;
 
                               // Submit button
-                              if (subComponent.type === EmbeddedFlowComponentType.Action && subComponent.eventType === EmbeddedFlowEventType.Submit) {
+                              if (
+                                (String(subComponent.type) === String(EmbeddedFlowComponentType.Action) || subComponent.type === 'ACTION') &&
+                                (String(subComponent.eventType) === String(EmbeddedFlowEventType.Submit) || subComponent.eventType === 'SUBMIT')
+                              ) {
                                 return (
                                   <Button
                                     key={subComponent.id ?? compIndex}
