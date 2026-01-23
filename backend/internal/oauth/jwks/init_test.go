@@ -27,7 +27,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/asgardeo/thunder/internal/system/config"
@@ -66,12 +65,13 @@ func (suite *InitTestSuite) TestInitialize() {
 
 func (suite *InitTestSuite) TestInitialize_RegistersRoutes() {
 	mux := http.NewServeMux()
-	// Prepare PKI mock with minimal expectations for handler invocation
+	// Prepare PKI mock with expectations for handler invocation using new method
 	pkiMock := pkimock.NewPKIServiceInterfaceMock(suite.T())
 	key, _ := rsa.GenerateKey(rand.Reader, 2048)
 	cert := &x509.Certificate{Raw: []byte("raw-cert"), PublicKey: &key.PublicKey}
-	pkiMock.EXPECT().GetX509Certificate(mock.Anything).Return(cert, nil)
-	pkiMock.EXPECT().GetCertThumbprint(mock.Anything).Return("test-kid")
+	allCerts := map[string]*x509.Certificate{"test-kid": cert}
+	pkiMock.EXPECT().GetAllX509Certificates().Return(allCerts, nil)
+	pkiMock.EXPECT().GetCertThumbprint("test-kid").Return("test-kid")
 
 	_ = Initialize(mux, pkiMock)
 
