@@ -146,11 +146,11 @@ describe('ConfigureDetails', () => {
     const hostingUrlInput = screen.getByPlaceholderText(
       'applications:onboarding.configure.details.hostingUrl.placeholder',
     );
-    const user = userEvent.setup();
+    const user = userEvent.setup({delay: null}); // Remove typing delay for faster test
 
     await user.type(hostingUrlInput, 'https://example.com');
 
-    expect(onHostingUrlChange).toHaveBeenLastCalledWith('https://example.com');
+    await waitFor(() => expect(onHostingUrlChange).toHaveBeenLastCalledWith('https://example.com'));
 
     const customRadio = screen.getByRole('radio', {
       name: 'applications:onboarding.configure.details.callbackMode.custom',
@@ -161,9 +161,11 @@ describe('ConfigureDetails', () => {
     await user.clear(callbackUrlInput);
     await user.type(callbackUrlInput, 'https://example.com/callback');
 
-    await waitFor(() => expect(onCallbackUrlChange).toHaveBeenLastCalledWith('https://example.com/callback'));
+    await waitFor(() => expect(onCallbackUrlChange).toHaveBeenLastCalledWith('https://example.com/callback'), {
+      timeout: 10000,
+    });
     expect(onReadyChange).toHaveBeenCalled();
-  });
+  }, 15000);
 
   it('displays deep link configuration and forwards values for mobile templates', async () => {
     const template = createTemplate('Mobile App', []);

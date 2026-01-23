@@ -84,13 +84,7 @@ vi.mock('@/features/flows/utils/findMatchingFlowForIntegrations', () => ({
 
 // Mock child components
 vi.mock('../FlowsListView', () => ({
-  default: ({
-    onFlowSelect,
-    onClearSelection,
-  }: {
-    onFlowSelect: (id: string) => void;
-    onClearSelection: () => void;
-  }) => (
+  default: ({onFlowSelect, onClearSelection}: {onFlowSelect: (id: string) => void; onClearSelection: () => void}) => (
     <div data-testid="flows-list-view">
       <button type="button" data-testid="select-flow-btn" onClick={() => onFlowSelect('flow-1')}>
         Select Flow
@@ -105,7 +99,11 @@ vi.mock('../FlowsListView', () => ({
 vi.mock('../IndividualMethodsToggleView', () => ({
   default: ({onIntegrationToggle}: {onIntegrationToggle: (id: string) => void}) => (
     <div data-testid="individual-methods-view">
-      <button type="button" data-testid="toggle-basic-auth" onClick={() => onIntegrationToggle(AuthenticatorTypes.BASIC_AUTH)}>
+      <button
+        type="button"
+        data-testid="toggle-basic-auth"
+        onClick={() => onIntegrationToggle(AuthenticatorTypes.BASIC_AUTH)}
+      >
         Toggle Basic Auth
       </button>
       <button type="button" data-testid="toggle-google" onClick={() => onIntegrationToggle('google-idp')}>
