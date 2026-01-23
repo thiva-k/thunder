@@ -1,0 +1,274 @@
+/**
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {describe, it, expect, vi, beforeEach} from 'vitest';
+import {render, screen, within} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import CertificateSection from '../CertificateSection';
+import type {Application} from '../../../../models/application';
+import CertificateTypes from '../../../../constants/certificate-types';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+  }),
+}));
+
+describe('CertificateSection', () => {
+  const mockApplication: Application = {
+    id: 'test-app-id',
+    name: 'Test Application',
+    description: 'Test Description',
+    template: 'custom',
+    certificate: {
+      type: CertificateTypes.NONE,
+      value: '',
+    },
+  } as Application;
+
+  const mockOnFieldChange = vi.fn();
+
+  beforeEach(() => {
+    mockOnFieldChange.mockClear();
+  });
+
+  describe('Rendering', () => {
+    it('should render the certificate section', () => {
+      render(<CertificateSection application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(screen.getByText('applications:edit.advanced.labels.certificate')).toBeInTheDocument();
+      expect(screen.getByText('applications:edit.advanced.certificate.intro')).toBeInTheDocument();
+    });
+
+    it('should render certificate type dropdown', () => {
+      render(<CertificateSection application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(screen.getByLabelText('applications:edit.advanced.labels.certificateType')).toBeInTheDocument();
+    });
+
+    it('should not show value field when certificate type is NONE', () => {
+      render(<CertificateSection application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(
+        screen.queryByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwks'),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwksUri'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should show JWKS value field when certificate type is JWKS', () => {
+      const appWithJwks = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: ''},
+      };
+
+      render(<CertificateSection application={appWithJwks} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(
+        screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwks'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('applications:edit.advanced.certificate.hint.jwks')).toBeInTheDocument();
+    });
+
+    it('should show JWKS URI value field when certificate type is JWKS_URI', () => {
+      const appWithJwksUri = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS_URI, value: ''},
+      };
+
+      render(<CertificateSection application={appWithJwksUri} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(
+        screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwksUri'),
+      ).toBeInTheDocument();
+      expect(screen.getByText('applications:edit.advanced.certificate.hint.jwksUri')).toBeInTheDocument();
+    });
+  });
+
+  describe('Certificate Type Selection', () => {
+    it('should display current certificate type from application', () => {
+      const appWithJwks = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: ''},
+      };
+
+      render(<CertificateSection application={appWithJwks} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const input = screen.getByRole('combobox');
+      expect(input).toHaveValue('applications:edit.advanced.certificate.type.jwks');
+    });
+
+    it('should prioritize editedApp certificate type over application', () => {
+      const appWithNone = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.NONE, value: ''},
+      };
+
+      render(
+        <CertificateSection
+          application={appWithNone}
+          editedApp={{certificate: {type: CertificateTypes.JWKS, value: ''}}}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      const input = screen.getByRole('combobox');
+      expect(input).toHaveValue('applications:edit.advanced.certificate.type.jwks');
+    });
+
+    it('should call onFieldChange when certificate type changes', async () => {
+      const user = userEvent.setup();
+      render(<CertificateSection application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const autocomplete = screen.getByRole('combobox');
+      await user.click(autocomplete);
+
+      const listbox = screen.getByRole('listbox');
+      const jwksOption = within(listbox).getByText('applications:edit.advanced.certificate.type.jwks');
+      await user.click(jwksOption);
+
+      expect(mockOnFieldChange).toHaveBeenCalledWith('certificate', {
+        type: CertificateTypes.JWKS,
+        value: '',
+      });
+    });
+
+    it('should preserve certificate value when changing type', async () => {
+      const user = userEvent.setup();
+      const appWithValue = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: 'existing-jwks'},
+      };
+
+      render(<CertificateSection application={appWithValue} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const autocomplete = screen.getByRole('combobox');
+      await user.click(autocomplete);
+
+      const listbox = screen.getByRole('listbox');
+      const jwksUriOption = within(listbox).getByText('applications:edit.advanced.certificate.type.jwksUri');
+      await user.click(jwksUriOption);
+
+      expect(mockOnFieldChange).toHaveBeenCalledWith('certificate', {
+        type: CertificateTypes.JWKS_URI,
+        value: 'existing-jwks',
+      });
+    });
+  });
+
+  describe('Certificate Value Input', () => {
+    it('should display current certificate value from application', () => {
+      const appWithValue = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: 'test-jwks-value'},
+      };
+
+      render(<CertificateSection application={appWithValue} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const valueInput = screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwks');
+      expect(valueInput).toHaveValue('test-jwks-value');
+    });
+
+    it('should prioritize editedApp certificate value over application', () => {
+      const appWithValue = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: 'original-value'},
+      };
+
+      render(
+        <CertificateSection
+          application={appWithValue}
+          editedApp={{certificate: {type: CertificateTypes.JWKS, value: 'edited-value'}}}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      const valueInput = screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwks');
+      expect(valueInput).toHaveValue('edited-value');
+    });
+
+    it('should call onFieldChange when certificate value changes', async () => {
+      const user = userEvent.setup({delay: null});
+      const appWithJwks = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: ''},
+      };
+
+      render(<CertificateSection application={appWithJwks} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const valueInput = screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwks');
+      await user.type(valueInput, 'new-value');
+
+      expect(mockOnFieldChange).toHaveBeenCalled();
+      // Check that the field was updated with the correct type
+      expect(mockOnFieldChange).toHaveBeenCalledWith(
+        'certificate',
+        expect.objectContaining({
+          type: CertificateTypes.JWKS,
+        }),
+      );
+    });
+
+    it('should preserve certificate type when changing value', async () => {
+      const user = userEvent.setup({delay: null});
+      const appWithJwksUri = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS_URI, value: 'https://example.com'},
+      };
+
+      render(<CertificateSection application={appWithJwksUri} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const valueInput = screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwksUri');
+      await user.clear(valueInput);
+      await user.type(valueInput, 'https://new-url.com');
+
+      // Check that the field was updated with the correct type
+      expect(mockOnFieldChange).toHaveBeenCalledWith(
+        'certificate',
+        expect.objectContaining({
+          type: CertificateTypes.JWKS_URI,
+        }),
+      );
+    });
+  });
+
+  describe('Edge Cases', () => {
+    it('should handle missing certificate in application', () => {
+      const appWithoutCert = {...mockApplication};
+      delete (appWithoutCert as Partial<Application>).certificate;
+
+      render(<CertificateSection application={appWithoutCert} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const input = screen.getByRole('combobox');
+      expect(input).toHaveValue('applications:edit.advanced.certificate.type.none');
+    });
+
+    it('should handle multiline JWKS input', () => {
+      const appWithJwks = {
+        ...mockApplication,
+        certificate: {type: CertificateTypes.JWKS, value: ''},
+      };
+
+      render(<CertificateSection application={appWithJwks} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      const valueInput = screen.getByPlaceholderText('applications:edit.advanced.certificate.placeholder.jwks');
+      expect(valueInput).toHaveAttribute('rows', '3');
+    });
+  });
+});

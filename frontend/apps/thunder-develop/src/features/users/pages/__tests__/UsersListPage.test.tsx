@@ -56,7 +56,9 @@ vi.mock('@asgardeo/react', async () => {
   const actual = await vi.importActual<typeof import('@asgardeo/react')>('@asgardeo/react');
   return {
     ...actual,
-    InviteUser: ({children}: {
+    InviteUser: ({
+      children,
+    }: {
       children: (props: InviteUserRenderProps) => JSX.Element;
       onInviteLinkGenerated?: (link: string) => void;
       onError?: (error: Error) => void;
