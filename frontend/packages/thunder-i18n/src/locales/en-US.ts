@@ -1003,20 +1003,12 @@ const translations = {
   // ============================================================================
   invite: {
     validating: 'Validating your invite link...',
-    complete: {
-      title: 'Welcome Aboard!',
-      description: 'Your account has been successfully set up.',
-    },
-    errors: {
-      invalid: {
-        title: 'Unable to verify invite',
-        description: 'This invite link is invalid or has expired.',
-      },
-      failed: {
-        title: 'Error',
-        description: 'An error occurred. Please try again.',
-      },
-    },
+    'complete.title': 'Welcome Aboard!',
+    'complete.description': 'Your account has been successfully set up.',
+    'errors.invalid.title': 'Unable to verify invite',
+    'errors.invalid.description': 'This invite link is invalid or has expired.',
+    'errors.failed.title': 'Error',
+    'errors.failed.description': 'An error occurred. Please try again.',
     goToSignIn: 'Go to Sign In',
     signIn: 'Sign In',
   },
