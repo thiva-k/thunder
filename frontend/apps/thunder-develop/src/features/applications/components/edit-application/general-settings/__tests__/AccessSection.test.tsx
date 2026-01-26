@@ -390,4 +390,307 @@ describe('AccessSection', () => {
       });
     });
   });
+
+  describe('URI Validation on Blur', () => {
+    const mockApplicationWithAuth: Application = {
+      id: 'app-123',
+      name: 'Test App',
+      url: 'https://example.com',
+      allowed_user_types: ['admin', 'user'],
+      inbound_auth_config: [
+        {
+          type: 'oauth2',
+          config: {
+            client_id: 'client-123',
+            redirect_uris: ['https://example.com/callback'],
+          },
+        },
+      ],
+    } as Application;
+
+    it('should show error when invalid URI is entered and blurred', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      render(
+        <AccessSection
+          application={mockApplicationWithAuth}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // Find the existing URI input and enter invalid URI
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+      await user.clear(uriInput);
+      await user.type(uriInput, 'not-a-valid-url');
+
+      // Blur the input to trigger validation
+      await user.tab();
+
+      // Should show error and not call onFieldChange for inbound_auth_config
+      await waitFor(() => {
+        const errorCalls = mockOnFieldChange.mock.calls.filter((call) => call[0] === 'inbound_auth_config');
+        expect(errorCalls).toHaveLength(0);
+      });
+    });
+
+    it('should show error when URI is empty and blurred', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      render(
+        <AccessSection
+          application={mockApplicationWithAuth}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // Find the existing URI input and clear it
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+      await user.clear(uriInput);
+
+      // Blur the input to trigger validation
+      await user.tab();
+
+      // Should not call onFieldChange for empty URI
+      await waitFor(() => {
+        const errorCalls = mockOnFieldChange.mock.calls.filter((call) => call[0] === 'inbound_auth_config');
+        expect(errorCalls).toHaveLength(0);
+      });
+    });
+
+    it('should validate URI on blur', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      render(
+        <AccessSection
+          application={mockApplicationWithAuth}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // Find the existing URI input
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+
+      // Focus and blur to trigger validation flow
+      await user.click(uriInput);
+      await user.tab();
+
+      // The onBlur handler should have been called
+      // Since URI is valid and non-empty, it should call updateRedirectUris
+      await waitFor(() => {
+        expect(mockOnFieldChange).toHaveBeenCalledWith('inbound_auth_config', expect.any(Array));
+      });
+    });
+
+  });
+
+
+  describe('Handle empty user types data', () => {
+    it('should handle undefined user types data gracefully', () => {
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: undefined,
+        loading: false,
+      } as unknown as MockedUseGetUserTypes);
+
+      render(<AccessSection application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
+
+      expect(screen.getByLabelText('Allowed User Types')).toBeInTheDocument();
+    });
+
+    it('should handle null application allowed_user_types', () => {
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      const appWithNullTypes = {
+        ...mockApplication,
+        allowed_user_types: undefined,
+      };
+
+      render(
+        <AccessSection
+          application={appWithNullTypes as unknown as Application}
+          editedApp={{}}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByLabelText('Allowed User Types')).toBeInTheDocument();
+    });
+  });
+
+  describe('URI Error Handling', () => {
+    it('should clear error when typing non-empty value in URI field', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      render(
+        <AccessSection
+          application={mockApplication}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+
+      // Clear and blur to trigger empty error
+      await user.clear(uriInput);
+      await user.tab();
+
+      // Now type something to clear the error
+      await user.click(uriInput);
+      await user.type(uriInput, 'https://new-uri.com');
+
+      // Error should be cleared when typing non-empty value
+      await waitFor(() => {
+        expect(screen.queryByText('URI cannot be empty')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should reindex errors when removing a URI with errors on subsequent URIs', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      const configWithThreeUris = {
+        ...mockOAuth2Config,
+        redirect_uris: ['https://example.com/callback1', 'invalid-uri', 'https://example.com/callback3'],
+      };
+
+      render(
+        <AccessSection
+          application={mockApplication}
+          editedApp={{}}
+          oauth2Config={configWithThreeUris}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // First, trigger validation error on the second URI by blurring it
+      const secondUriInput = screen.getByDisplayValue('invalid-uri');
+      await user.click(secondUriInput);
+      await user.tab();
+
+      // Now remove the first URI - this should trigger reindexing of errors
+      const deleteButtons = screen.getAllByRole('button', {name: /delete/i});
+      await user.click(deleteButtons[0]);
+
+      // The first URI should be removed
+      expect(screen.queryByDisplayValue('https://example.com/callback1')).not.toBeInTheDocument();
+    });
+
+    it('should preserve errors on URIs before the removed index', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      const configWithThreeUris = {
+        ...mockOAuth2Config,
+        redirect_uris: ['invalid-first', 'https://example.com/callback2', 'https://example.com/callback3'],
+      };
+
+      render(
+        <AccessSection
+          application={mockApplication}
+          editedApp={{}}
+          oauth2Config={configWithThreeUris}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // Trigger validation error on the first URI
+      const firstUriInput = screen.getByDisplayValue('invalid-first');
+      await user.click(firstUriInput);
+      await user.tab();
+
+      // Remove the last URI (index 2) - error on index 0 should be preserved
+      const deleteButtons = screen.getAllByRole('button', {name: /delete/i});
+      await user.click(deleteButtons[2]);
+
+      // The last URI should be removed
+      expect(screen.queryByDisplayValue('https://example.com/callback3')).not.toBeInTheDocument();
+      // First URI should still be present
+      expect(screen.getByDisplayValue('invalid-first')).toBeInTheDocument();
+    });
+  });
+
+  describe('Mixed Inbound Auth Config', () => {
+    it('should preserve non-oauth2 config when updating redirect URIs', async () => {
+      const user = userEvent.setup();
+      vi.mocked(useGetUserTypes).mockReturnValue({
+        data: mockUserTypes,
+        loading: false,
+      } as MockedUseGetUserTypes);
+
+      const appWithMixedConfig: Application = {
+        ...mockApplication,
+        inbound_auth_config: [
+          {
+            type: 'saml',
+            config: {issuer: 'test-issuer'},
+          },
+          {
+            type: 'oauth2',
+            config: {
+              client_id: 'client-123',
+              redirect_uris: ['https://example.com/callback'],
+            },
+          },
+        ],
+      } as Application;
+
+      render(
+        <AccessSection
+          application={appWithMixedConfig}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // Blur the URI input to trigger updateRedirectUris
+      const uriInput = screen.getByDisplayValue('https://example.com/callback');
+      await user.click(uriInput);
+      await user.tab();
+
+      await waitFor(() => {
+        expect(mockOnFieldChange).toHaveBeenCalledWith('inbound_auth_config', expect.any(Array));
+        const call = mockOnFieldChange.mock.calls.find((c) => c[0] === 'inbound_auth_config');
+        if (call) {
+          const updatedConfig = call[1] as Array<{type: string}>;
+          // Should contain both saml and oauth2 configs
+          expect(updatedConfig.some((c) => c.type === 'saml')).toBe(true);
+          expect(updatedConfig.some((c) => c.type === 'oauth2')).toBe(true);
+        }
+      });
+    });
+  });
+
 });

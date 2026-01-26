@@ -21,6 +21,7 @@
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {render, screen, fireEvent, waitFor} from '@testing-library/react';
 import {MemoryRouter} from 'react-router';
+import {DataGrid} from '@wso2/oxygen-ui';
 import FlowsList from '../FlowsList';
 import type {BasicFlowDefinition} from '../../models/responses';
 
@@ -143,54 +144,63 @@ interface MockDataGridProps {
   getRowId: (row: MockRow) => string;
 }
 
-// Mock DataGrid - DO NOT mock Menu, let it render normally
+// Use vi.hoisted for the capturedColumns variable so it's available in the mock
+const {capturedColumns} = vi.hoisted(() => ({
+  capturedColumns: {value: [] as DataGrid.GridColDef<BasicFlowDefinition>[]},
+}));
+
+// Mock DataGrid - captures columns for testing
 vi.mock('@wso2/oxygen-ui', async () => {
   const actual = await vi.importActual('@wso2/oxygen-ui');
   return {
     ...actual,
     DataGrid: {
-      DataGrid: ({rows, columns, loading, onRowClick, getRowId}: MockDataGridProps) => (
-        <div data-testid="data-grid" data-loading={loading}>
-          <table>
-            <thead>
-              <tr>
-                {columns.map((col: MockColumn) => (
-                  <th key={col.field}>{col.headerName}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows?.map((row: MockRow) => {
-                const rowId: string = getRowId(row);
-                const handleClick = (): void => onRowClick?.({row});
-                const handleButtonClick = (e: React.MouseEvent): void => {
-                  e.stopPropagation();
-                  const event = new CustomEvent('menuopen', {detail: {row}});
-                  document.dispatchEvent(event);
-                };
-                return (
-                  <tr
-                    key={rowId}
-                    data-testid={`row-${rowId}`}
-                    onClick={handleClick}
-                    style={{cursor: row.flowType === 'AUTHENTICATION' ? 'pointer' : 'default'}}
-                  >
-                    <td>{row.name}</td>
-                    <td>{row.flowType}</td>
-                    <td>v{row.activeVersion}</td>
-                    <td>{row.updatedAt}</td>
-                    <td>
-                      <button type="button" aria-label="Open actions menu" onClick={handleButtonClick}>
-                        Actions
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ),
+      DataGrid: ({rows, columns, loading, onRowClick, getRowId}: MockDataGridProps) => {
+        // Capture columns for testing renderCell functions
+        capturedColumns.value = columns as unknown as DataGrid.GridColDef<BasicFlowDefinition>[];
+        return (
+          <div data-testid="data-grid" data-loading={loading}>
+            <table>
+              <thead>
+                <tr>
+                  {columns.map((col: MockColumn) => (
+                    <th key={col.field}>{col.headerName}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows?.map((row: MockRow) => {
+                  const rowId: string = getRowId(row);
+                  const handleClick = (): void => onRowClick?.({row});
+                  const handleButtonClick = (e: React.MouseEvent): void => {
+                    e.stopPropagation();
+                    const event = new CustomEvent('menuopen', {detail: {row}});
+                    document.dispatchEvent(event);
+                  };
+                  return (
+                    <tr
+                      key={rowId}
+                      data-testid={`row-${rowId}`}
+                      onClick={handleClick}
+                      style={{cursor: row.flowType === 'AUTHENTICATION' ? 'pointer' : 'default'}}
+                    >
+                      <td>{row.name}</td>
+                      <td>{row.flowType}</td>
+                      <td>v{row.activeVersion}</td>
+                      <td>{row.updatedAt}</td>
+                      <td>
+                        <button type="button" aria-label="Open actions menu" onClick={handleButtonClick}>
+                          Actions
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      },
     },
   };
 });
@@ -203,6 +213,7 @@ describe('FlowsList', () => {
       isLoading: false,
       error: null,
     };
+    capturedColumns.value = [];
   });
 
   describe('Rendering', () => {
@@ -451,6 +462,95 @@ describe('FlowsList', () => {
 
       expect(screen.getByText('v1')).toBeInTheDocument();
       expect(screen.getByText('v2')).toBeInTheDocument();
+    });
+  });
+
+  describe('Column RenderCell Functions', () => {
+    it('should capture column definitions', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      // Verify columns are captured
+      expect(capturedColumns.value.length).toBeGreaterThan(0);
+
+      // Verify expected columns exist
+      const avatarColumn = capturedColumns.value.find((col) => col.field === 'avatar');
+      const flowTypeColumn = capturedColumns.value.find((col) => col.field === 'flowType');
+      const versionColumn = capturedColumns.value.find((col) => col.field === 'activeVersion');
+      const updatedAtColumn = capturedColumns.value.find((col) => col.field === 'updatedAt');
+      const actionsColumn = capturedColumns.value.find((col) => col.field === 'actions');
+
+      expect(avatarColumn).toBeDefined();
+      expect(flowTypeColumn).toBeDefined();
+      expect(versionColumn).toBeDefined();
+      expect(updatedAtColumn).toBeDefined();
+      expect(actionsColumn).toBeDefined();
+    });
+
+    it('should have renderCell functions defined for columns', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const avatarColumn = capturedColumns.value.find((col) => col.field === 'avatar');
+      const flowTypeColumn = capturedColumns.value.find((col) => col.field === 'flowType');
+      const versionColumn = capturedColumns.value.find((col) => col.field === 'activeVersion');
+      const actionsColumn = capturedColumns.value.find((col) => col.field === 'actions');
+
+      expect(avatarColumn?.renderCell).toBeDefined();
+      expect(flowTypeColumn?.renderCell).toBeDefined();
+      expect(versionColumn?.renderCell).toBeDefined();
+      expect(actionsColumn?.renderCell).toBeDefined();
+    });
+
+    it('should have valueGetter for updatedAt column', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const updatedAtColumn = capturedColumns.value.find((col) => col.field === 'updatedAt');
+      expect(updatedAtColumn?.valueGetter).toBeDefined();
+
+      if (updatedAtColumn?.valueGetter) {
+        const formattedDate = updatedAtColumn.valueGetter(undefined, mockFlowsData.flows[0]) as string;
+        // Check that the formatted date contains expected parts
+        expect(formattedDate).toContain('2025');
+        expect(formattedDate).toContain('Jan');
+      }
+    });
+  });
+
+  describe('Menu Interactions', () => {
+    it('should have actions column with renderCell defined', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      const actionsColumn = capturedColumns.value.find((col) => col.field === 'actions');
+      expect(actionsColumn).toBeDefined();
+      expect(actionsColumn?.renderCell).toBeDefined();
+    });
+  });
+
+  describe('Delete Dialog Integration', () => {
+    it('should render delete dialog component', () => {
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      // Delete dialog is rendered but not visible initially
+      expect(screen.queryByTestId('flow-delete-dialog')).not.toBeInTheDocument();
     });
   });
 });

@@ -57,6 +57,11 @@ vi.mock('@asgardeo/react', () => ({
       {children}
     </div>
   ),
+  useAsgardeo: () => ({
+    http: {
+      request: vi.fn().mockResolvedValue({data: {language: 'en-US', translations: {}}}),
+    },
+  }),
 }));
 
 // Mock App component

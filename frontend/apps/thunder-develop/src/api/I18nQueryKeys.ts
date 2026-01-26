@@ -16,23 +16,23 @@
  * under the License.
  */
 
- .MuiFormHelperText-root {
-    .composer-input-field-hint-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: flex-start;
-        align-items: center;
-        gap: 8px;
-    }
-    &.MuiFormHelperText-contained {
-        .composer-input-field-hint-container {
-            margin-left: -14px;
-        }
-    }
-    &.oxygen-form-helper-text {
-        .composer-input-field-hint-container {
-            margin-top: -8px;
-            margin-left: 0px;
-        }
-    }
- }
+/**
+ * Query key constants for i18n feature cache management.
+ *
+ * @public
+ * @remarks
+ * These constants are used with TanStack Query to manage caching,
+ * invalidation, and refetching of i18n translation data.
+ */
+const I18nQueryKeys = {
+  /**
+   * Base key for all i18n translation queries
+   */
+  TRANSLATIONS: 'i18n-translations',
+  /**
+   * Key for languages list query
+   */
+  LANGUAGES: 'i18n-languages',
+} as const;
+
+export default I18nQueryKeys;

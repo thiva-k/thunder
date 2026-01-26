@@ -32,6 +32,38 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// Mock the API hooks used by I18nConfigurationCard
+vi.mock('../../../../../api/useSetTranslation', () => ({
+  default: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+  }),
+}));
+
+vi.mock('../../../../../api/useGetLanguages', () => ({
+  default: () => ({
+    data: {languages: ['en-US', 'es', 'fr']},
+  }),
+}));
+
+vi.mock('../../../../../api/useGetTranslations', () => ({
+  default: () => ({
+    data: {
+      language: 'en-US',
+      translations: {
+        flowI18n: {
+          'common.submit': 'Submit',
+          'common.button': 'Button',
+          'common.label': 'Label',
+          'common.test': 'Test',
+          'login.submit': 'Log In',
+        },
+      },
+    },
+    isLoading: false,
+  }),
+}));
+
 describe('TextPropertyField', () => {
   const mockOnChange = vi.fn();
 

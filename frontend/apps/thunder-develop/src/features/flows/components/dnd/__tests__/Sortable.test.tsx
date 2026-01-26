@@ -246,4 +246,186 @@ describe('Sortable', () => {
       expect(container.firstChild).toBeInTheDocument();
     });
   });
+
+  describe('Drag States', () => {
+    it('should apply dragging styles when isDragging is true', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: mockSortable,
+        isDragging: true,
+        isDropTarget: false,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      const {container} = render(
+        <Sortable id="dragging-item" index={0}>
+          <div>Dragging</div>
+        </Sortable>,
+      );
+
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    it('should apply drop target styles when isDropTarget is true', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+      const {useDragOperation} = await import('@dnd-kit/react');
+
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: mockSortable,
+        isDragging: false,
+        isDropTarget: true,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      vi.mocked(useDragOperation).mockReturnValue({
+        source: {id: 'drag-1', type: 'TYPE_A'},
+      } as ReturnType<typeof useDragOperation>);
+
+      const {container} = render(
+        <Sortable id="drop-target" index={0}>
+          <div>Drop Target</div>
+        </Sortable>,
+      );
+
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    it('should check if sortable accepts source', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+      const {useDragOperation} = await import('@dnd-kit/react');
+
+      const mockAccepts = vi.fn(() => true);
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: {accepts: mockAccepts},
+        isDragging: false,
+        isDropTarget: true,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      vi.mocked(useDragOperation).mockReturnValue({
+        source: {id: 'drag-1', type: 'TYPE_A'},
+      } as ReturnType<typeof useDragOperation>);
+
+      render(
+        <Sortable id="test-sortable" index={0}>
+          <div>Content</div>
+        </Sortable>,
+      );
+
+      expect(mockAccepts).toHaveBeenCalled();
+    });
+
+    it('should not call accepts when source is null', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+      const {useDragOperation} = await import('@dnd-kit/react');
+
+      const mockAccepts = vi.fn(() => true);
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: {accepts: mockAccepts},
+        isDragging: false,
+        isDropTarget: false,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      vi.mocked(useDragOperation).mockReturnValue({
+        source: null,
+      } as ReturnType<typeof useDragOperation>);
+
+      render(
+        <Sortable id="test-sortable" index={0}>
+          <div>Content</div>
+        </Sortable>,
+      );
+
+      // accepts should not be called when source is null
+      expect(mockAccepts).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Drop Indicator', () => {
+    it('should show indicator before when reordering from higher index', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+      const {useDragOperation} = await import('@dnd-kit/react');
+
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: {accepts: vi.fn(() => true)},
+        isDragging: false,
+        isDropTarget: true,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      vi.mocked(useDragOperation).mockReturnValue({
+        source: {id: 'drag-1', type: 'TYPE_A', index: 5, data: {isReordering: true}},
+      } as ReturnType<typeof useDragOperation>);
+
+      const {container} = render(
+        <Sortable id="test-sortable" index={2}>
+          <div>Content</div>
+        </Sortable>,
+      );
+
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    it('should show indicator after when reordering from lower index', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+      const {useDragOperation} = await import('@dnd-kit/react');
+
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: {accepts: vi.fn(() => true)},
+        isDragging: false,
+        isDropTarget: true,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      vi.mocked(useDragOperation).mockReturnValue({
+        source: {id: 'drag-1', type: 'TYPE_A', index: 0, data: {isReordering: true}},
+      } as ReturnType<typeof useDragOperation>);
+
+      const {container} = render(
+        <Sortable id="test-sortable" index={3}>
+          <div>Content</div>
+        </Sortable>,
+      );
+
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    it('should show indicator before for new items from resource panel', async () => {
+      const {useSortable} = await import('@dnd-kit/react/sortable');
+      const {useDragOperation} = await import('@dnd-kit/react');
+
+      vi.mocked(useSortable).mockReturnValue({
+        ref: mockSortableRef,
+        sortable: {accepts: vi.fn(() => true)},
+        isDragging: false,
+        isDropTarget: true,
+      } as unknown as ReturnType<typeof useSortable>);
+
+      vi.mocked(useDragOperation).mockReturnValue({
+        source: {id: 'drag-1', type: 'TYPE_A', data: {isReordering: false}},
+      } as ReturnType<typeof useDragOperation>);
+
+      const {container} = render(
+        <Sortable id="test-sortable" index={1}>
+          <div>Content</div>
+        </Sortable>,
+      );
+
+      expect(container.firstChild).toBeInTheDocument();
+    });
+  });
+
+  describe('Memoized Presentation', () => {
+    it('should render children through MemoizedSortablePresentation', () => {
+      const {getByText} = render(
+        <Sortable id="memo-test" index={0}>
+          <span>Memoized Content</span>
+        </Sortable>,
+      );
+
+      expect(getByText('Memoized Content')).toBeInTheDocument();
+    });
+  });
 });

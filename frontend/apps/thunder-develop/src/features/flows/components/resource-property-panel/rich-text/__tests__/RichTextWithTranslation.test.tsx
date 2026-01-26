@@ -22,8 +22,7 @@ import type {ReactNode, ChangeEvent} from 'react';
 import {ValidationContext, type ValidationContextProps} from '@/features/flows/context/ValidationContext';
 import Notification from '@/features/flows/models/notification';
 import type {Resource} from '@/features/flows/models/resources';
-import RichTextWithTranslation, {TranslationRichText} from '../RichTextWithTranslation';
-import type {LanguageTextFieldProps} from '../../I18nConfigurationCard';
+import RichTextWithTranslation from '../RichTextWithTranslation';
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -57,27 +56,16 @@ vi.mock('../RichText', () => ({
 
 // Mock I18nConfigurationCard
 vi.mock('../../I18nConfigurationCard', () => ({
-  default: ({open, onClose, onChange, i18nKey, LanguageTextField}: {
+  default: ({open, onClose, onChange, i18nKey}: {
     open: boolean;
     onClose: () => void;
     onChange: (key: string) => void;
     i18nKey: string;
-    LanguageTextField?: (props: LanguageTextFieldProps) => ReactNode;
   }) => (open ? (
     <div data-testid="i18n-config-card" data-i18n-key={i18nKey}>
       <button type="button" onClick={onClose} data-testid="close-i18n-card">Close</button>
       <button type="button" onClick={() => onChange('test.key')} data-testid="change-i18n-key">Change Key</button>
       <button type="button" onClick={() => onChange('')} data-testid="clear-i18n-key">Clear Key</button>
-      {/* Render the LanguageTextField if provided */}
-      {LanguageTextField && (
-        <div data-testid="language-text-field-container">
-          {LanguageTextField({
-            onChange: vi.fn(),
-            value: 'test value',
-            disabled: false,
-          })}
-        </div>
-      )}
     </div>
   ) : null),
 }));
@@ -707,229 +695,6 @@ describe('i18n onChange wrapper', () => {
 
   it('should handle keys with numbers', () => {
     expect(wrapI18nKey('error.code.404')).toBe('{{t(error.code.404)}}');
-  });
-});
-
-/**
- * Tests for the exported TranslationRichText component.
- */
-describe('TranslationRichText Component (Exported)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should render the RichText component with resource created from value', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="Test content"
-        disabled={false}
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toBeInTheDocument();
-    expect(richText).toHaveAttribute('data-resource-label', 'Test content');
-  });
-
-  it('should handle null value by defaulting to empty string', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value={null as unknown as string}
-        disabled={false}
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toHaveAttribute('data-resource-label', '');
-  });
-
-  it('should handle undefined value by defaulting to empty string', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value={undefined as unknown as string}
-        disabled={false}
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toHaveAttribute('data-resource-label', '');
-  });
-
-  it('should pass disabled prop to RichText', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="Test"
-        disabled
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toHaveAttribute('data-disabled', 'true');
-  });
-
-  it('should convert string change to ChangeEvent format when RichText changes', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="Initial"
-        disabled={false}
-      />,
-    );
-
-    // Click the mock RichText to trigger onChange
-    const richText = screen.getByTestId('rich-text-component');
-    fireEvent.click(richText);
-
-    // The mock RichText calls onChange with 'test-content'
-    // TranslationRichText wraps this in a ChangeEvent format
-    expect(mockOnChange).toHaveBeenCalledWith({
-      target: {
-        value: 'test-content',
-      },
-    });
-  });
-
-  it('should create new resource object when value changes', () => {
-    const mockOnChange = vi.fn();
-
-    const {rerender} = render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="First value"
-        disabled={false}
-      />,
-    );
-
-    expect(screen.getByTestId('rich-text-component')).toHaveAttribute('data-resource-label', 'First value');
-
-    rerender(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="Second value"
-        disabled={false}
-      />,
-    );
-
-    expect(screen.getByTestId('rich-text-component')).toHaveAttribute('data-resource-label', 'Second value');
-  });
-
-  it('should handle i18n formatted value', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="{{t(common.greeting)}}"
-        disabled={false}
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toHaveAttribute('data-resource-label', '{{t(common.greeting)}}');
-  });
-
-  it('should handle HTML content in value', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value="<p>Rich <strong>text</strong></p>"
-        disabled={false}
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toHaveAttribute('data-resource-label', '<p>Rich <strong>text</strong></p>');
-  });
-
-  it('should handle empty string value', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <TranslationRichText
-        onChange={mockOnChange}
-        value=""
-        disabled={false}
-      />,
-    );
-
-    const richText = screen.getByTestId('rich-text-component');
-    expect(richText).toHaveAttribute('data-resource-label', '');
-  });
-});
-
-/**
- * Tests for TranslationRichText component rendered via LanguageTextField prop.
- * These tests verify the integration with I18nConfigurationCard.
- */
-describe('TranslationRichText via LanguageTextField', () => {
-  const createMockResource = (overrides: Partial<Resource & {label?: string}> = {}): Resource => ({
-    id: 'resource-1',
-    resourceType: 'ELEMENT',
-    type: 'RICH_TEXT',
-    category: 'DISPLAY',
-    version: '1.0.0',
-    deprecated: false,
-    deletable: true,
-    display: {
-      label: 'Test Rich Text',
-      image: '',
-      showOnResourcePanel: true,
-    },
-    config: {
-      field: {name: 'richText', type: 'RICH_TEXT'},
-      styles: {},
-    },
-    ...overrides,
-  } as unknown as Resource);
-
-  const createValidationContext = (): ValidationContextProps => ({
-    isValid: true,
-    notifications: [],
-    selectedNotification: null,
-    setSelectedNotification: vi.fn(),
-    getNotification: vi.fn(),
-  });
-
-  const createWrapper = (validationContext: ValidationContextProps = createValidationContext()) => {
-    function Wrapper({children}: {children: ReactNode}) {
-      return (
-        <ValidationContext.Provider value={validationContext}>
-          {children}
-        </ValidationContext.Provider>
-      );
-    }
-    return Wrapper;
-  };
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('should render RichTextWithTranslation and verify structure', () => {
-    const mockOnChange = vi.fn();
-
-    render(
-      <RichTextWithTranslation onChange={mockOnChange} resource={createMockResource()} />,
-      {wrapper: createWrapper()},
-    );
-
-    expect(screen.getByTestId('rich-text-component')).toBeInTheDocument();
   });
 });
 

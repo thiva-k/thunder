@@ -22,6 +22,7 @@ import {AsgardeoProvider} from '@asgardeo/react';
 import {useConfig} from '@thunder/commons-contexts';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {ReactQueryDevtools} from '@tanstack/react-query-devtools';
+import I18nApiProvider from './i18n/I18nApiProvider';
 import App from './App';
 
 const queryClient: QueryClient = new QueryClient();
@@ -44,7 +45,9 @@ export default function AppWithConfig(): JSX.Element {
     >
       <OxygenUIThemeProvider radialBackground>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <I18nApiProvider>
+            <App />
+          </I18nApiProvider>
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>
       </OxygenUIThemeProvider>

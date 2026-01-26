@@ -85,7 +85,12 @@ const translations = {
     create: 'Create',
     update: 'Update',
     save: 'Save',
+    cancel: 'Cancel',
     or: 'or',
+
+    // Page names (for breadcrumbs and navigation)
+    home: 'Home',
+    flows: 'Flows',
 
     // Status messages
     status: {
@@ -1255,6 +1260,8 @@ const translations = {
     'core.elements.textPropertyField.i18nCard.tooltip.commonKeyTooltip': 'This key is shared across multiple screens',
     'core.elements.textPropertyField.i18nCard.tooltip.editExistingTranslation': 'Edit existing translation',
     'core.elements.textPropertyField.i18nCard.tooltip.addNewTranslation': 'Add new translation',
+    'core.elements.textPropertyField.i18nCard.invalidKeyFormat':
+      'Invalid key format. Use only letters, numbers, dots, underscores, and hyphens.',
 
     // Form requires view dialog
     'core.dialogs.formRequiresView.formOnCanvas.title': 'Form Requires a View',
