@@ -87,7 +87,7 @@ export const ExecutionTypes = {
   FacebookFederation: 'FacebookExecutor',
   MicrosoftFederation: 'Office365Executor',
   GithubFederation: 'GithubOAuthExecutor',
-  PasskeyEnrollment: 'FIDO2Executor',
+  PasskeyAuth: 'PasskeyAuthExecutor',
   ConfirmationCode: 'ConfirmationCodeValidationExecutor',
   MagicLinkExecutor: 'MagicLinkExecutor',
   SendEmailOTP: 'SendEmailOTPExecutor',
