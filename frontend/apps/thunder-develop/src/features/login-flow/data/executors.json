@@ -158,6 +158,52 @@
     "category": "EXECUTOR",
     "type": "TASK_EXECUTION",
     "display": {
+      "header": "Passkey Executor",
+      "label": "Passkey Challenge",
+      "image": "assets/images/icons/fingerprint.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "PasskeyAuthExecutor",
+          "mode": "challenge"
+        },
+        "next": ""
+      },
+      "properties": {
+        "relyingPartyId": "localhost",
+        "relyingPartyName": "Thunder"
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
+      "header": "Passkey Executor",
+      "label": "Passkey Verify",
+      "image": "assets/images/icons/fingerprint.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "PasskeyAuthExecutor",
+          "mode": "verify"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
       "header": "Identifying Executor",
       "label": "Identifying",
       "image": "assets/images/icons/magnifying-glass.svg",
@@ -387,26 +433,6 @@
     "category": "EXECUTOR",
     "type": "TASK_EXECUTION",
     "display": {
-      "header": "Passkey Executor",
-      "label": "Passkey",
-      "image": "assets/images/icons/fingerprint.svg",
-      "showOnResourcePanel": false
-    },
-    "data": {
-      "action": {
-        "type": "EXECUTOR",
-        "executor": {
-          "name": "FIDO2Executor"
-        },
-        "next": ""
-      }
-    }
-  },
-  {
-    "resourceType": "STEP",
-    "category": "EXECUTOR",
-    "type": "TASK_EXECUTION",
-    "display": {
       "header": "Magic Link Executor",
       "label": "Magic Link",
       "image": "assets/images/icons/link.svg",
@@ -477,6 +503,26 @@
         "type": "EXECUTOR",
         "executor": {
           "name": "VerifyEmailOTPExecutor"
+        },
+        "next": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
+      "header": "Identity Resolver",
+      "label": "Identity Resolver",
+      "image": "assets/images/icons/magnifying-glass.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {
+          "name": "IdentityResolver"
         },
         "next": ""
       }

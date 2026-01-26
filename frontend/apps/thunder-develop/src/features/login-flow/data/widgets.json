@@ -486,6 +486,10 @@
         "__generationMeta__": {
           "replacers": [
             {
+              "key": "MOBILE_NUMBER_VIEW_ID",
+              "type": "ID"
+            },
+            {
               "key": "SMS_SEND_EXECUTOR_ID",
               "type": "ID"
             },
@@ -524,8 +528,61 @@
                       "eventType": "TRIGGER",
                       "label": "Continue with SMS OTP",
                       "action": {
-                        "next": "{{SMS_SEND_EXECUTOR_ID}}",
+                        "next": "{{MOBILE_NUMBER_VIEW_ID}}",
                         "type": "NEXT"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "{{MOBILE_NUMBER_VIEW_ID}}",
+            "type": "VIEW",
+            "size": {
+              "width": 350,
+              "height": 300
+            },
+            "position": {
+              "x": 690,
+              "y": 50
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
+                  "label": "Enter Mobile Number"
+                },
+                {
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "config": {},
+                  "id": "{{ID}}",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "FIELD",
+                      "type": "PHONE_INPUT",
+                      "hint": "",
+                      "label": "Mobile Number",
+                      "required": true,
+                      "placeholder": "Enter your mobile number",
+                      "ref": "mobile"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Send OTP",
+                      "action": {
+                        "type": "NEXT",
+                        "next": "{{SMS_SEND_EXECUTOR_ID}}"
                       }
                     }
                   ]
@@ -542,7 +599,7 @@
             },
             "position": {
               "x": 690,
-              "y": 200
+              "y": 400
             },
             "data": {
               "action": {
@@ -670,18 +727,30 @@
     "category": "FLOW",
     "type": "PASSKEY_AUTHENTICATION",
     "display": {
-      "label": "Continue with Passkey",
-      "description": "Login experience with Passkeys",
+      "label": "Sign In with Passkey",
+      "description": "Passwordless login experience with Passkeys",
       "image": "assets/images/icons/fingerprint.svg",
-      "showOnResourcePanel": false
+      "showOnResourcePanel": true
     },
     "config": {
       "data": {
         "__generationMeta__": {
-          "defaultPropertySelectorId": "{{PASSKEY_EXECUTION_STEP_ID}}",
+          "defaultPropertySelectorId": "{{PASSKEY_CHALLENGE_EXECUTOR_ID}}",
           "replacers": [
             {
-              "key": "PASSKEY_EXECUTION_STEP_ID",
+              "key": "USERNAME_VIEW_ID",
+              "type": "ID"
+            },
+            {
+              "key": "IDENTITY_RESOLVER_EXECUTOR_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PASSKEY_CHALLENGE_EXECUTOR_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PASSKEY_VERIFY_EXECUTOR_ID",
               "type": "ID"
             },
             {
@@ -709,11 +778,11 @@
                       "type": "ACTION",
                       "variant": "SOCIAL",
                       "eventType": "TRIGGER",
-                      "label": "Continue with Passkey",
+                      "label": "Sign In with Passkey",
                       "image": "assets/images/icons/fingerprint.svg",
                       "action": {
                         "type": "NEXT",
-                        "next": "{{PASSKEY_EXECUTION_STEP_ID}}"
+                        "next": "{{USERNAME_VIEW_ID}}"
                       }
                     }
                   ]
@@ -722,11 +791,86 @@
             }
           },
           {
-            "id": "{{PASSKEY_EXECUTION_STEP_ID}}",
-            "type": "TASK_EXECUTION",
+            "id": "{{USERNAME_VIEW_ID}}",
+            "type": "VIEW",
             "size": {
               "width": 350,
-              "height": 291
+              "height": 300
+            },
+            "position": {
+              "x": 690,
+              "y": 200
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "variant": "HEADING_3",
+                  "label": "Sign In with Passkey"
+                },
+                {
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "config": {},
+                  "id": "{{ID}}",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "FIELD",
+                      "type": "TEXT_INPUT",
+                      "inputType": "text",
+                      "hint": "",
+                      "label": "Username",
+                      "required": true,
+                      "placeholder": "Enter your username",
+                      "ref": "username"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
+                      "action": {
+                        "type": "NEXT",
+                        "next": "{{IDENTITY_RESOLVER_EXECUTOR_ID}}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "id": "{{IDENTITY_RESOLVER_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 690,
+              "y": 350
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "IdentityResolver"
+                },
+                "next": "{{PASSKEY_CHALLENGE_EXECUTOR_ID}}"
+              }
+            }
+          },
+          {
+            "id": "{{PASSKEY_CHALLENGE_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
             },
             "position": {
               "x": 690,
@@ -736,7 +880,34 @@
               "action": {
                 "type": "EXECUTOR",
                 "executor": {
-                  "name": "FIDO2Executor"
+                  "name": "PasskeyAuthExecutor",
+                  "mode": "challenge"
+                },
+                "next": "{{PASSKEY_VERIFY_EXECUTOR_ID}}"
+              },
+              "properties": {
+                "relyingPartyId": "localhost",
+                "relyingPartyName": "Thunder"
+              }
+            }
+          },
+          {
+            "id": "{{PASSKEY_VERIFY_EXECUTOR_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 690,
+              "y": 650
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "PasskeyAuthExecutor",
+                  "mode": "verify"
                 },
                 "next": "{{AUTH_ASSERT_EXECUTOR_ID}}"
               }
@@ -750,8 +921,8 @@
               "height": 113
             },
             "position": {
-              "x": 1080,
-              "y": 570
+              "x": 690,
+              "y": 800
             },
             "data": {
               "action": {

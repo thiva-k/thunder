@@ -52,6 +52,14 @@ const SMS_OTP_MODES = [
 ] as const;
 
 /**
+ * Available modes for Passkey executor.
+ */
+const PASSKEY_MODES = [
+  {value: 'challenge', translationKey: 'flows:core.executions.passkey.mode.challenge', displayLabel: 'Passkey Challenge'},
+  {value: 'verify', translationKey: 'flows:core.executions.passkey.mode.verify', displayLabel: 'Passkey Verify'},
+] as const;
+
+/**
  * Props interface of {@link ExecutionExtendedProperties}
  */
 export type ExecutionExtendedPropertiesPropsInterface = CommonResourcePropertiesPropsInterface;
@@ -95,6 +103,9 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
 
   // Check if this is an SMS OTP executor
   const isSmsOtpExecutor = executorName === ExecutionTypes.SMSOTPAuth;
+
+  // Check if this is a Passkey executor
+  const isPasskeyExecutor = executorName === ExecutionTypes.PasskeyAuth;
 
   // Get the IDP type for the current executor
   const idpType = useMemo(() => {
@@ -178,6 +189,31 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
     onChange('data.properties.senderId', selectedSenderId, resource);
   };
 
+  // Handle mode selection for Passkey executor
+  const handlePasskeyModeChange = (selectedMode: string): void => {
+    // Update the display label based on the selected mode
+    const modeConfig = PASSKEY_MODES.find((mode) => mode.value === selectedMode);
+
+    // Build the updated data object with both mode and display label
+    const updatedData = {
+      ...((resource?.data as StepData) ?? {}),
+      action: {
+        ...((resource?.data as StepData)?.action ?? {}),
+        executor: {
+          ...((resource?.data as StepData)?.action?.executor ?? {}),
+          mode: selectedMode,
+        },
+      },
+      display: {
+        ...((resource?.data as StepData)?.display ?? {}),
+        label: modeConfig?.displayLabel ?? 'Passkey',
+      },
+    };
+
+    // Single update call with the complete data object
+    onChange('data', updatedData, resource);
+  };
+
   // Render SMS OTP mode and sender selector
   if (isSmsOtpExecutor) {
     const hasSenders = (notificationSenders?.length ?? 0) > 0;
@@ -240,6 +276,37 @@ function ExecutionExtendedProperties({resource, onChange}: ExecutionExtendedProp
             {t('flows:core.executions.smsOtp.sender.noSenders')}
           </Alert>
         )}
+      </Stack>
+    );
+  }
+
+  // Render Passkey mode selector
+  if (isPasskeyExecutor) {
+    return (
+      <Stack gap={2}>
+        <Typography variant="body2" color="text.secondary">
+          {t('flows:core.executions.passkey.description')}
+        </Typography>
+
+        <div>
+          <FormLabel htmlFor="passkey-mode-select">{t('flows:core.executions.passkey.mode.label')}</FormLabel>
+          <Select
+            id="passkey-mode-select"
+            value={currentMode}
+            onChange={(e) => handlePasskeyModeChange(e.target.value)}
+            displayEmpty
+            fullWidth
+          >
+            <MenuItem value="" disabled>
+              {t('flows:core.executions.passkey.mode.placeholder')}
+            </MenuItem>
+            {PASSKEY_MODES.map((mode) => (
+              <MenuItem key={mode.value} value={mode.value}>
+                {t(mode.translationKey)}
+              </MenuItem>
+            ))}
+          </Select>
+        </div>
       </Stack>
     );
   }

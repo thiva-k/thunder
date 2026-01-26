@@ -1127,7 +1127,7 @@ const translations = {
     'core.executions.names.github': 'GitHub',
     'core.executions.names.facebook': 'Facebook',
     'core.executions.names.microsoft': 'Microsoft',
-    'core.executions.names.passkeyEnrollment': 'Passkey Enrollment',
+    'core.executions.names.PasskeyAuthentication': 'Passkey Authentication',
     'core.executions.names.confirmationCode': 'Confirmation Code',
     'core.executions.names.magicLink': 'Magic Link',
     'core.executions.names.sendEmailOTP': 'Send Email OTP',
@@ -1149,6 +1149,13 @@ const translations = {
     'core.executions.smsOtp.sender.required': 'Notification sender is required and must be selected.',
     'core.executions.smsOtp.sender.noSenders':
       'No notification senders available. Please create a notification sender first.',
+
+    // Passkey executor modes
+    'core.executions.passkey.mode.challenge': 'Challenge',
+    'core.executions.passkey.mode.verify': 'Verify',
+    'core.executions.passkey.mode.label': 'Mode',
+    'core.executions.passkey.mode.placeholder': 'Select a mode',
+    'core.executions.passkey.description': 'Configure the Passkey executor settings.',
 
     // Execution steps - tooltips and messages
     'core.executions.tooltip.configurationHint': 'Click to configure this step',
