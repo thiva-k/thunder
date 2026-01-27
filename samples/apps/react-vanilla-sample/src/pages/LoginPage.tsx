@@ -38,6 +38,7 @@ import GitHubIcon from '@mui/icons-material/GitHub';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import FingerprintIcon from '@mui/icons-material/Fingerprint';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Layout from '../components/Layout';
 import ConnectionErrorModal from '../components/ConnectionErrorModal';
@@ -65,6 +66,7 @@ interface AuthInput {
 interface ActionPrompt {
     ref: string;
     nextNode?: string;
+    label?: string;
 }
 
 // Define the interface for the authentication response
@@ -281,10 +283,18 @@ const LoginPage = () => {
             return;
         }
 
-        // Clear previous state
+        // Clear previous state, but preserve error if it exists in the new response
         clearToken();
-        setError(false);
-        setConnectionError(false);
+        const hasNewError = !!data.failureReason;
+        
+        if (hasNewError) {
+             setError(true);
+             setErrorMessage(data.failureReason || '');
+        } else {
+             setError(false);
+             setConnectionError(false);
+        }
+        
         setNeedsDecision(false);
         setFormData({});
         setAvailableActions([]);
@@ -327,7 +337,7 @@ const LoginPage = () => {
                 // This is a decision screen - multiple actions to choose from
                 setNeedsDecision(true);
                 setAvailableActions(data.data.actions);
-            } else if (data.data?.actions && data.data.actions.length === 1) {
+            } else if (data.data?.actions && data.data.actions.length === 1 && !data.failureReason) {
                 // Single action without inputs - auto-execute it to continue the flow
                 // This handles intermediate steps like "send_sms" that don't need user input
                 const singleAction = data.data.actions[0];
@@ -1204,41 +1214,52 @@ const LoginPage = () => {
                         </Box>
                     )}
 
-                    { error && !errorMessage.includes("invalid OTP") ? (
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            type="submit"
-                            fullWidth
-                            sx={{ mt: 2 }}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                setError(false);
-                                setErrorMessage('');
-                                handleRetry();
-                            }}
-                         >
-                            Retry
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            type="submit"
-                            fullWidth
-                            sx={{ mt: 2 }}
-                        >
-                            {
-                                inputs.some(input => input.identifier === 'password') ? 
-                                    (isSignupMode ? 
-                                        'Create Account' 
-                                        : 'Sign In'
-                                    ) 
-                                    : inputs.some(input => input.identifier === 'otp') ? 
-                                        'Verify OTP' 
-                                        : 'Continue'
-                            }
-                        </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        type="submit"
+                        fullWidth
+                        sx={{ mt: 2 }}
+                    >
+                        {
+                            inputs.some(input => input.identifier === 'password') ? 
+                                (isSignupMode ? 
+                                    'Create Account' 
+                                    : 'Sign In'
+                                ) 
+                                : inputs.some(input => input.identifier === 'otp') ? 
+                                    'Verify OTP' 
+                                    : 'Continue'
+                        }
+                    </Button>
+
+                    {/* Render alternative actions if available (e.g. Passkey) */}
+                    {availableActions.length > 1 && (
+                         <Box sx={{ mt: 1 }}>
+                            <Divider sx={{ my: 2 }}>or</Divider>
+                            {availableActions.slice(1).map((action, index) => {
+                                let label = "Continue";
+                                if (action.nextNode?.includes("passkey")) {
+                                    label = "Sign in with Passkey";
+                                } else if (action.label) {
+                                    label = action.label;
+                                }
+
+                                return (
+                                    <Button
+                                        key={`alt-action-${index}`}
+                                        fullWidth
+                                        variant="outlined"
+                                        color="secondary"
+                                        onClick={() => handleAuthOptionSelection(action.ref)}
+                                        sx={{ mb: 1 }}
+                                        startIcon={action.nextNode?.includes("passkey") ? <FingerprintIcon /> : undefined}
+                                    >
+                                        {label}
+                                    </Button>
+                                );
+                            })}
+                         </Box>
                     )}
                 </Box>
             </form>

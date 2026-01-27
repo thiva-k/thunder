@@ -29,13 +29,9 @@ import type {
 import { authenticateWithPasskey } from '../services/authService';
 
 interface PasskeyAuthPromptProps {
-    /** The passkey request options from the server (JSON string) */
     passkeyRequestOptionsJson: string;
-    /** Callback when passkey authentication is successful */
     onAuthenticated: (assertion: PasskeyAssertionResponse) => void;
-    /** Callback when an error occurs */
     onError: (error: string) => void;
-    /** Whether the component is in a loading state */
     isLoading?: boolean;
 }
 
@@ -55,19 +51,14 @@ const PasskeyAuthPrompt = ({
         setAuthenticating(true);
 
         try {
-            // Parse the passkey request options
             const options: PasskeyRequestOptions = JSON.parse(passkeyRequestOptionsJson);
 
-            // Call WebAuthn API to get assertion
             const assertion = await authenticateWithPasskey(options);
 
-            // Call the success callback with the assertion
             onAuthenticated(assertion);
         } catch (err) {
-            // Provide user-friendly error messages based on DOMException name
             let displayError: string;
             
-            // WebAuthn throws DOMException objects with a name property
             if (err instanceof DOMException) {
                 switch (err.name) {
                     case 'NotAllowedError':
