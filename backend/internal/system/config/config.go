@@ -109,6 +109,7 @@ type JWTConfig struct {
 	ValidityPeriod int64  `yaml:"validity_period" json:"validity_period"`
 	Audience       string `yaml:"audience" json:"audience"`
 	PreferredKeyID string `yaml:"preferred_key_id" json:"preferred_key_id"`
+	Leeway         int64  `yaml:"leeway" json:"leeway"`
 }
 
 // RefreshTokenConfig holds the refresh token configuration details.

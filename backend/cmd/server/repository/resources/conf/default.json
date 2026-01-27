@@ -72,7 +72,8 @@
   "jwt": {
     "validity_period": 3600,
     "audience": "application",
-    "preferred_key_id": "default-key"
+    "preferred_key_id": "default-key",
+    "leeway": 30
   },
   "oauth": {
     "refresh_token": {
