@@ -109,7 +109,7 @@ export const hasMinimumAAL = (
 
   const currentLevel = aalLevels[currentAAL];
   const requiredLevel = aalLevels[requiredAAL];
-  
+
   if (currentLevel === undefined || requiredLevel === undefined) {
     // Fail securely: unknown AAL levels are not trusted
     return false;

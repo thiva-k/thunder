@@ -60,6 +60,7 @@ function SMSOTPStepUpModal({
   const hasSentOTPRef = useRef(false);
   const isSendingRef = useRef(false);
   const sendPromiseRef = useRef<Promise<void> | null>(null);
+  const cooldownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleSendOTP = useCallback(async (): Promise<void> => {
     setSendingOTP(true);
@@ -78,12 +79,20 @@ function SMSOTPStepUpModal({
       setOtpSent(true);
       hasSentOTPRef.current = true;
       
+      // Clear any existing cooldown interval
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+      }
+
       // Set cooldown for resend (60 seconds)
       setResendCooldown(60);
-      const cooldownInterval = setInterval(() => {
+      cooldownIntervalRef.current = setInterval(() => {
         setResendCooldown((prev) => {
           if (prev <= 1) {
-            clearInterval(cooldownInterval);
+            if (cooldownIntervalRef.current) {
+              clearInterval(cooldownIntervalRef.current);
+              cooldownIntervalRef.current = null;
+            }
             return 0;
           }
           return prev - 1;
@@ -144,6 +153,11 @@ function SMSOTPStepUpModal({
         isSendingRef.current = false;
         sendPromiseRef.current = null;
       }
+      // Clear cooldown interval on cleanup
+      if (cooldownIntervalRef.current) {
+        clearInterval(cooldownIntervalRef.current);
+        cooldownIntervalRef.current = null;
+      }
     };
   }, [open, handleSendOTP]);
 
@@ -193,6 +207,11 @@ function SMSOTPStepUpModal({
     hasSentOTPRef.current = false;
     isSendingRef.current = false;
     sendPromiseRef.current = null;
+    // Clear cooldown interval
+    if (cooldownIntervalRef.current) {
+      clearInterval(cooldownIntervalRef.current);
+      cooldownIntervalRef.current = null;
+    }
     onClose();
   };
 
@@ -259,7 +278,11 @@ function SMSOTPStepUpModal({
                 name="otp"
                 type="text"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value)}
+                onChange={(e) => {
+                  // Filter out non-numeric characters
+                  const numericValue = e.target.value.replace(/[^0-9]/g, "");
+                  setOtp(numericValue);
+                }}
                 placeholder="123456"
                 required
                 disabled={loading || !otpSent || sendingOTP}

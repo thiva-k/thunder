@@ -80,14 +80,17 @@ export function useStepUpAuth(): UseStepUpAuthReturn {
       if (userId) {
         try {
           user = await fetchUserById(userId);
-        } catch {
-          // Silently fall through to username filter
+        } catch (error) {
+          // Log at debug level and fall through to username filter
+          console.debug("Failed to fetch user by ID, falling back to username filter:", error);
         }
       }
       
       // If ID fetch failed, try username filter
       if (!user && username) {
-        const users = await fetchUsers(`username eq "${username}"`);
+        // Escape special characters to prevent filter injection
+        const escapedUsername = username.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        const users = await fetchUsers(`username eq "${escapedUsername}"`);
         if (users.length > 0) {
           user = users[0];
         }

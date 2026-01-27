@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import {
   Alert,
   Box,
@@ -45,6 +45,16 @@ function DashboardPage() {
   const navigate = useNavigate();
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const {
     triggerStepUp,
@@ -128,13 +138,22 @@ function DashboardPage() {
             const link = document.createElement("a");
             link.href = url;
             link.download = `users-export-${new Date().toISOString().split("T")[0]}.json`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            try {
+              document.body.appendChild(link);
+              link.click();
+            } finally {
+              if (document.body.contains(link)) {
+                document.body.removeChild(link);
+              }
+              URL.revokeObjectURL(url);
+            }
 
             setExportSuccess(true);
-            setTimeout(() => setExportSuccess(false), 3000);
+            // Clear any existing timeout before setting a new one
+            if (successTimeoutRef.current) {
+              clearTimeout(successTimeoutRef.current);
+            }
+            successTimeoutRef.current = setTimeout(() => setExportSuccess(false), 3000);
           } catch (err) {
             setExportError(
               err instanceof Error
