@@ -1,6 +1,7 @@
 packages:
   - apps/*
   - packages/*
+  - ../docs
 
 catalog:
   '@asgardeo/react': 0.9.0
