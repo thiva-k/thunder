@@ -684,7 +684,7 @@ describe('AccessSection', () => {
         expect(mockOnFieldChange).toHaveBeenCalledWith('inbound_auth_config', expect.any(Array));
         const call = mockOnFieldChange.mock.calls.find((c) => c[0] === 'inbound_auth_config');
         if (call) {
-          const updatedConfig = call[1] as Array<{type: string}>;
+          const updatedConfig = call[1] as {type: string}[];
           // Should contain both saml and oauth2 configs
           expect(updatedConfig.some((c) => c.type === 'saml')).toBe(true);
           expect(updatedConfig.some((c) => c.type === 'oauth2')).toBe(true);

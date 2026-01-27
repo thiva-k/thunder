@@ -17,9 +17,8 @@
  */
 
 import {useQuery, type UseQueryResult} from '@tanstack/react-query';
-import {useConfig} from '@thunder/commons-contexts';
 import {useAsgardeo} from '@asgardeo/react';
-import I18nQueryKeys from './I18nQueryKeys';
+import I18nQueryKeys from '../constants/I18nQueryKeys';
 
 /**
  * Response from the translations API.
@@ -34,6 +33,7 @@ export interface TranslationsResponse {
  * Options for the useGetTranslations hook.
  */
 export interface UseGetTranslationsOptions {
+  serverUrl: string;
   language: string;
   namespace?: string;
   enabled?: boolean;
@@ -49,6 +49,7 @@ export interface UseGetTranslationsOptions {
  * ```tsx
  * function TranslationsDisplay() {
  *   const { data, isLoading, error } = useGetTranslations({
+ *     serverUrl: 'https://api.example.com',
  *     language: 'en',
  *     namespace: 'flowCustomi18n',
  *   });
@@ -69,17 +70,16 @@ export interface UseGetTranslationsOptions {
  * ```
  */
 export default function useGetTranslations({
+  serverUrl,
   language,
   namespace,
   enabled = true,
 }: UseGetTranslationsOptions): UseQueryResult<TranslationsResponse, Error> {
   const {http} = useAsgardeo();
-  const {getServerUrl} = useConfig();
 
   return useQuery<TranslationsResponse, Error>({
     queryKey: namespace ? [I18nQueryKeys.TRANSLATIONS, language, namespace] : [I18nQueryKeys.TRANSLATIONS, language],
     queryFn: async (): Promise<TranslationsResponse> => {
-      const serverUrl: string = getServerUrl();
       let url = `${serverUrl}/i18n/languages/${language}/translations/resolve`;
 
       if (namespace) {
@@ -97,6 +97,6 @@ export default function useGetTranslations({
 
       return response.data;
     },
-    enabled: enabled && !!language,
+    enabled: enabled && !!language && !!serverUrl,
   });
 }

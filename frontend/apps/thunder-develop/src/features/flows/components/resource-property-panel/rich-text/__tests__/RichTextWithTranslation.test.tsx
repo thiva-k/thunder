@@ -566,6 +566,155 @@ describe('TranslationRichText Component', () => {
       expect(screen.getByTestId('rich-text-component')).toBeInTheDocument();
     });
   });
+
+  describe('I18n Configuration Card Toggle', () => {
+    it('should open I18n configuration card when language button is clicked', () => {
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={createMockResource()} />,
+        {wrapper: createWrapper()},
+      );
+
+      // The language icon button
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // The I18nConfigurationCard should now be open
+      expect(screen.getByTestId('i18n-config-card')).toBeInTheDocument();
+    });
+
+    it('should close I18n configuration card when close button is clicked', () => {
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={createMockResource()} />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the card
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // Verify it's open
+      expect(screen.getByTestId('i18n-config-card')).toBeInTheDocument();
+
+      // Click close button
+      const closeButton = screen.getByTestId('close-i18n-card');
+      fireEvent.click(closeButton);
+
+      // The card should be closed
+      expect(screen.queryByTestId('i18n-config-card')).not.toBeInTheDocument();
+    });
+
+    it('should toggle I18n configuration card on repeated button clicks', () => {
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={createMockResource()} />,
+        {wrapper: createWrapper()},
+      );
+
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+
+      // Open
+      fireEvent.click(languageButton);
+      expect(screen.getByTestId('i18n-config-card')).toBeInTheDocument();
+
+      // Toggle closed via close button (since card is a popover)
+      const closeButton = screen.getByTestId('close-i18n-card');
+      fireEvent.click(closeButton);
+      expect(screen.queryByTestId('i18n-config-card')).not.toBeInTheDocument();
+
+      // Open again
+      fireEvent.click(languageButton);
+      expect(screen.getByTestId('i18n-config-card')).toBeInTheDocument();
+    });
+
+    it('should pass i18n key from change handler and call onChange with formatted value', () => {
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={createMockResource()} />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the card
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // Click the change key button in the mocked card
+      const changeKeyButton = screen.getByTestId('change-i18n-key');
+      fireEvent.click(changeKeyButton);
+
+      // Should call onChange with formatted i18n pattern
+      expect(mockOnChange).toHaveBeenCalledWith('{{t(test.key)}}');
+    });
+
+    it('should pass empty string when i18n key is cleared from card', () => {
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={createMockResource()} />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the card
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // Click the clear key button in the mocked card
+      const clearKeyButton = screen.getByTestId('clear-i18n-key');
+      fireEvent.click(clearKeyButton);
+
+      // Should call onChange with empty string
+      expect(mockOnChange).toHaveBeenCalledWith('');
+    });
+
+    it('should extract and display correct i18n key when resource has t() pattern label', () => {
+      const resource = createMockResource();
+      (resource as Resource & {label?: string}).label = '{{t(flows.greeting.title)}}';
+
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={resource} />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the card
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // The mocked I18nConfigurationCard should have the extracted key
+      const card = screen.getByTestId('i18n-config-card');
+      expect(card).toHaveAttribute('data-i18n-key', 'flows.greeting.title');
+    });
+
+    it('should pass empty i18n key when resource label is plain text', () => {
+      const resource = createMockResource();
+      (resource as Resource & {label?: string}).label = 'Plain text content';
+
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={resource} />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the card
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // The mocked I18nConfigurationCard should have empty key
+      const card = screen.getByTestId('i18n-config-card');
+      expect(card).toHaveAttribute('data-i18n-key', '');
+    });
+
+    it('should handle resource without label property', () => {
+      const resource = createMockResource();
+      // Don't set label property
+
+      render(
+        <RichTextWithTranslation onChange={mockOnChange} resource={resource} />,
+        {wrapper: createWrapper()},
+      );
+
+      // Open the card
+      const languageButton = screen.getByRole('button', {name: /configureTranslation/i});
+      fireEvent.click(languageButton);
+
+      // The mocked I18nConfigurationCard should have empty key
+      const card = screen.getByTestId('i18n-config-card');
+      expect(card).toHaveAttribute('data-i18n-key', '');
+    });
+  });
 });
 
 /**

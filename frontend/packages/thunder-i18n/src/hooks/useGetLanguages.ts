@@ -17,9 +17,8 @@
  */
 
 import {useQuery, type UseQueryResult} from '@tanstack/react-query';
-import {useConfig} from '@thunder/commons-contexts';
 import {useAsgardeo} from '@asgardeo/react';
-import I18nQueryKeys from './I18nQueryKeys';
+import I18nQueryKeys from '../constants/I18nQueryKeys';
 
 /**
  * Response from the languages API.
@@ -29,14 +28,25 @@ export interface LanguagesResponse {
 }
 
 /**
+ * Options for the useGetLanguages hook.
+ */
+export interface UseGetLanguagesOptions {
+  serverUrl: string;
+  enabled?: boolean;
+}
+
+/**
  * Custom hook to fetch available languages.
  *
+ * @param options - Options for fetching languages
  * @returns TanStack Query object for fetching languages
  *
  * @example
  * ```tsx
  * function LanguageSelector() {
- *   const { data, isLoading, error } = useGetLanguages();
+ *   const { data, isLoading, error } = useGetLanguages({
+ *     serverUrl: 'https://api.example.com',
+ *   });
  *
  *   if (isLoading) return <Spinner />;
  *   if (error) return <Error message={error.message} />;
@@ -51,14 +61,15 @@ export interface LanguagesResponse {
  * }
  * ```
  */
-export default function useGetLanguages(): UseQueryResult<LanguagesResponse, Error> {
+export default function useGetLanguages({
+  serverUrl,
+  enabled = true,
+}: UseGetLanguagesOptions): UseQueryResult<LanguagesResponse, Error> {
   const {http} = useAsgardeo();
-  const {getServerUrl} = useConfig();
 
   return useQuery<LanguagesResponse, Error>({
     queryKey: [I18nQueryKeys.LANGUAGES],
     queryFn: async (): Promise<LanguagesResponse> => {
-      const serverUrl: string = getServerUrl();
       const response: {
         data: LanguagesResponse;
       } = await http.request({
@@ -70,5 +81,6 @@ export default function useGetLanguages(): UseQueryResult<LanguagesResponse, Err
 
       return response.data;
     },
+    enabled: enabled && !!serverUrl,
   });
 }

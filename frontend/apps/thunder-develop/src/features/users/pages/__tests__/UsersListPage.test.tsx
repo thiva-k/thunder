@@ -102,6 +102,23 @@ vi.mock('@thunder/shared-hooks', () => ({
   }),
 }));
 
+// Store onSuccess callback for testing
+let capturedOnSuccess: ((inviteLink: string) => void) | undefined;
+
+// Mock InviteUserDialog to capture callbacks
+vi.mock('../../components/InviteUserDialog', () => ({
+  default: ({open, onClose, onSuccess}: {open: boolean; onClose: () => void; onSuccess?: (inviteLink: string) => void}) => {
+    capturedOnSuccess = onSuccess;
+    if (!open) return null;
+    return (
+      <div role="dialog" data-testid="invite-dialog">
+        <button type="button" onClick={onClose} aria-label="close">Close</button>
+        <button type="button" onClick={() => onSuccess?.('https://invite.link/123')} data-testid="trigger-success">Trigger Success</button>
+      </div>
+    );
+  },
+}));
+
 describe('UsersListPage', () => {
   const mockSchemas: UserSchemaListResponse = {
     totalResults: 2,
@@ -278,5 +295,77 @@ describe('UsersListPage', () => {
 
     const createButton = screen.getByRole('button', {name: /add user/i});
     expect(createButton).toHaveClass('MuiButton-contained');
+  });
+
+  it('opens invite dialog when invite user button is clicked', async () => {
+    const user = userEvent.setup();
+    render(<UsersListPage />);
+
+    const inviteButton = screen.getByRole('button', {name: /invite user/i});
+    await user.click(inviteButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+  });
+
+  it('closes invite dialog when onClose is triggered', async () => {
+    const user = userEvent.setup();
+    render(<UsersListPage />);
+
+    // Open dialog
+    const inviteButton = screen.getByRole('button', {name: /invite user/i});
+    await user.click(inviteButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Close dialog by clicking the close button
+    const closeButton = screen.getByRole('button', {name: /close/i});
+    await user.click(closeButton);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
+  it('calls onSuccess handler when invite is successful', async () => {
+    const user = userEvent.setup();
+    render(<UsersListPage />);
+
+    // Open dialog
+    const inviteButton = screen.getByRole('button', {name: /invite user/i});
+    await user.click(inviteButton);
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    // Trigger the success callback
+    const triggerSuccessButton = screen.getByTestId('trigger-success');
+    await user.click(triggerSuccessButton);
+
+    // Verify the onSuccess callback was captured and can be called
+    expect(capturedOnSuccess).toBeDefined();
+  });
+
+  it('handles navigation error gracefully', async () => {
+    const navigationError = new Error('Navigation failed');
+    mockNavigate.mockRejectedValueOnce(navigationError);
+
+    const user = userEvent.setup();
+    render(<UsersListPage />);
+
+    const createButton = screen.getByRole('button', {name: /add user/i});
+    await user.click(createButton);
+
+    // Verify navigate was called even though it will fail
+    expect(mockNavigate).toHaveBeenCalledWith('/users/create');
+
+    // Wait a bit for the error handler to be called
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled();
+    });
   });
 });

@@ -17,10 +17,8 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
-import {useConfig} from '@thunder/commons-contexts';
 import {useAsgardeo} from '@asgardeo/react';
-import {invalidateI18nCache} from '../i18n/invalidate-i18n-cache';
-import I18nQueryKeys from './I18nQueryKeys';
+import I18nQueryKeys from '../constants/I18nQueryKeys';
 
 /**
  * Response from the translation API.
@@ -33,9 +31,9 @@ export interface TranslationResponse {
 }
 
 /**
- * Variables for the set translation mutation.
+ * Variables for the update translation mutation.
  */
-export interface SetTranslationVariables {
+export interface UpdateTranslationVariables {
   language: string;
   namespace: string;
   key: string;
@@ -43,17 +41,36 @@ export interface SetTranslationVariables {
 }
 
 /**
+ * Options for the useUpdateTranslation hook.
+ */
+export interface UseUpdateTranslationOptions {
+  serverUrl: string;
+  /**
+   * Optional callback to be called after a successful mutation.
+   * This is useful for app-specific cache invalidation (e.g., invalidating i18next cache).
+   */
+  onMutationSuccess?: (data: TranslationResponse, variables: UpdateTranslationVariables) => void;
+}
+
+/**
  * Custom hook to create or update a single translation.
  *
- * @returns TanStack Query mutation object for setting translations
+ * @param options - Options for the mutation
+ * @returns TanStack Query mutation object for updating translations
  *
  * @example
  * ```tsx
  * function CreateTranslationForm() {
- *   const setTranslation = useSetTranslation();
+ *   const updateTranslation = useUpdateTranslation({
+ *     serverUrl: 'https://api.example.com',
+ *     onMutationSuccess: () => {
+ *       // Invalidate app-specific caches
+ *       invalidateI18nCache();
+ *     },
+ *   });
  *
- *   const handleSubmit = (data: SetTranslationVariables) => {
- *     setTranslation.mutate(data, {
+ *   const handleSubmit = (data: UpdateTranslationVariables) => {
+ *     updateTranslation.mutate(data, {
  *       onSuccess: (translation) => {
  *         console.log('Translation created:', translation);
  *       },
@@ -67,14 +84,15 @@ export interface SetTranslationVariables {
  * }
  * ```
  */
-export default function useSetTranslation(): UseMutationResult<TranslationResponse, Error, SetTranslationVariables> {
+export default function useUpdateTranslation({
+  serverUrl,
+  onMutationSuccess,
+}: UseUpdateTranslationOptions): UseMutationResult<TranslationResponse, Error, UpdateTranslationVariables> {
   const {http} = useAsgardeo();
-  const {getServerUrl} = useConfig();
   const queryClient: ReturnType<typeof useQueryClient> = useQueryClient();
 
-  return useMutation<TranslationResponse, Error, SetTranslationVariables>({
-    mutationFn: async ({language, namespace, key, value}: SetTranslationVariables): Promise<TranslationResponse> => {
-      const serverUrl: string = getServerUrl();
+  return useMutation<TranslationResponse, Error, UpdateTranslationVariables>({
+    mutationFn: async ({language, namespace, key, value}: UpdateTranslationVariables): Promise<TranslationResponse> => {
       const response: {
         data: TranslationResponse;
       } = await http.request({
@@ -88,7 +106,7 @@ export default function useSetTranslation(): UseMutationResult<TranslationRespon
 
       return response.data;
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
       // Invalidate translations cache after successful update
       queryClient.invalidateQueries({queryKey: [I18nQueryKeys.TRANSLATIONS]}).catch(() => {
         // Ignore invalidation errors
@@ -97,8 +115,8 @@ export default function useSetTranslation(): UseMutationResult<TranslationRespon
         // Ignore invalidation errors
       });
 
-      // Also invalidate the app-level i18n cache to refresh i18next resources
-      invalidateI18nCache();
+      // Call app-specific success handler if provided
+      onMutationSuccess?.(data, variables);
     },
   });
 }

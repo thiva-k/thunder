@@ -181,7 +181,7 @@ describe('ResourcePanelItem', () => {
         mode: 'dark',
         systemMode: 'light',
         setMode: vi.fn(),
-      });
+      } as unknown as ReturnType<typeof oxygenUI.useColorScheme>);
 
       const resource = createMockResource();
       render(<ResourcePanelItem resource={resource} />);
@@ -197,7 +197,7 @@ describe('ResourcePanelItem', () => {
         mode: 'system',
         systemMode: 'dark',
         setMode: vi.fn(),
-      });
+      } as unknown as ReturnType<typeof oxygenUI.useColorScheme>);
 
       const resource = createMockResource();
       render(<ResourcePanelItem resource={resource} />);
@@ -212,7 +212,7 @@ describe('ResourcePanelItem', () => {
         mode: 'system',
         systemMode: 'light',
         setMode: vi.fn(),
-      });
+      } as unknown as ReturnType<typeof oxygenUI.useColorScheme>);
 
       const resource = createMockResource();
       render(<ResourcePanelItem resource={resource} />);

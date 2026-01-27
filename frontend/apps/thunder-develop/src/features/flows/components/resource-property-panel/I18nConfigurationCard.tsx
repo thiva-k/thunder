@@ -38,9 +38,9 @@ import {
   Typography,
 } from '@wso2/oxygen-ui';
 import {PlusIcon, XIcon} from '@wso2/oxygen-ui-icons-react';
-import useGetLanguages from '../../../../api/useGetLanguages';
-import useGetTranslations from '../../../../api/useGetTranslations';
-import useSetTranslation from '../../../../api/useSetTranslation';
+import {useGetLanguages, useGetTranslations, useUpdateTranslation} from '@thunder/i18n';
+import {useConfig} from '@thunder/commons-contexts';
+import {invalidateI18nCache} from '../../../../i18n/invalidate-i18n-cache';
 import useFlowBuilderCore from '../../hooks/useFlowBuilderCore';
 
 /**
@@ -88,10 +88,18 @@ function I18nConfigurationCard({
   i18nKey: selectedI18nKey,
 }: I18nConfigurationCardPropsInterface): ReactElement {
   const {t} = useTranslation();
+  const {getServerUrl} = useConfig();
+  const serverUrl = getServerUrl();
   const {i18nText, i18nTextLoading} = useFlowBuilderCore();
-  const setTranslation = useSetTranslation();
-  const {data: languagesData} = useGetLanguages();
+  const updateTranslation = useUpdateTranslation({
+    serverUrl,
+    onMutationSuccess: () => {
+      invalidateI18nCache();
+    },
+  });
+  const {data: languagesData} = useGetLanguages({serverUrl});
   const {data: translationsData, isLoading: translationsLoading} = useGetTranslations({
+    serverUrl,
     language: DEFAULT_LANGUAGE,
     namespace: DEFAULT_NAMESPACE,
     enabled: open,
@@ -202,7 +210,7 @@ function I18nConfigurationCard({
       return;
     }
 
-    setTranslation.mutate(
+    updateTranslation.mutate(
       {
         language: selectedLanguage,
         namespace: DEFAULT_NAMESPACE,
@@ -220,7 +228,7 @@ function I18nConfigurationCard({
         },
       },
     );
-  }, [newKey, newTranslationValue, selectedLanguage, setTranslation, onChange, handleExitCreateMode, t]);
+  }, [newKey, newTranslationValue, selectedLanguage, updateTranslation, onChange, handleExitCreateMode, t]);
 
   /**
    * Handle close and reset state.
@@ -307,9 +315,9 @@ function I18nConfigurationCard({
         <Button
           variant="contained"
           onClick={handleCreateTranslation}
-          disabled={setTranslation.isPending || !newKey.trim() || !newTranslationValue.trim()}
+          disabled={updateTranslation.isPending || !newKey.trim() || !newTranslationValue.trim()}
         >
-          {setTranslation.isPending ? <CircularProgress size={16} /> : t('common:create')}
+          {updateTranslation.isPending ? <CircularProgress size={16} /> : t('common:create')}
         </Button>
       </Box>
     </Box>

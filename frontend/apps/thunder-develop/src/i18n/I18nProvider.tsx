@@ -21,7 +21,7 @@ import {useTranslation} from 'react-i18next';
 import {useQuery, useQueryClient} from '@tanstack/react-query';
 import {useConfig} from '@thunder/commons-contexts';
 import {useAsgardeo} from '@asgardeo/react';
-import I18nQueryKeys from '../api/I18nQueryKeys';
+import {I18nQueryKeys} from '@thunder/i18n';
 import {registerI18nCacheInvalidator, unregisterI18nCacheInvalidator} from './invalidate-i18n-cache';
 
 /**
@@ -35,9 +35,9 @@ interface TranslationsResponse {
 }
 
 /**
- * Props for I18nApiProvider.
+ * Props for I18nProvider.
  */
-export interface I18nApiProviderProps {
+export interface I18nProviderProps {
   /**
    * The children to render.
    */
@@ -58,15 +58,15 @@ export interface I18nApiProviderProps {
  * <AuthProvider>
  *   <ConfigProvider>
  *     <QueryClientProvider>
- *       <I18nApiProvider>
+ *       <I18nProvider>
  *         <App />
- *       </I18nApiProvider>
+ *       </I18nProvider>
  *     </QueryClientProvider>
  *   </ConfigProvider>
  * </AuthProvider>
  * ```
  */
-function I18nApiProvider({children}: I18nApiProviderProps): ReactElement {
+function I18nProvider({children}: I18nProviderProps): ReactElement {
   const {i18n} = useTranslation();
   const {http} = useAsgardeo() as unknown as {
     http: {
@@ -156,4 +156,4 @@ function I18nApiProvider({children}: I18nApiProviderProps): ReactElement {
   return children as ReactElement;
 }
 
-export default I18nApiProvider;
+export default I18nProvider;

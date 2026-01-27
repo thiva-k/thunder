@@ -30,7 +30,7 @@ interface WindowWithI18nCache extends Window {
 
 /**
  * Registers the i18n cache invalidation function.
- * Called by I18nApiProvider to expose the invalidation function.
+ * Called by I18nProvider to expose the invalidation function.
  *
  * @param invalidateFn - Function to invalidate the i18n cache
  */
@@ -40,7 +40,7 @@ export function registerI18nCacheInvalidator(invalidateFn: () => void): void {
 
 /**
  * Unregisters the i18n cache invalidation function.
- * Called by I18nApiProvider on cleanup.
+ * Called by I18nProvider on cleanup.
  */
 export function unregisterI18nCacheInvalidator(): void {
   delete (window as WindowWithI18nCache)[I18N_CACHE_INVALIDATE_KEY];

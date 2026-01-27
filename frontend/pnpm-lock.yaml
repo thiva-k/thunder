@@ -703,6 +703,12 @@ importers:
 
   packages/thunder-i18n:
     dependencies:
+      '@asgardeo/react':
+        specifier: 'catalog:'
+        version: 0.9.0(@types/react@19.2.7)(react@19.2.3)
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.90.5(react@19.2.3)
       i18next:
         specifier: 'catalog:'
         version: 25.6.0(typescript@5.9.3)
