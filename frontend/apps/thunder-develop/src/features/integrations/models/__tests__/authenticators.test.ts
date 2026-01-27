@@ -16,23 +16,21 @@
  * under the License.
  */
 
- .MuiFormHelperText-root {
-    .composer-input-field-hint-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: flex-start;
-        align-items: center;
-        gap: 8px;
-    }
-    &.MuiFormHelperText-contained {
-        .composer-input-field-hint-container {
-            margin-left: -14px;
-        }
-    }
-    &.oxygen-form-helper-text {
-        .composer-input-field-hint-container {
-            margin-top: -8px;
-            margin-left: 0px;
-        }
-    }
- }
+import {describe, it, expect} from 'vitest';
+import {AuthenticatorTypes} from '../authenticators';
+import type {AuthenticatorType} from '../authenticators';
+
+describe('AuthenticatorTypes', () => {
+  it('should have BASIC_AUTH defined with correct value', () => {
+    expect(AuthenticatorTypes.BASIC_AUTH).toBe('basic_auth');
+  });
+
+  it('should be a const object with expected keys', () => {
+    expect(Object.keys(AuthenticatorTypes)).toEqual(['BASIC_AUTH']);
+  });
+
+  it('should allow type-safe assignment', () => {
+    const authenticator: AuthenticatorType = AuthenticatorTypes.BASIC_AUTH;
+    expect(authenticator).toBe('basic_auth');
+  });
+});

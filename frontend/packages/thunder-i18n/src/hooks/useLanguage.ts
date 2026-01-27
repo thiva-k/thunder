@@ -17,8 +17,8 @@
  */
 
 import {useTranslation} from 'react-i18next';
-import type {SupportedLanguage, LanguageConfig} from '@thunder/i18n';
-import {LANGUAGE_CONFIGS} from '@thunder/i18n';
+import type {SupportedLanguage, LanguageConfig} from '../models';
+import {LANGUAGE_CONFIGS} from '../models';
 
 export interface UseLanguageReturn {
   currentLanguage: SupportedLanguage;
@@ -31,8 +31,28 @@ export interface UseLanguageReturn {
  * Uses react-i18next internally for language management.
  *
  * @returns {UseLanguageReturn} Language management utilities
+ *
+ * @example
+ * ```tsx
+ * function LanguageSwitcher() {
+ *   const { currentLanguage, availableLanguages, setLanguage } = useLanguage();
+ *
+ *   return (
+ *     <select
+ *       value={currentLanguage}
+ *       onChange={(e) => setLanguage(e.target.value as SupportedLanguage)}
+ *     >
+ *       {availableLanguages.map((lang) => (
+ *         <option key={lang.code} value={lang.code}>
+ *           {lang.nativeName}
+ *         </option>
+ *       ))}
+ *     </select>
+ *   );
+ * }
+ * ```
  */
-export function useLanguage(): UseLanguageReturn {
+export default function useLanguage(): UseLanguageReturn {
   const {i18n} = useTranslation();
 
   const currentLanguage = i18n.language as SupportedLanguage;

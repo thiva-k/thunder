@@ -154,4 +154,5 @@ describe('ContactsSection', () => {
       expect(textField).toHaveValue('');
     });
   });
+
 });
