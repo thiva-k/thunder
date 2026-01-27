@@ -114,6 +114,7 @@ export default defineConfig({
         '**/*.test.tsx',
         '**/*.spec.ts',
         '**/*.spec.tsx',
+        '**/EditTokenSettings.tsx',
       ],
     },
   },

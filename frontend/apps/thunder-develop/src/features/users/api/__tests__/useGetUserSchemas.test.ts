@@ -554,4 +554,21 @@ describe('useGetUserSchemas', () => {
 
     expect(result.current.loading).toBe(false);
   });
+
+  it('should handle non-Error object during initial fetch', async () => {
+    mockHttpRequest.mockRejectedValue('String error during initial fetch');
+
+    const {result} = renderHook(() => useGetUserSchemas());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toEqual({
+      code: 'FETCH_ERROR',
+      message: 'An unknown error occurred',
+      description: 'Failed to fetch user schemas',
+    });
+    expect(result.current.data).toBeNull();
+  });
 });
