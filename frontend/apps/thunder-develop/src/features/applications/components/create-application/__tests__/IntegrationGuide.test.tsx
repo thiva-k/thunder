@@ -57,6 +57,8 @@ describe('IntegrationGuide', () => {
 
   // Store mock at module level so tests can access it
   let clipboardWriteTextMock: ReturnType<typeof vi.fn>;
+  // Store original document.execCommand to restore after tests
+  let originalExecCommand: typeof document.execCommand;
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -70,10 +72,15 @@ describe('IntegrationGuide', () => {
       writable: true,
       configurable: true,
     });
+    // Save original execCommand before any test modifies it
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    originalExecCommand = document.execCommand;
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    // Restore original execCommand to prevent test pollution
+    document.execCommand = originalExecCommand;
   });
 
   describe('Rendering', () => {
@@ -308,6 +315,148 @@ describe('IntegrationGuide', () => {
 
       await waitFor(() => {
         expect(execCommandMock).toHaveBeenCalledWith('copy');
+      });
+    });
+
+    it('should handle fallback copy failure gracefully when execCommand throws', async () => {
+      const user = userEvent.setup({advanceTimers: vi.advanceTimersByTime});
+
+      // Mock clipboard to fail
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: vi.fn().mockRejectedValue(new Error('Clipboard not available')),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      // Mock document.execCommand to throw an error
+      const execCommandMock = vi.fn().mockImplementation(() => {
+        throw new Error('execCommand not supported');
+      });
+      document.execCommand = execCommandMock;
+
+      const props = {
+        ...defaultProps,
+        hasOAuthConfig: true,
+        clientId: 'test_client_id',
+      };
+
+      renderWithRouter(<IntegrationGuide {...props} />);
+
+      // Buttons are: app card, client ID copy button
+      const copyButtons = screen.getAllByRole('button');
+
+      // Should not throw even when both copy methods fail
+      await expect(user.click(copyButtons[1])).resolves.not.toThrow();
+
+      // execCommand should have been called
+      expect(execCommandMock).toHaveBeenCalledWith('copy');
+    });
+
+    it('should handle fallback copy failure gracefully when execCommand returns false', async () => {
+      const user = userEvent.setup({advanceTimers: vi.advanceTimersByTime});
+
+      // Mock clipboard to fail
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: vi.fn().mockRejectedValue(new Error('Clipboard not available')),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      // Mock document.execCommand to return false (copy failed)
+      const execCommandMock = vi.fn().mockReturnValue(false);
+      document.execCommand = execCommandMock;
+
+      const props = {
+        ...defaultProps,
+        hasOAuthConfig: true,
+        clientId: 'test_client_id',
+      };
+
+      renderWithRouter(<IntegrationGuide {...props} />);
+
+      const copyButtons = screen.getAllByRole('button');
+
+      // Should not throw
+      await expect(user.click(copyButtons[1])).resolves.not.toThrow();
+    });
+
+    it('should show copied state on successful fallback copy', async () => {
+      const user = userEvent.setup({advanceTimers: vi.advanceTimersByTime});
+
+      // Mock clipboard to fail
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: vi.fn().mockRejectedValue(new Error('Clipboard not available')),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      // Mock document.execCommand to succeed
+      document.execCommand = vi.fn().mockReturnValue(true);
+
+      const props = {
+        ...defaultProps,
+        hasOAuthConfig: true,
+        clientId: 'test_client_id',
+      };
+
+      renderWithRouter(<IntegrationGuide {...props} />);
+
+      const copyButtons = screen.getAllByRole('button');
+      await user.click(copyButtons[1]);
+
+      // Should show copied message after fallback copy succeeds
+      await waitFor(() => {
+        expect(screen.getByText('applications:clientSecret.copied')).toBeInTheDocument();
+      });
+
+      // Advance timers to clear copied state
+      act(() => {
+        vi.advanceTimersByTime(2500);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText('applications:clientSecret.copied')).not.toBeInTheDocument();
+      });
+    });
+
+    it('should clear existing timeout before setting new one in fallback copy', async () => {
+      const user = userEvent.setup({advanceTimers: vi.advanceTimersByTime});
+
+      // Mock clipboard to fail
+      Object.defineProperty(navigator, 'clipboard', {
+        value: {
+          writeText: vi.fn().mockRejectedValue(new Error('Clipboard not available')),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      // Mock document.execCommand to succeed
+      document.execCommand = vi.fn().mockReturnValue(true);
+
+      const props = {
+        ...defaultProps,
+        hasOAuthConfig: true,
+        clientId: 'test_client_id',
+      };
+
+      renderWithRouter(<IntegrationGuide {...props} />);
+
+      const copyButtons = screen.getAllByRole('button');
+
+      // Click twice rapidly to trigger timeout clearing logic
+      await user.click(copyButtons[1]);
+      await user.click(copyButtons[1]);
+
+      // Should still show copied message
+      await waitFor(() => {
+        expect(screen.getByText('applications:clientSecret.copied')).toBeInTheDocument();
       });
     });
   });

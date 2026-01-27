@@ -375,4 +375,31 @@ describe('useUpdateUser', () => {
     });
     expect(result.current.error).toBeNull();
   });
+
+  it('should handle non-Error rejection', async () => {
+    const mockRequest: UpdateUserRequest = {
+      organizationUnit: '/sales',
+      type: 'customer',
+      attributes: {
+        name: 'John Updated',
+        email: 'john.updated@example.com',
+      },
+    };
+
+    mockHttpRequest.mockRejectedValueOnce('String error');
+
+    const {result} = renderHook(() => useUpdateUser());
+
+    await expect(result.current.updateUser('user-123', mockRequest)).rejects.toBe('String error');
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        code: 'UPDATE_USER_ERROR',
+        message: 'An unknown error occurred',
+        description: 'Failed to update user',
+      });
+      expect(result.current.data).toBeNull();
+      expect(result.current.loading).toBe(false);
+    });
+  });
 });

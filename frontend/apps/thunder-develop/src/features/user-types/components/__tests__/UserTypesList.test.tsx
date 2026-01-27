@@ -523,4 +523,41 @@ describe('UserTypesList', () => {
       expect(screen.getByText('Failed to load organization units')).toBeInTheDocument();
     });
   });
+
+  it('handles navigation error when row is clicked', async () => {
+    const user = userEvent.setup();
+    mockNavigate.mockRejectedValue(new Error('Navigation failed'));
+
+    render(<UserTypesList />);
+
+    const row = screen.getByTestId('row-schema1');
+    await user.click(row);
+
+    // Navigation was called but failed - the catch handler silently handles the error
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/user-types/schema1');
+    });
+  });
+
+  it('handles navigation error when View menu item is clicked', async () => {
+    const user = userEvent.setup();
+    mockNavigate.mockRejectedValue(new Error('Navigation failed'));
+
+    render(<UserTypesList />);
+
+    const actionButtons = screen.getAllByRole('button', {name: /open actions menu/i});
+    await user.click(actionButtons[0]);
+
+    await waitFor(() => {
+      expect(screen.getByText('View')).toBeInTheDocument();
+    });
+
+    const viewButton = screen.getByText('View');
+    await user.click(viewButton);
+
+    // Navigation was called but failed - the catch handler silently handles the error
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/user-types/schema1');
+    });
+  });
 });

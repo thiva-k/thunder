@@ -31,12 +31,13 @@ vi.mock('@asgardeo/react', () => ({
 }));
 
 // Mock useConfig
+const mockGetServerUrl = vi.fn<() => string | undefined>(() => 'https://localhost:8090');
 vi.mock('@thunder/commons-contexts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunder/commons-contexts')>();
   return {
     ...actual,
     useConfig: () => ({
-      getServerUrl: () => 'https://localhost:8090',
+      getServerUrl: mockGetServerUrl,
     }),
   };
 });
@@ -46,6 +47,7 @@ describe('useDeleteUserType', () => {
 
   beforeEach(() => {
     mockHttpRequest.mockReset();
+    mockGetServerUrl.mockReturnValue('https://localhost:8090');
   });
 
   afterEach(() => {
@@ -199,5 +201,23 @@ describe('useDeleteUserType', () => {
       });
       expect(result.current.loading).toBe(false);
     });
+  });
+
+  it('should fallback to env variable when getServerUrl returns undefined', async () => {
+    mockGetServerUrl.mockReturnValue(undefined);
+    mockHttpRequest.mockResolvedValueOnce({data: null});
+
+    const {result} = renderHook(() => useDeleteUserType());
+
+    const deleteResult = await result.current.deleteUserType(mockUserTypeId);
+
+    expect(deleteResult).toBe(true);
+
+    expect(mockHttpRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining('/user-schemas/') as string,
+        method: 'DELETE',
+      }),
+    );
   });
 });

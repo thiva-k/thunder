@@ -367,4 +367,21 @@ describe('useGetUser', () => {
 
     expect(result.current.loading).toBe(false);
   });
+
+  it('should handle non-Error object during initial fetch', async () => {
+    mockHttpRequest.mockRejectedValue('String error during initial fetch');
+
+    const {result} = renderHook(() => useGetUser('user-123'));
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.error).toEqual({
+      code: 'FETCH_ERROR',
+      message: 'An unknown error occurred',
+      description: 'Failed to fetch user',
+    });
+    expect(result.current.data).toBeNull();
+  });
 });

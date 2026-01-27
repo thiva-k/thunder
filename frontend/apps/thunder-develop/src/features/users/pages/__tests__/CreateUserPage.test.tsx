@@ -603,4 +603,44 @@ describe('CreateUserPage', () => {
 
     consoleSpy.mockRestore();
   });
+
+  it('uses selectedSchema name when field value is undefined', async () => {
+    const user = userEvent.setup();
+    render(<CreateUserPage />);
+
+    // The select should initially show the first schema name
+    const select = screen.getByRole('combobox');
+    expect(select).toHaveTextContent('Employee');
+
+    // Change to another schema
+    await user.click(select);
+    const contractorOption = await screen.findByText('Contractor');
+    await user.click(contractorOption);
+
+    await waitFor(() => {
+      expect(select).toHaveTextContent('Contractor');
+    });
+  });
+
+  it('shows validation error when submitting without required fields', async () => {
+    const user = userEvent.setup();
+
+    mockUseGetUserSchemas.mockReturnValue({
+      data: mockSchemasData,
+      loading: false,
+      error: null,
+      refetch: mockRefetchSchemas,
+    });
+
+    render(<CreateUserPage />);
+
+    // Submit without filling required fields
+    const submitButton = screen.getByRole('button', {name: /create user/i});
+    await user.click(submitButton);
+
+    // Check that validation runs - username is required
+    await waitFor(() => {
+      expect(screen.getByText('username is required')).toBeInTheDocument();
+    });
+  });
 });
