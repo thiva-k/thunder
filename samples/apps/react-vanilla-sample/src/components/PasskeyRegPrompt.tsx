@@ -29,13 +29,9 @@ import type {
 import { createPasskeyCredential } from '../services/authService';
 
 interface PasskeyRegPromptProps {
-    /** The passkey creation options from the server (JSON string) */
     passkeyCreationOptionsJson: string;
-    /** Callback when passkey credential is created */
     onCredentialCreated: (credential: PasskeyCredentialResponse) => void;
-    /** Callback when an error occurs */
     onError: (error: string) => void;
-    /** Whether the component is in a loading state */
     isLoading?: boolean;
 }
 
@@ -55,19 +51,12 @@ const PasskeyRegPrompt = ({
         setCreating(true);
 
         try {
-            // Parse the passkey creation options
             const options: PasskeyCreationOptions = JSON.parse(passkeyCreationOptionsJson);
-
-            // Call WebAuthn API to create credential
             const credential = await createPasskeyCredential(options);
-
-            // Call the success callback with the credential
             onCredentialCreated(credential);
         } catch (err) {
-            // Provide user-friendly error messages based on DOMException name
             let displayError: string;
             
-            // WebAuthn throws DOMException objects with a name property
             if (err instanceof DOMException) {
                 switch (err.name) {
                     case 'NotAllowedError':
