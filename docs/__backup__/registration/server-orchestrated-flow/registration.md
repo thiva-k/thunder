@@ -3,7 +3,7 @@
 Thunder supports self-registration flows where the server orchestrates the entire registration process. This allows users to execute registration flows via REST APIs, making it suitable for native applications, mobile apps, and single-page applications (SPAs).
 
 > [!TIP]
-> To customize registration flows, see the [Flow Guides](/docs/guides/flows/) for creating and managing flows using the Visual Flow Builder or the Flow Management API.
+> To customize registration flows, see the [Flow Guides](../../flows/) for creating and managing flows using the Visual Flow Builder or the Flow Management API.
 
 ## Enabling Self Registration
 
@@ -491,7 +491,7 @@ To enable self-registration, set the `is_registration_flow_enabled` property to 
 
 3. **Create or Update the Registration Flow**
 
-    Use the Flow Management API or Visual Flow Builder to create a GitHub registration flow with your `idpId`. See the [Flow Examples](/docs/guides/flows/flow-examples.md#github-oauth-registration) for a complete example.
+    Use the Flow Management API or Visual Flow Builder to create a GitHub registration flow with your `idpId`. See the [Flow Examples](../../flows/flow-examples.md#github-oauth-registration) for a complete example.
 
     Note the `id` of the created registration flow for the next step.
 

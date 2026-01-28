@@ -19,9 +19,9 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
+import fs from 'fs';
 import webpackPlugin from './plugins/webpackPlugin';
 import thunderConfig from './thunder.config';
-import fs from 'fs';
 
 const resourcesHTML = fs.readFileSync('./src/snippets/resources.html', 'utf-8');
 
@@ -37,22 +37,17 @@ const config: Config = {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
 
-  // Set the production url of your site here
   url: thunderConfig.project.documentation.deployment.production.url,
-  // Set the /<baseUrl>/ pathname under which your site is served
-  // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  // Since we use GitHub pages, the base URL is the repository name.
+  baseUrl: `/${thunderConfig.project.documentation.deployment.production.baseUrl}/`,
 
   // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
   organizationName: thunderConfig.project.source.github.owner.name, // Usually your GitHub org/user name.
   projectName: thunderConfig.project.source.github.name, // Usually your repo name.
 
-  onBrokenLinks: 'throw',
+  onBrokenLinks: 'log',
 
-  // Even if you don't use internationalization, you can use this field to set
-  // useful metadata like html lang. For example, if your site is Chinese, you
-  // may want to replace "en" with "zh-Hans".
+  // Useful metadata like html lang for internationalization.
   i18n: {
     defaultLocale: 'en',
     locales: ['en'],
@@ -181,12 +176,12 @@ const config: Config = {
       'classic',
       {
         docs: {
+          path: 'content',
           sidebarPath: './sidebars.ts',
           // Derived from docusaurus-theme-openapi
           docItemComponent: '@theme/ApiItem',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          // Edit URL for the "edit this page" feature.
+          editUrl: thunderConfig.project.source.github.editUrls.content,
         },
         blog: {
           showReadingTime: true,
@@ -194,9 +189,8 @@ const config: Config = {
             type: ['rss', 'atom'],
             xslt: true,
           },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl: 'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          // Blog edit URL.
+          editUrl: thunderConfig.project.source.github.editUrls.blog,
           // Useful options to enforce blogging best practices
           onInlineTags: 'warn',
           onInlineAuthors: 'warn',
@@ -241,7 +235,7 @@ const config: Config = {
           label: 'APIs',
         },
         {
-          to: '/sdks',
+          to: '/docs/sdks/overview',
           position: 'left',
           label: 'SDKs',
         },

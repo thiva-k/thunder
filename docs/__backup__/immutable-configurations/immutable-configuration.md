@@ -611,18 +611,18 @@ When immutable configuration mode is enabled:
 ### Read Operations (Allowed)
 
 ✅ **GET /applications** - List applications  
-✅ **GET /applications/{id}** - Get application details  
+✅ **GET /applications/\{id\}** - Get application details  
 ✅ **GET /flows** - List flow graphs  
-✅ **GET /flows/{id}** - Get flow graph details  
+✅ **GET /flows/\{id\}** - Get flow graph details  
 
 ### Write Operations (Disabled)
 
 ❌ **POST /applications** - Returns error  
-❌ **PUT /applications/{id}** - Returns error  
-❌ **DELETE /applications/{id}** - Returns error  
+❌ **PUT /applications/\{id\}** - Returns error  
+❌ **DELETE /applications/\{id\}** - Returns error  
 ❌ **POST /flows** - Returns error  
-❌ **PUT /flows/{id}** - Returns error  
-❌ **DELETE /flows/{id}** - Returns error
+❌ **PUT /flows/\{id\}** - Returns error  
+❌ **DELETE /flows/\{id\}** - Returns error
 
 
 ## Best Practices
@@ -789,4 +789,4 @@ This is expected behavior. To add new resources:
 
 For issues or questions:
 - **GitHub Issues:** [Report a bug](https://github.com/asgardeo/thunder/issues)
-- **Documentation:** [Thunder Guides](/docs/guides/README.md)
+- **Documentation:** [Thunder Guides](../README.md)
