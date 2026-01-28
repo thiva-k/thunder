@@ -158,6 +158,9 @@ importers:
       '@thunder/eslint-plugin-thunder':
         specifier: workspace:^
         version: link:packages/thunder-eslint-plugin
+      '@thunder/logger':
+        specifier: workspace:^
+        version: link:packages/thunder-logger
       '@thunder/prettier-config':
         specifier: workspace:^
         version: link:packages/thunder-prettier-config

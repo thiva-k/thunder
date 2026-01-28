@@ -17,9 +17,49 @@
  */
 
 import MDXComponents from '@theme-original/MDXComponents';
+import {Box, Card, CardContent, Typography} from '@wso2/oxygen-ui';
+import Stepper from '@site/src/components/Stepper';
+import TutorialHero, {TutorialHeroItem} from '@site/src/components/TutorialHero';
+import SDKCard from '@site/src/components/SDKCard';
+import ReactLogo from '@site/src/components/icons/ReactLogo';
+import NextLogo from '@site/src/components/icons/NextLogo';
+import VueLogo from '@site/src/components/icons/VueLogo';
+import NuxtLogo from '@site/src/components/icons/NuxtLogo';
+import AngularLogo from '@site/src/components/icons/AngularLogo';
+import BrowserLogo from '@site/src/components/icons/BrowserLogo';
+import NodeLogo from '@site/src/components/icons/NodeLogo';
+import ExpressLogo from '@site/src/components/icons/ExpressLogo';
+import GoLogo from '@site/src/components/icons/GoLogo';
+import PythonLogo from '@site/src/components/icons/PythonLogo';
+import FlutterLogo from '@site/src/components/icons/FlutterLogo';
+import iOSLogo from '@site/src/components/icons/iOSLogo';
+import AndroidLogo from '@site/src/components/icons/AndroidLogo';
+import ReactRouterLogo from '@site/src/components/icons/ReactRouterLogo';
 
 export default {
   ...MDXComponents,
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Stepper,
+  TutorialHero,
+  TutorialHeroItem,
+  SDKCard,
+  ReactLogo,
+  NextLogo,
+  VueLogo,
+  NuxtLogo,
+  AngularLogo,
+  BrowserLogo,
+  NodeLogo,
+  ExpressLogo,
+  GoLogo,
+  PythonLogo,
+  FlutterLogo,
+  iOSLogo,
+  AndroidLogo,
+  ReactRouterLogo,
   // TODO: Heading styling is a bit off when oxygen-ui Typography is used.
   // After sorting that out, we can switch to using Oxygen UI Typography for headings as well.
   // ex: h1: (props: TypographyProps<'h1'>) => <Typography variant="h1" {...props} />,

@@ -24,6 +24,7 @@ const thunderConfig = {
     documentation: {
       deployment: {
         production: {
+          baseUrl: 'thunder',
           // TODO: Docusaurus doesn't seem to allow subpaths in the URL yet.
           // Can't use the GitHub pages URL until then.
           url: 'https://thunder.dev',
@@ -38,6 +39,10 @@ const thunderConfig = {
         discussionsUrl: 'https://github.com/asgardeo/thunder/discussions',
         issuesUrl: 'https://github.com/asgardeo/thunder/issues',
         releasesUrl: 'https://github.com/asgardeo/thunder/releases',
+        editUrls: {
+          blog: 'https://github.com/asgardeo/thunder/tree/main/blog/',
+          content: 'https://github.com/asgardeo/thunder/tree/main/content/',
+        },
         owner: {
           name: 'asgardeo',
         },

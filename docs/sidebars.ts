@@ -17,21 +17,21 @@
  */
 
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
-import applicationApiSidebar from './docs/apis/application/sidebar';
-import authenticationApiSidebar from './docs/apis/authentication/sidebar';
-import brandingApiSidebar from './docs/apis/branding/sidebar';
-import flowExecutionApiSidebar from './docs/apis/flow-execution/sidebar';
-import flowManagementApiSidebar from './docs/apis/flow-management/sidebar';
-import groupApiSidebar from './docs/apis/group/sidebar';
-import healthCheckApiSidebar from './docs/apis/health-check/sidebar';
-import i18nApiSidebar from './docs/apis/i18n/sidebar';
-import idpApiSidebar from './docs/apis/idp/sidebar';
-import notificationSenderApiSidebar from './docs/apis/notification-sender/sidebar';
-import ouApiSidebar from './docs/apis/ou/sidebar';
-import registrationApiSidebar from './docs/apis/registration/sidebar';
-import resourceApiSidebar from './docs/apis/resource/sidebar';
-import roleApiSidebar from './docs/apis/role/sidebar';
-import userApiSidebar from './docs/apis/user/sidebar';
+import applicationApiSidebar from './content/apis/application/sidebar';
+import authenticationApiSidebar from './content/apis/authentication/sidebar';
+import brandingApiSidebar from './content/apis/branding/sidebar';
+import flowExecutionApiSidebar from './content/apis/flow-execution/sidebar';
+import flowManagementApiSidebar from './content/apis/flow-management/sidebar';
+import groupApiSidebar from './content/apis/group/sidebar';
+import healthCheckApiSidebar from './content/apis/health-check/sidebar';
+import i18nApiSidebar from './content/apis/i18n/sidebar';
+import idpApiSidebar from './content/apis/idp/sidebar';
+import notificationSenderApiSidebar from './content/apis/notification-sender/sidebar';
+import ouApiSidebar from './content/apis/ou/sidebar';
+import registrationApiSidebar from './content/apis/registration/sidebar';
+import resourceApiSidebar from './content/apis/resource/sidebar';
+import roleApiSidebar from './content/apis/role/sidebar';
+import userApiSidebar from './content/apis/user/sidebar';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
@@ -55,7 +55,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Application',
         description: 'This API is used to manage applications.',
-        slug: '/apis/application',
+        slug: 'apis/application',
       },
       items: applicationApiSidebar,
     },
@@ -66,7 +66,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Authentication',
         description: 'This API is used to manage authentication.',
-        slug: '/apis/authentication',
+        slug: 'apis/authentication',
       },
       items: authenticationApiSidebar,
     },
@@ -77,7 +77,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Branding',
         description: 'This API is used to manage branding.',
-        slug: '/apis/branding',
+        slug: 'apis/branding',
       },
       items: brandingApiSidebar,
     },
@@ -88,7 +88,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Flow Execution',
         description: 'This API is used to execute flows.',
-        slug: '/apis/flow-execution',
+        slug: 'apis/flow-execution',
       },
       items: flowExecutionApiSidebar,
     },
@@ -99,7 +99,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Flow Management',
         description: 'This API is used to manage flows.',
-        slug: '/apis/flow-management',
+        slug: 'apis/flow-management',
       },
       items: flowManagementApiSidebar,
     },
@@ -110,7 +110,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Group',
         description: 'This API is used to manage groups.',
-        slug: '/apis/group',
+        slug: 'apis/group',
       },
       items: groupApiSidebar,
     },
@@ -121,7 +121,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Health Check',
         description: 'This API is used to check the health of the system.',
-        slug: '/apis/health-check',
+        slug: 'apis/health-check',
       },
       items: healthCheckApiSidebar,
     },
@@ -132,7 +132,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Internationalization',
         description: 'This API is used to manage internationalization.',
-        slug: '/apis/i18n',
+        slug: 'apis/i18n',
       },
       items: i18nApiSidebar,
     },
@@ -143,7 +143,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Identity Provider',
         description: 'This API is used to manage identity providers.',
-        slug: '/apis/idp',
+        slug: 'apis/idp',
       },
       items: idpApiSidebar,
     },
@@ -154,7 +154,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Notification Sender',
         description: 'This API is used to manage notification senders.',
-        slug: '/apis/notification-sender',
+        slug: 'apis/notification-sender',
       },
       items: notificationSenderApiSidebar,
     },
@@ -165,7 +165,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Organization Unit',
         description: 'This API is used to manage organization units.',
-        slug: '/apis/ou',
+        slug: 'apis/ou',
       },
       items: ouApiSidebar,
     },
@@ -176,7 +176,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Registration',
         description: 'This API is used to manage registration.',
-        slug: '/apis/registration',
+        slug: 'apis/registration',
       },
       items: registrationApiSidebar,
     },
@@ -187,7 +187,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Resource',
         description: 'This API is used to manage resources.',
-        slug: '/apis/resource',
+        slug: 'apis/resource',
       },
       items: resourceApiSidebar,
     },
@@ -198,7 +198,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'Role',
         description: 'This API is used to manage roles.',
-        slug: '/apis/role',
+        slug: 'apis/role',
       },
       items: roleApiSidebar,
     },
@@ -209,7 +209,7 @@ const sidebars: SidebarsConfig = {
         type: 'generated-index',
         title: 'User',
         description: 'This API is used to manage users.',
-        slug: '/apis/user',
+        slug: 'apis/user',
       },
       items: userApiSidebar,
     },

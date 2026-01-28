@@ -102,14 +102,17 @@
 /*                        Overrides and Additions                       */
 /* -------------------------------------------------------------------- */
 
-/* Override the html background to use oxygen background */
-html {
-  background: var(--oxygen-palette-common-background);
+/* Manually inject the radial background since `@wso2/oxygen-ui` adds it to the body. */
+html[data-color-scheme='light'] #__docusaurus {
+    background-attachment: fixed;
+    background-image: radial-gradient(circle at 65% 30%, rgba(255, 116, 0, 0.1) 10%, rgba(255, 255, 255, 0) 40% 40%), radial-gradient(circle at 15% 50%, rgba(74, 41, 165, 0.1) 1%, rgba(255, 255, 255, 0) 40% 70%), radial-gradient(circle at center, rgba(255, 255, 255, 0.6) 0%, var(--oxygen-palette-background-default) 100%);
+    background-blend-mode: normal;
 }
 
-/* Override the body hight to make sure the body radial gradient works */
-html[data-page='home'] {
-  height: unset;
+html[data-color-scheme='dark'] #__docusaurus {
+    background-attachment: fixed;
+    background-image: radial-gradient(circle at 65% 30%, rgb(255 116 0 / 13%) 10%, rgba(0, 0, 0, 0) 60% 40%), radial-gradient(circle at 15% 50%, rgb(132 40 0 / 18%) 1%, rgba(0, 0, 0, 0) 40% 70%), radial-gradient(circle at center, rgba(0, 0, 0, 0.6) 0%, var(--oxygen-palette-background-default) 100%);
+    background-blend-mode: screen;
 }
 
 /* ------------------------------ Font Adjustments ---------------------- */
