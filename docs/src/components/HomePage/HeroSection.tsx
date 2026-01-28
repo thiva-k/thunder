@@ -166,7 +166,7 @@ export default function HeroSection(): JSX.Element {
             powered by open source innovation.
           </Typography>
           <Stack direction="row" spacing={2} sx={{mb: 8}}>
-            <Button component={Link} href="/guides" variant="contained" color="primary" size="large">
+            <Button component={Link} href="/docs/guides/introduction" variant="contained" color="primary" size="large">
               Get Started
             </Button>
             <Button
