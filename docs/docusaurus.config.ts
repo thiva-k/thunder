@@ -32,6 +32,11 @@ const config: Config = {
   tagline: thunderConfig.project.description,
   favicon: 'assets/images/favicon.ico',
 
+  // Prevent search engine indexing
+  // TODO: Remove this flag when the docs are ready for public access
+  // Tracker: https://github.com/asgardeo/thunder/issues/1209
+  noIndex: true,
+
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4

@@ -70,7 +70,6 @@ export default function SDKCard({
         height: '100%',
         border: '1px solid',
         borderColor: 'divider',
-        bgcolor: 'background.paper',
         transition: 'all 0.3s ease',
         position: 'relative',
         overflow: 'visible',
