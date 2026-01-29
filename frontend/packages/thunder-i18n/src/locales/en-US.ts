@@ -1158,13 +1158,32 @@ const translations = {
     // Passkey executor modes
     'core.executions.passkey.mode.challenge': 'Challenge',
     'core.executions.passkey.mode.verify': 'Verify',
+    'core.executions.passkey.mode.registerStart': 'Start Registration',
+    'core.executions.passkey.mode.registerFinish': 'Finish Registration',
     'core.executions.passkey.mode.label': 'Mode',
     'core.executions.passkey.mode.placeholder': 'Select a mode',
     'core.executions.passkey.description': 'Configure the Passkey executor settings.',
 
+    // Passkey relying party configuration
+    'core.executions.passkey.relyingPartyId.label': 'Relying Party ID',
+    'core.executions.passkey.relyingPartyId.placeholder': 'e.g., localhost or example.com',
+    'core.executions.passkey.relyingPartyId.hint':
+      'The domain identifier for passkey registration (typically your domain name)',
+    'core.executions.passkey.relyingPartyName.label': 'Relying Party Name',
+    'core.executions.passkey.relyingPartyName.placeholder': 'e.g., My Application',
+    'core.executions.passkey.relyingPartyName.hint': 'A human-readable name shown to users during passkey registration',
+
     // Execution steps - tooltips and messages
     'core.executions.tooltip.configurationHint': 'Click to configure this step',
     'core.executions.landing.message': 'This {{executor}} step will redirect users to a landing page.',
+
+    // Execution steps - branching handles
+    'core.executions.handles.success': 'onSuccess',
+    'core.executions.handles.failure': 'onFailure',
+
+    // Canvas hints and tips
+    'core.canvas.hints.autoLayout': 'Tip: Use auto-layout to organize your flow',
+    'core.canvas.buttons.autoLayout': 'Auto Layout',
 
     // Steps - end
     'core.steps.end.flowCompletionProperties': 'Flow Completion Properties',
@@ -1338,6 +1357,12 @@ const translations = {
 
     // Button extended properties
     'core.buttonExtendedProperties.type': 'Type',
+    'core.buttonExtendedProperties.startIcon.label': 'Start Icon',
+    'core.buttonExtendedProperties.startIcon.placeholder': 'Enter icon path (e.g., assets/images/icons/icon.svg)',
+    'core.buttonExtendedProperties.startIcon.hint': 'Optional icon displayed before the button label',
+    'core.buttonExtendedProperties.endIcon.label': 'End Icon',
+    'core.buttonExtendedProperties.endIcon.placeholder': 'Enter icon path (e.g., assets/images/icons/icon.svg)',
+    'core.buttonExtendedProperties.endIcon.hint': 'Optional icon displayed after the button label',
 
     // Rules properties
     'core.rulesProperties.description': 'Define a rule to how conditionally proceed to next steps in the flow',

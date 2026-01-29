@@ -5611,31 +5611,32 @@ describe('handleStepLoad - Non-VIEW Steps', () => {
 });
 
 describe('generateUnconnectedEdges Logic', () => {
-  it('should identify edges from node actions with next property', () => {
-    const action = {next: 'target-node-id'};
-    const hasNext = action && typeof action === 'object' && 'next' in action && action.next;
-    expect(hasNext).toBe('target-node-id');
+  it('should identify edges from node actions with onSuccess property', () => {
+    const action = {onSuccess: 'target-node-id'};
+    const hasOnSuccess = action && typeof action === 'object' && 'onSuccess' in action && action.onSuccess;
+    expect(hasOnSuccess).toBe('target-node-id');
   });
 
-  it('should skip actions without next property', () => {
+  it('should skip actions without onSuccess property', () => {
     const action = {executor: 'some-executor'};
-    const hasNext = action && typeof action === 'object' && 'next' in action && (action as {next?: string}).next;
-    expect(hasNext).toBeFalsy();
+    const hasOnSuccess =
+      action && typeof action === 'object' && 'onSuccess' in action && (action as {onSuccess?: string}).onSuccess;
+    expect(hasOnSuccess).toBeFalsy();
   });
 
   it('should process nested form components for actions', () => {
     const formComponent: Element = {
       id: 'form-1',
       type: BlockTypes.Form,
-      components: [{id: 'btn-1', type: ElementTypes.Action, action: {next: 'step-2'}} as Element],
+      components: [{id: 'btn-1', type: ElementTypes.Action, action: {onSuccess: 'step-2'}} as Element],
     } as Element;
 
     const nestedActions = formComponent.components?.filter(
-      (c) => c.action && typeof c.action === 'object' && 'next' in c.action,
+      (c) => c.action && typeof c.action === 'object' && 'onSuccess' in c.action,
     );
 
     expect(nestedActions).toHaveLength(1);
-    expect((nestedActions![0].action as {next: string}).next).toBe('step-2');
+    expect((nestedActions![0].action as {onSuccess: string}).onSuccess).toBe('step-2');
   });
 });
 
