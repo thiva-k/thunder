@@ -1332,7 +1332,7 @@ describe('reactFlowTransformer', () => {
           type: ElementTypes.Action,
           category: ElementCategories.Action,
           action: {
-            next: 'exec-1',
+            onSuccess: 'exec-1',
             executor: {name: 'TestExecutor'},
           },
         } as unknown as Element,

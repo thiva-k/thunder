@@ -414,7 +414,7 @@ describe('useDeleteExecutionResource', () => {
         category: 'ACTION',
         action: {
           type: 'NEXT',
-          next: 'execution-1',
+          onSuccess: 'execution-1',
         },
       };
 
