@@ -148,7 +148,7 @@ function ExecutionMinimal({resource}: ExecutionMinimalPropsInterface): ReactElem
           id={`${resource.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}
         />
       )}
-      {/* Failure handle - shown at the bottom when onFailure path exists */}
+      {/* Failure handle - shown at the bottom when the action supports branching (has onFailure property) */}
       {hasBranchingSupport && (
         <Tooltip title={t('flows:core.executions.handles.failure')} placement="bottom">
           <Box className="handle-wrapper failure-wrapper">

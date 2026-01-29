@@ -1822,7 +1822,7 @@ describe('generateUnconnectedEdges Function', () => {
           components: [
             {
               id: 'button-1',
-              action: {next: 'step-2'},
+              action: {onSuccess: 'step-2'},
             },
           ],
         },
@@ -1851,7 +1851,7 @@ describe('generateUnconnectedEdges Function', () => {
           components: [
             {
               id: 'button-1',
-              action: {next: 'non-existent-step'},
+              action: {onSuccess: 'non-existent-step'},
             },
           ],
         },
@@ -1878,7 +1878,7 @@ describe('generateUnconnectedEdges Function', () => {
               components: [
                 {
                   id: 'button-1',
-                  action: {next: 'step-2'},
+                  action: {onSuccess: 'step-2'},
                 },
               ],
             },
@@ -1906,7 +1906,7 @@ describe('generateUnconnectedEdges Function', () => {
         type: 'EXECUTION',
         position: {x: 0, y: 0},
         data: {
-          action: {next: 'step-2'},
+          action: {onSuccess: 'step-2'},
         },
       },
       {
@@ -1919,7 +1919,7 @@ describe('generateUnconnectedEdges Function', () => {
 
     // Verify node-level action
     expect(currentNodes[0].data.action).toBeDefined();
-    expect((currentNodes[0].data.action as {next: string}).next).toBe('step-2');
+    expect((currentNodes[0].data.action as {onSuccess: string}).onSuccess).toBe('step-2');
   });
 });
 
@@ -3492,7 +3492,7 @@ describe('generateUnconnectedEdges - Node Data Processing', () => {
             {
               id: 'form-1',
               type: BlockTypes.Form,
-              components: [{id: 'button-1', action: {next: 'step-2'}}],
+              components: [{id: 'button-1', action: {onSuccess: 'step-2'}}],
             },
           ],
         },
@@ -3513,7 +3513,7 @@ describe('generateUnconnectedEdges - Node Data Processing', () => {
         type: 'EXECUTION',
         position: {x: 0, y: 0},
         data: {
-          action: {next: 'view-step'},
+          action: {onSuccess: 'view-step'},
         },
       },
       {id: 'view-step', type: 'VIEW', position: {x: 100, y: 0}, data: {}},
@@ -3521,7 +3521,7 @@ describe('generateUnconnectedEdges - Node Data Processing', () => {
 
     // Verify node-level action is accessible
     expect(nodes[0].data.action).toBeDefined();
-    expect((nodes[0].data.action as {next: string}).next).toBe('view-step');
+    expect((nodes[0].data.action as {onSuccess: string}).onSuccess).toBe('view-step');
   });
 });
 
@@ -4795,7 +4795,7 @@ describe('generateUnconnectedEdges - Edge Generation', () => {
         type: 'VIEW',
         position: {x: 0, y: 0},
         data: {
-          components: [{id: 'btn-1', action: {next: 'step-2'}}],
+          components: [{id: 'btn-1', action: {onSuccess: 'step-2'}}],
         },
       },
       {id: 'step-2', type: 'VIEW', position: {x: 100, y: 0}, data: {}},
@@ -4823,7 +4823,7 @@ describe('generateUnconnectedEdges - Edge Generation', () => {
         type: 'VIEW',
         position: {x: 0, y: 0},
         data: {
-          components: [{id: 'btn-1', action: {next: 'non-existent'}}],
+          components: [{id: 'btn-1', action: {onSuccess: 'non-existent'}}],
         },
       },
     ];
@@ -4843,7 +4843,7 @@ describe('generateUnconnectedEdges - Edge Generation', () => {
             {
               id: 'form-1',
               type: BlockTypes.Form,
-              components: [{id: 'nested-btn', action: {next: 'step-2'}}],
+              components: [{id: 'nested-btn', action: {onSuccess: 'step-2'}}],
             },
           ],
         },
@@ -4864,13 +4864,13 @@ describe('generateUnconnectedEdges - Edge Generation', () => {
         type: 'EXECUTION',
         position: {x: 0, y: 0},
         data: {
-          action: {next: 'view-1'},
+          action: {onSuccess: 'view-1'},
         },
       },
     ];
 
     expect(nodes[0].data.action).toBeDefined();
-    expect((nodes[0].data.action as {next: string}).next).toBe('view-1');
+    expect((nodes[0].data.action as {onSuccess: string}).onSuccess).toBe('view-1');
   });
 });
 
