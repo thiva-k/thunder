@@ -1,0 +1,40 @@
+%%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#E8F5E9', 'actorBorder': '#2E7D32', 'signalColor': '#333333', 'fontSize': '13px'}}}%%
+sequenceDiagram
+    autonumber
+    participant C as OAuth Client
+    participant TE as Token Endpoint
+    participant CAM as Client Auth<br/>Middleware
+    participant GH as Refresh Token<br/>Grant Handler
+    participant TV as Token Validator
+    participant TS as Token Service
+
+    rect rgb(232, 245, 233)
+        C->>TE: POST /oauth2/token<br/>grant_type=refresh_token<br/>refresh_token=...&scope=...<br/>+ Client authentication
+    end
+
+    rect rgb(243, 229, 245)
+        TE->>CAM: Client Auth Middleware
+        CAM-->>TE: Client authenticated
+
+        Note over TE: Validate refresh_token<br/>grant allowed for app
+        TE->>GH: ValidateGrant + HandleGrant
+
+        GH->>TV: ValidateRefreshToken(token, clientID)
+        Note over TV: Verify JWT signature + expiry<br/>Validate sub == client_id<br/>Validate required claims present
+
+        TV-->>GH: Refresh token claims
+
+        Note over GH: Scope intersection:<br/>requested scopes intersect original<br/>(cannot escalate)
+
+        alt renew_on_grant = true
+            Note over GH: Rotate: issue new<br/>refresh token
+        else renew_on_grant = false
+            Note over GH: Reuse existing<br/>refresh token
+        end
+
+        GH->>TS: BuildAccessToken<br/>(+ optional new refresh token)
+        TS-->>GH: Tokens
+
+        GH-->>TE: Token response
+        TE-->>C: 200 OK<br/>{ access_token, refresh_token?,<br/>  expires_in }<br/>Cache-Control: no-store
+    end

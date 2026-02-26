@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant EU as End User (Browser)
+    participant OC as OAuth Client
+    participant AE as Thunder /oauth2/authorize
+    participant FE as Flow Engine (AuthN)
+    participant TE as Thunder /oauth2/token
+
+    OC->>OC: Generate PKCE code_verifier + code_challenge (S256)
+    EU->>OC: Click Login
+    OC->>AE: GET /oauth2/authorize<br/>response_type=code&client_id=...&redirect_uri=...<br/>&scope=openid&state=...&code_challenge=...&code_challenge_method=S256
+    AE->>AE: Validate client_id, redirect_uri (exact match), PKCE
+    AE->>AE: Store auth request context (authId, 10min expiry)
+    AE->>EU: 302 Redirect to Gate Login UI (?authId=...)
+    EU->>FE: Authenticate (password, MFA, social, etc.)
+    FE->>AE: POST /oauth2/auth/callback (JWT assertion + authId)
+    AE->>AE: Verify JWT assertion signature (RS256)
+    AE->>AE: Generate auth code (UUIDv7), store with PKCE + state
+    AE->>EU: 302 Redirect to redirect_uri (?code=...&state=...)
+    EU->>OC: Follow redirect with code + state
+    OC->>OC: Verify state matches
+    OC->>TE: POST /oauth2/token<br/>grant_type=authorization_code&code=...&code_verifier=...<br/>&redirect_uri=... + Client Auth
+    TE->>TE: Validate client auth (Basic/Post/None)
+    TE->>TE: Retrieve auth code (single-use, deactivate)
+    TE->>TE: Verify PKCE: SHA256(code_verifier) == code_challenge
+    TE->>TE: Verify redirect_uri matches stored value
+    TE->>TE: Build access_token + refresh_token + id_token (JWT/RS256)
+    TE->>OC: Token Response {access_token, refresh_token, id_token, expires_in}

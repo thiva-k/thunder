@@ -1,0 +1,120 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#E3F2FD', 'primaryBorderColor': '#1565C0', 'secondaryColor': '#FFF3E0', 'tertiaryColor': '#E8F5E9', 'lineColor': '#333333', 'fontSize': '14px'}}}%%
+graph TB
+    subgraph EXT["External / Untrusted Zone"]
+        direction TB
+        EU["End User<br/>(Browser)"]
+        OC["OAuth Client"]
+        RS["Resource Server"]
+    end
+
+    subgraph THUNDER["Thunder Server - Trusted Zone"]
+        direction TB
+        subgraph OAUTH["OAuth 2.0 / OIDC Endpoints"]
+            direction LR
+            AE["/oauth2/authorize<br/>GET"]
+            CB["/oauth2/auth/callback<br/>POST"]
+            TE["/oauth2/token<br/>POST"]
+            IE["/oauth2/introspect<br/>POST"]
+            UI["/oauth2/userinfo<br/>GET | POST"]
+            JK["/oauth2/jwks<br/>GET"]
+            DC["/oauth2/dcr/register<br/>POST"]
+            DI["/.well-known/*<br/>GET"]
+        end
+
+        subgraph CORE["Token Processing"]
+            direction LR
+            CAM["Client Auth<br/>Middleware"]
+            GH["Grant Handlers"]
+            TB_["Token Builder"]
+            TV["Token Validator"]
+        end
+
+        subgraph DEPS["Internal Services"]
+            direction LR
+            AS["Application<br/>Service"]
+            FE["Flow Engine"]
+            US["User Service"]
+            OU["OU Service"]
+            OBS["Observability"]
+        end
+
+        subgraph CRYPTO["Crypto Layer"]
+            JWT["JWT Service"]
+            PKI["PKI Service"]
+        end
+
+        subgraph DB["Data Stores"]
+            TDB["Thunder DB<br/>(Apps, Clients)"]
+            RDB["Runtime DB<br/>(Codes, Contexts)"]
+            UDB["User DB"]
+        end
+
+        GATE["Gate UI"]
+    end
+
+    %% External to Endpoints
+    EU -->|"TLS"| AE
+    EU -->|"TLS"| GATE
+    OC -->|"TLS"| AE
+    OC -->|"TLS + Credentials"| TE
+    OC -->|"TLS + Bearer"| UI
+    OC -->|"TLS"| DC
+    OC -->|"TLS"| DI
+    RS -->|"TLS"| IE
+    RS -->|"TLS"| JK
+    RS -->|"TLS"| DI
+
+    %% Token Endpoint chain
+    TE --> CAM
+    CAM --> GH
+    CAM --> AS
+    GH --> TB_
+    GH --> TV
+    GH --> RDB
+    TE --> OBS
+
+    %% Authorize + Callback
+    AE --> AS
+    AE --> FE
+    AE --> RDB
+    CB --> RDB
+    CB --> JWT
+
+    %% UserInfo
+    UI --> JWT
+    UI --> US
+    UI --> OU
+    UI --> AS
+
+    %% Introspection
+    IE --> JWT
+
+    %% DCR
+    DC --> AS
+
+    %% Token services → Crypto
+    TB_ --> JWT
+    TV --> JWT
+    JWT --> PKI
+    JK --> PKI
+
+    %% Data stores
+    AS --> TDB
+    US --> UDB
+
+    %% Gate
+    GATE --> CB
+
+    classDef external fill:#FFCDD2,stroke:#C62828,stroke-width:2px
+    classDef oauth fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
+    classDef core fill:#DCEDC8,stroke:#558B2F,stroke-width:2px
+    classDef internal fill:#FFF3E0,stroke:#EF6C00,stroke-width:2px
+    classDef crypto fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px
+    classDef db fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+
+    class EU,OC,RS external
+    class AE,CB,TE,IE,UI,JK,DC,DI oauth
+    class CAM,GH,TB_,TV core
+    class AS,FE,US,OU,OBS,GATE internal
+    class PKI,JWT crypto
+    class TDB,RDB,UDB db

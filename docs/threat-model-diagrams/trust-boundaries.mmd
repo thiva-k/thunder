@@ -1,0 +1,145 @@
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#FFCDD2', 'primaryBorderColor': '#C62828', 'secondaryColor': '#E3F2FD', 'tertiaryColor': '#E8F5E9', 'lineColor': '#333333', 'fontSize': '13px'}}}%%
+graph TB
+    subgraph UNTRUST["Untrusted Zone"]
+        direction LR
+        EU["End User<br/>(Browser)"]
+        OC["OAuth Client"]
+        RS["Resource<br/>Server"]
+    end
+
+    subgraph TRUST["Trusted Zone - Thunder Server"]
+        direction TB
+        subgraph EP["Endpoints"]
+            direction LR
+            AuthZ["/oauth2/authorize<br/>GET"]
+            CallB["/oauth2/auth/callback<br/>POST"]
+            Token["/oauth2/token<br/>POST"]
+            Intro["/oauth2/introspect<br/>POST"]
+            UInfo["/oauth2/userinfo<br/>GET | POST"]
+            JWKS["/oauth2/jwks<br/>GET"]
+            DCR["/oauth2/dcr/register<br/>POST"]
+            Disc["/.well-known/*<br/>GET"]
+        end
+
+        subgraph CORE["Token Processing"]
+            direction LR
+            CAM["Client Auth<br/>Middleware"]
+            GH["Grant Handlers"]
+            TB_["Token Builder"]
+            TV["Token Validator"]
+        end
+
+        subgraph SERVICES["Internal Services"]
+            direction LR
+            AppSvc["Application<br/>Service"]
+            FlowEng["Flow Engine"]
+            UserSvc["User Service"]
+            OUSvc["OU Service"]
+            OBS["Observability"]
+        end
+
+        subgraph CRYPTO["Crypto Layer"]
+            direction LR
+            JWTSvc["JWT Service"]
+            PKISvc["PKI Service"]
+        end
+
+        subgraph DATA["Data Stores"]
+            direction LR
+            RuntimeDB["Runtime DB<br/>(Codes, Contexts)"]
+            ThunderDB["Thunder DB<br/>(Apps, Clients)"]
+            UserDB["User DB"]
+        end
+
+        GATE["Gate UI"]
+    end
+
+    %% TB-01: Untrust to Trust - Auth Request
+    EU -.->|"TB-01: Auth Request"| AuthZ
+    OC -.->|"TB-01: Auth Request"| AuthZ
+
+    %% TB-02: Untrust to Trust - Token Request
+    OC -.->|"TB-02: Token + Credentials"| Token
+
+    %% TB-03: Untrust to Trust - Introspection
+    RS -.->|"TB-03: Introspection"| Intro
+
+    %% TB-04: Untrust to Trust - DCR
+    OC -.->|"TB-04: DCR"| DCR
+
+    %% TB-05: Untrust to Trust - JWKS
+    RS -.->|"TB-05: JWKS"| JWKS
+
+    %% TB-06: Untrust to Trust - UserInfo
+    OC -.->|"TB-06: Bearer Token"| UInfo
+
+    %% TB-13: Untrust to Trust - Gate UI Callback
+    GATE -.->|"TB-13: JWT Assertion"| CallB
+
+    %% TB-07: Trust to Trust - App Service
+    AuthZ -->|"TB-07"| AppSvc
+    Token -->|"TB-07"| AppSvc
+    DCR -->|"TB-07"| AppSvc
+    CAM -->|"TB-07"| AppSvc
+    UInfo -->|"TB-07"| AppSvc
+
+    %% TB-08: Trust to Trust - User Service
+    UInfo -->|"TB-08"| UserSvc
+    UInfo -->|"TB-08"| OUSvc
+
+    %% TB-09: Trust to Trust - Flow Engine
+    AuthZ -->|"TB-09"| FlowEng
+
+    %% TB-10: Internal - Runtime DB
+    AuthZ -->|"TB-10"| RuntimeDB
+    CallB -->|"TB-10"| RuntimeDB
+    GH -->|"TB-10"| RuntimeDB
+
+    %% TB-11: Internal - PKI Keys
+    TB_ -->|"TB-11"| JWTSvc
+    TV -->|"TB-11"| JWTSvc
+    JWTSvc -->|"TB-11"| PKISvc
+    JWKS -->|"TB-11"| PKISvc
+
+    %% TB-12: Trust to Untrust - Response with code
+    CallB -.->|"TB-12: HTTP 200 JSON<br/>with redirect_uri"| GATE
+
+    %% TB-14: Internal - Observability
+    Token -->|"TB-14"| OBS
+
+    %% Token endpoint chain
+    Token --> CAM
+    CAM --> GH
+    GH --> TB_
+    GH --> TV
+
+    %% Discovery
+    OC -.->|"TLS"| Disc
+    RS -.->|"TLS"| Disc
+
+    %% End User to Gate UI
+    EU -.->|"TLS"| GATE
+
+    %% Data store connections
+    AppSvc --> ThunderDB
+    UserSvc --> UserDB
+
+    %% Introspection to JWT
+    Intro --> JWTSvc
+    CallB --> JWTSvc
+
+    classDef untrust fill:#FFCDD2,stroke:#C62828,stroke-width:2px
+    classDef endpoint fill:#E3F2FD,stroke:#1565C0,stroke-width:2px
+    classDef core fill:#FFF3E0,stroke:#E65100,stroke-width:2px
+    classDef service fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px
+    classDef data fill:#F3E5F5,stroke:#6A1B9A,stroke-width:2px
+    classDef crypto fill:#FCE4EC,stroke:#880E4F,stroke-width:2px
+    classDef gate fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+
+    class EU,OC,RS untrust
+    class AuthZ,CallB,Token,Intro,UInfo,JWKS,DCR,Disc endpoint
+    class CAM,GH,TB_,TV core
+    class AppSvc,FlowEng,UserSvc,OUSvc,OBS service
+    class RuntimeDB,ThunderDB,UserDB data
+    class JWTSvc,PKISvc crypto
+    class GATE gate

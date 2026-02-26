@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant OC as OAuth Client
+    participant MW as Client Auth Middleware
+    participant TE as Thunder /oauth2/token
+
+    OC->>MW: POST /oauth2/token<br/>grant_type=client_credentials<br/>Authorization: Basic base64(client_id:secret)
+    MW->>MW: Extract & validate client credentials
+    MW->>TE: Forward authenticated request
+    TE->>TE: Validate grant_type allowed for client
+    TE->>TE: Build access_token (JWT/RS256) with client_id as sub
+    TE->>OC: Token Response {access_token, token_type, expires_in}

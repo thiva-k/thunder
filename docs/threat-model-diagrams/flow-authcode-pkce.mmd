@@ -1,0 +1,67 @@
+%%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#E3F2FD', 'actorBorder': '#1565C0', 'signalColor': '#333333', 'fontSize': '13px'}}}%%
+sequenceDiagram
+    autonumber
+    participant U as End User<br/>(Browser)
+    participant C as OAuth Client
+    participant AE as Authorization<br/>Endpoint
+    participant AS as Application<br/>Service
+    participant DB as Runtime DB
+    participant G as Gate UI
+    participant FE as Flow Engine
+    participant CB as Auth Callback
+    participant TE as Token Endpoint
+    participant CAM as Client Auth<br/>Middleware
+    participant GH as Auth Code<br/>Grant Handler
+    participant TS as Token Service
+
+    rect rgb(240, 248, 255)
+        Note over C: Generate PKCE<br/>code_verifier + code_challenge (S256)
+        C->>U: Redirect to /oauth2/authorize
+        U->>AE: GET /oauth2/authorize<br/>response_type=code, client_id,<br/>redirect_uri, scope, state,<br/>code_challenge, resource, claims
+    end
+
+    rect rgb(255, 243, 224)
+        AE->>AS: GetOAuthApplication(client_id)
+        AS-->>AE: App config + redirect URIs
+        Note over AE: Validate: redirect_uri exact match,<br/>response_type=code, PKCE params,<br/>resource (absolute URI, no fragment)
+        AE->>FE: InitiateFlow()
+        FE-->>AE: Flow initiated
+        AE->>DB: Store auth request context<br/>(10-min expiry, single-use)
+        AE->>U: 302 Redirect to Gate UI<br/>with authId + appId + flowId
+    end
+
+    rect rgb(232, 245, 233)
+        U->>G: Login page loads
+        G->>FE: User authenticates<br/>(password / MFA / social)
+        FE-->>G: Signed JWT assertion<br/>(sub, attributes, auth_time)
+        G->>CB: POST /oauth2/auth/callback<br/>with JWT assertion + authId
+    end
+
+    rect rgb(255, 243, 224)
+        CB->>DB: Retrieve + delete auth request<br/>context (single-use)
+        Note over CB: Verify JWT signature (jwtService)<br/>Validate sub claim constraints
+        Note over CB: Generate UUIDv7 auth code
+        CB->>DB: Store authorization code<br/>(with PKCE, state, scope, resource)
+        CB-->>G: 200 OK JSON { redirectURI }<br/>Gate UI performs client-side redirect
+        G->>U: Redirect to redirect_uri<br/>?code=...&state=...
+    end
+
+    rect rgb(240, 248, 255)
+        U->>C: Callback with code + state
+        C->>TE: POST /oauth2/token<br/>grant_type=authorization_code,<br/>code, code_verifier, redirect_uri
+    end
+
+    rect rgb(243, 229, 245)
+        TE->>CAM: Client Auth Middleware
+        Note over CAM: Validate client_secret_basic /<br/>client_secret_post / none
+        CAM-->>TE: Client authenticated
+        Note over TE: Validate grant_type allowed for app
+        TE->>GH: ValidateGrant + HandleGrant
+        GH->>DB: Retrieve auth code<br/>(deactivated on read, single-use)
+        Note over GH: Verify: PKCE code_verifier,<br/>redirect_uri match, resource match,<br/>code not expired, client_id match
+        GH->>TS: BuildAccessToken (JWT signed)
+        Note over GH: If openid scope: BuildIDToken
+        Note over TE: If refresh_token grant allowed:<br/>IssueRefreshToken
+        TS-->>TE: Tokens
+        TE-->>C: 200 OK<br/>{ access_token, token_type, expires_in,<br/>  refresh_token, id_token, scope }<br/>Cache-Control: no-store
+    end

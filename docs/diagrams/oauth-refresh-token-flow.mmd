@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant OC as OAuth Client
+    participant MW as Client Auth Middleware
+    participant TE as Thunder /oauth2/token
+
+    OC->>MW: POST /oauth2/token<br/>grant_type=refresh_token&refresh_token=...<br/>+ Client Auth
+    MW->>MW: Validate client credentials
+    MW->>TE: Forward authenticated request
+    TE->>TE: Validate & decode refresh_token JWT
+    TE->>TE: Verify client_id match
+    TE->>TE: Intersect requested scopes with original scopes
+    TE->>TE: Build new access_token (JWT/RS256)
+    TE->>TE: Optionally rotate refresh_token (renew_on_grant)
+    TE->>OC: Token Response {access_token, refresh_token (if rotated)}

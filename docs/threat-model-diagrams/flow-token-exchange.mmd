@@ -1,0 +1,44 @@
+%%{init: {'theme': 'base', 'themeVariables': {'actorBkg': '#F3E5F5', 'actorBorder': '#6A1B9A', 'signalColor': '#333333', 'fontSize': '13px'}}}%%
+sequenceDiagram
+    autonumber
+    participant C as OAuth Client
+    participant TE as Token Endpoint
+    participant CAM as Client Auth<br/>Middleware
+    participant GH as Token Exchange<br/>Grant Handler
+    participant TV as Token Validator
+    participant TS as Token Service
+
+    rect rgb(243, 229, 245)
+        C->>TE: POST /oauth2/token<br/>grant_type=...token-exchange<br/>subject_token, subject_token_type,<br/>audience, resource, scope<br/>+ Client authentication
+    end
+
+    rect rgb(240, 248, 255)
+        TE->>CAM: Client Auth Middleware
+        CAM-->>TE: Client authenticated
+
+        Note over TE: Validate token_exchange<br/>grant allowed for app
+        TE->>GH: ValidateGrant + HandleGrant
+
+        GH->>TV: ValidateSubjectToken(subject_token)
+        Note over TV: Verify JWT signature + expiry<br/>Validate issuer<br/>Audience checked only for<br/>auth assertions (assurance claim)
+        TV-->>GH: Subject token claims
+
+        opt actor_token provided
+            GH->>TV: ValidateSubjectToken(actor_token)
+            Note over TV: Same validation as subject
+            TV-->>GH: Actor token claims
+        end
+
+        Note over GH: Scope: if none requested<br/>inherit from subject token.<br/>If requested, intersect.
+
+        Note over GH: Audience priority:<br/>audience > resource ><br/>subject_token.aud > client_id
+
+        GH->>TS: BuildAccessToken
+        Note over TS: sub = subject_token.sub<br/>act = {sub: actor, iss: ...}<br/>aud = resolved audience
+
+        TS-->>GH: Access token (JWT)
+        GH-->>TE: Token response
+
+        Note over TE: No refresh token,<br/>no id_token for exchange
+        TE-->>C: 200 OK<br/>{ access_token,<br/>  issued_token_type,<br/>  token_type: Bearer }<br/>Cache-Control: no-store
+    end
