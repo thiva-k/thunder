@@ -21,28 +21,36 @@ package introspect
 import (
 	"net/http"
 
+	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/system/jwt"
 	"github.com/asgardeo/thunder/internal/system/middleware"
 )
 
 // Initialize initializes the token introspection handler and registers its routes.
-func Initialize(mux *http.ServeMux, jwtService jwt.JWTServiceInterface) TokenIntrospectionServiceInterface {
+func Initialize(mux *http.ServeMux, jwtService jwt.JWTServiceInterface,
+	appService application.ApplicationServiceInterface) TokenIntrospectionServiceInterface {
 	introspectionService := newTokenIntrospectionService(jwtService)
 	introspectHandler := newTokenIntrospectionHandler(introspectionService)
-	registerRoutes(mux, introspectHandler)
+	registerRoutes(mux, introspectHandler, appService)
 	return introspectionService
 }
 
 // registerRoutes registers the routes for the IntrospectionAPIService.
-func registerRoutes(mux *http.ServeMux, introspectHandler *tokenIntrospectionHandler) {
+func registerRoutes(mux *http.ServeMux, introspectHandler *tokenIntrospectionHandler,
+	appService application.ApplicationServiceInterface) {
 	opts := middleware.CORSOptions{
 		AllowedMethods:   "POST, OPTIONS",
 		AllowedHeaders:   "Content-Type, Authorization",
 		AllowCredentials: true,
 	}
 
-	mux.HandleFunc(middleware.WithCORS("POST /oauth2/introspect",
-		introspectHandler.HandleIntrospect, opts))
+	clientAuthMiddleware := clientauth.ClientAuthMiddleware(appService)
+	handler := clientAuthMiddleware(http.HandlerFunc(introspectHandler.HandleIntrospect))
+
+	pattern, wrappedHandler := middleware.WithCORS("POST /oauth2/introspect", handler.ServeHTTP, opts)
+	mux.HandleFunc(pattern, wrappedHandler)
+
 	mux.HandleFunc(middleware.WithCORS("OPTIONS /oauth2/introspect",
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
