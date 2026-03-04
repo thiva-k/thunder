@@ -21,6 +21,8 @@ package authz
 import (
 	"fmt"
 	"net/url"
+	"slices"
+	"strings"
 
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
@@ -60,6 +62,15 @@ func (av *authorizationValidator) validateInitialAuthorizationRequest(msg *OAuth
 	if err := oauthApp.ValidateRedirectURI(redirectURI); err != nil {
 		logger.Error("Validation failed for redirect URI", log.Error(err))
 		return false, constants.ErrorInvalidRequest, "Invalid redirect URI"
+	}
+
+	// Validate the prompt parameter.
+	promptParam := msg.RequestQueryParams[constants.RequestParamPrompt]
+	if promptParam != "" {
+		sendToClient, errCode, errMsg := validatePromptParameter(promptParam)
+		if errCode != "" {
+			return sendToClient, errCode, errMsg
+		}
 	}
 
 	// Validate if the authorization code grant type is allowed for the app.
@@ -124,4 +135,40 @@ func validateResourceParameter(resource string) error {
 	}
 
 	return nil
+}
+
+// validatePromptParameter validates the OIDC prompt parameter.
+func validatePromptParameter(prompt string) (bool, string, string) {
+	values := strings.Fields(prompt)
+
+	for _, v := range values {
+		if !slices.Contains(constants.ValidPromptValues, v) {
+			return true, constants.ErrorInvalidRequest, "Invalid prompt parameter value"
+		}
+	}
+
+	if slices.Contains(values, constants.PromptNone) {
+		// "none" must not be combined with other values.
+		if len(values) > 1 {
+			return true, constants.ErrorInvalidRequest,
+				"prompt value 'none' must not be combined with other values"
+		}
+
+		// Thunder does not support server-side sessions as of now.
+		return true, constants.ErrorLoginRequired,
+			"User authentication is required"
+	}
+
+	// Thunder does not support consent or account selection prompts as of now.
+	if slices.Contains(values, constants.PromptConsent) {
+		return true, constants.ErrorConsentRequired,
+			"Consent is not supported"
+	}
+
+	if slices.Contains(values, constants.PromptSelectAccount) {
+		return true, constants.ErrorAccountSelectionRequired,
+			"Account selection is not supported"
+	}
+
+	return false, "", ""
 }
