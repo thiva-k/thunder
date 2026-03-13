@@ -294,8 +294,6 @@ export default function AccessSection({
 
             <Stack spacing={2} id="redirect-uris-section">
               {redirectUris.map((uri, index) => (
-                // IMPORTANT: Do not remove the suppression since it affects functionality.
-                // eslint-disable-next-line react/no-array-index-key
                 <Stack key={index} direction="row" spacing={1} alignItems="flex-start">
                   <FormControl fullWidth required sx={{flex: 1}}>
                     <TextField
