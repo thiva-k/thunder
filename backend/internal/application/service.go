@@ -20,6 +20,7 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -38,6 +39,7 @@ import (
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/entityprovider"
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/security"
 	"github.com/asgardeo/thunder/internal/system/transaction"
@@ -64,6 +66,7 @@ type ApplicationServiceInterface interface {
 // ApplicationService is the default implementation of the ApplicationServiceInterface.
 type applicationService struct {
 	appStore          applicationStoreInterface
+	entityProvider    entityprovider.EntityProviderInterface
 	certService       cert.CertificateServiceInterface
 	flowMgtService    flowmgt.FlowMgtServiceInterface
 	themeMgtService   thememgt.ThemeMgtServiceInterface
@@ -76,6 +79,7 @@ type applicationService struct {
 // newApplicationService creates a new instance of ApplicationService.
 func newApplicationService(
 	appStore applicationStoreInterface,
+	entityProvider entityprovider.EntityProviderInterface,
 	certService cert.CertificateServiceInterface,
 	flowMgtService flowmgt.FlowMgtServiceInterface,
 	themeMgtService thememgt.ThemeMgtServiceInterface,
@@ -86,6 +90,7 @@ func newApplicationService(
 ) ApplicationServiceInterface {
 	return &applicationService{
 		appStore:          appStore,
+		entityProvider:    entityProvider,
 		certService:       certService,
 		flowMgtService:    flowMgtService,
 		themeMgtService:   themeMgtService,
@@ -140,6 +145,14 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 		}
 	}
 
+	// Create entity in the directory layer (userdb) before config in gateway (configdb).
+	appEntity := as.buildAppEntity(processedDTO)
+	if _, epErr := as.entityProvider.CreateEntity(appEntity); epErr != nil {
+		logger.Error("Failed to create entity for application",
+			log.String("appID", appID), log.String("error", epErr.Error()))
+		return nil, &ErrorInternalServerError
+	}
+
 	// Create certificates, application, and consent purpose atomically within a transaction.
 	var returnCert *model.ApplicationCertificate
 	var returnOAuthCert *model.ApplicationCertificate
@@ -177,10 +190,14 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 	})
 
 	if innerSvcErr != nil {
+		// Compensate: delete the entity created in the directory layer.
+		as.entityProvider.DeleteEntity(appID)
 		return nil, innerSvcErr
 	}
 
 	if err != nil {
+		// Compensate: delete the entity created in the directory layer.
+		as.entityProvider.DeleteEntity(appID)
 		logger.Error("Failed to create application", log.Error(err), log.String("appID", appID))
 		return nil, &ErrorInternalServerError
 	}
@@ -834,6 +851,12 @@ func (as *applicationService) DeleteApplication(ctx context.Context, appID strin
 	if err != nil {
 		logger.Error("Failed to delete application", log.Error(err), log.String("appID", appID))
 		return &ErrorInternalServerError
+	}
+
+	// Delete entity from the directory layer (userdb) after config is removed.
+	if epErr := as.entityProvider.DeleteEntity(appID); epErr != nil {
+		logger.Warn("Failed to delete entity for application (config already deleted)",
+			log.String("appID", appID), log.String("error", epErr.Error()))
 	}
 
 	return nil
@@ -2079,4 +2102,29 @@ func attributesToPurposeElements(attributes map[string]bool) []consent.PurposeEl
 	}
 
 	return elements
+}
+
+// buildAppEntity constructs an entityprovider.Entity from a processed application DTO.
+func (as *applicationService) buildAppEntity(dto *model.ApplicationProcessedDTO) *entityprovider.Entity {
+	systemAttrs := map[string]interface{}{
+		"name": dto.Name,
+	}
+	if dto.Description != "" {
+		systemAttrs["description"] = dto.Description
+	}
+	if dto.LogoURL != "" {
+		systemAttrs["logoUrl"] = dto.LogoURL
+	}
+	if len(dto.InboundAuthConfig) > 0 && dto.InboundAuthConfig[0].OAuthAppConfig != nil {
+		systemAttrs["clientId"] = dto.InboundAuthConfig[0].OAuthAppConfig.ClientID
+	}
+
+	systemAttrsJSON, _ := json.Marshal(systemAttrs)
+
+	return &entityprovider.Entity{
+		EntityID:         dto.ID,
+		EntityCategory:   entityprovider.EntityCategoryApp,
+		EntityType:       "application",
+		SystemAttributes: systemAttrsJSON,
+	}
 }

@@ -25,19 +25,24 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/model"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice"
+	"github.com/asgardeo/thunder/internal/role"
+	"github.com/asgardeo/thunder/internal/system/log"
 )
 
 // clientCredentialsGrantHandler handles the client credentials grant type.
 type clientCredentialsGrantHandler struct {
 	tokenBuilder tokenservice.TokenBuilderInterface
+	roleService  role.RoleServiceInterface
 }
 
 // newClientCredentialsGrantHandler creates a new instance of ClientCredentialsGrantHandler.
 func newClientCredentialsGrantHandler(
 	tokenBuilder tokenservice.TokenBuilderInterface,
+	roleService role.RoleServiceInterface,
 ) GrantHandlerInterface {
 	return &clientCredentialsGrantHandler{
 		tokenBuilder: tokenBuilder,
+		roleService:  roleService,
 	}
 }
 
@@ -55,10 +60,26 @@ func (h *clientCredentialsGrantHandler) ValidateGrant(ctx context.Context, token
 }
 
 // HandleGrant handles the client credentials grant type.
+// Scopes are filtered based on the application's role-based permissions.
 func (h *clientCredentialsGrantHandler) HandleGrant(ctx context.Context, tokenRequest *model.TokenRequest,
 	oauthApp *appmodel.OAuthAppConfigProcessedDTO) (
 	*model.TokenResponseDTO, *model.ErrorResponse) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ClientCredentialsGrant"))
+
 	scopes := tokenservice.ParseScopes(tokenRequest.Scope)
+
+	// Filter requested scopes based on the app's authorized permissions via RBAC.
+	// The app entity ID is the same as the app ID.
+	if h.roleService != nil && len(scopes) > 0 {
+		authorizedPerms, svcErr := h.roleService.GetAuthorizedPermissions(
+			ctx, oauthApp.AppID, nil, scopes)
+		if svcErr != nil {
+			logger.Warn("Failed to resolve authorized permissions for app, proceeding with requested scopes",
+				log.String("appID", oauthApp.AppID), log.String("error", svcErr.Error))
+		} else {
+			scopes = authorizedPerms
+		}
+	}
 
 	finalAudience := tokenservice.DetermineAudience("", tokenRequest.Resource, "", tokenRequest.ClientID)
 

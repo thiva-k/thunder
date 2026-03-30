@@ -107,6 +107,7 @@ func (suite *InitTestSuite) TestInitialize_WithDeclarativeResourcesDisabled() {
 	service, _, err := Initialize(
 		mux,
 		nil,
+		nil, // entityProvider
 		suite.mockCertService,
 		suite.mockFlowMgtService,
 		nil, // themeMgtService - not needed for this test
@@ -146,6 +147,7 @@ func (suite *InitTestSuite) TestInitialize_WithMCPServer() {
 	service, _, err := Initialize(
 		mux,
 		mcpServer,
+		nil, // entityProvider
 		suite.mockCertService,
 		suite.mockFlowMgtService,
 		nil, // themeMgtService - not needed for this test
@@ -543,6 +545,7 @@ func TestInitialize_Standalone(t *testing.T) {
 	service, _, err := Initialize(
 		mux,
 		nil,
+		nil, // entityProvider
 		mockCertService,
 		mockFlowMgtService,
 		nil, // themeMgtService - not needed for this test
@@ -592,6 +595,7 @@ func TestInitialize_WithDeclarativeResources_Standalone(t *testing.T) {
 	service, _, err := Initialize(
 		mux,
 		nil,
+		nil, // entityProvider
 		mockCertService,
 		mockFlowMgtService,
 		nil, // themeMgtService - not needed for this test

@@ -21,9 +21,11 @@ package role
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
+	"github.com/asgardeo/thunder/internal/entityprovider"
 	"github.com/asgardeo/thunder/internal/group"
 	oupkg "github.com/asgardeo/thunder/internal/ou"
 	resourcepkg "github.com/asgardeo/thunder/internal/resource"
@@ -60,6 +62,7 @@ type RoleServiceInterface interface {
 // roleService is the default implementation of the RoleServiceInterface.
 type roleService struct {
 	roleStore         roleStoreInterface
+	entityProvider    entityprovider.EntityProviderInterface
 	userService       user.UserServiceInterface
 	groupService      group.GroupServiceInterface
 	ouService         oupkg.OrganizationUnitServiceInterface
@@ -71,6 +74,7 @@ type roleService struct {
 // newRoleService creates a new instance of RoleService with injected dependencies.
 func newRoleService(
 	roleStore roleStoreInterface,
+	entityProvider entityprovider.EntityProviderInterface,
 	userService user.UserServiceInterface,
 	groupService group.GroupServiceInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
@@ -80,6 +84,7 @@ func newRoleService(
 ) RoleServiceInterface {
 	return &roleService{
 		roleStore:         roleStore,
+		entityProvider:    entityProvider,
 		userService:       userService,
 		groupService:      groupService,
 		ouService:         ouService,
@@ -607,7 +612,7 @@ func (rs *roleService) validateAssignmentsRequest(assignments []RoleAssignment) 
 	}
 
 	for _, assignment := range assignments {
-		if assignment.Type != AssigneeTypeUser && assignment.Type != AssigneeTypeGroup {
+		if assignment.Type != AssigneeTypeUser && assignment.Type != AssigneeTypeGroup && assignment.Type != AssigneeTypeApp {
 			return &ErrorInvalidRequestFormat
 		}
 		if assignment.ID == "" {
@@ -623,34 +628,33 @@ func (rs *roleService) validateAssignmentIDs(
 	ctx context.Context, assignments []RoleAssignment) *serviceerror.ServiceError {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 
-	var userIDs []string
+	var entityIDs []string
 	var groupIDs []string
 
-	// Collect user and group IDs
+	// Collect entity IDs (users + apps) and group IDs separately
 	for _, assignment := range assignments {
 		switch assignment.Type {
-		case AssigneeTypeUser:
-			userIDs = append(userIDs, assignment.ID)
+		case AssigneeTypeUser, AssigneeTypeApp:
+			entityIDs = append(entityIDs, assignment.ID)
 		case AssigneeTypeGroup:
 			groupIDs = append(groupIDs, assignment.ID)
 		}
 	}
 
 	// Deduplicate IDs
-	userIDs = utils.UniqueStrings(userIDs)
+	entityIDs = utils.UniqueStrings(entityIDs)
 	groupIDs = utils.UniqueStrings(groupIDs)
 
-	// Validate user IDs using user service
-	if len(userIDs) > 0 {
-		invalidUserIDs, svcErr := rs.userService.ValidateUserIDs(ctx, userIDs)
-		if svcErr != nil {
-			logger.Error("Failed to validate user IDs", log.String("error", svcErr.Error),
-				log.String("code", svcErr.Code))
+	// Validate entity IDs (users and apps) using entity provider
+	if len(entityIDs) > 0 {
+		invalidEntityIDs, epErr := rs.entityProvider.ValidateEntityIDs(entityIDs)
+		if epErr != nil {
+			logger.Error("Failed to validate entity IDs", log.String("error", epErr.Error()))
 			return &ErrorInternalServerError
 		}
 
-		if len(invalidUserIDs) > 0 {
-			logger.Debug("Invalid user IDs found", log.Any("invalidUserIDs", invalidUserIDs))
+		if len(invalidEntityIDs) > 0 {
+			logger.Debug("Invalid entity IDs found", log.Any("invalidEntityIDs", invalidEntityIDs))
 			return &ErrorInvalidAssignmentID
 		}
 	}
@@ -688,18 +692,21 @@ func (rs *roleService) populateDisplayNames(
 ) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
 	// Collect IDs by type
-	var userIDs, groupIDs []string
+	var userIDs, appIDs, groupIDs []string
 	for _, a := range assignments {
 		switch a.Type {
 		case AssigneeTypeUser:
 			userIDs = append(userIDs, a.ID)
+		case AssigneeTypeApp:
+			appIDs = append(appIDs, a.ID)
 		case AssigneeTypeGroup:
 			groupIDs = append(groupIDs, a.ID)
 		}
 	}
 
-	// Batch fetch users and groups
+	// Batch fetch users, app entities, and groups
 	var usersMap map[string]*user.User
+	var appEntitiesMap map[string]*entityprovider.Entity
 	var groupsMap map[string]*group.Group
 
 	if len(userIDs) > 0 {
@@ -707,6 +714,18 @@ func (rs *roleService) populateDisplayNames(
 		usersMap, svcErr = rs.userService.GetUsersByIDs(ctx, userIDs)
 		if svcErr != nil {
 			logger.Warn("Failed to batch fetch users for display names", log.Any("error", svcErr))
+		}
+	}
+
+	if len(appIDs) > 0 {
+		appEntities, epErr := rs.entityProvider.GetEntitiesByIDs(appIDs)
+		if epErr != nil {
+			logger.Warn("Failed to batch fetch app entities for display names", log.Any("error", epErr))
+		} else {
+			appEntitiesMap = make(map[string]*entityprovider.Entity, len(appEntities))
+			for _, e := range appEntities {
+				appEntitiesMap[e.EntityID] = e
+			}
 		}
 	}
 
@@ -739,6 +758,14 @@ func (rs *roleService) populateDisplayNames(
 				}
 			}
 			serviceAssignments[i].Display = assignments[i].ID
+		case AssigneeTypeApp:
+			if appEntitiesMap != nil {
+				if e, ok := appEntitiesMap[assignments[i].ID]; ok {
+					serviceAssignments[i].Display = resolveAppDisplayName(e)
+					continue
+				}
+			}
+			serviceAssignments[i].Display = assignments[i].ID
 		case AssigneeTypeGroup:
 			if groupsMap != nil {
 				if g, ok := groupsMap[assignments[i].ID]; ok {
@@ -751,6 +778,19 @@ func (rs *roleService) populateDisplayNames(
 			serviceAssignments[i].Display = assignments[i].ID
 		}
 	}
+}
+
+// resolveAppDisplayName extracts the display name from an app entity's SystemAttributes.
+func resolveAppDisplayName(e *entityprovider.Entity) string {
+	if len(e.SystemAttributes) > 0 {
+		var attrs map[string]interface{}
+		if err := json.Unmarshal(e.SystemAttributes, &attrs); err == nil {
+			if name, ok := attrs["name"].(string); ok && name != "" {
+				return name
+			}
+		}
+	}
+	return e.EntityID
 }
 
 // validatePermissions validates that all permissions exist in the resource management system.

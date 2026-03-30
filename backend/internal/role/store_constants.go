@@ -159,12 +159,12 @@ func buildAuthorizedPermissionsQuery(
 	args = append(args, deploymentID)
 	paramIndex := 2 // Start from $2 since $1 is DEPLOYMENT_ID
 
-	// Build user condition if userID is provided
+	// Build entity condition if entityID is provided (matches any assignee type — user, app, etc.)
 	if userID != "" {
 		postgresWhere = append(postgresWhere,
-			fmt.Sprintf("(ra.ASSIGNEE_TYPE = 'user' AND ra.ASSIGNEE_ID = $%d)", paramIndex))
+			fmt.Sprintf("(ra.ASSIGNEE_ID = $%d)", paramIndex))
 		sqliteWhere = append(sqliteWhere,
-			"(ra.ASSIGNEE_TYPE = 'user' AND ra.ASSIGNEE_ID = ?)")
+			"(ra.ASSIGNEE_ID = ?)")
 		args = append(args, userID)
 		paramIndex++
 	}

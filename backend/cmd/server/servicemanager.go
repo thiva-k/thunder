@@ -30,6 +30,7 @@ import (
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/consent"
 	"github.com/asgardeo/thunder/internal/entity"
+	"github.com/asgardeo/thunder/internal/entityprovider"
 	layoutmgt "github.com/asgardeo/thunder/internal/design/layout/mgt"
 	"github.com/asgardeo/thunder/internal/design/resolve"
 	thememgt "github.com/asgardeo/thunder/internal/design/theme/mgt"
@@ -133,6 +134,9 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 		logger.Fatal("Failed to initialize EntityService", log.Error(err))
 	}
 
+	// Create entity provider for gateway-layer consumers (application, role, etc.)
+	entityProvider := entityprovider.InitializeEntityProvider(entityService)
+
 	userService, ouUserResolver, userExporter, err := user.Initialize(
 		mux, entityService, ouService, userSchemaService, hashService, ouAuthzService,
 	)
@@ -158,7 +162,7 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 	}
 	exporters = append(exporters, resourceExporter)
 	roleService, roleExporter, err := role.Initialize(
-		mux, userService, groupService, ouService, resourceService, userSchemaService,
+		mux, entityProvider, userService, groupService, ouService, resourceService, userSchemaService,
 	)
 	if err != nil {
 		logger.Fatal("Failed to initialize RoleService", log.Error(err))
@@ -236,7 +240,7 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 	exporters = append(exporters, layoutExporter)
 
 	applicationService, applicationExporter, err := application.Initialize(
-		mux, mcpServer, certservice, flowMgtService, themeMgtService, layoutMgtService,
+		mux, mcpServer, entityProvider, certservice, flowMgtService, themeMgtService, layoutMgtService,
 		userSchemaService, consentService)
 	if err != nil {
 		logger.Fatal("Failed to initialize ApplicationService", log.Error(err))
@@ -260,7 +264,7 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 
 	// Initialize OAuth services.
 	err = oauth.Initialize(mux, applicationService, jwtService, flowExecService, observabilitySvc,
-		pkiService, ouService, attributeCacheService)
+		pkiService, ouService, attributeCacheService, roleService)
 	if err != nil {
 		logger.Fatal("Failed to initialize OAuth services", log.Error(err))
 	}

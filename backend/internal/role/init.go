@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/asgardeo/thunder/internal/entityprovider"
 	"github.com/asgardeo/thunder/internal/group"
 	oupkg "github.com/asgardeo/thunder/internal/ou"
 	resourcepkg "github.com/asgardeo/thunder/internal/resource"
@@ -36,6 +37,7 @@ import (
 // Initialize initializes the role service and registers its routes.
 func Initialize(
 	mux *http.ServeMux,
+	entityProvider entityprovider.EntityProviderInterface,
 	userService user.UserServiceInterface,
 	groupService group.GroupServiceInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
@@ -50,7 +52,7 @@ func Initialize(
 
 	// Step 2: Create service with store
 	roleService := newRoleService(
-		roleStore, userService, groupService, ouService, resourceService, userSchemaService, transactioner,
+		roleStore, entityProvider, userService, groupService, ouService, resourceService, userSchemaService, transactioner,
 	)
 	roleHandler := newRoleHandler(roleService)
 	registerRoutes(mux, roleHandler)

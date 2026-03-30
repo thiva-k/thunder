@@ -28,6 +28,7 @@ import (
 	"github.com/asgardeo/thunder/internal/consent"
 	layoutmgt "github.com/asgardeo/thunder/internal/design/layout/mgt"
 	thememgt "github.com/asgardeo/thunder/internal/design/theme/mgt"
+	"github.com/asgardeo/thunder/internal/entityprovider"
 	flowmgt "github.com/asgardeo/thunder/internal/flow/mgt"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	declarativeresource "github.com/asgardeo/thunder/internal/system/declarative_resource"
@@ -40,6 +41,7 @@ import (
 func Initialize(
 	mux *http.ServeMux,
 	mcpServer *mcp.Server,
+	entityProvider entityprovider.EntityProviderInterface,
 	certService cert.CertificateServiceInterface,
 	flowMgtService flowmgt.FlowMgtServiceInterface,
 	themeMgtService thememgt.ThemeMgtServiceInterface,
@@ -55,7 +57,7 @@ func Initialize(
 
 	// Step 2: Create service with store
 	appService := newApplicationService(
-		appStore, certService, flowMgtService,
+		appStore, entityProvider, certService, flowMgtService,
 		themeMgtService, layoutMgtService,
 		userSchemaService, consentService,
 		transactioner,
