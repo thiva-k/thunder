@@ -27,6 +27,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/asgardeo/thunder/internal/entity"
 	oupkg "github.com/asgardeo/thunder/internal/ou"
 	serverconst "github.com/asgardeo/thunder/internal/system/constants"
 	"github.com/asgardeo/thunder/internal/system/crypto/hash"
@@ -34,7 +35,6 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/system/security"
 	"github.com/asgardeo/thunder/internal/system/sysauthz"
-	"github.com/asgardeo/thunder/internal/system/transaction"
 	"github.com/asgardeo/thunder/internal/system/utils"
 	"github.com/asgardeo/thunder/internal/userschema"
 )
@@ -77,29 +77,26 @@ type UserServiceInterface interface {
 // userService is the default implementation of the UserServiceInterface.
 type userService struct {
 	authzService      sysauthz.SystemAuthorizationServiceInterface
-	userStore         userStoreInterface
+	entityService     entity.EntityServiceInterface
 	ouService         oupkg.OrganizationUnitServiceInterface
 	userSchemaService userschema.UserSchemaServiceInterface
 	hashService       hash.HashServiceInterface
-	transactioner     transaction.Transactioner
 }
 
 // newUserService creates a new instance of userService with injected dependencies.
 func newUserService(
 	authzService sysauthz.SystemAuthorizationServiceInterface,
-	userStore userStoreInterface,
+	entityService entity.EntityServiceInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	userSchemaService userschema.UserSchemaServiceInterface,
 	hashService hash.HashServiceInterface,
-	transactioner transaction.Transactioner,
 ) UserServiceInterface {
 	return &userService{
 		authzService:      authzService,
-		userStore:         userStore,
+		entityService:     entityService,
 		ouService:         ouService,
 		userSchemaService: userSchemaService,
 		hashService:       hashService,
-		transactioner:     transactioner,
 	}
 }
 
@@ -134,16 +131,17 @@ func (us *userService) listAllUsers(
 	ctx context.Context, limit, offset int, filters map[string]interface{},
 	includeDisplay bool, logger *log.Logger,
 ) (*UserListResponse, *serviceerror.ServiceError) {
-	totalCount, err := us.userStore.GetUserListCount(ctx, filters)
+	totalCount, err := us.entityService.GetEntityListCount(ctx, entity.EntityCategoryUser, filters)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to get user list count", err)
 	}
 
-	users, err := us.userStore.GetUserList(ctx, limit, offset, filters)
+	entities, err := us.entityService.GetEntityList(ctx, entity.EntityCategoryUser, limit, offset, filters)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to get user list", err)
 	}
 
+	users := entitiesToUsers(entities)
 	if includeDisplay {
 		us.populateUserDisplayNames(ctx, users, logger)
 	}
@@ -162,16 +160,17 @@ func (us *userService) listUsersByOUIDs(
 		return buildUserListResponse([]User{}, 0, limit, offset, displayQuery), nil
 	}
 
-	totalCount, err := us.userStore.GetUserListCountByOUIDs(ctx, ouIDs, filters)
+	totalCount, err := us.entityService.GetEntityListCountByOUIDs(ctx, entity.EntityCategoryUser, ouIDs, filters)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to get user list count", err)
 	}
 
-	users, err := us.userStore.GetUserListByOUIDs(ctx, ouIDs, limit, offset, filters)
+	entities, err := us.entityService.GetEntityListByOUIDs(ctx, entity.EntityCategoryUser, ouIDs, limit, offset, filters)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to get user list", err)
 	}
 
+	users := entitiesToUsers(entities)
 	if includeDisplay {
 		us.populateUserDisplayNames(ctx, users, logger)
 	}
@@ -254,7 +253,7 @@ func (us *userService) GetUsersByPath(
 		for i, ouUser := range ouResponse.Users {
 			userIDs[i] = ouUser.ID
 		}
-		fetchedUsers, err := us.userStore.GetUsersByIDs(ctx, userIDs)
+		fetchedEntities, err := us.entityService.GetEntitiesByIDs(ctx, userIDs)
 		if err != nil {
 			logger.Warn("Failed to batch fetch users for display names, skipping display resolution", log.Error(err))
 			// Fall back to bare IDs without display — partial display is worse than none.
@@ -263,6 +262,7 @@ func (us *userService) GetUsersByPath(
 				users[i] = User{ID: ouUser.ID}
 			}
 		} else {
+			fetchedUsers := entitiesToUsers(fetchedEntities)
 			// Build an ID-keyed map for display resolution, but only expose ID + Display.
 			userMap := make(map[string]User, len(fetchedUsers))
 			for _, u := range fetchedUsers {
@@ -349,11 +349,12 @@ func (us *userService) CreateUser(ctx context.Context, user *User) (*User, *serv
 		return nil, logErrorAndReturnServerError(logger, "Failed to create user DTO", err)
 	}
 
-	// Use transaction to ensure atomic user creation with indexed attributes
-	err = us.transactioner.Transact(ctx, func(txCtx context.Context) error {
-		return us.userStore.CreateUser(txCtx, *user, credentials)
-	})
+	e := userToEntity(user)
+	systemCreds, err := credentialsToJSON(credentials)
 	if err != nil {
+		return nil, logErrorAndReturnServerError(logger, "Failed to marshal credentials", err)
+	}
+	if _, err = us.entityService.CreateEntity(ctx, e, nil, systemCreds); err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to create user", err)
 	}
 
@@ -488,14 +489,15 @@ func (us *userService) GetUser(
 		return nil, &ErrorMissingUserID
 	}
 
-	user, err := us.userStore.GetUser(ctx, userID)
+	e, err := us.entityService.GetEntity(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
 		return nil, logErrorAndReturnServerError(logger, "Failed to retrieve user", err, log.String("id", userID))
 	}
+	user := entityToUser(e)
 
 	// Check authz using the user's OU ID (fetched from store).
 	if svcErr := us.checkUserAccess(ctx, security.ActionReadUser, user.OUID, userID); svcErr != nil {
@@ -527,9 +529,9 @@ func (as *userService) GetUserGroups(ctx context.Context, userID string, limit, 
 	}
 
 	// Fetch user to resolve the OU ID for the authorization check.
-	user, err := as.userStore.GetUser(ctx, userID)
+	userEntity, err := as.entityService.GetEntity(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
@@ -537,30 +539,29 @@ func (as *userService) GetUserGroups(ctx context.Context, userID string, limit, 
 	}
 
 	// Check authz using the user's OU ID.
-	if svcErr := as.checkUserAccess(ctx, security.ActionReadUser, user.OUID, userID); svcErr != nil {
+	if svcErr := as.checkUserAccess(ctx, security.ActionReadUser, userEntity.OrganizationUnitID, userID); svcErr != nil {
 		return nil, svcErr
 	}
 
-	totalCount, err := as.userStore.GetGroupCountForUser(ctx, userID)
+	totalCount, err := as.entityService.GetGroupCountForEntity(ctx, userID)
 	if err != nil {
 		logger.Error("Failed to get group count for user", log.String("userID", userID), log.Error(err))
 		return nil, &ErrorInternalServerError
 	}
 
-	groups, err := as.userStore.GetUserGroups(ctx, userID, limit, offset)
+	entityGroups, err := as.entityService.GetEntityGroups(ctx, userID, limit, offset)
 	if err != nil {
 		logger.Error("Failed to get user groups", log.String("id", userID), log.Error(err))
 		return nil, &ErrorInternalServerError
 	}
-
 	path := fmt.Sprintf("/users/%s/groups", userID)
 	links := utils.BuildPaginationLinks(path, limit, offset, totalCount, "")
 
 	response := &UserGroupListResponse{
 		TotalResults: totalCount,
-		Groups:       groups,
+		Groups:       entityGroups,
 		StartIndex:   offset + 1,
-		Count:        len(groups),
+		Count:        len(entityGroups),
 		Links:        links,
 	}
 
@@ -581,14 +582,15 @@ func (us *userService) UpdateUser(ctx context.Context, userID string, user *User
 	}
 
 	// Fetch the existing user to obtain its OU ID for the authorization check.
-	existingUser, err := us.userStore.GetUser(ctx, userID)
+	existingEntity, err := us.entityService.GetEntity(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
 		return nil, logErrorAndReturnServerError(logger, "Failed to retrieve user", err, log.String("id", userID))
 	}
+	existingUser := entityToUser(existingEntity)
 
 	// Check authz using the existing user's OU ID.
 	if svcErr := us.checkUserAccess(
@@ -626,57 +628,56 @@ func (us *userService) UpdateUser(ctx context.Context, userID string, user *User
 			fmt.Errorf("schema service error: %s", svcErr.ErrorDescription), log.String("id", userID))
 	}
 
-	var capturedSvcErr *serviceerror.ServiceError
-
-	err = us.transactioner.Transact(ctx, func(txCtx context.Context) error {
-		if svcErr := us.validateOrganizationUnitForUserType(
-			txCtx, user.Type, user.OUID, logger,
-		); svcErr != nil {
-			capturedSvcErr = svcErr
-			return errors.New("rollback for validation error")
-		}
-
-		// Validate before extracting credentials so that credential values (e.g. regex)
-		// are still checked when present. skipCredentialRequired is true because
-		// credentials are optional during updates.
-		if svcErr := us.validateUserAndUniqueness(
-			txCtx, user.Type, user.Attributes, logger, user.ID, true,
-		); svcErr != nil {
-			capturedSvcErr = svcErr
-			return errors.New("rollback for validation error")
-		}
-
-		credentials, err := us.extractCredentials(user, schemaCredentialAttributes)
-		if err != nil {
-			return fmt.Errorf("failed to extract credentials: %w", err)
-		}
-
-		err = us.userStore.UpdateUser(txCtx, user)
-		if err != nil {
-			return err
-		}
-
-		if len(credentials) > 0 {
-			_, existingCredentials, err := us.userStore.GetCredentials(txCtx, userID)
-			if err != nil {
-				return err
-			}
-			mergedCredentials := us.mergeCredentials(existingCredentials, credentials)
-			err = us.userStore.UpdateUserCredentials(txCtx, userID, mergedCredentials)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	if capturedSvcErr != nil {
-		return nil, capturedSvcErr
+	if svcErr := us.validateOrganizationUnitForUserType(
+		ctx, user.Type, user.OUID, logger,
+	); svcErr != nil {
+		return nil, svcErr
 	}
 
+	// Validate before extracting credentials so that credential values (e.g. regex)
+	// are still checked when present. skipCredentialRequired is true because
+	// credentials are optional during updates.
+	if svcErr := us.validateUserAndUniqueness(
+		ctx, user.Type, user.Attributes, logger, user.ID, true,
+	); svcErr != nil {
+		return nil, svcErr
+	}
+
+	credentials, err := us.extractCredentials(user, schemaCredentialAttributes)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		return nil, logErrorAndReturnServerError(logger, "Failed to extract credentials", err,
+			log.String("id", userID))
+	}
+
+	// Build merged system credentials if the update includes credential fields.
+	var mergedCredsJSON json.RawMessage
+	if len(credentials) > 0 {
+		_, _, existingCredsJSON, err := us.entityService.GetEntityWithCredentials(ctx, userID)
+		if err != nil {
+			if errors.Is(err, entity.ErrEntityNotFound) {
+				return nil, &ErrorUserNotFound
+			}
+			return nil, logErrorAndReturnServerError(logger, "Failed to retrieve credentials", err,
+				log.String("id", userID))
+		}
+		existingCredentials, err := jsonToCredentials(existingCredsJSON)
+		if err != nil {
+			return nil, logErrorAndReturnServerError(logger, "Failed to unmarshal existing credentials", err,
+				log.String("id", userID))
+		}
+		mergedCredentials := us.mergeCredentials(existingCredentials, credentials)
+		mergedCredsJSON, err = credentialsToJSON(mergedCredentials)
+		if err != nil {
+			return nil, logErrorAndReturnServerError(logger, "Failed to marshal merged credentials", err,
+				log.String("id", userID))
+		}
+	}
+
+	// Atomically update entity and credentials via entity service.
+	e := userToEntity(user)
+	_, err = us.entityService.UpdateEntityWithCredentials(ctx, userID, e, mergedCredsJSON)
+	if err != nil {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
@@ -703,14 +704,15 @@ func (us *userService) UpdateUserAttributes(
 	}
 
 	// Pre-fetch user to get the type for credential field lookup (outside transaction).
-	existingUser, getErr := us.userStore.GetUser(ctx, userID)
+	existingEntity, getErr := us.entityService.GetEntity(ctx, userID)
 	if getErr != nil {
-		if errors.Is(getErr, ErrUserNotFound) {
+		if errors.Is(getErr, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
 		return nil, logErrorAndReturnServerError(logger, "Failed to get user", getErr, log.String("id", userID))
 	}
+	existingUser := entityToUser(existingEntity)
 
 	if us.userSchemaService == nil {
 		logger.Error("User schema service is not configured for user operations")
@@ -745,32 +747,17 @@ func (us *userService) UpdateUserAttributes(
 		return nil, svcErr
 	}
 
-	var updatedUser User
-	var capturedSvcErr *serviceerror.ServiceError
+	existingUser.Attributes = attributes
 
-	err := us.transactioner.Transact(ctx, func(txCtx context.Context) error {
-		existingUser.Attributes = attributes
-
-		if svcErr := us.validateUserAndUniqueness(txCtx, existingUser.Type,
-			existingUser.Attributes, logger, userID, true); svcErr != nil {
-			capturedSvcErr = svcErr
-			return errors.New("rollback for validation error")
-		}
-
-		err := us.userStore.UpdateUser(txCtx, &existingUser)
-		if err != nil {
-			return err
-		}
-		updatedUser = existingUser
-		return nil
-	})
-
-	if capturedSvcErr != nil {
-		return nil, capturedSvcErr
+	if svcErr := us.validateUserAndUniqueness(ctx, existingUser.Type,
+		existingUser.Attributes, logger, userID, true); svcErr != nil {
+		return nil, svcErr
 	}
 
+	e := userToEntity(&existingUser)
+	_, err := us.entityService.UpdateEntity(ctx, userID, e)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
@@ -779,7 +766,7 @@ func (us *userService) UpdateUserAttributes(
 	}
 
 	logger.Debug("Successfully updated user attributes", log.String("id", userID))
-	return &updatedUser, nil
+	return &existingUser, nil
 }
 
 // containsCredentialAttributes checks whether the attributes include credential attributes
@@ -855,14 +842,15 @@ func (us *userService) batchUpdateUserCredentials(
 		log.Int("credentialTypesCount", len(credentialsMap)))
 
 	// Fetch user outside the transaction to resolve the OU ID for the authorization check.
-	existingUser, err := us.userStore.GetUser(ctx, userID)
+	existingEntity, err := us.entityService.GetEntity(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("userID", userID))
 			return &ErrorUserNotFound
 		}
 		return logErrorAndReturnServerError(logger, "Failed to retrieve user", err, log.String("userID", userID))
 	}
+	existingUser := entityToUser(existingEntity)
 
 	// Check authz outside the transaction so a denial is returned directly without a rollback.
 	if svcErr := us.checkUserAccess(
@@ -875,95 +863,84 @@ func (us *userService) batchUpdateUserCredentials(
 		return svcErr
 	}
 
-	var capturedSvcErr *serviceerror.ServiceError
-
-	err = us.transactioner.Transact(ctx, func(txCtx context.Context) error {
-		// Get existing credentials and user info
-		existingUser, existingCredentials, err := us.userStore.GetCredentials(txCtx, userID)
-		if err != nil {
-			if errors.Is(err, ErrUserNotFound) {
-				logger.Debug("User not found", log.String("userID", userID))
-				capturedSvcErr = &ErrorUserNotFound
-				return errors.New("rollback for user not found")
-			}
-
-			return err
+	// Get existing credentials and user info
+	_, _, existingCredsJSON, err := us.entityService.GetEntityWithCredentials(ctx, userID)
+	if err != nil {
+		if errors.Is(err, entity.ErrEntityNotFound) {
+			logger.Debug("User not found", log.String("userID", userID))
+			return &ErrorUserNotFound
 		}
-
-		// Get schema credential attributes for the user's type
-		if us.userSchemaService == nil {
-			return errors.New("user schema service not configured")
-		}
-
-		schemaCredentialAttributes, svcErr := us.userSchemaService.GetCredentialAttributes(txCtx, existingUser.Type)
-		if svcErr != nil {
-			if svcErr.Code == userschema.ErrorUserSchemaNotFound.Code {
-				capturedSvcErr = &ErrorUserSchemaNotFound
-				return errors.New("rollback for schema not found")
-			}
-			return fmt.Errorf("schema service error: %s", svcErr.ErrorDescription)
-		}
-
-		// Build set of valid credential field names
-		validCredentialAttributes := make(
-			map[string]struct{}, len(schemaCredentialAttributes)+len(systemManagedCredentialTypes))
-		for _, field := range schemaCredentialAttributes {
-			validCredentialAttributes[field] = struct{}{}
-		}
-		for _, credType := range systemManagedCredentialTypes {
-			validCredentialAttributes[string(credType)] = struct{}{}
-		}
-
-		// Process all credential types first (validation and hashing)
-		processedCredentials := make(Credentials)
-		for credTypeStr, credValue := range credentialsMap {
-			credType := CredentialType(credTypeStr)
-
-			// Validate credential type against schema + system-managed types
-			if _, valid := validCredentialAttributes[credTypeStr]; !valid {
-				logger.Debug("Invalid credential type", log.String("credentialType", credTypeStr))
-				errorDesc := fmt.Sprintf("Invalid credential type: %s", credType)
-				capturedSvcErr = serviceerror.CustomServiceError(ErrorInvalidCredential, errorDesc)
-				return errors.New("rollback for validation error")
-			}
-
-			if len(credValue) == 0 {
-				capturedSvcErr = &ErrorMissingCredentials
-				return errors.New("rollback for validation error")
-			}
-
-			// Process and validate credentials for this type
-			processed, svcErr := us.processCredentialType(credType, credValue, logger)
-			if svcErr != nil {
-				capturedSvcErr = svcErr
-				return errors.New("rollback for validation error")
-			}
-
-			processedCredentials[credType] = processed
-		}
-
-		// Merge all processed credentials with existing ones
-		updatedCredentials := us.mergeCredentials(existingCredentials, processedCredentials)
-
-		// Update credentials in database
-		err = us.userStore.UpdateUserCredentials(txCtx, userID, updatedCredentials)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	if capturedSvcErr != nil {
-		return capturedSvcErr
+		return logErrorAndReturnServerError(logger, "Failed to retrieve user credentials", err,
+			log.String("userID", userID))
+	}
+	existingCredentials, err := jsonToCredentials(existingCredsJSON)
+	if err != nil {
+		return logErrorAndReturnServerError(logger, "Failed to unmarshal existing credentials", err,
+			log.String("userID", userID))
 	}
 
+	// Get schema credential attributes for the user's type
+	if us.userSchemaService == nil {
+		return logErrorAndReturnServerError(logger, "User schema service not configured",
+			errors.New("user schema service not configured"), log.String("userID", userID))
+	}
+
+	schemaCredentialAttributes, svcErr := us.userSchemaService.GetCredentialAttributes(ctx, existingUser.Type)
+	if svcErr != nil {
+		if svcErr.Code == userschema.ErrorUserSchemaNotFound.Code {
+			return &ErrorUserSchemaNotFound
+		}
+		return logErrorAndReturnServerError(logger, "Failed to get credential attributes from schema",
+			fmt.Errorf("schema service error: %s", svcErr.ErrorDescription), log.String("userID", userID))
+	}
+
+	// Build set of valid credential field names
+	validCredentialAttributes := make(
+		map[string]struct{}, len(schemaCredentialAttributes)+len(systemManagedCredentialTypes))
+	for _, field := range schemaCredentialAttributes {
+		validCredentialAttributes[field] = struct{}{}
+	}
+	for _, credType := range systemManagedCredentialTypes {
+		validCredentialAttributes[string(credType)] = struct{}{}
+	}
+
+	// Process all credential types first (validation and hashing)
+	processedCredentials := make(Credentials)
+	for credTypeStr, credValue := range credentialsMap {
+		credType := CredentialType(credTypeStr)
+
+		// Validate credential type against schema + system-managed types
+		if _, valid := validCredentialAttributes[credTypeStr]; !valid {
+			logger.Debug("Invalid credential type", log.String("credentialType", credTypeStr))
+			errorDesc := fmt.Sprintf("Invalid credential type: %s", credType)
+			return serviceerror.CustomServiceError(ErrorInvalidCredential, errorDesc)
+		}
+
+		if len(credValue) == 0 {
+			return &ErrorMissingCredentials
+		}
+
+		// Process and validate credentials for this type
+		processed, svcErr := us.processCredentialType(credType, credValue, logger)
+		if svcErr != nil {
+			return svcErr
+		}
+
+		processedCredentials[credType] = processed
+	}
+
+	// Merge all processed credentials with existing ones
+	updatedCredentials := us.mergeCredentials(existingCredentials, processedCredentials)
+
+	// Update credentials in database
+	updatedCredsJSON, err := credentialsToJSON(updatedCredentials)
 	if err != nil {
-		return logErrorAndReturnServerError(
-			logger,
-			"Failed to update user credentials",
-			err,
-			log.String("userID", userID),
-		)
+		return logErrorAndReturnServerError(logger, "Failed to marshal updated credentials", err,
+			log.String("userID", userID))
+	}
+	if err = us.entityService.UpdateSystemCredentials(ctx, userID, updatedCredsJSON); err != nil {
+		return logErrorAndReturnServerError(logger, "Failed to update user credentials", err,
+			log.String("userID", userID))
 	}
 
 	logger.Debug("Successfully batch updated user credentials",
@@ -1100,14 +1077,15 @@ func (us *userService) DeleteUser(ctx context.Context, userID string) *serviceer
 	}
 
 	// Fetch the user to resolve the OU ID for the authorization check.
-	existingUser, err := us.userStore.GetUser(ctx, userID)
+	existingEntity, err := us.entityService.GetEntity(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return &ErrorUserNotFound
 		}
 		return logErrorAndReturnServerError(logger, "Failed to retrieve user", err, log.String("id", userID))
 	}
+	existingUser := entityToUser(existingEntity)
 
 	// Check authz using the user's OU ID.
 	if svcErr := us.checkUserAccess(
@@ -1120,12 +1098,9 @@ func (us *userService) DeleteUser(ctx context.Context, userID string) *serviceer
 		return svcErr
 	}
 
-	err = us.transactioner.Transact(ctx, func(txCtx context.Context) error {
-		return us.userStore.DeleteUser(txCtx, userID)
-	})
-
+	err = us.entityService.DeleteEntity(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return &ErrorUserNotFound
 		}
@@ -1145,9 +1120,9 @@ func (us *userService) IdentifyUser(ctx context.Context,
 		return nil, &ErrorInvalidRequestFormat
 	}
 
-	userID, err := us.userStore.IdentifyUser(ctx, filters)
+	userID, err := us.entityService.IdentifyEntity(ctx, filters)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found with provided filters")
 			return nil, &ErrorUserNotFound
 		}
@@ -1171,13 +1146,19 @@ func (us *userService) VerifyUser(
 		return nil, &ErrorInvalidRequestFormat
 	}
 
-	user, storedCredentials, err := us.userStore.GetCredentials(ctx, userID)
+	verifyEntity, _, systemCredsJSON, err := us.entityService.GetEntityWithCredentials(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("id", userID))
 			return nil, &ErrorUserNotFound
 		}
 		return nil, logErrorAndReturnServerError(logger, "Failed to verify user", err, log.String("id", userID))
+	}
+	user := entityToUser(verifyEntity)
+	storedCredentials, unmarshalErr := jsonToCredentials(systemCredsJSON)
+	if unmarshalErr != nil {
+		return nil, logErrorAndReturnServerError(logger, "Failed to unmarshal credentials", unmarshalErr,
+			log.String("id", userID))
 	}
 
 	if len(storedCredentials) == 0 {
@@ -1288,7 +1269,7 @@ func (us *userService) ValidateUserIDs(ctx context.Context, userIDs []string) ([
 		return []string{}, nil
 	}
 
-	invalidUserIDs, err := us.userStore.ValidateUserIDs(ctx, userIDs)
+	invalidUserIDs, err := us.entityService.ValidateEntityIDs(ctx, userIDs)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to validate user IDs", err)
 	}
@@ -1316,11 +1297,12 @@ func (us *userService) GetUsersByIDs(
 		}
 	}
 
-	users, err := us.userStore.GetUsersByIDs(ctx, uniqueIDs)
+	entities, err := us.entityService.GetEntitiesByIDs(ctx, uniqueIDs)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to get users by IDs", err)
 	}
 
+	users := entitiesToUsers(entities)
 	result := make(map[string]*User, len(users))
 	for i := range users {
 		result[users[i].ID] = &users[i]
@@ -1364,7 +1346,7 @@ func (us *userService) ValidateUserIDsInOUs(
 		return append([]string{}, userIDs...), nil
 	}
 
-	outOfScopeIDs, err := us.userStore.ValidateUserIDsInOUs(ctx, userIDs, ouIDs)
+	outOfScopeIDs, err := us.entityService.ValidateEntityIDsInOUs(ctx, userIDs, ouIDs)
 	if err != nil {
 		return nil, logErrorAndReturnServerError(logger, "Failed to validate user IDs in OUs", err)
 	}
@@ -1393,9 +1375,9 @@ func (us *userService) GetUserCredentialsByType(
 	}
 
 	// Get all credentials for the user
-	_, allCredentials, err := us.userStore.GetCredentials(ctx, userID)
+	_, _, systemCredsJSON, err := us.entityService.GetEntityWithCredentials(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("userID", userID))
 			return nil, &ErrorUserNotFound
 		}
@@ -1403,6 +1385,15 @@ func (us *userService) GetUserCredentialsByType(
 			logger,
 			"Failed to retrieve user credentials",
 			err,
+			log.String("userID", userID),
+		)
+	}
+	allCredentials, unmarshalErr := jsonToCredentials(systemCredsJSON)
+	if unmarshalErr != nil {
+		return nil, logErrorAndReturnServerError(
+			logger,
+			"Failed to unmarshal user credentials",
+			unmarshalErr,
 			log.String("userID", userID),
 		)
 	}
@@ -1433,9 +1424,9 @@ func (us *userService) IsUserDeclarative(ctx context.Context, userID string) (bo
 		return false, &ErrorMissingUserID
 	}
 
-	isDeclarative, err := us.userStore.IsUserDeclarative(ctx, userID)
+	isDeclarative, err := us.entityService.IsEntityDeclarative(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			logger.Debug("User not found", log.String("userID", userID))
 			return false, &ErrorUserNotFound
 		}
@@ -1653,9 +1644,9 @@ func mapOUServiceError(
 func (us *userService) checkUserDeclarative(
 	ctx context.Context, userID string, logger *log.Logger,
 ) *serviceerror.ServiceError {
-	isDeclarative, err := us.userStore.IsUserDeclarative(ctx, userID)
+	isDeclarative, err := us.entityService.IsEntityDeclarative(ctx, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
+		if errors.Is(err, entity.ErrEntityNotFound) {
 			return &ErrorUserNotFound
 		}
 		logger.Error("Failed to check if user is declarative",

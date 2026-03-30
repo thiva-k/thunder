@@ -16,4 +16,18 @@
  * under the License.
  */
 
-package user
+package entity
+
+import "errors"
+
+// Error variables for entity operations.
+var (
+	// ErrEntityNotFound is returned when the entity is not found in the system.
+	ErrEntityNotFound = errors.New("entity not found")
+
+	// ErrBadAttributesInRequest is returned when the attributes in the request are invalid.
+	ErrBadAttributesInRequest = errors.New("failed to marshal attributes")
+
+	// errResultLimitExceededInCompositeMode is returned when the result limit is exceeded in composite mode.
+	errResultLimitExceededInCompositeMode = errors.New("result limit exceeded in composite mode")
+)

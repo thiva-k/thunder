@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package user
+package entity
 
 import (
 	"fmt"
@@ -28,29 +28,40 @@ import (
 	"github.com/asgardeo/thunder/internal/system/log"
 )
 
-// getUserStoreMode determines the store mode for users.
+// getEntityStoreMode determines the store mode for the entity service.
 //
 // Resolution order:
-//  1. If User.Store is explicitly configured, use it
-//  2. Otherwise, fall back to global DeclarativeResources.Enabled:
+//  1. If Entity.Store is explicitly configured, use it
+//  2. Otherwise, fall back to User.Store for backward compatibility
+//  3. Otherwise, fall back to global DeclarativeResources.Enabled:
 //     - If enabled: return "declarative"
 //     - If disabled: return "mutable"
-//
-// Returns normalized store mode: "mutable", "declarative", or "composite"
-func getUserStoreMode() serverconst.StoreMode {
+func getEntityStoreMode() serverconst.StoreMode {
 	cfg := config.GetThunderRuntime().Config
-	if cfg.User.Store != "" {
-		mode := serverconst.StoreMode(strings.ToLower(strings.TrimSpace(cfg.User.Store)))
+
+	// Check entity-level configuration first.
+	if cfg.Entity.Store != "" {
+		mode := serverconst.StoreMode(strings.ToLower(strings.TrimSpace(cfg.Entity.Store)))
 		switch mode {
 		case serverconst.StoreModeMutable, serverconst.StoreModeDeclarative, serverconst.StoreModeComposite:
 			return mode
 		default:
 			msg := fmt.Sprintf(
-				"Invalid user store mode: %s, falling back to global declarative resources setting", mode)
+				"Invalid entity store mode: %s, falling back to global declarative resources setting", mode)
 			log.GetLogger().Warn(msg)
 		}
 	}
 
+	// Fall back to User.Store for backward compatibility.
+	if cfg.User.Store != "" {
+		mode := serverconst.StoreMode(strings.ToLower(strings.TrimSpace(cfg.User.Store)))
+		switch mode {
+		case serverconst.StoreModeMutable, serverconst.StoreModeDeclarative, serverconst.StoreModeComposite:
+			return mode
+		}
+	}
+
+	// Fall back to global declarative resources setting.
 	if declarativeresource.IsDeclarativeModeEnabled() {
 		return serverconst.StoreModeDeclarative
 	}
@@ -58,7 +69,14 @@ func getUserStoreMode() serverconst.StoreMode {
 	return serverconst.StoreModeMutable
 }
 
-// isDeclarativeModeEnabled checks if the user store mode is set to declarative.
-func isDeclarativeModeEnabled() bool {
-	return getUserStoreMode() == serverconst.StoreModeDeclarative
+// getIndexedAttributes reads indexed attributes from entity config,
+// falling back to user config for temporary backward compatibility.
+func getIndexedAttributes() []string {
+	cfg := config.GetThunderRuntime().Config
+
+	if len(cfg.Entity.IndexedAttributes) > 0 {
+		return cfg.Entity.IndexedAttributes
+	}
+
+	return cfg.User.IndexedAttributes
 }
