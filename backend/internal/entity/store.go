@@ -52,7 +52,8 @@ type entityStoreInterface interface {
 	AddIdentifier(ctx context.Context, entityID, idType, value, source string) error
 	RemoveIdentifier(ctx context.Context, entityID, idType string) error
 	SyncAttributeIdentifiers(ctx context.Context, entityID string,
-		attributes json.RawMessage, indexedAttrs map[string]bool) error
+		attributes json.RawMessage, systemAttributes json.RawMessage,
+		indexedAttrs map[string]bool) error
 
 	// Query
 	IdentifyEntity(ctx context.Context, filters map[string]interface{}) (*string, error)
@@ -165,7 +166,7 @@ func (es *entityDBStore) CreateEntity(ctx context.Context, entity Entity,
 		return fmt.Errorf("failed to create entity: %w", err)
 	}
 
-	if err := es.SyncAttributeIdentifiers(ctx, entity.EntityID, entity.Attributes, es.indexedAttributes); err != nil {
+	if err := es.SyncAttributeIdentifiers(ctx, entity.EntityID, entity.Attributes, entity.SystemAttributes, es.indexedAttributes); err != nil {
 		return fmt.Errorf("failed to sync identifiers: %w", err)
 	}
 
@@ -261,7 +262,7 @@ func (es *entityDBStore) UpdateEntity(ctx context.Context, entity *Entity) error
 		return fmt.Errorf("failed to delete identifiers: %w", err)
 	}
 
-	if err := es.SyncAttributeIdentifiers(ctx, entity.EntityID, entity.Attributes, es.indexedAttributes); err != nil {
+	if err := es.SyncAttributeIdentifiers(ctx, entity.EntityID, entity.Attributes, entity.SystemAttributes, es.indexedAttributes); err != nil {
 		return fmt.Errorf("failed to sync identifiers: %w", err)
 	}
 
@@ -389,9 +390,10 @@ func (es *entityDBStore) RemoveIdentifier(ctx context.Context, entityID, idType 
 
 // SyncAttributeIdentifiers synchronizes indexed attributes to the ENTITY_IDENTIFIER table.
 func (es *entityDBStore) SyncAttributeIdentifiers(ctx context.Context, entityID string,
-	attributes json.RawMessage, indexedAttrs map[string]bool) error {
+	attributes json.RawMessage, systemAttributes json.RawMessage,
+	indexedAttrs map[string]bool) error {
 
-	query, args, err := prepareIdentifierQuery(entityID, attributes, indexedAttrs, es.deploymentID)
+	query, args, err := prepareIdentifierQuery(entityID, attributes, systemAttributes, indexedAttrs, es.deploymentID)
 	if err != nil {
 		return err
 	}
@@ -423,7 +425,19 @@ func (es *entityDBStore) IdentifyEntity(ctx context.Context,
 		return nil, fmt.Errorf("failed to get database client: %w", err)
 	}
 
-	// Categorize filters into indexed and non-indexed
+	// First, try to identify via ENTITY_IDENTIFIER table (covers both indexed attributes
+	// and system identifiers like clientId, name). This is the fast path.
+	identifyQuery, args, err := buildIdentifyQueryFromIdentifiers(filters, es.deploymentID)
+	if err == nil {
+		results, qErr := dbClient.QueryContext(ctx, identifyQuery, args...)
+		if qErr == nil && len(results) == 1 {
+			if entityID, ok := results[0]["entity_id"].(string); ok {
+				return &entityID, nil
+			}
+		}
+	}
+
+	// Fallback: categorize filters into indexed and non-indexed for JSONB search.
 	indexedFilters := make(map[string]interface{})
 	nonIndexedFilters := make(map[string]interface{})
 
@@ -434,9 +448,6 @@ func (es *entityDBStore) IdentifyEntity(ctx context.Context,
 			nonIndexedFilters[key] = value
 		}
 	}
-
-	var identifyQuery dbmodel.DBQuery
-	var args []interface{}
 
 	if len(indexedFilters) == len(filters) && len(indexedFilters) > 0 {
 		identifyQuery, args, err = buildIdentifyQueryFromIdentifiers(filters, es.deploymentID)
@@ -893,43 +904,51 @@ func maskMapValues(input map[string]interface{}) map[string]interface{} {
 }
 
 func prepareIdentifierQuery(
-	entityID string, attributes json.RawMessage, indexedAttrs map[string]bool, deploymentID string,
+	entityID string, attributes json.RawMessage, systemAttributes json.RawMessage,
+	indexedAttrs map[string]bool, deploymentID string,
 ) (*dbmodel.DBQuery, []interface{}, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "EntityStore"))
 
-	if len(attributes) == 0 {
-		return nil, nil, nil
-	}
-
-	var attrMap map[string]interface{}
-	if err := json.Unmarshal(attributes, &attrMap); err != nil {
-		return nil, nil, fmt.Errorf("failed to unmarshal attributes: %w", err)
-	}
-
 	type indexedAttr struct {
-		name  string
-		value string
+		name   string
+		value  string
+		source string
 	}
-	toInsert := make([]indexedAttr, 0, len(attrMap))
+	var toInsert []indexedAttr
 
-	for attrName, attrValue := range attrMap {
-		if !indexedAttrs[attrName] {
-			continue
+	// Extract indexed attributes from schema attributes (source = "attribute").
+	if len(attributes) > 0 {
+		var attrMap map[string]interface{}
+		if err := json.Unmarshal(attributes, &attrMap); err != nil {
+			return nil, nil, fmt.Errorf("failed to unmarshal attributes: %w", err)
 		}
-
-		var valueStr string
-		switch v := attrValue.(type) {
-		case string:
-			valueStr = v
-		case float64, int, int64, bool:
-			valueStr = fmt.Sprintf("%v", v)
-		default:
-			logger.Warn("Skipping indexing complex attribute; only primitive types are indexed",
-				log.String("attribute", attrName))
-			continue
+		for attrName, attrValue := range attrMap {
+			if !indexedAttrs[attrName] {
+				continue
+			}
+			if valueStr := attrValueToString(attrValue); valueStr != "" {
+				toInsert = append(toInsert, indexedAttr{name: attrName, value: valueStr, source: "attribute"})
+			} else {
+				logger.Warn("Skipping indexing complex attribute; only primitive types are indexed",
+					log.String("attribute", attrName))
+			}
 		}
+	}
 
-		toInsert = append(toInsert, indexedAttr{name: attrName, value: valueStr})
+	// Extract indexed attributes from system attributes (source = "system").
+	if len(systemAttributes) > 0 {
+		var sysAttrMap map[string]interface{}
+		if err := json.Unmarshal(systemAttributes, &sysAttrMap); err != nil {
+			return nil, nil, fmt.Errorf("failed to unmarshal system attributes: %w", err)
+		}
+		for attrName, attrValue := range sysAttrMap {
+			if !indexedAttrs[attrName] {
+				continue
+			}
+			if valueStr := attrValueToString(attrValue); valueStr != "" {
+				toInsert = append(toInsert, indexedAttr{name: attrName, value: valueStr, source: "system"})
+			}
+		}
 	}
 
 	if len(toInsert) == 0 {
@@ -944,7 +963,7 @@ func prepareIdentifierQuery(
 		valuePlaceholders = append(valuePlaceholders,
 			fmt.Sprintf("($%d, $%d, $%d, $%d, $%d)",
 				paramIndex, paramIndex+1, paramIndex+2, paramIndex+3, paramIndex+4))
-		args = append(args, entityID, attr.name, attr.value, "attribute", deploymentID)
+		args = append(args, entityID, attr.name, attr.value, attr.source, deploymentID)
 		paramIndex += 5
 	}
 
@@ -955,6 +974,19 @@ func prepareIdentifierQuery(
 	}
 
 	return query, args, nil
+}
+
+// attrValueToString converts an attribute value to a string for indexing.
+// Returns empty string for complex types that can't be indexed.
+func attrValueToString(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case float64, int, int64, bool:
+		return fmt.Sprintf("%v", v)
+	default:
+		return ""
+	}
 }
 
 func validateIndexedAttributesConfig(configuredAttrs []string) error {

@@ -140,7 +140,7 @@ func (st *applicationStore) CreateApplication(ctx context.Context, app model.App
 		layoutID = nil
 	}
 
-	_, err = dbClient.ExecuteContext(ctx, queryCreateApplication, app.ID, app.Name, app.Description,
+	_, err = dbClient.ExecuteContext(ctx, queryCreateApplication, app.ID,
 		app.AuthFlowID, app.RegistrationFlowID, isRegistrationEnabledStr, themeID, layoutID,
 		jsonDataBytes, st.deploymentID)
 	if err != nil {
@@ -222,7 +222,7 @@ func (st *applicationStore) GetOAuthApplication(
 		return nil, fmt.Errorf("failed to get database client: %w", err)
 	}
 
-	results, err := dbClient.QueryContext(ctx, queryGetOAuthApplicationByClientID, clientID, st.deploymentID)
+	results, err := dbClient.QueryContext(ctx, queryGetOAuthApplicationByEntityID, clientID, st.deploymentID)
 	if err != nil {
 		return nil, err
 	}
@@ -232,14 +232,9 @@ func (st *applicationStore) GetOAuthApplication(
 
 	row := results[0]
 
-	appID, ok := row["app_id"].(string)
+	appID, ok := row["entity_id"].(string)
 	if !ok {
-		return nil, errors.New("failed to parse app_id as string")
-	}
-
-	hashedClientSecret, ok := row["client_secret"].(string)
-	if !ok {
-		return nil, errors.New("failed to parse client_secret as string")
+		return nil, errors.New("failed to parse entity_id as string")
 	}
 
 	// Extract OAuth JSON data
@@ -319,8 +314,6 @@ func (st *applicationStore) GetOAuthApplication(
 
 	return &model.OAuthAppConfigProcessedDTO{
 		AppID:                   appID,
-		ClientID:                clientID,
-		HashedClientSecret:      hashedClientSecret,
 		RedirectURIs:            oAuthConfig.RedirectURIs,
 		GrantTypes:              grantTypes,
 		ResponseTypes:           responseTypes,
@@ -340,10 +333,11 @@ func (st *applicationStore) GetApplicationByID(ctx context.Context, id string) (
 	return st.getApplicationByQuery(ctx, queryGetApplicationByAppID, id, st.deploymentID)
 }
 
-// GetApplicationByName retrieves a specific application by its name from the database.
+// GetApplicationByName is no longer supported in the DB store.
+// Name lookups go through the entity provider. This method is kept for interface compatibility.
 func (st *applicationStore) GetApplicationByName(
 	ctx context.Context, name string) (*model.ApplicationProcessedDTO, error) {
-	return st.getApplicationByQuery(ctx, queryGetApplicationByName, name, st.deploymentID)
+	return nil, fmt.Errorf("GetApplicationByName is not supported in the DB store; use entity provider for name lookups")
 }
 
 // getApplicationByQuery retrieves a specific application from the database using the provided query and parameter.
@@ -407,8 +401,8 @@ func (st *applicationStore) UpdateApplication(
 	} else {
 		layoutID = nil
 	}
-	_, err = dbClient.ExecuteContext(ctx, queryUpdateApplicationByAppID, updatedApp.ID, updatedApp.Name,
-		updatedApp.Description, updatedApp.AuthFlowID, updatedApp.RegistrationFlowID,
+	_, err = dbClient.ExecuteContext(ctx, queryUpdateApplicationByAppID, updatedApp.ID,
+		updatedApp.AuthFlowID, updatedApp.RegistrationFlowID,
 		isRegistrationEnabledStr, themeID, layoutID, jsonDataBytes, st.deploymentID)
 	if err != nil {
 		return fmt.Errorf("failed to update application: %w", err)
@@ -474,8 +468,14 @@ func (st *applicationStore) IsApplicationExists(ctx context.Context, id string) 
 	return parseBoolFromCount(results)
 }
 
-// IsApplicationExistsByName checks if an application exists in the database by name.
+// IsApplicationExistsByName is no longer supported in the DB store.
+// Name lookups go through the entity provider.
 func (st *applicationStore) IsApplicationExistsByName(ctx context.Context, name string) (bool, error) {
+	return false, fmt.Errorf("IsApplicationExistsByName is not supported in the DB store; use entity provider")
+}
+
+// isApplicationExistsByNameLegacy is kept for reference but no longer called.
+func (st *applicationStore) isApplicationExistsByNameLegacy(ctx context.Context, name string) (bool, error) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationStore"))
 
 	dbClient, err := st.dbProvider.GetConfigDBClient()
@@ -484,7 +484,7 @@ func (st *applicationStore) IsApplicationExistsByName(ctx context.Context, name 
 		return false, fmt.Errorf("failed to get database client: %w", err)
 	}
 
-	results, err := dbClient.QueryContext(ctx, queryCheckApplicationExistsByName, name, st.deploymentID)
+	results, err := dbClient.QueryContext(ctx, queryCheckApplicationExistsByID, name, st.deploymentID)
 	if err != nil {
 		logger.Error("Failed to execute existence check query", log.Error(err))
 		return false, fmt.Errorf("failed to execute existence check query: %w", err)
@@ -604,27 +604,24 @@ func getOAuthConfigJSONBytes(inboundAuthConfig model.InboundAuthConfigProcessedD
 func (st *applicationStore) createOAuthApp(ctx context.Context, dbClient provider.DBClientInterface,
 	app *model.ApplicationProcessedDTO, oauthAppMgtQuery dbmodel.DBQuery) error {
 	inboundAuthConfig := app.InboundAuthConfig[0]
-	clientID := inboundAuthConfig.OAuthAppConfig.ClientID
-	clientSecret := inboundAuthConfig.OAuthAppConfig.HashedClientSecret
 
-	// Generate the OAuth config JSON
+	// Generate the OAuth config JSON (no clientId/clientSecret — those are in the ENTITY table)
 	oauthConfigJSON, err := getOAuthConfigJSONBytes(inboundAuthConfig)
 	if err != nil {
 		return err
 	}
 
-	_, err = dbClient.ExecuteContext(ctx, oauthAppMgtQuery, app.ID, clientID,
-		clientSecret, oauthConfigJSON, st.deploymentID)
+	_, err = dbClient.ExecuteContext(ctx, oauthAppMgtQuery, app.ID, oauthConfigJSON, st.deploymentID)
 	if err != nil {
 		return fmt.Errorf("failed to create/update OAuth application: %w", err)
 	}
 	return nil
 }
 
-// deleteOAuthApp deletes an OAuth application by client ID.
+// deleteOAuthApp deletes an OAuth application config by app/entity ID.
 func (st *applicationStore) deleteOAuthApp(ctx context.Context, dbClient provider.DBClientInterface,
-	clientID string) error {
-	_, err := dbClient.ExecuteContext(ctx, queryDeleteOAuthApplicationByClientID, clientID, st.deploymentID)
+	appID string) error {
+	_, err := dbClient.ExecuteContext(ctx, queryDeleteOAuthApplicationByAppID, appID, st.deploymentID)
 	if err != nil {
 		return fmt.Errorf("failed to delete OAuth application: %w", err)
 	}
@@ -638,19 +635,8 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 		return model.BasicApplicationDTO{}, fmt.Errorf("failed to parse id as string")
 	}
 
-	appName, ok := row["app_name"].(string)
-	if !ok {
-		return model.BasicApplicationDTO{}, fmt.Errorf("failed to parse app_name as string")
-	}
-
-	var description string
-	if row["description"] == nil {
-		description = ""
-	} else if desc, ok := row["description"].(string); ok {
-		description = desc
-	} else {
-		return model.BasicApplicationDTO{}, fmt.Errorf("failed to parse description as string")
-	}
+	// Name and Description are no longer in the APPLICATION table — they come from the ENTITY table
+	// and are populated by the service layer.
 
 	authFlowID, ok := row["auth_flow_id"].(string)
 	if !ok {
@@ -694,8 +680,6 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 
 	application := model.BasicApplicationDTO{
 		ID:                        appID,
-		Name:                      appName,
-		Description:               description,
 		AuthFlowID:                authFlowID,
 		RegistrationFlowID:        regisFlowID,
 		IsRegistrationFlowEnabled: isRegistrationFlowEnabled,
@@ -703,13 +687,7 @@ func buildBasicApplicationFromResultRow(row map[string]interface{}) (model.Basic
 		LayoutID:                  layoutID,
 	}
 
-	if row["client_id"] != nil {
-		clientID, ok := row["client_id"].(string)
-		if !ok {
-			return model.BasicApplicationDTO{}, fmt.Errorf("failed to parse client_id as string")
-		}
-		application.ClientID = clientID
-	}
+	// ClientID is no longer in the APPLICATION/OAUTH tables — it comes from the ENTITY table.
 
 	// Extract logo_url and template from app_json if present.
 	if row["app_json"] != nil {
@@ -916,8 +894,9 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 		Metadata:                  metadata,
 	}
 
-	if basicApp.ClientID != "" {
-		inboundAuthConfig, err := buildOAuthInboundAuthConfig(row, basicApp)
+	// Check if OAuth config exists (joined from APP_OAUTH_INBOUND_CONFIG).
+	if row["oauth_config_json"] != nil {
+		inboundAuthConfig, err := buildOAuthInboundAuthConfig(row)
 		if err != nil {
 			return model.ApplicationProcessedDTO{}, err
 		}
@@ -927,12 +906,15 @@ func buildApplicationFromResultRow(row map[string]interface{}) (model.Applicatio
 	return application, nil
 }
 
-// buildOAuthInboundAuthConfig builds OAuth inbound auth configuration from database row and basic app data.
-func buildOAuthInboundAuthConfig(row map[string]interface{}, basicApp model.BasicApplicationDTO) (
+// buildOAuthInboundAuthConfig builds OAuth inbound auth configuration from database row.
+// ClientID, HashedClientSecret come from the ENTITY table — not from this row.
+func buildOAuthInboundAuthConfig(row map[string]interface{}) (
 	model.InboundAuthConfigProcessedDTO, error) {
-	hashedClientSecret, ok := row["client_secret"].(string)
-	if !ok {
-		return model.InboundAuthConfigProcessedDTO{}, fmt.Errorf("failed to parse client_secret as string")
+	// Extract entity_id for linking.
+	appID, _ := row["entity_id"].(string)
+	if appID == "" {
+		// For application queries, the ID comes from the app row.
+		appID, _ = row["id"].(string)
 	}
 
 	// Extract OAuth JSON data from the row.
@@ -1015,9 +997,7 @@ func buildOAuthInboundAuthConfig(row map[string]interface{}, basicApp model.Basi
 	inboundAuthConfig := model.InboundAuthConfigProcessedDTO{
 		Type: model.OAuthInboundAuthType,
 		OAuthAppConfig: &model.OAuthAppConfigProcessedDTO{
-			AppID:                   basicApp.ID,
-			ClientID:                basicApp.ClientID,
-			HashedClientSecret:      hashedClientSecret,
+			AppID:                   appID,
 			RedirectURIs:            oauthConfig.RedirectURIs,
 			GrantTypes:              grantTypes,
 			ResponseTypes:           responseTypes,

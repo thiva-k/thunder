@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/authnprovider"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/discovery"
 	"github.com/asgardeo/thunder/internal/system/jose/jwt"
@@ -34,10 +35,11 @@ func Initialize(
 	jwtService jwt.JWTServiceInterface,
 	appService application.ApplicationServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
+	authnProvider authnprovider.AuthnProviderInterface,
 ) TokenIntrospectionServiceInterface {
 	introspectionService := newTokenIntrospectionService(jwtService)
 	introspectHandler := newTokenIntrospectionHandler(introspectionService)
-	registerRoutes(mux, introspectHandler, appService, jwtService, discoveryService)
+	registerRoutes(mux, introspectHandler, appService, jwtService, discoveryService, authnProvider)
 	return introspectionService
 }
 
@@ -48,6 +50,7 @@ func registerRoutes(
 	appService application.ApplicationServiceInterface,
 	jwtService jwt.JWTServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
+	authnProvider authnprovider.AuthnProviderInterface,
 ) {
 	opts := middleware.CORSOptions{
 		AllowedMethods:   "POST, OPTIONS",
@@ -55,7 +58,7 @@ func registerRoutes(
 		AllowCredentials: true,
 	}
 
-	clientAuthMiddleware := clientauth.ClientAuthMiddleware(appService, jwtService, discoveryService)
+	clientAuthMiddleware := clientauth.ClientAuthMiddleware(appService, jwtService, discoveryService, authnProvider)
 	handler := clientAuthMiddleware(http.HandlerFunc(introspectHandler.HandleIntrospect))
 
 	pattern, wrappedHandler := middleware.WithCORS(

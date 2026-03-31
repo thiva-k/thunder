@@ -22,6 +22,7 @@ import (
 	"net/http"
 
 	"github.com/asgardeo/thunder/internal/application"
+	"github.com/asgardeo/thunder/internal/authnprovider"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/clientauth"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/discovery"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/granthandlers"
@@ -42,10 +43,11 @@ func Initialize(
 	observabilitySvc observability.ObservabilityServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
 	transactioner transaction.Transactioner,
+	authnProvider authnprovider.AuthnProviderInterface,
 ) TokenHandlerInterface {
 	tokenSvc := newTokenService(grantHandlerProvider, scopeValidator, observabilitySvc, transactioner)
 	tokenHandler := newTokenHandler(tokenSvc, observabilitySvc)
-	registerRoutes(mux, tokenHandler, appService, jwtService, discoveryService)
+	registerRoutes(mux, tokenHandler, appService, jwtService, discoveryService, authnProvider)
 	return tokenHandler
 }
 
@@ -56,6 +58,7 @@ func registerRoutes(
 	appService application.ApplicationServiceInterface,
 	jwtService jwt.JWTServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
+	authnProvider authnprovider.AuthnProviderInterface,
 ) {
 	corsOpts := middleware.CORSOptions{
 		AllowedMethods:   "POST",
@@ -63,7 +66,7 @@ func registerRoutes(
 		AllowCredentials: true,
 	}
 
-	clientAuthMiddleware := clientauth.ClientAuthMiddleware(appService, jwtService, discoveryService)
+	clientAuthMiddleware := clientauth.ClientAuthMiddleware(appService, jwtService, discoveryService, authnProvider)
 	handler := clientAuthMiddleware(http.HandlerFunc(tokenHandler.HandleTokenRequest))
 
 	pattern, wrappedHandler := middleware.WithCORS(

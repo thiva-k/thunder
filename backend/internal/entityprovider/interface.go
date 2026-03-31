@@ -28,9 +28,10 @@ type EntityProviderInterface interface {
 	GetEntity(entityID string) (*Entity, *EntityProviderError)
 	GetEntityGroups(entityID string, limit, offset int) (*EntityGroupListResponse, *EntityProviderError)
 	UpdateEntity(entityID string, entity *Entity) (*Entity, *EntityProviderError)
-	CreateEntity(entity *Entity) (*Entity, *EntityProviderError)
+	CreateEntity(entity *Entity, systemCredentials json.RawMessage) (*Entity, *EntityProviderError)
 	UpdateEntityCredentials(entityID string, credentials json.RawMessage) *EntityProviderError
 	DeleteEntity(entityID string) *EntityProviderError
+	AddSystemIdentifier(entityID string, idType string, value string) *EntityProviderError
 	ValidateEntityIDs(entityIDs []string) ([]string, *EntityProviderError)
 	GetEntitiesByIDs(entityIDs []string) ([]*Entity, *EntityProviderError)
 }

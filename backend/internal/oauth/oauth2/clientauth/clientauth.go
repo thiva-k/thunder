@@ -30,6 +30,7 @@ import (
 
 	"github.com/asgardeo/thunder/internal/application"
 	appmodel "github.com/asgardeo/thunder/internal/application/model"
+	"github.com/asgardeo/thunder/internal/authnprovider"
 	"github.com/asgardeo/thunder/internal/cert"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/constants"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/discovery"
@@ -49,6 +50,7 @@ func authenticate(
 	appService application.ApplicationServiceInterface,
 	jwtService jwt.JWTServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
+	authnProvider authnprovider.AuthnProviderInterface,
 ) (*OAuthClientInfo, *authError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ClientAuthMiddleware"))
 
@@ -128,7 +130,18 @@ func authenticate(
 		return nil, errClientIDMismatch
 	}
 
-	oauthApp, err := appService.GetOAuthApplication(ctx, clientID)
+	// Step 1: Identify the app entity by clientId to get the entityID.
+	entityID, identifyErr := authnProvider.Authenticate(ctx,
+		map[string]interface{}{"clientId": clientID},
+		map[string]interface{}{}, // Empty credentials — just identify, don't verify yet.
+		nil,
+	)
+	if identifyErr != nil {
+		return nil, errInvalidClientCredentials
+	}
+
+	// Step 2: Get OAuth config by entity ID.
+	oauthApp, err := appService.GetOAuthApplication(ctx, entityID.UserID)
 	if err != nil || oauthApp == nil {
 		return nil, errInvalidClientCredentials
 	}
@@ -137,7 +150,7 @@ func authenticate(
 		return nil, errUnauthorizedAuthMethod
 	}
 
-	// Validate credentials based on method
+	// Step 3: Validate credentials based on method.
 	switch detectedMethod {
 	case constants.TokenEndpointAuthMethodPrivateKeyJWT:
 		if err := validateClientAssertion(ctx, oauthApp, jwtService, discoveryService, clientID,
@@ -147,7 +160,12 @@ func authenticate(
 		}
 	case constants.TokenEndpointAuthMethodClientSecretBasic,
 		constants.TokenEndpointAuthMethodClientSecretPost:
-		if !oauthApp.ValidateCredentials(clientID, clientSecret) {
+		_, authnErr := authnProvider.Authenticate(ctx,
+			map[string]interface{}{"clientId": clientID},
+			map[string]interface{}{"clientSecret": clientSecret},
+			nil,
+		)
+		if authnErr != nil {
 			return nil, errInvalidClientCredentials
 		}
 	}

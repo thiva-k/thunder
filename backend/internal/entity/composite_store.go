@@ -113,8 +113,9 @@ func (c *entityCompositeStore) RemoveIdentifier(ctx context.Context, entityID, i
 
 // SyncAttributeIdentifiers syncs identifiers in the database store only.
 func (c *entityCompositeStore) SyncAttributeIdentifiers(ctx context.Context, entityID string,
-	attributes json.RawMessage, indexedAttrs map[string]bool) error {
-	return c.dbStore.SyncAttributeIdentifiers(ctx, entityID, attributes, indexedAttrs)
+	attributes json.RawMessage, systemAttributes json.RawMessage,
+	indexedAttrs map[string]bool) error {
+	return c.dbStore.SyncAttributeIdentifiers(ctx, entityID, attributes, systemAttributes, indexedAttrs)
 }
 
 // IdentifyEntity identifies an entity from either store (DB first, then file fallback).

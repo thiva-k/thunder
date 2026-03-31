@@ -21,28 +21,54 @@ package authnprovider
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
+	"errors"
 
+	"github.com/asgardeo/thunder/internal/entity"
+	"github.com/asgardeo/thunder/internal/system/crypto/hash"
 	"github.com/asgardeo/thunder/internal/system/error/serviceerror"
+	"github.com/asgardeo/thunder/internal/system/log"
 	"github.com/asgardeo/thunder/internal/user"
 )
 
 type defaultAuthnProvider struct {
-	userSvc user.UserServiceInterface
+	userSvc       user.UserServiceInterface
+	entityService entity.EntityServiceInterface
 }
 
-// newDefaultAuthnProvider creates a new internal user authn provider.
-func newDefaultAuthnProvider(userSvc user.UserServiceInterface) AuthnProviderInterface {
+// newDefaultAuthnProvider creates a new internal authn provider.
+func newDefaultAuthnProvider(
+	userSvc user.UserServiceInterface,
+	entityService entity.EntityServiceInterface,
+) AuthnProviderInterface {
 	return &defaultAuthnProvider{
-		userSvc: userSvc,
+		userSvc:       userSvc,
+		entityService: entityService,
 	}
 }
 
-// Authenticate authenticates the user using the internal user service.
+// Authenticate authenticates an entity (user or application) based on the provided identifiers.
+// If identifiers contain "clientId", it authenticates as an application via the entity service.
+// Otherwise, it delegates to the user service for user authentication.
 func (p *defaultAuthnProvider) Authenticate(
 	ctx context.Context,
 	identifiers, credentials map[string]interface{},
 	metadata *AuthnMetadata,
+) (*AuthnResult, *AuthnProviderError) {
+	// Route to app authentication if clientId is present.
+	if _, hasClientID := identifiers["clientId"]; hasClientID {
+		return p.authenticateApp(ctx, identifiers, credentials)
+	}
+
+	// Default: user authentication via user service.
+	return p.authenticateUser(ctx, identifiers, credentials)
+}
+
+// authenticateUser authenticates a user using the internal user service.
+func (p *defaultAuthnProvider) authenticateUser(
+	ctx context.Context,
+	identifiers, credentials map[string]interface{},
 ) (*AuthnResult, *AuthnProviderError) {
 	authResponse, authErr := p.userSvc.AuthenticateUser(ctx, identifiers, credentials)
 	if authErr != nil {
@@ -85,11 +111,72 @@ func (p *defaultAuthnProvider) Authenticate(
 
 	return &AuthnResult{
 		UserID:              authResponse.ID,
-		Token:               authResponse.ID,
 		UserType:            userResult.Type,
 		OUID:                userResult.OUID,
+		Token:               authResponse.ID,
 		AvailableAttributes: availableAttributes,
 	}, nil
+}
+
+// authenticateApp authenticates an application by verifying the client secret
+// against the hashed secret stored in the entity's system credentials.
+func (p *defaultAuthnProvider) authenticateApp(
+	ctx context.Context,
+	identifiers, credentials map[string]interface{},
+) (*AuthnResult, *AuthnProviderError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "AuthnProvider"))
+
+	// Identify the entity by clientId.
+	entityID, err := p.entityService.IdentifyEntity(ctx, identifiers)
+	if err != nil {
+		if errors.Is(err, entity.ErrEntityNotFound) {
+			return nil, NewError(ErrorCodeAuthenticationFailed, "Authentication failed", "Client not found")
+		}
+		return nil, NewError(ErrorCodeSystemError, "Authentication failed", err.Error())
+	}
+
+	// Fetch entity with credentials.
+	e, _, systemCredsJSON, err := p.entityService.GetEntityWithCredentials(ctx, *entityID)
+	if err != nil {
+		return nil, NewError(ErrorCodeSystemError, "Authentication failed", err.Error())
+	}
+
+	// Verify client secret if provided. If no credentials are given, this is an identify-only call.
+	clientSecret, _ := credentials["clientSecret"].(string)
+	if clientSecret != "" {
+		if !verifyClientSecret(clientSecret, systemCredsJSON) {
+			logger.Debug("Client secret verification failed", log.String("entityID", *entityID))
+			return nil, NewError(ErrorCodeAuthenticationFailed, "Authentication failed", "Invalid client credentials")
+		}
+	}
+
+	return &AuthnResult{
+		UserID:   e.EntityID,
+		UserType: e.EntityType,
+		OUID:     e.OrganizationUnitID,
+		Token:    e.EntityID,
+	}, nil
+}
+
+// verifyClientSecret verifies the provided client secret against the stored hashed secret.
+func verifyClientSecret(providedSecret string, systemCredsJSON json.RawMessage) bool {
+	if len(systemCredsJSON) == 0 {
+		return false
+	}
+
+	var creds map[string]interface{}
+	if err := json.Unmarshal(systemCredsJSON, &creds); err != nil {
+		return false
+	}
+
+	storedHash, ok := creds["clientSecret"].(string)
+	if !ok || storedHash == "" {
+		return false
+	}
+
+	// Hash the provided secret and compare using constant-time comparison.
+	hashedProvided := hash.GenerateThumbprintFromString(providedSecret)
+	return subtle.ConstantTimeCompare([]byte(hashedProvided), []byte(storedHash)) == 1
 }
 
 // GetAttributes retrieves the user attributes using the internal user service.

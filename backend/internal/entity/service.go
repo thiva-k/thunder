@@ -47,6 +47,8 @@ type EntityServiceInterface interface {
 
 	// Identifiers
 	IdentifyEntity(ctx context.Context, filters map[string]interface{}) (*string, error)
+	AddSystemIdentifier(ctx context.Context, entityID string, idType string, value string) error
+	RemoveSystemIdentifier(ctx context.Context, entityID string, idType string) error
 
 	// Lists (category-scoped)
 	GetEntityListCount(ctx context.Context, category EntityCategory,
@@ -174,6 +176,18 @@ func (s *entityService) GetEntityWithCredentials(ctx context.Context, entityID s
 func (s *entityService) IdentifyEntity(ctx context.Context,
 	filters map[string]interface{}) (*string, error) {
 	return s.store.IdentifyEntity(ctx, filters)
+}
+
+// AddSystemIdentifier adds a system-managed identifier for an entity.
+func (s *entityService) AddSystemIdentifier(ctx context.Context,
+	entityID string, idType string, value string) error {
+	return s.store.AddIdentifier(ctx, entityID, idType, value, "system")
+}
+
+// RemoveSystemIdentifier removes a system-managed identifier for an entity.
+func (s *entityService) RemoveSystemIdentifier(ctx context.Context,
+	entityID string, idType string) error {
+	return s.store.RemoveIdentifier(ctx, entityID, idType)
 }
 
 // GetEntityListCount retrieves the total count of entities by category.

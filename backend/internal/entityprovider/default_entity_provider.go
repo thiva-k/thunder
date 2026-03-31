@@ -119,7 +119,7 @@ func (p *defaultEntityProvider) UpdateEntity(
 
 // CreateEntity creates a new entity.
 func (p *defaultEntityProvider) CreateEntity(
-	providerEntity *Entity) (*Entity, *EntityProviderError) {
+	providerEntity *Entity, systemCredentials json.RawMessage) (*Entity, *EntityProviderError) {
 
 	if providerEntity == nil {
 		return nil, NewEntityProviderError(
@@ -128,7 +128,7 @@ func (p *defaultEntityProvider) CreateEntity(
 
 	ctx := security.WithRuntimeContext(context.Background())
 	internalEntity := fromProviderEntity(providerEntity)
-	created, err := p.entitySvc.CreateEntity(ctx, internalEntity, nil, nil)
+	created, err := p.entitySvc.CreateEntity(ctx, internalEntity, nil, systemCredentials)
 	if err != nil {
 		return nil, NewEntityProviderError(ErrorCodeSystemError, "Failed to create entity", err.Error())
 	}
@@ -159,6 +159,18 @@ func (p *defaultEntityProvider) DeleteEntity(entityID string) *EntityProviderErr
 			return nil // idempotent
 		}
 		return NewEntityProviderError(ErrorCodeSystemError, "Failed to delete entity", err.Error())
+	}
+	return nil
+}
+
+// AddSystemIdentifier adds a system-managed identifier for an entity.
+func (p *defaultEntityProvider) AddSystemIdentifier(
+	entityID string, idType string, value string) *EntityProviderError {
+
+	ctx := security.WithRuntimeContext(context.Background())
+	err := p.entitySvc.AddSystemIdentifier(ctx, entityID, idType, value)
+	if err != nil {
+		return NewEntityProviderError(ErrorCodeSystemError, "Failed to add identifier", err.Error())
 	}
 	return nil
 }

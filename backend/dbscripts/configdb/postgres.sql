@@ -48,7 +48,7 @@ CREATE INDEX idx_role_permission_resource_server ON ROLE_PERMISSION (RESOURCE_SE
 CREATE TABLE ROLE_ASSIGNMENT (
     DEPLOYMENT_ID       VARCHAR(255) NOT NULL,
     ROLE_ID         VARCHAR(36) NOT NULL,
-    ASSIGNEE_TYPE   VARCHAR(5)  NOT NULL CHECK (ASSIGNEE_TYPE IN ('user', 'group')),
+    ASSIGNEE_TYPE   VARCHAR(10) NOT NULL CHECK (ASSIGNEE_TYPE IN ('user', 'group', 'app')),
     ASSIGNEE_ID     VARCHAR(36) NOT NULL,
     CREATED_AT      TIMESTAMPTZ DEFAULT NOW(),
     UPDATED_AT      TIMESTAMPTZ DEFAULT NOW(),
@@ -94,12 +94,12 @@ CREATE INDEX idx_layout_deployment_id ON LAYOUT (DEPLOYMENT_ID);
 -- Unique index for layout handle per deployment
 CREATE UNIQUE INDEX idx_layout_handle_deployment ON LAYOUT (HANDLE, DEPLOYMENT_ID);
 
--- Table to store application details.
+-- Table to store application gateway configuration.
+-- Identity fields (name, description, clientId, credentials) are stored in the ENTITY table (userdb).
+-- APPLICATION.ID = ENTITY.ENTITY_ID.
 CREATE TABLE APPLICATION (
     DEPLOYMENT_ID VARCHAR(255) NOT NULL,
     ID VARCHAR(36) PRIMARY KEY,
-    APP_NAME VARCHAR(255) NOT NULL,
-    DESCRIPTION VARCHAR(255) NOT NULL,
     AUTH_FLOW_ID VARCHAR(100) NOT NULL,
     REGISTRATION_FLOW_ID VARCHAR(100) NOT NULL,
     IS_REGISTRATION_FLOW_ENABLED CHAR(1) DEFAULT '1',
@@ -110,28 +110,22 @@ CREATE TABLE APPLICATION (
     FOREIGN KEY (LAYOUT_ID) REFERENCES LAYOUT(ID) ON DELETE RESTRICT
 );
 
--- Composite index for name-based application lookups
-CREATE INDEX idx_application_name_deployment ON APPLICATION (DEPLOYMENT_ID, APP_NAME);
-
 -- Index for efficient lookups of applications by theme.
 CREATE INDEX idx_application_theme_id ON APPLICATION(THEME_ID);
 
 -- Index for efficient lookups of applications by layout.
 CREATE INDEX idx_application_layout_id ON APPLICATION(LAYOUT_ID);
 
--- Table to store OAuth configurations for applications.
+-- Table to store OAuth protocol configuration for applications.
+-- CLIENT_ID and CLIENT_SECRET are stored in the ENTITY table (userdb).
+-- ENTITY_ID = ENTITY.ENTITY_ID.
 CREATE TABLE APP_OAUTH_INBOUND_CONFIG (
     DEPLOYMENT_ID VARCHAR(255) NOT NULL,
-    CLIENT_ID VARCHAR(255) NOT NULL,
-    CLIENT_SECRET VARCHAR(255) NOT NULL,
-    APP_ID VARCHAR(36) NOT NULL,
+    ENTITY_ID VARCHAR(36) NOT NULL,
     OAUTH_CONFIG_JSON JSONB,
-    PRIMARY KEY (CLIENT_ID, DEPLOYMENT_ID),
-    FOREIGN KEY (APP_ID) REFERENCES APPLICATION(ID) ON DELETE CASCADE
+    PRIMARY KEY (ENTITY_ID, DEPLOYMENT_ID),
+    FOREIGN KEY (ENTITY_ID) REFERENCES APPLICATION(ID) ON DELETE CASCADE
 );
-
--- Index for APP_ID lookups on APP_OAUTH_INBOUND_CONFIG (UPDATE/DELETE by app ID, and JOIN in application list)
-CREATE INDEX idx_app_oauth_app_id ON APP_OAUTH_INBOUND_CONFIG (APP_ID);
 
 -- Table to store identity providers.
 CREATE TABLE IDP (

@@ -145,12 +145,45 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 		}
 	}
 
-	// Create entity in the directory layer (userdb) before config in gateway (configdb).
+	// Build system credentials JSON for the entity.
+	var systemCreds json.RawMessage
+	if len(processedDTO.InboundAuthConfig) > 0 && processedDTO.InboundAuthConfig[0].OAuthAppConfig != nil {
+		oauthConfig := processedDTO.InboundAuthConfig[0].OAuthAppConfig
+		if oauthConfig.HashedClientSecret != "" {
+			systemCreds, _ = json.Marshal(map[string]interface{}{
+				"clientSecret": oauthConfig.HashedClientSecret,
+			})
+		}
+	}
+
+	// Create entity in the directory layer (userdb) with credentials, before config in gateway (configdb).
+	// SyncAttributeIdentifiers will auto-index name and clientId from SystemAttributes
+	// if they are configured as indexed attributes.
 	appEntity := as.buildAppEntity(processedDTO)
-	if _, epErr := as.entityProvider.CreateEntity(appEntity); epErr != nil {
+	if _, epErr := as.entityProvider.CreateEntity(appEntity, systemCreds); epErr != nil {
 		logger.Error("Failed to create entity for application",
 			log.String("appID", appID), log.String("error", epErr.Error()))
 		return nil, &ErrorInternalServerError
+	}
+
+	// Register name and clientId as system identifiers for fast lookups.
+	if processedDTO.Name != "" {
+		if epErr := as.entityProvider.AddSystemIdentifier(appID, "name", processedDTO.Name); epErr != nil {
+			logger.Error("Failed to register name identifier",
+				log.String("appID", appID), log.String("error", epErr.Error()))
+			as.entityProvider.DeleteEntity(appID)
+			return nil, &ErrorInternalServerError
+		}
+	}
+	if len(processedDTO.InboundAuthConfig) > 0 && processedDTO.InboundAuthConfig[0].OAuthAppConfig != nil {
+		if clientID := processedDTO.InboundAuthConfig[0].OAuthAppConfig.ClientID; clientID != "" {
+			if epErr := as.entityProvider.AddSystemIdentifier(appID, "clientId", clientID); epErr != nil {
+				logger.Error("Failed to register clientId identifier",
+					log.String("appID", appID), log.String("error", epErr.Error()))
+				as.entityProvider.DeleteEntity(appID)
+				return nil, &ErrorInternalServerError
+			}
+		}
 	}
 
 	// Create certificates, application, and consent purpose atomically within a transaction.
@@ -262,14 +295,14 @@ func (as *applicationService) ValidateApplication(ctx context.Context, app *mode
 	if app.Name == "" {
 		return nil, nil, &ErrorInvalidApplicationName
 	}
-	existingApp, appCheckErr := as.appStore.GetApplicationByName(ctx, app.Name)
-	if appCheckErr != nil && !errors.Is(appCheckErr, model.ApplicationNotFoundError) {
-		logger.Error("Failed to check existing application by name", log.Error(appCheckErr),
-			log.String("appName", app.Name))
-		return nil, nil, &ErrorInternalServerError
-	}
-	if existingApp != nil {
-		return nil, nil, &ErrorApplicationAlreadyExistsWithName
+	// Check for duplicate name via entity provider (name is in ENTITY.SystemAttributes).
+	existingEntityID, identifyErr := as.entityProvider.IdentifyEntity(
+		map[string]interface{}{"name": app.Name})
+	if identifyErr == nil && existingEntityID != nil {
+		// An entity with this name already exists — check if it's a different app.
+		if app.ID == "" || *existingEntityID != app.ID {
+			return nil, nil, &ErrorApplicationAlreadyExistsWithName
+		}
 	}
 
 	inboundAuthConfig, svcErr := as.processInboundAuthConfig(ctx, app, nil)
@@ -377,15 +410,11 @@ func (as *applicationService) validateApplicationForUpdate(
 		return nil, nil, &ErrorApplicationNotFound
 	}
 
-	// If the application name is changed, check if an application with the new name already exists.
+	// If the application name is changed, check for duplicate via entity provider.
 	if existingApp.Name != app.Name {
-		existingAppWithName, appCheckErr := as.appStore.GetApplicationByName(ctx, app.Name)
-		if appCheckErr != nil && !errors.Is(appCheckErr, model.ApplicationNotFoundError) {
-			logger.Debug("Failed to check existing application by name", log.Error(appCheckErr),
-				log.String("appName", app.Name))
-			return nil, nil, &ErrorInternalServerError
-		}
-		if existingAppWithName != nil {
+		existingEntityID, identifyErr := as.entityProvider.IdentifyEntity(
+			map[string]interface{}{"name": app.Name})
+		if identifyErr == nil && existingEntityID != nil && *existingEntityID != appID {
 			return nil, nil, &ErrorApplicationAlreadyExistsWithName
 		}
 	}
@@ -423,6 +452,9 @@ func (as *applicationService) GetApplicationList(
 		return nil, &ErrorInternalServerError
 	}
 
+	// Enrich applications with identity data from entity provider.
+	as.enrichBasicApplicationsWithEntityIdentity(applications)
+
 	applicationList := make([]model.BasicApplicationResponse, 0, len(applications))
 	for _, app := range applications {
 		applicationList = append(applicationList, buildBasicApplicationResponse(app))
@@ -455,29 +487,51 @@ func buildBasicApplicationResponse(app model.BasicApplicationDTO) model.BasicApp
 	}
 }
 
-// GetOAuthApplication retrieves the OAuth application based on the client id.
+// GetOAuthApplication retrieves the OAuth application based on the client id or entity id.
+// If the provided ID is a clientId (e.g., "CONSOLE"), it first resolves it to an entity ID
+// via the entity provider. If it's already an entity ID (UUID), it queries directly.
 func (as *applicationService) GetOAuthApplication(
-	ctx context.Context, clientID string) (*model.OAuthAppConfigProcessedDTO, *serviceerror.ServiceError) {
-	if clientID == "" {
+	ctx context.Context, clientIDOrEntityID string) (*model.OAuthAppConfigProcessedDTO, *serviceerror.ServiceError) {
+	if clientIDOrEntityID == "" {
 		return nil, &ErrorInvalidClientID
 	}
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService"))
 
-	oauthApp, err := as.appStore.GetOAuthApplication(ctx, clientID)
+	// Try to resolve clientId to entityId via entity provider.
+	// If the input is already an entityId, the store query will work directly.
+	entityID := clientIDOrEntityID
+	resolvedID, identifyErr := as.entityProvider.IdentifyEntity(
+		map[string]interface{}{"clientId": clientIDOrEntityID})
+	if identifyErr == nil && resolvedID != nil {
+		entityID = *resolvedID
+	}
+
+	oauthApp, err := as.appStore.GetOAuthApplication(ctx, entityID)
 	if err != nil {
 		if errors.Is(err, model.ApplicationNotFoundError) {
 			return nil, &ErrorApplicationNotFound
 		}
 
 		logger.Error("Failed to retrieve OAuth application", log.Error(err),
-			log.String("clientID", log.MaskString(clientID)))
+			log.String("clientID", log.MaskString(clientIDOrEntityID)))
 		return nil, &ErrorInternalServerError
 	}
 	if oauthApp == nil {
 		return nil, &ErrorApplicationNotFound
 	}
 
-	certificate, certErr := as.getApplicationCertificate(ctx, clientID, cert.CertificateReferenceTypeOAuthApp)
+	// Enrich with clientId from entity.
+	e, epErr := as.entityProvider.GetEntity(oauthApp.AppID)
+	if epErr == nil && e != nil && len(e.SystemAttributes) > 0 {
+		var attrs map[string]interface{}
+		if err := json.Unmarshal(e.SystemAttributes, &attrs); err == nil {
+			if cid, ok := attrs["clientId"].(string); ok {
+				oauthApp.ClientID = cid
+			}
+		}
+	}
+
+	certificate, certErr := as.getApplicationCertificate(ctx, oauthApp.ClientID, cert.CertificateReferenceTypeOAuthApp)
 	if certErr != nil {
 		return nil, certErr
 	}
@@ -498,6 +552,9 @@ func (as *applicationService) GetApplication(ctx context.Context, appID string) 
 	if err != nil {
 		return nil, as.handleApplicationRetrievalError(err)
 	}
+
+	// Enrich with identity data from entity provider.
+	as.enrichApplicationWithEntityIdentity(applicationDTO)
 
 	application := &model.Application{
 		ID:                        applicationDTO.ID,
@@ -625,6 +682,12 @@ func (as *applicationService) UpdateApplication(ctx context.Context, appID strin
 				innerSvcErr = certErr
 				return fmt.Errorf("OAuth certificate update failed")
 			}
+		}
+
+		// Update entity identity in the directory layer.
+		updatedEntity := as.buildAppEntity(processedDTO)
+		if _, epErr := as.entityProvider.UpdateEntity(processedDTO.ID, updatedEntity); epErr != nil {
+			return fmt.Errorf("failed to update entity: %s", epErr.Error())
 		}
 
 		storeErr := as.appStore.UpdateApplication(txCtx, existingApp, processedDTO)
@@ -806,6 +869,9 @@ func (as *applicationService) DeleteApplication(ctx context.Context, appID strin
 			}
 			return fetchErr
 		}
+
+		// Enrich with entity identity (needed for certificate cleanup by clientId).
+		as.enrichApplicationWithEntityIdentity(existingApp)
 
 		appErr := as.appStore.DeleteApplication(txCtx, appID)
 		if appErr != nil {
@@ -2102,6 +2168,87 @@ func attributesToPurposeElements(attributes map[string]bool) []consent.PurposeEl
 	}
 
 	return elements
+}
+
+// enrichBasicApplicationsWithEntityIdentity batch-enriches basic application DTOs
+// with identity data (name, description, clientId) from the entity provider.
+func (as *applicationService) enrichBasicApplicationsWithEntityIdentity(apps []model.BasicApplicationDTO) {
+	if len(apps) == 0 {
+		return
+	}
+
+	ids := make([]string, len(apps))
+	for i, app := range apps {
+		ids[i] = app.ID
+	}
+
+	entities, epErr := as.entityProvider.GetEntitiesByIDs(ids)
+	if epErr != nil || len(entities) == 0 {
+		return
+	}
+
+	entityMap := make(map[string]*entityprovider.Entity, len(entities))
+	for _, e := range entities {
+		entityMap[e.EntityID] = e
+	}
+
+	for i := range apps {
+		e, ok := entityMap[apps[i].ID]
+		if !ok || len(e.SystemAttributes) == 0 {
+			continue
+		}
+		var attrs map[string]interface{}
+		if err := json.Unmarshal(e.SystemAttributes, &attrs); err != nil {
+			continue
+		}
+		if name, ok := attrs["name"].(string); ok {
+			apps[i].Name = name
+		}
+		if desc, ok := attrs["description"].(string); ok {
+			apps[i].Description = desc
+		}
+		if logoURL, ok := attrs["logoUrl"].(string); ok && apps[i].LogoURL == "" {
+			apps[i].LogoURL = logoURL
+		}
+		if clientID, ok := attrs["clientId"].(string); ok {
+			apps[i].ClientID = clientID
+		}
+	}
+}
+
+// enrichApplicationWithEntityIdentity populates identity fields (Name, Description, ClientID)
+// on an ApplicationProcessedDTO by fetching the entity from the directory layer.
+func (as *applicationService) enrichApplicationWithEntityIdentity(dto *model.ApplicationProcessedDTO) {
+	if dto == nil || dto.ID == "" {
+		return
+	}
+
+	e, epErr := as.entityProvider.GetEntity(dto.ID)
+	if epErr != nil || e == nil {
+		return // best-effort — config still usable without identity enrichment
+	}
+
+	// Extract identity fields from entity SystemAttributes.
+	if len(e.SystemAttributes) > 0 {
+		var attrs map[string]interface{}
+		if err := json.Unmarshal(e.SystemAttributes, &attrs); err == nil {
+			if name, ok := attrs["name"].(string); ok {
+				dto.Name = name
+			}
+			if desc, ok := attrs["description"].(string); ok {
+				dto.Description = desc
+			}
+			if logoURL, ok := attrs["logoUrl"].(string); ok && dto.LogoURL == "" {
+				dto.LogoURL = logoURL
+			}
+			// Enrich OAuth config with clientId from entity.
+			if clientID, ok := attrs["clientId"].(string); ok {
+				if len(dto.InboundAuthConfig) > 0 && dto.InboundAuthConfig[0].OAuthAppConfig != nil {
+					dto.InboundAuthConfig[0].OAuthAppConfig.ClientID = clientID
+				}
+			}
+		}
+	}
 }
 
 // buildAppEntity constructs an entityprovider.Entity from a processed application DTO.

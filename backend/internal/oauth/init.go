@@ -34,6 +34,7 @@ import (
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/tokenservice"
 	"github.com/asgardeo/thunder/internal/oauth/oauth2/userinfo"
 	"github.com/asgardeo/thunder/internal/oauth/scope"
+	"github.com/asgardeo/thunder/internal/authnprovider"
 	"github.com/asgardeo/thunder/internal/ou"
 	"github.com/asgardeo/thunder/internal/role"
 	"github.com/asgardeo/thunder/internal/system/crypto/pki"
@@ -53,6 +54,7 @@ func Initialize(
 	ouService ou.OrganizationUnitServiceInterface,
 	attributeCacheSvc attributecache.AttributeCacheServiceInterface,
 	roleService role.RoleServiceInterface,
+	authnProvider authnprovider.AuthnProviderInterface,
 ) error {
 	// Fetch runtime transactioner for OAuth services.
 	transactioner, err := provider.GetDBProvider().GetRuntimeDBTransactioner()
@@ -71,8 +73,8 @@ func Initialize(
 	scopeValidator := scope.Initialize()
 	discoveryService := discovery.Initialize(mux)
 	token.Initialize(mux, jwtService, applicationService, grantHandlerProvider,
-		scopeValidator, observabilitySvc, discoveryService, transactioner)
-	introspect.Initialize(mux, jwtService, applicationService, discoveryService)
+		scopeValidator, observabilitySvc, discoveryService, transactioner, authnProvider)
+	introspect.Initialize(mux, jwtService, applicationService, discoveryService, authnProvider)
 	userinfo.Initialize(mux, jwtService, tokenValidator, applicationService, ouService, attributeCacheSvc,
 		transactioner)
 	dcr.Initialize(mux, applicationService, transactioner)

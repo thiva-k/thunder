@@ -186,7 +186,7 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 	mcpServer := mcp.Initialize(mux, jwtService)
 
 	// Initialize authn provider
-	authnProvider := authnprovider.InitializeAuthnProvider(userService)
+	authnProvider := authnprovider.InitializeAuthnProvider(userService, entityService)
 
 	// Initialize user provider based on configuration
 	userProvider := userprovider.InitializeUserProvider(userService)
@@ -264,7 +264,7 @@ func registerServices(mux *http.ServeMux) jwt.JWTServiceInterface {
 
 	// Initialize OAuth services.
 	err = oauth.Initialize(mux, applicationService, jwtService, flowExecService, observabilitySvc,
-		pkiService, ouService, attributeCacheService, roleService)
+		pkiService, ouService, attributeCacheService, roleService, authnProvider)
 	if err != nil {
 		logger.Fatal("Failed to initialize OAuth services", log.Error(err))
 	}

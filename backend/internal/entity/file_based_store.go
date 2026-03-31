@@ -135,7 +135,8 @@ func (f *entityFileBasedStore) RemoveIdentifier(ctx context.Context, entityID, i
 
 // SyncAttributeIdentifiers is a no-op in file-based store (no indexed attribute table).
 func (f *entityFileBasedStore) SyncAttributeIdentifiers(ctx context.Context, entityID string,
-	attributes json.RawMessage, indexedAttrs map[string]bool) error {
+	attributes json.RawMessage, systemAttributes json.RawMessage,
+	indexedAttrs map[string]bool) error {
 	return nil
 }
 

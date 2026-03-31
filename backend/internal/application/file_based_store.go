@@ -100,8 +100,9 @@ func (f *fileBasedStore) GetApplicationList(ctx context.Context) ([]model.BasicA
 }
 
 // GetOAuthApplication implements applicationStoreInterface.
+// Looks up by app/entity ID (not clientID — clientID is now in the ENTITY table).
 func (f *fileBasedStore) GetOAuthApplication(
-	ctx context.Context, clientID string) (*model.OAuthAppConfigProcessedDTO, error) {
+	ctx context.Context, appID string) (*model.OAuthAppConfigProcessedDTO, error) {
 	list, err := f.GenericFileBasedStore.List()
 	if err != nil {
 		return nil, err
@@ -109,12 +110,10 @@ func (f *fileBasedStore) GetOAuthApplication(
 
 	for _, item := range list {
 		if app, ok := item.Data.(*model.ApplicationProcessedDTO); ok {
-			for _, inbound := range app.InboundAuthConfig {
-				if inbound.Type == model.OAuthInboundAuthType {
-					if inbound.OAuthAppConfig != nil {
-						if inbound.OAuthAppConfig.ClientID == clientID {
-							return inbound.OAuthAppConfig, nil
-						}
+			if app.ID == appID {
+				for _, inbound := range app.InboundAuthConfig {
+					if inbound.Type == model.OAuthInboundAuthType && inbound.OAuthAppConfig != nil {
+						return inbound.OAuthAppConfig, nil
 					}
 				}
 			}
