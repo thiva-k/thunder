@@ -74,20 +74,11 @@ echo "Client ID: $CLIENT_ID"
 echo "Client Secret: $CLIENT_SECRET"
 ```
 
-### Verify entity was created in directory
+### Verify application was created
 
 ```bash
-# Check ENTITY table
-sqlite3 backend/cmd/server/repository/database/userdb.db \
-  "SELECT ENTITY_ID, ENTITY_CATEGORY, SYSTEM_ATTRIBUTES FROM ENTITY WHERE ENTITY_ID='$APP_ID';"
-
-# Check ENTITY_IDENTIFIER table
-sqlite3 backend/cmd/server/repository/database/userdb.db \
-  "SELECT * FROM ENTITY_IDENTIFIER WHERE ENTITY_ID='$APP_ID';"
-
-# Check SYSTEM_CREDENTIALS (should have hashed clientSecret)
-sqlite3 backend/cmd/server/repository/database/userdb.db \
-  "SELECT SYSTEM_CREDENTIALS FROM ENTITY WHERE ENTITY_ID='$APP_ID';"
+# Verify via API — should return name, clientId, grantTypes
+curl -sk "https://localhost:8090/applications/$APP_ID" | jq '{name, inboundAuthConfig}'
 ```
 
 ---
@@ -96,8 +87,7 @@ sqlite3 backend/cmd/server/repository/database/userdb.db \
 
 Get the OU ID first:
 ```bash
-OU_ID=$(sqlite3 backend/cmd/server/repository/database/userdb.db \
-  "SELECT OU_ID FROM ORGANIZATION_UNIT LIMIT 1;")
+OU_ID=$(curl -sk https://localhost:8090/organization-units | jq -r '.organizationUnits[0].id')
 echo "OU ID: $OU_ID"
 ```
 

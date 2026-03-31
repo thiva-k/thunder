@@ -10,10 +10,14 @@ echo "=========================================="
 echo " Entity RBAC E2E Test"
 echo "=========================================="
 
-# Get OU ID (needed for resource server and role creation)
-OU_ID=$(sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/userdb.db \
-  "SELECT OU_ID FROM ORGANIZATION_UNIT LIMIT 1;")
+# Get OU ID via API (needed for resource server and role creation)
+OU_ID=$($CURL "$BASE_URL/organization-units" | jq -r '.organizationUnits[0].id')
 echo "OU ID: $OU_ID"
+
+if [ "$OU_ID" = "null" ] || [ -z "$OU_ID" ]; then
+  echo "FAILED: Could not get OU ID from API"
+  exit 1
+fi
 
 # Step 1: Create Resource Server with Permissions
 echo ""
@@ -80,26 +84,13 @@ if [ "$APP_ID" = "null" ] || [ -z "$APP_ID" ]; then
   exit 1
 fi
 
-# Verify entity in directory
+# Verify app via API
 echo ""
-echo "--- Verify: Entity in Directory ---"
-echo "ENTITY:"
-sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/userdb.db \
-  "SELECT ENTITY_CATEGORY, SYSTEM_ATTRIBUTES FROM ENTITY WHERE ENTITY_ID='$APP_ID';"
-echo "IDENTIFIERS:"
-sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/userdb.db \
-  "SELECT TYPE || '=' || VALUE || ' (' || SOURCE || ')' FROM ENTITY_IDENTIFIER WHERE ENTITY_ID='$APP_ID';"
-HAS_CREDS=$(sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/userdb.db \
-  "SELECT CASE WHEN SYSTEM_CREDENTIALS != '{}' AND SYSTEM_CREDENTIALS != '' THEN 'YES' ELSE 'NO' END FROM ENTITY WHERE ENTITY_ID='$APP_ID';")
-echo "Has hashed credentials: $HAS_CREDS"
-echo ""
-echo "--- Verify: Config in Gateway (no name/description/clientId/secret) ---"
-echo "APPLICATION columns: ID, AUTH_FLOW_ID, THEME_ID"
-sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/configdb.db \
-  "SELECT ID, AUTH_FLOW_ID, THEME_ID FROM APPLICATION WHERE ID='$APP_ID';"
-echo "OAUTH columns: ENTITY_ID, substr(OAUTH_CONFIG_JSON)"
-sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/configdb.db \
-  "SELECT ENTITY_ID, substr(OAUTH_CONFIG_JSON, 1, 80) FROM APP_OAUTH_INBOUND_CONFIG WHERE ENTITY_ID='$APP_ID';"
+echo "--- Verify: Application via API ---"
+APP_GET=$($CURL "$BASE_URL/applications/$APP_ID")
+echo "Name: $(echo "$APP_GET" | jq -r '.name')"
+echo "ClientID: $(echo "$APP_GET" | jq -r '.inboundAuthConfig[0].config.clientId // empty')"
+echo "GrantTypes: $(echo "$APP_GET" | jq -r '.inboundAuthConfig[0].config.grantTypes // empty')"
 
 # Step 3: Create Role with subset of permissions
 echo ""
@@ -139,10 +130,6 @@ ASSIGN_RESPONSE=$($CURL -X POST "$BASE_URL/roles/$ROLE_ID/assignments/add" \
 echo "Assignments:"
 $CURL "$BASE_URL/roles/$ROLE_ID/assignments?include=display" | jq '.assignments // .'
 
-echo ""
-echo "--- Verify: ROLE_ASSIGNMENT in DB ---"
-sqlite3 /Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/repository/database/configdb.db \
-  "SELECT ROLE_ID, ASSIGNEE_TYPE, ASSIGNEE_ID FROM ROLE_ASSIGNMENT WHERE ASSIGNEE_ID='$APP_ID';"
 
 # Step 5: Token Request — RBAC filters scopes
 echo ""
