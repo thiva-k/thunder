@@ -138,6 +138,7 @@ paths:
                     pkceRequired: false
                     publicClient: false
                     requirePushedAuthorizationRequests: false
+                    dpopBoundAccessTokens: false
                     scopes:
                       - "openid"
                       - "profile"
@@ -213,6 +214,7 @@ paths:
                       pkceRequired: false
                       publicClient: false
                       requirePushedAuthorizationRequests: false
+                      dpopBoundAccessTokens: false
                       scopes:
                         - "openid"
                         - "profile"
@@ -354,6 +356,7 @@ paths:
                       pkceRequired: false
                       publicClient: false
                       requirePushedAuthorizationRequests: false
+                      dpopBoundAccessTokens: false
                       scopes:
                         - "openid"
                         - "profile"
@@ -483,6 +486,7 @@ paths:
                     tokenEndpointAuthMethod: "client_secret_basic"
                     pkceRequired: false
                     publicClient: false
+                    dpopBoundAccessTokens: false
                     scopes:
                       - "openid"
                       - "profile"
@@ -560,6 +564,7 @@ paths:
                       pkceRequired: false
                       publicClient: false
                       requirePushedAuthorizationRequests: false
+                      dpopBoundAccessTokens: false
                       scopes:
                         - "openid"
                         - "profile"
@@ -1353,6 +1358,11 @@ components:
           description: Whether Pushed Authorization Requests (PAR) per RFC 9126 are required for this application.
           example: false
           default: false
+        dpopBoundAccessTokens:
+          type: boolean
+          description: Whether DPoP-bound access tokens (RFC 9449) are required for this application.
+          example: false
+          default: false
         scopes:
           type: array
           items:
@@ -1443,6 +1453,11 @@ components:
         requirePushedAuthorizationRequests:
           type: boolean
           description: Whether Pushed Authorization Requests (PAR) per RFC 9126 are required for this application.
+          example: false
+          default: false
+        dpopBoundAccessTokens:
+          type: boolean
+          description: Whether DPoP-bound access tokens (RFC 9449) are required for this application.
           example: false
           default: false
         scopes:
