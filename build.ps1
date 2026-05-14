@@ -471,8 +471,7 @@ function Build-Frontend {
         & npm install -g pnpm
     }
     
-    # Navigate to frontend directory and install dependencies
-    Push-Location $FRONTEND_BASE_DIR
+    # Install dependencies
     try {
         Write-Host "Installing frontend dependencies..."
         & pnpm install --frozen-lockfile
@@ -497,8 +496,6 @@ function Build-Docs {
         & npm install -g pnpm
     }
     
-    # Navigate to frontend directory first to ensure build:docs script can run
-    Push-Location $FRONTEND_BASE_DIR
     try {
         Write-Host "Installing frontend dependencies (required for docs build)..."
         & pnpm install --frozen-lockfile
@@ -1787,8 +1784,7 @@ function Run-Frontend {
         & npm install -g pnpm
     }
     
-    # Navigate to frontend directory and install dependencies
-    Push-Location $FRONTEND_BASE_DIR
+    # Install dependencies
     try {
         Write-Host "Installing frontend dependencies..."
         & pnpm install --frozen-lockfile
@@ -1818,8 +1814,7 @@ function Run-Docs {
         & npm install -g pnpm
     }
     
-    # Navigate to frontend directory first to install all dependencies
-    Push-Location $FRONTEND_BASE_DIR
+    # Install dependencies
     try {
         Write-Host "Installing frontend dependencies (required for docs)..."
         & pnpm install --frozen-lockfile

@@ -143,4 +143,61 @@ describe('RichTextAdapter', () => {
       expect(getByTestId('rich-text-box').innerHTML).not.toContain('/signup?');
     });
   });
+
+  describe('sign-in URL handling', () => {
+    const signInLabel = '<p>Go back to <a href="{{meta(application.sign_in_url)}}">Sign in</a></p>';
+    const signInComponent: FlowComponent = {
+      id: 'signin-richtext',
+      type: 'RICH_TEXT',
+      label: signInLabel,
+    };
+
+    it('renders the sign-in link when the server resolves the URL', () => {
+      const resolve = (template: string | undefined) =>
+        template?.replace('{{meta(application.sign_in_url)}}', '/custom/signin');
+
+      const {getByTestId} = renderWithProviders(<RichTextAdapter component={signInComponent} resolve={resolve} />);
+      expect(getByTestId('rich-text-box').innerHTML).toContain('/custom/signin');
+    });
+
+    it('uses signInFallbackUrl when the server does not resolve the sign-in URL template', () => {
+      const {getByTestId} = renderWithProviders(
+        <RichTextAdapter
+          component={signInComponent}
+          resolve={(template: string | undefined) => template}
+          signInFallbackUrl="/signin?client_id=abc"
+        />,
+      );
+
+      expect(getByTestId('rich-text-box').innerHTML).toContain('/signin?client_id=abc');
+    });
+  });
+
+  describe('application URL handling', () => {
+    const applicationUrlLabel = '<p>Go back to <a href="{{meta(application.url)}}">Application</a></p>';
+    const applicationUrlComponent: FlowComponent = {
+      id: 'application-url-richtext',
+      type: 'RICH_TEXT',
+      label: applicationUrlLabel,
+    };
+
+    it('renders the application link when the server resolves the URL', () => {
+      const resolve = (template: string | undefined) =>
+        template?.replace('{{meta(application.url)}}', 'https://app.example.com');
+
+      const {getByTestId} = renderWithProviders(
+        <RichTextAdapter component={applicationUrlComponent} resolve={resolve} />,
+      );
+
+      expect(getByTestId('rich-text-box').innerHTML).toContain('https://app.example.com');
+    });
+
+    it('returns null when the application URL is missing', () => {
+      const {queryByTestId} = renderWithProviders(
+        <RichTextAdapter component={applicationUrlComponent} resolve={(template: string | undefined) => template} />,
+      );
+
+      expect(queryByTestId('rich-text-box')).not.toBeInTheDocument();
+    });
+  });
 });

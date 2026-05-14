@@ -315,13 +315,13 @@ To try out the Client Credentials flow, follow these steps:
 
 ## Contributing
 
-Please refer to the [Contributing Guide](https://thunderid.github.io/thunderid/docs/next/community/contributing/overview) for the different ways to contribute to this project and the relevant guidelines.
+Please refer to the [Contributing Guide](https://thunderid.dev/docs/next/community/contributing/overview) for the different ways to contribute to this project and the relevant guidelines.
 
-For code contributions, refer to the [Contributing Code](https://thunderid.github.io/thunderid/docs/next/community/contributing/contributing-code/prerequisites) section for details on the prerequisites and instructions for running ThunderID in development mode.
+For code contributions, refer to the [Contributing Code](https://thunderid.dev/docs/next/community/contributing/contributing-code/prerequisites) section for details on the prerequisites and instructions for running ThunderID in development mode.
 
 ## Documentation
 
-Please refer to the [Documentation](https://thunderid.github.io/thunderid/docs/next/guides/getting-started/what-is-thunder) for additional guidance on getting started with ThunderID and exploring its features, concepts, and usage.
+Please refer to the [Documentation](https://thunderid.dev/docs/next/guides/getting-started/what-is-thunderid) for additional guidance on getting started with ThunderID and exploring its features, concepts, and usage.
 
 <details>
 <summary><h2>Advanced Setup & Configuration</h2></summary>

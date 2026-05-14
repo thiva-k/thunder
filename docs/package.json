@@ -22,7 +22,7 @@
   ],
   "scripts": {
     "build": "pnpm setup && docusaurus build",
-    "clear": "docusaurus clear",
+    "clean": "docusaurus clear",
     "deploy": "docusaurus deploy",
     "dev": "pnpm setup && docusaurus start --port 5180",
     "docusaurus": "docusaurus",
@@ -52,7 +52,6 @@
     "@scalar/api-reference-react": "0.9.15",
     "clsx": "2.1.1",
     "eslint": "9.39.4",
-    "prettier": "3.6.2",
     "prism-react-renderer": "2.3.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"

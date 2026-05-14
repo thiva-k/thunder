@@ -85,8 +85,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # NX artifacts
-frontend/.nx/cache
-frontend/.nx/workspace-data
+.nx/cache
+.nx/workspace-data
 frontend/packages/**/.nx/cache
 frontend/packages/**/.nx/workspace-data
 

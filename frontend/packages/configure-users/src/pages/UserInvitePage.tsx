@@ -381,7 +381,10 @@ function InviteUserStepContent({
                 error={!!formErrors[ref]}
                 helperText={formErrors[ref]?.message as string}
                 color={formErrors[ref] ? 'error' : 'primary'}
-                onChange={field.onChange}
+                onChange={(e) => {
+                  field.onChange(e);
+                  handleInputChangeFn(ref, e.target.value);
+                }}
                 onBlur={field.onBlur}
                 inputRef={field.ref}
               />

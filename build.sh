@@ -153,7 +153,7 @@ TEST_RUN="${4:-}"
 TEST_PACKAGE="${5:-}"
 
 # PNPM version to use for frontend builds and docs build
-PNPM_VERSION="10.33.4"
+PNPM_VERSION="11.0.9"
 
 # ============================================================================
 # Read Configuration from deployment.yaml
@@ -383,8 +383,7 @@ function build_frontend() {
         npm install -g pnpm@$PNPM_VERSION
     fi
     
-    # Navigate to frontend directory and install dependencies
-    cd "$FRONTEND_BASE_DIR" || exit 1
+    # Install dependencies
     echo "Installing frontend dependencies..."
     pnpm install --frozen-lockfile
     
@@ -406,8 +405,6 @@ function build_docs() {
         npm install -g pnpm@$PNPM_VERSION
     fi
     
-    # Navigate to frontend directory first to ensure build:docs script can run
-    cd "$FRONTEND_BASE_DIR" || exit 1
     echo "Installing frontend dependencies (required for docs build)..."
     pnpm install --frozen-lockfile
     
@@ -1157,8 +1154,7 @@ function run_frontend() {
         npm install -g pnpm@$PNPM_VERSION
     fi
     
-    # Navigate to frontend directory and install dependencies
-    cd "$FRONTEND_BASE_DIR" || exit 1
+    # Install dependencies
     echo "Installing frontend dependencies..."
     pnpm install --frozen-lockfile
     
@@ -1185,8 +1181,7 @@ function run_docs() {
         npm install -g pnpm@$PNPM_VERSION
     fi
     
-    # Navigate to frontend directory first to install all dependencies
-    cd "$FRONTEND_BASE_DIR" || exit 1
+    # Install dependencies
     echo "Installing frontend dependencies (required for docs)..."
     pnpm install --frozen-lockfile
     

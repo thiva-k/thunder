@@ -21,6 +21,7 @@ import Link from '@docusaurus/Link';
 import Layout from '@theme/Layout';
 import {useBaseUrlUtils} from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
 import {Avatar, AvatarGroup, Tooltip} from '@wso2/oxygen-ui';
 import GithubIcon from '@site/src/components/icons/GithubIcon';
 import IOSLogo from '@site/src/components/icons/IOSLogo';
@@ -119,7 +120,7 @@ interface ReleasesData {
 const RELEASES_UNAVAILABLE_MESSAGE = 'Release information is currently unavailable. Please check back soon.';
 
 function getDistributionAsset(asset: ReleaseAsset): DistributionAsset | null {
-  const match = /^thunder-[0-9A-Za-z.+-]+-(macos|linux|win)-(arm64|x64)\.zip$/i.exec(asset.name);
+  const match = /^thunder(?:id)?-[0-9A-Za-z.+-]+-(macos|linux|win)-(arm64|x64)\.zip$/i.exec(asset.name);
 
   if (!match) {
     return null;
@@ -497,6 +498,10 @@ function ReleaseCard({release}: {release: ReleaseEntry}) {
 
 export default function ReleasesPage() {
   const {siteConfig} = useDocusaurusContext();
+  const project = siteConfig.customFields?.product as DocusaurusProductConfig | undefined;
+  const productName = project?.project?.name ?? siteConfig.title;
+  const repoUrl = project?.project?.source?.github?.url ?? '';
+  const githubReleasesUrl = repoUrl ? `${repoUrl}/releases` : '#';
   const {withBaseUrl} = useBaseUrlUtils();
   const [data, setData] = useState<ReleasesData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -552,13 +557,13 @@ export default function ReleasesPage() {
   return (
     <Layout
       title="Releases"
-      description="Explore ThunderID releases, changelogs, and downloads."
+      description={`Explore ${productName} releases, changelogs, and downloads.`}
       wrapperClassName="releases-page"
     >
       <main className="releases-shell">
         <section className="releases-hero">
           <h1>
-            ThunderID{' '}
+            {productName}{' '}
             <span
               style={{
                 background: 'linear-gradient(90deg, #FF6B00 0%, #FF8C00 100%)',
@@ -570,12 +575,12 @@ export default function ReleasesPage() {
               Releases
             </span>
           </h1>
-          <p>Explore every release with detailed changelogs, download options, and the people building ThunderID.</p>
+          <p>Explore every release with detailed changelogs, download options, and the people building {productName}.</p>
 
           <div className="releases-hero-actions">
             <a
               className="button button--primary"
-              href={repository?.releasesUrl ?? 'https://github.com/thunder-id/thunderid/releases'}
+              href={repository?.releasesUrl ?? githubReleasesUrl}
               target="_blank"
               rel="noreferrer"
             >
@@ -626,7 +631,7 @@ export default function ReleasesPage() {
         <section className="releases-footer-note">
           <p>
             Source:{' '}
-            <Link to={repository?.url ?? 'https://github.com/thunder-id/thunderid'}>
+            <Link to={repository?.url ?? repoUrl}>
               {repository?.fullName ?? siteConfig.title}
             </Link>
             {data?.generatedAt ? ` · Updated ${new Date(data.generatedAt).toLocaleString('en-US')}` : ''}

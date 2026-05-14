@@ -32,6 +32,9 @@ const SIGN_IN_URL_META_KEY = 'application.sign_in_url';
 /** The meta key used by the server to embed the application's forgot-password URL. */
 const FORGOT_PASSWORD_URL_META_KEY = 'application.forgot_password_url';
 
+/** The meta key used by the server to embed the application's access URL. */
+const APPLICATION_URL_META_KEY = 'application.url';
+
 const REGISTRATION_ENABLED_META_KEY = 'isRegistrationFlowEnabled';
 
 const RECOVERY_ENABLED_META_KEY = 'isRecoveryFlowEnabled';
@@ -128,6 +131,31 @@ export default function RichTextAdapter({
 
     if (containsMetaTemplate(resolvedLabel, SIGN_IN_URL_META_KEY) && signInFallbackUrl) {
       resolvedLabel = replaceMetaTemplate(resolvedLabel, SIGN_IN_URL_META_KEY, signInFallbackUrl);
+    }
+
+    return (
+      <Box
+        className={cn('Flow--richText')}
+        sx={{mb: 1, textAlign: isDesignEnabled ? 'center' : 'left'}}
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(resolvedLabel)}}
+      />
+    );
+  }
+
+  // When any component label embeds the application's URL, render it only when
+  // the URL is present. There is no sensible local fallback route for this.
+  if (rawLabel && containsMetaTemplate(rawLabel, APPLICATION_URL_META_KEY)) {
+    const resolvedUrl = resolve(`{{meta(${APPLICATION_URL_META_KEY})}}`);
+
+    if (!resolvedUrl || containsMetaTemplate(resolvedUrl, APPLICATION_URL_META_KEY)) {
+      return null;
+    }
+
+    let resolvedLabel = resolve(rawLabel) ?? rawLabel;
+
+    if (containsMetaTemplate(resolvedLabel, APPLICATION_URL_META_KEY)) {
+      resolvedLabel = replaceMetaTemplate(resolvedLabel, APPLICATION_URL_META_KEY, resolvedUrl);
     }
 
     return (

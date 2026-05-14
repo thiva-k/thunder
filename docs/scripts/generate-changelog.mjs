@@ -20,12 +20,16 @@ import {existsSync, mkdirSync, writeFileSync} from 'fs';
 import {join, dirname} from 'path';
 import {fileURLToPath} from 'url';
 import {createLogger} from '@thunderid/logger';
+import DocusaurusProductConfig from '../docusaurus.product.config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const OUTPUT_FILE = join(__dirname, '..', 'static', 'data', 'releases.json');
-const GITHUB_REPO = 'thunder-id/thunderid';
+
+const GITHUB_REPO = DocusaurusProductConfig.project.source.github.fullName;
+const GITHUB_REPO_URL = DocusaurusProductConfig.project.source.github.url;
+const PROJECT_NAME = DocusaurusProductConfig.project.name;
 const GITHUB_REPO_API_URL = `https://api.github.com/repos/${GITHUB_REPO}`;
 const GITHUB_RELEASES_API_URL = `${GITHUB_REPO_API_URL}/releases`;
 
@@ -271,7 +275,7 @@ function pickPrimaryAsset(assets) {
   }
 
   return (
-    assets.find((asset) => /thunder-.*\.(zip|tgz|tar\.gz)$/i.test(asset.name)) ||
+    assets.find((asset) => /thunder(?:id)?-.*\.(zip|tgz|tar\.gz)$/i.test(asset.name)) ||
     assets.find((asset) => /\.(zip|tgz|tar\.gz)$/i.test(asset.name)) ||
     assets[0]
   );
@@ -349,13 +353,13 @@ async function buildChangelogData(repository, releases) {
     latestRelease: latestEntry || null,
     releases: releaseEntries,
     repository: {
-      description: repository?.description || 'Thunder release notes and downloads.',
+      description: repository?.description || `${PROJECT_NAME} release notes and downloads.`,
       forks: repository?.forks_count || 0,
       fullName: repository?.full_name || GITHUB_REPO,
       stars: repository?.stargazers_count || 0,
       subscribers: repository?.subscribers_count || 0,
-      url: repository?.html_url || `https://github.com/${GITHUB_REPO}`,
-      releasesUrl: `${repository?.html_url || `https://github.com/${GITHUB_REPO}`}/releases`,
+      url: repository?.html_url || GITHUB_REPO_URL,
+      releasesUrl: `${repository?.html_url || GITHUB_REPO_URL}/releases`,
     },
   };
 }
@@ -366,13 +370,13 @@ function buildFallbackChangelogData() {
     latestRelease: null,
     releases: [],
     repository: {
-      description: 'Thunder release notes and downloads.',
+      description: `${PROJECT_NAME} release notes and downloads.`,
       forks: 0,
       fullName: GITHUB_REPO,
       stars: 0,
       subscribers: 0,
-      url: `https://github.com/${GITHUB_REPO}`,
-      releasesUrl: `https://github.com/${GITHUB_REPO}/releases`,
+      url: GITHUB_REPO_URL,
+      releasesUrl: `${GITHUB_REPO_URL}/releases`,
     },
   };
 }
