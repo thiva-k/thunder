@@ -29,7 +29,7 @@ import (
 	"time"
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
-	"github.com/thunder-id/thunderid/internal/system/cryptolab"
+	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
 	"github.com/thunder-id/thunderid/internal/system/jose/jws"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
@@ -185,7 +185,7 @@ func verifyProofSignature(proof, alg string, jwk map[string]any) error {
 	if err != nil {
 		return fmt.Errorf("%w: invalid JWS signature encoding: %s", ErrInvalidProof, err.Error())
 	}
-	if err := cryptolab.Verify([]byte(parts[0]+"."+parts[1]), signature, signAlg, pubKey); err != nil {
+	if err := cryptolib.Verify([]byte(parts[0]+"."+parts[1]), signature, signAlg, pubKey); err != nil {
 		return fmt.Errorf("%w: signature verification failed: %s", ErrInvalidProof, err.Error())
 	}
 	return nil

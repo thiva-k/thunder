@@ -37,7 +37,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
-	"github.com/thunder-id/thunderid/internal/system/cryptolab"
+	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
 	"github.com/thunder-id/thunderid/internal/system/jose/jws"
 	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/jtimock"
@@ -47,7 +47,7 @@ const testAccessToken = "abc.def.ghi"
 
 type signer struct {
 	alg     string
-	signAlg cryptolab.SignAlgorithm
+	signAlg cryptolib.SignAlgorithm
 	priv    any
 	jwk     map[string]any
 }
@@ -58,7 +58,7 @@ func newPS256Signer(t *testing.T) *signer {
 	require.NoError(t, err)
 	return &signer{
 		alg:     "PS256",
-		signAlg: cryptolab.RSAPSSSHA256,
+		signAlg: cryptolib.RSAPSSSHA256,
 		priv:    priv,
 		jwk: map[string]any{
 			"kty": "RSA",
@@ -74,7 +74,7 @@ func newRS256Signer(t *testing.T) *signer {
 	require.NoError(t, err)
 	return &signer{
 		alg:     "RS256",
-		signAlg: cryptolab.RSASHA256,
+		signAlg: cryptolib.RSASHA256,
 		priv:    priv,
 		jwk: map[string]any{
 			"kty": "RSA",
@@ -90,7 +90,7 @@ func newEdDSASigner(t *testing.T) *signer {
 	require.NoError(t, err)
 	return &signer{
 		alg:     "EdDSA",
-		signAlg: cryptolab.ED25519,
+		signAlg: cryptolib.ED25519,
 		priv:    priv,
 		jwk: map[string]any{
 			"kty": "OKP",
@@ -123,7 +123,7 @@ func (s *signer) signProof(t *testing.T, headerOverrides, payload map[string]any
 	require.NoError(t, err)
 
 	signingInput := base64.RawURLEncoding.EncodeToString(hb) + "." + base64.RawURLEncoding.EncodeToString(pb)
-	sig, err := cryptolab.Generate([]byte(signingInput), s.signAlg, s.priv)
+	sig, err := cryptolib.Generate([]byte(signingInput), s.signAlg, s.priv)
 	require.NoError(t, err)
 	return signingInput + "." + base64.RawURLEncoding.EncodeToString(sig)
 }

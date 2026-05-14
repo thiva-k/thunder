@@ -30,7 +30,7 @@ import (
 	"testing"
 
 	"github.com/thunder-id/thunderid/internal/system/config"
-	"github.com/thunder-id/thunderid/internal/system/cryptolab"
+	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
@@ -75,9 +75,9 @@ func (suite *JWEServiceTestSuite) TestEncryptDecrypt_RSA() {
 	mockProvider.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(
 			ctx context.Context, keyRef *kmprovider.KeyRef,
-			params cryptolab.AlgorithmParams, content []byte,
+			params cryptolib.AlgorithmParams, content []byte,
 		) ([]byte, error) {
-			return cryptolab.Decrypt(suite.testRSAPrivateKey, params, content)
+			return cryptolib.Decrypt(suite.testRSAPrivateKey, params, content)
 		}).Times(len(encAlgs))
 
 	suite.jweService = &jweService{
@@ -114,9 +114,9 @@ func (suite *JWEServiceTestSuite) TestEncryptDecrypt_ECDH() {
 	mockProvider.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(
 			ctx context.Context, keyRef *kmprovider.KeyRef,
-			params cryptolab.AlgorithmParams, content []byte,
+			params cryptolib.AlgorithmParams, content []byte,
 		) ([]byte, error) {
-			return cryptolab.Decrypt(suite.testECPrivateKey, params, content)
+			return cryptolib.Decrypt(suite.testECPrivateKey, params, content)
 		}).Times(len(testCases))
 
 	suite.jweService = &jweService{
@@ -181,9 +181,9 @@ func (suite *JWEServiceTestSuite) TestDecrypt_Errors() {
 	mockProvider.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(
 			ctx context.Context, keyRef *kmprovider.KeyRef,
-			params cryptolab.AlgorithmParams, content []byte,
+			params cryptolib.AlgorithmParams, content []byte,
 		) ([]byte, error) {
-			return cryptolab.Decrypt(suite.testRSAPrivateKey, params, content)
+			return cryptolib.Decrypt(suite.testRSAPrivateKey, params, content)
 		}).Once()
 	parts := strings.Split(jweToken, ".")
 	parts[4] = base64.RawURLEncoding.EncodeToString([]byte("wrong-tag"))
@@ -293,7 +293,7 @@ func (suite *JWEServiceTestSuite) TestBuildDecryptParams() {
 	header := map[string]interface{}{"alg": "RSA-OAEP", "enc": "A128GCM"}
 	params, err := buildDecryptParams(RSAOAEP, A128GCM, header)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), cryptolab.AlgorithmRSAOAEP, params.Algorithm)
+	assert.Equal(suite.T(), cryptolib.AlgorithmRSAOAEP, params.Algorithm)
 
 	// ECDHESA192KW — needs a valid EPK in the header
 	privKey, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -306,7 +306,7 @@ func (suite *JWEServiceTestSuite) TestBuildDecryptParams() {
 	}
 	params, err = buildDecryptParams(ECDHESA192KW, A256GCM, headerWithEPK)
 	assert.NoError(suite.T(), err)
-	assert.Equal(suite.T(), cryptolab.AlgorithmECDHESA192KW, params.Algorithm)
+	assert.Equal(suite.T(), cryptolib.AlgorithmECDHESA192KW, params.Algorithm)
 
 	// Missing EPK for all ECDH-ES variants
 	headerNoEPK := map[string]interface{}{"alg": "ECDH-ES", "enc": "A128GCM"}
@@ -367,9 +367,9 @@ func (suite *JWEServiceTestSuite) TestEncryptDecrypt_CBC() {
 	mockProvider.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(
 			ctx context.Context, keyRef *kmprovider.KeyRef,
-			params cryptolab.AlgorithmParams, content []byte,
+			params cryptolib.AlgorithmParams, content []byte,
 		) ([]byte, error) {
-			return cryptolab.Decrypt(suite.testRSAPrivateKey, params, content)
+			return cryptolib.Decrypt(suite.testRSAPrivateKey, params, content)
 		}).Times(len(encAlgs))
 
 	suite.jweService = &jweService{
