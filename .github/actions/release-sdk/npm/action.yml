@@ -16,9 +16,6 @@ inputs:
   bump-type:
     description: 'Semver bump type: major, minor, or patch'
     required: true
-  npm-token:
-    description: 'NPM authentication token'
-    required: true
   git-user-name:
     description: 'Git committer name'
     required: false
@@ -95,6 +92,4 @@ runs:
       shell: bash
       run: |
         cd sdks/${{ inputs.sdk }}
-        pnpm publish --no-git-checks --access public
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+        pnpm publish --no-git-checks --access public --provenance

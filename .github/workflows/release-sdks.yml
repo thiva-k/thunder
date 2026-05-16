@@ -80,6 +80,8 @@ on:
 
 permissions:
   contents: write
+  # IMPORTANT: DO NOT REMOVE. `id-token` is required for OIDC publishing.
+  id-token: write
 
 env:
   RELEASE_GIT_USER_NAME: "thunderid-automation-bot"
@@ -104,7 +106,6 @@ jobs:
         with:
           sdk: javascript
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -127,7 +128,6 @@ jobs:
         with:
           sdk: browser
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -149,7 +149,6 @@ jobs:
         with:
           sdk: node
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -172,7 +171,6 @@ jobs:
         with:
           sdk: express
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -194,7 +192,6 @@ jobs:
         with:
           sdk: react
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -216,7 +213,6 @@ jobs:
         with:
           sdk: vue
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -239,7 +235,6 @@ jobs:
         with:
           sdk: react-router
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -261,7 +256,6 @@ jobs:
         with:
           sdk: tanstack-router
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -283,7 +277,6 @@ jobs:
         with:
           sdk: nextjs
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
@@ -305,7 +298,6 @@ jobs:
         with:
           sdk: nuxt
           bump-type: ${{ github.event.inputs.bump_type }}
-          npm-token: ${{ secrets.NPM_TOKEN }}
           git-user-name: ${{ env.RELEASE_GIT_USER_NAME }}
           git-user-email: ${{ env.RELEASE_GIT_USER_EMAIL }}
           node-version: ${{ env.NODE_VERSION }}
