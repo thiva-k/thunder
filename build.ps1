@@ -461,15 +461,17 @@ function Build-Backend {
     Write-Host "================================================================"
 }
 
-function Build-Frontend {
-    Write-Host "================================================================"
-    Write-Host "Building frontend apps..."
-    
-    # Check if pnpm is installed, if not install it
+function Ensure-Pnpm {
     if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
         Write-Host "pnpm not found, installing..."
         & npm install -g pnpm
     }
+}
+
+function Build-Frontend {
+    Write-Host "================================================================"
+    Write-Host "Building frontend apps..."
+    Ensure-Pnpm
     
     # Install dependencies
     try {
@@ -477,7 +479,7 @@ function Build-Frontend {
         & pnpm install --frozen-lockfile
         
         Write-Host "Building frontend applications & packages..."
-        & pnpm build
+        & pnpm build:frontend
     }
     finally {
         Pop-Location
@@ -489,12 +491,7 @@ function Build-Frontend {
 function Build-Docs {
     Write-Host "================================================================"
     Write-Host "Building documentation..."
-    
-    # Check if pnpm is installed, if not install it
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        Write-Host "pnpm not found, installing..."
-        & npm install -g pnpm
-    }
+    Ensure-Pnpm
     
     try {
         Write-Host "Installing frontend dependencies (required for docs build)..."
@@ -507,6 +504,57 @@ function Build-Docs {
         Pop-Location
     }
     
+    Write-Host "================================================================"
+}
+
+function Build-Sdks-Js {
+    Ensure-Pnpm
+    
+    Write-Host "Installing SDK dependencies..."
+    & pnpm install --frozen-lockfile
+    
+    Write-Host "Building JavaScript ecosystem SDK packages..."
+    & pnpm --filter './sdks/**' build
+}
+
+function Test-Sdks-Js {
+    Ensure-Pnpm
+    
+    Write-Host "Installing SDK dependencies..."
+    & pnpm install --frozen-lockfile
+    
+    Write-Host "Running JavaScript ecosystem SDK tests..."
+    & pnpm --filter './sdks/**' test
+}
+
+function Lint-Sdks-Js {
+    Ensure-Pnpm
+    
+    Write-Host "Installing SDK dependencies..."
+    & pnpm install --frozen-lockfile
+    
+    Write-Host "Linting JavaScript ecosystem SDK packages..."
+    & pnpm --filter './sdks/**' lint
+}
+
+function Build-Sdks {
+    Write-Host "================================================================"
+    Write-Host "Building SDKs..."
+    Build-Sdks-Js
+    Write-Host "================================================================"
+}
+
+function Test-Sdks {
+    Write-Host "================================================================"
+    Write-Host "Running SDK tests..."
+    Test-Sdks-Js
+    Write-Host "================================================================"
+}
+
+function Lint-Sdks {
+    Write-Host "================================================================"
+    Write-Host "Linting SDKs..."
+    Lint-Sdks-Js
     Write-Host "================================================================"
 }
 
@@ -1777,12 +1825,7 @@ function Start-Backend {
 function Run-Frontend {
     Write-Host "================================================================"
     Write-Host "Running frontend apps..."
-    
-    # Check if pnpm is installed, if not install it
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        Write-Host "pnpm not found, installing..."
-        & npm install -g pnpm
-    }
+    Ensure-Pnpm
     
     # Install dependencies
     try {
@@ -1790,7 +1833,7 @@ function Run-Frontend {
         & pnpm install --frozen-lockfile
         
         Write-Host "Building frontend applications & packages..."
-        & pnpm build
+        & pnpm build:frontend
         
         Write-Host "Starting frontend applications in the background..."
         # Start frontend processes in background
@@ -1807,12 +1850,7 @@ function Run-Frontend {
 function Run-Docs {
     Write-Host "================================================================"
     Write-Host "Starting documentation development server..."
-    
-    # Check if pnpm is installed, if not install it
-    if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) {
-        Write-Host "pnpm not found, installing..."
-        & npm install -g pnpm
-    }
+    Ensure-Pnpm
     
     # Install dependencies
     try {
@@ -1905,6 +1943,15 @@ switch ($Command) {
     }
     'build_docs' {
         Build-Docs
+    }
+    'build_sdks' {
+        Build-Sdks
+    }
+    'test_sdks' {
+        Test-Sdks
+    }
+    'lint_sdks' {
+        Lint-Sdks
     }
     'build_samples' {
         Build-Sample-App

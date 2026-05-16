@@ -26,6 +26,8 @@
     "build:with-docs": "nx run-many --target=build --all",
     "build:apps": "nx run-many --target=build --projects=frontend/apps/*",
     "build:packages": "nx run-many --target=build --projects=frontend/packages/*",
+    "build:frontend": "nx run-many --target=build --projects=frontend/**",
+    "build:sdks": "nx run-many --target=build --projects=sdks/**",
     "clean": "nx run-many --target=clean --all",
     "format:check": "prettier --check --cache --config frontend/prettier.config.js --ignore-path frontend/.prettierignore frontend",
     "format:fix": "prettier --write --cache --config frontend/prettier.config.js --ignore-path frontend/.prettierignore frontend",

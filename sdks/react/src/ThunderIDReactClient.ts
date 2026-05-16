@@ -1,0 +1,587 @@
+/**
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {
+  ThunderIDBrowserClient,
+  flattenUserSchema,
+  generateFlattenedUserProfile,
+  UserProfile,
+  SignInOptions,
+  SignOutOptions,
+  User,
+  generateUserProfile,
+  EmbeddedFlowExecuteResponse,
+  SignUpOptions,
+  EmbeddedFlowExecuteRequestPayload,
+  ThunderIDRuntimeError,
+  executeEmbeddedSignUpFlow,
+  EmbeddedSignInFlowHandleRequestPayload,
+  executeEmbeddedSignInFlow,
+  executeEmbeddedSignInFlowV2,
+  Organization,
+  IdToken,
+  EmbeddedFlowExecuteRequestConfig,
+  deriveOrganizationHandleFromBaseUrl,
+  AllOrganizationsApiResponse,
+  extractUserClaimsFromIdToken,
+  TokenResponse,
+  HttpRequestConfig,
+  HttpResponse,
+  navigate,
+  getRedirectBasedSignUpUrl,
+  Config,
+  TokenExchangeRequestConfig,
+  Platform,
+  isEmpty,
+  EmbeddedSignInFlowResponseV2,
+  executeEmbeddedSignUpFlowV2,
+  executeEmbeddedRecoveryFlowV2,
+  EmbeddedSignInFlowStatusV2,
+  OIDCDiscoveryApiResponse,
+} from '@thunderid/browser';
+import AuthAPI from './__temp__/api';
+import getAllOrganizations from './api/getAllOrganizations';
+import getMeOrganizations from './api/getMeOrganizations';
+import getSchemas from './api/getSchemas';
+import getScim2Me from './api/getScim2Me';
+import {ThunderIDReactConfig} from './models/config';
+
+/**
+ * Client for mplementing ThunderID in React applications.
+ * This class provides the core functionality for managing user authentication and sessions.
+ *
+ * @typeParam T - Configuration type that extends ThunderIDReactConfig.
+ */
+class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig> extends ThunderIDBrowserClient<T> {
+  private authApi: AuthAPI;
+
+  private loadingState = false;
+
+  private clientInstanceId: number;
+
+  private initializeConfig: ThunderIDReactConfig | undefined;
+
+  /**
+   * Creates a new ThunderIDReactClient instance.
+   * @param instanceId - Optional instance ID for multi-auth context support. Defaults to 0 for backward compatibility.
+   */
+  constructor(instanceId = 0) {
+    super();
+    this.clientInstanceId = instanceId;
+
+    // FIXME: This has to be the browser client from `@thunderid/browser` package.
+    this.authApi = new AuthAPI(undefined, instanceId);
+  }
+
+  /**
+   * Get the instance ID for this client.
+   * @returns The instance ID used for multi-auth context support.
+   */
+  public getInstanceId(): number {
+    return this.clientInstanceId;
+  }
+
+  /**
+   * Set the loading state of the client
+   * @param loading - Boolean indicating if the client is in a loading state
+   */
+  private setLoading(loading: boolean): void {
+    this.loadingState = loading;
+  }
+
+  /**
+   * Wrap async operations with loading state management
+   * @param operation - The async operation to execute
+   * @returns Promise with the result of the operation
+   */
+  private async withLoading<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
+    this.setLoading(true);
+    try {
+      const result: TResult = await operation();
+      return result;
+    } finally {
+      this.setLoading(false);
+    }
+  }
+
+  override initialize(config: ThunderIDReactConfig): Promise<boolean> {
+    let resolvedOrganizationHandle: string | undefined = config?.organizationHandle;
+
+    if (!resolvedOrganizationHandle) {
+      resolvedOrganizationHandle = deriveOrganizationHandleFromBaseUrl(config?.baseUrl);
+    }
+
+    return this.withLoading(async () => {
+      this.initializeConfig = {
+        ...config,
+        organizationHandle: resolvedOrganizationHandle,
+        periodicTokenRefresh:
+          config?.tokenLifecycle?.refreshToken?.autoRefresh ?? (config as any)?.periodicTokenRefresh,
+      } as any;
+
+      return this.authApi.init(this.initializeConfig as any);
+    });
+  }
+
+  override reInitialize(config: Partial<ThunderIDReactConfig>): Promise<boolean> {
+    return this.withLoading(async () => {
+      let isInitialized: boolean;
+
+      try {
+        await this.authApi.reInitialize(config as any);
+
+        isInitialized = true;
+      } catch (error) {
+        throw new ThunderIDRuntimeError(
+          `Failed to check if the client is initialized: ${error instanceof Error ? error.message : String(error)}`,
+          'ThunderIDReactClient-reInitialize-RuntimeError-001',
+          'react',
+          'An error occurred while checking the initialization status of the client.',
+        );
+      }
+
+      return isInitialized;
+    });
+  }
+
+  override async updateUserProfile(): Promise<User> {
+    throw new Error('Not implemented');
+  }
+
+  override async getUser(options?: any): Promise<User> {
+    try {
+      let baseUrl: string = options?.baseUrl;
+
+      if (!baseUrl) {
+        const configData: any = await this.authApi.getConfigData();
+        baseUrl = configData?.baseUrl;
+      }
+
+      const profile: User = await getScim2Me({baseUrl});
+      const schemas: any = await getSchemas({baseUrl});
+
+      return generateUserProfile(profile, flattenUserSchema(schemas));
+    } catch (error) {
+      return extractUserClaimsFromIdToken(await this.getDecodedIdToken());
+    }
+  }
+
+  async getDecodedIdToken(sessionId?: string): Promise<IdToken> {
+    return this.authApi.getDecodedIdToken(sessionId);
+  }
+
+  async getIdToken(): Promise<string> {
+    return this.withLoading(async () => this.authApi.getIdToken());
+  }
+
+  override async getUserProfile(options?: any): Promise<UserProfile> {
+    return this.withLoading(async () => {
+      try {
+        let baseUrl: string = options?.baseUrl;
+
+        if (!baseUrl) {
+          const configData: any = await this.authApi.getConfigData();
+          baseUrl = configData?.baseUrl;
+        }
+
+        const profile: User = await getScim2Me({baseUrl, instanceId: this.getInstanceId()});
+        const schemas: any = await getSchemas({baseUrl, instanceId: this.getInstanceId()});
+
+        const processedSchemas: any = flattenUserSchema(schemas);
+
+        const output: UserProfile = {
+          flattenedProfile: generateFlattenedUserProfile(profile, processedSchemas),
+          profile,
+          schemas: processedSchemas,
+        };
+
+        return output;
+      } catch (error) {
+        return {
+          flattenedProfile: extractUserClaimsFromIdToken(await this.getDecodedIdToken()),
+          profile: extractUserClaimsFromIdToken(await this.getDecodedIdToken()),
+          schemas: [],
+        };
+      }
+    });
+  }
+
+  override async getMyOrganizations(options?: any): Promise<Organization[]> {
+    try {
+      let baseUrl: string = options?.baseUrl;
+
+      if (!baseUrl) {
+        const configData: any = await this.authApi.getConfigData();
+        baseUrl = configData?.baseUrl;
+      }
+
+      return await getMeOrganizations({baseUrl, instanceId: this.getInstanceId()});
+    } catch (error) {
+      throw new ThunderIDRuntimeError(
+        `Failed to fetch the user's associated organizations: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        'ThunderIDReactClient-getMyOrganizations-RuntimeError-001',
+        'react',
+        'An error occurred while fetching associated organizations of the signed-in user.',
+      );
+    }
+  }
+
+  override async getAllOrganizations(options?: any): Promise<AllOrganizationsApiResponse> {
+    try {
+      let baseUrl: string = options?.baseUrl;
+
+      if (!baseUrl) {
+        const configData: any = await this.authApi.getConfigData();
+        baseUrl = configData?.baseUrl;
+      }
+
+      return await getAllOrganizations({baseUrl, instanceId: this.getInstanceId()});
+    } catch (error) {
+      throw new ThunderIDRuntimeError(
+        `Failed to fetch all organizations: ${error instanceof Error ? error.message : String(error)}`,
+        'ThunderIDReactClient-getAllOrganizations-RuntimeError-001',
+        'react',
+        'An error occurred while fetching all the organizations associated with the user.',
+      );
+    }
+  }
+
+  override async getCurrentOrganization(): Promise<Organization | null> {
+    try {
+      return await this.withLoading(async () => {
+        const idToken: IdToken = await this.getDecodedIdToken();
+        return {
+          id: idToken?.org_id,
+          name: idToken?.org_name,
+          orgHandle: idToken?.org_handle,
+        };
+      });
+    } catch (error) {
+      throw new ThunderIDRuntimeError(
+        `Failed to fetch the current organization: ${error instanceof Error ? error.message : String(error)}`,
+        'ThunderIDReactClient-getCurrentOrganization-RuntimeError-001',
+        'react',
+        'An error occurred while fetching the current organization of the signed-in user.',
+      );
+    }
+  }
+
+  override async switchOrganization(organization: Organization): Promise<TokenResponse | Response> {
+    return this.withLoading(async () => {
+      try {
+        const configData: any = await this.authApi.getConfigData();
+        const sourceInstanceId: number | undefined = configData?.organizationChain?.sourceInstanceId;
+
+        if (!organization.id) {
+          throw new ThunderIDRuntimeError(
+            'Organization ID is required for switching organizations',
+            'react-ThunderIDReactClient-SwitchOrganizationError-001',
+            'react',
+            'The organization object must contain a valid ID to perform the organization switch.',
+          );
+        }
+
+        const exchangeConfig: TokenExchangeRequestConfig = {
+          attachToken: false,
+          data: {
+            client_id: '{{clientId}}',
+            grant_type: 'organization_switch',
+            scope: '{{scopes}}',
+            switching_organization: organization.id,
+            token: '{{accessToken}}',
+          },
+          id: 'organization-switch',
+          returnsSession: true,
+          signInRequired: sourceInstanceId === undefined,
+        };
+
+        return (await this.authApi.exchangeToken(exchangeConfig, () => {})) as TokenResponse | Response;
+      } catch (error) {
+        throw new ThunderIDRuntimeError(
+          `Failed to switch organization: ${error.message || error}`,
+          'react-ThunderIDReactClient-SwitchOrganizationError-003',
+          'react',
+          'An error occurred while switching to the specified organization. Please try again.',
+        );
+      }
+    });
+  }
+
+  override isLoading(): boolean {
+    return this.loadingState || this.authApi.isLoading();
+  }
+
+  async isInitialized(): Promise<boolean> {
+    return this.authApi.isInitialized();
+  }
+
+  override async isSignedIn(): Promise<boolean> {
+    return this.authApi.isSignedIn();
+  }
+
+  async startAutoRefreshToken(): Promise<void> {
+    return this.authApi.startAutoRefreshToken();
+  }
+
+  override getConfiguration(): T {
+    return this.authApi.getConfigData() as unknown as T;
+  }
+
+  override async exchangeToken(config: TokenExchangeRequestConfig): Promise<TokenResponse | Response> {
+    return this.withLoading(
+      async () => this.authApi.exchangeToken(config, () => {}) as unknown as TokenResponse | Response,
+    );
+  }
+
+  override signIn(
+    options?: SignInOptions,
+    sessionId?: string,
+    onSignInSuccess?: (afterSignInUrl: string) => void,
+  ): Promise<User>;
+  override signIn(
+    payload: EmbeddedSignInFlowHandleRequestPayload,
+    request: EmbeddedFlowExecuteRequestConfig,
+    sessionId?: string,
+    onSignInSuccess?: (afterSignInUrl: string) => void,
+  ): Promise<User>;
+  override async signIn(...args: any[]): Promise<User | EmbeddedSignInFlowResponseV2> {
+    return this.withLoading(async () => {
+      const arg1: any = args[0];
+      const arg2: any = args[1];
+
+      const config: ThunderIDReactConfig | undefined = (await this.authApi.getConfigData()) as
+        | ThunderIDReactConfig
+        | undefined;
+
+      // NOTE: With React 19 strict mode, the initialization logic runs twice, and there's an intermittent
+      // issue where the config object is not getting stored in the storage layer with Vite scaffolding.
+      // Hence, we need to check if the client is initialized but the config object is empty, and reinitialize.
+      // Tracker: https://github.com/asgardeo/asgardeo-auth-react-sdk/issues/240
+      if (!config || Object.keys(config).length === 0) {
+        await this.initialize(this.initializeConfig);
+      }
+
+      const isV2Platform: boolean = config?.platform === Platform.ThunderIDV2;
+
+      if (isV2Platform && typeof arg1 === 'object' && arg1 !== null && arg1.callOnlyOnRedirect === true) {
+        return undefined as any;
+      }
+
+      if (
+        isV2Platform &&
+        typeof arg1 === 'object' &&
+        arg1 !== null &&
+        !isEmpty(arg1) &&
+        ('executionId' in arg1 || 'applicationId' in arg1)
+      ) {
+        const authIdFromUrl: string = new URL(window.location.href).searchParams.get('authId');
+        const authIdFromStorage: string = sessionStorage.getItem('thunderid_auth_id');
+        const authId: string = authIdFromUrl || authIdFromStorage;
+        const baseUrl: string = config?.baseUrl;
+
+        const response: EmbeddedSignInFlowResponseV2 = await executeEmbeddedSignInFlowV2({
+          authId,
+          baseUrl,
+          payload: arg1 as EmbeddedSignInFlowHandleRequestPayload,
+          url: arg2?.url,
+        });
+
+        /**
+         * NOTE: For ThunderID V2, if the embedded (App Native) sign-in flow returns a completed status along with an assertion (ID
+         * token), we manually set the session using that assertion. This is a temporary workaround until the platform
+         * fully supports session management for embedded flows.
+         *
+         * Tracker:
+         */
+        if (
+          isV2Platform &&
+          response &&
+          typeof response === 'object' &&
+          response.flowStatus === EmbeddedSignInFlowStatusV2.Complete &&
+          response.assertion
+        ) {
+          const decodedAssertion: {
+            [key: string]: unknown;
+            exp?: number;
+            iat?: number;
+            scope?: string;
+          } = await this.decodeJwtToken<{
+            [key: string]: unknown;
+            exp?: number;
+            iat?: number;
+            scope?: string;
+          }>(response.assertion);
+
+          const createdAt: number = decodedAssertion.iat ? decodedAssertion.iat * 1000 : Date.now();
+          const expiresIn: number =
+            decodedAssertion.exp && decodedAssertion.iat ? decodedAssertion.exp - decodedAssertion.iat : 3600;
+
+          await this.setSession({
+            access_token: response.assertion,
+            created_at: createdAt,
+            expires_in: expiresIn,
+            id_token: response.assertion,
+            scope: decodedAssertion.scope,
+            token_type: 'Bearer',
+          });
+        }
+
+        return response;
+      }
+
+      if (typeof arg1 === 'object' && 'flowId' in arg1 && typeof arg2 === 'object' && 'url' in arg2) {
+        return executeEmbeddedSignInFlow({
+          payload: arg1,
+          url: arg2.url,
+        });
+      }
+
+      return (await this.authApi.signIn(arg1)) as unknown as Promise<User>;
+    });
+  }
+
+  override async signInSilently(options?: SignInOptions): Promise<User | boolean> {
+    return this.authApi.signInSilently(options as Record<string, string | boolean>);
+  }
+
+  override signOut(options?: SignOutOptions, afterSignOut?: (afterSignOutUrl: string) => void): Promise<string>;
+  override signOut(
+    options?: SignOutOptions,
+    sessionId?: string,
+    afterSignOut?: (afterSignOutUrl: string) => void,
+  ): Promise<string>;
+  override async signOut(...args: any[]): Promise<string> {
+    if (args[1] && typeof args[1] !== 'function') {
+      throw new Error('The second argument must be a function.');
+    }
+
+    const config: ThunderIDReactConfig = (await this.authApi.getConfigData()) as ThunderIDReactConfig;
+
+    // TEMPORARY: Handle ThunderID V2 sign-out differently until the sign-out flow is implemented in the platform.
+    // Tracker: https://github.com/asgardeo/javascript/issues/212#issuecomment-3435713699
+    if (config.platform === Platform.ThunderIDV2) {
+      this.authApi.clearSession();
+
+      if (config.signInUrl) {
+        navigate(config.signInUrl);
+      } else {
+        this.signIn(config.signInOptions);
+      }
+
+      args[1]?.(config.afterSignOutUrl || '');
+
+      return Promise.resolve(config.afterSignOutUrl || '');
+    }
+
+    const response: boolean = await this.authApi.signOut(args[1]);
+
+    return Promise.resolve(String(response));
+  }
+
+  override async signUp(options?: SignUpOptions): Promise<void>;
+  override async signUp(payload: EmbeddedFlowExecuteRequestPayload): Promise<EmbeddedFlowExecuteResponse>;
+  override async signUp(...args: any[]): Promise<void | EmbeddedFlowExecuteResponse> {
+    const config: ThunderIDReactConfig = (await this.authApi.getConfigData()) as ThunderIDReactConfig;
+    const firstArg: any = args[0];
+    const baseUrl: string = config?.baseUrl;
+
+    if (config.platform === Platform.ThunderIDV2) {
+      // Read authId from URL params or sessionStorage
+      // This is needed to complete the OAuth flow after registration
+      const authIdFromUrl: string = new URL(window.location.href).searchParams.get('authId');
+      const authIdFromStorage: string = sessionStorage.getItem('thunderid_auth_id');
+      const authId: string = authIdFromUrl || authIdFromStorage;
+
+      if (authIdFromUrl && !authIdFromStorage) {
+        sessionStorage.setItem('thunderid_auth_id', authIdFromUrl);
+      }
+
+      return executeEmbeddedSignUpFlowV2({
+        authId,
+        baseUrl,
+        payload:
+          typeof firstArg === 'object' && 'flowType' in firstArg
+            ? {...(firstArg as EmbeddedFlowExecuteRequestPayload), verbose: true}
+            : (firstArg as EmbeddedFlowExecuteRequestPayload),
+      }) as any;
+    }
+
+    if (typeof firstArg === 'object' && 'flowType' in firstArg) {
+      return executeEmbeddedSignUpFlow({
+        baseUrl,
+        payload: firstArg as EmbeddedFlowExecuteRequestPayload,
+      });
+    }
+
+    navigate(getRedirectBasedSignUpUrl(config as Config));
+    return undefined;
+  }
+
+  override async recover(payload: EmbeddedFlowExecuteRequestPayload): Promise<EmbeddedFlowExecuteResponse> {
+    const config: ThunderIDReactConfig = (await this.authApi.getConfigData()) as ThunderIDReactConfig;
+    const baseUrl: string = config?.baseUrl;
+    const isV2Platform: boolean = config?.platform === Platform.ThunderIDV2;
+
+    if (isV2Platform) {
+      return executeEmbeddedRecoveryFlowV2({
+        baseUrl,
+        payload: {...payload, verbose: true},
+      }) as any;
+    }
+
+    return undefined as any;
+  }
+
+  override async getDiscoveryResponse(): Promise<OIDCDiscoveryApiResponse | null> {
+    const storageManager: any = await this.authApi.getStorageManager();
+
+    return storageManager.loadOpenIDProviderConfiguration();
+  }
+
+  async request(requestConfig?: HttpRequestConfig): Promise<HttpResponse<any>> {
+    return this.authApi.httpRequest(requestConfig);
+  }
+
+  async requestAll(requestConfigs?: HttpRequestConfig[]): Promise<HttpResponse<any>[]> {
+    return this.authApi.httpRequestAll(requestConfigs);
+  }
+
+  override async getAccessToken(sessionId?: string): Promise<string> {
+    return this.authApi.getAccessToken(sessionId);
+  }
+
+  override clearSession(sessionId?: string): void {
+    this.authApi.clearSession(sessionId);
+  }
+
+  override async setSession(sessionData: Record<string, unknown>, sessionId?: string): Promise<void> {
+    return (await this.authApi.getStorageManager()).setSessionData(sessionData, sessionId);
+  }
+
+  async getStorageManager(): Promise<any> {
+    return this.authApi.getStorageManager();
+  }
+
+  override decodeJwtToken<TResult = Record<string, unknown>>(token: string): Promise<TResult> {
+    return this.authApi.decodeJwtToken<TResult>(token);
+  }
+}
+
+export default ThunderIDReactClient;

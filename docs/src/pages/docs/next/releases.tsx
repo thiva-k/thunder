@@ -563,23 +563,13 @@ export default function ReleasesPage() {
       <main className="releases-shell">
         <section className="releases-hero">
           <h1>
-            {productName}{' '}
-            <span
-              style={{
-                background: 'linear-gradient(90deg, #FF6B00 0%, #FF8C00 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              Releases
-            </span>
+            Releases
           </h1>
           <p>Explore every release with detailed changelogs, download options, and the people building {productName}.</p>
 
           <div className="releases-hero-actions">
             <a
-              className="button button--primary"
+              className="button button--secondary"
               href={repository?.releasesUrl ?? githubReleasesUrl}
               target="_blank"
               rel="noreferrer"
