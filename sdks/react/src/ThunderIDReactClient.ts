@@ -22,93 +22,48 @@ import {
   generateFlattenedUserProfile,
   UserProfile,
   SignInOptions,
-  SignOutOptions,
   User,
   generateUserProfile,
   EmbeddedFlowExecuteResponse,
   SignUpOptions,
   EmbeddedFlowExecuteRequestPayload,
   ThunderIDRuntimeError,
-  executeEmbeddedSignUpFlow,
   EmbeddedSignInFlowHandleRequestPayload,
-  executeEmbeddedSignInFlow,
   executeEmbeddedSignInFlowV2,
   Organization,
   IdToken,
-  EmbeddedFlowExecuteRequestConfig,
   deriveOrganizationHandleFromBaseUrl,
   AllOrganizationsApiResponse,
   extractUserClaimsFromIdToken,
   TokenResponse,
   HttpRequestConfig,
   HttpResponse,
-  navigate,
-  getRedirectBasedSignUpUrl,
-  Config,
   TokenExchangeRequestConfig,
-  Platform,
   isEmpty,
   EmbeddedSignInFlowResponseV2,
   executeEmbeddedSignUpFlowV2,
   executeEmbeddedRecoveryFlowV2,
   EmbeddedSignInFlowStatusV2,
-  OIDCDiscoveryApiResponse,
 } from '@thunderid/browser';
-import AuthAPI from './__temp__/api';
 import getAllOrganizations from './api/getAllOrganizations';
 import getMeOrganizations from './api/getMeOrganizations';
 import getSchemas from './api/getSchemas';
 import getScim2Me from './api/getScim2Me';
 import {ThunderIDReactConfig} from './models/config';
 
-/**
- * Client for mplementing ThunderID in React applications.
- * This class provides the core functionality for managing user authentication and sessions.
- *
- * @typeParam T - Configuration type that extends ThunderIDReactConfig.
- */
 class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig> extends ThunderIDBrowserClient<T> {
-  private authApi: AuthAPI;
-
   private loadingState = false;
 
-  private clientInstanceId: number;
+  private _initializeConfig: ThunderIDReactConfig | undefined;
 
-  private initializeConfig: ThunderIDReactConfig | undefined;
-
-  /**
-   * Creates a new ThunderIDReactClient instance.
-   * @param instanceId - Optional instance ID for multi-auth context support. Defaults to 0 for backward compatibility.
-   */
   constructor(instanceId = 0) {
-    super();
-    this.clientInstanceId = instanceId;
-
-    // FIXME: This has to be the browser client from `@thunderid/browser` package.
-    this.authApi = new AuthAPI(undefined, instanceId);
+    super(instanceId);
   }
 
-  /**
-   * Get the instance ID for this client.
-   * @returns The instance ID used for multi-auth context support.
-   */
-  public getInstanceId(): number {
-    return this.clientInstanceId;
-  }
-
-  /**
-   * Set the loading state of the client
-   * @param loading - Boolean indicating if the client is in a loading state
-   */
   private setLoading(loading: boolean): void {
     this.loadingState = loading;
   }
 
-  /**
-   * Wrap async operations with loading state management
-   * @param operation - The async operation to execute
-   * @returns Promise with the result of the operation
-   */
   private async withLoading<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
     this.setLoading(true);
     try {
@@ -127,14 +82,14 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
     }
 
     return this.withLoading(async () => {
-      this.initializeConfig = {
+      this._initializeConfig = {
         ...config,
         organizationHandle: resolvedOrganizationHandle,
         periodicTokenRefresh:
           config?.tokenLifecycle?.refreshToken?.autoRefresh ?? (config as any)?.periodicTokenRefresh,
       } as any;
 
-      return this.authApi.init(this.initializeConfig as any);
+      return super.initialize(this._initializeConfig as unknown as T);
     });
   }
 
@@ -143,8 +98,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
       let isInitialized: boolean;
 
       try {
-        await this.authApi.reInitialize(config as any);
-
+        await super.reInitialize(config as Partial<T>);
         isInitialized = true;
       } catch (error) {
         throw new ThunderIDRuntimeError(
@@ -168,7 +122,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
       let baseUrl: string = options?.baseUrl;
 
       if (!baseUrl) {
-        const configData: any = await this.authApi.getConfigData();
+        const configData: any = await (this.getStorageManager() as any).getConfigData();
         baseUrl = configData?.baseUrl;
       }
 
@@ -181,12 +135,12 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
     }
   }
 
-  async getDecodedIdToken(sessionId?: string): Promise<IdToken> {
-    return this.authApi.getDecodedIdToken(sessionId);
+  override async getDecodedIdToken(sessionId?: string): Promise<IdToken> {
+    return super.getDecodedIdToken(sessionId) as Promise<IdToken>;
   }
 
-  async getIdToken(): Promise<string> {
-    return this.withLoading(async () => this.authApi.getIdToken());
+  override async getIdToken(): Promise<string> {
+    return this.withLoading(async () => super.getIdToken() as Promise<string>);
   }
 
   override async getUserProfile(options?: any): Promise<UserProfile> {
@@ -195,7 +149,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
         let baseUrl: string = options?.baseUrl;
 
         if (!baseUrl) {
-          const configData: any = await this.authApi.getConfigData();
+          const configData: any = await (this.getStorageManager() as any).getConfigData();
           baseUrl = configData?.baseUrl;
         }
 
@@ -204,13 +158,11 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
 
         const processedSchemas: any = flattenUserSchema(schemas);
 
-        const output: UserProfile = {
+        return {
           flattenedProfile: generateFlattenedUserProfile(profile, processedSchemas),
           profile,
           schemas: processedSchemas,
         };
-
-        return output;
       } catch (error) {
         return {
           flattenedProfile: extractUserClaimsFromIdToken(await this.getDecodedIdToken()),
@@ -226,7 +178,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
       let baseUrl: string = options?.baseUrl;
 
       if (!baseUrl) {
-        const configData: any = await this.authApi.getConfigData();
+        const configData: any = await (this.getStorageManager() as any).getConfigData();
         baseUrl = configData?.baseUrl;
       }
 
@@ -248,7 +200,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
       let baseUrl: string = options?.baseUrl;
 
       if (!baseUrl) {
-        const configData: any = await this.authApi.getConfigData();
+        const configData: any = await (this.getStorageManager() as any).getConfigData();
         baseUrl = configData?.baseUrl;
       }
 
@@ -286,7 +238,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
   override async switchOrganization(organization: Organization): Promise<TokenResponse | Response> {
     return this.withLoading(async () => {
       try {
-        const configData: any = await this.authApi.getConfigData();
+        const configData: any = await (this.getStorageManager() as any).getConfigData();
         const sourceInstanceId: number | undefined = configData?.organizationChain?.sourceInstanceId;
 
         if (!organization.id) {
@@ -312,7 +264,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
           signInRequired: sourceInstanceId === undefined,
         };
 
-        return (await this.authApi.exchangeToken(exchangeConfig, () => {})) as TokenResponse | Response;
+        return (await super.exchangeToken(exchangeConfig)) as TokenResponse | Response;
       } catch (error) {
         throw new ThunderIDRuntimeError(
           `Failed to switch organization: ${error.message || error}`,
@@ -325,48 +277,25 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
   }
 
   override isLoading(): boolean {
-    return this.loadingState || this.authApi.isLoading();
-  }
-
-  async isInitialized(): Promise<boolean> {
-    return this.authApi.isInitialized();
+    return this.loadingState;
   }
 
   override async isSignedIn(): Promise<boolean> {
-    return this.authApi.isSignedIn();
-  }
-
-  async startAutoRefreshToken(): Promise<void> {
-    return this.authApi.startAutoRefreshToken();
-  }
-
-  override getConfiguration(): T {
-    return this.authApi.getConfigData() as unknown as T;
+    return super.isSignedIn() as Promise<boolean>;
   }
 
   override async exchangeToken(config: TokenExchangeRequestConfig): Promise<TokenResponse | Response> {
     return this.withLoading(
-      async () => this.authApi.exchangeToken(config, () => {}) as unknown as TokenResponse | Response,
+      async () => super.exchangeToken(config) as unknown as TokenResponse | Response,
     );
   }
 
-  override signIn(
-    options?: SignInOptions,
-    sessionId?: string,
-    onSignInSuccess?: (afterSignInUrl: string) => void,
-  ): Promise<User>;
-  override signIn(
-    payload: EmbeddedSignInFlowHandleRequestPayload,
-    request: EmbeddedFlowExecuteRequestConfig,
-    sessionId?: string,
-    onSignInSuccess?: (afterSignInUrl: string) => void,
-  ): Promise<User>;
   override async signIn(...args: any[]): Promise<User | EmbeddedSignInFlowResponseV2> {
     return this.withLoading(async () => {
       const arg1: any = args[0];
       const arg2: any = args[1];
 
-      const config: ThunderIDReactConfig | undefined = (await this.authApi.getConfigData()) as
+      const config: ThunderIDReactConfig | undefined = (await (this.getStorageManager() as any).getConfigData()) as
         | ThunderIDReactConfig
         | undefined;
 
@@ -375,17 +304,14 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
       // Hence, we need to check if the client is initialized but the config object is empty, and reinitialize.
       // Tracker: https://github.com/asgardeo/asgardeo-auth-react-sdk/issues/240
       if (!config || Object.keys(config).length === 0) {
-        await this.initialize(this.initializeConfig);
+        await this.initialize(this._initializeConfig);
       }
 
-      const isV2Platform: boolean = config?.platform === Platform.ThunderIDV2;
-
-      if (isV2Platform && typeof arg1 === 'object' && arg1 !== null && arg1.callOnlyOnRedirect === true) {
+      if (typeof arg1 === 'object' && arg1 !== null && arg1.callOnlyOnRedirect === true) {
         return undefined as any;
       }
 
       if (
-        isV2Platform &&
         typeof arg1 === 'object' &&
         arg1 !== null &&
         !isEmpty(arg1) &&
@@ -403,15 +329,7 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
           url: arg2?.url,
         });
 
-        /**
-         * NOTE: For ThunderID V2, if the embedded (App Native) sign-in flow returns a completed status along with an assertion (ID
-         * token), we manually set the session using that assertion. This is a temporary workaround until the platform
-         * fully supports session management for embedded flows.
-         *
-         * Tracker:
-         */
         if (
-          isV2Platform &&
           response &&
           typeof response === 'object' &&
           response.flowStatus === EmbeddedSignInFlowStatusV2.Complete &&
@@ -441,146 +359,65 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
             scope: decodedAssertion.scope,
             token_type: 'Bearer',
           });
+
+          this.notifySignIn(extractUserClaimsFromIdToken(decodedAssertion as IdToken) as User);
         }
 
         return response;
       }
 
-      if (typeof arg1 === 'object' && 'flowId' in arg1 && typeof arg2 === 'object' && 'url' in arg2) {
-        return executeEmbeddedSignInFlow({
-          payload: arg1,
-          url: arg2.url,
-        });
-      }
-
-      return (await this.authApi.signIn(arg1)) as unknown as Promise<User>;
+      return (await super.signIn(arg1)) as unknown as User;
     });
   }
 
   override async signInSilently(options?: SignInOptions): Promise<User | boolean> {
-    return this.authApi.signInSilently(options as Record<string, string | boolean>);
-  }
-
-  override signOut(options?: SignOutOptions, afterSignOut?: (afterSignOutUrl: string) => void): Promise<string>;
-  override signOut(
-    options?: SignOutOptions,
-    sessionId?: string,
-    afterSignOut?: (afterSignOutUrl: string) => void,
-  ): Promise<string>;
-  override async signOut(...args: any[]): Promise<string> {
-    if (args[1] && typeof args[1] !== 'function') {
-      throw new Error('The second argument must be a function.');
-    }
-
-    const config: ThunderIDReactConfig = (await this.authApi.getConfigData()) as ThunderIDReactConfig;
-
-    // TEMPORARY: Handle ThunderID V2 sign-out differently until the sign-out flow is implemented in the platform.
-    // Tracker: https://github.com/asgardeo/javascript/issues/212#issuecomment-3435713699
-    if (config.platform === Platform.ThunderIDV2) {
-      this.authApi.clearSession();
-
-      if (config.signInUrl) {
-        navigate(config.signInUrl);
-      } else {
-        this.signIn(config.signInOptions);
-      }
-
-      args[1]?.(config.afterSignOutUrl || '');
-
-      return Promise.resolve(config.afterSignOutUrl || '');
-    }
-
-    const response: boolean = await this.authApi.signOut(args[1]);
-
-    return Promise.resolve(String(response));
+    return super.signInSilently(options as Record<string, string | boolean>) as Promise<User | boolean>;
   }
 
   override async signUp(options?: SignUpOptions): Promise<void>;
   override async signUp(payload: EmbeddedFlowExecuteRequestPayload): Promise<EmbeddedFlowExecuteResponse>;
   override async signUp(...args: any[]): Promise<void | EmbeddedFlowExecuteResponse> {
-    const config: ThunderIDReactConfig = (await this.authApi.getConfigData()) as ThunderIDReactConfig;
+    const config: ThunderIDReactConfig = (await (this.getStorageManager() as any).getConfigData()) as ThunderIDReactConfig;
     const firstArg: any = args[0];
     const baseUrl: string = config?.baseUrl;
 
-    if (config.platform === Platform.ThunderIDV2) {
-      // Read authId from URL params or sessionStorage
-      // This is needed to complete the OAuth flow after registration
-      const authIdFromUrl: string = new URL(window.location.href).searchParams.get('authId');
-      const authIdFromStorage: string = sessionStorage.getItem('thunderid_auth_id');
-      const authId: string = authIdFromUrl || authIdFromStorage;
+    const authIdFromUrl: string = new URL(window.location.href).searchParams.get('authId');
+    const authIdFromStorage: string = sessionStorage.getItem('thunderid_auth_id');
+    const authId: string = authIdFromUrl || authIdFromStorage;
 
-      if (authIdFromUrl && !authIdFromStorage) {
-        sessionStorage.setItem('thunderid_auth_id', authIdFromUrl);
-      }
-
-      return executeEmbeddedSignUpFlowV2({
-        authId,
-        baseUrl,
-        payload:
-          typeof firstArg === 'object' && 'flowType' in firstArg
-            ? {...(firstArg as EmbeddedFlowExecuteRequestPayload), verbose: true}
-            : (firstArg as EmbeddedFlowExecuteRequestPayload),
-      }) as any;
+    if (authIdFromUrl && !authIdFromStorage) {
+      sessionStorage.setItem('thunderid_auth_id', authIdFromUrl);
     }
 
-    if (typeof firstArg === 'object' && 'flowType' in firstArg) {
-      return executeEmbeddedSignUpFlow({
-        baseUrl,
-        payload: firstArg as EmbeddedFlowExecuteRequestPayload,
-      });
-    }
-
-    navigate(getRedirectBasedSignUpUrl(config as Config));
-    return undefined;
+    return executeEmbeddedSignUpFlowV2({
+      authId,
+      baseUrl,
+      payload:
+        typeof firstArg === 'object' && 'flowType' in firstArg
+          ? {...(firstArg as EmbeddedFlowExecuteRequestPayload), verbose: true}
+          : (firstArg as EmbeddedFlowExecuteRequestPayload),
+    }) as any;
   }
 
   override async recover(payload: EmbeddedFlowExecuteRequestPayload): Promise<EmbeddedFlowExecuteResponse> {
-    const config: ThunderIDReactConfig = (await this.authApi.getConfigData()) as ThunderIDReactConfig;
-    const baseUrl: string = config?.baseUrl;
-    const isV2Platform: boolean = config?.platform === Platform.ThunderIDV2;
+    const config: ThunderIDReactConfig = (await (this.getStorageManager() as any).getConfigData()) as ThunderIDReactConfig;
 
-    if (isV2Platform) {
-      return executeEmbeddedRecoveryFlowV2({
-        baseUrl,
-        payload: {...payload, verbose: true},
-      }) as any;
-    }
-
-    return undefined as any;
+    return executeEmbeddedRecoveryFlowV2({
+      baseUrl: config?.baseUrl,
+      payload: {...payload, verbose: true},
+    }) as any;
   }
 
-  override async getDiscoveryResponse(): Promise<OIDCDiscoveryApiResponse | null> {
-    const storageManager: any = await this.authApi.getStorageManager();
-
-    return storageManager.loadOpenIDProviderConfiguration();
+  public override getStorageManager(): any {
+    return super.getStorageManager();
   }
 
   async request(requestConfig?: HttpRequestConfig): Promise<HttpResponse<any>> {
-    return this.authApi.httpRequest(requestConfig);
+    return super.httpRequest(requestConfig);
   }
 
   async requestAll(requestConfigs?: HttpRequestConfig[]): Promise<HttpResponse<any>[]> {
-    return this.authApi.httpRequestAll(requestConfigs);
-  }
-
-  override async getAccessToken(sessionId?: string): Promise<string> {
-    return this.authApi.getAccessToken(sessionId);
-  }
-
-  override clearSession(sessionId?: string): void {
-    this.authApi.clearSession(sessionId);
-  }
-
-  override async setSession(sessionData: Record<string, unknown>, sessionId?: string): Promise<void> {
-    return (await this.authApi.getStorageManager()).setSessionData(sessionData, sessionId);
-  }
-
-  async getStorageManager(): Promise<any> {
-    return this.authApi.getStorageManager();
-  }
-
-  override decodeJwtToken<TResult = Record<string, unknown>>(token: string): Promise<TResult> {
-    return this.authApi.decodeJwtToken<TResult>(token);
+    return super.httpRequestAll(requestConfigs) as Promise<HttpResponse<any>[]>;
   }
 }
 

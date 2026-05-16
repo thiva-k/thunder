@@ -19,7 +19,7 @@
 import {TokenExchangeRequestConfig, TokenResponse} from '@thunderid/node';
 import getSessionIdAction from './actions/getSessionId';
 import {ThunderIDNextConfig} from '../models/config';
-import ThunderIDNextClient from '../ThunderIDNextClient';
+import getClient from './getClient';
 
 const thunderid = async (): Promise<{
   exchangeToken: (config: TokenExchangeRequestConfig, sessionId: string) => Promise<TokenResponse | Response>;
@@ -28,7 +28,7 @@ const thunderid = async (): Promise<{
   reInitialize: (config: Partial<ThunderIDNextConfig>) => Promise<boolean>;
 }> => {
   const getAccessToken = async (sessionId: string): Promise<string> => {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     return client.getAccessToken(sessionId);
   };
 
@@ -38,12 +38,12 @@ const thunderid = async (): Promise<{
     config: TokenExchangeRequestConfig,
     sessionId: string,
   ): Promise<TokenResponse | Response> => {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     return client.exchangeToken(config, sessionId);
   };
 
   const reInitialize = async (config: Partial<ThunderIDNextConfig>): Promise<boolean> => {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     return client.reInitialize(config);
   };
 

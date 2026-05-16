@@ -19,7 +19,7 @@
 'use server';
 
 import {User} from '@thunderid/node';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action to get the current user.
@@ -29,7 +29,7 @@ const getUserAction = async (
   sessionId: string,
 ): Promise<{data: {user: User | null}; error: string | null; success: boolean}> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     const user: User = await client.getUser(sessionId);
     return {data: {user}, error: null, success: true};
   } catch (error) {

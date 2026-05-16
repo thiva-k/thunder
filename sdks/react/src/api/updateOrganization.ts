@@ -18,7 +18,7 @@
 
 import {
   HttpResponse,
-  ThunderIDSPAClient,
+  FetchHttpClient,
   HttpRequestConfig,
   updateOrganization as baseUpdateOrganization,
   UpdateOrganizationConfig as BaseUpdateOrganizationConfig,
@@ -92,9 +92,8 @@ const updateOrganization = async ({
   ...requestConfig
 }: UpdateOrganizationConfig): Promise<OrganizationDetails> => {
   const defaultFetcher = async (url: string, config: RequestInit): Promise<Response> => {
-    const client: ThunderIDSPAClient = ThunderIDSPAClient.getInstance(instanceId);
-    const httpClient: (config: HttpRequestConfig) => Promise<HttpResponse<any>> = client.httpRequest.bind(client);
-    const response: HttpResponse<any> = await httpClient({
+    const httpClient: FetchHttpClient = FetchHttpClient.getInstance(instanceId);
+    const response: HttpResponse<any> = await httpClient.request({
       data: config.body ? JSON.parse(config.body as string) : undefined,
       headers: config.headers as Record<string, string>,
       method: config.method || 'PATCH',

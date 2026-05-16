@@ -19,7 +19,7 @@
 import {
   Organization,
   HttpResponse,
-  ThunderIDSPAClient,
+  FetchHttpClient,
   HttpRequestConfig,
   createOrganization as baseCreateOrganization,
   CreateOrganizationConfig as BaseCreateOrganizationConfig,
@@ -97,9 +97,8 @@ const createOrganization = async ({
   ...requestConfig
 }: CreateOrganizationConfig): Promise<Organization> => {
   const defaultFetcher = async (url: string, config: RequestInit): Promise<Response> => {
-    const client: ThunderIDSPAClient = ThunderIDSPAClient.getInstance(instanceId);
-    const httpClient: (config: HttpRequestConfig) => Promise<HttpResponse<any>> = client.httpRequest.bind(client);
-    const response: HttpResponse<any> = await httpClient({
+    const httpClient: FetchHttpClient = FetchHttpClient.getInstance(instanceId);
+    const response: HttpResponse<any> = await httpClient.request({
       data: config.body ? JSON.parse(config.body as string) : undefined,
       headers: config.headers as Record<string, string>,
       method: config.method || 'POST',

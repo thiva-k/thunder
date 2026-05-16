@@ -16,15 +16,93 @@
  * under the License.
  */
 
-import {LegacyThunderIDNodeClient} from '@thunderid/node';
-import {ThunderIDExpressConfig} from './models/config';
+import {ThunderIDNodeClient, ThunderIDAuthException, Storage, TokenResponse} from '@thunderid/node';
+import express from 'express';
+import {v4 as uuidv4} from 'uuid';
+import CookieConfig, {SESSION_COOKIE_NAME, DEFAULT_LOGIN_PATH, DEFAULT_LOGOUT_PATH} from './constants/CookieConfig';
+import {ExpressClientConfig} from './models/config';
+import hasErrorInURL from './utils/expressUtils';
 
-/**
- * Base class for implementing ThunderID in Express.js based applications.
- * This class provides the core functionality for managing user authentication and sessions.
- *
- * @typeParam T - Configuration type that extends ThunderIDExpressConfig.
- */
-abstract class ThunderIDExpressClient<T = ThunderIDExpressConfig> extends LegacyThunderIDNodeClient<T> {}
+class ThunderIDExpressClient<T extends ExpressClientConfig = ExpressClientConfig> extends ThunderIDNodeClient<T> {
+  private _expressConfig: ExpressClientConfig | undefined;
+
+  public constructor() {
+    super();
+  }
+
+  public override async initialize(config: T, storage?: Storage): Promise<boolean> {
+    this._expressConfig = config;
+
+    const nodeConfig = {
+      ...config,
+      afterSignInUrl: config.appURL + (config.loginPath || DEFAULT_LOGIN_PATH),
+      afterSignOutUrl: config.appURL + (config.logoutPath || DEFAULT_LOGOUT_PATH),
+    };
+
+    return super.initialize(nodeConfig as unknown as T, storage);
+  }
+
+  public override async signIn(
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+    signInConfig?: Record<string, string | boolean>,
+  ): Promise<TokenResponse> {
+    if (hasErrorInURL(req.originalUrl)) {
+      return Promise.reject(
+        new ThunderIDAuthException(
+          'EXPRESS-CLIENT-SI-IV01',
+          'Invalid login request URL',
+          'Login request contains an error query parameter in the URL',
+        ),
+      );
+    }
+
+    let userId: string = req.cookies?.[SESSION_COOKIE_NAME];
+    if (!userId) {
+      userId = uuidv4();
+    }
+
+    const authRedirectCallback = (url: string): void => {
+      if (!url) return;
+
+      res.cookie(SESSION_COOKIE_NAME, userId, {
+        httpOnly: this._expressConfig?.cookieConfig?.httpOnly ?? CookieConfig.defaultHttpOnly,
+        maxAge: this._expressConfig?.cookieConfig?.maxAge ?? CookieConfig.defaultMaxAge,
+        sameSite: (this._expressConfig?.cookieConfig?.sameSite ?? CookieConfig.defaultSameSite) as any,
+        secure: this._expressConfig?.cookieConfig?.secure ?? CookieConfig.defaultSecure,
+      });
+      res.redirect(url);
+      if (typeof next === 'function') next();
+    };
+
+    const authResponse: TokenResponse = (await super.signIn(
+      authRedirectCallback,
+      userId,
+      req.query.code as string | undefined,
+      req.query.session_state as string | undefined,
+      req.query.state as string | undefined,
+      signInConfig,
+    )) as unknown as TokenResponse;
+
+    if (authResponse.accessToken || authResponse.idToken) {
+      return authResponse;
+    }
+
+    return {
+      accessToken: '',
+      createdAt: 0,
+      expiresIn: '',
+      idToken: '',
+      refreshToken: '',
+      scope: '',
+      tokenType: '',
+    };
+  }
+
+  public override async signOut(userId?: string): Promise<string> {
+    return super.signOut(userId);
+  }
+}
 
 export default ThunderIDExpressClient;

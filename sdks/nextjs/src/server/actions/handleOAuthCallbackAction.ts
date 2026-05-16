@@ -21,7 +21,7 @@
 import {IdToken} from '@thunderid/node';
 import {cookies} from 'next/headers';
 import {ThunderIDNextConfig} from '../../models/config';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 import logger from '../../utils/logger';
 import SessionManager from '../../utils/SessionManager';
 
@@ -54,7 +54,7 @@ const handleOAuthCallbackAction = async (
       };
     }
 
-    const thunderIDClient: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const thunderIDClient = getClient();
 
     if (!thunderIDClient.isInitialized) {
       return {

@@ -20,14 +20,14 @@
 
 import {AllOrganizationsApiResponse, ThunderIDAPIError} from '@thunderid/node';
 import getSessionId from './getSessionId';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action to get organizations.
  */
 const getAllOrganizations = async (options?: any, sessionId?: string): Promise<AllOrganizationsApiResponse> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     return await client.getAllOrganizations(options, sessionId ?? (await getSessionId())!);
   } catch (error) {
     throw new ThunderIDAPIError(

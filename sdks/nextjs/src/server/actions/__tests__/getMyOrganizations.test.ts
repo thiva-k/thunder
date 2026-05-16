@@ -21,15 +21,13 @@ import {ThunderIDAPIError, Organization} from '@thunderid/node';
 import {describe, it, expect, vi, beforeEach, afterEach, type Mock} from 'vitest';
 
 // --- Import SUT and mocked deps ---
-import ThunderIDNextClient from '../../../ThunderIDNextClient';
+import getClient from '../../getClient';
 import getMyOrganizations from '../getMyOrganizations';
 import getSessionId from '../getSessionId';
 
 // --- Mocks (declare BEFORE importing the SUT) ---
-vi.mock('../../../ThunderIDNextClient', () => ({
-  default: {
-    getInstance: vi.fn(),
-  },
+vi.mock('../../getClient', () => ({
+  default: vi.fn(),
 }));
 
 // Mock the dynamically-imported module that SUT calls as: import('./getSessionId')
@@ -51,7 +49,7 @@ describe('getMyOrganizations (Next.js server action)', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    (ThunderIDNextClient.getInstance as unknown as Mock).mockReturnValue(mockClient);
+    (getClient as unknown as Mock).mockReturnValue(mockClient);
     (getSessionId as unknown as Mock).mockResolvedValue('sess-abc');
     mockClient.getAccessToken.mockResolvedValue('atk-123');
     mockClient.getMyOrganizations.mockResolvedValue(orgs);
@@ -65,7 +63,7 @@ describe('getMyOrganizations (Next.js server action)', () => {
   it('should return organizations when sessionId is provided (no getSessionId fallback)', async () => {
     const result: Organization[] = await getMyOrganizations(options, 'sess-123');
 
-    expect(ThunderIDNextClient.getInstance).toHaveBeenCalledTimes(1);
+    expect(getClient).toHaveBeenCalledTimes(1);
     expect(getSessionId).not.toHaveBeenCalled();
     expect(mockClient.getAccessToken).toHaveBeenCalledWith('sess-123');
     expect(mockClient.getMyOrganizations).toHaveBeenCalledWith(options, 'sess-123');
@@ -191,7 +189,7 @@ describe('getMyOrganizations (Next.js server action)', () => {
   });
 
   it('should wrap an error thrown by ThunderIDNextClient.getInstance()', async () => {
-    (ThunderIDNextClient.getInstance as unknown as Mock).mockImplementationOnce(() => {
+    (getClient as unknown as Mock).mockImplementationOnce(() => {
       throw new Error('factory failed');
     });
 

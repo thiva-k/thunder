@@ -26,18 +26,29 @@ if (!globalThis.fetch) {
   globalThis.Response = Response;
 }
 
-export {ThunderIDNodeClient as LegacyThunderIDNodeClient} from './__legacy__/client';
-export * from './__legacy__/models';
-export * from './__legacy__/utils/logger-utils';
+/**
+ * Entry point for all public APIs of the @thunderid/node SDK.
+ */
 
+// Client
+export {default as ThunderIDNodeClient} from './ThunderIDNodeClient';
+
+// Constants
 export {default as CookieConfig} from './constants/CookieConfig';
 
-export {ThunderIDNodeConfig} from './models/config';
-export {CookieOptions} from './models/cookies';
+// Models
+export type {ThunderIDNodeConfig} from './models/config';
+export type {CookieOptions} from './models/cookies';
+export type {default as AuthURLCallback} from './models/AuthURLCallback';
 
+// Stores
+export {default as MemoryCacheStore} from './stores/MemoryCacheStore';
+
+// Utils
+export {default as NodeCryptoUtils} from './utils/NodeCryptoUtils';
+export {default as SessionUtils} from './utils/SessionUtils';
 export {default as generateSessionId} from './utils/generateSessionId';
 export {default as getSessionCookieOptions} from './utils/getSessionCookieOptions';
 
-export {default as ThunderIDNodeClient} from './ThunderIDNodeClient';
-
+// Re-export everything from the JavaScript SDK
 export * from '@thunderid/javascript';

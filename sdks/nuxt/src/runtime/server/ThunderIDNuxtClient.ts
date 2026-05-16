@@ -18,8 +18,6 @@
 
 import {
   ThunderIDNodeClient,
-  LegacyThunderIDNodeClient,
-  Platform,
   type AuthClientConfig,
   type IdToken,
   type Organization,
@@ -37,13 +35,6 @@ import {
   getAllOrganizations,
   createOrganization,
   getOrganization,
-  getScim2Me,
-  getSchemas,
-  flattenUserSchema,
-  generateFlattenedUserProfile,
-  updateMeProfile,
-  type GetBrandingPreferenceConfig,
-  type BrandingPreference,
   initializeEmbeddedSignInFlow,
   executeEmbeddedSignInFlow,
   executeEmbeddedSignUpFlow,
@@ -53,47 +44,20 @@ import {
   type EmbeddedFlowExecuteResponse,
   type ExtendedAuthorizeRequestUrlParams,
   type SignUpOptions,
+  type GetBrandingPreferenceConfig,
+  type BrandingPreference,
 } from '@thunderid/node';
 import type {ThunderIDNuxtConfig, ThunderIDSessionPayload} from '../types';
 
-/**
- * Singleton ThunderID client for Nuxt applications.
- *
- * Mirrors the {@link ThunderIDNextClient} pattern: a single shared instance per
- * server process that delegates OAuth/OIDC operations to an internal
- * {@link LegacyThunderIDNodeClient}. The legacy client provisions its own default
- * in-memory store (`MemoryCacheStore`) for PKCE state and tokens so that state
- * persists across the sign-in → callback boundary.
- *
- * Consumers call {@link getInstance} directly from server routes and plugins —
- * there is no per-request wrapper factory. Initialization happens once per
- * process (guarded by {@link isInitialized}) from the `thunderid-init` Nitro
- * plugin on the first request.
- *
- * @example
- * ```ts
- * // In a Nitro API route:
- * export default defineEventHandler(async (event) => {
- *   const client = ThunderIDNuxtClient.getInstance();
- *   return client.getUser(sessionId);
- * });
- * ```
- */
 class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
   private static instance: ThunderIDNuxtClient;
-
-  private legacy: LegacyThunderIDNodeClient<ThunderIDNuxtConfig>;
 
   public isInitialized: boolean = false;
 
   private constructor() {
     super();
-    this.legacy = new LegacyThunderIDNodeClient<ThunderIDNuxtConfig>();
   }
 
-  /**
-   * Get the singleton instance of ThunderIDNuxtClient.
-   */
   public static getInstance(): ThunderIDNuxtClient {
     if (!ThunderIDNuxtClient.instance) {
       ThunderIDNuxtClient.instance = new ThunderIDNuxtClient();
@@ -101,11 +65,6 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     return ThunderIDNuxtClient.instance;
   }
 
-  /**
-   * Initializes the underlying legacy client with OAuth/OIDC settings derived
-   * from the Nuxt module config. Idempotent — repeated calls are no-ops after
-   * the first successful initialization.
-   */
   override async initialize(config: ThunderIDNuxtConfig, storage?: Storage): Promise<boolean> {
     if (this.isInitialized) {
       return true;
@@ -118,45 +77,26 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
       clientId: config.clientId as string,
       clientSecret: config.clientSecret || undefined,
       enablePKCE: true,
-      platform: config.platform,
       scopes: config.scopes || ['openid', 'profile'],
       tokenRequest: config.tokenRequest,
     } as AuthClientConfig<ThunderIDNuxtConfig>;
 
-    const result: boolean = await this.legacy.initialize(authConfig, storage);
+    const result: boolean = await super.initialize(authConfig as unknown as ThunderIDNuxtConfig, storage);
     this.isInitialized = true;
     return result;
   }
 
   override async reInitialize(config: Partial<ThunderIDNuxtConfig>): Promise<boolean> {
-    await this.legacy.reInitialize(config as any);
+    await super.reInitialize(config as any);
     return true;
   }
 
-  /**
-   * Seeds the legacy in-memory token store from a verified session JWT payload.
-   *
-   * The signed session cookie is the source of truth for tokens in this SDK — it
-   * survives server restarts and new worker processes. The underlying
-   * {@link LegacyThunderIDNodeClient}, however, keeps tokens in a
-   * {@link MemoryCacheStore} keyed by `sessionId`, and its
-   * `getAccessToken` / `getUser` / `getDecodedIdToken` / `signOut` paths all
-   * read from that store. Without rehydration, those calls fail whenever the
-   * in-memory store and the cookie diverge (the classic case: `nuxi dev`
-   * restart while the browser still holds a valid session cookie).
-   *
-   * Writes the snake_case token shape the legacy helper expects
-   * (see `AuthenticationHelper.processTokenResponse`). Safe to call on every
-   * request — it's an in-memory write and the cookie always reflects the
-   * freshest tokens (the refresh path re-issues the cookie too).
-   */
   async rehydrateSessionFromPayload(session: ThunderIDSessionPayload): Promise<void> {
     if (!this.isInitialized || !session?.sessionId || !session?.accessToken) {
       return;
     }
 
-    type StorageManager = Awaited<ReturnType<LegacyThunderIDNodeClient<ThunderIDNuxtConfig>['getStorageManager']>>;
-    const storageManager: StorageManager = await this.legacy.getStorageManager();
+    const storageManager: any = this.getStorageManager();
     const iatSeconds: number = typeof session.iat === 'number' ? session.iat : Math.floor(Date.now() / 1000);
     const expiresInSeconds: number =
       typeof session.accessTokenExpiresAt === 'number' ? Math.max(0, session.accessTokenExpiresAt - iatSeconds) : 3600;
@@ -176,42 +116,14 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     );
   }
 
-  /**
-   * Initiates the authorization code flow, handles an embedded sign-in step,
-   * or exchanges a code for tokens.
-   *
-   * Overload 1 — **redirect-flow** (existing callers like `signin.get.ts`):
-   * ```
-   * signIn(authURLCallback, sessionId, code?, sessionState?, state?, config?)
-   * ```
-   * Overload 2 — **embedded flow initiate** (flowId === ''):
-   * ```
-   * signIn({flowId: ''}, request, sessionId)
-   * ```
-   * Dispatches to `initializeEmbeddedSignInFlow`.
-   *
-   * Overload 3 — **embedded flow execute** (flowId set):
-   * ```
-   * signIn(payload, request, sessionId)
-   * ```
-   * Dispatches to `executeEmbeddedSignInFlow`.
-   *
-   * Overload 4 — **code exchange** (completion after embedded flow):
-   * ```
-   * signIn({code, state, session_state}, {}, sessionId)
-   * ```
-   * Falls through to the legacy redirect-flow code-exchange path.
-   */
   override signIn(...args: any[]): Promise<any> {
     const arg0: unknown = args[0];
 
-    // Embedded flow: first argument is a non-null object with a `flowId` property.
     if (typeof arg0 === 'object' && arg0 !== null && 'flowId' in arg0) {
       const sessionId: string | undefined = args[2] as string | undefined;
 
-      if (arg0.flowId === '') {
-        // Initialize embedded sign-in flow.
-        return this.getAuthorizeRequestUrl(
+      if ((arg0 as any).flowId === '') {
+        return this.getSignInUrl(
           {client_secret: '{{clientSecret}}', response_mode: 'direct'},
           sessionId,
         ).then((authorizeUrl: string) => {
@@ -223,7 +135,6 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
         });
       }
 
-      // Execute embedded sign-in step.
       const request: EmbeddedFlowExecuteRequestConfig = args[1] ?? {};
       return executeEmbeddedSignInFlow({
         payload: arg0 as EmbeddedSignInFlowHandleRequestPayload,
@@ -231,8 +142,6 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
       });
     }
 
-    // Code exchange path: {code, state, session_state} as arg0, {} as arg1, sessionId as arg2.
-    // Falls through to the legacy client mirroring ThunderIDNextClient.
     if (typeof arg0 === 'object' && arg0 !== null && ('code' in arg0 || 'state' in arg0)) {
       const payload: {code?: unknown; session_state?: unknown; state?: unknown} = arg0 as {
         code?: unknown;
@@ -245,40 +154,25 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
       const state: string | undefined = typeof payload.state === 'string' ? payload.state : undefined;
       const extraParams: Record<string, string | boolean> = {};
 
-      if (code) {
-        extraParams.code = code;
-      }
-      if (sessionState) {
-        extraParams.session_state = sessionState;
-      }
-      if (state) {
-        extraParams.state = state;
-      }
+      if (code) extraParams.code = code;
+      if (sessionState) extraParams.session_state = sessionState;
+      if (state) extraParams.state = state;
 
-      // args[3] would be onSignInSuccess (undefined), args[2] is sessionId
-      return this.legacy.signIn(args[3], args[2], code, sessionState, state, extraParams);
+      return super.signIn(args[3], args[2], code, sessionState, state, extraParams);
     }
 
-    // Redirect-flow: first argument is a callback function.
-    return this.legacy.signIn(args[0], args[1], args[2], args[3], args[4], args[5]);
+    return super.signIn(args[0], args[1], args[2], args[3], args[4], args[5]);
   }
 
-  /**
-   * Executes the embedded sign-up flow step.
-   * Mirrors `ThunderIDNextClient.signUp` with an `EmbeddedFlowExecuteRequestPayload`.
-   */
   override signUp(options?: SignUpOptions): Promise<void>;
   override signUp(payload: EmbeddedFlowExecuteRequestPayload): Promise<EmbeddedFlowExecuteResponse>;
   override async signUp(
     payloadOrOptions?: EmbeddedFlowExecuteRequestPayload | SignUpOptions,
   ): Promise<void | EmbeddedFlowExecuteResponse> {
     if (!payloadOrOptions || !('flowType' in payloadOrOptions)) {
-      // Redirect-flow sign-up: not meaningful server-side, but satisfies the interface.
       return undefined;
     }
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
+    const configData: any = (this.getStorageManager() as any).getConfigData();
     const baseUrl: string | undefined = configData?.baseUrl as string | undefined;
     const response: EmbeddedFlowExecuteResponse = await executeEmbeddedSignUpFlow({
       baseUrl,
@@ -287,111 +181,43 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     return response;
   }
 
-  /**
-   * Returns the OAuth2 authorization URL.
-   * Used by the redirect-flow GET handler and the embedded-flow initiation path.
-   *
-   * Mirrors `ThunderIDNextClient.getAuthorizeRequestUrl`.
-   */
   public async getAuthorizeRequestUrl(
     customParams: ExtendedAuthorizeRequestUrlParams,
     userId?: string,
   ): Promise<string> {
-    return this.legacy.getSignInUrl(customParams, userId);
+    return this.getSignInUrl(customParams, userId);
   }
 
-  /**
-   * Clears the session and returns the RP-Initiated Logout URL.
-   * Accepts either `(sessionId: string)` or `(options?, sessionId?, callback?)`.
-   *
-   * For ThunderIDV2 (Thunder), RP-Initiated Logout is not yet supported by the platform.
-   * Skip the /oidc/logout call and return afterSignOutUrl directly — the caller
-   * (signout.post.ts) is responsible for clearing session cookies.
-   */
   override async signOut(...args: any[]): Promise<string> {
-    const sessionId: string = typeof args[0] === 'string' ? args[0] : (args[1] as string);
-
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
-
-    if ((configData as any)?.platform === Platform.ThunderIDV2) {
-      return (configData?.afterSignOutUrl as string) || (configData?.afterSignInUrl as string) || '/';
-    }
-
-    return this.legacy.signOut(sessionId);
+    const configData: any = (this.getStorageManager() as any).getConfigData();
+    return (configData?.afterSignOutUrl as string) || (configData?.afterSignInUrl as string) || '/';
   }
 
   override getUser(sessionId?: string): Promise<User> {
-    return this.legacy.getUser(sessionId as string);
+    return super.getUser(sessionId) as Promise<User>;
   }
 
   override getAccessToken(sessionId?: string): Promise<string> {
-    return this.legacy.getAccessToken(sessionId as string);
+    return super.getAccessToken(sessionId);
   }
 
-  /**
-   * Decodes and returns the ID token claims for the given session.
-   * Exposed here (as on {@link ThunderIDNextClient}) so route handlers can
-   * access ID token claims without falling back to the legacy client.
-   */
-  getDecodedIdToken(sessionId?: string, idToken?: string): Promise<IdToken> {
-    return this.legacy.getDecodedIdToken(sessionId as string, idToken);
+  override getDecodedIdToken(sessionId?: string, idToken?: string): Promise<IdToken> {
+    return super.getDecodedIdToken(sessionId, idToken) as Promise<IdToken>;
   }
 
   override isSignedIn(sessionId?: string): Promise<boolean> {
-    return this.legacy.isSignedIn(sessionId as string);
+    return super.isSignedIn(sessionId) as Promise<boolean>;
   }
 
   override exchangeToken(config: TokenExchangeRequestConfig, sessionId?: string): Promise<TokenResponse | Response> {
-    return this.legacy.exchangeToken(config, sessionId);
+    return super.exchangeToken(config, sessionId) as unknown as Promise<TokenResponse | Response>;
   }
 
-  /**
-   * Fetches the flattened SCIM2 user profile for the given session.
-   * Mirrors `ThunderIDNextClient.getUserProfile` — calls `getScim2Me` +
-   * `getSchemas` + `generateFlattenedUserProfile` and falls back to
-   * `getUser` claims if SCIM2 is unavailable.
-   */
   override async getUserProfile(sessionId: string): Promise<UserProfile> {
-    const accessToken: string = await this.getAccessToken(sessionId);
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
-    const baseUrl: string = (configData?.baseUrl ?? '') as string;
-
-    // ThunderIDV2 (Thunder) does not support SCIM2 — return ID token claims directly.
-    if ((configData as any)?.platform === Platform.ThunderIDV2) {
-      const user: User = await this.getUser(sessionId);
-      return {flattenedProfile: user, profile: user, schemas: []};
-    }
-
-    try {
-      const authHeaders: Record<string, string> = {Authorization: `Bearer ${accessToken}`};
-
-      const [profile, schemas] = await Promise.all([
-        getScim2Me({baseUrl, headers: authHeaders}),
-        getSchemas({baseUrl, headers: authHeaders}),
-      ]);
-
-      const processedSchemas: ReturnType<typeof flattenUserSchema> = flattenUserSchema(schemas);
-
-      return {
-        flattenedProfile: generateFlattenedUserProfile(profile, processedSchemas),
-        profile,
-        schemas: processedSchemas,
-      };
-    } catch {
-      // Fall back to user claims from the ID token
-      const user: User = await this.getUser(sessionId);
-      return {flattenedProfile: user, profile: user, schemas: []};
-    }
+    const user: User = await this.getUser(sessionId);
+    return {flattenedProfile: user, profile: user, schemas: []};
   }
 
-  /**
-   * Extracts the current organisation from the decoded ID token.
-   * Returns null when the user is not acting within an organisation.
-   */
   override async getCurrentOrganization(sessionId: string): Promise<Organization | null> {
     try {
       const idToken: IdToken = await this.getDecodedIdToken(sessionId);
@@ -408,14 +234,9 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     }
   }
 
-  /**
-   * Returns the list of organisations the authenticated user is a member of.
-   */
   override async getMyOrganizations(sessionId: string): Promise<Organization[]> {
     const accessToken: string = await this.getAccessToken(sessionId);
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
+    const configData: any = (this.getStorageManager() as any).getConfigData();
     const baseUrl: string = (configData?.baseUrl ?? '') as string;
 
     return getMeOrganizations({
@@ -424,49 +245,19 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     });
   }
 
-  /**
-   * Fetches the branding preference for the tenant / application.
-   * Delegates to the standalone `getBrandingPreference` API helper from
-   * `@thunderid/node`, which does not require an authenticated session.
-   */
   // eslint-disable-next-line class-methods-use-this
   async getBrandingPreference(config: GetBrandingPreferenceConfig): Promise<BrandingPreference> {
     return getBrandingPreference(config);
   }
 
-  /**
-   * Updates the SCIM2 /Me profile for the authenticated user.
-   * Mirrors `ThunderIDNextClient.updateUserProfile`.
-   */
   override async updateUserProfile(config: UpdateMeProfileConfig, sessionId: string): Promise<User> {
-    const accessToken: string = await this.getAccessToken(sessionId);
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
-    const baseUrl: string = (configData?.baseUrl ?? '') as string;
-
-    // ThunderIDV2 (Thunder) does not support SCIM2 profile updates.
-    if ((configData as any)?.platform === Platform.ThunderIDV2) {
-      throw new Error('Profile updates are not supported for the ThunderIDV2 (Thunder) platform.');
-    }
-
-    return updateMeProfile({
-      ...config, // pass-through, includes payload
-      baseUrl,
-      headers: {...config.headers, Authorization: `Bearer ${accessToken}`},
-    });
+    throw new Error('Profile updates are not supported for the ThunderID platform.');
   }
 
-  /**
-   * Retrieves all organisations accessible to the authenticated user
-   * (paginated). Mirrors `ThunderIDNextClient.getAllOrganizations`.
-   */
   override async getAllOrganizations(options?: any, sessionId?: string): Promise<AllOrganizationsApiResponse> {
     const resolvedSessionId: string = sessionId ?? '';
     const accessToken: string = await this.getAccessToken(resolvedSessionId);
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
+    const configData: any = (this.getStorageManager() as any).getConfigData();
     const baseUrl: string = (configData?.baseUrl ?? '') as string;
 
     return getAllOrganizations({
@@ -475,14 +266,9 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     });
   }
 
-  /**
-   * Creates a new sub-organisation. Mirrors `ThunderIDNextClient.createOrganization`.
-   */
   async createOrganization(payload: CreateOrganizationPayload, sessionId: string): Promise<Organization> {
     const accessToken: string = await this.getAccessToken(sessionId);
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
+    const configData: any = (this.getStorageManager() as any).getConfigData();
     const baseUrl: string = (configData?.baseUrl ?? '') as string;
 
     return createOrganization({
@@ -492,15 +278,9 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     });
   }
 
-  /**
-   * Fetches the details of a single organisation by ID.
-   * Mirrors `ThunderIDNextClient.getOrganization`.
-   */
   async getOrganization(organizationId: string, sessionId: string): Promise<OrganizationDetails> {
     const accessToken: string = await this.getAccessToken(sessionId);
-    const configData: AuthClientConfig<ThunderIDNuxtConfig> | undefined = (await this.legacy.getConfigData?.()) as
-      | AuthClientConfig<ThunderIDNuxtConfig>
-      | undefined;
+    const configData: any = (this.getStorageManager() as any).getConfigData();
     const baseUrl: string = (configData?.baseUrl ?? '') as string;
 
     return getOrganization({
@@ -510,13 +290,6 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
     });
   }
 
-  /**
-   * Performs an organisation-switch token exchange and returns the new
-   * `TokenResponse`. The caller (the Nitro route) is responsible for
-   * persisting the new session cookie.
-   *
-   * Mirrors `ThunderIDNextClient.switchOrganization`.
-   */
   override async switchOrganization(organization: Organization, sessionId: string): Promise<TokenResponse | Response> {
     if (!organization.id) {
       throw new Error('Organization ID is required for switching organizations.');
@@ -537,7 +310,11 @@ class ThunderIDNuxtClient extends ThunderIDNodeClient<ThunderIDNuxtConfig> {
       signInRequired: true,
     };
 
-    return this.legacy.exchangeToken(exchangeConfig, sessionId);
+    return this.exchangeToken(exchangeConfig, sessionId);
+  }
+
+  public override getStorageManager(): any {
+    return super.getStorageManager();
   }
 }
 
