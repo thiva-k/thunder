@@ -19,18 +19,13 @@
 /**
  * Enumeration of supported identity platforms.
  *
- * - `ThunderID`: Represents the ThunderID cloud identity platform (asgardeo.io domains).
+ * - `ThunderID`: Represents the ThunderID identity platform.
  * - `IdentityServer`: Represents WSO2 Identity Server (on-prem or custom domains).
  * - `Unknown`: Used when the platform cannot be determined from the configuration.
- *
- * This enum is used to distinguish between different identity providers and to
- * enable platform-specific logic throughout the SDK.
  */
 export enum Platform {
-  /** ThunderID cloud identity platform (asgardeo.io domains) */
+  /** ThunderID identity platform */
   ThunderID = 'THUNDERID',
-  /** @experimental ThunderID V2 */
-  ThunderIDV2 = 'ThunderIDV2',
   /** WSO2 Identity Server (on-prem or custom domains) */
   IdentityServer = 'IDENTITY_SERVER',
   /** Unknown or unsupported platform */

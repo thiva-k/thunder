@@ -61,8 +61,8 @@ import type {ThunderIDContext} from '../models/contexts';
 import ThunderIDVueClient from '../ThunderIDVueClient';
 
 interface ThunderIDProviderProps {
-  afterSignInUrl: string;
-  afterSignOutUrl: string;
+  afterSignInUrl: string | undefined;
+  afterSignOutUrl: string | undefined;
   applicationId: string | undefined;
   baseUrl: string;
   clientId: string;
@@ -81,9 +81,11 @@ interface ThunderIDProviderProps {
 /**
  * Checks if the current URL contains authentication parameters.
  */
-function hasAuthParams(url: URL, afterSignInUrl: string): boolean {
+function hasAuthParams(url: URL, afterSignInUrl: string | undefined): boolean {
   return (
-    (hasAuthParamsInUrl() && new URL(url.origin + url.pathname).toString() === new URL(afterSignInUrl).toString()) ||
+    (hasAuthParamsInUrl() &&
+      !!afterSignInUrl &&
+      new URL(url.origin + url.pathname).toString() === new URL(afterSignInUrl).toString()) ||
     url.searchParams.get('error') !== null
   );
 }
@@ -106,14 +108,14 @@ function hasAuthParams(url: URL, afterSignInUrl: string): boolean {
 const ThunderIDProvider: Component = defineComponent({
   name: 'ThunderIDProvider',
   props: {
-    /** The URL to redirect to after sign in. Defaults to `window.location.origin`. */
+    /** The URL to redirect to after sign in. */
     afterSignInUrl: {
-      default: () => window.location.origin,
+      default: undefined,
       type: String,
     },
-    /** The URL to redirect to after sign out. Defaults to `window.location.origin`. */
+    /** The URL to redirect to after sign out. */
     afterSignOutUrl: {
-      default: () => window.location.origin,
+      default: undefined,
       type: String,
     },
     /** The ThunderID application ID. */
@@ -210,7 +212,6 @@ const ThunderIDProvider: Component = defineComponent({
         clientId: props.clientId,
         organizationChain: props.organizationChain,
         organizationHandle: props.organizationHandle,
-        platform: props.platform,
         scopes: props.scopes,
         signInOptions: props.signInOptions,
         signInUrl: props.signInUrl,
@@ -234,48 +235,14 @@ const ThunderIDProvider: Component = defineComponent({
           resolvedBaseUrl.value = baseUrl;
         }
 
-        const config: ThunderIDVueConfig = buildConfig();
-
-        if (config.platform === Platform.ThunderIDV2) {
-          const claims: User = extractUserClaimsFromIdToken(decodedToken);
-          user.value = claims;
-          const profileData: UserProfile = {
-            flattenedProfile: claims,
-            profile: claims,
-            schemas: [],
-          };
-          userProfile.value = profileData;
-        } else {
-          try {
-            const fetchedUser: User = await client.getUser({baseUrl});
-            user.value = fetchedUser;
-          } catch {
-            // silent
-          }
-
-          try {
-            const fetchedOrg: Organization = await client.getCurrentOrganization();
-            currentOrganization.value = fetchedOrg;
-          } catch {
-            // silent
-          }
-
-          // Fetch user's organizations for organization components
-          try {
-            const orgs: Organization[] = await client.getMyOrganizations({baseUrl});
-            myOrganizations.value = orgs || [];
-          } catch {
-            // silent
-          }
-
-          // Fetch user profile details for profile components
-          try {
-            const profileData: UserProfile = await client.getUserProfile({baseUrl});
-            userProfile.value = profileData;
-          } catch {
-            // silent
-          }
-        }
+        const claims: User = extractUserClaimsFromIdToken(decodedToken);
+        user.value = claims;
+        const profileData: UserProfile = {
+          flattenedProfile: claims,
+          profile: claims,
+          schemas: [],
+        };
+        userProfile.value = profileData;
 
         const currentSignInStatus: boolean = await client.isSignedIn();
         isSignedIn.value = currentSignInStatus;
@@ -290,12 +257,8 @@ const ThunderIDProvider: Component = defineComponent({
     // ── Sign In (wrapper) ──
     async function signIn(...args: any[]): Promise<User | EmbeddedSignInFlowResponseV2> {
       const arg1: any = args[0];
-      const config: ThunderIDVueConfig = buildConfig();
       const isV2FlowRequest: boolean =
-        config.platform === Platform.ThunderIDV2 &&
-        typeof arg1 === 'object' &&
-        arg1 !== null &&
-        ('executionId' in arg1 || 'applicationId' in arg1);
+        typeof arg1 === 'object' && arg1 !== null && ('executionId' in arg1 || 'applicationId' in arg1);
 
       try {
         if (!isV2FlowRequest) {
@@ -303,17 +266,7 @@ const ThunderIDProvider: Component = defineComponent({
           isLoading.value = true;
         }
 
-        const response: User | EmbeddedSignInFlowResponseV2 = await client.signIn(...args);
-
-        if (isV2FlowRequest || (response && typeof response === 'object' && 'flowStatus' in response)) {
-          return response;
-        }
-
-        if (await client.isSignedIn()) {
-          await updateSession();
-        }
-
-        return response;
+        return await client.signIn(...args);
       } catch (error) {
         throw new ThunderIDRuntimeError(
           `Sign in failed: ${error instanceof Error ? error.message : String(JSON.stringify(error))}`,
@@ -344,13 +297,7 @@ const ThunderIDProvider: Component = defineComponent({
       try {
         isUpdatingSession = true;
         isLoading.value = true;
-        const response: User | boolean = await client.signInSilently(options);
-
-        if (await client.isSignedIn()) {
-          await updateSession();
-        }
-
-        return response;
+        return await client.signInSilently(options);
       } catch (error) {
         throw new ThunderIDRuntimeError(
           `Error while signing in silently: ${error instanceof Error ? error.message : String(JSON.stringify(error))}`,
@@ -412,7 +359,7 @@ const ThunderIDProvider: Component = defineComponent({
       isSignedIn,
       organization: currentOrganization,
       organizationHandle: props.organizationHandle,
-      platform: props.platform as ThunderIDVueConfig['platform'],
+      platform: Platform.ThunderID,
       reInitialize: async (config: any): Promise<boolean> => {
         const result: boolean = await client.reInitialize(config);
         return typeof result === 'boolean' ? result : true;
@@ -439,9 +386,6 @@ const ThunderIDProvider: Component = defineComponent({
 
       const initializedConfig: any = client.getConfiguration();
 
-      if (initializedConfig?.platform) {
-        sessionStorage.setItem('thunderid_platform', initializedConfig.platform);
-      }
       if (initializedConfig?.baseUrl) {
         sessionStorage.setItem('thunderid_base_url', initializedConfig.baseUrl);
       }
@@ -454,6 +398,11 @@ const ThunderIDProvider: Component = defineComponent({
         isInitialized.value = false;
       }
 
+      // Sync session state whenever sign-in completes (both redirect and embedded V2 flows).
+      await client.on('sign-in', async () => {
+        await updateSession();
+      });
+
       // 3. Try to sign in if already authenticated or if URL has auth params
       const alreadySignedIn: boolean = await client.isSignedIn();
 
@@ -462,24 +411,18 @@ const ThunderIDProvider: Component = defineComponent({
       } else {
         const currentUrl: URL = new URL(window.location.href);
         const hasParams: boolean =
-          hasAuthParams(currentUrl, props.afterSignInUrl) &&
+          hasAuthParams(currentUrl, initializedConfig?.afterSignInUrl) &&
           hasCalledForThisInstanceInUrl(props.instanceId ?? 0, currentUrl.search);
 
         if (hasParams) {
           try {
-            const isV2Platform: boolean = config.platform === Platform.ThunderIDV2;
+            const urlParams: URLSearchParams = currentUrl.searchParams;
+            const code: string | null = urlParams.get('code');
+            const executionIdFromUrl: string | null = urlParams.get('executionId');
+            const storedExecutionId: string | null = sessionStorage.getItem('thunderid_execution_id');
 
-            if (isV2Platform) {
-              const urlParams: URLSearchParams = currentUrl.searchParams;
-              const code: string | null = urlParams.get('code');
-              const executionIdFromUrl: string | null = urlParams.get('executionId');
-              const storedExecutionId: string | null = sessionStorage.getItem('thunderid_execution_id');
-
-              if (code && !executionIdFromUrl && !storedExecutionId) {
-                await signIn();
-              }
-            } else {
-              await signIn({callOnlyOnRedirect: true});
+            if (code && !executionIdFromUrl && !storedExecutionId) {
+              await signIn();
             }
           } catch (error) {
             throw new ThunderIDRuntimeError(
@@ -518,7 +461,7 @@ const ThunderIDProvider: Component = defineComponent({
         if (isUpdatingSession) return;
 
         const currentUrl: URL = new URL(window.location.href);
-        if (!isSignedIn.value && hasAuthParams(currentUrl, props.afterSignInUrl)) return;
+        if (!isSignedIn.value && hasAuthParams(currentUrl, initializedConfig?.afterSignInUrl)) return;
 
         isLoading.value = client.isLoading();
       }, 100);
@@ -539,7 +482,7 @@ const ThunderIDProvider: Component = defineComponent({
         default: (): any =>
           h(
             FlowMetaProvider,
-            {enabled: props.platform === Platform.ThunderIDV2},
+            {enabled: true},
             {
               default: (): any =>
                 h(BrandingProvider, null, {
@@ -564,27 +507,15 @@ const ThunderIDProvider: Component = defineComponent({
                                 },
                                 profile: userProfile.value,
                                 revalidateProfile: async (): Promise<void> => {
-                                  const revalConfig: ThunderIDVueConfig = buildConfig();
-                                  if (revalConfig.platform === Platform.ThunderIDV2) {
-                                    try {
-                                      const decodedToken: IdToken = await client.getDecodedIdToken();
-                                      const claims: User = extractUserClaimsFromIdToken(decodedToken);
-                                      user.value = claims;
-                                      userProfile.value = {
-                                        flattenedProfile: claims,
-                                        profile: claims,
-                                        schemas: [],
-                                      };
-                                    } catch {
-                                      // silent
-                                    }
-                                    return;
-                                  }
                                   try {
-                                    const profileData: UserProfile = await client.getUserProfile({
-                                      baseUrl: resolvedBaseUrl.value,
-                                    });
-                                    userProfile.value = profileData;
+                                    const decodedToken: IdToken = await client.getDecodedIdToken();
+                                    const claims: User = extractUserClaimsFromIdToken(decodedToken);
+                                    user.value = claims;
+                                    userProfile.value = {
+                                      flattenedProfile: claims,
+                                      profile: claims,
+                                      schemas: [],
+                                    };
                                   } catch {
                                     // silent
                                   }

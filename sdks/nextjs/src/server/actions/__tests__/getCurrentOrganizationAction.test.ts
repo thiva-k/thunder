@@ -20,14 +20,12 @@
 import {describe, it, expect, vi, beforeEach, afterEach, type Mock} from 'vitest';
 
 // --- Import SUT and mocked deps ---
-import ThunderIDNextClient from '../../../ThunderIDNextClient';
+import getClient from '../../getClient';
 import getCurrentOrganizationAction from '../getCurrentOrganizationAction';
 
 // --- Mock client factory BEFORE importing SUT ---
-vi.mock('../../../ThunderIDNextClient', () => ({
-  default: {
-    getInstance: vi.fn(),
-  },
+vi.mock('../../getClient', () => ({
+  default: vi.fn(),
 }));
 
 // A light org shape for testing (only fields we assert on)
@@ -49,7 +47,7 @@ describe('getCurrentOrganizationAction', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    (ThunderIDNextClient.getInstance as unknown as Mock).mockReturnValue(mockClient);
+    (getClient as unknown as Mock).mockReturnValue(mockClient);
   });
 
   afterEach(() => {
@@ -61,7 +59,7 @@ describe('getCurrentOrganizationAction', () => {
 
     const result: ActionResult = await getCurrentOrganizationAction(sessionId);
 
-    expect(ThunderIDNextClient.getInstance).toHaveBeenCalledTimes(1);
+    expect(getClient).toHaveBeenCalledTimes(1);
     expect(mockClient.getCurrentOrganization).toHaveBeenCalledWith(sessionId);
 
     expect(result.success).toBe(true);
@@ -91,7 +89,7 @@ describe('getCurrentOrganizationAction', () => {
   });
 
   it('should return failure shape when ThunderIDNextClient.getInstance throws', async () => {
-    (ThunderIDNextClient.getInstance as unknown as Mock).mockImplementationOnce(() => {
+    (getClient as unknown as Mock).mockImplementationOnce(() => {
       throw new Error('factory failed');
     });
 

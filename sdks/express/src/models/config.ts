@@ -16,16 +16,48 @@
  * under the License.
  */
 
-import {ThunderIDNodeConfig} from '@thunderid/node';
+import {AuthClientConfig} from '@thunderid/node';
+
+/**
+ * Express-specific cookie configuration options.
+ */
+export interface CookieOptions {
+  /** Cookie max age in milliseconds. */
+  maxAge?: number;
+  /** Whether the cookie is HTTP-only. */
+  httpOnly?: boolean;
+  /** SameSite policy. */
+  sameSite?: string;
+  /** Whether the cookie requires HTTPS. */
+  secure?: boolean;
+}
+
+/**
+ * Express-specific configuration fields.
+ */
+export interface StrictExpressClientConfig {
+  /** The base URL of the Express application (e.g. `http://localhost:3000`). */
+  appURL: string;
+  /** Cookie configuration for the session cookie. */
+  cookieConfig?: CookieOptions;
+  /** Whether to apply global authentication middleware. */
+  globalAuth?: boolean;
+  /** Custom login path. Defaults to `/login`. */
+  loginPath?: string;
+  /** Custom logout path. Defaults to `/logout`. */
+  logoutPath?: string;
+  /** Additional parameters to include in the sign-in request. */
+  signInConfig?: Record<string, string | boolean>;
+}
+
+/**
+ * Full configuration type for `ThunderIDExpressClient`.
+ * Combines node-level auth config with Express-specific settings.
+ */
+export type ExpressClientConfig = Exclude<AuthClientConfig, 'afterSignInUrl' | 'afterSignOutUrl'> &
+  StrictExpressClientConfig;
 
 /**
  * Configuration type for the ThunderID Express.js SDK.
- * Extends the base Config type from @thunderid/node with Express.js specific settings.
- *
- * @remarks
- * This type is used to configure the Express.js SDK with settings like:
- * - Server endpoints
- * - Authentication parameters
- * - Session management options
  */
-export type ThunderIDExpressConfig = ThunderIDNodeConfig;
+export type ThunderIDExpressConfig = ExpressClientConfig;

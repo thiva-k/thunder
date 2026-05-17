@@ -19,14 +19,14 @@
 'use server';
 
 import {ThunderIDAPIError, Organization} from '@thunderid/node';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action to get organizations.
  */
 const getMyOrganizations = async (options?: any, sessionId?: string): Promise<Organization[]> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
 
     // Get session ID if not provided
     let resolvedSessionId: string | undefined = sessionId;

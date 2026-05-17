@@ -20,7 +20,7 @@
 
 import {cookies} from 'next/headers';
 import getSessionId from './getSessionId';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 import logger from '../../utils/logger';
 import SessionManager from '../../utils/SessionManager';
 
@@ -43,7 +43,7 @@ const signOutAction = async (): Promise<{data?: {afterSignOutUrl?: string}; erro
   };
 
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     const sessionId: string | undefined = await getSessionId();
 
     let afterSignOutUrl = '/';

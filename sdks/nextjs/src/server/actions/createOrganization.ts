@@ -20,14 +20,14 @@
 
 import {CreateOrganizationPayload, Organization, ThunderIDAPIError} from '@thunderid/node';
 import getSessionId from './getSessionId';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action to create an organization.
  */
 const createOrganization = async (payload: CreateOrganizationPayload, sessionId: string): Promise<Organization> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     return await client.createOrganization(payload, sessionId ?? (await getSessionId())!);
   } catch (error) {
     throw new ThunderIDAPIError(

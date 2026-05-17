@@ -20,7 +20,7 @@ import {ThunderIDAPIError, Organization, CreateOrganizationPayload} from '@thund
 import {describe, it, expect, vi, beforeEach, afterEach, Mock} from 'vitest';
 
 // Adjust these paths if your project structure is different
-import ThunderIDNextClient from '../../../ThunderIDNextClient';
+import getClient from '../../getClient';
 import createOrganization from '../createOrganization';
 
 // Use the same class so we can assert instanceof and status code propagation
@@ -29,14 +29,9 @@ import createOrganization from '../createOrganization';
 import getSessionId from '../getSessionId';
 
 // ---- Mocks ----
-vi.mock('../../../ThunderIDNextClient', () =>
-  // We return a default export with a static getInstance function we can stub
-  ({
-    default: {
-      getInstance: vi.fn(),
-    },
-  }),
-);
+vi.mock('../../getClient', () => ({
+  default: vi.fn(),
+}));
 
 vi.mock('../getSessionId', () => ({
   default: vi.fn(),
@@ -65,7 +60,7 @@ describe('createOrganization (Next.js server action)', () => {
     vi.resetAllMocks();
 
     // Default: getInstance returns our mock client
-    (ThunderIDNextClient.getInstance as unknown as Mock).mockReturnValue(mockClient);
+    (getClient as unknown as Mock).mockReturnValue(mockClient);
     // Default: getSessionId resolves to a session id
     (getSessionId as unknown as Mock).mockResolvedValue('sess-abc');
   });
@@ -79,7 +74,7 @@ describe('createOrganization (Next.js server action)', () => {
 
     const result: Organization = await createOrganization(basePayload, 'sess-123');
 
-    expect(ThunderIDNextClient.getInstance).toHaveBeenCalledTimes(1);
+    expect(getClient).toHaveBeenCalledTimes(1);
     expect(getSessionId).not.toHaveBeenCalled();
     expect(mockClient.createOrganization).toHaveBeenCalledWith(basePayload, 'sess-123');
     expect(result).toEqual(mockOrg);

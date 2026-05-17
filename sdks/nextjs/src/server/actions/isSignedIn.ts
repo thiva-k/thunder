@@ -20,7 +20,7 @@
 
 import getSessionId from './getSessionId';
 import getSessionPayload from './getSessionPayload';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 import {SessionTokenPayload} from '../../utils/SessionManager';
 
 /**
@@ -50,7 +50,7 @@ const isSignedIn = async (sessionId?: string): Promise<boolean> => {
       return false;
     }
 
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
 
     try {
       const accessToken: string = await client.getAccessToken(resolvedSessionId);

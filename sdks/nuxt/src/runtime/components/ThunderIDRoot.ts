@@ -232,7 +232,7 @@ const ThunderIDRoot: Component = defineComponent({
     // `BaseAcceptInvite`, `BaseInviteUser`) returns a real context with
     // `meta: null` instead of throwing. When the Nuxt SDK gains a `platform`
     // config option, derive `enabled` from it the same way `ThunderIDProvider`
-    // does (`enabled: platform === Platform.ThunderIDV2`).
+    // does (`enabled: platform === Platform.ThunderID`).
     return (): VNode =>
       h(
         I18nProvider,

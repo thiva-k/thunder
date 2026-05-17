@@ -25,6 +25,7 @@ import type {
   HttpResponse,
   IdToken,
   Organization,
+  Platform,
   Schema,
   SignInOptions,
   Theme,
@@ -83,7 +84,7 @@ export interface ThunderIDContext {
   /** The current organization, or `null`. */
   organization: Readonly<Ref<Organization | null>>;
   organizationHandle: string | undefined;
-  platform: ThunderIDVueConfig['platform'] | undefined;
+  platform: Platform | undefined;
 
   // ── Lifecycle ──
   reInitialize: (config: Partial<ThunderIDVueConfig>) => Promise<boolean>;

@@ -47,7 +47,7 @@ export interface ThunderIDNuxtConfig {
   /** OAuth2 Client Secret (server-only, use ASGARDEO_CLIENT_SECRET env var) */
   clientSecret?: string;
   /**
-   * Identity platform variant. Set to `Platform.ThunderIDV2` when connecting to
+   * Identity platform variant. Set to `Platform.ThunderID` when connecting to
    * a Thunder (ThunderIDV2) instance. Forwarded to the underlying Node client so
    * platform-specific behaviours (e.g. issuer resolution) apply correctly.
    */

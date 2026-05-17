@@ -28,7 +28,7 @@ export type {SignInRenderProps} from './v2/SignIn';
  * SignIn — platform-aware sign-in component.
  *
  * Routes to the V1 (authenticator-based) flow by default or the V2
- * (component-driven) flow when `platform` is set to `Platform.ThunderIDV2`.
+ * (component-driven) flow when `platform` is set to `Platform.ThunderID`.
  */
 const SignIn: Component = defineComponent({
   name: 'SignIn',
@@ -51,7 +51,7 @@ const SignIn: Component = defineComponent({
     const {platform} = useThunderID();
 
     return (): VNode => {
-      if (platform === Platform.ThunderIDV2) {
+      if (platform === Platform.ThunderID) {
         return h(
           SignInV2,
           {

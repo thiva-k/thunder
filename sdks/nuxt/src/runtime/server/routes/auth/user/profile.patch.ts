@@ -16,7 +16,6 @@
  * under the License.
  */
 
-import {Platform} from '@thunderid/node';
 import type {UpdateMeProfileConfig, User} from '@thunderid/node';
 import {defineEventHandler, readBody, createError} from 'h3';
 import type {H3Event} from 'h3';
@@ -39,13 +38,6 @@ export default defineEventHandler(
     const config: ReturnType<typeof useRuntimeConfig> = useRuntimeConfig();
     const sessionSecret: string | undefined = config.thunderid?.sessionSecret;
     const publicConfig: ThunderIDNuxtConfig = config.public.thunderid as ThunderIDNuxtConfig;
-
-    if ((publicConfig?.platform as any) === Platform.ThunderIDV2) {
-      throw createError({
-        statusCode: 501,
-        statusMessage: 'Profile updates are not supported for the ThunderIDV2 (Thunder) platform.',
-      });
-    }
 
     const session: Awaited<ReturnType<typeof verifyAndRehydrateSession>> = await verifyAndRehydrateSession(
       event,
