@@ -104,8 +104,10 @@ const LoginPage = () => {
     const START_INIT_KEY = 'startInit';
     const EXECUTION_ID_KEY = 'executionId';
     const CHALLENGE_TOKEN_KEY = 'challengeToken';
+    const SIGNUP_MODE_KEY = 'isSignupMode';
 
     const isComponentReMount = useRef(false);
+    const initRef = useRef<((mode?: boolean) => void) | null>(null);
     const { setToken, clearToken } = useAuth();
 
     const [showRememberMe] = useState<boolean>(false);
@@ -134,8 +136,10 @@ const LoginPage = () => {
     const [availableActions, setAvailableActions] = useState<ActionPrompt[]>([]);
     const [selectedAction, setSelectedAction] = useState<string | null>(null);
     
-    // Add state to track signup mode
-    const [isSignupMode, setIsSignupMode] = useState<boolean>(false);
+    const [isSignupMode, setIsSignupMode] = useState<boolean>(
+        sessionStorage.getItem(START_INIT_KEY) === 'false' &&
+        sessionStorage.getItem(SIGNUP_MODE_KEY) === 'true'
+    );
     const [regOnlySuccess, setRegOnlySuccess] = useState<boolean>(false);
     const [promptRegistration, setPromptRegistration] = useState<boolean>(false);
     
@@ -263,13 +267,14 @@ const LoginPage = () => {
         } else {
             sessionStorage.removeItem(CHALLENGE_TOKEN_KEY);
         }
+        sessionStorage.setItem(SIGNUP_MODE_KEY, String(isSignupMode));
         sessionStorage.setItem(START_INIT_KEY, "false");
         window.location.href = redirectURL;
-    }, [executionId, challengeToken]);
+    }, [executionId, challengeToken, isSignupMode]);
 
     // Process authentication response
-    const processAuthResponse = useCallback((data: AuthResponse, selectedAction?: string) => {
-        const isCameFromDecision = needsDecision;
+    const processAuthResponse = useCallback((data: AuthResponse, selectedAction?: string, autoRedirect: boolean = false) => {
+        const isCameFromDecision = needsDecision || autoRedirect;
         const isMobileLogin = selectedAction && selectedAction.includes('mobile');
 
         setExecutionId(data.executionId || '');
@@ -284,12 +289,18 @@ const LoginPage = () => {
                 return;
             }
 
-            const defaultMessage = isSignupMode 
-                ? 'Registration failed. Please check your information.' 
+            const defaultMessage = isSignupMode
+                ? 'Registration failed. Please check your information.'
                 : 'Login failed. Please check your credentials.';
             setError(true);
             setErrorMessage(data.failureReason || defaultMessage);
             setLoading(false);
+
+            // The server invalidates the flow session on ERROR, so clear stale state
+            // and restart to get a fresh session with valid executionId/challengeToken.
+            sessionStorage.removeItem(EXECUTION_ID_KEY);
+            sessionStorage.removeItem(CHALLENGE_TOKEN_KEY);
+            initRef.current?.(isSignupMode);
             return;
         }
 
@@ -353,7 +364,7 @@ const LoginPage = () => {
                 // This handles intermediate steps like "send_sms" that don't need user input
                 const singleAction = data.data.actions[0];
                 setLoading(true);
-                submitAuthDecision(executionId, singleAction.ref, undefined, data.challengeToken)
+                submitAuthDecision(data.executionId || '', singleAction.ref, undefined, data.challengeToken)
                     .then((result) => {
                         processAuthResponse(result.data, singleAction.ref);
                     })
@@ -395,7 +406,7 @@ const LoginPage = () => {
 
         submitAuthDecision(executionId, actionId, undefined, challengeToken)
             .then((result) => {
-                processAuthResponse(result.data);
+                processAuthResponse(result.data, undefined, true);
             })
             .catch((error) => {
                 console.error("Error during authentication decision:", error);
@@ -407,6 +418,7 @@ const LoginPage = () => {
 
     const init = useCallback((isSignupMode: boolean = false) => {
         clearToken();
+        sessionStorage.removeItem(SIGNUP_MODE_KEY);
         setConnectionError(false);
         setNeedsDecision(false);
         setAvailableActions([]);
@@ -495,7 +507,9 @@ const LoginPage = () => {
                 setConnectionError(true);
                 setLoading(false);
             });
-    }, [clearToken, isSignupMode, setToken]);
+    }, [clearToken, processAuthResponse, setToken]);
+
+    useEffect(() => { initRef.current = init; }, [init]);
 
     // Initialize the prompt signup decision action
     const initPromptSignupDecision = () => {
@@ -743,7 +757,7 @@ const LoginPage = () => {
             return `${prefix} with Google`;
         } else if (actionId.includes('github')) {
             return `${prefix} with GitHub`;
-        } else if (actionId.includes('mobile')) {
+        } else if (actionId.includes('mobile') || actionId.includes('sms')) {
             return `${prefix} with SMS OTP`;
         } else {
             const idpText = actionId.split('_').map(word => 
@@ -785,7 +799,7 @@ const LoginPage = () => {
 
             sessionStorage.setItem(START_INIT_KEY, "true");
         }
-    },[startInit, init, executionId, setToken, processAuthResponse]);
+    },[startInit, init, executionId, challengeToken, setToken, processAuthResponse]);
 
     // Render input fields based on the current inputs array
     const renderInputFields = () => {
@@ -793,7 +807,7 @@ const LoginPage = () => {
             const inputId = input.identifier || `input-${index}`;
             const isPassword = input.type === "password" || input.type === "PASSWORD_INPUT" || input.identifier === "password";
             const isOTP = input.type === "otp" || input.type === "OTP_INPUT" || input.identifier === "otp";
-            const isDropdown = input.type === "dropdown" || input.type === "DROPDOWN";
+            const isDropdown = input.type === "SELECT" || input.type === "dropdown" || input.type === "DROPDOWN";
             const isRequired = input.required;
             
             // Determine appropriate label
@@ -917,20 +931,26 @@ const LoginPage = () => {
 
     // Render the login form with side-by-side layout based on the available actions
     const renderSideBySideLoginForm = () => {
-        const basicAuthAction = availableActions.find(action => action.nextNode === "basic_auth");
+        const basicAuthAction = availableActions.find(action => action.ref?.includes("basic_auth"));
         const mobileAuthActions = availableActions.filter(action => 
             action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile"
         );
         
         const hasSocialAuth = availableActions.some(action => 
-            action.nextNode?.includes("google") || action.nextNode?.includes("github")
+            action.ref?.includes("google") || action.ref?.includes("github")
         );
         const hasMobileAuth = mobileAuthActions.length > 0;
         
-        const socialAuthActions = availableActions.filter(action => 
-            action.nextNode?.includes("google") || action.nextNode?.includes("github")
+        const socialAuthActions = availableActions.filter(action =>
+            action.ref?.includes("google") || action.ref?.includes("github")
         );
-        
+
+        const otherActions = availableActions.filter(action =>
+            action !== basicAuthAction &&
+            !socialAuthActions.includes(action) &&
+            !mobileAuthActions.includes(action)
+        );
+
         return (
             <Box sx={{ my: 4 }}>
                 <Box display="flex" gap={4}>
@@ -1020,9 +1040,9 @@ const LoginPage = () => {
                                         color="secondary"
                                         onClick={() => handleAuthOptionSelection(action.ref)}
                                         sx={{ my: 1 }}
-                                        startIcon={getSocialLoginIcon(action.nextNode || '')}
+                                        startIcon={getSocialLoginIcon(action.ref || '')}
                                     >
-                                        {getSocialLoginText(action.nextNode || '')}
+                                        {getSocialLoginText(action.ref || '')}
                                     </Button>
                                 ))}
                             </Box>
@@ -1035,7 +1055,7 @@ const LoginPage = () => {
 
                         {/* SMS OTP Auth */}
                         {hasMobileAuth && (
-                            <form 
+                            <form
                                 onSubmit={handleSubmit}
                                 data-action-id={mobileAuthActions[0]?.ref}
                             >
@@ -1067,6 +1087,25 @@ const LoginPage = () => {
                                 </Box>
                             </form>
                         )}
+
+                        {otherActions.length > 0 && (
+                            <Box>
+                                {(hasSocialAuth || hasMobileAuth) && (
+                                    <Divider sx={{ my: 3 }}>or</Divider>
+                                )}
+                                {otherActions.map((action, index) => (
+                                    <Button
+                                        key={`other-action-${index}`}
+                                        fullWidth
+                                        variant="contained"
+                                        onClick={() => handleAuthOptionSelection(action.ref)}
+                                        sx={{ my: 1 }}
+                                    >
+                                        {action.ref || 'Continue'}
+                                    </Button>
+                                ))}
+                            </Box>
+                        )}
                     </Box>
                 </Box>
             </Box>
@@ -1075,19 +1114,25 @@ const LoginPage = () => {
 
     // Render the regular login form with options stacked vertically
     const renderRegularLoginForm = () => {
-        const basicAuthAction = availableActions.find(action => action.nextNode === "basic_auth");
+        const basicAuthAction = availableActions.find(action => action.ref?.includes("basic_auth"));
         const mobileAuthActions = availableActions.filter(action => 
             action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile"
         );
         
         const hasBasicAuth = !!basicAuthAction;
         const hasSocialAuth = availableActions.some(action => 
-            action.nextNode?.includes("google") || action.nextNode?.includes("github")
+            action.ref?.includes("google") || action.ref?.includes("github")
         );
         const hasMobileAuth = mobileAuthActions.length > 0;
         
-        const socialAuthActions = availableActions.filter(action => 
-            action.nextNode?.includes("google") || action.nextNode?.includes("github")
+        const socialAuthActions = availableActions.filter(action =>
+            action.ref?.includes("google") || action.ref?.includes("github")
+        );
+
+        const otherActions = availableActions.filter(action =>
+            action !== basicAuthAction &&
+            !socialAuthActions.includes(action) &&
+            !mobileAuthActions.includes(action)
         );
 
         return (
@@ -1198,8 +1243,8 @@ const LoginPage = () => {
 
                 {/* SMS OTP auth form */}
                 {hasMobileAuth && (
-                    <form 
-                        onSubmit={handleSubmit} 
+                    <form
+                        onSubmit={handleSubmit}
                         data-action-id={mobileAuthActions[0]?.ref}
                     >
                         <Box display="flex" flexDirection="column" gap={2}>
@@ -1230,6 +1275,25 @@ const LoginPage = () => {
                         </Box>
                     </form>
                 )}
+
+                {otherActions.length > 0 && (
+                    <Box>
+                        {(hasBasicAuth || hasSocialAuth || hasMobileAuth) && (
+                            <Divider sx={{ my: 3 }}>or</Divider>
+                        )}
+                        {otherActions.map((action, index) => (
+                            <Button
+                                key={`other-action-${index}`}
+                                fullWidth
+                                variant="contained"
+                                onClick={() => handleAuthOptionSelection(action.ref)}
+                                sx={{ my: 1 }}
+                            >
+                                {action.ref || 'Continue'}
+                            </Button>
+                        ))}
+                    </Box>
+                )}
             </Box>
         );
     }
@@ -1259,32 +1323,42 @@ const LoginPage = () => {
                         </Box>
                     )}
 
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        type="submit"
-                        fullWidth
-                        sx={{ mt: 2 }}
-                    >
-                        {
-                            inputs.some(input => input.identifier === 'password') ? 
-                                (isSignupMode ? 
-                                    'Create Account' 
-                                    : 'Sign In'
-                                ) 
-                                : inputs.some(input => input.identifier === 'otp') ? 
-                                    'Verify OTP' 
-                                    : 'Continue'
+                    {inputs.length > 0 && (() => {
+                        const primaryRef = availableActions[0]?.ref?.toLowerCase() || '';
+                        let label: string;
+                        if (primaryRef.includes('signin') || primaryRef.includes('sign_in')) {
+                            label = 'Sign In';
+                        } else if (primaryRef.includes('signup') || primaryRef.includes('sign_up')) {
+                            label = 'Create Account';
+                        } else if (inputs.some(input => input.identifier === 'password' || input.type === 'PASSWORD_INPUT')) {
+                            label = isSignupMode ? 'Create Account' : 'Sign In';
+                        } else if (inputs.some(input => input.identifier === 'otp' || input.type === 'OTP_INPUT')) {
+                            label = 'Verify OTP';
+                        } else {
+                            label = 'Continue';
                         }
-                    </Button>
+                        return (
+                            <Button variant="contained" color="primary" type="submit" fullWidth sx={{ mt: 2 }}>
+                                {label}
+                            </Button>
+                        );
+                    })()}
 
                     {/* Render alternative actions if available (e.g. Passkey) */}
                     {availableActions.length > 1 && (
                          <Box sx={{ mt: 1 }}>
                             <Divider sx={{ my: 2 }}>or</Divider>
                             {availableActions.slice(1).map((action, index) => {
-                                let label = "Continue";
-                                if (action.nextNode?.includes("passkey")) {
+                                const isSocial = action.ref.includes("google") || action.ref.includes("github");
+                                const isPasskey = action.ref.includes("passkey");
+                                const isMobile = action.ref.includes("sms") || action.ref.includes("mobile");
+
+                                let label = action.ref || "Continue";
+                                if (isSocial) {
+                                    label = getSocialLoginText(action.ref || '');
+                                } else if (isMobile) {
+                                    label = getSocialLoginText(action.ref || '');
+                                } else if (isPasskey) {
                                     label = "Sign in with Passkey";
                                 } else if (action.label) {
                                     label = action.label;
@@ -1294,11 +1368,15 @@ const LoginPage = () => {
                                     <Button
                                         key={`alt-action-${index}`}
                                         fullWidth
-                                        variant="outlined"
+                                        variant="contained"
                                         color="secondary"
                                         onClick={() => handleAuthOptionSelection(action.ref)}
                                         sx={{ mb: 1 }}
-                                        startIcon={action.nextNode?.includes("passkey") ? <FingerprintIcon /> : undefined}
+                                        startIcon={
+                                            isSocial ? getSocialLoginIcon(action.ref || '')
+                                            : isPasskey ? <FingerprintIcon />
+                                            : undefined
+                                        }
                                     >
                                         {label}
                                     </Button>
@@ -1340,12 +1418,12 @@ const LoginPage = () => {
     // Calculate appropriate grid size based on layout complexity
     const gridMdSize = needsDecision 
         && !promptRegistration
-        && availableActions.some(action => action.nextNode === "basic_auth") 
+        && availableActions.some(action => action.ref?.includes("basic_auth")) 
         && availableActions.some(action => action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile") 
         ? 10 : 6;
     const containerBoxMaxWidth = gridMdSize === 10 ? 1000 : 500;
 
-    const basicAuthAction = availableActions.find(action => action.nextNode === "basic_auth");
+    const basicAuthAction = availableActions.find(action => action.ref?.includes("basic_auth"));
     const mobileAuthActions = availableActions.filter(action => 
         action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile"
     );
