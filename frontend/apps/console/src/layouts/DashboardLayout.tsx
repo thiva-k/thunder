@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {SignOutButton, User, useAsgardeo} from '@asgardeo/react';
+import {SignOutButton, User, useThunderID} from '@thunderid/react';
 import {useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {
@@ -80,7 +80,7 @@ function ExportConfigButton(): ReactNode {
 }
 
 export default function DashboardLayout(): ReactNode {
-  const {signIn, clearSession, discovery} = useAsgardeo();
+  const {signIn, clearSession, discovery} = useThunderID();
   const {isTrustedIssuerGenericOidc, getTrustedIssuerClientId, getClientUrl} = useConfig();
   const {t} = useTranslation();
   const logger = useLogger();
