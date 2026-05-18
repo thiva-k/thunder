@@ -12,6 +12,7 @@ The sample is a travel booking app called Wayfinder. A chat widget in the UI tal
 - The agent's **machine-to-machine (M2M) token** used for read-only browsing tools (search flights, search hotels, etc.).
 - An **on-behalf-of (OBO)** flow triggered from inside a chat session: the agent asks for the user's consent in a popup, the user picks which booking permissions to grant, and the issued user-context token only carries the approved subset.
 - A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`).
+- An in-app **Agent Portal** page (`/agent-portal`) where a signed-in admin can list, create, and delete agents and assign Thunder roles to them — calling Thunder's admin APIs directly from the browser with the user's `system`-scoped access token.
 
 ## Project Structure
 
@@ -52,13 +53,15 @@ Create a resource server **`booking-api`** (identifier `booking-api`) with a res
 
 Create a user (e.g. username `john.doe`, password `john.doe`) under the default OU. This will be the resource owner who consents in the popup.
 
-### 3. Role granting the booking permissions
+### 3. Roles granting the demo user permissions
 
 Create a role (e.g. **Wayfinder Admin**) that grants the three `booking:read`, `booking:create`, `booking:cancel` permissions on the `booking-api` resource server. Assign the role to the demo user.
 
+Also assign the demo user the built-in **Administrator** role (or any role that grants the `system` permission on the `system` resource server). This is what lets the in-app Agent Portal page call Thunder's admin APIs. Without it, sign-in still works but the Agent Portal will see authorization errors when listing or creating agents.
+
 ### 4. Wayfinder web application
 
-Create an OAuth application **`WAYFINDER`** with redirect URI `http://localhost:5173` and assign it any user authentication flow (the default sign-in flow works). This is what the frontend uses for user sign-in.
+Create an OAuth application **`WAYFINDER`** with redirect URI `http://localhost:5173`. Assign it an authentication flow that runs the **AuthorizationExecutor** so the user's role permissions are evaluated into the access token (the same flow shape as the agent flow below works). This is what the frontend uses for user sign-in.
 
 ### 5. Agent + agent authentication flow
 
@@ -120,3 +123,5 @@ Book flight 2
 ```
 
 The agent will pause and ask for your permission. A popup opens, you sign in as the demo user, you pick which booking permissions to grant in the consent screen, and the booking succeeds (or returns 403 if you denied `booking:create`).
+
+To exercise the **Agent Portal**, sign in to the Wayfinder web app itself (using the same demo user, who now has the `system` permission) and open the account menu → **Agent Portal**. From there you can create more agents, delete them, and assign roles to them — all calling Thunder's admin APIs with the user's access token.

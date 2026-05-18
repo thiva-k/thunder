@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAsgardeo } from "@asgardeo/react";
 import {
+  Bot,
   ChevronDown,
   CircleUserRound,
   LogOut,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { getLocations } from "./api";
+import { AgentPortalPage } from "./pages/AgentPortalPage";
 import { BookingDetailsPageWithAuth } from "./pages/BookingDetailsPageWithAuth";
 import { BookingsPageWithAuth } from "./pages/BookingsPageWithAuth";
 import { BookingsUnavailable } from "./pages/BookingsUnavailable";
@@ -142,6 +144,10 @@ function LiveAuthHeader() {
             <Link className="account-menu-item" to="/bookings" role="menuitem">
               <CircleUserRound size={18} />
               <span>My Bookings</span>
+            </Link>
+            <Link className="account-menu-item" to="/agent-portal" role="menuitem">
+              <Bot size={18} />
+              <span>Agent Portal</span>
             </Link>
             <button
               className="account-menu-item"
@@ -807,6 +813,10 @@ function AppRoutes({ authReady, criteria, locations, onSearch }) {
       <Route
         path="/bookings"
         element={authReady ? <BookingsPageWithAuth /> : <BookingsUnavailable />}
+      />
+      <Route
+        path="/agent-portal"
+        element={authReady ? <AgentPortalPage /> : <BookingsUnavailable />}
       />
       <Route path="/agent-callback" element={<AgentCallbackRoute />} />
       <Route
