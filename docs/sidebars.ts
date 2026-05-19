@@ -278,6 +278,7 @@ const sidebars: SidebarsConfig = {
           collapsed: true,
           items: [
             {type: 'doc', id: 'use-cases/b2c/customer-identity', label: 'Customer Identity'},
+            {type: 'doc', id: 'use-cases/b2c/solution-patterns', label: 'Solution Patterns'},
           ],
         },
         {
