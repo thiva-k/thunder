@@ -1,5 +1,4 @@
-###
-<img src="frontend/apps/console/public/assets/images/logo.svg" alt="ThunderID" width="500" />
+<img src="https://thunderid.dev/assets/images/readme/repo-banner.png" alt="ThunderID" width="100%" />
 
 ###
 
