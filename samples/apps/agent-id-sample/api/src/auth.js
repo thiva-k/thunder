@@ -33,7 +33,7 @@ function getIssuer() {
     return process.env.THUNDER_ISSUER;
   }
 
-  return `${process.env.THUNDER_BASE_URL}/oauth2/token`;
+  return process.env.THUNDER_BASE_URL;
 }
 
 async function getJwks() {

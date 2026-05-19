@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -305,10 +305,10 @@ if (!existsSync(apiRoot)) {
   mkdirSync(apiRoot, { recursive: true });
 }
 
-const db = new Database(dbPath);
+const db = new DatabaseSync(dbPath);
 
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+db.exec("PRAGMA journal_mode = WAL");
+db.exec("PRAGMA foreign_keys = ON");
 
 db.exec(`
   DROP TABLE IF EXISTS bookings;
@@ -441,7 +441,9 @@ const insertTrip = db.prepare(`
   )
 `);
 
-const seed = db.transaction(() => {
+try {
+  db.exec("BEGIN TRANSACTION");
+
   for (const flight of flights) {
     insertFlight.run(flight);
   }
@@ -453,15 +455,16 @@ const seed = db.transaction(() => {
   for (const trip of trips) {
     insertTrip.run(trip);
   }
-});
 
-try {
-  seed();
+  db.exec("COMMIT");
 } catch (error) {
+  db.exec("ROLLBACK");
   console.error(`Failed to seed SQLite database at ${dbPath}: ${error.message}`);
   process.exitCode = 1;
 } finally {
   db.close();
 }
 
-console.log(`Seeded SQLite database at ${dbPath}`);
+if (process.exitCode !== 1) {
+  console.log(`Seeded SQLite database at ${dbPath}`);
+}
