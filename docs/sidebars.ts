@@ -337,8 +337,8 @@ const sidebars: SidebarsConfig = {
           items: [
             {
               type: 'doc',
-              id: 'guides/guides/flows/what-is-flows',
-              label: 'What are Flows?',
+              id: 'guides/guides/flows/what-are-flows',
+              label: 'What Are Flows?',
             },
             {
               type: 'doc',
@@ -352,8 +352,8 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'doc',
-              id: 'guides/guides/flows/flow-reference',
-              label: 'Flow Reference',
+              id: 'guides/guides/flows/advanced-configurations',
+              label: 'Advanced Configurations',
             },
           ],
         },

@@ -4667,6 +4667,200 @@ a.connect-card {
   color: #5ba3d4;
 }
 
+/* ── Flow Node Diagram ─────────────────────────────────────────────────── */
+
+.flow-node-diagram {
+  margin: 1.5rem 0;
+  padding: 1.25rem 1.5rem;
+  background: var(--ifm-color-emphasis-100);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+[data-theme='dark'] .flow-node-diagram {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: var(--ifm-color-emphasis-200);
+}
+
+.flow-node-diagram svg {
+  min-width: 500px;
+}
+
+.fnd-node {
+  fill: var(--ifm-background-color);
+  stroke: var(--ifm-color-emphasis-300);
+  stroke-width: 1.5;
+}
+
+[data-theme='dark'] .fnd-node {
+  fill: var(--ifm-color-emphasis-100);
+}
+
+.fnd-node--start,
+.fnd-node--end {
+  fill: var(--ifm-color-primary);
+  stroke: none;
+}
+
+.fnd-node--prompt {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 8%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 35%, var(--ifm-color-emphasis-200));
+}
+
+[data-theme='dark'] .fnd-node--prompt {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 12%, var(--ifm-color-emphasis-100));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 45%, var(--ifm-color-emphasis-300));
+}
+
+.fnd-node--task {
+  fill: color-mix(in srgb, var(--ifm-color-warning) 10%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-warning) 50%, var(--ifm-color-emphasis-200));
+  stroke-width: 1.5;
+}
+
+[data-theme='dark'] .fnd-node--task {
+  fill: color-mix(in srgb, var(--ifm-color-warning) 12%, var(--ifm-color-emphasis-100));
+  stroke: color-mix(in srgb, var(--ifm-color-warning) 50%, var(--ifm-color-emphasis-300));
+}
+
+.fnd-label {
+  fill: var(--ifm-font-color-base);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.fnd-label--light {
+  fill: #fff;
+}
+
+.fnd-label--task {
+  font-size: 11px;
+}
+
+.fnd-edge {
+  stroke: var(--ifm-color-emphasis-400);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+[data-theme='dark'] .fnd-edge {
+  stroke: var(--ifm-color-emphasis-500);
+}
+
+.fnd-edge--success {
+  stroke: var(--ifm-color-success);
+}
+
+.fnd-edge--failure {
+  stroke: var(--ifm-color-danger);
+}
+
+.fnd-edge--incomplete {
+  stroke: var(--ifm-color-warning);
+}
+
+.fnd-edge-label {
+  fill: var(--ifm-color-emphasis-600);
+  font-size: 10px;
+  font-style: italic;
+}
+
+[data-theme='dark'] .fnd-edge-label {
+  fill: var(--ifm-color-emphasis-700);
+}
+
+.fnd-edge-label--success {
+  fill: var(--ifm-color-success);
+}
+
+.fnd-edge-label--failure {
+  fill: var(--ifm-color-danger);
+}
+
+.fnd-edge-label--incomplete {
+  fill: var(--ifm-color-warning);
+}
+
+.fnd-divider {
+  stroke: var(--ifm-color-emphasis-200);
+  stroke-width: 1;
+  fill: none;
+}
+
+[data-theme='dark'] .fnd-divider {
+  stroke: var(--ifm-color-emphasis-300);
+}
+
+.fnd-option {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 5%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 18%, var(--ifm-color-emphasis-200));
+  stroke-width: 1;
+}
+
+[data-theme='dark'] .fnd-option {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 9%, var(--ifm-color-emphasis-100));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 25%, var(--ifm-color-emphasis-300));
+}
+
+.fnd-option-icon {
+  fill: var(--ifm-color-emphasis-500);
+  stroke: none;
+}
+
+.fnd-option-icon-stroke {
+  fill: none;
+  stroke: var(--ifm-color-emphasis-500);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+[data-theme='dark'] .fnd-option-icon {
+  fill: var(--ifm-color-emphasis-600);
+}
+
+[data-theme='dark'] .fnd-option-icon-stroke {
+  stroke: var(--ifm-color-emphasis-600);
+}
+
+.fnd-option-label {
+  fill: var(--ifm-font-color-base);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.fnd-google-circle {
+  fill: #4285F4;
+}
+
+.fnd-google-g {
+  fill: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.fnd-badge {
+  fill: var(--ifm-background-color);
+  stroke: var(--ifm-color-emphasis-300);
+  stroke-width: 1;
+}
+
+[data-theme='dark'] .fnd-badge {
+  fill: var(--ifm-color-emphasis-100);
+  stroke: var(--ifm-color-emphasis-400);
+}
+
+.fnd-badge-label {
+  fill: var(--ifm-color-emphasis-700);
+  font-size: 9.5px;
+  font-weight: 500;
+}
+
+[data-theme='dark'] .fnd-badge-label {
+  fill: var(--ifm-color-emphasis-800);
+}
+
 /* ── Prerequisites table ── */
 .dp-prereqs {
   margin-top: 2.5rem;

@@ -18,7 +18,7 @@ By the end of this guide you will have a working username and password sign-in f
 
 <Stepper>
 
-## Open the Flow Designer
+## Open the Flow Builder
 
 1. Sign in to the <ProductName /> Console at [https://localhost:8090/console](https://localhost:8090/console).
 2. Go to **Flows** and click **+ Create New Flow**.
@@ -46,7 +46,7 @@ The Basic template has four nodes:
 Each node connects to the next via its **green (success) output**. The final executor connects to **END**.
 
 :::note
-Every executor also has a **red (failure) output**. In the Basic template the failure path from **Identifier + Password** loops back to the Sign In view so users can retry. Don't leave failure paths unconnected, an unconnected failure path stops the flow with an error.
+Every executor also has a **red (failure) output**. In the Basic template the failure path from **Identifier + Password** is not connected — wire it back to the Sign In view so users can retry. Don't leave failure paths unconnected; an unconnected failure path stops the flow with an error.
 :::
 
 ## Save the Flow
