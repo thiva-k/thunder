@@ -149,6 +149,7 @@ export default function CommunitySection(): JSX.Element {
   const productName = (siteConfig.customFields?.product as DocusaurusProductConfig).project.name;
   const discussionsUrl = (siteConfig.customFields?.product as DocusaurusProductConfig).project.source.github
     .discussionsUrl;
+  const issuesUrl = (siteConfig.customFields?.product as DocusaurusProductConfig).project.source.github.issuesUrl;
 
   return (
     <Box component="section" sx={{py: {xs: 8, lg: 12}}}>
@@ -216,7 +217,7 @@ export default function CommunitySection(): JSX.Element {
               title="Contribute"
               description={`Help shape ${productName} by submitting features, fixes, or improvements.`}
               linkLabel="Start Contributing"
-              href="./community/contributing/overview/"
+              href="/docs/next/community/contributing/overview/"
             />
             <CommunityCard
               icon={<IssueIcon />}
@@ -224,7 +225,7 @@ export default function CommunitySection(): JSX.Element {
               title="Report issues"
               description={`Identify bugs and suggest enhancements to make ${productName} better for everyone.`}
               linkLabel="Open an Issue"
-              href="https://github.com/thunder-id/thunderid/issues"
+              href={issuesUrl}
             />
             <CommunityCard
               icon={<MessagesSquareIcon />}

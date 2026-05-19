@@ -65,10 +65,7 @@ const config: Config = {
   tagline: productConfig.project.description,
   favicon: 'assets/images/favicon.ico',
 
-  // Prevent search engine indexing
-  // TODO: Remove this flag when the docs are ready for public access
-  // Tracker: https://github.com/thunder-id/thunderid/issues/1209
-  noIndex: true,
+  noIndex: false,
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
@@ -115,6 +112,33 @@ const config: Config = {
   },
 
   clientModules: [require.resolve('./src/clientModules/tabTocSync.js')],
+
+  headTags: [
+    {
+      tagName: 'script',
+      attributes: {},
+      innerHTML: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+})(window,document,'script','dataLayer','GTM-PTKWJGJL');`,
+    },
+    {
+      tagName: 'script',
+      attributes: {
+        src: 'https://cookie-cdn.cookiepro.com/scripttemplates/otSDKStub.js',
+        type: 'text/javascript',
+        charset: 'UTF-8',
+        'data-domain-script': '019e40cb-79a0-7395-aa5d-5d887b4b8d2d',
+      },
+    },
+    {
+      tagName: 'script',
+      attributes: {type: 'text/javascript'},
+      innerHTML: 'function OptanonWrapper() { }',
+    },
+  ],
+
 
   plugins: [webpackPlugin, personaPlugin],
 
