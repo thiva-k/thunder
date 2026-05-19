@@ -70,3 +70,5 @@ BCP
 Memorystore
 [Uu]pdatedAt
 [Cc]reatedAt
+[Aa]gentic
+[Ee]num
