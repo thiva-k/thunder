@@ -54,7 +54,7 @@ Write-Host ""
 
 # System resource server configuration from environment variables.
 $SYSTEM_RS_HANDLE = if ($env:SYSTEM_RS_HANDLE) { $env:SYSTEM_RS_HANDLE } else { "" }
-$SYSTEM_RS_IDENTIFIER = if ($env:SYSTEM_RS_IDENTIFIER) { $env:SYSTEM_RS_IDENTIFIER } else { "system" }
+$SYSTEM_RS_IDENTIFIER = if ($env:SYSTEM_RS_IDENTIFIER) { $env:SYSTEM_RS_IDENTIFIER } else { "https://localhost:8090/mcp" }
 
 # Derive the system permission root based on the configured handle.
 if ($SYSTEM_RS_HANDLE) {
