@@ -481,13 +481,21 @@ export default function ApplicationCreatePage(): JSX.Element {
         }
 
         const oauth2Config = createdApplication.inboundAuthConfig?.find((config) => config.type === 'oauth2');
+        const clientId = oauth2Config?.config?.clientId;
         const clientSecret = oauth2Config?.config?.clientSecret;
 
         if (!clientSecret) {
           return null;
         }
 
-        return <ShowClientSecret appName={appName} clientSecret={clientSecret} onContinue={handleNextStep} />;
+        return (
+          <ShowClientSecret
+            appName={appName}
+            clientId={clientId}
+            clientSecret={clientSecret}
+            onContinue={handleNextStep}
+          />
+        );
       }
 
       default:

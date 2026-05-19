@@ -27,8 +27,8 @@ describe('TechnologyBasedApplicationTemplateMetadata', () => {
       expect(Array.isArray(TechnologyBasedApplicationTemplateMetadata)).toBe(true);
     });
 
-    it('should have at least 2 technology templates', () => {
-      expect(TechnologyBasedApplicationTemplateMetadata.length).toBeGreaterThanOrEqual(2);
+    it('should have at least 3 technology templates', () => {
+      expect(TechnologyBasedApplicationTemplateMetadata.length).toBeGreaterThanOrEqual(3);
     });
 
     it('should have all required properties for each template', () => {
@@ -39,6 +39,42 @@ describe('TechnologyBasedApplicationTemplateMetadata', () => {
         expect(metadata).toHaveProperty('descriptionKey');
         expect(metadata).toHaveProperty('template');
       });
+    });
+  });
+
+  describe('Express Technology', () => {
+    const expressMetadata = TechnologyBasedApplicationTemplateMetadata.find(
+      (m) => m.value === TechnologyApplicationTemplate.EXPRESS,
+    );
+
+    it('should exist', () => {
+      expect(expressMetadata).toBeDefined();
+    });
+
+    it('should have correct value', () => {
+      expect(expressMetadata?.value).toBe(TechnologyApplicationTemplate.EXPRESS);
+    });
+
+    it('should have icon component', () => {
+      expect(expressMetadata?.icon).toBeDefined();
+      const {container} = render(<div>{expressMetadata?.icon}</div>);
+      expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should have correct i18n keys', () => {
+      expect(expressMetadata?.titleKey).toBe('applications:onboarding.configure.stack.technology.express.title');
+      expect(expressMetadata?.descriptionKey).toBe(
+        'applications:onboarding.configure.stack.technology.express.description',
+      );
+    });
+
+    it('should have a template', () => {
+      expect(expressMetadata?.template).toBeDefined();
+      expect(expressMetadata?.template).toHaveProperty(['defaults', 'name']);
+    });
+
+    it('should not be disabled', () => {
+      expect(expressMetadata?.disabled).not.toBe(true);
     });
   });
 
@@ -140,6 +176,7 @@ describe('TechnologyBasedApplicationTemplateMetadata', () => {
 
     it('should have at least React and Next.js templates', () => {
       const configuredValues = TechnologyBasedApplicationTemplateMetadata.map((m) => m.value);
+      expect(configuredValues).toContain(TechnologyApplicationTemplate.EXPRESS);
       expect(configuredValues).toContain(TechnologyApplicationTemplate.REACT);
       expect(configuredValues).toContain(TechnologyApplicationTemplate.NEXTJS);
     });
