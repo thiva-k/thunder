@@ -18,6 +18,7 @@
 
 import {
   ThunderIDRuntimeError,
+  type ConsentPurposeDataV2 as ConsentPurposeData,
   EmbeddedFlowComponentV2 as EmbeddedFlowComponent,
   EmbeddedFlowType,
   EmbeddedSignInFlowRequestV2,
@@ -289,7 +290,7 @@ const SignIn: Component = defineComponent({
       if (additionalData.value?.['consentPrompt']) {
         try {
           const consentRaw: any = additionalData.value['consentPrompt'];
-          const purposes: any[] =
+          const purposes: ConsentPurposeData[] =
             typeof consentRaw === 'string' ? JSON.parse(consentRaw) : consentRaw.purposes || consentRaw;
 
           let isDeny = false;
@@ -306,17 +307,17 @@ const SignIn: Component = defineComponent({
             }
           }
 
-          const decisions: Record<string, any> = {
-            purposes: purposes.map((p: any) => ({
+          const decisions: Record<string, unknown> = {
+            purposes: purposes.map((p) => ({
               approved: !isDeny,
               elements: [
-                ...(p.essential || []).map((attr: string) => ({approved: !isDeny, name: attr})),
-                ...(p.optional || []).map((attr: string) => {
-                  const key = `__consent_opt__${p.purpose_id}__${attr}`;
-                  return {approved: isDeny ? false : processedInputs[key] !== 'false', name: attr};
+                ...(p.essential ?? []).map((e) => ({approved: !isDeny, name: e.name})),
+                ...(p.optional ?? []).map((e) => {
+                  const key = `__consent_opt__${p.purposeId}__${e.name}`;
+                  return {approved: isDeny ? false : processedInputs[key] !== 'false', name: e.name};
                 }),
               ],
-              purpose_name: p.purpose_name,
+              purposeName: p.purposeName,
             })),
           };
           processedInputs['consent_decisions'] = JSON.stringify(decisions);
