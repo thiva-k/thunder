@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -56,7 +56,7 @@ function getDatabase() {
   }
 
   if (!db) {
-    db = new Database(dbPath);
+    db = new DatabaseSync(dbPath);
     ensureSchema(db);
   }
 

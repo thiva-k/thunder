@@ -1,6 +1,6 @@
 # Agent Identity Sample (Wayfinder)
 
-End-to-end sample of an AI agent that holds its own Thunder-managed identity.
+End-to-end sample of an AI agent that holds its own ThunderID-managed identity.
 
 The agent uses **its own access token (client_credentials grant)** for browsing tools and switches to a **user-context token via OAuth 2.0 authorization-code + PKCE** when a tool needs the user's consent (booking, cancellation, viewing the user's own data).
 
@@ -8,11 +8,11 @@ The sample is a travel booking app called Wayfinder. A chat widget in the UI tal
 
 ## What This Demonstrates
 
-- A Thunder **agent** acting as an autonomous principal — distinct from a Thunder user.
+- A ThunderID **agent** acting as an autonomous principal — distinct from a ThunderID user.
 - The agent's **machine-to-machine (M2M) token** used for read-only browsing tools (search flights, search hotels, etc.).
 - An **on-behalf-of (OBO)** flow triggered from inside a chat session: the agent asks for the user's consent in a popup, the user picks which booking permissions to grant, and the issued user-context token only carries the approved subset.
 - A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`).
-- An in-app **Agent Portal** page (`/agent-portal`) where a signed-in admin can list, create, and delete agents and assign Thunder roles to them — calling Thunder's admin APIs directly from the browser with the user's `system`-scoped access token.
+- An in-app **Agent Portal** page (`/agent-portal`) where a signed-in admin can list, create, and delete agents and assign ThunderID roles to them — calling ThunderID's admin APIs directly from the browser with the user's `system`-scoped access token.
 
 ## Project Structure
 
@@ -31,13 +31,13 @@ Each subdirectory has its own README with the environment variables it reads and
 
 ## Prerequisites
 
-- Node.js 20+
-- A running Thunder backend on `https://localhost:8090` (self-signed cert is fine).
-- An Anthropic API key from [console.anthropic.com](https://console.anthropic.com).
+- Node.js 22+
+- A running ThunderID backend on `https://localhost:8090` (self-signed cert is fine).
+- An Anthropic API key from [console.anthropic.com](https://console.anthropic.com) **or** a Google Gemini API key from [aistudio.google.com](https://aistudio.google.com/app/apikey).
 
-## Thunder Setup
+## ThunderID Setup
 
-Before running the sample, create the following entities in Thunder. You can use the Console UI or the management APIs.
+Before running the sample, create the following entities in ThunderID. You can use the Console UI or the management APIs.
 
 ### 1. Resource Server With Permissions
 
@@ -57,7 +57,7 @@ Create a user (e.g. username `john.doe`, password `john.doe`) under the default 
 
 Create a role (e.g. **Wayfinder Admin**) that grants the three `booking:read`, `booking:create`, `booking:cancel` permissions on the `booking-api` resource server. Assign the role to the demo user.
 
-Also assign the demo user the built-in **Administrator** role (or any role that grants the `system` permission on the `system` resource server). This is what lets the in-app Agent Portal page call Thunder's admin APIs. Without it, sign-in still works but the Agent Portal will see authorization errors when listing or creating agents.
+Also assign the demo user the built-in **Administrator** role (or any role that grants the `system` permission on the `system` resource server). This is what lets the in-app Agent Portal page call ThunderID's admin APIs. Without it, sign-in still works but the Agent Portal will see authorization errors when listing or creating agents.
 
 ### 4. Wayfinder Web Application
 
@@ -80,16 +80,22 @@ Create an **agent** named **`WAYFINDER-CHAT-AGENT`** with:
 - `accessToken.userAttributes`: `given_name`, `family_name`, `email`, `groups`
 - The agent authentication flow created above
 
-Thunder prints the agent's **client secret only once** at creation. Capture it for `ai-agent/.env`.
+ThunderID prints the agent's **client secret only once** at creation. Capture it for `ai-agent/.env`.
 
 ## Configure the Sample
 
 `api/`, `ai-agent/`, and `frontend/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `mcp/` server has no required configuration.
 
-The two placeholder values you must replace are in `ai-agent/.env`:
+The placeholder values you must replace are in `ai-agent/.env`:
 
 - `AGENT_SECRET=` — the agent client secret captured at agent creation.
-- `ANTHROPIC_API_KEY=` — your Anthropic API key.
+- `ANTHROPIC_API_KEY=` — your Anthropic API key (when using the default `MODEL_PROVIDER=anthropic`).
+
+To use Gemini instead, set:
+
+- `MODEL_PROVIDER=google`
+- `GEMINI_API_KEY=` — your Google Gemini API key.
+- `MODEL_NAME=` — optionally override the model (default: `gemini-3-flash-preview`).
 
 Everything else in the examples is local development defaults that match the run instructions below.
 
@@ -124,4 +130,4 @@ Book flight 2
 
 The agent will pause and ask for your permission. A popup opens, you sign in as the demo user, you pick which booking permissions to grant in the consent screen, and the booking succeeds (or returns 403 if you denied `booking:create`).
 
-To exercise the **Agent Portal**, sign in to the Wayfinder web app itself (using the same demo user, who now has the `system` permission) and open the account menu → **Agent Portal**. From there you can create more agents, delete them, and assign roles to them — all calling Thunder's admin APIs with the user's access token.
+To exercise the **Agent Portal**, sign in to the Wayfinder web app itself (using the same demo user, who now has the `system` permission) and open the account menu → **Agent Portal**. From there you can create more agents, delete them, and assign roles to them — all calling ThunderID's admin APIs with the user's access token.

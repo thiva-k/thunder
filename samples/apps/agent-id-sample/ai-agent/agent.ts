@@ -19,6 +19,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Duplex } from "node:stream";
 
 import { ChatAnthropic } from "@langchain/anthropic";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 import { MultiServerMCPClient } from "@langchain/mcp-adapters";
 import dotenv from "dotenv";
@@ -46,20 +48,40 @@ const agentConfig = {
     agentSecret: process.env.AGENT_SECRET || "",
 };
 
-const model = new ChatAnthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY || "",
-    model: process.env.MODEL_NAME || "claude-sonnet-4-6",
-});
+const MODEL_PROVIDER = (process.env.MODEL_PROVIDER || "anthropic").toLowerCase();
 
-// LangChain @langchain/anthropic 0.3.x has special "send only when explicitly
-// set" handling for sonnet-4-5 / haiku-4-5 / opus-4-1, but not for sonnet-4-6.
-// For models outside that list it sends top_p:-1 and top_k:-1 as defaults,
-// which the Anthropic API rejects ("top_p cannot be set to -1", and
-// "temperature and top_p cannot both be specified"). Mutating these to
-// `undefined` makes JSON.stringify omit them from the request body so only
-// the model's own default temperature (1) is sent.
-(model as unknown as { topP: number | undefined }).topP = undefined;
-(model as unknown as { topK: number | undefined }).topK = undefined;
+if (MODEL_PROVIDER !== "google" && MODEL_PROVIDER !== "anthropic") {
+    throw new Error(`Unsupported MODEL_PROVIDER "${MODEL_PROVIDER}". Must be "google" or "anthropic".`);
+}
+
+let model: BaseChatModel;
+if (MODEL_PROVIDER === "google") {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error("GEMINI_API_KEY is required when MODEL_PROVIDER=google");
+    }
+    model = new ChatGoogleGenerativeAI({
+        apiKey: process.env.GEMINI_API_KEY,
+        model: process.env.MODEL_NAME || "gemini-3-flash-preview",
+    });
+} else {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        throw new Error("ANTHROPIC_API_KEY is required when MODEL_PROVIDER=anthropic");
+    }
+    const anthropicModel = new ChatAnthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+        model: process.env.MODEL_NAME || "claude-sonnet-4-6",
+    });
+    // LangChain @langchain/anthropic 0.3.x has special "send only when explicitly
+    // set" handling for sonnet-4-5 / haiku-4-5 / opus-4-1, but not for sonnet-4-6.
+    // For models outside that list it sends top_p:-1 and top_k:-1 as defaults,
+    // which the Anthropic API rejects ("top_p cannot be set to -1", and
+    // "temperature and top_p cannot both be specified"). Mutating these to
+    // `undefined` makes JSON.stringify omit them from the request body so only
+    // the model's own default temperature (1) is sent.
+    (anthropicModel as unknown as { topP: number | undefined }).topP = undefined;
+    (anthropicModel as unknown as { topK: number | undefined }).topK = undefined;
+    model = anthropicModel;
+}
 
 // System prompt for the chat agent. Kept short and focused on formatting so
 // answers render cleanly inside a narrow chat widget. Tables and complex
@@ -177,6 +199,10 @@ type SessionState = {
     userToken?: UserToken;
     userToolsByName?: Map<string, MCPLikeTool>;
     pendingConsents: Map<string, PendingConsent>;
+    // When multiple tools are invoked in parallel (common with Gemini), only
+    // one consent flow should run at a time. Concurrent callers share this
+    // promise so a single popup is shown and a single token is acquired.
+    consentInProgress?: Promise<void>;
     // Accumulated conversation history for this WebSocket session. We feed
     // the full thread (including prior tool calls and assistant replies) into
     // each invoke() so the agent remembers what it just said. Without this
@@ -253,18 +279,6 @@ async function exchangeCodeForUserToken(code: string, codeVerifier: string): Pro
 
     if (!payload.access_token) {
         throw new Error(`Token exchange response missing access_token: ${text}`);
-    }
-
-    try {
-        const claims = JSON.parse(Buffer.from(payload.access_token.split(".")[1], "base64url").toString("utf8"));
-        console.log("[obo] user token claims:", JSON.stringify({
-            sub: claims.sub,
-            authorized_permissions: claims.authorized_permissions,
-            scope: claims.scope,
-            aud: claims.aud,
-        }));
-    } catch (decodeErr) {
-        console.warn("[obo] failed to decode access token for logging", decodeErr);
     }
 
     return {
@@ -360,15 +374,26 @@ function wrapToolForSession(originalTool: MCPLikeTool, session: SessionState): M
 
     wrapped.invoke = async (input: unknown, config?: unknown) => {
         if (!session.userToken || session.userToken.expiresAt <= Date.now() + 5_000) {
-            const scope = USER_CONTEXT_SCOPES[originalTool.name] || "booking";
-            console.log(`[obo] ${originalTool.name} → requesting user consent (scope=${scope})`);
-            await requestUserConsent(session, scope);
-            console.log(`[obo] ${originalTool.name} → user token acquired`);
-        } else {
-            console.log(`[obo] ${originalTool.name} → reusing cached user token`);
+            if (!session.consentInProgress) {
+                const scope = USER_CONTEXT_SCOPES[originalTool.name] || "booking";
+                session.consentInProgress = requestUserConsent(session, scope).finally(() => {
+                    session.consentInProgress = undefined;
+                });
+            }
+            try {
+                await session.consentInProgress;
+            } catch (err) {
+                console.error(`[obo] ${originalTool.name} → consent failed:`, err);
+                throw err;
+            }
         }
         const userTool = await getUserContextTool(session, originalTool.name);
-        return userTool.invoke(input, config);
+        try {
+            return await userTool.invoke(input, config);
+        } catch (err) {
+            console.error(`[tool] ${originalTool.name} invocation failed:`, err);
+            throw err;
+        }
     };
 
     return wrapped;
@@ -557,7 +582,8 @@ function closeWebSocket(socket: Duplex) {
     if (isSocketWritable(socket)) {
         try {
             socket.end(encodeWebSocketFrame("", 0x8));
-        } catch {
+        } catch (err) {
+            console.error("[ws] failed to send close frame, destroying socket:", err);
             socket.destroy();
         }
     }
@@ -727,7 +753,8 @@ async function runAgentServer() {
                         let preParsed: { type?: unknown; request_id?: unknown } | undefined;
                         try {
                             preParsed = JSON.parse(payload) as { type?: unknown; request_id?: unknown };
-                        } catch {
+                        } catch (err) {
+                            console.error("[ws] failed to parse incoming message as JSON:", err);
                             preParsed = undefined;
                         }
 
