@@ -1,6 +1,7 @@
-# ThunderID ⚡
+###
+<img src="frontend/apps/console/public/assets/images/logo.svg" alt="ThunderID" width="500" />
 
-### Identity Management Suite
+###
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub last commit](https://img.shields.io/github/last-commit/thunder-id/thunderid.svg)](https://github.com/thunder-id/thunderid/commits/main)
