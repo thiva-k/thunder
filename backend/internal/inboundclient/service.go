@@ -64,6 +64,9 @@ type InboundClientServiceInterface interface {
 	// Validate resolves flow defaults and validates FK constraints and OAuth profile without persisting.
 	Validate(ctx context.Context, client *inboundmodel.InboundClient,
 		oauthProfile *inboundmodel.OAuthProfile, hasClientSecret bool) error
+	// ResolveInboundAuthProfileHandles resolves flow handle fields in-place to their IDs.
+	// Only fields with an empty ID but a non-empty handle are resolved.
+	ResolveInboundAuthProfileHandles(ctx context.Context, profile *inboundmodel.InboundAuthProfile) error
 
 	// GetOAuthProfileByEntityID returns the stored OAuth profile for the given entity.
 	GetOAuthProfileByEntityID(ctx context.Context, entityID string) (*inboundmodel.OAuthProfile, error)
@@ -281,6 +284,38 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
 			return vErr
 		}
+	}
+	return nil
+}
+
+// ResolveInboundAuthProfileHandles resolves flow handle fields to their IDs in-place.
+// Each handle is only resolved when the corresponding ID field is empty.
+func (s *inboundClientService) ResolveInboundAuthProfileHandles(
+	ctx context.Context, profile *inboundmodel.InboundAuthProfile,
+) error {
+	if s.flowMgt == nil {
+		return nil
+	}
+	if profile.AuthFlowID == "" && profile.AuthFlowHandle != "" {
+		flow, svcErr := s.flowMgt.GetFlowByHandle(ctx, profile.AuthFlowHandle, flowcommon.FlowTypeAuthentication)
+		if svcErr != nil {
+			return ErrFKInvalidAuthFlow
+		}
+		profile.AuthFlowID = flow.ID
+	}
+	if profile.RegistrationFlowID == "" && profile.RegistrationFlowHandle != "" {
+		flow, svcErr := s.flowMgt.GetFlowByHandle(ctx, profile.RegistrationFlowHandle, flowcommon.FlowTypeRegistration)
+		if svcErr != nil {
+			return ErrFKInvalidRegistrationFlow
+		}
+		profile.RegistrationFlowID = flow.ID
+	}
+	if profile.RecoveryFlowID == "" && profile.RecoveryFlowHandle != "" {
+		flow, svcErr := s.flowMgt.GetFlowByHandle(ctx, profile.RecoveryFlowHandle, flowcommon.FlowTypeRecovery)
+		if svcErr != nil {
+			return ErrFKInvalidRecoveryFlow
+		}
+		profile.RecoveryFlowID = flow.ID
 	}
 	return nil
 }

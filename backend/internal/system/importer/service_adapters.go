@@ -23,19 +23,18 @@ import (
 	"encoding/json"
 	"fmt"
 
+	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
+	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/group"
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
+	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/error/serviceerror"
 	"github.com/thunder-id/thunderid/internal/system/i18n/core"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
 	"github.com/thunder-id/thunderid/internal/user"
-
-	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
-	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
-	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 )
 
 type roleDeclarativeYAML struct {
@@ -59,7 +58,8 @@ type entityTypeDeclarativeYAML struct {
 	ID                    string                       `yaml:"id"`
 	Category              entitytype.TypeCategory      `yaml:"category,omitempty"`
 	Name                  string                       `yaml:"name"`
-	OUID                  string                       `yaml:"organization_unit_id"`
+	OUID                  string                       `yaml:"organization_unit_id,omitempty"`
+	OUHandle              string                       `yaml:"ou_handle,omitempty"`
 	AllowSelfRegistration bool                         `yaml:"allow_self_registration,omitempty"`
 	SystemAttributes      *entitytype.SystemAttributes `yaml:"system_attributes,omitempty"`
 	Schema                interface{}                  `yaml:"schema"`
@@ -201,6 +201,7 @@ func (s *importService) importEntityType(
 		ID:                    req.ID,
 		Name:                  req.Name,
 		OUID:                  req.OUID,
+		OUHandle:              req.OUHandle,
 		AllowSelfRegistration: req.AllowSelfRegistration,
 		SystemAttributes:      req.SystemAttributes,
 		Schema:                schemaBytes,
@@ -208,6 +209,7 @@ func (s *importService) importEntityType(
 	updateReq := entitytype.UpdateEntityTypeRequest{
 		Name:                  createReq.Name,
 		OUID:                  createReq.OUID,
+		OUHandle:              createReq.OUHandle,
 		AllowSelfRegistration: createReq.AllowSelfRegistration,
 		SystemAttributes:      createReq.SystemAttributes,
 		Schema:                createReq.Schema,

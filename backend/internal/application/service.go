@@ -911,6 +911,18 @@ func (as *applicationService) validateApplicationForUpdate(
 // validateApplicationFields validates application fields that are common to both create and update operations.
 func (as *applicationService) validateApplicationFields(
 	ctx context.Context, app *model.ApplicationDTO) *serviceerror.ServiceError {
+	// Resolve ou_handle to an ID when the direct ID is absent.
+	if app.OUID == "" && app.OUHandle != "" {
+		ou, svcErr := as.ouService.GetOrganizationUnitByPath(ctx, app.OUHandle)
+		if svcErr != nil {
+			return &ErrorInvalidRequestFormat
+		}
+		app.OUID = ou.ID
+	}
+	// Resolve flow handles to IDs when the direct IDs are absent.
+	if err := as.inboundClientService.ResolveInboundAuthProfileHandles(ctx, &app.InboundAuthProfile); err != nil {
+		return &ErrorInvalidRequestFormat
+	}
 	// Validate organization unit ID.
 	if app.OUID == "" {
 		return &ErrorInvalidRequestFormat

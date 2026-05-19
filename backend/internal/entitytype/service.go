@@ -84,6 +84,7 @@ type EntityTypeServiceInterface interface {
 	GetDisplayAttributesByNames(
 		ctx context.Context, category TypeCategory, names []string,
 	) (map[string]string, *serviceerror.ServiceError)
+	ResolveEntityTypeHandles(ctx context.Context, entityType *EntityType) *serviceerror.ServiceError
 }
 
 // entityTypeService is the default implementation of the EntityTypeServiceInterface.
@@ -224,6 +225,14 @@ func (us *entityTypeService) CreateEntityType(
 
 	if isDeclarativeModeEnabled() {
 		return nil, &ErrorCannotModifyDeclarativeResource
+	}
+
+	if request.OUID == "" && request.OUHandle != "" {
+		ou, svcErr := us.ouService.GetOrganizationUnitByPath(ctx, request.OUHandle)
+		if svcErr != nil {
+			return nil, invalidEntityTypeRequestErr(category, "organization unit with handle not found")
+		}
+		request.OUID = ou.ID
 	}
 
 	schemaToValidate := EntityType{
@@ -386,6 +395,14 @@ func (us *entityTypeService) UpdateEntityType(ctx context.Context, category Type
 
 	if us.entityTypeStore.IsEntityTypeDeclarative(category, schemaID) {
 		return nil, &ErrorCannotModifyDeclarativeResource
+	}
+
+	if request.OUID == "" && request.OUHandle != "" {
+		ou, svcErr := us.ouService.GetOrganizationUnitByPath(ctx, request.OUHandle)
+		if svcErr != nil {
+			return nil, invalidEntityTypeRequestErr(category, "organization unit with handle not found")
+		}
+		request.OUID = ou.ID
 	}
 
 	schemaToValidate := EntityType{
@@ -744,6 +761,25 @@ func (us *entityTypeService) getAccessibleResources(
 		return nil, &serviceerror.InternalServerError
 	}
 	return accessible, nil
+}
+
+// ResolveEntityTypeHandles resolves ou_handle to an OU ID on the given entity type in-place.
+// Called by the declarative loader validator so that file-based entity types support ou_handle.
+func (us *entityTypeService) ResolveEntityTypeHandles(
+	ctx context.Context, entityType *EntityType,
+) *serviceerror.ServiceError {
+	if entityType.OUID == "" && entityType.OUHandle != "" {
+		if us.ouService == nil {
+			return &serviceerror.InternalServerError
+		}
+		ou, svcErr := us.ouService.GetOrganizationUnitByPath(
+			security.WithRuntimeContext(ctx), entityType.OUHandle)
+		if svcErr != nil {
+			return &ErrorInvalidRequestFormat
+		}
+		entityType.OUID = ou.ID
+	}
+	return nil
 }
 
 // ensureOrganizationUnitExists validates that the provided organization unit exists using the OU service.

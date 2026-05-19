@@ -423,6 +423,22 @@ func (f *fakeOUService) GetOrganizationUnit(
 	}
 }
 
+func (f *fakeOUService) GetOrganizationUnitByPath(
+	_ context.Context, handlePath string,
+) (ou.OrganizationUnit, *serviceerror.ServiceError) {
+	for _, existing := range f.existing {
+		if existing.Handle == handlePath {
+			return existing, nil
+		}
+	}
+
+	return ou.OrganizationUnit{}, &serviceerror.ServiceError{
+		Type:  serviceerror.ClientErrorType,
+		Code:  "OU-1003",
+		Error: core.I18nMessage{DefaultValue: "not found"},
+	}
+}
+
 func (f *fakeOUService) UpdateOrganizationUnit(
 	_ context.Context, id string, request ou.OrganizationUnitRequestWithID,
 ) (ou.OrganizationUnit, *serviceerror.ServiceError) {
@@ -1388,6 +1404,33 @@ func TestImportResources_UpsertCreatePreservesIDsAcrossResourceTypes(t *testing.
 	assert.Equal(t, "thm-123", themeSvc.created[0].ID)
 }
 
+func TestImportResources_EntityTypeOUHandlePassedToService(t *testing.T) {
+	entityTypeSvc := &fakeEntityTypeService{
+		byID:   map[string]*entitytype.EntityType{},
+		byName: map[string]*entitytype.EntityType{},
+	}
+	svc := newImportService(nil, nil, nil, nil, entityTypeSvc, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: usrs-123",
+		"name: customer",
+		"ou_handle: default",
+		"schema:",
+		"  type: object",
+		"  properties: {}",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, entityTypeSvc.created, 1)
+	assert.Equal(t, "default", entityTypeSvc.created[0].OUHandle)
+	assert.Equal(t, "", entityTypeSvc.created[0].OUID)
+}
+
 func TestImportResources_StripsClientSecretForPublicClientWithNoneAuthMethod(t *testing.T) {
 	content := strings.Join([]string{
 		"id: app-1",
@@ -1518,4 +1561,110 @@ func TestDeleteResource_RemovesDeclarativeFile(t *testing.T) {
 
 	_, statErr := os.Stat(filepath.Join(tempHome, "repository", "resources", "applications", "app-1.yaml"))
 	assert.True(t, os.IsNotExist(statErr))
+}
+
+func TestImportResources_ApplicationOUHandlePassedToService(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*model.Application{}}
+	svc := newImportService(appSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: strings.Join([]string{
+			"# resource_type: application",
+			"name: My App",
+			"ou_handle: default",
+			"",
+		}, "\n"),
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, appSvc.created, 1)
+	assert.Equal(t, "default", appSvc.created[0].OUHandle)
+}
+
+func TestImportResources_ApplicationAuthFlowHandlePassedToService(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*model.Application{}}
+	svc := newImportService(appSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: strings.Join([]string{
+			"# resource_type: application",
+			"name: My App",
+			"auth_flow_handle: login-flow",
+			"",
+		}, "\n"),
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, appSvc.created, 1)
+	assert.Equal(t, "login-flow", appSvc.created[0].AuthFlowHandle)
+}
+
+func TestImportResources_ApplicationRegistrationFlowHandlePassedToService(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*model.Application{}}
+	svc := newImportService(appSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: strings.Join([]string{
+			"# resource_type: application",
+			"name: My App",
+			"registration_flow_handle: reg-flow",
+			"is_registration_flow_enabled: true",
+			"",
+		}, "\n"),
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, appSvc.created, 1)
+	assert.Equal(t, "reg-flow", appSvc.created[0].RegistrationFlowHandle)
+	assert.True(t, appSvc.created[0].IsRegistrationFlowEnabled)
+}
+
+func TestImportResources_ApplicationRecoveryFlowHandlePassedToService(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*model.Application{}}
+	svc := newImportService(appSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: strings.Join([]string{
+			"# resource_type: application",
+			"name: My App",
+			"recovery_flow_handle: recovery-flow",
+			"is_recovery_flow_enabled: true",
+			"",
+		}, "\n"),
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, appSvc.created, 1)
+	assert.Equal(t, "recovery-flow", appSvc.created[0].RecoveryFlowHandle)
+	assert.True(t, appSvc.created[0].IsRecoveryFlowEnabled)
+}
+
+func TestImportResources_DryRunSkipsApplicationHandleResolution(t *testing.T) {
+	// With dry-run, handle resolution is skipped — unknown handles must not cause failure.
+	appSvc := &fakeApplicationService{existing: map[string]*model.Application{}}
+	svc := newImportService(appSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: strings.Join([]string{
+			"# resource_type: application",
+			"name: My App",
+			"ou_handle: nonexistent-ou",
+			"auth_flow_handle: nonexistent-flow",
+			"",
+		}, "\n"),
+		DryRun: true,
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	assert.Len(t, appSvc.created, 0)
 }
