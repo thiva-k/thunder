@@ -21,24 +21,41 @@ Core design goals of ThunderID include:
 
 ---
 
-## 🚀 Features
+## Architecture
 
-- **Standards-Based**
-  - OAuth 2/ OpenID Connect (OIDC): Client Credentials, Authorization Code, Refresh Token
-- **Login Options:**
-  - Basic Authentication (Username/Password)
-  - Social Logins: Google, Github
-  - SMS OTP
-- **Registration Options:**
-  - Username/Password
-  - Social Registration: Google, Github
-  - SMS OTP
-- **RESTful APIs:**
-  - App Native Login/Registration
-  - User Management
-  - Application Management
-  - Identity Provider Management
-  - Message Notification Sender Management
+<img src="https://thunderid.dev/assets/images/readme/architecture.png" alt="ThunderID Architecture" width="100%" />
+
+---
+
+## Features
+
+* **Identity Management**
+    * Humans, AI agents, and workloads as first-class identity types
+    * Hierarchical organizational units (OUs) and groups
+
+* **Standards**
+    * OAuth 2.1 and OpenID Connect, with PAR and PKCE
+    * WebAuthn / passkeys
+    * IdP federation — Google, Microsoft, GitHub, and any OIDC or SAML provider
+
+* **User Journeys**
+    * Login, registration, and recovery defined as journeys
+    * 20+ built-in executors — password, passkey, OTP, social login, consent, and more
+    * Orchestratable in the server or the application
+    * Themeable end-user UI
+
+* **Authorization**
+    * Hierarchical resources with derived permissions
+    * Role-based access control across users, agents, and applications
+    * Consent management with user-facing review
+
+* **Developer Experience**
+    * Console UI, REST APIs, and SDKs
+    * MCP server for managing and querying IAM from AI agents
+
+* **Declarative and GitOps-Ready**
+    * YAML resource definitions for every entity
+    * Immutable runtime — config is the source of truth
 
 ---
 
