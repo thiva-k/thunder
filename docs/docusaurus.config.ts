@@ -244,24 +244,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           position: 'right',
         },
         {
-          label: 'Resources',
-          type: 'dropdown',
-          position: 'right',
-          className: 'navbar__link--dropdown',
-          items: [
-            {
-              label: 'Discussions',
-              href: productConfig.project.source.github.discussionsUrl,
-              className: 'navbar-resources__discussions',
-            },
-            {
-              label: 'Report an Issue',
-              href: productConfig.project.source.github.issuesUrl,
-              className: 'navbar-resources__issues',
-            },
-          ],
-        },
-        {
           type: 'docSidebar',
           sidebarId: 'communitySidebar',
           position: 'right',
@@ -270,28 +252,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         {
           type: 'custom-GitHubStarButton',
           position: 'right',
-        },
-        {
-          href: `https://github.com/${productConfig.project.source.github.fullName}`,
-          position: 'right',
-          className: 'navbar__github--link',
-          'aria-label': 'GitHub repository',
-        },
-        // Locale dropdown for i18n support.
-        // Will be visible when multiple locales are configured.
-        {
-          type: 'localeDropdown',
-          position: 'right',
-          dropdownItemsAfter: [
-            {
-              type: 'html',
-              value: '<hr style="margin: 0.3rem 0;">',
-            },
-            {
-              href: 'https://github.com/thunder-id/thunderid/issues/1912',
-              label: '🌍 Help translate',
-            },
-          ],
         },
         ...(productConfig.documentation.versioning.enabled
           ? [
