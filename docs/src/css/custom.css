@@ -474,7 +474,7 @@ html[data-page='home'][data-theme='dark'] .navbar .navbar__github--link::before 
 .navbar__github-star {
   display: flex;
   align-items: center;
-  margin-left: 0.5rem;
+  margin: 0 0.5rem;
   line-height: 0;
 }
 
