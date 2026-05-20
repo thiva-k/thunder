@@ -385,7 +385,7 @@ html[data-theme='dark'] .theme-announcement-bar {
 .navbar {
   border-bottom: 1px solid var(--oxygen-palette-divider);
   box-shadow: none;
-  padding: 0 2rem;
+  padding: 0 2.5rem;
   transition: background-color 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease;
 }
 
@@ -650,10 +650,16 @@ html[data-page='home'][data-theme='dark'] .dropdown>.navbar__link:after {
 /* ------------------------------ Sidebar Adjustments ---------------------- */
 
 /* Center the entire docs layout within the page */
+.blog-wrapper .main-wrapper,
 .plugin-docs .main-wrapper {
-  max-width: var(--ifm-container-width-xl);
+  padding: 0 38px;
   margin: 0 auto;
   width: 100%;
+}
+
+.blog-wrapper .container {
+  max-width: 100%;
+  padding: 0 1rem;
 }
 
 /* Ensure the doc page row itself doesn't overflow */
@@ -811,9 +817,11 @@ aside.theme-doc-sidebar-container {
   background: var(--oxygen-palette-common-background);
 }
 
-/* Docs Home sidebar entry */
-.sidebar-doc-home {
-  margin-top: 1.25rem;
+/* Docs sidebar first entry */
+.sidebar-doc-home,
+.theme-doc-sidebar-item-category,
+.theme-doc-sidebar-menu {
+  margin-top: 1.5rem;
 }
 
 .sidebar-doc-home > .menu__link {

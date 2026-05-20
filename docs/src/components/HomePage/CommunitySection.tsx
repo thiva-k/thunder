@@ -236,7 +236,7 @@ export default function CommunitySection(): JSX.Element {
           >
             <CommunityCard
               icon={<GitForkIcon />}
-              iconBg={`linear-gradient(135deg, ${theme.vars?.palette.primary.dark} 0%, ${theme.vars?.palette.primary.main} 100%)`}
+              iconBg="rgba(59,130,246,0.10)"
               title="Contribute"
               description={`Help shape ${productName} by submitting features, fixes, or improvements.`}
               linkLabel="Start Contributing"
@@ -244,7 +244,7 @@ export default function CommunitySection(): JSX.Element {
             />
             <CommunityCard
               icon={<IssueIcon />}
-              iconBg="linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
+              iconBg="rgba(59,130,246,0.10)"
               title="Report issues"
               description={`Identify bugs and suggest enhancements to make ${productName} better for everyone.`}
               linkLabel="Open an Issue"
@@ -252,7 +252,7 @@ export default function CommunitySection(): JSX.Element {
             />
             <CommunityCard
               icon={<MessagesSquareIcon />}
-              iconBg="linear-gradient(135deg, #5865F2 0%, #4752C4 100%)"
+              iconBg="rgba(59,130,246,0.10)"
               title="Join the Discussions"
               description="Ask questions, share ideas, and connect with the community through GitHub Discussions"
               linkLabel="Open Discussions"
