@@ -66,13 +66,13 @@ The sample uses two OAuth clients and three token types:
 
 ```text
 agent-id-sample/
-├── frontend/     React + Vite UI. Hosts the chat widget and the
-│                 /agent-callback route used by the consent popup.
-├── api/          Node REST API backed by SQLite. Validates JWTs
-│                 and enforces scopes on booking routes.
-├── mcp/          Streamable-HTTP MCP server that wraps the REST API.
-├── ai-agent/     HTTP chat agent API (LangChain + Claude/Gemini).
-├── resources/    Declarative YAML files for ThunderID setup.
+├── frontend/          React + Vite UI. Hosts the chat widget and the
+│                      /agent-callback route used by the consent popup.
+├── api/               Node REST API backed by SQLite. Validates JWTs
+│                      and enforces scopes on booking routes.
+├── mcp/               Streamable-HTTP MCP server that wraps the REST API.
+├── ai-agent/          HTTP chat agent API (LangChain + Claude/Gemini).
+├── thunderid-config/  Importable YAML config for ThunderID setup.
 └── README.md
 ```
 
@@ -103,67 +103,47 @@ Restart the ThunderID server after the change. If you serve the frontend from a 
 
 ## ThunderID Setup
 
-The `resources/` directory contains declarative YAML files that configure most of the ThunderID entities automatically. The agent must still be created manually since declarative agent support is not yet available.
+The `thunderid-config/` directory contains a single importable YAML that creates all required ThunderID resources — resource servers, roles, users, the OAuth application, and the AI agent.
 
-### Step 1 — Load Declarative Resources
+### Import Resources
 
-Find your ThunderID default organization unit ID. You can find it in the Console UI under **Organization Units**, or query the database:
+1. Start ThunderID and open the Console.
+2. On the **welcome screen** (shown on first login, or accessible from the user profile menu), choose **Open** and upload `thunderid-config/thunderid-config.yaml`. Then for environment variables, upload `thunderid-config/thunderid.env`.
 
-```bash
-sqlite3 backend/cmd/server/repository/database/configdb.db \
-  "SELECT OU_ID FROM RESOURCE_SERVER WHERE NAME='System' LIMIT 1;"
-```
+The import creates:
 
-Copy the sample's `resources/` subdirectories into ThunderID's declarative resource directory and set the OU ID:
-
-```bash
-export THUNDER_OU_ID=<your-ou-id>
-
-# Copy resource files into the ThunderID server's resources directory
-cp -r samples/apps/agent-id-sample/resources/resource_servers \
-      backend/cmd/server/repository/resources/
-cp -r samples/apps/agent-id-sample/resources/roles \
-      backend/cmd/server/repository/resources/
-cp -r samples/apps/agent-id-sample/resources/users \
-      backend/cmd/server/repository/resources/
-cp -r samples/apps/agent-id-sample/resources/applications \
-      backend/cmd/server/repository/resources/
-```
-
-Restart the ThunderID server. On startup it will load:
-
-| Resource | File | What it creates |
+| Resource | Type | What it creates |
 |----------|------|-----------------|
-| Resource server | `resource_servers/wayfinder-agent.yaml` | `wayfinder-agent` resource server with `agent:access` permission |
-| Resource server | `resource_servers/booking-api.yaml` | `booking-api` resource server with `booking:read`, `booking:create`, `booking:cancel` permissions |
-| Role | `roles/wayfinder-chat-user.yaml` | **Wayfinder Chat User** role with `agent:access`, assigned to `john.doe` |
-| Role | `roles/wayfinder-user.yaml` | **Wayfinder User** role with booking permissions, assigned to both demo users |
-| User | `users/john-doe.yaml` | Demo user `john.doe` / `john.doe` — has chat agent access and booking permissions |
-| User | `users/jane-smith.yaml` | Demo user `jane.smith` / `jane.smith` — has booking permissions but **no** chat agent access |
-| Application | `applications/wayfinder.yaml` | `WAYFINDER` OAuth app (public, PKCE, redirect to `http://localhost:5173`) |
+| `wayfinder-agent` | Resource server | `agent:access` permission |
+| `booking-api` | Resource server | `booking:read`, `booking:create`, `booking:cancel` permissions |
+| `WAYFINDER` | Application | Public OAuth app (PKCE, redirect to `http://localhost:5173`) |
+| `WAYFINDER-CHAT-AGENT` | Agent | Confidential OAuth client with `client_credentials` + `authorization_code` grants |
+| Basic Authentication with Consent | Flow | Authentication flow with consent screen (assigned to the agent) |
+| Wayfinder Chat User | Role | `agent:access` permission |
+| Wayfinder User | Role | Booking permissions |
+| `john.doe` / `john.doe` | User | Demo user with chat agent access and booking permissions |
+| `jane.smith` / `jane.smith` | User | Demo user with booking permissions but **no** chat agent access |
 
-### Step 2 — Manual Steps
+The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderid.env`). Change it in the env file before importing if you prefer a different value.
 
-These steps cannot be done declaratively yet:
+### Assign Users to Roles
 
-**Create the agent.** In the Console UI or via the management API, create an agent named **`WAYFINDER-CHAT-AGENT`**:
+After the import, assign users to roles in the Console UI:
 
-1. Create the agent and capture the **client secret** — ThunderID prints it only once at creation. You will need it for `ai-agent/.env`.
-2. Under the agent's **Protocol** settings, enable the **Authorization Code** grant (the Client Credentials grant is enabled by default for agents).
-3. Add the authorized redirect URI: `http://localhost:5173/agent-callback`
-4. Set the authentication flow to the built-in **Default Basic Authentication Flow** (`default-basic-flow`).
-5. Under `accessToken.userAttributes`, add: `given_name`, `family_name`, `email`, `groups`.
+1. Go to **Roles** > **Wayfinder Chat User** > **Assignments** > **User** > **Add**. Assign `john.doe`.
+2. Go to **Roles** > **Wayfinder User** > **Assignments** > **User** > **Add**. Assign both `john.doe` and `jane.smith`.
+
+> Role assignments reference entities by ID. User IDs are auto-generated during import, so they cannot be predicted in the YAML. Assign users to roles manually after the import.
 
 ## Configure the Sample
 
 `api/`, `ai-agent/`, and `frontend/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `mcp/` server has no required configuration.
 
-The two placeholder values you must replace are in `ai-agent/.env`:
+The only placeholder you must replace is in `ai-agent/.env`:
 
-- `AGENT_SECRET=` — the agent client secret captured at agent creation.
 - `ANTHROPIC_API_KEY=` (or `GOOGLE_API_KEY=`) — your LLM API key.
 
-Everything else in the examples is local development defaults that match the run instructions below.
+The agent secret defaults to `wayfinder-agent-secret` (matching `thunderid.env`). Everything else in the examples is local development defaults that match the run instructions below.
 
 ## Run
 
