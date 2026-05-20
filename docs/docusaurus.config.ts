@@ -295,6 +295,11 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       theme: prismThemes.nightOwlLight,
       darkTheme: prismThemes.nightOwl,
     },
+    algolia: {
+      appId: 'I2J00F96K6',
+      apiKey: '109b36a4b48dc5da1f24d1f764e7685f',
+      indexName: 'thunderid-docs-prod',
+    },
   } satisfies Preset.ThemeConfig,
 
   /* -------------------------------- Product Config ------------------------------- */
