@@ -1280,7 +1280,7 @@ nav.theme-doc-breadcrumbs {
 .releases-status,
 .releases-release-header p,
 .releases-footer-note p {
-  color: rgba(17, 24, 39, 0.7);
+  color: var(--ifm-color-emphasis-700);
 }
 
 .releases-hero-actions {
@@ -1316,16 +1316,16 @@ nav.theme-doc-breadcrumbs {
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: rgba(17, 24, 39, 0.62);
+  color: var(--ifm-color-emphasis-600);
 }
 
 .releases-version-picker select {
   width: 100%;
   min-height: 2.9rem;
   padding: 0.75rem 0.95rem;
-  border: 1px solid rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 0.95rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--oxygen-palette-background-paper);
   color: var(--ifm-font-color-base);
   font: inherit;
 }
@@ -1335,8 +1335,8 @@ nav.theme-doc-breadcrumbs {
   min-width: 0;
   padding: 2rem;
   border-radius: 1.8rem;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--oxygen-palette-background-paper);
   backdrop-filter: blur(14px);
   box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
 }
@@ -1366,8 +1366,8 @@ nav.theme-doc-breadcrumbs {
   align-items: center;
   padding: 0.28rem 0.65rem;
   border-radius: 999px;
-  background: rgba(255, 153, 0, 0.12);
-  color: #b76500;
+  background: var(--ifm-hover-overlay);
+  color: var(--ifm-breadcrumb-color-active);
   font-size: 0.78rem;
   font-weight: 700;
 }
@@ -1384,10 +1384,8 @@ nav.theme-doc-breadcrumbs {
   margin-bottom: 1rem;
   padding: 1.35rem;
   border-radius: 1.25rem;
-  border: 1px solid rgba(255, 107, 0, 0.14);
-  background:
-    radial-gradient(circle at top right, rgba(255, 140, 0, 0.14), transparent 35%),
-    linear-gradient(180deg, rgba(255, 250, 245, 0.98) 0%, rgba(255, 255, 255, 0.92) 100%);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--oxygen-palette-background-paper);
 }
 
 .releases-download-feature-copy {
@@ -1397,7 +1395,7 @@ nav.theme-doc-breadcrumbs {
 }
 
 .releases-download-feature-kicker {
-  color: #FF6B00;
+  color: var(--ifm-color-primary);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -1415,11 +1413,11 @@ nav.theme-doc-breadcrumbs {
   gap: 0.65rem 1rem;
   min-width: 0;
   overflow-wrap: anywhere;
-  color: rgba(17, 24, 39, 0.58);
+  color: var(--ifm-color-emphasis-600);
   font-size: 0.9rem;
 }
 
-.releases-download-primary {
+.releases-page .releases-download-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1427,16 +1425,19 @@ nav.theme-doc-breadcrumbs {
   min-height: 2.9rem;
   padding: 0.65rem 1rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, #FF6B00 0%, #FF8C00 100%);
+  background: var(--ifm-color-primary);
   color: #fff !important;
   font-size: 0.92rem;
   font-weight: 700;
   text-decoration: none !important;
 }
 
-.releases-download-primary:hover {
+.releases-page .releases-download-primary:hover {
+  background: var(--ifm-color-primary-dark);
+  color: #fff !important;
+  text-decoration: none !important;
   transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(255, 107, 0, 0.24);
+  box-shadow: 0 14px 30px rgb(var(--oxygen-palette-primary-mainChannel) / 0.35);
 }
 
 .releases-download-icon {
@@ -1446,8 +1447,8 @@ nav.theme-doc-breadcrumbs {
   width: 1.8rem;
   height: 1.8rem;
   border-radius: 999px;
-  background: rgba(255, 107, 0, 0.08);
-  color: #FF6B00;
+  background: rgb(var(--oxygen-palette-primary-mainChannel) / 0.1);
+  color: var(--ifm-color-primary);
 }
 
 .releases-other-downloads-grid {
@@ -1459,8 +1460,8 @@ nav.theme-doc-breadcrumbs {
 .releases-other-downloads-card {
   padding: 0.95rem 1rem;
   border-radius: 1.15rem;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--oxygen-palette-background-paper);
 }
 
 .releases-other-downloads-header {
@@ -1474,14 +1475,14 @@ nav.theme-doc-breadcrumbs {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: rgba(17, 24, 39, 0.8);
+  color: var(--ifm-color-emphasis-800);
 }
 
 .releases-other-downloads-os-icon {
   display: inline-flex;
   width: 1.3rem;
   height: 1.3rem;
-  color: rgba(17, 24, 39, 0.72);
+  color: var(--ifm-color-emphasis-700);
 }
 
 .releases-other-downloads-architectures {
@@ -1497,8 +1498,8 @@ nav.theme-doc-breadcrumbs {
   min-height: 3.7rem;
   padding: 0.65rem 0.8rem;
   border-radius: 0.85rem;
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--oxygen-palette-background-acrylic);
   color: inherit !important;
   text-decoration: none !important;
 }
@@ -1506,14 +1507,14 @@ nav.theme-doc-breadcrumbs {
 .releases-other-downloads-architecture-title {
   min-width: 0;
   overflow-wrap: anywhere;
-  color: rgba(17, 24, 39, 0.78);
+  color: var(--ifm-color-emphasis-800);
   font-size: 0.98rem;
   font-weight: 600;
 }
 
 .releases-other-downloads-architecture-meta,
 .releases-other-downloads-architecture em {
-  color: rgba(17, 24, 39, 0.52);
+  color: var(--ifm-color-emphasis-600);
   font-size: 0.82rem;
 }
 
@@ -1540,7 +1541,7 @@ nav.theme-doc-breadcrumbs {
 
 .releases-change-group ul {
   margin: 0;
-  border-left: 2px solid rgba(255, 107, 0, 0.75);
+  border-left: 2px solid var(--ifm-color-primary);
   padding-left: 1.35rem;
 }
 
@@ -1566,7 +1567,7 @@ nav.theme-doc-breadcrumbs {
   height: 2.75rem;
   font-size: 1rem;
   border: 2px solid #fff;
-  background: #FF6B00;
+  background: var(--ifm-color-primary);
 }
 
 .releases-contributor-avatar-link {
@@ -1584,70 +1585,33 @@ nav.theme-doc-breadcrumbs {
 }
 
 .releases-page .button--primary {
-  background-color: #FF6B00;
+  background-color: var(--ifm-color-primary);
 }
 
 .releases-page .button--primary:hover {
-  background-color: #E55A00;
+  background-color: var(--ifm-color-primary-dark);
 }
 
-[data-theme='dark'] .releases-hero p,
-[data-theme='dark'] .releases-status,
-[data-theme='dark'] .releases-release-header p,
-[data-theme='dark'] .releases-version-picker span,
-[data-theme='dark'] .releases-footer-note p,
-[data-theme='dark'] .releases-download-feature-meta {
-  color: rgba(255, 255, 255, 0.65);
+.releases-page .button--secondary {
+  background: var(--oxygen-palette-background-paper);
+  border-color: var(--ifm-color-emphasis-300);
+  color: var(--ifm-font-color-base);
 }
 
-[data-theme='dark'] .releases-release-card,
-[data-theme='dark'] .releases-other-downloads-card {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(15, 23, 42, 0.78);
+.releases-page .button--secondary:hover {
+  background: var(--ifm-hover-overlay);
+  border-color: var(--ifm-color-emphasis-400);
+  color: var(--ifm-font-color-base);
+}
+
+[data-theme='dark'] .releases-release-card {
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
 }
 
-[data-theme='dark'] .releases-other-downloads-architecture {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-[data-theme='dark'] .releases-other-downloads-header h4,
-[data-theme='dark'] .releases-other-downloads-os-icon,
-[data-theme='dark'] .releases-other-downloads-architecture-title {
-  color: rgba(255, 255, 255, 0.76);
-}
-
-[data-theme='dark'] .releases-other-downloads-architecture-meta,
-[data-theme='dark'] .releases-other-downloads-architecture em {
-  color: rgba(255, 255, 255, 0.5);
-}
-
 [data-theme='dark'] .releases-contributors-avatar-group .MuiAvatar-root {
-  border-color: rgba(15, 23, 42, 0.78);
+  border-color: var(--ifm-background-surface-color);
 }
 
-[data-theme='dark'] .releases-version-picker select {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(15, 23, 42, 0.78);
-}
-
-[data-theme='dark'] .releases-download-feature {
-  border-color: rgba(255, 140, 0, 0.18);
-  background:
-    radial-gradient(circle at top right, rgba(255, 140, 0, 0.16), transparent 35%),
-    linear-gradient(180deg, rgba(33, 41, 54, 0.96) 0%, rgba(15, 23, 42, 0.88) 100%);
-}
-
-[data-theme='dark'] .releases-release-badge {
-  background: rgba(255, 190, 92, 0.12);
-  color: #ffc170;
-}
-
-[data-theme='dark'] .releases-download-icon {
-  background: rgba(255, 107, 0, 0.14);
-  color: #FF8C00;
-}
 
 @media (max-width: 996px) {
   .releases-shell {
@@ -1667,7 +1631,7 @@ nav.theme-doc-breadcrumbs {
     flex-direction: column;
   }
 
-  .releases-download-primary {
+  .releases-page .releases-download-primary {
     width: 100%;
   }
 
