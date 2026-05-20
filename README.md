@@ -162,10 +162,11 @@ Follow these steps to access the ThunderID Console:
 
 #### Try Out with the Sample App
 
-ThunderID provides two sample applications to help you get started quickly:
+ThunderID provides the following sample applications to help you get started quickly:
 
 - **React Vanilla Sample** — Sample React application demonstrating direct API integration without external SDKs. Supports Native Flow API or Standard OAuth/OIDC.
 - **React SDK Sample** — Sample React application demonstrating SDK-based integration using `@asgardeo/react` for OAuth 2.0/OIDC authentication.
+- **Wayfinder Sample** — Travel app demonstrating an AI agent with its own ThunderID-managed identity. The agent uses a `client_credentials` token for browsing tools and an on-behalf-of `authorization_code` + PKCE flow for actions that need the user's consent.
 
 ##### React Vanilla Sample
 
@@ -239,6 +240,39 @@ ThunderID provides two sample applications to help you get started quickly:
     Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
 
     > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
+
+##### Wayfinder Sample
+
+1. **Download the sample**
+
+    Download `sample-app-wayfinder-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/thunder-id/thunderid/releases/latest).
+
+2. **Unzip and navigate to the sample app directory**
+
+    ```bash
+    unzip sample-app-wayfinder-<version>-<os>-<arch>.zip
+    cd sample-app-wayfinder-<version>-<os>-<arch>/
+    ```
+
+3. **Import sample app resources**
+
+    The sample app ships with a `thunderid-config/` directory containing a single importable YAML that creates the resource servers, roles, users, the `WAYFINDER` OAuth app, and the `WAYFINDER-CHAT-AGENT` agent in one step. Import it via the ThunderID Console:
+    - **First-time login**: a welcome screen appears with an **Open** button. Upload `thunderid-config/thunderid-config.yaml`, then upload `thunderid-config/thunderid.env` for environment variables.
+    - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
+
+    After import, assign the demo users to their roles in **Roles** > **Wayfinder Chat User** (assign `john.doe`) and **Roles** > **Wayfinder User** (assign both `john.doe` and `jane.smith`). Role assignments are not part of the imported YAML because user IDs are auto-generated.
+
+4. **Start the sample**
+
+    The sample runs four services (REST API, MCP server, AI chat agent, and React frontend). Set your LLM API key (`ANTHROPIC_API_KEY` or `GOOGLE_API_KEY`) in `ai-agent/.env` — the agent secret defaults to `wayfinder-agent-secret` to match `thunderid.env`. Then:
+
+    ```bash
+    ./start.sh
+    ```
+
+    Open your browser and navigate to [http://localhost:5173](http://localhost:5173) to access the sample app.
+
+    > 📖 Refer to the `README.md` inside the extracted sample app for the full ThunderID setup, OBO flow details, and troubleshooting steps.
 
 ##### Self Register and Login (React Vanilla Sample)
 

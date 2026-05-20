@@ -1,4 +1,4 @@
-# Agent Identity Sample (Wayfinder)
+# Wayfinder Sample
 
 End-to-end sample of an AI agent that holds its own ThunderID-managed identity.
 
@@ -65,7 +65,7 @@ The sample uses two OAuth clients and three token types:
 ## Project Structure
 
 ```text
-agent-id-sample/
+wayfinder-sample/
 ├── frontend/          React + Vite UI. Hosts the chat widget and the
 │                      /agent-callback route used by the consent popup.
 ├── api/               Node REST API backed by SQLite. Validates JWTs
