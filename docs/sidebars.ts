@@ -97,6 +97,11 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'doc',
+              id: 'guides/quick-start/connect-your-application/nuxt',
+              label: 'Nuxt',
+            },
+            {
+              type: 'doc',
               id: 'guides/quick-start/connect-your-application/browser',
               label: 'JavaScript',
             },
