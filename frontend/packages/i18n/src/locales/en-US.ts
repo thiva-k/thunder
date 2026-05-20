@@ -1985,6 +1985,8 @@ const translations = {
     'configureExport.fallback.unnamedResourceServer': 'Unnamed Resource Server',
     'configureExport.fallback.unnamedRole': 'Unnamed Role',
     'configureExport.fallback.unnamedGroup': 'Unnamed Group',
+    'configureExport.labels.agents': 'Agents',
+    'configureExport.fallback.unnamedAgent': 'Unnamed Agent',
     'configureExport.fallback.unnamedUser': 'User {{index}}',
     'configureExport.labels.projectDetails': 'Project Details',
     'configureExport.labels.totalResources': 'Total Resources',
