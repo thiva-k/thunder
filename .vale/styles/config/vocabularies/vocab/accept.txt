@@ -74,3 +74,5 @@ Memorystore
 [Cc]reatedAt
 [Aa]gentic
 [Ee]num
+[Uu]serinfo
+[Dd]ev

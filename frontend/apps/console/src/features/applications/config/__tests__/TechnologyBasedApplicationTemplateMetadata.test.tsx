@@ -150,6 +150,42 @@ describe('TechnologyBasedApplicationTemplateMetadata', () => {
     });
   });
 
+  describe('Vanilla JavaScript Technology', () => {
+    const vanillaJsMetadata = TechnologyBasedApplicationTemplateMetadata.find(
+      (m) => m.value === TechnologyApplicationTemplate.VANILLA_JS,
+    );
+
+    it('should exist', () => {
+      expect(vanillaJsMetadata).toBeDefined();
+    });
+
+    it('should have correct value', () => {
+      expect(vanillaJsMetadata?.value).toBe(TechnologyApplicationTemplate.VANILLA_JS);
+    });
+
+    it('should have icon component', () => {
+      expect(vanillaJsMetadata?.icon).toBeDefined();
+      const {container} = render(<div>{vanillaJsMetadata?.icon}</div>);
+      expect(container.querySelector('svg')).toBeInTheDocument();
+    });
+
+    it('should have correct i18n keys', () => {
+      expect(vanillaJsMetadata?.titleKey).toBe('applications:onboarding.configure.stack.technology.vanillaJs.title');
+      expect(vanillaJsMetadata?.descriptionKey).toBe(
+        'applications:onboarding.configure.stack.technology.vanillaJs.description',
+      );
+    });
+
+    it('should have a template', () => {
+      expect(vanillaJsMetadata?.template).toBeDefined();
+      expect(vanillaJsMetadata?.template).toHaveProperty(['defaults', 'name']);
+    });
+
+    it('should not be disabled', () => {
+      expect(vanillaJsMetadata?.disabled).not.toBe(true);
+    });
+  });
+
   describe('Templates', () => {
     it('should have unique values', () => {
       const values = TechnologyBasedApplicationTemplateMetadata.map((m) => m.value);
@@ -174,11 +210,12 @@ describe('TechnologyBasedApplicationTemplateMetadata', () => {
       });
     });
 
-    it('should have at least React and Next.js templates', () => {
+    it('should have at least React, Next.js, and Vanilla JS templates', () => {
       const configuredValues = TechnologyBasedApplicationTemplateMetadata.map((m) => m.value);
       expect(configuredValues).toContain(TechnologyApplicationTemplate.EXPRESS);
       expect(configuredValues).toContain(TechnologyApplicationTemplate.REACT);
       expect(configuredValues).toContain(TechnologyApplicationTemplate.NEXTJS);
+      expect(configuredValues).toContain(TechnologyApplicationTemplate.VANILLA_JS);
     });
   });
 
