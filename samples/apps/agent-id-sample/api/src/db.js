@@ -224,7 +224,7 @@ export function createBookingRecord({
   status,
   createdAt
 }) {
-  const username = user.username || user.email || user.id;
+  const username = user.id;
 
   getDatabase()
     .prepare(

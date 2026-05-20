@@ -29,6 +29,28 @@ import {
 const port = Number(process.env.PORT || 8787);
 const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 
+function decodeTokenClaims(authHeader) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  try {
+    const parts = authHeader.slice(7).split(".");
+    return JSON.parse(Buffer.from(parts[1], "base64url").toString());
+  } catch {
+    return null;
+  }
+}
+
+function logRequest(method, pathname, claims) {
+  if (!claims) {
+    console.log(`${method} ${pathname}`);
+    return;
+  }
+  const type = claims.sub === claims.client_id ? "m2m" : "user";
+  const aud = Array.isArray(claims.aud) ? claims.aud.join(",") : (claims.aud || "-");
+  console.log(
+    `${method} ${pathname} | type: ${type} | client_id: ${claims.client_id || "-"} | sub: ${claims.sub || "-"} | aud: ${aud} | scope: ${claims.scope || "-"}`
+  );
+}
+
 function sendJson(response, statusCode, body) {
   response.writeHead(statusCode, {
     "Content-Type": "application/json",
@@ -88,7 +110,7 @@ async function handleBooking(request) {
   const itemId = body.itemId;
   const requestedTravelers = body.travelers ?? 1;
   const travelers = Number(requestedTravelers);
-  const username = user.username || user.email || user.id;
+  const username = user.id;
 
   if (!["flight", "hotel", "trip"].includes(itemType)) {
     return {
@@ -148,6 +170,9 @@ async function route(request, response) {
     return sendJson(response, 204, {});
   }
 
+  const claims = decodeTokenClaims(request.headers.authorization);
+  logRequest(request.method, url.pathname, claims);
+
   try {
     if (request.method === "GET" && url.pathname === "/health") {
       return sendJson(response, 200, { status: "ok" });
@@ -205,7 +230,7 @@ async function route(request, response) {
 
       requireScope(user, "booking:read");
 
-      const username = user.username || user.email || user.id;
+      const username = user.id;
 
       return sendJson(response, 200, {
         data: listBookedFlights(username)
@@ -223,7 +248,7 @@ async function route(request, response) {
 
       requireScope(user, "booking:cancel");
 
-      const username = user.username || user.email || user.id;
+      const username = user.id;
       const result = deleteBookingsForUser(username);
 
       return sendJson(response, 200, {

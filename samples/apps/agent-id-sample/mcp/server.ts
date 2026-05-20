@@ -25,6 +25,61 @@ const host = process.env.HOST || "localhost";
 
 type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
+interface TokenClaims {
+    sub?: string;
+    client_id?: string;
+    aud?: string | string[];
+    scope?: string;
+    [key: string]: unknown;
+}
+
+function decodeTokenClaims(authHeader: string | undefined): TokenClaims | null {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+    try {
+        const parts = authHeader.slice(7).split(".");
+        return JSON.parse(Buffer.from(parts[1], "base64url").toString());
+    } catch {
+        return null;
+    }
+}
+
+function callerTag(claims: TokenClaims | null): string {
+    if (!claims) return "anon";
+    const type = claims.sub === claims.client_id ? "m2m" : "user";
+    return `${type}:${claims.sub || "-"}`;
+}
+
+function logRequest(method: string, pathname: string, claims: TokenClaims | null): void {
+    if (!claims) {
+        console.log(`${method} ${pathname}`);
+        return;
+    }
+    const type = claims.sub === claims.client_id ? "m2m" : "user";
+    const aud = Array.isArray(claims.aud) ? claims.aud.join(",") : (claims.aud || "-");
+    console.log(
+        `${method} ${pathname} | type: ${type} | client_id: ${claims.client_id || "-"} | sub: ${claims.sub || "-"} | aud: ${aud} | scope: ${claims.scope || "-"}`
+    );
+}
+
+interface McpRpcBody {
+    method?: string;
+    params?: { name?: string; arguments?: unknown };
+}
+
+function logMcpToolCall(body: unknown, claims: TokenClaims | null): void {
+    if (!body || typeof body !== "object") return;
+
+    const rpc = body as McpRpcBody;
+    if (rpc.method !== "tools/call" || !rpc.params?.name) return;
+
+    const toolName = rpc.params.name;
+    const args = rpc.params.arguments;
+    const caller = callerTag(claims);
+    const scope = claims?.scope || "-";
+
+    console.log(`  → TOOL ${toolName} | caller: ${caller} | scope: ${scope} | args: ${JSON.stringify(args || {})}`);
+}
+
 function getAuthorizationHeader(request: IncomingMessage): string | undefined {
     const authorization = request.headers.authorization;
 
@@ -242,8 +297,13 @@ const httpServer = createServer(async (request, response) => {
         return;
     }
 
+    const authorization = getAuthorizationHeader(request);
+    const claims = decodeTokenClaims(authorization);
+    logRequest(request.method!, request.url!, claims);
+    logMcpToolCall(body, claims);
+
     try {
-        const server = createTravelMcpServer(getAuthorizationHeader(request));
+        const server = createTravelMcpServer(authorization);
         const transport = new StreamableHTTPServerTransport({
             sessionIdGenerator: undefined,
         });
