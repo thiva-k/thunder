@@ -1,0 +1,15 @@
+id: wayfinder-user-role
+name: Wayfinder User
+description: Grants booking permissions for the Wayfinder sample
+ou_id: "{{ .THUNDER_OU_ID }}"
+permissions:
+  - resource_server_id: booking-api-rs
+    permissions:
+      - booking:read
+      - booking:create
+      - booking:cancel
+assignments:
+  - id: wayfinder-demo-user
+    type: user
+  - id: wayfinder-demo-user-2
+    type: user
