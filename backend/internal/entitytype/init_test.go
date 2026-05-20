@@ -1213,8 +1213,9 @@ schema: |
 	assert.Contains(t, err.Error(), "failed to load entity type resources")
 }
 
-// TestInitialize_WithDeclarativeResourcesEnabled_OUServiceError tests Initialize when OU service fails
-func TestInitialize_WithDeclarativeResourcesEnabled_OUServiceError(t *testing.T) {
+// TestInitialize_WithDeclarativeResourcesEnabled_OUHandleNotFound tests Initialize when an
+// ou_handle in a declarative resource cannot be resolved.
+func TestInitialize_WithDeclarativeResourcesEnabled_OUHandleNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	confDir := tmpDir + "/repository/resources"
 	schemaDir := confDir + "/user_types"
@@ -1227,10 +1228,10 @@ func TestInitialize_WithDeclarativeResourcesEnabled_OUServiceError(t *testing.T)
 	err = os.MkdirAll(cryptoDir, 0750)
 	assert.NoError(t, err)
 
-	// Create a valid YAML file
+	// Create a YAML file that uses an ou_handle that cannot be resolved
 	validSchemaYAML := `id: "test-schema"
 name: "Test Schema"
-organization_unit_id: "550e8400-e29b-41d4-a716-446655440000"
+ou_handle: "nonexistent-handle"
 allow_self_registration: true
 schema: |
   {
@@ -1265,8 +1266,8 @@ schema: |
 	mux := http.NewServeMux()
 	mockOUService := oumock.NewOrganizationUnitServiceInterfaceMock(t)
 
-	// Mock OU service to return an error
-	mockOUService.On("GetOrganizationUnit", mock.Anything, "550e8400-e29b-41d4-a716-446655440000").
+	// Mock OU service to return not-found for the handle
+	mockOUService.On("GetOrganizationUnitByPath", mock.Anything, "nonexistent-handle").
 		Return(oupkg.OrganizationUnit{}, &serviceerror.ServiceError{
 			Code: "OUS-1002",
 			Type: serviceerror.ClientErrorType,
@@ -1281,7 +1282,6 @@ schema: |
 		}).Once()
 	mockConsentService := mockConsentServiceWithDisabled(t)
 
-	// Initialize should return an error due to OU service failure
 	_, _, err = Initialize(mux, cache.Initialize(), mockOUService, nil, mockConsentService)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to load entity type resources")
