@@ -201,7 +201,7 @@ func classifyResourceType(node *yaml.Node) string {
 		matches = append(matches, resourceTypeLayout)
 	}
 
-	if hasAllKeys(node, "type", "attributes", "ou_id") {
+	if hasAllKeys(node, "type", "attributes") && hasAnyKey(node, "ou_id", "ou_handle") {
 		matches = append(matches, resourceTypeUser)
 	}
 
@@ -228,8 +228,9 @@ func classifyResourceType(node *yaml.Node) string {
 		matches = append(matches, resourceTypeApplication)
 	}
 
-	if hasAllKeys(node, "name", "ou_id") &&
-		!hasAnyKey(node, "handle", "permissions", "identifier", "type", "flowType", "displayName", "properties") {
+	if hasAllKeys(node, "name") && hasAnyKey(node, "ou_id", "ou_handle") &&
+		!hasAnyKey(node, "handle", "permissions", "identifier", "type", "flowType",
+			"displayName", "properties", "schema") {
 		matches = append(matches, resourceTypeGroup)
 	}
 

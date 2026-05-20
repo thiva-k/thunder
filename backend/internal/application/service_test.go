@@ -3348,6 +3348,35 @@ func (suite *ServiceTestSuite) TestValidateApplicationFields_OUHandleNotFound() 
 	assert.Equal(suite.T(), ErrorInvalidRequestFormat.Code, svcErr.Code)
 }
 
+// TestValidateApplicationFields_OUIDWinsWhenBothProvided verifies that when both ou_id and
+// ou_handle are supplied, ou_id wins and no handle resolution is attempted (the absence of a
+// GetOrganizationUnitByPath mock expectation asserts that). This covers the WARN-on-collision
+// branch in validateApplicationFields.
+func (suite *ServiceTestSuite) TestValidateApplicationFields_OUIDWinsWhenBothProvided() {
+	testConfig := &config.Config{
+		DeclarativeResources: config.DeclarativeResources{Enabled: false},
+	}
+	config.ResetServerRuntime()
+	require.NoError(suite.T(), config.InitializeServerRuntime("/tmp/test", testConfig))
+	defer config.ResetServerRuntime()
+
+	service, _ := suite.setupTestService()
+
+	app := &model.ApplicationDTO{
+		Name:     "test-app",
+		OUID:     testOUID,
+		OUHandle: "some-handle",
+	}
+
+	svcErr := service.validateApplicationFields(context.Background(), app)
+
+	assert.Nil(suite.T(), svcErr)
+	assert.Equal(suite.T(), testOUID, app.OUID)
+
+	ouMock := service.ouService.(*oumock.OrganizationUnitServiceInterfaceMock)
+	ouMock.AssertNotCalled(suite.T(), "GetOrganizationUnitByPath", mock.Anything, mock.Anything)
+}
+
 func (suite *ServiceTestSuite) TestValidateApplicationFields_FlowHandleResolutionError() {
 	testConfig := &config.Config{
 		DeclarativeResources: config.DeclarativeResources{Enabled: false},
