@@ -44,12 +44,13 @@ import Layout from '../components/Layout';
 import ConnectionErrorModal from '../components/ConnectionErrorModal';
 import PasskeyRegPrompt from '../components/PasskeyRegPrompt';
 import PasskeyAuthPrompt from '../components/PasskeyAuthPrompt';
-import { 
-    NativeAuthSubmitType, 
+import {
+    NativeAuthSubmitType,
+    FlowServerError,
     initiateNativeAuthFlow,
     initiateNativeAuthFlowWithData,
-    submitNativeAuth, 
-    submitAuthDecision 
+    submitNativeAuth,
+    submitAuthDecision
 } from '../services/authService';
 import type { PasskeyCredentialResponse, PasskeyAssertionResponse } from '../services/authService';
 import useAuth from '../hooks/useAuth';
@@ -84,17 +85,16 @@ interface AuthResponse {
             idpName?: string;
             passkeyCreationOptions?: string;
             passkeyChallenge?: string;
+            emailSent?: string;
         };
     };
     executionId?: string;
 }
 
-// Define the interface for the submission error
-interface SubmissionError {
-    code?: string;
-    message?: string;
-    description?: string;
-}
+const isConnectionFailure = (error: Error) => {
+    const message = error.message?.toLowerCase() || '';
+    return message.includes('failed to fetch') || message.includes('network error');
+};
 
 /**
  * LoginPage component renders the login page with dynamic options based on the server response.
@@ -108,10 +108,12 @@ const LoginPage = () => {
 
     const isComponentReMount = useRef(false);
     const initRef = useRef<((mode?: boolean) => void) | null>(null);
+    const initRecoveryRef = useRef<((resetErrorState?: boolean) => void) | null>(null);
     const { setToken, clearToken } = useAuth();
 
     const [showRememberMe] = useState<boolean>(false);
-    const [showForgotPassword] = useState<boolean>(false);
+    const [isRecoveryMode, setIsRecoveryMode] = useState<boolean>(false);
+    const [emailSent, setEmailSent] = useState<boolean>(false);
     const [error, setError] = useState<boolean>(false);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [connectionError, setConnectionError] = useState<boolean>(false);
@@ -142,6 +144,7 @@ const LoginPage = () => {
     );
     const [regOnlySuccess, setRegOnlySuccess] = useState<boolean>(false);
     const [promptRegistration, setPromptRegistration] = useState<boolean>(false);
+    const showForgotPassword = !isSignupMode && !isRecoveryMode;
     
     // Passkey registration state
     const [passkeyCreationOptions, setPasskeyCreationOptions] = useState<string | null>(null);
@@ -275,7 +278,7 @@ const LoginPage = () => {
     // Process authentication response
     const processAuthResponse = useCallback((data: AuthResponse, selectedAction?: string, autoRedirect: boolean = false) => {
         const isCameFromDecision = needsDecision || autoRedirect;
-        const isMobileLogin = selectedAction && selectedAction.includes('mobile');
+        const isMobileLogin = !!selectedAction && (selectedAction.includes('mobile') || selectedAction.includes('sms'));
 
         setExecutionId(data.executionId || '');
         setChallengeToken(data.challengeToken || '');
@@ -289,9 +292,11 @@ const LoginPage = () => {
                 return;
             }
 
-            const defaultMessage = isSignupMode
-                ? 'Registration failed. Please check your information.'
-                : 'Login failed. Please check your credentials.';
+            const defaultMessage = isRecoveryMode
+                ? 'Recovery failed. Please try again.'
+                : isSignupMode
+                    ? 'Registration failed. Please check your information.'
+                    : 'Login failed. Please check your credentials.';
             setError(true);
             setErrorMessage(data.failureReason || defaultMessage);
             setLoading(false);
@@ -300,7 +305,11 @@ const LoginPage = () => {
             // and restart to get a fresh session with valid executionId/challengeToken.
             sessionStorage.removeItem(EXECUTION_ID_KEY);
             sessionStorage.removeItem(CHALLENGE_TOKEN_KEY);
-            initRef.current?.(isSignupMode);
+            if (isRecoveryMode) {
+                initRecoveryRef.current?.(false);
+            } else {
+                initRef.current?.(isSignupMode);
+            }
             return;
         }
 
@@ -343,7 +352,21 @@ const LoginPage = () => {
                 setPasskeyChallenge(data.data.additionalData.passkeyChallenge);
             }
 
-            // Handle the VIEW response
+            if (data.data?.additionalData?.emailSent === "true") {
+                setEmailSent(true);
+                setLoading(false);
+                return;
+            }
+
+            const hasHiddenInviteToken = data.data?.inputs?.some(
+                (input: AuthInput) => input.identifier === 'inviteToken' && input.type === 'HIDDEN'
+            );
+            if (hasHiddenInviteToken) {
+                setEmailSent(true);
+                setLoading(false);
+                return;
+            }
+
             // Check if this is an input prompt (has inputs to collect)
             if (data.data?.inputs && data.data.inputs.length > 0) {
                 // This is an input prompt - show input fields
@@ -397,7 +420,7 @@ const LoginPage = () => {
         }
 
         setLoading(false);
-    }, [needsDecision, isSignupMode, clearToken, setToken, handleSocialLoginClick]);
+    }, [needsDecision, isRecoveryMode, isSignupMode, clearToken, setToken, handleSocialLoginClick]);
 
     // Handle when user selects an authentication option
     const handleAuthOptionSelection = (actionId: string) => {
@@ -431,6 +454,8 @@ const LoginPage = () => {
         setRegOnlySuccess(false);
         setPasskeyCreationOptions(null);
         setPasskeyChallenge(null);
+        setIsRecoveryMode(false);
+        setEmailSent(false);
 
         initiateNativeAuthFlow(isSignupMode ? 'REGISTRATION' : 'LOGIN')
             .then((result) => {
@@ -509,7 +534,64 @@ const LoginPage = () => {
             });
     }, [clearToken, processAuthResponse, setToken]);
 
+    const initRecovery = useCallback((resetErrorState: boolean = true) => {
+        clearToken();
+        sessionStorage.removeItem(SIGNUP_MODE_KEY);
+        setConnectionError(false);
+        setNeedsDecision(false);
+        setAvailableActions([]);
+        setSelectedAction(null);
+        setFormData({});
+        setInputs([]);
+        setRedirectURL(null);
+        setSocialIdpName('');
+        setRegOnlySuccess(false);
+        setPasskeyCreationOptions(null);
+        setPasskeyChallenge(null);
+        setIsSignupMode(false);
+        setIsRecoveryMode(true);
+        setEmailSent(false);
+        setLoading(true);
+
+        if (resetErrorState) {
+            setError(false);
+            setErrorMessage('');
+        }
+
+        initiateNativeAuthFlow('RECOVERY')
+            .then((result) => {
+                const data = result.data;
+
+                if (data.flowStatus === 'ERROR') {
+                    setError(true);
+                    setErrorMessage(data.failureReason || 'Failed to start recovery. Please try again.');
+                } else if (data.type === 'VIEW' && data.data?.inputs) {
+                    data.data.inputs.forEach((input: AuthInput) => {
+                        setInputs(prev => [...prev, input]);
+                    });
+                    if (data.data.actions) {
+                        setAvailableActions(data.data.actions);
+                    }
+                }
+
+                setExecutionId(data.executionId);
+                setChallengeToken(data.challengeToken || '');
+                setLoading(false);
+            })
+            .catch((nextError: Error) => {
+                console.error('Error during recovery initialization:', nextError);
+                if (isConnectionFailure(nextError)) {
+                    setConnectionError(true);
+                } else {
+                    setError(true);
+                    setErrorMessage(nextError.message || 'Failed to start recovery. Please try again.');
+                }
+                setLoading(false);
+            });
+    }, [clearToken]);
+
     useEffect(() => { initRef.current = init; }, [init]);
+    useEffect(() => { initRecoveryRef.current = initRecovery; }, [initRecovery]);
 
     // Initialize the prompt signup decision action
     const initPromptSignupDecision = () => {
@@ -655,16 +737,29 @@ const LoginPage = () => {
         }
     };
 
-    const handleSubmissionError = (error: SubmissionError) => {
-        // Check if it's a network error or authentication error
-        if (error.message && error.message.includes("Network Error")) {
+    const handleSubmissionError = useCallback((error: Error) => {
+        if (isConnectionFailure(error)) {
             setConnectionError(true);
+            setLoading(false);
+        } else if (error instanceof FlowServerError) {
+            setError(true);
+            setErrorMessage(error.message || 'An unexpected server error occurred. Please try again.');
+            sessionStorage.removeItem(EXECUTION_ID_KEY);
+            sessionStorage.removeItem(CHALLENGE_TOKEN_KEY);
+            sessionStorage.removeItem(SIGNUP_MODE_KEY);
+            sessionStorage.setItem(START_INIT_KEY, 'true');
+            setLoading(false);
+            if (isRecoveryMode) {
+                initRecoveryRef.current?.(false);
+            } else {
+                initRef.current?.(isSignupMode);
+            }
         } else {
             setError(true);
             setErrorMessage(error.message || 'Error during authentication');
+            setLoading(false);
         }
-        setLoading(false);
-    };
+    }, [isRecoveryMode, isSignupMode]);
 
     // Handler for passkey credential creation
     const handlePasskeyCredentialCreated = (credential: PasskeyCredentialResponse) => {
@@ -732,7 +827,11 @@ const LoginPage = () => {
 
     const handleRetry = () => {
         setTimeout(() => {
-            init();
+            if (isRecoveryMode) {
+                initRecoveryRef.current?.(false);
+            } else {
+                init();
+            }
         }, 500);
     };
     
@@ -767,6 +866,12 @@ const LoginPage = () => {
         }
     };
 
+    const isMobileAction = (action?: ActionPrompt) =>
+        !!action?.ref && (action.ref.includes("mobile") || action.ref.includes("sms"));
+
+    const usesMobileNumberField = (action?: ActionPrompt) =>
+        !!action && (action.ref.includes("prompt_mobile") || action.nextNode === "prompt_mobile");
+
     // This effect is to handle initial component mount
     useEffect(() => {
         // Prevent double mount due to React Strict Mode
@@ -799,7 +904,7 @@ const LoginPage = () => {
 
             sessionStorage.setItem(START_INIT_KEY, "true");
         }
-    },[startInit, init, executionId, challengeToken, setToken, processAuthResponse]);
+    }, [startInit, init, executionId, challengeToken, processAuthResponse, handleSubmissionError]);
 
     // Render input fields based on the current inputs array
     const renderInputFields = () => {
@@ -932,9 +1037,7 @@ const LoginPage = () => {
     // Render the login form with side-by-side layout based on the available actions
     const renderSideBySideLoginForm = () => {
         const basicAuthAction = availableActions.find(action => action.ref?.includes("basic_auth"));
-        const mobileAuthActions = availableActions.filter(action => 
-            action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile"
-        );
+        const mobileAuthActions = availableActions.filter(isMobileAction);
         
         const hasSocialAuth = availableActions.some(action => 
             action.ref?.includes("google") || action.ref?.includes("github")
@@ -1007,7 +1110,11 @@ const LoginPage = () => {
                                             label="Remember me"
                                         />
                                     )}
-                                    {showForgotPassword && <Link href="#">Forgot your password?</Link>}
+                                    {showForgotPassword && (
+                                        <Link href="#" onClick={(e) => { e.preventDefault(); initRecovery(); }} underline="hover">
+                                            Forgot your password?
+                                        </Link>
+                                    )}
                                 </Box>
                                 )}
 
@@ -1061,16 +1168,16 @@ const LoginPage = () => {
                             >
                                 <Box display="flex" flexDirection="column" gap={2}>
                                     <Box display="flex" flexDirection="column" gap={0.5}>
-                                        <InputLabel htmlFor={mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"}>
-                                            {mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "Mobile Number" : "Username"}
+                                        <InputLabel htmlFor={usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"}>
+                                            {usesMobileNumberField(mobileAuthActions[0]) ? "Mobile Number" : "Username"}
                                         </InputLabel>
                                         <OutlinedInput
                                             type="text"
-                                            id={mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"}
-                                            name={mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"}
-                                            placeholder={`Enter your ${mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobile number" : "username"}`}
+                                            id={usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"}
+                                            name={usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"}
+                                            placeholder={`Enter your ${usesMobileNumberField(mobileAuthActions[0]) ? "mobile number" : "username"}`}
                                             size="small"
-                                            value={formData[mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"] || ''}
+                                            value={formData[usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"] || ''}
                                             onChange={handleInputChange}
                                             required
                                         />
@@ -1115,9 +1222,7 @@ const LoginPage = () => {
     // Render the regular login form with options stacked vertically
     const renderRegularLoginForm = () => {
         const basicAuthAction = availableActions.find(action => action.ref?.includes("basic_auth"));
-        const mobileAuthActions = availableActions.filter(action => 
-            action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile"
-        );
+        const mobileAuthActions = availableActions.filter(isMobileAction);
         
         const hasBasicAuth = !!basicAuthAction;
         const hasSocialAuth = availableActions.some(action => 
@@ -1148,9 +1253,9 @@ const LoginPage = () => {
                                 color="secondary"
                                 onClick={() => handleAuthOptionSelection(action.ref)}
                                 sx={{ my: 1 }}
-                                startIcon={getSocialLoginIcon(action.nextNode || '')}
+                                startIcon={getSocialLoginIcon(action.ref || '')}
                             >
-                                {getSocialLoginText(action.nextNode || '')}
+                                {getSocialLoginText(action.ref || '')}
                             </Button>
                         ))}
                     </Box>
@@ -1218,9 +1323,11 @@ const LoginPage = () => {
                                             control={<Checkbox name="remember-me-checkbox" />} 
                                             label="Remember me" />
                                     )}
-                                    { showForgotPassword &&
-                                        <Link href="">Forgot your password?</Link>
-                                    }
+                                    {showForgotPassword && (
+                                        <Link href="#" onClick={(e) => { e.preventDefault(); initRecovery(); }} underline="hover">
+                                            Forgot your password?
+                                        </Link>
+                                    )}
                                 </Box>
                             )}
                             <Button
@@ -1249,16 +1356,16 @@ const LoginPage = () => {
                     >
                         <Box display="flex" flexDirection="column" gap={2}>
                             <Box display="flex" flexDirection="column" gap={0.5}>
-                                <InputLabel htmlFor={mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"}>
-                                    {mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "Mobile Number" : "Username"}
+                                <InputLabel htmlFor={usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"}>
+                                    {usesMobileNumberField(mobileAuthActions[0]) ? "Mobile Number" : "Username"}
                                 </InputLabel>
                                 <OutlinedInput
                                     type="text"
-                                    id={mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"}
-                                    name={mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"}
-                                    placeholder={`Enter your ${mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobile number" : "username"}`}
+                                    id={usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"}
+                                    name={usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"}
+                                    placeholder={`Enter your ${usesMobileNumberField(mobileAuthActions[0]) ? "mobile number" : "username"}`}
                                     size="small"
-                                    value={formData[mobileAuthActions[0]?.nextNode === "prompt_mobile" ? "mobileNumber" : "username"] || ''}
+                                    value={formData[usesMobileNumberField(mobileAuthActions[0]) ? "mobileNumber" : "username"] || ''}
                                     onChange={handleInputChange}
                                     required
                                 />
@@ -1317,9 +1424,11 @@ const LoginPage = () => {
                                     control={<Checkbox name="remember-me-checkbox" />} 
                                     label="Remember me" />
                             )}
-                            { showForgotPassword &&
-                                <Link href="">Forgot your password?</Link>
-                            }
+                            {showForgotPassword && (
+                                <Link href="#" onClick={(e) => { e.preventDefault(); initRecovery(); }} underline="hover">
+                                    Forgot your password?
+                                </Link>
+                            )}
                         </Box>
                     )}
 
@@ -1331,7 +1440,7 @@ const LoginPage = () => {
                         } else if (primaryRef.includes('signup') || primaryRef.includes('sign_up')) {
                             label = 'Create Account';
                         } else if (inputs.some(input => input.identifier === 'password' || input.type === 'PASSWORD_INPUT')) {
-                            label = isSignupMode ? 'Create Account' : 'Sign In';
+                            label = isRecoveryMode ? 'Reset Password' : isSignupMode ? 'Create Account' : 'Sign In';
                         } else if (inputs.some(input => input.identifier === 'otp' || input.type === 'OTP_INPUT')) {
                             label = 'Verify OTP';
                         } else {
@@ -1418,14 +1527,14 @@ const LoginPage = () => {
     // Calculate appropriate grid size based on layout complexity
     const gridMdSize = needsDecision 
         && !promptRegistration
-        && availableActions.some(action => action.ref?.includes("basic_auth")) 
-        && availableActions.some(action => action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile") 
+        && availableActions.some(action => action.ref?.includes("basic_auth"))
+        && availableActions.some(action => action.ref?.includes("mobile") || action.ref?.includes("sms"))
         ? 10 : 6;
     const containerBoxMaxWidth = gridMdSize === 10 ? 1000 : 500;
 
     const basicAuthAction = availableActions.find(action => action.ref?.includes("basic_auth"));
-    const mobileAuthActions = availableActions.filter(action => 
-        action.nextNode === "mobile_prompt_username" || action.nextNode === "prompt_mobile"
+    const mobileAuthActions = availableActions.filter(action =>
+        action.ref?.includes("mobile") || action.ref?.includes("sms")
     );
     
     const hasBasicAuth = !!basicAuthAction;
@@ -1468,20 +1577,36 @@ const LoginPage = () => {
                                 ) : regOnlySuccess ? (
                                     <Box sx={{ mb: 4 }}>
                                         <Typography variant="h5" gutterBottom>
-                                            Registration Successful
+                                            {isRecoveryMode ? 'Password Reset Successful' : 'Registration Successful'}
                                         </Typography>
                                         <Typography>
                                             You can now log in to your account.
                                         </Typography>
                                     </Box>
-                                ) : (
+                                ) : !emailSent ? (
                                     <Box sx={{ mb: 4 }}>
                                         <Typography variant="h5" gutterBottom>
-                                            {isSignupMode ? 'Create Account' : 'Login to Account'}
+                                            {isRecoveryMode ? 'Reset Password' : isSignupMode ? 'Create Account' : 'Login to Account'}
                                         </Typography>
 
                                         <Typography>
-                                            {isSignupMode ? (
+                                            {isRecoveryMode ? (
+                                                <>
+                                                    Remember your password?{' '}
+                                                    <Link
+                                                        href="#"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setError(false);
+                                                            setErrorMessage('');
+                                                            init(false);
+                                                        }}
+                                                        underline="hover"
+                                                    >
+                                                        Sign in!
+                                                    </Link>
+                                                </>
+                                            ) : isSignupMode ? (
                                                 <>
                                                     Already have an account?{' '}
                                                     <Link 
@@ -1518,6 +1643,8 @@ const LoginPage = () => {
                                             )}
                                         </Typography>
                                     </Box>
+                                ) : (
+                                    <Box sx={{ mb: 4 }} />
                                 )}
                                 
                                 {connectionError && (
@@ -1534,7 +1661,28 @@ const LoginPage = () => {
                                     </Alert>
                                 )}
 
-                                {!connectionError && (
+                                {!connectionError && emailSent ? (
+                                    <Box sx={{ textAlign: 'center', py: 2 }}>
+                                        <Typography variant="h3" sx={{ mb: 2 }}>✉️</Typography>
+                                        <Typography variant="h5" gutterBottom>
+                                            Check Your Email
+                                        </Typography>
+                                        <Typography sx={{ mb: 3 }}>
+                                            If an account with that username exists, we&apos;ve sent a password reset link to the associated email address.
+                                        </Typography>
+                                        <Button
+                                            variant="outlined"
+                                            fullWidth
+                                            onClick={() => {
+                                                setError(false);
+                                                setErrorMessage('');
+                                                init(false);
+                                            }}
+                                        >
+                                            Back to Login
+                                        </Button>
+                                    </Box>
+                                ) : !connectionError && (
                                     promptRegistration ? (
                                         <Box sx={{ mb: 4 }}>
                                             <Button
