@@ -63,7 +63,7 @@ const siteUrl = process.env.DOCUSAURUS_URL || productConfig.documentation.deploy
 const config: Config = {
   title: productConfig.project.name,
   tagline: productConfig.project.description,
-  favicon: 'assets/images/favicon.ico',
+  favicon: 'assets/images/favicon-inverted.ico',
 
   noIndex: false,
 
@@ -115,6 +115,24 @@ const config: Config = {
 
   headTags: [
     {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/assets/images/logo-mini.svg',
+        media: '(prefers-color-scheme: light)',
+        type: 'image/svg+xml',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/assets/images/logo-mini-inverted.svg',
+        media: '(prefers-color-scheme: dark)',
+        type: 'image/svg+xml',
+      },
+    },
+    {
       tagName: 'script',
       attributes: {},
       innerHTML: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -138,7 +156,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       innerHTML: 'function OptanonWrapper() { }',
     },
   ],
-
 
   plugins: [webpackPlugin, personaPlugin],
 
