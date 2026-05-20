@@ -83,7 +83,7 @@ This command will automatically set up your complete development environment:
 - Starts the backend server
 - Runs the bootstrap script which creates:
   - The `Console` application with the correct redirect URIs
-  - The default admin user (`admin` / `admin`)
+  - The default admin user (credentials default to `admin` / `admin`; configurable via `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars)
 
 **Services that start:**
 
@@ -134,7 +134,7 @@ $env:API_BASE = "https://localhost:8090"
   </CodeBlock>
 </CodeGroup>
 
-This creates the `Console` application and the default admin user (`admin` / `admin`). You only need to do this once — the data persists in the SQLite databases.
+This creates the `Console` application and the default admin user (credentials default to `admin` / `admin`). You only need to do this once — the data persists in the SQLite databases.
 
 :::warning
 Don't use `./setup.sh` here. That script is designed for the packaged distribution zip and expects a compiled `./thunderid` binary at the project root. From source code, always use the bootstrap script directly as shown above, or use `make run` (Option A) which handles everything for you.
@@ -155,7 +155,7 @@ For development environments, `make run` executes the `backend/cmd/server/bootst
 
 - Default Organization Unit
 - Default User Type (Person)
-- Admin user (`admin` / `admin`)
+- Admin user (credentials default to `admin` / `admin`; configurable via `ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars)
 - System resource server with system actions and permissions
 - Administrator role and role assignment
 - `Console` application
