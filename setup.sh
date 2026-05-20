@@ -50,6 +50,16 @@ BOOTSTRAP_SKIP_PATTERN="${BOOTSTRAP_SKIP_PATTERN:-}"
 BOOTSTRAP_ONLY_PATTERN="${BOOTSTRAP_ONLY_PATTERN:-}"
 BOOTSTRAP_DIR="${BOOTSTRAP_DIR:-./bootstrap}"
 WITH_CONSENT=${WITH_CONSENT:-true}
+ADMIN_USERNAME_PROVIDED=false
+ADMIN_PASSWORD_PROVIDED=false
+if [[ -n "${ADMIN_USERNAME:-}" ]]; then
+    ADMIN_USERNAME_PROVIDED=true
+fi
+if [[ -n "${ADMIN_PASSWORD:-}" ]]; then
+    ADMIN_PASSWORD_PROVIDED=true
+fi
+ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
 
 # Color codes
 RED='\033[0;31m'
@@ -131,6 +141,10 @@ print_help() {
     echo "  --debug                  Enable debug mode with remote debugging"
     echo "  --debug-port PORT        Set debug port (default: 2345)"
     echo "  --without-consent        Disable the bundled consent server"
+    echo "  --admin-username VALUE   Username for the default admin user (default: admin)"
+    echo "                           Falls back to ADMIN_USERNAME env var if flag not set"
+    echo "  --admin-password VALUE   Password for the default admin user (default: admin)"
+    echo "                           Falls back to ADMIN_PASSWORD env var if flag not set"
     echo "  --help                   Show this help message"
     echo ""
     echo "Description:"
@@ -166,6 +180,24 @@ while [[ $# -gt 0 ]]; do
             WITH_CONSENT=false
             shift
             ;;
+        --admin-username)
+            if [[ -z "${2:-}" || "${2:-}" == --* ]]; then
+                echo -e "${RED}--admin-username requires a non-empty value${NC}"
+                exit 1
+            fi
+            ADMIN_USERNAME="$2"
+            ADMIN_USERNAME_PROVIDED=true
+            shift 2
+            ;;
+        --admin-password)
+            if [[ -z "${2:-}" || "${2:-}" == --* ]]; then
+                echo -e "${RED}--admin-password requires a non-empty value${NC}"
+                exit 1
+            fi
+            ADMIN_PASSWORD="$2"
+            ADMIN_PASSWORD_PROVIDED=true
+            shift 2
+            ;;
         --help)
             print_help
             exit 0
@@ -177,6 +209,28 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# ============================================================================
+# Prompt for Admin Credentials (interactive mode only)
+# ============================================================================
+
+# Prompt for any credential not supplied via CLI flags or environment
+# variables, but only when stdin is a terminal.
+if [ -t 0 ] && [[ "$ADMIN_USERNAME_PROVIDED" == "false" || "$ADMIN_PASSWORD_PROVIDED" == "false" ]]; then
+    echo ""
+    echo "Configure the default admin user (press Enter to accept defaults):"
+    echo ""
+    if [[ "$ADMIN_USERNAME_PROVIDED" == "false" ]]; then
+        read -r -p "  Admin username [admin]: " _input_username
+        ADMIN_USERNAME="${_input_username:-admin}"
+    fi
+    if [[ "$ADMIN_PASSWORD_PROVIDED" == "false" ]]; then
+        read -r -s -p "  Admin password [admin]: " _input_password
+        echo ""
+        ADMIN_PASSWORD="${_input_password:-admin}"
+    fi
+    echo ""
+fi
 
 # ============================================================================
 # Read Configuration from deployment.yaml
@@ -440,6 +494,8 @@ export PUBLIC_URL="${PUBLIC_URL}"
 export SYSTEM_RS_HANDLE="${SYSTEM_RS_HANDLE}"
 export SYSTEM_RS_IDENTIFIER="${SYSTEM_RS_IDENTIFIER}"
 export SETUP_SILENT_MODE="${SILENT_MODE}"
+export ADMIN_USERNAME
+export ADMIN_PASSWORD
 
 # FD3 always points to the real terminal stdout.
 # Quiet-mode result markers write to FD3 so they reach the terminal even
@@ -617,10 +673,7 @@ if [ "$SILENT_MODE" = "true" ]; then
     echo "✅ Setup completed successfully!"
     echo "========================================="
     echo ""
-    echo "Admin credentials:"
-    echo "  URL:      ${PUBLIC_URL}/console"
-    echo "  Username: admin"
-    echo "  Password: admin"
+    echo "Console URL: ${PUBLIC_URL}/console"
     echo ""
     echo "Run ./start.sh to start ${PRODUCT_NAME}."
     echo ""
