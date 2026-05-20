@@ -245,15 +245,35 @@ echo ""
 # Create Admin User
 # ============================================================================
 
+ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin}"
+
+if [[ "$ADMIN_USERNAME" == "admin" && "$ADMIN_PASSWORD" == "admin" ]]; then
+    log_warning "Using default admin credentials (admin/admin). Set ADMIN_USERNAME and ADMIN_PASSWORD or use --admin-username/--admin-password to override."
+fi
+
 log_info "Creating admin user..."
+
+# JSON-escape username and password to safely embed arbitrary characters in the payload.
+json_escape() {
+    local s="$1"
+    s="${s//\\/\\\\}"
+    s="${s//\"/\\\"}"
+    s="${s//$'\n'/\\n}"
+    s="${s//$'\r'/\\r}"
+    s="${s//$'\t'/\\t}"
+    printf '%s' "$s"
+}
+ADMIN_USERNAME_JSON=$(json_escape "$ADMIN_USERNAME")
+ADMIN_PASSWORD_JSON=$(json_escape "$ADMIN_PASSWORD")
 
 RESPONSE=$(api_call POST "/users" '{
   "type": "Person",
   "ouId": "'${DEFAULT_OU_ID}'",
   "attributes": {
-    "username": "admin",
-    "password": "admin",
-    "sub": "admin",
+    "username": "'"${ADMIN_USERNAME_JSON}"'",
+    "password": "'"${ADMIN_PASSWORD_JSON}"'",
+    "sub": "'"${ADMIN_USERNAME_JSON}"'",
     "email": "admin@example.com",
     "name": "Administrator",
     "given_name": "Admin",
@@ -268,8 +288,7 @@ BODY="${RESPONSE%???}"
 
 if [[ "$HTTP_CODE" == "201" ]] || [[ "$HTTP_CODE" == "200" ]]; then
     log_success "Admin user created successfully"
-    log_info "Username: admin"
-    log_info "Password: admin"
+    log_info "Username: ${ADMIN_USERNAME}"
 
     # Extract admin user ID
     ADMIN_USER_ID=$(echo "$BODY" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
@@ -287,12 +306,15 @@ elif [[ "$HTTP_CODE" == "409" ]]; then
     BODY="${RESPONSE%???}"
 
     if [[ "$HTTP_CODE" == "200" ]]; then
+        # Escape regex metacharacters so usernames like "admin.test" match literally.
+        ADMIN_USERNAME_REGEX=$(printf '%s' "$ADMIN_USERNAME" | sed 's/[.[*^$()+?{|\\]/\\&/g')
+
         # Parse JSON to find admin user
-        ADMIN_USER_ID=$(echo "$BODY" | grep -o '"id":"[^"]*","[^"]*":"[^"]*","attributes":{[^}]*"username":"admin"' | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+        ADMIN_USER_ID=$(echo "$BODY" | grep -o "\"id\":\"[^\"]*\",\"[^\"]*\":\"[^\"]*\",\"attributes\":{[^}]*\"username\":\"${ADMIN_USERNAME_REGEX}\"" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
         # Fallback parsing
         if [[ -z "$ADMIN_USER_ID" ]]; then
-            ADMIN_USER_ID=$(echo "$BODY" | sed 's/},{/}\n{/g' | grep '"username":"admin"' | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
+            ADMIN_USER_ID=$(echo "$BODY" | sed 's/},{/}\n{/g' | grep "\"username\":\"${ADMIN_USERNAME_REGEX}\"" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
         fi
 
         if [[ -n "$ADMIN_USER_ID" ]]; then

@@ -1097,6 +1097,8 @@ function run() {
     API_BASE="$BASE_URL" \
         SYSTEM_RS_HANDLE="$SYSTEM_RS_HANDLE" \
         SYSTEM_RS_IDENTIFIER="$SYSTEM_RS_IDENTIFIER" \
+        ADMIN_USERNAME="${ADMIN_USERNAME:-}" \
+        ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" \
         "$BACKEND_BASE_DIR/cmd/server/bootstrap/01-default-resources.sh" \
         --console-redirect-uris "https://localhost:$CONSOLE_APP_DEFAULT_PORT/console"
 
