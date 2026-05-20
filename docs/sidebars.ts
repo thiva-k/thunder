@@ -21,6 +21,7 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 import browserSdkSidebar from './content/sdks/browser/sidebar';
 import expressSdkSidebar from './content/sdks/express/sidebar';
+import nextjsSdkSidebar from './content/sdks/nextjs/sidebar';
 import reactSdkSidebar from './content/sdks/react/sidebar';
 import nodeSdkSidebar from './content/sdks/node/sidebar';
 import vueSdkSidebar from './content/sdks/vue/sidebar';
@@ -111,6 +112,11 @@ const sidebars: SidebarsConfig = {
               type: 'doc',
               id: 'guides/getting-started/connect-your-application/nuxt',
               label: 'Nuxt',
+            },
+            {
+              type: 'doc',
+              id: 'guides/getting-started/connect-your-application/nextjs',
+              label: 'Next.js',
             },
             {
               type: 'doc',
@@ -412,6 +418,7 @@ const sidebars: SidebarsConfig = {
   nodeSdkSidebar,
   vueSdkSidebar,
   browserSdkSidebar,
+  nextjsSdkSidebar,
   communitySidebar: [
     // Community Section
     {

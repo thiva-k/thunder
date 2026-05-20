@@ -145,8 +145,8 @@ describe('TechnologyBasedApplicationTemplateMetadata', () => {
       expect(nextjsMetadata?.template).toHaveProperty(['defaults', 'name']);
     });
 
-    it('should be marked as disabled', () => {
-      expect(nextjsMetadata?.disabled).toBe(true);
+    it('should not be disabled', () => {
+      expect(nextjsMetadata?.disabled).not.toBe(true);
     });
   });
 

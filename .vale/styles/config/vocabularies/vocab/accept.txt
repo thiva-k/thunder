@@ -80,3 +80,8 @@ mkdir
 [Ww]ayfinder
 [Dd]eclaratively
 client_credentials
+npx
+[Bb]oolean
+[Ee]xpiresAt
+[Ss]essionStorage
+[Ll]ocalStorage
