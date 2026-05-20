@@ -290,6 +290,7 @@ const sidebars: SidebarsConfig = {
           items: [
             {type: 'doc', id: 'use-cases/b2c/customer-identity', label: 'Customer Identity'},
             {type: 'doc', id: 'use-cases/b2c/solution-patterns', label: 'Solution Patterns'},
+            {type: 'doc', id: 'use-cases/b2c/try-it-out', label: 'Try It Out', key: 'b2c-try-it-out'},
           ],
         },
         {
@@ -312,6 +313,7 @@ const sidebars: SidebarsConfig = {
             {type: 'doc', id: 'use-cases/ai-agents/connect-to-services', label: 'Connect to Services'},
             {type: 'doc', id: 'use-cases/ai-agents/multi-agent-workflows', label: 'Multi-Agent Workflows'},
             {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization', label: 'MCP Authorization'},
+            {type: 'doc', id: 'use-cases/ai-agents/try-it-out', label: 'Try It Out', key: 'ai-agents-try-it-out'},
           ],
         },
       ],
