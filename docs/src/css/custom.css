@@ -1030,6 +1030,9 @@ aside.theme-doc-sidebar-container {
 .apis-page .scalar-api-reference aside {
   width: var(--doc-sidebar-width);
   background: var(--oxygen-palette-background-paper);
+  /* Cap to usable viewport height so last nav items are always reachable */
+  max-height: calc(100vh - var(--ifm-navbar-height) - var(--docusaurus-announcement-bar-height, 0px)) !important;
+  overflow-y: auto !important;
 }
 
 .apis-page .scalar-api-reference main, .apis-page .scalar-api-reference .narrow-references-container {
@@ -1038,10 +1041,8 @@ aside.theme-doc-sidebar-container {
   background-blend-mode: var(--site-background-blend-mode);
 }
 
-/* Capitalize the Scalar side bar item text transformation */
-.apis-page .scalar-api-reference aside .group\/items > .group\/item .group\/button {
-  text-transform: capitalize;
-}
+/* Scalar side bar item text transformation — removed: tags now use correct
+   Title Case directly in the spec files, so no CSS override is needed. */
 
 /* Hide the introduction in side panel & content in Scalar since it's redundant with the content in the main page. */
 .apis-page .scalar-api-reference aside .group\/items > .group\/item:first-child {
@@ -1052,9 +1053,132 @@ aside.theme-doc-sidebar-container {
   display: none;
 }
 
-/* Capitalize section headers in the API reference */
-.apis-page .scalar-api-reference main .section-header-label {
-  text-transform: capitalize;
+/* Section headers in the API reference — removed text-transform; heading
+   casing comes from tag names in the spec files. */
+
+/* Response rows: allow both the header summary and the description body to wrap fully */
+.apis-page .response-heading .truncate,
+.apis-page .response-description,
+.apis-page .response-description p,
+.apis-page .response-description-markdown {
+  overflow: visible !important;
+  text-overflow: unset !important;
+  white-space: normal !important;
+}
+
+/* Soften the content-type badge (e.g. "application/json") in response rows —
+   it carries secondary information and should not compete with status codes */
+.apis-page .response-card .tab {
+  font-size: 0.7rem !important;
+  opacity: 0.75;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+}
+
+/* Slightly more vertical breathing room between response rows */
+.apis-page .response-card + .response-card {
+  margin-top: 2px;
+}
+
+/* ----- Request Body / Schema Properties ----------------------------------- */
+
+/* Header row: "Body" + required badge + content-type pill */
+.apis-page .request-body-header {
+  align-items: center;
+  margin-bottom: 12px !important;
+}
+
+/* "required" badge next to "Body" heading — de-emphasise to secondary info */
+.apis-page .request-body-required {
+  font-size: 0.65rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  padding: 1px 5px !important;
+  line-height: 1.5;
+}
+
+/* "application/json" content-type pill — purely secondary metadata */
+.apis-page .selected-content-type {
+  font-size: 0.65rem !important;
+  background: transparent !important;
+  border-color: var(--ifm-color-emphasis-300) !important;
+  color: var(--ifm-color-content-secondary, var(--ifm-color-emphasis-600)) !important;
+}
+
+/* Individual property rows — more vertical breathing room */
+.apis-page .property {
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+/* Property type details (string, array string[], object · TypeName) — lighter */
+.apis-page .property-detail,
+.apis-page .property-detail-value,
+.apis-page .property-detail-prefix {
+  font-size: 0.72rem !important;
+  color: var(--ifm-color-content-secondary, var(--ifm-color-emphasis-600)) !important;
+  opacity: 0.85;
+}
+
+/* "required" label on individual properties — badge style, not plain orange text */
+.apis-page .property-required {
+  font-size: 0.6rem !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 5px !important;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  line-height: 1.5;
+}
+
+/* Property description — slightly lighter than the name to create clear hierarchy */
+.apis-page .property-description {
+  margin-top: 3px !important;
+  color: var(--ifm-color-content-secondary, var(--ifm-color-emphasis-700)) !important;
+  font-size: 0.875rem !important;
+  line-height: 1.55 !important;
+}
+
+/* "Example" and "Default" labels — keep subtle; only show on hover (Scalar default) */
+.apis-page .property-example-label,
+.apis-page .property-default-label {
+  font-size: 0.68rem !important;
+  opacity: 0.7;
+  border-radius: 4px !important;
+  padding: 1px 6px !important;
+}
+
+/* "+ Show Child Attributes" — match site primary colour instead of default outline */
+.apis-page .schema-card-title--compact {
+  font-size: 0.72rem !important;
+  color: var(--ifm-color-primary) !important;
+  border-color: var(--ifm-color-primary-lighter, var(--ifm-color-primary)) !important;
+  border-radius: 6px !important;
+  padding: 3px 10px !important;
+  margin-top: 6px !important;
+  opacity: 0.9;
+  transition: opacity 0.15s;
+}
+
+.apis-page .schema-card-title--compact:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--ifm-color-primary) 8%, transparent) !important;
+}
+
+/* ========================= MOBILE API PAGE ================================ */
+@media (max-width: 996px) {
+  /* Mobile API docs uses MobileApiReference — a purpose-built component that
+     replaces Scalar entirely on narrow viewports. No Scalar CSS overrides are
+     needed here; the mobile component manages its own layout via inline styles.
+     Only the Postman button (already hidden by the component switch) is kept
+     as a safety net. */
+  .apis-page-postman-btn {
+    display: none !important;
+  }
 }
 
 /* ------------------------------ Copy Page Button ---------------------- */

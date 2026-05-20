@@ -1,15 +1,15 @@
 {
   "item": [
     {
-      "id": "a7cdc9aa-b1b4-4f35-9e0b-1f64a5b39320",
-      "name": "languages",
+      "id": "b1a54a53-3e8f-4ebd-9eb5-fe28a50844be",
+      "name": "Languages",
       "description": {
         "content": "List supported languages",
         "type": "text/plain"
       },
       "item": [
         {
-          "id": "254b659b-ca53-484a-90d1-065d4e03c10e",
+          "id": "d28b63fa-0e5f-45a3-bea4-ee4e4fdb65cb",
           "name": "List all languages",
           "request": {
             "name": "List all languages",
@@ -58,8 +58,8 @@
           },
           "response": [
             {
-              "id": "f390476c-a8c1-4d31-b079-01c3ca6bd99e",
-              "name": "List of language tags retrieved successfully",
+              "id": "3fcec0d9-cd89-463a-9d32-8b2166cf72e0",
+              "name": "List of language tags",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -121,7 +121,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "6ff1e437-1ad8-4ceb-ba1d-5aed926cbd0f",
+              "id": "d1107384-4638-497b-86d4-dc90d2a0c6c0",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -193,7 +193,7 @@
       "event": []
     },
     {
-      "id": "499477ed-b41b-46b5-a0b6-5b0bb262e47a",
+      "id": "6b1b36b7-8b93-4f57-ba71-8e1fc82f30f6",
       "name": "resolve",
       "description": {
         "content": "Resolve translations (runtime)",
@@ -201,7 +201,7 @@
       },
       "item": [
         {
-          "id": "ba975073-d317-4922-84ee-ed0f437848f8",
+          "id": "cd2f992f-4961-4667-b222-bddceed9b818",
           "name": "Resolve all translations for a language",
           "request": {
             "name": "Resolve all translations for a language",
@@ -234,7 +234,7 @@
                   "type": "any",
                   "value": "<string>",
                   "key": "language",
-                  "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                  "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                 },
                 {
                   "description": {
@@ -267,8 +267,8 @@
           },
           "response": [
             {
-              "id": "57a7c808-751d-492c-9d66-f4eeea42dde0",
-              "name": "Translations resolved successfully",
+              "id": "6ca8f0e1-e8e3-4ba6-aa1f-8a57adfe6dd3",
+              "name": "Translations resolved",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -293,7 +293,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -340,13 +340,13 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"consecteturd\": {\n      \"elit9a_\": \"<string>\"\n    },\n    \"et5b\": {\n      \"ex_8_\": \"<string>\",\n      \"voluptate_7\": \"<string>\",\n      \"magnac\": \"<string>\",\n      \"adipisicing2\": \"<string>\"\n    },\n    \"ex3e\": {\n      \"exercitation_ee\": \"<string>\"\n    },\n    \"Duis0c\": {\n      \"Ut_05a\": \"<string>\",\n      \"do_d8b\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
+              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"aute48f\": {\n      \"pariatur_4e\": \"<string>\",\n      \"ute\": \"<string>\",\n      \"tempor_10\": \"<string>\"\n    },\n    \"amet_22b\": {\n      \"quis_0c8\": \"<string>\",\n      \"ut_d7f\": \"<string>\"\n    },\n    \"enim39\": {\n      \"ullamco4\": \"<string>\",\n      \"qui99\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "d619ad8a-b6d1-48c2-a78a-0f77c7532a3f",
-              "name": "Bad request - Invalid input",
+              "id": "de10a0c6-625b-4029-a279-f6b7fa02ade3",
+              "name": "Bad request",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -371,7 +371,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -423,7 +423,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "80218d0c-ae6e-4744-b74b-ee06f6cf33a5",
+              "id": "e635fbc2-e685-4e75-9606-8d5b6284b880",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -449,7 +449,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -507,7 +507,7 @@
           }
         },
         {
-          "id": "f193a05b-b5d2-461e-afb8-b37e4c8d95fe",
+          "id": "92b2e361-f843-4e59-bffa-ba083b0a8d39",
           "name": "Resolve a single translation",
           "request": {
             "name": "Resolve a single translation",
@@ -537,7 +537,7 @@
                   "type": "any",
                   "value": "<string>",
                   "key": "language",
-                  "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                  "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                 },
                 {
                   "disabled": false,
@@ -584,8 +584,8 @@
           },
           "response": [
             {
-              "id": "66294b04-db54-47fc-b9ae-5bd270624fd3",
-              "name": "Translation resolved successfully",
+              "id": "2cdec81a-a610-4cb8-bd0a-66a2ccd27fd0",
+              "name": "Translation resolved",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -609,7 +609,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -675,8 +675,8 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "8123816d-6a63-4491-a6bd-099a6253a266",
-              "name": "Bad request - Invalid input",
+              "id": "e058359e-861c-4803-8aaa-545e5e544afe",
+              "name": "Bad request",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -700,7 +700,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -766,8 +766,8 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "8d8a3bfc-66af-4428-9da8-1c5895e2884a",
-              "name": "Resource not found",
+              "id": "bc0c5720-d871-4546-bb98-897a4af9df85",
+              "name": "Translation not found",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -791,7 +791,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -857,7 +857,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "2d11bbcc-aaed-4e14-a548-8b0100e155f5",
+              "id": "c40b5706-dd0c-4f74-88a1-a926aeb774a2",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -882,7 +882,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -957,7 +957,7 @@
       "event": []
     },
     {
-      "id": "a9c0f554-6071-4676-b025-694975e00ede",
+      "id": "ebe12336-c769-4cc0-8ae1-257da78ba7fd",
       "name": "management",
       "description": {
         "content": "Manage translations (admin)",
@@ -965,7 +965,7 @@
       },
       "item": [
         {
-          "id": "4b114fbd-a866-4295-9ba7-a88f37db3ec8",
+          "id": "bc6c6a5e-e664-4eda-9eb6-88372da812d9",
           "name": "Set translations for a language",
           "request": {
             "name": "Set translations for a language",
@@ -990,7 +990,7 @@
                   "type": "any",
                   "value": "<string>",
                   "key": "language",
-                  "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                  "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                 },
                 {
                   "description": {
@@ -1026,7 +1026,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"translations\": {\n    \"occaecat_f1\": {\n      \"laboris_6_\": \"<string>\",\n      \"consectetur_87d\": \"<string>\"\n    },\n    \"pariatur87\": {\n      \"enim8\": \"<string>\",\n      \"officia4c\": \"<string>\"\n    },\n    \"minim02\": {\n      \"non_b08\": \"<string>\",\n      \"irure6\": \"<string>\"\n    }\n  }\n}",
+              "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1036,8 +1036,8 @@
           },
           "response": [
             {
-              "id": "8b83bd18-c602-4ea4-98a6-290437560521",
-              "name": "Custom translations set successfully",
+              "id": "6b9a81ea-7191-4e55-af1d-878c3b81c872",
+              "name": "Custom translations set",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1056,7 +1056,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -1095,7 +1095,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"occaecat_f1\": {\n      \"laboris_6_\": \"<string>\",\n      \"consectetur_87d\": \"<string>\"\n    },\n    \"pariatur87\": {\n      \"enim8\": \"<string>\",\n      \"officia4c\": \"<string>\"\n    },\n    \"minim02\": {\n      \"non_b08\": \"<string>\",\n      \"irure6\": \"<string>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1111,13 +1111,13 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"consecteturd\": {\n      \"elit9a_\": \"<string>\"\n    },\n    \"et5b\": {\n      \"ex_8_\": \"<string>\",\n      \"voluptate_7\": \"<string>\",\n      \"magnac\": \"<string>\",\n      \"adipisicing2\": \"<string>\"\n    },\n    \"ex3e\": {\n      \"exercitation_ee\": \"<string>\"\n    },\n    \"Duis0c\": {\n      \"Ut_05a\": \"<string>\",\n      \"do_d8b\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
+              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"aute48f\": {\n      \"pariatur_4e\": \"<string>\",\n      \"ute\": \"<string>\",\n      \"tempor_10\": \"<string>\"\n    },\n    \"amet_22b\": {\n      \"quis_0c8\": \"<string>\",\n      \"ut_d7f\": \"<string>\"\n    },\n    \"enim39\": {\n      \"ullamco4\": \"<string>\",\n      \"qui99\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "f02a5362-429b-4dcf-896e-7cd948ea6b89",
-              "name": "Bad request - Invalid input",
+              "id": "24b18ab7-a199-48de-b4af-49db727ce7cd",
+              "name": "Bad request",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1136,7 +1136,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -1175,7 +1175,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"occaecat_f1\": {\n      \"laboris_6_\": \"<string>\",\n      \"consectetur_87d\": \"<string>\"\n    },\n    \"pariatur87\": {\n      \"enim8\": \"<string>\",\n      \"officia4c\": \"<string>\"\n    },\n    \"minim02\": {\n      \"non_b08\": \"<string>\",\n      \"irure6\": \"<string>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1196,167 +1196,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "4128fb10-adbf-4b70-ae40-822fa4777ba1",
-              "name": "Authentication required",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "POST",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"occaecat_f1\": {\n      \"laboris_6_\": \"<string>\",\n      \"consectetur_87d\": \"<string>\"\n    },\n    \"pariatur87\": {\n      \"enim8\": \"<string>\",\n      \"officia4c\": \"<string>\"\n    },\n    \"minim02\": {\n      \"non_b08\": \"<string>\",\n      \"irure6\": \"<string>\"\n    }\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "47ca4693-040f-4385-b57f-c9e94444d6b8",
-              "name": "Insufficient permissions",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "POST",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"occaecat_f1\": {\n      \"laboris_6_\": \"<string>\",\n      \"consectetur_87d\": \"<string>\"\n    },\n    \"pariatur87\": {\n      \"enim8\": \"<string>\",\n      \"officia4c\": \"<string>\"\n    },\n    \"minim02\": {\n      \"non_b08\": \"<string>\",\n      \"irure6\": \"<string>\"\n    }\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "320a8790-5595-4bd0-bf7a-b0d5545047bb",
+              "id": "804372de-a186-4678-89fd-7445bf6c4cb3",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1376,7 +1216,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -1415,7 +1255,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"occaecat_f1\": {\n      \"laboris_6_\": \"<string>\",\n      \"consectetur_87d\": \"<string>\"\n    },\n    \"pariatur87\": {\n      \"enim8\": \"<string>\",\n      \"officia4c\": \"<string>\"\n    },\n    \"minim02\": {\n      \"non_b08\": \"<string>\",\n      \"irure6\": \"<string>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1442,7 +1282,7 @@
           }
         },
         {
-          "id": "f33727e1-4a8a-4a15-ad78-88b4d8eabfc6",
+          "id": "7529d175-12b1-4e27-a480-d137d3edd67e",
           "name": "Clear all translations for a language",
           "request": {
             "name": "Clear all translations for a language",
@@ -1467,7 +1307,7 @@
                   "type": "any",
                   "value": "<string>",
                   "key": "language",
-                  "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                  "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                 },
                 {
                   "description": {
@@ -1500,8 +1340,8 @@
           },
           "response": [
             {
-              "id": "1c399507-c01d-46bf-b497-58c1c08a850a",
-              "name": "Translations reset to default successfully",
+              "id": "3f06f86a-83e3-4dcd-bbd1-3e97e97a76aa",
+              "name": "Custom translations cleared",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1520,7 +1360,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -1568,8 +1408,8 @@
               "_postman_previewlanguage": "text"
             },
             {
-              "id": "c3cd9747-69da-426a-b970-ede1a6a6ab71",
-              "name": "Bad request - Invalid input",
+              "id": "4792a6f6-a080-4eb6-9036-8e4b72a96354",
+              "name": "Bad request",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1588,7 +1428,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -1640,151 +1480,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "7026a596-6860-4363-8add-f44b0e15434b",
-              "name": "Authentication required",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "a267aa59-98dd-448b-a139-562ca039b22a",
-              "name": "Insufficient permissions",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "5e32b306-b017-4200-b9a5-f92b6273bc2a",
+              "id": "bdeabdf6-994d-4fd5-b470-86a6d46907bb",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1804,7 +1500,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "description": {
@@ -1862,7 +1558,7 @@
           }
         },
         {
-          "id": "8117738b-d6e7-46ff-aa27-87ebb1ed4cda",
+          "id": "32547935-934d-4bf4-ab74-f2697b20342c",
           "name": "Set a single translation",
           "request": {
             "name": "Set a single translation",
@@ -1891,7 +1587,7 @@
                   "type": "any",
                   "value": "<string>",
                   "key": "language",
-                  "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                  "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                 },
                 {
                   "disabled": false,
@@ -1951,8 +1647,8 @@
           },
           "response": [
             {
-              "id": "0b2eaa0e-109e-40aa-b8d7-b9e88f35f4bc",
-              "name": "Translation set successfully",
+              "id": "14e7ef48-e76e-424e-a4ef-b926a769d2c1",
+              "name": "Translation set",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -1975,7 +1671,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -2049,8 +1745,8 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "df2c8857-1c46-4dbe-9bff-d4516e75d9e6",
-              "name": "Bad request - Invalid input",
+              "id": "04c1ac00-23b6-41ec-b4b7-230c82b20446",
+              "name": "Bad request",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -2073,7 +1769,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -2147,203 +1843,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "f3e7ea89-5cb8-4229-b863-6c0ec989092e",
-              "name": "Authentication required",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations",
-                    "ns",
-                    ":namespace",
-                    "keys",
-                    ":key"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "namespace",
-                      "description": "(Required) Namespace for grouping translations (e.g., `auth`, `errors`, `common`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "key",
-                      "description": "(Required) Translation key within the namespace (e.g., `login.button`, `user.not_found`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "POST",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"value\": \"<string>\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "2af86717-a491-4869-aa3e-66da3b8bce57",
-              "name": "Insufficient permissions",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations",
-                    "ns",
-                    ":namespace",
-                    "keys",
-                    ":key"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "namespace",
-                      "description": "(Required) Namespace for grouping translations (e.g., `auth`, `errors`, `common`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "key",
-                      "description": "(Required) Translation key within the namespace (e.g., `login.button`, `user.not_found`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "POST",
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"value\": \"<string>\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "286a218d-f9a2-456d-977f-792c72262dbb",
+              "id": "74d06a34-a84c-48ec-b037-a41b9fc32bc0",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -2367,7 +1867,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -2447,12 +1947,12 @@
           }
         },
         {
-          "id": "952970be-7632-4a05-82be-7f3137a0ac69",
+          "id": "0ae99c58-7605-424c-9324-5023cf8514b4",
           "name": "Clear a single translation",
           "request": {
             "name": "Clear a single translation",
             "description": {
-              "content": "Removes the custom translation.",
+              "content": "Removes the custom translation for the specified language, namespace, and key.",
               "type": "text/plain"
             },
             "url": {
@@ -2476,7 +1976,7 @@
                   "type": "any",
                   "value": "<string>",
                   "key": "language",
-                  "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                  "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                 },
                 {
                   "disabled": false,
@@ -2523,8 +2023,8 @@
           },
           "response": [
             {
-              "id": "2d6fdb6d-035d-42d2-a554-223ab7e807dd",
-              "name": "Translations reset to default successfully",
+              "id": "d76cf114-c097-40f6-995d-04e2f9c66606",
+              "name": "Custom translation cleared",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -2547,7 +2047,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -2609,8 +2109,8 @@
               "_postman_previewlanguage": "text"
             },
             {
-              "id": "ea60dc3d-91e1-4637-b17d-0d0280236b4b",
-              "name": "Bad request - Invalid input",
+              "id": "3641dd48-dcd3-499d-9110-5cfe829ea83c",
+              "name": "Bad request",
               "originalRequest": {
                 "url": {
                   "path": [
@@ -2633,7 +2133,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -2699,277 +2199,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "b75da969-77a2-48f5-a6dc-564e39066a4b",
-              "name": "Authentication required",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations",
-                    "ns",
-                    ":namespace",
-                    "keys",
-                    ":key"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "namespace",
-                      "description": "(Required) Namespace for grouping translations (e.g., `auth`, `errors`, `common`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "key",
-                      "description": "(Required) Translation key within the namespace (e.g., `login.button`, `user.not_found`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Unauthorized",
-              "code": 401,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "3b1549c4-8c6e-4c73-9802-f4d6ccb4b80e",
-              "name": "Insufficient permissions",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations",
-                    "ns",
-                    ":namespace",
-                    "keys",
-                    ":key"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "namespace",
-                      "description": "(Required) Namespace for grouping translations (e.g., `auth`, `errors`, `common`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "key",
-                      "description": "(Required) Translation key within the namespace (e.g., `login.button`, `user.not_found`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Forbidden",
-              "code": 403,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "4fc665f4-9326-4d60-bdd5-6134d9f90686",
-              "name": "Resource not found",
-              "originalRequest": {
-                "url": {
-                  "path": [
-                    "i18n",
-                    "languages",
-                    ":language",
-                    "translations",
-                    "ns",
-                    ":namespace",
-                    "keys",
-                    ":key"
-                  ],
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "query": [],
-                  "variable": [
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "namespace",
-                      "description": "(Required) Namespace for grouping translations (e.g., `auth`, `errors`, `common`)."
-                    },
-                    {
-                      "disabled": false,
-                      "type": "any",
-                      "value": "<string>",
-                      "key": "key",
-                      "description": "(Required) Translation key within the namespace (e.g., `login.button`, `user.not_found`)."
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{host}}",
-                      "key": "host"
-                    },
-                    {
-                      "description": {
-                        "content": "",
-                        "type": "text/plain"
-                      },
-                      "type": "any",
-                      "value": "{{port}}",
-                      "key": "port"
-                    }
-                  ]
-                },
-                "header": [
-                  {
-                    "description": {
-                      "content": "Added as a part of security scheme: oauth2",
-                      "type": "text/plain"
-                    },
-                    "key": "Authorization",
-                    "value": "<token>"
-                  },
-                  {
-                    "key": "Accept",
-                    "value": "application/json"
-                  }
-                ],
-                "method": "DELETE",
-                "body": {}
-              },
-              "status": "Not Found",
-              "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "body": "{\n  \"code\": \"<string>\",\n  \"message\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  },\n  \"description\": {\n    \"key\": \"<string>\",\n    \"defaultValue\": \"<string>\"\n  }\n}",
-              "cookie": [],
-              "_postman_previewlanguage": "json"
-            },
-            {
-              "id": "043dc839-ad10-400c-98ea-517c038e8559",
+              "id": "8d8aff31-5516-4601-a253-202729e00952",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -2993,7 +2223,7 @@
                       "type": "any",
                       "value": "<string>",
                       "key": "language",
-                      "description": "(Required) Language tag in BCP 47 format (e.g., `en`, `es`, `fr-CA`)."
+                      "description": "(Required) Language tag in canonical BCP 47 format (e.g., `en-US`, `es`, `fr-CA`)."
                     },
                     {
                       "disabled": false,
@@ -3092,31 +2322,49 @@
       "type": "string",
       "value": "https://{{host}}:{{port}}",
       "key": "baseUrl"
+    },
+    {
+      "key": "clientId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "clientSecret",
+      "value": "",
+      "type": "string"
     }
   ],
   "auth": {
     "type": "oauth2",
     "oauth2": [
       {
-        "key": "scope",
-        "value": "system"
+        "key": "grant_type",
+        "value": "client_credentials"
       },
       {
         "key": "accessTokenUrl",
         "value": "{{baseUrl}}/oauth2/token"
       },
       {
-        "key": "authUrl",
-        "value": "{{baseUrl}}/oauth2/authorize"
+        "key": "clientId",
+        "value": "{{clientId}}"
       },
       {
-        "key": "grant_type",
-        "value": "authorization_code"
+        "key": "clientSecret",
+        "value": "{{clientSecret}}"
+      },
+      {
+        "key": "scope",
+        "value": "system"
+      },
+      {
+        "key": "addTokenTo",
+        "value": "header"
       }
     ]
   },
   "info": {
-    "_postman_id": "579173dd-40a2-4ac6-8431-ec9665c7d9fa",
+    "_postman_id": "d73d7d38-b2b9-495f-83ce-3438154cc365",
     "name": "Internationalization (i18n) API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {

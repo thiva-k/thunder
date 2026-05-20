@@ -44,7 +44,7 @@
     "@docusaurus/preset-classic": "3.9.2",
     "@docusaurus/theme-common": "^3.10.1",
     "@mdx-js/react": "3.0.0",
-    "@scalar/api-reference-react": "0.9.15",
+    "@scalar/api-reference-react": "0.9.38",
     "@thunderid/design": "workspace:^",
     "@thunderid/eslint-plugin": "workspace:^",
     "@thunderid/logger": "workspace:^",

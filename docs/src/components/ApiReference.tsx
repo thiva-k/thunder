@@ -45,7 +45,9 @@ export default function ApiReference({specUrl, ...rest}: ApiReferenceProps) {
             right: 0,
             bottom: 0,
             height: 'calc(100vh - var(--ifm-navbar-height))',
-            overflow: 'auto',
+            overflowY: 'scroll',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch',
             background: 'var(--oxygen-palette-background-default)',
           }}
         >
