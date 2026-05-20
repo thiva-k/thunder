@@ -427,6 +427,7 @@ func TestUserService_CreateUser_CallsCreateEntity(t *testing.T) {
 		ouService:         ouServiceMock,
 		entityTypeService: entityTypeMock,
 		authzService:      newAllowAllAuthz(t),
+		uuidGenerator:     utils.GenerateUUIDv7,
 	}
 
 	user := &User{
@@ -441,6 +442,32 @@ func TestUserService_CreateUser_CallsCreateEntity(t *testing.T) {
 	require.Equal(t, testOrgID, created.OUID)
 	require.NotEmpty(t, created.ID)
 	storeMock.AssertNumberOfCalls(t, "CreateEntity", 1)
+}
+
+func TestUserService_CreateUser_UUIDGenerationError(t *testing.T) {
+	ouServiceMock := oumock.NewOrganizationUnitServiceInterfaceMock(t)
+	ouServiceMock.On("IsOrganizationUnitExists", mock.Anything, testOrgID).
+		Return(true, (*serviceerror.ServiceError)(nil)).Once()
+
+	entityTypeMock := entitytypemock.NewEntityTypeServiceInterfaceMock(t)
+	entityTypeMock.On("GetEntityTypeByName", mock.Anything, mock.Anything, testUserType).
+		Return(&entitytype.EntityType{OUID: testOrgID}, (*serviceerror.ServiceError)(nil)).Once()
+
+	service := &userService{
+		ouService:         ouServiceMock,
+		entityTypeService: entityTypeMock,
+		authzService:      newAllowAllAuthz(t),
+		uuidGenerator: func() (string, error) {
+			return "", errors.New("entropy source failed")
+		},
+	}
+
+	user := &User{Type: testUserType, OUID: testOrgID}
+
+	created, svcErr := service.CreateUser(context.Background(), user)
+	require.Nil(t, created)
+	require.NotNil(t, svcErr)
+	require.Equal(t, serviceerror.InternalServerError.Code, svcErr.Code)
 }
 
 func TestUserService_CreateUser_PropagatesStoreError(t *testing.T) {
@@ -468,6 +495,7 @@ func TestUserService_CreateUser_PropagatesStoreError(t *testing.T) {
 		ouService:         ouServiceMock,
 		entityTypeService: entityTypeMock,
 		authzService:      newAllowAllAuthz(t),
+		uuidGenerator:     utils.GenerateUUIDv7,
 	}
 
 	user := &User{
@@ -1857,6 +1885,7 @@ func TestUserService_CreateUser_EntityErrors(t *testing.T) {
 				ouService:         ouServiceMock,
 				entityTypeService: entityTypeMock,
 				authzService:      newAllowAllAuthz(t),
+				uuidGenerator:     utils.GenerateUUIDv7,
 			}
 
 			user := &User{
