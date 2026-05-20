@@ -1408,6 +1408,9 @@ const translations = {
       'Users will sign in or sign up through your app using the UI components or APIs provided by {{product}}. You can customize and brand the flows using the designer or through code.',
     'onboarding.configure.stack.technology.title': 'Technology',
     'onboarding.configure.stack.technology.subtitle': 'What technology are you using to build your application?',
+    'onboarding.configure.stack.technology.express.title': 'Express.js',
+    'onboarding.configure.stack.technology.express.description':
+      'Server-side Node.js application built with Express.js',
     'onboarding.configure.stack.technology.react.title': 'React',
     'onboarding.configure.stack.technology.react.description': 'Single-page application built with React',
     'onboarding.configure.stack.technology.nextjs.title': 'Next.js',

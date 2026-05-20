@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import ExpressTemplate from '../data/application-templates/technology-based/express.json';
 import NextJSTemplate from '../data/application-templates/technology-based/nextjs.json';
 import ReactTemplate from '../data/application-templates/technology-based/react.json';
 import type {ApplicationTemplate, ApplicationTemplateMetadata} from '../models/application-templates';
@@ -47,6 +48,18 @@ const TechnologyBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Te
     titleKey: 'applications:onboarding.configure.stack.technology.react.title',
     descriptionKey: 'applications:onboarding.configure.stack.technology.react.description',
     template: ReactTemplate as ApplicationTemplate,
+  },
+  {
+    value: TechnologyApplicationTemplate.EXPRESS,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 16 16" fill="none">
+        <rect width="16" height="16" rx="4" fill="#111827" />
+        <path d="M4.25 5.25h7.5v1h-6.25v1.75h5.75v1h-5.75v1.75h6.25v1h-7.5v-6.5Z" fill="#fff" />
+      </svg>
+    ),
+    titleKey: 'applications:onboarding.configure.stack.technology.express.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.express.description',
+    template: ExpressTemplate as ApplicationTemplate,
   },
   {
     value: TechnologyApplicationTemplate.NEXTJS,
