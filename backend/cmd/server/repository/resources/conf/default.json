@@ -198,6 +198,9 @@
   "application": {
     "store": "composite"
   },
+  "agent": {
+    "store": "composite"
+  },
   "user_type": {
     "store": "composite"
   },

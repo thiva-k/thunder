@@ -23,10 +23,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	agentmodel "github.com/thunder-id/thunderid/internal/agent/model"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entitytype"
 	"github.com/thunder-id/thunderid/internal/group"
+	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
+	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
@@ -34,6 +37,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/error/serviceerror"
 	"github.com/thunder-id/thunderid/internal/system/i18n/core"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
+	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/user"
 )
 
@@ -812,6 +816,134 @@ func (s *importService) importResourceServerChildren(
 	}
 
 	return nil
+}
+
+func (s *importService) importAgent(
+	ctx context.Context, doc parsedDocument, options *ImportOptions, dryRun bool, flowIDAliases map[string]string,
+) ImportItemOutcome {
+	if s.agentService == nil {
+		return unsupportedAdapterOutcome(resourceTypeAgent, "agent")
+	}
+
+	var req agentmodel.AgentRequestWithID
+	if err := doc.Node.Decode(&req); err != nil {
+		return decodeErrorOutcome(resourceTypeAgent, req.ID, req.Name, err)
+	}
+
+	if mappedFlowID, ok := flowIDAliases[req.AuthFlowID]; ok {
+		req.AuthFlowID = mappedFlowID
+	}
+	if mappedFlowID, ok := flowIDAliases[req.RegistrationFlowID]; ok {
+		req.RegistrationFlowID = mappedFlowID
+	}
+
+	var attributesJSON json.RawMessage
+	if len(req.Attributes) > 0 {
+		raw, err := json.Marshal(req.Attributes)
+		if err != nil {
+			return ImportItemOutcome{
+				ResourceType: resourceTypeAgent,
+				ResourceID:   req.ID,
+				ResourceName: req.Name,
+				Status:       statusFailed,
+				Code:         ErrorInvalidYAMLContent.Code,
+				Message:      fmt.Sprintf("failed to marshal agent attributes: %v", err),
+			}
+		}
+		attributesJSON = raw
+	}
+
+	normalizeAgentOAuthConfigForImport(&req)
+
+	createReq := &agentmodel.CreateAgentRequest{
+		OUID:               req.OUID,
+		OUHandle:           req.OUHandle,
+		Type:               req.Type,
+		Name:               req.Name,
+		Description:        req.Description,
+		Owner:              req.Owner,
+		Attributes:         attributesJSON,
+		InboundAuthProfile: req.InboundAuthProfile,
+		InboundAuthConfig:  req.InboundAuthConfig,
+	}
+	updateReq := &agentmodel.UpdateAgentRequest{
+		OUID:               req.OUID,
+		OUHandle:           req.OUHandle,
+		Type:               req.Type,
+		Name:               req.Name,
+		Description:        req.Description,
+		Owner:              req.Owner,
+		Attributes:         attributesJSON,
+		InboundAuthProfile: req.InboundAuthProfile,
+		InboundAuthConfig:  req.InboundAuthConfig,
+	}
+
+	if dryRun {
+		if options.IsUpsertEnabled() && req.ID != "" {
+			_, svcErr := s.agentService.GetAgent(ctx, req.ID, false)
+			if svcErr == nil {
+				return successOutcome(resourceTypeAgent, req.ID, req.Name, operationUpdate)
+			}
+
+			if !isNotFoundServiceError(svcErr) {
+				return serviceErrorOutcome(resourceTypeAgent, req.ID, req.Name, operationUpdate, svcErr)
+			}
+		}
+
+		return successOutcome(resourceTypeAgent, req.ID, req.Name, operationCreate)
+	}
+
+	if options.IsUpsertEnabled() && req.ID != "" {
+		_, svcErr := s.agentService.GetAgent(ctx, req.ID, false)
+		if svcErr == nil {
+			updated, updateErr := s.agentService.UpdateAgent(ctx, req.ID, updateReq)
+			if updateErr != nil {
+				return serviceErrorOutcome(resourceTypeAgent, req.ID, req.Name, operationUpdate, updateErr)
+			}
+			return successOutcome(resourceTypeAgent, updated.ID, updated.Name, operationUpdate)
+		}
+
+		if !isNotFoundServiceError(svcErr) {
+			return serviceErrorOutcome(resourceTypeAgent, req.ID, req.Name, operationUpdate, svcErr)
+		}
+	}
+
+	created, svcErr := s.agentService.CreateAgent(ctx, createReq)
+	if svcErr != nil {
+		return serviceErrorOutcome(resourceTypeAgent, req.ID, req.Name, operationCreate, svcErr)
+	}
+	return successOutcome(resourceTypeAgent, created.ID, created.Name, operationCreate)
+}
+
+func getAgentOAuthConfigForImport(req *agentmodel.AgentRequestWithID) *inboundmodel.OAuthConfigWithSecret {
+	if req == nil {
+		return nil
+	}
+
+	for _, inboundAuth := range req.InboundAuthConfig {
+		if inboundAuth.Type == inboundmodel.OAuthInboundAuthType && inboundAuth.OAuthConfig != nil {
+			return inboundAuth.OAuthConfig
+		}
+	}
+
+	return nil
+}
+
+func normalizeAgentOAuthConfigForImport(req *agentmodel.AgentRequestWithID) {
+	oauthConfig := getAgentOAuthConfigForImport(req)
+	if oauthConfig == nil {
+		return
+	}
+
+	if oauthConfig.PublicClient &&
+		oauthConfig.TokenEndpointAuthMethod == oauth2const.TokenEndpointAuthMethodNone &&
+		oauthConfig.ClientSecret != "" {
+		log.GetLogger().Debug("Dropping client_secret for public agent import with token endpoint auth method 'none'",
+			log.String("agentID", req.ID),
+			log.String("name", req.Name),
+			log.String("clientID", oauthConfig.ClientID))
+		oauthConfig.ClientSecret = ""
+	}
 }
 
 func unsupportedAdapterOutcome(resourceType, name string) ImportItemOutcome {
