@@ -30,7 +30,7 @@ const pageDetails = {
       {
         icon: <ShieldCheck size={22} />,
         title: "Protected bookings",
-        copy: "Keep booked trips connected to secure ThunderID sign-in."
+        copy: "Keep booked trips connected to secure account sign-in."
       },
       {
         icon: <Clock3 size={22} />,
@@ -171,13 +171,30 @@ const pageDetails = {
   }
 };
 
+export function getDisplayName(user) {
+  if (!user) return "";
+  const given = user.given_name || user.name?.givenName || "";
+  const family = user.family_name || user.name?.familyName || "";
+  const full = `${given} ${family}`.trim();
+  if (full) return full;
+  if (typeof user.name === "string" && user.name.trim()) return user.name.trim();
+  return (
+    user.preferred_username ||
+    user.username ||
+    user.userName ||
+    user.email ||
+    user.mail ||
+    ""
+  );
+}
+
 export function HomePage({
   category = "flights",
   hideHeroSupport = false,
   heroHeading,
   locations,
   onSearch,
-  showSearch = false
+  showSearch = true
 }) {
   const details = pageDetails[category] || pageDetails.flights;
   const isGreetingHero = hideHeroSupport;
@@ -307,7 +324,7 @@ export function HomePage({
               <span>
                 <ShieldCheck size={18} />
               </span>
-              <strong>ThunderID</strong>
+              <strong>Protected</strong>
             </div>
           </article>
           <article className="stay-card">
@@ -364,11 +381,7 @@ export function SignedInHomePage({ category = "flights", locations, onSearch }) 
     return <HomePage category={category} locations={locations} onSearch={onSearch} />;
   }
 
-  const firstName = user?.name?.givenName || "";
-  const lastName = user?.name?.familyName || "";
-  const fullName = `${firstName} ${lastName}`.trim();
-  const email = user?.email || user?.mail || user?.username || user?.userName || "";
-  const greetingName = firstName || fullName || email || "Traveler";
+  const greetingName = getDisplayName(user) || "Traveler";
 
   return (
     <HomePage

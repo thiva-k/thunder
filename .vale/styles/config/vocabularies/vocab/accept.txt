@@ -77,3 +77,6 @@ Memorystore
 [Uu]serinfo
 [Dd]ev
 mkdir
+[Ww]ayfinder
+[Dd]eclaratively
+client_credentials

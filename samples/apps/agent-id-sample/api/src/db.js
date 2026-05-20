@@ -141,6 +141,14 @@ export function findFlights({ from, to, cabin }) {
   return rows.map(mapFlight);
 }
 
+export function findRecommendedFlights({ limit = 3 } = {}) {
+  const rows = getDatabase()
+    .prepare("SELECT * FROM flights ORDER BY RANDOM() LIMIT @limit")
+    .all({ limit });
+
+  return rows.map(mapFlight);
+}
+
 export function findFlightById(id) {
   const row = getDatabase()
     .prepare("SELECT * FROM flights WHERE id = @id")

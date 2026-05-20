@@ -8,6 +8,7 @@ import {
   Plane,
   Send,
   ShieldCheck,
+  UserCog,
   X
 } from "lucide-react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -16,7 +17,8 @@ import { BookingDetailsPageWithAuth } from "./pages/BookingDetailsPageWithAuth";
 import { BookingsPageWithAuth } from "./pages/BookingsPageWithAuth";
 import { BookingsUnavailable } from "./pages/BookingsUnavailable";
 import { FlightDetailsPage } from "./pages/FlightDetailsPage";
-import { HomePage, SignedInHomePage } from "./pages/HomePage";
+import { getDisplayName, HomePage, SignedInHomePage } from "./pages/HomePage";
+import { ProfilePage } from "./pages/ProfilePage";
 import { PaymentPageWithAuth } from "./pages/PaymentPageWithAuth";
 import { ResultsPage, ResultsPageWithAuth } from "./pages/ResultsPage";
 import { buildResultsPath, readCriteria } from "./utils/routes";
@@ -69,14 +71,20 @@ function LivePrimaryNav() {
 }
 
 function LiveAuthHeader() {
-  const { isSignedIn, isLoading, signIn, signOut, signUpUrl, user } = useThunderID();
+  const { isSignedIn, isLoading, signIn, clearSession, user } = useThunderID();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef(null);
-  const firstName = user?.name?.givenName || "";
-  const lastName = user?.name?.familyName || "";
-  const fullName = `${firstName} ${lastName}`.trim();
-  const email = user?.email || user?.mail || user?.username || user?.userName || "";
-  const displayName = fullName || email || user?.sub || "Traveler";
+  const email = user?.email || user?.mail || "";
+  const displayName = getDisplayName(user) || user?.sub || "Traveler";
+  const showEmailSub = email && email !== displayName;
+
+  async function handleSignOut() {
+    try {
+      await clearSession();
+    } finally {
+      window.location.replace("/flights");
+    }
+  }
 
   useEffect(() => {
     function handlePointerDown(event) {
@@ -105,7 +113,7 @@ function LiveAuthHeader() {
           <CircleUserRound className="user-chip-avatar" size={28} />
           <span className="user-chip-text">
             <span className="user-chip-name">{displayName}</span>
-            {fullName && email && <span className="user-chip-email">{email}</span>}
+            {showEmailSub && <span className="user-chip-email">{email}</span>}
           </span>
           <ChevronDown
             className={`user-chip-chevron ${isAccountMenuOpen ? "user-chip-chevron--open" : ""}`}
@@ -118,11 +126,15 @@ function LiveAuthHeader() {
               <CircleUserRound size={18} />
               <span>My Bookings</span>
             </Link>
+            <Link className="account-menu-item" to="/profile" role="menuitem">
+              <UserCog size={18} />
+              <span>Profile</span>
+            </Link>
             <button
               className="account-menu-item"
               type="button"
               role="menuitem"
-              onClick={() => signOut()}
+              onClick={handleSignOut}
             >
               <LogOut size={18} />
               <span>Sign Out</span>
@@ -136,18 +148,13 @@ function LiveAuthHeader() {
   return (
     <div className="auth-cluster">
       <button
-        className="text-button"
+        className="primary-small"
         type="button"
         disabled={isLoading}
         onClick={() => signIn({ acr_values: "urn:thunder:auth:user" })}
       >
         Sign in
       </button>
-      {signUpUrl && (
-        <a className="primary-small" href={signUpUrl}>
-          Sign up
-        </a>
-      )}
     </div>
   );
 }
@@ -155,11 +162,8 @@ function LiveAuthHeader() {
 function SignedOutHeader({ disabled }) {
   return (
     <div className="auth-cluster">
-      <button className="text-button" type="button" disabled={disabled}>
-        Sign in
-      </button>
       <button className="primary-small" type="button" disabled={disabled}>
-        Sign up
+        Sign in
       </button>
     </div>
   );
@@ -203,7 +207,7 @@ function SiteFooter({ authReady }) {
           </span>
           <span>Wayfinder</span>
         </Link>
-        <p>Modern travel booking flows, secured with ThunderID.</p>
+        <p>Modern travel booking flows, with secure sign-in built in.</p>
       </div>
       <FooterLinks authReady={authReady} />
     </footer>
@@ -761,6 +765,10 @@ function AppRoutes({ authReady, criteria, locations, onSearch }) {
         path="/bookings"
         element={authReady ? <BookingsPageWithAuth /> : <BookingsUnavailable />}
       />
+      <Route
+        path="/profile"
+        element={authReady ? <ProfilePage /> : <BookingsUnavailable />}
+      />
       <Route path="/agent-callback" element={<AgentCallbackRoute />} />
       <Route
         path="/signin-as-agent"
@@ -853,7 +861,7 @@ function App({ authReady }) {
         <div className="setup-banner" role="status">
           <ShieldCheck size={18} />
           Add `VITE_THUNDER_CLIENT_ID` and `VITE_THUNDER_BASE_URL` to enable live
-          ThunderID sign in, sign up, and sign out.
+          sign in and sign out.
         </div>
       )}
 

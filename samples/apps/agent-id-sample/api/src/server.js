@@ -21,6 +21,7 @@ import {
   findFlightById,
   findFlights,
   findHotels,
+  findRecommendedFlights,
   listBookedFlights,
   listLocations,
   listTrips
@@ -181,6 +182,19 @@ async function route(request, response) {
     if (request.method === "GET" && url.pathname === "/api/flights") {
       return sendJson(response, 200, {
         data: searchFlights(url.searchParams)
+      });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/flights/recommended") {
+      const user = await resolveUser(request);
+
+      requireScope(user, "flight:recommend");
+
+      const rawLimit = Number(url.searchParams.get("limit") || 3);
+      const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 3, 1), 10);
+
+      return sendJson(response, 200, {
+        data: findRecommendedFlights({ limit })
       });
     }
 

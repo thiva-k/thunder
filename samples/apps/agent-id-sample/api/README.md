@@ -20,6 +20,7 @@ The API runs on `http://localhost:8787`.
 | ------ | --------------------------- | ------------------ | -------------------------------------- |
 | GET    | `/health`                   | —                  |                                        |
 | GET    | `/api/flights`              | —                  | `?from=Colombo&to=Singapore`           |
+| GET    | `/api/flights/recommended`  | `flight:recommend` | `?limit=3` (1-10, default 3). Random picks. |
 | GET    | `/api/hotels`               | —                  | `?location=Singapore`                  |
 | GET    | `/api/trips`                | —                  |                                        |
 | GET    | `/api/locations`            | —                  | `?category=flights`                    |

@@ -2,7 +2,7 @@
 
 End-to-end sample of an AI agent that holds its own ThunderID-managed identity.
 
-The agent uses **its own access token (client_credentials grant)** for browsing tools and switches to a **user-context token via OAuth 2.0 authorization-code + PKCE** when a tool needs the user's consent (booking, cancellation, viewing the user's own data).
+The agent uses **its own access token (client_credentials grant)** for browsing tools. When a tool needs the user's consent (booking, cancellation, reading the user's own data), it switches to a **user-context token**. That token is obtained via **OAuth 2.0 authorization-code + PKCE**.
 
 The sample is a travel booking app called Wayfinder. A chat widget in the UI talks to a LangChain agent that calls REST tools through an MCP server.
 
@@ -55,10 +55,11 @@ The sample uses two OAuth clients and three token types:
 ## What This Demonstrates
 
 - A ThunderID **agent** acting as an autonomous principal — distinct from a ThunderID user.
-- The agent's **machine-to-machine (M2M) token** used for read-only browsing tools (search flights, search hotels, etc.).
+- The agent's **machine-to-machine (M2M) token** used for read-only browsing tools (search flights, search hotels, recommend flights, etc.).
 - **Scope-based access control** on the AI Agent's HTTP API — only users with `agent:access` can use the chat. Users without this scope (e.g. `jane.smith`) can browse and book through the UI but cannot use the chat agent.
 - An **on-behalf-of (OBO)** flow triggered from inside a chat session: the agent returns a consent request, the frontend opens a popup where the user picks which booking permissions to grant, and the issued user-context token only carries the approved subset.
-- A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`).
+- A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`, `flight:recommend`).
+- A **self-service profile page** at `/profile` that calls Thunder's `/users/me` directly with the `WAYFINDER` user token to read account details, edit attributes, and change the password.
 - **Multi-LLM support** — the chat agent works with both **Anthropic Claude** and **Google Gemini**, selectable via an environment variable.
 
 ## Project Structure
@@ -84,6 +85,21 @@ Each subdirectory has its own README with the environment variables it reads and
 - **One** of the following LLM API keys:
   - Anthropic API key from [console.anthropic.com](https://console.anthropic.com), **or**
   - Google Gemini API key from [aistudio.google.com](https://aistudio.google.com).
+
+### Allow the frontend origin in Thunder
+
+The Wayfinder web app runs on `http://localhost:5173` and calls Thunder directly for `/oauth2/authorize`, `/oauth2/token`, and `/users/me`. Browsers block these cross-origin calls unless Thunder's CORS allow-list includes the frontend origin.
+
+Edit `backend/cmd/server/repository/conf/deployment.yaml` and add `http://localhost:5173` under `cors.allowed_origins`. Leave any existing entries in place — they belong to other samples.
+
+```yaml
+cors:
+  allowed_origins:
+    # ...existing entries...
+    - "http://localhost:5173"
+```
+
+Restart the ThunderID server after the change. If you serve the frontend from a different host or port, add that origin instead.
 
 ## ThunderID Setup
 
@@ -124,7 +140,7 @@ Restart the ThunderID server. On startup it will load:
 | Role | `roles/wayfinder-user.yaml` | **Wayfinder User** role with booking permissions, assigned to both demo users |
 | User | `users/john-doe.yaml` | Demo user `john.doe` / `john.doe` — has chat agent access and booking permissions |
 | User | `users/jane-smith.yaml` | Demo user `jane.smith` / `jane.smith` — has booking permissions but **no** chat agent access |
-| Application | `applications/wayfinder.yaml` | **WAYFINDER** OAuth app (public, PKCE, redirect to `http://localhost:5173`) |
+| Application | `applications/wayfinder.yaml` | `WAYFINDER` OAuth app (public, PKCE, redirect to `http://localhost:5173`) |
 
 ### Step 2 — Manual Steps
 
@@ -172,14 +188,26 @@ What flights are there from Colombo to Singapore?
 
 These browsing tools use the agent's M2M token — no popup beyond the initial sign-in.
 
+You can also ask the agent for general recommendations — for example:
+
+```
+Suggest a few flight deals.
+```
+
+This calls the `recommend_flights` MCP tool, which hits `GET /api/flights/recommended` with the agent's M2M token. The endpoint requires the `flight:recommend` scope, which is granted to the `WAYFINDER-CHAT-AGENT` agent via its role assignment.
+
 Then:
 
 ```
 Book flight 2
 ```
 
-The agent will pause and ask for your permission. A popup opens, you sign in as the demo user via the agent's OAuth application, you pick which booking permissions to grant in the consent screen, and the booking succeeds (or returns 403 if you denied `booking:create`).
+The agent will pause and ask for your permission. A popup opens and you sign in as the demo user via the agent's OAuth application. You pick which booking permissions to grant in the consent screen. The booking then succeeds — or returns 403 if you denied `booking:create`.
+
+### Manage Your Profile
+
+Click your name in the top-right corner and pick **Profile** to view your account details, edit profile attributes, or change your password. The page calls Thunder's `/users/me`, `PUT /users/me`, and `POST /users/me/update-credentials` directly with the `WAYFINDER` user token — no scope beyond a valid user JWT is required.
 
 ### No Chat Access
 
-Sign out and sign in as `jane.smith` / `jane.smith`. Jane can browse flights, hotels, and manage bookings through the web UI, but sending a chat message will return a 403 error — her token lacks the `agent:access` scope because she is not assigned the **Wayfinder Chat User** role.
+Sign out and sign in as `jane.smith` / `jane.smith`. Jane can browse flights, hotels, and manage bookings through the web UI. Sending a chat message returns a 403 error — her token lacks the `agent:access` scope because she is not assigned the **Wayfinder Chat User** role.
