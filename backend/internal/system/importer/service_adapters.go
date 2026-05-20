@@ -41,11 +41,39 @@ import (
 	"github.com/thunder-id/thunderid/internal/user"
 )
 
+// resolveImportOUHandle resolves an ou_handle to its corresponding OU ID for import operations.
+// If both ouID and ouHandle are provided, ouID wins and a warning is logged.
+// Returns the (possibly resolved) ouID and any service error from the OU lookup.
+func (s *importService) resolveImportOUHandle(
+	ctx context.Context, resourceType, resourceID, resourceName, ouID, ouHandle string,
+) (string, *serviceerror.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ImportService"))
+	if ouID != "" && ouHandle != "" {
+		logger.Warn("Both ou_id and ou_handle provided; ou_handle ignored",
+			log.String("resourceType", resourceType),
+			log.String("resourceID", resourceID),
+			log.String("resourceName", resourceName))
+		return ouID, nil
+	}
+	if ouID == "" && ouHandle != "" {
+		if s.ouService == nil {
+			return "", &serviceerror.InternalServerError
+		}
+		resolved, svcErr := s.ouService.GetOrganizationUnitByPath(ctx, ouHandle)
+		if svcErr != nil {
+			return "", svcErr
+		}
+		return resolved.ID, nil
+	}
+	return ouID, nil
+}
+
 type roleDeclarativeYAML struct {
 	ID          string                     `yaml:"id"`
 	Name        string                     `yaml:"name"`
 	Description string                     `yaml:"description,omitempty"`
-	OUID        string                     `yaml:"ou_id"`
+	OUID        string                     `yaml:"ou_id,omitempty"`
+	OUHandle    string                     `yaml:"ou_handle,omitempty"`
 	Permissions []role.ResourcePermissions `yaml:"permissions"`
 	Assignments []role.RoleAssignment      `yaml:"assignments,omitempty"`
 }
@@ -53,7 +81,8 @@ type roleDeclarativeYAML struct {
 type userDeclarativeYAML struct {
 	ID          string                 `yaml:"id"`
 	Type        string                 `yaml:"type"`
-	OUID        string                 `yaml:"ou_id"`
+	OUID        string                 `yaml:"ou_id,omitempty"`
+	OUHandle    string                 `yaml:"ou_handle,omitempty"`
 	Attributes  map[string]interface{} `yaml:"attributes"`
 	Credentials map[string]interface{} `yaml:"credentials,omitempty"`
 }
@@ -270,6 +299,13 @@ func (s *importService) importRole(
 		return decodeErrorOutcome(resourceTypeRole, req.ID, req.Name, err)
 	}
 
+	resolvedOUID, svcErr := s.resolveImportOUHandle(
+		ctx, resourceTypeRole, req.ID, req.Name, req.OUID, req.OUHandle)
+	if svcErr != nil {
+		return serviceErrorOutcome(resourceTypeRole, req.ID, req.Name, operationCreate, svcErr)
+	}
+	req.OUID = resolvedOUID
+
 	createReq := role.RoleCreationDetail{
 		ID:          req.ID,
 		Name:        req.Name,
@@ -346,12 +382,21 @@ func (s *importService) importGroup(
 		ID          string         `yaml:"id"`
 		Name        string         `yaml:"name"`
 		Description string         `yaml:"description,omitempty"`
-		OUID        string         `yaml:"ou_id"`
+		OUID        string         `yaml:"ou_id,omitempty"`
+		OUHandle    string         `yaml:"ou_handle,omitempty"`
 		Members     []group.Member `yaml:"members,omitempty"`
 	}
 	if err := doc.Node.Decode(&raw); err != nil {
 		return decodeErrorOutcome(resourceTypeGroup, raw.ID, raw.Name, err)
 	}
+
+	resolvedOUID, svcErr := s.resolveImportOUHandle(
+		ctx, resourceTypeGroup, raw.ID, raw.Name, raw.OUID, raw.OUHandle)
+	if svcErr != nil {
+		return serviceErrorOutcome(resourceTypeGroup, raw.ID, raw.Name, operationCreate, svcErr)
+	}
+	raw.OUID = resolvedOUID
+
 	req = group.CreateGroupRequest{
 		ID:          raw.ID,
 		Name:        raw.Name,
@@ -420,6 +465,13 @@ func (s *importService) importResourceServer(
 	if err := doc.Node.Decode(&req); err != nil {
 		return decodeErrorOutcome(resourceTypeResourceServer, req.ID, req.Name, err)
 	}
+
+	resolvedOUID, svcErr := s.resolveImportOUHandle(
+		ctx, resourceTypeResourceServer, req.ID, req.Name, req.OUID, req.OUHandle)
+	if svcErr != nil {
+		return serviceErrorOutcome(resourceTypeResourceServer, req.ID, req.Name, operationCreate, svcErr)
+	}
+	req.OUID = resolvedOUID
 
 	if dryRun {
 		if options.IsUpsertEnabled() && req.ID != "" {
@@ -605,6 +657,13 @@ func (s *importService) importUser(
 	if err := doc.Node.Decode(&req); err != nil {
 		return decodeErrorOutcome(resourceTypeUser, req.ID, "", err)
 	}
+
+	resolvedOUID, svcErr := s.resolveImportOUHandle(
+		ctx, resourceTypeUser, req.ID, "", req.OUID, req.OUHandle)
+	if svcErr != nil {
+		return serviceErrorOutcome(resourceTypeUser, req.ID, "", operationCreate, svcErr)
+	}
+	req.OUID = resolvedOUID
 
 	attributesJSON, err := json.Marshal(req.Attributes)
 	if err != nil {

@@ -38,6 +38,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/idp"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	"github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/error/serviceerror"
@@ -460,12 +461,14 @@ func (f *fakeOUService) UpdateOrganizationUnit(
 }
 
 type fakeRoleService struct {
+	created []role.RoleCreationDetail
 	updated []role.RoleUpdateDetail
 }
 
 func (f *fakeRoleService) CreateRole(
 	_ context.Context, req role.RoleCreationDetail,
 ) (*role.RoleWithPermissionsAndAssignments, *serviceerror.ServiceError) {
+	f.created = append(f.created, req)
 	return &role.RoleWithPermissionsAndAssignments{ID: "role-1", Name: req.Name}, nil
 }
 
@@ -2055,4 +2058,372 @@ func TestImportAgent_StripsClientSecretForPublicAgentWithNoneAuthMethod(t *testi
 func TestGetAgentOAuthConfigForImport_NilRequest(t *testing.T) {
 	result := getAgentOAuthConfigForImport(nil)
 	assert.Nil(t, result)
+}
+
+// fakeResourceServerService is a test double for the resource server adapter used by importer tests.
+type fakeResourceServerService struct {
+	created []resource.ResourceServer
+	updated []resource.ResourceServer
+}
+
+func (f *fakeResourceServerService) CreateResourceServer(
+	_ context.Context, rs resource.ResourceServer,
+) (*resource.ResourceServer, *serviceerror.ServiceError) {
+	f.created = append(f.created, rs)
+	return &resource.ResourceServer{ID: rs.ID, Name: rs.Name, OUID: rs.OUID}, nil
+}
+
+func (f *fakeResourceServerService) GetResourceServer(
+	_ context.Context, id string,
+) (*resource.ResourceServer, *serviceerror.ServiceError) {
+	return nil, &serviceerror.ServiceError{
+		Type:  serviceerror.ClientErrorType,
+		Code:  resource.ErrorResourceServerNotFound.Code,
+		Error: core.I18nMessage{DefaultValue: "not found: " + id},
+	}
+}
+
+func (f *fakeResourceServerService) UpdateResourceServer(
+	_ context.Context, _ string, rs resource.ResourceServer,
+) (*resource.ResourceServer, *serviceerror.ServiceError) {
+	f.updated = append(f.updated, rs)
+	return &resource.ResourceServer{ID: rs.ID, Name: rs.Name, OUID: rs.OUID}, nil
+}
+
+func (f *fakeResourceServerService) CreateResource(
+	_ context.Context, _ string, _ resource.Resource,
+) (*resource.Resource, *serviceerror.ServiceError) {
+	return &resource.Resource{}, nil
+}
+
+func (f *fakeResourceServerService) GetResourceList(
+	_ context.Context, _ string, _ *string, _, _ int,
+) (*resource.ResourceList, *serviceerror.ServiceError) {
+	return &resource.ResourceList{}, nil
+}
+
+func (f *fakeResourceServerService) CreateAction(
+	_ context.Context, _ string, _ *string, _ resource.Action,
+) (*resource.Action, *serviceerror.ServiceError) {
+	return &resource.Action{}, nil
+}
+
+// TestImportRole_OUHandleResolved verifies that ou_handle on a role document is resolved
+// to ou_id via the OU service before the role create request is built.
+func TestImportRole_OUHandleResolved(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{
+		"ou-default": {ID: "ou-default", Handle: "default"},
+	}}
+	roleSvc := &fakeRoleService{}
+	roleAssignmentSvc := &fakeRoleAssignmentService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, roleSvc, roleAssignmentSvc, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: role-new",
+		"name: Viewer",
+		"ou_handle: default",
+		"permissions: []",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, roleSvc.created, 1)
+	assert.Equal(t, "ou-default", roleSvc.created[0].OUID)
+}
+
+// TestImportRole_OUHandleNotFound verifies that an unknown ou_handle on a role document
+// causes the import to fail with a clear error.
+func TestImportRole_OUHandleNotFound(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	roleSvc := &fakeRoleService{}
+	roleAssignmentSvc := &fakeRoleAssignmentService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, roleSvc, roleAssignmentSvc, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: role-new",
+		"name: Viewer",
+		"ou_handle: missing",
+		"permissions: []",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Empty(t, roleSvc.created)
+}
+
+// TestImportRole_OUIDWinsOverHandle verifies that ou_id wins when both ou_id and ou_handle
+// are provided, and the OU service is never consulted.
+func TestImportRole_OUIDWinsOverHandle(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	roleSvc := &fakeRoleService{}
+	roleAssignmentSvc := &fakeRoleAssignmentService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, roleSvc, roleAssignmentSvc, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: role-new",
+		"name: Viewer",
+		"ou_id: ou-explicit",
+		"ou_handle: default",
+		"permissions: []",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, roleSvc.created, 1)
+	assert.Equal(t, "ou-explicit", roleSvc.created[0].OUID)
+}
+
+// TestImportGroup_OUHandleResolved verifies that ou_handle on a group document is resolved
+// to ou_id via the OU service before the group create request is built.
+func TestImportGroup_OUHandleResolved(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{
+		"ou-default": {ID: "ou-default", Handle: "default"},
+	}}
+	groupSvc := &fakeGroupService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, groupSvc, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: group-new",
+		"name: Engineers",
+		"ou_handle: default",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, groupSvc.created, 1)
+	assert.Equal(t, "ou-default", groupSvc.created[0].OUID)
+}
+
+// TestImportGroup_OUHandleNotFound verifies that an unknown ou_handle on a group document
+// causes the import to fail with a clear error.
+func TestImportGroup_OUHandleNotFound(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	groupSvc := &fakeGroupService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, groupSvc, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: group-new",
+		"name: Engineers",
+		"ou_handle: missing",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Empty(t, groupSvc.created)
+}
+
+// TestImportGroup_OUIDWinsOverHandle verifies that ou_id wins when both ou_id and ou_handle
+// are provided, and the OU service is never consulted.
+func TestImportGroup_OUIDWinsOverHandle(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	groupSvc := &fakeGroupService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, groupSvc, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: group-new",
+		"name: Engineers",
+		"ou_id: ou-explicit",
+		"ou_handle: default",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, groupSvc.created, 1)
+	assert.Equal(t, "ou-explicit", groupSvc.created[0].OUID)
+}
+
+// TestImportUser_OUHandleResolved verifies that ou_handle on a user document is resolved
+// to ou_id via the OU service before the user create request is built.
+func TestImportUser_OUHandleResolved(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{
+		"ou-default": {ID: "ou-default", Handle: "default"},
+	}}
+	userSvc := &fakeUserService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, nil, nil, nil, nil, userSvc, nil, nil)
+
+	content := strings.Join([]string{
+		"id: user-new",
+		"type: person",
+		"ou_handle: default",
+		"attributes:",
+		"  username: alice",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, userSvc.created, 1)
+	assert.Equal(t, "ou-default", userSvc.created[0].OUID)
+}
+
+// TestImportUser_OUHandleNotFound verifies that an unknown ou_handle on a user document
+// causes the import to fail with a clear error.
+func TestImportUser_OUHandleNotFound(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	userSvc := &fakeUserService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, nil, nil, nil, nil, userSvc, nil, nil)
+
+	content := strings.Join([]string{
+		"id: user-new",
+		"type: person",
+		"ou_handle: missing",
+		"attributes:",
+		"  username: alice",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Empty(t, userSvc.created)
+}
+
+// TestImportUser_OUIDWinsOverHandle verifies that ou_id wins when both ou_id and ou_handle
+// are provided, and the OU service is never consulted.
+func TestImportUser_OUIDWinsOverHandle(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	userSvc := &fakeUserService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, nil, nil, nil, nil, userSvc, nil, nil)
+
+	content := strings.Join([]string{
+		"id: user-new",
+		"type: person",
+		"ou_id: ou-explicit",
+		"ou_handle: default",
+		"attributes:",
+		"  username: alice",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, userSvc.created, 1)
+	assert.Equal(t, "ou-explicit", userSvc.created[0].OUID)
+}
+
+// TestImportResourceServer_OUHandleResolved verifies that ou_handle on a resource server
+// document is resolved to ou_id via the OU service before the create request is built.
+func TestImportResourceServer_OUHandleResolved(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{
+		"ou-default": {ID: "ou-default", Handle: "default"},
+	}}
+	rsSvc := &fakeResourceServerService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"# resource_type: resource_server",
+		"id: rs-new",
+		"name: Test RS",
+		"handle: test-rs",
+		"identifier: test-rs",
+		"ou_handle: default",
+		"resources: []",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, rsSvc.created, 1)
+	assert.Equal(t, "ou-default", rsSvc.created[0].OUID)
+}
+
+// TestImportResourceServer_OUHandleNotFound verifies that an unknown ou_handle on a resource
+// server document causes the import to fail with a clear error.
+func TestImportResourceServer_OUHandleNotFound(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	rsSvc := &fakeResourceServerService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"# resource_type: resource_server",
+		"id: rs-new",
+		"name: Test RS",
+		"handle: test-rs",
+		"identifier: test-rs",
+		"ou_handle: missing",
+		"resources: []",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusFailed, resp.Results[0].Status)
+	assert.Empty(t, rsSvc.created)
+}
+
+// TestImportResourceServer_OUIDWinsOverHandle verifies that ou_id wins when both ou_id and
+// ou_handle are provided, and the OU service is never consulted.
+func TestImportResourceServer_OUIDWinsOverHandle(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]ou.OrganizationUnit{}}
+	rsSvc := &fakeResourceServerService{}
+	svc := newImportService(nil, nil, nil, ouSvc, nil, nil, nil, nil, rsSvc, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"# resource_type: resource_server",
+		"id: rs-new",
+		"name: Test RS",
+		"handle: test-rs",
+		"identifier: test-rs",
+		"ou_id: ou-explicit",
+		"ou_handle: default",
+		"resources: []",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(false)},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, rsSvc.created, 1)
+	assert.Equal(t, "ou-explicit", rsSvc.created[0].OUID)
 }
