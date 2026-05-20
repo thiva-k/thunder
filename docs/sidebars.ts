@@ -302,7 +302,20 @@ const sidebars: SidebarsConfig = {
           items: [
             {type: 'doc', id: 'use-cases/b2c/customer-identity', label: 'Customer Identity'},
             {type: 'doc', id: 'use-cases/b2c/solution-patterns', label: 'Solution Patterns'},
-            {type: 'doc', id: 'use-cases/b2c/try-it-out', label: 'Try It Out', key: 'b2c-try-it-out'},
+            {
+              type: 'category',
+              label: 'Try It Out',
+              collapsible: true,
+              collapsed: true,
+              link: {type: 'doc', id: 'use-cases/b2c/try-it-out'},
+              items: [
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/add-login', label: 'Add Login'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/self-sign-up', label: 'Self Sign-Up'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/profile-section', label: 'Profile Section'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/account-recovery', label: 'Account Recovery'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/onboard-internal-users', label: 'Onboard Internal Users'},
+              ],
+            },
           ],
         },
         {

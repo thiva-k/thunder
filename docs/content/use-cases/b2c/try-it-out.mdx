@@ -1,7 +1,220 @@
 ---
 title: Try It Out
-description: Try out B2C identity flows with {{ProductName}}.
+description: Run the B2C use cases against the Wayfinder sample, a fictional consumer travel-booking app.
 sidebar_position: 3
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { WayfinderOrganization, WayfinderArchitecture } from '../../../src/components/WayfinderDiagrams';
+
 # Try It Out
+
+Each walkthrough on this page runs one of the use cases from [Customer Identity](../customer-identity) against a working sample, using one of the patterns from [Solution Patterns](../solution-patterns).
+
+## Meet Wayfinder
+
+Wayfinder is a B2C travel-booking application. Through Wayfinder, consumers search for flights and hotels, book trips, and manage their travel profile.
+
+Wayfinder has two types of users: consumers who book travel, and staff who run the product.
+
+<WayfinderOrganization />
+
+Meet the cast:
+
+- **Consumers** book travel. They sign themselves up, sign in, manage their own profile, and recover access when they lose it.
+  - **Thor** is a returning traveller who signs in, manages his profile, and recovers his password.
+  - **Sif** is a new arrival who signs up with her email and a password.
+  - **Freya** is another new arrival who would rather use her Google account than create yet another password.
+- **Staff** run the product. They are onboarded by an operations admin from the <ProductName /> console.
+  - **Odin** is the operations admin who onboards everyone else.
+  - **Heimdall** is the support agent.
+  - **Baldur** is the destinations curator.
+
+## Sample Architecture
+
+Wayfinder runs as three deployable pieces:
+
+- **Wayfinder Web**: the browser-based app that consumers interact with.
+- **Wayfinder Server**: holds the booking data and exposes the booking API.
+- <ProductName />: authenticates users and issues the tokens.
+
+<WayfinderArchitecture />
+
+## Identity Model
+
+The setup below creates a handful of <ProductName /> resources. Here is what each one is and how it maps to Wayfinder concepts.
+
+### Organization
+
+<ProductName /> can host many isolated tenants. A B2C product like Wayfinder needs only one, so everything lives in a single organization.
+
+### User Types
+
+A user type defines who can exist in the system and what attributes they carry. Each user record belongs to exactly one user type. Wayfinder defines two user types:
+
+- `Customer`: consumers like Thor and Freya, with traveller attributes such as name and email.
+- `Staff`: team members like Odin, with operational attributes like display name and time zone.
+
+See [User Types](/docs/next/guides/guides/users/user-types).
+
+### Resource and Permissions
+
+When Wayfinder Web calls Wayfinder Server, the server protects its endpoints with permissions issued by <ProductName />. 
+
+A **resource server** groups the APIs of one backend. Each resource server defines one or more **resources**, and each resource defines **actions**. <ProductName /> automatically generates a **permission** of the form `<resource>:<action>` for every action. 
+
+Wayfinder's booking API is one resource server with a single `booking` resource that has three actions: `read`, `create`, and `cancel`. The generated permissions are `booking:read`, `booking:create`, and `booking:cancel`.
+
+```
+wayfinder-booking-api                   (Resource Server)
+└── booking                             (Resource)
+    ├── read     →  booking:read        (Permission)
+    ├── create   →  booking:create
+    └── cancel   →  booking:cancel
+```
+
+Permissions are issued to the access tokens. See [Resource Servers](/docs/next/guides/guides/resource-servers).
+
+### Roles
+
+A role bundles permissions for a class of user. A user's effective permissions are the union of permissions across their roles. Wayfinder defines four roles:
+
+- `Traveler`: consumer role with all three `booking:*` permissions.
+- `Support`: staff role for consumer support workflows.
+- `DestinationsAdmin`: staff role for curating featured destinations.
+- `OpsAdmin`: staff role for inviting and managing other staff.
+
+See Manage Roles.
+
+### Application
+
+An application is the OAuth2 client that <ProductName /> issues tokens to. Wayfinder Web is registered as `WAYFINDER`.
+
+See [Manage Applications](/docs/next/guides/guides/applications/manage-applications).
+
+### Flows
+
+A flow is the sequence of steps a user moves through when signing in, signing up, or recovering. Wayfinder uses `default-basic-flow` for sign-in (with Google added for federated sign-in), plus a separate recovery and invitation flow.
+
+See [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
+
+## Setup
+
+Complete the setup once. Every walkthrough below builds on the same starting point.
+
+The two tabs below offer the same end state through different paths.
+
+- **Quick Start** applies a single declarative bundle that creates every resource the walkthroughs share.
+- **Build It Yourself** creates the same consumer-side resources manually so you can see how each one is made.
+
+Before you begin, make sure you have:
+
+- <ProductName /> running locally. See [Get <ProductName />](/docs/next/guides/getting-started/get-thunderid).
+- The Wayfinder sample distribution from the <ProductName /> <RepoLink path="/releases">releases</RepoLink>. The distribution ships with a `thunderid-config/` directory containing a declarative YAML and a `thunderid.env` file, plus the Wayfinder web frontend.
+
+<Tabs>
+<TabItem value="declarative" label="Quick Start" default>
+
+Apply the Wayfinder declarative bundle.
+
+1. **Edit `thunderid-config/thunderid.env`** to set the client ID and redirect URIs the sample should use.
+
+2. **Import the YAML into <ProductName />.**
+
+   - Sign in to the <ProductName /> Console at [https://localhost:8090/console](https://localhost:8090/console).
+   - On first sign-in, a welcome screen appears with an **Open** button. (Later, reach the same screen from the user profile menu in the top-right corner of the Console.)
+   - Click **Open** and select your `thunderid-config/thunderid-config.yaml` file from the sample distribution.
+   - Select your `thunderid-config/thunderid.env` file to provide the environment variables referenced in the YAML.
+   - The Console imports the files and reports the resources it created when the import completes.
+
+   The import creates:
+
+   - **User types:** Customer (consumers) and Staff (internal team).
+   - **Resource server:** `wayfinder-booking-api` with `booking:read`, `booking:create`, and `booking:cancel` permissions.
+   - **Roles:** Traveler (consumer), Support, DestinationsAdmin, OpsAdmin (staff).
+   - **Application:** WAYFINDER.
+   - **Users:** Thor (Customer with the Traveler role) and Odin (Staff with the OpsAdmin role).
+
+3. **Start the sample** following the commands in its README.
+
+</TabItem>
+<TabItem value="build" label="Build It Yourself">
+
+Create the consumer-side resources manually in the <ProductName /> console. Each walkthrough later layers any additional resources it needs on top of this baseline.
+
+1. **Create the `Customer` user type.**
+
+   Navigate to **User Types** → **Create User Type**. Define the schema:
+
+   | Attribute     | Type   | Properties          |
+   | ------------- | ------ | ------------------- |
+   | `username`    | string | Required, unique    |
+   | `email`       | string | Required, unique    |
+   | `password`    | string | Credential          |
+   | `given_name`  | string | Optional            |
+   | `family_name` | string | Optional            |
+   | `name`        | string | Optional            |
+   | `sub`         | string | Optional            |
+
+   See [User Types](/docs/next/guides/guides/users/user-types).
+
+2. **Create the `wayfinder-booking-api` resource server.**
+
+   Invoke **Resource Management API** to create the resource server, resource and actions. Set the handle to `wayfinder-booking-api`. Add a resource with handle `booking` and three actions:
+
+   | Action   | Generated permission |
+   | -------- | -------------------- |
+   | `read`   | `booking:read`       |
+   | `create` | `booking:create`     |
+   | `cancel` | `booking:cancel`     |
+
+   See [Resource Servers](/docs/next/guides/guides/resource-servers).
+
+3. **Create the `Traveler` role.**
+
+   Navigate to **Roles** → **Add Role**. Grant it the three `booking:*` permissions on `wayfinder-booking-api`. 
+   
+   See [Authorization](/docs/next/guides/key-concepts/authorization).
+
+4. **Register the `WAYFINDER` application.**
+
+   Navigate to **Applications** → **Add Application** and choose **Browser App** as the type. Configure:
+
+   | Setting             | Value                     |
+   | ------------------- | ------------------------- |
+   | Redirect URI        | `http://localhost:5173`   |
+   | Allowed grants      | `authorization_code`      |
+   | PKCE                | Required                  |
+   | Allowed user types  | `Customer`                |
+
+   See [Manage Applications](/docs/next/guides/guides/applications/manage-applications).
+
+5. **Use the `default-basic-flow` authentication flow.**
+
+   The shipped `default-basic-flow` works as-is for password sign-in. To customize the steps, see [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
+
+6. **Create Thor as a `Customer`.**
+
+   Navigate to **Users** → **Add User**. Select `Customer` as the user type and click "Create User". Fill in the schema attributes and complete the user creation.
+
+   Navigate to **Roles** → open the `Traveler` role → **Assignments** tab. Click on **Add** and select the user you just created to assign the role.
+   
+   See [Manage Users](/docs/next/guides/guides/users/manage-users).
+
+7. **Start the sample** following the commands in its README.
+
+</TabItem>
+</Tabs>
+
+## Walkthrough Structure
+
+Each walkthrough below starts from the setup above. If the walkthrough needs anything extra (an external IdP, a notification sender, a recovery flow), the sub page covers it.
+
+Select a walkthrough to begin:
+
+- [Add Login](../try-it-out/add-login)
+- [Self Sign-Up](../try-it-out/self-sign-up)
+- [Profile Section](../try-it-out/profile-section)
+- [Account Recovery](../try-it-out/account-recovery)
+- [Onboard Internal Users](../try-it-out/onboard-internal-users)

@@ -1,0 +1,91 @@
+---
+title: Onboard Internal Users
+description: Invite staff members through the console.
+sidebar_position: 6
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Onboard Internal Users
+
+In this walkthrough, Odin signs in to the <ProductName /> Console as the operations admin. He invites two new staff members: Heimdall onto the support team and Baldur onto the destinations team. Each invitee receives an email, opens the link, fills in a few additional attributes, and arrives in Wayfinder with their `Staff` user record and role already attached.
+
+Onboarding internal users happens entirely in the <ProductName /> Console, so this walkthrough applies regardless of which solution pattern the app uses.
+
+:::note Prerequisites
+Complete [Setup](../#setup) before starting this walkthrough.
+:::
+
+:::info Background
+[Onboard Internal Users](../../customer-identity#onboard-internal-users) covers the requirements story behind this use case.
+:::
+
+## Walkthrough Setup
+
+1. **Configure an email notification sender** so the invitation email can be delivered. Have these values ready:
+
+   | Field             | Value                                  |
+   | ----------------- | -------------------------------------- |
+   | SMTP host         | Your mail provider                     |
+   | SMTP credentials  | Username and password / API key        |
+   | Sender name       | What appears as the "From" name        |
+   | Email template    | The invitation email body              |
+
+2. **Add the staff side of the model.** Pick the tab that matches the path you used in Setup.
+
+<Tabs>
+<TabItem value="declarative" label="Quick Start" default>
+
+The bundle already created the `Staff` user type, the `Support`, `DestinationsAdmin`, and `OpsAdmin` roles, the invitation flow, and Odin (Staff with the OpsAdmin role). No further action is needed.
+
+</TabItem>
+<TabItem value="build" label="Build It Yourself">
+
+Create the staff resources now:
+
+- **Create the `Staff` user type.** Navigate to **User Types** → **Create User Type**. Define the schema:
+
+  | Attribute     | Type   | Notes                            |
+  | ------------- | ------ | -------------------------------- |
+  | `username`    | string | Required, unique                 |
+  | `email`       | string | Required, unique                 |
+  | `password`    | string | Credential                       |
+  | `displayName` | string | Captured on invitation accept    |
+  | `timeZone`    | string | Captured on invitation accept    |
+
+  See [User Types](/docs/next/guides/guides/users/user-types).
+
+- **Create the staff roles.** Navigate to **Roles** → **Create Role**. Add the three staff roles:
+
+  | Role                | Purpose                          |
+  | ------------------- | -------------------------------- |
+  | `Support`           | Consumer support workflows       |
+  | `DestinationsAdmin` | Curate featured destinations     |
+  | `OpsAdmin`          | Invite and manage other staff    |
+
+  See [Authorization](/docs/next/guides/key-concepts/authorization).
+
+- **Build the invitation flow.** Navigate to **Flows** and create a flow that:
+
+  - Sends an invitation email to the invitee.
+  - Lands the invitee on a **Complete Your Profile** screen.
+  - Captures the missing attributes (display name, time zone).
+  - Attaches the assigned role on acceptance.
+
+  See [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
+
+- **Create Odin as a `Staff` user** with the `OpsAdmin` role so he can issue invitations. Navigate to **Users** → **Add User**. See [Manage Users](/docs/next/guides/guides/users/manage-users).
+
+</TabItem>
+</Tabs>
+
+## Try the Use Case
+
+1. Sign in to the <ProductName /> Console as Odin.
+2. Navigate to **Users** and select **Add User** → **Invite User**.
+3. Select `Staff` as the user type, enter Heimdall's email, and select `Support` as the role.
+4. Send the invitation. <ProductName /> emails Heimdall a one-time link.
+5. Open the email in Heimdall's inbox and open the link. The browser opens a **Complete Your Profile** page.
+6. Fill in the additional attributes and submit. Heimdall's account is now active with the `Support` role attached.
+7. Repeat the flow for Baldur with the `DestinationsAdmin` role.
