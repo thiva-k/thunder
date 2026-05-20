@@ -183,10 +183,10 @@ $reactApiPackageJson = Get-Content "samples/apps/react-api-based-sample/package.
 $REACT_API_SAMPLE_APP_VERSION = $reactApiPackageJson.version
 $REACT_API_SAMPLE_APP_FOLDER = "sample-app-react-api-based-${REACT_API_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
-# Agent Identity Sample (Wayfinder)
-$agentIdPackageJson = Get-Content "samples/apps/agent-id-sample/package.json" -Raw | ConvertFrom-Json
-$AGENT_ID_SAMPLE_APP_VERSION = $agentIdPackageJson.version
-$AGENT_ID_SAMPLE_APP_FOLDER = "sample-app-agent-id-${AGENT_ID_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
+# Wayfinder Sample
+$agentIdPackageJson = Get-Content "samples/apps/wayfinder-sample/package.json" -Raw | ConvertFrom-Json
+$WAYFINDER_SAMPLE_APP_VERSION = $agentIdPackageJson.version
+$WAYFINDER_SAMPLE_APP_FOLDER = "sample-app-wayfinder-${WAYFINDER_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
 # Directories
 $TARGET_DIR = Join-Path $SCRIPT_DIR "target"
@@ -211,7 +211,7 @@ $VANILLA_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-vanilla-sample"
 $VANILLA_SAMPLE_APP_SERVER_DIR = Join-Path $VANILLA_SAMPLE_APP_DIR "server"
 $REACT_SDK_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-sdk-sample"
 $REACT_API_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/react-api-based-sample"
-$AGENT_ID_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/agent-id-sample"
+$WAYFINDER_SAMPLE_APP_DIR = Join-Path $SAMPLE_BASE_DIR "apps/wayfinder-sample"
 
 # Default ports
 $GATE_APP_DEFAULT_PORT = 5190
@@ -906,18 +906,18 @@ function Build-Sample-App {
 
     Write-Host "✅ React API-based sample app built successfully."
 
-    # Build Agent Identity sample (Wayfinder)
-    Write-Host "=== Building Agent Identity sample app ==="
+    # Build Wayfinder sample (Wayfinder)
+    Write-Host "=== Building Wayfinder sample app ==="
 
-    Push-Location (Join-Path $AGENT_ID_SAMPLE_APP_DIR "frontend")
+    Push-Location (Join-Path $WAYFINDER_SAMPLE_APP_DIR "frontend")
     try {
-        Write-Host "Installing Agent Identity sample frontend dependencies..."
+        Write-Host "Installing Wayfinder sample frontend dependencies..."
         & npm ci
         if ($LASTEXITCODE -ne 0) {
             throw "npm ci failed with exit code $LASTEXITCODE"
         }
 
-        Write-Host "Building Agent Identity sample frontend..."
+        Write-Host "Building Wayfinder sample frontend..."
         & npm run build
         if ($LASTEXITCODE -ne 0) {
             throw "npm run build failed with exit code $LASTEXITCODE"
@@ -928,8 +928,8 @@ function Build-Sample-App {
     }
 
     foreach ($svc in @("api", "mcp", "ai-agent")) {
-        Write-Host "Installing Agent Identity sample $svc dependencies..."
-        Push-Location (Join-Path $AGENT_ID_SAMPLE_APP_DIR $svc)
+        Write-Host "Installing Wayfinder sample $svc dependencies..."
+        Push-Location (Join-Path $WAYFINDER_SAMPLE_APP_DIR $svc)
         try {
             & npm ci
             if ($LASTEXITCODE -ne 0) {
@@ -941,7 +941,7 @@ function Build-Sample-App {
         }
     }
 
-    Write-Host "✅ Agent Identity sample app built successfully."
+    Write-Host "✅ Wayfinder sample app built successfully."
     Write-Host "================================================================"
 }
 
@@ -961,9 +961,9 @@ function Package-Sample-App {
     Write-Host "=== Packaging React API-based sample app ==="
     Package-React-API-Based-Sample
 
-    # Package Agent Identity sample
-    Write-Host "=== Packaging Agent Identity sample app ==="
-    Package-Agent-Id-Sample
+    # Package Wayfinder sample
+    Write-Host "=== Packaging Wayfinder sample app ==="
+    Package-Wayfinder-Sample
 
     Write-Host "================================================================"
 }
@@ -1147,34 +1147,34 @@ function Package-React-API-Based-Sample {
     Write-Host "✅ React API-based sample app packaged successfully as $zipFile"
 }
 
-function Package-Agent-Id-Sample {
-    $dist_folder = Join-Path $DIST_DIR $AGENT_ID_SAMPLE_APP_FOLDER
+function Package-Wayfinder-Sample {
+    $dist_folder = Join-Path $DIST_DIR $WAYFINDER_SAMPLE_APP_FOLDER
     New-Item -Path $dist_folder -ItemType Directory -Force | Out-Null
 
     # Frontend built ahead of time; api/mcp/ai-agent ship as source because
     # pkg cannot bundle Node 22's node:sqlite binding and the chat agent
     # needs runtime LLM keys from .env.
-    $frontendDist = Join-Path $AGENT_ID_SAMPLE_APP_DIR "frontend/dist"
+    $frontendDist = Join-Path $WAYFINDER_SAMPLE_APP_DIR "frontend/dist"
     if (-not (Test-Path $frontendDist)) {
-        throw "Agent Identity sample frontend build output not found at $frontendDist"
+        throw "Wayfinder sample frontend build output not found at $frontendDist"
     }
-    Write-Host "Copying Agent Identity sample frontend build output..."
+    Write-Host "Copying Wayfinder sample frontend build output..."
     $frontendDest = Join-Path $dist_folder "frontend"
     New-Item -Path $frontendDest -ItemType Directory -Force | Out-Null
     Copy-Item -Path $frontendDist -Destination $frontendDest -Recurse -Force
     foreach ($item in @("package.json", "package-lock.json", "index.html", "vite.config.js", ".env.example", "README.md")) {
-        $src = Join-Path $AGENT_ID_SAMPLE_APP_DIR "frontend/$item"
+        $src = Join-Path $WAYFINDER_SAMPLE_APP_DIR "frontend/$item"
         if (Test-Path $src) { Copy-Item -Path $src -Destination $frontendDest -Force }
     }
     foreach ($subdir in @("src", "public")) {
-        $src = Join-Path $AGENT_ID_SAMPLE_APP_DIR "frontend/$subdir"
+        $src = Join-Path $WAYFINDER_SAMPLE_APP_DIR "frontend/$subdir"
         if (Test-Path $src) { Copy-Item -Path $src -Destination $frontendDest -Recurse -Force }
     }
 
     foreach ($svc in @("api", "mcp", "ai-agent")) {
-        $svcSrc = Join-Path $AGENT_ID_SAMPLE_APP_DIR $svc
+        $svcSrc = Join-Path $WAYFINDER_SAMPLE_APP_DIR $svc
         $svcDest = Join-Path $dist_folder $svc
-        Write-Host "Copying Agent Identity sample $svc source..."
+        Write-Host "Copying Wayfinder sample $svc source..."
         New-Item -Path $svcDest -ItemType Directory -Force | Out-Null
         foreach ($item in @("package.json", "package-lock.json", "tsconfig.json", "README.md", ".env.example", "server.ts", "agent.ts")) {
             $src = Join-Path $svcSrc $item
@@ -1186,32 +1186,32 @@ function Package-Agent-Id-Sample {
         }
     }
 
-    if (Test-Path (Join-Path $AGENT_ID_SAMPLE_APP_DIR "README.md")) {
-        Copy-Item -Path (Join-Path $AGENT_ID_SAMPLE_APP_DIR "README.md") -Destination $dist_folder -Force
+    if (Test-Path (Join-Path $WAYFINDER_SAMPLE_APP_DIR "README.md")) {
+        Copy-Item -Path (Join-Path $WAYFINDER_SAMPLE_APP_DIR "README.md") -Destination $dist_folder -Force
     }
-    if (Test-Path (Join-Path $AGENT_ID_SAMPLE_APP_DIR "package.json")) {
-        Copy-Item -Path (Join-Path $AGENT_ID_SAMPLE_APP_DIR "package.json") -Destination $dist_folder -Force
+    if (Test-Path (Join-Path $WAYFINDER_SAMPLE_APP_DIR "package.json")) {
+        Copy-Item -Path (Join-Path $WAYFINDER_SAMPLE_APP_DIR "package.json") -Destination $dist_folder -Force
     }
 
     if ($SAMPLE_DIST_OS -eq "win") {
         Write-Host "Including Windows start script (start.ps1)..."
-        Copy-Item -Path (Join-Path $AGENT_ID_SAMPLE_APP_DIR "start.ps1") -Destination $dist_folder -Force
+        Copy-Item -Path (Join-Path $WAYFINDER_SAMPLE_APP_DIR "start.ps1") -Destination $dist_folder -Force
     }
     else {
         Write-Host "Including Unix start script (start.sh)..."
-        Copy-Item -Path (Join-Path $AGENT_ID_SAMPLE_APP_DIR "start.sh") -Destination $dist_folder -Force
+        Copy-Item -Path (Join-Path $WAYFINDER_SAMPLE_APP_DIR "start.sh") -Destination $dist_folder -Force
     }
 
-    $thunderConfig = Join-Path $AGENT_ID_SAMPLE_APP_DIR "thunderid-config"
+    $thunderConfig = Join-Path $WAYFINDER_SAMPLE_APP_DIR "thunderid-config"
     if (-not (Test-Path $thunderConfig)) {
         throw "thunderid-config directory not found at $thunderConfig"
     }
     Write-Host "Copying ThunderID config..."
     Copy-Item -Path $thunderConfig -Destination $dist_folder -Recurse -Force
 
-    Write-Host "Creating Agent Identity sample zip file..."
+    Write-Host "Creating Wayfinder sample zip file..."
     $distAbs = (Resolve-Path -Path $DIST_DIR).Path
-    $zipFile = [System.IO.Path]::Combine($distAbs, "$AGENT_ID_SAMPLE_APP_FOLDER.zip")
+    $zipFile = [System.IO.Path]::Combine($distAbs, "$WAYFINDER_SAMPLE_APP_FOLDER.zip")
     if (Test-Path $zipFile) {
         Remove-Item $zipFile -Force
     }
@@ -1221,7 +1221,7 @@ function Package-Agent-Id-Sample {
 
     Remove-Item -Path $dist_folder -Recurse -Force
 
-    Write-Host "✅ Agent Identity sample app packaged successfully as $zipFile"
+    Write-Host "✅ Wayfinder sample app packaged successfully as $zipFile"
 }
 
 function Test-Unit {

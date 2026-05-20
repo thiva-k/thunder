@@ -119,9 +119,9 @@ REACT_SDK_SAMPLE_APP_FOLDER="sample-app-react-sdk-${REACT_SDK_SAMPLE_APP_VERSION
 REACT_API_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/react-api-based-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
 REACT_API_SAMPLE_APP_FOLDER="sample-app-react-api-based-${REACT_API_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
-# Agent Identity Sample (Wayfinder)
-AGENT_ID_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/agent-id-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
-AGENT_ID_SAMPLE_APP_FOLDER="sample-app-agent-id-${AGENT_ID_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
+# Wayfinder Sample
+WAYFINDER_SAMPLE_APP_VERSION=$(grep -o '"version": *"[^"]*"' samples/apps/wayfinder-sample/package.json | sed 's/"version": *"\(.*\)"/\1/')
+WAYFINDER_SAMPLE_APP_FOLDER="sample-app-wayfinder-${WAYFINDER_SAMPLE_APP_VERSION}-${SAMPLE_PACKAGE_OS}-${SAMPLE_PACKAGE_ARCH}"
 
 # Directories
 TARGET_DIR=target
@@ -146,7 +146,7 @@ VANILLA_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/react-vanilla-sample
 VANILLA_SAMPLE_APP_SERVER_DIR=$VANILLA_SAMPLE_APP_DIR/server
 REACT_SDK_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/react-sdk-sample
 REACT_API_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/react-api-based-sample
-AGENT_ID_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/agent-id-sample
+WAYFINDER_SAMPLE_APP_DIR=$SAMPLE_BASE_DIR/apps/wayfinder-sample
 
 # Default ports
 GATE_APP_DEFAULT_PORT=5190
@@ -632,24 +632,24 @@ function build_sample_app() {
     cd - || exit 1
     echo "✅ React API-based sample app built successfully."
 
-    # Build Agent Identity sample (Wayfinder)
-    echo "=== Building Agent Identity sample app ==="
+    # Build Wayfinder sample (Wayfinder)
+    echo "=== Building Wayfinder sample app ==="
 
-    cd "$AGENT_ID_SAMPLE_APP_DIR/frontend" || exit 1
-    echo "Installing Agent Identity sample frontend dependencies..."
+    cd "$WAYFINDER_SAMPLE_APP_DIR/frontend" || exit 1
+    echo "Installing Wayfinder sample frontend dependencies..."
     npm ci
 
-    echo "Building Agent Identity sample frontend..."
+    echo "Building Wayfinder sample frontend..."
     npm run build
 
     cd "$SCRIPT_DIR" || exit 1
 
     for svc in api mcp ai-agent; do
-        echo "Installing Agent Identity sample $svc dependencies..."
-        (cd "$AGENT_ID_SAMPLE_APP_DIR/$svc" && npm ci)
+        echo "Installing Wayfinder sample $svc dependencies..."
+        (cd "$WAYFINDER_SAMPLE_APP_DIR/$svc" && npm ci)
     done
 
-    echo "✅ Agent Identity sample app built successfully."
+    echo "✅ Wayfinder sample app built successfully."
 
     echo "================================================================"
 }
@@ -670,9 +670,9 @@ function package_sample_app() {
     echo "=== Packaging React API-based sample app ==="
     package_react_api_based_sample
 
-    # Package Agent Identity sample
-    echo "=== Packaging Agent Identity sample app ==="
-    package_agent_id_sample
+    # Package Wayfinder sample
+    echo "=== Packaging Wayfinder sample app ==="
+    package_wayfinder_sample
 
     echo "================================================================"
 }
@@ -841,42 +841,42 @@ function package_react_api_based_sample() {
     echo "✅ React API-based sample app packaged successfully as $DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER.zip"
 }
 
-function package_agent_id_sample() {
-    local dist_folder="$DIST_DIR/$AGENT_ID_SAMPLE_APP_FOLDER"
+function package_wayfinder_sample() {
+    local dist_folder="$DIST_DIR/$WAYFINDER_SAMPLE_APP_FOLDER"
     mkdir -p "$dist_folder"
 
     # Frontend is built ahead of time; the api/mcp/ai-agent services ship as source
     # because pkg cannot bundle Node 22's node:sqlite binding and the chat agent
     # requires runtime LLM keys from .env.
-    if [ -d "$AGENT_ID_SAMPLE_APP_DIR/frontend/dist" ]; then
-        echo "Copying Agent Identity sample frontend build output..."
+    if [ -d "$WAYFINDER_SAMPLE_APP_DIR/frontend/dist" ]; then
+        echo "Copying Wayfinder sample frontend build output..."
         mkdir -p "$dist_folder/frontend"
-        cp -r "$AGENT_ID_SAMPLE_APP_DIR/frontend/dist" "$dist_folder/frontend/"
-        cp "$AGENT_ID_SAMPLE_APP_DIR/frontend/package.json" "$dist_folder/frontend/"
-        cp "$AGENT_ID_SAMPLE_APP_DIR/frontend/package-lock.json" "$dist_folder/frontend/" 2>/dev/null || true
-        cp "$AGENT_ID_SAMPLE_APP_DIR/frontend/index.html" "$dist_folder/frontend/" 2>/dev/null || true
-        cp "$AGENT_ID_SAMPLE_APP_DIR/frontend/vite.config.js" "$dist_folder/frontend/" 2>/dev/null || true
-        if [ -d "$AGENT_ID_SAMPLE_APP_DIR/frontend/src" ]; then
-            cp -r "$AGENT_ID_SAMPLE_APP_DIR/frontend/src" "$dist_folder/frontend/"
+        cp -r "$WAYFINDER_SAMPLE_APP_DIR/frontend/dist" "$dist_folder/frontend/"
+        cp "$WAYFINDER_SAMPLE_APP_DIR/frontend/package.json" "$dist_folder/frontend/"
+        cp "$WAYFINDER_SAMPLE_APP_DIR/frontend/package-lock.json" "$dist_folder/frontend/" 2>/dev/null || true
+        cp "$WAYFINDER_SAMPLE_APP_DIR/frontend/index.html" "$dist_folder/frontend/" 2>/dev/null || true
+        cp "$WAYFINDER_SAMPLE_APP_DIR/frontend/vite.config.js" "$dist_folder/frontend/" 2>/dev/null || true
+        if [ -d "$WAYFINDER_SAMPLE_APP_DIR/frontend/src" ]; then
+            cp -r "$WAYFINDER_SAMPLE_APP_DIR/frontend/src" "$dist_folder/frontend/"
         fi
-        if [ -d "$AGENT_ID_SAMPLE_APP_DIR/frontend/public" ]; then
-            cp -r "$AGENT_ID_SAMPLE_APP_DIR/frontend/public" "$dist_folder/frontend/"
+        if [ -d "$WAYFINDER_SAMPLE_APP_DIR/frontend/public" ]; then
+            cp -r "$WAYFINDER_SAMPLE_APP_DIR/frontend/public" "$dist_folder/frontend/"
         fi
-        if [ -f "$AGENT_ID_SAMPLE_APP_DIR/frontend/.env.example" ]; then
-            cp "$AGENT_ID_SAMPLE_APP_DIR/frontend/.env.example" "$dist_folder/frontend/"
+        if [ -f "$WAYFINDER_SAMPLE_APP_DIR/frontend/.env.example" ]; then
+            cp "$WAYFINDER_SAMPLE_APP_DIR/frontend/.env.example" "$dist_folder/frontend/"
         fi
-        if [ -f "$AGENT_ID_SAMPLE_APP_DIR/frontend/README.md" ]; then
-            cp "$AGENT_ID_SAMPLE_APP_DIR/frontend/README.md" "$dist_folder/frontend/"
+        if [ -f "$WAYFINDER_SAMPLE_APP_DIR/frontend/README.md" ]; then
+            cp "$WAYFINDER_SAMPLE_APP_DIR/frontend/README.md" "$dist_folder/frontend/"
         fi
     else
-        echo "Error: Agent Identity sample frontend build output not found at $AGENT_ID_SAMPLE_APP_DIR/frontend/dist"
+        echo "Error: Wayfinder sample frontend build output not found at $WAYFINDER_SAMPLE_APP_DIR/frontend/dist"
         exit 1
     fi
 
     for svc in api mcp ai-agent; do
-        local svc_src="$AGENT_ID_SAMPLE_APP_DIR/$svc"
+        local svc_src="$WAYFINDER_SAMPLE_APP_DIR/$svc"
         local svc_dest="$dist_folder/$svc"
-        echo "Copying Agent Identity sample $svc source..."
+        echo "Copying Wayfinder sample $svc source..."
         mkdir -p "$svc_dest"
         # Copy package metadata, source, and per-service docs but skip node_modules
         cp "$svc_src/package.json" "$svc_dest/"
@@ -905,40 +905,40 @@ function package_agent_id_sample() {
     done
 
     # Copy top-level files
-    if [ -f "$AGENT_ID_SAMPLE_APP_DIR/README.md" ]; then
-        cp "$AGENT_ID_SAMPLE_APP_DIR/README.md" "$dist_folder/"
+    if [ -f "$WAYFINDER_SAMPLE_APP_DIR/README.md" ]; then
+        cp "$WAYFINDER_SAMPLE_APP_DIR/README.md" "$dist_folder/"
     fi
-    if [ -f "$AGENT_ID_SAMPLE_APP_DIR/package.json" ]; then
-        cp "$AGENT_ID_SAMPLE_APP_DIR/package.json" "$dist_folder/"
+    if [ -f "$WAYFINDER_SAMPLE_APP_DIR/package.json" ]; then
+        cp "$WAYFINDER_SAMPLE_APP_DIR/package.json" "$dist_folder/"
     fi
 
     # Startup script for the appropriate OS
     if [ "$SAMPLE_DIST_OS" = "win" ]; then
         echo "Including Windows start script (start.ps1)..."
-        cp "$AGENT_ID_SAMPLE_APP_DIR/start.ps1" "$dist_folder/"
+        cp "$WAYFINDER_SAMPLE_APP_DIR/start.ps1" "$dist_folder/"
     else
         echo "Including Unix start script (start.sh)..."
-        cp "$AGENT_ID_SAMPLE_APP_DIR/start.sh" "$dist_folder/"
+        cp "$WAYFINDER_SAMPLE_APP_DIR/start.sh" "$dist_folder/"
         chmod +x "$dist_folder/start.sh"
     fi
 
     # ThunderID declarative resource configs
-    if [ -d "$AGENT_ID_SAMPLE_APP_DIR/thunderid-config" ]; then
+    if [ -d "$WAYFINDER_SAMPLE_APP_DIR/thunderid-config" ]; then
         echo "Copying ThunderID config..."
-        cp -r "$AGENT_ID_SAMPLE_APP_DIR/thunderid-config" "$dist_folder/"
+        cp -r "$WAYFINDER_SAMPLE_APP_DIR/thunderid-config" "$dist_folder/"
     else
-        echo "Error: thunderid-config directory not found at $AGENT_ID_SAMPLE_APP_DIR/thunderid-config"
-        echo "  AGENT_ID_SAMPLE_APP_DIR=$AGENT_ID_SAMPLE_APP_DIR"
-        echo "  AGENT_ID_SAMPLE_APP_FOLDER=$AGENT_ID_SAMPLE_APP_FOLDER"
+        echo "Error: thunderid-config directory not found at $WAYFINDER_SAMPLE_APP_DIR/thunderid-config"
+        echo "  WAYFINDER_SAMPLE_APP_DIR=$WAYFINDER_SAMPLE_APP_DIR"
+        echo "  WAYFINDER_SAMPLE_APP_FOLDER=$WAYFINDER_SAMPLE_APP_FOLDER"
         echo "  DIST_DIR=$DIST_DIR"
         exit 1
     fi
 
-    echo "Creating Agent Identity sample zip file..."
-    (cd "$DIST_DIR" && find "$AGENT_ID_SAMPLE_APP_FOLDER" | sort | zip "$AGENT_ID_SAMPLE_APP_FOLDER.zip" -@)
-    rm -rf "${DIST_DIR:?}/$AGENT_ID_SAMPLE_APP_FOLDER"
+    echo "Creating Wayfinder sample zip file..."
+    (cd "$DIST_DIR" && find "$WAYFINDER_SAMPLE_APP_FOLDER" | sort | zip "$WAYFINDER_SAMPLE_APP_FOLDER.zip" -@)
+    rm -rf "${DIST_DIR:?}/$WAYFINDER_SAMPLE_APP_FOLDER"
 
-    echo "✅ Agent Identity sample app packaged successfully as $DIST_DIR/$AGENT_ID_SAMPLE_APP_FOLDER.zip"
+    echo "✅ Wayfinder sample app packaged successfully as $DIST_DIR/$WAYFINDER_SAMPLE_APP_FOLDER.zip"
 }
 
 function test_unit() {

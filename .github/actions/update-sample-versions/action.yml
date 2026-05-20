@@ -49,8 +49,8 @@ runs:
         cd "$GITHUB_WORKSPACE"
 
         # Update agent-id sample
-        echo "Updating agent-id-sample..."
-        cd samples/apps/agent-id-sample
+        echo "Updating wayfinder-sample..."
+        cd samples/apps/wayfinder-sample
         npm version "$SAMPLE_VERSION" --no-git-tag-version --allow-same-version
 
         cd "$GITHUB_WORKSPACE"

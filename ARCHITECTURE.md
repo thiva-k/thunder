@@ -23,7 +23,7 @@ frontend/apps/
   gate/         # login/registration SPA  (@asgardeo/react — app-native mode)
   console/      # admin SPA               (@asgardeo/react — redirect mode)
 frontend/packages/      # @thunderid/contexts · design · hooks · i18n · utils · types · logger
-samples/apps/           # react-sdk-sample · react-api-based-sample · react-vanilla-sample · agent-id-sample
+samples/apps/           # react-sdk-sample · react-api-based-sample · react-vanilla-sample · wayfinder-sample
 ```
 
 ## Backend patterns

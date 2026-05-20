@@ -166,7 +166,7 @@ ThunderID provides the following sample applications to help you get started qui
 
 - **React Vanilla Sample** — Sample React application demonstrating direct API integration without external SDKs. Supports Native Flow API or Standard OAuth/OIDC.
 - **React SDK Sample** — Sample React application demonstrating SDK-based integration using `@asgardeo/react` for OAuth 2.0/OIDC authentication.
-- **Agent Identity Sample (Wayfinder)** — Travel app demonstrating an AI agent with its own ThunderID-managed identity. The agent uses a `client_credentials` token for browsing tools and an on-behalf-of `authorization_code` + PKCE flow for actions that need the user's consent.
+- **Wayfinder Sample** — Travel app demonstrating an AI agent with its own ThunderID-managed identity. The agent uses a `client_credentials` token for browsing tools and an on-behalf-of `authorization_code` + PKCE flow for actions that need the user's consent.
 
 ##### React Vanilla Sample
 
@@ -241,17 +241,17 @@ ThunderID provides the following sample applications to help you get started qui
 
     > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
 
-##### Agent Identity Sample (Wayfinder)
+##### Wayfinder Sample
 
 1. **Download the sample**
 
-    Download `sample-app-agent-id-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/thunder-id/thunderid/releases/latest).
+    Download `sample-app-wayfinder-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/thunder-id/thunderid/releases/latest).
 
 2. **Unzip and navigate to the sample app directory**
 
     ```bash
-    unzip sample-app-agent-id-<version>-<os>-<arch>.zip
-    cd sample-app-agent-id-<version>-<os>-<arch>/
+    unzip sample-app-wayfinder-<version>-<os>-<arch>.zip
+    cd sample-app-wayfinder-<version>-<os>-<arch>/
     ```
 
 3. **Import sample app resources**
