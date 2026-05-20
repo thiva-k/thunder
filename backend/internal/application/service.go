@@ -912,7 +912,11 @@ func (as *applicationService) validateApplicationForUpdate(
 func (as *applicationService) validateApplicationFields(
 	ctx context.Context, app *model.ApplicationDTO) *serviceerror.ServiceError {
 	// Resolve ou_handle to an ID when the direct ID is absent.
-	if app.OUID == "" && app.OUHandle != "" {
+	// If both are provided, ou_id wins and a warning is logged.
+	if app.OUID != "" && app.OUHandle != "" {
+		as.logger.Warn("Both ou_id and ou_handle provided for application; ou_handle ignored",
+			log.String("appID", app.ID), log.String("name", app.Name))
+	} else if app.OUID == "" && app.OUHandle != "" {
 		ou, svcErr := as.ouService.GetOrganizationUnitByPath(ctx, app.OUHandle)
 		if svcErr != nil {
 			return &ErrorInvalidRequestFormat

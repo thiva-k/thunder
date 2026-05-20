@@ -5057,3 +5057,98 @@ func (suite *ResourceServiceTestSuite) TestConsentSyncError_IsClientError() {
 	emptyErr := &consentSyncError{}
 	require.False(suite.T(), emptyErr.IsClientError())
 }
+
+// TestResolveResourceServerOUHandle_OUHandleResolved verifies that when only ou_handle is set,
+// it is resolved to ou_id via the OU service.
+func (suite *ResourceServiceTestSuite) TestResolveResourceServerOUHandle_OUHandleResolved() {
+	suite.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "default").
+		Return(oupkg.OrganizationUnit{ID: "ou-resolved"}, (*serviceerror.ServiceError)(nil)).Once()
+
+	rs := &ResourceServer{OUHandle: "default"}
+	svcErr := suite.service.ResolveResourceServerOUHandle(context.Background(), rs)
+
+	suite.Nil(svcErr)
+	suite.Equal("ou-resolved", rs.OUID)
+}
+
+// TestResolveResourceServerOUHandle_OUIDAlreadySet verifies that no resolution happens when
+// ou_id is set and ou_handle is empty.
+func (suite *ResourceServiceTestSuite) TestResolveResourceServerOUHandle_OUIDAlreadySet() {
+	rs := &ResourceServer{OUID: "ou-direct"}
+	svcErr := suite.service.ResolveResourceServerOUHandle(context.Background(), rs)
+
+	suite.Nil(svcErr)
+	suite.Equal("ou-direct", rs.OUID)
+}
+
+// TestResolveResourceServerOUHandle_BothProvided verifies that when both ou_id and ou_handle
+// are provided, ou_id is retained and the OU service is never called.
+func (suite *ResourceServiceTestSuite) TestResolveResourceServerOUHandle_BothProvided() {
+	rs := &ResourceServer{ID: "rs1", Name: "Server", OUID: "ou-direct", OUHandle: "default"}
+
+	svcErr := suite.service.ResolveResourceServerOUHandle(context.Background(), rs)
+
+	suite.Nil(svcErr)
+	suite.Equal("ou-direct", rs.OUID)
+	// AssertExpectations in t.Cleanup confirms GetOrganizationUnitByPath was never invoked.
+}
+
+// TestResolveResourceServerOUHandle_OUHandleNotFound verifies that a not-found response from
+// the OU service is surfaced as ErrorInvalidRequestFormat.
+func (suite *ResourceServiceTestSuite) TestResolveResourceServerOUHandle_OUHandleNotFound() {
+	suite.mockOU.On("GetOrganizationUnitByPath", mock.Anything, "missing").
+		Return(oupkg.OrganizationUnit{}, &oupkg.ErrorOrganizationUnitNotFound).Once()
+
+	rs := &ResourceServer{OUHandle: "missing"}
+	svcErr := suite.service.ResolveResourceServerOUHandle(context.Background(), rs)
+
+	suite.NotNil(svcErr)
+	suite.Equal(ErrorInvalidRequestFormat.Code, svcErr.Code)
+}
+
+// TestResolveResourceServerOUHandle_NeitherProvided verifies the call is a no-op when neither
+// ou_id nor ou_handle is provided.
+func (suite *ResourceServiceTestSuite) TestResolveResourceServerOUHandle_NeitherProvided() {
+	rs := &ResourceServer{}
+	svcErr := suite.service.ResolveResourceServerOUHandle(context.Background(), rs)
+
+	suite.Nil(svcErr)
+	suite.Empty(rs.OUID)
+}
+
+// TestResolveResourceServerOUHandle_NilOUService verifies that a clear error is returned when
+// the OU service is nil and ou_handle is supplied (no nil-pointer panic).
+func (suite *ResourceServiceTestSuite) TestResolveResourceServerOUHandle_NilOUService() {
+	svc := &resourceService{
+		logger:    *log.GetLogger(),
+		ouService: nil,
+	}
+	rs := &ResourceServer{OUHandle: "default"}
+
+	svcErr := svc.ResolveResourceServerOUHandle(context.Background(), rs)
+
+	suite.NotNil(svcErr)
+	suite.Equal(serviceerror.InternalServerError.Code, svcErr.Code)
+}
+
+// TestResourceServerYAML_OUHandleParsed verifies that ou_handle is parsed off the YAML
+// document into the ResourceServer struct.
+func TestResourceServerYAML_OUHandleParsed(t *testing.T) {
+	yamlData := []byte(`
+id: rs1
+name: Server
+handle: server
+ou_handle: default
+`)
+	rs, err := parseToResourceServer(yamlData)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rs.OUHandle != "default" {
+		t.Errorf("OUHandle = %q, want %q", rs.OUHandle, "default")
+	}
+	if rs.OUID != "" {
+		t.Errorf("OUID = %q, want empty (resolution happens later)", rs.OUID)
+	}
+}
