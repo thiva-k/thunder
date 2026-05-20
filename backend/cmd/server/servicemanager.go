@@ -310,9 +310,11 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	}
 	exporters = append(exporters, applicationExporter)
 
-	if _, err := agent.Initialize(mux, entityService, inboundClientService, ouService); err != nil {
+	agentService, agentExporter, err := agent.Initialize(mux, entityService, inboundClientService, ouService)
+	if err != nil {
 		logger.Fatal("Failed to initialize AgentService", log.Error(err))
 	}
+	exporters = append(exporters, agentExporter)
 
 	// Initialize design resolve service for theme and layout resolution
 	designResolveService := resolve.Initialize(mux, themeMgtService, layoutMgtService, applicationService)
@@ -339,6 +341,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		layoutMgtService,
 		userService,
 		i18nService,
+		agentService,
 	)
 
 	flowExecService, err := flowexec.Initialize(mux, flowMgtService, inboundClientService, entityProvider,
