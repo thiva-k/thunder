@@ -61,8 +61,8 @@ const logger: ReturnType<typeof createPackageComponentLogger> = createPackageCom
 export type ThunderIDProviderProps = ThunderIDReactConfig;
 
 const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
-  afterSignInUrl = window.location.origin,
-  afterSignOutUrl = window.location.origin,
+  afterSignInUrl,
+  afterSignOutUrl,
   baseUrl: initialBaseUrl,
   clientId,
   children,
@@ -77,7 +77,6 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
   syncSession,
   instanceId = 0,
   organizationChain,
-  platform = Platform.ThunderIDV2,
   ...rest
 }: PropsWithChildren<ThunderIDProviderProps>): ReactElement => {
   const reRenderCheckRef: RefObject<boolean> = useRef(false);
@@ -95,8 +94,8 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [baseUrl, setBaseUrl] = useState<string>(initialBaseUrl);
   const [config, setConfig] = useState<ThunderIDReactConfig>({
-    afterSignInUrl,
-    afterSignOutUrl,
+    afterSignInUrl: afterSignInUrl ?? window.location.origin,
+    afterSignOutUrl: afterSignOutUrl ?? window.location.origin,
     applicationId,
     baseUrl,
     clientId,
@@ -107,7 +106,6 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
     signInUrl,
     signUpUrl,
     syncSession,
-    platform,
     ...rest,
   });
 
@@ -155,55 +153,15 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
         setBaseUrl(resolvedBaseUrl);
       }
 
-      // TEMPORARY: ThunderID V2 platform does not support SCIM2, Organizations endpoints yet.
+      // TEMPORARY: SCIM2 and Organizations endpoints are not yet supported.
       // Tracker: https://github.com/asgardeo/javascript/issues/212
-      if (config.platform === Platform.ThunderIDV2) {
-        const claims: Record<string, any> = extractUserClaimsFromIdToken(decodedToken);
-        setUser(claims);
-        setUserProfile({
-          flattenedProfile: claims as User,
-          profile: claims as User,
-          schemas: [],
-        });
-      } else {
-        // Check if user profile fetching is enabled (default: true)
-        const shouldFetchUserProfile: boolean = preferences?.user?.fetchUserProfile !== false;
-
-        if (shouldFetchUserProfile) {
-          try {
-            const fetchedUser: User = await client.getUser({baseUrl: resolvedBaseUrl});
-            setUser(fetchedUser);
-          } catch (error) {
-            // TODO: Add an error log.
-          }
-
-          try {
-            const fetchedUserProfile: UserProfile = await client.getUserProfile({baseUrl: resolvedBaseUrl});
-            setUserProfile(fetchedUserProfile);
-          } catch (error) {
-            // TODO: Add an error log.
-          }
-        }
-
-        // Check if organization fetching is enabled (default: true)
-        const shouldFetchOrganizations: boolean = preferences?.user?.fetchOrganizations !== false;
-
-        if (shouldFetchOrganizations) {
-          try {
-            const fetchedOrganization: Organization = await client.getCurrentOrganization();
-            setCurrentOrganization(fetchedOrganization);
-          } catch (error) {
-            // TODO: Add an error log.
-          }
-
-          try {
-            const fetchedMyOrganizations: Organization[] = await client.getMyOrganizations();
-            setMyOrganizations(fetchedMyOrganizations);
-          } catch (error) {
-            // TODO: Add an error log.
-          }
-        }
-      }
+      const claims: Record<string, any> = extractUserClaimsFromIdToken(decodedToken);
+      setUser(claims);
+      setUserProfile({
+        flattenedProfile: claims as User,
+        profile: claims as User,
+        schemas: [],
+      });
 
       // CRITICAL: Update sign-in status BEFORE setting loading to false
       // This prevents the race condition where ProtectedRoute sees isLoading=false but isSignedIn=false
@@ -223,10 +181,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
     // This allows us to skip session checks entirely for V2 flows
     const arg1: any = args[0];
     const isV2FlowRequest: boolean =
-      config.platform === Platform.ThunderIDV2 &&
-      typeof arg1 === 'object' &&
-      arg1 !== null &&
-      ('executionId' in arg1 || 'applicationId' in arg1);
+      typeof arg1 === 'object' && arg1 !== null && ('executionId' in arg1 || 'applicationId' in arg1);
 
     try {
       if (!isV2FlowRequest) {
@@ -234,17 +189,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
         setIsLoadingSync(true);
       }
 
-      const response: User | EmbeddedSignInFlowResponseV2 = await client.signIn(...args);
-
-      if (isV2FlowRequest || (response && typeof response === 'object' && 'flowStatus' in response)) {
-        return response;
-      }
-
-      if (await client.isSignedIn()) {
-        await updateSession();
-      }
-
-      return response;
+      return await client.signIn(...args);
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Sign in failed: ${error instanceof Error ? error.message : String(JSON.stringify(error))}`,
@@ -277,6 +222,11 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
     reRenderCheckRef.current = true;
 
     (async (): Promise<void> => {
+      // Sync session state whenever sign-in completes (both redirect and embedded V2 flows).
+      await client.on('sign-in', async () => {
+        await updateSession();
+      });
+
       // User is already authenticated. Skip...
       const isAlreadySignedIn: boolean = await client.isSignedIn();
 
@@ -311,33 +261,18 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
 
       const currentUrl: URL = new URL(window.location.href);
       const hasAuthParamsResult: boolean =
-        hasAuthParams(currentUrl, afterSignInUrl) && hasCalledForThisInstance(currentUrl, instanceId ?? 0);
-
-      const isV2Platform: boolean = config.platform === Platform.ThunderIDV2;
+        hasAuthParams(currentUrl, config.afterSignInUrl) && hasCalledForThisInstance(currentUrl, instanceId ?? 0);
 
       if (hasAuthParamsResult) {
         try {
-          if (isV2Platform) {
-            // For V2 platform, check if this is an embedded flow or traditional OAuth
-            const urlParams: URLSearchParams = currentUrl.searchParams;
-            const code: string | null = urlParams.get('code');
-            const executionIdFromUrl: string | null = urlParams.get('executionId');
-            const storedExecutionId: string | null = sessionStorage.getItem('thunderid_execution_id');
+          const urlParams: URLSearchParams = currentUrl.searchParams;
+          const code: string | null = urlParams.get('code');
+          const executionIdFromUrl: string | null = urlParams.get('executionId');
+          const storedExecutionId: string | null = sessionStorage.getItem('thunderid_execution_id');
 
-            // If there's a code and no executionId, exchange OAuth code for tokens
-            if (code && !executionIdFromUrl && !storedExecutionId) {
-              await signIn();
-            }
-          } else {
-            // If non-V2 platform, use traditional OAuth callback handling
-            await signIn(
-              {callOnlyOnRedirect: true},
-              // authParams?.authorizationCode,
-              // authParams?.sessionState,
-              // authParams?.state,
-            );
+          if (code && !executionIdFromUrl && !storedExecutionId) {
+            await signIn();
           }
-          // setError(null);
         } catch (error) {
           throw new ThunderIDRuntimeError(
             `Sign in failed: ${error instanceof Error ? error.message : String(JSON.stringify(error))}`,
@@ -346,8 +281,6 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
             'An error occurred while trying to sign in.',
           );
         }
-      } else {
-        // TODO: Add a debug log to indicate that the user is not signed in
       }
     })();
   }, []);
@@ -415,7 +348,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
       // Don't set loading=false while auth params are in the URL and user isn't signed in yet.
       // This prevents ProtectedRoute from redirecting before the sign-in effect processes the auth code.
       const currentUrl: URL = new URL(window.location.href);
-      if (!isSignedInSync && hasAuthParams(currentUrl, afterSignInUrl)) {
+      if (!isSignedInSync && hasAuthParams(currentUrl, config.afterSignInUrl)) {
         return;
       }
 
@@ -475,11 +408,9 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
 
   // Auto-fetch branding when initialized and configured
   useEffect(() => {
-    // TEMPORARY: ThunderID V2 platform does not support branding preference yet.
+    // TEMPORARY: Branding preference is not yet supported.
     // Tracker: https://github.com/asgardeo/javascript/issues/212
-    if (config.platform === Platform.ThunderIDV2) {
-      return;
-    }
+    return;
 
     // Only fetch branding when explicitly enabled via preferences.theme.inheritFromBranding
     const shouldFetchBranding: boolean = preferences?.theme?.inheritFromBranding === true;
@@ -500,13 +431,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
     try {
       setIsUpdatingSession(true);
       setIsLoadingSync(true);
-      const response: User | boolean = await client.signInSilently(options);
-
-      if (await client.isSignedIn()) {
-        await updateSession();
-      }
-
-      return response;
+      return await client.signInSilently(options);
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Error while signing in silently: ${error instanceof Error ? error.message : String(JSON.stringify(error))}`,
@@ -615,7 +540,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
 
   const value: any = useMemo(
     () => ({
-      afterSignInUrl,
+      afterSignInUrl: config.afterSignInUrl,
       applicationId: config.applicationId,
       baseUrl,
       clearSession,
@@ -639,7 +564,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
       organization: currentOrganization,
       organizationChain,
       organizationHandle: config?.organizationHandle,
-      platform: config?.platform,
+      platform: Platform.ThunderID,
       reInitialize,
       recover,
       signIn,
@@ -656,9 +581,9 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
     [
       applicationId,
       config?.organizationHandle,
+      config.afterSignInUrl,
       signInUrl,
       signUpUrl,
-      afterSignInUrl,
       baseUrl,
       clientId,
       wellKnown,

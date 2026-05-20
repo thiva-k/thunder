@@ -27,7 +27,7 @@ export type BaseRecoveryProps = BaseRecoveryV1Props | BaseRecoveryV2Props;
 const BaseRecovery: FC<BaseRecoveryProps> = (props: BaseRecoveryProps) => {
   const {platform} = useThunderID();
 
-  if (platform === Platform.ThunderIDV2) {
+  if (platform === Platform.ThunderID) {
     return <BaseRecoveryV2 {...(props as BaseRecoveryV2Props)} />;
   }
 

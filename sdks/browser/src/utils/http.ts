@@ -16,57 +16,32 @@
  * under the License.
  */
 
-// eslint-disable-next-line import/no-cycle
-import {ThunderIDSPAClient} from '../__legacy__/client';
+import ThunderIDBrowserClient from '../ThunderIDBrowserClient';
 
 /**
- * Creates an HTTP utility for making requests using a specific ThunderIDSPAClient instance.
+ * Creates an HTTP utility for making authenticated requests using a `ThunderIDBrowserClient` instance.
  *
- * @param instanceId - Optional instance ID for multi-instance support. Defaults to 0.
- * @returns An object with request and requestAll methods bound to the specified instance.
- *
- * @remarks
- * This utility provides methods to make single or multiple HTTP requests for a specific instance.
+ * @param client - The browser client instance to use for requests.
+ * @returns An object with `request` and `requestAll` methods bound to the provided client.
  *
  * @example
  * ```typescript
- * // Use default instance
- * const httpClient = http();
- *
- * // Use specific instance
- * const httpInstance1 = http(1);
- * const httpInstance2 = http(2);
+ * const auth = new ThunderIDBrowserClient();
+ * await auth.initialize(config);
+ * const httpClient = http(auth);
+ * const response = await httpClient.request({ url: '/api/data', method: 'GET' });
  * ```
  */
-export const http = (
-  instanceId = 0,
+const http = (
+  client: ThunderIDBrowserClient,
 ): {
-  request: typeof ThunderIDSPAClient.prototype.httpRequest;
-  requestAll: typeof ThunderIDSPAClient.prototype.httpRequestAll;
+  request: typeof ThunderIDBrowserClient.prototype.httpRequest;
+  requestAll: typeof ThunderIDBrowserClient.prototype.httpRequestAll;
 } => {
-  const client: ThunderIDSPAClient = ThunderIDSPAClient.getInstance(instanceId);
-
   return {
-    /**
-     * Makes a single HTTP request using the ThunderIDSPAClient instance.
-     *
-     * @param config - The HTTP request configuration object.
-     * @returns A promise resolving to the HTTP response.
-     */
     request: client.httpRequest.bind(client),
-
-    /**
-     * Makes multiple HTTP requests in parallel using the ThunderIDSPAClient instance.
-     *
-     * @param configs - An array of HTTP request configuration objects.
-     * @returns A promise resolving to an array of HTTP responses.
-     */
     requestAll: client.httpRequestAll.bind(client),
   };
 };
 
-/**
- * Default HTTP utility using instance 0.
- * For multi-instance support, use http(instanceId) instead.
- */
-export default http();
+export default http;

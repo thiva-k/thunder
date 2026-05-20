@@ -29,6 +29,10 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
     const { token, clearToken } = useAuth();
     
     const handleLogout = () => {
+        sessionStorage.removeItem("isSignupMode");
+        sessionStorage.removeItem("startInit");
+        sessionStorage.removeItem("executionId");
+        sessionStorage.removeItem("challengeToken");
         clearToken();
     }
 

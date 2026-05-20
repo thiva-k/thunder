@@ -1,0 +1,14 @@
+id: wayfinder-agent-rs
+name: Wayfinder Agent
+description: Controls access to the AI chat agent
+handle: wayfinder-agent
+identifier: wayfinder-agent
+ou_id: "{{ .THUNDER_OU_ID }}"
+delimiter: ":"
+resources:
+  - name: Agent
+    handle: agent
+    actions:
+      - name: Access
+        handle: access
+        description: Grants access to the AI chat agent

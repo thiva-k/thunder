@@ -102,7 +102,7 @@ const SignIn: FC<SignInProps> = ({className, size = 'medium', children, preferen
     }
   };
 
-  if (platform === Platform.ThunderIDV2) {
+  if (platform === Platform.ThunderID) {
     return (
       <SignInV2
         className={className}

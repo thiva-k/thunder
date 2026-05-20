@@ -41,7 +41,7 @@ import switchOrganization from './actions/switchOrganization';
 import updateUserProfileAction from './actions/updateUserProfileAction';
 import ThunderIDClientProvider from '../client/contexts/ThunderID/ThunderIDProvider.js';
 import {ThunderIDNextConfig} from '../models/config';
-import ThunderIDNextClient from '../ThunderIDNextClient';
+import getClient from './getClient';
 import logger from '../utils/logger';
 import {SessionTokenPayload} from '../utils/SessionManager';
 
@@ -56,7 +56,7 @@ export type ThunderIDServerProviderProps = Partial<ThunderIDProviderProps> & {
    *
    * Resolution order (first defined value wins):
    *   1. This prop — set here when mounting the provider.
-   *   2. `ASGARDEO_SESSION_COOKIE_EXPIRY_TIME` environment variable.
+   *   2. `THUNDERID_SESSION_COOKIE_EXPIRY_TIME` environment variable.
    *   3. Built-in default of 86400 seconds (24 hours).
    *
    * @example
@@ -88,7 +88,7 @@ const ThunderIDServerProvider: FC<PropsWithChildren<ThunderIDServerProviderProps
   afterSignOutUrl,
   ..._config
 }: PropsWithChildren<ThunderIDServerProviderProps>): Promise<ReactElement> => {
-  const thunderIDClient: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+  const thunderIDClient = getClient();
   let config: Partial<ThunderIDNextConfig> = {};
 
   try {

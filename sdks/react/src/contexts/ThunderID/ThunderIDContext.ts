@@ -23,6 +23,7 @@ import {
   IdToken,
   OIDCDiscoveryApiResponse,
   Organization,
+  Platform,
   SignInOptions,
   TokenExchangeRequestConfig,
   TokenResponse,
@@ -200,7 +201,8 @@ export type ThunderIDContextProps = {
   signUpUrl: string | undefined;
 
   user: any;
-} & Pick<ThunderIDReactConfig, 'storage' | 'platform'> &
+  platform?: Platform;
+} & Pick<ThunderIDReactConfig, 'storage'> &
   Pick<ThunderIDReactClient, 'clearSession' | 'switchOrganization'>;
 
 /**

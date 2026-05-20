@@ -1,6 +1,6 @@
-# ThunderID ⚡
+<img src="https://thunderid.dev/assets/images/readme/repo-banner.png" alt="ThunderID" width="100%" />
 
-### Identity Management Suite
+###
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub last commit](https://img.shields.io/github/last-commit/thunder-id/thunderid.svg)](https://github.com/thunder-id/thunderid/commits/main)
@@ -90,8 +90,6 @@ Follow these steps to download the latest release of ThunderID and run it locall
     .\setup.ps1
     ```
 
-    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>`.** You'll need it for the sample app configuration.
-
 4. **Start the product**
 
     If you are using a Linux or macOS machine:
@@ -117,7 +115,7 @@ Follow these steps to run ThunderID using Docker Compose.
     Download the `docker-compose.yml` file using the following command:
 
     ```bash
-    curl -o docker-compose.yml https://raw.githubusercontent.com/thunder-id/thunderid/v0.38.0/install/quick-start/docker-compose.yml
+    curl -o docker-compose.yml https://raw.githubusercontent.com/thunder-id/thunderid/v0.39.0/install/quick-start/docker-compose.yml
     ```
 
 2. **Start ThunderID**
@@ -132,8 +130,6 @@ Follow these steps to run ThunderID using Docker Compose.
     - Initialize the database
     - Run the setup process
     - Start the ThunderID server
-
-    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>` in the setup logs.** You'll need it for the sample app configuration.
 
     The product will start on `https://localhost:8090`.
 
@@ -167,15 +163,15 @@ ThunderID provides two sample applications to help you get started quickly:
     cd sample-app-react-vanilla-<version>-<os>-<arch>/
     ```
 
-3. **Configure the sample**
+3. **Import sample app resources**
 
-    Open `app/runtime.json` and set the `applicationID` to the sample app ID generated during "Setup the product":
+    The sample app ships with a `thunderid-config/` directory containing declarative resource definitions for the required user type and application.
 
-    ```json
-    {
-        "applicationID": "{your-application-id}"
-    }
-    ```
+    Before importing, edit `thunderid-config/thunderid.env` to set your preferred client credentials and redirect URIs.
+
+    Then import via the ThunderID Console:
+    - **First-time login**: a welcome screen appears with an **Open** button to upload the YAML file directly.
+    - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
 
 4. **Start the sample**
 
@@ -200,7 +196,24 @@ ThunderID provides two sample applications to help you get started quickly:
     cd sample-app-react-sdk-<version>-<os>-<arch>/
     ```
 
-3. **Start the sample**
+3. **Import sample app resources**
+
+    The sample app ships with a `thunderid-config/` directory containing declarative resource definitions for the required user type and application.
+
+    The default `thunderid-config/thunderid.env` uses `REACT_SDK_SAMPLE` as the client ID, which matches the pre-configured `dist/runtime.json` — no further changes are needed for a default setup. If you change `REACT_SDK_SAMPLE_CLIENT_ID` in `thunderid.env`, update `dist/runtime.json` to match:
+
+    ```json
+    {
+        "clientId": "{your-client-id}",
+        "baseUrl": "https://localhost:8090"
+    }
+    ```
+
+    Then import via the ThunderID Console:
+    - **First-time login**: a welcome screen appears with an **Open** button to upload the YAML file directly.
+    - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
+
+4. **Start the sample**
 
     ```bash
     ./start.sh

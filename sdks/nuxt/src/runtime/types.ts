@@ -44,10 +44,10 @@ export interface ThunderIDNuxtConfig {
   baseUrl?: string;
   /** OAuth2 Client ID */
   clientId?: string;
-  /** OAuth2 Client Secret (server-only, use ASGARDEO_CLIENT_SECRET env var) */
+  /** OAuth2 Client Secret (server-only, use THUNDERID_CLIENT_SECRET env var) */
   clientSecret?: string;
   /**
-   * Identity platform variant. Set to `Platform.ThunderIDV2` when connecting to
+   * Identity platform variant. Set to `Platform.ThunderID` when connecting to
    * a Thunder (ThunderIDV2) instance. Forwarded to the underlying Node client so
    * platform-specific behaviours (e.g. issuer resolution) apply correctly.
    */
@@ -83,7 +83,7 @@ export interface ThunderIDNuxtConfig {
   };
   /** OAuth2 scopes to request */
   scopes?: string[];
-  /** Secret for signing session JWTs (use ASGARDEO_SESSION_SECRET env var) */
+  /** Secret for signing session JWTs (use THUNDERID_SESSION_SECRET env var) */
   sessionSecret?: string;
   /**
    * Optional override for the redirect-based sign-in URL. Reserved for

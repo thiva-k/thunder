@@ -19,7 +19,7 @@
 'use server';
 
 import {UpdateMeProfileConfig, User} from '@thunderid/node';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action to get the current user.
@@ -30,7 +30,7 @@ const updateUserProfileAction = async (
   sessionId?: string,
 ): Promise<{data: {user: User}; error: string; success: boolean}> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     const user: User = await client.updateUserProfile(payload, sessionId);
     return {data: {user}, error: '', success: true};
   } catch (error) {

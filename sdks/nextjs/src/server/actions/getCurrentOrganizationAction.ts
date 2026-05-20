@@ -19,7 +19,7 @@
 'use server';
 
 import {Organization} from '@thunderid/node';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action to create an organization.
@@ -32,7 +32,7 @@ const getCurrentOrganizationAction = async (
   success: boolean;
 }> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     const organization: Organization = (await client.getCurrentOrganization(sessionId))!;
     return {data: {organization}, error: null, success: true};
   } catch (error) {

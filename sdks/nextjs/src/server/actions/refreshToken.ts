@@ -21,7 +21,7 @@
 import {ThunderIDAPIError, logger} from '@thunderid/node';
 import {cookies} from 'next/headers';
 import {ThunderIDNextConfig} from '../../models/config';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 import handleRefreshToken, {HandleRefreshTokenResult} from '../../utils/handleRefreshToken';
 import SessionManager, {SessionTokenPayload} from '../../utils/SessionManager';
 
@@ -68,14 +68,14 @@ const refreshToken = async (): Promise<RefreshResult> => {
     }
 
     const sessionPayload: SessionTokenPayload = await SessionManager.verifySessionTokenForRefresh(sessionToken);
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     const config: ThunderIDNextConfig = await client.getConfiguration();
 
     const result: HandleRefreshTokenResult = await handleRefreshToken(sessionPayload, {
       baseUrl: config.baseUrl ?? '',
       clientId: config.clientId ?? '',
       clientSecret: config.clientSecret ?? '',
-      sessionCookieExpiryTime: config.sessionCookieExpiryTime,
+      sessionCookie: config.sessionCookie,
     });
 
     try {

@@ -414,6 +414,16 @@ type ApplicationConfig struct {
 	Store string `yaml:"store" json:"store"`
 }
 
+// AgentConfig holds the agent service configuration.
+type AgentConfig struct {
+	// Store defines the storage mode for agents.
+	// Valid values: "mutable", "declarative", "composite" (hybrid mode)
+	// If not specified, falls back to global DeclarativeResources.Enabled setting:
+	//   - If DeclarativeResources.Enabled = true: behaves as "declarative"
+	//   - If DeclarativeResources.Enabled = false: behaves as "mutable"
+	Store string `yaml:"store" json:"store"`
+}
+
 // EntityTypeConfig holds the entity type service configuration.
 type EntityTypeConfig struct {
 	// Store defines the storage mode for entity types.
@@ -647,6 +657,7 @@ type Config struct {
 	OrganizationUnit     OrganizationUnitConfig `yaml:"organization_unit" json:"organization_unit"`
 	IdentityProvider     IdentityProviderConfig `yaml:"identity_provider" json:"identity_provider"`
 	Application          ApplicationConfig      `yaml:"application" json:"application"`
+	Agent                AgentConfig            `yaml:"agent" json:"agent"`
 	EntityType           EntityTypeConfig       `yaml:"user_type" json:"user_type"`
 	Observability        ObservabilityConfig    `yaml:"observability" json:"observability"`
 	Passkey              PasskeyConfig          `yaml:"passkey" json:"passkey"`

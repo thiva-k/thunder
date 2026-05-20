@@ -121,9 +121,13 @@
 /*                        Overrides and Additions                       */
 /* -------------------------------------------------------------------- */
 
+/* Let docs and blog backgrounds move with page content instead of staying pinned to the viewport. */
+html {
+  --site-background-attachment: fixed;
+}
+
 /* Manually inject the radial background since `@wso2/oxygen-ui` adds it to the body. */
-html[data-page^='thunder-docs-'] #__docusaurus,
-html[data-page='home'] #__docusaurus {
+html #__docusaurus {
     background-color: var(--oxygen-palette-background-default);
     background-attachment: var(--site-background-attachment);
     background-image: var(--site-background);
@@ -334,6 +338,10 @@ html[data-page^='thunder-docs-'] .navbar.navbar--fixed-top {
   background: transparent !important;
 }
 
+.navbar__logo img {
+  height: 90%;
+}
+
 /* Softer border in dark mode */
 html[data-theme='dark'] .navbar {
   border-bottom-color: rgba(255, 255, 255, 0.08);
@@ -442,10 +450,6 @@ html[data-page='home'][data-theme='dark'] .navbar .navbar__github--link::before 
 
 /* Align header logo consistently across all pages. */
 @media (min-width: 997px) {
-  .navbar {
-    padding-left: calc(max(0px, (100vw - var(--ifm-container-width-xl)) / 2) + 0.75rem);
-  }
-
   .navbar .navbar__brand {
     margin-left: 0;
   }
@@ -464,6 +468,33 @@ html[data-page='home'][data-theme='dark'] .navbar .navbar__github--link::before 
 /* Add separator gap before icon-only items (GitHub, color mode) */
 .navbar .navbar__github--link {
   margin-left: 0.75rem;
+}
+
+/* GitHub star button (react-github-btn) */
+.navbar__github-star {
+  display: flex;
+  align-items: center;
+  margin: 0 0.5rem;
+  line-height: 0;
+}
+
+.navbar__github-star > span,
+.navbar__github-star > span > span {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Mobile drawer variant */
+.navbar__github-star--mobile {
+  margin-left: 0;
+  padding: 0.375rem 0.75rem;
+}
+
+/* Hide the Github star button in the mobile top navbar */
+@media (max-width: 996px) {
+  .navbar__github-star:not(.navbar__github-star--mobile) {
+    display: none;
+  }
 }
 
 /* Color mode toggle styling */
@@ -561,7 +592,7 @@ html[data-page='home'][data-theme='dark'] .dropdown>.navbar__link:after {
 /* ------------------------------ Sidebar Adjustments ---------------------- */
 
 /* Center the entire docs layout within the page */
-.main-wrapper {
+.plugin-docs .main-wrapper {
   max-width: var(--ifm-container-width-xl);
   margin: 0 auto;
   width: 100%;
@@ -766,9 +797,12 @@ aside.theme-doc-sidebar-container {
   margin-bottom: 0.5rem !important;
 }
 
+/* Divider line between sections */
 /* No dividers between sections */
 .sidebar-section + .sidebar-html-section-header {
   border-top: none;
+  margin-top: 1rem;
+  padding-top: 0.5rem;
 }
 
 
@@ -1053,13 +1087,17 @@ aside.theme-doc-sidebar-container {
   white-space: normal !important;
 }
 
+.plugin-docs article {
+  padding: 15px;
+}
+
 /* Copy page button — float to top-right of article, aligned with breadcrumb row */
 article:has(.doc-content-with-copy-btn) {
   position: relative;
 }
 .copy-page-btn-wrapper {
   position: absolute !important;
-  top: 5px !important;
+  top: 10px !important;
   right: 0 !important;
   margin: 0 !important;
   display: inline-block !important;
@@ -2872,6 +2910,91 @@ nav.theme-doc-breadcrumbs {
     width: var(--uc-icon-size);
     min-width: var(--uc-icon-size);
     height: var(--uc-icon-size);
+  }
+}
+
+/* B2C identity journey — simple clickable node row */
+.uc-b2c-roadmap {
+  --uc-node-w: 9rem;
+  --uc-node-h: 5rem;
+  --uc-icon-size: 4rem;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1.25rem 1.4rem;
+  margin: 1.5rem 0 2rem;
+  padding: 0.5rem 0.2rem;
+}
+
+.uc-b2c-roadmap__node {
+  width: var(--uc-node-w);
+  min-height: var(--uc-node-h);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.55rem;
+  text-align: center;
+  text-decoration: none;
+  color: var(--ifm-font-color-base);
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  transition: transform 160ms ease;
+}
+
+.uc-b2c-roadmap__node:hover {
+  transform: translateY(-2px);
+  text-decoration: none;
+}
+
+.uc-b2c-roadmap__node:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--ifm-color-primary) 58%, white);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+.uc-b2c-roadmap__icon {
+  width: var(--uc-icon-size);
+  min-width: var(--uc-icon-size);
+  height: var(--uc-icon-size);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--ifm-color-primary) 38%, var(--ifm-color-emphasis-300));
+  background: radial-gradient(80px 80px at 28% 18%, color-mix(in srgb, var(--ifm-color-primary) 24%, transparent), transparent),
+    linear-gradient(160deg, color-mix(in srgb, var(--ifm-color-primary) 72%, #091629), color-mix(in srgb, var(--ifm-color-primary) 44%, #030712));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 24%, transparent), 0 8px 18px color-mix(in srgb, var(--ifm-color-primary) 24%, transparent);
+}
+
+.uc-b2c-roadmap__icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  stroke: #fff;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.uc-b2c-roadmap__node:hover .uc-b2c-roadmap__icon {
+  border-color: color-mix(in srgb, #ffffff 56%, var(--ifm-color-primary));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 32%, transparent), 0 12px 24px color-mix(in srgb, var(--ifm-color-primary) 34%, transparent);
+}
+
+.uc-b2c-roadmap__label {
+  display: block;
+  max-width: 9.4rem;
+}
+
+@media (max-width: 640px) {
+  .uc-b2c-roadmap {
+    --uc-node-w: 7.5rem;
+    --uc-node-h: 4.4rem;
+    --uc-icon-size: 3.4rem;
+    gap: 1rem 0.8rem;
   }
 }
 

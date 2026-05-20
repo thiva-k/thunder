@@ -60,7 +60,7 @@ export type RecoveryProps = RecoveryV1Props | RecoveryV2Props;
 const Recovery: FC<RecoveryProps> = (props: RecoveryProps) => {
   const {platform} = useThunderID();
 
-  if (platform === Platform.ThunderIDV2) {
+  if (platform === Platform.ThunderID) {
     return <RecoveryV2 {...(props as RecoveryV2Props)} />;
   }
 

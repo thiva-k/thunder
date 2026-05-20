@@ -57,7 +57,7 @@ export interface ThunderIDClient<T> {
    * @param config - Configuration for the token exchange request.
    * @param sessionId - Optional session ID to be used for the token exchange.
    */
-  exchangeToken(config: TokenExchangeRequestConfig, sessionId?: string): Promise<TokenResponse | Response>;
+  exchangeToken(config: TokenExchangeRequestConfig, sessionId?: string): Promise<TokenResponse | Response | User>;
 
   /**
    * Retrieves the access token for the current session.
@@ -170,7 +170,7 @@ export interface ThunderIDClient<T> {
     options?: SignInOptions,
     sessionId?: string,
     onSignInSuccess?: (afterSignInUrl: string) => void,
-  ): Promise<User>;
+  ): Promise<User | TokenResponse | undefined>;
 
   /**
    * Initiates an embedded (App-Native) sign-in flow for the user.
@@ -186,7 +186,7 @@ export interface ThunderIDClient<T> {
     request: EmbeddedFlowExecuteRequestConfig<EmbeddedSignInFlowHandleRequestPayload>,
     sessionId?: string,
     onSignInSuccess?: (afterSignInUrl: string) => void,
-  ): Promise<User>;
+  ): Promise<User | TokenResponse | undefined>;
 
   /**
    * Try signing in silently in the background without any user interactions.
@@ -197,7 +197,7 @@ export interface ThunderIDClient<T> {
    * @param options - Optional sign-in options like additional parameters to be sent in the authorize request, etc.
    * @returns A promise that resolves to the user if sign-in is successful, or false if not.
    */
-  signInSilently(options?: SignInOptions): Promise<User | boolean>;
+  signInSilently(options?: SignInOptions): Promise<User | boolean | undefined>;
 
   /**
    * Signs out the currently signed-in user.
@@ -206,7 +206,7 @@ export interface ThunderIDClient<T> {
    * @param afterSignOut - Callback function to be executed after sign-out is complete.
    * @returns A promise that resolves to true if sign-out is successful
    */
-  signOut(options?: SignOutOptions, afterSignOut?: (afterSignOutUrl: string) => void): Promise<string>;
+  signOut(options?: SignOutOptions, afterSignOut?: (afterSignOutUrl: string) => void): Promise<string | boolean>;
 
   /**
    * Signs out the currently signed-in user with an optional session ID.
@@ -215,13 +215,13 @@ export interface ThunderIDClient<T> {
    * @param sessionId - Optional session ID to be used for sign-out.
    *                    This can be useful in scenarios where multiple sessions are managed.
    * @param afterSignOut - Callback function to be executed after sign-out is complete.
-   * @returns A promise that resolves to true if sign-out is successful
+   * @returns A promise that resolves to the sign-out URL or true if sign-out is successful.
    */
   signOut(
     options?: SignOutOptions,
     sessionId?: string,
     afterSignOut?: (afterSignOutUrl: string) => void,
-  ): Promise<string>;
+  ): Promise<string | boolean>;
 
   /**
    * Initiates a redirection-based sign-up process for the user.

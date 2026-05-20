@@ -38,7 +38,7 @@ const SignUp: Component = defineComponent({
     const {platform} = useThunderID();
 
     return (): VNode => {
-      if (platform === Platform.ThunderIDV2) {
+      if (platform === Platform.ThunderID) {
         return h(SignUpV2, {...attrs}, slots);
       }
       return h(SignUpV1, {...attrs}, slots);
