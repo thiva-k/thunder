@@ -31,6 +31,7 @@ export const TechnologyApplicationTemplate = {
   REACT: 'REACT',
   EXPRESS: 'EXPRESS',
   NEXTJS: 'NEXTJS',
+  VANILLA_JS: 'VANILLA_JS',
   OTHER: 'OTHER',
 } as const;
 

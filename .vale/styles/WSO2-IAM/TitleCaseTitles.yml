@@ -30,3 +30,6 @@ exceptions:
   - v7
   - Per-Cache
   - act
+  - Sign-In
+  - Sign-Out
+  - Sign-Up
