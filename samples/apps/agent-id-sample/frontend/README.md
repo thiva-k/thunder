@@ -21,7 +21,14 @@ The app opens on `http://localhost:5173/`.
 | Route              | Purpose                                                                 |
 | ------------------ | ----------------------------------------------------------------------- |
 | `/`                | Travel UI + chat widget.                                                |
+| `/flights`         | Public landing page (flights). Search panel is visible by default.      |
+| `/hotels`          | Hotels landing page.                                                    |
+| `/trips`           | Trip-ideas landing page.                                                |
+| `/results`         | Flight search results.                                                  |
+| `/bookings`        | Signed-in user's flight bookings.                                       |
+| `/profile`         | Signed-in user's profile — account details, attribute edits, password change. Calls Thunder's `/users/me` directly. |
 | `/agent-callback`  | Lands the OBO auth code and posts it back to the chat widget.           |
+| `/signin-as-agent` | Deep-link entry that triggers an agent (M2M) sign-in flow.              |
 
 ## Build
 

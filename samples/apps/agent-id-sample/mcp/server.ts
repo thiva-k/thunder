@@ -170,6 +170,31 @@ function createTravelMcpServer(authorization?: string) {
     );
 
     server.tool(
+        "recommend_flights",
+        "Get a small set of recommended flights from the travel API. Use this when the user asks for 'recommendations', 'suggestions', 'deals', or 'what's good today' rather than a specific route.",
+        {
+            limit: z
+                .number()
+                .int()
+                .min(1)
+                .max(10)
+                .optional()
+                .describe("Number of flights to return (1-10, default 3)."),
+        },
+        async ({ limit }) => {
+            const params = new URLSearchParams();
+
+            if (typeof limit === "number") {
+                params.set("limit", String(limit));
+            }
+
+            const query = params.toString();
+
+            return toToolContent(await api.get(`/api/flights/recommended${query ? `?${query}` : ""}`));
+        },
+    );
+
+    server.tool(
         "search_hotels",
         "Search available hotels from the travel API.",
         {

@@ -5,6 +5,7 @@ Streamable-HTTP MCP server that wraps the Wayfinder Travel REST API and forwards
 ## Tools
 
 - `search_flights` — `GET /api/flights`
+- `recommend_flights` — `GET /api/flights/recommended` (requires `flight:recommend`). Returns 1-10 random flights; used when the user asks for "recommendations", "suggestions", "deals", or "what's good today".
 - `search_hotels` — `GET /api/hotels`
 - `get_trips` — `GET /api/trips`
 - `get_locations` — `GET /api/locations`
