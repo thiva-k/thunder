@@ -774,7 +774,6 @@ Bootstrap scripts extend ThunderID's setup process by adding your own initializa
 ThunderID provides these default bootstrap scripts in `/opt/thunderid/bootstrap/`:
 - **`common.sh`** - Helper functions for logging (`log_info`, `log_success`, `log_warning`, `log_error`) and API calls (`thunderid_api_call`)
 - **`01-default-resources.sh`** - Creates admin user, default organization, and Person user type
-- **`02-sample-resources.sh`** - Creates sample resources for testing
 
 #### Configuration Parameters
 
@@ -804,7 +803,7 @@ bootstrap:
       log_success "User created"
 ```
 
-- ✅ Preserves ThunderID's default scripts (`common.sh`, `01-*`, `02-*`)
+- ✅ Preserves ThunderID's default scripts (`common.sh`, `01-*`)
 - ✅ Can use helper functions from `common.sh`
 - ✅ No additional configuration needed
 
@@ -858,7 +857,7 @@ bootstrap:
     # No files list = mounts entire ConfigMap (replaces all defaults)
 ```
 
-- ⚠️ **Removes ALL default scripts** (`common.sh`, `01-default-resources.sh`, `02-sample-resources.sh`)
+- ⚠️ **Removes ALL default scripts** (`common.sh`, `01-default-resources.sh`)
 - ⚠️ You MUST provide your own `common.sh` with required helper functions
 - ⚠️ No default admin user, organization, or schemas will be created
 - ✅ Complete control over bootstrap process

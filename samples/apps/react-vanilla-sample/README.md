@@ -19,6 +19,54 @@ To try these out, configure the corresponding flows in your ThunderID instance a
 - A running ThunderID server instance (default: `https://localhost:8090`)
 - An application registered in the server
 
+## Quick Start (Pre-Built Application)
+
+If you have the pre-built distribution, you can run it directly:
+
+### 1. Import ThunderID Resources
+
+The sample ships with a `thunderid-config/` directory containing a declarative YAML file that creates the required user type and application (referencing the default OU by handle) in one step.
+
+1. Open `thunderid-config/thunderid.env` and set your preferred credentials:
+
+    ```bash
+    SAMPLE_APP_CLIENT_ID=sample_app_client
+    SAMPLE_APP_REDIRECT_URIS=["https://localhost:3000"]
+    ```
+
+2. Import via the ThunderID Console ([https://localhost:8090/console](https://localhost:8090/console)):
+   - **First-time login**: a welcome screen appears with an **Open** button to upload the YAML file directly.
+   - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
+
+This creates the `Customer` user type and the `Sample App` application under the default organization unit. The application ID is `019e3a5c-0500-7f3e-a66e-66fc7918c3a7`.
+
+### 2. Configure the Application
+
+Open `public/runtime.json` and set the application ID:
+
+```json
+{
+    "flowEndpoint": "https://localhost:8090/flow",
+    "applicationID": "019e3a5c-0500-7f3e-a66e-66fc7918c3a7"
+}
+```
+
+### 3. Start the Application
+
+**Linux/macOS:**
+```bash
+sh start.sh
+```
+
+**Windows:**
+```powershell
+.\start.ps1
+```
+
+### 4. Access the Application
+
+Open your browser and navigate to [https://localhost:3000](https://localhost:3000)
+
 ## Configuration
 
 Open `public/runtime.json` and set your values:
