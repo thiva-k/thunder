@@ -145,10 +145,11 @@ Follow these steps to access the ThunderID Console:
 
 #### Try Out with the Sample App
 
-ThunderID provides two sample applications to help you get started quickly:
+ThunderID provides the following sample applications to help you get started quickly:
 
 - **React Vanilla Sample** — Sample React application demonstrating direct API integration without external SDKs. Supports Native Flow API or Standard OAuth/OIDC.
 - **React SDK Sample** — Sample React application demonstrating SDK-based integration using `@asgardeo/react` for OAuth 2.0/OIDC authentication.
+- **Agent Identity Sample (Wayfinder)** — Travel app demonstrating an AI agent with its own ThunderID-managed identity. The agent uses a `client_credentials` token for browsing tools and an on-behalf-of `authorization_code` + PKCE flow for actions that need the user's consent.
 
 ##### React Vanilla Sample
 
@@ -222,6 +223,35 @@ ThunderID provides two sample applications to help you get started quickly:
     Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
 
     > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
+
+##### Agent Identity Sample (Wayfinder)
+
+1. **Download the sample**
+
+    Download `sample-app-agent-id-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/thunder-id/thunderid/releases/latest).
+
+2. **Unzip and navigate to the sample app directory**
+
+    ```bash
+    unzip sample-app-agent-id-<version>-<os>-<arch>.zip
+    cd sample-app-agent-id-<version>-<os>-<arch>/
+    ```
+
+3. **Import sample app resources**
+
+    The sample app ships with a `thunderid-config/` directory containing declarative resource definitions for the demo users, roles, resource servers, and the Wayfinder web application. Follow the instructions in the bundled `README.md` to copy them into the ThunderID server's `repository/resources/` directory and then create the `WAYFINDER-CHAT-AGENT` agent manually (declarative agent support is not yet available).
+
+4. **Start the sample**
+
+    The sample runs four services (REST API, MCP server, AI chat agent, and React frontend). Set your LLM API key (`ANTHROPIC_API_KEY` or `GOOGLE_API_KEY`) and the captured agent secret in `ai-agent/.env`, then:
+
+    ```bash
+    ./start.sh
+    ```
+
+    Open your browser and navigate to [http://localhost:5173](http://localhost:5173) to access the sample app.
+
+    > 📖 Refer to the `README.md` inside the extracted sample app for the full ThunderID setup, OBO flow details, and troubleshooting steps.
 
 ##### Self Register and Login (React Vanilla Sample)
 

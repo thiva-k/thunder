@@ -70,8 +70,9 @@ agent-id-sample/
 ├── api/          Node REST API backed by SQLite. Validates JWTs
 │                 and enforces scopes on booking routes.
 ├── mcp/          Streamable-HTTP MCP server that wraps the REST API.
-├── ai-agent/     HTTP chat agent API (LangChain + Claude/Gemini).
-├── resources/    Declarative YAML files for ThunderID setup.
+├── ai-agent/         HTTP chat agent API (LangChain + Claude/Gemini).
+├── thunderid-config/ Declarative YAML files for ThunderID setup.
+├── start.sh / start.ps1  Convenience scripts that install and start every service.
 └── README.md
 ```
 
@@ -87,7 +88,7 @@ Each subdirectory has its own README with the environment variables it reads and
 
 ## ThunderID Setup
 
-The `resources/` directory contains declarative YAML files that configure most of the ThunderID entities automatically. The agent must still be created manually since declarative agent support is not yet available.
+The `thunderid-config/` directory contains declarative YAML files that configure most of the ThunderID entities automatically. The agent must still be created manually since declarative agent support is not yet available.
 
 ### Step 1 — Load Declarative Resources
 
@@ -98,19 +99,19 @@ sqlite3 backend/cmd/server/repository/database/configdb.db \
   "SELECT OU_ID FROM RESOURCE_SERVER WHERE NAME='System' LIMIT 1;"
 ```
 
-Copy the sample's `resources/` subdirectories into ThunderID's declarative resource directory and set the OU ID:
+Copy the sample's `thunderid-config/` subdirectories into ThunderID's declarative resource directory and set the OU ID:
 
 ```bash
 export THUNDER_OU_ID=<your-ou-id>
 
 # Copy resource files into the ThunderID server's resources directory
-cp -r samples/apps/agent-id-sample/resources/resource_servers \
+cp -r samples/apps/agent-id-sample/thunderid-config/resource_servers \
       backend/cmd/server/repository/resources/
-cp -r samples/apps/agent-id-sample/resources/roles \
+cp -r samples/apps/agent-id-sample/thunderid-config/roles \
       backend/cmd/server/repository/resources/
-cp -r samples/apps/agent-id-sample/resources/users \
+cp -r samples/apps/agent-id-sample/thunderid-config/users \
       backend/cmd/server/repository/resources/
-cp -r samples/apps/agent-id-sample/resources/applications \
+cp -r samples/apps/agent-id-sample/thunderid-config/applications \
       backend/cmd/server/repository/resources/
 ```
 
