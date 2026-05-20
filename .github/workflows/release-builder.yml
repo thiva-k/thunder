@@ -210,6 +210,9 @@ jobs:
           cd server
           npm version "$SEMVER_VERSION" --no-git-tag-version --allow-same-version
 
+          cd "$GITHUB_WORKSPACE/samples/apps/agent-id-sample"
+          npm version "$SEMVER_VERSION" --no-git-tag-version --allow-same-version
+
           cd "$GITHUB_WORKSPACE"
           echo "✅ Updated Helm chart and sample app versions to $SEMVER_VERSION"
 
@@ -236,7 +239,8 @@ jobs:
             samples/apps/react-vanilla-sample/package-lock.json \
             samples/apps/react-vanilla-sample/package.json \
             samples/apps/react-vanilla-sample/server/package-lock.json \
-            samples/apps/react-vanilla-sample/server/package.json
+            samples/apps/react-vanilla-sample/server/package.json \
+            samples/apps/agent-id-sample/package.json
 
           if git diff --cached --quiet; then
             echo "✅ No changes to commit (files already at $VERSION)"
@@ -685,6 +689,12 @@ jobs:
           pnpm version $NEXT_VERSION --no-git-tag-version --no-git-checks --allow-same-version
 
           cd "$GITHUB_WORKSPACE"
+
+          # Update the agent-id sample app package.json
+          cd samples/apps/agent-id-sample
+          npm version $NEXT_VERSION --no-git-tag-version --allow-same-version
+
+          cd "$GITHUB_WORKSPACE"
           echo "✅ Updated sample apps version to $NEXT_VERSION"
 
 
@@ -975,6 +985,16 @@ jobs:
             "   | Linux | ARM64 | [sample-app-react-api-based-${RELEASE_VERSION}-linux-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-linux-arm64.zip) |" \
             "   | Windows | x64 | [sample-app-react-api-based-${RELEASE_VERSION}-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-win-x64.zip) |")
 
+          # Create the Agent Identity (Wayfinder) Sample App downloads table with proper newlines using printf
+          AGENT_ID_SAMPLE_TABLE=$(printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s" \
+            "   | OS | Architecture | Download Link |" \
+            "   |-------|-------------|-------------|" \
+            "   | macOS | ARM64 (Apple Silicon) | [sample-app-agent-id-${RELEASE_VERSION}-macos-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-agent-id-${RELEASE_VERSION}-macos-arm64.zip) |" \
+            "   | macOS | x64 (Intel) | [sample-app-agent-id-${RELEASE_VERSION}-macos-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-agent-id-${RELEASE_VERSION}-macos-x64.zip) |" \
+            "   | Linux | x64 | [sample-app-agent-id-${RELEASE_VERSION}-linux-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-agent-id-${RELEASE_VERSION}-linux-x64.zip) |" \
+            "   | Linux | ARM64 | [sample-app-agent-id-${RELEASE_VERSION}-linux-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-agent-id-${RELEASE_VERSION}-linux-arm64.zip) |" \
+            "   | Windows | x64 | [sample-app-agent-id-${RELEASE_VERSION}-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-agent-id-${RELEASE_VERSION}-win-x64.zip) |")
+
           # Replace the vanilla sample app download instruction with its table
           QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$VANILLA_SAMPLE_TABLE" '
             /Download `sample-app-react-vanilla-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
@@ -996,6 +1016,15 @@ jobs:
           # Replace the API-based sample app download instruction with its table
           QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$API_SAMPLE_TABLE" '
             /Download `sample-app-react-api-based-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
+              print table
+              next
+            }
+            { print }
+          ')
+
+          # Replace the Agent Identity sample app download instruction with its table
+          QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$AGENT_ID_SAMPLE_TABLE" '
+            /Download `sample-app-agent-id-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
               print table
               next
             }
