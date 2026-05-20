@@ -1,9 +1,9 @@
 {
   "id": "express",
-  "displayName": "Express.js",
-  "description": "Server-side Node.js application built with Express.js",
+  "displayName": "Express",
+  "description": "Server-side Node.js application built with Express",
   "defaults": {
-    "name": "Express.js Application",
+    "name": "Express Application",
     "inboundAuthConfig": [
       {
         "type": "oauth2",
@@ -36,10 +36,10 @@
       "llm_prompt": {
         "id": "llm-prompt",
         "title": "Integrate with a Coding Agent Prompt",
-        "description": "Use AI to generate integration code for your Express.js application",
+        "description": "Use AI to generate integration code for your Express application",
         "type": "llm",
         "icon": "sparkles",
-        "content": "# Integrate {{productName}} Authentication in an Express.js Application (Inbuilt Mode)\n\n## Context\nI have an Express.js application and I want to integrate {{productName}} authentication using the ThunderID Express SDK with {{productName}}-hosted sign-in pages.\n\n## Requirements\n- Use `@thunderid/express` in a Node.js + Express application\n- Use `cookie-parser` and `express.json()` middleware\n- Configure ThunderID middleware with `baseUrl`, `clientId`, `clientSecret`, `afterSignInUrl`, and `afterSignOutUrl`\n- Implement `/login` with `handleSignIn()` and `/logout` with `handleSignOut()`\n- Protect a route (`/protected`) using `protect((res) => res.redirect('/login'))`\n- Add a `/me` route that returns the authenticated user profile as JSON\n- Keep the code minimal, production-lean, and fully runnable\n\n## Configuration\n- **Client ID**: {{clientId}}\n- **Client Secret**: `<your-client-secret>`\n- **Base URL**: https://localhost:8090 (or your {{productName}} instance URL)\n- **App URL**: http://localhost:3000\n- **Login Callback Route**: `/login`\n- **Logout Callback Route**: `/logout`\n- **SDK**: @thunderid/express\n\n## Important Rules\n- Use CommonJS syntax (`require`) in `index.js`\n- Use these SDK imports exactly: `thunderID`, `handleSignIn`, `handleSignOut`, `protect`\n- Ensure redirect URL alignment: the app callback URL must be `http://localhost:3000/login`, and the post-logout redirect URL must be `http://localhost:3000/logout`\n- Do not invent unsupported SDK APIs or custom wrappers\n- Keep route names and behavior exactly as specified\n\n## Implementation Steps\n1. Create a new project and install `express` and `cookie-parser`\n2. Install `@thunderid/express`\n3. Add `index.js` with ThunderID middleware and auth routes\n4. Add `/protected` and `/me` routes with `protect()`\n5. Start the server with `node index.js`\n6. Validate the flow by opening `/protected`, then `/me`\n\nPlease provide:\n- The exact terminal commands\n- A complete `index.js` file\n- A short verification checklist for sign-in, sign-out, and protected route behavior"
+        "content": "# Integrate {{productName}} Authentication in an Express Application (Inbuilt Mode)\n\n## Context\nI have an Express application and I want to integrate {{productName}} authentication using the ThunderID Express SDK with {{productName}}-hosted sign-in pages.\n\n## Requirements\n- Use `@thunderid/express` in a Node.js + Express application\n- Use `cookie-parser` and `express.json()` middleware\n- Configure ThunderID middleware with `baseUrl`, `clientId`, `clientSecret`, `afterSignInUrl`, and `afterSignOutUrl`\n- Implement `/login` with `handleSignIn()` and `/logout` with `handleSignOut()`\n- Protect a route (`/protected`) using `protect((res) => res.redirect('/login'))`\n- Add a `/me` route that returns the authenticated user profile as JSON\n- Keep the code minimal, production-lean, and fully runnable\n\n## Configuration\n- **Client ID**: {{clientId}}\n- **Client Secret**: `<your-client-secret>`\n- **Base URL**: https://localhost:8090 (or your {{productName}} instance URL)\n- **App URL**: http://localhost:3000\n- **Login Callback Route**: `/login`\n- **Logout Callback Route**: `/logout`\n- **SDK**: @thunderid/express\n\n## Important Rules\n- Use CommonJS syntax (`require`) in `index.js`\n- Use these SDK imports exactly: `thunderID`, `handleSignIn`, `handleSignOut`, `protect`\n- Ensure redirect URL alignment: the app callback URL must be `http://localhost:3000/login`, and the post-logout redirect URL must be `http://localhost:3000/logout`\n- Do not invent unsupported SDK APIs or custom wrappers\n- Keep route names and behavior exactly as specified\n\n## Implementation Steps\n1. Create a new project and install `express` and `cookie-parser`\n2. Install `@thunderid/express`\n3. Add `index.js` with ThunderID middleware and auth routes\n4. Add `/protected` and `/me` routes with `protect()`\n5. Start the server with `node index.js`\n6. Validate the flow by opening `/protected`, then `/me`\n\nPlease provide:\n- The exact terminal commands\n- A complete `index.js` file\n- A short verification checklist for sign-in, sign-out, and protected route behavior"
       },
       "manual_steps": [
         {

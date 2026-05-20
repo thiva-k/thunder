@@ -76,3 +76,4 @@ Memorystore
 [Ee]num
 [Uu]serinfo
 [Dd]ev
+mkdir

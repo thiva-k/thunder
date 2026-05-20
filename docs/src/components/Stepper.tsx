@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import React, {ReactNode, Children, isValidElement} from 'react';
 import {Box, Typography, styled} from '@wso2/oxygen-ui';
+import React, {ReactNode, Children, isValidElement} from 'react';
 
 interface StepperProps {
   children: ReactNode;
@@ -27,7 +27,7 @@ interface StepperProps {
 
 interface StepData {
   id?: string;
-  label: string;
+  label: ReactNode;
   content: ReactNode[];
 }
 
@@ -47,9 +47,7 @@ const StepCircle = styled('div')<{ownerState: {active?: boolean}}>(({theme, owne
     : theme.palette.mode === 'dark'
       ? theme.palette.grey[800]
       : theme.palette.grey[200],
-  color: ownerState.active
-    ? theme.palette.primary.contrastText
-    : theme.palette.text.secondary,
+  color: ownerState.active ? theme.palette.primary.contrastText : theme.palette.text.secondary,
   border: `2px solid ${ownerState.active ? theme.palette.primary.main : theme.palette.divider}`,
   boxShadow: ownerState.active ? `0 0 0 4px ${theme.palette.primary.main}22` : 'none',
 }));
@@ -82,10 +80,7 @@ export default function Stepper({children, stepNode = 'h2', as = 'h2'}: StepperP
       // Create new step, preserving the id Docusaurus generated for the heading
       currentStep = {
         id: child.props.id as string | undefined,
-        label:
-          typeof child.props.children === 'string'
-            ? child.props.children
-            : extractTextFromChildren(child.props.children),
+        label: child.props.children,
         content: [],
       };
     } else if (currentStep) {
@@ -102,12 +97,22 @@ export default function Stepper({children, stepNode = 'h2', as = 'h2'}: StepperP
   return (
     <Box sx={{mt: 4}}>
       {steps.map((step, index) => (
-        <Box key={step.label} sx={{display: 'flex', gap: '16px'}}>
+        <Box key={step.id ?? `step-${index + 1}`} sx={{display: 'flex', gap: '16px'}}>
           {/* Left column: circle + connector line */}
           <Box sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', flexShrink: 0}}>
             <StepCircle ownerState={{active: true}}>{index + 1}</StepCircle>
             {index < steps.length - 1 && (
-              <Box sx={{width: '2px', flex: 1, mt: '6px', mb: '6px', background: 'rgba(128,128,128,0.4)', minHeight: '32px', borderRadius: '1px'}} />
+              <Box
+                sx={{
+                  width: '2px',
+                  flex: 1,
+                  mt: '6px',
+                  mb: '6px',
+                  background: 'rgba(128,128,128,0.4)',
+                  minHeight: '32px',
+                  borderRadius: '1px',
+                }}
+              />
             )}
           </Box>
           {/* Right column: title + content */}
@@ -126,18 +131,4 @@ export default function Stepper({children, stepNode = 'h2', as = 'h2'}: StepperP
       ))}
     </Box>
   );
-}
-
-// Helper function to extract text from React children
-function extractTextFromChildren(children: ReactNode): string {
-  if (typeof children === 'string') {
-    return children;
-  }
-  if (Array.isArray(children)) {
-    return children.map(extractTextFromChildren).join('');
-  }
-  if (isValidElement(children) && children.props.children) {
-    return extractTextFromChildren(children.props.children);
-  }
-  return '';
 }
