@@ -152,7 +152,7 @@ export default function CommunitySection(): JSX.Element {
   const issuesUrl = (siteConfig.customFields?.product as DocusaurusProductConfig).project.source.github.issuesUrl;
 
   return (
-    <Box component="section" sx={{py: {xs: 8, lg: 12}}}>
+    <Box component="section" sx={{py: {xs: 8, lg: 12}, borderTop: '1px solid', borderColor: 'divider'}}>
       <Container maxWidth="lg" sx={{px: {xs: 2, sm: 4}}}>
         <Box
           ref={ref}
