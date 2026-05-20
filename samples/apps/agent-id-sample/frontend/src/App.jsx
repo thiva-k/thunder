@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useThunderID } from "@thunderid/react";
 import {
-  Bot,
   ChevronDown,
   CircleUserRound,
   LogOut,
@@ -13,7 +12,6 @@ import {
 } from "lucide-react";
 import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import { getLocations } from "./api";
-import { AgentPortalPage } from "./pages/AgentPortalPage";
 import { BookingDetailsPageWithAuth } from "./pages/BookingDetailsPageWithAuth";
 import { BookingsPageWithAuth } from "./pages/BookingsPageWithAuth";
 import { BookingsUnavailable } from "./pages/BookingsUnavailable";
@@ -23,7 +21,7 @@ import { PaymentPageWithAuth } from "./pages/PaymentPageWithAuth";
 import { ResultsPage, ResultsPageWithAuth } from "./pages/ResultsPage";
 import { buildResultsPath, readCriteria } from "./utils/routes";
 
-const AGENT_CHAT_URL = import.meta.env.VITE_AGENT_CHAT_URL || "ws://localhost:8790/chat";
+const AGENT_CHAT_URL = import.meta.env.VITE_AGENT_CHAT_URL || "http://localhost:8790/chat";
 const THUNDER_BASE_URL = import.meta.env.VITE_THUNDER_BASE_URL || "";
 
 function createChatMessage(role, content) {
@@ -120,10 +118,6 @@ function LiveAuthHeader() {
               <CircleUserRound size={18} />
               <span>My Bookings</span>
             </Link>
-            <Link className="account-menu-item" to="/agent-portal" role="menuitem">
-              <Bot size={18} />
-              <span>Agent Portal</span>
-            </Link>
             <button
               className="account-menu-item"
               type="button"
@@ -216,100 +210,36 @@ function SiteFooter({ authReady }) {
   );
 }
 
-// Opens an OAuth authorize URL in a popup, waits for the /agent-callback page
-// to post the auth code back via window.postMessage, then forwards the code
-// over the WebSocket so the ai-agent can exchange it for a user-context token.
-function handleNeedUserConsent(payload, socket) {
-  const authorizeUrl = payload.authorize_url;
-  const expectedState = payload.state;
-  const requestId = payload.request_id;
-
-  if (!authorizeUrl || !requestId) {
-    return;
+// Opens an OAuth authorize URL in a popup. The /agent-callback page posts the
+// auth code back via window.postMessage — the ChatWidgetCore message listener
+// picks it up and submits it to POST /chat/consent.
+function openConsentPopup(authorizeUrl) {
+  if (!authorizeUrl) {
+    return null;
   }
 
-  const popup = window.open(
+  return window.open(
     authorizeUrl,
     "wayfinder-agent-consent",
     "width=520,height=720,popup=yes"
   );
-
-  if (!popup) {
-    socket.send(JSON.stringify({
-      type: "user_consent_error",
-      request_id: requestId,
-      error: "popup_blocked"
-    }));
-    return;
-  }
-
-  let settled = false;
-
-  const onMessage = (event) => {
-    if (event.origin !== window.location.origin) return;
-    const data = event.data;
-    if (!data || data.type !== "wayfinder-agent-oauth") return;
-    if (expectedState && data.state !== expectedState) return;
-    settled = true;
-    window.removeEventListener("message", onMessage);
-    window.clearInterval(closedPoll);
-    if (data.error) {
-      socket.send(JSON.stringify({
-        type: "user_consent_error",
-        request_id: requestId,
-        error: data.error,
-        error_description: data.errorDescription
-      }));
-    } else if (data.code) {
-      socket.send(JSON.stringify({
-        type: "user_code",
-        request_id: requestId,
-        code: data.code,
-        state: data.state
-      }));
-    }
-  };
-
-  window.addEventListener("message", onMessage);
-
-  // If the user closes the popup before completing the flow, signal cancel.
-  const closedPoll = window.setInterval(() => {
-    if (popup.closed && !settled) {
-      window.removeEventListener("message", onMessage);
-      window.clearInterval(closedPoll);
-      socket.send(JSON.stringify({
-        type: "user_consent_error",
-        request_id: requestId,
-        error: "popup_closed"
-      }));
-    }
-  }, 500);
 }
 
 // In-chat prompt that asks the user to confirm BEFORE the OAuth popup opens.
-// Clicking "Authorize" inside this bubble is what actually triggers
-// handleNeedUserConsent. Because the click is a direct user gesture, browsers
-// honour the popup window features and render a real popup (not a tab).
-function ConsentRequestBubble({ message, onUpdate, socket }) {
+// Clicking "Authorize" is a direct user gesture so browsers render a real popup.
+function ConsentRequestBubble({ message, onUpdate }) {
   const status = message.status || "pending";
 
   function handleAuthorize() {
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      onUpdate({ status: "error", errorReason: "Connection to assistant lost" });
+    const popup = openConsentPopup(message.consent?.authorize_url);
+    if (!popup) {
+      onUpdate({ status: "error", errorReason: "Popup was blocked by the browser" });
       return;
     }
     onUpdate({ status: "awaiting" });
-    handleNeedUserConsent(message.consent, socket);
   }
 
   function handleCancel() {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({
-        type: "user_consent_error",
-        request_id: message.consent.request_id,
-        error: "user_cancelled"
-      }));
-    }
     onUpdate({ status: "cancelled" });
   }
 
@@ -363,6 +293,11 @@ function ConsentRequestBubble({ message, onUpdate, socket }) {
             Waiting for sign in…
           </p>
         )}
+        {status === "authorized" && (
+          <p style={{ margin: 0, fontStyle: "italic", color: "#28a745" }}>
+            Authorized — retrying…
+          </p>
+        )}
         {status === "cancelled" && (
           <p style={{ margin: 0, fontStyle: "italic", color: "#888" }}>
             Cancelled.
@@ -378,132 +313,183 @@ function ConsentRequestBubble({ message, onUpdate, socket }) {
   );
 }
 
-function ChatWidget() {
+function ChatWidget({ authReady }) {
+  if (authReady) {
+    return <LiveChatWidget />;
+  }
+
+  return <ChatWidgetCore />;
+}
+
+function LiveChatWidget() {
+  const { getAccessToken, isSignedIn } = useThunderID();
+
+  return <ChatWidgetCore getToken={isSignedIn ? getAccessToken : null} />;
+}
+
+function ChatWidgetCore({ getToken }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState("disconnected");
   const [messages, setMessages] = useState([
     createChatMessage("assistant", "Hi, I can help with travel questions and booking details.")
   ]);
   const [draft, setDraft] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const socketRef = useRef(null);
-  const reconnectTimerRef = useRef(null);
+  const sessionIdRef = useRef(null);
+  const pendingRetryRef = useRef(null);
+  const getTokenRef = useRef(getToken);
   const messagesEndRef = useRef(null);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setIsProcessing(false);
-      setConnectionStatus("disconnected");
-      return undefined;
+  getTokenRef.current = getToken;
+
+  async function sendChatMessage(message, addToUI = true) {
+    if (addToUI) {
+      setMessages((current) => [...current, createChatMessage("user", message)]);
     }
+    setIsProcessing(true);
 
-    let isCurrent = true;
-    let retryDelay = 700;
+    try {
+      const headers = { "Content-Type": "application/json" };
+      const tokenFn = getTokenRef.current;
 
-    function connect() {
-      if (!isCurrent) {
+      if (tokenFn) {
+        try {
+          const token = await tokenFn();
+
+          if (token) {
+            headers["Authorization"] = `Bearer ${token}`;
+          }
+        } catch {
+          // Continue without token — server will reject if auth is required.
+        }
+      }
+
+      const res = await fetch(AGENT_CHAT_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          message,
+          session_id: sessionIdRef.current,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.session_id) {
+        sessionIdRef.current = data.session_id;
+      }
+
+      if (data.type === "response") {
+        setMessages((current) => [
+          ...current,
+          createChatMessage("assistant", data.message || ""),
+        ]);
+      } else if (data.type === "need_user_consent") {
+        pendingRetryRef.current = message;
+        setMessages((current) => [
+          ...current,
+          {
+            id: `consent-${data.request_id}`,
+            role: "assistant",
+            kind: "consent_request",
+            content: "This action needs your permission. Sign in to authorize the assistant to act on your behalf.",
+            consent: {
+              authorize_url: data.authorize_url,
+              state: data.state,
+              request_id: data.request_id,
+              scope: data.scope,
+            },
+            status: "pending",
+          },
+        ]);
+      } else if (data.error) {
+        setMessages((current) => [
+          ...current,
+          createChatMessage("assistant", data.error),
+        ]);
+      }
+    } catch {
+      setMessages((current) => [
+        ...current,
+        createChatMessage("assistant", "Failed to reach the assistant. Please try again."),
+      ]);
+    } finally {
+      setIsProcessing(false);
+    }
+  }
+
+  // Listen for the OAuth callback from the consent popup. When the popup
+  // completes sign-in, it posts the authorization code back via postMessage.
+  // We submit it to POST /chat/consent and then auto-retry the pending message.
+  useEffect(() => {
+    async function handleWindowMessage(event) {
+      if (event.origin !== window.location.origin) {
         return;
       }
 
-      setConnectionStatus("connecting");
-      const socket = new WebSocket(AGENT_CHAT_URL);
-      socketRef.current = socket;
+      if (!event.data || event.data.type !== "wayfinder-agent-oauth") {
+        return;
+      }
 
-      socket.addEventListener("open", () => {
-        if (!isCurrent) {
-          return;
-        }
+      const currentSessionId = sessionIdRef.current;
 
-        retryDelay = 700;
-        setConnectionStatus("connected");
-      });
+      if (!currentSessionId) {
+        return;
+      }
 
-      socket.addEventListener("message", (event) => {
-        if (!isCurrent) {
-          return;
-        }
+      if (event.data.error) {
+        setMessages((current) =>
+          current.map((m) =>
+            m.kind === "consent_request" && m.status === "awaiting"
+              ? { ...m, status: "error", errorReason: event.data.errorDescription || event.data.error }
+              : m
+          )
+        );
+        return;
+      }
 
-        let payload;
-
+      if (event.data.code) {
         try {
-          payload = JSON.parse(event.data);
-        } catch {
-          payload = { type: "message", message: event.data };
+          const consentUrl = `${AGENT_CHAT_URL}/consent`;
+          const res = await fetch(consentUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              session_id: currentSessionId,
+              code: event.data.code,
+              state: event.data.state,
+            }),
+          });
+          const data = await res.json();
+
+          setMessages((current) =>
+            current.map((m) =>
+              m.kind === "consent_request" && m.status === "awaiting"
+                ? { ...m, status: "authorized" }
+                : m
+            )
+          );
+
+          if (data.type === "consent_received" && pendingRetryRef.current) {
+            const retryMessage = pendingRetryRef.current;
+            pendingRetryRef.current = null;
+            await sendChatMessage(retryMessage, false);
+          }
+        } catch (error) {
+          console.error("Consent submission failed:", error);
+          setMessages((current) =>
+            current.map((m) =>
+              m.kind === "consent_request" && m.status === "awaiting"
+                ? { ...m, status: "error", errorReason: "Failed to complete authorization" }
+                : m
+            )
+          );
         }
-
-        if (payload.type === "message" || payload.type === "response") {
-          setMessages((current) => [
-            ...current,
-            createChatMessage("assistant", payload.message || "")
-          ]);
-          setIsProcessing(false);
-        } else if (payload.type === "error") {
-          setMessages((current) => [
-            ...current,
-            createChatMessage("assistant", payload.message || "I could not process that request.")
-          ]);
-          setIsProcessing(false);
-        } else if (payload.type === "need_user_consent") {
-          // Don't auto-open the popup. Browsers demote window.open() to a
-          // background tab when it's not triggered by a user gesture, which
-          // is why the OAuth screen previously opened in a full tab. Instead,
-          // render an in-chat prompt with an "Authorize" button. The user's
-          // click is a direct gesture, so window.open will produce a real
-          // popup window.
-          setMessages((current) => [
-            ...current,
-            {
-              id: `consent-${payload.request_id}`,
-              role: "assistant",
-              kind: "consent_request",
-              content: `This action needs your permission. Sign in to authorize the assistant to act on your behalf.`,
-              consent: {
-                authorize_url: payload.authorize_url,
-                state: payload.state,
-                request_id: payload.request_id,
-                scope: payload.scope
-              },
-              status: "pending"
-            }
-          ]);
-          // The agent is now waiting for the user — turn off the "typing" dots.
-          setIsProcessing(false);
-        }
-      });
-
-      socket.addEventListener("close", () => {
-        if (!isCurrent) {
-          return;
-        }
-
-        setConnectionStatus("disconnected");
-        socketRef.current = null;
-        reconnectTimerRef.current = window.setTimeout(connect, retryDelay);
-        retryDelay = Math.min(retryDelay * 1.6, 4000);
-      });
-
-      socket.addEventListener("error", () => {
-        if (!isCurrent) {
-          return;
-        }
-
-        setConnectionStatus("disconnected");
-      });
+      }
     }
 
-    connect();
-
-    return () => {
-      isCurrent = false;
-      window.clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-
-      if (socketRef.current) {
-        socketRef.current.close();
-        socketRef.current = null;
-      }
-    };
-  }, [isOpen]);
+    window.addEventListener("message", handleWindowMessage);
+    return () => window.removeEventListener("message", handleWindowMessage);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -520,20 +506,8 @@ function ChatWidget() {
       return;
     }
 
-    setMessages((current) => [...current, createChatMessage("user", message)]);
     setDraft("");
-    setIsProcessing(true);
-
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ message }));
-      return;
-    }
-
-    setMessages((current) => [
-      ...current,
-      createChatMessage("assistant", "The travel assistant is reconnecting. Try again in a moment.")
-    ]);
-    setIsProcessing(false);
+    sendChatMessage(message);
   }
 
   return (
@@ -546,9 +520,6 @@ function ChatWidget() {
               <h2>Wayfinder concierge</h2>
             </div>
             <div className="chat-header-actions">
-              <span className={`chat-status chat-status--${connectionStatus}`}>
-                {connectionStatus}
-              </span>
               <button
                 className="chat-icon-button"
                 type="button"
@@ -571,7 +542,6 @@ function ChatWidget() {
                         current.map((m) => (m.id === message.id ? { ...m, ...patch } : m))
                       );
                     }}
-                    socket={socketRef.current}
                   />
                 );
               }
@@ -791,10 +761,6 @@ function AppRoutes({ authReady, criteria, locations, onSearch }) {
         path="/bookings"
         element={authReady ? <BookingsPageWithAuth /> : <BookingsUnavailable />}
       />
-      <Route
-        path="/agent-portal"
-        element={authReady ? <AgentPortalPage /> : <BookingsUnavailable />}
-      />
       <Route path="/agent-callback" element={<AgentCallbackRoute />} />
       <Route
         path="/signin-as-agent"
@@ -897,7 +863,7 @@ function App({ authReady }) {
         locations={locations}
         onSearch={handleSearch}
       />
-      <ChatWidget />
+      <ChatWidget authReady={authReady} />
       <SiteFooter authReady={authReady} />
     </div>
   );

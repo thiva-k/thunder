@@ -9,22 +9,7 @@ const clientId = import.meta.env.VITE_THUNDER_CLIENT_ID;
 const baseUrl = import.meta.env.VITE_THUNDER_BASE_URL;
 const thunderidReady = Boolean(clientId && baseUrl);
 
-// Scopes requested at sign-in. The trailing `system:*` scopes power the in-app
-// Agent Portal: when an admin user signs in, the issued access token carries
-// the system permissions needed to call Thunder's /agents and /roles APIs
-// directly from the browser. Non-admin users will simply have these scopes
-// stripped from the issued token.
-const SCOPES = [
-  "openid",
-  "profile",
-  "email",
-  "ou",
-  "system",
-  "system:user",
-  "system:group",
-  "system:ou:view",
-  "system:usertype:view"
-];
+const SCOPES = ["openid", "profile", "email", "ou", "agent:access", "booking:read", "booking:create", "booking:cancel"];
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

@@ -42,6 +42,7 @@ const (
 	resourceTypeApplication        = "application"
 	resourceTypeUser               = "user"
 	resourceTypeTranslation        = "translation"
+	resourceTypeAgent              = "agent"
 	resourceTypeUnknown            = "unknown"
 )
 
@@ -166,6 +167,7 @@ func isKnownResourceType(resourceType string) bool {
 		resourceTypeUser:               {},
 		resourceTypeGroup:              {},
 		resourceTypeTranslation:        {},
+		resourceTypeAgent:              {},
 	}
 
 	_, exists := knownTypes[resourceType]
@@ -211,7 +213,18 @@ func classifyResourceType(node *yaml.Node) string {
 		matches = append(matches, resourceTypeIdentityProvider)
 	}
 
-	if hasAnyKey(node, "auth_flow_id", "registration_flow_id", "inbound_auth_config", "allowed_user_types") {
+	if hasAnyKey(node, "owner") ||
+		(hasAnyKey(node, "type") &&
+			hasAnyKey(node, "auth_flow_id", "registration_flow_id", "inbound_auth_config", "allowed_user_types") &&
+			!hasAnyKey(node, "properties")) {
+		matches = append(matches, resourceTypeAgent)
+	}
+
+	if !hasAnyKey(node, "owner") &&
+		!(hasAnyKey(node, "type") &&
+			hasAnyKey(node, "auth_flow_id", "registration_flow_id", "inbound_auth_config", "allowed_user_types") &&
+			!hasAnyKey(node, "properties")) &&
+		hasAnyKey(node, "auth_flow_id", "registration_flow_id", "inbound_auth_config", "allowed_user_types") {
 		matches = append(matches, resourceTypeApplication)
 	}
 

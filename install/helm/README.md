@@ -682,8 +682,61 @@ The setup job runs `setup.sh` as a one-time Helm pre-install hook to initialize 
 | `setup.resources.requests.memory`      | Memory request for setup job                                    | `50Mi`                       |
 | `setup.resources.limits.cpu`           | CPU limit for setup job                                         | `200m`                       |
 | `setup.resources.limits.memory`        | Memory limit for setup job                                      | `100Mi`                      |
+| `setup.admin.username`                 | Username for the default admin user                             | `admin`                      |
+| `setup.admin.password`                 | Password for the default admin user. Ignored when `setup.admin.passwordRef.name` is set | `admin` |
+| `setup.admin.passwordRef.name`         | Existing Kubernetes Secret name containing the admin password. Must be set together with `passwordRef.key` | `""` |
+| `setup.admin.passwordRef.key`          | Key in the Secret whose value is used as the admin password. Must be set together with `passwordRef.name` | `""` |
 | `setup.extraVolumeMounts`              | Additional volume mounts for setup job                          | `[]`                         |
 | `setup.extraVolumes`                   | Additional volumes for setup job                                | `[]`                         |
+
+### Admin Credentials
+
+The setup job seeds a default admin user during first install. The password can be supplied as a plain value (for development) or sourced from an existing Kubernetes Secret (recommended for production).
+
+#### Security Warning
+
+⚠️ **The default `admin`/`admin` credentials must be changed before any non-development deployment.** When defaults are used, the credentials are printed in the setup completion summary. Always set explicit credentials for any non-development environment.
+
+#### Pattern 1: Plain value (Development / Quick-start)
+
+```yaml
+setup:
+  admin:
+    username: "myAdmin"
+    password: "MyP@ssw0rd!"
+```
+
+Or via `--set` to avoid committing the password:
+
+```bash
+helm install my-thunderid oci://ghcr.io/thunder-id/helm-charts/thunderid \
+  --set setup.admin.username=myAdmin \
+  --set setup.admin.password='MyP@ssw0rd!'
+```
+
+#### Pattern 2: External Kubernetes Secret (Production — Recommended)
+
+**Step 1:** Create the Secret:
+
+```bash
+kubectl create secret generic thunderid-admin-credentials \
+  --from-literal=password='MyP@ssw0rd!'
+```
+
+**Step 2:** Reference it in your values:
+
+```yaml
+setup:
+  admin:
+    username: "myAdmin"
+    passwordRef:
+      name: "thunderid-admin-credentials"
+      key: "password"
+```
+
+When `passwordRef.name` and `passwordRef.key` are both set, the `password` field is ignored and the admin password is injected directly from the Secret — no plaintext appears in the rendered Job manifest.
+
+**Validation:** The chart fails at render time if only one of `passwordRef.name` / `passwordRef.key` is provided. Both must be set together or both must be left empty.
 
 Environment variable item structure for plain value environment variables in `deployment.env` and `setup.env`:
 
@@ -721,7 +774,6 @@ Bootstrap scripts extend ThunderID's setup process by adding your own initializa
 ThunderID provides these default bootstrap scripts in `/opt/thunderid/bootstrap/`:
 - **`common.sh`** - Helper functions for logging (`log_info`, `log_success`, `log_warning`, `log_error`) and API calls (`thunderid_api_call`)
 - **`01-default-resources.sh`** - Creates admin user, default organization, and Person user type
-- **`02-sample-resources.sh`** - Creates sample resources for testing
 
 #### Configuration Parameters
 
@@ -751,7 +803,7 @@ bootstrap:
       log_success "User created"
 ```
 
-- ✅ Preserves ThunderID's default scripts (`common.sh`, `01-*`, `02-*`)
+- ✅ Preserves ThunderID's default scripts (`common.sh`, `01-*`)
 - ✅ Can use helper functions from `common.sh`
 - ✅ No additional configuration needed
 
@@ -805,7 +857,7 @@ bootstrap:
     # No files list = mounts entire ConfigMap (replaces all defaults)
 ```
 
-- ⚠️ **Removes ALL default scripts** (`common.sh`, `01-default-resources.sh`, `02-sample-resources.sh`)
+- ⚠️ **Removes ALL default scripts** (`common.sh`, `01-default-resources.sh`)
 - ⚠️ You MUST provide your own `common.sh` with required helper functions
 - ⚠️ No default admin user, organization, or schemas will be created
 - ✅ Complete control over bootstrap process

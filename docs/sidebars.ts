@@ -22,6 +22,7 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 import browserSdkSidebar from './content/sdks/browser/sidebar';
 import expressSdkSidebar from './content/sdks/express/sidebar';
 import reactSdkSidebar from './content/sdks/react/sidebar';
+import vueSdkSidebar from './content/sdks/vue/sidebar';
 import productConfig from './docusaurus.product.config';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)

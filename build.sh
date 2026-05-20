@@ -696,6 +696,18 @@ function package_vanilla_sample() {
         cp -r "$VANILLA_SAMPLE_APP_SERVER_DIR/start.sh" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER"
     fi
 
+    # Copy ThunderID declarative resource configs
+    if [ -d "$VANILLA_SAMPLE_APP_DIR/thunderid-config" ]; then
+        echo "Copying ThunderID config..."
+        cp -r "$VANILLA_SAMPLE_APP_DIR/thunderid-config" "$DIST_DIR/$VANILLA_SAMPLE_APP_FOLDER/"
+    else
+        echo "Error: thunderid-config directory not found at $VANILLA_SAMPLE_APP_DIR/thunderid-config"
+        echo "  VANILLA_SAMPLE_APP_DIR=$VANILLA_SAMPLE_APP_DIR"
+        echo "  VANILLA_SAMPLE_APP_FOLDER=$VANILLA_SAMPLE_APP_FOLDER"
+        echo "  DIST_DIR=$DIST_DIR"
+        exit 1
+    fi
+
     echo "Creating React Vanilla sample zip file..."
     (cd "$DIST_DIR" && find "$VANILLA_SAMPLE_APP_FOLDER" | sort | zip "$VANILLA_SAMPLE_APP_FOLDER.zip" -@)
     rm -rf "${DIST_DIR:?}/$VANILLA_SAMPLE_APP_FOLDER"
@@ -733,6 +745,18 @@ function package_react_sdk_sample() {
         cp -r "$REACT_SDK_SAMPLE_APP_DIR/start.sh" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER"
     fi
 
+    # Copy ThunderID declarative resource configs
+    if [ -d "$REACT_SDK_SAMPLE_APP_DIR/thunderid-config" ]; then
+        echo "Copying ThunderID config..."
+        cp -r "$REACT_SDK_SAMPLE_APP_DIR/thunderid-config" "$DIST_DIR/$REACT_SDK_SAMPLE_APP_FOLDER/"
+    else
+        echo "Error: thunderid-config directory not found at $REACT_SDK_SAMPLE_APP_DIR/thunderid-config"
+        echo "  REACT_SDK_SAMPLE_APP_DIR=$REACT_SDK_SAMPLE_APP_DIR"
+        echo "  REACT_SDK_SAMPLE_APP_FOLDER=$REACT_SDK_SAMPLE_APP_FOLDER"
+        echo "  DIST_DIR=$DIST_DIR"
+        exit 1
+    fi
+
     echo "Creating React SDK sample zip file..."
     (cd "$DIST_DIR" && find "$REACT_SDK_SAMPLE_APP_FOLDER" | sort | zip "$REACT_SDK_SAMPLE_APP_FOLDER.zip" -@)
     rm -rf "${DIST_DIR:?}/$REACT_SDK_SAMPLE_APP_FOLDER"
@@ -768,6 +792,18 @@ function package_react_api_based_sample() {
     else
         echo "Including Unix start script (start.sh)..."
         cp -r "$REACT_API_SAMPLE_APP_DIR/start.sh" "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER"
+    fi
+
+    # Copy ThunderID declarative resource configs
+    if [ -d "$REACT_API_SAMPLE_APP_DIR/thunderid-config" ]; then
+        echo "Copying ThunderID config..."
+        cp -r "$REACT_API_SAMPLE_APP_DIR/thunderid-config" "$DIST_DIR/$REACT_API_SAMPLE_APP_FOLDER/"
+    else
+        echo "Error: thunderid-config directory not found at $REACT_API_SAMPLE_APP_DIR/thunderid-config"
+        echo "  REACT_API_SAMPLE_APP_DIR=$REACT_API_SAMPLE_APP_DIR"
+        echo "  REACT_API_SAMPLE_APP_FOLDER=$REACT_API_SAMPLE_APP_FOLDER"
+        echo "  DIST_DIR=$DIST_DIR"
+        exit 1
     fi
 
     echo "Creating React API-based sample zip file..."
@@ -1097,6 +1133,8 @@ function run() {
     API_BASE="$BASE_URL" \
         SYSTEM_RS_HANDLE="$SYSTEM_RS_HANDLE" \
         SYSTEM_RS_IDENTIFIER="$SYSTEM_RS_IDENTIFIER" \
+        ADMIN_USERNAME="${ADMIN_USERNAME:-}" \
+        ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" \
         "$BACKEND_BASE_DIR/cmd/server/bootstrap/01-default-resources.sh" \
         --console-redirect-uris "https://localhost:$CONSOLE_APP_DEFAULT_PORT/console"
 
