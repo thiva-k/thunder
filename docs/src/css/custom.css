@@ -450,10 +450,6 @@ html[data-page='home'][data-theme='dark'] .navbar .navbar__github--link::before 
 
 /* Align header logo consistently across all pages. */
 @media (min-width: 997px) {
-  .navbar {
-    padding-left: calc(max(0px, (100vw - var(--ifm-container-width-xl)) / 2) + 0.75rem);
-  }
-
   .navbar .navbar__brand {
     margin-left: 0;
   }
@@ -596,7 +592,7 @@ html[data-page='home'][data-theme='dark'] .dropdown>.navbar__link:after {
 /* ------------------------------ Sidebar Adjustments ---------------------- */
 
 /* Center the entire docs layout within the page */
-.main-wrapper {
+.plugin-docs .main-wrapper {
   max-width: var(--ifm-container-width-xl);
   margin: 0 auto;
   width: 100%;
