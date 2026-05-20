@@ -73,43 +73,47 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'doc',
-          id: 'guides/quick-start/quickstart',
+          id: 'guides/getting-started/register-an-application',
           label: 'Register an Application',
         },
         {
           type: 'doc',
-          id: 'guides/guides/flows/build-a-flow',
+          id: 'guides/getting-started/build-a-flow',
           label: 'Build a Sign-In Flow',
         },
         {
           type: 'category',
           label: 'Connect Your Application',
-          collapsed: false,
+          link: {
+            type: 'doc',
+            id: 'guides/getting-started/connect-your-application/index',
+          },
+          collapsed: true,
           collapsible: true,
           items: [
             {
               type: 'doc',
-              id: 'guides/quick-start/connect-your-application/react',
+              id: 'guides/getting-started/connect-your-application/react',
               label: 'React',
             },
             {
               type: 'doc',
-              id: 'guides/quick-start/connect-your-application/express',
+              id: 'guides/getting-started/connect-your-application/express',
               label: 'Express',
             },
             {
               type: 'doc',
-              id: 'guides/quick-start/connect-your-application/vue',
+              id: 'guides/getting-started/connect-your-application/vue',
               label: 'Vue',
             },
             {
               type: 'doc',
-              id: 'guides/quick-start/connect-your-application/nuxt',
+              id: 'guides/getting-started/connect-your-application/nuxt',
               label: 'Nuxt',
             },
             {
               type: 'doc',
-              id: 'guides/quick-start/connect-your-application/browser',
+              id: 'guides/getting-started/connect-your-application/browser',
               label: 'JavaScript',
             },
           ],
@@ -215,18 +219,7 @@ const sidebars: SidebarsConfig = {
               id: 'guides/guides/agents/manage-agents',
               label: 'Manage Agents',
             },
-            {
-              type: 'doc',
-              id: 'guides/guides/agents/agent-authentication',
-              label: 'Agent Authentication',
-              key: 'guides-agent-authentication',
-            },
           ],
-        },
-        {
-          type: 'doc',
-          id: 'guides/guides/integrations',
-          label: 'Integrations',
         },
         {
           type: 'doc',
@@ -293,7 +286,7 @@ const sidebars: SidebarsConfig = {
       collapsible: false,
       className: 'sidebar-section',
       items: [
-        {type: 'doc', id: 'use-cases/overview', label: 'Overview'},
+        {type: 'doc', id: 'use-cases/overview', label: 'Choose your usecase'},
         {
           type: 'category',
           label: 'Consumer Applications (B2C)',
@@ -319,10 +312,7 @@ const sidebars: SidebarsConfig = {
           collapsed: true,
           items: [
             {type: 'doc', id: 'use-cases/ai-agents/overview', label: 'Overview', key: 'ai-agents-overview'},
-            {type: 'doc', id: 'use-cases/ai-agents/protect-your-agent', label: 'Protect Your Agent'},
-            {type: 'doc', id: 'use-cases/ai-agents/connect-to-services', label: 'Connect to Services'},
             {type: 'doc', id: 'use-cases/ai-agents/multi-agent-workflows', label: 'Multi-Agent Workflows'},
-            {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization', label: 'MCP Authorization'},
             {type: 'doc', id: 'use-cases/ai-agents/try-it-out', label: 'Try It Out', key: 'ai-agents-try-it-out'},
           ],
         },
@@ -344,33 +334,10 @@ const sidebars: SidebarsConfig = {
       className: 'sidebar-section sidebar-persona-not-devops',
       items: [
         {
-          type: 'category',
-          label: 'Authentication',
-          collapsed: true,
-          items: [
-            {
-              type: 'doc',
-              id: 'guides/key-concepts/authentication/overview',
-            },
-            {
-              type: 'category',
-              label: 'Passwordless',
-              collapsed: true,
-              items: [
-                {
-                  type: 'doc',
-                  id: 'guides/key-concepts/authentication/passwordless/overview',
-                },
-                {
-                  type: 'doc',
-                  id: 'guides/key-concepts/authentication/passwordless/passkeys',
-                  label: 'Passkeys',
-                },
-              ],
-            },
-          ],
+          type: 'doc',
+          id: 'guides/key-concepts/authentication/passwordless/passkeys',
+          label: 'Passkeys',
         },
-
         {
           type: 'doc',
           id: 'guides/key-concepts/authorization',
@@ -380,11 +347,6 @@ const sidebars: SidebarsConfig = {
           type: 'doc',
           id: 'guides/key-concepts/tokens',
           label: 'Tokens',
-        },
-        {
-          type: 'doc',
-          id: 'guides/key-concepts/events',
-          label: 'Events',
         },
       ],
     },
@@ -405,28 +367,41 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: 'doc',
-          id: 'guides/getting-started/configuration',
-          label: 'Configuration',
-        },
-        {
-          type: 'doc',
           id: 'guides/deployment-patterns/index',
           label: 'Choose Your Deployment',
         },
         {
-          type: 'doc',
-          id: 'guides/deployment-patterns/docker',
-          label: 'Docker',
+          type: 'category',
+          label: 'Deployment Paths',
+          collapsible: true,
+          collapsed: true,
+          items: [
+            {
+              type: 'doc',
+              id: 'guides/deployment-patterns/docker',
+              label: 'Docker',
+            },
+            {
+              type: 'doc',
+              id: 'guides/deployment-patterns/kubernetes',
+              label: 'Kubernetes',
+            },
+            {
+              type: 'doc',
+              id: 'guides/deployment-patterns/openchoreo',
+              label: 'OpenChoreo',
+            },
+          ],
         },
         {
           type: 'doc',
-          id: 'guides/deployment-patterns/kubernetes',
-          label: 'Kubernetes',
+          id: 'guides/getting-started/configuration',
+          label: 'Configure your Instance',
         },
         {
           type: 'doc',
-          id: 'guides/deployment-patterns/openchoreo',
-          label: 'OpenChoreo',
+          id: 'guides/deployment-patterns/production-guidelines',
+          label: 'Production Guidelines',
         },
       ],
     },
@@ -434,8 +409,101 @@ const sidebars: SidebarsConfig = {
   expressSdkSidebar,
   reactSdkSidebar,
   browserSdkSidebar,
-  vueSdkSidebar,
-  communitySidebar: [{type: 'autogenerated', dirName: 'community'}],
+  communitySidebar: [
+    // Community Section
+    {
+      type: 'html',
+      value:
+        '<div class="sidebar-section-label"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Community</span></div>',
+      className: 'sidebar-html-section-header',
+    },
+    {
+      type: 'category',
+      label: 'Community',
+      className: 'sidebar-section',
+      collapsed: false,
+      collapsible: false,
+      items: [
+        { type: 'doc', id: 'community/overview', label: 'Join the Community', key: 'community-overview' },
+      ],
+    },
+
+    // Contribute Section
+    {
+      type: 'html',
+      value:
+        '<div class="sidebar-section-label"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span>Contribute</span></div>',
+      className: 'sidebar-html-section-header',
+    },
+    {
+      type: 'category',
+      label: 'Contribute',
+      className: 'sidebar-section',
+      collapsed: false,
+      collapsible: false,
+      items: [
+        { type: 'doc', id: 'community/contributing/overview', label: 'Contribute to ThunderID' },
+        { type: 'doc', id: 'community/contributing/sharing-ideas', label: 'Share Ideas' },
+        { type: 'doc', id: 'community/contributing/proposing-features', label: 'Propose Features' },
+        { type: 'doc', id: 'community/contributing/contributing-code/prerequisites', label: 'Prerequisites' },
+        { type: 'doc', id: 'community/contributing/contributing-code/configure-and-run', label: 'Configure and Run' },
+        { type: 'doc', id: 'community/contributing/contributing-code/development-pipeline', label: 'Development Pipeline', key: 'code-development-pipeline' },
+        { type: 'doc', id: 'community/contributing/contributing-code/debugging', label: 'Debugging' },
+        {
+          type: 'category',
+          label: 'Backend Development',
+          collapsed: true,
+          collapsible: true,
+          items: [
+            { type: 'doc', id: 'community/contributing/contributing-code/backend-development/overview', label: 'Backend Overview', key: 'backend-overview' },
+            { type: 'doc', id: 'community/contributing/contributing-code/backend-development/observability', label: 'Observability' },
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Frontend Development',
+          collapsed: true,
+          collapsible: true,
+          items: [
+            { type: 'doc', id: 'community/contributing/contributing-code/frontend-development/overview', label: 'Frontend Overview', key: 'frontend-overview' },
+            { type: 'doc', id: 'community/contributing/contributing-code/frontend-development/scaffolding-tool', label: 'Scaffolding Tool' },
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Documentation Development',
+          collapsed: true,
+          collapsible: true,
+          items: [
+            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/overview', label: 'Documentation Overview', key: 'docs-overview' },
+            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/development-pipeline', label: 'Documentation Development Pipeline', key: 'docs-development-pipeline' },
+            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/writing-documentation', label: 'Writing Documentation' },
+            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/documentation-style-guide', label: 'Style Guide' },
+            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/advanced-topics', label: 'Advanced Topics' },
+            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/glossary', label: 'Glossary' },
+          ],
+        },
+      ],
+    },
+
+    // Maintenance Section
+    {
+      type: 'html',
+      value:
+        '<div class="sidebar-section-label"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg><span>Maintenance</span></div>',
+      className: 'sidebar-html-section-header',
+    },
+    {
+      type: 'category',
+      label: 'Maintenance',
+      className: 'sidebar-section',
+      collapsed: false,
+      collapsible: false,
+      items: [
+        { type: 'doc', id: 'community/release-operations', label: 'Release Operations' },
+      ],
+    },
+  ],
 };
 
 export default sidebars;

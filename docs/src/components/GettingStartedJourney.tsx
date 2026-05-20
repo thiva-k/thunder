@@ -22,14 +22,46 @@ import React from 'react';
 interface JourneyStep {
   label: string;
   href: string;
+  docIds: string[];
 }
 
-const STEPS: JourneyStep[] = [
-  {label: 'Run ThunderID', href: '/docs/next/guides/getting-started/get-thunderid'},
-  {label: 'Register an app', href: '/docs/next/guides/getting-started/register-an-application'},
-  {label: 'Build a flow', href: '/docs/next/guides/getting-started/build-a-flow'},
-  {label: 'Connect your app', href: '/docs/next/guides/quick-start/connect-your-application/react'},
+export const GETTING_STARTED_STEPS: JourneyStep[] = [
+  {
+    label: 'Run ThunderID',
+    href: '/docs/next/guides/getting-started/get-thunderid',
+    docIds: ['guides/getting-started/get-thunderid'],
+  },
+  {
+    label: 'Register an app',
+    href: '/docs/next/guides/getting-started/register-an-application',
+    docIds: ['guides/getting-started/register-an-application'],
+  },
+  {
+    label: 'Build a flow',
+    href: '/docs/next/guides/getting-started/build-a-flow',
+    docIds: ['guides/getting-started/build-a-flow'],
+  },
+  {
+    label: 'Connect your app',
+    href: '/docs/next/guides/getting-started/connect-your-application',
+    docIds: [
+      'guides/getting-started/connect-your-application/index',
+      'guides/getting-started/connect-your-application/react',
+      'guides/getting-started/connect-your-application/vue',
+      'guides/getting-started/connect-your-application/browser',
+    ],
+  },
 ];
+
+export function getGettingStartedStepIndex(docId?: string): number | null {
+  if (!docId) {
+    return null;
+  }
+
+  const stepIndex = GETTING_STARTED_STEPS.findIndex((step) => step.docIds.includes(docId));
+
+  return stepIndex >= 0 ? stepIndex + 1 : null;
+}
 
 interface GettingStartedJourneyProps {
   current: number; // 1-based index
@@ -38,7 +70,7 @@ interface GettingStartedJourneyProps {
 export default function GettingStartedJourney({current}: GettingStartedJourneyProps) {
   return (
     <div className="gsj">
-      {STEPS.map((step, i) => {
+      {GETTING_STARTED_STEPS.map((step, i) => {
         const index = i + 1;
         const isDone = index < current;
         const isActive = index === current;
@@ -90,7 +122,7 @@ export default function GettingStartedJourney({current}: GettingStartedJourneyPr
                 {content}
               </Link>
             )}
-            {i < STEPS.length - 1 && (
+            {i < GETTING_STARTED_STEPS.length - 1 && (
               <div className={`gsj__connector ${isDone ? 'gsj__connector--done' : ''}`} aria-hidden />
             )}
           </React.Fragment>

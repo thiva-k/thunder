@@ -31,12 +31,14 @@ import ExpressLogo from '@site/src/components/icons/ExpressLogo';
 import FlutterLogo from '@site/src/components/icons/FlutterLogo';
 import GoLogo from '@site/src/components/icons/GoLogo';
 import IOSLogo from '@site/src/components/icons/IOSLogo';
+import JavaScriptLogo from '@site/src/components/icons/JavaScriptLogo';
 import NextLogo from '@site/src/components/icons/NextLogo';
 import NodeLogo from '@site/src/components/icons/NodeLogo';
 import NuxtLogo from '@site/src/components/icons/NuxtLogo';
 import PythonLogo from '@site/src/components/icons/PythonLogo';
 import ReactLogo from '@site/src/components/icons/ReactLogo';
 import ReactRouterLogo from '@site/src/components/icons/ReactRouterLogo';
+import TanStackLogo from '@site/src/components/icons/TanStackLogo';
 import VueLogo from '@site/src/components/icons/VueLogo';
 import ProductName from '@site/src/components/ProductName';
 import RepoLink from '@site/src/components/RepoLink';
@@ -69,8 +71,10 @@ export default {
   PythonLogo,
   FlutterLogo,
   IOSLogo,
+  JavaScriptLogo,
   AndroidLogo,
   ReactRouterLogo,
+  TanStackLogo,
   ApiReference,
   CodeBlock,
   CodeGroup,

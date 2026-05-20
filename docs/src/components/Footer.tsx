@@ -80,7 +80,7 @@ export default function Footer(): JSX.Element {
         color: 'text.primary',
         borderTop: '1px solid',
         borderColor: 'divider',
-        pt: {xs: 6, lg: 8},
+        pt: {xs: 4, lg: 5},
         pb: 3,
       }}
     >
@@ -88,9 +88,9 @@ export default function Footer(): JSX.Element {
         <Box
           sx={{
             display: 'grid',
-            gridTemplateColumns: {xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr'},
-            gap: {xs: 4, md: 6},
-            mb: 6,
+            gridTemplateColumns: {xs: '1fr', sm: 'repeat(2, 1fr)', md: '2fr 1fr 1fr 1fr'},
+            gap: {xs: 4, md: 5},
+            mb: 4,
           }}
         >
           {/* Brand column */}
@@ -102,31 +102,28 @@ export default function Footer(): JSX.Element {
                   dark: withBaseUrl('/assets/images/logo-inverted.svg'),
                 }}
                 alt={`${productConfig.project.name} Logo`}
-                style={{height: 32}}
+                style={{height: 48}}
               />
             </Box>
-            <Typography
-              variant="body2"
-              sx={{
-                color: 'text.secondary',
-                fontSize: '0.85rem',
-                lineHeight: 1.7,
-                maxWidth: '280px',
-                mb: 3,
-              }}
-            >
-              Work together seamlessly and secure your applications with ease.
-            </Typography>
           </Box>
 
-          {/* Pages column */}
+          {/* Docs + SDKs column */}
           <FooterColumn
-            title="Pages"
+            title="Product"
             links={[
-              {label: 'Home', href: '/'},
               {label: 'Docs', href: '/docs/next/guides/getting-started/what-is-thunderid'},
               {label: 'APIs', href: '/docs/next/apis'},
               {label: 'SDKs', href: '/docs/next/sdks/overview'},
+            ]}
+          />
+
+          {/* Community column */}
+          <FooterColumn
+            title="Community"
+            links={[
+              {label: 'Contributing', href: '/docs/next/community/contributing/overview'},
+              {label: 'Discussions', href: productConfig.project.source.github.discussionsUrl},
+              {label: 'Report an Issue', href: productConfig.project.source.github.issuesUrl},
             ]}
           />
 
@@ -134,10 +131,8 @@ export default function Footer(): JSX.Element {
           <FooterColumn
             title="Resources"
             links={[
-              {label: 'Community', href: '/docs/next/community/overview'},
               {label: 'Releases', href: productConfig.project.source.github.releasesUrl},
-              {label: 'Discussions', href: productConfig.project.source.github.discussionsUrl},
-              {label: 'Report an Issue', href: productConfig.project.source.github.issuesUrl},
+              {label: 'GitHub', href: productConfig.project.source.github.url},
             ]}
           />
         </Box>
