@@ -1,8 +1,8 @@
 # React Vanilla Sample Application
 
-This sample React application demonstrates integrating authentication and registration into your application using the app-native flow orchestration API.
+This sample React application demonstrates integrating authentication, registration, and basic self-service profile management into your application using the app-native flow orchestration API.
 
-### Supported Authentication Methods
+## Supported Authentication Methods
 
 This sample supports the following authentication and registration methods:
 
@@ -95,6 +95,18 @@ passkey:
 ```
 
 If the sample is hosted at a different address, add that origin instead. Without this, passkey registration will fail with an origin validation error.
+
+### Invite Flow Configuration
+
+If you use invite-based flows such as password recovery, set `inviteBaseURL` on the `InviteExecutor` node that runs in `generate` mode in the flow definition.
+
+For this sample, it should point to the frontend invite page, for example:
+
+```text
+https://localhost:3000/invite
+```
+
+Without this, the generated invite link will fall back to the server's default Gate URL instead of this sample app.
 
 ## Quick Start
 

@@ -138,8 +138,8 @@ describe('WelcomePage', () => {
 
   it('renders learn product items', () => {
     render(<WelcomePage />);
-    expect(screen.getByText('common:welcome.learnProduct.b2c')).toBeInTheDocument();
-    expect(screen.getByText('common:welcome.learnProduct.aiAgents')).toBeInTheDocument();
+    expect(screen.getByText('common:welcome.tryoutProduct.b2c')).toBeInTheDocument();
+    expect(screen.getByText('common:welcome.tryoutProduct.aiAgents')).toBeInTheDocument();
   });
 
   it('renders walkthrough items', () => {
@@ -162,12 +162,12 @@ describe('WelcomePage', () => {
   it('renders learn product items as links with correct href', () => {
     render(<WelcomePage />);
 
-    const b2cLink = screen.getByText('common:welcome.learnProduct.b2c').closest('a');
+    const b2cLink = screen.getByText('common:welcome.tryoutProduct.b2c').closest('a');
     expect(b2cLink).toHaveAttribute('href', expect.stringContaining('/use-cases/b2c/try-it-out'));
     expect(b2cLink).toHaveAttribute('target', '_blank');
     expect(b2cLink).toHaveAttribute('rel', 'noopener noreferrer');
 
-    const aiAgentsLink = screen.getByText('common:welcome.learnProduct.aiAgents').closest('a');
+    const aiAgentsLink = screen.getByText('common:welcome.tryoutProduct.aiAgents').closest('a');
     expect(aiAgentsLink).toHaveAttribute('href', expect.stringContaining('/use-cases/ai-agents/try-it-out'));
   });
 

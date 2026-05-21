@@ -27,11 +27,7 @@ Get the latest release of <ProductName /> and run it locally on your machine.
 
 ## Download the Distribution
 
-Download `{{productSlug}}-<version>-<os>-<arch>.zip` from the <RepoLink path="/releases/latest">latest release</RepoLink> for your operating system and architecture.
-
-:::info Example
-If you're using a MacOS machine with Apple Silicon (ARM64) processor, download `{{productSlug}}-<version>-macos-arm64.zip`
-:::
+Download the latest release from the <a href="/docs/next/releases/" target="_blank">releases page</a>.
 
 ## Extract the Archive
 
@@ -108,21 +104,12 @@ The quickest way to get <ProductName /> up and running with all dependencies con
 
 <Stepper stepNode="h2" as="h3">
 
-## Download Docker Compose File
-
-Download the `docker-compose.yml` file from the <ProductName /> repository:
-
-{/* The release workflow keeps this versioned URL in sync. */}
-```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/thunder-id/thunderid/v0.39.0/install/quick-start/docker-compose.yml
-```
-
 ## Start <ProductName />
 
-Run the following command in the directory where you downloaded the `docker-compose.yml` file:
+Run the following command to start <ProductName /> using Docker Compose:
 
 ```bash
-docker compose up
+docker compose -f oci://ghcr.io/thunder-id/thunderid-quick-start:latest up
 ```
 
 :::note

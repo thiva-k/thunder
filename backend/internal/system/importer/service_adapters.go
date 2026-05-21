@@ -914,7 +914,8 @@ func (s *importService) importAgent(
 
 	normalizeAgentOAuthConfigForImport(&req)
 
-	createReq := &agentmodel.CreateAgentRequest{
+	createReq := &agentmodel.Agent{
+		ID:                 req.ID,
 		OUID:               req.OUID,
 		OUHandle:           req.OUHandle,
 		Type:               req.Type,

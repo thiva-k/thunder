@@ -17,25 +17,60 @@
  */
 
 import Link from '@docusaurus/Link';
+import useIsDarkMode from '@site/src/hooks/useIsDarkMode';
 import {Box, Container, Typography} from '@wso2/oxygen-ui';
 import React, {JSX, useState} from 'react';
 import ExpressLogo from '../icons/ExpressLogo';
-import Html5Logo from '../icons/Html5Logo';
+import JavaScriptLogo from '../icons/JavaScriptLogo';
 import NextLogo from '../icons/NextLogo';
 import NodeLogo from '../icons/NodeLogo';
 import NuxtLogo from '../icons/NuxtLogo';
 import ReactLogo from '../icons/ReactLogo';
 import VueLogo from '../icons/VueLogo';
-import useIsDarkMode from '@site/src/hooks/useIsDarkMode';
 
 const SDKS = [
-  {name: 'HTML', packageName: '@thunderid/browser', icon: Html5Logo, href: '/docs/next/sdks/overview'},
-  {name: 'React', packageName: '@thunderid/react', icon: ReactLogo, href: '/docs/next/sdks/overview'},
-  {name: 'Next.js', packageName: '@thunderid/nextjs', icon: NextLogo, href: '/docs/next/sdks/overview'},
-  {name: 'Node.js', packageName: '@thunderid/node', icon: NodeLogo, href: '/docs/next/sdks/overview'},
-  {name: 'Express', packageName: '@thunderid/express', icon: ExpressLogo, href: '/docs/next/sdks/overview'},
-  {name: 'Vue', packageName: '@thunderid/vue', icon: VueLogo, href: '/docs/next/sdks/overview'},
-  {name: 'Nuxt', packageName: '@thunderid/nuxt', icon: NuxtLogo, href: '/docs/next/sdks/overview'},
+  {
+    name: 'React',
+    packageName: '@thunderid/react',
+    icon: ReactLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/react',
+  },
+  {
+    name: 'Next.js',
+    packageName: '@thunderid/nextjs',
+    icon: NextLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/nextjs',
+  },
+  {
+    name: 'Express',
+    packageName: '@thunderid/express',
+    icon: ExpressLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/express',
+  },
+  {
+    name: 'Vue',
+    packageName: '@thunderid/vue',
+    icon: VueLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/vue',
+  },
+  {
+    name: 'Nuxt',
+    packageName: '@thunderid/nuxt',
+    icon: NuxtLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/nuxt',
+  },
+  {
+    name: 'Node.js',
+    packageName: '@thunderid/node',
+    icon: NodeLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/node',
+  },
+  {
+    name: 'Vanilla JavaScript',
+    packageName: '@thunderid/browser',
+    icon: JavaScriptLogo,
+    href: '/docs/next/guides/getting-started/connect-your-application/browser',
+  },
 ];
 
 export default function SDKShowcaseSection(): JSX.Element {

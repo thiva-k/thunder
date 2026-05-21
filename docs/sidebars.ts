@@ -21,8 +21,13 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 import browserSdkSidebar from './content/sdks/browser/sidebar';
 import expressSdkSidebar from './content/sdks/express/sidebar';
-import reactSdkSidebar from './content/sdks/react/sidebar';
+import javascriptSdkSidebar from './content/sdks/javascript/sidebar';
+import nextjsSdkSidebar from './content/sdks/nextjs/sidebar';
 import nodeSdkSidebar from './content/sdks/node/sidebar';
+import nuxtSdkSidebar from './content/sdks/nuxt/sidebar';
+import reactSdkSidebar from './content/sdks/react/sidebar';
+import reactRouterSdkSidebar from './content/sdks/react-router/sidebar';
+import tanstackRouterSdkSidebar from './content/sdks/tanstack-router/sidebar';
 import vueSdkSidebar from './content/sdks/vue/sidebar';
 import productConfig from './docusaurus.product.config';
 
@@ -99,6 +104,11 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'doc',
+              id: 'guides/getting-started/connect-your-application/nextjs',
+              label: 'Next.js',
+            },
+            {
+              type: 'doc',
               id: 'guides/getting-started/connect-your-application/express',
               label: 'Express',
             },
@@ -114,8 +124,13 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'doc',
+              id: 'guides/getting-started/connect-your-application/node',
+              label: 'Node.js',
+            },
+            {
+              type: 'doc',
               id: 'guides/getting-started/connect-your-application/browser',
-              label: 'JavaScript',
+              label: 'Vanilla JavaScript',
             },
           ],
         },
@@ -296,7 +311,20 @@ const sidebars: SidebarsConfig = {
           items: [
             {type: 'doc', id: 'use-cases/b2c/customer-identity', label: 'Customer Identity'},
             {type: 'doc', id: 'use-cases/b2c/solution-patterns', label: 'Solution Patterns'},
-            {type: 'doc', id: 'use-cases/b2c/try-it-out', label: 'Try It Out', key: 'b2c-try-it-out'},
+            {
+              type: 'category',
+              label: 'Try It Out',
+              collapsible: true,
+              collapsed: true,
+              link: {type: 'doc', id: 'use-cases/b2c/try-it-out'},
+              items: [
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/add-login', label: 'Add Login'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/self-sign-up', label: 'Self Sign-Up'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/profile-section', label: 'Profile Section'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/account-recovery', label: 'Account Recovery'},
+                {type: 'doc', id: 'use-cases/b2c/try-it-out/onboard-internal-users', label: 'Onboard Internal Users'},
+              ],
+            },
           ],
         },
         {
@@ -313,8 +341,23 @@ const sidebars: SidebarsConfig = {
           collapsed: true,
           items: [
             {type: 'doc', id: 'use-cases/ai-agents/overview', label: 'Overview', key: 'ai-agents-overview'},
+            {type: 'doc', id: 'use-cases/ai-agents/protect-your-agent', label: 'Protect Your Agent'},
+            {type: 'doc', id: 'use-cases/ai-agents/connect-to-services', label: 'Connect to Services'},
             {type: 'doc', id: 'use-cases/ai-agents/multi-agent-workflows', label: 'Multi-Agent Workflows'},
-            {type: 'doc', id: 'use-cases/ai-agents/try-it-out', label: 'Try It Out', key: 'ai-agents-try-it-out'},
+            {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization', label: 'MCP Authorization'},
+            {
+              type: 'category',
+              label: 'Try It Out',
+              collapsible: true,
+              collapsed: true,
+              key: 'ai-agents-try-it-out',
+              link: {type: 'doc', id: 'use-cases/ai-agents/try-it-out'},
+              items: [
+                {type: 'doc', id: 'use-cases/ai-agents/try-it-out/protect-the-agent', label: 'Protect the Agent'},
+                {type: 'doc', id: 'use-cases/ai-agents/try-it-out/act-on-its-own', label: 'Acting on Its Own'},
+                {type: 'doc', id: 'use-cases/ai-agents/try-it-out/act-on-behalf-of-user', label: 'Acting on Behalf of a User'},
+              ],
+            },
           ],
         },
       ],
@@ -408,10 +451,15 @@ const sidebars: SidebarsConfig = {
     },
   ],
   expressSdkSidebar,
+  nuxtSdkSidebar,
   reactSdkSidebar,
+  reactRouterSdkSidebar,
+  tanstackRouterSdkSidebar,
   nodeSdkSidebar,
   vueSdkSidebar,
   browserSdkSidebar,
+  nextjsSdkSidebar,
+  javascriptSdkSidebar,
   communitySidebar: [
     // Community Section
     {

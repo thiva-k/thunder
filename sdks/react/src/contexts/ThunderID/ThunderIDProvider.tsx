@@ -155,11 +155,11 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
 
       // TEMPORARY: SCIM2 and Organizations endpoints are not yet supported.
       // Tracker: https://github.com/asgardeo/javascript/issues/212
-      const claims: Record<string, any> = extractUserClaimsFromIdToken(decodedToken);
+      const claims: User = extractUserClaimsFromIdToken(decodedToken) as User;
       setUser(claims);
       setUserProfile({
-        flattenedProfile: claims as User,
-        profile: claims as User,
+        flattenedProfile: claims,
+        profile: claims,
         schemas: [],
       });
 
@@ -223,6 +223,7 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
 
     (async (): Promise<void> => {
       // Sync session state whenever sign-in completes (both redirect and embedded V2 flows).
+      // Pass the user returned by the SDK's sign-in flow so SCIM2/Me result is not discarded.
       await client.on('sign-in', async () => {
         await updateSession();
       });

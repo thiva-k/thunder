@@ -27,7 +27,7 @@ inputs:
   tag-convention:
     description: 'Git tag format. Use {sdk} and {version} as placeholders (e.g. "{sdk}/v{version}")'
     required: false
-    default: '{sdk}/v{version}'
+    default: 'sdk/{sdk}/v{version}'
 
 runs:
   using: composite

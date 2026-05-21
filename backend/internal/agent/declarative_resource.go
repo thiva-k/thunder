@@ -211,7 +211,8 @@ func makeAgentEntityParser(
 			attributesJSON = raw
 		}
 
-		createReq := &model.CreateAgentRequest{
+		agent := &model.Agent{
+			ID:                 req.ID,
 			OUID:               req.OUID,
 			OUHandle:           req.OUHandle,
 			Type:               req.Type,
@@ -222,14 +223,14 @@ func makeAgentEntityParser(
 			InboundAuthProfile: req.InboundAuthProfile,
 			InboundAuthConfig:  req.InboundAuthConfig,
 		}
-		clientID, clientSecret, _, svcErr := agentSvc.ValidateAgent(context.Background(), createReq, req.ID)
+		clientID, clientSecret, _, svcErr := agentSvc.ValidateAgent(context.Background(), agent, req.ID)
 		if svcErr != nil {
 			return nil, nil, nil, fmt.Errorf("failed to validate agent '%s': %v", req.ID, svcErr)
 		}
 
-		// createReq.OUID may have been resolved from OUHandle by ValidateAgent.
+		// agent.OUID may have been resolved from OUHandle by ValidateAgent.
 		e, sysCredsJSON, buildErr := buildAgentEntity(
-			req.ID, req.Type, createReq.OUID, attributesJSON,
+			req.ID, req.Type, agent.OUID, attributesJSON,
 			req.Name, req.Description, req.Owner, clientID, clientSecret,
 		)
 		if buildErr != nil {
@@ -263,7 +264,8 @@ func makeAgentInboundParser(agentSvc AgentServiceInterface) func([]byte) (*inbou
 			return nil, fmt.Errorf("failed to parse agent YAML: %w", err)
 		}
 
-		createReq := &model.CreateAgentRequest{
+		agent := &model.Agent{
+			ID:                 req.ID,
 			OUID:               req.OUID,
 			OUHandle:           req.OUHandle,
 			Type:               req.Type,
@@ -273,7 +275,7 @@ func makeAgentInboundParser(agentSvc AgentServiceInterface) func([]byte) (*inbou
 			InboundAuthProfile: req.InboundAuthProfile,
 			InboundAuthConfig:  req.InboundAuthConfig,
 		}
-		_, _, resolvedClient, svcErr := agentSvc.ValidateAgent(context.Background(), createReq, req.ID)
+		_, _, resolvedClient, svcErr := agentSvc.ValidateAgent(context.Background(), agent, req.ID)
 		if svcErr != nil {
 			return nil, fmt.Errorf("failed to validate agent '%s': %v", req.ID, svcErr)
 		}

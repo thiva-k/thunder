@@ -113,9 +113,9 @@ export const DefaultThemeConfig = {
   },
   blur: {
     none: 'none',
-    light: 'blur(10px)',
-    medium: 'blur(16px)',
-    heavy: 'blur(24px)',
+    light: 'blur(5px)',
+    medium: 'blur(10px)',
+    heavy: 'blur(15px)',
   },
   gradient: {
     primary: 'linear-gradient(90deg, #3688FF 0%, #1d5eb4 100%)',
@@ -163,9 +163,9 @@ export const DefaultThemeConfig = {
 
           return {
             color: '#ffffff',
-            background: 'linear-gradient(90deg, #3688FF 0%, #6b85a8 100%)',
+            background: 'inherit',
             '&:hover': {
-              background: 'linear-gradient(90deg, #3688FF 0%, #6b85a8 100%)',
+              background: 'inherit',
             },
           };
         },
@@ -278,6 +278,21 @@ export const DefaultThemeConfig = {
           WebkitBackdropFilter: theme.blur.medium,
           backdropFilter: theme.blur.medium,
           backgroundImage: 'none',
+        }),
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        root: ({theme}: {theme: OxygenThemeType}) => ({
+          '& .MuiBackdrop-root': {
+            WebkitBackdropFilter: theme.blur.light,
+            backdropFilter: theme.blur.light,
+          },
+        }),
+        paper: ({theme}: {theme: OxygenThemeType}) => ({
+          backgroundColor: theme.vars.palette.background.default,
+          WebkitBackdropFilter: 'none',
+          backdropFilter: 'none',
         }),
       },
     },

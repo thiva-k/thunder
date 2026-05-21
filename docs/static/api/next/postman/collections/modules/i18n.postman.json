@@ -1,7 +1,7 @@
 {
   "item": [
     {
-      "id": "b1a54a53-3e8f-4ebd-9eb5-fe28a50844be",
+      "id": "b613b9d3-a93b-4a2a-8898-00fface05880",
       "name": "Languages",
       "description": {
         "content": "List supported languages",
@@ -9,7 +9,7 @@
       },
       "item": [
         {
-          "id": "d28b63fa-0e5f-45a3-bea4-ee4e4fdb65cb",
+          "id": "0ebb6f6c-31a7-4be6-8a16-6332287302fb",
           "name": "List all languages",
           "request": {
             "name": "List all languages",
@@ -58,7 +58,7 @@
           },
           "response": [
             {
-              "id": "3fcec0d9-cd89-463a-9d32-8b2166cf72e0",
+              "id": "7440384c-cbfc-414b-8dcc-43374da03a36",
               "name": "List of language tags",
               "originalRequest": {
                 "url": {
@@ -121,7 +121,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "d1107384-4638-497b-86d4-dc90d2a0c6c0",
+              "id": "5248604e-36dc-43f0-9f19-ec2151a18aeb",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -193,7 +193,7 @@
       "event": []
     },
     {
-      "id": "6b1b36b7-8b93-4f57-ba71-8e1fc82f30f6",
+      "id": "8cfb4b15-0e3a-4f5c-a831-313bc75f380b",
       "name": "resolve",
       "description": {
         "content": "Resolve translations (runtime)",
@@ -201,7 +201,7 @@
       },
       "item": [
         {
-          "id": "cd2f992f-4961-4667-b222-bddceed9b818",
+          "id": "6a8cef29-8537-4423-a1c7-1846a97a19eb",
           "name": "Resolve all translations for a language",
           "request": {
             "name": "Resolve all translations for a language",
@@ -267,7 +267,7 @@
           },
           "response": [
             {
-              "id": "6ca8f0e1-e8e3-4ba6-aa1f-8a57adfe6dd3",
+              "id": "cdf00fbb-96cd-4e96-ba62-80fcc012ad0c",
               "name": "Translations resolved",
               "originalRequest": {
                 "url": {
@@ -340,12 +340,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"aute48f\": {\n      \"pariatur_4e\": \"<string>\",\n      \"ute\": \"<string>\",\n      \"tempor_10\": \"<string>\"\n    },\n    \"amet_22b\": {\n      \"quis_0c8\": \"<string>\",\n      \"ut_d7f\": \"<string>\"\n    },\n    \"enim39\": {\n      \"ullamco4\": \"<string>\",\n      \"qui99\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
+              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"occaecat_5b\": {\n      \"elit__1\": \"<string>\",\n      \"cupidatatc\": \"<string>\",\n      \"laboris_93\": \"<string>\"\n    },\n    \"occaecat_3d\": {\n      \"sinta7d\": \"<string>\"\n    },\n    \"consequatf\": {\n      \"do_20\": \"<string>\",\n      \"Lorem607\": \"<string>\",\n      \"aliqua2e\": \"<string>\"\n    },\n    \"nond\": {\n      \"voluptate_f4\": \"<string>\",\n      \"ea_629\": \"<string>\"\n    },\n    \"laborum_7_5\": {\n      \"exercitation_7_3\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "de10a0c6-625b-4029-a279-f6b7fa02ade3",
+              "id": "02a0f990-f718-4fac-bb5d-f90f47d57b23",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -423,7 +423,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "e635fbc2-e685-4e75-9606-8d5b6284b880",
+              "id": "85445368-81f9-4b2e-92b4-1b7c8f881688",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -507,7 +507,7 @@
           }
         },
         {
-          "id": "92b2e361-f843-4e59-bffa-ba083b0a8d39",
+          "id": "9bb0c63b-3daf-4275-8aeb-990952184b69",
           "name": "Resolve a single translation",
           "request": {
             "name": "Resolve a single translation",
@@ -584,7 +584,7 @@
           },
           "response": [
             {
-              "id": "2cdec81a-a610-4cb8-bd0a-66a2ccd27fd0",
+              "id": "a888ad75-9cb0-4165-855b-086f5ee138b4",
               "name": "Translation resolved",
               "originalRequest": {
                 "url": {
@@ -675,7 +675,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "e058359e-861c-4803-8aaa-545e5e544afe",
+              "id": "476efa6c-3a51-46a2-9963-d7613627ccea",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -766,7 +766,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "bc0c5720-d871-4546-bb98-897a4af9df85",
+              "id": "18def2d8-a53f-4d5b-8e69-0d5f8242a569",
               "name": "Translation not found",
               "originalRequest": {
                 "url": {
@@ -857,7 +857,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "c40b5706-dd0c-4f74-88a1-a926aeb774a2",
+              "id": "4795fb41-c9a6-40e4-9a31-3587ebf82581",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -957,7 +957,7 @@
       "event": []
     },
     {
-      "id": "ebe12336-c769-4cc0-8ae1-257da78ba7fd",
+      "id": "b90886b6-3cd7-4b42-9e9b-dc2afb7be52c",
       "name": "management",
       "description": {
         "content": "Manage translations (admin)",
@@ -965,7 +965,7 @@
       },
       "item": [
         {
-          "id": "bc6c6a5e-e664-4eda-9eb6-88372da812d9",
+          "id": "2ae02f8f-5145-45e4-8cce-ddaf0c5d1481",
           "name": "Set translations for a language",
           "request": {
             "name": "Set translations for a language",
@@ -1026,7 +1026,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
+              "raw": "{\n  \"translations\": {\n    \"aliquip_50\": {\n      \"mollitc\": \"<string>\"\n    },\n    \"fugiat_a\": {\n      \"id_49\": \"<string>\",\n      \"esse_e_4\": \"<string>\"\n    },\n    \"amet_7d\": {\n      \"adipisicing45\": \"<string>\",\n      \"veniam_3\": \"<string>\",\n      \"mollita6\": \"<string>\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1036,7 +1036,7 @@
           },
           "response": [
             {
-              "id": "6b9a81ea-7191-4e55-af1d-878c3b81c872",
+              "id": "6bb48182-88b8-4bce-9289-4fb9341e1809",
               "name": "Custom translations set",
               "originalRequest": {
                 "url": {
@@ -1095,7 +1095,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"translations\": {\n    \"aliquip_50\": {\n      \"mollitc\": \"<string>\"\n    },\n    \"fugiat_a\": {\n      \"id_49\": \"<string>\",\n      \"esse_e_4\": \"<string>\"\n    },\n    \"amet_7d\": {\n      \"adipisicing45\": \"<string>\",\n      \"veniam_3\": \"<string>\",\n      \"mollita6\": \"<string>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1111,12 +1111,12 @@
                   "value": "application/json"
                 }
               ],
-              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"aute48f\": {\n      \"pariatur_4e\": \"<string>\",\n      \"ute\": \"<string>\",\n      \"tempor_10\": \"<string>\"\n    },\n    \"amet_22b\": {\n      \"quis_0c8\": \"<string>\",\n      \"ut_d7f\": \"<string>\"\n    },\n    \"enim39\": {\n      \"ullamco4\": \"<string>\",\n      \"qui99\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
+              "body": "{\n  \"language\": \"<string>\",\n  \"translations\": {\n    \"occaecat_5b\": {\n      \"elit__1\": \"<string>\",\n      \"cupidatatc\": \"<string>\",\n      \"laboris_93\": \"<string>\"\n    },\n    \"occaecat_3d\": {\n      \"sinta7d\": \"<string>\"\n    },\n    \"consequatf\": {\n      \"do_20\": \"<string>\",\n      \"Lorem607\": \"<string>\",\n      \"aliqua2e\": \"<string>\"\n    },\n    \"nond\": {\n      \"voluptate_f4\": \"<string>\",\n      \"ea_629\": \"<string>\"\n    },\n    \"laborum_7_5\": {\n      \"exercitation_7_3\": \"<string>\"\n    }\n  },\n  \"totalResults\": \"<integer>\"\n}",
               "cookie": [],
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "24b18ab7-a199-48de-b4af-49db727ce7cd",
+              "id": "d84ca376-ff47-4ee2-bcc7-44d0a431b40f",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -1175,7 +1175,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"translations\": {\n    \"aliquip_50\": {\n      \"mollitc\": \"<string>\"\n    },\n    \"fugiat_a\": {\n      \"id_49\": \"<string>\",\n      \"esse_e_4\": \"<string>\"\n    },\n    \"amet_7d\": {\n      \"adipisicing45\": \"<string>\",\n      \"veniam_3\": \"<string>\",\n      \"mollita6\": \"<string>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1196,7 +1196,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "804372de-a186-4678-89fd-7445bf6c4cb3",
+              "id": "a2ae9cf7-bb92-4112-892b-2a41dc712bb1",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1255,7 +1255,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"translations\": {\n    \"in_1a1\": {\n      \"qui_a\": \"<string>\",\n      \"dolor7\": \"<string>\",\n      \"pariaturef\": \"<string>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"translations\": {\n    \"aliquip_50\": {\n      \"mollitc\": \"<string>\"\n    },\n    \"fugiat_a\": {\n      \"id_49\": \"<string>\",\n      \"esse_e_4\": \"<string>\"\n    },\n    \"amet_7d\": {\n      \"adipisicing45\": \"<string>\",\n      \"veniam_3\": \"<string>\",\n      \"mollita6\": \"<string>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -1282,7 +1282,7 @@
           }
         },
         {
-          "id": "7529d175-12b1-4e27-a480-d137d3edd67e",
+          "id": "af3c116f-e96f-46ac-807b-af034d1d67b7",
           "name": "Clear all translations for a language",
           "request": {
             "name": "Clear all translations for a language",
@@ -1340,7 +1340,7 @@
           },
           "response": [
             {
-              "id": "3f06f86a-83e3-4dcd-bbd1-3e97e97a76aa",
+              "id": "86146bf8-a37b-4430-b2b0-23deb46d42bf",
               "name": "Custom translations cleared",
               "originalRequest": {
                 "url": {
@@ -1408,7 +1408,7 @@
               "_postman_previewlanguage": "text"
             },
             {
-              "id": "4792a6f6-a080-4eb6-9036-8e4b72a96354",
+              "id": "bbc1f597-1410-4c42-9f77-e9ff911d0683",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -1480,7 +1480,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "bdeabdf6-994d-4fd5-b470-86a6d46907bb",
+              "id": "dcbf4d7a-ebb0-403a-a81e-5f588097a5d0",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1558,7 +1558,7 @@
           }
         },
         {
-          "id": "32547935-934d-4bf4-ab74-f2697b20342c",
+          "id": "cd561b13-0c9b-4664-a481-834318884b04",
           "name": "Set a single translation",
           "request": {
             "name": "Set a single translation",
@@ -1647,7 +1647,7 @@
           },
           "response": [
             {
-              "id": "14e7ef48-e76e-424e-a4ef-b926a769d2c1",
+              "id": "21276d4e-d068-4f99-b63a-37b50b830032",
               "name": "Translation set",
               "originalRequest": {
                 "url": {
@@ -1745,7 +1745,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "04c1ac00-23b6-41ec-b4b7-230c82b20446",
+              "id": "480ba005-f885-4c50-b7fa-d0b6b7d205b3",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -1843,7 +1843,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "74d06a34-a84c-48ec-b037-a41b9fc32bc0",
+              "id": "0d9ba534-db3d-460e-a97b-c8206ee8daa0",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1947,7 +1947,7 @@
           }
         },
         {
-          "id": "0ae99c58-7605-424c-9324-5023cf8514b4",
+          "id": "977b5f41-9b88-4c61-8d6d-f4bbd63365b6",
           "name": "Clear a single translation",
           "request": {
             "name": "Clear a single translation",
@@ -2023,7 +2023,7 @@
           },
           "response": [
             {
-              "id": "d76cf114-c097-40f6-995d-04e2f9c66606",
+              "id": "99322a09-89d2-4923-8626-b806f119decf",
               "name": "Custom translation cleared",
               "originalRequest": {
                 "url": {
@@ -2109,7 +2109,7 @@
               "_postman_previewlanguage": "text"
             },
             {
-              "id": "3641dd48-dcd3-499d-9110-5cfe829ea83c",
+              "id": "fc7df2dd-a500-45b1-9344-b2671652795c",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -2199,7 +2199,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "8d8aff31-5516-4601-a253-202729e00952",
+              "id": "97b7858a-3770-48d3-a5bf-c20bbcb73942",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -2364,7 +2364,7 @@
     ]
   },
   "info": {
-    "_postman_id": "d73d7d38-b2b9-495f-83ce-3438154cc365",
+    "_postman_id": "96035de7-375f-47d5-ad8a-07679cba95e2",
     "name": "Internationalization (i18n) API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {

@@ -41,53 +41,6 @@ This is **step 4** of the getting started sequence. By the end you will have a w
 
 <Stepper stepNode="h2" as="h2">
 
-## Create an Application in <ProductName />
-
-Before integrating <ProductName /> with your Nuxt app, you need to create an application in <ProductName />.
-
-The `@thunderid/nuxt` module automatically registers a `/api/auth/callback` server route that handles the OAuth callback. Your redirect URL must point to this route.
-
-### Using the <ProductName /> Console
-
-1. Sign into the <ProductName /> Console at [https://localhost:8090/console](https://localhost:8090/console)
-2. Navigate to **Applications** → **New Application**
-3. Provide the following details:
-   - **Name**: `my-nuxt-app`
-   - **Type**: Web Application
-   - **Authorized Redirect URL**: `http://localhost:3000/api/auth/callback`
-
-:::info
-The SDK automatically registers `/api/auth/callback` as a Nitro server route. You do **not** need to create this file yourself.
-:::
-
-### Using the <ProductName /> API
-
-You can also create an application using the <ProductName /> API. First, [obtain a system API token](/docs/next/guides/getting-started/get-thunderid#obtain-system-api-token), then:
-
-```bash
-curl -kL -X POST https://localhost:8090/applications \
-  -H 'Authorization: Bearer <your-system-token>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "my-nuxt-app",
-    "inboundAuthConfig": [{
-      "type": "oauth2",
-      "config": {
-        "grantTypes": ["authorization_code", "refresh_token"],
-        "responseTypes": ["code"],
-        "redirectUris": ["http://localhost:3000/api/auth/callback"],
-        "tokenEndpointAuthMethod": "client_secret_post",
-        "publicClient": false,
-        "pkceRequired": true
-      }
-    }]
-  }'
-```
-
-:::warning Important
-Note down both the **Client ID** and **Client Secret** from the response. You'll need both to configure your Nuxt app.
-:::
-
 ## Create a Nuxt App
 
 Create a new Nuxt 3 app:
@@ -145,6 +98,10 @@ export default defineNuxtConfig({
 ```
 
 That's all the `nuxt.config.ts` change needed — the module reads all configuration from environment variables.
+
+:::info
+The module automatically registers `/api/auth/callback` as a Nitro server route. Make sure the authorized redirect URL in your <ProductName /> application settings is set to `http://localhost:3000/api/auth/callback`. You do **not** need to create the callback route yourself.
+:::
 
 ## Set Up Environment Variables
 

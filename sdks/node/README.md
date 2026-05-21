@@ -1,4 +1,4 @@
-![ThunderID Node.js SDK](https://raw.githubusercontent.com/thunder-id/thunderid/refs/heads/main/docs/content/sdks/assets/images/%40thunderid_node_sdk_banner.png)
+![ThunderID Node.js SDK](https://raw.githubusercontent.com/thunder-id/thunderid/refs/heads/main/docs/static/assets/images/readme/repo-banner-node-sdk.png)
 
 Node.js runtime SDK for ThunderID. Provides authentication and session management for server-side Node.js applications.
 

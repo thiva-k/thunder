@@ -1,7 +1,7 @@
 {
   "item": [
     {
-      "id": "85ec16a2-12b7-4591-9c2e-97ee6ec0dc3f",
+      "id": "835b9f1e-c3a7-4883-8a86-944aa15776aa",
       "name": "Passkeys",
       "description": {
         "content": "Passkey registration start and finish operations.",
@@ -9,7 +9,7 @@
       },
       "item": [
         {
-          "id": "441c68c7-3373-49ea-8f6a-09c62529015e",
+          "id": "dfc1f55d-7d3f-4c18-b3ce-0c910460a5e8",
           "name": "Start Passkey credential registration",
           "request": {
             "name": "Start Passkey credential registration",
@@ -72,7 +72,7 @@
           },
           "response": [
             {
-              "id": "d8e61371-b314-4954-9bb1-327f4fb16989",
+              "id": "48224110-269d-47a7-81bf-035b25990fef",
               "name": "OK",
               "originalRequest": {
                 "url": {
@@ -136,7 +136,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "26199b2d-5e9b-460c-a188-cde6c57a0427",
+              "id": "1e8befe6-b6ad-4049-a9cf-60404738cb4c",
               "name": "Bad Request: The request body is malformed or contains invalid data, or the user was not found",
               "originalRequest": {
                 "url": {
@@ -200,7 +200,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "70bbe4a9-ba96-4923-9845-7bf7077cbb44",
+              "id": "1a91c6e2-973c-4bc9-b110-925d10f0b2bd",
               "name": "Internal Server Error: An unexpected error occurred while processing the request",
               "originalRequest": {
                 "url": {
@@ -270,7 +270,7 @@
           }
         },
         {
-          "id": "9dd54662-9905-4bd6-a349-c8990e754db2",
+          "id": "e676c6ea-994c-4d79-a0cd-241df2db6ac1",
           "name": "Finish Passkey credential registration",
           "request": {
             "name": "Finish Passkey credential registration",
@@ -333,7 +333,7 @@
           },
           "response": [
             {
-              "id": "07d3b4c0-81ae-498f-aa64-3129e5658f80",
+              "id": "06815341-1168-4355-8a16-f11399925d43",
               "name": "OK",
               "originalRequest": {
                 "url": {
@@ -397,7 +397,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "b0aff073-5aac-4592-b80b-b156abfa01ff",
+              "id": "f76f08f6-67d7-4b40-9119-dadc6d792ab3",
               "name": "Bad Request: The request body is malformed, contains invalid data, or the session is invalid",
               "originalRequest": {
                 "url": {
@@ -461,7 +461,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "0835f8f7-a78c-49df-81f3-27fb3c427f80",
+              "id": "3df6aa70-b380-418e-9108-ca6336e71e2f",
               "name": "Internal Server Error: An unexpected error occurred while processing the request",
               "originalRequest": {
                 "url": {
@@ -561,7 +561,7 @@
     }
   ],
   "info": {
-    "_postman_id": "d432ebec-47a6-42b5-a126-0f9cd7dbe594",
+    "_postman_id": "211d5bd6-ace7-45da-b33d-147e6b581f13",
     "name": "Registration API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {

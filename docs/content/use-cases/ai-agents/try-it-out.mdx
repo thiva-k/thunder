@@ -1,7 +1,272 @@
 ---
 title: Try It Out
-description: Try out identity flows for AI agents with {{ProductName}}.
+description: Run the AI agent use cases against the Wayfinder sample, a fictional travel-booking app with a built-in AI chat assistant.
 sidebar_position: 5
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import { WayfinderAgentOrganization, WayfinderAgentArchitecture } from '../../../src/components/WayfinderDiagrams';
+
 # Try It Out
+
+Each walkthrough on this page runs one of the agent identity patterns from [Protect Your Agent](../protect-your-agent) and [Connect to Services](../connect-to-services) against a working sample.
+
+## Meet Wayfinder
+
+Wayfinder is a travel-booking application with an AI chat assistant built in. Through Wayfinder, consumers search for flights and hotels, book trips, and ask the in-app Wayfinder Concierge to do the same on their behalf.
+
+Wayfinder has two principals you'll meet in these walkthroughs: consumers who book travel and chat with the agent, and the **Wayfinder Concierge** that acts as their assistant. Each carries its own identity in <ProductName />.
+
+<WayfinderAgentOrganization />
+
+Meet the cast:
+
+- **Consumers** book travel and chat with the agent.
+  - **John Doe** is the customer with full access. He can book through the UI *and* talk to the Wayfinder Concierge. He carries both the `Booking User` and `Chat User` roles.
+  - **Jane Smith** also books through the UI, but does not have access to the Wayfinder Concierge. She carries only the `Booking User` role.
+- **The Wayfinder Concierge** is a first-class principal in <ProductName /> with its own credentials. It uses its own identity for browsing tools, and switches to a user-context token when a tool needs the consumer's consent.
+
+## Sample Architecture
+
+Wayfinder runs as three deployable pieces. The **Wayfinder Web** browser app hosts the chat widget, the **AI Agent** drives the conversation, and the **Wayfinder Server** exposes booking data over MCP.
+
+<ProductName /> sits alongside as the identity authority. It issues a user token on sign-in, an M2M token for the agent itself, and an on-behalf-of (OBO) token when the agent acts for the consumer. The Wayfinder Server also fetches <ProductName />'s JWKS to validate every incoming JWT.
+
+<WayfinderAgentArchitecture />
+
+## Identity Model
+
+The setup below creates a handful of <ProductName /> resources. Here is what each one is and how it maps to Wayfinder concepts.
+
+### Organization
+
+<ProductName /> can host many isolated tenants. Wayfinder needs only one, so everything lives in a single organization.
+
+### User Types
+
+A user type defines who can exist in the system and what attributes they carry. Each user record belongs to exactly one user type. Wayfinder uses the built-in `Person` user type for the two demo consumers — John Doe and Jane Smith — with standard attributes like username, email, and name.
+
+See [User Types](/docs/next/guides/guides/users/user-types).
+
+### Resources and Permissions
+
+The **AI Agent API** and the **Wayfinder Server** both need protection in the sample. The AI Agent API decides who is allowed to chat with the agent at all, and the Wayfinder Server decides who can book travel. Each is registered as a resource server, with its actions generating one permission per action.
+
+A **resource server** groups the APIs of one backend. Each resource server defines one or more **resources**, each resource defines **actions**, and <ProductName /> automatically generates a **permission** of the form `<resource>:<action>` for every action.
+
+```
+wayfinder-agent                         (Resource Server)
+└── agent                               (Resource)
+    └── access     →  agent:access      (Permission)
+
+booking-api                             (Resource Server)
+└── booking                             (Resource)
+    ├── read       →  booking:read      (Permission)
+    ├── create     →  booking:create
+    ├── cancel     →  booking:cancel
+    └── recommend  →  booking:recommend
+```
+
+Permissions are issued to the access tokens. See [Resource Servers](/docs/next/guides/guides/resource-servers).
+
+### Roles
+
+A role bundles permissions for a class of principal. A user's or agent's effective permissions are the union of permissions across their roles. Wayfinder defines three roles:
+
+- `Chat User`: grants `agent:access`, the permission required to talk to the Wayfinder Concierge.
+- `Booking User`: grants `booking:read`, `booking:create`, and `booking:cancel` for booking travel through the UI.
+- `Recommender`: grants `booking:recommend`, the permission the Wayfinder Concierge needs to surface flight recommendations on its own.
+
+John Doe carries both user roles; Jane Smith carries only `Booking User`. The `Recommender` role is assigned to the `WAYFINDER-CONCIERGE` agent, not to a user.
+
+See [Authorization](/docs/next/guides/key-concepts/authorization).
+
+### Application
+
+An application is the OAuth2 client that <ProductName /> issues tokens to. Wayfinder Web is registered as `WAYFINDER` — a public, PKCE-enforced browser client.
+
+See [Manage Applications](/docs/next/guides/guides/applications/manage-applications).
+
+### Agent
+
+An agent is a first-class non-human principal in <ProductName /> with its own credentials. The Wayfinder Concierge is registered as `WAYFINDER-CONCIERGE`, with two grants enabled:
+
+- `client_credentials` — for the agent's own M2M token, used to call browsing tools.
+- `authorization_code` (with PKCE) — for the on-behalf-of flow, where the user consents and the agent calls mutating tools as the user.
+
+See [Manage Agents](/docs/next/guides/guides/agents/manage-agents) and [Agent Authentication](/docs/next/guides/guides/agents/agent-authentication).
+
+### Flows
+
+A flow is the sequence of steps a user moves through when signing in or granting consent. Wayfinder Web uses the shipped `default-basic-flow` for sign-in. The agent uses a separate **Basic Authentication with Consent** flow that drives the OBO consent screen.
+
+See [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
+
+## Setup
+
+Complete the setup once. Every walkthrough below builds on the same starting point.
+
+The two tabs below offer the same end state through different paths.
+
+- **Quick Start** imports a single bundle that creates every resource the walkthroughs share — including the agent.
+- **Build It Yourself** creates the same resources manually so you can see how each one is made.
+
+Before you begin, make sure you have:
+
+- <ProductName /> running locally. See [Get <ProductName />](/docs/next/guides/getting-started/get-thunderid).
+- The Wayfinder sample distribution. The [Get <ProductName />](/docs/next/guides/getting-started/get-thunderid) step above already pulls the archive that ships it. It contains a `thunderid-config/` directory with an importable YAML config and a `thunderid.env` file, plus the Wayfinder web frontend and the Concierge services.
+- **Node.js 20+** for running the sample's services.
+- **An LLM API key.** One of an Anthropic API key from [console.anthropic.com](https://console.anthropic.com) or a Google Gemini API key from [aistudio.google.com](https://aistudio.google.com).
+
+### Allow the Wayfinder Origin in <ProductName />
+
+Whichever path you pick, the Wayfinder web app on `http://localhost:5173` calls <ProductName /> directly for sign-in and profile management. Browsers block these cross-origin calls unless <ProductName />'s CORS allow-list includes the frontend origin.
+
+Edit `backend/cmd/server/repository/conf/deployment.yaml` and add `http://localhost:5173` under `cors.allowed_origins`. Leave any existing entries in place.
+
+```yaml
+cors:
+  allowed_origins:
+    # ...existing entries...
+    - "http://localhost:5173"
+```
+
+Restart <ProductName /> after the change.
+
+<Tabs>
+<TabItem value="declarative" label="Quick Start" default>
+
+Import the Wayfinder configuration bundle.
+
+1. **Edit `thunderid-config/thunderid.env`** if you want to change the agent's client secret. The default value (`wayfinder-agent-secret`) matches the sample's defaults.
+
+2. **Import the bundle into <ProductName />.**
+
+   - Sign in to the <ProductName /> Console at [https://localhost:8090/console](https://localhost:8090/console).
+   - On first sign-in, a welcome screen appears with an **Open** button. (Later, reach the same screen from the user profile menu in the top-right corner of the Console.)
+   - Click **Open** and select your `thunderid-config/thunderid-config.yaml` file from the sample distribution.
+   - Select your `thunderid-config/thunderid.env` file to provide the environment variables referenced in the YAML.
+   - The Console imports the files and reports the resources it created when the import completes.
+
+   The import creates:
+
+   - **Resource servers:** `wayfinder-agent` (with `agent:access`) and `booking-api` (with `booking:read`, `booking:create`, `booking:cancel`, `booking:recommend`).
+   - **Roles:** `Chat User`, `Booking User`, and `Recommender`, with users and the agent pre-assigned:
+     - `Chat User` → `john.doe`.
+     - `Booking User` → `john.doe` and `jane.smith`.
+     - `Recommender` → `WAYFINDER-CONCIERGE`.
+   - **Application:** `WAYFINDER` (public, PKCE, redirect to `http://localhost:5173`).
+   - **Agent:** `WAYFINDER-CONCIERGE` (confidential client with `client_credentials` + `authorization_code` grants).
+   - **Flow:** `Basic Authentication with Consent` (assigned to the agent).
+   - **Users:** `john.doe` / `john.doe` and `jane.smith` / `jane.smith`.
+
+3. **Start the sample** following the commands in its README.
+
+</TabItem>
+<TabItem value="build" label="Build It Yourself">
+
+Create every resource manually in the <ProductName /> console.
+
+1. **Create the `wayfinder-agent` resource server.**
+
+   Invoke the **Resource Management API** to create the resource server, resource, and action. Set the handle to `wayfinder-agent`. Add a resource with handle `agent` and one action:
+
+   | Action   | Generated permission |
+   | -------- | -------------------- |
+   | `access` | `agent:access`       |
+
+   See [Resource Servers](/docs/next/guides/guides/resource-servers).
+
+2. **Create the `booking-api` resource server.**
+
+   Invoke the **Resource Management API** again. Set the handle to `booking-api`. Add a resource with handle `booking` and four actions:
+
+   | Action      | Generated permission |
+   | ----------- | -------------------- |
+   | `read`      | `booking:read`       |
+   | `create`    | `booking:create`     |
+   | `cancel`    | `booking:cancel`     |
+   | `recommend` | `booking:recommend`  |
+
+3. **Create the `Chat User` role.**
+
+   Navigate to **Roles** → **Add Role**. Grant it the `agent:access` permission on `wayfinder-agent`.
+
+4. **Create the `Booking User` role.**
+
+   Grant it `booking:read`, `booking:create`, and `booking:cancel` on `booking-api`.
+
+5. **Create the `Recommender` role.**
+
+   Grant it `booking:recommend` on `booking-api`. This role will be assigned to the Wayfinder Concierge, not to a user.
+
+   See [Authorization](/docs/next/guides/key-concepts/authorization).
+
+6. **Create the two demo users.**
+
+   Navigate to **Users** → **Add User**. Select the `Person` user type and create:
+
+   | Username     | Password     |
+   | ------------ | ------------ |
+   | `john.doe`   | `john.doe`   |
+   | `jane.smith` | `jane.smith` |
+
+   See [Manage Users](/docs/next/guides/guides/users/manage-users).
+
+7. **Assign user roles.**
+
+   - **Roles** → **Chat User** → **Assignments** tab → **User** → **Add**. Assign `john.doe`.
+   - **Roles** → **Booking User** → **Assignments** tab → **User** → **Add**. Assign both `john.doe` and `jane.smith`.
+
+8. **Register the `WAYFINDER` application.**
+
+   Navigate to **Applications** → **Add Application** and choose **Browser App** as the type. Configure:
+
+   | Setting             | Value                                          |
+   | ------------------- | ---------------------------------------------- |
+   | Client ID           | `WAYFINDER`                                    |
+   | Redirect URI        | `http://localhost:5173`                        |
+   | Allowed grants      | `authorization_code`, `refresh_token`          |
+   | PKCE                | Required                                       |
+   | Allowed user types  | `Person`                                       |
+
+   See [Manage Applications](/docs/next/guides/guides/applications/manage-applications).
+
+9. **Register the `WAYFINDER-CONCIERGE` agent.**
+
+   Navigate to **Agents** → **Add Agent**. Name the agent `WAYFINDER-CONCIERGE`, then:
+
+   - **Capture the client secret.** <ProductName /> prints it only once. You will use it in `ai-agent/.env`.
+   - Under **Protocol** settings, enable the **Authorization Code** grant. Client Credentials is on by default for agents.
+   - Add the redirect URI `http://localhost:5173/agent-callback`.
+   - Under `accessToken.userAttributes`, add `given_name`, `family_name`, `email`, `groups`.
+
+   See [Manage Agents](/docs/next/guides/guides/agents/manage-agents) and [Agent Authentication](/docs/next/guides/guides/agents/agent-authentication).
+
+10. **Assign the `Recommender` role to the agent.**
+
+    With the agent created, complete the role assignment:
+
+    - **Roles** → **Recommender** → **Assignments** tab → **Agent** → **Add**. Assign `WAYFINDER-CONCIERGE`.
+
+11. **Create the `Basic Authentication with Consent` flow.**
+
+    Navigate to **Flows** and create a flow that authenticates the user with username and password, then shows a consent screen listing the `booking:*` permissions the agent is requesting. Attach the flow to the `WAYFINDER-CONCIERGE` agent.
+
+    See [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
+
+12. **Start the sample** following the commands in its README, passing the agent client secret you captured in step 9.
+
+</TabItem>
+</Tabs>
+
+## Walkthrough Structure
+
+Each walkthrough below starts from the setup above. The walkthroughs map onto the patterns from [Protect Your Agent](../protect-your-agent) and [Connect to Services](../connect-to-services), so you can read about a pattern and then run it.
+
+Select a walkthrough to begin:
+
+- [Protect the Agent](./protect-the-agent)
+- [Acting on Its Own](./act-on-its-own)
+- [Acting on Behalf of a User](./act-on-behalf-of-user)

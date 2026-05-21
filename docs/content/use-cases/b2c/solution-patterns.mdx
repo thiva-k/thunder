@@ -21,7 +21,7 @@ The four integration approaches in **Part A** answer these questions differently
 
 ## Part A: Integration Approaches
 
-The four approaches differ on UI rendering and journey control. Pick the one that fits your application's UX requirements first, then look at the supporting patterns in Part B.
+The four approaches differ on UI rendering and journey control. Choose the one that fits your application's UX requirements first, then review the supporting patterns in Part B.
 
 <B2CSolutionPatternsRoadmap />
 
@@ -35,7 +35,7 @@ The four approaches differ on UI rendering and journey control. Pick the one tha
 
 When a user wants to sign in, the app sends them to the identity product. The product shows the sign-in, sign-up, and recovery screens, then sends the user back signed in. Because the app never sees the user's password, this is the simplest security posture and the quickest path to a working sign-in.
 
-The pattern covers sign-in, sign-up, recovery, additional-permission requests with consent screens, hosted-page branding, and signing the user out. It fits web apps, single-page apps, and mobile apps. The main trade-off is that the user has to leave the app for a hosted page. This can feel jarring inside a native mobile app or a heavily branded web experience, and UI customization is limited to what the hosted pages expose.
+The pattern covers sign-in, sign-up, recovery, additional-permission requests with consent screens, hosted-page branding, and signing the user out. It fits web apps, single-page apps, and mobile apps. The main trade-off is that the user has to leave the app for a hosted page. This can feel disruptive inside a native mobile app or a heavily branded web experience, and UI customization is limited to what the hosted pages expose.
 
 This pattern is typically built with a standard sign-in library or an SDK provided by the identity product. The underlying handshake is well-specified and not worth hand-rolling.
 
@@ -54,7 +54,7 @@ This pattern is typically built using an SDK provided by the identity product. T
 
 ### Direct API
 
-Small, single-purpose API calls, for example "authenticate with username and password" or "send an OTP and verify it". The app strings these together itself, with no journey between the app and the primitive. This pattern fits two situations well. First, clients who want the simplest possible login with no application or flow configuration on the identity product side. Second, headless or scripted scenarios where a guided journey isn't useful, such as server-to-server authentication, internal tools, and automation.
+Small, single-purpose API calls, for example "authenticate with username and password" or "send an OTP and verify it". The app strings these together itself, with no journey between the app and the primitive. This pattern fits two situations well. First, clients who want the simplest possible sign-in with no application or flow configuration on the identity product side. Second, headless or scripted scenarios where a guided journey isn't useful, such as server-to-server authentication, internal tools, and automation.
 
 Coverage is typically limited to the primitives the identity product exposes, often authentication only. Because there is no journey, journey-level policies (multi-factor, conditional steps) are not applied; the app is fully responsible for getting the identity logic right.
 
@@ -133,4 +133,4 @@ Every implementation touches these regardless of which approach you pick.
 
 ## Next Steps
 
-Pick an approach that fits your application, then see it running with sample apps you can clone and run. (Sample tutorials coming soon.)
+Choose an approach that fits your application, then see it running against the Wayfinder sample in **[Try It Out](../try-it-out)**.

@@ -1,7 +1,7 @@
 {
   "item": [
     {
-      "id": "0cb9d1ab-28d7-4a28-a3dd-e6689da82a24",
+      "id": "c18c6ec8-7b5f-4eae-a5f6-e27157d41d18",
       "name": "Identity Providers",
       "description": {
         "content": "Configure and manage external identity providers for federated login.",
@@ -9,7 +9,7 @@
       },
       "item": [
         {
-          "id": "78fd4ddd-ad31-4328-a388-ac295e046336",
+          "id": "9dfd804b-4ff6-4a53-a086-345e0ca7bb9d",
           "name": "List identity providers",
           "request": {
             "name": "List identity providers",
@@ -54,7 +54,7 @@
           },
           "response": [
             {
-              "id": "f9512fdf-79db-45ba-84c0-b239b8ded998",
+              "id": "d6300a11-250a-4c21-8ba6-60c5a7143751",
               "name": "List of identity providers",
               "originalRequest": {
                 "url": {
@@ -116,7 +116,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "2312a9cf-1b1e-4ff2-94d5-e3a5fea81038",
+              "id": "edc99e0e-2987-4b72-9ead-fef572b2024f",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -178,7 +178,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "ff6bf65d-300d-4ff0-bba6-b83baf44920d",
+              "id": "45fb3ae5-5c9d-4734-92d0-5d81f46d00c8",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -242,7 +242,7 @@
           }
         },
         {
-          "id": "3a1615ac-a04a-4d2f-a155-e3a7d18c9a71",
+          "id": "edc94da2-5a0f-499a-b3a4-42ab5d26ea8e",
           "name": "Create an identity provider",
           "request": {
             "name": "Create an identity provider",
@@ -300,7 +300,7 @@
           },
           "response": [
             {
-              "id": "3c1e7042-10a8-458e-a499-f50d58f53fc4",
+              "id": "f5a247ab-662f-437f-afe0-0c93254e2351",
               "name": "Identity provider created",
               "originalRequest": {
                 "url": {
@@ -370,7 +370,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "a756d9e3-6615-4771-8109-82ca17bc569f",
+              "id": "2404966f-9bb9-4f95-b996-2734e3268d16",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -440,7 +440,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "56b4c63f-d2c0-468b-9a98-8acdd5bb85b2",
+              "id": "17acf840-d8d1-4c47-9adb-aba5e21d0345",
               "name": "Conflict",
               "originalRequest": {
                 "url": {
@@ -510,7 +510,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "a8677755-743a-46fd-8fd8-d91a5a81d798",
+              "id": "3308052a-3bca-444d-bd7d-bfe1d32cccc7",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -582,7 +582,7 @@
           }
         },
         {
-          "id": "f3a1e038-9b14-4e01-a083-3672af4df57f",
+          "id": "6494cc66-6829-40f2-8340-9c29ab9544d4",
           "name": "Get an identity provider by ID",
           "request": {
             "name": "Get an identity provider by ID",
@@ -635,7 +635,7 @@
           },
           "response": [
             {
-              "id": "2cfad290-c24c-4d24-bf00-c90201e385a3",
+              "id": "bd06e9a4-b5af-4afa-8f27-8eaa6013b9b0",
               "name": "Identity provider details",
               "originalRequest": {
                 "url": {
@@ -705,7 +705,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "f0726e0a-446a-40ae-a530-742c9db2a7bc",
+              "id": "997c2563-135e-4ee4-bc22-7d96f5e9e4d9",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -775,7 +775,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "4dc08a1d-4485-43e7-8e1c-9cf527389f94",
+              "id": "7b51f886-f33e-4bac-bd30-48712c380b21",
               "name": "Identity provider not found",
               "originalRequest": {
                 "url": {
@@ -845,7 +845,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "c5ab7296-ae9b-4f5e-816a-c7c0a1e9615c",
+              "id": "843c20b8-5a31-4518-b5ee-e0193c8cdeac",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -917,7 +917,7 @@
           }
         },
         {
-          "id": "e29781d1-b58e-40bb-94f7-0811e62636c8",
+          "id": "fcdcfb05-7907-4475-a930-545c6714b37f",
           "name": "Update an identity provider",
           "request": {
             "name": "Update an identity provider",
@@ -983,7 +983,7 @@
           },
           "response": [
             {
-              "id": "ab142dec-ad1a-4d0a-9608-68206a3ce961",
+              "id": "dad900e8-2333-4838-8472-aacd23937492",
               "name": "Identity provider updated",
               "originalRequest": {
                 "url": {
@@ -1061,7 +1061,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "c60075f2-93a4-4aca-acd0-1774644b59fb",
+              "id": "01710d9c-49ec-4cb4-91b9-ad97a7ffbf08",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -1139,7 +1139,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "ad32232a-7421-468c-8819-7c509bb39f61",
+              "id": "e8f415d0-6a8e-4d40-845e-23908080586d",
               "name": "Identity provider not found",
               "originalRequest": {
                 "url": {
@@ -1217,7 +1217,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "5f2d680d-2ddc-48a1-a146-32d774404a84",
+              "id": "9c3cdf07-c215-478e-b23d-69b054ed6cff",
               "name": "Conflict",
               "originalRequest": {
                 "url": {
@@ -1295,7 +1295,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "eae8bf26-6deb-476d-a4f5-26f5fc6104f4",
+              "id": "a024a52c-6524-4dd3-8fc7-06b12c800b6b",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1375,7 +1375,7 @@
           }
         },
         {
-          "id": "727d8441-b32f-40a1-bc5a-682f499ac586",
+          "id": "6bd9fcd4-eb6f-4464-be2a-47a59a8e4570",
           "name": "Delete an identity provider",
           "request": {
             "name": "Delete an identity provider",
@@ -1428,7 +1428,7 @@
           },
           "response": [
             {
-              "id": "a0c02f3d-9de5-46f6-8c3c-491ecb16c8b4",
+              "id": "e7e15c13-75b5-42a3-807e-bff3f20c891e",
               "name": "Identity provider deleted",
               "originalRequest": {
                 "url": {
@@ -1494,7 +1494,7 @@
               "_postman_previewlanguage": "text"
             },
             {
-              "id": "8d1148d4-7752-430b-82be-475bdeb17fab",
+              "id": "afb8fc8a-36ac-4437-8273-3f8433574144",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -1564,7 +1564,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "1394a676-7d12-412d-8656-e0612d18191f",
+              "id": "36d4c2e9-4d1a-46d8-8e8c-c74ca1b32dea",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -1705,7 +1705,7 @@
     ]
   },
   "info": {
-    "_postman_id": "b4546d59-2128-4a19-bced-0ce641aa6b71",
+    "_postman_id": "36ee809b-ebdb-452f-8bb4-8bb131ba1740",
     "name": "Identity Provider Management API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {

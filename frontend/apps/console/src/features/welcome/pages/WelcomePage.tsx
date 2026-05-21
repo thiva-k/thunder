@@ -27,6 +27,7 @@ import {
   Users,
   ExternalLink,
   Lightbulb,
+  Rocket,
 } from '@wso2/oxygen-ui-icons-react';
 import {motion} from 'framer-motion';
 import type {JSX} from 'react';
@@ -78,15 +79,15 @@ export default function WelcomePage(): JSX.Element {
     {
       id: 'learn-b2c',
       icon: <Users size={18} />,
-      label: t('common:welcome.learnProduct.b2c'),
-      description: t('common:welcome.learnProduct.b2cDesc'),
+      label: t('common:welcome.tryoutProduct.b2c'),
+      description: t('common:welcome.tryoutProduct.b2cDesc'),
       url: `${docsBaseUrl}/use-cases/b2c/try-it-out`,
     },
     {
       id: 'learn-ai-agents',
       icon: <Bot size={18} />,
-      label: t('common:welcome.learnProduct.aiAgents'),
-      description: t('common:welcome.learnProduct.aiAgentsDesc'),
+      label: t('common:welcome.tryoutProduct.aiAgents'),
+      description: t('common:welcome.tryoutProduct.aiAgentsDesc'),
       url: `${docsBaseUrl}/use-cases/ai-agents/try-it-out`,
     },
   ];
@@ -205,10 +206,6 @@ export default function WelcomePage(): JSX.Element {
                 flex: 1,
               }}
             >
-              <Typography variant="h2" sx={{mb: 3}}>
-                {t('common:welcome.sections.start')}
-              </Typography>
-
               <Stack spacing={2}>
                 {startActions.map((action, index) => (
                   <MotionBox
@@ -279,73 +276,89 @@ export default function WelcomePage(): JSX.Element {
                 animate={{opacity: 1, y: 0}}
                 transition={{duration: 0.3, delay: 0.3}}
               >
-                <Typography variant="h5" color="secondary" sx={{mb: 3}}>
-                  {t('common:welcome.sections.learnProduct', {productName})}
-                </Typography>
                 <Box
                   sx={{
                     border: '1px solid',
                     borderColor: 'divider',
                     borderRadius: 1,
-                    mb: 2,
-                    overflow: 'hidden',
                   }}
                 >
-                  {learnProduct.map((item, index) => (
-                    <MotionBox
-                      key={item.id}
-                      initial={{opacity: 0, x: 10}}
-                      animate={{opacity: 1, x: 0}}
-                      transition={{duration: 0.2, delay: 0.3 + index * 0.05}}
-                    >
-                      <Box
-                        component="a"
-                        href={item.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                          cursor: 'pointer',
-                          color: 'inherit',
-                          textDecoration: 'none',
-                          px: 2,
-                          py: 1.5,
-                          borderBottom: index < learnProduct.length - 1 ? '1px solid' : 'none',
-                          borderColor: 'divider',
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                            '& .learnproduct-title': {
-                              color: 'primary.main',
-                              textDecoration: 'underline',
-                            },
-                          },
-                        }}
+                  <Typography
+                    variant="h2"
+                    sx={{
+                      py: 2.8,
+                      px: 2.2,
+                      m: 0,
+                      backgroundColor: 'background.paper',
+                      fontSize: '1.25rem',
+                      fontWeight: 600,
+                      borderRadius: '8px 8px 0 0',
+                    }}
+                  >
+                    <Rocket size={20} style={{marginRight: 12, marginBottom: 2, verticalAlign: 'middle'}} />
+                    {t('common:welcome.sections.tryoutProduct', {productName})}
+                  </Typography>
+                  <Box
+                    sx={{
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {learnProduct.map((item, index) => (
+                      <MotionBox
+                        key={item.id}
+                        initial={{opacity: 0, x: 10}}
+                        animate={{opacity: 1, x: 0}}
+                        transition={{duration: 0.2, delay: 0.3 + index * 0.05}}
                       >
-                        <Box sx={{color: 'text.secondary', display: 'flex', flexShrink: 0}}>{item.icon}</Box>
-                        <Stack spacing={0.5} sx={{flex: 1}}>
-                          <Typography
-                            className="learnproduct-title"
-                            variant="body1"
-                            fontWeight={500}
-                            sx={{transition: 'all 0.2s'}}
-                          >
-                            {item.label}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {item.description}
-                          </Typography>
-                        </Stack>
-                        <Box sx={{color: 'text.disabled', display: 'flex', flexShrink: 0}}>
-                          <ExternalLink size={14} />
+                        <Box
+                          component="a"
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            cursor: 'pointer',
+                            color: 'inherit',
+                            textDecoration: 'none',
+                            px: 2,
+                            py: 1.5,
+                            borderBottom: index < learnProduct.length - 1 ? '1px solid' : 'none',
+                            borderColor: 'divider',
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                              '& .learnproduct-title': {
+                                color: 'primary.main',
+                                textDecoration: 'underline',
+                              },
+                            },
+                          }}
+                        >
+                          <Box sx={{color: 'text.secondary', display: 'flex', flexShrink: 0, mr: 0.5}}>{item.icon}</Box>
+                          <Stack spacing={0.5} sx={{flex: 1}}>
+                            <Typography
+                              className="learnproduct-title"
+                              variant="body1"
+                              fontWeight={500}
+                              sx={{transition: 'all 0.2s'}}
+                            >
+                              {item.label}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {item.description}
+                            </Typography>
+                          </Stack>
+                          <Box sx={{color: 'text.disabled', display: 'flex', flexShrink: 0}}>
+                            <ExternalLink size={14} />
+                          </Box>
                         </Box>
-                      </Box>
-                    </MotionBox>
-                  ))}
+                      </MotionBox>
+                    ))}
+                  </Box>
                 </Box>
 
-                <Stack spacing={2}>
+                <Stack spacing={2} sx={{mt: 4}}>
                   {walkthroughs.map((walkthrough, index) => (
                     <MotionBox
                       key={walkthrough.id}

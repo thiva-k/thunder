@@ -78,7 +78,7 @@ function createModel(): BaseChatModel {
 
 const model = createModel();
 
-const SYSTEM_PROMPT = `You are the Wayfinder Chat Agent, a travel assistant for the Wayfinder Travel app.
+const SYSTEM_PROMPT = `You are the Wayfinder Concierge, a travel assistant for the Wayfinder Travel app.
 
 You MUST call tools to perform any action. Never simulate, skip, or fabricate tool results.
 
@@ -420,6 +420,7 @@ let mcpTokenFingerprint = "";
 async function fetchAgentToken(): Promise<TokenState> {
     const body = new URLSearchParams({
         grant_type: "client_credentials",
+        scope: "booking:recommend",
     });
     const basicAuth = Buffer.from(`${agentConfig.agentID}:${agentConfig.agentSecret}`).toString("base64");
 

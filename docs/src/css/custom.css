@@ -817,13 +817,11 @@ aside.theme-doc-sidebar-container {
   background: var(--oxygen-palette-common-background);
 }
 
-/* Docs sidebar first entry */
-.sidebar-doc-home,
-.theme-doc-sidebar-item-category,
 .theme-doc-sidebar-menu {
-  margin-top: 1.5rem;
+  margin-top: 2rem;
 }
 
+.theme-doc-sidebar-container .menu > .menu__list > .theme-doc-sidebar-item-link:first-child > .menu__link,
 .sidebar-doc-home > .menu__link {
   display: flex;
   align-items: center;
@@ -839,21 +837,25 @@ aside.theme-doc-sidebar-container {
   user-select: none;
 }
 
+[data-theme='dark'] .theme-doc-sidebar-container .menu > .menu__list > .theme-doc-sidebar-item-link:first-child > .menu__link,
 [data-theme='dark'] .sidebar-doc-home > .menu__link {
   color: #ffffff;
 }
 
+.theme-doc-sidebar-container .menu > .menu__list > .theme-doc-sidebar-item-link:first-child > .menu__link:hover,
 .sidebar-doc-home > .menu__link:hover {
   background: none;
   color: var(--ifm-color-primary);
   text-decoration: none;
 }
 
+.theme-doc-sidebar-container .menu > .menu__list > .theme-doc-sidebar-item-link:first-child > .menu__link--active,
 .sidebar-doc-home > .menu__link--active {
   background: none;
   color: var(--ifm-color-primary);
 }
 
+.theme-doc-sidebar-container .menu > .menu__list > .theme-doc-sidebar-item-link:first-child > .menu__link::before,
 .sidebar-doc-home > .menu__link::before {
   content: '';
   display: block;
@@ -918,6 +920,119 @@ aside.theme-doc-sidebar-container {
   height: 17px;
   flex-shrink: 0;
   color: var(--ifm-color-emphasis-700);
+}
+
+.sidebar-section-icon-getting-started {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z'/%3E%3Cpath d='M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-ai {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z'/%3E%3Cpath d='M5 3v4'/%3E%3Cpath d='M19 17v4'/%3E%3Cpath d='M3 5h4'/%3E%3Cpath d='M17 19h4'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-guides {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpolygon points='16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-apis,
+.sidebar-section-icon-contribute {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'/%3E%3Cpolyline points='8 6 2 12 8 18'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-use-cases {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='12 2 2 7 12 12 22 7 12 2'/%3E%3Cpolyline points='2 17 12 22 22 17'/%3E%3Cpolyline points='2 12 12 17 22 12'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-key-concepts {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-deployment {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='20' height='8' x='2' y='2' rx='2' ry='2'/%3E%3Crect width='20' height='8' x='2' y='14' rx='2' ry='2'/%3E%3Cline x1='6' x2='6.01' y1='6' y2='6'/%3E%3Cline x1='6' x2='6.01' y1='18' y2='18'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-community {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='9' cy='7' r='4'/%3E%3Cpath d='M23 21v-2a4 4 0 0 0-3-3.87'/%3E%3Cpath d='M16 3.13a4 4 0 0 1 0 7.75'/%3E%3C/svg%3E");
+}
+
+.sidebar-section-icon-maintenance {
+  --sidebar-section-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14'/%3E%3C/svg%3E");
+}
+
+.theme-doc-sidebar-container .menu > .menu__list > .theme-doc-sidebar-item-category:not(.sidebar-section) {
+  margin-top: 1.25rem;
+}
+
+.theme-doc-sidebar-container
+  .menu
+  > .menu__list
+  > .theme-doc-sidebar-item-category:not(.sidebar-section)
+  > .menu__list-item-collapsible {
+  background: none;
+}
+
+.theme-doc-sidebar-container
+  .menu
+  > .menu__list
+  > .theme-doc-sidebar-item-category:not(.sidebar-section)
+  > .menu__list-item-collapsible
+  > .menu__link {
+  align-items: center;
+  background: none;
+  color: var(--ifm-font-color-base);
+  display: flex;
+  font-size: 0.95rem;
+  font-weight: 800;
+  gap: 0.5rem;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.75rem 0.6rem 0.75rem;
+  text-transform: uppercase;
+}
+
+[data-theme='dark']
+  .theme-doc-sidebar-container
+  .menu
+  > .menu__list
+  > .theme-doc-sidebar-item-category:not(.sidebar-section)
+  > .menu__list-item-collapsible
+  > .menu__link {
+  color: #ffffff;
+}
+
+.theme-doc-sidebar-container
+  .menu
+  > .menu__list
+  > .theme-doc-sidebar-item-category:not(.sidebar-section)
+  > .menu__list-item-collapsible:hover
+  > .menu__link,
+.theme-doc-sidebar-container
+  .menu
+  > .menu__list
+  > .theme-doc-sidebar-item-category:not(.sidebar-section)
+  > .menu__list-item-collapsible
+  > .menu__link:hover {
+  background: none;
+  color: var(--ifm-color-primary);
+}
+
+.theme-doc-sidebar-container
+  .menu
+  > .menu__list
+  > .theme-doc-sidebar-item-category:not(.sidebar-section)
+  > .menu__list-item-collapsible
+  > .menu__link::before {
+  background-color: var(--ifm-color-emphasis-700);
+  content: '';
+  display: block;
+  flex-shrink: 0;
+  height: 17px;
+  mask-image: var(--sidebar-section-icon, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E"));
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  width: 17px;
+  -webkit-mask-image: var(--sidebar-section-icon, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/%3E%3Cpath d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/%3E%3C/svg%3E"));
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
 }
 
 /* ---- Global sidebar item styles ---- */
@@ -989,19 +1104,26 @@ aside.theme-doc-sidebar-container {
   transition: transform 0.2s ease;
 }
 
-/* sidebar-section: hide the duplicate category header label */
+.theme-doc-sidebar-container .theme-doc-sidebar-item-category > .menu__list {
+  padding-left: 0;
+}
+
+.theme-doc-sidebar-container .theme-doc-sidebar-item-category > .menu__list .menu__list {
+  padding-left: 0.75rem;
+}
+
+/* sidebar-section: hide the duplicate category header label rendered by Docusaurus */
+.theme-doc-sidebar-container .menu__list-item.sidebar-section > .menu__list-item-collapsible,
+.theme-doc-sidebar-container .theme-doc-sidebar-item-category.sidebar-section > .menu__list-item-collapsible,
+.theme-doc-sidebar-container .menu__list-item.sidebar-section > .menu__link,
+.theme-doc-sidebar-container .theme-doc-sidebar-item-category.sidebar-section > .menu__link,
 .sidebar-section > .menu__list-item-collapsible {
-  display: none;
+  display: none !important;
 }
 
 /* Collapsed items inside sidebar-sections: opacity only — rotation is handled via ::before */
 .sidebar-section > .menu__list .menu__list-item--collapsed > .menu__list-item-collapsible > .menu__caret {
   opacity: 0.6;
-}
-
-/* Nested sub-list indentation */
-.sidebar-section > .menu__list .menu__list {
-  padding-left: 0.75rem;
 }
 
 /* ---- Working with AI section — gradient + sparkle ---- */
@@ -3421,6 +3543,170 @@ a.connect-card {
   }
 }
 
+/* Wayfinder organization — story diagram on B2C Try It Out overview */
+
+.uc-b2c-wayfinder-org,
+.uc-b2c-wayfinder-arch {
+  margin: 1.5rem 0 2.5rem;
+}
+
+.uc-b2c-wayfinder-org__svg,
+.uc-b2c-wayfinder-arch__svg {
+  width: 100%;
+  height: auto;
+  max-width: 960px;
+  display: block;
+  margin: 0 auto;
+  color: color-mix(in srgb, var(--ifm-color-primary) 60%, var(--ifm-color-emphasis-500));
+}
+
+.uc-b2c-wayfinder-org__svg text,
+.uc-b2c-wayfinder-arch__svg text {
+  fill: var(--ifm-font-color-base);
+  font-size: 12px;
+  font-family: var(--ifm-font-family-base);
+}
+
+.uc-b2c-wayfinder-org__header rect {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 12%, var(--ifm-background-surface-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.6;
+}
+
+.uc-b2c-wayfinder-org__header-title {
+  font-weight: 700;
+  font-size: 20px !important;
+}
+
+.uc-b2c-wayfinder-org__header-sub {
+  font-size: 12px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-b2c-wayfinder-org__edges line {
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 45%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-b2c-wayfinder-org__col rect {
+  fill: var(--ifm-background-surface-color);
+  stroke: var(--ifm-color-emphasis-300);
+  stroke-width: 1;
+}
+
+.uc-b2c-wayfinder-org__col-title {
+  font-weight: 700;
+  font-size: 16px !important;
+}
+
+.uc-b2c-wayfinder-org__col-sub {
+  font-size: 12px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+  font-style: italic;
+}
+
+.uc-b2c-wayfinder-org__divider {
+  stroke: var(--ifm-color-emphasis-200);
+  stroke-width: 1;
+}
+
+.uc-b2c-wayfinder-org__icon > circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 16%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-b2c-wayfinder-org__icon--lead > circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 28%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 70%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.6;
+}
+
+.uc-b2c-wayfinder-person-glyph circle,
+.uc-b2c-wayfinder-person-glyph path {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 90%, #fff);
+  stroke: none;
+}
+
+.uc-b2c-wayfinder-org__cast-name {
+  font-weight: 700;
+  font-size: 13px !important;
+}
+
+.uc-b2c-wayfinder-org__cast-role {
+  font-size: 11.5px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+/* Wayfinder architecture — integration diagram on B2C Try It Out overview */
+
+.uc-b2c-wayfinder-arch__idp rect {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 12%, var(--ifm-background-surface-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.6;
+}
+
+.uc-b2c-wayfinder-arch__idp-title {
+  font-weight: 700;
+  font-size: 18px !important;
+}
+
+.uc-b2c-wayfinder-arch__app rect {
+  fill: var(--ifm-background-surface-color);
+  stroke: var(--ifm-color-emphasis-400);
+  stroke-width: 1.4;
+}
+
+.uc-b2c-wayfinder-arch__app-title {
+  font-weight: 700;
+  font-size: 16px !important;
+}
+
+.uc-b2c-wayfinder-arch__sub {
+  font-size: 12px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-b2c-wayfinder-arch__detail {
+  font-size: 11.5px !important;
+  fill: var(--ifm-color-emphasis-600) !important;
+}
+
+.uc-b2c-wayfinder-arch__divider {
+  stroke: var(--ifm-color-emphasis-200);
+  stroke-width: 1;
+}
+
+.uc-b2c-wayfinder-arch__edges line {
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-b2c-wayfinder-arch__edge-label {
+  font-size: 11.5px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+  font-style: italic;
+}
+
+.uc-b2c-wayfinder-arch__icon > circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 16%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-b2c-wayfinder-arch__group-label {
+  font-weight: 700;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-b2c-wayfinder-arch__cast-name {
+  font-weight: 700;
+  font-size: 13px !important;
+}
+
 .uc-accordion {
   margin-top: 1rem;
 }
@@ -3896,8 +4182,14 @@ a.connect-card {
   z-index: 1;
 }
 
-/* OpenChoreo logo: invert to white in dark mode so it's legible */
-[data-theme='dark'] .dp-route-node img {
+.dp-route-node img {
+  height: 30px;
+  max-width: 30px;
+  object-fit: contain;
+  width: 30px;
+}
+
+[data-theme='dark'] .dp-openchoreo-logo {
   filter: brightness(0) invert(1);
   opacity: 0.9;
 }
@@ -4469,4 +4761,202 @@ a.connect-card {
 @media (max-width: 900px) {
   .dp-choose-grid { grid-template-columns: 1fr; }
   .dp-next-grid   { grid-template-columns: 1fr; }
+}
+
+/* Wayfinder organization — story diagram on AI Agents Try It Out overview */
+
+.uc-agent-wayfinder-org,
+.uc-agent-wayfinder-arch {
+  margin: 1.5rem 0 2.5rem;
+}
+
+.uc-agent-wayfinder-org__svg,
+.uc-agent-wayfinder-arch__svg {
+  width: 100%;
+  height: auto;
+  max-width: 960px;
+  display: block;
+  margin: 0 auto;
+  color: color-mix(in srgb, var(--ifm-color-primary) 60%, var(--ifm-color-emphasis-500));
+}
+
+.uc-agent-wayfinder-org__svg text,
+.uc-agent-wayfinder-arch__svg text {
+  fill: var(--ifm-font-color-base);
+  font-size: 12px;
+  font-family: var(--ifm-font-family-base);
+}
+
+.uc-agent-wayfinder-org__header rect {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 12%, var(--ifm-background-surface-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.6;
+}
+
+.uc-agent-wayfinder-org__header-title {
+  font-weight: 700;
+  font-size: 20px !important;
+}
+
+.uc-agent-wayfinder-org__header-sub {
+  font-size: 12px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-agent-wayfinder-org__edges line {
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 45%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-agent-wayfinder-org__col rect {
+  fill: var(--ifm-background-surface-color);
+  stroke: var(--ifm-color-emphasis-300);
+  stroke-width: 1;
+}
+
+.uc-agent-wayfinder-org__col--agent rect {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 6%, var(--ifm-background-surface-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 35%, var(--ifm-color-emphasis-300));
+  stroke-width: 1.2;
+}
+
+.uc-agent-wayfinder-org__col-title {
+  font-weight: 700;
+  font-size: 16px !important;
+}
+
+.uc-agent-wayfinder-org__col-sub {
+  font-size: 12px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+  font-style: italic;
+}
+
+.uc-agent-wayfinder-org__divider {
+  stroke: var(--ifm-color-emphasis-200);
+  stroke-width: 1;
+}
+
+.uc-agent-wayfinder-org__icon > circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 16%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-agent-wayfinder-org__icon--agent > circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 28%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 70%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.6;
+}
+
+.uc-agent-wayfinder-person-glyph circle,
+.uc-agent-wayfinder-person-glyph path {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 90%, #fff);
+  stroke: none;
+}
+
+.uc-agent-wayfinder-agent-glyph rect,
+.uc-agent-wayfinder-agent-glyph circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 90%, #fff);
+  stroke: none;
+}
+
+.uc-agent-wayfinder-agent-glyph line {
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 90%, #fff);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.uc-agent-wayfinder-org__cast-name {
+  font-weight: 700;
+  font-size: 13px !important;
+}
+
+.uc-agent-wayfinder-org__cast-role {
+  font-size: 11.5px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-agent-wayfinder-org__cast-detail {
+  font-size: 11px !important;
+  fill: var(--ifm-color-emphasis-600) !important;
+  font-style: italic;
+}
+
+/* Wayfinder architecture — integration diagram on AI Agents Try It Out overview */
+
+.uc-agent-wayfinder-arch__idp rect {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 12%, var(--ifm-background-surface-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.6;
+}
+
+.uc-agent-wayfinder-arch__idp-title {
+  font-weight: 700;
+  font-size: 18px !important;
+}
+
+.uc-agent-wayfinder-arch__app rect,
+.uc-agent-wayfinder-arch__svc rect {
+  fill: var(--ifm-background-surface-color);
+  stroke: var(--ifm-color-emphasis-400);
+  stroke-width: 1.4;
+}
+
+.uc-agent-wayfinder-arch__svc--agent rect {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 6%, var(--ifm-background-surface-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 45%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-agent-wayfinder-arch__app-title {
+  font-weight: 700;
+  font-size: 16px !important;
+}
+
+.uc-agent-wayfinder-arch__sub {
+  font-size: 12px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-agent-wayfinder-arch__detail {
+  font-size: 11.5px !important;
+  fill: var(--ifm-color-emphasis-600) !important;
+}
+
+.uc-agent-wayfinder-arch__divider {
+  stroke: var(--ifm-color-emphasis-200);
+  stroke-width: 1;
+}
+
+.uc-agent-wayfinder-arch__edges line,
+.uc-agent-wayfinder-arch__edges polyline {
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+  fill: none;
+}
+
+.uc-agent-wayfinder-arch__edge-label {
+  font-size: 11.5px !important;
+  fill: var(--ifm-color-emphasis-700) !important;
+  font-style: italic;
+}
+
+.uc-agent-wayfinder-arch__icon > circle {
+  fill: color-mix(in srgb, var(--ifm-color-primary) 16%, var(--ifm-background-color));
+  stroke: color-mix(in srgb, var(--ifm-color-primary) 55%, var(--ifm-color-emphasis-400));
+  stroke-width: 1.4;
+}
+
+.uc-agent-wayfinder-arch__group-label {
+  font-weight: 700;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  fill: var(--ifm-color-emphasis-700) !important;
+}
+
+.uc-agent-wayfinder-arch__cast-name {
+  font-weight: 700;
+  font-size: 13px !important;
 }

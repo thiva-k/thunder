@@ -18,8 +18,11 @@
 
 import ExpressTemplate from '../data/application-templates/technology-based/express.json';
 import NextJSTemplate from '../data/application-templates/technology-based/nextjs.json';
+import NodeTemplate from '../data/application-templates/technology-based/node.json';
+import NuxtTemplate from '../data/application-templates/technology-based/nuxt.json';
 import ReactTemplate from '../data/application-templates/technology-based/react.json';
 import VanillaJSTemplate from '../data/application-templates/technology-based/vanilla-js.json';
+import VueTemplate from '../data/application-templates/technology-based/vue.json';
 import type {ApplicationTemplate, ApplicationTemplateMetadata} from '../models/application-templates';
 import {TechnologyApplicationTemplate} from '../models/application-templates';
 
@@ -96,7 +99,6 @@ const TechnologyBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Te
     titleKey: 'applications:onboarding.configure.stack.technology.nextjs.title',
     descriptionKey: 'applications:onboarding.configure.stack.technology.nextjs.description',
     template: NextJSTemplate as ApplicationTemplate,
-    disabled: true,
   },
   {
     value: TechnologyApplicationTemplate.VANILLA_JS,
@@ -109,6 +111,50 @@ const TechnologyBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Te
     titleKey: 'applications:onboarding.configure.stack.technology.vanillaJs.title',
     descriptionKey: 'applications:onboarding.configure.stack.technology.vanillaJs.description',
     template: VanillaJSTemplate as ApplicationTemplate,
+  },
+  {
+    value: TechnologyApplicationTemplate.VUE,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 261.76 226.69">
+        <path d="M161.096.001l-30.225 52.351L100.647.001H0l130.871 226.688L261.742.001z" fill="#41b883" />
+        <path d="M161.096.001l-30.225 52.351L100.647.001H52.346l78.525 136.01L209.398.001z" fill="#34495e" />
+      </svg>
+    ),
+    titleKey: 'applications:onboarding.configure.stack.technology.vue.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.vue.description',
+    template: VueTemplate as ApplicationTemplate,
+  },
+  {
+    value: TechnologyApplicationTemplate.NUXT,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 221 120">
+        <path
+          d="M120.81 120H212.7c1.903 0 3.773-.498 5.408-1.442a10.827 10.827 0 003.977-3.92 10.657 10.657 0 001.458-5.36c0-1.889-.5-3.745-1.458-5.36L166.037 19.2a10.827 10.827 0 00-3.977-3.92 10.978 10.978 0 00-10.816 0 10.827 10.827 0 00-3.977 3.92l-9.684 16.704-18.664-32.28A10.827 10.827 0 00114.942 0a10.978 10.978 0 00-10.816 0 10.827 10.827 0 00-3.977 3.92L1.458 104.008A10.697 10.697 0 000 109.278a10.657 10.657 0 001.458 5.36 10.827 10.827 0 003.977 3.92A10.978 10.978 0 0010.843 120H67.89c21.187 0 36.72-9.152 47.248-26.88L140.47 51.2l12.94 22.4-21.6 37.36C125.097 118.18 113.433 120 120.81 120zm-58.168-21.28l-36.19-.08 72.368-125.2 18.096 31.28-25.936 44.8c-8.784 14.56-18.37 49.2-28.338 49.2z"
+          fill="#00dc82"
+        />
+      </svg>
+    ),
+    titleKey: 'applications:onboarding.configure.stack.technology.nuxt.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.nuxt.description',
+    template: NuxtTemplate as ApplicationTemplate,
+  },
+  {
+    value: TechnologyApplicationTemplate.NODEJS,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 256 289">
+        <path
+          d="M128 288.774c-3.975 0-7.685-1.06-11.13-2.915l-35.247-20.936c-5.3-2.915-2.65-3.975-1.06-4.505 7.155-2.385 8.48-2.915 15.9-7.155.795-.53 1.856-.265 2.65.265l27.032 16.166c1.06.53 2.385.53 3.18 0l105.74-61.082c1.06-.53 1.59-1.59 1.59-2.915V94.28c0-1.325-.53-2.385-1.59-2.915L128.795 30.55c-1.06-.53-2.385-.53-3.18 0L19.875 91.365c-1.06.53-1.59 1.855-1.59 2.915v122.165c0 1.06.53 2.385 1.59 2.915l28.887 16.696c15.635 7.95 25.442-1.325 25.442-10.6V107.35c0-1.59 1.325-3.18 3.18-3.18h13.515c1.59 0 3.18 1.325 3.18 3.18v118.11c0 20.936-11.395 32.861-31.271 32.861-6.095 0-10.865 0-24.382-6.625L10.07 235.2A22.312 22.312 0 010 216.46V94.28c0-7.685 4.24-14.84 11.13-18.815L116.87 14.648c6.625-3.975 15.635-3.975 22.26 0L244.87 75.465c6.89 3.975 11.13 11.13 11.13 18.815V216.46c0 7.685-4.24 14.84-11.13 18.815L139.13 295.93c-3.445 1.59-7.155 2.384-11.13 2.384v-.265z"
+          fill="#539E43"
+        />
+        <path
+          d="M163.573 215.666c-46.217 0-55.757-21.2-55.757-39.22 0-1.59 1.325-3.18 3.18-3.18h13.78c1.59 0 2.915 1.06 3.18 2.65 2.12 14.31 8.48 21.466 35.882 21.466 22.26 0 31.536-5.035 31.536-16.96 0-6.89-2.65-11.925-37.472-15.37-29.152-2.915-47.277-9.275-47.277-32.596 0-21.466 18.12-34.187 48.337-34.187 33.921 0 50.617 11.66 52.737 37.207 0 .795-.265 1.59-.795 2.12-.53.53-1.325.795-2.12.795h-13.78c-1.325 0-2.65-1.06-2.915-2.385-3.18-14.575-11.13-19.345-33.127-19.345-24.382 0-27.297 8.48-27.297 14.84 0 7.685 3.445 10.07 36.412 14.31 32.7 4.24 48.602 10.335 48.602 33.391 0 23.32-19.345 36.572-53.266 36.572l-.62-.109z"
+          fill="#539E43"
+        />
+      </svg>
+    ),
+    titleKey: 'applications:onboarding.configure.stack.technology.nodejs.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.nodejs.description',
+    template: NodeTemplate as ApplicationTemplate,
   },
 ];
 
