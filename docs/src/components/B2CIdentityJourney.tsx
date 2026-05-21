@@ -26,7 +26,7 @@ interface RoadmapNode {
 
 const roadmapNodes: RoadmapNode[] = [
   {
-    href: '#add-login-to-your-app',
+    href: '#add-login-to-your-application',
     label: 'Sign In',
     icon: (
       <svg viewBox="0 0 24 24">
@@ -38,7 +38,7 @@ const roadmapNodes: RoadmapNode[] = [
     ),
   },
   {
-    href: '#enable-self-sign-up-and-registration',
+    href: '#enable-self-sign-up',
     label: 'Self Sign-Up',
     icon: (
       <svg viewBox="0 0 24 24">
@@ -50,7 +50,7 @@ const roadmapNodes: RoadmapNode[] = [
     ),
   },
   {
-    href: '#add-a-profile-section',
+    href: '#add-self-service-profile-management',
     label: 'Manage Profile',
     icon: (
       <svg viewBox="0 0 24 24">
@@ -60,7 +60,7 @@ const roadmapNodes: RoadmapNode[] = [
     ),
   },
   {
-    href: '#account-recovery',
+    href: '#add-account-recovery',
     label: 'Recover Access',
     icon: (
       <svg viewBox="0 0 24 24">
