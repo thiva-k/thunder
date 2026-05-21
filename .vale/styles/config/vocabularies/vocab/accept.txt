@@ -85,3 +85,7 @@ npx
 [Ee]xpiresAt
 [Ss]essionStorage
 [Ll]ocalStorage
+[Ww]alkthrough[s]?
+[Oo]nboards
+Sif
+Baldur

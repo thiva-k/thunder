@@ -1,0 +1,85 @@
+---
+title: Account Recovery
+description: Reset a forgotten password through an email recovery link as Thor.
+sidebar_position: 5
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+# Account Recovery
+
+Thor has forgotten his password on a Sunday morning, just before a flight-booking deadline. He selects **Forgot password?** on the Wayfinder sign-in screen and receives a recovery email a few seconds later. He opens the link, sets a new password, and is back in his Wayfinder account before the airline's price-hold expires.
+
+:::note Prerequisites
+Complete [Setup](../#setup) before starting this walkthrough.
+:::
+
+:::info Background
+[Account Recovery](../../customer-identity#account-recovery) covers the requirements story behind this use case.
+:::
+
+## Walkthrough Setup
+
+1. **Configure an email notification sender** so the recovery email can be delivered. Have these values ready:
+
+   | Field             | Value                                  |
+   | ----------------- | -------------------------------------- |
+   | SMTP host         | Your mail provider                     |
+   | SMTP credentials  | Username and password / API key        |
+   | Sender name       | What appears as the "From" name        |
+   | Email template    | The recovery email body                |
+
+2. **Add a recovery flow.** Pick the tab that matches the path you used in Setup.
+
+<Tabs>
+<TabItem value="declarative" label="Quick Start" default>
+
+The bundle already includes a recovery flow attached to `WAYFINDER`. No further action is needed.
+
+</TabItem>
+<TabItem value="build" label="Build It Yourself">
+
+In the <ProductName /> Console, navigate to **Flows** and create a flow that:
+
+- Looks up the user by email.
+- Generates a one-time link.
+- Sends the recovery email through the notification sender.
+- Lands the user on a **Set new password** screen.
+
+Then attach the flow to `WAYFINDER` so the **Forgot password?** action triggers it. See [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
+
+</TabItem>
+</Tabs>
+
+## Pick Your Pattern
+
+<details open>
+  <summary>Redirect-based</summary>
+
+In the redirect-based pattern, the consumer app sends the user to <ProductName /> for the entire recovery experience. The Wayfinder web frontend is configured exactly this way: the **Sign in** button triggers an OIDC redirect to <ProductName />. From there, the user picks **Forgot password?**, completes the recovery flow, and returns to Wayfinder to sign in with the new password.
+
+**Try the Use Case**
+
+1. Open `http://localhost:5173` and select **Sign in**. The browser navigates to <ProductName />.
+2. On the <ProductName /> sign-in page, select **Forgot password?**.
+3. Enter Thor's email and submit. <ProductName /> runs the recovery flow and sends Thor a recovery email.
+4. Open the email in Thor's inbox and open the link inside.
+5. <ProductName /> renders a **Set new password** screen. Enter a new password and submit.
+6. <ProductName /> shows a confirmation and returns Thor to Wayfinder. Select **Sign in** again and sign in with the new password.
+
+</details>
+
+<details>
+  <summary>App-native step-by-step</summary>
+
+Coming soon. See the [App-native pattern](../../solution-patterns#app-native) for what to expect.
+
+</details>
+
+<details>
+  <summary>App-native managed</summary>
+
+Coming soon. See the [App-native pattern](../../solution-patterns#app-native) for what to expect.
+
+</details>
