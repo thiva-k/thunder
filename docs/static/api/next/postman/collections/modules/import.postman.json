@@ -1,7 +1,7 @@
 {
   "item": [
     {
-      "id": "432337db-89c0-42e6-a35f-26035e6436bc",
+      "id": "5ecd7b1c-755b-4af0-b58e-2394852795d3",
       "name": "Import",
       "description": {
         "content": "Import declarative resource definitions from YAML into the runtime store, or delete resources by declaration.",
@@ -9,7 +9,7 @@
       },
       "item": [
         {
-          "id": "dc8a3fc1-47ce-4e81-94e1-e742c3266ad0",
+          "id": "acf46f32-9921-4ba4-8fdb-deb663af4bb9",
           "name": "Import declarative resources",
           "request": {
             "name": "Import declarative resources",
@@ -60,7 +60,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"enim_7\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
+              "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"ad__53\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -70,7 +70,7 @@
           },
           "response": [
             {
-              "id": "95f256b8-c545-4994-bc51-5aca9ae86fe8",
+              "id": "f4202deb-0388-4a7b-b1d6-2b2996421200",
               "name": "Import completed",
               "originalRequest": {
                 "url": {
@@ -119,7 +119,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"enim_7\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
+                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"ad__53\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -140,7 +140,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "6e8a8d8b-8fd4-4e81-b8a8-fff952abde00",
+              "id": "43a9afbe-9cea-4f21-94c0-03e1fafc86d2",
               "name": "Invalid import request or processing error",
               "originalRequest": {
                 "url": {
@@ -189,7 +189,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"enim_7\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
+                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"ad__53\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -210,7 +210,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "3ed3027b-38de-4553-937a-c76a0d440169",
+              "id": "052a471b-fd63-4019-ad62-25f9d084945d",
               "name": "Unauthorized - missing or invalid authentication token",
               "originalRequest": {
                 "url": {
@@ -259,7 +259,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"enim_7\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
+                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"ad__53\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -280,7 +280,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "96f8044b-74ea-4f92-8d9b-65740e2884bb",
+              "id": "3925eb1e-133f-4447-8edd-9ad081d0c1f4",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -329,7 +329,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"enim_7\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
+                  "raw": "{\n  \"content\": \"<string>\",\n  \"variables\": {\n    \"ad__53\": {}\n  },\n  \"dryRun\": false,\n  \"options\": {\n    \"upsert\": true,\n    \"continueOnError\": true,\n    \"target\": \"runtime\"\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -356,7 +356,7 @@
           }
         },
         {
-          "id": "9b479372-3c64-4e8f-a317-60198f8a1420",
+          "id": "414036e3-0f57-42db-bc4a-4680e40bd3a9",
           "name": "Delete imported declarative resource file",
           "request": {
             "name": "Delete imported declarative resource file",
@@ -418,7 +418,7 @@
           },
           "response": [
             {
-              "id": "5a07e2ba-861b-4e3a-bf51-e0c14f5860ca",
+              "id": "83c3258d-73e2-4aa0-ac81-3cfaa5e22dd7",
               "name": "Resource file deleted successfully",
               "originalRequest": {
                 "url": {
@@ -489,7 +489,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "a7d79112-33a3-492e-a03a-fd255204277a",
+              "id": "98ebb2fd-5582-44d0-8c82-8893afec5d54",
               "name": "Invalid delete request or deletion error",
               "originalRequest": {
                 "url": {
@@ -560,7 +560,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "77cff7e4-50ac-4f01-9200-d3e2416ea259",
+              "id": "29fb2b71-0232-42d3-aef4-3d2c68ae7264",
               "name": "Unauthorized - missing or invalid authentication token",
               "originalRequest": {
                 "url": {
@@ -631,7 +631,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "208452ee-e291-47c5-8bbc-5bcefd33b2b3",
+              "id": "3dcbd55e-59c2-4ec9-b4b7-ec0266e003c4",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -777,7 +777,7 @@
     ]
   },
   "info": {
-    "_postman_id": "66db1602-a9f7-4604-9baf-a41c5ce955a8",
+    "_postman_id": "b72b2c02-f7a5-48d9-8542-7b9759ce7a27",
     "name": "Import API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {

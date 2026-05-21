@@ -43,7 +43,7 @@ describe('Application Templates Models', () => {
     });
 
     it('should have all expected properties', () => {
-      const expectedKeys = ['REACT', 'EXPRESS', 'NEXTJS', 'VANILLA_JS', 'OTHER'];
+      const expectedKeys = ['REACT', 'EXPRESS', 'NEXTJS', 'VANILLA_JS', 'VUE', 'NUXT', 'NODEJS', 'OTHER'];
 
       expect(Object.keys(TechnologyApplicationTemplate)).toEqual(expectedKeys);
     });

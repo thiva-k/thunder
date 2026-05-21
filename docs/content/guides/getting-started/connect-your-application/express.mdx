@@ -41,22 +41,6 @@ Use this guide to add ThunderID authentication to an Express app with sign-in, s
 
 <Stepper stepNode="h2" as="h2">
 
-## Create an Application in <ProductName />
-
-Before integrating <ProductName /> with your Express app, you need to create an application in <ProductName />.
-
-### Using the <ProductName /> Console
-
-1. Sign into the <ProductName /> Console at [https://localhost:8090/console](https://localhost:8090/console)
-2. Navigate to **Applications** → **New Application**
-3. Under **Technology Stack**, select **Express**
-4. Enter the application name `my-express-app`, then continue to create the application
-5. Copy the **Client ID** and **Client Secret** from the application
-
-:::info
-For Express applications, the default authorized redirect URL is `http://localhost:3000/login`. This URL points to the callback route used in this guide. You can update it later from the application settings if your callback route changes.
-:::
-
 ## Create an Express App
 
 Create your new Node.js application:
@@ -153,7 +137,7 @@ app.listen(port, () => {
 ```
 
 :::warning Configuration
-Replace `<your-client-id>` and `<your-client-secret>` with values from your <ProductName /> application.
+Replace `<your-client-id>` and `<your-client-secret>` with values from your <ProductName /> application. Make sure the authorized redirect URL in your application settings is set to `http://localhost:3000/login`.
 :::
 
 ## Run Your App

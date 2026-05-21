@@ -21,9 +21,13 @@
 import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 import browserSdkSidebar from './content/sdks/browser/sidebar';
 import expressSdkSidebar from './content/sdks/express/sidebar';
+import javascriptSdkSidebar from './content/sdks/javascript/sidebar';
 import nextjsSdkSidebar from './content/sdks/nextjs/sidebar';
-import reactSdkSidebar from './content/sdks/react/sidebar';
 import nodeSdkSidebar from './content/sdks/node/sidebar';
+import nuxtSdkSidebar from './content/sdks/nuxt/sidebar';
+import reactSdkSidebar from './content/sdks/react/sidebar';
+import reactRouterSdkSidebar from './content/sdks/react-router/sidebar';
+import tanstackRouterSdkSidebar from './content/sdks/tanstack-router/sidebar';
 import vueSdkSidebar from './content/sdks/vue/sidebar';
 import productConfig from './docusaurus.product.config';
 
@@ -100,6 +104,11 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'doc',
+              id: 'guides/getting-started/connect-your-application/nextjs',
+              label: 'Next.js',
+            },
+            {
+              type: 'doc',
               id: 'guides/getting-started/connect-your-application/express',
               label: 'Express',
             },
@@ -115,13 +124,13 @@ const sidebars: SidebarsConfig = {
             },
             {
               type: 'doc',
-              id: 'guides/getting-started/connect-your-application/nextjs',
-              label: 'Next.js',
+              id: 'guides/getting-started/connect-your-application/node',
+              label: 'Node.js',
             },
             {
               type: 'doc',
               id: 'guides/getting-started/connect-your-application/browser',
-              label: 'JavaScript',
+              label: 'Vanilla JavaScript',
             },
           ],
         },
@@ -430,11 +439,15 @@ const sidebars: SidebarsConfig = {
     },
   ],
   expressSdkSidebar,
+  nuxtSdkSidebar,
   reactSdkSidebar,
+  reactRouterSdkSidebar,
+  tanstackRouterSdkSidebar,
   nodeSdkSidebar,
   vueSdkSidebar,
   browserSdkSidebar,
   nextjsSdkSidebar,
+  javascriptSdkSidebar,
   communitySidebar: [
     // Community Section
     {

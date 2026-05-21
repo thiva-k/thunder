@@ -32,6 +32,9 @@ export const TechnologyApplicationTemplate = {
   EXPRESS: 'EXPRESS',
   NEXTJS: 'NEXTJS',
   VANILLA_JS: 'VANILLA_JS',
+  VUE: 'VUE',
+  NUXT: 'NUXT',
+  NODEJS: 'NODEJS',
   OTHER: 'OTHER',
 } as const;
 

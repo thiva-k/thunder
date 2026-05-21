@@ -1,7 +1,7 @@
 {
   "item": [
     {
-      "id": "7bc38b30-4831-4757-a517-5b2df23106f9",
+      "id": "43560e9f-04b1-4c5e-809c-0c884d124872",
       "name": "Export",
       "description": {
         "content": "Export all declared resources as a combined YAML document or a downloadable ZIP archive.",
@@ -9,7 +9,7 @@
       },
       "item": [
         {
-          "id": "b9785d3b-d817-4035-99ae-8398eb004219",
+          "id": "a2d8f925-71cd-46bb-aa07-4b017d5b8139",
           "name": "Export resources as JSON",
           "request": {
             "name": "Export resources as JSON",
@@ -60,7 +60,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam2\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+              "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"occaecat_6e5\": \"<string>\",\n        \"aute_5d\": \"<string>\",\n        \"exercitation22\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -70,7 +70,7 @@
           },
           "response": [
             {
-              "id": "5b09c2fb-3099-452a-afb7-82538e41336e",
+              "id": "340cac4d-57c3-463a-8654-ad931232c553",
               "name": "Combined YAML and environment variable export",
               "originalRequest": {
                 "url": {
@@ -119,7 +119,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -140,7 +140,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "f3f8e1d1-0789-46ed-b3d8-c8d14a00c1a1",
+              "id": "0d3646ab-7bd1-4667-bc92-18a5d94ddceb",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -189,7 +189,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -210,7 +210,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "17d8870f-c4ed-4f8d-b872-44af074d77b6",
+              "id": "ea01714c-0531-41ce-9fef-2da5c55cc6bf",
               "name": "Unauthorized - missing or invalid authentication token",
               "originalRequest": {
                 "url": {
@@ -259,7 +259,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -280,7 +280,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "73df3656-4f27-4f80-97ed-a958837e8851",
+              "id": "3e92a13c-a94b-4707-b8df-b343de54a2d1",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -329,7 +329,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -356,7 +356,7 @@
           }
         },
         {
-          "id": "73192e00-4af0-457d-ad6e-e4aaeb3e06c8",
+          "id": "933690c0-5ad5-4dbb-863f-518b884419dd",
           "name": "Export resources as ZIP archive",
           "request": {
             "name": "Export resources as ZIP archive",
@@ -408,7 +408,7 @@
             "auth": null,
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+              "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -418,7 +418,7 @@
           },
           "response": [
             {
-              "id": "64a1ea64-eb0c-49de-ab5f-57188243cd42",
+              "id": "d002c546-1ddf-43c5-8435-23c4cf138c93",
               "name": "ZIP archive containing all exported resource files",
               "originalRequest": {
                 "url": {
@@ -468,7 +468,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -501,7 +501,7 @@
               "_postman_previewlanguage": "text"
             },
             {
-              "id": "b286495d-b15f-4b63-b955-0613ac1a00e5",
+              "id": "bb99f33f-02c0-4aeb-9ad7-15133b82198b",
               "name": "Bad request",
               "originalRequest": {
                 "url": {
@@ -551,7 +551,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -572,7 +572,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "71d41d8e-a6d0-4da9-95d0-046ac4565370",
+              "id": "67f8c276-2c47-45cc-8ab3-f729217644b9",
               "name": "Unauthorized - missing or invalid authentication token",
               "originalRequest": {
                 "url": {
@@ -622,7 +622,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -643,7 +643,7 @@
               "_postman_previewlanguage": "json"
             },
             {
-              "id": "14316711-7a58-4b3e-a064-479f5b3926fb",
+              "id": "a3b29fab-e7b8-4d1b-99e0-6aaf36b9f26d",
               "name": "Internal server error",
               "originalRequest": {
                 "url": {
@@ -693,7 +693,7 @@
                 "method": "POST",
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"proident7\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
+                  "raw": "{\n  \"applications\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"identityProviders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"notificationSenders\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"userTypes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"organizationUnits\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"users\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"groups\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"resourceServers\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"roles\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"flows\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"translations\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"layouts\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"themes\": [\n    \"<string>\",\n    \"<string>\"\n  ],\n  \"options\": {\n    \"includeMetadata\": false,\n    \"includeDependencies\": false,\n    \"format\": \"yaml\",\n    \"folderStructure\": {\n      \"groupByType\": false,\n      \"customStructure\": {\n        \"veniam00c\": \"<string>\",\n        \"laborum_28\": \"<string>\"\n      },\n      \"fileNamingPattern\": \"<string>\"\n    },\n    \"pagination\": {\n      \"page\": \"<integer>\",\n      \"limit\": \"<integer>\"\n    }\n  }\n}",
                   "options": {
                     "raw": {
                       "language": "json"
@@ -789,7 +789,7 @@
     ]
   },
   "info": {
-    "_postman_id": "0dd804c6-aff2-4ae0-9c67-458d9aa7cdf7",
+    "_postman_id": "1e36b306-25f5-4f58-b20a-774c5981e629",
     "name": "Export API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": {
