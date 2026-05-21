@@ -19,6 +19,11 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import {zodResolver} from '@hookform/resolvers/zod';
+import {PageLoadingAnimation} from '@thunderid/components';
+import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
+import {CopyableTextAdapter, type FlowComponent} from '@thunderid/design';
+import {useLogger} from '@thunderid/logger/react';
 import {
   EmbeddedFlowComponentType,
   EmbeddedFlowEventType,
@@ -27,10 +32,6 @@ import {
   type EmbeddedFlowComponent,
   type InviteUserRenderProps,
 } from '@thunderid/react';
-import {zodResolver} from '@hookform/resolvers/zod';
-import {OrganizationUnitTreePicker} from '@thunderid/configure-organization-units';
-import {CopyableTextAdapter, type FlowComponent} from '@thunderid/design';
-import {useLogger} from '@thunderid/logger/react';
 import type {ApiError} from '@thunderid/types';
 import {
   Box,
@@ -39,7 +40,6 @@ import {
   Button,
   Alert,
   AlertTitle,
-  CircularProgress,
   TextField,
   IconButton,
   FormControl,
@@ -48,6 +48,7 @@ import {
   MenuItem,
   LinearProgress,
   Breadcrumbs,
+  CircularProgress,
 } from '@wso2/oxygen-ui';
 import {X, ChevronRight} from '@wso2/oxygen-ui-icons-react';
 import {useState, useEffect, useMemo, useCallback, useRef, type JSX} from 'react';
@@ -530,11 +531,7 @@ function InviteUserStepContent({
 
   // Loading
   if (isLoading && !components?.length) {
-    return (
-      <Box sx={{display: 'flex', justifyContent: 'center', p: 4}}>
-        <CircularProgress />
-      </Box>
-    );
+    return <PageLoadingAnimation />;
   }
 
   // Error without components
@@ -556,11 +553,7 @@ function InviteUserStepContent({
 
   // Loading components
   if (!components?.length) {
-    return (
-      <Box sx={{display: 'flex', justifyContent: 'center', p: 4}}>
-        <CircularProgress />
-      </Box>
-    );
+    return <PageLoadingAnimation />;
   }
 
   const hasInteractiveComponents = hasActionsOrInputs(components as EmbeddedFlowComponent[]);
