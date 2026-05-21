@@ -635,8 +635,6 @@ var resourceDependencyOrder = []string{
 	resourceTypeOrganizationUnit,
 	resourceTypeEntityType,
 	resourceTypeResourceServer,
-	resourceTypeRole,
-	resourceTypeGroup,
 	resourceTypeIdentityProvider,
 	resourceTypeNotificationSender,
 	resourceTypeFlow,
@@ -645,6 +643,8 @@ var resourceDependencyOrder = []string{
 	resourceTypeApplication,
 	resourceTypeAgent,
 	resourceTypeUser,
+	resourceTypeGroup,
+	resourceTypeRole,
 	resourceTypeTranslation,
 }
 
