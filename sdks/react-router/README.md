@@ -1,4 +1,4 @@
-![ThunderID React Router SDK](https://raw.githubusercontent.com/thunder-id/thunderid/refs/heads/main/docs/content/sdks/assets/images/%40thunderid_react_router_sdk_banner.png)
+![ThunderID React Router SDK](https://raw.githubusercontent.com/thunder-id/thunderid/refs/heads/main/docs/static/assets/images/readme/repo-banner-react-router-sdk.png)
 
 React Router integration for ThunderID. Provides protected routes and authentication utilities for React Router v6+ applications.
 

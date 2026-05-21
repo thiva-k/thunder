@@ -587,7 +587,7 @@ export default function ApplicationCreatePage(): JSX.Element {
               <Box
                 sx={{
                   width: '100%',
-                  maxWidth: 800,
+                  maxWidth: {xs: '100%', md: currentStep === ApplicationCreateFlowStep.STACK ? '70%' : 800},
                   display: 'flex',
                   flexDirection: 'column',
                 }}

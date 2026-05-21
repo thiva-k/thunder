@@ -49,6 +49,10 @@ export const GETTING_STARTED_STEPS: JourneyStep[] = [
       'guides/getting-started/connect-your-application/react',
       'guides/getting-started/connect-your-application/vue',
       'guides/getting-started/connect-your-application/browser',
+      'guides/getting-started/connect-your-application/express',
+      'guides/getting-started/connect-your-application/nuxt',
+      'guides/getting-started/connect-your-application/node',
+      'guides/getting-started/connect-your-application/nextjs',
     ],
   },
 ];

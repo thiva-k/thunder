@@ -1431,6 +1431,8 @@ const translations = {
     'onboarding.configure.stack.technology.springboot.description': 'Java backend application with Spring Boot',
     'onboarding.configure.stack.technology.nodejs.title': 'Node.js',
     'onboarding.configure.stack.technology.nodejs.description': 'Backend service built with Node.js',
+    'onboarding.configure.stack.technology.nuxt.title': 'Nuxt',
+    'onboarding.configure.stack.technology.nuxt.description': 'Full-stack Vue framework with server-side rendering',
     'onboarding.configure.stack.technology.vanillaJs.title': 'JavaScript',
     'onboarding.configure.stack.technology.vanillaJs.description': 'Browser application built with vanilla JavaScript',
     'onboarding.configure.stack.platform.title': 'Application Type',

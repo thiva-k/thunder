@@ -41,50 +41,6 @@ This is **step 4** of the getting started sequence. By the end you will have a w
 
 <Stepper stepNode="h2" as="h2">
 
-## Create an Application in <ProductName />
-
-Before integrating <ProductName /> with your Next.js app, you need to create an application in <ProductName />.
-
-### Using the <ProductName /> Console
-
-1. Sign into the <ProductName /> Console at [https://localhost:8090/console](https://localhost:8090/console)
-2. Navigate to **Applications** → **New Application**
-3. Select **Next.js** as the technology
-4. Provide the following details:
-   - **Name**: `my-nextjs-app`
-   - **Authorized Redirect URL**: `http://localhost:3000`
-
-:::info
-The authorized redirect URL determines where <ProductName /> sends users after they log in. The `ThunderIDProvider` component handles the OAuth callback automatically — no manual callback route is needed.
-:::
-
-### Using the <ProductName /> API
-
-You can also create an application using the <ProductName /> API. First, [obtain a system API token](/docs/next/guides/getting-started/get-thunderid#obtain-system-api-token), then:
-
-```bash
-curl -kL -X POST https://localhost:8090/applications \
-  -H 'Authorization: Bearer <your-system-token>' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "name": "my-nextjs-app",
-    "inboundAuthConfig": [{
-      "type": "oauth2",
-      "config": {
-        "grantTypes": ["authorization_code", "refresh_token"],
-        "responseTypes": ["code"],
-        "redirectUris": ["http://localhost:3000"],
-        "tokenEndpointAuthMethod": "client_secret_post",
-        "publicClient": false
-      }
-    }]
-  }'
-```
-
-:::warning Important
-Note down the **Client ID** and **Client Secret** from the response. You need both to configure your Next.js app.
-:::
-
 ## Create a Next.js App
 
 Create your new Next.js app:
@@ -144,6 +100,10 @@ Replace `<your-client-id>` and `<your-client-secret>` with the values from your 
 ## Add `ThunderIDProvider` to Your Layout
 
 Wrap your root layout with `ThunderIDProvider` from the server export. This enables authentication across your entire app.
+
+:::info
+`ThunderIDProvider` handles the OAuth callback automatically — no manual callback route is needed. Make sure the authorized redirect URL in your <ProductName /> application settings is set to `http://localhost:3000`.
+:::
 
 ```tsx title="app/layout.tsx" showLineNumbers
 import { ThunderIDProvider } from '@thunderid/nextjs/server'

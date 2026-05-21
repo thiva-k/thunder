@@ -27,7 +27,7 @@ inputs:
   tag-convention:
     description: 'Git tag format. Use {tool} and {version} as placeholders (e.g. "{tool}/v{version}")'
     required: false
-    default: '{tool}/v{version}'
+    default: 'tool/{tool}/v{version}'
 
 runs:
   using: composite
