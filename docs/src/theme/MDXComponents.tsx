@@ -17,7 +17,7 @@
  */
 
 import MDXComponents from '@theme-original/MDXComponents';
-import {Box, Card, CardContent, Typography, ColorSchemeSVG} from '@wso2/oxygen-ui';
+import {Box, Card, CardContent, Typography, ColorSchemeSVG, Table, TableBody, TableCell, TableContainer, TableHead, TableRow} from '@wso2/oxygen-ui';
 import ApiReference from '@site/src/components/ApiReference';
 import CodeBlock from '@site/src/components/CodeBlock';
 import CodeGroup from '@site/src/components/CodeGroup';
@@ -53,6 +53,12 @@ export default {
   CardContent,
   ColorSchemeSVG,
   ColorSchemeImage,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   Typography,
   DocsGetStarted,
   Stepper,
