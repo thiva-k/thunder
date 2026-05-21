@@ -16,10 +16,11 @@
  * under the License.
  */
 
-import { Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
+import { Navigate, Route, BrowserRouter as Router, Routes, useLocation } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import InvitePage from './pages/InvitePage';
 import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage';
 import AuthProvider from './contexts/AuthProvider';
 import useAuth from './hooks/useAuth';
 import './App.css';
@@ -31,6 +32,7 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={token ? <HomePage /> : <LoginPage />} key={location.key} />
+      <Route path="/profile" element={token ? <ProfilePage /> : <Navigate to="/" replace />} />
       <Route path="/invite" element={<InvitePage />} />
     </Routes>
   );
