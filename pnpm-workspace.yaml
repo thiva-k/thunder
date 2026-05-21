@@ -5,6 +5,7 @@ packages:
   - docs
   - sdks/**
   - samples/apps/*
+  - tools/*
 
 allowBuilds:
   '@parcel/watcher': false
