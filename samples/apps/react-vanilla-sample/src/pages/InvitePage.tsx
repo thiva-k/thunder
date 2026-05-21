@@ -63,6 +63,7 @@ interface FlowResponse {
     data?: {
         inputs?: AuthInput[];
         actions?: ActionPrompt[];
+        redirectURL?: string;
     };
 }
 
@@ -126,6 +127,20 @@ const InvitePage = () => {
             setOtpDigits(Array(6).fill(''));
             setStep('form');
             setLoading(false);
+            return;
+        }
+
+        if (data.type === 'REDIRECTION') {
+            const redirectURL = data.data?.redirectURL;
+
+            if (!redirectURL) {
+                setStep('error');
+                setErrorMessage('Invalid invite flow response. Please request a new invite link.');
+                setLoading(false);
+                return;
+            }
+
+            window.location.href = redirectURL;
         }
     };
 

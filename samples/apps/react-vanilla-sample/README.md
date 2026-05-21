@@ -1,6 +1,6 @@
 # React Vanilla Sample Application
 
-This sample React application demonstrates integrating authentication and registration into your application using the app-native flow orchestration API.
+This sample React application demonstrates integrating authentication, registration, and basic self-service profile management into your application using the app-native flow orchestration API.
 
 ## Supported Authentication Methods
 

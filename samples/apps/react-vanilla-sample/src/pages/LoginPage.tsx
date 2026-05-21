@@ -1468,7 +1468,7 @@ const LoginPage = () => {
                                 } else if (isMobile) {
                                     label = getSocialLoginText(action.ref || '');
                                 } else if (isPasskey) {
-                                    label = "Sign in with Passkey";
+                                    label = `${isSignupMode ? 'Sign up' : 'Continue'} with Passkey`;
                                 } else if (action.label) {
                                     label = action.label;
                                 }
