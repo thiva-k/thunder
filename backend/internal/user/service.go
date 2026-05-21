@@ -67,6 +67,7 @@ type userService struct {
 	entityService     entity.EntityServiceInterface
 	ouService         oupkg.OrganizationUnitServiceInterface
 	entityTypeService entitytype.EntityTypeServiceInterface
+	uuidGenerator     func() (string, error)
 }
 
 // newUserService creates a new instance of userService with injected dependencies.
@@ -81,6 +82,7 @@ func newUserService(
 		entityService:     entityService,
 		ouService:         ouService,
 		entityTypeService: entityTypeService,
+		uuidGenerator:     utils.GenerateUUIDv7,
 	}
 }
 
@@ -315,10 +317,12 @@ func (us *userService) CreateUser(ctx context.Context, user *User) (*User, *serv
 	// Schema validation and uniqueness checks are handled by entity service in CreateEntity.
 
 	var err error
-	user.ID, err = utils.GenerateUUIDv7()
-	if err != nil {
-		logger.Error("Failed to generate UUID", log.Error(err))
-		return nil, &serviceerror.InternalServerError
+	if user.ID == "" {
+		user.ID, err = us.uuidGenerator()
+		if err != nil {
+			logger.Error("Failed to generate UUID", log.Error(err))
+			return nil, &serviceerror.InternalServerError
+		}
 	}
 
 	e := userToEntity(user)

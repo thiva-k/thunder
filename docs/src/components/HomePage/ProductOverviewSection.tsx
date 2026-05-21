@@ -321,16 +321,14 @@ function SectionDivider({label}: {label: string}): JSX.Element {
         }}
       />
       <Typography
+        variant="h3"
         sx={{
-          fontFamily: 'var(--ifm-font-family-monospace, monospace)',
-          fontSize: '0.72rem',
-          fontWeight: 600,
-          letterSpacing: '0.1em',
-          textTransform: 'uppercase',
-          color: 'primary.main',
-          opacity: 0.8,
-          whiteSpace: 'nowrap',
-          px: 0.5,
+          mt: 4,
+          fontSize: {xs: '1rem', sm: '1.25rem', md: '2rem'},
+          fontWeight: 800,
+          letterSpacing: '-0.03em',
+          color: 'text.primary',
+          lineHeight: 1.15,
         }}
       >
         {label}

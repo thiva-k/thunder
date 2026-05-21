@@ -210,6 +210,9 @@ jobs:
           cd server
           npm version "$SEMVER_VERSION" --no-git-tag-version --allow-same-version
 
+          cd "$GITHUB_WORKSPACE/samples/apps/wayfinder-sample"
+          npm version "$SEMVER_VERSION" --no-git-tag-version --allow-same-version
+
           cd "$GITHUB_WORKSPACE"
           echo "✅ Updated Helm chart and sample app versions to $SEMVER_VERSION"
 
@@ -236,7 +239,8 @@ jobs:
             samples/apps/react-vanilla-sample/package-lock.json \
             samples/apps/react-vanilla-sample/package.json \
             samples/apps/react-vanilla-sample/server/package-lock.json \
-            samples/apps/react-vanilla-sample/server/package.json
+            samples/apps/react-vanilla-sample/server/package.json \
+            samples/apps/wayfinder-sample/package.json
 
           if git diff --cached --quiet; then
             echo "✅ No changes to commit (files already at $VERSION)"
@@ -489,6 +493,26 @@ jobs:
           echo "📦 Image available at: ${IMAGE_NAME}:${DOCKER_VERSION}"
           echo "📦 Image available at: ${IMAGE_NAME}:latest"
 
+      - name: 📦 Publish Docker Compose (Quick Start) to GHCR
+        run: |
+          OWNER_NAME=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          DOCKER_VERSION="${{ needs.build.outputs.version }}"
+          if [[ $DOCKER_VERSION == v* ]]; then
+            DOCKER_VERSION="${DOCKER_VERSION#v}"
+          fi
+
+          COMPOSE_IMAGE="ghcr.io/${OWNER_NAME}/${PRODUCT_NAME_LOWER}-quick-start"
+
+          docker compose -f install/quick-start/docker-compose.yml publish \
+            --resolve-image-digests -y "${COMPOSE_IMAGE}:${DOCKER_VERSION}"
+
+          docker compose -f install/quick-start/docker-compose.yml publish \
+            --resolve-image-digests -y "${COMPOSE_IMAGE}:latest"
+
+          echo "✅ Docker Compose published successfully!"
+          echo "📦 Available at: ${COMPOSE_IMAGE}:${DOCKER_VERSION}"
+          echo "📦 Available at: ${COMPOSE_IMAGE}:latest"
+
       - name: 🏷️ Update Helm Values Image Tag
         run: |
           # Get version without 'v' prefix
@@ -663,6 +687,12 @@ jobs:
           # Update the react-api-based sample app package.json
           cd samples/apps/react-api-based-sample
           pnpm version $NEXT_VERSION --no-git-tag-version --no-git-checks --allow-same-version
+
+          cd "$GITHUB_WORKSPACE"
+
+          # Update the agent-id sample app package.json
+          cd samples/apps/wayfinder-sample
+          npm version $NEXT_VERSION --no-git-tag-version --allow-same-version
 
           cd "$GITHUB_WORKSPACE"
           echo "✅ Updated sample apps version to $NEXT_VERSION"
@@ -955,6 +985,16 @@ jobs:
             "   | Linux | ARM64 | [sample-app-react-api-based-${RELEASE_VERSION}-linux-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-linux-arm64.zip) |" \
             "   | Windows | x64 | [sample-app-react-api-based-${RELEASE_VERSION}-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-react-api-based-${RELEASE_VERSION}-win-x64.zip) |")
 
+          # Create the Agent Identity (Wayfinder) Sample App downloads table with proper newlines using printf
+          WAYFINDER_SAMPLE_TABLE=$(printf "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s" \
+            "   | OS | Architecture | Download Link |" \
+            "   |-------|-------------|-------------|" \
+            "   | macOS | ARM64 (Apple Silicon) | [sample-app-wayfinder-${RELEASE_VERSION}-macos-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-wayfinder-${RELEASE_VERSION}-macos-arm64.zip) |" \
+            "   | macOS | x64 (Intel) | [sample-app-wayfinder-${RELEASE_VERSION}-macos-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-wayfinder-${RELEASE_VERSION}-macos-x64.zip) |" \
+            "   | Linux | x64 | [sample-app-wayfinder-${RELEASE_VERSION}-linux-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-wayfinder-${RELEASE_VERSION}-linux-x64.zip) |" \
+            "   | Linux | ARM64 | [sample-app-wayfinder-${RELEASE_VERSION}-linux-arm64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-wayfinder-${RELEASE_VERSION}-linux-arm64.zip) |" \
+            "   | Windows | x64 | [sample-app-wayfinder-${RELEASE_VERSION}-win-x64.zip](https://github.com/${{ github.repository }}/releases/download/v${RELEASE_VERSION}/sample-app-wayfinder-${RELEASE_VERSION}-win-x64.zip) |")
+
           # Replace the vanilla sample app download instruction with its table
           QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$VANILLA_SAMPLE_TABLE" '
             /Download `sample-app-react-vanilla-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
@@ -976,6 +1016,15 @@ jobs:
           # Replace the API-based sample app download instruction with its table
           QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$API_SAMPLE_TABLE" '
             /Download `sample-app-react-api-based-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
+              print table
+              next
+            }
+            { print }
+          ')
+
+          # Replace the Wayfinder sample app download instruction with its table
+          QUICKSTART=$(echo "$QUICKSTART" | awk -v table="$WAYFINDER_SAMPLE_TABLE" '
+            /Download `sample-app-wayfinder-.*-<os>-<arch>\.zip` from the \[.*release\]/ {
               print table
               next
             }

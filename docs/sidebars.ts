@@ -410,6 +410,7 @@ const sidebars: SidebarsConfig = {
   expressSdkSidebar,
   reactSdkSidebar,
   nodeSdkSidebar,
+  vueSdkSidebar,
   browserSdkSidebar,
   communitySidebar: [
     // Community Section
@@ -425,9 +426,7 @@ const sidebars: SidebarsConfig = {
       className: 'sidebar-section',
       collapsed: false,
       collapsible: false,
-      items: [
-        { type: 'doc', id: 'community/overview', label: 'Join the Community', key: 'community-overview' },
-      ],
+      items: [{type: 'doc', id: 'community/overview', label: 'Join the Community', key: 'community-overview'}],
     },
 
     // Contribute Section
@@ -444,21 +443,35 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       collapsible: false,
       items: [
-        { type: 'doc', id: 'community/contributing/overview', label: 'Contribute to ThunderID' },
-        { type: 'doc', id: 'community/contributing/sharing-ideas', label: 'Share Ideas' },
-        { type: 'doc', id: 'community/contributing/proposing-features', label: 'Propose Features' },
-        { type: 'doc', id: 'community/contributing/contributing-code/prerequisites', label: 'Prerequisites' },
-        { type: 'doc', id: 'community/contributing/contributing-code/configure-and-run', label: 'Configure and Run' },
-        { type: 'doc', id: 'community/contributing/contributing-code/development-pipeline', label: 'Development Pipeline', key: 'code-development-pipeline' },
-        { type: 'doc', id: 'community/contributing/contributing-code/debugging', label: 'Debugging' },
+        {type: 'doc', id: 'community/contributing/overview', label: 'Contribute to ThunderID'},
+        {type: 'doc', id: 'community/contributing/sharing-ideas', label: 'Share Ideas'},
+        {type: 'doc', id: 'community/contributing/proposing-features', label: 'Propose Features'},
+        {type: 'doc', id: 'community/contributing/contributing-code/prerequisites', label: 'Prerequisites'},
+        {type: 'doc', id: 'community/contributing/contributing-code/configure-and-run', label: 'Configure and Run'},
+        {
+          type: 'doc',
+          id: 'community/contributing/contributing-code/development-pipeline',
+          label: 'Development Pipeline',
+          key: 'code-development-pipeline',
+        },
+        {type: 'doc', id: 'community/contributing/contributing-code/debugging', label: 'Debugging'},
         {
           type: 'category',
           label: 'Backend Development',
           collapsed: true,
           collapsible: true,
           items: [
-            { type: 'doc', id: 'community/contributing/contributing-code/backend-development/overview', label: 'Backend Overview', key: 'backend-overview' },
-            { type: 'doc', id: 'community/contributing/contributing-code/backend-development/observability', label: 'Observability' },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/backend-development/overview',
+              label: 'Backend Overview',
+              key: 'backend-overview',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/backend-development/observability',
+              label: 'Observability',
+            },
           ],
         },
         {
@@ -467,8 +480,17 @@ const sidebars: SidebarsConfig = {
           collapsed: true,
           collapsible: true,
           items: [
-            { type: 'doc', id: 'community/contributing/contributing-code/frontend-development/overview', label: 'Frontend Overview', key: 'frontend-overview' },
-            { type: 'doc', id: 'community/contributing/contributing-code/frontend-development/scaffolding-tool', label: 'Scaffolding Tool' },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/frontend-development/overview',
+              label: 'Frontend Overview',
+              key: 'frontend-overview',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/frontend-development/scaffolding-tool',
+              label: 'Scaffolding Tool',
+            },
           ],
         },
         {
@@ -477,12 +499,38 @@ const sidebars: SidebarsConfig = {
           collapsed: true,
           collapsible: true,
           items: [
-            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/overview', label: 'Documentation Overview', key: 'docs-overview' },
-            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/development-pipeline', label: 'Documentation Development Pipeline', key: 'docs-development-pipeline' },
-            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/writing-documentation', label: 'Writing Documentation' },
-            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/documentation-style-guide', label: 'Style Guide' },
-            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/advanced-topics', label: 'Advanced Topics' },
-            { type: 'doc', id: 'community/contributing/contributing-code/documentation-development/glossary', label: 'Glossary' },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/documentation-development/overview',
+              label: 'Documentation Overview',
+              key: 'docs-overview',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/documentation-development/development-pipeline',
+              label: 'Documentation Development Pipeline',
+              key: 'docs-development-pipeline',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/documentation-development/writing-documentation',
+              label: 'Writing Documentation',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/documentation-development/documentation-style-guide',
+              label: 'Style Guide',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/documentation-development/advanced-topics',
+              label: 'Advanced Topics',
+            },
+            {
+              type: 'doc',
+              id: 'community/contributing/contributing-code/documentation-development/glossary',
+              label: 'Glossary',
+            },
           ],
         },
       ],
@@ -501,9 +549,7 @@ const sidebars: SidebarsConfig = {
       className: 'sidebar-section',
       collapsed: false,
       collapsible: false,
-      items: [
-        { type: 'doc', id: 'community/release-operations', label: 'Release Operations' },
-      ],
+      items: [{type: 'doc', id: 'community/release-operations', label: 'Release Operations'}],
     },
   ],
 };

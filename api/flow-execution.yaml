@@ -2,7 +2,7 @@ openapi: 3.0.3
 
 info:
   title: Flow Execution API for App Native Authentication
-  description: This API is used to execute app native authentication flows.
+  description: Drive app-native authentication flows step by step. The caller initiates a flow, receives a step descriptor, submits the required input, and repeats until the flow reaches a success or failure terminal state.
   version: "1.0"
   license:
     name: Apache 2.0
@@ -17,7 +17,7 @@ servers:
         default: "8090"
 
 tags:
-  - name: flow-execution
+  - name: Flow Execution
     description: Execute app native authentication and registration flow steps.
 
 security: []
@@ -28,7 +28,7 @@ paths:
       summary: Execute a flow step
       description: Execute a step in an authentication flow.
       tags:
-        - flow-execution
+        - Flow Execution
       requestBody:
         required: true
         content:
@@ -48,7 +48,7 @@ paths:
                 value:
                   executionId: "2c6d4c45-3de9-4a70-ae6b-ba1d034af6bc"
                   challengeToken: "a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2"
-                  actionId: "basic_auth"
+                  action: "basic_auth"
                   inputs: {
                     "username": "thor",
                     "password": "thor@123"
@@ -69,7 +69,6 @@ paths:
                   propertyName: flowStatus
                   mapping:
                     INCOMPLETE: '#/components/schemas/IncompleteFlowResponse'
-                    PROMPT_ONLY: '#/components/schemas/IncompleteFlowResponse'
                     COMPLETE: '#/components/schemas/CompleteFlowResponse'
                     ERROR: '#/components/schemas/ErrorFlowResponse'
               examples:
@@ -77,7 +76,7 @@ paths:
                   summary: Incomplete flow (prompt for user input)
                   value:
                     executionId: "2c6d4c45-3de9-4a70-ae6b-ba1d034af6bc"
-                    flowStatus: "PROMPT_ONLY"
+                    flowStatus: "INCOMPLETE"
                     stepId: "3071b6c6-0119-465c-b00b-3a0e6f88a730"
                     challengeToken: "a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2"
                     type: "VIEW"
@@ -169,6 +168,10 @@ components:
             - REGISTRATION
             - RECOVERY
           example: "AUTHENTICATION"
+        verbose:
+          type: boolean
+          description: When true, the response includes full UI metadata (meta/components) for prompt nodes
+          example: false
 
     SubSequentFlowRequest:
       type: object
@@ -183,17 +186,23 @@ components:
           type: string
           description: Per-step challenge token received from the previous flow response
           example: "a3f2e1b0c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d0e9f8a7b6c5d4e3f2"
-        actionId:
+        action:
           type: string
-          description: Identifier of the action to execute in the flow
+          description: Reference of the action to execute in the flow
           example: "basic_auth"
         inputs:
           type: object
           description: Input data provided for the flow step execution
+          additionalProperties:
+            type: string
           example: {
             "username": "thor",
             "password": "thor@123"
           }
+        verbose:
+          type: boolean
+          description: When true, the response includes full UI metadata (meta/components) for prompt nodes
+          example: false
 
     IncompleteFlowResponse:
       type: object
@@ -210,7 +219,9 @@ components:
         flowStatus:
           type: string
           description: Status of the flow execution
-          example: "PROMPT_ONLY"
+          enum:
+            - INCOMPLETE
+          example: "INCOMPLETE"
         stepId:
           type: string
           description: Identifier of the current flow step
@@ -242,7 +253,9 @@ components:
         flowStatus:
           type: string
           description: Status of the flow execution
-          example: "PROMPT_ONLY"
+          enum:
+            - COMPLETE
+          example: "COMPLETE"
         assertion:
           type: string
           description: Authentication assertion. This will be the JWT authentication token
@@ -349,6 +362,12 @@ components:
           type: boolean
           description: Whether the input is required
           example: true
+        options:
+          type: array
+          items:
+            type: string
+          description: Allowed values for SELECT-type inputs
+          example: ["option1", "option2"]
 
     Error:
       type: object

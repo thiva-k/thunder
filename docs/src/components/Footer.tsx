@@ -19,10 +19,10 @@
 import Link from '@docusaurus/Link';
 import {useBaseUrlUtils} from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
 import ThemedImage from '@theme/ThemedImage';
 import {Box, Container, Typography} from '@wso2/oxygen-ui';
 import React, {JSX} from 'react';
+import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
 
 interface FooterColumnProps {
   title: string;
@@ -143,7 +143,11 @@ export default function Footer(): JSX.Element {
             borderTop: '1px solid',
             borderColor: 'divider',
             pt: 3,
-            textAlign: 'center',
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: 2,
           }}
         >
           <Typography
@@ -154,6 +158,38 @@ export default function Footer(): JSX.Element {
             }}
           >
             &copy; WSO2 LLC. All rights reserved.
+          </Typography>
+          <Typography
+            component={Link}
+            href="/privacy-policy"
+            variant="caption"
+            sx={{
+              color: 'text.disabled',
+              fontSize: '0.75rem',
+              textDecoration: 'none',
+              '&:hover': {
+                color: 'text.secondary',
+                textDecoration: 'none',
+              },
+            }}
+          >
+            Privacy Policy
+          </Typography>
+          <Typography
+            component={Link}
+            href="/cookie-policy"
+            variant="caption"
+            sx={{
+              color: 'text.disabled',
+              fontSize: '0.75rem',
+              textDecoration: 'none',
+              '&:hover': {
+                color: 'text.secondary',
+                textDecoration: 'none',
+              },
+            }}
+          >
+            Cookie Policy
           </Typography>
         </Box>
       </Container>
