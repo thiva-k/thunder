@@ -18,16 +18,20 @@
 
 import Link from '@docusaurus/Link';
 import {translate} from '@docusaurus/Translate';
-import {useActiveVersion} from '@docusaurus/plugin-content-docs/client';
+import {useActiveVersion, useDoc} from '@docusaurus/plugin-content-docs/client';
 import IconHome from '@theme/Icon/Home';
 import React, {type ReactNode} from 'react';
 
 import styles from './styles.module.css';
 
+const SDK_SIDEBARS = new Set(['browserSdkSidebar', 'expressSdkSidebar', 'reactSdkSidebar', 'vueSdkSidebar']);
+
 export default function HomeBreadcrumbItem(): ReactNode {
   const activeVersion = useActiveVersion(undefined);
+  const {metadata} = useDoc();
   // version.path is the docs version root (e.g. /thunder/docs/next)
   const docsHomeHref = activeVersion?.path ?? '/docs';
+  const homeHref = SDK_SIDEBARS.has(metadata.sidebar ?? '') ? `${docsHomeHref}/sdks/overview` : docsHomeHref;
 
   return (
     <li className="breadcrumbs__item">
@@ -38,7 +42,7 @@ export default function HomeBreadcrumbItem(): ReactNode {
           description: 'The ARIA label for the home page in the breadcrumbs',
         })}
         className="breadcrumbs__link"
-        href={docsHomeHref}>
+        href={homeHref}>
         <IconHome className={styles.breadcrumbHomeIcon} />
       </Link>
     </li>
