@@ -145,7 +145,7 @@ export async function resolveUser(request) {
       email: "local.traveler@example.com",
       givenName: "Local",
       familyName: "Traveler",
-      scopes: ["booking:read", "booking:create", "booking:cancel"]
+      scopes: ["booking:read", "booking:create", "booking:cancel", "booking:recommend"]
     };
   }
 

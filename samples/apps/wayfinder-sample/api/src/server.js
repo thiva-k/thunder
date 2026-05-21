@@ -188,7 +188,7 @@ async function route(request, response) {
     if (request.method === "GET" && url.pathname === "/api/flights/recommended") {
       const user = await resolveUser(request);
 
-      requireScope(user, "flight:recommend");
+      requireScope(user, "booking:recommend");
 
       const rawLimit = Number(url.searchParams.get("limit") || 3);
       const limit = Math.min(Math.max(Number.isFinite(rawLimit) ? rawLimit : 3, 1), 10);

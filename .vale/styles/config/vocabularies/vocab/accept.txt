@@ -89,3 +89,5 @@ npx
 [Oo]nboards
 Sif
 Baldur
+[Rr]ecommender
+[Uu]ncheck

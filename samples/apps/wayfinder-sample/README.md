@@ -41,14 +41,14 @@ The sample uses two OAuth clients and three token types:
 | Token | OAuth Client | Grant | Purpose |
 |-------|-------------|-------|---------|
 | **User token** | `WAYFINDER` | `authorization_code` | Frontend sign-in, API calls, chat API auth (`agent:access` scope) |
-| **M2M token** | `WAYFINDER-CHAT-AGENT` | `client_credentials` | Agent's own identity for browsing tools (search flights, hotels) via MCP |
-| **OBO token** | `WAYFINDER-CHAT-AGENT` | `authorization_code` + PKCE | User-context token for mutating tools (booking, cancellation) via MCP |
+| **M2M token** | `WAYFINDER-CONCIERGE` | `client_credentials` | Agent's own identity for browsing tools (search flights, hotels) via MCP |
+| **OBO token** | `WAYFINDER-CONCIERGE` | `authorization_code` + PKCE | User-context token for mutating tools (booking, cancellation) via MCP |
 
 **How it works:**
 
-1. The user signs in to the Wayfinder web app via the `WAYFINDER` OAuth application. The issued token carries `agent:access` (from the Wayfinder Chat User role).
+1. The user signs in to the Wayfinder web app via the `WAYFINDER` OAuth application. The issued token carries `agent:access` (from the Chat User role).
 2. When the user sends a chat message, the frontend calls `POST /chat` on the AI Agent API with the user's access token in the `Authorization` header. The AI Agent validates the token has the `agent:access` scope before processing the message.
-3. For browsing tools (search flights, search hotels), the AI Agent uses its own M2M token (obtained via `client_credentials` with the `WAYFINDER-CHAT-AGENT` credentials) to call the MCP server, which proxies to the REST API.
+3. For browsing tools (search flights, search hotels), the AI Agent uses its own M2M token (obtained via `client_credentials` with the `WAYFINDER-CONCIERGE` credentials) to call the MCP server, which proxies to the REST API.
 4. For mutating tools (create booking, cancel booking), the AI Agent returns a `need_user_consent` response. The frontend opens a consent popup, the user signs in and picks which booking permissions to grant (`booking:read`, `booking:create`, `booking:cancel`), and the authorization code is submitted to `POST /chat/consent`. The agent exchanges it for a user-context token, and the frontend retries the original message.
 5. The REST API validates the JWT on every request and enforces scopes per route — browsing endpoints are open, booking endpoints require the matching `booking:*` scope.
 
@@ -56,11 +56,11 @@ The sample uses two OAuth clients and three token types:
 
 - A ThunderID **agent** acting as an autonomous principal — distinct from a ThunderID user.
 - The agent's **machine-to-machine (M2M) token** used for read-only browsing tools (search flights, search hotels, recommend flights, etc.).
-- **Scope-based access control** on the AI Agent's HTTP API — only users with `agent:access` can use the chat. Users without this scope (e.g. `jane.smith`) can browse and book through the UI but cannot use the chat agent.
+- **Scope-based access control** on the AI Agent's HTTP API — only users with `agent:access` can use the chat. Users without this scope (e.g. `jane.smith`) can browse and book through the UI but cannot use the Wayfinder Concierge.
 - An **on-behalf-of (OBO)** flow triggered from inside a chat session: the agent returns a consent request, the frontend opens a popup where the user picks which booking permissions to grant, and the issued user-context token only carries the approved subset.
-- A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`, `flight:recommend`).
+- A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`, `booking:recommend`).
 - A **self-service profile page** at `/profile` that calls Thunder's `/users/me` directly with the `WAYFINDER` user token to read account details, edit attributes, and change the password.
-- **Multi-LLM support** — the chat agent works with both **Anthropic Claude** and **Google Gemini**, selectable via an environment variable.
+- **Multi-LLM support** — the Wayfinder Concierge works with both **Anthropic Claude** and **Google Gemini**, selectable via an environment variable.
 
 ## Project Structure
 
@@ -71,7 +71,7 @@ wayfinder-sample/
 ├── api/               Node REST API backed by SQLite. Validates JWTs
 │                      and enforces scopes on booking routes.
 ├── mcp/               Streamable-HTTP MCP server that wraps the REST API.
-├── ai-agent/          HTTP chat agent API (LangChain + Claude/Gemini).
+├── ai-agent/          HTTP Wayfinder Concierge API (LangChain + Claude/Gemini).
 ├── thunderid-config/  Importable YAML config for ThunderID setup.
 └── README.md
 ```
@@ -115,14 +115,15 @@ The import creates:
 | Resource | Type | What it creates |
 |----------|------|-----------------|
 | `wayfinder-agent` | Resource server | `agent:access` permission |
-| `booking-api` | Resource server | `booking:read`, `booking:create`, `booking:cancel` permissions |
+| `booking-api` | Resource server | `booking:read`, `booking:create`, `booking:cancel`, `booking:recommend` permissions |
 | `WAYFINDER` | Application | Public OAuth app (PKCE, redirect to `http://localhost:5173`) |
-| `WAYFINDER-CHAT-AGENT` | Agent | Confidential OAuth client with `client_credentials` + `authorization_code` grants |
+| `WAYFINDER-CONCIERGE` | Agent | Confidential OAuth client with `client_credentials` + `authorization_code` grants |
 | Basic Authentication with Consent | Flow | Authentication flow with consent screen (assigned to the agent) |
-| Wayfinder Chat User | Role | `agent:access` permission |
-| Wayfinder User | Role | Booking permissions |
-| `john.doe` / `john.doe` | User | Demo user with chat agent access and booking permissions |
-| `jane.smith` / `jane.smith` | User | Demo user with booking permissions but **no** chat agent access |
+| Chat User | Role | `agent:access` permission |
+| Booking User | Role | `booking:read`, `booking:create`, `booking:cancel` permissions |
+| Recommender | Role | `booking:recommend` permission (assigned to the Wayfinder Concierge) |
+| `john.doe` / `john.doe` | User | Demo user with Concierge access and booking permissions |
+| `jane.smith` / `jane.smith` | User | Demo user with booking permissions but **no** Concierge access |
 
 The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderid.env`). Change it in the env file before importing if you prefer a different value.
 
@@ -165,7 +166,7 @@ You can also ask the agent for general recommendations — for example:
 Suggest a few flight deals.
 ```
 
-This calls the `recommend_flights` MCP tool, which hits `GET /api/flights/recommended` with the agent's M2M token. The endpoint requires the `flight:recommend` scope, which is granted to the `WAYFINDER-CHAT-AGENT` agent via its role assignment.
+This calls the `recommend_flights` MCP tool, which hits `GET /api/flights/recommended` with the agent's M2M token. The endpoint requires the `booking:recommend` scope, which is granted to the `WAYFINDER-CONCIERGE` agent via its **Recommender** role assignment.
 
 Then:
 
@@ -181,4 +182,4 @@ Click your name in the top-right corner and pick **Profile** to view your accoun
 
 ### No Chat Access
 
-Sign out and sign in as `jane.smith` / `jane.smith`. Jane can browse flights, hotels, and manage bookings through the web UI. Sending a chat message returns a 403 error — her token lacks the `agent:access` scope because she is not assigned the **Wayfinder Chat User** role.
+Sign out and sign in as `jane.smith` / `jane.smith`. Jane can browse flights, hotels, and manage bookings through the web UI. Sending a chat message returns a 403 error — her token lacks the `agent:access` scope because she is not assigned the **Chat User** role.
