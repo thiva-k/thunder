@@ -57,6 +57,7 @@ The sample uses two OAuth clients and three token types:
 - A ThunderID **agent** acting as an autonomous principal — distinct from a ThunderID user.
 - The agent's **machine-to-machine (M2M) token** used for read-only browsing tools (search flights, search hotels, recommend flights, etc.).
 - **Scope-based access control** on the AI Agent's HTTP API — only users with `agent:access` can use the chat. Users without this scope (e.g. `jane.smith`) can browse and book through the UI but cannot use the Wayfinder Concierge.
+- A **typed user model** — `Customer` user type for consumers, `Staff` user type for internal team — with self sign-up, password recovery, and staff invitation flows backing the B2C use-case story.
 - An **on-behalf-of (OBO)** flow triggered from inside a chat session: the agent returns a consent request, the frontend opens a popup where the user picks which booking permissions to grant, and the issued user-context token only carries the approved subset.
 - A REST API that **verifies the JWT** and **enforces scopes per route** (`booking:read`, `booking:create`, `booking:cancel`, `booking:recommend`).
 - A **self-service profile page** at `/profile` that calls Thunder's `/users/me` directly with the `WAYFINDER` user token to read account details, edit attributes, and change the password.
@@ -107,6 +108,20 @@ The `thunderid-config/` directory contains a single importable YAML that creates
 
 ### Import Resources
 
+**Before you import**, delete the bundled `default-user-onboarding` flow. ThunderID permits only one `USER_ONBOARDING` flow at a time. The Wayfinder bundle ships its own with Support and DestinationsAdmin branches that attach the matching role on invitation accept.
+
+```bash
+# Look up the default flow ID first
+curl -k -H "Authorization: Bearer $TOKEN" \
+  https://localhost:8090/flows?flowType=USER_ONBOARDING
+
+# Delete it
+curl -k -X DELETE -H "Authorization: Bearer $TOKEN" \
+  https://localhost:8090/flows/<default-onboarding-flow-id>
+```
+
+Then import the bundle:
+
 1. Start ThunderID and open the Console.
 2. On the **welcome screen** (shown on first login, or accessible from the user profile menu), choose **Open** and upload `thunderid-config/thunderid-config.yaml`. Then for environment variables, upload `thunderid-config/thunderid.env`.
 
@@ -114,18 +129,27 @@ The import creates:
 
 | Resource | Type | What it creates |
 |----------|------|-----------------|
+| `Customer` | User type | Consumer schema (`username`, `email`, `password`, `given_name`, `family_name`, `sub`) with self-registration enabled |
+| `Staff` | User type | Internal team schema (`username`, `email`, `password`, `displayName`) |
 | `wayfinder-agent` | Resource server | `agent:access` permission |
 | `booking-api` | Resource server | `booking:read`, `booking:create`, `booking:cancel`, `booking:recommend` permissions |
-| `WAYFINDER` | Application | Public OAuth app (PKCE, redirect to `http://localhost:5173`) |
+| `WAYFINDER` | Application | Public OAuth app (PKCE, redirect to `http://localhost:5173`) with registration and recovery flows enabled |
 | `WAYFINDER-CONCIERGE` | Agent | Confidential OAuth client with `client_credentials` + `authorization_code` grants |
-| Basic Authentication with Consent | Flow | Authentication flow with consent screen (assigned to the agent) |
-| Chat User | Role | `agent:access` permission |
-| Booking User | Role | `booking:read`, `booking:create`, `booking:cancel` permissions |
-| Recommender | Role | `booking:recommend` permission (assigned to the Wayfinder Concierge) |
+| `wayfinder-registration-flow` | Flow | Self sign-up flow (REGISTRATION). Assigns the `Traveler` role on completion. |
+| `wayfinder-recovery-flow` | Flow | Email-link password recovery flow (RECOVERY) |
+| `wayfinder-onboarding-flow` | Flow | Staff onboarding flow (USER_ONBOARDING) with Support/DestinationsAdmin role-selection branches |
+| `wayfinder-agent-auth-flow` | Flow | Authentication flow with consent screen (assigned to the AI chat agent) |
+| `Traveler` | Role | Booking permissions, assigned to `john.doe` and `jane.smith` |
+| `Support` | Role | Staff role for consumer support workflows |
+| `DestinationsAdmin` | Role | Staff role for curating featured destinations |
+| `OpsAdmin` | Role | Staff role for managing other staff, assigned to `alex.carter` |
+| `Wayfinder Chat User` | Role | `agent:access` permission, assigned to `john.doe` |
+| `Recommender` | Role | `booking:recommend` permission (assigned to the Wayfinder Concierge) || `john.doe` / `john.doe` | User | Customer with `Traveler` and `Wayfinder Chat User` roles |
 | `john.doe` / `john.doe` | User | Demo user with Concierge access and booking permissions |
-| `jane.smith` / `jane.smith` | User | Demo user with booking permissions but **no** Concierge access |
+| `jane.smith` / `jane.smith` | User | Demo user with booking permissions but **no** Concierge access, Customer with the `Traveler` role |
+| `alex.carter` / `alex.carter` | User | Staff with the `OpsAdmin` role for inviting other staff |
 
-The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderid.env`). Change it in the env file before importing if you prefer a different value.
+The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderid.env`). Change it in the environment file before importing if you prefer a different value.
 
 ## Configure the Sample
 
