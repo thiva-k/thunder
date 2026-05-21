@@ -332,7 +332,10 @@ const sidebars: SidebarsConfig = {
           collapsed: true,
           items: [
             {type: 'doc', id: 'use-cases/ai-agents/overview', label: 'Overview', key: 'ai-agents-overview'},
+            {type: 'doc', id: 'use-cases/ai-agents/protect-your-agent', label: 'Protect Your Agent'},
+            {type: 'doc', id: 'use-cases/ai-agents/connect-to-services', label: 'Connect to Services'},
             {type: 'doc', id: 'use-cases/ai-agents/multi-agent-workflows', label: 'Multi-Agent Workflows'},
+            {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization', label: 'MCP Authorization'},
             {type: 'doc', id: 'use-cases/ai-agents/try-it-out', label: 'Try It Out', key: 'ai-agents-try-it-out'},
           ],
         },
