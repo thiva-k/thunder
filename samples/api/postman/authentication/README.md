@@ -107,7 +107,7 @@ Import the `environment.json` file into Postman and fill in the required values.
 |----------|-------------|
 | `ASGARDEO_CLIENT_ID` | Asgardeo OAuth client ID |
 | `ASGARDEO_CLIENT_SECRET` | Asgardeo OAuth client secret |
-| `ASGARDEO_BASE_URI` | Asgardeo organization base URI (Ex: https://api.asgardeo.io/t/your-org) |
+| `THUNDERID_BASE_URI` | Asgardeo organization base URI (Ex: https://localhost:8090) |
 
 Note: Replace `your-org` with your actual Asgardeo organization name.
 
@@ -174,7 +174,7 @@ These variables will be auto-populated during the resource setup phase:
 | `demoSchemaName` | Created demo user schema name |
 | `googleIDPId` | Created Google IDP ID |
 | `githubIDPId` | Created GitHub IDP ID |
-| `asgardeoIDPId` | Created Asgardeo IDP ID |
+| `thunderidIDPId` | Created Asgardeo IDP ID |
 | `messageNotificationSenderId` | Created SMS notification sender ID |
 | `loginApplicationId` | Created demo application ID |
 | `basicAuthFlowGraphId` | Created basic authentication flow graph ID |
@@ -205,7 +205,7 @@ These variables are automatically populated during the demo execution:
 | `first_factor_assertion` | First factor authentication assertion for MFA flows |
 | `google_session_token` | Google authentication session token |
 | `github_session_token` | GitHub authentication session token |
-| `asgardeo_session_token` | Asgardeo authentication session token |
+| `thunderid_session_token` | Asgardeo authentication session token |
 | `exec_flow_id` | Flow execution ID for flow-native APIs |
 | `exec_challenge_token` | Challenge token for flow execution |
 | `auth_std_auth_id` | OAuth standard flow auth ID |

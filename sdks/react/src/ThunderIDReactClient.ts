@@ -264,7 +264,6 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
       // NOTE: With React 19 strict mode, the initialization logic runs twice, and there's an intermittent
       // issue where the config object is not getting stored in the storage layer with Vite scaffolding.
       // Hence, we need to check if the client is initialized but the config object is empty, and reinitialize.
-      // Tracker: https://github.com/asgardeo/asgardeo-auth-react-sdk/issues/240
       if (!config || Object.keys(config).length === 0) {
         await this.initialize(this._initializeConfig);
       }

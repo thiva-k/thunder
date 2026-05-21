@@ -52,7 +52,7 @@ export interface UpdateMeProfileConfig extends Omit<RequestInit, 'method' | 'bod
  * ```typescript
  * // Using default fetch
  * await updateMeProfile({
- *   url: "https://api.asgardeo.io/t/<ORG>/scim2/Me",
+ *   url: "https://localhost:8090/scim2/Me",
  *   payload: { "urn:scim:wso2:schema": { mobileNumbers: ["0777933830"] } }
  * });
  * ```
@@ -61,7 +61,7 @@ export interface UpdateMeProfileConfig extends Omit<RequestInit, 'method' | 'bod
  * ```typescript
  * // Using custom fetcher (e.g., axios-based httpClient)
  * await updateMeProfile({
- *   url: "https://api.asgardeo.io/t/<ORG>/scim2/Me",
+ *   url: "https://localhost:8090/scim2/Me",
  *   payload: { "urn:scim:wso2:schema": { mobileNumbers: ["0777933830"] } },
  *   fetcher: async (url, config) => {
  *     const response = await httpClient({

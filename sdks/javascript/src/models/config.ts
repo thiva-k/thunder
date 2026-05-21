@@ -146,7 +146,7 @@ export interface BaseConfig<T = unknown> extends WithPreferences, WithExtensions
 
   /**
    * The base URL of the ThunderID identity server.
-   * Example: "https://api.asgardeo.io/t/{org_name}"
+   * Example: "https://localhost:8090"
    */
   baseUrl: string | undefined;
 
@@ -555,7 +555,6 @@ export interface Preferences {
   /**
    * User profile preferences for controlling user data fetching behavior.
    * TEMPORARY CONFIG
-   * TODO: Remove this once https://github.com/asgardeo/javascript/issues/412 is properly fixed.
    */
   user?: UserPreferences;
 }
