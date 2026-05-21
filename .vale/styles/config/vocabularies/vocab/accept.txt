@@ -94,3 +94,5 @@ Sif
 Baldur
 [Rr]ecommender
 [Uu]ncheck
+[Hh]ardcoded
+[Ss]ignup

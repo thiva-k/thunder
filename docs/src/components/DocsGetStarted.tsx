@@ -249,7 +249,7 @@ function QuickstartPanel({isVisible}: {isVisible: boolean}): JSX.Element {
         </Typography>
         <Box
           component={Link}
-          to="/docs/next/guides/working-with-ai/mcp-server"
+          to="/docs/next/guides/working-with-ai/get-started-with-mcp"
           sx={{
             flexShrink: 0,
             display: 'inline-flex',
