@@ -19,7 +19,7 @@
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import {Box, Card, Container, Typography, useTheme} from '@wso2/oxygen-ui';
 import {MessagesSquareIcon} from '@wso2/oxygen-ui-icons-react';
-import React, {JSX} from 'react';
+import {JSX} from 'react';
 import useIsDarkMode from '../../hooks/useIsDarkMode';
 import useScrollAnimation from '../../hooks/useScrollAnimation';
 import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
@@ -36,7 +36,6 @@ interface CommunityCardProps {
 function CommunityCard({icon, iconBg, title, description, linkLabel, href}: CommunityCardProps) {
   const isDark = useIsDarkMode();
   const theme = useTheme();
-  const {siteConfig} = useDocusaurusContext();
 
   return (
     <Card
@@ -50,31 +49,54 @@ function CommunityCard({icon, iconBg, title, description, linkLabel, href}: Comm
         alignItems: 'center',
         textAlign: 'center',
         cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        bgcolor: isDark ? 'rgba(255, 255, 255, 0.025)' : 'rgba(0, 0, 0, 0.02)',
+        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        bgcolor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.02)',
+        backdropFilter: 'blur(12px)',
         border: '1px solid',
         borderColor: 'divider',
         borderRadius: '16px',
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '2px',
+          background: `linear-gradient(90deg, ${theme.vars?.palette.primary.dark} 0%, ${theme.vars?.palette.primary.main} 100%)`,
+          opacity: 0,
+          transition: 'opacity 0.3s ease',
+        },
+        '&:hover::before': {opacity: 1},
         '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: isDark ? '0 12px 32px rgba(0, 0, 0, 0.4)' : '0 12px 32px rgba(0, 0, 0, 0.1)',
-          borderColor: `rgba(${theme.vars?.palette.primary.main} / 0.25)`,
-          bgcolor: isDark ? 'rgba(255, 255, 255, 0.035)' : 'rgba(0, 0, 0, 0.03)',
+          transform: 'translateY(-6px)',
+          boxShadow: isDark
+            ? `0 16px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(${theme.vars?.palette.primary.main} / 0.2)`
+            : `0 16px 40px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(${theme.vars?.palette.primary.main} / 0.15)`,
+          borderColor: `rgba(${theme.vars?.palette.primary.main} / 0.3)`,
+          bgcolor: isDark ? 'rgba(255, 255, 255, 0.045)' : 'rgba(0, 0, 0, 0.025)',
         },
       }}
       onClick={() => window.open(href, '_blank', 'noopener noreferrer')}
     >
       <Box
         sx={{
-          width: 56,
-          height: 56,
-          borderRadius: '14px',
+          width: 60,
+          height: 60,
+          borderRadius: '16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           background: iconBg,
           color: 'common.white',
           mb: 3,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          '.MuiCard-root:hover &': {
+            transform: 'scale(1.1)',
+            boxShadow: '0 12px 32px rgba(0,0,0,0.3)',
+          },
         }}
       >
         {icon}
@@ -144,6 +166,7 @@ function IssueIcon() {
 
 export default function CommunitySection(): JSX.Element {
   const theme = useTheme();
+  const isDark = useIsDarkMode();
   const {ref, isVisible} = useScrollAnimation({threshold: 0.15});
   const {siteConfig} = useDocusaurusContext();
   const productName = (siteConfig.customFields?.product as DocusaurusProductConfig).project.name;
@@ -198,8 +221,8 @@ export default function CommunitySection(): JSX.Element {
               maxWidth: '600px',
             }}
           >
-            We're building {productName} with you. Engage with our ever-growing community to get the latest updates,
-            product support, and more.
+            We&apos;re building {productName} with you. Engage with our ever-growing community to get the latest
+            updates, product support, and more.
           </Typography>
 
           <Box
@@ -213,7 +236,7 @@ export default function CommunitySection(): JSX.Element {
           >
             <CommunityCard
               icon={<GitForkIcon />}
-              iconBg={`linear-gradient(135deg, ${theme.vars?.palette.primary.dark} 0%, ${theme.vars?.palette.primary.main} 100%)`}
+              iconBg="rgba(59,130,246,0.10)"
               title="Contribute"
               description={`Help shape ${productName} by submitting features, fixes, or improvements.`}
               linkLabel="Start Contributing"
@@ -221,7 +244,7 @@ export default function CommunitySection(): JSX.Element {
             />
             <CommunityCard
               icon={<IssueIcon />}
-              iconBg="linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
+              iconBg="rgba(59,130,246,0.10)"
               title="Report issues"
               description={`Identify bugs and suggest enhancements to make ${productName} better for everyone.`}
               linkLabel="Open an Issue"
@@ -229,7 +252,7 @@ export default function CommunitySection(): JSX.Element {
             />
             <CommunityCard
               icon={<MessagesSquareIcon />}
-              iconBg="linear-gradient(135deg, #5865F2 0%, #4752C4 100%)"
+              iconBg="rgba(59,130,246,0.10)"
               title="Join the Discussions"
               description="Ask questions, share ideas, and connect with the community through GitHub Discussions"
               linkLabel="Open Discussions"

@@ -32,6 +32,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/error/serviceerror"
 	"github.com/thunder-id/thunderid/internal/system/i18n/core"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
@@ -108,6 +109,13 @@ type ResourceServiceInterface interface {
 	FindResourceServersByPermissions(
 		ctx context.Context, permissions []string,
 	) ([]ResourceServer, *serviceerror.ServiceError)
+
+	// ResolveResourceServerOUHandle resolves ou_handle to an OU ID on the given resource server
+	// in-place. Called by the declarative loader validator so that file-based resource servers
+	// support ou_handle.
+	ResolveResourceServerOUHandle(
+		ctx context.Context, rs *ResourceServer,
+	) *serviceerror.ServiceError
 }
 
 // resourceService is the default implementation of ResourceServiceInterface.
@@ -1381,6 +1389,31 @@ func (rs *resourceService) FindResourceServersByPermissions(
 		return nil, &serviceerror.InternalServerError
 	}
 	return resourceServers, nil
+}
+
+// ResolveResourceServerOUHandle resolves ou_handle to an OU ID on the given resource server
+// in-place. Called by the declarative loader validator so that file-based resource servers
+// support ou_handle. If both ou_id and ou_handle are provided, ou_id wins and a warning is logged.
+func (rs *resourceService) ResolveResourceServerOUHandle(
+	ctx context.Context, server *ResourceServer,
+) *serviceerror.ServiceError {
+	if server.OUID != "" && server.OUHandle != "" {
+		rs.logger.Warn("Both ou_id and ou_handle provided for resource server; ou_handle ignored",
+			log.String("resourceServerID", server.ID), log.String("name", server.Name))
+		return nil
+	}
+	if server.OUID == "" && server.OUHandle != "" {
+		if rs.ouService == nil {
+			return &serviceerror.InternalServerError
+		}
+		ou, svcErr := rs.ouService.GetOrganizationUnitByPath(
+			security.WithRuntimeContext(ctx), server.OUHandle)
+		if svcErr != nil {
+			return &ErrorInvalidRequestFormat
+		}
+		server.OUID = ou.ID
+	}
+	return nil
 }
 
 // Validation helper methods

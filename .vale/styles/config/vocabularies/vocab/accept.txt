@@ -79,3 +79,7 @@ Memorystore
 [Ww]alkthrough
 Twilio
 Vonage
+mkdir
+[Ww]ayfinder
+[Dd]eclaratively
+client_credentials

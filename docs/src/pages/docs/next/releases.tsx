@@ -20,7 +20,7 @@ import Link from '@docusaurus/Link';
 import {useBaseUrlUtils} from '@docusaurus/useBaseUrl';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
-import {Avatar, AvatarGroup, Tooltip} from '@wso2/oxygen-ui';
+import {Avatar, AvatarGroup, Tooltip, Typography} from '@wso2/oxygen-ui';
 import React, {useEffect, useMemo, useState} from 'react';
 import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
 import GithubIcon from '@site/src/components/icons/GithubIcon';
@@ -438,7 +438,16 @@ export default function ReleasesPage() {
     >
       <main className="releases-shell">
         <section className="releases-hero">
-          <h1>Releases</h1>
+          <Typography
+            variant="h1"
+            sx={{
+              fontWeight: 700,
+              fontSize: {xs: '2.5rem', sm: '3rem', md: '3.5rem'},
+              lineHeight: 1.15,
+            }}
+          >
+            Releases
+          </Typography>
           <p>
             Explore every release with detailed changelogs, download options, and the people building {productName}.
           </p>

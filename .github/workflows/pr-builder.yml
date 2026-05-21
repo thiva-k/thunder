@@ -658,21 +658,66 @@ jobs:
           
           echo "Server started successfully!"
       
+      - name: 📦 Import Sample App Resources
+        run: |
+          echo "Importing React Vanilla Sample declarative resources..."
+          YAML_CONTENT=$(cat samples/apps/react-vanilla-sample/thunderid-config/thunderid-config.yaml)
+          HTTP_STATUS=$(curl -k -s -o /tmp/import_response.json -w "%{http_code}" \
+            -X POST https://localhost:8090/import \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"content\": $(echo "$YAML_CONTENT" | jq -Rs .),
+              \"variables\": {
+                \"SAMPLE_APP_CLIENT_ID\": \"sample_app_client\",
+                \"SAMPLE_APP_REDIRECT_URIS\": [\"https://localhost:3000\"]
+              },
+              \"options\": {\"upsert\": true}
+            }")
+          echo "Import HTTP status: $HTTP_STATUS"
+          cat /tmp/import_response.json | jq . || cat /tmp/import_response.json
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Failed to import React Vanilla Sample resources (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+          echo "✅ React Vanilla Sample resources imported successfully"
+
+          echo "Importing React SDK Sample declarative resources..."
+          YAML_CONTENT=$(cat samples/apps/react-sdk-sample/thunderid-config/thunderid-config.yaml)
+          HTTP_STATUS=$(curl -k -s -o /tmp/import_response.json -w "%{http_code}" \
+            -X POST https://localhost:8090/import \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"content\": $(echo "$YAML_CONTENT" | jq -Rs .),
+              \"variables\": {
+                \"REACT_SDK_SAMPLE_CLIENT_ID\": \"REACT_SDK_SAMPLE\",
+                \"REACT_SDK_SAMPLE_REDIRECT_URIS\": [\"https://localhost:3000\"]
+              },
+              \"options\": {\"upsert\": true}
+            }")
+          echo "Import HTTP status: $HTTP_STATUS"
+          cat /tmp/import_response.json | jq . || cat /tmp/import_response.json
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "❌ Failed to import React SDK Sample resources (HTTP $HTTP_STATUS)"
+            exit 1
+          fi
+          echo "✅ React SDK Sample resources imported successfully"
+
       - name: 🔍 Extract Sample App ID
         id: extract-app-id
         run: |
           echo "Fetching applications from the server..."
-          
+
           # Get applications list
           APPS_RESPONSE=$(curl -s -k https://localhost:8090/applications)
-          
-          # Extract Sample App ID using jq
-          SAMPLE_APP_ID=$(echo "$APPS_RESPONSE" | jq -r '.applications[] | select(.name == "Sample App") | .id')
-          
+
+          # Extract Sample App ID using jq (uses "Sample App" from vanilla sample,
+          # which is unaffected by MFA test setup/teardown)
+          SAMPLE_APP_ID=$(echo "$APPS_RESPONSE" | jq -r '(.applications // [])[] | select(.name == "Sample App") | .id')
+
           if [ -z "$SAMPLE_APP_ID" ] || [ "$SAMPLE_APP_ID" == "null" ]; then
             echo "⚠️  Warning: Sample App not found in applications list"
             echo "Available applications:"
-            echo "$APPS_RESPONSE" | jq -r '.applications[] | "  - \(.name) (\(.id))"'
+            echo "$APPS_RESPONSE" | jq -r '(.applications // [])[] | "  - \(.name) (\(.id))"'
             echo "sample_app_id=" >> $GITHUB_OUTPUT
           else
             echo "✓ Sample App ID extracted: $SAMPLE_APP_ID"
@@ -752,7 +797,7 @@ jobs:
           
           # Make start script executable
           chmod +x start.sh
-          
+
           echo "Starting Sample App..."
           ./start.sh &
           

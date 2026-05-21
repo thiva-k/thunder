@@ -34,9 +34,9 @@ export const DefaultThemeConfig = {
           contrastText: '#ffffff',
         },
         secondary: {
-          main: '#00b8d9',
-          dark: '#0097b2',
-          light: '#4dd8ef',
+          main: '#5498b4',
+          dark: '#2d8eac',
+          light: '#85cde3',
           contrastText: '#ffffff',
         },
         warning: {
@@ -75,10 +75,10 @@ export const DefaultThemeConfig = {
           contrastText: '#ffffff',
         },
         secondary: {
-          main: '#00d5ff',
-          dark: '#00b8d9',
-          light: '#6deeff',
-          contrastText: '#0a1628',
+          main: '#5498b4',
+          dark: '#2d8eac',
+          light: '#85cde3',
+          contrastText: '#0a2230',
         },
         warning: {
           main: '#f59e0b',

@@ -279,6 +279,15 @@ packages:
       pkgname: httpmock
       filename: "{{.InterfaceName}}_mock.go"
 
+  github.com/thunder-id/thunderid/internal/agent:
+    config:
+      dir: tests/mocks/agentmock
+      structname: '{{.InterfaceName}}Mock'
+      pkgname: agentmock
+      filename: "{{.InterfaceName}}_mock.go"
+    interfaces:
+      AgentServiceInterface:
+
   github.com/thunder-id/thunderid/internal/application:
     config:
       dir: tests/mocks/applicationmock

@@ -26,6 +26,7 @@ import NodeLogo from '../icons/NodeLogo';
 import NuxtLogo from '../icons/NuxtLogo';
 import ReactLogo from '../icons/ReactLogo';
 import VueLogo from '../icons/VueLogo';
+import useIsDarkMode from '@site/src/hooks/useIsDarkMode';
 
 const SDKS = [
   {name: 'HTML', packageName: '@thunderid/browser', icon: Html5Logo, href: '/docs/next/sdks/overview'},
@@ -40,6 +41,7 @@ const SDKS = [
 export default function SDKShowcaseSection(): JSX.Element {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
   const [hoveredIndex, rawSet] = useState<number | null>(null);
+  const isDark = useIsDarkMode();
   const setHoveredIndex = rawSet as (v: number | null) => void;
   const isHovering = hoveredIndex !== null;
   const hoveredSdk = SDKS.find((_, i) => i === hoveredIndex);
@@ -55,6 +57,7 @@ export default function SDKShowcaseSection(): JSX.Element {
           from: {opacity: 0, transform: 'translateY(16px)'},
           to: {opacity: 1, transform: 'translateY(0)'},
         },
+        background: isDark ? 'rgba(10, 10, 10, 0.2)' : 'rgba(255, 255, 255, 0.2)',
         animation: 'sdkFadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.6s both',
       }}
     >

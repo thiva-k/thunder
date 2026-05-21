@@ -7,11 +7,11 @@ description: Configure a generic OAuth 2.0 identity provider for federated authe
 
 # Add an OAuth 2.0 Identity Provider
 
-This guide explains how to register a generic OAuth 2.0 identity provider (IdP) in <ProductName />. Use this type for OAuth 2.0 providers that do not implement OpenID Connect discovery. If the provider supports OIDC, use [Add an OIDC Identity Provider](./add-oidc-provider) instead.
+This guide explains how to register a generic OAuth 2.0 identity provider (IdP) in <ProductName />. Use this type for OAuth 2.0 providers that do not implement OpenID Connect discovery. If the provider supports OIDC, use [Add an OIDC Identity Provider](../add-oidc-provider) instead.
 
 ## Prerequisites
 
-- <ProductName /> is running. See [Get Started](../../getting-started/get-thunderid).
+- <ProductName /> is running. See [Get Started](../../../getting-started/get-thunderid).
 - An access token with the `system` scope.
 - A client application registered in the external OAuth 2.0 provider with a **Client ID**, **Client Secret**, and **redirect URI**.
 - The provider's authorization endpoint, token endpoint, and userinfo endpoint URLs.
@@ -100,5 +100,5 @@ curl -kL -X POST https://localhost:8090/identity-providers \
 
 ## Next Steps
 
-- [Connect an IdP to an Application](./connect-idp-to-application) — Add this OAuth 2.0 IdP to an application's authentication flow.
-- [Manage Identity Providers](./manage-identity-providers) — Update or delete identity providers.
+- [Connect an IdP to an Application](../connect-idp-to-application) — Add this OAuth 2.0 IdP to an application's authentication flow.
+- [Manage Identity Providers](../manage-identity-providers) — Update or delete identity providers.

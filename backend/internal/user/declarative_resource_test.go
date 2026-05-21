@@ -234,7 +234,7 @@ func (suite *DeclarativeResourceTestSuite) TestMakeUserParser_ParsesYAMLToEntity
 		"credentials:\n" +
 		"  password: \"secret\"\n")
 
-	parser := makeUserParser()
+	parser := makeUserParser(nil)
 	e, _, systemCreds, err := parser(userYAML)
 
 	suite.NoError(err)

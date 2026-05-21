@@ -63,7 +63,7 @@ const siteUrl = process.env.DOCUSAURUS_URL || productConfig.documentation.deploy
 const config: Config = {
   title: productConfig.project.name,
   tagline: productConfig.project.description,
-  favicon: 'assets/images/favicon.ico',
+  favicon: 'assets/images/favicon-inverted.ico',
 
   noIndex: false,
 
@@ -74,6 +74,7 @@ const config: Config = {
 
   url: siteUrl,
   baseUrl,
+  trailingSlash: true,
 
   // GitHub pages deployment config.
   organizationName: productConfig.project.source.github.owner.name, // Usually your GitHub org/user name.
@@ -115,6 +116,24 @@ const config: Config = {
 
   headTags: [
     {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/assets/images/logo-mini.svg',
+        media: '(prefers-color-scheme: light)',
+        type: 'image/svg+xml',
+      },
+    },
+    {
+      tagName: 'link',
+      attributes: {
+        rel: 'icon',
+        href: '/assets/images/logo-mini-inverted.svg',
+        media: '(prefers-color-scheme: dark)',
+        type: 'image/svg+xml',
+      },
+    },
+    {
       tagName: 'script',
       attributes: {},
       innerHTML: `(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
@@ -138,7 +157,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
       innerHTML: 'function OptanonWrapper() { }',
     },
   ],
-
 
   plugins: [webpackPlugin, personaPlugin],
 
@@ -227,24 +245,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
           position: 'right',
         },
         {
-          label: 'Resources',
-          type: 'dropdown',
-          position: 'right',
-          className: 'navbar__link--dropdown',
-          items: [
-            {
-              label: 'Discussions',
-              href: productConfig.project.source.github.discussionsUrl,
-              className: 'navbar-resources__discussions',
-            },
-            {
-              label: 'Report an Issue',
-              href: productConfig.project.source.github.issuesUrl,
-              className: 'navbar-resources__issues',
-            },
-          ],
-        },
-        {
           type: 'docSidebar',
           sidebarId: 'communitySidebar',
           position: 'right',
@@ -253,28 +253,6 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         {
           type: 'custom-GitHubStarButton',
           position: 'right',
-        },
-        {
-          href: `https://github.com/${productConfig.project.source.github.fullName}`,
-          position: 'right',
-          className: 'navbar__github--link',
-          'aria-label': 'GitHub repository',
-        },
-        // Locale dropdown for i18n support.
-        // Will be visible when multiple locales are configured.
-        {
-          type: 'localeDropdown',
-          position: 'right',
-          dropdownItemsAfter: [
-            {
-              type: 'html',
-              value: '<hr style="margin: 0.3rem 0;">',
-            },
-            {
-              href: 'https://github.com/thunder-id/thunderid/issues/1912',
-              label: '🌍 Help translate',
-            },
-          ],
         },
         ...(productConfig.documentation.versioning.enabled
           ? [

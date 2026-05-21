@@ -12,7 +12,7 @@ An agent occupies multiple identity postures simultaneously, and each posture re
 - **Agent as subject** — the agent authenticates as itself to call APIs on its own behalf. Use the M2M (client credentials) pattern.
 - **Agent as actor** — the agent carries delegated authority on behalf of a user or another principal. Use the OBO (token exchange) pattern. The access the agent carries can never exceed the authority that was delegated to it.
 
-Both patterns use the token endpoint at `POST /oauth2/token`. The agent must be [registered with an OAuth inbound auth config](./manage-agents) before it can request tokens.
+Both patterns use the token endpoint at `POST /oauth2/token`. The agent must be [registered with an OAuth inbound auth config](../manage-agents) before it can request tokens.
 
 ## M2M Tokens (Agent as Subject)
 
@@ -183,6 +183,6 @@ Refresh tokens preserve the original full set of authorized audiences, so later 
 
 ## Next Steps
 
-- [Manage Agents](./manage-agents) — Configure OAuth credentials, assign groups, and rotate secrets.
-- [Resource Servers](../resource-servers) — Register resource servers and define the scopes they accept.
-- [Resource Indicators](../resource-indicators) — Use RFC 8707 `resource` parameters to issue audience-restricted tokens.
+- [Manage Agents](../manage-agents) — Configure OAuth credentials, assign groups, and rotate secrets.
+- [Resource Servers](../../resource-servers) — Register resource servers and define the scopes they accept.
+- [Resource Indicators](../../resource-indicators) — Use RFC 8707 `resource` parameters to issue audience-restricted tokens.

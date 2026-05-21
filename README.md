@@ -21,24 +21,41 @@ Core design goals of ThunderID include:
 
 ---
 
-## 🚀 Features
+## Architecture
 
-- **Standards-Based**
-  - OAuth 2/ OpenID Connect (OIDC): Client Credentials, Authorization Code, Refresh Token
-- **Login Options:**
-  - Basic Authentication (Username/Password)
-  - Social Logins: Google, Github
-  - SMS OTP
-- **Registration Options:**
-  - Username/Password
-  - Social Registration: Google, Github
-  - SMS OTP
-- **RESTful APIs:**
-  - App Native Login/Registration
-  - User Management
-  - Application Management
-  - Identity Provider Management
-  - Message Notification Sender Management
+<img src="https://thunderid.dev/assets/images/readme/architecture.png" alt="ThunderID Architecture" width="100%" />
+
+---
+
+## Features
+
+* **Identity Management**
+    * Humans, AI agents, and workloads as first-class identity types
+    * Hierarchical organizational units (OUs) and groups
+
+* **Standards**
+    * OAuth 2.1 and OpenID Connect, with PAR and PKCE
+    * WebAuthn / passkeys
+    * IdP federation — Google, Microsoft, GitHub, and any OIDC or SAML provider
+
+* **User Journeys**
+    * Login, registration, and recovery defined as journeys
+    * 20+ built-in executors — password, passkey, OTP, social login, consent, and more
+    * Orchestratable in the server or the application
+    * Themeable end-user UI
+
+* **Authorization**
+    * Hierarchical resources with derived permissions
+    * Role-based access control across users, agents, and applications
+    * Consent management with user-facing review
+
+* **Developer Experience**
+    * Console UI, REST APIs, and SDKs
+    * MCP server for managing and querying IAM from AI agents
+
+* **Declarative and GitOps-Ready**
+    * YAML resource definitions for every entity
+    * Immutable runtime — config is the source of truth
 
 ---
 
@@ -90,8 +107,6 @@ Follow these steps to download the latest release of ThunderID and run it locall
     .\setup.ps1
     ```
 
-    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>`.** You'll need it for the sample app configuration.
-
 4. **Start the product**
 
     If you are using a Linux or macOS machine:
@@ -133,8 +148,6 @@ Follow these steps to run ThunderID using Docker Compose.
     - Run the setup process
     - Start the ThunderID server
 
-    **Note the id of the sample app indicated with the log line `[INFO] Sample App ID: <id>` in the setup logs.** You'll need it for the sample app configuration.
-
     The product will start on `https://localhost:8090`.
 
 ### Try Out the Product
@@ -149,10 +162,11 @@ Follow these steps to access the ThunderID Console:
 
 #### Try Out with the Sample App
 
-ThunderID provides two sample applications to help you get started quickly:
+ThunderID provides the following sample applications to help you get started quickly:
 
 - **React Vanilla Sample** — Sample React application demonstrating direct API integration without external SDKs. Supports Native Flow API or Standard OAuth/OIDC.
 - **React SDK Sample** — Sample React application demonstrating SDK-based integration using `@asgardeo/react` for OAuth 2.0/OIDC authentication.
+- **Wayfinder Sample** — Travel app demonstrating an AI agent with its own ThunderID-managed identity. The agent uses a `client_credentials` token for browsing tools and an on-behalf-of `authorization_code` + PKCE flow for actions that need the user's consent.
 
 ##### React Vanilla Sample
 
@@ -167,15 +181,15 @@ ThunderID provides two sample applications to help you get started quickly:
     cd sample-app-react-vanilla-<version>-<os>-<arch>/
     ```
 
-3. **Configure the sample**
+3. **Import sample app resources**
 
-    Open `app/runtime.json` and set the `applicationID` to the sample app ID generated during "Setup the product":
+    The sample app ships with a `thunderid-config/` directory containing declarative resource definitions for the required user type and application.
 
-    ```json
-    {
-        "applicationID": "{your-application-id}"
-    }
-    ```
+    Before importing, edit `thunderid-config/thunderid.env` to set your preferred client credentials and redirect URIs.
+
+    Then import via the ThunderID Console:
+    - **First-time login**: a welcome screen appears with an **Open** button to upload the YAML file directly.
+    - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
 
 4. **Start the sample**
 
@@ -200,7 +214,24 @@ ThunderID provides two sample applications to help you get started quickly:
     cd sample-app-react-sdk-<version>-<os>-<arch>/
     ```
 
-3. **Start the sample**
+3. **Import sample app resources**
+
+    The sample app ships with a `thunderid-config/` directory containing declarative resource definitions for the required user type and application.
+
+    The default `thunderid-config/thunderid.env` uses `REACT_SDK_SAMPLE` as the client ID, which matches the pre-configured `dist/runtime.json` — no further changes are needed for a default setup. If you change `REACT_SDK_SAMPLE_CLIENT_ID` in `thunderid.env`, update `dist/runtime.json` to match:
+
+    ```json
+    {
+        "clientId": "{your-client-id}",
+        "baseUrl": "https://localhost:8090"
+    }
+    ```
+
+    Then import via the ThunderID Console:
+    - **First-time login**: a welcome screen appears with an **Open** button to upload the YAML file directly.
+    - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
+
+4. **Start the sample**
 
     ```bash
     ./start.sh
@@ -209,6 +240,39 @@ ThunderID provides two sample applications to help you get started quickly:
     Open your browser and navigate to [https://localhost:3000](https://localhost:3000) to access the sample app.
 
     > 📖 Refer to the `README.md` inside the extracted sample app for detailed configuration and troubleshooting.
+
+##### Wayfinder Sample
+
+1. **Download the sample**
+
+    Download `sample-app-wayfinder-<version>-<os>-<arch>.zip` from the [latest release](https://github.com/thunder-id/thunderid/releases/latest).
+
+2. **Unzip and navigate to the sample app directory**
+
+    ```bash
+    unzip sample-app-wayfinder-<version>-<os>-<arch>.zip
+    cd sample-app-wayfinder-<version>-<os>-<arch>/
+    ```
+
+3. **Import sample app resources**
+
+    The sample app ships with a `thunderid-config/` directory containing a single importable YAML that creates the resource servers, roles, users, the `WAYFINDER` OAuth app, and the `WAYFINDER-CHAT-AGENT` agent in one step. Import it via the ThunderID Console:
+    - **First-time login**: a welcome screen appears with an **Open** button. Upload `thunderid-config/thunderid-config.yaml`, then upload `thunderid-config/thunderid.env` for environment variables.
+    - **Later**: access the same welcome screen from the user profile menu in the top-right corner of the console.
+
+    After import, assign the demo users to their roles in **Roles** > **Wayfinder Chat User** (assign `john.doe`) and **Roles** > **Wayfinder User** (assign both `john.doe` and `jane.smith`). Role assignments are not part of the imported YAML because user IDs are auto-generated.
+
+4. **Start the sample**
+
+    The sample runs four services (REST API, MCP server, AI chat agent, and React frontend). Set your LLM API key (`ANTHROPIC_API_KEY` or `GOOGLE_API_KEY`) in `ai-agent/.env` — the agent secret defaults to `wayfinder-agent-secret` to match `thunderid.env`. Then:
+
+    ```bash
+    ./start.sh
+    ```
+
+    Open your browser and navigate to [http://localhost:5173](http://localhost:5173) to access the sample app.
+
+    > 📖 Refer to the `README.md` inside the extracted sample app for the full ThunderID setup, OBO flow details, and troubleshooting steps.
 
 ##### Self Register and Login (React Vanilla Sample)
 

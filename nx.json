@@ -24,6 +24,16 @@
       "cache": true
     }
   },
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "env": {
+          "NUXT_TELEMETRY_DISABLED": "1"
+        }
+      }
+    }
+  },
   "sync": {
     "applyChanges": false
   },
