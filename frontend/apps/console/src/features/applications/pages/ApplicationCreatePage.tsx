@@ -89,6 +89,7 @@ export default function ApplicationCreatePage(): JSX.Element {
     setSignInApproach,
     selectedTechnology,
     selectedPlatform,
+    hostingUrl,
     setHostingUrl,
     callbackUrlFromConfig,
     setCallbackUrlFromConfig,
@@ -217,6 +218,7 @@ export default function ApplicationCreatePage(): JSX.Element {
 
     const applicationData: CreateApplicationRequest = {
       name: appName,
+      ...(hostingUrl && {url: hostingUrl}),
       ...(authFlowId && {authFlowId}),
       ...(effectiveOuId && {ouId: effectiveOuId}),
       ...(finalTemplateId && {template: finalTemplateId}),
