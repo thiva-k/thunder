@@ -2427,3 +2427,78 @@ func TestImportResourceServer_OUIDWinsOverHandle(t *testing.T) {
 	require.Len(t, rsSvc.created, 1)
 	assert.Equal(t, "ou-explicit", rsSvc.created[0].OUID)
 }
+
+func TestImportResources_IDPPropertiesArePassedToService(t *testing.T) {
+	idpSvc := &fakeIDPService{byID: map[string]*idp.IDPDTO{}, byName: map[string]*idp.IDPDTO{}}
+	svc := newImportService(nil, idpSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	// is_secret with empty value avoids the encryption path while still verifying the flag is parsed.
+	content := strings.Join([]string{
+		"name: google-idp",
+		"type: GOOGLE",
+		"properties:",
+		"- name: client_id",
+		"  value: my-client-id",
+		"- name: client_secret",
+		"  is_secret: true",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Target: importTargetRuntime},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, idpSvc.created, 1)
+
+	created := idpSvc.created[0]
+	require.Len(t, created.Properties, 2)
+	assert.Equal(t, "client_id", created.Properties[0].GetName())
+	assert.False(t, created.Properties[0].IsSecret())
+	assert.Equal(t, "client_secret", created.Properties[1].GetName())
+	assert.True(t, created.Properties[1].IsSecret())
+
+	plainValue, err2 := created.Properties[0].GetValue()
+	require.NoError(t, err2)
+	assert.Equal(t, "my-client-id", plainValue)
+}
+
+func TestImportResources_IDPUpsertUpdatePropertiesArePassedToService(t *testing.T) {
+	existing := &idp.IDPDTO{ID: "idp-1", Name: "google-idp", Type: idp.IDPTypeGoogle}
+	idpSvc := &fakeIDPService{
+		byID:   map[string]*idp.IDPDTO{"idp-1": existing},
+		byName: map[string]*idp.IDPDTO{"google-idp": existing},
+	}
+	svc := newImportService(nil, idpSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+
+	content := strings.Join([]string{
+		"id: idp-1",
+		"name: google-idp",
+		"type: GOOGLE",
+		"properties:",
+		"- name: client_id",
+		"  value: updated-client-id",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: content,
+		Options: &ImportOptions{Upsert: boolPtr(true), Target: importTargetRuntime},
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, idpSvc.updated, 1)
+
+	updated := idpSvc.updated[0]
+	require.Len(t, updated.Properties, 1)
+	assert.Equal(t, "client_id", updated.Properties[0].GetName())
+
+	plainValue, err2 := updated.Properties[0].GetValue()
+	require.NoError(t, err2)
+	assert.Equal(t, "updated-client-id", plainValue)
+}
