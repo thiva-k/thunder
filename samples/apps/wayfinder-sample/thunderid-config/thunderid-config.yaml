@@ -253,6 +253,11 @@ permissions:
   - resource_server_id: wayfinder-agent-rs
     permissions:
       - agent:access
+assignments:
+  - id: wayfinder-demo-user
+    type: user
+  - id: wayfinder-demo-user-2
+    type: user
 
 ---
 # resource_type: role
@@ -266,6 +271,11 @@ permissions:
       - booking:read
       - booking:create
       - booking:cancel
+assignments:
+  - id: wayfinder-demo-user
+    type: user
+  - id: wayfinder-demo-user-2
+    type: user
 
 ---
 # resource_type: user

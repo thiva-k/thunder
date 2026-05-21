@@ -126,15 +126,6 @@ The import creates:
 
 The agent's client secret defaults to `wayfinder-agent-secret` (set in `thunderid.env`). Change it in the env file before importing if you prefer a different value.
 
-### Assign Users to Roles
-
-After the import, assign users to roles in the Console UI:
-
-1. Go to **Roles** > **Wayfinder Chat User** > **Assignments** > **User** > **Add**. Assign `john.doe`.
-2. Go to **Roles** > **Wayfinder User** > **Assignments** > **User** > **Add**. Assign both `john.doe` and `jane.smith`.
-
-> Role assignments reference entities by ID. User IDs are auto-generated during import, so they cannot be predicted in the YAML. Assign users to roles manually after the import.
-
 ## Configure the Sample
 
 `api/`, `ai-agent/`, and `frontend/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `mcp/` server has no required configuration.
