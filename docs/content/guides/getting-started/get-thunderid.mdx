@@ -104,21 +104,12 @@ The quickest way to get <ProductName /> up and running with all dependencies con
 
 <Stepper stepNode="h2" as="h3">
 
-## Download Docker Compose File
-
-Download the `docker-compose.yml` file from the <ProductName /> repository:
-
-{/* TODO: Fix the version in the URL below */}
-```bash
-curl -o docker-compose.yml https://raw.githubusercontent.com/thunder-id/thunderid/v0.39.0/install/quick-start/docker-compose.yml
-```
-
 ## Start <ProductName />
 
-Run the following command in the directory where you downloaded the `docker-compose.yml` file:
+Run the following command to start <ProductName /> using Docker Compose:
 
 ```bash
-docker compose up
+docker compose -f oci://ghcr.io/thunder-id/thunderid-quick-start:latest up
 ```
 
 :::note

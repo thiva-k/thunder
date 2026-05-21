@@ -51,7 +51,14 @@ const INSTALL_TABS = [
     brandColor: '#3941FF',
     enabled: false,
   },
-  {id: 'docker', label: 'Docker', icon: DockerLogo, command: '', brandColor: '#2560FF', enabled: true},
+  {
+    id: 'docker',
+    label: 'Docker',
+    icon: DockerLogo,
+    command: 'docker compose -f oci://ghcr.io/thunder-id/thunderid-quick-start:latest up',
+    brandColor: '#2560FF',
+    enabled: true,
+  },
   {
     id: 'skills',
     label: 'Skills',
@@ -116,11 +123,6 @@ export default function HeroSection(): JSX.Element {
   const [downloadAssetsRaw, setDownloadAssetsRaw] = useState([] as DownloadAsset[]);
   const downloadAssets = downloadAssetsRaw as DownloadAsset[];
   const setDownloadAssets = setDownloadAssetsRaw as (v: DownloadAsset[]) => void;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
-  const [latestVersionRaw, setLatestVersionRaw] = useState('');
-  const latestVersion = latestVersionRaw as string;
-  const setLatestVersion = setLatestVersionRaw as (v: string) => void;
-
   useEffect(() => {
     fetch(withBaseUrl('/data/releases.json'))
       .then(
@@ -130,16 +132,12 @@ export default function HeroSection(): JSX.Element {
           }>,
       )
       .then((data) => {
-        setLatestVersion(data.latestRelease?.tagName ?? '');
         setDownloadAssets(parseDownloadAssets(data.latestRelease?.assets ?? []));
       })
       .catch(() => {});
-  }, [withBaseUrl, setLatestVersion, setDownloadAssets]);
+  }, [withBaseUrl, setDownloadAssets]);
 
-  const activeCommand =
-    activeTab === 'docker'
-      ? `curl -o docker-compose.yml https://raw.githubusercontent.com/thunder-id/thunderid/${latestVersion}/install/quick-start/docker-compose.yml && docker compose up`
-      : (INSTALL_TABS.find((t) => t.id === activeTab)?.command ?? '');
+  const activeCommand = INSTALL_TABS.find((t) => t.id === activeTab)?.command ?? '';
 
   const cmdSpaceIdx = activeCommand.indexOf(' ');
   const cmdFirst = cmdSpaceIdx !== -1 ? activeCommand.slice(0, cmdSpaceIdx) : activeCommand;
