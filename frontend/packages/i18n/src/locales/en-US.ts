@@ -164,7 +164,7 @@ const translations = {
     'welcome.start.connectTo': 'Connect to \u2026',
     'welcome.noRecentItems': 'No recent projects found',
     'welcome.hero.titlePrefix': 'Welcome to',
-    'welcome.hero.subtitle': 'Design and configure your identity & access management project',
+    'welcome.hero.subtitle': 'Design and configure your Identity & Access Management project',
     'welcome.walkthrough.getStartedDesigner': 'Get started',
     'welcome.walkthrough.getStartedDesignerDesc': 'Learn how to design and customize your identity experience',
     'welcome.walkthrough.learnFundamentals': 'Learn the Fundamentals',
