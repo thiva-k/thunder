@@ -16,10 +16,13 @@
  * under the License.
  */
 
+import MDXComponents from '@theme-original/MDXComponents';
+import {Box, Card, CardContent, Typography, ColorSchemeSVG} from '@wso2/oxygen-ui';
 import ApiReference from '@site/src/components/ApiReference';
 import CodeBlock from '@site/src/components/CodeBlock';
-import DocsGetStarted from '@site/src/components/DocsGetStarted';
 import CodeGroup from '@site/src/components/CodeGroup';
+import ColorSchemeImage from '@site/src/components/ColorSchemeImage';
+import DocsGetStarted from '@site/src/components/DocsGetStarted';
 import FloatingLogosBackground from '@site/src/components/FloatingLogosBackground';
 import AndroidLogo from '@site/src/components/icons/AndroidLogo';
 import AngularLogo from '@site/src/components/icons/AngularLogo';
@@ -28,20 +31,20 @@ import ExpressLogo from '@site/src/components/icons/ExpressLogo';
 import FlutterLogo from '@site/src/components/icons/FlutterLogo';
 import GoLogo from '@site/src/components/icons/GoLogo';
 import IOSLogo from '@site/src/components/icons/IOSLogo';
+import JavaScriptLogo from '@site/src/components/icons/JavaScriptLogo';
 import NextLogo from '@site/src/components/icons/NextLogo';
 import NodeLogo from '@site/src/components/icons/NodeLogo';
 import NuxtLogo from '@site/src/components/icons/NuxtLogo';
 import PythonLogo from '@site/src/components/icons/PythonLogo';
 import ReactLogo from '@site/src/components/icons/ReactLogo';
 import ReactRouterLogo from '@site/src/components/icons/ReactRouterLogo';
+import TanStackLogo from '@site/src/components/icons/TanStackLogo';
 import VueLogo from '@site/src/components/icons/VueLogo';
 import ProductName from '@site/src/components/ProductName';
 import RepoLink from '@site/src/components/RepoLink';
 import SDKCard from '@site/src/components/SDKCard';
 import Stepper from '@site/src/components/Stepper';
 import TutorialHero, {TutorialHeroItem} from '@site/src/components/TutorialHero';
-import MDXComponents from '@theme-original/MDXComponents';
-import {Box, Card, CardContent, Typography, ColorSchemeSVG} from '@wso2/oxygen-ui';
 
 export default {
   ...MDXComponents,
@@ -49,6 +52,7 @@ export default {
   Card,
   CardContent,
   ColorSchemeSVG,
+  ColorSchemeImage,
   Typography,
   DocsGetStarted,
   Stepper,
@@ -67,8 +71,10 @@ export default {
   PythonLogo,
   FlutterLogo,
   IOSLogo,
+  JavaScriptLogo,
   AndroidLogo,
   ReactRouterLogo,
+  TanStackLogo,
   ApiReference,
   CodeBlock,
   CodeGroup,

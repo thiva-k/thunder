@@ -1,6 +1,6 @@
 {
   "name": "@thunderid/react-router",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "React Router integration for ThunderID",
   "keywords": [
     "thunderid",
@@ -33,8 +33,10 @@
     "directory": "sdks/react-router"
   },
   "scripts": {
-    "build": "pnpm clean && node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist",
+    "build": "pnpm clean:dist &&  node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist",
+    "clean": "pnpm clean:node_modules && pnpm clean:dist",
+    "clean:dist": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules",
     "format:check": "prettier --check --cache .",
     "format:fix": "prettier --write --cache .",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.cjs,.mjs",

@@ -4,6 +4,8 @@ packages:
   - frontend/packages/*
   - docs
   - sdks/**
+  - samples/apps/*
+  - tools/*
 
 allowBuilds:
   '@parcel/watcher': false
@@ -20,8 +22,6 @@ allowBuilds:
   vue-demi: false
 
 catalog:
-  '@asgardeo/react': 0.25.2
-  '@asgardeo/react-router': 2.0.0
   '@hookform/resolvers': 5.2.2
   '@monaco-editor/react': 4.7.0
   '@tanstack/react-query': 5.90.5
@@ -42,7 +42,7 @@ catalog:
   babel-plugin-react-compiler: 19.1.0-rc.3
   clsx: 2.1.1
   dayjs: 1.11.18
-  dompurify: 3.3.3
+  dompurify: 3.4.0
   eslint: 9.39.4
   globals: 16.4.0
   i18next: 25.6.0
@@ -82,14 +82,17 @@ catalog:
   cross-fetch: 4.1.0
   memory-cache: 0.2.0
   secure-random-bytes: 5.0.1
-  uuid: 11.1.0
+  uuid: 11.1.1
 
 overrides:
+  # JUSTIFICATION: The `ws` package is a transitive dependency of `docusaurus/core -> webpack-bundle-analyzer` and it requires a major version bump.
+  ws: '>=8.20.1'
+  # JUSTIFICATION: Packed through next@15.5.18. Could be resolved once next is updated to 16 versions.
+  postcss: 8.5.10
   openapi-to-postmanv2>ajv: 8.18.0
   ajv-draft-04>ajv: 8.18.0
   ajv-formats>ajv: 8.18.0
   flatted: 3.4.2
-  picomatch: 4.0.4
   vite: 'catalog:'
   defu: 6.1.5
   axios: 1.15.2
@@ -108,7 +111,7 @@ overrides:
   svgo: 3.3.3
   brace-expansion@>=4.0.0 <5.0.5: 5.0.5
   lodash: 4.18.1
-  protobufjs: 7.5.6
+  protobufjs: 7.6.0
   js-yaml@>=4.0.0 <4.1.1: 4.1.1
   # TODO: Remove once `nuxt` bumps `devalue` to 5.8.1 or later.
   devalue: 5.8.1

@@ -18,4 +18,4 @@
 
 import {Config} from '@thunderid/javascript';
 
-export type ThunderIDBrowserConfig = Config<'sessionStorage' | 'localStorage' | 'browserMemory' | 'webWorker'>;
+export type ThunderIDBrowserConfig = Config<'sessionStorage' | 'localStorage' | 'browserMemory'>;

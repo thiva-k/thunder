@@ -1,0 +1,294 @@
+# resource_type: resource_server
+id: wayfinder-agent-rs
+name: Wayfinder Agent
+description: Controls access to the AI chat agent
+identifier: wayfinder-agent
+ou_handle: default
+delimiter: ":"
+resources:
+  - name: Agent
+    handle: agent
+    actions:
+      - name: Access
+        handle: access
+        description: Grants access to the AI chat agent
+
+---
+# resource_type: resource_server
+id: booking-api-rs
+name: Booking API
+description: Controls booking operations in the Wayfinder Travel API
+identifier: booking-api
+ou_handle: default
+delimiter: ":"
+resources:
+  - name: Booking
+    handle: booking
+    actions:
+      - name: Read
+        handle: read
+      - name: Create
+        handle: create
+      - name: Cancel
+        handle: cancel
+
+---
+# resource_type: application
+id: wayfinder-app
+name: Wayfinder
+description: Wayfinder Travel sample application
+ou_handle: default
+url: http://localhost:5173
+auth_flow_handle: default-basic-flow
+is_registration_flow_enabled: false
+is_recovery_flow_enabled: false
+assertion:
+  validity_period: 3600
+allowed_user_types:
+  - Person
+inbound_auth_config:
+  - type: oauth2
+    config:
+      client_id: WAYFINDER
+      redirect_uris:
+        - http://localhost:5173
+      grant_types:
+        - authorization_code
+      response_types:
+        - code
+      token_endpoint_auth_method: none
+      pkce_required: true
+      public_client: true
+      token:
+        access_token:
+          validity_period: 3600
+          user_attributes:
+            - given_name
+            - family_name
+            - email
+            - groups
+        id_token:
+          validity_period: 3600
+          user_attributes:
+            - given_name
+            - family_name
+            - email
+            - groups
+
+---
+# resource_type: flow
+id: f034ce11-4699-41f5-a6e7-dc0915bc4369
+name: Basic Authentication with Consent
+handle: basic-with-consent
+flowType: AUTHENTICATION
+nodes:
+  - id: start
+    type: START
+    onSuccess: prompt_credentials
+  - id: prompt_credentials
+    type: PROMPT
+    meta:
+      components:
+        - alt: "{{ t(signin:images.app_logo.alt) }}"
+          category: DISPLAY
+          height: "60"
+          id: image
+          resourceType: ELEMENT
+          src: "{{ meta(application.logoUrl) }}"
+          type: IMAGE
+          width: ""
+        - align: center
+          type: TEXT
+          id: text_001
+          label: "{{ t(signin:forms.credentials.title) }}"
+          variant: HEADING_1
+        - type: BLOCK
+          id: block_001
+          components:
+            - id: input_001
+              ref: username
+              type: TEXT_INPUT
+              label: "{{ t(signin:forms.credentials.fields.username.label) }}"
+              required: true
+              placeholder: "{{ t(signin:forms.credentials.fields.username.placeholder) }}"
+            - id: input_002
+              ref: password
+              type: PASSWORD_INPUT
+              label: "{{ t(signin:forms.credentials.fields.password.label) }}"
+              required: true
+              placeholder: "{{ t(signin:forms.credentials.fields.password.placeholder) }}"
+            - type: ACTION
+              id: action_001
+              label: "{{ t(signin:forms.credentials.actions.submit.label) }}"
+              variant: PRIMARY
+              eventType: SUBMIT
+    prompts:
+      - inputs:
+          - ref: input_001
+            identifier: username
+            type: TEXT_INPUT
+            required: true
+          - ref: input_002
+            identifier: password
+            type: PASSWORD_INPUT
+            required: true
+        action:
+          ref: action_001
+          nextNode: basic_auth
+  - id: basic_auth
+    type: TASK_EXECUTION
+    executor:
+      name: BasicAuthExecutor
+    onSuccess: authorization_check
+    onIncomplete: prompt_credentials
+  - id: authorization_check
+    type: TASK_EXECUTION
+    executor:
+      name: AuthorizationExecutor
+    onSuccess: consent_check
+  - id: consent_check
+    type: TASK_EXECUTION
+    executor:
+      name: ConsentExecutor
+    onSuccess: auth_assert
+    onIncomplete: prompt_consent
+  - id: prompt_consent
+    type: PROMPT
+    meta:
+      components:
+        - alt: "{{ t(signin:images.app_logo.alt) }}"
+          category: DISPLAY
+          height: "60"
+          id: consent_image
+          resourceType: ELEMENT
+          src: "{{ meta(application.logoUrl) }}"
+          type: IMAGE
+          width: ""
+        - align: center
+          type: TEXT
+          id: consent_heading
+          label: "{{ meta(application.name) }} is requesting access"
+          variant: HEADING_1
+        - type: BLOCK
+          id: consent_block
+          components:
+            - id: consent_input
+              ref: consent_decisions
+              type: CONSENT_INPUT
+              required: true
+            - type: ACTION
+              id: consent_action_deny
+              label: Deny
+              variant: SECONDARY
+              eventType: SUBMIT
+            - type: ACTION
+              id: consent_action_allow
+              label: Allow
+              variant: PRIMARY
+              eventType: SUBMIT
+    prompts:
+      - inputs:
+          - ref: consent_input
+            identifier: consent_decisions
+            type: CONSENT_INPUT
+            required: true
+        action:
+          ref: consent_action_allow
+          nextNode: consent_check
+      - inputs:
+          - ref: consent_input
+            identifier: consent_decisions
+            type: CONSENT_INPUT
+            required: true
+        action:
+          ref: consent_action_deny
+          nextNode: consent_check
+  - id: auth_assert
+    type: TASK_EXECUTION
+    executor:
+      name: AuthAssertExecutor
+    onSuccess: end
+  - id: end
+    type: END
+
+---
+# resource_type: agent
+id: wayfinder-chat-agent
+name: WAYFINDER-CHAT-AGENT
+description: AI chat agent for the Wayfinder Travel sample
+ou_handle: default
+type: default
+auth_flow_handle: basic-with-consent
+inbound_auth_config:
+  - type: oauth2
+    config:
+      client_id: WAYFINDER-CHAT-AGENT
+      client_secret: "{{.AGENT_CLIENT_SECRET}}"
+      redirect_uris:
+        - http://localhost:5173/agent-callback
+      grant_types:
+        - client_credentials
+        - authorization_code
+      response_types:
+        - code
+      token_endpoint_auth_method: client_secret_basic
+      pkce_required: false
+      public_client: false
+      token:
+        access_token:
+          validity_period: 3600
+          user_attributes:
+            - given_name
+            - family_name
+            - email
+            - groups
+
+---
+# resource_type: role
+id: wayfinder-chat-user-role
+name: Wayfinder Chat User
+description: Grants access to use the Wayfinder AI chat agent
+ou_handle: default
+permissions:
+  - resource_server_id: wayfinder-agent-rs
+    permissions:
+      - agent:access
+
+---
+# resource_type: role
+id: wayfinder-user-role
+name: Wayfinder User
+description: Grants booking permissions for the Wayfinder sample
+ou_handle: default
+permissions:
+  - resource_server_id: booking-api-rs
+    permissions:
+      - booking:read
+      - booking:create
+      - booking:cancel
+
+---
+# resource_type: user
+id: wayfinder-demo-user
+type: Person
+ou_handle: default
+attributes:
+  username: john.doe
+  given_name: John
+  family_name: Doe
+  email: john.doe@example.com
+credentials:
+  password: john.doe
+
+---
+# resource_type: user
+id: wayfinder-demo-user-2
+type: Person
+ou_handle: default
+attributes:
+  username: jane.smith
+  given_name: Jane
+  family_name: Smith
+  email: jane.smith@example.com
+credentials:
+  password: jane.smith

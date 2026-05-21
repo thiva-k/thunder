@@ -83,7 +83,7 @@ const FlowMetaProvider: FC<PropsWithChildren<FlowMetaProviderProps>> = ({
   const lastFetchedRef: RefObject<(() => Promise<void>) | null> = useRef<(() => Promise<void>) | null>(null);
 
   const fetchFlowMeta: () => Promise<void> = useCallback(async (): Promise<void> => {
-    if (!enabled || platform !== Platform.ThunderIDV2) {
+    if (!enabled || platform !== Platform.ThunderID) {
       setMeta(null);
       setIsLoading(false);
       return;
@@ -115,7 +115,7 @@ const FlowMetaProvider: FC<PropsWithChildren<FlowMetaProviderProps>> = ({
 
   const switchLanguage: (language: string) => Promise<void> = useCallback(
     async (language: string): Promise<void> => {
-      if (!enabled || platform !== Platform.ThunderIDV2) return;
+      if (!enabled || platform !== Platform.ThunderID) return;
 
       setIsLoading(true);
       setError(null);

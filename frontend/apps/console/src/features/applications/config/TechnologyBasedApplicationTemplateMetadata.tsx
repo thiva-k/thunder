@@ -16,8 +16,10 @@
  * under the License.
  */
 
+import ExpressTemplate from '../data/application-templates/technology-based/express.json';
 import NextJSTemplate from '../data/application-templates/technology-based/nextjs.json';
 import ReactTemplate from '../data/application-templates/technology-based/react.json';
+import VanillaJSTemplate from '../data/application-templates/technology-based/vanilla-js.json';
 import type {ApplicationTemplate, ApplicationTemplateMetadata} from '../models/application-templates';
 import {TechnologyApplicationTemplate} from '../models/application-templates';
 
@@ -47,6 +49,21 @@ const TechnologyBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Te
     titleKey: 'applications:onboarding.configure.stack.technology.react.title',
     descriptionKey: 'applications:onboarding.configure.stack.technology.react.description',
     template: ReactTemplate as ApplicationTemplate,
+  },
+  {
+    value: TechnologyApplicationTemplate.EXPRESS,
+    icon: (
+      <svg width="40" height="40" viewBox="0 0 20 20" style={{fill: 'white'}}>
+        <path d="M6.504 7.181c1.47 0 1.812 1.29 1.812 2.108H4.5c.103-.906.683-2.108 2.004-2.108Z" />
+        <path
+          fillRule="evenodd"
+          d="M10 20a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm-3.05-7.291c-1.321 0-2.438-.728-2.464-2.492l5.032.013c.04-.2.062-.405.058-.61 0-1.32-.621-3.37-2.955-3.37-2.109 0-3.385 1.737-3.385 3.875 0 2.137 1.328 3.625 3.535 3.625a5.738 5.738 0 0 0 2.39-.475l-.223-.938a4.65 4.65 0 0 1-1.988.372Zm5.833-4.78L11.759 6.4h-1.455l2.437 3.505-2.555 3.666h1.439l1.04-1.604a26.7 26.7 0 0 1 .261-.425c.171-.274.336-.538.494-.837h.031l.023.037c.245.413.479.807.75 1.225l1.067 1.604h1.471L14.238 9.86l2.45-3.46h-1.425l-.995 1.514c-.096.157-.194.312-.293.47-.146.231-.294.465-.435.704h-.03l-.165-.273c-.176-.291-.35-.58-.563-.887Z"
+        />
+      </svg>
+    ),
+    titleKey: 'applications:onboarding.configure.stack.technology.express.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.express.description',
+    template: ExpressTemplate as ApplicationTemplate,
   },
   {
     value: TechnologyApplicationTemplate.NEXTJS,
@@ -80,6 +97,18 @@ const TechnologyBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Te
     descriptionKey: 'applications:onboarding.configure.stack.technology.nextjs.description',
     template: NextJSTemplate as ApplicationTemplate,
     disabled: true,
+  },
+  {
+    value: TechnologyApplicationTemplate.VANILLA_JS,
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 256 256">
+        <rect width="256" height="256" fill="#F7DF1E" />
+        <path d="M67.312 213.932l19.59-11.856c3.78 6.701 7.218 12.371 15.465 12.371 7.905 0 12.89-3.092 12.89-15.12v-81.798h24.057v82.138c0 24.917-14.606 36.259-35.916 36.259-19.245 0-30.416-9.967-36.087-21.996M152.381 211.354l19.588-11.341c5.157 8.421 11.859 14.607 23.715 14.607 9.969 0 16.325-4.984 16.325-11.858 0-8.248-6.53-11.17-17.528-15.98l-6.013-2.58c-17.357-7.387-28.87-16.667-28.87-36.257 0-18.044 13.747-31.792 35.228-31.792 15.294 0 26.292 5.328 34.196 19.247l-18.732 12.03c-4.125-7.389-8.591-10.31-15.465-10.31-7.046 0-11.514 4.468-11.514 10.31 0 7.217 4.468 10.14 14.778 14.608l6.014 2.577c20.45 8.765 31.963 17.7 31.963 37.804 0 21.654-17.012 33.51-39.867 33.51-22.339 0-36.774-10.654-43.819-24.574" />
+      </svg>
+    ),
+    titleKey: 'applications:onboarding.configure.stack.technology.vanillaJs.title',
+    descriptionKey: 'applications:onboarding.configure.stack.technology.vanillaJs.description',
+    template: VanillaJSTemplate as ApplicationTemplate,
   },
 ];
 

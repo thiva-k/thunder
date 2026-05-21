@@ -129,3 +129,5 @@ export class FetchHttpClient extends HttpClient {
     };
   }
 }
+
+export default FetchHttpClient;

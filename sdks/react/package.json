@@ -1,6 +1,6 @@
 {
   "name": "@thunderid/react",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "React SDK for ThunderID",
   "keywords": [
     "thunderid",
@@ -32,8 +32,10 @@
     "directory": "sdks/react"
   },
   "scripts": {
-    "build": "pnpm clean && node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist",
-    "clean": "rimraf dist",
+    "build": "pnpm clean:dist &&  node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist",
+    "clean": "pnpm clean:node_modules && pnpm clean:dist",
+    "clean:dist": "rimraf dist",
+    "clean:node_modules": "rimraf node_modules",
     "format:check": "prettier --check --cache .",
     "format:fix": "prettier --write --cache .",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx,.cjs,.mjs",
@@ -43,14 +45,19 @@
     "typecheck": "tsc -p tsconfig.lib.json"
   },
   "devDependencies": {
+    "@emotion/css": "catalog:",
+    "@floating-ui/react": "catalog:",
     "@testing-library/react": "catalog:",
     "@thunderid/eslint-plugin": "workspace:^",
     "@thunderid/prettier-config": "workspace:^",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "dompurify": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "react": "catalog:",
+    "react-dom": "catalog:",
     "rimraf": "catalog:",
     "rolldown": "catalog:",
     "typescript": "catalog:",
@@ -58,15 +65,14 @@
   },
   "peerDependencies": {
     "@types/react": ">=16.8.0",
-    "react": ">=16.8.0"
+    "react": ">=16.8.0",
+    "react-dom": ">=16.8.0"
   },
   "dependencies": {
     "@emotion/css": "catalog:",
     "@floating-ui/react": "catalog:",
     "@thunderid/browser": "workspace:^",
-    "@types/react-dom": "catalog:",
     "dompurify": "catalog:",
-    "react-dom": "catalog:",
     "tslib": "catalog:"
   },
   "publishConfig": {

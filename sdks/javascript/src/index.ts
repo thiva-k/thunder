@@ -16,16 +16,6 @@
  * under the License.
  */
 
-export {ThunderIDAuthClient} from './__legacy__/client';
-export type {
-  DefaultAuthClientConfig,
-  WellKnownAuthClientConfig,
-  BaseURLAuthClientConfig,
-  ExplicitAuthClientConfig,
-  StrictAuthClientConfig,
-  AuthClientConfig,
-} from './__legacy__/models';
-
 export {IsomorphicCrypto} from './IsomorphicCrypto';
 
 export {default as initializeEmbeddedSignInFlow} from './api/initializeEmbeddedSignInFlow';
@@ -173,6 +163,12 @@ export type {
 export {FlowMode} from './models/flow';
 export type {ThunderIDClient} from './models/client';
 export type {
+  AuthClientConfig,
+  StrictAuthClientConfig,
+  DefaultAuthClientConfig,
+  WellKnownAuthClientConfig,
+  BaseURLAuthClientConfig,
+  ExplicitAuthClientConfig,
   BaseConfig,
   Config,
   Preferences,
@@ -228,6 +224,7 @@ export {default as ThunderIDJavaScriptClient} from './ThunderIDJavaScriptClient'
 export {default as createTheme, DEFAULT_THEME} from './theme/createTheme';
 export type {ThemeColors, ThemeConfig, Theme, ThemeMode, ThemeDetection} from './theme/types';
 
+export {default as AuthenticationHelper} from './utils/AuthenticationHelper';
 export {default as arrayBufferToBase64url} from './utils/arrayBufferToBase64url';
 export {default as base64urlToArrayBuffer} from './utils/base64urlToArrayBuffer';
 export {default as bem} from './utils/bem';

@@ -31,7 +31,7 @@ export type BaseSignUpProps = BaseSignUpV1Props | BaseSignUpV2Props;
 const BaseSignUp: FC<BaseSignUpProps> = (props: BaseSignUpProps) => {
   const {platform} = useThunderID();
 
-  if (platform === Platform.ThunderIDV2) {
+  if (platform === Platform.ThunderID) {
     return <BaseSignUpV2 {...(props as BaseSignUpV2Props)} />;
   }
 

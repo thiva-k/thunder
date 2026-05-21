@@ -21,7 +21,7 @@
 import {IdToken} from '@thunderid/node';
 import {cookies} from 'next/headers';
 import {ThunderIDNextConfig} from '../../models/config';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 import logger from '../../utils/logger';
 import SessionManager from '../../utils/SessionManager';
 
@@ -54,7 +54,7 @@ const handleOAuthCallbackAction = async (
       };
     }
 
-    const thunderIDClient: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const thunderIDClient = getClient();
 
     if (!thunderIDClient.isInitialized) {
       return {
@@ -116,7 +116,7 @@ const handleOAuthCallbackAction = async (
           | undefined;
         const expiresIn: number = signInResult['expiresIn'] as number;
         const sessionCookieExpiryTime: number = SessionManager.resolveSessionCookieExpiry(
-          config.sessionCookieExpiryTime,
+          config.sessionCookie?.expiryTime,
         );
 
         const sessionToken: string = await SessionManager.createSessionToken(
@@ -151,8 +151,18 @@ const handleOAuthCallbackAction = async (
       success: true,
     };
   } catch (error) {
+    let errorMessage = 'Authentication failed';
+
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      errorMessage = String((error as {message: unknown}).message);
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+
     return {
-      error: error instanceof Error ? error.message : 'Authentication failed',
+      error: errorMessage,
       success: false,
     };
   }

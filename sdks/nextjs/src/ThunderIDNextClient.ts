@@ -22,19 +22,15 @@ import {
   ThunderIDRuntimeError,
   AuthClientConfig,
   CreateOrganizationPayload,
-  EmbeddedFlowExecuteRequestConfig,
   EmbeddedFlowExecuteRequestPayload,
   EmbeddedFlowExecuteResponse,
-  EmbeddedSignInFlowHandleRequestPayload,
   ExtendedAuthorizeRequestUrlParams,
   FlattenedSchema,
   IdToken,
-  LegacyThunderIDNodeClient,
   Organization,
   OrganizationDetails,
   Schema,
   SignInOptions,
-  SignOutOptions,
   SignUpOptions,
   Storage,
   TokenExchangeRequestConfig,
@@ -62,41 +58,13 @@ import getClientOrigin from './server/actions/getClientOrigin';
 import getSessionId from './server/actions/getSessionId';
 import decorateConfigWithNextEnv from './utils/decorateConfigWithNextEnv';
 
-/**
- * Client for mplementing ThunderID in Next.js applications.
- * This class provides the core functionality for managing user authentication and sessions.
- *
- * This class is implemented as a singleton to ensure a single instance across the application.
- *
- * @typeParam T - Configuration type that extends ThunderIDNextConfig.
- */
 class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> extends ThunderIDNodeClient<T> {
-  private static instance: ThunderIDNextClient<any>;
-
-  private legacyClient: LegacyThunderIDNodeClient<T>;
-
   public isInitialized = false;
 
-  private constructor() {
+  public constructor() {
     super();
-
-    this.legacyClient = new LegacyThunderIDNodeClient();
   }
 
-  /**
-   * Get the singleton instance of ThunderIDNextClient
-   */
-  public static getInstance<T extends ThunderIDNextConfig = ThunderIDNextConfig>(): ThunderIDNextClient<T> {
-    if (!ThunderIDNextClient.instance) {
-      ThunderIDNextClient.instance = new ThunderIDNextClient<T>();
-    }
-    return ThunderIDNextClient.instance as ThunderIDNextClient<T>;
-  }
-
-  /**
-   * Ensures the client is initialized before using it.
-   * Throws an error if the client is not initialized.
-   */
   private async ensureInitialized(): Promise<void> {
     if (!this.isInitialized) {
       throw new Error(
@@ -122,8 +90,6 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
       ...rest
     } = decorateConfigWithNextEnv(config);
 
-    this.isInitialized = true;
-
     let resolvedOrganizationHandle: string | undefined = organizationHandle;
 
     if (!resolvedOrganizationHandle) {
@@ -132,30 +98,31 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
     const origin: string = await getClientOrigin();
 
-    return this.legacyClient.initialize(
+    const initialized: boolean = await super.initialize(
       {
+        ...rest,
         afterSignInUrl: afterSignInUrl ?? origin,
         afterSignOutUrl: afterSignOutUrl ?? origin,
         baseUrl,
         clientId,
         clientSecret,
-        enablePKCE: false,
+        enablePKCE: clientSecret == null,
         organizationHandle: resolvedOrganizationHandle,
         signInUrl,
         signUpUrl,
-        ...rest,
       } as any,
       storage,
     );
+
+    this.isInitialized = initialized;
+
+    return initialized;
   }
 
   override async reInitialize(config: Partial<T>): Promise<boolean> {
-    let isInitialized = false;
-
     try {
-      await this.legacyClient.reInitialize(config as any);
-
-      isInitialized = true;
+      await super.reInitialize(config);
+      return true;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to re-initialize the client: ${error instanceof Error ? error.message : String(error)}`,
@@ -164,8 +131,6 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
         'An error occurred while re-initializing the client. Please check your configuration and network connection.',
       );
     }
-
-    return isInitialized;
   }
 
   override async getUser(userId?: string): Promise<User> {
@@ -173,7 +138,7 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
     const resolvedSessionId: string = userId || (await getSessionId())!;
 
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string | undefined = configData?.baseUrl;
 
       const profile: User = await getScim2Me({
@@ -192,7 +157,7 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
       return generateUserProfile(profile, flattenUserSchema(schemas));
     } catch (error) {
-      return this.legacyClient.getUser(resolvedSessionId);
+      return (await super.getUser(resolvedSessionId)) as User;
     }
   }
 
@@ -200,7 +165,7 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
     await this.ensureInitialized();
 
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string | undefined = configData?.baseUrl;
 
       const profile: User = await getScim2Me({
@@ -219,17 +184,15 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
       const processedSchemas: FlattenedSchema[] = flattenUserSchema(schemas);
 
-      const output: UserProfile = {
+      return {
         flattenedProfile: generateFlattenedUserProfile(profile, processedSchemas),
         profile,
         schemas: processedSchemas,
       };
-
-      return output;
     } catch (error) {
       return {
-        flattenedProfile: extractUserClaimsFromIdToken(await this.legacyClient.getDecodedIdToken(userId)),
-        profile: extractUserClaimsFromIdToken(await this.legacyClient.getDecodedIdToken(userId)),
+        flattenedProfile: extractUserClaimsFromIdToken((await super.getDecodedIdToken(userId))!),
+        profile: extractUserClaimsFromIdToken((await super.getDecodedIdToken(userId))!),
         schemas: [],
       };
     }
@@ -239,18 +202,16 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
     await this.ensureInitialized();
 
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string | undefined = configData?.baseUrl;
 
-      const userProfile: User = await updateMeProfile({
+      return updateMeProfile({
         baseUrl,
         headers: {
           Authorization: `Bearer ${await this.getAccessToken(userId)}`,
         },
         payload,
       });
-
-      return userProfile;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to update user profile: ${error instanceof Error ? error.message : String(error)}`,
@@ -263,18 +224,16 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
   async createOrganization(payload: CreateOrganizationPayload, userId?: string): Promise<Organization> {
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string = configData?.baseUrl!;
 
-      const createdOrg: Organization = await createOrganization({
+      return createOrganization({
         baseUrl,
         headers: {
           Authorization: `Bearer ${await this.getAccessToken(userId)}`,
         },
         payload,
       });
-
-      return createdOrg;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to create organization: ${error instanceof Error ? error.message : String(error)}`,
@@ -287,18 +246,16 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
   async getOrganization(organizationId: string, userId?: string): Promise<OrganizationDetails> {
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string = configData?.baseUrl!;
 
-      const organization: OrganizationDetails = await getOrganization({
+      return getOrganization({
         baseUrl,
         headers: {
           Authorization: `Bearer ${await this.getAccessToken(userId)}`,
         },
         organizationId,
       });
-
-      return organization;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to fetch the organization details of ${organizationId}: ${String(error)}`,
@@ -311,17 +268,15 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
   override async getMyOrganizations(options?: any, userId?: string): Promise<Organization[]> {
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string = configData?.baseUrl!;
 
-      const myOrganizations: Organization[] = await getMeOrganizations({
+      return getMeOrganizations({
         baseUrl,
         headers: {
           Authorization: `Bearer ${await this.getAccessToken(userId)}`,
         },
       });
-
-      return myOrganizations;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to fetch the user's associated organizations: ${
@@ -336,17 +291,15 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
 
   override async getAllOrganizations(options?: any, userId?: string): Promise<AllOrganizationsApiResponse> {
     try {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string = configData?.baseUrl!;
 
-      const allOrganizations: AllOrganizationsApiResponse = await getAllOrganizations({
+      return getAllOrganizations({
         baseUrl,
         headers: {
           Authorization: `Bearer ${await this.getAccessToken(userId)}`,
         },
       });
-
-      return allOrganizations;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to fetch all organizations: ${error instanceof Error ? error.message : String(error)}`,
@@ -358,7 +311,7 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
   }
 
   override async getCurrentOrganization(userId?: string): Promise<Organization | null> {
-    const idToken: IdToken = await this.legacyClient.getDecodedIdToken(userId);
+    const idToken: IdToken = (await super.getDecodedIdToken(userId))!;
 
     return {
       id: idToken?.org_id!,
@@ -393,9 +346,7 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
         signInRequired: true,
       };
 
-      const tokenResponse: TokenResponse | Response = await this.legacyClient.exchangeToken(exchangeConfig, userId);
-
-      return tokenResponse;
+      return super.exchangeToken(exchangeConfig, userId) as unknown as Promise<TokenResponse | Response>;
     } catch (error) {
       throw new ThunderIDRuntimeError(
         `Failed to switch organization: ${error instanceof Error ? error.message : String(JSON.stringify(error))}`,
@@ -411,17 +362,13 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
   }
 
   override isSignedIn(sessionId?: string): Promise<boolean> {
-    return this.legacyClient.isSignedIn(sessionId!);
+    return super.isSignedIn(sessionId!) as Promise<boolean>;
   }
 
   override exchangeToken(config: TokenExchangeRequestConfig, sessionId?: string): Promise<TokenResponse | Response> {
-    return this.legacyClient.exchangeToken(config, sessionId);
+    return super.exchangeToken(config, sessionId) as unknown as Promise<TokenResponse | Response>;
   }
 
-  /**
-   * Gets the access token from the session cookie if no sessionId is provided,
-   * otherwise falls back to legacy client method.
-   */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   override async getAccessToken(_sessionId?: string): Promise<string> {
     const {default: getAccessToken} = await import('./server/actions/getAccessToken');
@@ -439,30 +386,12 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
     return token;
   }
 
-  /**
-   * Get the decoded ID token for a session
-   */
-  async getDecodedIdToken(sessionId?: string, idToken?: string): Promise<IdToken> {
+  override async getDecodedIdToken(sessionId?: string, idToken?: string): Promise<IdToken> {
     await this.ensureInitialized();
-    return this.legacyClient.getDecodedIdToken(sessionId, idToken);
+    return (await super.getDecodedIdToken(sessionId, idToken)) as IdToken;
   }
 
-  override getConfiguration(): T {
-    return this.legacyClient.getConfigData() as unknown as T;
-  }
-
-  override signIn(
-    options?: SignInOptions,
-    sessionId?: string,
-    onSignInSuccess?: (afterSignInUrl: string) => void,
-  ): Promise<User>;
-  override signIn(
-    payload: EmbeddedSignInFlowHandleRequestPayload,
-    request: EmbeddedFlowExecuteRequestConfig,
-    sessionId?: string,
-    onSignInSuccess?: (afterSignInUrl: string) => void,
-  ): Promise<User>;
-  override async signIn(...args: any[]): Promise<User> {
+  override async signIn(...args: any[]): Promise<any> {
     const arg1: any = args[0];
     const arg2: any = args[1];
     const arg3: any = args[2];
@@ -489,7 +418,7 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
       });
     }
 
-    return this.legacyClient.signIn(
+    return super.signIn(
       arg4,
       arg3,
       arg1?.code,
@@ -499,26 +428,33 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
     ) as unknown as Promise<User>;
   }
 
-  override signOut(options?: SignOutOptions, afterSignOut?: (afterSignOutUrl: string) => void): Promise<string>;
-  override signOut(
-    options?: SignOutOptions,
-    sessionId?: string,
-    afterSignOut?: (afterSignOutUrl: string) => void,
-  ): Promise<string>;
   override async signOut(...args: any[]): Promise<string> {
     if (args[1] && typeof args[1] !== 'string') {
       throw new Error('The second argument must be a string.');
     }
 
+    const config: T = this.getConfiguration();
+    const afterSignOutUrl: string = config?.afterSignOutUrl || '/';
+
     const resolvedSessionId: string = args[1] || (await getSessionId())!;
 
-    return Promise.resolve(await this.legacyClient.signOut(resolvedSessionId));
+    try {
+      await (super.signOut as (...a: any[]) => Promise<string>)(resolvedSessionId);
+    } catch (error) {
+      const message: string = error instanceof Error ? error.message : String(error);
+
+      if (!message.includes('end_session_endpoint')) {
+        throw error;
+      }
+    }
+
+    return afterSignOutUrl;
   }
 
   override async signUp(options?: SignUpOptions): Promise<void>;
   override async signUp(payload: EmbeddedFlowExecuteRequestPayload): Promise<EmbeddedFlowExecuteResponse>;
-  override async signUp(...args: any[]): Promise<void | EmbeddedFlowExecuteResponse> {
-    if (args.length === 0) {
+  override async signUp(firstArg?: any): Promise<void | EmbeddedFlowExecuteResponse> {
+    if (firstArg === undefined || firstArg === null) {
       throw new ThunderIDRuntimeError(
         'No arguments provided for signUp method.',
         'ThunderIDNextClient-ValidationError-001',
@@ -527,10 +463,8 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
       );
     }
 
-    const firstArg: any = args[0];
-
     if (typeof firstArg === 'object' && 'flowType' in firstArg) {
-      const configData: AuthClientConfig<T> = await this.legacyClient.getConfigData();
+      const configData: AuthClientConfig<T> = await this.getStorageManager().getConfigData();
       const baseUrl: string | undefined = configData?.baseUrl;
 
       return executeEmbeddedSignUpFlow({
@@ -556,31 +490,16 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
     );
   }
 
-  /**
-   * Gets the sign-in URL for authentication.
-   * Ensures the client is initialized before making the call.
-   *
-   * @param customParams - Custom parameters to include in the sign-in URL.
-   * @param userId - The user ID
-   * @returns Promise that resolves to the sign-in URL
-   */
   public async getAuthorizeRequestUrl(
     customParams: ExtendedAuthorizeRequestUrlParams,
     userId?: string,
   ): Promise<string> {
     await this.ensureInitialized();
-    return this.legacyClient.getSignInUrl(customParams, userId);
+    return this.getSignInUrl(customParams, userId);
   }
 
-  /**
-   * Gets the storage manager from the underlying ThunderID client.
-   * Ensures the client is initialized before making the call.
-   *
-   * @returns Promise that resolves to the storage manager
-   */
-  public async getStorageManager(): Promise<any> {
-    await this.ensureInitialized();
-    return this.legacyClient.getStorageManager();
+  public override getStorageManager(): any {
+    return super.getStorageManager();
   }
 
   public override async clearSession(): Promise<void> {
@@ -593,11 +512,11 @@ class ThunderIDNextClient<T extends ThunderIDNextConfig = ThunderIDNextConfig> e
   }
 
   override async setSession(sessionData: Record<string, unknown>, sessionId?: string): Promise<void> {
-    return (await this.legacyClient.getStorageManager()).setSessionData(sessionData, sessionId);
+    return this.getStorageManager().setSessionData(sessionData, sessionId);
   }
 
   override decodeJwtToken<R = Record<string, unknown>>(token: string): Promise<R> {
-    return this.legacyClient.decodeJwtToken<R>(token);
+    return super.decodeJwtToken<R>(token);
   }
 }
 

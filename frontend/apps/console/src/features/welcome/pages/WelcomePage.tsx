@@ -18,7 +18,16 @@
 
 import {useConfig} from '@thunderid/contexts';
 import {Box, Card, IconButton, Stack, Typography, useTheme} from '@wso2/oxygen-ui';
-import {FolderOpen, X, ChevronRight, BookOpen, Lightbulb, PackagePlus} from '@wso2/oxygen-ui-icons-react';
+import {
+  FolderOpen,
+  X,
+  ChevronRight,
+  PackagePlus,
+  Bot,
+  Users,
+  ExternalLink,
+  Lightbulb,
+} from '@wso2/oxygen-ui-icons-react';
 import {motion} from 'framer-motion';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -33,6 +42,7 @@ export default function WelcomePage(): JSX.Element {
   const theme = useTheme();
   const {config} = useConfig();
   const productName = config.brand.product_name;
+  const docsBaseUrl = (config.brand.docs_url ?? '').replace(/\/$/, '');
 
   const handleClose = (): void => {
     sessionStorage.setItem(getWelcomeDismissedStorageKey(productName), 'true');
@@ -64,30 +74,30 @@ export default function WelcomePage(): JSX.Element {
     },
   ];
 
-  const walkthroughs = [
+  const learnProduct = [
     {
-      id: 'get-started-designer',
-      icon: <BookOpen size={20} />,
-      label: t('common:welcome.walkthrough.getStartedDesigner'),
-      description: t('common:welcome.walkthrough.getStartedDesignerDesc'),
-      action: () =>
-        window.open(
-          'https://asgardeo.github.io/thunder/docs/next/guides/quick-start/quickstart',
-          '_blank',
-          'noopener,noreferrer',
-        ),
+      id: 'learn-b2c',
+      icon: <Users size={18} />,
+      label: t('common:welcome.learnProduct.b2c'),
+      description: t('common:welcome.learnProduct.b2cDesc'),
+      url: `${docsBaseUrl}/use-cases/b2c/try-it-out`,
     },
     {
+      id: 'learn-ai-agents',
+      icon: <Bot size={18} />,
+      label: t('common:welcome.learnProduct.aiAgents'),
+      description: t('common:welcome.learnProduct.aiAgentsDesc'),
+      url: `${docsBaseUrl}/use-cases/ai-agents/try-it-out`,
+    },
+  ];
+
+  const walkthroughs = [
+    {
       id: 'learn-fundamentals',
-      icon: <Lightbulb size={20} />,
+      icon: <Lightbulb size={18} />,
       label: t('common:welcome.walkthrough.learnFundamentals'),
       description: t('common:welcome.walkthrough.learnFundamentalsDesc'),
-      action: () =>
-        window.open(
-          'https://asgardeo.github.io/thunder/docs/next/guides/key-concepts/authentication/overview',
-          '_blank',
-          'noopener,noreferrer',
-        ),
+      action: () => window.open(`${docsBaseUrl}`, '_blank', 'noopener,noreferrer'),
     },
   ];
 
@@ -265,14 +275,76 @@ export default function WelcomePage(): JSX.Element {
               }}
             >
               <MotionBox
-                sx={{mt: 6}}
                 initial={{opacity: 0, y: 20}}
                 animate={{opacity: 1, y: 0}}
                 transition={{duration: 0.3, delay: 0.3}}
               >
-                <Typography variant="h3" color="primary" sx={{mb: 3}}>
-                  {t('common:welcome.sections.walkthrough')}
+                <Typography variant="h5" color="secondary" sx={{mb: 3}}>
+                  {t('common:welcome.sections.learnProduct', {productName})}
                 </Typography>
+                <Box
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    mb: 2,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {learnProduct.map((item, index) => (
+                    <MotionBox
+                      key={item.id}
+                      initial={{opacity: 0, x: 10}}
+                      animate={{opacity: 1, x: 0}}
+                      transition={{duration: 0.2, delay: 0.3 + index * 0.05}}
+                    >
+                      <Box
+                        component="a"
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          cursor: 'pointer',
+                          color: 'inherit',
+                          textDecoration: 'none',
+                          px: 2,
+                          py: 1.5,
+                          borderBottom: index < learnProduct.length - 1 ? '1px solid' : 'none',
+                          borderColor: 'divider',
+                          '&:hover': {
+                            bgcolor: 'action.hover',
+                            '& .learnproduct-title': {
+                              color: 'primary.main',
+                              textDecoration: 'underline',
+                            },
+                          },
+                        }}
+                      >
+                        <Box sx={{color: 'text.secondary', display: 'flex', flexShrink: 0}}>{item.icon}</Box>
+                        <Stack spacing={0.5} sx={{flex: 1}}>
+                          <Typography
+                            className="learnproduct-title"
+                            variant="body1"
+                            fontWeight={500}
+                            sx={{transition: 'all 0.2s'}}
+                          >
+                            {item.label}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {item.description}
+                          </Typography>
+                        </Stack>
+                        <Box sx={{color: 'text.disabled', display: 'flex', flexShrink: 0}}>
+                          <ExternalLink size={14} />
+                        </Box>
+                      </Box>
+                    </MotionBox>
+                  ))}
+                </Box>
+
                 <Stack spacing={2}>
                   {walkthroughs.map((walkthrough, index) => (
                     <MotionBox
@@ -280,13 +352,14 @@ export default function WelcomePage(): JSX.Element {
                       initial={{opacity: 0, x: 10}}
                       animate={{opacity: 1, x: 0}}
                       transition={{duration: 0.2, delay: 0.35 + index * 0.05}}
+                      sx={{px: 2}}
                     >
                       <Box
                         onClick={walkthrough.action}
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 1,
+                          gap: 1.5,
                           cursor: 'pointer',
                           py: 1,
                           '&:hover': {
@@ -297,7 +370,7 @@ export default function WelcomePage(): JSX.Element {
                           },
                         }}
                       >
-                        <ChevronRight size={16} />
+                        <Box sx={{color: 'text.secondary', display: 'flex', flexShrink: 0}}>{walkthrough.icon}</Box>
                         <Stack spacing={0.5}>
                           <Typography
                             className="walkthrough-title"
@@ -308,6 +381,9 @@ export default function WelcomePage(): JSX.Element {
                             }}
                           >
                             {walkthrough.label}
+                            <Box sx={{color: 'text.disabled', display: 'inline-block', ml: 1}}>
+                              <ExternalLink size={14} />
+                            </Box>
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {walkthrough.description}

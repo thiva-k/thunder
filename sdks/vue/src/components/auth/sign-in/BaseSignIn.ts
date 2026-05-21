@@ -37,7 +37,7 @@ const BaseSignIn: Component = defineComponent({
     const {platform} = useThunderID();
 
     return (): VNode => {
-      if (platform === Platform.ThunderIDV2) {
+      if (platform === Platform.ThunderID) {
         return h(BaseSignInV2, {...attrs}, slots);
       }
 

@@ -106,7 +106,7 @@ const ThemeProvider: FC<PropsWithChildren<ThemeProviderProps>> = ({
 }: PropsWithChildren<ThemeProviderProps>): ReactElement => {
   const {platform} = useThunderID();
 
-  if (platform === Platform.ThunderIDV2) {
+  if (platform === Platform.ThunderID) {
     const v2Props: ThemeProviderV2Props = {theme};
 
     return <ThemeProviderV2 {...v2Props}>{children}</ThemeProviderV2>;

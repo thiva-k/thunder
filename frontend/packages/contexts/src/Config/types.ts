@@ -65,7 +65,7 @@ export interface ClientConfig {
 
   /**
    * Unique identifier for the client application, used for authentication
-   * and authorization with identity providers like Asgardeo.
+   * and authorization with identity providers like ThunderID.
    * @example "CONSOLE", "my-app-client-id"
    */
   client_id: string;
@@ -143,6 +143,12 @@ export interface BrandConfig {
    * @example { light: "assets/images/favicon.ico", dark: "assets/images/favicon-inverted.ico" }
    */
   favicon: {light: string; dark: string};
+
+  /**
+   * Base URL for the product documentation site.
+   * @example "https://thunderid.dev/docs/next"
+   */
+  docs_url?: string;
 
   /**
    * Design configuration for theming and UI customization.

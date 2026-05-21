@@ -28,15 +28,15 @@ export const DefaultThemeConfig = {
     light: {
       palette: {
         primary: {
-          main: '#3a87ed',
+          main: '#3688FF',
           dark: '#2d78e0',
           light: '#6ba8f5',
           contrastText: '#ffffff',
         },
         secondary: {
-          main: '#00b8d9',
-          dark: '#0097b2',
-          light: '#4dd8ef',
+          main: '#5498b4',
+          dark: '#2d8eac',
+          light: '#85cde3',
           contrastText: '#ffffff',
         },
         warning: {
@@ -69,16 +69,16 @@ export const DefaultThemeConfig = {
     dark: {
       palette: {
         primary: {
-          main: '#4d9ef7',
-          dark: '#3a87ed',
-          light: '#8bf9fa',
+          main: '#3688FF',
+          dark: '#2d78e0',
+          light: '#6ba8f5',
           contrastText: '#ffffff',
         },
         secondary: {
-          main: '#00d5ff',
-          dark: '#00b8d9',
-          light: '#6deeff',
-          contrastText: '#0a1628',
+          main: '#5498b4',
+          dark: '#2d8eac',
+          light: '#85cde3',
+          contrastText: '#0a2230',
         },
         warning: {
           main: '#f59e0b',
@@ -118,8 +118,8 @@ export const DefaultThemeConfig = {
     heavy: 'blur(24px)',
   },
   gradient: {
-    primary: 'linear-gradient(90deg, #3a8cf8 0%, #1d5eb4 100%)',
-    secondary: 'linear-gradient(90deg, #00b8d9 0%, #6deeff 100%)',
+    primary: 'linear-gradient(90deg, #3688FF 0%, #1d5eb4 100%)',
+    secondary: 'linear-gradient(90deg, #3688FF 0%, #1d5eb4 100%)',
   },
   components: {
     MuiCssBaseline: {
@@ -163,9 +163,9 @@ export const DefaultThemeConfig = {
 
           return {
             color: '#ffffff',
-            background: 'linear-gradient(90deg, #3a87ed 0%, #6b85a8 100%)',
+            background: 'linear-gradient(90deg, #3688FF 0%, #6b85a8 100%)',
             '&:hover': {
-              background: 'linear-gradient(90deg, #3a87ed 0%, #6b85a8 100%)',
+              background: 'linear-gradient(90deg, #3688FF 0%, #6b85a8 100%)',
             },
           };
         },

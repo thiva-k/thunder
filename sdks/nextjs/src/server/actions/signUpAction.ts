@@ -19,7 +19,7 @@
 'use server';
 
 import {EmbeddedFlowExecuteRequestPayload, EmbeddedFlowExecuteResponse, EmbeddedFlowStatus} from '@thunderid/node';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 
 /**
  * Server action for signing in a user.
@@ -42,7 +42,7 @@ const signUpAction = async (
   success: boolean;
 }> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
 
     // If no payload provided, redirect to sign-in URL for redirect-based sign-in.
     // If there's a payload, handle the embedded sign-in flow.

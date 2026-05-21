@@ -29,7 +29,7 @@ import {
 } from '@thunderid/node';
 import {cookies} from 'next/headers';
 import {ThunderIDNextConfig} from '../../models/config';
-import ThunderIDNextClient from '../../ThunderIDNextClient';
+import getClient from '../getClient';
 import logger from '../../utils/logger';
 import SessionManager, {SessionTokenPayload} from '../../utils/SessionManager';
 
@@ -57,7 +57,7 @@ const signInAction = async (
   success: boolean;
 }> => {
   try {
-    const client: ThunderIDNextClient = ThunderIDNextClient.getInstance();
+    const client = getClient();
     const cookieStore: RequestCookies = await cookies();
 
     let sessionId: string | undefined;
@@ -137,7 +137,7 @@ const signInAction = async (
         }
         const config: ThunderIDNextConfig = await client.getConfiguration();
         const sessionCookieExpiryTime: number = SessionManager.resolveSessionCookieExpiry(
-          config.sessionCookieExpiryTime,
+          config.sessionCookie?.expiryTime,
         );
 
         const sessionToken: string = await SessionManager.createSessionToken(

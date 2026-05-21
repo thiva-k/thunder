@@ -21,15 +21,13 @@ import {ThunderIDAPIError, AllOrganizationsApiResponse} from '@thunderid/node';
 import {describe, it, expect, vi, beforeEach, afterEach, Mock} from 'vitest';
 
 // --- Now import the SUT and mocked deps ---
-import ThunderIDNextClient from '../../../ThunderIDNextClient';
+import getClient from '../../getClient';
 import getAllOrganizations from '../getAllOrganizations';
 import getSessionId from '../getSessionId';
 
 // --- Mocks MUST be defined before importing the SUT ---
-vi.mock('../../../ThunderIDNextClient', () => ({
-  default: {
-    getInstance: vi.fn(),
-  },
+vi.mock('../../getClient', () => ({
+  default: vi.fn(),
 }));
 
 vi.mock('../getSessionId', () => ({
@@ -59,7 +57,7 @@ describe('getAllOrganizations (Next.js server action)', () => {
     vi.resetAllMocks();
 
     // Default: getInstance returns our mock client
-    (ThunderIDNextClient.getInstance as unknown as Mock).mockReturnValue(mockClient);
+    (getClient as unknown as Mock).mockReturnValue(mockClient);
     // Default: session id resolver returns a value
     (getSessionId as unknown as Mock).mockResolvedValue('sess-abc');
   });
@@ -73,7 +71,7 @@ describe('getAllOrganizations (Next.js server action)', () => {
 
     const result: AllOrganizationsApiResponse = await getAllOrganizations(baseOptions, 'sess-123');
 
-    expect(ThunderIDNextClient.getInstance).toHaveBeenCalledTimes(1);
+    expect(getClient).toHaveBeenCalledTimes(1);
     expect(getSessionId).not.toHaveBeenCalled();
     expect(mockClient.getAllOrganizations).toHaveBeenCalledWith(baseOptions, 'sess-123');
     expect(result).toBe(mockResponse);

@@ -17,51 +17,48 @@
  */
 
 /**
- * Entry point for all public APIs of this SDK.
+ * Entry point for all public APIs of the @thunderid/browser SDK.
  */
-// eslint-disable-next-line import/no-cycle
-export * from './__legacy__/client';
-// eslint-disable-next-line import/no-cycle
-export * from './__legacy__/models';
 
-// Utils
-// eslint-disable-next-line import/no-cycle
-export * from './__legacy__/utils/spa-utils';
+// Client
+export {default as ThunderIDBrowserClient} from './ThunderIDBrowserClient';
+export {default as FetchHttpClient} from './FetchHttpClient';
 
 // Constants
-export * from './__legacy__/constants/storage';
-export * from './__legacy__/constants/hooks';
+export {default as Hooks, Hooks as BrowserHooks} from './constants/Hooks';
+export * from './constants/SPAConstants';
 
-// clients
-export * from './__legacy__/clients/main-thread-client';
-export * from './__legacy__/clients/web-worker-client';
-
-// models
-export * from './__legacy__/models/request-custom-grant';
-
-// helpers
-export * from './__legacy__/helpers/authentication-helper';
-export * from './__legacy__/helpers/spa-helper';
-
-// worker receiver
-export * from './__legacy__/worker/worker-receiver';
-
+// Models
+export {default as BrowserStorage} from './models/BrowserStorage';
+export type {BrowserClientConfig, BrowserAuthConfig} from './models/BrowserConfig';
+export type {default as SignInConfig} from './models/SignInConfig';
+export type {default as SignOutError} from './models/SignOutError';
+export type {SPATokenExchangeConfig} from './models/TokenExchangeConfig';
 export type {ThunderIDBrowserConfig} from './models/config';
 
+// Stores
+export {default as LocalStore} from './stores/LocalStore';
+export {default as SessionStore} from './stores/SessionStore';
+export {default as MemoryStore} from './stores/MemoryStore';
+
+// Utils
+export {default as SPACryptoUtils} from './utils/SPACryptoUtils';
+export {default as SPAUtils} from './utils/SPAUtils';
+export {default as SPAHelper} from './utils/SPAHelper';
+export {default as AuthenticationHelper} from './utils/AuthenticationHelper';
+export {default as createSessionManagementHelper} from './utils/SessionManagementHelper';
+export type {SessionManagementHelperInterface} from './utils/SessionManagementHelper';
 export {default as hasAuthParamsInUrl} from './utils/hasAuthParamsInUrl';
 export {default as hasCalledForThisInstanceInUrl} from './utils/hasCalledForThisInstanceInUrl';
 export {default as navigate} from './utils/navigate';
+export {default as http} from './utils/http';
+export {default as handleWebAuthnAuthentication} from './utils/handleWebAuthnAuthentication';
+export {default as resolveEmojiUrisInHtml} from './utils/v2/resolveEmojiUrisInHtml';
 
-export {default as ThunderIDBrowserClient} from './ThunderIDBrowserClient';
-export {FetchHttpClient} from './FetchHttpClient';
-
-// Re-export everything from the JavaScript package
-export * from '@thunderid/javascript';
-
+// Theme
 export {detectThemeMode, createClassObserver, createMediaQueryListener} from './theme/themeDetection';
 export type {BrowserThemeDetection} from './theme/themeDetection';
 export {default as getActiveTheme} from './theme/getActiveTheme';
 
-export {default as handleWebAuthnAuthentication} from './utils/handleWebAuthnAuthentication';
-export {default as http} from './utils/http';
-export {default as resolveEmojiUrisInHtml} from './utils/v2/resolveEmojiUrisInHtml';
+// Re-export everything from the JavaScript SDK
+export * from '@thunderid/javascript';

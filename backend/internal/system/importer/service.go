@@ -27,6 +27,7 @@ import (
 
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 
+	agentmodel "github.com/thunder-id/thunderid/internal/agent/model"
 	appmodel "github.com/thunder-id/thunderid/internal/application/model"
 	layoutmgt "github.com/thunder-id/thunderid/internal/design/layout/mgt"
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
@@ -86,6 +87,7 @@ type ouAdapter interface {
 		*serviceerror.ServiceError,
 	)
 	GetOrganizationUnit(ctx context.Context, id string) (ou.OrganizationUnit, *serviceerror.ServiceError)
+	GetOrganizationUnitByPath(ctx context.Context, handlePath string) (ou.OrganizationUnit, *serviceerror.ServiceError)
 	UpdateOrganizationUnit(ctx context.Context, id string, request ou.OrganizationUnitRequestWithID) (
 		ou.OrganizationUnit,
 		*serviceerror.ServiceError)
@@ -167,6 +169,15 @@ type translationAdapter interface {
 		*serviceerror.ServiceError)
 }
 
+type agentAdapter interface {
+	CreateAgent(ctx context.Context, req *agentmodel.CreateAgentRequest) (
+		*agentmodel.AgentCompleteResponse, *serviceerror.ServiceError)
+	GetAgent(ctx context.Context, agentID string, includeDisplay bool) (
+		*agentmodel.AgentGetResponse, *serviceerror.ServiceError)
+	UpdateAgent(ctx context.Context, agentID string, req *agentmodel.UpdateAgentRequest) (
+		*agentmodel.AgentCompleteResponse, *serviceerror.ServiceError)
+}
+
 // ImportServiceInterface defines runtime resource import and declarative resource deletion operations.
 type ImportServiceInterface interface {
 	ImportResources(ctx context.Context, request *ImportRequest) (*ImportResponse, *serviceerror.ServiceError)
@@ -196,6 +207,7 @@ type importService struct {
 	layoutService         layoutAdapter
 	userService           userAdapter
 	translationService    translationAdapter
+	agentService          agentAdapter
 }
 
 func newImportService(
@@ -212,6 +224,7 @@ func newImportService(
 	layoutService layoutAdapter,
 	userService userAdapter,
 	translationService translationAdapter,
+	agentService agentAdapter,
 ) ImportServiceInterface {
 	return &importService{
 		applicationService:    applicationService,
@@ -227,6 +240,7 @@ func newImportService(
 		layoutService:         layoutService,
 		userService:           userService,
 		translationService:    translationService,
+		agentService:          agentService,
 	}
 }
 
@@ -378,6 +392,8 @@ func (s *importService) importDocument(
 		return s.importUser(ctx, doc, options, dryRun)
 	case resourceTypeTranslation:
 		return s.importTranslation(doc, dryRun)
+	case resourceTypeAgent:
+		return s.importAgent(ctx, doc, options, dryRun, flowIDAliases)
 	default:
 		return ImportItemOutcome{
 			ResourceType: doc.ResourceType,
@@ -627,6 +643,7 @@ var resourceDependencyOrder = []string{
 	resourceTypeTheme,
 	resourceTypeLayout,
 	resourceTypeApplication,
+	resourceTypeAgent,
 	resourceTypeUser,
 	resourceTypeTranslation,
 }
@@ -791,12 +808,18 @@ func applicationRequestToDTO(req *appmodel.ApplicationRequestWithID) *appmodel.A
 	appDTO := &appmodel.ApplicationDTO{
 		ID:          req.ID,
 		OUID:        req.OUID,
+		OUHandle:    req.OUHandle,
 		Name:        req.Name,
 		Description: req.Description,
 		InboundAuthProfile: inboundmodel.InboundAuthProfile{
 			AuthFlowID:                req.AuthFlowID,
+			AuthFlowHandle:            req.AuthFlowHandle,
 			RegistrationFlowID:        req.RegistrationFlowID,
+			RegistrationFlowHandle:    req.RegistrationFlowHandle,
 			IsRegistrationFlowEnabled: req.IsRegistrationFlowEnabled,
+			RecoveryFlowID:            req.RecoveryFlowID,
+			RecoveryFlowHandle:        req.RecoveryFlowHandle,
+			IsRecoveryFlowEnabled:     req.IsRecoveryFlowEnabled,
 			ThemeID:                   req.ThemeID,
 			LayoutID:                  req.LayoutID,
 			Assertion:                 req.Assertion,

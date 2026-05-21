@@ -16,7 +16,19 @@
  * under the License.
  */
 
-export * from './__legacy__/models';
-export * from './__legacy__/client';
+// Client
+export {default as ThunderIDExpressClient} from './ThunderIDExpressClient';
 
+// Middleware
+export {thunderID, handleSignIn, handleSignOut} from './middleware/authentication';
+export {default as protect} from './middleware/protect';
+export {default as handleFlow} from './middleware/flow';
+
+// Models
+export type {ExpressClientConfig, ThunderIDExpressConfig, StrictExpressClientConfig} from './models/config';
+
+// Constants
+export {default as CookieConfig, SESSION_COOKIE_NAME} from './constants/CookieConfig';
+
+// Re-export everything from the Node SDK (includes SessionCookieConfig, ThunderIDNodeConfig, etc.)
 export * from '@thunderid/node';

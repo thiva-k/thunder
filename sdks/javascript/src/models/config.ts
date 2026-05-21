@@ -16,7 +16,8 @@
  * under the License.
  */
 
-import {Platform} from './platforms';
+import type {OIDCEndpoints} from './oidc-endpoints';
+import type {OAuthResponseMode} from './oauth-response';
 import {TokenEndpointAuthMethod} from './token-endpoint-auth';
 import {RecursivePartial} from './utility-types';
 import {ComponentsExtensions} from './v2/extensions/components';
@@ -57,6 +58,43 @@ export type SignOutOptions = Record<string, unknown>;
 export type SignUpOptions = Record<string, unknown>;
 
 export interface BaseConfig<T = unknown> extends WithPreferences, WithExtensions {
+  /**
+   * Whether to enable PKCE (Proof Key for Code Exchange) for the authorization request.
+   * Defaults to `true`. Disable only if your authorization server does not support PKCE.
+   *
+   * @default true
+   * @see {@link https://datatracker.ietf.org/doc/html/rfc7636}
+   */
+  enablePKCE?: boolean;
+
+  /**
+   * Optional prompt value to include in the authorization request.
+   * Controls the authentication UI behavior (e.g., `"login"`, `"none"`, `"consent"`).
+   */
+  prompt?: string;
+
+  /**
+   * OAuth 2.0 response mode for the authorization request.
+   * Controls how the authorization server delivers the response.
+   *
+   * @default 'query'
+   */
+  responseMode?: OAuthResponseMode;
+
+  /**
+   * Whether to include cookies in access-token, refresh-token, and custom-grant requests.
+   * Set to `false` for cross-origin requests where cookies should not be forwarded.
+   *
+   * @default true
+   */
+  sendCookiesInRequests?: boolean;
+
+  /**
+   * Whether to include the ID token as a hint in the logout request.
+   * When `true`, the `id_token_hint` parameter is sent to the end-session endpoint.
+   */
+  sendIdTokenInLogoutRequest?: boolean;
+
   /**
    * Optional URL where the authorization server should redirect after authentication.
    * This must match one of the allowed redirect URIs configured in your IdP.
@@ -212,6 +250,17 @@ export interface BaseConfig<T = unknown> extends WithPreferences, WithExtensions
   instanceId?: number;
 
   /**
+   * Authentication interaction mode.
+   *
+   * - `'redirect'` (default) — standard OAuth 2.0 authorization-code redirect flow.
+   * - `'embedded'` — app-native embedded flow; the server SDK drives the step-by-step
+   *   authentication without a browser redirect to the identity provider.
+   *
+   * @default 'redirect'
+   */
+  mode?: 'redirect' | 'embedded';
+
+  /**
    * Configuration for chaining authentication across multiple organization contexts.
    * Used when you need to authenticate a user in one organization using credentials
    * from another organization context.
@@ -236,13 +285,6 @@ export interface BaseConfig<T = unknown> extends WithPreferences, WithExtensions
    * @remarks This is mandatory if a custom domain is configured for the ThunderID organization.
    */
   organizationHandle?: string | undefined;
-
-  /**
-   * Optional platform where the application is running.
-   * This helps the SDK to optimize its behavior based on the platform.
-   * If not provided, the SDK will attempt to auto-detect the platform.
-   */
-  platform?: keyof typeof Platform;
 
   /**
    * The scopes to request during authentication.
@@ -517,3 +559,39 @@ export interface Preferences {
    */
   user?: UserPreferences;
 }
+
+/**
+ * Full client configuration type, combining all base options with an optional
+ * framework-specific extension type `T`.
+ *
+ * @typeParam T - Optional extension type for framework-specific config fields.
+ */
+export type AuthClientConfig<T = unknown> = Config<T>;
+
+/**
+ * Alias for the strict (non-extended) client configuration.
+ * Equivalent to `Config` with no extension type.
+ */
+export type StrictAuthClientConfig = Config;
+
+/**
+ * Alias for the default client configuration fields.
+ * Equivalent to `Config` with no extension type.
+ */
+export type DefaultAuthClientConfig = Config;
+
+/**
+ * Config variant for clients that discover endpoints via the well-known document.
+ * The `endpoints.wellKnown` field specifies the discovery URL.
+ */
+export type WellKnownAuthClientConfig = Config & {endpoints?: {wellKnown?: string}};
+
+/**
+ * Config variant for clients that derive endpoints from a `baseUrl`.
+ */
+export type BaseURLAuthClientConfig = Config & {baseUrl: string};
+
+/**
+ * Config variant for clients that specify OIDC endpoints explicitly.
+ */
+export type ExplicitAuthClientConfig = Config & {endpoints: Partial<OIDCEndpoints>};
