@@ -24,8 +24,6 @@ function DockerLogo() {
     <img
       src="/img/docker-logo.svg"
       alt="Docker"
-      width="22"
-      height="22"
       style={{ objectFit: 'contain', display: 'block' }}
     />
   );
@@ -36,8 +34,6 @@ function KubernetesLogo() {
     <img
       src="/img/kubernetes-logo.svg"
       alt="Kubernetes"
-      width="22"
-      height="22"
       style={{ objectFit: 'contain', display: 'block' }}
     />
   );
@@ -46,10 +42,9 @@ function KubernetesLogo() {
 function OpenChoreoLogo() {
   return (
     <img
+      className="dp-openchoreo-logo"
       src="/img/openchoreo-logo.svg"
       alt="OpenChoreo"
-      width="22"
-      height="22"
       style={{ objectFit: 'contain', display: 'block' }}
     />
   );

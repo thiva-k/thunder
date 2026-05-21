@@ -28,6 +28,7 @@ const sidebar: SidebarsConfig = {
       type: 'category',
       label: 'APIs',
       collapsed: false,
+      className: 'sidebar-section-icon-apis',
       items: [
         {
           type: 'doc',
@@ -50,6 +51,7 @@ const sidebar: SidebarsConfig = {
       type: 'category',
       label: 'Guides',
       collapsed: false,
+      className: 'sidebar-section-icon-guides',
       items: [
         {
           type: 'doc',

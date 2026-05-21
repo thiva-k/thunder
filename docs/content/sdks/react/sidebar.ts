@@ -28,6 +28,7 @@ const sidebar: SidebarsConfig = {
       type: 'category',
       label: 'APIs',
       collapsed: false,
+      className: 'sidebar-section-icon-apis',
       items: [
         {
           type: 'category',
@@ -164,6 +165,7 @@ const sidebar: SidebarsConfig = {
       type: 'category',
       label: 'Guides',
       collapsed: false,
+      className: 'sidebar-section-icon-guides',
       items: [
         {
           type: 'category',
