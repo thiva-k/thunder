@@ -78,15 +78,15 @@ export default function WelcomePage(): JSX.Element {
     {
       id: 'learn-b2c',
       icon: <Users size={18} />,
-      label: t('common:welcome.learnProduct.b2c'),
-      description: t('common:welcome.learnProduct.b2cDesc'),
+      label: t('common:welcome.tryoutProduct.b2c'),
+      description: t('common:welcome.tryoutProduct.b2cDesc'),
       url: `${docsBaseUrl}/use-cases/b2c/try-it-out`,
     },
     {
       id: 'learn-ai-agents',
       icon: <Bot size={18} />,
-      label: t('common:welcome.learnProduct.aiAgents'),
-      description: t('common:welcome.learnProduct.aiAgentsDesc'),
+      label: t('common:welcome.tryoutProduct.aiAgents'),
+      description: t('common:welcome.tryoutProduct.aiAgentsDesc'),
       url: `${docsBaseUrl}/use-cases/ai-agents/try-it-out`,
     },
   ];
@@ -280,7 +280,7 @@ export default function WelcomePage(): JSX.Element {
                 transition={{duration: 0.3, delay: 0.3}}
               >
                 <Typography variant="h5" color="secondary" sx={{mb: 3}}>
-                  {t('common:welcome.sections.learnProduct', {productName})}
+                  {t('common:welcome.sections.tryoutProduct', {productName})}
                 </Typography>
                 <Box
                   sx={{
