@@ -22,6 +22,7 @@ import type {SidebarsConfig} from '@docusaurus/plugin-content-docs';
 import browserSdkSidebar from './content/sdks/browser/sidebar';
 import expressSdkSidebar from './content/sdks/express/sidebar';
 import reactSdkSidebar from './content/sdks/react/sidebar';
+import nodeSdkSidebar from './content/sdks/node/sidebar';
 import vueSdkSidebar from './content/sdks/vue/sidebar';
 import productConfig from './docusaurus.product.config';
 
@@ -408,6 +409,7 @@ const sidebars: SidebarsConfig = {
   ],
   expressSdkSidebar,
   reactSdkSidebar,
+  nodeSdkSidebar,
   vueSdkSidebar,
   browserSdkSidebar,
   communitySidebar: [
