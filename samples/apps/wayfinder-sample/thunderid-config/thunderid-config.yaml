@@ -1,7 +1,7 @@
 # resource_type: resource_server
 id: wayfinder-agent-rs
 name: Wayfinder Agent
-description: Controls access to the AI chat agent
+description: Controls access to the Wayfinder Concierge agent
 identifier: wayfinder-agent
 ou_handle: default
 delimiter: ":"
@@ -11,7 +11,7 @@ resources:
     actions:
       - name: Access
         handle: access
-        description: Grants access to the AI chat agent
+        description: Grants access to the Wayfinder Concierge agent
 
 ---
 # resource_type: resource_server
@@ -31,6 +31,9 @@ resources:
         handle: create
       - name: Cancel
         handle: cancel
+      - name: Recommend
+        handle: recommend
+        description: Grants access to surface flight recommendations
 
 ---
 # resource_type: application
@@ -213,16 +216,16 @@ nodes:
 
 ---
 # resource_type: agent
-id: wayfinder-chat-agent
-name: WAYFINDER-CHAT-AGENT
-description: AI chat agent for the Wayfinder Travel sample
+id: wayfinder-concierge
+name: WAYFINDER-CONCIERGE
+description: Wayfinder Concierge AI agent for the Wayfinder Travel sample
 ou_handle: default
 type: default
 auth_flow_handle: basic-with-consent
 inbound_auth_config:
   - type: oauth2
     config:
-      client_id: WAYFINDER-CHAT-AGENT
+      client_id: WAYFINDER-CONCIERGE
       client_secret: "{{.AGENT_CLIENT_SECRET}}"
       redirect_uris:
         - http://localhost:5173/agent-callback
@@ -245,9 +248,9 @@ inbound_auth_config:
 
 ---
 # resource_type: role
-id: wayfinder-chat-user-role
-name: Wayfinder Chat User
-description: Grants access to use the Wayfinder AI chat agent
+id: chat-user-role
+name: Chat User
+description: Grants access to use the Wayfinder Concierge agent
 ou_handle: default
 permissions:
   - resource_server_id: wayfinder-agent-rs
@@ -256,13 +259,11 @@ permissions:
 assignments:
   - id: wayfinder-demo-user
     type: user
-  - id: wayfinder-demo-user-2
-    type: user
 
 ---
 # resource_type: role
-id: wayfinder-user-role
-name: Wayfinder User
+id: booking-user-role
+name: Booking User
 description: Grants booking permissions for the Wayfinder sample
 ou_handle: default
 permissions:
@@ -276,6 +277,20 @@ assignments:
     type: user
   - id: wayfinder-demo-user-2
     type: user
+
+---
+# resource_type: role
+id: recommender-role
+name: Recommender
+description: Grants access to the booking:recommend permission, assigned to the Wayfinder Concierge agent
+ou_handle: default
+permissions:
+  - resource_server_id: booking-api-rs
+    permissions:
+      - booking:recommend
+assignments:
+  - id: wayfinder-concierge
+    type: agent
 
 ---
 # resource_type: user

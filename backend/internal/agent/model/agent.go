@@ -45,6 +45,21 @@ type AgentRequestWithID struct {
 	InboundAuthConfig               []inboundmodel.InboundAuthConfigWithSecret `json:"inboundAuthConfig,omitempty" yaml:"inbound_auth_config,omitempty"`
 }
 
+// Agent is the service-level model for agent create operations.
+type Agent struct {
+	ID          string          `json:"id,omitempty"`
+	OUID        string          `json:"ouId"`
+	OUHandle    string          `json:"ouHandle,omitempty"`
+	Type        string          `json:"type"`
+	Name        string          `json:"name"`
+	Description string          `json:"description,omitempty"`
+	Owner       string          `json:"owner,omitempty"`
+	Attributes  json.RawMessage `json:"attributes,omitempty"`
+
+	inboundmodel.InboundAuthProfile
+	InboundAuthConfig []inboundmodel.InboundAuthConfigWithSecret `json:"inboundAuthConfig,omitempty"`
+}
+
 // CreateAgentRequest is the HTTP request body for creating an agent.
 type CreateAgentRequest struct {
 	OUID        string          `json:"ouId"`

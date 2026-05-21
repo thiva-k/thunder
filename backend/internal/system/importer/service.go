@@ -170,7 +170,7 @@ type translationAdapter interface {
 }
 
 type agentAdapter interface {
-	CreateAgent(ctx context.Context, req *agentmodel.CreateAgentRequest) (
+	CreateAgent(ctx context.Context, agent *agentmodel.Agent) (
 		*agentmodel.AgentCompleteResponse, *serviceerror.ServiceError)
 	GetAgent(ctx context.Context, agentID string, includeDisplay bool) (
 		*agentmodel.AgentGetResponse, *serviceerror.ServiceError)
@@ -416,12 +416,10 @@ func (s *importService) importIdentityProvider(
 		}
 	}
 
-	var req idp.IDPDTO
-	if err := doc.Node.Decode(&req); err != nil {
+	req, err := idp.ParseIDPDTOFromNode(doc.Node)
+	if err != nil {
 		return ImportItemOutcome{
 			ResourceType: resourceTypeIdentityProvider,
-			ResourceID:   req.ID,
-			ResourceName: req.Name,
 			Status:       statusFailed,
 			Code:         ErrorInvalidYAMLContent.Code,
 			Message:      fmt.Sprintf("failed to decode identity provider document: %v", err),
@@ -444,7 +442,7 @@ func (s *importService) importIdentityProvider(
 	}
 
 	if options.IsUpsertEnabled() && req.ID != "" {
-		updated, svcErr := s.idpService.UpdateIdentityProvider(ctx, req.ID, &req)
+		updated, svcErr := s.idpService.UpdateIdentityProvider(ctx, req.ID, req)
 		if svcErr == nil {
 			return ImportItemOutcome{
 				ResourceType: resourceTypeIdentityProvider,
@@ -468,7 +466,7 @@ func (s *importService) importIdentityProvider(
 		}
 	}
 
-	created, svcErr := s.idpService.CreateIdentityProvider(ctx, &req)
+	created, svcErr := s.idpService.CreateIdentityProvider(ctx, req)
 	if svcErr != nil {
 		return ImportItemOutcome{
 			ResourceType: resourceTypeIdentityProvider,
