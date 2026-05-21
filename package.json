@@ -28,6 +28,7 @@
     "build:frontend": "nx run-many --target=build --projects=frontend/**",
     "build:sdks": "nx run-many --target=build --projects=sdks/**",
     "build:docs": "nx run @thunderid/docs:build",
+    "build:tools": "nx run-many --target=build --projects=tools/**",
     "clean": "nx run-many --target=clean --all",
     "clean:docs": "pnpm --dir docs run clear",
     "format:check": "prettier --check --cache --config frontend/prettier.config.js --ignore-path frontend/.prettierignore frontend",
