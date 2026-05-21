@@ -1678,13 +1678,13 @@ func TestImportResources_DryRunSkipsApplicationHandleResolution(t *testing.T) {
 // Agent import tests
 
 type fakeAgentService struct {
-	created  []*agentmodel.CreateAgentRequest
+	created  []*agentmodel.Agent
 	updated  []*agentmodel.UpdateAgentRequest
 	existing map[string]*agentmodel.AgentGetResponse
 }
 
 func (f *fakeAgentService) CreateAgent(
-	_ context.Context, req *agentmodel.CreateAgentRequest,
+	_ context.Context, req *agentmodel.Agent,
 ) (*agentmodel.AgentCompleteResponse, *serviceerror.ServiceError) {
 	id := req.Name + "-id"
 	f.created = append(f.created, req)
@@ -1835,7 +1835,7 @@ type errAgentService struct {
 }
 
 func (e *errAgentService) CreateAgent(
-	ctx context.Context, req *agentmodel.CreateAgentRequest,
+	ctx context.Context, req *agentmodel.Agent,
 ) (*agentmodel.AgentCompleteResponse, *serviceerror.ServiceError) {
 	if e.createErr != nil {
 		return nil, e.createErr
@@ -1961,7 +1961,7 @@ func TestImportAgent_FlowAliasRemapsFlowIDs(t *testing.T) {
 		agentID      string
 		agentName    string
 		agentFlowKey string
-		getFlowID    func(*agentmodel.CreateAgentRequest) string
+		getFlowID    func(*agentmodel.Agent) string
 	}{
 		{
 			name:         "auth_flow_id remapped",
@@ -1972,7 +1972,7 @@ func TestImportAgent_FlowAliasRemapsFlowIDs(t *testing.T) {
 			agentID:      "agent-2",
 			agentName:    "Flow Agent",
 			agentFlowKey: "auth_flow_id",
-			getFlowID:    func(r *agentmodel.CreateAgentRequest) string { return r.AuthFlowID },
+			getFlowID:    func(r *agentmodel.Agent) string { return r.AuthFlowID },
 		},
 		{
 			name:         "registration_flow_id remapped",
@@ -1983,7 +1983,7 @@ func TestImportAgent_FlowAliasRemapsFlowIDs(t *testing.T) {
 			agentID:      "agent-3",
 			agentName:    "Reg Agent",
 			agentFlowKey: "registration_flow_id",
-			getFlowID:    func(r *agentmodel.CreateAgentRequest) string { return r.RegistrationFlowID },
+			getFlowID:    func(r *agentmodel.Agent) string { return r.RegistrationFlowID },
 		},
 	}
 

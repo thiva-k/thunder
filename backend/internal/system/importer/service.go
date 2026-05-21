@@ -170,7 +170,7 @@ type translationAdapter interface {
 }
 
 type agentAdapter interface {
-	CreateAgent(ctx context.Context, req *agentmodel.CreateAgentRequest) (
+	CreateAgent(ctx context.Context, agent *agentmodel.Agent) (
 		*agentmodel.AgentCompleteResponse, *serviceerror.ServiceError)
 	GetAgent(ctx context.Context, agentID string, includeDisplay bool) (
 		*agentmodel.AgentGetResponse, *serviceerror.ServiceError)
