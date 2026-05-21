@@ -18,12 +18,9 @@
 
 import {
   ThunderIDBrowserClient,
-  flattenUserSchema,
-  generateFlattenedUserProfile,
   UserProfile,
   SignInOptions,
   User,
-  generateUserProfile,
   EmbeddedFlowExecuteResponse,
   SignUpOptions,
   EmbeddedFlowExecuteRequestPayload,
@@ -47,8 +44,6 @@ import {
 } from '@thunderid/browser';
 import getAllOrganizations from './api/getAllOrganizations';
 import getMeOrganizations from './api/getMeOrganizations';
-import getSchemas from './api/getSchemas';
-import getScim2Me from './api/getScim2Me';
 import {ThunderIDReactConfig} from './models/config';
 
 class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig> extends ThunderIDBrowserClient<T> {
@@ -117,22 +112,8 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
     throw new Error('Not implemented');
   }
 
-  override async getUser(options?: any): Promise<User> {
-    try {
-      let baseUrl: string = options?.baseUrl;
-
-      if (!baseUrl) {
-        const configData: any = await (this.getStorageManager() as any).getConfigData();
-        baseUrl = configData?.baseUrl;
-      }
-
-      const profile: User = await getScim2Me({baseUrl});
-      const schemas: any = await getSchemas({baseUrl});
-
-      return generateUserProfile(profile, flattenUserSchema(schemas));
-    } catch (error) {
-      return extractUserClaimsFromIdToken(await this.getDecodedIdToken());
-    }
+  override async getUser(): Promise<User> {
+    return extractUserClaimsFromIdToken(await this.getDecodedIdToken());
   }
 
   override async getDecodedIdToken(sessionId?: string): Promise<IdToken> {
@@ -143,33 +124,14 @@ class ThunderIDReactClient<T extends ThunderIDReactConfig = ThunderIDReactConfig
     return this.withLoading(async () => super.getIdToken() as Promise<string>);
   }
 
-  override async getUserProfile(options?: any): Promise<UserProfile> {
+  override async getUserProfile(): Promise<UserProfile> {
     return this.withLoading(async () => {
-      try {
-        let baseUrl: string = options?.baseUrl;
-
-        if (!baseUrl) {
-          const configData: any = await (this.getStorageManager() as any).getConfigData();
-          baseUrl = configData?.baseUrl;
-        }
-
-        const profile: User = await getScim2Me({baseUrl, instanceId: this.getInstanceId()});
-        const schemas: any = await getSchemas({baseUrl, instanceId: this.getInstanceId()});
-
-        const processedSchemas: any = flattenUserSchema(schemas);
-
-        return {
-          flattenedProfile: generateFlattenedUserProfile(profile, processedSchemas),
-          profile,
-          schemas: processedSchemas,
-        };
-      } catch (error) {
-        return {
-          flattenedProfile: extractUserClaimsFromIdToken(await this.getDecodedIdToken()),
-          profile: extractUserClaimsFromIdToken(await this.getDecodedIdToken()),
-          schemas: [],
-        };
-      }
+      const claims: User = extractUserClaimsFromIdToken(await this.getDecodedIdToken());
+      return {
+        flattenedProfile: claims,
+        profile: claims,
+        schemas: [],
+      };
     });
   }
 
