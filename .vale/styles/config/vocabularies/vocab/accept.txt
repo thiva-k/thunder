@@ -76,6 +76,9 @@ Memorystore
 [Ee]num
 [Uu]serinfo
 [Dd]ev
+[Ww]alkthrough
+Twilio
+Vonage
 mkdir
 [Ww]ayfinder
 [Dd]eclaratively

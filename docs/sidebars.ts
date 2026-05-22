@@ -243,6 +243,70 @@ const sidebars: SidebarsConfig = {
           ],
         },
         {
+          type: 'category',
+          label: 'Integrations',
+          collapsed: true,
+          collapsible: true,
+          items: [
+            {
+              type: 'category',
+              label: 'Identity Providers',
+              collapsed: true,
+              collapsible: true,
+              items: [
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/overview',
+                  label: 'What are Identity Providers?',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/add-google',
+                  label: 'Add Google',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/add-github',
+                  label: 'Add GitHub',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/add-oidc-provider',
+                  label: 'Add OIDC Provider',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/add-oauth-provider',
+                  label: 'Add OAuth 2.0 Provider',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/manage-identity-providers',
+                  label: 'Manage Identity Providers',
+                },
+                {
+                  type: 'doc',
+                  id: 'guides/guides/identity-providers/connect-idp-to-application',
+                  label: 'Connect IdP to Application',
+                },
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Notifications',
+              collapsed: true,
+              collapsible: true,
+              items: [
+                {
+                  type: 'doc',
+                  id: 'guides/guides/notifications/sms-providers',
+                  label: 'SMS Providers',
+                },
+              ],
+            },
+          ],
+        },
+        {
           type: 'doc',
           id: 'guides/guides/organization-units',
           label: 'Organization Units',
