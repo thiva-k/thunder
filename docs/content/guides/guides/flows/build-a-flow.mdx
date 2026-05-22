@@ -39,7 +39,7 @@ The Basic template has four nodes:
 |---|---|
 | **Sign In** (View) | Renders the sign-in form with username and password fields |
 | **Identifier + Password** (Executor) | Validates the submitted credentials against the user store |
-| **Authorization** (Executor) | Checks whether the authenticated user is authorized to access the application |
+| **Authorization** (Executor) | Checks whether the authenticated user can access the application |
 | **Auth Assertion Generator** (Executor) | Issues the authentication assertion on success |
 
 Each node connects to the next via its **green (success) output**. The final executor connects to **END**.

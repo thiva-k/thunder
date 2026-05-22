@@ -168,10 +168,10 @@ configuration:
 
 ## Token Exchange with External Identity Providers
 
-In addition to accepting external tokens for API authentication (above), <ProductName /> supports exchanging external IDP tokens for <ProductName />-issued access tokens via [RFC 8693 Token Exchange](https://datatracker.ietf.org/doc/html/rfc8693). This is useful when:
+Along with accepting external tokens for API authentication (above), <ProductName /> supports exchanging external IDP tokens for <ProductName />-issued access tokens via [RFC 8693 Token Exchange](https://datatracker.ietf.org/doc/html/rfc8693). This is useful when:
 
 - A client authenticates users via an external OIDC provider (Asgardeo, Google, Azure AD, Keycloak) and needs a <ProductName />-scoped access token.
-- You want to consolidate token issuance through <ProductName /> while delegating authentication to an upstream IDP.
+- You want to centralize token issuance through <ProductName /> while delegating authentication to an upstream IDP.
 
 ### How It Works
 
