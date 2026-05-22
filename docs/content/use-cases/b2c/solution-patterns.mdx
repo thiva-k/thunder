@@ -66,14 +66,14 @@ These compose with any approach in Part A. They are independent decisions: a red
 
 ### Identity Federation
 
-External identity providers, both social and enterprise, let users bring an identity they already have to your app, removing the need to manage a separate credential. Done well, federation creates one user record per real person regardless of how many sign-in methods they end up using. Most consumer apps adopt at least one social provider, and prosumer apps add enterprise OIDC or SAML.
+External identity providers, both social and enterprise, let users bring an identity they already have to your app, removing the need to manage a separate credential. Done well, federation creates one user record per real person regardless of how many sign-in methods they end up using. Most consumer apps adopt at least one social provider, and prosumer apps add enterprise OIDC.
 
 Federation requires a few specific decisions. Should a user record be created the first time someone signs in via a provider (just-in-time provisioning), or only after an invitation? Should multiple federated identities link to one user, and what is the linking signal (verified email, explicit linking, or both)? Should signing out of your app sign the user out of the federated provider too? Should a user be routed to a specific provider automatically based on their email domain? Each of these is configurable independently.
 
 **Capabilities Involved**
 
 - Social sign-in via Google, GitHub, and other social providers.
-- Enterprise sign-in via OpenID Connect or SAML.
+- Enterprise sign-in via OpenID Connect.
 - Just-in-time (JIT) provisioning: create the user the first time they sign in this way.
 - Single logout (SLO): sign the user out of every place they're signed in.
 - Account linking: connect multiple sign-in methods to a single user.
