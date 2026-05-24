@@ -199,9 +199,22 @@ const sidebars: SidebarsConfig = {
               id: 'guides/guides/applications/application-settings',
               label: 'Application Settings',
             },
+          ],
+        },
+        {
+          type: 'category',
+          label: 'Protocols',
+          collapsed: true,
+          collapsible: true,
+          items: [
             {
               type: 'doc',
-              id: 'guides/guides/applications/dynamic-client-registration',
+              id: 'guides/guides/protocols/oauth2',
+              label: 'OAuth 2.0 Configuration',
+            },
+            {
+              type: 'doc',
+              id: 'guides/guides/protocols/dynamic-client-registration',
               label: 'Dynamic Client Registration',
             },
           ],

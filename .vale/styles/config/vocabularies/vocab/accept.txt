@@ -71,6 +71,11 @@ BCP
 Memorystore
 [Uu]pdatedAt
 [Cc]reatedAt
+[Ww]alkthrough
+[Uu]serinfo
+PAR
+ACR
+JWKS
 [Aa]gentic
 [Ee]num
 [Uu]serinfo
