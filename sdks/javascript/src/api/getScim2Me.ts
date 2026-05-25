@@ -93,7 +93,7 @@ export interface GetScim2MeConfig extends Omit<RequestInit, 'method'> {
 const getScim2Me = async ({url, baseUrl, fetcher, ...requestConfig}: GetScim2MeConfig): Promise<User> => {
   try {
     // eslint-disable-next-line no-new
-    new URL(url ?? baseUrl);
+    new URL((url ?? baseUrl)!);
   } catch (error) {
     throw new ThunderIDAPIError(
       `Invalid URL provided. ${error?.toString()}`,

@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import type {OIDCEndpoints} from './oidc-endpoints';
 import type {OAuthResponseMode} from './oauth-response';
+import type {OIDCEndpoints} from './oidc-endpoints';
 import {TokenEndpointAuthMethod} from './token-endpoint-auth';
 import {RecursivePartial} from './utility-types';
 import {ComponentsExtensions} from './v2/extensions/components';

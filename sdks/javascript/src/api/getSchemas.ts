@@ -92,7 +92,7 @@ export interface GetSchemasConfig extends Omit<RequestInit, 'method'> {
 const getSchemas = async ({url, baseUrl, fetcher, ...requestConfig}: GetSchemasConfig): Promise<Schema[]> => {
   try {
     // eslint-disable-next-line no-new
-    new URL(url ?? baseUrl);
+    new URL((url ?? baseUrl)!);
   } catch (error) {
     throw new ThunderIDAPIError(
       `Invalid URL provided. ${error?.toString()}`,
