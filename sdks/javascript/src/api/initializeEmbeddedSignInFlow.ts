@@ -58,7 +58,7 @@ const initializeEmbeddedSignInFlow = async ({
 }: EmbeddedFlowExecuteRequestConfig): Promise<EmbeddedSignInFlowInitiateResponse> => {
   try {
     // eslint-disable-next-line no-new
-    new URL(url ?? baseUrl);
+    new URL((url ?? baseUrl)!);
   } catch (error) {
     throw new ThunderIDAPIError(
       `Invalid URL provided. ${error?.toString()}`,
@@ -94,7 +94,7 @@ const initializeEmbeddedSignInFlow = async ({
         ...requestConfig.headers,
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      } as HeadersInit,
       method: requestConfig.method || 'POST',
     });
 

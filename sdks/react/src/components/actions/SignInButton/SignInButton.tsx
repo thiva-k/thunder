@@ -97,7 +97,7 @@ const SignInButton: ForwardRefExoticComponent<SignInButtonProps & RefAttributes<
         }
 
         if (onClick) {
-          onClick(e);
+          onClick(e!);
         }
       } catch (error) {
         throw new ThunderIDRuntimeError(
