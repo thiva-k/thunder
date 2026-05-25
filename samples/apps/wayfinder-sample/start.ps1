@@ -76,7 +76,10 @@ if (-not (Test-Path (Join-Path "api" "wayfinder.sqlite"))) {
 function Start-Service-Process {
     param([string]$Dir, [string]$Script, [string]$Log)
     $logPath = Join-Path $ScriptDir "logs/$Log"
-    return Start-Process -FilePath "npm" `
+    
+    $npmExecutable = if ($IsWindows -or $env:OS -match "Windows") { "npm.cmd" } else { "npm" }
+
+    return Start-Process -FilePath $npmExecutable `
         -ArgumentList @("run", $Script) `
         -WorkingDirectory (Join-Path $ScriptDir $Dir) `
         -PassThru `
