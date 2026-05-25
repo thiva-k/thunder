@@ -8,15 +8,15 @@ sidebar_position: 1
 
 You built an AI agent and deployed it. It exposes multiple capabilities — some low-risk, some sensitive, some that should only be available to specific consumers. Now other applications need to use it: a web app, a mobile client, another backend service, an MCP host.
 
-The question is straightforward: when a request arrives at your agent, how do you know whether the caller is allowed to be there, and whether they are allowed to use that specific capability?
+The question is straightforward: when a request arrives at your agent, how do you know whether the caller can be there? How do you know whether the caller can use that specific capability?
 
-An agent without access control is an open door. Any application that discovers the endpoint can invoke any capability. There is no distinction between a customer-facing chat widget and an internal admin tool — both get the same access. There is no way to say "this caller can use these two capabilities but not that one." There is no way to revoke access to one consumer without shutting the agent down for everyone.
+An agent without access control is an open door. Any application that discovers the endpoint can invoke any capability. No distinction exists between a customer-facing chat widget and an internal admin tool — both get the same access. You cannot say "this caller can use these two capabilities but not that one." You cannot revoke access to one consumer without shutting the agent down for everyone.
 
 This is the same challenge API developers have solved for years, but agents introduce a nuance. Agents often combine multiple capabilities behind a single deployment, each with a different sensitivity level. A general conversation capability might be low-risk, but a capability that exposes internal reasoning traces or processes confidential documents carries real consequences if accessed by the wrong party.
 
 Treating the entire agent as a single "all or nothing" resource is not enough.
 
-## What needs to be solved
+## What Needs to Be Solved
 
 - **Identify the caller.** When a request arrives, the agent needs to know which application or service is making the call. Anonymous access is not acceptable for agents that handle user data or perform actions with real-world consequences.
 
@@ -26,9 +26,9 @@ Treating the entire agent as a single "all or nothing" resource is not enough.
 
 - **Centralize authorization decisions.** The agent should not maintain its own allowlists, API key tables, or access logic. Authorization decisions should come from a central identity provider so you manage access in one place — across all your agents, not inside each one.
 
-## How to solve it
+## How to Solve It
 
-### Represent the agent as a protected resource
+### Represent the Agent as a Protected Resource
 
 Register your agent's capabilities as a resource in ThunderID. Each capability becomes a scope — a named permission that describes what the caller is allowed to do. When a consumer requests access, ThunderID issues a token that contains only the scopes that consumer has been granted. The agent validates the token on every request and checks whether the required scope is present before executing the capability.
 

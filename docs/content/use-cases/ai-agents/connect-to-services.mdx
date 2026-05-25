@@ -12,13 +12,13 @@ The question is: whose identity should the agent carry when it makes a call?
 
 Sometimes the answer is simple. A background agent running a nightly data sync has no user behind it. It acts on its own, with its own permissions. The service it calls needs to know "this is Agent X, and Agent X is allowed to read this data."
 
-Other times, the answer depends on context. An agent responding to a user's request should only access what that user can access. If a junior employee asks the agent to pull a report, the agent should not return data the employee is not authorized to see — even if the agent itself has broader access. The service needs to know "this is Agent X acting on behalf of User Y, and User Y is allowed to read this data."
+Other times, the answer depends on context. An agent responding to a user's request should only access what that user can access. If a junior employee asks the agent to pull a report, the agent should not return data the employee is not authorized to see. This remains true even if the agent itself has broader access. The service needs to know "this is Agent X acting on behalf of User Y, and User Y is allowed to read this data."
 
 Getting this wrong has real consequences. An agent with its own broad permissions acting on behalf of any user becomes a privilege escalation path. An agent with no identity at all relies on shared API keys that cannot be scoped, rotated, or revoked per agent.
 
-## What needs to be solved
+## What Needs to Be Solved
 
-### The agent acts on its own
+### Agent Acts on Its Own
 
 The agent operates without a user session — running scheduled tasks, processing queues, monitoring systems, or performing maintenance. No user triggered the action, and no user's permissions should apply.
 
@@ -28,7 +28,7 @@ The agent operates without a user session — running scheduled tasks, processin
 
 - **Credentials must be managed.** The agent's credentials need a lifecycle — issuance, rotation, and revocation. When an agent is decommissioned or compromised, its credentials should be invalidated without affecting other agents.
 
-### The agent acts on behalf of a user
+### Agent Acts on Behalf of a User
 
 The agent is triggered by a user interaction — a chat message, a button click, a scheduled task the user configured. The agent needs to access services using the user's permissions, not its own.
 
@@ -40,7 +40,7 @@ The agent is triggered by a user interaction — a chat message, a button click,
 
 - **Background agents need a way to request approval.** Not every agent has the user sitting in front of a browser. A background agent that reaches a point where it needs user authorization — accessing sensitive data, performing a high-risk action — needs a way to request approval without requiring the user to be in the same session.
 
-## How to solve it
+## How to Solve It
 
 ### Autonomous agent access
 

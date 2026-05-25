@@ -2431,27 +2431,6 @@ a.connect-card {
   align-items: center;
 }
 
-.uc-overview-root-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--ifm-color-primary) 10%, transparent);
-  border: 2px solid color-mix(in srgb, var(--ifm-color-primary) 25%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1rem;
-}
-
-.uc-overview-root-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--ifm-color-primary);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  margin-bottom: 0.5rem;
-}
-
 .uc-overview-root-title {
   font-weight: 800;
   font-size: 1.75rem;
