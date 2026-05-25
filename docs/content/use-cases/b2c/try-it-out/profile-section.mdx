@@ -1,15 +1,15 @@
 ---
-title: Profile Section
+title: View Profile
 description: View profile attributes, update them, and change the password as John Doe.
 sidebar_position: 4
 ---
 
-# Profile Section
+# View Profile
 
 In this walkthrough, John opens his Wayfinder profile and exercises the two parts of the use case. He **views** what Wayfinder stores about him: name, email, and the other attributes on his `Customer` record. He then **updates** the values he wants to change: his last name and his password.
 
 :::note Prerequisites
-Complete [Setup](../#setup) before starting this walkthrough.
+Complete [Set Up Your Environment](../../try-it-out#set-up-your-environment) before starting this walkthrough.
 :::
 
 :::info Background
@@ -25,7 +25,7 @@ In the redirect-based pattern, the consumer app renders the profile screen itsel
 
 **Try the Use Case**
 
-1. Open [http://localhost:5173](http://localhost:5173) and sign in as John.
+1. Open <WayFinderSampleUrl /> and sign in as John.
 2. Open the account menu and select **Profile**. The sample reads John's attributes from his ID token and renders the **View** section.
 3. Edit the **Last Name** field and select **Save**.
 4. Select **Change Password**, enter the current password, set a new one, and save.
@@ -56,3 +56,8 @@ Coming soon. See the [App-native pattern](../../solution-patterns#app-native) fo
 Coming soon. See the [Direct API pattern](../../solution-patterns#direct-api) for what to expect.
 
 </details>
+
+## Going Deeper
+
+- Want to understand which attributes Wayfinder stores about John? See [User Types](../../identity-concepts#user-types) in the Identity Concepts.
+- Prefer to define the `Customer` schema manually? See [Set Up the Foundation](../../configure-it-yourself#set-up-the-foundation) in Configure It Yourself.
