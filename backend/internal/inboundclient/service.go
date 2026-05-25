@@ -461,6 +461,7 @@ func BuildOAuthClient(entityID, clientID, ouID string, p *inboundmodel.OAuthProf
 		PKCERequired:                       p.PKCERequired,
 		PublicClient:                       p.PublicClient,
 		RequirePushedAuthorizationRequests: p.RequirePushedAuthorizationRequests,
+		DPoPBoundAccessTokens:              p.DPoPBoundAccessTokens,
 		Scopes:                             p.Scopes,
 		ScopeClaims:                        p.ScopeClaims,
 		Token:                              p.Token,
