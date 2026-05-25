@@ -16,8 +16,8 @@
  * under the License.
  */
 
-// Package kmprovider defines interfaces for key manager providers.
-package kmprovider
+// Package common defines interfaces for key manager providers.
+package common
 
 import (
 	"context"

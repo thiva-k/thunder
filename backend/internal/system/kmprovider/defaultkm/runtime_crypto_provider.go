@@ -27,7 +27,7 @@ import (
 	"fmt"
 
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
 	"github.com/thunder-id/thunderid/internal/system/log"
 )

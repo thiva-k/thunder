@@ -51,7 +51,7 @@ import (
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/observability"
 )
 

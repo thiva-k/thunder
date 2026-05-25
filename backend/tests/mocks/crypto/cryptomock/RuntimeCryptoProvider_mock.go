@@ -9,7 +9,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 )
 
 // NewRuntimeCryptoProviderMock creates a new instance of RuntimeCryptoProviderMock. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

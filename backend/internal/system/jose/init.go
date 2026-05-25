@@ -23,7 +23,7 @@ package jose
 import (
 	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 )
 
 // Initialize initializes the JOSE services (JWT and JWE).
