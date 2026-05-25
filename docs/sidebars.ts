@@ -405,11 +405,33 @@ const sidebars: SidebarsConfig = {
               collapsed: true,
               link: {type: 'doc', id: 'use-cases/b2c/try-it-out'},
               items: [
-                {type: 'doc', id: 'use-cases/b2c/try-it-out/add-login', label: 'Add Login'},
-                {type: 'doc', id: 'use-cases/b2c/try-it-out/self-sign-up', label: 'Self Sign-Up'},
-                {type: 'doc', id: 'use-cases/b2c/try-it-out/profile-section', label: 'Profile Section'},
-                {type: 'doc', id: 'use-cases/b2c/try-it-out/account-recovery', label: 'Account Recovery'},
-                {type: 'doc', id: 'use-cases/b2c/try-it-out/onboard-internal-users', label: 'Onboard Internal Users'},
+                {
+                  type: 'category',
+                  label: 'Walkthroughs',
+                  collapsible: true,
+                  collapsed: true,
+                  items: [
+                    {type: 'doc', id: 'use-cases/b2c/try-it-out/add-login', label: 'Login'},
+                    {type: 'doc', id: 'use-cases/b2c/try-it-out/self-sign-up', label: 'Self Sign-Up'},
+                    {type: 'doc', id: 'use-cases/b2c/try-it-out/profile-section', label: 'View Profile'},
+                    {type: 'doc', id: 'use-cases/b2c/try-it-out/account-recovery', label: 'Account Recovery'},
+                    {
+                      type: 'doc',
+                      id: 'use-cases/b2c/try-it-out/onboard-internal-users',
+                      label: 'Onboard Internal Users',
+                    },
+                  ],
+                },
+                {
+                  type: 'category',
+                  label: 'Learn More',
+                  collapsible: true,
+                  collapsed: true,
+                  items: [
+                    {type: 'doc', id: 'use-cases/b2c/identity-concepts', label: 'Identity Concepts'},
+                    {type: 'doc', id: 'use-cases/b2c/configure-it-yourself', label: 'Configure It Yourself'},
+                  ],
+                },
               ],
             },
           ],
