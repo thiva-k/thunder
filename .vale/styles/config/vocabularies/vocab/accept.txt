@@ -154,6 +154,7 @@ Vuetify
 [Ee]nums
 [Rr]ecommender
 [Uu]ncheck
+Twilio
 [Hh]ardcoded
 [Ss]ignup
 [Cc]onfigdb
