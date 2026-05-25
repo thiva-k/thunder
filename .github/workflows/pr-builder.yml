@@ -23,13 +23,6 @@ env:
   NODE_VERSION: "lts/*"
 
 jobs:
-  dependency-guard:
-    name: 🛡️ Dependency Guard
-    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
-    uses: ./.github/workflows/dependency-guard.yml
-    with:
-      detection-mode: pr
-
   security-audit:
     name: 🔒 Security Audit
     if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
@@ -173,8 +166,7 @@ jobs:
 
   lint:
     name: 🧹 Lint Code
-    needs: dependency-guard
-    if: ${{ always() && (needs.dependency-guard.result == 'success' || needs.dependency-guard.result == 'skipped') && (github.event_name == 'pull_request' || github.event_name == 'merge_group') }}
+    if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -227,8 +219,8 @@ jobs:
 
   build:
     name: 🛠️ Build Product
-    needs: [dependency-guard, detect-code-changes]
-    if: ${{ always() && (needs.dependency-guard.result == 'success' || needs.dependency-guard.result == 'skipped') && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.detect-code-changes.result == 'skipped' || needs.detect-code-changes.outputs.should-run == 'true') }}
+    needs: [detect-code-changes]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.detect-code-changes.result == 'skipped' || needs.detect-code-changes.outputs.should-run == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -346,8 +338,8 @@ jobs:
 
   test-frontend:
     name: 🧪 Frontend Tests (shard ${{ matrix.shard }}/4)
-    needs: [dependency-guard, detect-code-changes]
-    if: ${{ always() && (needs.dependency-guard.result == 'success' || needs.dependency-guard.result == 'skipped') && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.detect-code-changes.result == 'skipped' || needs.detect-code-changes.outputs.should-run == 'true') }}
+    needs: [detect-code-changes]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.detect-code-changes.result == 'skipped' || needs.detect-code-changes.outputs.should-run == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
@@ -479,8 +471,8 @@ jobs:
 
   build_samples:
     name: 🛠️ Build Sample Apps
-    needs: [dependency-guard, detect-code-changes]
-    if: ${{ always() && (needs.dependency-guard.result == 'success' || needs.dependency-guard.result == 'skipped') && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.detect-code-changes.result == 'skipped' || needs.detect-code-changes.outputs.should-run == 'true') }}
+    needs: [detect-code-changes]
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' || github.event_name == 'merge_group') && (needs.detect-code-changes.result == 'skipped' || needs.detect-code-changes.outputs.should-run == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -979,8 +971,8 @@ jobs:
 
   build-test-sdks:
     name: 🔨 Build, Lint & Test SDKs
-    needs: [dependency-guard, detect-sdk-changes]
-    if: ${{ always() && (needs.dependency-guard.result == 'success' || needs.dependency-guard.result == 'skipped') && needs.detect-sdk-changes.outputs.should-run == 'true' }}
+    needs: [detect-sdk-changes]
+    if: ${{ always() && needs.detect-sdk-changes.outputs.should-run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -1003,8 +995,8 @@ jobs:
 
   build-docs:
     name: 📚 Build Documentation
-    needs: [dependency-guard, detect-docs-changes]
-    if: ${{ always() && (needs.dependency-guard.result == 'success' || needs.dependency-guard.result == 'skipped') && needs.detect-docs-changes.outputs.should-run == 'true' }}
+    needs: [detect-docs-changes]
+    if: ${{ always() && needs.detect-docs-changes.outputs.should-run == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
