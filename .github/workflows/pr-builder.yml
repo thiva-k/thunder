@@ -686,7 +686,7 @@ jobs:
       - name: 📦 Import Sample App Resources
         run: |
           echo "Importing React Vanilla Sample declarative resources..."
-          YAML_CONTENT=$(cat samples/apps/react-vanilla-sample/thunderid-config/thunderid-config.yaml)
+          YAML_CONTENT=$(cat samples/apps/react-vanilla-sample/thunderid-config/basic/thunderid-config.yaml)
           HTTP_STATUS=$(curl -k -s -o /tmp/import_response.json -w "%{http_code}" \
             -X POST https://localhost:8090/import \
             -H 'Content-Type: application/json' \
@@ -694,7 +694,15 @@ jobs:
               \"content\": $(echo "$YAML_CONTENT" | jq -Rs .),
               \"variables\": {
                 \"SAMPLE_APP_CLIENT_ID\": \"sample_app_client\",
-                \"SAMPLE_APP_REDIRECT_URIS\": [\"https://localhost:3000\"]
+                \"SAMPLE_APP_REDIRECT_URIS\": [\"https://localhost:3000\"],
+                \"SAMPLE_APP_GOOGLE_CLIENT_ID\": \"test-google-client-id\",
+                \"SAMPLE_APP_GOOGLE_CLIENT_SECRET\": \"test-google-client-secret\",
+                \"SAMPLE_APP_GOOGLE_REDIRECT_URI\": \"https://localhost:3000/\",
+                \"SAMPLE_APP_GOOGLE_SCOPES\": \"openid,email,profile\",
+                \"SAMPLE_APP_GITHUB_CLIENT_ID\": \"test-github-client-id\",
+                \"SAMPLE_APP_GITHUB_CLIENT_SECRET\": \"test-github-client-secret\",
+                \"SAMPLE_APP_GITHUB_REDIRECT_URI\": \"https://localhost:3000/\",
+                \"SAMPLE_APP_SMS_SENDER_ID\": \"test-sms-sender-id\"
               },
               \"options\": {\"upsert\": true}
             }")

@@ -62,6 +62,7 @@ contacts:
   - admin@example.com
   - support@example.com
 auth_flow_handle: default-basic-flow
+registration_flow_handle: default-basic-flow
 is_registration_flow_enabled: true
 is_recovery_flow_enabled: false
 assertion:
