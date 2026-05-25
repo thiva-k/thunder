@@ -30,7 +30,7 @@ import {EmbeddedFlowType, EmbeddedFlowExecuteResponse, EmbeddedFlowExecuteReques
  * ```typescript
  * try {
  *   const embeddedSignUpResponse = await executeEmbeddedSignUpFlow({
- *     url: "https://api.asgardeo.io/t/<ORGANIZATION>/api/server/v1/flow/execute",
+ *     url: "https://localhost:8090/api/server/v1/flow/execute",
  *     payload: {
  *       flowType: "REGISTRATION"
  *     }

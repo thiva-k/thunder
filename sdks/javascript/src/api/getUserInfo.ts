@@ -26,7 +26,7 @@ import {User} from '../models/user';
  * @returns A promise that resolves with the user information.
  * @throw
  *   const userInfo = await getUserInfo({
- *     url: "https://api.asgardeo.io/t/<ORGANIZATION>/oauth2/userinfo",
+ *     url: "https://localhost:8090/oauth2/userinfo",
  *   });
  *   console.log(userInfo);
  * } catch (error) {

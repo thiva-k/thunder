@@ -31,7 +31,7 @@ import {EmbeddedSignInFlowInitiateResponse} from '../models/embedded-signin-flow
  * ```typescript
  * try {
  *   const authResponse = await initializeEmbeddedSignInFlow({
- *     url: "https://api.asgardeo.io/t/<ORGANIZATION>/oauth2/authorize",
+ *     url: "https://localhost:8090/oauth2/authorize",
  *     payload: {
  *       response_type: "code",
  *       client_id: "your-client-id",

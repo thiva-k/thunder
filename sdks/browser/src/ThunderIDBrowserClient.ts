@@ -392,7 +392,6 @@ class ThunderIDBrowserClient<T = BrowserAuthConfig> extends ThunderIDJavaScriptC
 
     // TEMPORARY: Handle sign-out by clearing the session and navigating back to sign-in,
     // until the OIDC end-session flow is fully supported.
-    // Tracker: https://github.com/asgardeo/javascript/issues/212#issuecomment-3435713699
     this.clearSession();
 
     if (config?.signInUrl) {

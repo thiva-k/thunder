@@ -154,7 +154,6 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
       }
 
       // TEMPORARY: SCIM2 and Organizations endpoints are not yet supported.
-      // Tracker: https://github.com/asgardeo/javascript/issues/212
       const claims: User = extractUserClaimsFromIdToken(decodedToken) as User;
       setUser(claims);
       setUserProfile({
@@ -410,7 +409,6 @@ const ThunderIDProvider: FC<PropsWithChildren<ThunderIDProviderProps>> = ({
   // Auto-fetch branding when initialized and configured
   useEffect(() => {
     // TEMPORARY: Branding preference is not yet supported.
-    // Tracker: https://github.com/asgardeo/javascript/issues/212
     return;
 
     // Only fetch branding when explicitly enabled via preferences.theme.inheritFromBranding
