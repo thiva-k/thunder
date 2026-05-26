@@ -116,6 +116,8 @@ overrides:
   js-yaml@>=4.0.0 <4.1.1: 4.1.1
   # TODO: Remove once `nuxt` bumps `devalue` to 5.8.1 or later.
   devalue: 5.8.1
+  # JUSTIFICATION: Transitive dep via js-beautify. Fixes CVE-2026-46625 (GHSA-qjx8-664m-686j) — prototype hijack in assign() allows cookie-attribute injection.
+  js-cookie: 3.0.7
 
 packageExtensions:
   '@hookform/resolvers':
