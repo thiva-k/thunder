@@ -22,7 +22,9 @@
   ],
   "scripts": {
     "build": "pnpm setup && docusaurus build",
-    "clean": "docusaurus clear",
+    "clean": "pnpm clean:dist && pnpm clean:node_modules",
+    "clean:dist": "docusaurus clear",
+    "clean:node_modules": "rimraf node_modules",
     "deploy": "docusaurus deploy",
     "dev": "pnpm setup && docusaurus start --port 5180",
     "docusaurus": "docusaurus",
@@ -64,6 +66,7 @@
     "@docusaurus/tsconfig": "3.9.2",
     "@docusaurus/types": "3.9.2",
     "openapi-to-postmanv2": "4.23.0",
+    "rimraf": "catalog:",
     "typescript": "5.9.3",
     "yaml": "2.8.2"
   },
