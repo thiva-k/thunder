@@ -52,7 +52,6 @@
     "dotenv": "17.2.3"
   },
   "overrides": {
-    "qs": "6.15.2",
     "flatted": ">=3.4.2",
     "path-to-regexp": ">=8.4.0"
   }
