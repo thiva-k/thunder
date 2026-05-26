@@ -365,9 +365,9 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
 
-      - name: 🔨 Build Frontend Packages
+      - name: 🔨 Build Frontend
         run: |
-          pnpm build:packages
+          pnpm build:frontend
 
       - name: 🧪 Run Console Tests with Coverage
         run: |
