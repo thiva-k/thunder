@@ -23,7 +23,7 @@ import (
 	"time"
 
 	httpservice "github.com/thunder-id/thunderid/internal/system/http"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 )
 
 // Initialize initializes the JWT service.

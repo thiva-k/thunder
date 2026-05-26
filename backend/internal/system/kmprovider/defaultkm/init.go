@@ -25,9 +25,8 @@ import (
 	"sync"
 
 	"github.com/thunder-id/thunderid/internal/system/config"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
-	"github.com/thunder-id/thunderid/internal/system/log"
 )
 
 var (
@@ -41,7 +40,7 @@ var (
 // Deprecated
 func GetConfigCryptoService() (kmprovider.ConfigCryptoProvider, error) {
 	globalOnce.Do(func() {
-		_, globalCfgSvc, initErr = Initialize()
+		globalCfgSvc, initErr = initConfigProvider()
 	})
 	if initErr != nil {
 		return nil, initErr
@@ -49,24 +48,13 @@ func GetConfigCryptoService() (kmprovider.ConfigCryptoProvider, error) {
 	return globalCfgSvc, nil
 }
 
-// InitConfigProvider returns a ConfigCryptoProvider initialized from the server config.
-func InitConfigProvider() (kmprovider.ConfigCryptoProvider, error) {
-	return initConfigProvider()
-}
-
 // Initialize returns a fully wired RuntimeCryptoProvider and ConfigCryptoProvider.
-func Initialize() (kmprovider.RuntimeCryptoProvider, kmprovider.ConfigCryptoProvider, error) {
-	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "defaultkm"))
-
+func Initialize(pkiSvc pki.PKIServiceInterface) (
+	kmprovider.RuntimeCryptoProvider, kmprovider.ConfigCryptoProvider, error,
+) {
 	cfgSvc, err := initConfigProvider()
 	if err != nil {
 		return nil, nil, err
-	}
-
-	pkiSvc, err := pki.Initialize()
-	if err != nil {
-		logger.Warn("PKI service unavailable; asymmetric operations will fail",
-			log.String("reason", err.Error()))
 	}
 
 	runtimeSvc := NewRuntimeCryptoService(pkiSvc, cfgSvc)

@@ -16,6 +16,19 @@
  * under the License.
  */
 
+// Package kmprovider provides the key manager provider abstraction and initialization.
 package kmprovider
 
-// TODO: Define the key manager registry and provider selection interface.
+import (
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/common"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
+)
+
+// Initialize initializes and returns both RuntimeCryptoProvider and ConfigCryptoProvider.
+// The pkiService is injected as a dependency.
+// Currently hardcoded to use the default KM provider, but structured to support
+// provider selection based on server configuration in the future.
+func Initialize(pkiService pki.PKIServiceInterface) (common.RuntimeCryptoProvider, common.ConfigCryptoProvider, error) {
+	return defaultkm.Initialize(pkiService)
+}

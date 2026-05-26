@@ -73,7 +73,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/importer"
 	"github.com/thunder-id/thunderid/internal/system/jose"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/mcp"
@@ -97,11 +97,10 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 		logger.Fatal("Failed to initialize certificate service", log.Error(err))
 	}
 
-	configCryptoSvc, err := defaultkm.InitConfigProvider()
+	runtimeCryptoSvc, _, err := kmprovider.Initialize(pkiService)
 	if err != nil {
-		logger.Fatal("Failed to initialize config crypto provider", log.Error(err))
+		logger.Fatal("Failed to initialize key manager provider", log.Error(err))
 	}
-	runtimeCryptoSvc := defaultkm.NewRuntimeCryptoService(pkiService, configCryptoSvc)
 
 	jwtService, jweService, err := jose.Initialize(runtimeCryptoSvc)
 	if err != nil {
