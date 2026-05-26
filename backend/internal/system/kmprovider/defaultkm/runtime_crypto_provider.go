@@ -26,21 +26,21 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/thunder-id/thunderid/internal/system/cryptolab"
+	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pkiservice"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
 	"github.com/thunder-id/thunderid/internal/system/log"
 )
 
 type runtimeCryptoService struct {
-	pkiService pkiservice.PKIServiceInterface
+	pkiService pki.PKIServiceInterface
 	cfgService kmprovider.ConfigCryptoProvider
 	logger     *log.Logger
 }
 
 // NewRuntimeCryptoService creates a RuntimeCryptoProvider backed by the given PKI and config services.
 func NewRuntimeCryptoService(
-	pkiSvc pkiservice.PKIServiceInterface,
+	pkiSvc pki.PKIServiceInterface,
 	cfgSvc kmprovider.ConfigCryptoProvider,
 ) kmprovider.RuntimeCryptoProvider {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, "RuntimeCryptoService"))
@@ -52,16 +52,16 @@ func NewRuntimeCryptoService(
 }
 
 func (s *runtimeCryptoService) Encrypt(
-	ctx context.Context, keyRef *kmprovider.KeyRef, params cryptolab.AlgorithmParams, content []byte,
-) ([]byte, *cryptolab.CryptoDetails, error) {
+	ctx context.Context, keyRef *kmprovider.KeyRef, params cryptolib.AlgorithmParams, content []byte,
+) ([]byte, *cryptolib.CryptoDetails, error) {
 	switch params.Algorithm {
-	case cryptolab.AlgorithmAESGCM:
+	case cryptolib.AlgorithmAESGCM:
 		if s.cfgService == nil {
 			return nil, nil, errors.New("config crypto service not initialized")
 		}
 		encrypted, err := s.cfgService.Encrypt(ctx, content)
 		return encrypted, nil, err
-	case cryptolab.AlgorithmRSAOAEP, cryptolab.AlgorithmRSAOAEP256:
+	case cryptolib.AlgorithmRSAOAEP, cryptolib.AlgorithmRSAOAEP256:
 		if keyRef == nil {
 			return nil, nil, fmt.Errorf("keyRef required for %s", params.Algorithm)
 		}
@@ -69,9 +69,9 @@ func (s *runtimeCryptoService) Encrypt(
 		if err != nil {
 			return nil, nil, err
 		}
-		return cryptolab.Encrypt(rsaPub, &params, content)
-	case cryptolab.AlgorithmECDHES,
-		cryptolab.AlgorithmECDHESA128KW, cryptolab.AlgorithmECDHESA192KW, cryptolab.AlgorithmECDHESA256KW:
+		return cryptolib.Encrypt(rsaPub, &params, content)
+	case cryptolib.AlgorithmECDHES,
+		cryptolib.AlgorithmECDHESA128KW, cryptolib.AlgorithmECDHESA192KW, cryptolib.AlgorithmECDHESA256KW:
 		if keyRef == nil {
 			return nil, nil, fmt.Errorf("keyRef required for %s", params.Algorithm)
 		}
@@ -79,22 +79,22 @@ func (s *runtimeCryptoService) Encrypt(
 		if err != nil {
 			return nil, nil, err
 		}
-		return cryptolab.Encrypt(ecPub, &params, content)
+		return cryptolib.Encrypt(ecPub, &params, content)
 	default:
 		return nil, nil, fmt.Errorf("unsupported algorithm: %s", params.Algorithm)
 	}
 }
 
 func (s *runtimeCryptoService) Decrypt(
-	ctx context.Context, keyRef *kmprovider.KeyRef, params cryptolab.AlgorithmParams, content []byte,
+	ctx context.Context, keyRef *kmprovider.KeyRef, params cryptolib.AlgorithmParams, content []byte,
 ) ([]byte, error) {
 	switch params.Algorithm {
-	case cryptolab.AlgorithmAESGCM:
+	case cryptolib.AlgorithmAESGCM:
 		if s.cfgService == nil {
 			return nil, errors.New("config crypto service not initialized")
 		}
 		return s.cfgService.Decrypt(ctx, content)
-	case cryptolab.AlgorithmRSAOAEP, cryptolab.AlgorithmRSAOAEP256:
+	case cryptolib.AlgorithmRSAOAEP, cryptolib.AlgorithmRSAOAEP256:
 		if keyRef == nil {
 			return nil, fmt.Errorf("keyRef required for %s", params.Algorithm)
 		}
@@ -102,9 +102,9 @@ func (s *runtimeCryptoService) Decrypt(
 		if err != nil {
 			return nil, err
 		}
-		return cryptolab.Decrypt(rsaPriv, params, content)
-	case cryptolab.AlgorithmECDHES,
-		cryptolab.AlgorithmECDHESA128KW, cryptolab.AlgorithmECDHESA192KW, cryptolab.AlgorithmECDHESA256KW:
+		return cryptolib.Decrypt(rsaPriv, params, content)
+	case cryptolib.AlgorithmECDHES,
+		cryptolib.AlgorithmECDHESA128KW, cryptolib.AlgorithmECDHESA192KW, cryptolib.AlgorithmECDHESA256KW:
 		if keyRef == nil {
 			return nil, fmt.Errorf("keyRef required for %s", params.Algorithm)
 		}
@@ -112,14 +112,14 @@ func (s *runtimeCryptoService) Decrypt(
 		if err != nil {
 			return nil, err
 		}
-		return cryptolab.Decrypt(ecPriv, params, content)
+		return cryptolib.Decrypt(ecPriv, params, content)
 	default:
 		return nil, fmt.Errorf("unsupported algorithm: %s", params.Algorithm)
 	}
 }
 
 func (s *runtimeCryptoService) Sign(
-	_ context.Context, keyRef kmprovider.KeyRef, algorithm cryptolab.SignAlgorithm, content []byte,
+	_ context.Context, keyRef kmprovider.KeyRef, algorithm cryptolib.SignAlgorithm, content []byte,
 ) ([]byte, error) {
 	if s.pkiService == nil {
 		return nil, errors.New("PKI service not initialized")
@@ -129,7 +129,7 @@ func (s *runtimeCryptoService) Sign(
 		return nil, fmt.Errorf("key not found for id %s: [%s] %s",
 			keyRef.KeyID, svcErr.Code, svcErr.Error.DefaultValue)
 	}
-	return cryptolab.Generate(content, algorithm, privKey)
+	return cryptolib.Generate(content, algorithm, privKey)
 }
 
 func (s *runtimeCryptoService) GetPublicKeys(
@@ -147,18 +147,18 @@ func (s *runtimeCryptoService) GetPublicKeys(
 
 	keys := make([]kmprovider.PublicKeyInfo, 0, len(allCerts))
 	for id, cert := range allCerts {
-		var alg cryptolab.Algorithm
+		var alg cryptolib.Algorithm
 		switch pub := cert.PublicKey.(type) {
 		case *rsa.PublicKey:
-			alg = cryptolab.AlgorithmRS256
+			alg = cryptolib.AlgorithmRS256
 		case *ecdsa.PublicKey:
 			switch pub.Curve.Params().Name {
 			case "P-256":
-				alg = cryptolab.AlgorithmES256
+				alg = cryptolib.AlgorithmES256
 			case "P-384":
-				alg = cryptolab.AlgorithmES384
+				alg = cryptolib.AlgorithmES384
 			case "P-521":
-				alg = cryptolab.AlgorithmES512
+				alg = cryptolib.AlgorithmES512
 			default:
 				s.logger.Warn("Unsupported EC curve; skipping",
 					log.String("keyID", id),
@@ -166,7 +166,7 @@ func (s *runtimeCryptoService) GetPublicKeys(
 				continue
 			}
 		case ed25519.PublicKey:
-			alg = cryptolab.AlgorithmEdDSA
+			alg = cryptolib.AlgorithmEdDSA
 		default:
 			s.logger.Debug("Unsupported public key type; skipping", log.String("keyID", id))
 			continue

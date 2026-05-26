@@ -16,7 +16,7 @@
  * under the License.
  */
 
-package cryptolab
+package cryptolib
 
 import (
 	gocrypto "crypto"

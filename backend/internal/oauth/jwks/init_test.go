@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/system/config"
-	"github.com/thunder-id/thunderid/internal/system/cryptolab"
+	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 )
@@ -72,7 +72,7 @@ func (suite *InitTestSuite) TestInitialize_RegistersRoutes() {
 	keys := []kmprovider.PublicKeyInfo{
 		{
 			KeyID:          "test-kid",
-			Algorithm:      cryptolab.AlgorithmRS256,
+			Algorithm:      cryptolib.AlgorithmRS256,
 			PublicKey:      &rsaKey.PublicKey,
 			Thumbprint:     "test-kid",
 			CertificateDER: []byte("raw-cert"),
