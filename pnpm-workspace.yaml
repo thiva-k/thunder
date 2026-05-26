@@ -118,6 +118,10 @@ overrides:
   devalue: 5.8.1
   # JUSTIFICATION: Transitive dep via js-beautify. Fixes CVE-2026-46625 (GHSA-qjx8-664m-686j) — prototype hijack in assign() allows cookie-attribute injection.
   js-cookie: 3.0.7
+  # JUSTIFICATION: Fixes GHSA-gg6b-4mfj-5v5c — ReDoS vulnerability in qs parsing.
+  qs: 6.15.2
+  # JUSTIFICATION: Transitive dep resolves to versions < 11.1.1 which contain a predictable RNG vulnerability.
+  uuid: 11.1.1
 
 packageExtensions:
   '@hookform/resolvers':
