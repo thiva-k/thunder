@@ -18,8 +18,6 @@
  * under the License.
  */
 
-/* eslint-disable @thunderid/copyright-header */
-
 /**
  * Cuts a new Docusaurus documentation version and snapshots the API spec for it.
  *

@@ -18,8 +18,6 @@
  * under the License.
  */
 
-/* eslint-disable @thunderid/copyright-header */
-
 /**
  * Prunes old Docusaurus documentation versions, keeping only the N most recent.
  *

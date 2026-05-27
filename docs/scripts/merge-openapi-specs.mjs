@@ -18,8 +18,6 @@
  * under the License.
  */
 
-/* eslint-disable @thunderid/copyright-header */
-
 import {readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync} from 'fs';
 import {join, dirname} from 'path';
 import {fileURLToPath} from 'url';

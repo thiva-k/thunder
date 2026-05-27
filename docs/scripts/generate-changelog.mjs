@@ -20,7 +20,6 @@ import {existsSync, mkdirSync, writeFileSync} from 'fs';
 import {join, dirname} from 'path';
 import {fileURLToPath} from 'url';
 import {createLogger} from '@thunderid/logger';
-// eslint-disable-next-line import-x/extensions
 import DocusaurusProductConfig from '../docusaurus.product.config.ts';
 
 const __filename = fileURLToPath(import.meta.url);
