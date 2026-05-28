@@ -164,3 +164,9 @@ Twilio
 [Mm]ultibyte
 [Ss]harding
 [Ff]ailover
+[Dd]ownscope
+[Dd]ownscoping
+[Dd]ownscoped
+untrusted
+superset
+iss
