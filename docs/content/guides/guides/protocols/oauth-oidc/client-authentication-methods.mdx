@@ -3,6 +3,8 @@ title: Client Authentication Methods
 sidebar_position: 1
 description: How a registered OAuth 2.1 client proves its identity to {{ProductName}} — the four supported client authentication methods.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Client Authentication Methods
 
@@ -140,7 +142,8 @@ This certificate is **separate** from <ProductName />'s own signing keys (see [J
 
 ## Enable It in <ProductName />
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Advanced Settings** tab and find the **Client Authentication** section.
@@ -148,7 +151,8 @@ This certificate is **separate** from <ProductName />'s own signing keys (see [J
 4. For `private_key_jwt`, also configure a **Certificate** (JWKS or JWKS_URI) on the **Certificates** tab.
 5. Save.
 
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 ```http
 POST /oauth2/dcr/register
@@ -161,6 +165,9 @@ Content-Type: application/json
   "jwks_uri": "https://service.example.com/.well-known/jwks.json"
 }
 ```
+
+</TabItem>
+</Tabs>
 
 ## Related Guides
 

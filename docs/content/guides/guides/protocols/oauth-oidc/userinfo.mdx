@@ -3,6 +3,8 @@ title: UserInfo
 sidebar_position: 2
 description: The OpenID Connect UserInfo endpoint in {{ProductName}} — returns claims about the authenticated user, in JSON, JWS, JWE, or NESTED_JWT.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import { UserInfoDiagram } from '../../../../../src/components/OAuthFlowDiagrams';
 
 # UserInfo
@@ -46,7 +48,8 @@ The signing and encryption algorithm tables live on the [Token Formats](../token
 
 UserInfo is always available for tokens that carry the `openid` scope. To customize *which* claims it returns and *what format* they come back in:
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Token** tab and find the **UserInfo** section.
@@ -55,7 +58,8 @@ UserInfo is always available for tokens that carry the `openid` scope. To custom
 5. Choose the **User Attributes** to return — typically these mirror the ID Token attributes.
 6. Save.
 
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 ```http
 POST /oauth2/dcr/register
@@ -71,6 +75,9 @@ Content-Type: application/json
 ```
 
 For encryption, add `userinfo_encrypted_response_alg` and `userinfo_encrypted_response_enc`. See [Token Formats](../token-formats) for the full algorithm tables.
+
+</TabItem>
+</Tabs>
 
 ### Call the Endpoint
 

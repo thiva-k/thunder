@@ -3,6 +3,8 @@ title: Token Formats
 sidebar_position: 4
 description: ID Token and UserInfo response formats in {{ProductName}} — JWS, JWE, and NESTED_JWT — with supported signing and encryption algorithms.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Token Formats
 
@@ -91,7 +93,8 @@ Encrypted responses (`JWE`, `NESTED_JWT`) and `private_key_jwt` client authentic
 
 ## Enable It in <ProductName />
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Token** tab.
@@ -100,7 +103,8 @@ Encrypted responses (`JWE`, `NESTED_JWT`) and `private_key_jwt` client authentic
 5. For encrypted responses, attach a **Certificate** under the **Advanced** tab.
 6. Save.
 
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 Per [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591) field names:
 
@@ -125,6 +129,9 @@ Content-Type: application/json
   "jwks_uri": "https://app.example.com/.well-known/jwks.json"
 }
 ```
+
+</TabItem>
+</Tabs>
 
 ### Inspect What a Deployment Advertises
 

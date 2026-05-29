@@ -3,6 +3,8 @@ title: Refresh Token
 sidebar_position: 3
 description: The OAuth 2.1 Refresh Token grant in {{ProductName}} — exchange a refresh token for a new access token, with optional rotation and audience preservation.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Refresh Token
 
@@ -65,16 +67,16 @@ Response (rotation enabled):
 
 ## Enable It in <ProductName />
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Advanced Settings** tab.
 3. Under **Grant Types**, add `refresh_token` alongside an existing grant such as `authorization_code`.
 4. Save.
 
-Refresh token rotation is a deployment-wide setting, not per client. Enable it by setting `oauth.refresh_token.renew_on_grant: true` in `deployment.yaml`.
-
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 ```http
 POST /oauth2/dcr/register
@@ -87,6 +89,11 @@ Content-Type: application/json
   "response_types": ["code"]
 }
 ```
+
+</TabItem>
+</Tabs>
+
+Refresh token rotation is a deployment-wide setting, not per client. Enable it by setting `oauth.refresh_token.renew_on_grant: true` in `deployment.yaml`.
 
 ## Related Guides
 

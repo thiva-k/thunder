@@ -3,6 +3,8 @@ title: Claims & Scopes
 sidebar_position: 3
 description: How OpenID Connect scopes map to claims in {{ProductName}} — standard OIDC scopes, custom scope-to-claim mapping, and the claims request parameter.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Claims & Scopes
 
@@ -82,13 +84,15 @@ How the request-time scope list becomes the issued-token scope list:
 
 ## Enable It in <ProductName />
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Token** tab to list the allowed scopes and to define custom scope-to-claim mappings.
 3. Save.
 
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 ```http
 POST /oauth2/dcr/register
@@ -104,6 +108,9 @@ Content-Type: application/json
 ```
 
 The `scopeClaims` mapping is configured on the application object itself, alongside the `scopes` allowlist.
+
+</TabItem>
+</Tabs>
 
 ## Related Guides
 

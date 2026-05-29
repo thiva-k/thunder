@@ -3,6 +3,8 @@ title: PKCE
 sidebar_position: 1
 description: Proof Key for Code Exchange (RFC 7636) in {{ProductName}} — S256-only, mandatory for public clients, recommended for all.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import { PKCEDiagram } from '../../../../../src/components/OAuthFlowDiagrams';
 
 # PKCE
@@ -30,14 +32,16 @@ OAuth 2.1 makes PKCE mandatory for public clients and recommends it for every au
 
 ## Enable It in <ProductName />
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Advanced Settings** tab.
 3. Toggle **Require PKCE** on for confidential clients (already on for public clients).
 4. Save.
 
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 Public clients receive `pkceRequired` automatically. To enable it on a confidential client:
 
@@ -54,6 +58,9 @@ Content-Type: application/json
   "require_pkce": true
 }
 ```
+
+</TabItem>
+</Tabs>
 
 ### Generate the Verifier and Challenge
 

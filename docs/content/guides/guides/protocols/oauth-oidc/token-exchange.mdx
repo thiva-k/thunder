@@ -3,6 +3,8 @@ title: Token Exchange
 sidebar_position: 4
 description: RFC 8693 Token Exchange in {{ProductName}} — swap one token for another to delegate, impersonate, or downscope across services.
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 import { TokenExchangeDiagram } from '../../../../../src/components/OAuthFlowDiagrams';
 
 # Token Exchange
@@ -50,14 +52,16 @@ Typical uses:
 
 ## Enable It in <ProductName />
 
-### Console
+<Tabs groupId="client-registration">
+<TabItem value="console" label="Console" default>
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select the client that will perform the exchange.
 2. Open the **Advanced Settings** tab.
 3. Under **Grant Types**, add `urn:ietf:params:oauth:grant-type:token-exchange`.
 4. Save.
 
-### Dynamic Client Registration
+</TabItem>
+<TabItem value="dcr" label="Dynamic Client Registration">
 
 ```http
 POST /oauth2/dcr/register
@@ -70,6 +74,9 @@ Content-Type: application/json
   "jwks_uri": "https://gateway.example.com/.well-known/jwks.json"
 }
 ```
+
+</TabItem>
+</Tabs>
 
 ### Exchange a Token
 
