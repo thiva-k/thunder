@@ -17,7 +17,8 @@ OAuth 2.1 makes PKCE mandatory for public clients and recommends it for every au
 
 <PKCEDiagram />
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -30,7 +31,9 @@ OAuth 2.1 makes PKCE mandatory for public clients and recommends it for every au
 | Interaction with PAR | The `code_challenge` is supplied at PAR push time; it cannot be added or changed at the `/oauth2/authorize` redirect |
 | Failure mode | Missing verifier, wrong verifier, or mismatched challenge → `invalid_grant` at the token endpoint |
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 <Tabs groupId="client-registration">
 <TabItem value="console" label="Console" default>

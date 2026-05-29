@@ -81,7 +81,8 @@ curl https://{{productSlug}}.example.com/.well-known/openid-configuration
 
 The OAuth-only document at `/.well-known/oauth-authorization-server` omits the OIDC-specific fields (subject types, ID token algorithms, claims supported).
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -92,7 +93,9 @@ The OAuth-only document at `/.well-known/oauth-authorization-server` omits the O
 | `require_pushed_authorization_requests` | Reflects the global `oauth.par.require_par` setting |
 | `authorization_response_iss_parameter_supported` | Always `true` (see [Issuer Identification](../issuer-identification)) |
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 No configuration is needed. The discovery endpoints are always served and reflect the current deployment's settings.
 

@@ -17,7 +17,8 @@ If your application needs the user's identity, request the `openid` scope. If it
 
 The ID Token is a signed JWT delivered to the client at the token endpoint. It is **never** sent to a resource server — its audience is the client itself. Resource servers use the access token; clients use the ID Token to establish a local session.
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -28,6 +29,8 @@ The ID Token is a signed JWT delivered to the client at the token endpoint. It i
 | Standard scopes | `openid`, `profile`, `email`, `phone`, `address` — see [Claims & Scopes](../claims-and-scopes) |
 | Subject types | `public` only — pairwise subject identifiers are not supported |
 | Discovery | `/.well-known/openid-configuration` — see [Server Metadata](../server-metadata) |
+
+</details>
 
 ## ID Token Claims
 
@@ -64,7 +67,7 @@ These parameters on the authorization request control *how* the user authenticat
 | `consent` | Returns `consent_required` — prompt-driven consent is not currently supported. |
 | `select_account` | Returns `account_selection_required` — account selection is not currently supported. |
 
-## Enable It in <ProductName />
+## Try It in <ProductName />
 
 OpenID Connect activates as soon as a client requests the `openid` scope. No deployment-level toggle is needed.
 

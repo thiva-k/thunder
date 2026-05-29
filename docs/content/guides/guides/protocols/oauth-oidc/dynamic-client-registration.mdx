@@ -20,7 +20,8 @@ DCR registers **applications** only. Agents are provisioned through the <Product
 
 <DCRDiagram />
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -30,6 +31,8 @@ DCR registers **applications** only. Agents are provisioned through the <Product
 | Localized metadata | Supported via `<field>#<bcp47-tag>` syntax (see below) |
 | Returned credentials | `client_id`, `client_secret` (for confidential clients), and the full echoed metadata |
 | Discovery field | `registration_endpoint` in [Server Metadata](../server-metadata) |
+
+</details>
 
 ## Register a Client
 

@@ -17,7 +17,8 @@ DPoP is an alternative to mutual TLS bound tokens (RFC 8705, not supported in <P
 
 The proof JWT is a one-time, short-lived JWT signed by the client. Each call to <ProductName /> or to a protected resource carries its own fresh proof.
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -56,7 +57,9 @@ The client signs a JWT with this structure for every protected request:
 | `jti` | Not seen before |
 | `ath` | SHA-256 of the access token, when present |
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 DPoP activates implicitly: send a `DPoP` header on the token request and the issued token will be DPoP-bound. No per-application opt-in is required — any client may use DPoP if it wants to.
 

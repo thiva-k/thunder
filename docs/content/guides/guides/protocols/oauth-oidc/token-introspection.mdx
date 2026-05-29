@@ -15,7 +15,8 @@ Use it when a resource server cannot or should not validate JWTs locally. For ex
 
 <TokenIntrospectionDiagram />
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -45,6 +46,8 @@ Use it when a resource server cannot or should not validate JWTs locally. For ex
 
 When the token is DPoP-bound, the response also includes the `cnf.jkt` claim.
 
+</details>
+
 ## Introspection or Local JWT Validation
 
 <ProductName /> issues JWT access tokens, so resource servers have two valid options:
@@ -56,7 +59,7 @@ When the token is DPoP-bound, the response also includes the `cnf.jkt` claim.
 
 A common pattern is to verify the JWT locally on most calls and call introspection only on high-value operations.
 
-## Enable It in <ProductName />
+## Try It in <ProductName />
 
 Introspection is always available. To call it, register a client with permission to introspect — typically the resource server itself.
 

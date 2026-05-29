@@ -40,7 +40,8 @@ curl https://{{productSlug}}.example.com/oauth2/jwks
 
 The endpoint is public and idempotent — cache the response in line with your tolerance for key rotation.
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -51,7 +52,9 @@ The endpoint is public and idempotent — cache the response in line with your t
 | Private keys | Never returned — the document contains only public material |
 | Key rotation | New keys appear in the document before they're used for signing; old keys remain published while there are still valid tokens signed by them |
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 The JWKS endpoint is always available. Nothing needs to be configured at the application level.
 

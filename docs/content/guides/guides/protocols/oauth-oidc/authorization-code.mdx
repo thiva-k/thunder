@@ -17,7 +17,8 @@ Authorization codes are single-use, bound to the redirect URI and client, and sh
 
 <AuthorizationCodeDiagram />
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -31,7 +32,9 @@ Authorization codes are single-use, bound to the redirect URI and client, and sh
 | Code lifetime | Single-use, short TTL; binding to client + redirect_uri enforced on exchange |
 | Refresh token | Issued when `refresh_token` is in the application's `grantTypes` |
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 The Authorization Code grant is the default for newly registered applications. Confirm or enable it on your application.
 

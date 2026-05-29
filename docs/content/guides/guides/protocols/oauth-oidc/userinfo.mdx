@@ -19,7 +19,8 @@ The endpoint is OIDC-specific: the access token must have been issued with the `
 
 The client presents the access token as a Bearer (or DPoP) credential. <ProductName /> resolves the user, applies scope-based filtering, and returns the claims in the configured response format.
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -44,7 +45,9 @@ The client presents the access token as a Bearer (or DPoP) credential. <ProductN
 
 The signing and encryption algorithm tables live on the [Token Formats](../token-formats) page.
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 UserInfo is always available for tokens that carry the `openid` scope. To customize *which* claims it returns and *what format* they come back in:
 

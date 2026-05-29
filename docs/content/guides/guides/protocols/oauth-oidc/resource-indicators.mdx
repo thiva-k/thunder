@@ -43,7 +43,8 @@ The issued access token carries the resource identifier as its `aud`:
 }
 ```
 
-## How <ProductName /> Implements It
+<details>
+<summary>How <ProductName /> Implements It</summary>
 
 | Aspect | Behavior |
 |---|---|
@@ -88,7 +89,9 @@ curl -X POST https://{{productSlug}}.example.com/oauth2/token \
 
 Without `resource`, the new access token preserves the full original audience (RFC 8707 §5).
 
-## Enable It in <ProductName />
+</details>
+
+## Try It in <ProductName />
 
 Resource indicators activate as soon as you register a resource server with an absolute-URI `identifier`.
 
