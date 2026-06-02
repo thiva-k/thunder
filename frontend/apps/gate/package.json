@@ -53,6 +53,7 @@
     "@wso2/oxygen-ui-icons-react": "catalog:",
     "dompurify": "catalog:",
     "i18next": "catalog:",
+    "qrcode.react": "^4.2.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-i18next": "catalog:",

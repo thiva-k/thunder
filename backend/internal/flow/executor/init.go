@@ -37,6 +37,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/group"
 	"github.com/thunder-id/thunderid/internal/idp"
 	"github.com/thunder-id/thunderid/internal/notification"
+	"github.com/thunder-id/thunderid/internal/openid4vp"
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/role"
 	"github.com/thunder-id/thunderid/internal/system/email"
@@ -72,6 +73,7 @@ func Initialize(
 	oidcSvc oidc.OIDCAuthnServiceInterface,
 	githubSvc github.GithubOAuthAuthnServiceInterface,
 	googleSvc google.GoogleOIDCAuthnServiceInterface,
+	openid4vpVerifierSvc *openid4vp.Service,
 ) ExecutorRegistryInterface {
 	reg := newExecutorRegistry()
 	reg.RegisterExecutor(ExecutorNameBasicAuth, newBasicAuthExecutor(
@@ -92,6 +94,8 @@ func Initialize(
 		flowFactory, idpService, entityTypeService, githubSvc, authnProvider))
 	reg.RegisterExecutor(ExecutorNameGoogleAuth, newGoogleOIDCAuthExecutor(
 		flowFactory, idpService, entityTypeService, googleSvc, authnProvider))
+
+	reg.RegisterExecutor(ExecutorNameOpenID4VPVerify, newOpenID4VPVerifier(flowFactory, openid4vpVerifierSvc))
 
 	reg.RegisterExecutor(ExecutorNameProvisioning, newProvisioningExecutor(flowFactory,
 		groupService, roleService, roleAssignmentService, entityProvider, entityTypeService))

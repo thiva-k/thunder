@@ -20,7 +20,8 @@ import {useDesign, FlowComponentRenderer, AuthCardLayout} from '@thunderid/desig
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
 import {EmbeddedFlowComponentType, SignIn, type EmbeddedFlowComponent} from '@thunderid/react';
 import {TemplateLiteralType} from '@thunderid/utils';
-import {Box, Alert, CircularProgress} from '@wso2/oxygen-ui';
+import {Box, Alert, Button, CircularProgress, Typography} from '@wso2/oxygen-ui';
+import {QRCodeSVG} from 'qrcode.react';
 import {useState} from 'react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -100,6 +101,30 @@ export default function SignInBox(): JSX.Element {
                   {error.message ?? t('signin:errors.signin.failed.description')}
                 </Alert>
               )}
+              {(() => {
+                // OpenID4VP: render a QR for the presentation request when present.
+                const vpData = additionalData as Record<string, string> | undefined;
+                const walletUri = vpData?.openid4vpWalletUri;
+                const requestUri = vpData?.openid4vpRequestUri;
+                if (!walletUri && !requestUri) {
+                  return null;
+                }
+                return (
+                  <Box sx={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mb: 2}}>
+                    <QRCodeSVG value={walletUri ?? requestUri ?? ''} size={220} />
+                    {walletUri && (
+                      <Button variant="outlined" href={walletUri}>
+                        Open wallet on this device
+                      </Button>
+                    )}
+                    {requestUri && (
+                      <Typography variant="caption" sx={{wordBreak: 'break-all', textAlign: 'center'}}>
+                        {requestUri}
+                      </Typography>
+                    )}
+                  </Box>
+                );
+              })()}
               {(() => {
                 const renderComponents = components && components.length > 0 ? components : [];
 
