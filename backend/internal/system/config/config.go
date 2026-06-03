@@ -47,8 +47,9 @@ const schemeHTTPS = "https"
 // rather than nested under any particular consumer. Value is in seconds; zero disables
 // the cache; negative values are rejected at load time.
 type SecurityConfig struct {
-	JWKSCacheTTL  int                 `yaml:"jwks_cache_ttl" json:"jwks_cache_ttl"`
-	TrustedIssuer TrustedIssuerConfig `yaml:"trusted_issuer" json:"trusted_issuer"`
+	JWKSCacheTTL           int                 `yaml:"jwks_cache_ttl" json:"jwks_cache_ttl"`
+	TrustedIssuer          TrustedIssuerConfig `yaml:"trusted_issuer" json:"trusted_issuer"`
+	SystemPermissionPrefix string              `yaml:"system_permission_prefix" json:"system_permission_prefix"`
 }
 
 // Validate checks the security configuration for correctness, including any nested
@@ -416,12 +417,6 @@ type UserConfig struct {
 	Store string `yaml:"store" json:"store"`
 }
 
-// SystemResourceServerConfig holds configuration for the built-in system resource server.
-type SystemResourceServerConfig struct {
-	Handle     string `yaml:"handle" json:"handle"`
-	Identifier string `yaml:"identifier" json:"identifier"`
-}
-
 // ResourceConfig holds the resource management configuration details.
 type ResourceConfig struct {
 	DefaultDelimiter string `yaml:"default_delimiter" json:"default_delimiter"`
@@ -430,8 +425,7 @@ type ResourceConfig struct {
 	// If not specified, falls back to global DeclarativeResources.Enabled setting:
 	//   - If DeclarativeResources.Enabled = true: behaves as "declarative"
 	//   - If DeclarativeResources.Enabled = false: behaves as "mutable"
-	Store                string                     `yaml:"store" json:"store"`
-	SystemResourceServer SystemResourceServerConfig `yaml:"system_resource_server" json:"system_resource_server"`
+	Store string `yaml:"store" json:"store"`
 }
 
 // OrganizationUnitConfig holds the organization unit service configuration.
@@ -527,6 +521,67 @@ type TranslationConfig struct {
 // PasskeyConfig holds the passkey configuration details.
 type PasskeyConfig struct {
 	AllowedOrigins []string `yaml:"allowed_origins" json:"allowed_origins"`
+}
+
+// OpenID4VPConfig holds the OpenID4VP verifier engine configuration. Engine
+// defaults (client_id, signing key, base URLs, response advertisement) live at
+// the top level; credential-specific configuration (vct, requested claims,
+// trusted issuers, ...) lives under PresentationDefinitions.
+type OpenID4VPConfig struct {
+	ClientID               string   `yaml:"client_id" json:"client_id"`
+	SigningKeyID           string   `yaml:"signing_key_id" json:"signing_key_id"`
+	BaseURL                string   `yaml:"base_url" json:"base_url"`
+	ResultRedirectURI      string   `yaml:"result_redirect_uri" json:"result_redirect_uri"`
+	RequestAudience        string   `yaml:"request_audience" json:"request_audience"`
+	EphemeralKeyID         string   `yaml:"ephemeral_key_id" json:"ephemeral_key_id"`
+	ResponseEncValues      []string `yaml:"response_enc_values" json:"response_enc_values"`
+	RequestValiditySeconds int      `yaml:"request_validity_seconds" json:"request_validity_seconds"`
+	StateTTLSeconds        int      `yaml:"state_ttl_seconds" json:"state_ttl_seconds"`
+	LeewaySeconds          int      `yaml:"leeway_seconds" json:"leeway_seconds"`
+	// ResultTokenValiditySeconds bounds how long an RP-facing result_token is
+	// valid for. Defaults to 300s when zero.
+	ResultTokenValiditySeconds int `yaml:"result_token_validity_seconds" json:"result_token_validity_seconds"`
+	// RegistrationCertFile is the path (relative to ServerHome) to the
+	// Registration Certificate JWT issued by the trust framework's registrar
+	// (e.g. the EUDI Sandbox Registrar). When set, the JWT is included in
+	// every request object's `verifier_info` array under format
+	// "registration_cert" so wallets can enforce purpose / claim-scope policy.
+	// Optional: the base OpenID4VP spec treats `verifier_info` as optional;
+	// HAIP / EUDI profiles require it.
+	RegistrationCertFile    string             `yaml:"registration_cert_file" json:"registration_cert_file"`
+	PresentationDefinitions []DefinitionConfig `yaml:"presentation_definitions" json:"presentation_definitions"`
+	// EnforceTrustedIssuer requires the credential issuer to be in the
+	// configured trusted_issuers list and its signature to be valid. When false
+	// (the default) both checks are skipped — suitable for development and
+	// testing without production-issued credentials.
+	EnforceTrustedIssuer bool `yaml:"enforce_trusted_issuer" json:"enforce_trusted_issuer"`
+	// EnforceKeyBinding requires the wallet to present a Key Binding JWT proving
+	// possession of the holder key. When false (the default) the check is
+	// skipped — suitable for development and testing.
+	EnforceKeyBinding bool `yaml:"enforce_key_binding" json:"enforce_key_binding"`
+}
+
+// DefinitionConfig describes a single OpenID4VP presentation definition the
+// verifier should register at start-up. The format value selects the
+// CredentialFormat plug-in; the rest configures the DCQL query, the policy
+// applied to verified presentations, the subject derivation claim set and the
+// trusted issuers for that definition.
+type DefinitionConfig struct {
+	ID              string               `yaml:"id" json:"id"`
+	DisplayName     string               `yaml:"display_name" json:"display_name"`
+	CredentialID    string               `yaml:"credential_id" json:"credential_id"`
+	VCT             string               `yaml:"vct" json:"vct"`
+	RequestedClaims []string             `yaml:"requested_claims" json:"requested_claims"`
+	MandatoryClaims []string             `yaml:"mandatory_claims" json:"mandatory_claims"`
+	SubjectClaims   []string             `yaml:"subject_claims" json:"subject_claims"`
+	TrustedIssuers  []TrustedIssuerEntry `yaml:"trusted_issuers" json:"trusted_issuers"`
+}
+
+// TrustedIssuerEntry pins a trusted credential issuer's signing certificate
+// for a presentation definition.
+type TrustedIssuerEntry struct {
+	Issuer   string `yaml:"issuer" json:"issuer"`
+	CertFile string `yaml:"cert_file" json:"cert_file"`
 }
 
 // AuthnProviderConfig holds the authentication provider configuration details.
@@ -711,6 +766,7 @@ type Config struct {
 	EntityType           EntityTypeConfig       `yaml:"user_type" json:"user_type"`
 	Observability        ObservabilityConfig    `yaml:"observability" json:"observability"`
 	Passkey              PasskeyConfig          `yaml:"passkey" json:"passkey"`
+	OpenID4VP            OpenID4VPConfig        `yaml:"openid4vp" json:"openid4vp"`
 	AuthnProvider        AuthnProviderConfig    `yaml:"authn_provider" json:"authn_provider"`
 	UserProvider         UserProviderConfig     `yaml:"user_provider" json:"user_provider"`
 	EntityProvider       EntityProviderConfig   `yaml:"entity_provider" json:"entity_provider"`
@@ -757,11 +813,6 @@ func LoadConfig(configPath string, defaultPath string, serverHome string) (*Conf
 	// Derive JWT issuer from server config if not set
 	if cfg.JWT.Issuer == "" {
 		cfg.JWT.Issuer = GetServerURL(&cfg.Server)
-	}
-
-	// Default system resource server identifier to "system" if not set.
-	if cfg.Resource.SystemResourceServer.Identifier == "" {
-		cfg.Resource.SystemResourceServer.Identifier = "system"
 	}
 
 	if err := cfg.Server.SecurityConfig.Validate(); err != nil {
