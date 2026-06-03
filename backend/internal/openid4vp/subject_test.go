@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// pidClaims is the PID identity-claim set used by the EUDI demo path.
+// pidClaims is a sample identity-claim set for subject-derivation tests.
 var pidClaims = []string{"family_name", "given_name", "birthdate"}
 
 func TestDefaultSubjectDeriverPrefersSubClaim(t *testing.T) {

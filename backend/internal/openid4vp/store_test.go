@@ -34,13 +34,12 @@ import (
 )
 
 func TestCacheStateStoreRoundTrip(t *testing.T) {
+	cacheCfg := config.CacheConfig{Type: "inmemory", Size: 100, TTL: 3600, CleanupInterval: 300}
 	config.ResetServerRuntime()
-	require.NoError(t, config.InitializeServerRuntime("", &config.Config{
-		Cache: config.CacheConfig{Type: "inmemory", Size: 100, TTL: 3600, CleanupInterval: 300},
-	}))
+	require.NoError(t, config.InitializeServerRuntime("", &config.Config{Cache: cacheCfg}))
 	t.Cleanup(config.ResetServerRuntime)
 
-	cm := cache.Initialize()
+	cm := cache.Initialize(cacheCfg, "test")
 	t.Cleanup(cm.Close)
 	require.True(t, cm.IsEnabled())
 

@@ -29,7 +29,7 @@ const (
 )
 
 // BuildQuery builds the DCQL query requesting the configured claims as an
-// SD-JWT VC. It produces the sandbox guide's single-format request; an mdoc
+// SD-JWT VC presentation for the configured credential id and vct. An mdoc
 // option can be added later without changing callers.
 func buildQuery(cfg dcqlConfig) (*dcqlQuery, error) {
 	credentialID := cfg.CredentialID

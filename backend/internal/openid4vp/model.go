@@ -216,7 +216,7 @@ type serviceConfig struct {
 	Leeway                time.Duration
 	ResultRedirectURIBase string
 	// VerifierInfo is the engine-wide verifier_info array attached to every signed request object
-	// (e.g. the EUDI Sandbox Registration Certificate). Required by HAIP / EUDI profiles.
+	// (e.g. a trust-framework registration certificate JWT). Optional per OpenID4VP spec.
 	VerifierInfo []interface{}
 }
 

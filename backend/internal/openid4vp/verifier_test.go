@@ -43,7 +43,7 @@ const (
 	testVCT      = "urn:eudi:pid:de:1"
 )
 
-// pidBuilder assembles signed PID SD-JWT VC presentations for the tests.
+// pidBuilder assembles signed SD-JWT VC presentations for OpenID4VP verifier tests.
 type pidBuilder struct {
 	t         *testing.T
 	issuerKey *ecdsa.PrivateKey

@@ -1,16 +1,15 @@
 # Thunder OpenID4VP Verifier
 
 Thunder ships an embedded **OpenID for Verifiable Presentations 1.0** verifier
-that consumes Verifiable Credentials (SD-JWT VC) presented by EUDI-style
-wallets. It targets the HAIP profile out of the box: signed JAR with `x5c`,
-`request_uri` flow, encrypted `direct_post.jwt` response, DCQL, and the
-`x509_hash:` client identifier.
+that consumes Verifiable Credentials (SD-JWT VC) from compatible wallets. Out of
+the box it uses signed JAR with `x5c`, `request_uri`, encrypted
+`direct_post.jwt` responses, DCQL, and the `x509_hash:` client identifier.
 
 Two ways to integrate:
 
 | Path | Who triggers verification | Result delivery | Use case |
 |---|---|---|---|
-| **Flow Engine** | Thunder's authentication flow | `AuthenticatedUser` → session/assertion | The app uses Thunder as its IdP. "Sign in with EUDI Wallet". |
+| **Flow Engine** | Thunder's authentication flow | `AuthenticatedUser` → session/assertion | The app uses Thunder as its IdP (e.g. wallet sign-in via Gate). |
 | **REST API** | Partner backend (any RP) | Signed result token | Standalone verifier-as-a-service. A non-Thunder app uses Thunder purely to verify a credential. |
 
 Both paths share the same wallet round-trip and verification pipeline.
@@ -25,12 +24,12 @@ in `deployment.yaml`, it boots with the defaults from `default.json`:
 - `client_id: "x509_hash:dev-placeholder"` (will need replacing for live wallets — see [Going live](#going-live))
 - Signing key: `default-key` (the bundled dev key)
 - Base URL: `https://localhost:8090`
-- One presentation definition registered: `eudi-pid` (German PID SD-JWT VC)
-- All HAIP defaults: `response_mode=direct_post.jwt`, `A128GCM` content encryption, ECDH-ES key agreement, `request_audience=https://self-issued.me/v2`, and a 5-minute lifetime for both the request object and the per-transaction state.
+- One presentation definition registered: `eudi-pid` (bundled sample SD-JWT VC definition)
+- OpenID4VP engine defaults: `response_mode=direct_post.jwt`, `A128GCM` content encryption, ECDH-ES key agreement, `request_audience=https://self-issued.me/v2`, and a 5-minute lifetime for both the request object and the per-transaction state.
 
 ---
 
-## Path A — Flow Engine (Sign in with EUDI Wallet)
+## Path A — Flow Engine (wallet sign-in)
 
 ### Wire Up
 
@@ -64,7 +63,7 @@ start  →  choose_auth (PROMPT: "Sign in with EUDI Wallet")
 
 ### Authenticated User Attributes
 
-The verified PID attributes appear on the authenticated user's
+The verified credential attributes appear on the authenticated user's
 `Attributes` map alongside two metadata keys for downstream consumers:
 
 ```json
@@ -239,7 +238,7 @@ Decoded JWS **payload**:
 
 ### Step W2 — Wallet Validates the Request, Gathers Consent, Builds Presentation
 
-Wallet-side checks (a real EUDI wallet does the following):
+Wallet-side checks (a conforming wallet typically does the following):
 
 1. JWS signature verified against the leaf cert in `x5c`.
 2. `SHA-256(leaf cert DER)` base64url-encoded equals the suffix of the
@@ -250,7 +249,7 @@ Wallet-side checks (a real EUDI wallet does the following):
 The wallet then:
 
 5. Evaluates the DCQL → picks the matching credential (the user's PID).
-6. Displays a consent screen: "Acme wants `given_name`, `family_name`, `birthdate` from your EUDI Wallet PID."
+6. Displays a consent screen listing the requested claims (e.g. `given_name`, `family_name`, `birthdate`).
 7. Holder approves → the wallet:
    - Picks the disclosures for the three requested claims.
    - Builds a **Key Binding JWT** (signed with the holder's private key, the public half is `cnf.jwk` in the credential) carrying:
@@ -374,17 +373,17 @@ are all it ever does.
 
 | Field | Meaning |
 |---|---|
-| `client_id` | Verifier identifier shown to the wallet. HAIP form: `x509_hash:<base64url(sha256(DER(your registered cert)))>`. |
+| `client_id` | Verifier identifier shown to the wallet. Common form: `x509_hash:<base64url(sha256(DER(your registered cert)))>`. |
 | `signing_key_id` | Key id in `crypto.keys[]` used to sign request objects. Must be cert-backed. |
 | `base_url` | Public URL of this Thunder instance. Drives `request_uri` and `response_uri`. |
 | `ephemeral_key_id` | The `kid` advertised on the per-request ephemeral encryption JWK. Cosmetic. |
-| `response_enc_values` | Allowed content-encryption algorithms. HAIP: `["A128GCM"]`. |
+| `response_enc_values` | Allowed content-encryption algorithms (default: `["A128GCM"]`). |
 | `request_audience` | JAR `aud` claim. OpenID4VP: `https://self-issued.me/v2`. |
 | `request_validity_seconds` | JAR `exp` window. |
 | `state_ttl_seconds` | How long a verification transaction lives before EXPIRED. |
 | `leeway_seconds` | Allowed clock skew on KB-JWT `iat`. |
 | `result_token_validity_seconds` | Result-token `exp` window for Path B. |
-| `registration_cert_file` | Optional. Path (relative to ServerHome) to a Registration Certificate JWT issued by the trust framework's registrar (e.g. EUDI Sandbox). When set, the JWT rides on every JAR's verifier-info attestation array (format `"registration_cert"`). Required by HAIP / EUDI. |
+| `registration_cert_file` | Optional. Path (relative to ServerHome) to a registration certificate JWT from your trust framework. When set, the JWT is attached to every JAR `verifier_info` entry (`format: "registration_cert"`). |
 | `presentation_definitions[]` | One entry per credential type the verifier accepts. |
 
 ### Definition-Level Fields
@@ -436,11 +435,11 @@ Adding a definition is purely a YAML edit. No Go code change is needed.
 
 ## Going Live
 
-Three operational gates close before a real EUDI wallet can complete a
+Three operational gates close before a production wallet can complete a
 verification against your deployment. None of them are code:
 
-1. **Real Access Certificate** from the trust framework's Registrar
-   (e.g. the EUDI Sandbox Registrar). Install it as a `crypto.keys[]` entry
+1. **Verifier access certificate** from your trust framework's registrar.
+   Install it as a `crypto.keys[]` entry
    that matches `openid4vp.signing_key_id`. Compute the hash:
    ```bash
    openssl x509 -in access-cert.pem -outform der \
@@ -448,10 +447,10 @@ verification against your deployment. None of them are code:
      | basenc --base64url | tr -d '='
    ```
    Set `client_id: "x509_hash:<that hash>"` in `deployment.yaml`.
-2. **Real PID issuer cert** (e.g. Bundesdruckerei) saved as PEM under
+2. **Trusted issuer certificate(s)** for the credential types you accept, saved as PEM under
    `repository/resources/security/`. Update the relevant
    `trusted_issuers[*].cert_file` in `deployment.yaml`.
-3. **Registration Certificate** from the Registrar. Save the JWT to
+3. **Registration certificate** (if required by your framework). Save the JWT to
    `repository/resources/security/` and set
    `openid4vp.registration_cert_file` to its path (relative to ServerHome)
    in `deployment.yaml`. The engine loads it at startup and attaches it

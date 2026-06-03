@@ -25,7 +25,7 @@ import (
 	"time"
 )
 
-// OpenID4VP request object constants (German sandbox HAIP profile).
+// OpenID4VP request object constants used by the verifier engine.
 const (
 	// ResponseTypeVPToken is the OpenID4VP response_type.
 	ResponseTypeVPToken = "vp_token"
