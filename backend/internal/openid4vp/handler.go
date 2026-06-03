@@ -54,21 +54,27 @@ type openID4VPHandler struct {
 	requestStateValidity time.Duration
 }
 
-// newOpenID4VPHandler builds the handler. A zero validity falls back to
-// defaultResultTokenValidity. A nil issuer disables COMPLETED result-token
-// issuance — wallet endpoints continue to work.
+// newOpenID4VPHandler builds the handler. Zero resultTokenValidity falls back to
+// defaultResultTokenValidity; zero requestStateValidity falls back to defaultStateTTL.
+// A nil issuer disables COMPLETED result-token issuance — wallet endpoints continue to work.
 func newOpenID4VPHandler(
-	svc OpenID4VPServiceInterface, issuer resultTokenIssuer, baseURL string, validity time.Duration,
+	svc OpenID4VPServiceInterface,
+	issuer resultTokenIssuer,
+	baseURL string,
+	resultTokenValidity, requestStateValidity time.Duration,
 ) *openID4VPHandler {
-	if validity <= 0 {
-		validity = defaultResultTokenValidity
+	if resultTokenValidity <= 0 {
+		resultTokenValidity = defaultResultTokenValidity
+	}
+	if requestStateValidity <= 0 {
+		requestStateValidity = defaultStateTTL
 	}
 	return &openID4VPHandler{
 		service:              svc,
 		issuer:               issuer,
 		rpStatusBase:         strings.TrimRight(baseURL, "/") + apiStatusPrefix,
-		resultTokenValidity:  validity,
-		requestStateValidity: svc.StateTTL(),
+		resultTokenValidity:  resultTokenValidity,
+		requestStateValidity: requestStateValidity,
 	}
 }
 
@@ -131,13 +137,12 @@ func (h *openID4VPHandler) HandleInitiate(w http.ResponseWriter, r *http.Request
 		writeServiceErrorResponse(w, &ErrorInvalidRequest)
 		return
 	}
-	if !h.service.HasDefinition(req.DefinitionID) {
-		writeServiceErrorResponse(w, &ErrorUnknownDefinition)
-		return
-	}
-
 	init, err := h.service.InitiateForRP(r.Context(), req.DefinitionID, req.RPID)
 	if err != nil {
+		if isUnregisteredDefinition(err) {
+			writeServiceErrorResponse(w, &ErrorUnknownDefinition)
+			return
+		}
 		log.GetLogger().Error("Failed to initiate OpenID4VP transaction", log.Error(err))
 		writeServiceErrorResponse(w, toServiceError(err))
 		return
@@ -214,6 +219,13 @@ func (h *openID4VPHandler) HandleStatus(w http.ResponseWriter, r *http.Request) 
 }
 
 // extractTxnID resolves txn_id from a Go-1.22 path value or the trailing path segment.
+// isUnregisteredDefinition reports whether err is the policy error returned when
+// no presentation definition is registered for the requested id.
+func isUnregisteredDefinition(err error) bool {
+	return errors.Is(err, ErrPolicy) &&
+		strings.Contains(err.Error(), "no presentation definition registered")
+}
+
 func extractTxnID(r *http.Request) string {
 	if v := r.PathValue("txn_id"); v != "" {
 		return v

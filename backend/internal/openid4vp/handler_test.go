@@ -45,7 +45,7 @@ const (
 func TestHandleRequestObject(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, _ := newTestService(t, b)
-	h := newOpenID4VPHandler(svc, nil, "", 0)
+	h := newOpenID4VPHandler(svc, nil, "", 0, 0)
 
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
@@ -82,7 +82,7 @@ func TestHandleResponse(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
 	svc.cfg.ResultRedirectURIBase = resultRedirectURIBase
-	h := newOpenID4VPHandler(svc, nil, "", 0)
+	h := newOpenID4VPHandler(svc, nil, "", 0, 0)
 
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestHandleResponse(t *testing.T) {
 func TestHandleResponseVerificationFailure(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
-	h := newOpenID4VPHandler(svc, nil, "", 0)
+	h := newOpenID4VPHandler(svc, nil, "", 0, 0)
 
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
@@ -151,7 +151,7 @@ func newTestRPHandler(t *testing.T) (*openID4VPHandler, *fakeStore) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
 	issuer := &resultTokenIssuerFake{}
-	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second)
+	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second, 0)
 	return h, store
 }
 
@@ -279,7 +279,7 @@ func TestAPIInitiateAndStatusCompleted(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
 	issuer := &resultTokenIssuerFake{}
-	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second)
+	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second, 0)
 
 	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{
 		DefinitionID: testDefinitionID, RPID: "scholarbooks",

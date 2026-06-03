@@ -39,19 +39,20 @@ type requestSigner interface {
 	signRequestObject(ctx context.Context, claims map[string]interface{}) (string, error)
 }
 
-// OpenID4VPServiceInterface is the OpenID4VP verifier service contract consumed
-// by the HTTP handler and by in-process callers such as flow executors.
+// OpenID4VPServiceInterface is the contract for the OpenID4VP verifier service.
+// It is implemented by *service and consumed by the HTTP handler and in-process
+// callers such as flow executors (which depend only on Initiate and Result).
 type OpenID4VPServiceInterface interface {
 	Initiate(ctx context.Context, definitionID string) (*Initiation, error)
-	InitiateForRP(ctx context.Context, definitionID, rpID string) (*Initiation, error)
+	Result(ctx context.Context, state string) (*RequestState, error)
 	RequestObject(ctx context.Context, state string) (string, error)
 	SubmitResponse(ctx context.Context, state string, body []byte) (*VerifiedPresentation, error)
-	Result(ctx context.Context, state string) (*RequestState, error)
-	LookupState(ctx context.Context, state string) (*RequestState, error)
 	ResultRedirectURI(state string) string
-	HasDefinition(id string) bool
-	StateTTL() time.Duration
+	InitiateForRP(ctx context.Context, definitionID, rpID string) (*Initiation, error)
+	LookupState(ctx context.Context, state string) (*RequestState, error)
 }
+
+var _ OpenID4VPServiceInterface = (*service)(nil)
 
 // service drives the OpenID4VP verifier: it issues signed requests with a
 // fresh nonce and ephemeral encryption key, and verifies the encrypted
@@ -86,12 +87,6 @@ func newService(
 		signer:   signer,
 	}, nil
 }
-
-// registry returns the verifier's presentationDefinition registry, so callers
-// (e.g. credential-specific authenticators) can register their definitions.
-
-// ClientID returns the engine-default verifier client identifier. Authenticators
-// use this to set policy.Audience consistently.
 
 // InitiateForRP is the RP-facing variant of Initiate: it stores the calling
 // relying party's identifier on the state so the result-token audience matches
@@ -259,18 +254,6 @@ func (s *service) SubmitResponse(ctx context.Context, state string, body []byte)
 // ErrUnknownState when the state is unknown or expired.
 func (s *service) Result(ctx context.Context, state string) (*RequestState, error) {
 	return s.load(ctx, state)
-}
-
-// HasDefinition reports whether a presentation definition with the given id is
-// registered with the verifier.
-func (s *service) HasDefinition(id string) bool {
-	return s.registry.has(id)
-}
-
-// StateTTL is the configured time-to-live applied to a freshly initiated
-// request state.
-func (s *service) StateTTL() time.Duration {
-	return s.cfg.TTL
 }
 
 // LookupState returns the raw state record without auto-evicting expired

@@ -93,7 +93,7 @@ func Initialize(
 		issuer = newJWTresultTokenIssuer(jwtService, base, cfg.ClientID)
 	}
 	resultTokenValidity := time.Duration(cfg.ResultTokenValiditySeconds) * time.Second
-	registerRoutes(mux, newOpenID4VPHandler(svc, issuer, base, resultTokenValidity))
+	registerRoutes(mux, newOpenID4VPHandler(svc, issuer, base, resultTokenValidity, svc.cfg.TTL))
 
 	return svc, nil
 }

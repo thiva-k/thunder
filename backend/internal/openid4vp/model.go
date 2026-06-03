@@ -126,12 +126,6 @@ func (r *registry) get(id string) (*presentationDefinition, bool) {
 	return def, ok
 }
 
-// has reports whether a definition is registered under id.
-func (r *registry) has(id string) bool {
-	_, ok := r.get(id)
-	return ok
-}
-
 // list returns the IDs of all registered definitions in lexicographic order.
 func (r *registry) list() []string {
 	r.mu.RLock()
