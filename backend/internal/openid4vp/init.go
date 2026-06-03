@@ -36,25 +36,15 @@ import (
 	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 )
 
-// Route paths for the wallet-facing OpenID4VP endpoints.
-const (
-	requestURIPath  = "/openid4vp/request"
-	responseURIPath = "/openid4vp/response"
-)
-
-// Initialize wires the OpenID4VP verifier engine, registers its wallet-facing
-// endpoints, and registers every presentation definition supplied in
-// configuration. The returned Service exposes a registry for in-process
-// consumers that need to register additional definitions at runtime.
+// Initialize wires the OpenID4VP verifier engine, registers its HTTP endpoints,
+// and registers every presentation definition supplied in configuration.
 //
-// Returns (nil, nil) when the verifier is disabled in configuration.
-//
-// jwtService is used to sign RP-facing result tokens. When nil, the RP-facing
-// REST API is not registered (the wallet-facing flow still works).
+// jwtService is used to sign RP-facing result tokens. When nil, the COMPLETED
+// status response cannot issue a result token (wallet flow still works).
 func Initialize(
 	mux *http.ServeMux, cryptoProvider kmprovider.RuntimeCryptoProvider,
 	cacheManager cache.CacheManagerInterface, jwtService jwt.JWTServiceInterface,
-) (*Service, error) {
+) (OpenID4VPServiceInterface, error) {
 	runtime := config.GetServerRuntime()
 	cfg := runtime.Config.OpenID4VP
 	serverHome := runtime.ServerHome
@@ -98,13 +88,12 @@ func Initialize(
 		}
 	}
 
-	registerRoutes(mux, newHandler(svc))
-
+	var issuer resultTokenIssuer
 	if jwtService != nil {
-		resultTokenValidity := time.Duration(cfg.ResultTokenValiditySeconds) * time.Second
-		issuer := newJWTresultTokenIssuer(jwtService, base, cfg.ClientID)
-		registerRPRoutes(mux, newRPHandler(svc, issuer, base, resultTokenValidity))
+		issuer = newJWTresultTokenIssuer(jwtService, base, cfg.ClientID)
 	}
+	resultTokenValidity := time.Duration(cfg.ResultTokenValiditySeconds) * time.Second
+	registerRoutes(mux, newOpenID4VPHandler(svc, issuer, base, resultTokenValidity))
 
 	return svc, nil
 }
@@ -112,7 +101,7 @@ func Initialize(
 // buildDefinition constructs a presentationDefinition from its config.
 // Trusted-issuer cert paths are resolved against serverHome.
 func buildDefinition(
-	dc config.DefinitionConfig, svc *Service, serverHome string,
+	dc config.DefinitionConfig, svc *service, serverHome string,
 ) (*presentationDefinition, error) {
 	if dc.ID == "" {
 		return nil, fmt.Errorf("%w: presentation definition requires an id", ErrPolicy)

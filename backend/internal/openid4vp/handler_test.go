@@ -45,7 +45,7 @@ const (
 func TestHandleRequestObject(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, _ := newTestService(t, b)
-	h := newHandler(svc)
+	h := newOpenID4VPHandler(svc, nil, "", 0)
 
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
@@ -53,7 +53,7 @@ func TestHandleRequestObject(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/openid4vp/request?state="+url.QueryEscape(init.State), nil)
 		rec := httptest.NewRecorder()
-		h.handleRequestObject(rec, req)
+		h.HandleRequestObject(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 		assert.Equal(t, requestObjectContentType, rec.Header().Get("Content-Type"))
@@ -64,7 +64,7 @@ func TestHandleRequestObject(t *testing.T) {
 	t.Run("missing state", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/openid4vp/request", nil)
 		rec := httptest.NewRecorder()
-		h.handleRequestObject(rec, req)
+		h.HandleRequestObject(rec, req)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, ErrorInvalidRequest.Code, decodeErrorCode(t, rec))
 	})
@@ -72,7 +72,7 @@ func TestHandleRequestObject(t *testing.T) {
 	t.Run("unknown state", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/openid4vp/request?state=nope", nil)
 		rec := httptest.NewRecorder()
-		h.handleRequestObject(rec, req)
+		h.HandleRequestObject(rec, req)
 		assert.Equal(t, http.StatusNotFound, rec.Code)
 		assert.Equal(t, ErrorUnknownState.Code, decodeErrorCode(t, rec))
 	})
@@ -82,7 +82,7 @@ func TestHandleResponse(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
 	svc.cfg.ResultRedirectURIBase = resultRedirectURIBase
-	h := newHandler(svc)
+	h := newOpenID4VPHandler(svc, nil, "", 0)
 
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
@@ -118,7 +118,7 @@ func TestHandleResponse(t *testing.T) {
 func TestHandleResponseVerificationFailure(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
-	h := newHandler(svc)
+	h := newOpenID4VPHandler(svc, nil, "", 0)
 
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
@@ -142,16 +142,16 @@ func TestHandleResponseVerificationFailure(t *testing.T) {
 // RP-facing handler tests
 // =============================================================================
 
-// newTestRPHandler builds an rpHandler over the standard test service plus
-// the deterministic resultTokenIssuerFake. Tests that need to assert on the
-// issuer's recorded calls construct the handler inline (see
+// newTestRPHandler builds an openID4VPHandler over the standard test service
+// plus the deterministic resultTokenIssuerFake. Tests that need to assert on
+// the issuer's recorded calls construct the handler inline (see
 // TestAPIInitiateAndStatusCompleted).
-func newTestRPHandler(t *testing.T) (*rpHandler, *fakeStore) {
+func newTestRPHandler(t *testing.T) (*openID4VPHandler, *fakeStore) {
 	t.Helper()
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
 	issuer := &resultTokenIssuerFake{}
-	h := newRPHandler(svc, issuer, apiBaseURL, 300*time.Second)
+	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second)
 	return h, store
 }
 
@@ -162,7 +162,7 @@ func TestAPIInitiateHappyPath(t *testing.T) {
 		DefinitionID: testDefinitionID,
 		RPID:         "scholarbooks",
 	})
-	rec := postJSON(h.handleInitiate, body)
+	rec := postJSON(h.HandleInitiate, body)
 	require.Equal(t, http.StatusOK, rec.Code)
 
 	var resp initiateResponse
@@ -180,7 +180,7 @@ func TestAPIInitiateRejectsUnknownDefinition(t *testing.T) {
 	h, _ := newTestRPHandler(t)
 
 	body, _ := json.Marshal(initiateRequest{DefinitionID: "no-such-def", RPID: "rp"})
-	rec := postJSON(h.handleInitiate, body)
+	rec := postJSON(h.HandleInitiate, body)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, ErrorUnknownDefinition.Code, decodeErrorCode(t, rec))
 }
@@ -195,7 +195,7 @@ func TestAPIInitiateRejectsMissingFields(t *testing.T) {
 	}
 	for _, c := range cases {
 		body, _ := json.Marshal(c)
-		rec := postJSON(h.handleInitiate, body)
+		rec := postJSON(h.HandleInitiate, body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Equal(t, ErrorInvalidRequest.Code, decodeErrorCode(t, rec))
 	}
@@ -203,14 +203,14 @@ func TestAPIInitiateRejectsMissingFields(t *testing.T) {
 
 func TestAPIInitiateRejectsInvalidJSON(t *testing.T) {
 	h, _ := newTestRPHandler(t)
-	rec := postJSON(h.handleInitiate, []byte("not json"))
+	rec := postJSON(h.HandleInitiate, []byte("not json"))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Equal(t, ErrorInvalidRequest.Code, decodeErrorCode(t, rec))
 }
 
 func TestAPIStatusUnknownTxn(t *testing.T) {
 	h, _ := newTestRPHandler(t)
-	rec := getStatus(h.handleStatus, "nope")
+	rec := getStatus(h.HandleStatus, "nope")
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.Equal(t, ErrorUnknownState.Code, decodeErrorCode(t, rec))
 }
@@ -219,11 +219,11 @@ func TestAPIStatusPending(t *testing.T) {
 	h, _ := newTestRPHandler(t)
 
 	body, _ := json.Marshal(initiateRequest{DefinitionID: testDefinitionID, RPID: "rp-1"})
-	postJSON(h.handleInitiate, body)
+	postJSON(h.HandleInitiate, body)
 	var resp initiateResponse
-	require.NoError(t, json.Unmarshal(postJSON(h.handleInitiate, body).Body.Bytes(), &resp))
+	require.NoError(t, json.Unmarshal(postJSON(h.HandleInitiate, body).Body.Bytes(), &resp))
 
-	rec := getStatus(h.handleStatus, resp.TxnID)
+	rec := getStatus(h.HandleStatus, resp.TxnID)
 	require.Equal(t, http.StatusOK, rec.Code)
 	var s statusResponse
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &s))
@@ -234,7 +234,7 @@ func TestAPIStatusPending(t *testing.T) {
 func TestAPIStatusFailed(t *testing.T) {
 	h, store := newTestRPHandler(t)
 
-	rec := postJSON(h.handleInitiate, mustJSON(t, initiateRequest{
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{
 		DefinitionID: testDefinitionID, RPID: "rp",
 	}))
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -246,7 +246,7 @@ func TestAPIStatusFailed(t *testing.T) {
 	rs.Status = StatusFailed
 	rs.FailureReason = "untrusted_issuer"
 
-	srec := getStatus(h.handleStatus, ir.TxnID)
+	srec := getStatus(h.HandleStatus, ir.TxnID)
 	require.Equal(t, http.StatusOK, srec.Code)
 	var sr statusResponse
 	require.NoError(t, json.Unmarshal(srec.Body.Bytes(), &sr))
@@ -257,7 +257,7 @@ func TestAPIStatusFailed(t *testing.T) {
 func TestAPIStatusExpired(t *testing.T) {
 	h, store := newTestRPHandler(t)
 
-	rec := postJSON(h.handleInitiate, mustJSON(t, initiateRequest{
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{
 		DefinitionID: testDefinitionID, RPID: "rp",
 	}))
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -266,7 +266,7 @@ func TestAPIStatusExpired(t *testing.T) {
 
 	store.m[ir.TxnID].ExpiresAt = time.Now().Add(-time.Minute)
 
-	srec := getStatus(h.handleStatus, ir.TxnID)
+	srec := getStatus(h.HandleStatus, ir.TxnID)
 	require.Equal(t, http.StatusOK, srec.Code)
 	var sr statusResponse
 	require.NoError(t, json.Unmarshal(srec.Body.Bytes(), &sr))
@@ -279,9 +279,9 @@ func TestAPIInitiateAndStatusCompleted(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, store := newTestService(t, b)
 	issuer := &resultTokenIssuerFake{}
-	h := newRPHandler(svc, issuer, apiBaseURL, 300*time.Second)
+	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second)
 
-	rec := postJSON(h.handleInitiate, mustJSON(t, initiateRequest{
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{
 		DefinitionID: testDefinitionID, RPID: "scholarbooks",
 	}))
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -302,10 +302,10 @@ func TestAPIInitiateAndStatusCompleted(t *testing.T) {
 	})
 	require.NoError(t, err)
 	jweToken := fabricateResponseJWE(t, &rs.EphemeralKey.PublicKey, body)
-	_, err = svc.submitResponse(context.Background(), ir.TxnID, []byte(jweToken))
+	_, err = svc.SubmitResponse(context.Background(), ir.TxnID, []byte(jweToken))
 	require.NoError(t, err)
 
-	srec := getStatus(h.handleStatus, ir.TxnID)
+	srec := getStatus(h.HandleStatus, ir.TxnID)
 	require.Equal(t, http.StatusOK, srec.Code)
 	var sr statusResponse
 	require.NoError(t, json.Unmarshal(srec.Body.Bytes(), &sr))
@@ -330,7 +330,7 @@ func TestAPIInitiateAndStatusCompleted(t *testing.T) {
 func TestAPIRegisterRoutesAddsInitiateAndStatus(t *testing.T) {
 	h, _ := newTestRPHandler(t)
 	mux := http.NewServeMux()
-	registerRPRoutes(mux, h)
+	registerRoutes(mux, h)
 
 	// POST initiate is routed.
 	body := mustJSON(t, initiateRequest{DefinitionID: testDefinitionID, RPID: "rp"})
@@ -356,11 +356,11 @@ func TestAPIRegisterRoutesAddsInitiateAndStatus(t *testing.T) {
 // Shared test helpers
 // =============================================================================
 
-func postForm(h *handler, form url.Values) *httptest.ResponseRecorder {
+func postForm(h *openID4VPHandler, form url.Values) *httptest.ResponseRecorder {
 	req := httptest.NewRequest(http.MethodPost, "/openid4vp/response", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
-	h.handleResponse(rec, req)
+	h.HandleResponse(rec, req)
 	return rec
 }
 

@@ -68,6 +68,20 @@ var (
 			DefaultValue: "The presented credential could not be verified",
 		},
 	}
+
+	// ErrorUnknownDefinition indicates the requested presentation_definition_id is not registered.
+	ErrorUnknownDefinition = serviceerror.ServiceError{
+		Type: serviceerror.ClientErrorType,
+		Code: "EUDI-1004",
+		Error: core.I18nMessage{
+			Key:          "error.eudi.unknown_definition",
+			DefaultValue: "Unknown presentation definition",
+		},
+		ErrorDescription: core.I18nMessage{
+			Key:          "error.eudi.unknown_definition_description",
+			DefaultValue: "No presentation definition is registered for the supplied id",
+		},
+	}
 )
 
 // toServiceError maps an internal verifier error to a client-facing service error.

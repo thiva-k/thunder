@@ -31,7 +31,7 @@ import (
 const defaultPresentationDefinitionID = "eudi-pid"
 
 // openid4vpVerifierService is the subset of the OpenID4VP verifier service the
-// executor depends on. *openid4vp.Service satisfies it.
+// executor depends on. openid4vp.OpenID4VPServiceInterface satisfies it.
 type openid4vpVerifierService interface {
 	Initiate(ctx context.Context, definitionID string) (*openid4vp.Initiation, error)
 	Result(ctx context.Context, state string) (*openid4vp.RequestState, error)

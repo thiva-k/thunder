@@ -27,7 +27,6 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/error/apierror"
 	"github.com/thunder-id/thunderid/internal/system/error/serviceerror"
-	"github.com/thunder-id/thunderid/internal/system/i18n/core"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -35,23 +34,53 @@ import (
 
 const requestObjectContentType = "application/oauth-authz-req+jwt"
 
-// handler serves the wallet-facing OpenID4VP endpoints.
-type handler struct {
-	service *Service
+// Route paths for the OpenID4VP wallet- and RP-facing endpoints.
+const (
+	requestURIPath  = "/openid4vp/request"
+	responseURIPath = "/openid4vp/response"
+	apiInitiatePath = "/openid4vp/initiate"
+	apiStatusPath   = "/openid4vp/status/{txn_id}"
+	apiStatusPrefix = "/openid4vp/status/"
+)
+
+const defaultResultTokenValidity = 300 * time.Second
+
+// openID4VPHandler serves both the wallet-facing and RP-facing OpenID4VP endpoints.
+type openID4VPHandler struct {
+	service              OpenID4VPServiceInterface
+	issuer               resultTokenIssuer
+	rpStatusBase         string
+	resultTokenValidity  time.Duration
+	requestStateValidity time.Duration
 }
 
-func newHandler(service *Service) *handler {
-	return &handler{service: service}
+// newOpenID4VPHandler builds the handler. A zero validity falls back to
+// defaultResultTokenValidity. A nil issuer disables COMPLETED result-token
+// issuance — wallet endpoints continue to work.
+func newOpenID4VPHandler(
+	svc OpenID4VPServiceInterface, issuer resultTokenIssuer, baseURL string, validity time.Duration,
+) *openID4VPHandler {
+	if validity <= 0 {
+		validity = defaultResultTokenValidity
+	}
+	return &openID4VPHandler{
+		service:              svc,
+		issuer:               issuer,
+		rpStatusBase:         strings.TrimRight(baseURL, "/") + apiStatusPrefix,
+		resultTokenValidity:  validity,
+		requestStateValidity: svc.StateTTL(),
+	}
 }
 
-func (h *handler) handleRequestObject(w http.ResponseWriter, r *http.Request) {
+// HandleRequestObject returns the signed authorization request JWT to the wallet.
+func (h *openID4VPHandler) HandleRequestObject(w http.ResponseWriter, r *http.Request) {
 	state := sysutils.SanitizeString(r.URL.Query().Get("state"))
 	if state == "" {
 		writeServiceErrorResponse(w, &ErrorInvalidRequest)
 		return
 	}
 
-	jar, err := h.service.requestObject(r.Context(), state)
+	jar, err := h.service.RequestObject(r.Context(), state)
 	if err != nil {
 		writeServiceErrorResponse(w, toServiceError(err))
 		return
@@ -65,7 +94,8 @@ func (h *handler) handleRequestObject(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *handler) handleResponse(w http.ResponseWriter, r *http.Request) {
+// HandleResponse ingests the wallet's encrypted VP response.
+func (h *openID4VPHandler) HandleResponse(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		writeServiceErrorResponse(w, &ErrorInvalidRequest)
 		return
@@ -78,68 +108,20 @@ func (h *handler) handleResponse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, err := h.service.submitResponse(r.Context(), state, []byte(response)); err != nil {
+	if _, err := h.service.SubmitResponse(r.Context(), state, []byte(response)); err != nil {
 		writeServiceErrorResponse(w, toServiceError(err))
 		return
 	}
 
 	body := map[string]string{}
-	if redirect := h.service.resultRedirectURI(state); redirect != "" {
+	if redirect := h.service.ResultRedirectURI(state); redirect != "" {
 		body["redirect_uri"] = redirect
 	}
 	sysutils.WriteSuccessResponse(w, http.StatusOK, body)
 }
 
-const (
-	apiInitiatePath = "/openid4vp/initiate"
-	apiStatusPath   = "/openid4vp/status/{txn_id}"
-	apiStatusPrefix = "/openid4vp/status/"
-)
-
-const defaultResultTokenValidity = 300 * time.Second
-
-var (
-	// ErrorUnknownDefinition indicates the requested presentation_definition_id is not registered.
-	ErrorUnknownDefinition = serviceerror.ServiceError{
-		Type: serviceerror.ClientErrorType,
-		Code: "EUDI-1004",
-		Error: core.I18nMessage{
-			Key:          "error.eudi.unknown_definition",
-			DefaultValue: "Unknown presentation definition",
-		},
-		ErrorDescription: core.I18nMessage{
-			Key:          "error.eudi.unknown_definition_description",
-			DefaultValue: "No presentation definition is registered for the supplied id",
-		},
-	}
-)
-
-// rpHandler serves the RP-facing OpenID4VP REST endpoints. It mirrors the
-// patterns of other Thunder admin handlers: a small dependency struct, JSON
-// request/response shapes, and the standard apierror envelope on failure.
-type rpHandler struct {
-	service              *Service
-	issuer               resultTokenIssuer
-	rpStatusBase         string
-	resultTokenValidity  time.Duration
-	requestStateValidity time.Duration
-}
-
-// newRPHandler builds the RP-facing API handler. A zero validity falls back to defaultResultTokenValidity.
-func newRPHandler(svc *Service, issuer resultTokenIssuer, baseURL string, validity time.Duration) *rpHandler {
-	if validity <= 0 {
-		validity = defaultResultTokenValidity
-	}
-	return &rpHandler{
-		service:              svc,
-		issuer:               issuer,
-		rpStatusBase:         strings.TrimRight(baseURL, "/") + apiStatusPrefix,
-		resultTokenValidity:  validity,
-		requestStateValidity: svc.cfg.TTL,
-	}
-}
-
-func (h *rpHandler) handleInitiate(w http.ResponseWriter, r *http.Request) {
+// HandleInitiate starts a verifier transaction on behalf of an RP.
+func (h *openID4VPHandler) HandleInitiate(w http.ResponseWriter, r *http.Request) {
 	var req initiateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeServiceErrorResponse(w, &ErrorInvalidRequest)
@@ -149,19 +131,19 @@ func (h *rpHandler) handleInitiate(w http.ResponseWriter, r *http.Request) {
 		writeServiceErrorResponse(w, &ErrorInvalidRequest)
 		return
 	}
-	if !h.service.registry.has(req.DefinitionID) {
+	if !h.service.HasDefinition(req.DefinitionID) {
 		writeServiceErrorResponse(w, &ErrorUnknownDefinition)
 		return
 	}
 
-	init, err := h.service.initiateForRP(r.Context(), req.DefinitionID, req.RPID)
+	init, err := h.service.InitiateForRP(r.Context(), req.DefinitionID, req.RPID)
 	if err != nil {
 		log.GetLogger().Error("Failed to initiate OpenID4VP transaction", log.Error(err))
 		writeServiceErrorResponse(w, toServiceError(err))
 		return
 	}
 
-	rs, lookupErr := h.service.lookupState(r.Context(), init.State)
+	rs, lookupErr := h.service.LookupState(r.Context(), init.State)
 	expiresAt := time.Now().Add(h.requestStateValidity)
 	if lookupErr == nil && rs != nil {
 		expiresAt = rs.ExpiresAt
@@ -176,15 +158,15 @@ func (h *rpHandler) handleInitiate(w http.ResponseWriter, r *http.Request) {
 	sysutils.WriteSuccessResponse(w, http.StatusOK, resp)
 }
 
-// handleStatus issues a result token on COMPLETED; FAILED/EXPIRED carry a diagnostic but no token.
-func (h *rpHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
+// HandleStatus issues a result token on COMPLETED; FAILED/EXPIRED carry a diagnostic but no token.
+func (h *openID4VPHandler) HandleStatus(w http.ResponseWriter, r *http.Request) {
 	txnID := strings.TrimSpace(extractTxnID(r))
 	if txnID == "" {
 		writeServiceErrorResponse(w, &ErrorInvalidRequest)
 		return
 	}
 
-	rs, err := h.service.lookupState(r.Context(), txnID)
+	rs, err := h.service.LookupState(r.Context(), txnID)
 	switch {
 	case errors.Is(err, ErrUnknownState):
 		writeServiceErrorResponse(w, &ErrorUnknownState)
@@ -206,6 +188,11 @@ func (h *rpHandler) handleStatus(w http.ResponseWriter, r *http.Request) {
 			Error:  rs.FailureReason,
 		})
 	case StatusCompleted:
+		if h.issuer == nil {
+			log.GetLogger().Error("Result token issuer not configured")
+			writeServiceErrorResponse(w, &serviceerror.InternalServerError)
+			return
+		}
 		rpID := rs.RPID
 		if rpID == "" {
 			rpID = rs.ClientID
@@ -253,7 +240,7 @@ func clientErrorStatusCode(code string) int {
 	return http.StatusBadRequest
 }
 
-func registerRoutes(mux *http.ServeMux, h *handler) {
+func registerRoutes(mux *http.ServeMux, h *openID4VPHandler) {
 	opts := middleware.CORSOptions{
 		AllowedMethods:   []string{"GET", "POST"},
 		AllowedHeaders:   middleware.DefaultAllowedHeaders,
@@ -262,30 +249,15 @@ func registerRoutes(mux *http.ServeMux, h *handler) {
 	}
 
 	mux.HandleFunc(middleware.WithCORS("GET "+requestURIPath,
-		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.handleRequestObject)).ServeHTTP, opts))
+		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleRequestObject)).ServeHTTP, opts))
 	mux.HandleFunc(middleware.WithCORS("POST "+responseURIPath,
-		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.handleResponse)).ServeHTTP, opts))
-
-	for _, path := range []string{requestURIPath, responseURIPath} {
-		mux.HandleFunc(middleware.WithCORS("OPTIONS "+path,
-			func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }, opts))
-	}
-}
-
-func registerRPRoutes(mux *http.ServeMux, h *rpHandler) {
-	opts := middleware.CORSOptions{
-		AllowedMethods:   []string{"GET", "POST"},
-		AllowedHeaders:   middleware.DefaultAllowedHeaders,
-		AllowCredentials: true,
-		MaxAge:           600,
-	}
-
+		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleResponse)).ServeHTTP, opts))
 	mux.HandleFunc(middleware.WithCORS("POST "+apiInitiatePath,
-		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.handleInitiate)).ServeHTTP, opts))
+		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleInitiate)).ServeHTTP, opts))
 	mux.HandleFunc(middleware.WithCORS("GET "+apiStatusPath,
-		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.handleStatus)).ServeHTTP, opts))
+		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleStatus)).ServeHTTP, opts))
 
-	for _, path := range []string{apiInitiatePath, apiStatusPath} {
+	for _, path := range []string{requestURIPath, responseURIPath, apiInitiatePath, apiStatusPath} {
 		mux.HandleFunc(middleware.WithCORS("OPTIONS "+path,
 			func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }, opts))
 	}

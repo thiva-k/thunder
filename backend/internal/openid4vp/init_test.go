@@ -186,7 +186,7 @@ func TestLoadVerifierInfoEmptyFile(t *testing.T) {
 // testEngineService returns a Service without registering HTTP routes so the
 // build-definition tests can exercise the config -> registry path without
 // running the full Initialize wiring.
-func testEngineService(t *testing.T) *Service {
+func testEngineService(t *testing.T) *service {
 	t.Helper()
 	svc, err := newService(serviceConfig{
 		RequestURIBase:  "https://verifier.example/openid4vp/request",

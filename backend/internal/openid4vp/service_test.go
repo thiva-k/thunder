@@ -129,7 +129,7 @@ func fabricateResponseJWE(t *testing.T, recipientPub *ecdsa.PublicKey, plaintext
 	}, ".")
 }
 
-func newTestService(t *testing.T, b *pidBuilder) (*Service, *fakeStore) {
+func newTestService(t *testing.T, b *pidBuilder) (*service, *fakeStore) {
 	t.Helper()
 	signerKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
@@ -207,7 +207,7 @@ func TestRequestObjectBuildsSignedJAR(t *testing.T) {
 	init, err := svc.Initiate(context.Background(), testDefinitionID)
 	require.NoError(t, err)
 
-	jar, err := svc.requestObject(context.Background(), init.State)
+	jar, err := svc.RequestObject(context.Background(), init.State)
 	require.NoError(t, err)
 
 	parts := strings.Split(jar, ".")
@@ -229,7 +229,7 @@ func TestRequestObjectBuildsSignedJAR(t *testing.T) {
 func TestRequestObjectUnknownState(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, _ := newTestService(t, b)
-	_, err := svc.requestObject(context.Background(), "nope")
+	_, err := svc.RequestObject(context.Background(), "nope")
 	assert.ErrorIs(t, err, ErrUnknownState)
 }
 
@@ -251,7 +251,7 @@ func TestSubmitResponseHappyPath(t *testing.T) {
 	require.NoError(t, err)
 	jweToken := fabricateResponseJWE(t, &rs.EphemeralKey.PublicKey, body)
 
-	pid, err := svc.submitResponse(context.Background(), init.State, []byte(jweToken))
+	pid, err := svc.SubmitResponse(context.Background(), init.State, []byte(jweToken))
 	require.NoError(t, err)
 	assert.Equal(t, "Erika", pid.Claims["given_name"])
 
@@ -282,7 +282,7 @@ func TestSubmitResponseWrongNonceMarksFailed(t *testing.T) {
 	require.NoError(t, err)
 	jweToken := fabricateResponseJWE(t, &rs.EphemeralKey.PublicKey, body)
 
-	_, err = svc.submitResponse(context.Background(), init.State, []byte(jweToken))
+	_, err = svc.SubmitResponse(context.Background(), init.State, []byte(jweToken))
 	assert.ErrorIs(t, err, ErrInvalidPresentation)
 	assert.Equal(t, StatusFailed, store.m[init.State].Status)
 	assert.NotEmpty(t, store.m[init.State].FailureReason)
@@ -304,7 +304,7 @@ func TestSubmitResponseStateMismatch(t *testing.T) {
 	require.NoError(t, err)
 	jweToken := fabricateResponseJWE(t, &rs.EphemeralKey.PublicKey, body)
 
-	_, err = svc.submitResponse(context.Background(), init.State, []byte(jweToken))
+	_, err = svc.SubmitResponse(context.Background(), init.State, []byte(jweToken))
 	assert.ErrorIs(t, err, ErrStateMismatch)
 }
 
@@ -320,14 +320,14 @@ func TestSubmitResponseUndecryptable(t *testing.T) {
 	require.NoError(t, err)
 	jweToken := fabricateResponseJWE(t, &other.PublicKey, []byte(`{"state":"x"}`))
 
-	_, err = svc.submitResponse(context.Background(), init.State, []byte(jweToken))
+	_, err = svc.SubmitResponse(context.Background(), init.State, []byte(jweToken))
 	assert.ErrorIs(t, err, ErrInvalidResponse)
 }
 
 func TestSubmitResponseUnknownState(t *testing.T) {
 	b := newPIDBuilder(t)
 	svc, _ := newTestService(t, b)
-	_, err := svc.submitResponse(context.Background(), "nope", []byte("x.y.z.a.b"))
+	_, err := svc.SubmitResponse(context.Background(), "nope", []byte("x.y.z.a.b"))
 	assert.ErrorIs(t, err, ErrUnknownState)
 }
 
@@ -369,14 +369,14 @@ func TestResultRedirectURI(t *testing.T) {
 	svc, _ := newTestService(t, b)
 
 	// Unconfigured base => empty URL.
-	assert.Equal(t, "", svc.resultRedirectURI("some-state"))
+	assert.Equal(t, "", svc.ResultRedirectURI("some-state"))
 
 	svc.cfg.ResultRedirectURIBase = resultRedirectURIBase
-	got := svc.resultRedirectURI("xyz state")
+	got := svc.ResultRedirectURI("xyz state")
 	assert.Equal(t, "https://verifier.example/result?state=xyz+state", got)
 
 	svc.cfg.ResultRedirectURIBase = "https://verifier.example/result?ui=qr"
-	got = svc.resultRedirectURI("abc")
+	got = svc.ResultRedirectURI("abc")
 	assert.Equal(t, "https://verifier.example/result?ui=qr&state=abc", got)
 }
 
@@ -385,14 +385,14 @@ func TestInitiateForRPRecordsRPID(t *testing.T) {
 	svc, store := newTestService(t, b)
 
 	// With an empty RPID the field is not set.
-	init, err := svc.initiateForRP(context.Background(), testDefinitionID, "")
+	init, err := svc.InitiateForRP(context.Background(), testDefinitionID, "")
 	require.NoError(t, err)
 	rs := store.m[init.State]
 	require.NotNil(t, rs)
 	assert.Empty(t, rs.RPID)
 
 	// With a non-empty RPID the field is persisted.
-	init2, err := svc.initiateForRP(context.Background(), testDefinitionID, "scholarbooks")
+	init2, err := svc.InitiateForRP(context.Background(), testDefinitionID, "scholarbooks")
 	require.NoError(t, err)
 	rs2 := store.m[init2.State]
 	require.NotNil(t, rs2)
@@ -406,7 +406,7 @@ func TestInitiateRejectsUnknownDefinition(t *testing.T) {
 	_, err := svc.Initiate(context.Background(), "no-such-def")
 	assert.ErrorIs(t, err, ErrPolicy)
 
-	_, err = svc.initiateForRP(context.Background(), "no-such-def", "rp")
+	_, err = svc.InitiateForRP(context.Background(), "no-such-def", "rp")
 	assert.ErrorIs(t, err, ErrPolicy)
 }
 

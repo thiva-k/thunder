@@ -73,7 +73,7 @@ func Initialize(
 	oidcSvc oidc.OIDCAuthnServiceInterface,
 	githubSvc github.GithubOAuthAuthnServiceInterface,
 	googleSvc google.GoogleOIDCAuthnServiceInterface,
-	openid4vpVerifierSvc *openid4vp.Service,
+	openid4vpVerifierSvc openid4vp.OpenID4VPServiceInterface,
 ) ExecutorRegistryInterface {
 	reg := newExecutorRegistry()
 	reg.RegisterExecutor(ExecutorNameBasicAuth, newBasicAuthExecutor(

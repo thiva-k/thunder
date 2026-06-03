@@ -39,10 +39,24 @@ type requestSigner interface {
 	signRequestObject(ctx context.Context, claims map[string]interface{}) (string, error)
 }
 
-// Service drives the OpenID4VP verifier: it issues signed requests with a
+// OpenID4VPServiceInterface is the OpenID4VP verifier service contract consumed
+// by the HTTP handler and by in-process callers such as flow executors.
+type OpenID4VPServiceInterface interface {
+	Initiate(ctx context.Context, definitionID string) (*Initiation, error)
+	InitiateForRP(ctx context.Context, definitionID, rpID string) (*Initiation, error)
+	RequestObject(ctx context.Context, state string) (string, error)
+	SubmitResponse(ctx context.Context, state string, body []byte) (*VerifiedPresentation, error)
+	Result(ctx context.Context, state string) (*RequestState, error)
+	LookupState(ctx context.Context, state string) (*RequestState, error)
+	ResultRedirectURI(state string) string
+	HasDefinition(id string) bool
+	StateTTL() time.Duration
+}
+
+// service drives the OpenID4VP verifier: it issues signed requests with a
 // fresh nonce and ephemeral encryption key, and verifies the encrypted
 // responses. Per-credential behavior is plugged in via the registry.
-type Service struct {
+type service struct {
 	cfg      serviceConfig
 	store    stateStore
 	registry *registry
@@ -50,11 +64,11 @@ type Service struct {
 	signer   requestSigner
 }
 
-// NewService creates an OpenID4VP verifier engine. clientID is the verifier
+// newService creates an OpenID4VP verifier engine. clientID is the verifier
 // identifier (e.g. "x509_hash:<hash>") and signer signs the JAR request object.
 func newService(
 	cfg serviceConfig, store stateStore, clientID string, signer requestSigner,
-) (*Service, error) {
+) (*service, error) {
 	if store == nil || clientID == "" || signer == nil {
 		return nil, fmt.Errorf("%w: store, client id and signer are required", ErrPolicy)
 	}
@@ -64,7 +78,7 @@ func newService(
 	if cfg.TTL == 0 {
 		cfg.TTL = defaultStateTTL
 	}
-	return &Service{
+	return &service{
 		cfg:      cfg,
 		store:    store,
 		registry: newRegistry(),
@@ -82,7 +96,7 @@ func newService(
 // InitiateForRP is the RP-facing variant of Initiate: it stores the calling
 // relying party's identifier on the state so the result-token audience matches
 // the RP that initiated the transaction.
-func (s *Service) initiateForRP(ctx context.Context, definitionID, rpID string) (*Initiation, error) {
+func (s *service) InitiateForRP(ctx context.Context, definitionID, rpID string) (*Initiation, error) {
 	init, err := s.Initiate(ctx, definitionID)
 	if err != nil {
 		return nil, err
@@ -103,7 +117,7 @@ func (s *Service) initiateForRP(ctx context.Context, definitionID, rpID string) 
 
 // Initiate creates a fresh request for definitionID: a random state and nonce
 // and an ephemeral encryption keypair, stored pending under a short TTL.
-func (s *Service) Initiate(ctx context.Context, definitionID string) (*Initiation, error) {
+func (s *service) Initiate(ctx context.Context, definitionID string) (*Initiation, error) {
 	def, ok := s.registry.get(definitionID)
 	if !ok {
 		return nil, fmt.Errorf("%w: no presentation definition registered for %q", ErrPolicy, definitionID)
@@ -146,7 +160,7 @@ func (s *Service) Initiate(ctx context.Context, definitionID string) (*Initiatio
 // RequestObject builds and signs the request object (JAR) for state. The
 // definition recorded on the state drives DCQL, encryption advertisement and
 // signing.
-func (s *Service) requestObject(ctx context.Context, state string) (string, error) {
+func (s *service) RequestObject(ctx context.Context, state string) (string, error) {
 	rs, err := s.load(ctx, state)
 	if err != nil {
 		return "", err
@@ -183,7 +197,7 @@ func (s *Service) requestObject(ctx context.Context, state string) (string, erro
 
 // SubmitResponse decrypts and verifies a wallet response for state, recording
 // the outcome. It returns the verified presentation on success.
-func (s *Service) submitResponse(ctx context.Context, state string, body []byte) (*VerifiedPresentation, error) {
+func (s *service) SubmitResponse(ctx context.Context, state string, body []byte) (*VerifiedPresentation, error) {
 	rs, err := s.load(ctx, state)
 	if err != nil {
 		return nil, err
@@ -243,15 +257,27 @@ func (s *Service) submitResponse(ctx context.Context, state string, body []byte)
 
 // Result returns the current state record for polling. It returns
 // ErrUnknownState when the state is unknown or expired.
-func (s *Service) Result(ctx context.Context, state string) (*RequestState, error) {
+func (s *service) Result(ctx context.Context, state string) (*RequestState, error) {
 	return s.load(ctx, state)
+}
+
+// HasDefinition reports whether a presentation definition with the given id is
+// registered with the verifier.
+func (s *service) HasDefinition(id string) bool {
+	return s.registry.has(id)
+}
+
+// StateTTL is the configured time-to-live applied to a freshly initiated
+// request state.
+func (s *service) StateTTL() time.Duration {
+	return s.cfg.TTL
 }
 
 // LookupState returns the raw state record without auto-evicting expired
 // entries. Expired entries are returned with ErrExpiredState so callers (the
 // RP-facing status endpoint) can report EXPIRED distinctly from a truly
 // unknown state. Missing entries return ErrUnknownState.
-func (s *Service) lookupState(ctx context.Context, state string) (*RequestState, error) {
+func (s *service) LookupState(ctx context.Context, state string) (*RequestState, error) {
 	rs, ok := s.store.Get(ctx, state)
 	if !ok || rs == nil {
 		return nil, ErrUnknownState
@@ -264,11 +290,11 @@ func (s *Service) lookupState(ctx context.Context, state string) (*RequestState,
 
 // ResultRedirectURIBase returns the engine-configured result-redirect base URL
 // (empty when none is configured).
-func (s *Service) resultRedirectURIBase() string { return s.cfg.ResultRedirectURIBase }
+func (s *service) resultRedirectURIBase() string { return s.cfg.ResultRedirectURIBase }
 
 // resolveDefinition resolves the definition pinned on the state, erroring when
 // the registry no longer carries it.
-func (s *Service) resolveDefinition(rs *RequestState) (*presentationDefinition, error) {
+func (s *service) resolveDefinition(rs *RequestState) (*presentationDefinition, error) {
 	def, ok := s.registry.get(rs.DefinitionID)
 	if !ok {
 		return nil, fmt.Errorf("%w: presentation definition %q no longer registered", ErrPolicy, rs.DefinitionID)
@@ -277,7 +303,7 @@ func (s *Service) resolveDefinition(rs *RequestState) (*presentationDefinition, 
 }
 
 // load fetches non-expired state, deleting and rejecting expired entries.
-func (s *Service) load(ctx context.Context, state string) (*RequestState, error) {
+func (s *service) load(ctx context.Context, state string) (*RequestState, error) {
 	rs, ok := s.store.Get(ctx, state)
 	if !ok || rs == nil {
 		return nil, ErrUnknownState
@@ -290,7 +316,7 @@ func (s *Service) load(ctx context.Context, state string) (*RequestState, error)
 }
 
 // fail records a verification failure and returns the wrapped reason.
-func (s *Service) fail(ctx context.Context, rs *RequestState, reason error) error {
+func (s *service) fail(ctx context.Context, rs *RequestState, reason error) error {
 	rs.Status = StatusFailed
 	rs.FailureReason = reason.Error()
 	_ = s.store.Save(ctx, rs)
@@ -299,18 +325,18 @@ func (s *Service) fail(ctx context.Context, rs *RequestState, reason error) erro
 
 // ResultRedirectURI returns the URL the wallet should follow after posting its
 // response, or an empty string when none is configured.
-func (s *Service) resultRedirectURI(state string) string {
+func (s *service) ResultRedirectURI(state string) string {
 	if s.cfg.ResultRedirectURIBase == "" {
 		return ""
 	}
 	return withState(s.cfg.ResultRedirectURIBase, state)
 }
 
-func (s *Service) requestURI(state string) string {
+func (s *service) requestURI(state string) string {
 	return withState(s.cfg.RequestURIBase, state)
 }
 
-func (s *Service) responseURI(state string) string {
+func (s *service) responseURI(state string) string {
 	return withState(s.cfg.ResponseURIBase, state)
 }
 
