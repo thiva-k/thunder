@@ -83,7 +83,7 @@
                         "align": "center",
                         "type": "TEXT",
                         "id": "text_wait_help",
-                        "label": "Open your EUDI Wallet and present your PID. This page updates automatically once you approve the request.",
+                        "label": "Open your EUDI Wallet and present your PID. After you approve the request, click Refresh status below.",
                         "variant": "BODY_1"
                     },
                     {

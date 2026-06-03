@@ -228,7 +228,8 @@ func (s *service) SubmitResponse(ctx context.Context, state string, body []byte)
 		policy.Leeway = s.cfg.Leeway
 	}
 
-	cred, err := verifySDJWTPresentation(ctx, presentation, def.Trust, policy.Audience, rs.Nonce, policy.Leeway)
+	cred, err := verifySDJWTPresentation(ctx, presentation, def.Trust, policy.Audience, rs.Nonce, policy.Leeway,
+		policy.EnforceTrustedIssuer, policy.EnforceKeyBinding)
 	if err != nil {
 		return nil, s.fail(ctx, rs, err)
 	}

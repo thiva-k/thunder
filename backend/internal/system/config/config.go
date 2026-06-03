@@ -550,6 +550,15 @@ type OpenID4VPConfig struct {
 	// HAIP / EUDI profiles require it.
 	RegistrationCertFile    string             `yaml:"registration_cert_file" json:"registration_cert_file"`
 	PresentationDefinitions []DefinitionConfig `yaml:"presentation_definitions" json:"presentation_definitions"`
+	// EnforceTrustedIssuer requires the credential issuer to be in the
+	// configured trusted_issuers list and its signature to be valid. When false
+	// (the default) both checks are skipped — suitable for development and
+	// testing without production-issued credentials.
+	EnforceTrustedIssuer bool `yaml:"enforce_trusted_issuer" json:"enforce_trusted_issuer"`
+	// EnforceKeyBinding requires the wallet to present a Key Binding JWT proving
+	// possession of the holder key. When false (the default) the check is
+	// skipped — suitable for development and testing.
+	EnforceKeyBinding bool `yaml:"enforce_key_binding" json:"enforce_key_binding"`
 }
 
 // DefinitionConfig describes a single OpenID4VP presentation definition the

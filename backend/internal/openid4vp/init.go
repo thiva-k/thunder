@@ -74,6 +74,8 @@ func Initialize(
 		Leeway:                time.Duration(cfg.LeewaySeconds) * time.Second,
 		ResultRedirectURIBase: cfg.ResultRedirectURI,
 		VerifierInfo:          verifierInfo,
+		EnforceTrustedIssuer:  cfg.EnforceTrustedIssuer,
+		EnforceKeyBinding:     cfg.EnforceKeyBinding,
 	}, newCacheStateStore(cacheManager), cfg.ClientID, signer)
 	if err != nil {
 		return nil, err
@@ -114,9 +116,16 @@ func buildDefinition(
 			CertFile: resolvePath(serverHome, ti.CertFile),
 		})
 	}
-	trust, err := buildTrustStore(issuers)
-	if err != nil {
-		return nil, err
+
+	var trust *staticTrustStore
+	if len(issuers) > 0 {
+		var err error
+		trust, err = buildTrustStore(issuers)
+		if err != nil {
+			return nil, err
+		}
+	} else if svc.cfg.EnforceTrustedIssuer {
+		return nil, fmt.Errorf("%w: enforce_trusted_issuer requires at least one trusted issuer", ErrPolicy)
 	}
 
 	return &presentationDefinition{
@@ -128,10 +137,12 @@ func buildDefinition(
 			Claims:       dc.RequestedClaims,
 		},
 		policy: policy{
-			ExpectedVCT:     dc.VCT,
-			Audience:        svc.clientID,
-			RequestedClaims: dc.RequestedClaims,
-			MandatoryClaims: dc.MandatoryClaims,
+			ExpectedVCT:          dc.VCT,
+			Audience:             svc.clientID,
+			RequestedClaims:      dc.RequestedClaims,
+			MandatoryClaims:      dc.MandatoryClaims,
+			EnforceTrustedIssuer: svc.cfg.EnforceTrustedIssuer,
+			EnforceKeyBinding:    svc.cfg.EnforceKeyBinding,
 		},
 		Trust:         trust,
 		SubjectClaims: dc.SubjectClaims,

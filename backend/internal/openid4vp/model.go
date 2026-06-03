@@ -49,6 +49,12 @@ type policy struct {
 	RequestedClaims []string
 	MandatoryClaims []string
 	Leeway          time.Duration
+	// EnforceTrustedIssuer requires the credential issuer to be pinned in the
+	// trust store and its signature to be valid. Defaults to false (skip).
+	EnforceTrustedIssuer bool
+	// EnforceKeyBinding requires a Key Binding JWT proving holder possession.
+	// Defaults to false (skip).
+	EnforceKeyBinding bool
 }
 
 // verifiedCredential is the raw output of an SD-JWT VC verification, before policy enforcement.
@@ -217,7 +223,9 @@ type serviceConfig struct {
 	ResultRedirectURIBase string
 	// VerifierInfo is the engine-wide verifier_info array attached to every signed request object
 	// (e.g. a trust-framework registration certificate JWT). Optional per OpenID4VP spec.
-	VerifierInfo []interface{}
+	VerifierInfo         []interface{}
+	EnforceTrustedIssuer bool
+	EnforceKeyBinding    bool
 }
 
 // Initiation is what the client needs to render the QR / deep link.

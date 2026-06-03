@@ -141,10 +141,12 @@ func (b *pidBuilder) trustStore() *staticTrustStore {
 
 func defaultPolicy() policy {
 	return policy{
-		ExpectedVCT:     testVCT,
-		Audience:        testAudience,
-		RequestedClaims: []string{"given_name", "family_name", "birthdate"},
-		MandatoryClaims: []string{"given_name", "family_name"},
+		ExpectedVCT:          testVCT,
+		Audience:             testAudience,
+		RequestedClaims:      []string{"given_name", "family_name", "birthdate"},
+		MandatoryClaims:      []string{"given_name", "family_name"},
+		EnforceTrustedIssuer: true,
+		EnforceKeyBinding:    true,
 	}
 }
 

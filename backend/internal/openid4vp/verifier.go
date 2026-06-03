@@ -35,7 +35,7 @@ type verifier struct {
 }
 
 func newVerifier(trust *staticTrustStore, policy policy) (*verifier, error) {
-	if trust == nil {
+	if trust == nil && policy.EnforceTrustedIssuer {
 		return nil, fmt.Errorf("%w: trust resolver is required", ErrPolicy)
 	}
 	if policy.ExpectedVCT == "" {
@@ -48,23 +48,23 @@ func newVerifier(trust *staticTrustStore, policy policy) (*verifier, error) {
 }
 
 func (v *verifier) verify(ctx context.Context, presentation, nonce string) (*VerifiedPresentation, error) {
-	cred, err := verifySDJWTPresentation(ctx, presentation, v.trust, v.policy.Audience, nonce, v.policy.Leeway)
+	cred, err := verifySDJWTPresentation(ctx, presentation, v.trust, v.policy.Audience, nonce, v.policy.Leeway,
+		v.policy.EnforceTrustedIssuer, v.policy.EnforceKeyBinding)
 	if err != nil {
 		return nil, err
 	}
 	return finalizePresentation(cred, v.policy)
 }
 
-// verifySDJWTPresentation runs the full SD-JWT verification stack: signature,
-// selective disclosure and holder binding. policy enforcement is finalizePresentation's job.
+// verifySDJWTPresentation runs the SD-JWT verification stack: parsing, optional
+// trust/signature enforcement, selective-disclosure resolution, and optional
+// key-binding enforcement. Policy enforcement (VCT, claim policy) is
+// finalizePresentation's job.
 func verifySDJWTPresentation(
 	ctx context.Context, presentation string, trust *staticTrustStore,
 	expectedAudience, expectedNonce string, leeway time.Duration,
+	enforceTrustedIssuer, enforceKeyBinding bool,
 ) (*verifiedCredential, error) {
-	if trust == nil {
-		return nil, fmt.Errorf("%w: trust resolver is required", ErrPolicy)
-	}
-
 	p, err := sdjwt.Parse(presentation)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidPresentation, err)
@@ -79,20 +79,29 @@ func verifySDJWTPresentation(
 		return nil, fmt.Errorf("%w: credential missing iss", ErrInvalidPresentation)
 	}
 
-	issuerKey, err := trust.resolveIssuerKey(ctx, issuer)
-	if err != nil {
-		return nil, err
+	if enforceTrustedIssuer {
+		issuerKey, err := trust.resolveIssuerKey(ctx, issuer)
+		if err != nil {
+			return nil, err
+		}
+		if err := sdjwt.VerifyIssuerSignature(p, issuerKey); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrInvalidPresentation, err)
+		}
 	}
 
-	cred, err := sdjwt.Verify(p, sdjwt.VerifyOptions{
-		IssuerKey:         issuerKey,
-		RequireKeyBinding: true,
-		ExpectedAudience:  expectedAudience,
-		ExpectedNonce:     expectedNonce,
-		Leeway:            leeway,
-	})
+	cred, err := sdjwt.ResolveDisclosures(p)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidPresentation, err)
+	}
+
+	if enforceKeyBinding {
+		if err := sdjwt.VerifyKeyBinding(p, cred, sdjwt.VerifyOptions{
+			ExpectedAudience: expectedAudience,
+			ExpectedNonce:    expectedNonce,
+			Leeway:           leeway,
+		}); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrInvalidPresentation, err)
+		}
 	}
 
 	vct, _ := cred.Claims["vct"].(string)
