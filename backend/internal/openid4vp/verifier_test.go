@@ -299,6 +299,32 @@ func TestSubjectFromSubClaim(t *testing.T) {
 	assert.Equal(t, "stable-subject-123", pid.Subject)
 }
 
+// TestNewVerifierMissingAudience verifies that an empty Audience is rejected so
+// key-binding verification cannot be bypassed.
+func TestNewVerifierMissingAudience(t *testing.T) {
+	b := newPIDBuilder(t)
+	_, err := newVerifier(b.trustStore(), policy{ExpectedVCT: testVCT}) // Audience intentionally empty
+	assert.ErrorIs(t, err, ErrPolicy)
+}
+
+// TestVerifyIssuerSignatureMismatch verifies that a credential whose issuer URL
+// is in the trust store but was signed with a different key is rejected.
+func TestVerifyIssuerSignatureMismatch(t *testing.T) {
+	b := newPIDBuilder(t)
+	// Pin a different key under the same issuer URL — resolveIssuerKey succeeds
+	// but VerifyIssuerSignature must fail.
+	wrongKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	store := newStaticTrustStore(map[string]crypto.PublicKey{testIssuer: &wrongKey.PublicKey})
+	p := defaultPolicy()
+	v, err := newVerifier(store, p)
+	require.NoError(t, err)
+
+	presentation := b.build(testNonce, map[string]interface{}{"given_name": "Erika", "family_name": "M"})
+	_, err = v.verify(context.Background(), presentation, testNonce)
+	assert.ErrorIs(t, err, ErrInvalidPresentation)
+}
+
 func TestFlattenNestedClaims(t *testing.T) {
 	b := newPIDBuilder(t)
 	policy := defaultPolicy()

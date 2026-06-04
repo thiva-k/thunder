@@ -201,6 +201,30 @@ func TestEcdsaPublicKeyToEncJWKUnsupportedCurve(t *testing.T) {
 	assert.ErrorIs(t, err, ErrPolicy)
 }
 
+// TestBuildRequestObjectClientIDScheme verifies that a non-empty ClientIDScheme
+// is included as client_id_scheme in the request object claims.
+func TestBuildRequestObjectClientIDScheme(t *testing.T) {
+	cfg := testRequestConfig()
+	cfg.ClientIDScheme = "x509_san_dns"
+	req, err := buildRequestObject(cfg, testRequestParams(t))
+	require.NoError(t, err)
+	assert.Equal(t, "x509_san_dns", req["client_id_scheme"])
+}
+
+// TestBuildRequestObjectUnsupportedEphemeralCurve verifies that an ephemeral
+// key using an unsupported EC curve is rejected and the error is propagated.
+func TestBuildRequestObjectUnsupportedEphemeralCurve(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P224(), rand.Reader)
+	require.NoError(t, err)
+	params := requestParams{
+		Nonce:        "n",
+		State:        "s",
+		EphemeralKey: &key.PublicKey,
+	}
+	_, err = buildRequestObject(testRequestConfig(), params)
+	assert.ErrorIs(t, err, ErrPolicy)
+}
+
 func TestBuildRequestObjectSerialises(t *testing.T) {
 	params := testRequestParams(t)
 	req, err := buildRequestObject(testRequestConfig(), params)

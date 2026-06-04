@@ -138,6 +138,17 @@ func TestJWTresultTokenIssuerRejectsNonCompletedStates(t *testing.T) {
 	assert.ErrorIs(t, err, ErrPolicy)
 }
 
+// TestJWTresultTokenIssuerNilJWTService verifies that calling issueResultToken
+// when the underlying JWT service is nil returns ErrPolicy.
+func TestJWTresultTokenIssuerNilJWTService(t *testing.T) {
+	issuer := newJWTresultTokenIssuer(nil, "iss", "cid")
+	_, err := issuer.issueResultToken(context.Background(), "rp", &RequestState{
+		State: "x", Status: StatusCompleted,
+		Result: &VerifiedPresentation{Subject: "sub"},
+	}, 300)
+	assert.ErrorIs(t, err, ErrPolicy)
+}
+
 func TestJWTresultTokenIssuerSurfacesSigningErrors(t *testing.T) {
 	jwtSvc := jwtmock.NewJWTServiceInterfaceMock(t)
 	jwtSvc.EXPECT().

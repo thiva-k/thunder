@@ -259,3 +259,38 @@ func TestBuildDefinitionRequiresID(t *testing.T) {
 	_, err := buildDefinition(config.DefinitionConfig{}, svc, "")
 	assert.ErrorIs(t, err, ErrPolicy)
 }
+
+// TestBuildDefinitionEnforceTrustedIssuerWithoutIssuers verifies that enabling
+// issuer enforcement without supplying any trusted-issuer entries is rejected.
+func TestBuildDefinitionEnforceTrustedIssuerWithoutIssuers(t *testing.T) {
+	svc := testEngineService(t)
+	svc.cfg.EnforceTrustedIssuer = true
+
+	dc := config.DefinitionConfig{
+		ID:  "eudi-pid",
+		VCT: testVCT,
+		// no TrustedIssuers
+	}
+	_, err := buildDefinition(dc, svc, "")
+	assert.ErrorIs(t, err, ErrPolicy)
+}
+
+// TestBuildDefinitionMergesMandatoryAndOptionalClaims verifies that when
+// RequestedClaims is empty the final claim list is the union of MandatoryClaims
+// followed by OptionalClaims, in declaration order.
+func TestBuildDefinitionMergesMandatoryAndOptionalClaims(t *testing.T) {
+	svc := testEngineService(t)
+
+	dc := config.DefinitionConfig{
+		ID:              "test-def",
+		VCT:             testVCT,
+		MandatoryClaims: []string{"given_name", "family_name"},
+		OptionalClaims:  []string{"birthdate", "address"},
+		// RequestedClaims intentionally empty
+	}
+	def, err := buildDefinition(dc, svc, "")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"given_name", "family_name", "birthdate", "address"}, def.DCQL.Claims)
+	assert.Equal(t, []string{"given_name", "family_name", "birthdate", "address"}, def.policy.RequestedClaims)
+	assert.Equal(t, dc.MandatoryClaims, def.policy.MandatoryClaims)
+}

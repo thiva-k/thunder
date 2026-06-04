@@ -22,6 +22,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -394,4 +395,108 @@ func decodeErrorCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 	}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
 	return resp.Code
+}
+
+// TestHandleStatusExtractsTxnIDFromURLPath covers the extractTxnID fallback that
+// reads the txn_id from the URL path when no path value is wired (e.g. non-mux
+// direct handler invocations).
+func TestHandleStatusExtractsTxnIDFromURLPath(t *testing.T) {
+	h, _ := newTestRPHandler(t)
+
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{DefinitionID: testDefinitionID, RPID: "rp"}))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var ir initiateResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ir))
+
+	// Build the request without SetPathValue — forces the URL-path fallback.
+	req := httptest.NewRequest(http.MethodGet, apiStatusPrefix+ir.TxnID, nil)
+	rw := httptest.NewRecorder()
+	h.HandleStatus(rw, req)
+
+	require.Equal(t, http.StatusOK, rw.Code)
+	var sr statusResponse
+	require.NoError(t, json.Unmarshal(rw.Body.Bytes(), &sr))
+	assert.Equal(t, "PENDING", sr.Status)
+}
+
+// TestHandleStatusNilIssuer verifies that a COMPLETED transaction returns 500
+// when no result-token issuer is configured on the handler.
+func TestHandleStatusNilIssuer(t *testing.T) {
+	b := newPIDBuilder(t)
+	svc, store := newTestService(t, b)
+	// Pass nil issuer — COMPLETED path requires one.
+	h := newOpenID4VPHandler(svc, nil, apiBaseURL, 300*time.Second, 0)
+
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{DefinitionID: testDefinitionID, RPID: "rp"}))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var ir initiateResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ir))
+
+	rs := store.m[ir.TxnID]
+	rs.Status = StatusCompleted
+	rs.Result = &VerifiedPresentation{Subject: "sub-1"}
+
+	srec := getStatus(h.HandleStatus, ir.TxnID)
+	assert.Equal(t, http.StatusInternalServerError, srec.Code)
+}
+
+// TestHandleStatusIssuerError verifies that a signing failure from the result
+// token issuer returns 500 without leaking the internal error.
+func TestHandleStatusIssuerError(t *testing.T) {
+	b := newPIDBuilder(t)
+	svc, store := newTestService(t, b)
+	issuer := &resultTokenIssuerFake{errToThrow: errors.New("signing failed")}
+	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second, 0)
+
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{DefinitionID: testDefinitionID, RPID: "rp"}))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var ir initiateResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ir))
+
+	rs := store.m[ir.TxnID]
+	rs.Status = StatusCompleted
+	rs.Result = &VerifiedPresentation{Subject: "sub-1"}
+
+	srec := getStatus(h.HandleStatus, ir.TxnID)
+	assert.Equal(t, http.StatusInternalServerError, srec.Code)
+}
+
+// TestHandleStatusDefaultStatus covers the default branch of the status switch
+// for a transaction that carries an unrecognised Status value.
+func TestHandleStatusDefaultStatus(t *testing.T) {
+	h, store := newTestRPHandler(t)
+
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{DefinitionID: testDefinitionID, RPID: "rp"}))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var ir initiateResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ir))
+
+	store.m[ir.TxnID].Status = Status("UNKNOWN_STATUS_FOR_TEST")
+
+	srec := getStatus(h.HandleStatus, ir.TxnID)
+	assert.Equal(t, http.StatusInternalServerError, srec.Code)
+}
+
+// TestHandleStatusRPIDFallsBackToClientID verifies that when a transaction has
+// no RPID recorded (e.g. initiated without one), the result token audience uses
+// the verifier's ClientID instead.
+func TestHandleStatusRPIDFallsBackToClientID(t *testing.T) {
+	b := newPIDBuilder(t)
+	svc, store := newTestService(t, b)
+	issuer := &resultTokenIssuerFake{}
+	h := newOpenID4VPHandler(svc, issuer, apiBaseURL, 300*time.Second, 0)
+
+	rec := postJSON(h.HandleInitiate, mustJSON(t, initiateRequest{DefinitionID: testDefinitionID, RPID: "rp"}))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var ir initiateResponse
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &ir))
+
+	rs := store.m[ir.TxnID]
+	rs.Status = StatusCompleted
+	rs.Result = &VerifiedPresentation{Subject: "sub-1"}
+	rs.RPID = "" // clear RPID so ClientID is used as fallback
+
+	srec := getStatus(h.HandleStatus, ir.TxnID)
+	require.Equal(t, http.StatusOK, srec.Code)
+	assert.Equal(t, testAudience, issuer.lastRPID)
 }

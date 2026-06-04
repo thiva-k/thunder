@@ -481,3 +481,29 @@ func TestRegistryListEmpty(t *testing.T) {
 	r := newRegistry()
 	assert.Empty(t, r.list())
 }
+
+// TestResolveDefinitionMissing verifies that resolveDefinition returns ErrPolicy
+// when the definition ID recorded on the state is no longer in the registry.
+func TestResolveDefinitionMissing(t *testing.T) {
+	b := newPIDBuilder(t)
+	svc, _ := newTestService(t, b)
+
+	rs := &RequestState{State: "x", DefinitionID: "nonexistent-def"}
+	_, err := svc.resolveDefinition(rs)
+	assert.ErrorIs(t, err, ErrPolicy)
+}
+
+// TestSubmitResponseNilEphemeralKey verifies that SubmitResponse fails cleanly
+// when the stored request state has a nil ephemeral key (e.g. corrupted state).
+func TestSubmitResponseNilEphemeralKey(t *testing.T) {
+	b := newPIDBuilder(t)
+	svc, store := newTestService(t, b)
+
+	init, err := svc.Initiate(context.Background(), testDefinitionID)
+	require.NoError(t, err)
+
+	store.m[init.State].EphemeralKey = nil
+
+	_, err = svc.SubmitResponse(context.Background(), init.State, []byte("dummy.jwe.a.b.c"))
+	assert.ErrorIs(t, err, ErrInvalidResponse)
+}

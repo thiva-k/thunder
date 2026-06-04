@@ -24,8 +24,10 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/asn1"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"math/big"
 	"strings"
 	"testing"
@@ -116,6 +118,26 @@ func TestNewRequestSignerErrors(t *testing.T) {
 		assert.ErrorIs(t, err, ErrPolicy)
 	})
 
+	t.Run("provider returns error", func(t *testing.T) {
+		m := cryptomock.NewRuntimeCryptoProviderMock(t)
+		m.EXPECT().GetPublicKeys(mock.Anything, mock.Anything).Return(nil, errors.New("provider unavailable"))
+		_, err := newRequestSigner(context.Background(), m, "k")
+		assert.Error(t, err)
+	})
+
+	t.Run("unsupported algorithm", func(t *testing.T) {
+		info := kmprovider.PublicKeyInfo{
+			KeyID:          "vp-signing",
+			Algorithm:      cryptolib.Algorithm("UNSUPPORTED-ALG"),
+			PublicKey:      &key.PublicKey,
+			CertificateDER: []byte{0x30, 0x82},
+		}
+		m := cryptomock.NewRuntimeCryptoProviderMock(t)
+		m.EXPECT().GetPublicKeys(mock.Anything, mock.Anything).Return([]kmprovider.PublicKeyInfo{info}, nil)
+		_, err := newRequestSigner(context.Background(), m, "vp-signing")
+		assert.ErrorIs(t, err, ErrPolicy)
+	})
+
 	t.Run("missing certificate", func(t *testing.T) {
 		info := kmprovider.PublicKeyInfo{
 			KeyID:     "vp-signing",
@@ -126,5 +148,110 @@ func TestNewRequestSignerErrors(t *testing.T) {
 		m.EXPECT().GetPublicKeys(mock.Anything, mock.Anything).Return([]kmprovider.PublicKeyInfo{info}, nil)
 		_, err := newRequestSigner(context.Background(), m, "vp-signing")
 		assert.ErrorIs(t, err, ErrPolicy)
+	})
+}
+
+// TestSignRequestObjectNoKid verifies that when the signing key has no thumbprint
+// the kid header field is omitted entirely from the signed JAR.
+func TestSignRequestObjectNoKid(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	info := kmprovider.PublicKeyInfo{
+		KeyID:          "vp-signing",
+		Algorithm:      cryptolib.AlgorithmES256,
+		PublicKey:      &key.PublicKey,
+		Thumbprint:     "", // no kid
+		CertificateDER: []byte{0x30, 0x82, 0x01, 0x02, 0x03},
+	}
+	m := newSignerMock(t, key, info)
+
+	signer, err := newRequestSigner(context.Background(), m, "vp-signing")
+	require.NoError(t, err)
+
+	jar, err := signer.signRequestObject(context.Background(), map[string]interface{}{"a": "b"})
+	require.NoError(t, err)
+
+	parts := strings.Split(jar, ".")
+	require.Len(t, parts, 3)
+	headerJSON, err := base64.RawURLEncoding.DecodeString(parts[0])
+	require.NoError(t, err)
+	var header map[string]interface{}
+	require.NoError(t, json.Unmarshal(headerJSON, &header))
+	_, hasKid := header["kid"]
+	assert.False(t, hasKid, "kid must be absent when Thumbprint is empty")
+}
+
+// TestSignRequestObjectSignError verifies that a crypto-provider signing failure
+// is surfaced as an error without panicking.
+func TestSignRequestObjectSignError(t *testing.T) {
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	info := kmprovider.PublicKeyInfo{
+		KeyID:          "vp-signing",
+		Algorithm:      cryptolib.AlgorithmES256,
+		PublicKey:      &key.PublicKey,
+		CertificateDER: []byte{0x30, 0x82},
+	}
+	m := cryptomock.NewRuntimeCryptoProviderMock(t)
+	m.EXPECT().GetPublicKeys(mock.Anything, mock.Anything).Return([]kmprovider.PublicKeyInfo{info}, nil)
+	m.EXPECT().Sign(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, errors.New("HSM unreachable"))
+
+	signer, err := newRequestSigner(context.Background(), m, "vp-signing")
+	require.NoError(t, err)
+
+	_, err = signer.signRequestObject(context.Background(), map[string]interface{}{"a": "b"})
+	assert.Error(t, err)
+}
+
+// TestEcdsaDERToJWSVariousAlgorithms covers the P-384 and P-521 coordinate-length
+// branches, the non-DER passthrough, and the unknown-algorithm passthrough.
+func TestEcdsaDERToJWSVariousAlgorithms(t *testing.T) {
+	t.Run("P-384 produces 96-byte JWS signature", func(t *testing.T) {
+		key, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+		require.NoError(t, err)
+		derSig, err := cryptolib.Generate([]byte("input"), cryptolib.ECDSASHA384, key)
+		require.NoError(t, err)
+
+		result := ecdsaDERToJWS(derSig, cryptolib.ECDSASHA384)
+		assert.Len(t, result, 96) // 48 bytes × 2
+
+		r := new(big.Int).SetBytes(result[:48])
+		s := new(big.Int).SetBytes(result[48:])
+		hashed := sha256.Sum256([]byte("input")) // hash used only to confirm r/s are large ints
+		_ = hashed
+		assert.True(t, r.Sign() > 0 && s.Sign() > 0)
+	})
+
+	t.Run("P-521 produces 132-byte JWS signature", func(t *testing.T) {
+		key, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
+		require.NoError(t, err)
+		derSig, err := cryptolib.Generate([]byte("input"), cryptolib.ECDSASHA512, key)
+		require.NoError(t, err)
+
+		result := ecdsaDERToJWS(derSig, cryptolib.ECDSASHA512)
+		assert.Len(t, result, 132) // 66 bytes × 2
+	})
+
+	t.Run("non-DER input is returned unchanged", func(t *testing.T) {
+		raw := []byte("not-asn1-der-data")
+		result := ecdsaDERToJWS(raw, cryptolib.ECDSASHA256)
+		assert.Equal(t, raw, result)
+	})
+
+	t.Run("unknown algorithm returns DER input unchanged", func(t *testing.T) {
+		// Build a valid ASN.1 DER signature so the unmarshal succeeds, then
+		// provide an unknown algorithm so the switch hits default.
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+		derSig, err := cryptolib.Generate([]byte("input"), cryptolib.ECDSASHA256, key)
+		require.NoError(t, err)
+
+		var parsed struct{ R, S *big.Int }
+		_, err = asn1.Unmarshal(derSig, &parsed)
+		require.NoError(t, err)
+
+		result := ecdsaDERToJWS(derSig, cryptolib.SignAlgorithm("UNKNOWN-ALG"))
+		assert.Equal(t, derSig, result)
 	})
 }
