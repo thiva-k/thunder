@@ -37,7 +37,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/granthandlers"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/introspect"
-	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jwksresolver"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/par"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/token"
@@ -70,6 +69,8 @@ func Initialize(
 	resourceService resource.ResourceServiceInterface,
 	i18nService i18nmgt.I18nServiceInterface,
 	idpService idp.IDPServiceInterface,
+	dpopVerifier dpop.VerifierInterface,
+	nonceProvider token.CredentialNonceProvider,
 	cfg oauthconfig.Config,
 ) error {
 	jwks.Initialize(mux, runtimeCrypto)
@@ -80,8 +81,6 @@ func Initialize(
 	tokenBuilder, tokenValidator := tokenservice.Initialize(cfg, jwtService, jweService, resolver, idpService)
 	scopeValidator := scope.Initialize()
 	discoveryService := discovery.Initialize(mux, runtimeCrypto, cfg)
-	jtiStore := jti.Initialize(cfg)
-	dpopVerifier := dpop.Initialize(cfg, jtiStore)
 	parService := par.Initialize(mux, actorProvider, authnProvider, jwtService, discoveryService,
 		resourceService, dpopVerifier, cfg)
 	cibaService := ciba.Initialize(mux, jwtService, actorProvider, authnProvider, flowExecService,
@@ -95,7 +94,7 @@ func Initialize(
 		jwtService, oauth2AuthzService, tokenBuilder, tokenValidator,
 		attributeCacheSvc, ouService, authzService, actorProvider, resourceService, cibaService, cfg)
 	token.Initialize(mux, jwtService, actorProvider, authnProvider, grantHandlerProvider,
-		scopeValidator, observabilitySvc, discoveryService, dpopVerifier, cfg)
+		scopeValidator, observabilitySvc, discoveryService, dpopVerifier, nonceProvider, cfg)
 	introspect.Initialize(mux, jwtService, actorProvider, authnProvider, discoveryService)
 	userinfo.Initialize(mux, jwtService, jweService, resolver,
 		tokenValidator, actorProvider, attributeCacheSvc,

@@ -1,0 +1,2 @@
+time=2026-06-20T01:17:59.215+05:30 level=ERROR msg="Failed to initialize InboundClientService" error="failed to verify inbound client table: SQL logic error: no such table: INBOUND_CLIENT (1)"
+exit status 1

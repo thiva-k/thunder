@@ -31,14 +31,17 @@ import {
   FormLabel,
   Autocomplete,
   Chip,
+  MenuItem,
+  Select,
 } from '@wso2/oxygen-ui';
 import {Globe} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {useForm, Controller, useWatch} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import {z} from 'zod';
 import {AuthenticatorTypes} from '../../../integrations/models/authenticators';
+import {CUSTOM_WALLET_VENDOR, WALLET_VENDORS} from '../../constants/wallet-vendors';
 import useApplicationCreate from '../../contexts/ApplicationCreate/useApplicationCreate';
 import {ApplicationCreateFlowConfiguration} from '../../models/application-create-flow';
 import type {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../../models/application-templates';
@@ -177,6 +180,11 @@ export interface ConfigureDetailsProps {
   onCallbackUrlChange: (url: string) => void;
 
   /**
+   * Callback invoked when the wallet client id changes (wallet template only).
+   */
+  onClientIdChange?: (clientId: string) => void;
+
+  /**
    * Callback function to notify parent component whether this step is ready to proceed
    */
   onReadyChange: (isReady: boolean) => void;
@@ -265,6 +273,7 @@ export interface ConfigureDetailsProps {
 export default function ConfigureDetails({
   onHostingUrlChange,
   onCallbackUrlChange,
+  onClientIdChange = () => null,
   onReadyChange,
   userTypes = [],
   selectedUserTypes = [],
@@ -304,6 +313,26 @@ export default function ConfigureDetails({
 
   const configurationType: ApplicationCreateFlowConfiguration =
     getConfigurationTypeFromTemplate(selectedTemplateConfig);
+
+  const isWallet: boolean = selectedTemplateConfig?.id === 'wallet';
+  const [walletVendor, setWalletVendor] = useState<string>(CUSTOM_WALLET_VENDOR);
+  const [customClientId, setCustomClientId] = useState<string>('');
+
+  const applyVendor = (vendorId: string): void => {
+    setWalletVendor(vendorId);
+    if (vendorId === CUSTOM_WALLET_VENDOR) {
+      onClientIdChange(customClientId.trim());
+      return;
+    }
+    onClientIdChange(WALLET_VENDORS.find((v) => v.id === vendorId)?.clientId ?? '');
+  };
+
+  const applyCustomClientId = (value: string): void => {
+    setCustomClientId(value);
+    if (walletVendor === CUSTOM_WALLET_VENDOR) {
+      onClientIdChange(value.trim());
+    }
+  };
 
   const hostingUrl: string = useWatch({control, name: 'hostingUrl'}) ?? '';
   const callbackUrl: string = useWatch({control, name: 'callbackUrl'}) ?? '';
@@ -540,7 +569,48 @@ export default function ConfigureDetails({
             />
           </FormControl>
 
-          <Alert severity="info">{t('applications:onboarding.configure.details.mobile.info')}</Alert>
+          {!isWallet && (
+            <Alert severity="info">{t('applications:onboarding.configure.details.mobile.info')}</Alert>
+          )}
+
+          {isWallet && (
+            <>
+              <FormControl fullWidth>
+                <FormLabel htmlFor="wallet-vendor-select">
+                  {t('applications:onboarding.configure.details.wallet.vendor.label')}
+                </FormLabel>
+                <Select
+                  id="wallet-vendor-select"
+                  value={walletVendor}
+                  onChange={(e): void => applyVendor(e.target.value)}
+                >
+                  {WALLET_VENDORS.map((vendor) => (
+                    <MenuItem key={vendor.id} value={vendor.id}>
+                      {vendor.id === CUSTOM_WALLET_VENDOR
+                        ? t('applications:onboarding.configure.details.wallet.vendor.custom')
+                        : vendor.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              {walletVendor === CUSTOM_WALLET_VENDOR && (
+                <FormControl fullWidth>
+                  <FormLabel htmlFor="wallet-client-id-input">
+                    {t('applications:onboarding.configure.details.wallet.clientId.label')}
+                  </FormLabel>
+                  <TextField
+                    fullWidth
+                    id="wallet-client-id-input"
+                    value={customClientId}
+                    placeholder={t('applications:onboarding.configure.details.wallet.clientId.placeholder')}
+                    helperText={t('applications:onboarding.configure.details.wallet.clientId.helperText')}
+                    onChange={(e): void => applyCustomClientId(e.target.value)}
+                  />
+                </FormControl>
+              )}
+            </>
+          )}
         </>
       )}
 

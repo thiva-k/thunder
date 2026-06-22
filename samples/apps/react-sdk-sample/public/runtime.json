@@ -1,5 +1,5 @@
 {
-    "clientId": "REACT_SDK_SAMPLE",
+    "clientId": "EUDI-DEMO-CLIENT",
     "baseUrl": "https://localhost:8090",
     "scopes": ["openid", "profile"]
 }

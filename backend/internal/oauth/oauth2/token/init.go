@@ -46,12 +46,13 @@ func Initialize(
 	observabilitySvc observability.ObservabilityServiceInterface,
 	discoveryService discovery.DiscoveryServiceInterface,
 	dpopVerifier dpop.VerifierInterface,
+	nonceProvider CredentialNonceProvider,
 	cfg oauthconfig.Config,
 ) TokenHandlerInterface {
 	tokenEndpoint := discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background()).TokenEndpoint
 	dpopRequired := cfg.OAuth.DPoP.Required
 	tokenSvc := newTokenService(grantHandlerProvider, scopeValidator, observabilitySvc,
-		dpopVerifier, tokenEndpoint, dpopRequired)
+		dpopVerifier, nonceProvider, tokenEndpoint, dpopRequired)
 	tokenHandler := newTokenHandler(tokenSvc, observabilitySvc)
 	registerRoutes(mux, tokenHandler, actorProvider, authnProvider, jwtService, discoveryService)
 	return tokenHandler

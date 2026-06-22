@@ -135,3 +135,6 @@ docs/static/api/next/postman/
 # Claude Code
 .claude/
 
+
+# Copied frontend build artifacts served by the backend (not source)
+backend/cmd/server/apps/

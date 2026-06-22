@@ -38,6 +38,14 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/observability/event"
 )
 
+// CredentialNonceProvider generates short-lived c_nonces for OID4VCI holder proofs.
+type CredentialNonceProvider interface {
+	Nonce(ctx context.Context) (string, error)
+}
+
+// credentialNonceTTLSeconds must match the OID4VCI service NonceTTL.
+const credentialNonceTTLSeconds = 300
+
 // TokenServiceInterface defines the interface for OAuth 2.0 token processing.
 type TokenServiceInterface interface {
 	ProcessTokenRequest(
@@ -53,6 +61,7 @@ type tokenService struct {
 	scopeValidator       scope.ScopeValidatorInterface
 	observabilitySvc     observability.ObservabilityServiceInterface
 	dpopVerifier         dpop.VerifierInterface
+	nonceProvider        CredentialNonceProvider
 	tokenEndpoint        string
 	dpopRequired         bool
 }
@@ -63,6 +72,7 @@ func newTokenService(
 	scopeValidator scope.ScopeValidatorInterface,
 	observabilitySvc observability.ObservabilityServiceInterface,
 	dpopVerifier dpop.VerifierInterface,
+	nonceProvider CredentialNonceProvider,
 	tokenEndpoint string,
 	dpopRequired bool,
 ) TokenServiceInterface {
@@ -71,6 +81,7 @@ func newTokenService(
 		scopeValidator:       scopeValidator,
 		observabilitySvc:     observabilitySvc,
 		dpopVerifier:         dpopVerifier,
+		nonceProvider:        nonceProvider,
 		tokenEndpoint:        tokenEndpoint,
 		dpopRequired:         dpopRequired,
 	}
@@ -261,6 +272,16 @@ func (ts *tokenService) ProcessTokenRequest(
 			tokenResponse.IssuedTokenType = string(constants.TokenTypeIdentifierAccessToken)
 		} else {
 			tokenResponse.IssuedTokenType = string(constants.TokenTypeIdentifierJWT)
+		}
+	}
+
+	// Attach c_nonce on authorization_code grant so OID4VCI wallets can build holder key proofs.
+	if grantType == constants.GrantTypeAuthorizationCode && ts.nonceProvider != nil {
+		if nonce, nonceErr := ts.nonceProvider.Nonce(ctx); nonceErr == nil {
+			tokenResponse.CNonce = nonce
+			tokenResponse.CNonceExpiresIn = credentialNonceTTLSeconds
+		} else {
+			logger.Warn(ctx, "Failed to issue c_nonce for token response", log.Error(nonceErr))
 		}
 	}
 

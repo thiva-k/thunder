@@ -50,6 +50,8 @@ type TokenResponse struct {
 	Scope           string `json:"scope,omitempty"`
 	IDToken         string `json:"id_token,omitempty"`
 	IssuedTokenType string `json:"issued_token_type,omitempty"`
+	CNonce          string `json:"c_nonce,omitempty"`
+	CNonceExpiresIn int64  `json:"c_nonce_expires_in,omitempty"`
 }
 
 // TokenDTO represents the data transfer object for tokens.

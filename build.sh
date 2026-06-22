@@ -931,6 +931,7 @@ function ensure_certificates() {
                 -keyout "$local_key_file" \
                 -out "$local_cert_file" \
                 -subj "/O=WSO2/OU=${PRODUCT_NAME}/CN=localhost" \
+                -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
                 > /dev/null 2>&1
         )
         if [[ $? -ne 0 ]]; then

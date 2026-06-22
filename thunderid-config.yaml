@@ -1,0 +1,392 @@
+# resource_type: user_type
+id: eudi-user
+category: user
+name: eudi-user
+ouHandle: default
+allowSelfRegistration: true
+systemAttributes:
+  display: given_name
+schema: {
+    "given_name": {
+      "type": "string",
+      "displayName": "First Name",
+      "required": false
+    },
+    "family_name": {
+      "type": "string",
+      "displayName": "Last Name",
+      "required": false
+    },
+    "birthdate": {
+      "type": "string",
+      "displayName": "Date of Birth",
+      "required": false
+    },
+    "sub": {
+      "type": "string",
+      "displayName": "Subject",
+      "required": false,
+      "unique": true
+    }
+  }
+
+---
+# resource_type: flow
+id: 0193b0a1-1001-7000-8000-000000000020
+name: Default EUDI Wallet Authentication Flow
+handle: default-eudi-flow
+flowType: AUTHENTICATION
+nodes:
+  - id: start
+    type: START
+    onSuccess: choose_auth
+  - id: choose_auth
+    type: PROMPT
+    meta:
+      components:
+        - alt: logo
+          category: DISPLAY
+          height: "60"
+          id: image
+          resourceType: ELEMENT
+          src: "{{ meta(application.logoUrl) }}"
+          type: IMAGE
+          width: ""
+        - align: center
+          type: TEXT
+          id: text_title
+          label: Sign in
+          variant: HEADING_1
+        - type: BLOCK
+          id: block_options
+          components:
+            - type: ACTION
+              id: action_eudi
+              label: Sign in with EUDI Wallet
+              variant: OUTLINED
+              eventType: SUBMIT
+    prompts:
+      - inputs: []
+        action:
+          ref: action_eudi
+          nextNode: eudi_verify
+  - id: eudi_verify
+    type: TASK_EXECUTION
+    properties:
+      presentation_definition_id: eudi-pid
+    executor:
+      name: OpenID4VPVerifyExecutor
+    onSuccess: eudi_provision
+    onIncomplete: eudi_wait
+  - id: eudi_provision
+    type: TASK_EXECUTION
+    condition:
+      key: "{{ context.userEligibleForProvisioning }}"
+      value: "true"
+      onSkip: auth_assert
+    executor:
+      name: ProvisioningExecutor
+    onSuccess: auth_assert
+  - id: eudi_wait
+    type: PROMPT
+    meta:
+      components:
+        - align: center
+          type: TEXT
+          id: text_wait_title
+          label: Scan with your EUDI Wallet
+          variant: HEADING_1
+        - align: center
+          type: TEXT
+          id: text_wait_help
+          label: Open your EUDI Wallet and present your PID. After you approve the request, click Refresh status below.
+          variant: BODY_1
+        - type: QR_CODE
+          id: qr_eudi
+          source: openid4vpWalletUri
+        - type: BLOCK
+          id: block_wait
+          components:
+            - type: ACTION
+              id: action_poll
+              label: Refresh status
+              variant: PRIMARY
+              eventType: SUBMIT
+    prompts:
+      - inputs: []
+        action:
+          ref: action_poll
+          nextNode: eudi_verify
+  - id: auth_assert
+    type: TASK_EXECUTION
+    executor:
+      name: AuthAssertExecutor
+    onSuccess: end
+  - id: end
+    type: END
+
+---
+# resource_type: application
+id: eudi-demo-app
+name: EUDI Demo
+description: Demo application for EUDI Wallet login via OpenID4VP
+ouHandle: default
+url: http://localhost:3000
+logoUrl: "emoji:🪪"
+authFlowHandle: default-eudi-flow
+isRegistrationFlowEnabled: false
+isRecoveryFlowEnabled: false
+assertion:
+  validityPeriod: 3600
+allowedUserTypes:
+  - eudi-user
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: "{{.EUDI_DEMO_CLIENT_ID}}"
+      redirectUris:
+        {{- range .EUDI_DEMO_REDIRECT_URIS}}
+        - {{.}}
+        {{- end}}
+      grantTypes:
+        - authorization_code
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: none
+      pkceRequired: true
+      publicClient: true
+      token:
+        accessToken:
+          validityPeriod: 3600
+          userAttributes:
+            - given_name
+            - family_name
+            - birthdate
+            - sub
+        idToken:
+          validityPeriod: 3600
+          userAttributes:
+            - given_name
+            - family_name
+            - birthdate
+            - sub
+      scopeClaims:
+        profile:
+          - given_name
+          - family_name
+          - birthdate
+          - sub
+
+---
+# resource_type: resource_server
+# The OID4VCI credential endpoint acts as the resource server. Wallets that send
+# a resource parameter (RFC 8707) use the issuer's public URL as the target.
+id: oid4vci-resource-server
+name: OID4VCI Credential Endpoint
+handle: oid4vci-credential-endpoint
+ouHandle: default
+identifier: "{{.NGROK_URL}}"
+type: CUSTOM
+
+---
+# resource_type: user_type
+# Credential holder for OpenID4VCI issuance: supports password login (username +
+# password) and carries the PID claims that become the issued credential.
+id: pid-holder-type
+category: user
+name: pid-holder
+ouHandle: default
+allowSelfRegistration: false
+systemAttributes:
+  display: username
+schema: {
+    "username": {
+      "type": "string",
+      "displayName": "Username",
+      "required": true,
+      "unique": true
+    },
+    "password": {
+      "type": "string",
+      "displayName": "Password",
+      "required": false,
+      "credential": true
+    },
+    "given_name": {
+      "type": "string",
+      "displayName": "First Name",
+      "required": false
+    },
+    "family_name": {
+      "type": "string",
+      "displayName": "Last Name",
+      "required": false
+    },
+    "birthdate": {
+      "type": "string",
+      "displayName": "Date of Birth",
+      "required": false
+    }
+  }
+
+---
+# resource_type: user
+# The credential subject. These attributes become the issued PID's claims.
+id: pid-holder-erika
+type: pid-holder
+ouHandle: default
+attributes:
+  username: erika
+  given_name: Erika
+  family_name: Mustermann
+  birthdate: "1986-03-22"
+credentials:
+  password: "{{.ERIKA_PASSWORD}}"
+
+---
+# resource_type: application
+# Heidi/Funke wallet OAuth client for the OID4VCI issuance authorization_code flow.
+# Wallets present a fixed client_id; this app pre-registers Heidi's. Uses a basic
+# username/password login flow (NOT the EUDI/VP flow).
+id: eudi-issuer-app-heidi
+name: Heidi Wallet
+description: OpenID4VCI issuance client for the Heidi/Funke wallet
+ouHandle: default
+url: http://localhost:3000
+logoUrl: "emoji:🪪"
+authFlowHandle: default-basic-flow
+isRegistrationFlowEnabled: false
+isRecoveryFlowEnabled: false
+allowedUserTypes:
+  - pid-holder
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: "c3ce7a6c-2bbb-4abe-909c-41bc9463d3c5"
+      redirectUris:
+        - "ch.ubique.funke://issuance"
+      grantTypes:
+        - authorization_code
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: none
+      pkceRequired: true
+      publicClient: true
+
+---
+# resource_type: application
+# Lissi wallet OAuth client for OID4VCI issuance (its fixed client_id + redirect).
+id: eudi-issuer-app-lissi
+name: Lissi Wallet
+description: OpenID4VCI issuance client for the Lissi wallet
+ouHandle: default
+url: http://localhost:3000
+logoUrl: "emoji:🪪"
+authFlowHandle: default-basic-flow
+isRegistrationFlowEnabled: false
+isRecoveryFlowEnabled: false
+allowedUserTypes:
+  - pid-holder
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: "9c481dc3-2ad0-4fe0-881d-c32ad02fe0fc"
+      redirectUris:
+        - "https://oob.lissi.io/vci-cb"
+      grantTypes:
+        - authorization_code
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: none
+      pkceRequired: true
+      publicClient: true
+
+---
+# resource_type: application
+# IDGo (Sprind) wallet OAuth client for OID4VCI issuance (its fixed client_id + redirect).
+id: eudi-issuer-app-idgo
+name: IDGo Wallet (Sprind)
+description: OpenID4VCI issuance client for the IDGo/Sprind sandbox wallet
+ouHandle: default
+url: http://localhost:3000
+logoUrl: "emoji:🪪"
+authFlowHandle: default-basic-flow
+isRegistrationFlowEnabled: false
+isRecoveryFlowEnabled: false
+allowedUserTypes:
+  - pid-holder
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: "fed79862-af36-4fee-8e64-89e3c91091ed"
+      redirectUris:
+        - "org.sprind.wallet.sandbox:/authorization"
+      grantTypes:
+        - authorization_code
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: none
+      pkceRequired: true
+      publicClient: true
+
+---
+# resource_type: application
+# IDGo (Sprind) wallet OAuth client for non-PID OID4VCI credential types.
+# IDGo uses a different client_id when the VCT is not a PID type.
+id: eudi-issuer-app-idgo-custom
+name: IDGo Wallet (Sprind) - Custom VCT
+description: OpenID4VCI issuance client for the IDGo/Sprind sandbox wallet (non-PID credentials)
+ouHandle: default
+url: http://localhost:3000
+logoUrl: "emoji:🪪"
+authFlowHandle: default-basic-flow
+isRegistrationFlowEnabled: false
+isRecoveryFlowEnabled: false
+allowedUserTypes:
+  - pid-holder
+inboundAuthConfig:
+  - type: oauth2
+    config:
+      clientId: "08002422-4c1e-4cd2-8c47-1b1dd61951c5"
+      redirectUris:
+        - "org.sprind.wallet.sandbox:/authorization"
+      grantTypes:
+        - authorization_code
+      responseTypes:
+        - code
+      tokenEndpointAuthMethod: none
+      pkceRequired: true
+      publicClient: true
+
+---
+# resource_type: credential_configuration
+# OpenID4VCI credential the wallet receives. handle = credential_configuration_id
+# (and the OAuth scope). Claims are pulled from the subject's user profile by name.
+id: eudi-pid
+handle: eudi-pid
+ouHandle: default
+vct: urn:test:custom:1
+display:
+  name: EUDI Wallet PID
+  locale: en-US
+claims:
+  - name: given_name
+    displayName: Given Name
+  - name: family_name
+    displayName: Family Name
+  - name: birthdate
+    displayName: Date of Birth
+
+---
+# resource_type: presentation_definition
+# OpenID4VP query used to verify the issued PID back. handle = the DCQL credential id.
+id: eudi-pid
+handle: eudi-pid
+ouHandle: default
+displayName: EUDI Wallet PID
+vct: urn:test:custom:1
+mandatoryClaims:
+  - given_name
+  - family_name
+optionalClaims:
+  - birthdate

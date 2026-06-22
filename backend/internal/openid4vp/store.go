@@ -20,39 +20,15 @@ package openid4vp
 
 import (
 	"context"
-
-	"github.com/thunder-id/thunderid/internal/system/cache"
 )
 
-const stateCacheName = "OpenID4VPRequestState"
-
-// stateStore persists short-lived OpenID4VP request state keyed by State.
+// stateStore persists short-lived OpenID4VP request state keyed by State. The
+// production implementation (dbStateStore) is runtime-database-backed so state
+// survives restarts and is visible across replicas.
 type stateStore interface {
 	Save(ctx context.Context, st *RequestState) error
 	Get(ctx context.Context, state string) (*RequestState, bool)
 	Delete(ctx context.Context, state string) error
-}
-
-// cacheStateStore backs stateStore with the system cache. Callers must honor
-// RequestState.ExpiresAt for the per-request window; the cache TTL is global.
-type cacheStateStore struct {
-	cache cache.CacheInterface[*RequestState]
-}
-
-func newCacheStateStore(cm cache.CacheManagerInterface) stateStore {
-	return &cacheStateStore{cache: cache.GetCache[*RequestState](cm, stateCacheName)}
-}
-
-func (c *cacheStateStore) Save(ctx context.Context, st *RequestState) error {
-	return c.cache.Set(ctx, cache.CacheKey{Key: st.State}, st)
-}
-
-func (c *cacheStateStore) Get(ctx context.Context, state string) (*RequestState, bool) {
-	return c.cache.Get(ctx, cache.CacheKey{Key: state})
-}
-
-func (c *cacheStateStore) Delete(ctx context.Context, state string) error {
-	return c.cache.Delete(ctx, cache.CacheKey{Key: state})
 }
 
 // memoryStateStore is a process-local stateStore for test wiring. Not safe for concurrent use.

@@ -20,7 +20,6 @@ package executor
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,20 +31,25 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/openid4vp"
+	"github.com/thunder-id/thunderid/internal/system/error/serviceerror"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
 )
 
 type fakeOpenID4VPService struct {
-	initiate func(ctx context.Context, definitionID string) (*openid4vp.Initiation, error)
-	result   func(ctx context.Context, state string) (*openid4vp.RequestState, error)
+	initiate func(ctx context.Context, definitionID string) (*openid4vp.Initiation, *serviceerror.ServiceError)
+	result   func(ctx context.Context, state string) (*openid4vp.RequestState, *serviceerror.ServiceError)
 }
 
-func (f *fakeOpenID4VPService) Initiate(ctx context.Context, definitionID string) (*openid4vp.Initiation, error) {
+func (f *fakeOpenID4VPService) Initiate(
+	ctx context.Context, definitionID string,
+) (*openid4vp.Initiation, *serviceerror.ServiceError) {
 	return f.initiate(ctx, definitionID)
 }
 
-func (f *fakeOpenID4VPService) Result(ctx context.Context, state string) (*openid4vp.RequestState, error) {
+func (f *fakeOpenID4VPService) Result(
+	ctx context.Context, state string,
+) (*openid4vp.RequestState, *serviceerror.ServiceError) {
 	return f.result(ctx, state)
 }
 
@@ -79,7 +83,7 @@ func openid4vpNodeContext(runtime map[string]string, properties map[string]inter
 func TestOpenID4VPExecutorInitiates(t *testing.T) {
 	var seenDefID string
 	svc := &fakeOpenID4VPService{
-		initiate: func(_ context.Context, defID string) (*openid4vp.Initiation, error) {
+		initiate: func(_ context.Context, defID string) (*openid4vp.Initiation, *serviceerror.ServiceError) {
 			seenDefID = defID
 			return &openid4vp.Initiation{
 				State:      "state-123",
@@ -106,7 +110,7 @@ func TestOpenID4VPExecutorInitiates(t *testing.T) {
 func TestOpenID4VPExecutorDefaultsToEUDIPID(t *testing.T) {
 	var seenDefID string
 	svc := &fakeOpenID4VPService{
-		initiate: func(_ context.Context, defID string) (*openid4vp.Initiation, error) {
+		initiate: func(_ context.Context, defID string) (*openid4vp.Initiation, *serviceerror.ServiceError) {
 			seenDefID = defID
 			return &openid4vp.Initiation{State: "s", ClientID: "x509_hash:abc", RequestURI: "https://x"}, nil
 		},
@@ -120,8 +124,8 @@ func TestOpenID4VPExecutorDefaultsToEUDIPID(t *testing.T) {
 
 func TestOpenID4VPExecutorInitiateFailure(t *testing.T) {
 	svc := &fakeOpenID4VPService{
-		initiate: func(_ context.Context, _ string) (*openid4vp.Initiation, error) {
-			return nil, errors.New("boom")
+		initiate: func(_ context.Context, _ string) (*openid4vp.Initiation, *serviceerror.ServiceError) {
+			return nil, &serviceerror.InternalServerError
 		},
 	}
 	exec := newTestOpenID4VPExecutor(t, svc)
@@ -134,7 +138,7 @@ func TestOpenID4VPExecutorInitiateFailure(t *testing.T) {
 
 func TestOpenID4VPExecutorPollPending(t *testing.T) {
 	svc := &fakeOpenID4VPService{
-		result: func(_ context.Context, state string) (*openid4vp.RequestState, error) {
+		result: func(_ context.Context, state string) (*openid4vp.RequestState, *serviceerror.ServiceError) {
 			return &openid4vp.RequestState{
 				State:      state,
 				Status:     openid4vp.StatusPending,
@@ -158,7 +162,7 @@ func TestOpenID4VPExecutorPollPending(t *testing.T) {
 
 func TestOpenID4VPExecutorPollCompleted(t *testing.T) {
 	svc := &fakeOpenID4VPService{
-		result: func(_ context.Context, state string) (*openid4vp.RequestState, error) {
+		result: func(_ context.Context, state string) (*openid4vp.RequestState, *serviceerror.ServiceError) {
 			return &openid4vp.RequestState{
 				State:  state,
 				Status: openid4vp.StatusCompleted,
@@ -199,7 +203,7 @@ func TestOpenID4VPExecutorPollCompleted(t *testing.T) {
 
 func TestOpenID4VPExecutorPollFailed(t *testing.T) {
 	svc := &fakeOpenID4VPService{
-		result: func(_ context.Context, state string) (*openid4vp.RequestState, error) {
+		result: func(_ context.Context, state string) (*openid4vp.RequestState, *serviceerror.ServiceError) {
 			return &openid4vp.RequestState{
 				State: state, Status: openid4vp.StatusFailed, FailureReason: "nonce mismatch",
 			}, nil
@@ -217,8 +221,8 @@ func TestOpenID4VPExecutorPollFailed(t *testing.T) {
 
 func TestOpenID4VPExecutorPollExpired(t *testing.T) {
 	svc := &fakeOpenID4VPService{
-		result: func(_ context.Context, _ string) (*openid4vp.RequestState, error) {
-			return nil, openid4vp.ErrUnknownState
+		result: func(_ context.Context, _ string) (*openid4vp.RequestState, *serviceerror.ServiceError) {
+			return nil, &openid4vp.ErrorUnknownState
 		},
 	}
 	exec := newTestOpenID4VPExecutor(t, svc)

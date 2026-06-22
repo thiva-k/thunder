@@ -1,0 +1,1480 @@
+./build.sh run  
+Using GO OS: darwin and ARCH: arm64
+Running frontend apps...
+================================================================
+Running frontend apps...
+Syncing quick start sample bundles to console welcome data dir...
+  Staging 'wayfinder' from samples/apps/wayfinder-sample/thunderid-config
+Installing frontend dependencies...
+Scope: all 45 workspace projects
+Already up to date
+Done in 302ms using pnpm v11.5.0
+Building frontend applications & packages...
+$ nx run-many --target=build --projects=frontend/**
+
+ NX   The following projects do not have a configuration for any of the provided targets ("build")
+
+- @thunderid/frontend
+
+
+ NX   Running target build for 21 projects and 4 tasks they depend on:
+
+- @thunderid/configure-organization-units
+- @thunderid/configure-resource-servers
+- @thunderid/configure-translations
+- @thunderid/configure-agent-types
+- @thunderid/configure-user-types
+- @thunderid/configure-users
+- @thunderid/prettier-config
+- @thunderid/build-plugins
+- @thunderid/eslint-plugin
+- @thunderid/components
+- @thunderid/test-utils
+- @thunderid/contexts
+- @thunderid/create
+- @thunderid/design
+- @thunderid/logger
+- @thunderid/hooks
+- @thunderid/types
+- @thunderid/utils
+- @thunderid/i18n
+- @thunderid/console
+- @thunderid/gate
+
+
+
+> nx run @thunderid/eslint-plugin:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33m[MIXED_EXPORT] Warning:[0m Entry module "index" is using named (including "createParserOptions", "default") and default exports together. Consumers of your bundle will have to use `src/index.ts.default` to access the default export, which may not be what you want. Use `output.exports: "named"` to disable this warning.
+
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 29.02 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 30.40 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m34.77 ms[39m
+
+> nx run @thunderid/prettier-config:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 1.14 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 1.14 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m32.50 ms[39m
+
+> nx run @thunderid/logger:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:47:16 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m47 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249m([0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mf[0m[38;5;249m [0mimport.meta[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m'[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m'[0m[38;5;249m [0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m [0m[38;5;249m([0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m.[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m)[0m[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m   │[0m                ─────┬─────  
+ [38;5;240m   │[0m                     ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:47:48 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m47 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249m([0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m.[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m'[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m'[0m[38;5;249m [0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m [0m[38;5;249m([0mimport.meta[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m)[0m[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m   │[0m                                                ─────┬─────  
+ [38;5;240m   │[0m                                                     ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:48:24 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m48 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mD[0m[38;5;249me[0m[38;5;249mv[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mp[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m([0mimport.meta[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m?[0m[38;5;249m.[0m[38;5;249mD[0m[38;5;249mE[0m[38;5;249mV[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249m;[0m
+ [38;5;240m   │[0m                        ─────┬─────  
+ [38;5;240m   │[0m                             ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:49:23 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m49 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mP[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249md[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m([0mimport.meta[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m?[0m[38;5;249m.[0m[38;5;249mP[0m[38;5;249mR[0m[38;5;249mO[0m[38;5;249mD[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249m;[0m
+ [38;5;240m   │[0m                       ─────┬─────  
+ [38;5;240m   │[0m                            ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:47:16 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m47 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249m([0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mf[0m[38;5;249m [0mimport.meta[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m'[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m'[0m[38;5;249m [0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m [0m[38;5;249m([0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m.[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m)[0m[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m   │[0m                ─────┬─────  
+ [38;5;240m   │[0m                     ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:47:48 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m47 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249m([0m[38;5;249mt[0m[38;5;249my[0m[38;5;249mp[0m[38;5;249me[0m[38;5;249mo[0m[38;5;249mf[0m[38;5;249m [0m[38;5;249mi[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249m.[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m'[0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m'[0m[38;5;249m [0m[38;5;249m&[0m[38;5;249m&[0m[38;5;249m [0m[38;5;249m([0mimport.meta[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m [0m[38;5;249m![0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mu[0m[38;5;249mn[0m[38;5;249md[0m[38;5;249me[0m[38;5;249mf[0m[38;5;249mi[0m[38;5;249mn[0m[38;5;249me[0m[38;5;249md[0m[38;5;249m)[0m[38;5;249m [0m[38;5;249m{[0m
+ [38;5;240m   │[0m                                                ─────┬─────  
+ [38;5;240m   │[0m                                                     ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:48:24 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m48 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mD[0m[38;5;249me[0m[38;5;249mv[0m[38;5;249me[0m[38;5;249ml[0m[38;5;249mo[0m[38;5;249mp[0m[38;5;249mm[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mt[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m([0mimport.meta[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m?[0m[38;5;249m.[0m[38;5;249mD[0m[38;5;249mE[0m[38;5;249mV[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249m;[0m
+ [38;5;240m   │[0m                        ─────┬─────  
+ [38;5;240m   │[0m                             ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[33m[EMPTY_IMPORT_META] Warning:[0m `import.meta` is not available with the `cjs` output format and will be empty.
+    [38;5;246m╭[0m[38;5;246m─[0m[38;5;246m[[0m src/utils/detectEnvironment.ts:49:23 [38;5;246m][0m
+    [38;5;246m│[0m
+ [38;5;246m49 │[0m [38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249m [0m[38;5;249mi[0m[38;5;249ms[0m[38;5;249mP[0m[38;5;249mr[0m[38;5;249mo[0m[38;5;249md[0m[38;5;249mu[0m[38;5;249mc[0m[38;5;249mt[0m[38;5;249mi[0m[38;5;249mo[0m[38;5;249mn[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m [0m[38;5;249m([0mimport.meta[38;5;249m [0m[38;5;249ma[0m[38;5;249ms[0m[38;5;249m [0m[38;5;249mI[0m[38;5;249mm[0m[38;5;249mp[0m[38;5;249mo[0m[38;5;249mr[0m[38;5;249mt[0m[38;5;249mM[0m[38;5;249me[0m[38;5;249mt[0m[38;5;249ma[0m[38;5;249m)[0m[38;5;249m.[0m[38;5;249me[0m[38;5;249mn[0m[38;5;249mv[0m[38;5;249m?[0m[38;5;249m.[0m[38;5;249mP[0m[38;5;249mR[0m[38;5;249mO[0m[38;5;249mD[0m[38;5;249m [0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m=[0m[38;5;249m [0m[38;5;249mt[0m[38;5;249mr[0m[38;5;249mu[0m[38;5;249me[0m[38;5;249m;[0m
+ [38;5;240m   │[0m                       ─────┬─────  
+ [38;5;240m   │[0m                            ╰─────── You need to set the output format to `esm` for `import.meta` to work correctly.
+[38;5;246m────╯[0m
+
+[2m<DIR>/[22m[36mreact.js               [39m[2mchunk[22m[2m │ size:  0.38 kB[22m
+[2m<DIR>/[22m[36mindex.js               [39m[2mchunk[22m[2m │ size:  2.16 kB[22m
+[2m<DIR>/[22m[36museLogger-DgvtF-BW.js  [39m[2mchunk[22m[2m │ size: 27.84 kB[22m
+[2m<DIR>/[22m[36mreact.cjs              [39m[2mchunk[22m[2m │ size:  0.52 kB[22m
+[2m<DIR>/[22m[36mindex.cjs              [39m[2mchunk[22m[2m │ size:  2.55 kB[22m
+[2m<DIR>/[22m[36museLogger-ChYUod_A.js  [39m[2mchunk[22m[2m │ size: 30.81 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m64.35 ms[39m
+
+> nx run @thunderid/contexts:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 11.50 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 12.88 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m62.09 ms[39m
+
+> nx run @thunderid/build-plugins:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mvite/index.js  [39m[2mchunk[22m[2m │ size: 0.34 kB[22m
+[2m<DIR>/[22m[36mvite/index.cjs  [39m[2mchunk[22m[2m │ size: 0.36 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m6.75 ms[39m
+
+> nx run @thunderid/javascript:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist &&  rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33m[1m⚠ Deprecation Warning:[22m[39m The top-level "define" option is deprecated. Use "transform.define" instead.
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 332.44 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 334.95 kB[22m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 332.40 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m92.06 ms[39m
+
+> nx run @thunderid/browser:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist &&  node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33m[1m⚠ Deprecation Warning:[22m[39m The top-level "define" option is deprecated. Use "transform.define" instead.
+[33m[1m⚠ Deprecation Warning:[22m[39m The top-level "define" option is deprecated. Use "transform.define" instead.
+
+> nx run @thunderid/react:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist &&  node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+
+> nx run @thunderid/i18n:build  [existing outputs match the cache, left as is]
+
+[2m$ tsc -p tsconfig.lib.json --emitDeclarationOnly && rolldown --config rolldown.config.js[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mlocales/en-US.js   [39m[2mchunk[22m[2m │ size:   0.10 kB[22m
+[2m<DIR>/[22m[36mindex.js           [39m[2mchunk[22m[2m │ size:  19.46 kB[22m
+[2m<DIR>/[22m[36men-US-DiRsfKGS.js  [39m[2mchunk[22m[2m │ size: 200.30 kB[22m
+[2m<DIR>/[22m[36mlocales/en-US.cjs  [39m[2mchunk[22m[2m │ size:   0.10 kB[22m
+[2m<DIR>/[22m[36mindex.cjs          [39m[2mchunk[22m[2m │ size:  21.51 kB[22m
+[2m<DIR>/[22m[36men-US-G9MV8fi2.js  [39m[2mchunk[22m[2m │ size: 200.40 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m68.32 ms[39m
+
+> nx run @thunderid/react-router:build  [existing outputs match the cache, left as is]
+
+> nx run @thunderid/react-router:build
+
+> pnpm run build
+
+[2m$ pnpm clean:dist &&  node rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+
+> nx run @thunderid/test-utils:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mmocks/index.js  [39m[2mchunk[22m[2m │ size: 0.73 kB[22m
+[2m<DIR>/[22m[36msetup.js        [39m[2mchunk[22m[2m │ size: 2.94 kB[22m
+[2m<DIR>/[22m[36mindex.js        [39m[2mchunk[22m[2m │ size: 3.85 kB[22m
+[2m<DIR>/[22m[36mmocks/index.cjs    [39m[2mchunk[22m[2m │ size: 0.92 kB[22m
+[2m<DIR>/[22m[36mchunk-nOFOJqeH.js  [39m[2mchunk[22m[2m │ size: 1.09 kB[22m
+[2m<DIR>/[22m[36msetup.cjs          [39m[2mchunk[22m[2m │ size: 3.90 kB[22m
+[2m<DIR>/[22m[36mindex.cjs          [39m[2mchunk[22m[2m │ size: 5.36 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m14.78 ms[39m
+
+> nx run @thunderid/types:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 0.01 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 0.00 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m13.27 ms[39m
+
+> nx run @thunderid/create:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist && node scripts/copy-templates.js[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mcli.js           [39m[2mchunk[22m[2m │ size:  0.11 kB[22m
+[2m<DIR>/[22m[36mindex.js         [39m[2mchunk[22m[2m │ size:  1.23 kB[22m
+[2m<DIR>/[22m[36mcli-CZ9hT3vj.js  [39m[2mchunk[22m[2m │ size: 39.05 kB[22m
+[2m<DIR>/[22m[36mcli.cjs          [39m[2mchunk[22m[2m │ size:  0.11 kB[22m
+[2m<DIR>/[22m[36mindex.cjs        [39m[2mchunk[22m[2m │ size:  1.39 kB[22m
+[2m<DIR>/[22m[36mcli-B6_-xv1T.js  [39m[2mchunk[22m[2m │ size: 43.21 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m33.23 ms[39m
+{"level":"info","message":"✓ Templates copied successfully","timestamp":"2026-06-22T20:08:24.151Z"}
+
+> nx run @thunderid/utils:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 20.02 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 21.62 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m12.25 ms[39m
+
+> nx run @thunderid/hooks:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 14.45 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 15.83 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m11.24 ms[39m
+
+> nx run @thunderid/design:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "preserveModules". Invalid key: Expected never but received "preserveModules". [0m
+[2m<DIR>/[22m[36mindex.js  [39m[2mchunk[22m[2m │ size: 81.02 kB[22m
+[2m<DIR>/[22m[36mindex.cjs  [39m[2mchunk[22m[2m │ size: 91.85 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m19.73 ms[39m
+
+> nx run @thunderid/components:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mPageLoader/PageLoader.js                                     [39m[2mchunk[22m[2m │ size:   0.41 kB[22m
+[2m<DIR>/[22m[36mlab/components/PageLoadingAnimation.js                       [39m[2mchunk[22m[2m │ size:   0.52 kB[22m
+[2m<DIR>/[22m[36mlab/components/Kbd.js                                        [39m[2mchunk[22m[2m │ size:   0.69 kB[22m
+[2m<DIR>/[22m[36mlab/components/EmojiPicker/utils/generateIconSuggestions.js  [39m[2mchunk[22m[2m │ size:   0.72 kB[22m
+[2m<DIR>/[22m[36mlab/utils/getInitials.js                                     [39m[2mchunk[22m[2m │ size:   1.04 kB[22m
+[2m<DIR>/[22m[36mHelmet/utils/applyAttributes.js                              [39m[2mchunk[22m[2m │ size:   1.57 kB[22m
+[2m<DIR>/[22m[36mindex.js                                                     [39m[2mchunk[22m[2m │ size:   1.63 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderFloatingPanel.js         [39m[2mchunk[22m[2m │ size:   1.72 kB[22m
+[2m<DIR>/[22m[36mlab/components/UnsavedChangesBar.js                          [39m[2mchunk[22m[2m │ size:   1.80 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderStaticPanel.js           [39m[2mchunk[22m[2m │ size:   2.02 kB[22m
+[2m<DIR>/[22m[36mHelmet/Helmet.js                                             [39m[2mchunk[22m[2m │ size:   2.28 kB[22m
+[2m<DIR>/[22m[36mlab/components/CopyableId.js                                 [39m[2mchunk[22m[2m │ size:   2.47 kB[22m
+[2m<DIR>/[22m[36mlab/components/SettingsCard.js                               [39m[2mchunk[22m[2m │ size:   2.64 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderLayout.js                [39m[2mchunk[22m[2m │ size:   2.72 kB[22m
+[2m<DIR>/[22m[36mlab/components/ResourceLogoDialog.js                         [39m[2mchunk[22m[2m │ size:   4.24 kB[22m
+[2m<DIR>/[22m[36mlab/components/ResourceAvatar.js                             [39m[2mchunk[22m[2m │ size:   4.36 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderPanelHeader.js           [39m[2mchunk[22m[2m │ size:   4.78 kB[22m
+[2m<DIR>/[22m[36mlab/components/EmojiPicker/EmojiPicker.js                    [39m[2mchunk[22m[2m │ size:   9.81 kB[22m
+[2m<DIR>/[22m[36mI18nTextInput/I18nTextInput.js                               [39m[2mchunk[22m[2m │ size:  13.38 kB[22m
+[2m<DIR>/[22m[36mlab/components/EmojiPicker/emojis.js                         [39m[2mchunk[22m[2m │ size: 299.36 kB[22m
+[2m<DIR>/[22m[36mPageLoader/PageLoader.cjs                                     [39m[2mchunk[22m[2m │ size:   0.72 kB[22m
+[2m<DIR>/[22m[36mlab/components/EmojiPicker/utils/generateIconSuggestions.cjs  [39m[2mchunk[22m[2m │ size:   0.73 kB[22m
+[2m<DIR>/[22m[36mlab/components/PageLoadingAnimation.cjs                       [39m[2mchunk[22m[2m │ size:   0.83 kB[22m
+[2m<DIR>/[22m[36mlab/components/Kbd.cjs                                        [39m[2mchunk[22m[2m │ size:   0.88 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                                 [39m[2mchunk[22m[2m │ size:   1.00 kB[22m
+[2m<DIR>/[22m[36mlab/utils/getInitials.cjs                                     [39m[2mchunk[22m[2m │ size:   1.03 kB[22m
+[2m<DIR>/[22m[36mHelmet/utils/applyAttributes.cjs                              [39m[2mchunk[22m[2m │ size:   1.57 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderFloatingPanel.cjs         [39m[2mchunk[22m[2m │ size:   2.07 kB[22m
+[2m<DIR>/[22m[36mlab/components/UnsavedChangesBar.cjs                          [39m[2mchunk[22m[2m │ size:   2.25 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                     [39m[2mchunk[22m[2m │ size:   2.38 kB[22m
+[2m<DIR>/[22m[36mHelmet/Helmet.cjs                                             [39m[2mchunk[22m[2m │ size:   2.45 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderStaticPanel.cjs           [39m[2mchunk[22m[2m │ size:   2.46 kB[22m
+[2m<DIR>/[22m[36mlab/components/SettingsCard.cjs                               [39m[2mchunk[22m[2m │ size:   3.21 kB[22m
+[2m<DIR>/[22m[36mlab/components/CopyableId.cjs                                 [39m[2mchunk[22m[2m │ size:   3.29 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderLayout.cjs                [39m[2mchunk[22m[2m │ size:   3.35 kB[22m
+[2m<DIR>/[22m[36mlab/components/ResourceAvatar.cjs                             [39m[2mchunk[22m[2m │ size:   5.08 kB[22m
+[2m<DIR>/[22m[36mlab/components/ResourceLogoDialog.cjs                         [39m[2mchunk[22m[2m │ size:   5.41 kB[22m
+[2m<DIR>/[22m[36mlab/components/BuilderLayout/BuilderPanelHeader.cjs           [39m[2mchunk[22m[2m │ size:   6.10 kB[22m
+[2m<DIR>/[22m[36mlab/components/EmojiPicker/EmojiPicker.cjs                    [39m[2mchunk[22m[2m │ size:  11.14 kB[22m
+[2m<DIR>/[22m[36mI18nTextInput/I18nTextInput.cjs                               [39m[2mchunk[22m[2m │ size:  16.12 kB[22m
+[2m<DIR>/[22m[36mlab/components/EmojiPicker/emojis.cjs                         [39m[2mchunk[22m[2m │ size: 299.32 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m36.69 ms[39m
+
+> nx run @thunderid/configure-organization-units:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mcontexts/OrganizationUnitContext.js                                                                       [39m[2mchunk[22m[2m │ size:  0.28 kB[22m
+[2m<DIR>/[22m[36mutils/findTreeItem.js                                                                                     [39m[2mchunk[22m[2m │ size:  0.30 kB[22m
+[2m<DIR>/[22m[36mutils/buildItemMap.js                                                                                     [39m[2mchunk[22m[2m │ size:  0.32 kB[22m
+[2m<DIR>/[22m[36mutils/updateTreeItemChildren.js                                                                           [39m[2mchunk[22m[2m │ size:  0.43 kB[22m
+[2m<DIR>/[22m[36mcontexts/useOrganizationUnit.js                                                                           [39m[2mchunk[22m[2m │ size:  0.43 kB[22m
+[2m<DIR>/[22m[36mutils/buildTreeItems.js                                                                                   [39m[2mchunk[22m[2m │ size:  0.55 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/user-settings/EditUserSettings.js                                       [39m[2mchunk[22m[2m │ size:  0.68 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/group-settings/EditGroupSettings.js                                     [39m[2mchunk[22m[2m │ size:  0.69 kB[22m
+[2m<DIR>/[22m[36mutils/appendTreeItemChildren.js                                                                           [39m[2mchunk[22m[2m │ size:  0.72 kB[22m
+[2m<DIR>/[22m[36mpages/OrganizationUnitsListPage.js                                                                        [39m[2mchunk[22m[2m │ size:  0.77 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/customization-settings/EditCustomizationSettings.js                     [39m[2mchunk[22m[2m │ size:  0.78 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/child-organization-unit-settings/EditChildOrganizationUnitSettings.js   [39m[2mchunk[22m[2m │ size:  0.88 kB[22m
+[2m<DIR>/[22m[36mapi/useHasMultipleOUs.js                                                                                  [39m[2mchunk[22m[2m │ size:  0.91 kB[22m
+[2m<DIR>/[22m[36mapi/fetchOrganizationUnits.js                                                                             [39m[2mchunk[22m[2m │ size:  0.97 kB[22m
+[2m<DIR>/[22m[36mcontexts/OrganizationUnitProvider.js                                                                      [39m[2mchunk[22m[2m │ size:  1.06 kB[22m
+[2m<DIR>/[22m[36mapi/fetchChildOrganizationUnits.js                                                                        [39m[2mchunk[22m[2m │ size:  1.10 kB[22m
+[2m<DIR>/[22m[36mconstants/organization-unit-tree-constants.js                                                             [39m[2mchunk[22m[2m │ size:  1.14 kB[22m
+[2m<DIR>/[22m[36mconstants/organization-unit-query-keys.js                                                                 [39m[2mchunk[22m[2m │ size:  1.36 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/DangerZoneSection.js                                   [39m[2mchunk[22m[2m │ size:  1.48 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnit.js                                                                             [39m[2mchunk[22m[2m │ size:  1.67 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/EditGeneralSettings.js                                 [39m[2mchunk[22m[2m │ size:  1.71 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnits.js                                                                            [39m[2mchunk[22m[2m │ size:  1.85 kB[22m
+[2m<DIR>/[22m[36mapi/useGetChildOrganizationUnits.js                                                                       [39m[2mchunk[22m[2m │ size:  1.91 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateOrganizationUnit.js                                                                          [39m[2mchunk[22m[2m │ size:  2.08 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnitGroups.js                                                                       [39m[2mchunk[22m[2m │ size:  2.11 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnitUsers.js                                                                        [39m[2mchunk[22m[2m │ size:  2.12 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateOrganizationUnit.js                                                                          [39m[2mchunk[22m[2m │ size:  2.15 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/customization-settings/AppearanceSection.js                             [39m[2mchunk[22m[2m │ size:  2.32 kB[22m
+[2m<DIR>/[22m[36mcomponents/OrganizationUnitDeleteDialog.js                                                                [39m[2mchunk[22m[2m │ size:  2.47 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteOrganizationUnit.js                                                                          [39m[2mchunk[22m[2m │ size:  2.54 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/group-settings/ManageGroupsSection.js                                   [39m[2mchunk[22m[2m │ size:  2.59 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/user-settings/ManageUsersSection.js                                     [39m[2mchunk[22m[2m │ size:  2.83 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/ParentSettingsSection.js                               [39m[2mchunk[22m[2m │ size:  3.01 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/QuickCopySection.js                                    [39m[2mchunk[22m[2m │ size:  3.50 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/child-organization-unit-settings/ManageChildOrganizationUnitSection.js  [39m[2mchunk[22m[2m │ size:  3.77 kB[22m
+[2m<DIR>/[22m[36mindex.js                                                                                                  [39m[2mchunk[22m[2m │ size:  4.55 kB[22m
+[2m<DIR>/[22m[36mpages/CreateOrganizationUnitPage.js                                                                       [39m[2mchunk[22m[2m │ size: 11.27 kB[22m
+[2m<DIR>/[22m[36mpages/OrganizationUnitEditPage.js                                                                         [39m[2mchunk[22m[2m │ size: 13.46 kB[22m
+[2m<DIR>/[22m[36mcomponents/OrganizationUnitTreePicker.js                                                                  [39m[2mchunk[22m[2m │ size: 17.69 kB[22m
+[2m<DIR>/[22m[36mcomponents/OrganizationUnitsTreeView.js                                                                   [39m[2mchunk[22m[2m │ size: 29.06 kB[22m
+[2m<DIR>/[22m[36mutils/findTreeItem.cjs                                                                                     [39m[2mchunk[22m[2m │ size:  0.30 kB[22m
+[2m<DIR>/[22m[36mutils/buildItemMap.cjs                                                                                     [39m[2mchunk[22m[2m │ size:  0.32 kB[22m
+[2m<DIR>/[22m[36mcontexts/OrganizationUnitContext.cjs                                                                       [39m[2mchunk[22m[2m │ size:  0.40 kB[22m
+[2m<DIR>/[22m[36mutils/updateTreeItemChildren.cjs                                                                           [39m[2mchunk[22m[2m │ size:  0.43 kB[22m
+[2m<DIR>/[22m[36mutils/buildTreeItems.cjs                                                                                   [39m[2mchunk[22m[2m │ size:  0.56 kB[22m
+[2m<DIR>/[22m[36mcontexts/useOrganizationUnit.cjs                                                                           [39m[2mchunk[22m[2m │ size:  0.57 kB[22m
+[2m<DIR>/[22m[36mutils/appendTreeItemChildren.cjs                                                                           [39m[2mchunk[22m[2m │ size:  0.73 kB[22m
+[2m<DIR>/[22m[36mapi/useHasMultipleOUs.cjs                                                                                  [39m[2mchunk[22m[2m │ size:  0.96 kB[22m
+[2m<DIR>/[22m[36mapi/fetchOrganizationUnits.cjs                                                                             [39m[2mchunk[22m[2m │ size:  0.97 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                                                                              [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/user-settings/EditUserSettings.cjs                                       [39m[2mchunk[22m[2m │ size:  1.02 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/group-settings/EditGroupSettings.cjs                                     [39m[2mchunk[22m[2m │ size:  1.03 kB[22m
+[2m<DIR>/[22m[36mapi/fetchChildOrganizationUnits.cjs                                                                        [39m[2mchunk[22m[2m │ size:  1.10 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/customization-settings/EditCustomizationSettings.cjs                     [39m[2mchunk[22m[2m │ size:  1.12 kB[22m
+[2m<DIR>/[22m[36mconstants/organization-unit-tree-constants.cjs                                                             [39m[2mchunk[22m[2m │ size:  1.13 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/child-organization-unit-settings/EditChildOrganizationUnitSettings.cjs   [39m[2mchunk[22m[2m │ size:  1.22 kB[22m
+[2m<DIR>/[22m[36mpages/OrganizationUnitsListPage.cjs                                                                        [39m[2mchunk[22m[2m │ size:  1.29 kB[22m
+[2m<DIR>/[22m[36mconstants/organization-unit-query-keys.cjs                                                                 [39m[2mchunk[22m[2m │ size:  1.35 kB[22m
+[2m<DIR>/[22m[36mcontexts/OrganizationUnitProvider.cjs                                                                      [39m[2mchunk[22m[2m │ size:  1.44 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/DangerZoneSection.cjs                                   [39m[2mchunk[22m[2m │ size:  2.04 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnit.cjs                                                                             [39m[2mchunk[22m[2m │ size:  2.09 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/EditGeneralSettings.cjs                                 [39m[2mchunk[22m[2m │ size:  2.21 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnits.cjs                                                                            [39m[2mchunk[22m[2m │ size:  2.30 kB[22m
+[2m<DIR>/[22m[36mapi/useGetChildOrganizationUnits.cjs                                                                       [39m[2mchunk[22m[2m │ size:  2.37 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnitGroups.cjs                                                                       [39m[2mchunk[22m[2m │ size:  2.54 kB[22m
+[2m<DIR>/[22m[36mapi/useGetOrganizationUnitUsers.cjs                                                                        [39m[2mchunk[22m[2m │ size:  2.55 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateOrganizationUnit.cjs                                                                          [39m[2mchunk[22m[2m │ size:  2.62 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateOrganizationUnit.cjs                                                                          [39m[2mchunk[22m[2m │ size:  2.69 kB[22m
+[2m<DIR>/[22m[36mcomponents/OrganizationUnitDeleteDialog.cjs                                                                [39m[2mchunk[22m[2m │ size:  3.06 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/customization-settings/AppearanceSection.cjs                             [39m[2mchunk[22m[2m │ size:  3.06 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteOrganizationUnit.cjs                                                                          [39m[2mchunk[22m[2m │ size:  3.09 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/group-settings/ManageGroupsSection.cjs                                   [39m[2mchunk[22m[2m │ size:  3.40 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/user-settings/ManageUsersSection.cjs                                     [39m[2mchunk[22m[2m │ size:  3.63 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/ParentSettingsSection.cjs                               [39m[2mchunk[22m[2m │ size:  3.84 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/general-settings/QuickCopySection.cjs                                    [39m[2mchunk[22m[2m │ size:  4.73 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-organization-unit/child-organization-unit-settings/ManageChildOrganizationUnitSection.cjs  [39m[2mchunk[22m[2m │ size:  4.95 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                                                                  [39m[2mchunk[22m[2m │ size:  6.88 kB[22m
+[2m<DIR>/[22m[36mpages/CreateOrganizationUnitPage.cjs                                                                       [39m[2mchunk[22m[2m │ size: 13.87 kB[22m
+[2m<DIR>/[22m[36mpages/OrganizationUnitEditPage.cjs                                                                         [39m[2mchunk[22m[2m │ size: 16.44 kB[22m
+[2m<DIR>/[22m[36mcomponents/OrganizationUnitTreePicker.cjs                                                                  [39m[2mchunk[22m[2m │ size: 20.38 kB[22m
+[2m<DIR>/[22m[36mcomponents/OrganizationUnitsTreeView.cjs                                                                   [39m[2mchunk[22m[2m │ size: 33.46 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m56.87 ms[39m
+
+> nx run @thunderid/configure-translations:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mindex.js                                                 [39m[2mchunk[22m[2m │ size: 0.41 kB[22m
+[2m<DIR>/[22m[36mcontexts/TranslationCreate/TranslationCreateContext.js   [39m[2mchunk[22m[2m │ size: 1.01 kB[22m
+[2m<DIR>/[22m[36mmodels/translation-create-flow.js                        [39m[2mchunk[22m[2m │ size: 1.03 kB[22m
+[2m<DIR>/[22m[36mcontexts/TranslationCreate/useTranslationCreate.js       [39m[2mchunk[22m[2m │ size: 1.28 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/NamespaceSelector.js         [39m[2mchunk[22m[2m │ size: 1.57 kB[22m
+[2m<DIR>/[22m[36mpages/TranslationsListPage.js                            [39m[2mchunk[22m[2m │ size: 2.10 kB[22m
+[2m<DIR>/[22m[36mcomponents/TranslationDeleteDialog.js                    [39m[2mchunk[22m[2m │ size: 2.30 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationEditorHeader.js   [39m[2mchunk[22m[2m │ size: 2.73 kB[22m
+[2m<DIR>/[22m[36mcontexts/TranslationCreate/TranslationCreateProvider.js  [39m[2mchunk[22m[2m │ size: 3.37 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationEditorCard.js     [39m[2mchunk[22m[2m │ size: 3.88 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationJsonEditor.js     [39m[2mchunk[22m[2m │ size: 3.95 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/ReviewLocaleCode.js        [39m[2mchunk[22m[2m │ size: 4.21 kB[22m
+[2m<DIR>/[22m[36mcomponents/TranslationsList.js                           [39m[2mchunk[22m[2m │ size: 4.36 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/SelectCountry.js           [39m[2mchunk[22m[2m │ size: 4.36 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/InitializeLanguage.js      [39m[2mchunk[22m[2m │ size: 4.47 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/SelectLanguage.js          [39m[2mchunk[22m[2m │ size: 4.64 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationFieldsView.js     [39m[2mchunk[22m[2m │ size: 7.01 kB[22m
+[2m<DIR>/[22m[36mpages/TranslationsEditPage.js                            [39m[2mchunk[22m[2m │ size: 7.96 kB[22m
+[2m<DIR>/[22m[36mpages/TranslationCreatePage.js                           [39m[2mchunk[22m[2m │ size: 9.58 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                 [39m[2mchunk[22m[2m │ size:  0.65 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                             [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mmodels/translation-create-flow.cjs                        [39m[2mchunk[22m[2m │ size:  1.06 kB[22m
+[2m<DIR>/[22m[36mcontexts/TranslationCreate/TranslationCreateContext.cjs   [39m[2mchunk[22m[2m │ size:  1.14 kB[22m
+[2m<DIR>/[22m[36mcontexts/TranslationCreate/useTranslationCreate.cjs       [39m[2mchunk[22m[2m │ size:  1.42 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/NamespaceSelector.cjs         [39m[2mchunk[22m[2m │ size:  2.06 kB[22m
+[2m<DIR>/[22m[36mcomponents/TranslationDeleteDialog.cjs                    [39m[2mchunk[22m[2m │ size:  3.04 kB[22m
+[2m<DIR>/[22m[36mpages/TranslationsListPage.cjs                            [39m[2mchunk[22m[2m │ size:  3.12 kB[22m
+[2m<DIR>/[22m[36mcontexts/TranslationCreate/TranslationCreateProvider.cjs  [39m[2mchunk[22m[2m │ size:  3.74 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationEditorHeader.cjs   [39m[2mchunk[22m[2m │ size:  3.77 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationJsonEditor.cjs     [39m[2mchunk[22m[2m │ size:  4.66 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationEditorCard.cjs     [39m[2mchunk[22m[2m │ size:  5.06 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/ReviewLocaleCode.cjs        [39m[2mchunk[22m[2m │ size:  5.37 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/SelectCountry.cjs           [39m[2mchunk[22m[2m │ size:  5.49 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/InitializeLanguage.cjs      [39m[2mchunk[22m[2m │ size:  5.52 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-translation/SelectLanguage.cjs          [39m[2mchunk[22m[2m │ size:  5.77 kB[22m
+[2m<DIR>/[22m[36mcomponents/TranslationsList.cjs                           [39m[2mchunk[22m[2m │ size:  5.98 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-translation/TranslationFieldsView.cjs     [39m[2mchunk[22m[2m │ size:  8.39 kB[22m
+[2m<DIR>/[22m[36mpages/TranslationsEditPage.cjs                            [39m[2mchunk[22m[2m │ size:  9.09 kB[22m
+[2m<DIR>/[22m[36mpages/TranslationCreatePage.cjs                           [39m[2mchunk[22m[2m │ size: 11.59 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m38.34 ms[39m
+
+> nx run @thunderid/configure-agent-types:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mindex.js                                                          [39m[2mchunk[22m[2m │ size:  0.45 kB[22m
+[2m<DIR>/[22m[36mutils/invalidateI18nCache.js                                      [39m[2mchunk[22m[2m │ size:  0.88 kB[22m
+[2m<DIR>/[22m[36mconstants/agentTypeQueryKeys.js                                   [39m[2mchunk[22m[2m │ size:  0.96 kB[22m
+[2m<DIR>/[22m[36mapi/useGetAgentType.js                                            [39m[2mchunk[22m[2m │ size:  1.02 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateAgentType.js                                         [39m[2mchunk[22m[2m │ size:  1.45 kB[22m
+[2m<DIR>/[22m[36mapi/useGetAgentTypes.js                                           [39m[2mchunk[22m[2m │ size:  1.51 kB[22m
+[2m<DIR>/[22m[36mpages/ViewAgentTypePage.js                                        [39m[2mchunk[22m[2m │ size:  7.10 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-agent-type/schema-settings/EditSchemaSettings.js  [39m[2mchunk[22m[2m │ size: 14.26 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                          [39m[2mchunk[22m[2m │ size:  0.69 kB[22m
+[2m<DIR>/[22m[36mutils/invalidateI18nCache.cjs                                      [39m[2mchunk[22m[2m │ size:  0.90 kB[22m
+[2m<DIR>/[22m[36mconstants/agentTypeQueryKeys.cjs                                   [39m[2mchunk[22m[2m │ size:  0.96 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                                      [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mapi/useGetAgentType.cjs                                            [39m[2mchunk[22m[2m │ size:  1.44 kB[22m
+[2m<DIR>/[22m[36mapi/useGetAgentTypes.cjs                                           [39m[2mchunk[22m[2m │ size:  1.93 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateAgentType.cjs                                         [39m[2mchunk[22m[2m │ size:  1.99 kB[22m
+[2m<DIR>/[22m[36mpages/ViewAgentTypePage.cjs                                        [39m[2mchunk[22m[2m │ size:  8.83 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-agent-type/schema-settings/EditSchemaSettings.cjs  [39m[2mchunk[22m[2m │ size: 16.98 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m26.30 ms[39m
+
+> nx run @thunderid/gate:build  [existing outputs match the cache, left as is]
+
+[2m$ tsc -b && vite build[22m
+[36mvite v8.0.16 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...[32m✓[39m 4097 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[0m[32mindex.html                                   [39m[2m[1m    1.67 kB[0m[0m[2m │ gzip:   0.57 kB[0m
+[2mdist/[0m[2massets/[0m[35mindex-cU0xs27d.css                    [39m[2m[1m    0.09 kB[0m[0m[2m │ gzip:   0.10 kB[0m
+[2mdist/[0m[2massets/[0m[35mvendor-oxygen-W4SEzVCm.css            [39m[2m[1m    0.10 kB[0m[0m[2m │ gzip:   0.09 kB[0m
+[2mdist/[0m[2massets/[0m[36men-US-DeVpPKv9.js                     [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mrolldown-runtime-QTnfLwEv.js          [39m[2m[1m    0.69 kB[0m[0m[2m │ gzip:   0.42 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-D2au5H3p.js                      [39m[2m[1m    0.72 kB[0m[0m[2m │ gzip:   0.45 kB[0m
+[2mdist/[0m[2massets/[0m[36mFlowProvider-DhcpyGq_.js              [39m[2m[1m    1.49 kB[0m[0m[2m │ gzip:   0.78 kB[0m
+[2mdist/[0m[2massets/[0m[36moauth-DnWsbeEz.js                     [39m[2m[1m    1.84 kB[0m[0m[2m │ gzip:   0.96 kB[0m
+[2mdist/[0m[2massets/[0m[36mErrorPage-BItcDDMU.js                 [39m[2m[1m    2.32 kB[0m[0m[2m │ gzip:   1.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mpasskey-a5r8o-7Q.js                   [39m[2m[1m    2.80 kB[0m[0m[2m │ gzip:   0.77 kB[0m
+[2mdist/[0m[2massets/[0m[36mLogo-CXszFpif.js                      [39m[2m[1m    5.14 kB[0m[0m[2m │ gzip:   2.39 kB[0m
+[2mdist/[0m[2massets/[0m[36mgetAuthComponentHeadings-BXwZ_7Sv.js  [39m[2m[1m   11.87 kB[0m[0m[2m │ gzip:   3.14 kB[0m
+[2mdist/[0m[2massets/[0m[36mAcceptInvitePage-YlzLz-ov.js          [39m[2m[1m   13.31 kB[0m[0m[2m │ gzip:   5.15 kB[0m
+[2mdist/[0m[2massets/[0m[36mRecoveryPage-Ct2DAvAV.js              [39m[2m[1m   17.63 kB[0m[0m[2m │ gzip:   5.91 kB[0m
+[2mdist/[0m[2massets/[0m[36mSignUpPage-DEt7OiCi.js                [39m[2m[1m   21.91 kB[0m[0m[2m │ gzip:   7.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-emotion-Cfw8XpNY.js            [39m[2m[1m   34.94 kB[0m[0m[2m │ gzip:  13.83 kB[0m
+[2mdist/[0m[2massets/[0m[36mSignInPage-nDfHOVpQ.js                [39m[2m[1m   48.58 kB[0m[0m[2m │ gzip:  13.20 kB[0m
+[2mdist/[0m[2massets/[0m[36mchunk-4N6VE7H7-ZmjbZTqW.js            [39m[2m[1m   50.45 kB[0m[0m[2m │ gzip:  18.93 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-i18n-DnSFPVFF.js               [39m[2m[1m   53.19 kB[0m[0m[2m │ gzip:  17.66 kB[0m
+[2mdist/[0m[2massets/[0m[36mAuthOptionFactory-CkHumcha.js         [39m[2m[1m   65.56 kB[0m[0m[2m │ gzip:  15.53 kB[0m
+[2mdist/[0m[2massets/[0m[36mindex-BP1fQaEs.js                     [39m[2m[1m  104.81 kB[0m[0m[2m │ gzip:  35.07 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-react-CgxZC2_u.js              [39m[2m[1m  178.53 kB[0m[0m[2m │ gzip:  56.39 kB[0m
+[2mdist/[0m[2massets/[0m[36men-US-DiRsfKGS-CdFpUr3R.js            [39m[2m[1m  187.32 kB[0m[0m[2m │ gzip:  40.68 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-mui-D7wxsaM1.js                [39m[2m[1m  357.22 kB[0m[0m[2m │ gzip: 104.77 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-DtPdpvxz.js                      [39m[2m[1m  388.92 kB[0m[0m[2m │ gzip: 107.52 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-oxygen-c0vn8WZ7.js             [39m[33m[1m1,432.62 kB[0m[39m[2m │ gzip: 529.64 kB[0m
+
+[33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+  - vite-plugin-svgr (71%)
+  - prismjs-inject-core (24%)
+  - @rolldown/plugin-babel (5%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+[39m
+[33m[plugin builtin:vite-reporter] [33m[1m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[0m[33m[39m
+[32m✓ built in 4.40s[39m
+
+> nx run @thunderid/configure-resource-servers:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mconstants/permission-constants.js                        [39m[2mchunk[22m[2m │ size:  0.14 kB[22m
+[2m<DIR>/[22m[36mutils/isValidPermissionDelimiter.js                      [39m[2mchunk[22m[2m │ size:  0.28 kB[22m
+[2m<DIR>/[22m[36mconfig/resource-server-delimiters.js                     [39m[2mchunk[22m[2m │ size:  0.66 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResourceServer.js                              [39m[2mchunk[22m[2m │ size:  0.75 kB[22m
+[2m<DIR>/[22m[36mmodels/permissions.js                                    [39m[2mchunk[22m[2m │ size:  0.80 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteResourceServer.js                           [39m[2mchunk[22m[2m │ size:  0.84 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateResourceServer.js                           [39m[2mchunk[22m[2m │ size:  0.86 kB[22m
+[2m<DIR>/[22m[36mutils/deriveHandle.js                                    [39m[2mchunk[22m[2m │ size:  0.88 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteResource.js                                 [39m[2mchunk[22m[2m │ size:  0.90 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateResource.js                                 [39m[2mchunk[22m[2m │ size:  0.90 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateResource.js                                 [39m[2mchunk[22m[2m │ size:  0.93 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResourceServers.js                             [39m[2mchunk[22m[2m │ size:  0.94 kB[22m
+[2m<DIR>/[22m[36mapi/useGetServerActions.js                               [39m[2mchunk[22m[2m │ size:  0.94 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateResourceServer.js                           [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mconstants/resource-server-query-keys.js                  [39m[2mchunk[22m[2m │ size:  1.07 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResourceActions.js                             [39m[2mchunk[22m[2m │ size:  1.09 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResources.js                                   [39m[2mchunk[22m[2m │ size:  1.16 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateAction.js                                   [39m[2mchunk[22m[2m │ size:  1.20 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteAction.js                                   [39m[2mchunk[22m[2m │ size:  1.20 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateAction.js                                   [39m[2mchunk[22m[2m │ size:  1.23 kB[22m
+[2m<DIR>/[22m[36mconfig/resource-server-types.js                          [39m[2mchunk[22m[2m │ size:  1.52 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureOrgUnit.js    [39m[2mchunk[22m[2m │ size:  1.54 kB[22m
+[2m<DIR>/[22m[36mpages/ResourceServersListPage.js                         [39m[2mchunk[22m[2m │ size:  1.66 kB[22m
+[2m<DIR>/[22m[36mcomponents/permission-catalog/SelectedScopesField.js     [39m[2mchunk[22m[2m │ size:  1.94 kB[22m
+[2m<DIR>/[22m[36mindex.js                                                 [39m[2mchunk[22m[2m │ size:  2.36 kB[22m
+[2m<DIR>/[22m[36mcomponents/ResourceServerDeleteDialog.js                 [39m[2mchunk[22m[2m │ size:  2.48 kB[22m
+[2m<DIR>/[22m[36mutils/permissionSelection.js                             [39m[2mchunk[22m[2m │ size:  2.80 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-server-detail/AdvancedTab.js         [39m[2mchunk[22m[2m │ size:  3.12 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureType.js       [39m[2mchunk[22m[2m │ size:  3.27 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureSeparator.js  [39m[2mchunk[22m[2m │ size:  3.37 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureName.js       [39m[2mchunk[22m[2m │ size:  4.03 kB[22m
+[2m<DIR>/[22m[36mapi/useSubtreePermissions.js                             [39m[2mchunk[22m[2m │ size:  4.09 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/ResourceTree.js                 [39m[2mchunk[22m[2m │ size:  6.36 kB[22m
+[2m<DIR>/[22m[36mcomponents/ResourceServersList.js                        [39m[2mchunk[22m[2m │ size:  6.45 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/AddNodeDialog.js                [39m[2mchunk[22m[2m │ size:  6.48 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/ResourceDetailPanel.js          [39m[2mchunk[22m[2m │ size:  9.78 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/ResourceTreeNode.js             [39m[2mchunk[22m[2m │ size: 10.21 kB[22m
+[2m<DIR>/[22m[36mpages/CreateResourceServerPage.js                        [39m[2mchunk[22m[2m │ size: 10.71 kB[22m
+[2m<DIR>/[22m[36mpages/ResourceServerEditPage.js                          [39m[2mchunk[22m[2m │ size: 11.32 kB[22m
+[2m<DIR>/[22m[36mcomponents/permission-catalog/PermissionCatalog.js       [39m[2mchunk[22m[2m │ size: 12.76 kB[22m
+[2m<DIR>/[22m[36mconstants/permission-constants.cjs                        [39m[2mchunk[22m[2m │ size:  0.17 kB[22m
+[2m<DIR>/[22m[36mutils/isValidPermissionDelimiter.cjs                      [39m[2mchunk[22m[2m │ size:  0.32 kB[22m
+[2m<DIR>/[22m[36mconfig/resource-server-delimiters.cjs                     [39m[2mchunk[22m[2m │ size:  0.68 kB[22m
+[2m<DIR>/[22m[36mmodels/permissions.cjs                                    [39m[2mchunk[22m[2m │ size:  0.83 kB[22m
+[2m<DIR>/[22m[36mutils/deriveHandle.cjs                                    [39m[2mchunk[22m[2m │ size:  0.89 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                             [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mconstants/resource-server-query-keys.cjs                  [39m[2mchunk[22m[2m │ size:  1.06 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResourceServer.cjs                              [39m[2mchunk[22m[2m │ size:  1.17 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteResourceServer.cjs                           [39m[2mchunk[22m[2m │ size:  1.28 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateResourceServer.cjs                           [39m[2mchunk[22m[2m │ size:  1.30 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteResource.cjs                                 [39m[2mchunk[22m[2m │ size:  1.34 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateResource.cjs                                 [39m[2mchunk[22m[2m │ size:  1.34 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResourceServers.cjs                             [39m[2mchunk[22m[2m │ size:  1.36 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateResource.cjs                                 [39m[2mchunk[22m[2m │ size:  1.37 kB[22m
+[2m<DIR>/[22m[36mapi/useGetServerActions.cjs                               [39m[2mchunk[22m[2m │ size:  1.40 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateResourceServer.cjs                           [39m[2mchunk[22m[2m │ size:  1.44 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResourceActions.cjs                             [39m[2mchunk[22m[2m │ size:  1.55 kB[22m
+[2m<DIR>/[22m[36mapi/useGetResources.cjs                                   [39m[2mchunk[22m[2m │ size:  1.61 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateAction.cjs                                   [39m[2mchunk[22m[2m │ size:  1.64 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteAction.cjs                                   [39m[2mchunk[22m[2m │ size:  1.65 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateAction.cjs                                   [39m[2mchunk[22m[2m │ size:  1.68 kB[22m
+[2m<DIR>/[22m[36mconfig/resource-server-types.cjs                          [39m[2mchunk[22m[2m │ size:  2.01 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureOrgUnit.cjs    [39m[2mchunk[22m[2m │ size:  2.27 kB[22m
+[2m<DIR>/[22m[36mpages/ResourceServersListPage.cjs                         [39m[2mchunk[22m[2m │ size:  2.66 kB[22m
+[2m<DIR>/[22m[36mcomponents/permission-catalog/SelectedScopesField.cjs     [39m[2mchunk[22m[2m │ size:  2.71 kB[22m
+[2m<DIR>/[22m[36mutils/permissionSelection.cjs                             [39m[2mchunk[22m[2m │ size:  2.97 kB[22m
+[2m<DIR>/[22m[36mcomponents/ResourceServerDeleteDialog.cjs                 [39m[2mchunk[22m[2m │ size:  3.34 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                 [39m[2mchunk[22m[2m │ size:  3.89 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureType.cjs       [39m[2mchunk[22m[2m │ size:  4.05 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-server-detail/AdvancedTab.cjs         [39m[2mchunk[22m[2m │ size:  4.14 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureSeparator.cjs  [39m[2mchunk[22m[2m │ size:  4.39 kB[22m
+[2m<DIR>/[22m[36mapi/useSubtreePermissions.cjs                             [39m[2mchunk[22m[2m │ size:  4.71 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-resource-server/ConfigureName.cjs       [39m[2mchunk[22m[2m │ size:  5.17 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/AddNodeDialog.cjs                [39m[2mchunk[22m[2m │ size:  7.92 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/ResourceTree.cjs                 [39m[2mchunk[22m[2m │ size:  7.97 kB[22m
+[2m<DIR>/[22m[36mcomponents/ResourceServersList.cjs                        [39m[2mchunk[22m[2m │ size:  8.33 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/ResourceDetailPanel.cjs          [39m[2mchunk[22m[2m │ size: 11.99 kB[22m
+[2m<DIR>/[22m[36mpages/CreateResourceServerPage.cjs                        [39m[2mchunk[22m[2m │ size: 12.92 kB[22m
+[2m<DIR>/[22m[36mcomponents/resource-tree/ResourceTreeNode.cjs             [39m[2mchunk[22m[2m │ size: 13.00 kB[22m
+[2m<DIR>/[22m[36mpages/ResourceServerEditPage.cjs                          [39m[2mchunk[22m[2m │ size: 13.98 kB[22m
+[2m<DIR>/[22m[36mcomponents/permission-catalog/PermissionCatalog.cjs       [39m[2mchunk[22m[2m │ size: 15.54 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m61.05 ms[39m
+
+> nx run @thunderid/configure-user-types:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mcontexts/UserTypeCreate/UserTypeCreateContext.js                   [39m[2mchunk[22m[2m │ size:  0.28 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserTypeCreate/useUserTypeCreate.js                       [39m[2mchunk[22m[2m │ size:  0.61 kB[22m
+[2m<DIR>/[22m[36mutils/invalidateI18nCache.js                                       [39m[2mchunk[22m[2m │ size:  0.88 kB[22m
+[2m<DIR>/[22m[36mconstants/userTypeQueryKeys.js                                     [39m[2mchunk[22m[2m │ size:  0.95 kB[22m
+[2m<DIR>/[22m[36mmodels/user-type-create-flow.js                                    [39m[2mchunk[22m[2m │ size:  0.98 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserType.js                                              [39m[2mchunk[22m[2m │ size:  1.01 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateUserType.js                                           [39m[2mchunk[22m[2m │ size:  1.28 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteUserType.js                                           [39m[2mchunk[22m[2m │ size:  1.37 kB[22m
+[2m<DIR>/[22m[36mpages/UserTypesListPage.js                                         [39m[2mchunk[22m[2m │ size:  1.37 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateUserType.js                                           [39m[2mchunk[22m[2m │ size:  1.44 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserTypes.js                                             [39m[2mchunk[22m[2m │ size:  1.50 kB[22m
+[2m<DIR>/[22m[36mindex.js                                                           [39m[2mchunk[22m[2m │ size:  2.06 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user-type/ConfigureGeneral.js                    [39m[2mchunk[22m[2m │ size:  2.15 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/general-settings/QuickCopySection.js     [39m[2mchunk[22m[2m │ size:  2.15 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/UserTypeDeleteDialog.js                  [39m[2mchunk[22m[2m │ size:  2.46 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserTypeCreate/UserTypeCreateProvider.js                  [39m[2mchunk[22m[2m │ size:  2.48 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user-type/ConfigureName.js                       [39m[2mchunk[22m[2m │ size:  2.76 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/general-settings/EditGeneralSettings.js  [39m[2mchunk[22m[2m │ size:  5.82 kB[22m
+[2m<DIR>/[22m[36mcomponents/UserTypesList.js                                        [39m[2mchunk[22m[2m │ size:  7.36 kB[22m
+[2m<DIR>/[22m[36mpages/CreateUserTypePage.js                                        [39m[2mchunk[22m[2m │ size: 10.71 kB[22m
+[2m<DIR>/[22m[36mpages/ViewUserTypePage.js                                          [39m[2mchunk[22m[2m │ size: 12.20 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/schema-settings/EditSchemaSettings.js    [39m[2mchunk[22m[2m │ size: 14.42 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user-type/ConfigureProperties.js                 [39m[2mchunk[22m[2m │ size: 15.56 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserTypeCreate/UserTypeCreateContext.cjs                   [39m[2mchunk[22m[2m │ size:  0.41 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserTypeCreate/useUserTypeCreate.cjs                       [39m[2mchunk[22m[2m │ size:  0.75 kB[22m
+[2m<DIR>/[22m[36mutils/invalidateI18nCache.cjs                                       [39m[2mchunk[22m[2m │ size:  0.90 kB[22m
+[2m<DIR>/[22m[36mconstants/userTypeQueryKeys.cjs                                     [39m[2mchunk[22m[2m │ size:  0.95 kB[22m
+[2m<DIR>/[22m[36mmodels/user-type-create-flow.cjs                                    [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                                       [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserType.cjs                                              [39m[2mchunk[22m[2m │ size:  1.43 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateUserType.cjs                                           [39m[2mchunk[22m[2m │ size:  1.81 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteUserType.cjs                                           [39m[2mchunk[22m[2m │ size:  1.91 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserTypes.cjs                                             [39m[2mchunk[22m[2m │ size:  1.92 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateUserType.cjs                                           [39m[2mchunk[22m[2m │ size:  1.98 kB[22m
+[2m<DIR>/[22m[36mpages/UserTypesListPage.cjs                                         [39m[2mchunk[22m[2m │ size:  2.34 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserTypeCreate/UserTypeCreateProvider.cjs                  [39m[2mchunk[22m[2m │ size:  2.85 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user-type/ConfigureGeneral.cjs                    [39m[2mchunk[22m[2m │ size:  3.01 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/general-settings/QuickCopySection.cjs     [39m[2mchunk[22m[2m │ size:  3.03 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/UserTypeDeleteDialog.cjs                  [39m[2mchunk[22m[2m │ size:  3.15 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                           [39m[2mchunk[22m[2m │ size:  3.21 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user-type/ConfigureName.cjs                       [39m[2mchunk[22m[2m │ size:  3.73 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/general-settings/EditGeneralSettings.cjs  [39m[2mchunk[22m[2m │ size:  7.18 kB[22m
+[2m<DIR>/[22m[36mcomponents/UserTypesList.cjs                                        [39m[2mchunk[22m[2m │ size:  9.33 kB[22m
+[2m<DIR>/[22m[36mpages/CreateUserTypePage.cjs                                        [39m[2mchunk[22m[2m │ size: 13.01 kB[22m
+[2m<DIR>/[22m[36mpages/ViewUserTypePage.cjs                                          [39m[2mchunk[22m[2m │ size: 14.51 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user-type/schema-settings/EditSchemaSettings.cjs    [39m[2mchunk[22m[2m │ size: 17.15 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user-type/ConfigureProperties.cjs                 [39m[2mchunk[22m[2m │ size: 18.63 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m67.67 ms[39m
+
+> nx run @thunderid/configure-users:build  [existing outputs match the cache, left as is]
+
+[2m$ pnpm clean:dist && rolldown -c rolldown.config.js && tsc -p tsconfig.lib.json --emitDeclarationOnly --outDir dist[22m
+[2m$ rimraf dist[22m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[33mWarning: Invalid input options (1 issue found)
+- For the "target". Invalid key: Expected never but received "target". [0m
+[2m<DIR>/[22m[36mcontexts/UserCreate/UserCreateContext.js                                         [39m[2mchunk[22m[2m │ size:  0.26 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/buildItemMap.js                          [39m[2mchunk[22m[2m │ size:  0.34 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/constants/organization-unit-query-keys.js      [39m[2mchunk[22m[2m │ size:  0.45 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/constants/organization-unit-tree-constants.js  [39m[2mchunk[22m[2m │ size:  0.45 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/updateTreeItemChildren.js                [39m[2mchunk[22m[2m │ size:  0.45 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserCreate/useUserCreate.js                                             [39m[2mchunk[22m[2m │ size:  0.56 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/buildTreeItems.js                        [39m[2mchunk[22m[2m │ size:  0.58 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/appendTreeItemChildren.js                [39m[2mchunk[22m[2m │ size:  0.74 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUser.js                                                                [39m[2mchunk[22m[2m │ size:  0.95 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserType.js                                                            [39m[2mchunk[22m[2m │ size:  0.95 kB[22m
+[2m<DIR>/[22m[36mconstants/user-query-keys.js                                                     [39m[2mchunk[22m[2m │ size:  0.96 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.js                                                     [39m[2mchunk[22m[2m │ size:  0.98 kB[22m
+[2m<DIR>/[22m[36mmodels/user-create-flow.js                                                       [39m[2mchunk[22m[2m │ size:  0.99 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/fetchOrganizationUnits.js                  [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/fetchChildOrganizationUnits.js             [39m[2mchunk[22m[2m │ size:  1.13 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateUser.js                                                             [39m[2mchunk[22m[2m │ size:  1.21 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserTypes.js                                                           [39m[2mchunk[22m[2m │ size:  1.28 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteUser.js                                                             [39m[2mchunk[22m[2m │ size:  1.29 kB[22m
+[2m<DIR>/[22m[36mcomponents/CredentialFieldInput.js                                               [39m[2mchunk[22m[2m │ size:  1.30 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateUser.js                                                             [39m[2mchunk[22m[2m │ size:  1.35 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUsers.js                                                               [39m[2mchunk[22m[2m │ size:  1.38 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user/ConfigureOrganizationUnit.js                              [39m[2mchunk[22m[2m │ size:  1.69 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/useGetOrganizationUnit.js                  [39m[2mchunk[22m[2m │ size:  1.69 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserCreate/UserCreateProvider.js                                        [39m[2mchunk[22m[2m │ size:  1.77 kB[22m
+[2m<DIR>/[22m[36mpages/UsersListPage.js                                                           [39m[2mchunk[22m[2m │ size:  1.80 kB[22m
+[2m<DIR>/[22m[36mcomponents/ArrayFieldInput.js                                                    [39m[2mchunk[22m[2m │ size:  1.85 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/useGetOrganizationUnits.js                 [39m[2mchunk[22m[2m │ size:  1.88 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user/ConfigureUserDetails.js                                   [39m[2mchunk[22m[2m │ size:  1.90 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/useGetChildOrganizationUnits.js            [39m[2mchunk[22m[2m │ size:  1.94 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user/ConfigureUserType.js                                      [39m[2mchunk[22m[2m │ size:  1.97 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user/QuickCopySection.js                                         [39m[2mchunk[22m[2m │ size:  2.10 kB[22m
+[2m<DIR>/[22m[36mindex.js                                                                         [39m[2mchunk[22m[2m │ size:  2.20 kB[22m
+[2m<DIR>/[22m[36mcomponents/UserDeleteDialog.js                                                   [39m[2mchunk[22m[2m │ size:  2.29 kB[22m
+[2m<DIR>/[22m[36mcomponents/UsersList.js                                                          [39m[2mchunk[22m[2m │ size:  7.30 kB[22m
+[2m<DIR>/[22m[36mutils/renderSchemaField.js                                                       [39m[2mchunk[22m[2m │ size:  7.50 kB[22m
+[2m<DIR>/[22m[36mpages/UserCreatePage.js                                                          [39m[2mchunk[22m[2m │ size: 12.68 kB[22m
+[2m<DIR>/[22m[36mpages/UserEditPage.js                                                            [39m[2mchunk[22m[2m │ size: 15.93 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/components/OrganizationUnitTreePicker.js       [39m[2mchunk[22m[2m │ size: 17.75 kB[22m
+[2m<DIR>/[22m[36mpages/UserInvitePage.js                                                          [39m[2mchunk[22m[2m │ size: 26.32 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/buildItemMap.cjs                          [39m[2mchunk[22m[2m │ size:  0.36 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserCreate/UserCreateContext.cjs                                         [39m[2mchunk[22m[2m │ size:  0.39 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/updateTreeItemChildren.cjs                [39m[2mchunk[22m[2m │ size:  0.48 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/constants/organization-unit-query-keys.cjs      [39m[2mchunk[22m[2m │ size:  0.48 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/constants/organization-unit-tree-constants.cjs  [39m[2mchunk[22m[2m │ size:  0.49 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/buildTreeItems.cjs                        [39m[2mchunk[22m[2m │ size:  0.63 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserCreate/useUserCreate.cjs                                             [39m[2mchunk[22m[2m │ size:  0.70 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/utils/appendTreeItemChildren.cjs                [39m[2mchunk[22m[2m │ size:  0.81 kB[22m
+[2m<DIR>/[22m[36mconstants/user-query-keys.cjs                                                     [39m[2mchunk[22m[2m │ size:  0.96 kB[22m
+[2m<DIR>/[22m[36m_virtual/rolldown_runtime.cjs                                                     [39m[2mchunk[22m[2m │ size:  1.00 kB[22m
+[2m<DIR>/[22m[36mmodels/user-create-flow.cjs                                                       [39m[2mchunk[22m[2m │ size:  1.01 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/fetchOrganizationUnits.cjs                  [39m[2mchunk[22m[2m │ size:  1.02 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/fetchChildOrganizationUnits.cjs             [39m[2mchunk[22m[2m │ size:  1.15 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUser.cjs                                                                [39m[2mchunk[22m[2m │ size:  1.37 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserType.cjs                                                            [39m[2mchunk[22m[2m │ size:  1.37 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUserTypes.cjs                                                           [39m[2mchunk[22m[2m │ size:  1.71 kB[22m
+[2m<DIR>/[22m[36mapi/useCreateUser.cjs                                                             [39m[2mchunk[22m[2m │ size:  1.75 kB[22m
+[2m<DIR>/[22m[36mapi/useGetUsers.cjs                                                               [39m[2mchunk[22m[2m │ size:  1.81 kB[22m
+[2m<DIR>/[22m[36mapi/useDeleteUser.cjs                                                             [39m[2mchunk[22m[2m │ size:  1.83 kB[22m
+[2m<DIR>/[22m[36mcomponents/CredentialFieldInput.cjs                                               [39m[2mchunk[22m[2m │ size:  1.89 kB[22m
+[2m<DIR>/[22m[36mapi/useUpdateUser.cjs                                                             [39m[2mchunk[22m[2m │ size:  1.90 kB[22m
+[2m<DIR>/[22m[36mcontexts/UserCreate/UserCreateProvider.cjs                                        [39m[2mchunk[22m[2m │ size:  2.10 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/useGetOrganizationUnit.cjs                  [39m[2mchunk[22m[2m │ size:  2.18 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user/ConfigureOrganizationUnit.cjs                              [39m[2mchunk[22m[2m │ size:  2.31 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/useGetOrganizationUnits.cjs                 [39m[2mchunk[22m[2m │ size:  2.40 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/api/useGetChildOrganizationUnits.cjs            [39m[2mchunk[22m[2m │ size:  2.48 kB[22m
+[2m<DIR>/[22m[36mcomponents/ArrayFieldInput.cjs                                                    [39m[2mchunk[22m[2m │ size:  2.53 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user/ConfigureUserDetails.cjs                                   [39m[2mchunk[22m[2m │ size:  2.63 kB[22m
+[2m<DIR>/[22m[36mcomponents/create-user/ConfigureUserType.cjs                                      [39m[2mchunk[22m[2m │ size:  2.63 kB[22m
+[2m<DIR>/[22m[36mpages/UsersListPage.cjs                                                           [39m[2mchunk[22m[2m │ size:  2.90 kB[22m
+[2m<DIR>/[22m[36mcomponents/UserDeleteDialog.cjs                                                   [39m[2mchunk[22m[2m │ size:  2.98 kB[22m
+[2m<DIR>/[22m[36mcomponents/edit-user/QuickCopySection.cjs                                         [39m[2mchunk[22m[2m │ size:  2.98 kB[22m
+[2m<DIR>/[22m[36mindex.cjs                                                                         [39m[2mchunk[22m[2m │ size:  3.41 kB[22m
+[2m<DIR>/[22m[36mutils/renderSchemaField.cjs                                                       [39m[2mchunk[22m[2m │ size:  8.93 kB[22m
+[2m<DIR>/[22m[36mcomponents/UsersList.cjs                                                          [39m[2mchunk[22m[2m │ size:  9.39 kB[22m
+[2m<DIR>/[22m[36mpages/UserCreatePage.cjs                                                          [39m[2mchunk[22m[2m │ size: 15.42 kB[22m
+[2m<DIR>/[22m[36mpages/UserEditPage.cjs                                                            [39m[2mchunk[22m[2m │ size: 19.75 kB[22m
+[2m<DIR>/[22m[36mconfigure-organization-units/dist/components/OrganizationUnitTreePicker.cjs       [39m[2mchunk[22m[2m │ size: 21.34 kB[22m
+[2m<DIR>/[22m[36mpages/UserInvitePage.cjs                                                          [39m[2mchunk[22m[2m │ size: 30.60 kB[22m
+
+[32m✔[39m rolldown v1.0.0-beta.45 Finished in [32m47.60 ms[39m
+
+> nx run @thunderid/console:build  [existing outputs match the cache, left as is]
+
+[2m$ tsc -b && vite build[22m
+[36mvite v8.0.16 [32mbuilding client environment for production...[36m[39m
+[2Ktransforming...[33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugin `vite:worker`. See https://rolldown.rs/options/checks#plugintimings for more details.
+[39m
+[33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugin `vite:worker`. See https://rolldown.rs/options/checks#plugintimings for more details.
+[39m
+[33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugin `vite:worker`. See https://rolldown.rs/options/checks#plugintimings for more details.
+[39m
+[32m✓[39m 7606 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/[0m[32mindex.html                                             [39m[2m[1m    4.84 kB[0m[0m[2m │ gzip:   1.07 kB[0m
+[2mdist/[0m[2massets/[0m[32mcodicon-ngg6Pgfi.ttf                            [39m[2m[1m  121.97 kB[0m[0m
+[2mdist/[0m[2massets/[0m[32meditor.worker-Cn2oRESe.js                       [39m[2m[1m  279.94 kB[0m[0m
+[2mdist/[0m[2massets/[0m[32mjson.worker-BkJRGcCJ.js                         [39m[2m[1m  409.21 kB[0m[0m
+[2mdist/[0m[2massets/[0m[32mhtml.worker-BO6WuOEO.js                         [39m[2m[1m  719.57 kB[0m[0m
+[2mdist/[0m[2massets/[0m[32mcss.worker-CvXBzhp8.js                          [39m[2m[1m1,054.62 kB[0m[0m
+[2mdist/[0m[2massets/[0m[32mts.worker-B0J26iPs.js                           [39m[2m[1m6,895.04 kB[0m[0m
+[2mdist/[0m[2massets/[0m[35mvendor-oxygen-W4SEzVCm.css                      [39m[2m[1m    0.10 kB[0m[0m[2m │ gzip:   0.09 kB[0m
+[2mdist/[0m[2massets/[0m[35mLoginFlowPage-CYHuzK4Q.css                      [39m[2m[1m   30.90 kB[0m[0m[2m │ gzip:   4.70 kB[0m
+[2mdist/[0m[2massets/[0m[35meditor-D7lGpvI3.css                             [39m[2m[1m  145.99 kB[0m[0m[2m │ gzip:  22.61 kB[0m
+[2mdist/[0m[2massets/[0m[36magent-BD4sTa1k.js                               [39m[2m[1m    0.03 kB[0m[0m[2m │ gzip:   0.05 kB[0m
+[2mdist/[0m[2massets/[0m[36mflow-query-keys-DBZRTuFH.js                     [39m[2m[1m    0.04 kB[0m[0m[2m │ gzip:   0.06 kB[0m
+[2mdist/[0m[2massets/[0m[36magent-query-keys-DLZ0gc1g.js                    [39m[2m[1m    0.05 kB[0m[0m[2m │ gzip:   0.06 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-C9NhkDoY.js                                [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36men-US-DeVpPKv9.js                               [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mapplication-query-keys-kYA2t4Pw.js              [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.07 kB[0m
+[2mdist/[0m[2massets/[0m[36mauthenticators-BQLmer28.js                      [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.09 kB[0m
+[2mdist/[0m[2massets/[0m[36mtypescript-DGcYmmYw.js                          [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.09 kB[0m
+[2mdist/[0m[2massets/[0m[36mvc-query-keys-CGQMQZBN.js                       [39m[2m[1m    0.07 kB[0m[0m[2m │ gzip:   0.07 kB[0m
+[2mdist/[0m[2massets/[0m[36midentity-provider-DuVdxe53.js                   [39m[2m[1m    0.08 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mdesign-ui-constants-CZB00Yzu.js                 [39m[2m[1m    0.08 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mgroup-query-keys-IdK5-QDB.js                    [39m[2m[1m    0.08 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mrole-query-keys-Yf8CZDim.js                     [39m[2m[1m    0.08 kB[0m[0m[2m │ gzip:   0.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-Bx7a2bVp.js                                [39m[2m[1m    0.13 kB[0m[0m[2m │ gzip:   0.11 kB[0m
+[2mdist/[0m[2massets/[0m[36mvp-query-keys-BNUBpGf9.js                       [39m[2m[1m    0.13 kB[0m[0m[2m │ gzip:   0.11 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-CpPTapQz.js                                [39m[2m[1m    0.14 kB[0m[0m[2m │ gzip:   0.11 kB[0m
+[2mdist/[0m[2massets/[0m[36minvalidate-i18n-cache-CdqN2ejJ.js               [39m[2m[1m    0.14 kB[0m[0m[2m │ gzip:   0.12 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-DS6NPhQm2.js                               [39m[2m[1m    0.14 kB[0m[0m[2m │ gzip:   0.12 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-B2OxrfKI.js                                [39m[2m[1m    0.14 kB[0m[0m[2m │ gzip:   0.12 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-CLiVShEj.js                                [39m[2m[1m    0.15 kB[0m[0m[2m │ gzip:   0.12 kB[0m
+[2mdist/[0m[2massets/[0m[36mApplicationCreateContext-BTu0PgE2.js            [39m[2m[1m    0.15 kB[0m[0m[2m │ gzip:   0.14 kB[0m
+[2mdist/[0m[2massets/[0m[36mLayoutBuilderContext-BTu0PgE2.js                [39m[2m[1m    0.15 kB[0m[0m[2m │ gzip:   0.14 kB[0m
+[2mdist/[0m[2massets/[0m[36mThemeBuilderContext-BTu0PgE2.js                 [39m[2m[1m    0.15 kB[0m[0m[2m │ gzip:   0.14 kB[0m
+[2mdist/[0m[2massets/[0m[36mgetEnvFileName-C1ClIuV_.js                      [39m[2m[1m    0.18 kB[0m[0m[2m │ gzip:   0.15 kB[0m
+[2mdist/[0m[2massets/[0m[36mgroup-create-flow-C2dILHmW.js                   [39m[2m[1m    0.21 kB[0m[0m[2m │ gzip:   0.18 kB[0m
+[2mdist/[0m[2massets/[0m[36mflows-DKveHWDW.js                               [39m[2m[1m    0.21 kB[0m[0m[2m │ gzip:   0.15 kB[0m
+[2mdist/[0m[2massets/[0m[36magent-create-flow-DkupNq5f.js                   [39m[2m[1m    0.24 kB[0m[0m[2m │ gzip:   0.20 kB[0m
+[2mdist/[0m[2massets/[0m[36mrole-create-flow-beYgvaLl.js                    [39m[2m[1m    0.25 kB[0m[0m[2m │ gzip:   0.20 kB[0m
+[2mdist/[0m[2massets/[0m[36mPageLoadingAnimation-CVoCdtHm.js                [39m[2m[1m    0.28 kB[0m[0m[2m │ gzip:   0.23 kB[0m
+[2mdist/[0m[2massets/[0m[36mapplication-create-flow-_wAgvByl.js             [39m[2m[1m    0.28 kB[0m[0m[2m │ gzip:   0.19 kB[0m
+[2mdist/[0m[2massets/[0m[36museImportConfiguration-CIdyX88j.js              [39m[2m[1m    0.43 kB[0m[0m[2m │ gzip:   0.33 kB[0m
+[2mdist/[0m[2massets/[0m[36moauth-B2N3CBdA.js                               [39m[2m[1m    0.53 kB[0m[0m[2m │ gzip:   0.33 kB[0m
+[2mdist/[0m[2massets/[0m[36mUser-D68NHKAq.js                                [39m[2m[1m    0.55 kB[0m[0m[2m │ gzip:   0.34 kB[0m
+[2mdist/[0m[2massets/[0m[36museGetVerifiablePresentations-DxZ_NPT_.js       [39m[2m[1m    0.58 kB[0m[0m[2m │ gzip:   0.41 kB[0m
+[2mdist/[0m[2massets/[0m[36museIdentityProviders-CKOpV-H7.js                [39m[2m[1m    0.66 kB[0m[0m[2m │ gzip:   0.46 kB[0m
+[2mdist/[0m[2massets/[0m[36mjavascript-R3LOtEWQ.js                          [39m[2m[1m    0.67 kB[0m[0m[2m │ gzip:   0.40 kB[0m
+[2mdist/[0m[2massets/[0m[36museCreateFlow-DM5CXo8M.js                       [39m[2m[1m    0.68 kB[0m[0m[2m │ gzip:   0.48 kB[0m
+[2mdist/[0m[2massets/[0m[36mazcli-Bc_sGQ0U.js                               [39m[2m[1m    0.70 kB[0m[0m[2m │ gzip:   0.28 kB[0m
+[2mdist/[0m[2massets/[0m[36museGetGroups-BxzN8Xuy.js                        [39m[2m[1m    0.86 kB[0m[0m[2m │ gzip:   0.56 kB[0m
+[2mdist/[0m[2massets/[0m[36museGetAgents-BXQVS9dN.js                        [39m[2m[1m    0.91 kB[0m[0m[2m │ gzip:   0.59 kB[0m
+[2mdist/[0m[2massets/[0m[36museGetApplications-DVLVvu7t.js                  [39m[2m[1m    0.91 kB[0m[0m[2m │ gzip:   0.58 kB[0m
+[2mdist/[0m[2massets/[0m[36mini-sBoK_t0W.js                                 [39m[2m[1m    0.96 kB[0m[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/[0m[2massets/[0m[36museGetFlows-CAs9Cwo6.js                         [39m[2m[1m    0.97 kB[0m[0m[2m │ gzip:   0.62 kB[0m
+[2mdist/[0m[2massets/[0m[36museWelcomeClose-0st-VySc.js                     [39m[2m[1m    1.00 kB[0m[0m[2m │ gzip:   0.61 kB[0m
+[2mdist/[0m[2massets/[0m[36mUnsavedChangesBar-DLDtMsOZ.js                   [39m[2m[1m    1.01 kB[0m[0m[2m │ gzip:   0.55 kB[0m
+[2mdist/[0m[2massets/[0m[36mpreload-helper-CPXBLZH2.js                      [39m[2m[1m    1.20 kB[0m[0m[2m │ gzip:   0.68 kB[0m
+[2mdist/[0m[2massets/[0m[36mrolldown-runtime-CMxvf4Kt.js                    [39m[2m[1m    1.21 kB[0m[0m[2m │ gzip:   0.67 kB[0m
+[2mdist/[0m[2massets/[0m[36mworkers-1ESZsPAA.js                             [39m[2m[1m    1.22 kB[0m[0m[2m │ gzip:   0.57 kB[0m
+[2mdist/[0m[2massets/[0m[36mcsp-bTuwJoIa.js                                 [39m[2m[1m    1.27 kB[0m[0m[2m │ gzip:   0.48 kB[0m
+[2mdist/[0m[2massets/[0m[36mIntegrationsPage-COJLYKb1.js                    [39m[2m[1m    1.47 kB[0m[0m[2m │ gzip:   0.80 kB[0m
+[2mdist/[0m[2massets/[0m[36mpla-CopQ2nXW.js                                 [39m[2m[1m    1.54 kB[0m[0m[2m │ gzip:   0.60 kB[0m
+[2mdist/[0m[2massets/[0m[36mGradientBorderButton-CGMwjFUj.js                [39m[2m[1m    1.54 kB[0m[0m[2m │ gzip:   0.86 kB[0m
+[2mdist/[0m[2massets/[0m[36mscheme-BeGwcela.js                              [39m[2m[1m    1.62 kB[0m[0m[2m │ gzip:   0.77 kB[0m
+[2mdist/[0m[2massets/[0m[36mflow9-C5_-GSwl.js                               [39m[2m[1m    1.66 kB[0m[0m[2m │ gzip:   0.80 kB[0m
+[2mdist/[0m[2massets/[0m[36msb-CcwsVR0C.js                                  [39m[2m[1m    1.68 kB[0m[0m[2m │ gzip:   0.78 kB[0m
+[2mdist/[0m[2massets/[0m[36mbat-i0X4ZdIN.js                                 [39m[2m[1m    1.69 kB[0m[0m[2m │ gzip:   0.82 kB[0m
+[2mdist/[0m[2massets/[0m[36mdockerfile-DZFCIeNp.js                          [39m[2m[1m    1.72 kB[0m[0m[2m │ gzip:   0.63 kB[0m
+[2mdist/[0m[2massets/[0m[36mpascaligo-D-ptJ9y-.js                           [39m[2m[1m    1.85 kB[0m[0m[2m │ gzip:   0.86 kB[0m
+[2mdist/[0m[2massets/[0m[36mxml-DgC70jwo.js                                 [39m[2m[1m    1.92 kB[0m[0m[2m │ gzip:   0.73 kB[0m
+[2mdist/[0m[2massets/[0m[36mcameligo-DMUM7wLl.js                            [39m[2m[1m    1.97 kB[0m[0m[2m │ gzip:   0.91 kB[0m
+[2mdist/[0m[2massets/[0m[36mlua-CsQS60Ue.js                                 [39m[2m[1m    1.98 kB[0m[0m[2m │ gzip:   0.88 kB[0m
+[2mdist/[0m[2massets/[0m[36mobjective-c-FvmIjYaQ.js                         [39m[2m[1m    2.10 kB[0m[0m[2m │ gzip:   1.01 kB[0m
+[2mdist/[0m[2massets/[0m[36mgraphql-fmXr3nnJ.js                             [39m[2m[1m    2.11 kB[0m[0m[2m │ gzip:   0.99 kB[0m
+[2mdist/[0m[2massets/[0m[36msparql-D_Lu-MrJ.js                              [39m[2m[1m    2.21 kB[0m[0m[2m │ gzip:   1.10 kB[0m
+[2mdist/[0m[2massets/[0m[36mlexon-CfSJPG6W.js                               [39m[2m[1m    2.28 kB[0m[0m[2m │ gzip:   0.88 kB[0m
+[2mdist/[0m[2massets/[0m[36mmips-CIPQ_RoX.js                                [39m[2m[1m    2.32 kB[0m[0m[2m │ gzip:   1.02 kB[0m
+[2mdist/[0m[2massets/[0m[36mgo-C-y9NEjX.js                                  [39m[2m[1m    2.35 kB[0m[0m[2m │ gzip:   1.11 kB[0m
+[2mdist/[0m[2massets/[0m[36mbicep-B5-_aFwp.js                               [39m[2m[1m    2.36 kB[0m[0m[2m │ gzip:   0.91 kB[0m
+[2mdist/[0m[2massets/[0m[36mBuilderStaticPanel-bkfAaYf4.js                  [39m[2m[1m    2.42 kB[0m[0m[2m │ gzip:   0.97 kB[0m
+[2mdist/[0m[2massets/[0m[36msophia-CRfGWb83.js                              [39m[2m[1m    2.48 kB[0m[0m[2m │ gzip:   1.15 kB[0m
+[2mdist/[0m[2massets/[0m[36mm3-D-oSqn_W.js                                  [39m[2m[1m    2.52 kB[0m[0m[2m │ gzip:   1.29 kB[0m
+[2mdist/[0m[2massets/[0m[36mtypespec-B8J7ngcE.js                            [39m[2m[1m    2.62 kB[0m[0m[2m │ gzip:   1.01 kB[0m
+[2mdist/[0m[2massets/[0m[36mpascal-DrH0SRf2.js                              [39m[2m[1m    2.63 kB[0m[0m[2m │ gzip:   1.35 kB[0m
+[2mdist/[0m[2massets/[0m[36mfsharp-C8Ef5oNN.js                              [39m[2m[1m    2.65 kB[0m[0m[2m │ gzip:   1.27 kB[0m
+[2mdist/[0m[2massets/[0m[36mqsharp-DkqhCAOL.js                              [39m[2m[1m    2.72 kB[0m[0m[2m │ gzip:   1.37 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-C1_-3XjN.js                                [39m[2m[1m    2.75 kB[0m[0m[2m │ gzip:   1.06 kB[0m
+[2mdist/[0m[2massets/[0m[36mshell-CC2rA5mh.js                               [39m[2m[1m    2.81 kB[0m[0m[2m │ gzip:   1.16 kB[0m
+[2mdist/[0m[2massets/[0m[36mr-BwWrilGY.js                                   [39m[2m[1m    2.83 kB[0m[0m[2m │ gzip:   1.25 kB[0m
+[2mdist/[0m[2massets/[0m[36mjava-BEtHBSE6.js                                [39m[2m[1m    2.90 kB[0m[0m[2m │ gzip:   1.34 kB[0m
+[2mdist/[0m[2massets/[0m[36mcssMode-CZfc6ETs.js                             [39m[2m[1m    2.96 kB[0m[0m[2m │ gzip:   1.13 kB[0m
+[2mdist/[0m[2massets/[0m[36mClaimsEditor-BbRq2Q7H.js                        [39m[2m[1m    3.03 kB[0m[0m[2m │ gzip:   1.46 kB[0m
+[2mdist/[0m[2massets/[0m[36mredis-ClamHrr6.js                               [39m[2m[1m    3.03 kB[0m[0m[2m │ gzip:   1.41 kB[0m
+[2mdist/[0m[2massets/[0m[36mkotlin-BOotOW0E.js                              [39m[2m[1m    3.04 kB[0m[0m[2m │ gzip:   1.41 kB[0m
+[2mdist/[0m[2massets/[0m[36mcypher-CVaqCwHa.js                              [39m[2m[1m    3.04 kB[0m[0m[2m │ gzip:   1.40 kB[0m
+[2mdist/[0m[2massets/[0m[36mpowershell-DmHpPYUd.js                          [39m[2m[1m    3.05 kB[0m[0m[2m │ gzip:   1.33 kB[0m
+[2mdist/[0m[2massets/[0m[36mtcl-DISqw1ZD.js                                 [39m[2m[1m    3.27 kB[0m[0m[2m │ gzip:   1.32 kB[0m
+[2mdist/[0m[2massets/[0m[36mliquid-BRqL_RIL.js                              [39m[2m[1m    3.34 kB[0m[0m[2m │ gzip:   1.42 kB[0m
+[2mdist/[0m[2massets/[0m[36mRoleDeleteDialog-Bfk_UNtK.js                    [39m[2m[1m    3.34 kB[0m[0m[2m │ gzip:   1.69 kB[0m
+[2mdist/[0m[2massets/[0m[36mGroupDeleteDialog-Dd1UntBs.js                   [39m[2m[1m    3.35 kB[0m[0m[2m │ gzip:   1.70 kB[0m
+[2mdist/[0m[2massets/[0m[36mcoffee-Ba7i2nA0.js                              [39m[2m[1m    3.36 kB[0m[0m[2m │ gzip:   1.24 kB[0m
+[2mdist/[0m[2massets/[0m[36mhtmlMode-3yeW0Xm4.js                            [39m[2m[1m    3.42 kB[0m[0m[2m │ gzip:   1.25 kB[0m
+[2mdist/[0m[2massets/[0m[36mhcl-CpzslTdj.js                                 [39m[2m[1m    3.44 kB[0m[0m[2m │ gzip:   1.45 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiableCredentialDeleteDialog-DHyAzUWk.js    [39m[2m[1m    3.45 kB[0m[0m[2m │ gzip:   1.72 kB[0m
+[2mdist/[0m[2massets/[0m[36mpython-C1l-wDHE.js                              [39m[2m[1m    3.45 kB[0m[0m[2m │ gzip:   1.42 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiablePresentationDeleteDialog-4GhLiNNo.js  [39m[2m[1m    3.46 kB[0m[0m[2m │ gzip:   1.72 kB[0m
+[2mdist/[0m[2massets/[0m[36mapex-BWPQTe0t.js                                [39m[2m[1m    3.46 kB[0m[0m[2m │ gzip:   1.70 kB[0m
+[2mdist/[0m[2massets/[0m[36myaml-DsGPEbfm.js                                [39m[2m[1m    3.54 kB[0m[0m[2m │ gzip:   1.29 kB[0m
+[2mdist/[0m[2massets/[0m[36mConfigCard-D7IhglAt.js                          [39m[2m[1m    3.54 kB[0m[0m[2m │ gzip:   1.52 kB[0m
+[2mdist/[0m[2massets/[0m[36mmarkdown-Cimd5fb3.js                            [39m[2m[1m    3.63 kB[0m[0m[2m │ gzip:   1.34 kB[0m
+[2mdist/[0m[2massets/[0m[36mrust-DdL9SqIa.js                                [39m[2m[1m    3.66 kB[0m[0m[2m │ gzip:   1.80 kB[0m
+[2mdist/[0m[2massets/[0m[36mAgentDeleteDialog-BIVRsism.js                   [39m[2m[1m    3.68 kB[0m[0m[2m │ gzip:   1.88 kB[0m
+[2mdist/[0m[2massets/[0m[36mrestructuredtext-BYgofb2h.js                    [39m[2m[1m    3.74 kB[0m[0m[2m │ gzip:   1.32 kB[0m
+[2mdist/[0m[2massets/[0m[36mless-B9JPFI3C.js                                [39m[2m[1m    3.74 kB[0m[0m[2m │ gzip:   1.36 kB[0m
+[2mdist/[0m[2massets/[0m[36mThemeThumbnail-B6ubimn4.js                      [39m[2m[1m    3.77 kB[0m[0m[2m │ gzip:   1.60 kB[0m
+[2mdist/[0m[2massets/[0m[36mdart-onAF5SnQ.js                                [39m[2m[1m    3.93 kB[0m[0m[2m │ gzip:   1.60 kB[0m
+[2mdist/[0m[2massets/[0m[36mgetTemplateMetadata-DA4gV8Au.js                 [39m[2m[1m    3.99 kB[0m[0m[2m │ gzip:   1.96 kB[0m
+[2mdist/[0m[2massets/[0m[36mcsharp-BKxtCVv1.js                              [39m[2m[1m    4.11 kB[0m[0m[2m │ gzip:   1.66 kB[0m
+[2mdist/[0m[2massets/[0m[36mmsdax-DauUninz.js                               [39m[2m[1m    4.27 kB[0m[0m[2m │ gzip:   1.87 kB[0m
+[2mdist/[0m[2massets/[0m[36mmdx-Wg_c6OqP.js                                 [39m[2m[1m    4.32 kB[0m[0m[2m │ gzip:   1.21 kB[0m
+[2mdist/[0m[2massets/[0m[36mcss-DIMkf-bt.js                                 [39m[2m[1m    4.36 kB[0m[0m[2m │ gzip:   1.33 kB[0m
+[2mdist/[0m[2massets/[0m[36mpug-Z5eAx3Zn.js                                 [39m[2m[1m    4.46 kB[0m[0m[2m │ gzip:   1.60 kB[0m
+[2mdist/[0m[2massets/[0m[36mswift-Bxkupp3x.js                               [39m[2m[1m    4.48 kB[0m[0m[2m │ gzip:   1.99 kB[0m
+[2mdist/[0m[2massets/[0m[36mhtml-Bptefv9n.js                                [39m[2m[1m    4.51 kB[0m[0m[2m │ gzip:   1.15 kB[0m
+[2mdist/[0m[2massets/[0m[36mecl-D05T4iGw.js                                 [39m[2m[1m    4.62 kB[0m[0m[2m │ gzip:   2.19 kB[0m
+[2mdist/[0m[2massets/[0m[36mtypescript-Ce6vmOXz.js                          [39m[2m[1m    4.65 kB[0m[0m[2m │ gzip:   1.92 kB[0m
+[2mdist/[0m[2massets/[0m[36mClaimsEditor-CrgvOBcG.js                        [39m[2m[1m    4.68 kB[0m[0m[2m │ gzip:   2.11 kB[0m
+[2mdist/[0m[2massets/[0m[36mcpp-C7h46wYY.js                                 [39m[2m[1m    4.74 kB[0m[0m[2m │ gzip:   2.02 kB[0m
+[2mdist/[0m[2massets/[0m[36mmonaco.contribution-BK8Kr0_p.js                 [39m[2m[1m    4.74 kB[0m[0m[2m │ gzip:   1.62 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-BH4HQStg.js                                [39m[2m[1m    4.98 kB[0m[0m[2m │ gzip:   2.18 kB[0m
+[2mdist/[0m[2massets/[0m[36mvb-DV3o63ZY.js                                  [39m[2m[1m    5.30 kB[0m[0m[2m │ gzip:   2.01 kB[0m
+[2mdist/[0m[2massets/[0m[36mtwig-De2hgUGE.js                                [39m[2m[1m    5.78 kB[0m[0m[2m │ gzip:   1.48 kB[0m
+[2mdist/[0m[2massets/[0m[36mImportConfigurationValidatePage-YIcecuHC.js     [39m[2m[1m    5.85 kB[0m[0m[2m │ gzip:   2.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mscss-gp-XZpBa.js                                [39m[2m[1m    6.26 kB[0m[0m[2m │ gzip:   1.70 kB[0m
+[2mdist/[0m[2massets/[0m[36museLogger-DgvtF-BW-CNR9g72n.js                  [39m[2m[1m    6.26 kB[0m[0m[2m │ gzip:   2.47 kB[0m
+[2mdist/[0m[2massets/[0m[36mhandlebars-CFK4Fkvb.js                          [39m[2m[1m    6.28 kB[0m[0m[2m │ gzip:   1.37 kB[0m
+[2mdist/[0m[2massets/[0m[36mjulia-Bri6UV-V.js                               [39m[2m[1m    6.50 kB[0m[0m[2m │ gzip:   2.64 kB[0m
+[2mdist/[0m[2massets/[0m[36msystemverilog-Bz4Y3fRF.js                       [39m[2m[1m    6.85 kB[0m[0m[2m │ gzip:   2.72 kB[0m
+[2mdist/[0m[2massets/[0m[36mst-DbInun42.js                                  [39m[2m[1m    6.94 kB[0m[0m[2m │ gzip:   2.24 kB[0m
+[2mdist/[0m[2massets/[0m[36mGroupsListPage-ChEHXRBn.js                      [39m[2m[1m    7.06 kB[0m[0m[2m │ gzip:   3.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mscala-DHpiXF5c.js                               [39m[2m[1m    7.11 kB[0m[0m[2m │ gzip:   2.07 kB[0m
+[2mdist/[0m[2massets/[0m[36mApplicationsListPage-CzrLS5hB.js                [39m[2m[1m    7.13 kB[0m[0m[2m │ gzip:   3.15 kB[0m
+[2mdist/[0m[2massets/[0m[36mI18nTextInput-bKvR3vuq.js                       [39m[2m[1m    7.13 kB[0m[0m[2m │ gzip:   2.66 kB[0m
+[2mdist/[0m[2massets/[0m[36mwgsl-DpFanUEy.js                                [39m[2m[1m    7.18 kB[0m[0m[2m │ gzip:   2.73 kB[0m
+[2mdist/[0m[2massets/[0m[36mperl-oz_6vUea.js                                [39m[2m[1m    7.35 kB[0m[0m[2m │ gzip:   3.10 kB[0m
+[2mdist/[0m[2massets/[0m[36mpostiats-43DmfD33.js                            [39m[2m[1m    7.36 kB[0m[0m[2m │ gzip:   2.39 kB[0m
+[2mdist/[0m[2massets/[0m[36mCreateGroupPage-BN3lWWzJ.js                     [39m[2m[1m    7.57 kB[0m[0m[2m │ gzip:   3.16 kB[0m
+[2mdist/[0m[2massets/[0m[36mRolesListPage-D1T-Gy5o.js                       [39m[2m[1m    7.74 kB[0m[0m[2m │ gzip:   3.43 kB[0m
+[2mdist/[0m[2massets/[0m[36mphp-nr791fC2.js                                 [39m[2m[1m    7.74 kB[0m[0m[2m │ gzip:   2.03 kB[0m
+[2mdist/[0m[2massets/[0m[36mAgentsListPage-Cxwsiq70.js                      [39m[2m[1m    7.90 kB[0m[0m[2m │ gzip:   3.44 kB[0m
+[2mdist/[0m[2massets/[0m[36mrazor-DHXSTB-g.js                               [39m[2m[1m    8.11 kB[0m[0m[2m │ gzip:   2.05 kB[0m
+[2mdist/[0m[2massets/[0m[36mclojure-Cm7r79vr.js                             [39m[2m[1m    8.21 kB[0m[0m[2m │ gzip:   3.49 kB[0m
+[2mdist/[0m[2massets/[0m[36mruby-DezsRK8O.js                                [39m[2m[1m    8.21 kB[0m[0m[2m │ gzip:   2.55 kB[0m
+[2mdist/[0m[2massets/[0m[36mImportConfigurationUploadPage-Con1VXxY.js       [39m[2m[1m    8.30 kB[0m[0m[2m │ gzip:   2.88 kB[0m
+[2mdist/[0m[2massets/[0m[36msql-NEE52Syq.js                                 [39m[2m[1m    8.84 kB[0m[0m[2m │ gzip:   3.73 kB[0m
+[2mdist/[0m[2massets/[0m[36mprotobuf-C531GsRP.js                            [39m[2m[1m    8.89 kB[0m[0m[2m │ gzip:   2.04 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-tcLuSVAF.js                                [39m[2m[1m    9.19 kB[0m[0m[2m │ gzip:   4.26 kB[0m
+[2mdist/[0m[2massets/[0m[36mFlowsListPage-Aime6fMF.js                       [39m[2m[1m    9.20 kB[0m[0m[2m │ gzip:   4.04 kB[0m
+[2mdist/[0m[2massets/[0m[36mCreateRolePage-ClUc0NDI.js                      [39m[2m[1m    9.28 kB[0m[0m[2m │ gzip:   3.72 kB[0m
+[2mdist/[0m[2massets/[0m[36mTemplateVariableDisplay-hRB2e7J7.js             [39m[2m[1m    9.30 kB[0m[0m[2m │ gzip:   3.92 kB[0m
+[2mdist/[0m[2massets/[0m[36mmysql-SOo6toE5.js                               [39m[2m[1m    9.65 kB[0m[0m[2m │ gzip:   3.98 kB[0m
+[2mdist/[0m[2massets/[0m[36melixir-6RTg0lbw.js                              [39m[2m[1m   10.11 kB[0m[0m[2m │ gzip:   2.50 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiableCredentialsListPage-Bo3VtSJR.js       [39m[2m[1m   10.16 kB[0m[0m[2m │ gzip:   4.22 kB[0m
+[2mdist/[0m[2massets/[0m[36mredshift-DT7zqm-g.js                            [39m[2m[1m   10.33 kB[0m[0m[2m │ gzip:   4.24 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiableCredentialCreatePage-BUPWFuN5.js      [39m[2m[1m   10.65 kB[0m[0m[2m │ gzip:   4.54 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiablePresentationCreatePage-CoUdMtpE.js    [39m[2m[1m   10.82 kB[0m[0m[2m │ gzip:   4.72 kB[0m
+[2mdist/[0m[2massets/[0m[36mabap-08VXUWAP.js                                [39m[2m[1m   11.69 kB[0m[0m[2m │ gzip:   5.15 kB[0m
+[2mdist/[0m[2massets/[0m[36mpgsql-DTj74zXo.js                               [39m[2m[1m   11.91 kB[0m[0m[2m │ gzip:   4.42 kB[0m
+[2mdist/[0m[2massets/[0m[36mThemeCreatePage-DCf7auyz.js                     [39m[2m[1m   12.00 kB[0m[0m[2m │ gzip:   4.99 kB[0m
+[2mdist/[0m[2massets/[0m[36mjsonMode-DVsX3-rL.js                            [39m[2m[1m   12.21 kB[0m[0m[2m │ gzip:   4.46 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiablePresentationsListPage-Cb_GcnLI.js     [39m[2m[1m   12.52 kB[0m[0m[2m │ gzip:   5.11 kB[0m
+[2mdist/[0m[2massets/[0m[36mWelcomePage-8BMuxaQg.js                         [39m[2m[1m   12.78 kB[0m[0m[2m │ gzip:   4.68 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiableCredentialEditPage-DODvwfpb.js        [39m[2m[1m   13.58 kB[0m[0m[2m │ gzip:   5.70 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-BFFGpPIk.js                                [39m[2m[1m   13.99 kB[0m[0m[2m │ gzip:   4.78 kB[0m
+[2mdist/[0m[2massets/[0m[36mDesignPage-BAaWw2sZ.js                          [39m[2m[1m   14.48 kB[0m[0m[2m │ gzip:   5.06 kB[0m
+[2mdist/[0m[2massets/[0m[36museQuery-DYWE3pa_.js                            [39m[2m[1m   14.80 kB[0m[0m[2m │ gzip:   4.90 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-kMlEwXVb.js                                [39m[2m[1m   15.13 kB[0m[0m[2m │ gzip:   5.46 kB[0m
+[2mdist/[0m[2massets/[0m[36mpowerquery-D3hlyOfw.js                          [39m[2m[1m   15.34 kB[0m[0m[2m │ gzip:   4.73 kB[0m
+[2mdist/[0m[2massets/[0m[36mFlowCreatePage-DoELX3OU.js                      [39m[2m[1m   15.43 kB[0m[0m[2m │ gzip:   5.33 kB[0m
+[2mdist/[0m[2massets/[0m[36mfreemarker2-Lf8lpk-2.js                         [39m[2m[1m   15.54 kB[0m[0m[2m │ gzip:   3.98 kB[0m
+[2mdist/[0m[2massets/[0m[36msolidity-BEEn4gHE.js                            [39m[2m[1m   15.99 kB[0m[0m[2m │ gzip:   4.39 kB[0m
+[2mdist/[0m[2massets/[0m[36mVerifiablePresentationEditPage-UJUEleQQ.js      [39m[2m[1m   16.49 kB[0m[0m[2m │ gzip:   6.78 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-mirMQsjX.js                                [39m[2m[1m   16.74 kB[0m[0m[2m │ gzip:   5.96 kB[0m
+[2mdist/[0m[2massets/[0m[36mAgentCreatePage-C_lq3_2l.js                     [39m[2m[1m   17.90 kB[0m[0m[2m │ gzip:   6.93 kB[0m
+[2mdist/[0m[2massets/[0m[36mtsMode-V8tvbKey.js                              [39m[2m[1m   21.88 kB[0m[0m[2m │ gzip:   6.17 kB[0m
+[2mdist/[0m[2massets/[0m[36mGatePreview-d5UdvIex.js                         [39m[2m[1m   21.91 kB[0m[0m[2m │ gzip:   8.36 kB[0m
+[2mdist/[0m[2massets/[0m[36mImportConfigurationSummaryPage-Chnd8UDL.js      [39m[2m[1m   23.53 kB[0m[0m[2m │ gzip:   5.20 kB[0m
+[2mdist/[0m[2massets/[0m[36mpurify.es-C0DBpM5B.js                           [39m[2m[1m   26.08 kB[0m[0m[2m │ gzip:  10.18 kB[0m
+[2mdist/[0m[2massets/[0m[36mCreateProjectPage-BGWmfYff.js                   [39m[2m[1m   26.85 kB[0m[0m[2m │ gzip:   9.44 kB[0m
+[2mdist/[0m[2massets/[0m[36mlspLanguageFeatures-BebUjwT_.js                 [39m[2m[1m   28.25 kB[0m[0m[2m │ gzip:   7.18 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist--dL81tic.js                                [39m[2m[1m   29.35 kB[0m[0m[2m │ gzip:   8.86 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-emotion-BJbDtNae.js                      [39m[2m[1m   35.30 kB[0m[0m[2m │ gzip:  13.90 kB[0m
+[2mdist/[0m[2massets/[0m[36mGroupEditPage-BSZWsV-1.js                       [39m[2m[1m   36.39 kB[0m[0m[2m │ gzip:  11.90 kB[0m
+[2mdist/[0m[2massets/[0m[36mExportPage-Dk288zjf.js                          [39m[2m[1m   40.18 kB[0m[0m[2m │ gzip:  10.18 kB[0m
+[2mdist/[0m[2massets/[0m[36mchunk-4N6VE7H7--bPOxL5U.js                      [39m[2m[1m   41.10 kB[0m[0m[2m │ gzip:  14.59 kB[0m
+[2mdist/[0m[2massets/[0m[36mThemeBuilderPage-Bx6cX9L4.js                    [39m[2m[1m   41.42 kB[0m[0m[2m │ gzip:  13.84 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-DbHJQx5i.js                                [39m[2m[1m   45.49 kB[0m[0m[2m │ gzip:  12.18 kB[0m
+[2mdist/[0m[2massets/[0m[36moauth2Rules-DL9CCmTj.js                         [39m[2m[1m   47.06 kB[0m[0m[2m │ gzip:  14.65 kB[0m
+[2mdist/[0m[2massets/[0m[36mgetInitials-BpS93xXW.js                         [39m[2m[1m   49.60 kB[0m[0m[2m │ gzip:  15.10 kB[0m
+[2mdist/[0m[2massets/[0m[36mRoleEditPage-BwFW6rW2.js                        [39m[2m[1m   50.03 kB[0m[0m[2m │ gzip:  15.92 kB[0m
+[2mdist/[0m[2massets/[0m[36mHomePage-CKJj0Kgy.js                            [39m[2m[1m   51.05 kB[0m[0m[2m │ gzip:  18.35 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-i18n-CV5imxpN.js                         [39m[2m[1m   53.19 kB[0m[0m[2m │ gzip:  17.66 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-DhVKtZ5W.js                                [39m[2m[1m   57.30 kB[0m[0m[2m │ gzip:  14.10 kB[0m
+[2mdist/[0m[2massets/[0m[36mLayoutBuilderPage-C9QcRu0e.js                   [39m[2m[1m   60.71 kB[0m[0m[2m │ gzip:  19.18 kB[0m
+[2mdist/[0m[2massets/[0m[36mAgentEditPage-DCfFtjCe.js                       [39m[2m[1m   61.18 kB[0m[0m[2m │ gzip:  21.76 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-Bptj23-y.js                                [39m[2m[1m   67.30 kB[0m[0m[2m │ gzip:  17.42 kB[0m
+[2mdist/[0m[2massets/[0m[36mApplicationCreatePage-fNCDvv1A.js               [39m[2m[1m   67.31 kB[0m[0m[2m │ gzip:  21.71 kB[0m
+[2mdist/[0m[2massets/[0m[36mtemplate-constants-DQz-ABBx.js                  [39m[2m[1m   67.39 kB[0m[0m[2m │ gzip:  15.65 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-DM-aM7DQ.js                                [39m[2m[1m   74.61 kB[0m[0m[2m │ gzip:  22.08 kB[0m
+[2mdist/[0m[2massets/[0m[36mschemas-DAq7cNL2.js                             [39m[2m[1m   91.46 kB[0m[0m[2m │ gzip:  26.93 kB[0m
+[2mdist/[0m[2massets/[0m[36mmonaco-setup-BaHVsarV.js                        [39m[2m[1m   95.95 kB[0m[0m[2m │ gzip:  22.58 kB[0m
+[2mdist/[0m[2massets/[0m[36mgetConfigFileName-ZpelDm2a.js                   [39m[2m[1m  102.56 kB[0m[0m[2m │ gzip:  31.54 kB[0m
+[2mdist/[0m[2massets/[0m[36mproxy-BpGafzdD.js                               [39m[2m[1m  120.53 kB[0m[0m[2m │ gzip:  39.03 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-DnEx2jOn.js                                [39m[2m[1m  131.72 kB[0m[0m[2m │ gzip:  33.38 kB[0m
+[2mdist/[0m[2massets/[0m[36mdist-zXwAU4KP.js                                [39m[2m[1m  136.56 kB[0m[0m[2m │ gzip:  34.23 kB[0m
+[2mdist/[0m[2massets/[0m[36mresolveStaticResourcePath-CkVvBLP5.js           [39m[2m[1m  151.92 kB[0m[0m[2m │ gzip:  13.40 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-react-BRrCN599.js                        [39m[2m[1m  178.53 kB[0m[0m[2m │ gzip:  56.39 kB[0m
+[2mdist/[0m[2massets/[0m[36men-US-DiRsfKGS-CdFpUr3R.js                      [39m[2m[1m  187.32 kB[0m[0m[2m │ gzip:  40.68 kB[0m
+[2mdist/[0m[2massets/[0m[36mindex-C0G4Pr0g.js                               [39m[2m[1m  217.15 kB[0m[0m[2m │ gzip:  53.49 kB[0m
+[2mdist/[0m[2massets/[0m[36mResourceAvatar-BaWxNqpA.js                      [39m[2m[1m  220.74 kB[0m[0m[2m │ gzip:  32.02 kB[0m
+[2mdist/[0m[2massets/[0m[36museThunderID-Bvz8PnCN.js                        [39m[2m[1m  267.13 kB[0m[0m[2m │ gzip:  67.78 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-mui-x-Cf-cIy3R.js                        [39m[2m[1m  368.95 kB[0m[0m[2m │ gzip: 108.85 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-mui-DfBexhDa.js                          [39m[2m[1m  411.81 kB[0m[0m[2m │ gzip: 118.93 kB[0m
+[2mdist/[0m[2massets/[0m[36mApplicationEditPage-DJK9ziiM.js                 [39m[33m[1m  715.33 kB[0m[39m[2m │ gzip: 257.87 kB[0m
+[2mdist/[0m[2massets/[0m[36mvendor-oxygen-DFNgTxPQ.js                       [39m[33m[1m1,080.49 kB[0m[39m[2m │ gzip: 426.93 kB[0m
+[2mdist/[0m[2massets/[0m[36mLoginFlowPage-B-lTpL11.js                       [39m[33m[1m2,401.37 kB[0m[39m[2m │ gzip: 739.29 kB[0m
+[2mdist/[0m[2massets/[0m[36meditor.api2-DPcBf-di.js                         [39m[33m[1m3,626.87 kB[0m[39m[2m │ gzip: 926.78 kB[0m
+
+[33m[33m[PLUGIN_TIMINGS] [0mYour build spent significant time in plugins. Here is a breakdown:
+  - prismjs-inject-core (45%)
+  - vite-plugin-svgr (43%)
+  - @rolldown/plugin-babel (11%)
+See https://rolldown.rs/options/checks#plugintimings for more details.
+[39m
+[33m[plugin builtin:vite-reporter] [33m[1m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[0m[33m[39m
+[32m✓ built in 18.72s[39m
+
+
+
+ NX   Successfully ran target build for 21 projects and 4 tasks they depend on
+
+Nx read the output from the cache instead of running the command for 25 out of 25 tasks.
+
+Starting frontend applications in the background...
+================================================================
+Running consent server...
+=== Starting consent server ===
+Consent server is ready
+Consent server started (PID: 13013)
+=== Ensuring server certificates exist ===
+Certificates (server) already exist in target/out/.cert.
+Certificates (server) already exist in backend/cmd/server/config/certs.
+Certificates (signing) already exist in target/out/.cert.
+Certificates (signing) already exist in backend/cmd/server/config/certs.
+=== Ensuring sample app certificates exist ===
+Certificates (server) already exist in target/out/.cert.
+Certificates (server) already exist in samples/apps/react-vanilla-sample.
+Certificates (server) already exist in target/out/.cert.
+Certificates (server) already exist in samples/apps/react-api-based-sample.
+=== Ensuring crypto key file exists in the distribution ===
+Default crypto key file already present in backend/cmd/server/config/certs/crypto.key. Skipping generation.
+================================================================
+Initializing databases...
+================================================================
+Initializing SQLite databases...
+ - Creating configdb.db using backend/dbscripts/configdb/sqlite.sql
+time=2026-06-23T01:53:06.684+05:30 level=INFO msg="Config file loaded" file=repository/conf/deployment.yaml
+time=2026-06-23T01:53:06.687+05:30 level=INFO msg="OpenFGC API Server is started" address=localhost:9090
+time=2026-06-23T01:53:06.689+05:30 level=ERROR msg="Failed to start server" error="listen tcp 127.0.0.1:9090: bind: address already in use"
+wal
+ - Creating runtimedb.db using backend/dbscripts/runtimedb/sqlite.sql
+wal
+ - Creating userdb.db using backend/dbscripts/userdb/sqlite.sql
+wal
+SQLite database initialization complete.
+================================================================
+Scope: 2 of 45 workspace projects
+frontend/apps/console dev$ vite
+frontend/apps/gate dev$ vite
+=== Starting backend on https://localhost:8090 ===
+⚙️  Running initial data setup...
+
+[INFO] Waiting for ThunderID server to be ready...
+[WAITING] Attempt 1/30 - Server not ready yet, retrying in 2s...
+frontend/apps/gate dev:   VITE v8.0.16  ready in 496 ms
+frontend/apps/gate dev:   ➜  Local:   https://localhost:5190/gate
+frontend/apps/console dev:   VITE v8.0.16  ready in 513 ms
+frontend/apps/console dev:   ➜  Local:   https://localhost:5191/console
+time=2026-06-23T01:53:08.170+05:30 level=WARN msg="Console application directory not found" directory=/Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/apps/console
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="============================================================" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="|       WARNING: SECURITY ENFORCEMENT DISABLED             |" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="|                                                          |" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="|        SKIP_SECURITY is set to 'true'            |" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="|  This is NOT RECOMMENDED for production environments!    |" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="| Endpoints accessible without auth, but tokens processed  |" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="|                                                          |" component=SecurityService
+time=2026-06-23T01:53:08.171+05:30 level=WARN msg="============================================================" component=SecurityService
+time=2026-06-23T01:53:08.173+05:30 level=INFO msg="ThunderID Server URL" url=https://23cd-2402-4000-b241-8610-5534-535-ea19-c46.ngrok-free.app
+time=2026-06-23T01:53:08.173+05:30 level=INFO msg="ThunderID Console URL" url=https://23cd-2402-4000-b241-8610-5534-535-ea19-c46.ngrok-free.app/console
+time=2026-06-23T01:53:08.173+05:30 level=INFO msg="ThunderID Server started" startup_time=24.41975ms
+time=2026-06-23T01:53:09.033+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] GET /health/readiness HTTP/1.1 200 156 0 e87fa590-8918-4ca7-afcd-aac24ce7a65a" trace_id=e87fa590-8918-4ca7-afcd-aac24ce7a65a
+✓ Server is ready!
+
+[0;34m[INFO][0m Creating default ThunderID resources...
+
+[0;34m[INFO][0m Creating default organization unit...
+time=2026-06-23T01:53:09.101+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /organization-units HTTP/1.1 201 248 0 b73b7420-ac87-45a1-a33c-83c6a06a53c9" trace_id=b73b7420-ac87-45a1-a33c-83c6a06a53c9
+[0;32m[SUCCESS][0m ✓ Organization unit created successfully
+[0;34m[INFO][0m Default OU ID: 019ef100-4c2d-77f0-87f4-0a4bf1dabb97
+
+[0;34m[INFO][0m Creating default user type (person)...
+time=2026-06-23T01:53:09.137+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /user-types HTTP/1.1 201 1013 2 bdc5a15d-2415-4a3f-bda7-2f98ea6a6b82" trace_id=bdc5a15d-2415-4a3f-bda7-2f98ea6a6b82
+[0;32m[SUCCESS][0m ✓ User type created successfully
+
+[0;34m[INFO][0m Creating default agent type...
+time=2026-06-23T01:53:09.156+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /agent-types HTTP/1.1 201 542 1 c75ff3d5-9c4f-4b4b-8908-78605a890c8d" trace_id=c75ff3d5-9c4f-4b4b-8908-78605a890c8d
+[0;32m[SUCCESS][0m ✓ Agent type created successfully
+
+[1;33m[WARNING][0m ⚠ Using default admin credentials (admin/admin). Set ADMIN_USERNAME and ADMIN_PASSWORD or use --admin-username/--admin-password to override.
+[0;34m[INFO][0m Creating admin user...
+time=2026-06-23T01:53:09.259+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /users HTTP/1.1 201 341 86 7ba68b7e-f4fc-4cfb-93ac-45656d2ab32a" trace_id=7ba68b7e-f4fc-4cfb-93ac-45656d2ab32a
+[0;32m[SUCCESS][0m ✓ Admin user created successfully
+[0;34m[INFO][0m Username: admin
+[0;34m[INFO][0m Admin user ID: 019ef100-4c74-738c-a2be-911fbf46c856
+
+[0;34m[INFO][0m Creating system resource server...
+time=2026-06-23T01:53:09.283+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers HTTP/1.1 201 252 0 deb74afb-9b10-4227-bd1c-dd005158eb7d" trace_id=deb74afb-9b10-4227-bd1c-dd005158eb7d
+[0;32m[SUCCESS][0m ✓ Resource server created successfully
+[0;34m[INFO][0m System resource server ID: 019ef100-4ce3-792f-9d1b-6fdd236cf343
+
+[0;34m[INFO][0m Creating 'system' resource under the system resource server...
+time=2026-06-23T01:53:09.310+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources HTTP/1.1 201 134 1 1056a9a8-0a8d-4751-9926-e7ede4470386" trace_id=1056a9a8-0a8d-4751-9926-e7ede4470386
+[0;32m[SUCCESS][0m ✓ System resource created successfully (permission: system)
+[0;34m[INFO][0m System resource ID: 019ef100-4cfc-7511-a286-8e01f5d0f737
+[0;34m[INFO][0m Creating 'ou' sub-resource under the 'system' resource...
+time=2026-06-23T01:53:09.334+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources HTTP/1.1 201 203 1 4e3c7f89-9cae-4d96-9afe-dd7bf18eb40e" trace_id=4e3c7f89-9cae-4d96-9afe-dd7bf18eb40e
+[0;32m[SUCCESS][0m ✓ OU resource created successfully (permission: system:ou)
+[0;34m[INFO][0m OU resource ID: 019ef100-4d14-7947-9507-75efa5a5a78d
+[0;34m[INFO][0m Creating 'view' action under the 'ou' resource...
+time=2026-06-23T01:53:09.359+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources/019ef100-4d14-7947-9507-75efa5a5a78d/actions HTTP/1.1 201 161 1 83e00bf9-1009-42c7-8686-acf488ee7f82" trace_id=83e00bf9-1009-42c7-8686-acf488ee7f82
+[0;32m[SUCCESS][0m ✓ OU view action created successfully (permission: system:ou:view)
+[0;34m[INFO][0m Creating 'user' sub-resource under the 'system' resource...
+time=2026-06-23T01:53:09.375+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources HTTP/1.1 201 181 1 57dacdd0-5b53-4e82-a210-787a05f995dc" trace_id=57dacdd0-5b53-4e82-a210-787a05f995dc
+[0;32m[SUCCESS][0m ✓ User resource created successfully (permission: system:user)
+[0;34m[INFO][0m User resource ID: 019ef100-4d3e-7276-bf9e-3cbb81428215
+[0;34m[INFO][0m Creating 'view' action under the 'user' resource...
+time=2026-06-23T01:53:09.401+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources/019ef100-4d3e-7276-bf9e-3cbb81428215/actions HTTP/1.1 201 150 2 1bd89e10-6839-4317-809d-b68dd3c04d06" trace_id=1bd89e10-6839-4317-809d-b68dd3c04d06
+[0;32m[SUCCESS][0m ✓ User view action created successfully (permission: system:user:view)
+[0;34m[INFO][0m Creating 'usertype' sub-resource under the 'system' resource...
+time=2026-06-23T01:53:09.418+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources HTTP/1.1 201 199 1 6cfbf511-3fdc-4f97-bf4b-f79d7595d529" trace_id=6cfbf511-3fdc-4f97-bf4b-f79d7595d529
+[0;32m[SUCCESS][0m ✓ User type resource created successfully (permission: system:usertype)
+[0;34m[INFO][0m User type resource ID: 019ef100-4d68-73a2-9bc1-4be021ff6ae1
+[0;34m[INFO][0m Creating 'view' action under the 'usertype' resource...
+time=2026-06-23T01:53:09.464+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources/019ef100-4d68-73a2-9bc1-4be021ff6ae1/actions HTTP/1.1 201 159 1 9ce3ac04-cabe-41c2-a47e-4f9e6dc9bcc3" trace_id=9ce3ac04-cabe-41c2-a47e-4f9e6dc9bcc3
+[0;32m[SUCCESS][0m ✓ User type view action created successfully (permission: system:usertype:view)
+
+[0;34m[INFO][0m Creating 'group' sub-resource under the 'system' resource...
+time=2026-06-23T01:53:09.482+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources HTTP/1.1 201 185 1 a8fce411-69d1-4e99-aba7-7739e9f91034" trace_id=a8fce411-69d1-4e99-aba7-7739e9f91034
+[0;32m[SUCCESS][0m ✓ Group resource created successfully (permission: system:group)
+[0;34m[INFO][0m Group resource ID: 019ef100-4da9-757e-ba35-e1033d229e2f
+[0;34m[INFO][0m Creating 'view' action under the 'group' resource...
+time=2026-06-23T01:53:09.507+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /resource-servers/019ef100-4ce3-792f-9d1b-6fdd236cf343/resources/019ef100-4da9-757e-ba35-e1033d229e2f/actions HTTP/1.1 201 152 1 e909d0ce-f3d7-438b-b4f2-3cd599255a31" trace_id=e909d0ce-f3d7-438b-b4f2-3cd599255a31
+[0;32m[SUCCESS][0m ✓ Group view action created successfully (permission: system:group:view)
+
+[0;34m[INFO][0m Creating administrator group...
+time=2026-06-23T01:53:09.524+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /groups HTTP/1.1 201 251 0 1df77961-0bb8-4c65-a41c-1ca294f9f80b" trace_id=1df77961-0bb8-4c65-a41c-1ca294f9f80b
+[0;32m[SUCCESS][0m ✓ Administrator group created successfully
+[0;34m[INFO][0m Administrator group ID: 019ef100-4dd4-7e7d-87b3-1b79f1b57ebe
+
+[0;34m[INFO][0m Creating admin role with 'system' permission...
+time=2026-06-23T01:53:09.549+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /roles HTTP/1.1 201 378 0 9cb3ac9f-f4ac-4078-96c9-543ce5ea6324" trace_id=9cb3ac9f-f4ac-4078-96c9-543ce5ea6324
+[0;32m[SUCCESS][0m ✓ Admin role created and assigned to administrator group
+[0;34m[INFO][0m Admin role ID: 019ef100-4dec-746c-94c6-67928c4c6907
+
+[0;34m[INFO][0m Creating default flows...
+[0;34m[INFO][0m Processing authentication flows...
+time=2026-06-23T01:53:09.574+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] GET /flows?flowType=AUTHENTICATION&limit=200 HTTP/1.1 200 66 0 fbc4168e-93f0-44d6-a80a-7ee5f7f89c0d" trace_id=fbc4168e-93f0-44d6-a80a-7ee5f7f89c0d
+[0;34m[INFO][0m Creating flow: Default Basic Authentication Flow
+time=2026-06-23T01:53:09.633+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /flows HTTP/1.1 201 3091 1 c174c3b5-f452-438d-be5f-b816b89e0c2d" trace_id=c174c3b5-f452-438d-be5f-b816b89e0c2d
+[0;32m[SUCCESS][0m ✓ Flow 'Default Basic Authentication Flow' created successfully (ID: 019ef100-4e41-78ed-b97f-d4287447b474)
+019ef100-4e41-78ed-b97f-d4287447b474
+[0;34m[INFO][0m Creating flow: Default CIBA Email Notification Flow
+time=2026-06-23T01:53:09.687+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /flows HTTP/1.1 201 4173 0 c64e86dd-ccfc-40fb-9327-3ce9c48ba1af" trace_id=c64e86dd-ccfc-40fb-9327-3ce9c48ba1af
+[0;32m[SUCCESS][0m ✓ Flow 'Default CIBA Email Notification Flow' created successfully (ID: 019ef100-4e77-79b9-b076-f08a0e4b8232)
+019ef100-4e77-79b9-b076-f08a0e4b8232
+[0;34m[INFO][0m Creating flow: Disambiguation Login Flow
+time=2026-06-23T01:53:09.743+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /flows HTTP/1.1 201 4477 0 882c4a75-b51a-44fc-b265-a9f002297f9f" trace_id=882c4a75-b51a-44fc-b265-a9f002297f9f
+[0;32m[SUCCESS][0m ✓ Flow 'Disambiguation Login Flow' created successfully (ID: 019ef100-4eae-7bbf-a807-e9705e204871)
+019ef100-4eae-7bbf-a807-e9705e204871
+[0;34m[INFO][0m Processing registration flows...
+time=2026-06-23T01:53:09.767+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] GET /flows?flowType=REGISTRATION&limit=200 HTTP/1.1 200 66 0 bab0fe24-4d4b-4fa6-99e6-7ce7a739da3e" trace_id=bab0fe24-4d4b-4fa6-99e6-7ce7a739da3e
+[0;34m[INFO][0m Creating flow: Default Basic Registration Flow
+time=2026-06-23T01:53:09.821+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /flows HTTP/1.1 201 4083 0 7503f64c-51b9-4375-bfee-63dba993fbf1" trace_id=7503f64c-51b9-4375-bfee-63dba993fbf1
+[0;32m[SUCCESS][0m ✓ Flow 'Default Basic Registration Flow' created successfully (ID: 019ef100-4efc-7e39-a6b5-434e3a7badcf)
+019ef100-4efc-7e39-a6b5-434e3a7badcf
+[0;34m[INFO][0m Creating flow: Default SMS Self-Invite Registration Flow
+time=2026-06-23T01:53:09.894+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /flows HTTP/1.1 201 6478 0 e453138b-8be2-48e9-b6bc-936389f6541c" trace_id=e453138b-8be2-48e9-b6bc-936389f6541c
+[0;32m[SUCCESS][0m ✓ Flow 'Default SMS Self-Invite Registration Flow' created successfully (ID: 019ef100-4f45-7e41-9a35-878ce5d04235)
+019ef100-4f45-7e41-9a35-878ce5d04235
+[0;34m[INFO][0m Processing user onboarding flows...
+time=2026-06-23T01:53:09.920+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] GET /flows?flowType=USER_ONBOARDING&limit=200 HTTP/1.1 200 66 0 5f8e8a5d-cf77-4e4d-a47d-95a573273c6f" trace_id=5f8e8a5d-cf77-4e4d-a47d-95a573273c6f
+[0;34m[INFO][0m Creating flow: User Onboarding Flow
+time=2026-06-23T01:53:09.977+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:09 +0530] POST /flows HTTP/1.1 201 13113 1 e949a526-c97c-42c4-a4a4-45c7edb6a55d" trace_id=e949a526-c97c-42c4-a4a4-45c7edb6a55d
+[0;32m[SUCCESS][0m ✓ Flow 'User Onboarding Flow' created successfully (ID: 019ef100-4f99-77f0-a1a0-6009dece4032)
+019ef100-4f99-77f0-a1a0-6009dece4032
+[0;34m[INFO][0m Processing recovery flows...
+time=2026-06-23T01:53:10.003+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] GET /flows?flowType=RECOVERY&limit=200 HTTP/1.1 200 66 0 60bbe865-6a04-4425-87e2-148a73e708ad" trace_id=60bbe865-6a04-4425-87e2-148a73e708ad
+[0;34m[INFO][0m Creating flow: Email Link Password Recovery Flow
+time=2026-06-23T01:53:10.059+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /flows HTTP/1.1 201 5640 0 4f8d1a90-e565-4cc1-a0c6-3809d678c21e" trace_id=4f8d1a90-e565-4cc1-a0c6-3809d678c21e
+[0;32m[SUCCESS][0m ✓ Flow 'Email Link Password Recovery Flow' created successfully (ID: 019ef100-4feb-745a-8c5a-2b6c77c89766)
+019ef100-4feb-745a-8c5a-2b6c77c89766
+[0;34m[INFO][0m Flow creation summary: 7 created/updated, 0 skipped, 0 failed
+
+[0;34m[INFO][0m Creating application-specific flows...
+[0;34m[INFO][0m Fetching existing flows for application flow processing...
+time=2026-06-23T01:53:10.084+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] GET /flows?flowType=AUTHENTICATION&limit=200 HTTP/1.1 200 836 0 6d9cebf8-9681-4f36-bead-161ffc6b7b6d" trace_id=6d9cebf8-9681-4f36-bead-161ffc6b7b6d
+time=2026-06-23T01:53:10.146+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] GET /flows?flowType=REGISTRATION&limit=200 HTTP/1.1 200 581 0 4812fcb5-dbb5-41c1-b952-3f6ac650c8b6" trace_id=4812fcb5-dbb5-41c1-b952-3f6ac650c8b6
+time=2026-06-23T01:53:10.192+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] GET /flows?flowType=RECOVERY&limit=200 HTTP/1.1 200 327 0 59a486c1-721b-41a6-b7d0-3cdbb647fac5" trace_id=59a486c1-721b-41a6-b7d0-3cdbb647fac5
+[0;34m[INFO][0m Processing flows for application: console
+[0;34m[INFO][0m Creating flow: Console App Authentication Flow
+time=2026-06-23T01:53:10.271+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /flows HTTP/1.1 201 2885 0 091d9473-6c5b-471b-ab01-69efdf65ae48" trace_id=091d9473-6c5b-471b-ab01-69efdf65ae48
+[0;32m[SUCCESS][0m ✓ Flow 'Console App Authentication Flow' created successfully (ID: 019ef100-50bf-7894-a96a-f1089e18324b)
+time=2026-06-23T01:53:10.295+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] GET /flows?flowType=REGISTRATION&limit=200 HTTP/1.1 200 581 0 1a7c2269-87a5-4ee3-90c2-96935d5fc503" trace_id=1a7c2269-87a5-4ee3-90c2-96935d5fc503
+[0;34m[INFO][0m Creating flow: Console App Registration Flow
+time=2026-06-23T01:53:10.376+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /flows HTTP/1.1 201 4046 0 f7d10bba-f4f8-4e3c-8104-c190dc44b704" trace_id=f7d10bba-f4f8-4e3c-8104-c190dc44b704
+[0;32m[SUCCESS][0m ✓ Flow 'Console App Registration Flow' created successfully (ID: 019ef100-5127-7a39-8a33-186e6a291d29)
+
+[0;34m[INFO][0m Creating CONSOLE application...
+[1;33m[WARNING][0m ⚠ Console recovery flow ID not found, recovery flow will be disabled
+[0;34m[INFO][0m Adding custom redirect URIs: https://localhost:5191/console
+time=2026-06-23T01:53:10.445+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /applications HTTP/1.1 201 1530 7 23149f60-5004-4083-8c59-e995e7b29a88" trace_id=23149f60-5004-4083-8c59-e995e7b29a88
+[0;32m[SUCCESS][0m ✓ CONSOLE application created successfully
+
+[0;34m[INFO][0m Creating themes...
+[0;34m[INFO][0m Processing themes from backend/cmd/server/bootstrap/themes...
+[0;34m[INFO][0m Creating theme: Acrylic Orange (from acrylic-orange.json)
+time=2026-06-23T01:53:10.486+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /design/themes HTTP/1.1 201 14625 1 638c617b-3522-4ccd-9c02-eb8eba2aa595" trace_id=638c617b-3522-4ccd-9c02-eb8eba2aa595
+[0;32m[SUCCESS][0m ✓ Theme 'Acrylic Orange' created successfully
+[0;34m[INFO][0m Theme ID: 019ef100-5195-74f9-ab41-040dfefea788
+[0;34m[INFO][0m Creating theme: Acrylic Purple (from acrylic-purple.json)
+time=2026-06-23T01:53:10.533+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /design/themes HTTP/1.1 201 14598 0 cd136f66-c947-4e61-b9ac-64ba1ac17911" trace_id=cd136f66-c947-4e61-b9ac-64ba1ac17911
+[0;32m[SUCCESS][0m ✓ Theme 'Acrylic Purple' created successfully
+[0;34m[INFO][0m Theme ID: 019ef100-51c5-7474-87a4-1743d3d44189
+[0;34m[INFO][0m Creating theme: Classic (from classic.json)
+time=2026-06-23T01:53:10.583+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /design/themes HTTP/1.1 201 14625 1 4dc7a5d5-7295-473c-a9d9-1fb6c60dd434" trace_id=4dc7a5d5-7295-473c-a9d9-1fb6c60dd434
+[0;32m[SUCCESS][0m ✓ Theme 'Classic' created successfully
+[0;34m[INFO][0m Theme ID: 019ef100-51f6-7e64-a896-b1be39839615
+[0;34m[INFO][0m Creating theme: High Contrast (from high-contrast.json)
+time=2026-06-23T01:53:10.631+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /design/themes HTTP/1.1 201 14492 1 e7bbbe22-83ee-4e88-a19f-afdbbccb43cd" trace_id=e7bbbe22-83ee-4e88-a19f-afdbbccb43cd
+[0;32m[SUCCESS][0m ✓ Theme 'High Contrast' created successfully
+[0;34m[INFO][0m Theme ID: 019ef100-5226-7460-8000-1d66842fc203
+[0;34m[INFO][0m Creating theme: Pale Gray (from pale-gray.json)
+time=2026-06-23T01:53:10.678+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /design/themes HTTP/1.1 201 14530 0 03bdc95b-e593-48e2-a72b-e4d7cc540d3c" trace_id=03bdc95b-e593-48e2-a72b-e4d7cc540d3c
+[0;32m[SUCCESS][0m ✓ Theme 'Pale Gray' created successfully
+[0;34m[INFO][0m Theme ID: 019ef100-5256-7562-ad2c-38f9d666c811
+[0;34m[INFO][0m Creating theme: Pale Indigo (from pale-indigo.json)
+time=2026-06-23T01:53:10.727+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /design/themes HTTP/1.1 201 14521 1 8fe75546-2a9f-4b9a-9e3d-348376d1b182" trace_id=8fe75546-2a9f-4b9a-9e3d-348376d1b182
+[0;32m[SUCCESS][0m ✓ Theme 'Pale Indigo' created successfully
+[0;34m[INFO][0m Theme ID: 019ef100-5287-7700-9b29-9f7e8dcde8b3
+
+[0;34m[INFO][0m Theme creation summary: 6 created, 0 updated (Total: 6)
+
+[0;34m[INFO][0m Seeding i18n translations...
+[0;34m[INFO][0m Processing i18n translations from backend/cmd/server/bootstrap/i18n...
+[0;34m[INFO][0m Seeding translations for language: en-US (from en-US.json)
+time=2026-06-23T01:53:10.768+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:10 +0530] POST /i18n/languages/en-US/translations HTTP/1.1 200 17633 3 faca8845-b648-4cf9-ae61-2ec8f506f441" trace_id=faca8845-b648-4cf9-ae61-2ec8f506f441
+[0;32m[SUCCESS][0m ✓ Translations for 'en-US' seeded successfully (277 translations)
+
+[0;34m[INFO][0m Translation seeding summary: 1 seeded (Total: 1)
+
+[0;32m[SUCCESS][0m ✓ Default resources setup completed successfully!
+
+[0;34m[INFO][0m 👤 Admin credentials:
+[0;34m[INFO][0m    Username: admin
+[0;34m[INFO][0m    Password: admin
+[0;34m[INFO][0m    Role: Administrator (system permission via Administrators group)
+
+🔒 Restoring security setting and restarting backend...
+=== Starting backend on https://localhost:8090 ===
+
+🚀 Servers running:
+  👉 Backend : https://localhost:8090
+  📱 Frontend :
+      🚪 Gate (Login/Register): https://localhost:5190/gate
+      🛠️  Console (System Management): https://localhost:5191/console
+
+Press Ctrl+C to stop.
+signal: killed
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="Console application directory not found" directory=/Users/thiva/Desktop/Repos/thunder3/backend/cmd/server/apps/console
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="============================================================" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="|       WARNING: SECURITY ENFORCEMENT DISABLED             |" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="|                                                          |" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="|        SKIP_SECURITY is set to 'true'            |" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="|  This is NOT RECOMMENDED for production environments!    |" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="| Endpoints accessible without auth, but tokens processed  |" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="|                                                          |" component=SecurityService
+time=2026-06-23T01:53:11.259+05:30 level=WARN msg="============================================================" component=SecurityService
+time=2026-06-23T01:53:11.261+05:30 level=INFO msg="ThunderID Server URL" url=https://23cd-2402-4000-b241-8610-5534-535-ea19-c46.ngrok-free.app
+time=2026-06-23T01:53:11.261+05:30 level=INFO msg="ThunderID Console URL" url=https://23cd-2402-4000-b241-8610-5534-535-ea19-c46.ngrok-free.app/console
+time=2026-06-23T01:53:11.261+05:30 level=INFO msg="ThunderID Server started" startup_time=23.494083ms
+time=2026-06-23T01:53:11.715+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:11 +0530] GET /.well-known/openid-credential-issuer HTTP/1.1 200 484 0 aa251ec5-ab17-49ad-9060-f15e3632d815" trace_id=aa251ec5-ab17-49ad-9060-f15e3632d815
+time=2026-06-23T01:53:11.738+05:30 level=WARN msg="Application import create failed" appID=eudi-demo-app name="EUDI Demo" code=APP-1031 error="Consent synchronization failed" authFlowID=0193b0a1-1001-7000-8000-000000000020 registrationFlowID="" isRegistrationFlowEnabled=false errorDescription="Failed to synchronize consent configurations for the application : code - CSE-1010" clientID=EUDI-DEMO-CLIENT hasClientSecret=false publicClient=true pkceRequired=true tokenEndpointAuthMethod=none grantTypes=[authorization_code] responseTypes=[code] redirectURIs="[http://localhost:3000 http://localhost:3000/callback https://localhost:3000 https://localhost:3000/callback https://oauth.pstmn.io/v1/callback]" trace_id=e60639f5-5c24-42a8-aa0b-246d943bc8f5
+time=2026-06-23T01:53:11.831+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:11 +0530] POST /import HTTP/1.1 200 1831 111 e60639f5-5c24-42a8-aa0b-246d943bc8f5" trace_id=e60639f5-5c24-42a8-aa0b-246d943bc8f5
+2026/06/23 01:53:31 http: TLS handshake error from 127.0.0.1:51363: remote error: tls: unknown certificate
+time=2026-06-23T01:53:31.469+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:31 +0530] OPTIONS /openid4vci/credential-configurations HTTP/1.1 204 0 0 7133cfeb-fc9d-4ce5-b58c-76f98df45976" trace_id=7133cfeb-fc9d-4ce5-b58c-76f98df45976
+2026/06/23 01:53:31 http: TLS handshake error from 127.0.0.1:51367: remote error: tls: unknown certificate
+time=2026-06-23T01:53:31.477+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:31 +0530] GET /openid4vci/credential-configurations HTTP/1.1 200 186 0 30392498-1025-47c0-a1d3-230a104a7d00" trace_id=30392498-1025-47c0-a1d3-230a104a7d00
+time=2026-06-23T01:53:32.794+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:32 +0530] OPTIONS /openid4vci/offer?credential_configuration_id=eudi-pid HTTP/1.1 204 0 0 200b6a63-aff8-44ac-b67b-f4ffddc4abb8" trace_id=200b6a63-aff8-44ac-b67b-f4ffddc4abb8
+time=2026-06-23T01:53:32.796+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:32 +0530] GET /openid4vci/offer?credential_configuration_id=eudi-pid HTTP/1.1 200 413 1 d4b72e64-3136-4307-b4d3-5a8917ff870b" trace_id=d4b72e64-3136-4307-b4d3-5a8917ff870b
+time=2026-06-23T01:53:38.337+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:38 +0530] GET /openid4vci/credential-offer/iHCBSVPNmOKHJnP6_4P7SKQVIbilz37uerwpPqx3p88 HTTP/1.1 200 169 0 f93751a6-3aa7-4741-aaaf-41cdfdb635e1" trace_id=f93751a6-3aa7-4741-aaaf-41cdfdb635e1
+time=2026-06-23T01:53:38.460+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:38 +0530] GET /.well-known/openid-credential-issuer HTTP/1.1 200 963 0 980dc66a-6407-4c16-a940-d9702aca5a7c" trace_id=980dc66a-6407-4c16-a940-d9702aca5a7c
+time=2026-06-23T01:53:38.654+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:38 +0530] GET /.well-known/oauth-authorization-server HTTP/1.1 200 1628 0 1cbe4b31-f972-495f-8804-5e00a5120542" trace_id=1cbe4b31-f972-495f-8804-5e00a5120542
+time=2026-06-23T01:53:40.069+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:40 +0530] GET /openid4vci/credential-offer/iHCBSVPNmOKHJnP6_4P7SKQVIbilz37uerwpPqx3p88 HTTP/1.1 200 169 0 2472c2f8-657d-4736-bf60-d222435af8b7" trace_id=2472c2f8-657d-4736-bf60-d222435af8b7
+time=2026-06-23T01:53:40.235+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:40 +0530] GET /.well-known/openid-credential-issuer HTTP/1.1 200 963 0 7e9ab107-94b4-447f-bb88-2155475aa0df" trace_id=7e9ab107-94b4-447f-bb88-2155475aa0df
+time=2026-06-23T01:53:40.454+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:40 +0530] GET /.well-known/oauth-authorization-server HTTP/1.1 200 1628 0 bcdd7d84-22d7-4633-aab4-0292aa75b5d9" trace_id=bcdd7d84-22d7-4633-aab4-0292aa75b5d9
+time=2026-06-23T01:53:41.155+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:41 +0530] GET /openid4vci/credential-offer/iHCBSVPNmOKHJnP6_4P7SKQVIbilz37uerwpPqx3p88 HTTP/1.1 200 169 0 364b71e2-7ad3-42f5-8062-07851666b0ba" trace_id=364b71e2-7ad3-42f5-8062-07851666b0ba
+time=2026-06-23T01:53:41.335+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:41 +0530] GET /.well-known/openid-credential-issuer HTTP/1.1 200 963 0 001e205f-fe92-4d0b-b6d9-ae3053de450a" trace_id=001e205f-fe92-4d0b-b6d9-ae3053de450a
+time=2026-06-23T01:53:41.544+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:41 +0530] GET /.well-known/oauth-authorization-server HTTP/1.1 200 1628 0 21f909b1-7e10-463e-af1a-257031ec3e1a" trace_id=21f909b1-7e10-463e-af1a-257031ec3e1a
+time=2026-06-23T01:53:41.856+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:41 +0530] POST /oauth2/par HTTP/1.1 201 112 4 4b8f22b8-59f5-4ad5-b937-961d1170da89" trace_id=4b8f22b8-59f5-4ad5-b937-961d1170da89
+time=2026-06-23T01:53:45.445+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:45 +0530] GET /oauth2/authorize?request_uri=urn:ietf:params:oauth:request_uri:0PLUmfEKi2Hg_HsiWsrvcxyIPveEVBSLHCDF-yaOxVI&state=FItk0L5k3STgRyQTGxBRRidvf6cOMnL0&client_id=08002422-4c1e-4cd2-8c47-1b1dd61951c5 HTTP/1.1 302 247 3 e60b0c6b-a4f4-4095-b3e0-41fbc2327dc7" trace_id=e60b0c6b-a4f4-4095-b3e0-41fbc2327dc7
+time=2026-06-23T01:53:45.658+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:45 +0530] GET /gate/signin?applicationId=eudi-issuer-app-idgo-custom&authId=019ef100-da22-7812-b1c6-8c8b73317a8d&executionId=019ef100-da23-71d0-b8a6-5c2666c2a383 HTTP/1.1 200 1679 1 ac5fc586-6acc-4c3f-9517-4bb259f790d2" trace_id=ac5fc586-6acc-4c3f-9517-4bb259f790d2
+time=2026-06-23T01:53:46.524+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/config.js HTTP/1.1 200 369 0 698165d0-6048-4700-a45d-2a97b262dafe" trace_id=698165d0-6048-4700-a45d-2a97b262dafe
+time=2026-06-23T01:53:46.588+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/index-cU0xs27d.css HTTP/1.1 200 95 1 6e00068b-51f1-4152-bb96-9d4587d1f93c" trace_id=6e00068b-51f1-4152-bb96-9d4587d1f93c
+time=2026-06-23T01:53:46.593+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/vendor-oxygen-W4SEzVCm.css HTTP/1.1 200 107 0 c5c6df42-fa17-4022-9464-f5a1152899ea" trace_id=c5c6df42-fa17-4022-9464-f5a1152899ea
+time=2026-06-23T01:53:46.594+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/index-BP1fQaEs.js HTTP/1.1 200 104810 1 378e91c6-0b91-4507-811b-037d85562b31" trace_id=378e91c6-0b91-4507-811b-037d85562b31
+time=2026-06-23T01:53:46.757+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/rolldown-runtime-QTnfLwEv.js HTTP/1.1 200 694 1 43b959d8-3286-4fab-85be-f8d1a2f7f34b" trace_id=43b959d8-3286-4fab-85be-f8d1a2f7f34b
+time=2026-06-23T01:53:46.757+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/chunk-4N6VE7H7-ZmjbZTqW.js HTTP/1.1 200 50452 1 9d28cbb6-fb30-4d40-8f18-c1c8f52f3763" trace_id=9d28cbb6-fb30-4d40-8f18-c1c8f52f3763
+time=2026-06-23T01:53:46.768+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/dist-DtPdpvxz.js HTTP/1.1 200 388923 2 033e39ce-c821-4842-b540-18f05959c7d7" trace_id=033e39ce-c821-4842-b540-18f05959c7d7
+time=2026-06-23T01:53:46.769+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/vendor-i18n-DnSFPVFF.js HTTP/1.1 200 53194 0 22568e36-cb4a-4900-946b-4de525a1f7d1" trace_id=22568e36-cb4a-4900-946b-4de525a1f7d1
+time=2026-06-23T01:53:46.806+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/vendor-react-CgxZC2_u.js HTTP/1.1 200 178530 1 6dcb48dd-f33a-4b9b-be5e-3f7e1934be8a" trace_id=6dcb48dd-f33a-4b9b-be5e-3f7e1934be8a
+time=2026-06-23T01:53:46.809+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/vendor-emotion-Cfw8XpNY.js HTTP/1.1 200 34941 0 29e3207d-98ec-4082-9f06-2e312729ecf7" trace_id=29e3207d-98ec-4082-9f06-2e312729ecf7
+time=2026-06-23T01:53:46.809+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/vendor-mui-D7wxsaM1.js HTTP/1.1 200 357220 1 3c11f7e0-85a1-4999-8f31-9b0e2353d563" trace_id=3c11f7e0-85a1-4999-8f31-9b0e2353d563
+time=2026-06-23T01:53:46.813+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/FlowProvider-DhcpyGq_.js HTTP/1.1 200 1493 0 341556f3-845d-40c7-b737-d9a8c7aa6d34" trace_id=341556f3-845d-40c7-b737-d9a8c7aa6d34
+time=2026-06-23T01:53:49.516+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:46 +0530] GET /gate/assets/vendor-oxygen-c0vn8WZ7.js HTTP/1.1 200 1432625 2704 231b464d-8956-4e16-a750-49eb0e00ca29" trace_id=231b464d-8956-4e16-a750-49eb0e00ca29
+time=2026-06-23T01:53:51.607+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:51 +0530] GET /gate/assets/en-US-DeVpPKv9.js HTTP/1.1 200 70 0 eedb435f-a5f4-4d50-a776-aef3c45c1505" trace_id=eedb435f-a5f4-4d50-a776-aef3c45c1505
+time=2026-06-23T01:53:51.607+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:51 +0530] GET /gate/assets/en-US-DiRsfKGS-CdFpUr3R.js HTTP/1.1 200 187323 2 2e3d1825-82d0-4bb1-9808-193f6e4bf635" trace_id=2e3d1825-82d0-4bb1-9808-193f6e4bf635
+time=2026-06-23T01:53:52.298+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /gate/assets/SignInPage-nDfHOVpQ.js HTTP/1.1 200 48581 1 9c0929fa-350e-41d5-8441-5ef3e0d34b52" trace_id=9c0929fa-350e-41d5-8441-5ef3e0d34b52
+time=2026-06-23T01:53:52.316+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-GB HTTP/1.1 200 131560 39 233a0fe4-3565-4110-a9db-bf08b052e0aa" trace_id=233a0fe4-3565-4110-a9db-bf08b052e0aa
+time=2026-06-23T01:53:52.326+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /gate/assets/dist-D2au5H3p.js HTTP/1.1 200 722 0 a8aa68c0-e9bd-4453-974a-9141b7b96b60" trace_id=a8aa68c0-e9bd-4453-974a-9141b7b96b60
+time=2026-06-23T01:53:52.328+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /gate/assets/oauth-DnWsbeEz.js HTTP/1.1 200 1848 0 7633f80d-113c-4524-b3d3-412ce9813f55" trace_id=7633f80d-113c-4524-b3d3-412ce9813f55
+time=2026-06-23T01:53:52.328+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /gate/assets/AuthOptionFactory-CkHumcha.js HTTP/1.1 200 65564 0 268aca13-31e2-4a45-bc32-3273f196609f" trace_id=268aca13-31e2-4a45-bc32-3273f196609f
+time=2026-06-23T01:53:52.336+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /gate/assets/Logo-CXszFpif.js HTTP/1.1 200 5144 0 b53bdaa9-9ea8-477e-a443-0a8d2d5df29e" trace_id=b53bdaa9-9ea8-477e-a443-0a8d2d5df29e
+time=2026-06-23T01:53:52.336+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /gate/assets/passkey-a5r8o-7Q.js HTTP/1.1 200 2805 0 d244cf3d-6ab3-44f6-8518-689ae65345f5" trace_id=d244cf3d-6ab3-44f6-8518-689ae65345f5
+time=2026-06-23T01:53:52.356+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:52 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-GB HTTP/1.1 200 131560 28 628908dc-644b-45cf-b1db-333b281dee0c" trace_id=628908dc-644b-45cf-b1db-333b281dee0c
+time=2026-06-23T01:53:53.396+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:53 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-US HTTP/1.1 200 131560 40 f7e72018-ec2e-4c86-a099-6c84bc5fb5ba" trace_id=f7e72018-ec2e-4c86-a099-6c84bc5fb5ba
+time=2026-06-23T01:53:53.399+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:53 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-US HTTP/1.1 200 131560 34 5d061979-636b-4901-a606-2a98d82ba112" trace_id=5d061979-636b-4901-a606-2a98d82ba112
+time=2026-06-23T01:53:53.463+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:53 +0530] GET /gate/assets/images/logo.svg HTTP/1.1 200 6532 1 054a0b5c-dd7f-4c20-8aac-c4b490fb28a2" trace_id=054a0b5c-dd7f-4c20-8aac-c4b490fb28a2
+time=2026-06-23T01:53:53.846+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:53 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-US HTTP/1.1 200 131560 39 f1229b45-e880-4d24-b213-afc220b83e37" trace_id=f1229b45-e880-4d24-b213-afc220b83e37
+time=2026-06-23T01:53:53.849+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:53 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-US HTTP/1.1 200 131560 33 256b3d17-431d-4acf-8e1d-b87ed5880b90" trace_id=256b3d17-431d-4acf-8e1d-b87ed5880b90
+time=2026-06-23T01:53:54.093+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:54 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-US HTTP/1.1 200 131560 39 50b31f1d-a949-4c35-b554-f920019ed93d" trace_id=50b31f1d-a949-4c35-b554-f920019ed93d
+time=2026-06-23T01:53:54.094+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:54 +0530] GET /flow/meta?id=eudi-issuer-app-idgo-custom&type=APP&language=en-US HTTP/1.1 200 131560 40 346d220c-e4d8-40e2-811b-6e8fe41a9af5" trace_id=346d220c-e4d8-40e2-811b-6e8fe41a9af5
+time=2026-06-23T01:53:54.376+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:54 +0530] POST /flow/execute HTTP/1.1 200 2480 2 55079ccb-beeb-4b68-8627-66da00da0a51" trace_id=55079ccb-beeb-4b68-8627-66da00da0a51
+time=2026-06-23T01:53:59.691+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:59 +0530] POST /flow/execute HTTP/1.1 200 1049 94 f6b1ceec-3b69-4971-876f-5953b1e2ff18" trace_id=f6b1ceec-3b69-4971-876f-5953b1e2ff18
+time=2026-06-23T01:53:59.919+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:53:59 +0530] POST /oauth2/auth/callback HTTP/1.1 200 218 4 fe1d0c0b-ef7a-46fe-92d6-03038783d470" trace_id=fe1d0c0b-ef7a-46fe-92d6-03038783d470
+time=2026-06-23T01:54:00.218+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:00 +0530] POST /oauth2/token HTTP/1.1 200 1147 5 2b533362-42c0-4bb7-a96c-f77aceaa2a35" trace_id=2b533362-42c0-4bb7-a96c-f77aceaa2a35
+time=2026-06-23T01:54:00.410+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:00 +0530] POST /openid4vci/nonce HTTP/1.1 200 58 1 fedeae31-cd24-45b8-931c-09a6fe6b87a4" trace_id=fedeae31-cd24-45b8-931c-09a6fe6b87a4
+time=2026-06-23T01:54:01.285+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:01 +0530] POST /openid4vci/credential HTTP/1.1 200 2014 2 97d0915d-766d-4db6-a31e-d7f46d5bd755" trace_id=97d0915d-766d-4db6-a31e-d7f46d5bd755
+time=2026-06-23T01:54:05.422+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:05 +0530] OPTIONS /openid4vp/presentation-definitions HTTP/1.1 204 0 0 618925ea-9889-4bb3-bcfb-acfc9b0da78c" trace_id=618925ea-9889-4bb3-bcfb-acfc9b0da78c
+time=2026-06-23T01:54:05.423+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:05 +0530] GET /openid4vp/presentation-definitions HTTP/1.1 200 186 0 16a59e0e-9289-42fb-918e-a03c2f238ddd" trace_id=16a59e0e-9289-42fb-918e-a03c2f238ddd
+time=2026-06-23T01:54:06.455+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:06 +0530] OPTIONS /openid4vp/initiate HTTP/1.1 204 0 0 1442f74c-b038-440f-bff5-32e17ff6d7ab" trace_id=1442f74c-b038-440f-bff5-32e17ff6d7ab
+time=2026-06-23T01:54:06.458+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:06 +0530] POST /openid4vp/initiate HTTP/1.1 200 522 2 96ee79c4-3355-4343-b4fb-bafe2810b2a7" trace_id=96ee79c4-3355-4343-b4fb-bafe2810b2a7
+time=2026-06-23T01:54:06.473+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:06 +0530] OPTIONS /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 204 0 0 35539653-3a27-4dc6-8258-687b5ef2b4e4" trace_id=35539653-3a27-4dc6-8258-687b5ef2b4e4
+time=2026-06-23T01:54:06.475+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:06 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 2e64cddd-ea67-4bc1-b2c1-a087f0a0672d" trace_id=2e64cddd-ea67-4bc1-b2c1-a087f0a0672d
+time=2026-06-23T01:54:08.478+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:08 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 08de69fa-d7fb-4865-9ac0-b1a722f4577f" trace_id=08de69fa-d7fb-4865-9ac0-b1a722f4577f
+time=2026-06-23T01:54:10.483+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:10 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 fe98bce4-2278-493f-a922-65c044aa3c1e" trace_id=fe98bce4-2278-493f-a922-65c044aa3c1e
+time=2026-06-23T01:54:11.691+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:11 +0530] GET /openid4vp/request?state=t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 7178 1 62f58bfe-e369-44ed-8c91-416d846df525" trace_id=62f58bfe-e369-44ed-8c91-416d846df525
+time=2026-06-23T01:54:12.489+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:12 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 d4c599ce-8840-4ed2-b798-d87288cad6fb" trace_id=d4c599ce-8840-4ed2-b798-d87288cad6fb
+time=2026-06-23T01:54:13.856+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:13 +0530] GET /openid4vp/request?state=t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 7178 1 5f9ac105-d60f-47d5-8c94-2bb6a7a25163" trace_id=5f9ac105-d60f-47d5-8c94-2bb6a7a25163
+time=2026-06-23T01:54:14.495+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:14 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 eb8eded9-9860-43cf-acb0-357c14266d03" trace_id=eb8eded9-9860-43cf-acb0-357c14266d03
+time=2026-06-23T01:54:16.500+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:16 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 19ab19cc-2413-44c2-b157-469a2a2759e8" trace_id=19ab19cc-2413-44c2-b157-469a2a2759e8
+time=2026-06-23T01:54:18.505+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:18 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 21 0 2400d9d6-d933-45aa-9210-903662b4745e" trace_id=2400d9d6-d933-45aa-9210-903662b4745e
+time=2026-06-23T01:54:18.687+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:18 +0530] POST /openid4vp/response?state=t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 3 2 8c695e45-edb6-4dd1-bedb-fb3428601555" trace_id=8c695e45-edb6-4dd1-bedb-fb3428601555
+time=2026-06-23T01:54:20.513+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:20 +0530] GET /openid4vp/status/t9rHgnRV0UKz0IN4mSAExZ6BgwumqNr6yQ_hf3W8miU HTTP/1.1 200 1501 3 503b0c1d-9a59-4bb3-b7ef-d691715b4eca" trace_id=503b0c1d-9a59-4bb3-b7ef-d691715b4eca
+time=2026-06-23T01:54:22.902+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] OPTIONS /organization-units?limit=2&offset=0 HTTP/1.1 204 0 0 5f43c0ba-cd4f-461f-a868-ae1963bd52ee" trace_id=5f43c0ba-cd4f-461f-a868-ae1963bd52ee
+2026/06/23 01:54:22 http: TLS handshake error from 127.0.0.1:51631: remote error: tls: unknown certificate
+2026/06/23 01:54:22 http: TLS handshake error from 127.0.0.1:51632: remote error: tls: unknown certificate
+time=2026-06-23T01:54:22.904+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] OPTIONS /organization-units/019ef0f3-dc81-7c00-9991-d1891ecdcb3e/ous?limit=1&offset=0 HTTP/1.1 204 0 0 20020687-3236-4ea0-88d5-0344c86d9f3f" trace_id=20020687-3236-4ea0-88d5-0344c86d9f3f
+time=2026-06-23T01:54:22.905+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] GET /organization-units?limit=2&offset=0 HTTP/1.1 200 330 0 6640231e-173f-48da-b86d-532967e4f4c9" trace_id=6640231e-173f-48da-b86d-532967e4f4c9
+time=2026-06-23T01:54:22.905+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] OPTIONS /openid4vp/trust-anchors HTTP/1.1 204 0 0 e4a8fcd8-7419-4b3b-9080-69a844ee3248" trace_id=e4a8fcd8-7419-4b3b-9080-69a844ee3248
+time=2026-06-23T01:54:22.906+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] GET /organization-units/019ef0f3-dc81-7c00-9991-d1891ecdcb3e/ous?limit=1&offset=0 HTTP/1.1 404 284 0 ca1e67b2-dd2e-49de-9de4-d74c89130d6d" trace_id=ca1e67b2-dd2e-49de-9de4-d74c89130d6d
+time=2026-06-23T01:54:22.906+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] OPTIONS /openid4vp/presentation-definitions/eudi-pid HTTP/1.1 204 0 0 c0a4b6f0-05e9-4700-a72d-432928b7cbef" trace_id=c0a4b6f0-05e9-4700-a72d-432928b7cbef
+time=2026-06-23T01:54:22.906+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] GET /openid4vp/trust-anchors HTTP/1.1 200 135 0 d823785a-7aa2-46a4-84ca-f5c892b4b3ba" trace_id=d823785a-7aa2-46a4-84ca-f5c892b4b3ba
+2026/06/23 01:54:22 http: TLS handshake error from 127.0.0.1:51633: remote error: tls: unknown certificate
+2026/06/23 01:54:22 http: TLS handshake error from 127.0.0.1:51639: remote error: tls: unknown certificate
+time=2026-06-23T01:54:22.908+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] OPTIONS /organization-units/019ef100-4c2d-77f0-87f4-0a4bf1dabb97/ous?limit=1&offset=0 HTTP/1.1 204 0 0 862af8f1-90d4-4c23-8d6d-42841342b58c" trace_id=862af8f1-90d4-4c23-8d6d-42841342b58c
+time=2026-06-23T01:54:22.908+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] GET /openid4vp/presentation-definitions/eudi-pid HTTP/1.1 200 262 0 a188a7f0-1246-47a3-bc8a-4ce9c3d5a03e" trace_id=a188a7f0-1246-47a3-bc8a-4ce9c3d5a03e
+time=2026-06-23T01:54:22.909+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:22 +0530] GET /organization-units/019ef100-4c2d-77f0-87f4-0a4bf1dabb97/ous?limit=1&offset=0 HTTP/1.1 200 78 0 883a2c52-1ccd-4b08-9200-b6ba0bf2a415" trace_id=883a2c52-1ccd-4b08-9200-b6ba0bf2a415
+2026/06/23 01:54:22 http: TLS handshake error from 127.0.0.1:51641: remote error: tls: unknown certificate
+time=2026-06-23T01:54:35.301+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:35 +0530] GET /openid4vci/credential-configurations HTTP/1.1 200 186 0 022e808d-c4f3-4c53-809d-b646671f7514" trace_id=022e808d-c4f3-4c53-809d-b646671f7514
+time=2026-06-23T01:54:36.428+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:36 +0530] OPTIONS /openid4vci/credential-configurations/eudi-pid HTTP/1.1 204 0 0 ffb4c26e-180c-4951-92a5-b5f8799ac241" trace_id=ffb4c26e-180c-4951-92a5-b5f8799ac241
+time=2026-06-23T01:54:36.429+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:36 +0530] GET /openid4vci/credential-configurations/eudi-pid HTTP/1.1 200 368 0 18ac3290-aa9b-4993-9a2e-d6cf43e77518" trace_id=18ac3290-aa9b-4993-9a2e-d6cf43e77518
+time=2026-06-23T01:54:36.455+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:36 +0530] GET /organization-units?limit=2&offset=0 HTTP/1.1 200 330 0 039d787d-74fe-40e0-9b5e-b7240e0167c4" trace_id=039d787d-74fe-40e0-9b5e-b7240e0167c4
+time=2026-06-23T01:54:36.456+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:54:36 +0530] GET /organization-units/019ef100-4c2d-77f0-87f4-0a4bf1dabb97/ous?limit=1&offset=0 HTTP/1.1 200 78 0 a9c94072-4dfe-4ca9-9f92-2e66fd836ce1" trace_id=a9c94072-4dfe-4ca9-9f92-2e66fd836ce1
+2026/06/23 01:54:36 http: TLS handshake error from 127.0.0.1:51697: remote error: tls: unknown certificate
+time=2026-06-23T01:55:41.627+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:41 +0530] OPTIONS /users?include=display HTTP/1.1 204 0 0 80142e6f-49a9-4e51-951f-8c64706d2a03" trace_id=80142e6f-49a9-4e51-951f-8c64706d2a03
+time=2026-06-23T01:55:41.629+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:41 +0530] GET /users?include=display HTTP/1.1 200 702 1 2440031f-2f86-4f1d-b8aa-b9877ff5d967" trace_id=2440031f-2f86-4f1d-b8aa-b9877ff5d967
+time=2026-06-23T01:55:42.645+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:42 +0530] OPTIONS /users/pid-holder-erika?include=display HTTP/1.1 204 0 0 584de859-8735-4e96-8c61-9dc6d05fb667" trace_id=584de859-8735-4e96-8c61-9dc6d05fb667
+time=2026-06-23T01:55:42.645+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:42 +0530] OPTIONS /user-types HTTP/1.1 204 0 0 9709c15a-3267-46ef-abbe-137809c74974" trace_id=9709c15a-3267-46ef-abbe-137809c74974
+2026/06/23 01:55:42 http: TLS handshake error from 127.0.0.1:51971: remote error: tls: unknown certificate
+time=2026-06-23T01:55:42.646+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:42 +0530] GET /users/pid-holder-erika?include=display HTTP/1.1 200 257 0 b815d5a5-5c25-4989-89e4-62dac35c077a" trace_id=b815d5a5-5c25-4989-89e4-62dac35c077a
+2026/06/23 01:55:42 http: TLS handshake error from 127.0.0.1:51973: remote error: tls: unknown certificate
+time=2026-06-23T01:55:42.650+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:42 +0530] GET /user-types HTTP/1.1 200 622 0 b89b2a6e-112a-4cb4-9dcb-e33b16e1c9be" trace_id=b89b2a6e-112a-4cb4-9dcb-e33b16e1c9be
+time=2026-06-23T01:55:42.675+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:42 +0530] OPTIONS /user-types/pid-holder-type HTTP/1.1 204 0 0 acceb9c7-f1ce-49a8-a67c-b09505dcb223" trace_id=acceb9c7-f1ce-49a8-a67c-b09505dcb223
+time=2026-06-23T01:55:42.675+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:55:42 +0530] GET /user-types/pid-holder-type HTTP/1.1 200 574 0 4519249d-366e-4b01-aeac-bf1c0a90557d" trace_id=4519249d-366e-4b01-aeac-bf1c0a90557d
+time=2026-06-23T01:56:36.372+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:56:36 +0530] GET /openid4vp/presentation-definitions HTTP/1.1 200 186 0 4fddf59c-4f28-469b-9aed-57c8ba2e12ad" trace_id=4fddf59c-4f28-469b-9aed-57c8ba2e12ad
+time=2026-06-23T01:56:36.409+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:56:36 +0530] GET /i18n/languages/en-US/translations/resolve HTTP/1.1 200 131029 37 6f304c3f-963f-4cd7-adc0-d9cea4e2225b" trace_id=6f304c3f-963f-4cd7-adc0-d9cea4e2225b
+time=2026-06-23T01:57:19.716+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:19 +0530] GET /openid4vp/presentation-definitions HTTP/1.1 200 186 0 474650fc-f39c-4454-b412-086cbd7129fc" trace_id=474650fc-f39c-4454-b412-086cbd7129fc
+time=2026-06-23T01:57:22.831+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:22 +0530] GET /users?include=display HTTP/1.1 200 702 0 5484d021-1f40-4c0f-bf7d-6781bb93382e" trace_id=5484d021-1f40-4c0f-bf7d-6781bb93382e
+time=2026-06-23T01:57:23.715+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:23 +0530] GET /users/pid-holder-erika?include=display HTTP/1.1 200 257 0 381a22aa-60a6-4b05-863f-52bada20553c" trace_id=381a22aa-60a6-4b05-863f-52bada20553c
+2026/06/23 01:57:23 http: TLS handshake error from 127.0.0.1:52395: remote error: tls: unknown certificate
+time=2026-06-23T01:57:23.717+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:23 +0530] GET /user-types HTTP/1.1 200 622 0 aac25d95-ae43-499c-968a-20b6bb7da54c" trace_id=aac25d95-ae43-499c-968a-20b6bb7da54c
+time=2026-06-23T01:57:23.747+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:23 +0530] GET /user-types/pid-holder-type HTTP/1.1 200 574 0 9be2c0a3-d53d-4cfb-9ed1-afa462927164" trace_id=9be2c0a3-d53d-4cfb-9ed1-afa462927164
+time=2026-06-23T01:57:57.904+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:57 +0530] GET /users/pid-holder-erika?include=display HTTP/1.1 200 257 0 ed1c697d-177d-4a30-952b-a22d3e82c525" trace_id=ed1c697d-177d-4a30-952b-a22d3e82c525
+time=2026-06-23T01:57:57.905+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:57 +0530] GET /user-types HTTP/1.1 200 622 0 1400d589-5540-4987-99a2-d881733f72a1" trace_id=1400d589-5540-4987-99a2-d881733f72a1
+time=2026-06-23T01:57:57.908+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:57:57 +0530] GET /user-types/pid-holder-type HTTP/1.1 200 574 1 570f6082-969c-46ef-ad94-675d091d6936" trace_id=570f6082-969c-46ef-ad94-675d091d6936
+2026/06/23 01:57:57 http: TLS handshake error from 127.0.0.1:52537: remote error: tls: unknown certificate
+2026/06/23 01:57:57 http: TLS handshake error from 127.0.0.1:52538: remote error: tls: unknown certificate
+time=2026-06-23T01:58:11.683+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:58:11 +0530] GET /users/pid-holder-erika?include=display HTTP/1.1 200 257 1 4a22ec95-f084-45ce-9f69-c7392b3232e4" trace_id=4a22ec95-f084-45ce-9f69-c7392b3232e4
+time=2026-06-23T01:58:11.684+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:58:11 +0530] GET /user-types HTTP/1.1 200 622 0 95fe8823-04f2-49ce-a683-c8ec6803df54" trace_id=95fe8823-04f2-49ce-a683-c8ec6803df54
+time=2026-06-23T01:58:11.685+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:01:58:11 +0530] GET /user-types/pid-holder-type HTTP/1.1 200 574 0 8a70fd73-c328-46dd-9183-e8bbb5f09b4c" trace_id=8a70fd73-c328-46dd-9183-e8bbb5f09b4c
+2026/06/23 01:58:11 http: TLS handshake error from 127.0.0.1:52597: remote error: tls: unknown certificate
+2026/06/23 01:58:11 http: TLS handshake error from 127.0.0.1:52598: remote error: tls: unknown certificate
+time=2026-06-23T02:00:04.875+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:04 +0530] GET /users/pid-holder-erika?include=display HTTP/1.1 200 257 0 45f7fd89-94ab-4dfe-9aad-8bffe2b13f14" trace_id=45f7fd89-94ab-4dfe-9aad-8bffe2b13f14
+time=2026-06-23T02:00:04.876+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:04 +0530] GET /user-types HTTP/1.1 200 622 0 2df6379c-68dc-440e-8626-33ffe053d9c1" trace_id=2df6379c-68dc-440e-8626-33ffe053d9c1
+time=2026-06-23T02:00:04.878+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:04 +0530] GET /user-types/pid-holder-type HTTP/1.1 200 574 0 ed17eb1e-d6a7-4a47-b039-2f0ca2f3901c" trace_id=ed17eb1e-d6a7-4a47-b039-2f0ca2f3901c
+2026/06/23 02:00:04 http: TLS handshake error from 127.0.0.1:53056: remote error: tls: unknown certificate
+2026/06/23 02:00:04 http: TLS handshake error from 127.0.0.1:53057: remote error: tls: unknown certificate
+time=2026-06-23T02:00:07.970+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:07 +0530] GET /users/pid-holder-erika?include=display HTTP/1.1 200 257 0 de5ca062-9045-4037-be18-7507144855e8" trace_id=de5ca062-9045-4037-be18-7507144855e8
+2026/06/23 02:00:07 http: TLS handshake error from 127.0.0.1:53071: remote error: tls: unknown certificate
+2026/06/23 02:00:07 http: TLS handshake error from 127.0.0.1:53074: remote error: tls: unknown certificate
+time=2026-06-23T02:00:07.974+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:07 +0530] GET /user-types HTTP/1.1 200 622 0 43755d69-af19-4d29-95e3-61f2f018b48d" trace_id=43755d69-af19-4d29-95e3-61f2f018b48d
+time=2026-06-23T02:00:07.975+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:07 +0530] GET /user-types/pid-holder-type HTTP/1.1 200 574 0 d7011ea5-56ef-4dcd-930e-f7221810355d" trace_id=d7011ea5-56ef-4dcd-930e-f7221810355d
+2026/06/23 02:00:07 http: TLS handshake error from 127.0.0.1:53075: remote error: tls: unknown certificate
+time=2026-06-23T02:00:08.010+05:30 level=INFO msg="127.0.0.1 - - [23/Jun/2026:02:00:07 +0530] GET /i18n/languages/en-US/translations/resolve HTTP/1.1 200 131029 34 fc7a5c68-d92b-4b9c-8b65-5d972ac7f439" trace_id=fc7a5c68-d92b-4b9c-8b65-5d972ac7f439

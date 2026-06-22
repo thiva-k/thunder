@@ -21,7 +21,6 @@ package openid4vp
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -37,11 +36,12 @@ const requestObjectContentType = "application/oauth-authz-req+jwt"
 
 // Route paths for the OpenID4VP wallet- and RP-facing endpoints.
 const (
-	requestURIPath  = "/openid4vp/request"
-	responseURIPath = "/openid4vp/response"
-	apiInitiatePath = "/openid4vp/initiate"
-	apiStatusPath   = "/openid4vp/status/{txn_id}"
-	apiStatusPrefix = "/openid4vp/status/"
+	requestURIPath      = "/openid4vp/request"
+	responseURIPath     = "/openid4vp/response"
+	apiInitiatePath     = "/openid4vp/initiate"
+	apiStatusPath       = "/openid4vp/status/{txn_id}"
+	apiStatusPrefix     = "/openid4vp/status/"
+	apiTrustAnchorsPath = "/openid4vp/trust-anchors"
 )
 
 const defaultResultTokenValidity = 300 * time.Second
@@ -53,6 +53,7 @@ type openID4VPHandler struct {
 	rpStatusBase         string
 	resultTokenValidity  time.Duration
 	requestStateValidity time.Duration
+	logger               *log.Logger
 }
 
 // newOpenID4VPHandler builds the handler. Zero resultTokenValidity falls back to
@@ -76,6 +77,7 @@ func newOpenID4VPHandler(
 		rpStatusBase:         strings.TrimRight(baseURL, "/") + apiStatusPrefix,
 		resultTokenValidity:  resultTokenValidity,
 		requestStateValidity: requestStateValidity,
+		logger:               log.GetLogger().With(log.String(log.LoggerKeyComponentName, "OpenID4VPHandler")),
 	}
 }
 
@@ -87,9 +89,9 @@ func (h *openID4VPHandler) HandleRequestObject(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	jar, err := h.service.RequestObject(r.Context(), state)
-	if err != nil {
-		writeServiceErrorResponse(r.Context(), w, toServiceError(err))
+	jar, svcErr := h.service.RequestObject(r.Context(), state)
+	if svcErr != nil {
+		writeServiceErrorResponse(r.Context(), w, svcErr)
 		return
 	}
 
@@ -97,7 +99,7 @@ func (h *openID4VPHandler) HandleRequestObject(w http.ResponseWriter, r *http.Re
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusOK)
 	if _, werr := w.Write([]byte(jar)); werr != nil {
-		log.GetLogger().Error(r.Context(), "Failed to write request object response", log.Error(werr))
+		h.logger.Error(r.Context(), "Failed to write request object response", log.Error(werr))
 	}
 }
 
@@ -109,14 +111,30 @@ func (h *openID4VPHandler) HandleResponse(w http.ResponseWriter, r *http.Request
 	}
 
 	state := sysutils.SanitizeString(r.FormValue("state"))
-	response := r.FormValue("response")
-	if state == "" || response == "" {
+	if state == "" {
 		writeServiceErrorResponse(r.Context(), w, &ErrorInvalidRequest)
 		return
 	}
 
-	if _, err := h.service.SubmitResponse(r.Context(), state, []byte(response)); err != nil {
-		writeServiceErrorResponse(r.Context(), w, toServiceError(err))
+	// A wallet may post an OAuth error to the response_uri instead of a vp_token (OpenID4VP §6.4).
+	if errCode := sysutils.SanitizeString(r.FormValue("error")); errCode != "" {
+		if svcErr := h.service.SubmitError(r.Context(), state, errCode,
+			r.FormValue("error_description")); svcErr != nil {
+			writeServiceErrorResponse(r.Context(), w, svcErr)
+			return
+		}
+		sysutils.WriteSuccessResponse(r.Context(), w, http.StatusOK, map[string]string{})
+		return
+	}
+
+	response := r.FormValue("response")
+	if response == "" {
+		writeServiceErrorResponse(r.Context(), w, &ErrorInvalidRequest)
+		return
+	}
+
+	if _, svcErr := h.service.SubmitResponse(r.Context(), state, []byte(response)); svcErr != nil {
+		writeServiceErrorResponse(r.Context(), w, svcErr)
 		return
 	}
 
@@ -138,14 +156,13 @@ func (h *openID4VPHandler) HandleInitiate(w http.ResponseWriter, r *http.Request
 		writeServiceErrorResponse(r.Context(), w, &ErrorInvalidRequest)
 		return
 	}
-	init, err := h.service.InitiateForRP(r.Context(), req.DefinitionID, req.RPID)
-	if err != nil {
-		if isUnregisteredDefinition(err) {
-			writeServiceErrorResponse(r.Context(), w, &ErrorUnknownDefinition)
-			return
+	init, svcErr := h.service.InitiateForRP(r.Context(), req.DefinitionID, req.RPID)
+	if svcErr != nil {
+		if svcErr.Type != serviceerror.ClientErrorType {
+			h.logger.Error(r.Context(), "Failed to initiate OpenID4VP transaction",
+				log.String("errorCode", svcErr.Code))
 		}
-		log.GetLogger().Error(r.Context(), "Failed to initiate OpenID4VP transaction", log.Error(err))
-		writeServiceErrorResponse(r.Context(), w, toServiceError(err))
+		writeServiceErrorResponse(r.Context(), w, svcErr)
 		return
 	}
 
@@ -172,16 +189,17 @@ func (h *openID4VPHandler) HandleStatus(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	rs, err := h.service.LookupState(r.Context(), txnID)
+	rs, svcErr := h.service.LookupState(r.Context(), txnID)
 	switch {
-	case errors.Is(err, ErrUnknownState):
+	case svcErr == nil:
+	case svcErr.Code == ErrorUnknownState.Code:
 		writeServiceErrorResponse(r.Context(), w, &ErrorUnknownState)
 		return
-	case errors.Is(err, ErrExpiredState):
+	case svcErr.Code == ErrorExpiredState.Code:
 		sysutils.WriteSuccessResponse(r.Context(), w, http.StatusOK, statusResponse{Status: "EXPIRED"})
 		return
-	case err != nil:
-		writeServiceErrorResponse(r.Context(), w, toServiceError(err))
+	default:
+		writeServiceErrorResponse(r.Context(), w, svcErr)
 		return
 	}
 
@@ -195,7 +213,7 @@ func (h *openID4VPHandler) HandleStatus(w http.ResponseWriter, r *http.Request) 
 		})
 	case StatusCompleted:
 		if h.issuer == nil {
-			log.GetLogger().Error(r.Context(), "Result token issuer not configured")
+			h.logger.Error(r.Context(), "Result token issuer not configured")
 			writeServiceErrorResponse(r.Context(), w, &serviceerror.InternalServerError)
 			return
 		}
@@ -206,7 +224,7 @@ func (h *openID4VPHandler) HandleStatus(w http.ResponseWriter, r *http.Request) 
 		token, tokenErr := h.issuer.issueResultToken(
 			r.Context(), rpID, rs, int64(h.resultTokenValidity.Seconds()))
 		if tokenErr != nil {
-			log.GetLogger().Error(r.Context(), "Failed to issue result token", log.Error(tokenErr))
+			h.logger.Error(r.Context(), "Failed to issue result token", log.Error(tokenErr))
 			writeServiceErrorResponse(r.Context(), w, &serviceerror.InternalServerError)
 			return
 		}
@@ -219,14 +237,12 @@ func (h *openID4VPHandler) HandleStatus(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// extractTxnID resolves txn_id from a Go-1.22 path value or the trailing path segment.
-// isUnregisteredDefinition reports whether err is the policy error returned when
-// no presentation definition is registered for the requested id.
-func isUnregisteredDefinition(err error) bool {
-	return errors.Is(err, ErrPolicy) &&
-		strings.Contains(err.Error(), "no presentation definition registered")
+// HandleTrustAnchors returns the configured trust anchors (root CAs) as JSON.
+func (h *openID4VPHandler) HandleTrustAnchors(w http.ResponseWriter, r *http.Request) {
+	sysutils.WriteSuccessResponse(r.Context(), w, http.StatusOK, h.service.TrustAnchors())
 }
 
+// extractTxnID resolves txn_id from a Go-1.22 path value or the trailing path segment.
 func extractTxnID(r *http.Request) string {
 	if v := r.PathValue("txn_id"); v != "" {
 		return v
@@ -269,8 +285,11 @@ func registerRoutes(mux *http.ServeMux, h *openID4VPHandler) {
 		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleInitiate)).ServeHTTP, opts))
 	mux.HandleFunc(middleware.WithCORS("GET "+apiStatusPath,
 		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleStatus)).ServeHTTP, opts))
+	mux.HandleFunc(middleware.WithCORS("GET "+apiTrustAnchorsPath,
+		middleware.CorrelationIDMiddleware(http.HandlerFunc(h.HandleTrustAnchors)).ServeHTTP, opts))
 
-	for _, path := range []string{requestURIPath, responseURIPath, apiInitiatePath, apiStatusPath} {
+	walletAndRPPaths := []string{requestURIPath, responseURIPath, apiInitiatePath, apiStatusPath, apiTrustAnchorsPath}
+	for _, path := range walletAndRPPaths {
 		mux.HandleFunc(middleware.WithCORS("OPTIONS "+path,
 			func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }, opts))
 	}

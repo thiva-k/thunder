@@ -19,7 +19,7 @@
 import thunderIdPlugin from '@thunderid/eslint-plugin';
 
 export default [
-  {ignores: ['dist/**', 'build/**', 'node_modules/**', 'coverage/**']},
+  {ignores: ['dist/**', 'build/**', 'node_modules/**', 'coverage/**', '.next/**', 'next-env.d.ts']},
   ...thunderIdPlugin.configs.react,
   ...thunderIdPlugin.configs.vitest,
   {
