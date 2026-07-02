@@ -237,14 +237,14 @@ The Wayfinder Concierge needs a separate authentication flow that drives the on-
 Navigate to **Flows** and create a flow with these steps:
 
 - A `PROMPT` step asking for username and password.
-- A `TASK_EXECUTION` step running the `BasicAuthExecutor`.
+- A `TASK_EXECUTION` step running the `CredentialsAuthExecutor`.
 - A `TASK_EXECUTION` step running the `AuthorizationExecutor`.
 - A `TASK_EXECUTION` step running the `ConsentExecutor`, with a `PROMPT` step for the consent screen on its `onIncomplete` branch.
 - A `TASK_EXECUTION` step running the `AuthAssertExecutor` on success.
 
 Attach the flow to the `WAYFINDER-CONCIERGE` agent (set `auth_flow_handle` on the agent to the flow's handle).
 
-The complete flow definition is in the Wayfinder sample distribution at `thunderid-config/thunderid-config.yaml` under the `wayfinder-agent-auth-flow` entry — copy it as a reference.
+The complete flow definition is in the Wayfinder sample distribution at `thunderid-config/redirect/thunderid-config.yaml` under the `wayfinder-agent-auth-flow` entry — copy it as a reference.
 
 See [Build a Flow](/docs/next/guides/guides/flows/build-a-flow).
 
