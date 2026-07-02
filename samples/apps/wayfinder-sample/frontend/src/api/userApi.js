@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 const THUNDER_BASE_URL =
   import.meta.env.VITE_THUNDER_BASE_URL || "https://localhost:8090";
 
@@ -47,4 +65,14 @@ export async function updateMyCredentials(accessToken, attributes) {
     method: "POST",
     body: JSON.stringify({ attributes })
   });
+}
+
+// Issuer-initiated OpenID4VCI credential offer for the Wayfinder Sky Pass. The
+// endpoint is public (the wallet authenticates during the flow), so no token is
+// sent. Returns { credential_offer, credential_offer_uri } — render the
+// credential_offer_uri as a QR for the wallet to scan.
+export async function getSkyPassOffer() {
+  return thunderRequest(
+    `/openid4vci/offer?credential_configuration_id=wayfinder-skypass`
+  );
 }
