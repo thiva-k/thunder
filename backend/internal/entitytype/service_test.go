@@ -1916,6 +1916,67 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredential_StoreError_
 	s.Require().Nil(attrs)
 }
 
+func (s *EntityTypeServiceTestSuite) TestGetEntityTypeSchema_Success() {
+	storeMock := newEntityTypeStoreInterfaceMock(s.T())
+	storeMock.
+		On("GetEntityTypeByName", context.Background(), TypeCategoryUser, "employee").
+		Return(EntityType{Name: "employee", Schema: json.RawMessage(`{}`)}, nil).
+		Once()
+
+	service := &entityTypeService{entityTypeStore: storeMock}
+
+	entityType, svcErr := service.GetEntityTypeSchema(context.Background(), TypeCategoryUser, "employee")
+	s.Require().Nil(svcErr)
+	s.Require().NotNil(entityType)
+	s.Require().Equal("employee", entityType.Name)
+}
+
+func (s *EntityTypeServiceTestSuite) TestGetEntityTypeSchema_InvalidCategory() {
+	service := &entityTypeService{}
+	entityType, svcErr := service.GetEntityTypeSchema(context.Background(), TypeCategory("invalid"), "employee")
+	s.Require().Nil(entityType)
+	s.Require().NotNil(svcErr)
+	s.Require().Equal(ErrorInvalidEntityTypeRequest.Code, svcErr.Code)
+}
+
+func (s *EntityTypeServiceTestSuite) TestGetEntityTypeSchema_EmptyName() {
+	service := &entityTypeService{}
+	entityType, svcErr := service.GetEntityTypeSchema(context.Background(), TypeCategoryUser, "")
+	s.Require().Nil(entityType)
+	s.Require().NotNil(svcErr)
+	s.Require().Equal(ErrorInvalidEntityTypeRequest.Code, svcErr.Code)
+}
+
+func (s *EntityTypeServiceTestSuite) TestGetEntityTypeSchema_NotFound() {
+	storeMock := newEntityTypeStoreInterfaceMock(s.T())
+	storeMock.
+		On("GetEntityTypeByName", context.Background(), TypeCategoryUser, "employee").
+		Return(EntityType{}, ErrEntityTypeNotFound).
+		Once()
+
+	service := &entityTypeService{entityTypeStore: storeMock}
+
+	entityType, svcErr := service.GetEntityTypeSchema(context.Background(), TypeCategoryUser, "employee")
+	s.Require().Nil(entityType)
+	s.Require().NotNil(svcErr)
+	s.Require().Equal(ErrorEntityTypeNotFound.Code, svcErr.Code)
+}
+
+func (s *EntityTypeServiceTestSuite) TestGetEntityTypeSchema_StoreError() {
+	storeMock := newEntityTypeStoreInterfaceMock(s.T())
+	storeMock.
+		On("GetEntityTypeByName", context.Background(), TypeCategoryUser, "employee").
+		Return(EntityType{}, errors.New("db error")).
+		Once()
+
+	service := &entityTypeService{entityTypeStore: storeMock}
+
+	entityType, svcErr := service.GetEntityTypeSchema(context.Background(), TypeCategoryUser, "employee")
+	s.Require().Nil(entityType)
+	s.Require().NotNil(svcErr)
+	s.Require().Equal(tidcommon.InternalServerError, *svcErr)
+}
+
 // TestGetCompiledSchemaForEntityType_CompileError verifies that a stored schema which fails to
 // compile surfaces as an internal server error through ValidateEntity.
 func TestGetCompiledSchemaForEntityType_CompileError(t *testing.T) {
