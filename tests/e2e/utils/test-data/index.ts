@@ -90,7 +90,7 @@ export interface UserData {
   email: string;
   given_name: string;
   family_name: string;
-  password?: string;
+  password: string;
   [key: string]: any;
 }
 
