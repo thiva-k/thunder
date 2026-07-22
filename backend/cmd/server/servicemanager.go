@@ -548,7 +548,8 @@ func initSessionService(ctx context.Context, svc serverconfig.ServerConfigServic
 	criteriaRevoker flowsession.CriteriaRevoker, logger *log.Logger) (flowsession.Service, flowsession.Config) {
 	cfg := readSessionConfig(ctx, svc, logger)
 	sessionService, err := flowsession.Initialize(dbprovider.GetDBProvider(), deploymentID,
-		flowsession.NewTimeouts(cfg.IdleTimeoutSeconds, cfg.AbsoluteTimeoutSeconds), criteriaRevoker)
+		flowsession.NewTimeouts(cfg.IdleTimeoutSeconds, cfg.AbsoluteTimeoutSeconds,
+			cfg.ActivityRefreshIntervalSeconds), criteriaRevoker)
 	fatalOnError(ctx, logger, err, "Failed to initialize SSO session service")
 	return sessionService, cfg
 }
