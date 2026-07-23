@@ -16,8 +16,8 @@
  * under the License.
  */
 
-import {ConnectionTypes, type ConnectionResponse} from '@thunderid/configure-connections';
 import {describe, it, expect} from 'vitest';
+import {ConnectionTypes, type ConnectionResponse} from '../../models/connection';
 import type {TrustedIssuer} from '../../models/trusted-issuer';
 import mapConnectionToTrustedIssuer from '../mapConnectionToTrustedIssuer';
 
