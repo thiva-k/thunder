@@ -105,7 +105,38 @@ const sidebars: SidebarsConfig = {
           className: 'connect-section connect-section--mcp',
           collapsible: true,
           items: [
-            {type: 'doc', id: 'getting-started/connect-your-mcp/python', label: 'Python', customProps: {icon: 'python'}},
+            {
+              type: 'category',
+              label: 'Server',
+              collapsible: true,
+              items: [
+                {type: 'doc', id: 'getting-started/connect-your-mcp/server/python', label: 'Python', key: 'mcp-server-python', customProps: {icon: 'python'}},
+              ],
+            },
+            {
+              type: 'category',
+              label: 'Client',
+              collapsible: true,
+              items: [
+                {
+                  type: 'category',
+                  label: 'Connect an MCP Client',
+                  collapsible: true,
+                  items: [
+                    {type: 'doc', id: 'getting-started/connect-your-mcp/client/connect/mcp-inspector', label: 'MCP Inspector'},
+                    {type: 'doc', id: 'getting-started/connect-your-mcp/client/connect/claude-code', label: 'Claude Code'},
+                  ],
+                },
+                {
+                  type: 'category',
+                  label: 'Build an MCP Client',
+                  collapsible: true,
+                  items: [
+                    {type: 'doc', id: 'getting-started/connect-your-mcp/client/build-a-client/python', label: 'Python', key: 'mcp-client-build-python', customProps: {icon: 'python'}},
+                  ],
+                },
+              ],
+            },
           ],
         },
       ],

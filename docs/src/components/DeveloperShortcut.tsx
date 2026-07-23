@@ -19,7 +19,7 @@
 import Link from '@docusaurus/Link';
 import {useWindowSize} from '@docusaurus/theme-common';
 import {Box, Chip, Typography} from '@wso2/oxygen-ui';
-import {Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
+import {AppWindow, Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
 import React, {useCallback} from 'react';
 import AndroidLogo from './icons/AndroidLogo';
 import ExpressLogo from './icons/ExpressLogo';
@@ -30,7 +30,6 @@ import LangChainLogo from './icons/LangChainLogo';
 import NextLogo from './icons/NextLogo';
 import NodeLogo from './icons/NodeLogo';
 import NuxtLogo from './icons/NuxtLogo';
-import PythonLogo from './icons/PythonLogo';
 import ReactLogo from './icons/ReactLogo';
 import VueLogo from './icons/VueLogo';
 import {applyConnectType, useConnectType} from '../utils/connectType';
@@ -55,7 +54,8 @@ const AGENT_QUICKSTARTS = [
 ];
 
 const MCP_QUICKSTARTS = [
-  {Logo: PythonLogo, href: '/docs/next/getting-started/connect-your-mcp/python', label: 'Python'},
+  {Logo: Server, href: '/docs/next/getting-started/connect-your-mcp/server/python', label: 'Server'},
+  {Logo: AppWindow, href: '/docs/next/getting-started/connect-your-mcp/client/connect/mcp-inspector', label: 'Client'},
 ];
 
 const CATEGORIES: {id: ConnectType; icon: React.ReactElement; label: string; description: string; comingSoon: boolean}[] = [
