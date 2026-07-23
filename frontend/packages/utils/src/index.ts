@@ -45,3 +45,6 @@ export {
   TemplateLiteralType,
 } from './template/parseTemplateLiteral';
 export type {TemplateLiteralResult, TemplateLiteralHandlers} from './template/parseTemplateLiteral';
+
+// Validation
+export {EMAIL_REGEX} from './validation/emailRegex';

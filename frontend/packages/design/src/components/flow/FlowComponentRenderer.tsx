@@ -58,6 +58,7 @@ export default function FlowComponentRenderer({
   isLoading,
   resolve,
   onInputChange,
+  onBlur,
   onSubmit,
   onValidate,
   maxImageSize,
@@ -96,6 +97,7 @@ export default function FlowComponentRenderer({
         fieldErrors={fieldErrors}
         isLoading={isLoading}
         onInputChange={onInputChange}
+        onBlur={onBlur}
         onSubmit={onSubmit}
         onValidate={onValidate}
       />
@@ -146,6 +148,7 @@ export default function FlowComponentRenderer({
             isLoading={isLoading || isExpiredOnMount}
             resolve={resolve}
             onInputChange={onInputChange}
+            onBlur={onBlur}
             onSubmit={onSubmit}
             onValidate={onValidate}
           />
@@ -163,6 +166,7 @@ export default function FlowComponentRenderer({
         isLoading={isLoading || isExpiredOnMount}
         resolve={resolve}
         onInputChange={onInputChange}
+        onBlur={onBlur}
         onSubmit={onSubmit}
         onValidate={onValidate}
       />

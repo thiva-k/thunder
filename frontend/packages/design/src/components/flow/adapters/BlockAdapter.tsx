@@ -38,6 +38,7 @@ interface BlockContext {
   isLoading: boolean;
   resolve: (template: string | undefined) => string | undefined;
   onInputChange: (field: string, value: string) => void;
+  onBlur?: (field: string) => void;
   onSubmit: (action: EmbeddedFlowComponent, inputs: Record<string, string>) => void;
   onValidate?: (components: EmbeddedFlowComponent[]) => boolean;
   passwordAutoComplete?: 'current-password' | 'new-password';
@@ -195,6 +196,7 @@ function renderFormSubComponent(
     isLoading: ctx.isLoading,
     resolve: ctx.resolve,
     onInputChange: ctx.onInputChange,
+    onBlur: ctx.onBlur,
   };
 
   if (

@@ -16,15 +16,20 @@
  * under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 
 import {FlowComponentRenderer, AuthCardLayout, useDesign} from '@thunderid/design';
-import {EmbeddedFlowEventType, SignUp, useThunderID, type EmbeddedFlowComponent} from '@thunderid/react';
+import {
+  EmbeddedFlowComponentType,
+  EmbeddedFlowEventType,
+  SignUp,
+  useThunderID,
+  type EmbeddedFlowComponent,
+} from '@thunderid/react';
+import {EMAIL_REGEX} from '@thunderid/utils';
 import {Box, Button, Alert, Typography, AlertTitle, CircularProgress} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
+import {useRef, useState} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import RouteConfig from '../../configs/RouteConfig';
@@ -46,53 +51,92 @@ export default function SignUpBox(): JSX.Element {
   const appUrl = meta?.application?.url;
   const afterSignUpUrl = appUrl != null && appUrl !== '' ? appUrl : signInUrl;
 
-  const renderFlowContent = (
-    components: EmbeddedFlowComponent[],
-    error: any,
-    isLoading: boolean,
-    values: any,
-    touched: any,
-    fieldErrors: any,
-    handleInputChange: any,
-    handleSubmit: any,
-  ): JSX.Element | null => {
-    if (components.length > 0) {
-      return (
-        <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-          {isLoading && (
-            <Typography sx={{textAlign: 'center'}}>
-              {t('signup:create_account.loading', 'Creating account...')}
-            </Typography>
-          )}
-          {components.map((component, index) => (
-            <FlowComponentRenderer
-              key={component.id ?? index}
-              component={component}
-              index={index}
-              values={values ?? {}}
-              touched={touched}
-              fieldErrors={fieldErrors}
-              isLoading={isLoading}
-              resolve={resolve}
-              onInputChange={handleInputChange}
-              onSubmit={(action, inputs) => {
-                const isTrigger = action.eventType === EmbeddedFlowEventType.Trigger || action.eventType === 'TRIGGER';
-                void handleSubmit(action, inputs, isTrigger);
-              }}
-            />
-          ))}
-        </Box>
-      );
+  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  const [localTouched, setLocalTouched] = useState<Record<string, boolean>>({});
+  const componentsRef = useRef<EmbeddedFlowComponent[]>([]);
+  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const formInputsRef = useRef<Record<string, string>>({});
+
+  const validateFieldFormat = (field: string, value: string): void => {
+    const component = componentsRef.current.find(
+      (c: EmbeddedFlowComponent) => typeof c.ref === 'string' && c.ref === field,
+    );
+    if (!component) return;
+
+    let error = '';
+    if (
+      (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.EmailInput &&
+      value.trim() &&
+      !EMAIL_REGEX.test(value)
+    ) {
+      error = `${t('validations:field.email.invalid', 'Please enter a valid email address.')}`;
     }
-    if (!error) {
-      return (
-        <Alert severity="error" sx={{mb: 2}}>
-          <AlertTitle>{t("Oops, that didn't work")}</AlertTitle>
-          {t("We're sorry, we ran into a problem. Please try again!")}
-        </Alert>
-      );
+
+    setLocalErrors((prev) => ({...prev, [field]: error}));
+    if (error) {
+      setLocalTouched((prev) => ({...prev, [field]: true}));
+    } else {
+      setLocalTouched((prev) => ({...prev, [field]: false}));
     }
-    return null;
+  };
+
+  const wrapInputChange = (sdkHandleInputChange: (name: string, value: string) => void) => {
+    return (field: string, value: string): void => {
+      formInputsRef.current[field] = value;
+      sdkHandleInputChange(field, value);
+
+      if (debounceTimers.current[field]) {
+        clearTimeout(debounceTimers.current[field]);
+      }
+
+      debounceTimers.current[field] = setTimeout(() => {
+        validateFieldFormat(field, value);
+      }, 600);
+    };
+  };
+
+  const mergeErrors = (
+    sdkErrors: Record<string, string> | undefined,
+    sdkTouched: Record<string, boolean> | undefined,
+  ): {mergedErrors: Record<string, string>; mergedTouched: Record<string, boolean>} => {
+    const mergedErrors = {...localErrors};
+    const mergedTouched = {...localTouched};
+    if (sdkErrors) {
+      Object.entries(sdkErrors).forEach(([key, val]) => {
+        if (val) {
+          mergedErrors[key] = val;
+          mergedTouched[key] = true;
+        }
+      });
+    }
+    if (sdkTouched) {
+      Object.entries(sdkTouched).forEach(([key, val]) => {
+        if (val) mergedTouched[key] = true;
+      });
+    }
+    return {mergedErrors, mergedTouched};
+  };
+
+  const collectComponents = (components: EmbeddedFlowComponent[]): void => {
+    const fields: EmbeddedFlowComponent[] = [];
+    const walk = (comps: EmbeddedFlowComponent[]) => {
+      comps.forEach((c: EmbeddedFlowComponent) => {
+        if (
+          ((c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.TextInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PasswordInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.EmailInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PhoneInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.OtpInput) &&
+          c.ref &&
+          typeof c.ref === 'string'
+        ) {
+          fields.push(c);
+        }
+        if (c.components && Array.isArray(c.components)) walk(c.components);
+      });
+    };
+    walk(components);
+    componentsRef.current = fields;
   };
 
   return (
@@ -109,59 +153,123 @@ export default function SignUpBox(): JSX.Element {
       logoDisplay={!isDesignEnabled ? {xs: 'flex', md: 'none'} : {display: 'none'}}
     >
       <SignUp afterSignUpUrl={afterSignUpUrl}>
-        {({values, fieldErrors, error, touched, handleInputChange, handleSubmit, isLoading, components}: any) => (
-          <>
-            {!components ? (
-              <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <>
-                {error && (
-                  <Alert severity="error" sx={{mb: 2}}>
-                    <AlertTitle>{t('signup:errors.signup.failed.message')}</AlertTitle>
-                    {error.message ?? t('signup:errors.signup.failed.description')}
-                  </Alert>
-                )}
-                {renderFlowContent(
-                  components as EmbeddedFlowComponent[],
-                  error,
-                  isLoading as boolean,
-                  values,
-                  touched,
-                  fieldErrors,
-                  handleInputChange,
-                  handleSubmit,
-                )}
-              </>
-            )}
+        {({values, fieldErrors, error, touched, handleInputChange, handleSubmit, isLoading, components}: any) => {
+          const renderComponents = components as EmbeddedFlowComponent[] | undefined;
 
-            <Typography sx={{textAlign: 'center', mt: 3}}>
-              <Trans i18nKey="signup:redirect.to.signin">
-                Already have an account?
-                <Button
-                  variant="text"
-                  onClick={() => {
-                    void navigate(signInPath);
-                  }}
-                  sx={{
-                    p: 0,
-                    minWidth: 'auto',
-                    textTransform: 'none',
-                    color: 'primary.main',
-                    textDecoration: 'underline',
-                    '&:hover': {
+          if (!renderComponents) {
+            return (
+              <>
+                <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
+                  <CircularProgress />
+                </Box>
+                <Typography sx={{textAlign: 'center', mt: 3}}>
+                  <Trans i18nKey="signup:redirect.to.signin">
+                    Already have an account?
+                    <Button
+                      variant="text"
+                      onClick={() => {
+                        void navigate(signInPath);
+                      }}
+                      sx={{
+                        p: 0,
+                        minWidth: 'auto',
+                        textTransform: 'none',
+                        color: 'primary.main',
+                        textDecoration: 'underline',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          backgroundColor: 'transparent',
+                        },
+                      }}
+                    >
+                      Sign in
+                    </Button>
+                  </Trans>
+                </Typography>
+              </>
+            );
+          }
+
+          collectComponents(renderComponents);
+          const {mergedErrors, mergedTouched} = mergeErrors(
+            fieldErrors as Record<string, string> | undefined,
+            touched as Record<string, boolean> | undefined,
+          );
+          const wrappedInputChange = wrapInputChange(handleInputChange as (name: string, value: string) => void);
+
+          return (
+            <>
+              {error && (
+                <Alert severity="error" sx={{mb: 2}}>
+                  <AlertTitle>{t('signup:errors.signup.failed.message')}</AlertTitle>
+                  {(error as {message?: string}).message ?? t('signup:errors.signup.failed.description')}
+                </Alert>
+              )}
+              {renderComponents.length > 0 ? (
+                <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
+                  {(isLoading as boolean) && (
+                    <Typography sx={{textAlign: 'center'}}>
+                      {t('signup:create_account.loading', 'Creating account...')}
+                    </Typography>
+                  )}
+                  {renderComponents.map((component, index) => (
+                    <FlowComponentRenderer
+                      key={component.id ?? index}
+                      component={component}
+                      index={index}
+                      values={(values as Record<string, string>) ?? {}}
+                      touched={mergedTouched}
+                      fieldErrors={mergedErrors}
+                      isLoading={isLoading as boolean}
+                      resolve={resolve}
+                      onInputChange={wrappedInputChange}
+                      onSubmit={(action, inputs) => {
+                        const isTrigger =
+                          action.eventType === EmbeddedFlowEventType.Trigger || action.eventType === 'TRIGGER';
+                        void (
+                          handleSubmit as (
+                            a: EmbeddedFlowComponent,
+                            i: Record<string, string>,
+                            s: boolean,
+                          ) => Promise<void>
+                        )(action, inputs, isTrigger);
+                      }}
+                    />
+                  ))}
+                </Box>
+              ) : (
+                <Alert severity="error" sx={{mb: 2}}>
+                  <AlertTitle>{t('signup:errors.signup.failed.message')}</AlertTitle>
+                  {(error as {message?: string})?.message ?? t('signup:errors.signup.failed.description')}
+                </Alert>
+              )}
+              <Typography sx={{textAlign: 'center', mt: 3}}>
+                <Trans i18nKey="signup:redirect.to.signin">
+                  Already have an account?
+                  <Button
+                    variant="text"
+                    onClick={() => {
+                      void navigate(signInPath);
+                    }}
+                    sx={{
+                      p: 0,
+                      minWidth: 'auto',
+                      textTransform: 'none',
+                      color: 'primary.main',
                       textDecoration: 'underline',
-                      backgroundColor: 'transparent',
-                    },
-                  }}
-                >
-                  Sign in
-                </Button>
-              </Trans>
-            </Typography>
-          </>
-        )}
+                      '&:hover': {
+                        textDecoration: 'underline',
+                        backgroundColor: 'transparent',
+                      },
+                    }}
+                  >
+                    Sign in
+                  </Button>
+                </Trans>
+              </Typography>
+            </>
+          );
+        }}
       </SignUp>
     </AuthCardLayout>
   );

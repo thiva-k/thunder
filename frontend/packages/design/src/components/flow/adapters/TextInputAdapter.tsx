@@ -54,6 +54,7 @@ export default function TextInputAdapter({
   isLoading,
   resolve,
   onInputChange,
+  onBlur,
 }: FlowFieldProps): JSX.Element | null {
   const {t} = useTranslation();
   const {ref} = component;
@@ -90,6 +91,7 @@ export default function TextInputAdapter({
         color={hasError ? 'error' : 'primary'}
         value={value}
         onChange={(e) => onInputChange(ref, e.target.value)}
+        onBlur={() => onBlur?.(ref)}
       />
     </FormControl>
   );
