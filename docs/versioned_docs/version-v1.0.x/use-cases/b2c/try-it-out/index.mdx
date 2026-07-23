@@ -1,52 +1,63 @@
 ---
-title: Try It Out
+title: See It in a Sample App
 docType: use-case
-description: Run B2C identity use cases against Wayfinder, a fictional consumer travel-booking app, to see ThunderID authentication in action.
+description: Meet the Wayfinder cast and architecture, set the sample up by importing a bundle or configuring it by hand, then walk through each consumer access journey.
 sidebar_position: 0
 ---
 
+# See It in a Sample App
 
-# Try It Out
-
-The walkthroughs in this section use Wayfinder, a fictional consumer travel-booking app, as the sample. You will sign users in, register new accounts, view and update profiles, recover lost passwords, and onboard staff, all against a locally running application connected to <ProductName />.
+Wayfinder is the reference implementation for [secure consumer access](../overview): a customer-facing travel application that
+runs each journey in this section against <ProductName />.
 
 ## Cast
 
-These sample users appear throughout the walkthroughs, each mapped to a specific flow: sign-up, sign-in, recovery, profile management, and staff onboarding.
+These sample users appear throughout the walkthroughs, one per journey.
 
 <WayfinderCast />
 
 ## Architecture
 
-The Wayfinder sample application has three main parts: a consumer web app, a booking API, and <ProductName /> as the identity provider.
-The following diagram shows how these pieces connect and where the identity flows run in the system.
+The Wayfinder sample has three main parts: a consumer web application, a booking API, and <ProductName /> as the
+identity platform. The diagram shows where identity journeys run and where tokens are used after sign-in.
 
 <WayfinderArchitecture />
 
-## Set Up the Sample
+## Import the Bundle
 
-Before running any walkthrough, set up the Wayfinder sample application. Two paths lead to the same end state:
+The fastest way to create the resources the walkthroughs need. First, [set up your environment](../build-environment); then apply the bundle through the <ProductName /> Console, which creates everything the walkthroughs share.
 
-<NextSteps>
-  <NextStepsCard
-    title="Quick Start"
-    description="Download the sample and import a pre-built configuration bundle into <ProductName />. Everything the walkthroughs need is created in one step."
-    href="./setup"
-  />
-  <NextStepsCard
-    title="Configure It Yourself"
-    description="Create the same resources step by step through the console and API. Use this path to understand how each piece is set up."
-    href="./configure-it-yourself"
-  />
-</NextSteps>
+Prefer to build each resource by hand and understand it as you go? Work through the [Build It](../build-index) tutorial instead.
+
+1. Sign in to the <ProductName /> Console at <ConsoleUrl />.
+2. On first sign-in, a welcome screen appears with an **Open** button. (Later, reach the same screen from the user profile menu in the top-right corner of the Console.)
+3. Click **Open** and select your `thunderid-config/redirect/thunderid-config.yaml` file from the sample distribution.
+4. Select your `thunderid-config/redirect/thunderid.env` file to provide the environment variables referenced in the YAML.
+5. The Console imports the files and reports the resources it created when the import completes.
+
+## Run the Sample
+
+From the extracted sample directory, install dependencies:
+
+```bash
+npm install
+```
+
+Then start all services:
+
+```bash
+npm run dev
+```
+
+The sample opens at <WayFinderSampleUrl />.
 
 ## Walkthroughs
 
-Once the sample is running, pick a walkthrough:
+After the sample is running, pick the journey you want to inspect:
 
 <NextSteps>
   <NextStepsCard
-    title="Login"
+    title="Sign In"
     description="John Doe signs in to Wayfinder and arrives at the dashboard."
     href="./add-login"
   />
@@ -55,11 +66,7 @@ Once the sample is running, pick a walkthrough:
     description="Emma Wilson signs up with email and password."
     href="./self-sign-up"
   />
-  <NextStepsCard
-    title="View Profile"
-    description="John views and updates his profile."
-    href="./profile-section"
-  />
+  <NextStepsCard title="View Profile" description="John views and updates his profile." href="./profile-section" />
   <NextStepsCard
     title="Account Recovery"
     description="John resets a forgotten password through an email link."
@@ -71,3 +78,8 @@ Once the sample is running, pick a walkthrough:
     href="./onboard-internal-users"
   />
 </NextSteps>
+
+## Next Steps
+
+- Go back to [Build It](../build-index) to build the same setup by hand, learning each concept as you go.
+- Review the [Design Decisions & Alternatives](../architecture-decisions) behind the pattern.

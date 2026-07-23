@@ -80,7 +80,7 @@ export default function Stepper({children, stepNode = 'h2', as = 'h2'}: StepperP
   }
 
   return (
-    <Box sx={{mt: 4}}>
+    <Box sx={{mt: 4, mb: 4}}>
       {steps.map((step, index) => (
         <Box key={step.id ?? `step-${index + 1}`} sx={{display: 'flex', gap: '16px'}}>
           {/* Left column: circle + connector line */}

@@ -2,17 +2,18 @@
 title: Integration Patterns
 docType: use-case
 description: Architectural choices for adding consumer identity to your application.
-sidebar_position: 2
+sidebar_position: 7
 ---
 
 
 # Integration Patterns
 
-When deciding on a solution pattern for a consumer application, there are a few key architectural choices to make. How users authenticate, where their identities live, how tokens flow between your app and APIs, and how the system runs in production all shape the overall architecture and user experience. 
+Wayfinder uses a redirect-based pattern: sign-in, sign-up, and recovery all run as hosted <ProductName /> screens. That
+fits a browser-based travel app well, but it is not the only option. The integration pattern determines where identity
+screens live and who controls each step in the journey. The right choice depends on your user experience goals,
+development resources, and how much control you want over the journey.
 
 ## Choose Your Integration Pattern
-
-The integration pattern determines where identity screens live and who controls each step in the journey. The right integration pattern for your application depend on your user experience goals, development resources, and how much control you want over the identity journey.
 
 You can choose the best fit for your application by answering these questions:
 <B2CSolutionPatternsExplorer />
@@ -48,12 +49,8 @@ Coverage is typically limited to the primitives <ProductName /> exposes, often a
 
 This pattern is built by calling the APIs directly; an SDK adds little here.
 
-## What's Next?
+## Continue Designing Your Architecture
 
-Now that you've selected an integration pattern, choose what you want to do next.
-
-<B2CNextSteps href="../try-it-out" /> 
-
-Continue designing your architecture by making decisions about identity sources, tokens, APIs, deployment, and operations.
+Review the other architecture decisions that shape your B2C application.
 
 <B2CArchitectureDecisions currentDecision="integration" />

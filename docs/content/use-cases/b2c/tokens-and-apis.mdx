@@ -12,41 +12,44 @@ After sign-in, the application holds a token or session that represents the user
 
 ## Session and Token Strategy
 
-Once a user signs in, the application holds a token or session that represents them. The shape of that credential decides how long the user stays signed in, how quickly access can be revoked when needed, and how much load lands on the identity product. Most B2C apps make this decision once and live with it for years, so it pays to pick deliberately.
+The shape of that credential decides how long the user stays signed in, how quickly access can be revoked when needed, and how much load lands on the identity product. Most B2C apps make this decision once and live with it for years, so it pays to pick deliberately.
 
 Three patterns cover most consumer scenarios:
 
-- **Stateless tokens:** short-lived access tokens backed by longer refresh tokens, with no server-side session record. Scales easily because no lookup is needed to validate a token. Revocation is best-effort and waits for the token to expire.
-- **Server-backed sessions:** every refresh and session is backed by a server-side record <ProductName /> can revoke instantly, which gives you true sign-out-everywhere.
+- **Stateless tokens:** short-lived [access tokens](../../../key-concepts/tokens) backed by longer
+  [refresh tokens](../../../guides/protocols/oauth-oidc/refresh-token), with no server-side session record. A
+  refresh token is a separate, longer-lived credential the application exchanges for a new access token without
+  asking the user to sign in again. Scales easily because no lookup is needed to validate a token. If you revoke
+  access, the token itself still works for anyone holding it until it expires; revocation only stops the next
+  refresh.
+- **Server-backed sessions:** refresh tokens are checked against a server-side record on every refresh, and can be
+  revoked immediately. Whether a sign-out takes effect immediately for an already-issued access token depends on how
+  your APIs validate it: an API that calls the introspection endpoint sees the revocation on its next request; an API
+  that verifies the token locally does not, since local verification never checks the server-side record, and the
+  token stays valid until it expires on its own.
 - **Sliding-expiry sessions:** sessions extend on each use, so returning users rarely have to sign in again, in return for longer-lived credentials.
 
-Many consumer apps combine the second and third into a long, sliding, revocable session.
+Many consumer apps combine the second and third into a long, sliding, revocable session. Whichever you pick, refresh-token rotation limits the damage if a token leaks.
 
-The choice shapes other concerns. A revocable session is needed for sign-out-everywhere to work reliably. Long-lived sessions should be paired with refresh-token rotation to limit the damage if a token leaks.
+## Where the Application Holds the Token
 
-**Capabilities:**
+For a browser-based web app, storing an access token somewhere JavaScript can read it, `localStorage` or a
+non-`HttpOnly` cookie, exposes it to any script that runs on the page: a single XSS vulnerability anywhere in your
+frontend dependencies hands an attacker the token directly. The safer pattern is a backend-for-frontend: your
+server-side code holds the token, and the browser only ever gets an `HttpOnly`, `Secure`, `SameSite` session cookie
+that JavaScript can't read at all. See the
+[Node.js Quickstart](../../../getting-started/connect-your-application/node) for a working example of this
+pattern.
 
-- Stateless JWT access tokens with refresh tokens
-- Server-side session record backing each refresh
-- Instant token and session revocation
-- Refresh-token rotation on use
-- Sliding-expiry sessions for stay-signed-in
-- Configurable access, refresh, and session lifetimes
-- Single logout across application surfaces
+Native mobile apps face a different tradeoff: platform-provided secure storage (Keychain on iOS, Keystore on
+Android) isn't exposed to arbitrary code the way a browser's JavaScript runtime is, so storing the token there
+directly is standard practice.
 
 ## Protect APIs the App Calls
 
 Sign-in is one half of identity; the other is protecting the APIs your app calls after sign-in. <ProductName /> issues tokens during sign-in, and the same tokens carry the user's permissions to your APIs. The API does not have to know who the user is; it only needs to validate the token and check the permissions inside.
 
-Validation typically happens at the API edge, in a gateway or middleware that verifies JWT signatures or calls <ProductName />'s introspection endpoint. Permissions are expressed as scopes (what the app may do) and audiences (which API the token is valid for). Grouping related APIs into a resource server lets multiple endpoints share one set of permission rules instead of each endpoint enforcing them ad-hoc.
-
-**Capabilities:**
-
-- Issue an OAuth2 access token to the app on sign-in
-- Validate the token at the API edge via JWT signature verification or introspection
-- Scope-based authorization checks
-- Bind a token to a specific API via audience or resource indicator
-- Group related APIs into a resource server so they share permission rules
+Validation typically happens at the API edge, in a gateway or middleware that verifies [JWT](../../../guides/protocols/oauth-oidc/token-formats) signatures locally, or calls <ProductName />'s [introspection endpoint](../../../guides/protocols/oauth-oidc/token-introspection) to ask <ProductName /> directly whether the token is still valid. Permissions are expressed as scopes (what the app may do) and audiences (which API the token is valid for). Grouping related APIs into a resource server lets multiple endpoints share one set of permission rules instead of each endpoint enforcing them ad-hoc.
 
 ## Continue Designing Your Architecture
 

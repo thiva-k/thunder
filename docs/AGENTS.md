@@ -17,5 +17,6 @@ The skill's `SKILL.md` is a dispatch table over its reference files, each coveri
 - `api.md` — API documentation specifically: OpenAPI specs (`api/*.yaml`) verified against the Go backend's registered routes, and SDK reference pages (`docs/content/sdks/*/apis/**`) verified against build artifacts when available. Technical accuracy hard-gates here, same as `tech.md`.
 - `review.md` — the full pre-merge check: runs `check.md`, `style.md`, `tech.md`, and (for API-reference paths) `api.md`, and combines them into one pass/fail report.
 - `seo.md` — discoverability check for new pages or major rewrites.
+- `use-case.md`, for structuring or auditing a use-case section (`docs/content/use-cases/<pattern>/`): page order, diagram design, jargon literacy for readers unfamiliar with IAM or ThunderID, and a scoring rubric. Use for creating, restructuring, or reviewing B2C, B2B, AI Agents, or a new use-case pattern.
 
 See [docs/README.md](README.md) for the full contributor workflow with a worked example, and `.agent/skills/docs/` for each reference file's complete rules.
