@@ -95,6 +95,7 @@ func (ts *TokenTestSuite) createTestApplication(authMethod string) string {
 		"name":                      appName,
 		"description":               "Application for token integration tests",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{
 			{
@@ -498,6 +499,7 @@ func (ts *TokenTestSuite) TestClientCredentialsGrantEntityIdentificationByClient
 		"name":                      "EntityIdTestApp",
 		"description":               "Application for entity identification test",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{
 			{

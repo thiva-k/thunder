@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -19,6 +19,20 @@
 import type {InboundAuthConfig} from './inbound-auth';
 import type {AttestationConfig} from './oauth';
 import type {AssertionConfig} from './token';
+
+/**
+ * Canonical application type (platform/client class).
+ *
+ * Mirrors the backend application `type` enum. Set at creation and immutable thereafter.
+ * - `browser`: public client, redirect-only (SPA).
+ * - `fullstack`: confidential client with a server component.
+ * - `mobile`: native/public client, uses platform attestation.
+ * - `m2m`: machine-to-machine, `client_credentials` only.
+ * - `custom`: no enforced constraints (escape hatch / legacy).
+ *
+ * @public
+ */
+export type ApplicationType = 'browser' | 'fullstack' | 'mobile' | 'm2m' | 'custom';
 
 /**
  * Application Response Model (Basic)
@@ -60,6 +74,7 @@ export type BasicApplication = Pick<
   | 'authFlowId'
   | 'registrationFlowId'
   | 'isRegistrationFlowEnabled'
+  | 'type'
   | 'template'
   | 'isReadOnly'
 > & {
@@ -253,8 +268,16 @@ export interface Application {
   layoutId?: string;
 
   /**
+   * Canonical application type (platform/client class).
+   * Set at creation and immutable thereafter. The backend uses it to apply type-specific behavior;
+   * prefer it over inferring the type from the OAuth config shape.
+   */
+  type?: ApplicationType;
+
+  /**
    * Application template identifier
-   * Indicates which template was used to create this application
+   * Indicates which frontend template was used to create this application. Display metadata only,
+   * not used for behavior decisions (use `type` instead).
    * @example 'react', 'nextjs', 'browser', 'mobile'
    */
   template?: string;

@@ -1,5 +1,6 @@
 {
   "id": "mcp-client",
+  "type": "browser",
   "displayName": "MCP Client",
   "description": "AI application that connects to MCP servers using the Model Context Protocol",
   "creationFlow": {

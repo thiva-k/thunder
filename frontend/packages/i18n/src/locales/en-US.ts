@@ -2155,6 +2155,8 @@ const translations = {
     'onboarding.configure.approach.native.title': 'Embedded sign-in/sign-up components in your app',
     'onboarding.configure.approach.native.description':
       'Users will sign in or sign up through your app using the UI components or APIs provided by {{product}}. You can customize and brand the flows using the designer or through code.',
+    'onboarding.configure.approach.native.attestationNotice':
+      'Mobile apps authenticate to the Flow Execution API using platform attestation instead of a flow secret. After creating this application, configure attestation under Advanced settings to access the flow APIs.',
     'onboarding.configure.stack.title': 'Choose a type',
     'onboarding.configure.stack.subtitle': 'Select the type that best matches your application.',
     'onboarding.templateSelect.subtitle':

@@ -72,6 +72,7 @@ test.describe("Application Edit", () => {
         name: appData.name,
         description: appData.description,
         ouId: resolvedOuId,
+        type: "fullstack",
         inboundAuthConfig: [
           {
             type: "oauth2",
@@ -307,6 +308,7 @@ test.describe("Application Edit", () => {
             name: appData.name,
             description: appData.description,
             ouId: suiteOuId,
+            type: "fullstack",
           },
           headers: {
             Authorization: `Bearer ${adminToken}`,

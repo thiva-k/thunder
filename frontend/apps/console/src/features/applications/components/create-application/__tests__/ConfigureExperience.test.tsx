@@ -106,6 +106,47 @@ describe('ConfigureExperience', () => {
 
       expect(mockOnApproachChange).toHaveBeenCalledWith(ApplicationCreateFlowSignInApproach.INBUILT);
     });
+
+    it('should show the attestation notice for mobile apps when embedded is selected', () => {
+      render(
+        <ConfigureExperience
+          selectedApproach={ApplicationCreateFlowSignInApproach.EMBEDDED}
+          onApproachChange={mockOnApproachChange}
+          embeddedRequiresAttestation
+        />,
+      );
+
+      expect(
+        screen.getByText('applications:onboarding.configure.approach.native.attestationNotice'),
+      ).toBeInTheDocument();
+    });
+
+    it('should not show the attestation notice when the inbuilt approach is selected', () => {
+      render(
+        <ConfigureExperience
+          selectedApproach={ApplicationCreateFlowSignInApproach.INBUILT}
+          onApproachChange={mockOnApproachChange}
+          embeddedRequiresAttestation
+        />,
+      );
+
+      expect(
+        screen.queryByText('applications:onboarding.configure.approach.native.attestationNotice'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('should not show the attestation notice when attestation is not required', () => {
+      render(
+        <ConfigureExperience
+          selectedApproach={ApplicationCreateFlowSignInApproach.EMBEDDED}
+          onApproachChange={mockOnApproachChange}
+        />,
+      );
+
+      expect(
+        screen.queryByText('applications:onboarding.configure.approach.native.attestationNotice'),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe('User Interactions', () => {

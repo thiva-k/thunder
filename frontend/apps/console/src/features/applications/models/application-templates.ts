@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -17,6 +17,7 @@
  */
 
 import type {JSX} from 'react';
+import type {ApplicationType} from './application';
 import type {CreationFlow} from './creation-flow';
 import type {InboundAuthConfig} from './inbound-auth';
 import type {OAuth2Config} from './oauth';
@@ -179,6 +180,12 @@ export interface ApplicationTemplate {
    * Templates without a `creationFlow` use the default user-facing flow.
    */
   creationFlow?: CreationFlow;
+  /**
+   * Canonical backend application type this template maps to. Sent as the application `type` on
+   * creation. Templates that can resolve to more than one type (e.g. MCP client) may override this
+   * at creation time based on user selections.
+   */
+  type?: ApplicationType;
   /**
    * Description of the template
    */

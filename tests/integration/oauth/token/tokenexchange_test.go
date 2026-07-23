@@ -223,6 +223,7 @@ func (ts *TokenExchangeTestSuite) createTestApplication() string {
 		"name":                      tokenExchangeAppName,
 		"description":               "Application for token exchange integration tests",
 		"ouId":                      ts.oUID,
+		"type":                      "fullstack",
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"token-test-person"},
 		"inboundAuthConfig": []map[string]interface{}{
@@ -703,6 +704,7 @@ func (ts *TokenExchangeTestSuite) TestTokenExchange_ApplicationNotRegisteredForG
 	app := map[string]interface{}{
 		"name":                      tokenExchangeAppName + "_no_te",
 		"description":               "Application without token exchange",
+		"type":                      "fullstack",
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"token-test-person"},
 		"inboundAuthConfig": []map[string]interface{}{

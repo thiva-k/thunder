@@ -4981,6 +4981,7 @@ resource_type: application
 id: 01900000-0000-7000-8000-000000000060
 name: Console
 description: Management application for ThunderID
+type: browser
 ouId: 01900000-0000-7000-8000-000000000001
 url: "{{ .PUBLIC_URL }}/console"
 logoUrl: "avatar:shape=rounded,variant=anonymous_entity,content=cube,colors=0,bg=#64be90"

@@ -27,8 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 const (
@@ -132,6 +132,7 @@ func (ts *WildcardRedirectURITestSuite) createApp(name, clientID, clientSecret s
 	payload := map[string]interface{}{
 		"name": name,
 		"ouId": ts.ouID,
+		"type": "fullstack",
 		"inboundAuthConfig": []map[string]interface{}{
 			{
 				"type": "oauth2",
@@ -189,6 +190,7 @@ func (ts *WildcardRedirectURITestSuite) postApplication(name string, redirectURI
 	payload := map[string]interface{}{
 		"name": name,
 		"ouId": ts.ouID,
+		"type": "fullstack",
 		"inboundAuthConfig": []map[string]interface{}{
 			{
 				"type": "oauth2",

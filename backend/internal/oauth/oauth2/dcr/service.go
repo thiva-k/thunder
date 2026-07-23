@@ -265,9 +265,12 @@ func (ds *dcrService) convertDCRToApplication(request *DCRRegistrationRequest) (
 	}
 
 	appDTO := &model.ApplicationDTO{
-		ID:                appID,
-		OUID:              request.OUID,
-		Name:              appName,
+		ID:   appID,
+		OUID: request.OUID,
+		Name: appName,
+		// Dynamic Client Registration (RFC 7591) has no concept of ThunderID's application type, and
+		// a DCR-registered client can take any shape, so it is always registered as custom.
+		Type:              model.ApplicationTypeCustom,
 		URL:               request.ClientURI,
 		LogoURL:           request.LogoURI,
 		InboundAuthConfig: inboundAuthConfig,

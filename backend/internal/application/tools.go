@@ -229,6 +229,7 @@ func (t *applicationTools) getApplicationTemplates(
 		"spa": {
 			OUID: "<OU_ID>",
 			Name: "<APP_NAME>",
+			Type: model.ApplicationTypeBrowser,
 			InboundAuthProfile: providers.InboundAuthProfile{
 				ThemeID: "<THEME_ID>",
 			},
@@ -261,6 +262,7 @@ func (t *applicationTools) getApplicationTemplates(
 		"mobile": {
 			OUID: "<OU_ID>",
 			Name: "<APP_NAME>",
+			Type: model.ApplicationTypeMobile,
 			InboundAuthProfile: providers.InboundAuthProfile{
 				ThemeID: "<THEME_ID>",
 			},
@@ -293,6 +295,7 @@ func (t *applicationTools) getApplicationTemplates(
 		"server": {
 			OUID: "<OU_ID>",
 			Name: "<APP_NAME>",
+			Type: model.ApplicationTypeFullStack,
 			InboundAuthProfile: providers.InboundAuthProfile{
 				ThemeID: "<THEME_ID>",
 			},
@@ -324,6 +327,7 @@ func (t *applicationTools) getApplicationTemplates(
 		"m2m": {
 			OUID: "<OU_ID>",
 			Name: "<APP_NAME>",
+			Type: model.ApplicationTypeM2M,
 			InboundAuthConfig: []providers.InboundAuthConfigWithSecret{
 				{
 					Type: providers.OAuthInboundAuthType,

@@ -1,5 +1,6 @@
 {
   "id": "nuxt",
+  "type": "fullstack",
   "displayName": "Nuxt",
   "description": "Full-stack Vue framework with server-side rendering",
   "defaults": {

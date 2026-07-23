@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -882,6 +882,79 @@ func (suite *ServiceTestSuite) TestValidateApplicationForUpdate_Success() {
 	assert.Equal(suite.T(), "Test App", result.Name)
 }
 
+func (suite *ServiceTestSuite) TestValidateApplicationForUpdate_TypeImmutable() {
+	testConfig := &config.Config{
+		DeclarativeResources: config.DeclarativeResources{
+			Enabled: false,
+		},
+	}
+	config.ResetServerRuntime()
+	err := config.InitializeServerRuntime("/tmp/test", testConfig)
+	require.NoError(suite.T(), err)
+	defer config.ResetServerRuntime()
+
+	service, mockStore := suite.setupTestService()
+
+	existingApp := &model.ApplicationProcessedDTO{
+		ID:   testServiceAppID,
+		Name: "Test App",
+		Type: model.ApplicationTypeMobile,
+	}
+
+	app := &model.ApplicationDTO{
+		Name:    "Test App",
+		OUID:    testOUID,
+		Type:    model.ApplicationTypeBrowser,
+		URL:     "https://example.com",
+		LogoURL: "https://example.com/logo.png",
+	}
+
+	mockStore.On("IsDeclarative", mock.Anything, testServiceAppID).Maybe().Return(false)
+	mockLoadFullApplication(mockStore, service, existingApp)
+
+	result, _, svcErr := service.validateApplicationForUpdate(context.Background(), testServiceAppID, app)
+
+	assert.Nil(suite.T(), result)
+	require.NotNil(suite.T(), svcErr)
+	assert.Equal(suite.T(), ErrorApplicationTypeImmutable.Code, svcErr.Code)
+}
+
+func (suite *ServiceTestSuite) TestValidateApplicationForUpdate_TypeInheritedWhenOmitted() {
+	testConfig := &config.Config{
+		DeclarativeResources: config.DeclarativeResources{
+			Enabled: false,
+		},
+	}
+	config.ResetServerRuntime()
+	err := config.InitializeServerRuntime("/tmp/test", testConfig)
+	require.NoError(suite.T(), err)
+	defer config.ResetServerRuntime()
+
+	service, mockStore := suite.setupTestService()
+
+	existingApp := &model.ApplicationProcessedDTO{
+		ID:   testServiceAppID,
+		Name: "Test App",
+		Type: model.ApplicationTypeMobile,
+	}
+
+	app := &model.ApplicationDTO{
+		Name:    "Test App",
+		OUID:    testOUID,
+		URL:     "https://example.com",
+		LogoURL: "https://example.com/logo.png",
+	}
+
+	mockStore.On("IsDeclarative", mock.Anything, testServiceAppID).Maybe().Return(false)
+	mockLoadFullApplication(mockStore, service, existingApp)
+
+	result, _, svcErr := service.validateApplicationForUpdate(context.Background(), testServiceAppID, app)
+
+	require.Nil(suite.T(), svcErr)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), model.ApplicationTypeMobile, app.Type)
+}
+
 func (suite *ServiceTestSuite) TestDeleteApplication_EmptyAppID() {
 	testConfig := &config.Config{
 		DeclarativeResources: config.DeclarativeResources{
@@ -1470,6 +1543,7 @@ func (suite *ServiceTestSuite) runCreateApplicationStoreErrorTest() {
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1685,6 +1759,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_WithAttestation_EncryptsAnd
 		}).Return(nil)
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeMobile,
 		Name: "Mobile App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1818,6 +1893,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_WithOAuthCertificate_Succes
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test OAuth Cert App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1868,6 +1944,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_IssuesFlowSecretForEmbedded
 
 	// An embedded server-side app: no OAuth config, so no OAuth profile.
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Embedded App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1909,6 +1986,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForM2MClient() 
 	// A machine-to-machine app using client_credentials only. It obtains tokens directly and cannot
 	// consume a flow assertion, so it gets no Flow Secret. A caller-supplied FlowSecret is ignored.
 	app := &model.ApplicationDTO{
+		Type:       model.ApplicationTypeM2M,
 		Name:       "M2M App",
 		OUID:       testOUID,
 		FlowSecret: "caller-supplied-secret",
@@ -1961,6 +2039,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForRedirectClie
 	// client secret but no Flow Secret, since it cannot initiate flows directly. A caller-supplied
 	// FlowSecret must be ignored for such an ineligible app.
 	app := &model.ApplicationDTO{
+		Type:       model.ApplicationTypeFullStack,
 		Name:       "Full-stack App",
 		OUID:       testOUID,
 		FlowSecret: "caller-supplied-secret",
@@ -2016,6 +2095,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForPublicClient
 
 	// A browser SPA: public client, no client secret. A caller-supplied FlowSecret must be ignored.
 	app := &model.ApplicationDTO{
+		Type:       model.ApplicationTypeBrowser,
 		Name:       "SPA App",
 		OUID:       testOUID,
 		FlowSecret: "caller-supplied-secret",
@@ -2076,6 +2156,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_StoreErrorWithOAuthCertRoll
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test OAuth Cert App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -3023,6 +3104,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_DeclarativeMode() {
 	service, _ := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test App",
 		OUID: testOUID,
 	}
@@ -3958,6 +4040,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_CreateInboundClientFailsAnd
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -3980,6 +4063,22 @@ func (suite *ServiceTestSuite) TestCreateApplication_CreateInboundClientFailsAnd
 	assert.Equal(suite.T(), &tidcommon.InternalServerError, svcErr)
 }
 
+func (suite *ServiceTestSuite) TestValidateApplication_TypeRequired() {
+	service, _ := suite.setupTestService()
+
+	app := &model.ApplicationDTO{
+		Name: "Test App",
+		OUID: testOUID,
+	}
+
+	processed, inboundAuthConfig, svcErr := service.ValidateApplication(context.Background(), app)
+
+	assert.Nil(suite.T(), processed)
+	assert.Nil(suite.T(), inboundAuthConfig)
+	assert.NotNil(suite.T(), svcErr)
+	assert.Equal(suite.T(), &ErrorApplicationTypeRequired, svcErr)
+}
+
 func (suite *ServiceTestSuite) TestValidateApplication_InboundClientValidateError() {
 	service, mockStore := suite.setupTestService()
 
@@ -3995,6 +4094,7 @@ func (suite *ServiceTestSuite) TestValidateApplication_InboundClientValidateErro
 	app := &model.ApplicationDTO{
 		Name: "Test App",
 		OUID: testOUID,
+		Type: model.ApplicationTypeFullStack,
 	}
 
 	processed, inboundAuthConfig, svcErr := service.ValidateApplication(context.Background(), app)

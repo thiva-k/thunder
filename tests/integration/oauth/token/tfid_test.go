@@ -199,6 +199,7 @@ func (ts *TfidTestSuite) createTestApplication(name, clientID, clientSecret, red
 		"name":                      name,
 		"description":               "Application for tfid integration tests",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"tfid-test-person"},

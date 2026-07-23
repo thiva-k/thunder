@@ -361,6 +361,7 @@ func (ts *CIBATestSuite) createCIBATestApplication(authFlowID string) string {
 		"name":                      "CIBATestApp",
 		"description":               "Application for CIBA integration test",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"ciba-test-person"},

@@ -52,13 +52,17 @@ The core principle is **shared responsibility**: <ProductName /> enforces authen
 Choose this approach when your application must render its own authentication screens (no redirects to hosted pages) while <ProductName /> enforces authentication logic, MFA, and policies server-side. This model suits native mobile and desktop apps, or confidential server-side applications, where the client can be trusted to drive the flow directly.
 
 :::warning
-App-native **sign-in** is **not supported for browser-based single-page applications (SPAs)** such as React, Angular, or Vue apps. SPAs are public clients that cannot be verified when calling the Flow Execution API directly, so they must sign users in through the [Redirect-Based](#redirect-based) model with the OAuth 2.0 Authorization Code grant and PKCE. Registration and recovery have no redirect-based equivalent today, so SPAs continue to drive those flows through the Flow Execution API.
+App-native **sign-in** is **not supported for browser-based single-page applications (SPAs)** such as React, Angular, or Vue apps. SPAs must register as the `browser` [application type](../../guides/applications/manage-applications.mdx#application-types), which can only sign users in through the [Redirect-Based](#redirect-based) model with the OAuth 2.0 Authorization Code grant and PKCE. Registration and recovery have no redirect-based equivalent today, so SPAs continue to drive those flows through the Flow Execution API.
 :::
 
-:::note[Grant Type Requirement]
-This restriction applies to **authentication** flows only. The Flow Execution API rejects a new authentication-flow initiation request (`flowType: AUTHENTICATION` with no `executionId`) from an application configured with the `authorization_code` grant type. Such applications must initiate authentication through the [Authorization endpoint](../../../apis#tag/authorization) (`GET /oauth2/authorize`), which then drives the flow internally.
+:::note[Direct Initiation Restriction]
+This restriction applies to new **authentication** and **sign-out** flow initiation only (`flowType: AUTHENTICATION` or `SIGN_OUT` with no `executionId`). Continuation requests that carry a valid `executionId` are always accepted, and registration, recovery, and user onboarding flows are never restricted because they have no redirect-based equivalent.
 
-Registration, recovery, and user onboarding flows are **not** restricted because they have no redirect-based equivalent and can still be initiated directly through the Flow Execution API regardless of grant type. Continuation requests that carry a valid `executionId` are also always accepted.
+Whether an application may initiate one of these flows directly depends on its [application type](../../guides/applications/manage-applications.mdx#application-types):
+
+- **Browser** and **Backend Service (m2m)** applications can never initiate these flows directly. A browser application must sign users in through the [Authorization endpoint](../../../apis#tag/authorization) (`GET /oauth2/authorize`), which drives the flow internally. A Backend Service application authenticates itself with the `client_credentials` grant instead of signing in a user.
+- **Mobile** applications must present a valid platform attestation token. See [Attestation](#attestation).
+- **Full-stack** and **Custom** applications are derived from their OAuth 2.0 configuration. An application with no OAuth 2.0 configuration, or one that is confidential and does not use the `authorization_code` grant, authenticates with a Flow Secret. An application configured with the `authorization_code` grant, or with `client_credentials` as its only grant, cannot initiate the flow directly.
 :::
 
 ### Key Features
@@ -82,9 +86,9 @@ See the [API Reference](../../../apis#tag/flow-execution) for endpoint specifica
 
 ### Attestation
 
-A confidential server-side application authenticates at flow initiation with a Flow Secret, but a mobile application cannot safely hold one. Instead, a mobile client proves its identity through platform attestation. <ProductName /> supports Google [Play Integrity](https://developer.android.com/google/play/integrity) for Android clients and Apple [App Attest](https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server) for iOS clients. When an application configures attestation, it may initiate a sign-in flow directly by presenting a platform attestation token, which <ProductName /> verifies against the registered identity before starting the flow.
+A confidential server-side application authenticates at flow initiation with a Flow Secret, but a mobile application cannot safely hold one. Instead, a **Mobile** [application type](../../guides/applications/manage-applications.mdx#application-types) proves its identity through platform attestation. <ProductName /> supports Google [Play Integrity](https://developer.android.com/google/play/integrity) for Android clients and Apple [App Attest](https://developer.apple.com/documentation/devicecheck/validating-apps-that-connect-to-your-server) for iOS clients. A Mobile application must configure attestation and present a valid attestation token to initiate a sign-in flow directly; <ProductName /> verifies the token against the registered identity before starting the flow.
 
-Attestation is a client-level setting configured at the application level, independent of the OAuth 2.0 protocol, so it applies to any application type, including embedded apps with no OAuth 2.0 configuration. When attestation is configured, it takes precedence: the application must present a valid attestation token to initiate a flow, and any Flow Secret is ignored. Attestation is optional; when enabled, an application configures exactly one platform. See [Configure Platform Attestation](../../guides/applications/application-settings.mdx#configure-platform-attestation) for how to configure it.
+Attestation is a client-level setting configured at the application level, independent of the OAuth 2.0 protocol. It is optional, and when enabled, an application configures exactly one platform. A Mobile application that has not configured attestation is rejected outright when it attempts to initiate a flow directly. Attestation is only consulted for the Mobile application type: configuring it on any other application type has no effect on direct flow initiation. See [Configure Platform Attestation](../../guides/applications/application-settings.mdx#configure-platform-attestation) for how to configure it.
 
 To initiate a new flow, the mobile client obtains a platform attestation token and presents it in the `Attestation-Token` request header of the Flow Execution request:
 
@@ -99,7 +103,7 @@ Attestation-Token: <attestation-token>
 }
 ```
 
-An attested mobile app that omits the token is rejected with `401 Unauthorized`, and an invalid or malformed token is also rejected with `401 Unauthorized`. Flow **continuation** requests (those carrying an `executionId`) do not require an attestation token.
+A Mobile application that has not configured attestation is rejected with `400 Bad Request`. Once attestation is configured, an application that omits the token is rejected with `401 Unauthorized`, and an invalid or malformed token is also rejected with `401 Unauthorized`. Flow **continuation** requests (those carrying an `executionId`) do not require an attestation token.
 
 ### Integration Modes
 

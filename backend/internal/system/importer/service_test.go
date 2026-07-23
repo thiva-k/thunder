@@ -2307,6 +2307,28 @@ func TestImportResources_ApplicationOUHandlePassedToService(t *testing.T) {
 	assert.Equal(t, "default", appSvc.created[0].OUHandle)
 }
 
+func TestImportResources_ApplicationTypePassedToService(t *testing.T) {
+	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
+	svc := newImportService(
+		appSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{
+		Content: strings.Join([]string{
+			"resource_type: application",
+			"name: My App",
+			"type: browser",
+			"",
+		}, "\n"),
+	})
+
+	require.Nil(t, err)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, appSvc.created, 1)
+	assert.Equal(t, model.ApplicationTypeBrowser, appSvc.created[0].Type)
+}
+
 func TestImportResources_ApplicationAuthFlowHandlePassedToService(t *testing.T) {
 	appSvc := &fakeApplicationService{existing: map[string]*providers.Application{}}
 	svc := newImportService(

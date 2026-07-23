@@ -277,6 +277,7 @@ func (ts *ClaimsParameterTestSuite) createTestApplication(authFlowID string) str
 		"name":                      appName,
 		"description":               "Application for Claims Parameter integration tests",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"claims-test-person"},

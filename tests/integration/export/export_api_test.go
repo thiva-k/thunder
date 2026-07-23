@@ -28,8 +28,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 const (
@@ -540,6 +540,9 @@ func (ts *ExportAPITestSuite) TestExportWithInvalidIdentityProviderID() {
 // Helper functions
 
 func (ts *ExportAPITestSuite) createApplication(app Application) (string, error) {
+	if app.Type == "" {
+		app.Type = "fullstack"
+	}
 	appJSON, err := json.Marshal(app)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal application: %w", err)
