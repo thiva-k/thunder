@@ -965,7 +965,6 @@ func applicationRequestToDTO(req *appmodel.ApplicationRequestWithID) *appmodel.A
 			IsRecoveryFlowEnabled:     req.IsRecoveryFlowEnabled,
 			SignOutFlowID:             req.SignOutFlowID,
 			SignOutFlowHandle:         req.SignOutFlowHandle,
-			IsSignOutFlowEnabled:      req.IsSignOutFlowEnabled,
 			ThemeID:                   req.ThemeID,
 			LayoutID:                  req.LayoutID,
 			Assertion:                 req.Assertion,
