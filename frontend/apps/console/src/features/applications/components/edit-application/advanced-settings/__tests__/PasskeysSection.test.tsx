@@ -1,0 +1,228 @@
+/**
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+import {render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import {describe, it, expect, vi, beforeEach} from 'vitest';
+import PasskeysSection from '../PasskeysSection';
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback?: string) => fallback ?? key,
+  }),
+}));
+
+describe('PasskeysSection', () => {
+  const mockOnChange = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Rendering', () => {
+    it('renders the section title and description', () => {
+      render(<PasskeysSection onPasskeysChange={mockOnChange} />);
+
+      expect(screen.getByText('Passkey Allowed Origins')).toBeInTheDocument();
+      expect(
+        screen.getByText('Allowed origins for passkey operations initiated through this application.'),
+      ).toBeInTheDocument();
+    });
+
+    it('renders an existing origin', () => {
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} onPasskeysChange={mockOnChange} />);
+
+      expect(screen.getByDisplayValue('https://app.example.com')).toBeInTheDocument();
+    });
+
+    it('renders multiple existing origins', () => {
+      render(
+        <PasskeysSection
+          allowedOrigins={['https://app.example.com', 'https://mobile.example.com']}
+          onPasskeysChange={mockOnChange}
+        />,
+      );
+
+      expect(screen.getByDisplayValue('https://app.example.com')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('https://mobile.example.com')).toBeInTheDocument();
+    });
+
+    it('renders no inputs when allowedOrigins is empty', () => {
+      render(<PasskeysSection allowedOrigins={[]} onPasskeysChange={mockOnChange} />);
+
+      expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    });
+
+    it('shows the Add Origin button when editable', () => {
+      render(<PasskeysSection onPasskeysChange={mockOnChange} />);
+
+      expect(screen.getByRole('button', {name: /Add Origin/i})).toBeInTheDocument();
+    });
+
+    it('hides the Add Origin and Delete buttons when read-only (no onChange)', () => {
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} />);
+
+      expect(screen.queryByRole('button', {name: /Add Origin/i})).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', {name: /Delete/i})).not.toBeInTheDocument();
+    });
+
+    it('hides the Add Origin and Delete buttons when disabled', () => {
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} onPasskeysChange={mockOnChange} disabled />);
+
+      expect(screen.queryByRole('button', {name: /Add Origin/i})).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', {name: /Delete/i})).not.toBeInTheDocument();
+    });
+
+    it('renders inputs as disabled when disabled prop is true', () => {
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} onPasskeysChange={mockOnChange} disabled />);
+
+      expect(screen.getByDisplayValue('https://app.example.com')).toBeDisabled();
+    });
+  });
+
+  describe('Adding origins', () => {
+    it('appends an empty string when "Add Origin" is clicked', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} onPasskeysChange={mockOnChange} />);
+
+      await user.click(screen.getByRole('button', {name: /Add Origin/i}));
+
+      expect(mockOnChange).toHaveBeenCalledWith(['https://app.example.com', '']);
+    });
+
+    it('appends to an empty list', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={[]} onPasskeysChange={mockOnChange} />);
+
+      await user.click(screen.getByRole('button', {name: /Add Origin/i}));
+
+      expect(mockOnChange).toHaveBeenCalledWith(['']);
+    });
+  });
+
+  describe('Removing origins', () => {
+    it('removes an origin when its Delete button is clicked', async () => {
+      const user = userEvent.setup();
+      render(
+        <PasskeysSection
+          allowedOrigins={['https://app.example.com', 'https://mobile.example.com']}
+          onPasskeysChange={mockOnChange}
+        />,
+      );
+
+      const deleteButtons = screen.getAllByRole('button', {name: /Delete/i});
+      await user.click(deleteButtons[0]);
+
+      expect(mockOnChange).toHaveBeenCalledWith(['https://mobile.example.com']);
+    });
+
+    it('removes the last origin, leaving an empty list', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} onPasskeysChange={mockOnChange} />);
+
+      await user.click(screen.getByRole('button', {name: /Delete/i}));
+
+      expect(mockOnChange).toHaveBeenCalledWith([]);
+    });
+
+    it('shifts error indices down after removing an earlier entry', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['', '', '']} onPasskeysChange={mockOnChange} />);
+
+      // Blur the first and third inputs to trigger empty-field errors on those two
+      const inputs = screen.getAllByRole('textbox');
+      await user.click(inputs[0]);
+      await user.tab();
+      await user.click(inputs[2]);
+      await user.tab();
+
+      expect(screen.getAllByText('Origin cannot be empty')).toHaveLength(2);
+
+      // Remove the middle (index 1) entry — the remaining two error entries should shift
+      const deleteButtons = screen.getAllByRole('button', {name: /Delete/i});
+      await user.click(deleteButtons[1]);
+
+      // onChange should be called with the two remaining empty strings
+      expect(mockOnChange).toHaveBeenCalledWith(['', '']);
+    });
+  });
+
+  describe('Editing origins', () => {
+    it('calls onChange on each keystroke', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<PasskeysSection allowedOrigins={['']} onPasskeysChange={mockOnChange} />);
+
+      const input = screen.getByPlaceholderText('https://app.example.com');
+      await user.type(input, 'h');
+
+      expect(mockOnChange).toHaveBeenCalledWith(['h']);
+    });
+
+    it('clears a field error while the user is typing', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['']} onPasskeysChange={mockOnChange} />);
+
+      const input = screen.getByPlaceholderText('https://app.example.com');
+
+      // Blur to trigger the empty error
+      await user.click(input);
+      await user.tab();
+      expect(screen.getByText('Origin cannot be empty')).toBeInTheDocument();
+
+      // Type something — the error should disappear
+      await user.type(input, 'h');
+      expect(screen.queryByText('Origin cannot be empty')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Validation', () => {
+    it('shows an empty-field error when an empty input is blurred', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['']} onPasskeysChange={mockOnChange} />);
+
+      const input = screen.getByPlaceholderText('https://app.example.com');
+      await user.click(input);
+      await user.tab();
+
+      expect(screen.getByText('Origin cannot be empty')).toBeInTheDocument();
+    });
+
+    it('shows an invalid-URL error for a non-URL value on blur', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['not a url']} onPasskeysChange={mockOnChange} />);
+
+      const input = screen.getByDisplayValue('not a url');
+      await user.click(input);
+      await user.tab();
+
+      expect(screen.getByText('Enter a valid URL')).toBeInTheDocument();
+    });
+
+    it('shows no inline error for a valid URL after blur', async () => {
+      const user = userEvent.setup();
+      render(<PasskeysSection allowedOrigins={['https://app.example.com']} onPasskeysChange={mockOnChange} />);
+
+      const input = screen.getByDisplayValue('https://app.example.com');
+      await user.click(input);
+      await user.tab();
+
+      expect(screen.queryByText('Origin cannot be empty')).not.toBeInTheDocument();
+      expect(screen.queryByText('Enter a valid URL')).not.toBeInTheDocument();
+    });
+  });
+});

@@ -2496,6 +2496,16 @@ const translations = {
     'edit.advanced.attestation.hint.bundleId': 'The iOS bundle identifier that must match the attested app.',
     'edit.advanced.attestation.error.appleIncomplete': 'Both Team ID and Bundle ID are required together.',
 
+    /* Passkeys section */
+    'edit.advanced.labels.passkeys': 'Passkey Allowed Origins',
+    'edit.advanced.passkeys.intro': 'Allowed origins for passkey operations initiated through this application.',
+    'edit.advanced.passkeys.serverFallbackHint':
+      'Origins listed here are automatically included in the server CORS allowed origins.',
+    'edit.advanced.passkeys.allowedOrigins.placeholder': 'https://app.example.com',
+    'edit.advanced.passkeys.allowedOrigins.addOrigin': 'Add Origin',
+    'edit.advanced.passkeys.allowedOrigins.error.empty': 'Origin cannot be empty',
+    'edit.advanced.passkeys.allowedOrigins.error.invalid': 'Enter a valid URL',
+
     /* -------------------- Edit page -------------------- */
     // Common
     'edit.page.error': 'Failed to load application information',

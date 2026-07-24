@@ -20,15 +20,11 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
-
-	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
-	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
-
-	"encoding/json"
 
 	"github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/cert"
@@ -37,14 +33,18 @@ import (
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	oauthutils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	oupkg "github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
 	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // ApplicationServiceInterface defines the interface for the application service.
@@ -75,6 +75,7 @@ type applicationService struct {
 	i18nService          i18nmgt.I18nServiceInterface
 	cryptoSvc            kmprovider.RuntimeCryptoProvider
 	dependencyRegistry   resourcedependency.Registry
+	serverConfigService  serverconfig.ServerConfigService
 }
 
 // newApplicationService creates a new instance of ApplicationService.
@@ -84,6 +85,7 @@ func newApplicationService(
 	ouService oupkg.OrganizationUnitServiceInterface,
 	i18nService i18nmgt.I18nServiceInterface,
 	cryptoSvc kmprovider.RuntimeCryptoProvider,
+	serverConfigSvc serverconfig.ServerConfigService,
 ) ApplicationServiceInterface {
 	return &applicationService{
 		logger:               log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService")),
@@ -92,6 +94,7 @@ func newApplicationService(
 		ouService:            ouService,
 		i18nService:          i18nService,
 		cryptoSvc:            cryptoSvc,
+		serverConfigService:  serverConfigSvc,
 	}
 }
 
@@ -185,6 +188,8 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 		as.logger.Error(ctx, "Failed to create application", log.Error(err), log.String("appID", appID))
 		return nil, &tidcommon.InternalServerError
 	}
+
+	as.syncPasskeyOriginsToCORS(ctx, processedDTO.PasskeyAllowedOrigins)
 
 	appForReturn := *app
 	appForReturn.AuthFlowID = inboundClient.AuthFlowID
@@ -438,6 +443,8 @@ func (as *applicationService) UpdateApplication(ctx context.Context, appID strin
 	if svcErr := as.cleanupStaleI18nKeys(ctx, appID, existingApp, app); svcErr != nil {
 		return nil, svcErr
 	}
+
+	as.syncPasskeyOriginsToCORS(ctx, processedDTO.PasskeyAllowedOrigins)
 
 	appForReturn := *app
 	appForReturn.AuthFlowID = inboundClient.AuthFlowID
@@ -821,6 +828,7 @@ func toInboundClient(dto *model.ApplicationProcessedDTO) inboundmodel.InboundCli
 		Assertion:                 dto.Assertion,
 		LoginConsent:              dto.LoginConsent,
 		AllowedUserTypes:          dto.AllowedUserTypes,
+		PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 		Attestation:               dto.Attestation,
 	}
 
@@ -876,6 +884,7 @@ func toProcessedDTO(
 			Assertion:                 dao.Assertion,
 			LoginConsent:              dao.LoginConsent,
 			AllowedUserTypes:          dao.AllowedUserTypes,
+			PasskeyAllowedOrigins:     dao.PasskeyAllowedOrigins,
 			Attestation:               dao.Attestation.WithoutCredentials(),
 		},
 	}
@@ -1812,6 +1821,7 @@ func buildApplicationResponse(dto *model.ApplicationProcessedDTO) *providers.App
 			LayoutID:                  dto.LayoutID,
 			Assertion:                 dto.Assertion,
 			AllowedUserTypes:          dto.AllowedUserTypes,
+			PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 			LoginConsent:              dto.LoginConsent,
 			Attestation:               dto.Attestation,
 		},
@@ -1923,6 +1933,7 @@ func buildBaseApplicationProcessedDTO(appID string, app *model.ApplicationDTO,
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation,
 		},
@@ -2007,6 +2018,7 @@ func buildReturnApplicationDTO(
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation.WithoutCredentials(),
 		},
@@ -2117,4 +2129,74 @@ func (as *applicationService) cleanupStaleI18nKeys(
 		return &tidcommon.InternalServerError
 	}
 	return nil
+}
+
+// syncPasskeyOriginsToCORS merges the application's passkey allowed origins into the CORS writable
+// layer so the browser can reach the ThunderID server from those origins. This is additive: origins
+// already present are skipped; origins removed from an application are not pruned here.
+func (as *applicationService) syncPasskeyOriginsToCORS(ctx context.Context, origins []string) {
+	if as.serverConfigService == nil || len(origins) == 0 {
+		return
+	}
+
+	writableAny, svcErr := as.serverConfigService.GetWritableConfig(ctx, string(serverconfig.ConfigNameCORS))
+	if svcErr != nil {
+		as.logger.Warn(ctx, "Failed to read CORS writable config for passkey origin sync",
+			log.String("error", svcErr.ErrorDescription.DefaultValue))
+		return
+	}
+
+	cfg, _ := writableAny.(cors.OriginConfig)
+
+	existingJSON, err := json.Marshal(cfg.AllowedOrigins)
+	if err != nil {
+		as.logger.Warn(ctx, "Failed to marshal existing CORS allowed origins", log.Error(err))
+		return
+	}
+	existingItems := make([]json.RawMessage, 0, len(cfg.AllowedOrigins))
+	_ = json.Unmarshal(existingJSON, &existingItems)
+
+	existingLiterals := make(map[string]struct{}, len(existingItems))
+	for _, item := range existingItems {
+		var s string
+		if json.Unmarshal(item, &s) == nil {
+			existingLiterals[s] = struct{}{}
+		}
+	}
+
+	added := false
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed == "" || strings.Contains(trimmed, "*") || trimmed == "null" {
+			continue
+		}
+		if _, err := cors.ParseOrigin(trimmed); err != nil {
+			as.logger.Debug(ctx, "Skipping invalid passkey origin for CORS sync",
+				log.String("origin", trimmed), log.String("error", err.Error()))
+			continue
+		}
+		if _, found := existingLiterals[trimmed]; found {
+			continue
+		}
+		originJSON, _ := json.Marshal(trimmed)
+		existingItems = append(existingItems, json.RawMessage(originJSON))
+		existingLiterals[trimmed] = struct{}{}
+		added = true
+	}
+
+	if !added {
+		return
+	}
+
+	newConfigJSON, err := json.Marshal(map[string]any{"allowedOrigins": existingItems})
+	if err != nil {
+		as.logger.Warn(ctx, "Failed to marshal updated CORS config", log.Error(err))
+		return
+	}
+	if svcErr := as.serverConfigService.SetConfig(
+		ctx, serverconfig.ConfigNameCORS, json.RawMessage(newConfigJSON),
+	); svcErr != nil {
+		as.logger.Warn(ctx, "Failed to update CORS config with passkey allowed origins",
+			log.String("error", svcErr.ErrorDescription.DefaultValue))
+	}
 }

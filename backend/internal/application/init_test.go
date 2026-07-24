@@ -159,6 +159,7 @@ func (suite *InitTestSuite) TestInitialize_WithDeclarativeResourcesDisabled() {
 		nil, // ouService - not needed for this test
 		nil, // i18nService - not needed for this test
 		nil, // cryptoSvc - not needed for this test
+		nil, // serverConfigSvc - not needed for this test
 	)
 
 	// Assert
@@ -202,6 +203,7 @@ func (suite *InitTestSuite) TestInitialize_WithMCPServer() {
 		nil, // ouService - not needed for this test
 		nil, // i18nService - not needed for this test
 		nil, // cryptoSvc - not needed for this test
+		nil, // serverConfigSvc - not needed for this test
 	)
 
 	// Assert
@@ -593,6 +595,7 @@ func TestInitialize_Standalone(t *testing.T) {
 		nil, // ouService - not needed for this test
 		nil, // i18nService - not needed for this test
 		nil, // cryptoSvc - not needed for this test
+		nil, // serverConfigSvc - not needed for this test
 	)
 
 	// Assert
@@ -644,6 +647,7 @@ func TestInitialize_WithDeclarativeResources_Standalone(t *testing.T) {
 		nil, // ouService - not needed for this test
 		nil, // i18nService - not needed for this test
 		nil, // cryptoSvc - not needed for this test
+		nil, // serverConfigSvc - not needed for this test
 	)
 
 	// Assert

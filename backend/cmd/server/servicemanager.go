@@ -399,7 +399,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// TODO: Remove entityService dependency after finalizing declarative resource loading pattern
 	applicationService, applicationExporter, err := application.Initialize(
 		mux, mcpServer, entityProvider, entityService, inboundClientService, ouService, i18nService,
-		runtimeCryptoSvc)
+		runtimeCryptoSvc, serverConfigService)
 	fatalOnError(ctx, logger, err, "Failed to initialize ApplicationService")
 	exporters = append(exporters, applicationExporter)
 
