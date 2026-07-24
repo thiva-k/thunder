@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thunder-id/thunderid/internal/attestation"
 	"github.com/thunder-id/thunderid/internal/attributecache"
 	"github.com/thunder-id/thunderid/internal/authn/assert"
 	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
@@ -170,13 +169,9 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 	engineCtx.graphBuilder = graphbuilder.Initialize(engineCtx.flowFactory, engineCtx.execRegistry,
 		engineCtx.interceptorRegistry, graphCache)
 
-	attestationProvider, err := attestation.Initialize(engineCtx.runtimeCryptoSvc)
-	if err != nil {
-		logger.Fatal(ctx, "Failed to initialize attestation provider", log.Error(err))
-	}
 	engineCtx.flowExecService, err = flowexec.Initialize(mux, engineCtx.flowProvider, engineCtx.actorProvider,
 		engineCtx.execRegistry, engineCtx.interceptorRegistry, engineCtx.observabilitySvc,
-		engineCtx.runtimeCryptoSvc, attestationProvider, engineCtx.graphBuilder,
+		engineCtx.runtimeCryptoSvc, engineCtx.attestationProvider, engineCtx.graphBuilder,
 		engineCtx.runtimeStoreProvider, engineCtx.transactioner, flowConfig)
 	if err != nil {
 		logger.Fatal(ctx, "Failed to initialize flow execution service", log.Error(err))
@@ -337,6 +332,7 @@ type engineContext struct {
 	customExecutors       map[string]providers.Executor
 	observabilitySvc      providers.ObservabilityProvider
 	authzProvider         providers.AuthorizationProvider
+	attestationProvider   providers.AttestationProvider
 
 	runtimeStoreProvider providers.RuntimeStoreProvider
 }
@@ -487,4 +483,9 @@ func WithLogConfig(config engineconfig.LogConfig) Option {
 	return func(ctx *engineContext) {
 		ctx.logConfig = config
 	}
+}
+
+// WithAttestationProvider supplies the Attestation provider.
+func WithAttestationProvider(provider providers.AttestationProvider) Option {
+	return func(c *engineContext) { c.attestationProvider = provider }
 }
