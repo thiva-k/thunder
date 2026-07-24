@@ -104,7 +104,7 @@ func Initialize(
 	if len(cfg.OAuth.AllowedGrantTypes) == 0 ||
 		slices.Contains(cfg.OAuth.AllowedGrantTypes, string(providers.GrantTypeCIBA)) {
 		cibaService = ciba.Initialize(mux, jwtService, actorProvider, authnProvider, flowExecService,
-			discoveryService, resourceService, cfg)
+			discoveryService, resourceService, runtimeStore, cfg)
 	}
 
 	grantHandlerProvider := granthandlers.Initialize(

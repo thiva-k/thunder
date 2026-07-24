@@ -32,6 +32,7 @@ import (
 	oauth2utils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	"github.com/thunder-id/thunderid/internal/runtimestore/inmemory"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock"
 )
 
 // AuthorizationRequestStoreTestSuite exercises the authorizationRequestStore adapter against a
@@ -92,7 +93,7 @@ func (suite *AuthorizationRequestStoreTestSuite) TestAddRequest_GeneratesUniqueI
 }
 
 func (suite *AuthorizationRequestStoreTestSuite) TestAddRequest_PutError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Put(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(fmt.Errorf("put failed"))
 	store := &authorizationRequestStore{
@@ -141,7 +142,7 @@ func (suite *AuthorizationRequestStoreTestSuite) TestGetRequest_NotFound() {
 }
 
 func (suite *AuthorizationRequestStoreTestSuite) TestGetRequest_GetError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("get failed"))
 	store := &authorizationRequestStore{
 		storeProvider: rt,
@@ -183,7 +184,7 @@ func (suite *AuthorizationRequestStoreTestSuite) TestClearRequest_EmptyKey() {
 }
 
 func (suite *AuthorizationRequestStoreTestSuite) TestClearRequest_DeleteError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Delete(mock.Anything, mock.Anything, mock.Anything).Return(fmt.Errorf("delete failed"))
 	store := &authorizationRequestStore{
 		storeProvider: rt,

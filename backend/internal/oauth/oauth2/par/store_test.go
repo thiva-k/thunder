@@ -29,6 +29,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
 	"github.com/thunder-id/thunderid/internal/runtimestore/inmemory"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock"
 )
 
 // StoreTestSuite exercises the parRequestStore adapter against a real in-memory runtime store,
@@ -84,7 +85,7 @@ func (s *StoreTestSuite) TestStore_GeneratesUniqueURIs() {
 }
 
 func (s *StoreTestSuite) TestStore_PutError() {
-	rt := NewRuntimeStoreProviderMock(s.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(s.T())
 	rt.EXPECT().Put(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(fmt.Errorf("put failed"))
 	store := &parRequestStore{storeProvider: rt}
@@ -134,7 +135,7 @@ func (s *StoreTestSuite) TestConsume_NotFound() {
 }
 
 func (s *StoreTestSuite) TestConsume_TakeError() {
-	rt := NewRuntimeStoreProviderMock(s.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(s.T())
 	rt.EXPECT().Take(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("take failed"))
 	store := &parRequestStore{storeProvider: rt}
 

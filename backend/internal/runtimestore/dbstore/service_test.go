@@ -459,3 +459,53 @@ func (s *DBStoreTestSuite) TestExtendTTL_NotFound_ReturnsError() {
 
 	s.ErrorIs(err, providers.ErrRuntimeStoreKeyNotFound)
 }
+
+// CompareFieldAndSwap
+
+func (s *DBStoreTestSuite) TestCompareFieldAndSwap_Swapped() {
+	s.mockDBProvider.On("GetRuntimeTransientDBClient").Return(s.mockDBClient, nil)
+	s.mockDBClient.On("ExecuteContext", mock.Anything, queryCompareFieldAndSwapRuntimeStore,
+		testDeploymentID, string(testNamespace), testKey, testValue, mock.Anything, "State", "PENDING",
+	).Return(int64(1), nil)
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING", testValue)
+
+	s.NoError(err)
+	s.True(swapped)
+}
+
+// TestCompareFieldAndSwap_NoMatch covers a differing field, a missing key, and an expired key alike:
+// the guarded UPDATE affects zero rows in every case.
+func (s *DBStoreTestSuite) TestCompareFieldAndSwap_NoMatch() {
+	s.mockDBProvider.On("GetRuntimeTransientDBClient").Return(s.mockDBClient, nil)
+	s.mockDBClient.On("ExecuteContext", mock.Anything, queryCompareFieldAndSwapRuntimeStore,
+		testDeploymentID, string(testNamespace), testKey, testValue, mock.Anything, "State", "PENDING",
+	).Return(int64(0), nil)
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING", testValue)
+
+	s.NoError(err)
+	s.False(swapped)
+}
+
+func (s *DBStoreTestSuite) TestCompareFieldAndSwap_DBClientError() {
+	s.mockDBProvider.On("GetRuntimeTransientDBClient").Return(nil, errors.New("db client error"))
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING", testValue)
+
+	s.Error(err)
+	s.False(swapped)
+}
+
+func (s *DBStoreTestSuite) TestCompareFieldAndSwap_ExecuteError() {
+	s.mockDBProvider.On("GetRuntimeTransientDBClient").Return(s.mockDBClient, nil)
+	s.mockDBClient.On("ExecuteContext", mock.Anything, queryCompareFieldAndSwapRuntimeStore,
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything,
+	).Return(int64(0), errors.New("update failed"))
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING", testValue)
+
+	s.Error(err)
+	s.False(swapped)
+	s.Contains(err.Error(), "failed to compare-and-swap in database")
+}

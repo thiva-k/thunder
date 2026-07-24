@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/runtimestore/inmemory"
+	"github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock"
 )
 
 // LogoutRequestStoreTestSuite exercises the runtime-store-backed logout request store against the
@@ -91,7 +92,7 @@ func (suite *LogoutRequestStoreTestSuite) TestClearEmptyKeyIsNoOp() {
 // The following cases drive the underlying runtime-store failure paths via a mock backend.
 
 func (suite *LogoutRequestStoreTestSuite) TestAddRequest_PutError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Put(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(fmt.Errorf("put failed"))
 	store := newLogoutRequestStore(rt)
@@ -102,7 +103,7 @@ func (suite *LogoutRequestStoreTestSuite) TestAddRequest_PutError() {
 }
 
 func (suite *LogoutRequestStoreTestSuite) TestGetRequest_StoreError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Get(mock.Anything, mock.Anything, "k").Return(nil, fmt.Errorf("get failed"))
 	store := newLogoutRequestStore(rt)
 
@@ -113,7 +114,7 @@ func (suite *LogoutRequestStoreTestSuite) TestGetRequest_StoreError() {
 }
 
 func (suite *LogoutRequestStoreTestSuite) TestGetRequest_UnmarshalError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Get(mock.Anything, mock.Anything, "k").Return([]byte("not-json"), nil)
 	store := newLogoutRequestStore(rt)
 
@@ -124,7 +125,7 @@ func (suite *LogoutRequestStoreTestSuite) TestGetRequest_UnmarshalError() {
 }
 
 func (suite *LogoutRequestStoreTestSuite) TestClearRequest_DeleteError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Delete(mock.Anything, mock.Anything, "k").Return(fmt.Errorf("delete failed"))
 	store := newLogoutRequestStore(rt)
 

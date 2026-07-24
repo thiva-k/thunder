@@ -30,6 +30,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/runtimestore/inmemory"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock"
 )
 
 // AuthorizationCodeStoreTestSuite exercises the authorizationCodeStore adapter against a real
@@ -105,7 +106,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_Succes
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_PutError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Put(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(fmt.Errorf("put failed"))
 	store := &authorizationCodeStore{storeProvider: rt}
@@ -149,7 +150,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_NotFound(
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_GetError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("get failed"))
 	store := &authorizationCodeStore{storeProvider: rt}
 
@@ -200,7 +201,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestConsumeAuthorizationCode_NotFo
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestConsumeAuthorizationCode_TakeError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Take(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("take failed"))
 	store := &authorizationCodeStore{storeProvider: rt}
 

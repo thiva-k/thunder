@@ -26,7 +26,6 @@ set -euo pipefail
 #
 # Tables cleaned (in order):
 #   1. WEBAUTHN_SESSION
-#   2. CIBA_AUTH_REQUEST
 #   2. RUNTIME_STORE
 #
 # Usage examples:
@@ -67,7 +66,7 @@ USERNAME=""
 PASSWORD=""
 
 # Tables to clean
-TABLES=("WEBAUTHN_SESSION" "CIBA_AUTH_REQUEST" "RUNTIME_STORE")
+TABLES=("WEBAUTHN_SESSION" "RUNTIME_STORE")
 
 # Totals for summary.
 TOTAL_DELETED=0
