@@ -74,6 +74,11 @@ interface EditGeneralSettingsProps {
    * @param hasErrors - Boolean indicating if the general settings have validation errors
    */
   onValidationChange?: (hasErrors: boolean) => void;
+  /**
+   * Whether to show user-facing access config (allowed user types, redirect URIs). Hidden for
+   * clients with no user-facing grant.
+   */
+  showUserAccessConfig?: boolean;
 }
 
 /**
@@ -96,6 +101,7 @@ export default function EditGeneralSettings({
   onCopyToClipboard,
   onDeleteSuccess = undefined,
   onValidationChange = undefined,
+  showUserAccessConfig = true,
 }: EditGeneralSettingsProps): JSX.Element {
   const {config} = useConfig();
   const {t} = useTranslation();
@@ -165,6 +171,7 @@ export default function EditGeneralSettings({
           oauth2Config={oauth2Config}
           onFieldChange={onFieldChange}
           onValidationChange={onValidationChange}
+          showUserAccessConfig={showUserAccessConfig}
         />
         {!application.isReadOnly && oauth2Config?.clientId?.toUpperCase() !== systemConsoleClientId && (
           <DangerZoneSection

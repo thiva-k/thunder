@@ -19,7 +19,7 @@ The **Application ID** and **Client ID** are shown on the application's General 
 
 ## Control Who Can Sign In
 
-Under **Access** on the General tab, you can configure which users can register with this application and provide the application's URL and redirect URIs.
+Under **Access** on the General tab, you can configure which users can register with this application and provide the application's URL and redirect URIs. The **Allowed User Types** and **Authorized Redirect URIs** settings apply to applications that let users sign in and are hidden for applications that use only the `client_credentials` grant.
 
 | Setting | Description |
 |---------|-------------|
@@ -69,7 +69,16 @@ On the **Customization** tab, control how your application looks and what legal 
 This section applies to OAuth 2.0 / OIDC applications (Browser App, Full-stack App, Mobile App, and Backend Service). For applications that use the embedded sign-in approach, user attributes are configured in the assertion returned by the flow, not in tokens.
 :::
 
-On the **Token** tab, choose which user attributes each token carries, how long tokens stay valid, and the response format for ID tokens and userinfo.
+On the **Token** tab, configure what your application's tokens carry and how long they stay valid. The tab has two sub-tabs:
+
+- **User**: the tokens issued when a user signs in. Available when the application supports a user sign-in grant, such as `authorization_code`.
+- **Application**: the access token the application receives for itself through the `client_credentials` grant.
+
+Each sub-tab stays read-only until its grant type is enabled on the Advanced Settings tab.
+
+### User Tokens
+
+On the **User** sub-tab, choose which user attributes each token carries, how long tokens stay valid, and the response format for ID tokens and userinfo.
 
 **Access Token**: select the user attributes to include in the access token payload. Default attributes (`sub`, `iss`, `exp`, and others) are always included and cannot be removed. Set **Token Validity** in seconds (for example, `3600` for one hour).
 
@@ -93,7 +102,13 @@ You can also configure the ID token response format via the API. These settings 
 | **Encryption Algorithm** | Required for `JWE` and `NESTED_JWT`. Options: `RSA-OAEP`, `RSA-OAEP-256`. Requires an OAuth client certificate. |
 | **Encryption Encoding** | Required when Encryption Algorithm is set. Options: `A128CBC-HS256`, `A256GCM`. |
 
-For the `client_credentials` grant, the token represents the application itself rather than a user. You can add the application's OU claims (`ouId`, `ouName`, `ouHandle`) to it via the API using `clientConfig.attributes`.
+### Application Token
+
+On the **Application** sub-tab, configure the access token the application receives through the `client_credentials` grant. This token represents the application itself, so it carries no user attributes.
+
+**Claims**: add the application's own claims to the token. The available claims are `groups`, `roles`, and the organization unit claims `ouHandle`, `ouId`, and `ouName`. Default claims (`sub`, `iss`, `exp`, and others) are always included and cannot be removed.
+
+**Token Validity**: set how long this token stays valid, in seconds, independently of the user access token.
 
 ## Rotate the Client Secret
 

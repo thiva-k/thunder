@@ -20,22 +20,20 @@ import {Alert, Box} from '@wso2/oxygen-ui';
 import {Lock} from '@wso2/oxygen-ui-icons-react';
 import type {ReactNode} from 'react';
 
-interface DelegationLockNoticeProps {
-  /** Whether Delegated mode is on for this agent. */
+interface SettingsLockNoticeProps {
+  /** Whether the wrapped settings are active. When false, they are shown but frozen. */
   isUnlocked: boolean;
-  /** Explains where/how to turn on Delegated mode — differs by caller (see Flows/Tokens). */
+  /** Explains why the settings are frozen and how to unlock them. */
   message: ReactNode;
   children: ReactNode;
 }
 
 /**
- * Wraps Flows/Tokens tab content with an info banner explaining that the settings shown below
- * aren't in effect for this agent yet, and gives the content a frozen look (dimmed, no pointer
- * interaction) rather than a blur — the values stay fully legible. The caller is still
- * responsible for disabling the inputs themselves (e.g. by forcing `isReadOnly` on the
- * agent/application it passes down) when `isUnlocked` is false.
+ * Wraps settings with an info banner and a frozen (dimmed, non-interactive) look when locked,
+ * keeping the values legible. Callers must still disable the inputs themselves (e.g. by forcing
+ * `isReadOnly`) when `isUnlocked` is false.
  */
-export default function DelegationLockNotice({isUnlocked, message, children}: DelegationLockNoticeProps): ReactNode {
+export default function SettingsLockNotice({isUnlocked, message, children}: SettingsLockNoticeProps): ReactNode {
   if (isUnlocked) {
     return children;
   }
