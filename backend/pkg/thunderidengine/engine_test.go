@@ -40,6 +40,7 @@ import (
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/actorprovidermock"
+	"github.com/thunder-id/thunderid/tests/mocks/attestationprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/providermock"
 	"github.com/thunder-id/thunderid/tests/mocks/authzmock"
 	"github.com/thunder-id/thunderid/tests/mocks/consentprovidermock"
@@ -75,6 +76,10 @@ func newTestAuthzProvider(t *testing.T) providers.AuthorizationProvider {
 
 func newTestDefaultAuthnProvider(t *testing.T) providers.AuthnProviderInterface {
 	return providermock.NewAuthnProviderInterfaceMock(t)
+}
+
+func newTestAttestationProvider(t *testing.T) providers.AttestationProvider {
+	return attestationprovidermock.NewAttestationProviderMock(t)
 }
 
 func newTestExecutor(t *testing.T, name string) providers.Executor {
@@ -264,6 +269,7 @@ func (suite *EngineTestSuite) TestEngineOptions() {
 		WithAuthorizationProvider(newTestAuthzProvider(suite.T())),
 		WithRuntimeStoreProvider(runtimeStoreProvider),
 		WithDefaultAuthnProvider(newTestDefaultAuthnProvider(suite.T())),
+		WithAttestationProvider(newTestAttestationProvider(suite.T())),
 	}
 	for _, opt := range opts {
 		opt(&ctx)
@@ -287,6 +293,7 @@ func (suite *EngineTestSuite) TestEngineOptions() {
 	assert.NotNil(suite.T(), ctx.observabilitySvc)
 	assert.NotNil(suite.T(), ctx.authzProvider)
 	assert.NotNil(suite.T(), ctx.defaultAuthnProvider)
+	assert.NotNil(suite.T(), ctx.attestationProvider)
 }
 
 func (suite *EngineTestSuite) TestJOSEConfig() {
