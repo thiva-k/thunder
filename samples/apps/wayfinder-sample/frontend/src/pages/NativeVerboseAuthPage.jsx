@@ -26,7 +26,7 @@ import {
   useTranslation,
 } from "@thunderid/react";
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { useNativeAuth } from "../auth/NativeAuthContext";
 import { exchangeAssertion } from "../auth/nativeAuthService";
 

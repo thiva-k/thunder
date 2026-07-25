@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 import { AUTH_CONFIG } from "../auth/config";
 import { NativeAuthPage } from "./NativeAuthPage";
 import { NativeVerboseAuthPage } from "./NativeVerboseAuthPage";
