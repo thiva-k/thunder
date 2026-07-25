@@ -124,13 +124,12 @@ overrides:
   # failed IDN canonicalization / literal parsing. Transitive via ajv in webpack/docusaurus chains.
   fast-uri@>=3.0.0 <3.1.4: 3.1.4
   # JUSTIFICATION: Fixes GHSA-3jxr-9vmj-r5cp — DoS via exponential-time expansion of consecutive
-  # non-expanding {} groups. Covers both the 1.x line and the 3.x/4.x line flagged by the advisory.
-  # Also fixes GHSA-mh99-v99m-4gvg — DoS via unbounded expansion length causing out-of-memory crash (>=5.0.0 <5.0.8).
-  brace-expansion@<1.1.16: 1.1.16
-  # minimatch 3.x requires brace-expansion 1.x (5.x has incompatible API)
-  brace-expansion@>=3.0.0 <5.0.8: 5.0.8
-  # Force brace-expansion 5.x consumers to use patched version
-  brace-expansion@>=5.0.0 <5.0.8: 5.0.8
+  # non-expanding {} groups, and GHSA-mh99-v99m-4gvg — DoS via unbounded expansion length. The
+  # advisory range covers every major (<5.0.8); only 5.0.8 is patched. Force every transitive
+  # brace-expansion to 5.0.8, and route minimatch@3.1.5 (used by @eslint/config-array,
+  # @eslint/eslintrc, and eslint itself, which do CJS `require('brace-expansion')`) through the
+  # `patches/minimatch@3.1.5.patch` shim so the switch to the 5.x `{ expand }` API is transparent.
+  brace-expansion: 5.0.8
   lodash: 4.18.1
   # JUSTIFICATION: Fixes GHSA-52cp-r559-cp3m — YAML merge-key chains forcing quadratic CPU consumption.
   js-yaml@>=4.0.0 <4.3.0: 4.3.0
@@ -208,3 +207,6 @@ auditConfig:
 
 minimumReleaseAgeExclude:
   - '@thunderid/*'
+
+patchedDependencies:
+  minimatch@3.1.5: patches/minimatch@3.1.5.patch
