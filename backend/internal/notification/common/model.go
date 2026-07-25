@@ -55,3 +55,11 @@ type VerifyOTPResultDTO struct {
 	Recipient     string
 	RecipientAttr string
 }
+
+// OTPConfig holds optional OTP generation overrides.
+// Nil pointer = use server default.
+type OTPConfig struct {
+	Length                *int
+	UseNumericOnly        *bool
+	ValidityPeriodSeconds *int
+}

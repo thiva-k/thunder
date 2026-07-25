@@ -115,6 +115,9 @@ const (
 	propertyKeyCallbackType                            = "callbackType"
 	propertyKeyLoginHintAttribute                      = "loginHintAttribute"
 	propertyKeyMaxOTPAttempts                          = "maxAttempts"
+	propertyKeyOTPLength                               = "otpLength"
+	propertyKeyOTPUseNumericOnly                       = "otpUseNumericOnly"
+	propertyKeyOTPValidityPeriodSeconds                = "otpValidityPeriodSeconds"
 	// propertyKeyPromptOnSignOut, when set to boolean true on a session sign-out node, makes the executor
 	// confirm the logout with the End-User (via the node's onIncomplete prompt) whenever the RP-initiated
 	// logout was not accompanied by a valid id_token_hint (RuntimeKeyLogoutPromptRequired).
