@@ -111,11 +111,21 @@ Download the latest Wayfinder sample distribution.
 
 ### Run the Sample
 
-From the extracted sample directory:
+From the extracted sample directory, install dependencies:
 
 ```bash
 npm install
-VITE_THUNDER_BASE_URL=<PUBLIC_URL> npm run dev
+```
+
+Point the apps at your public URL by setting it in their `.env` files:
+
+- In `frontend/.env`, set `VITE_THUNDER_BASE_URL=<PUBLIC_URL>`.
+- In `backend/.env` and `lounge/.env`, set `THUNDER_BASE_URL=<PUBLIC_URL>`.
+
+Then start the apps:
+
+```bash
+npm run dev
 ```
 
 Wayfinder opens at `http://localhost:5173` and the Skyline Lounge kiosk at `http://localhost:8795`.

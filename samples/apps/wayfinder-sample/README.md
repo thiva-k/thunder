@@ -230,7 +230,7 @@ Notifications now arrive as SMS. If you already approved the consent during the 
 
 ## Configure the Sample
 
-`backend/`, `smtp-server/`, `ai-agent/`, and `frontend/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `smtp-server/.env.example` defaults already match the `email.smtp` settings in `deployment.yaml`, so it works as-is.
+`backend/`, `smtp-server/`, `ai-agent/`, `frontend/`, and `lounge/` each ship with a `.env.example` listing only the variables you actually need to set. In each of those folders, copy it to `.env` and fill the placeholders. The `smtp-server/.env.example` defaults already match the `email.smtp` settings in `deployment.yaml`, so it works as-is.
 
 The only placeholder you must replace is in `ai-agent/.env`:
 
