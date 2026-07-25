@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/useAuth";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router";
 import { ChevronLeft, CreditCard } from "lucide-react";
 import { createBooking, getBookedFlights, getFlight } from "../api";
 import { formatPrice, isSameFlight } from "../utils/bookings";

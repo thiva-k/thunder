@@ -19,7 +19,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { ThunderIDProvider } from "@thunderid/react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter } from "react-router";
 import App from "./App.jsx";
 import "./styles.css";
 import { NativeAuthProvider } from "./auth/NativeAuthContext.jsx";

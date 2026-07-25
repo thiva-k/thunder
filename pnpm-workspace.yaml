@@ -54,8 +54,8 @@ catalog:
   babel-plugin-react-compiler: 19.1.0-rc.3
   clsx: 2.1.1
   dayjs: 1.11.18
-  dompurify: 3.4.11
-  eslint: 9.39.4
+  dompurify: 3.4.12
+  eslint: 9.39.5
   globals: 16.4.0
   i18next: 25.6.0
   jsdom: 27.0.1
@@ -101,7 +101,7 @@ overrides:
   defu: 6.1.5
   # JUSTIFICATION: i18next 26 breaks compatibility, gives a white screen issue on Console when navigating with "TypeError: n.getResourceBundle"
   i18next: '25.6.0'
-  dompurify: '>=3.4.11'
+  dompurify: '>=3.4.12'
   follow-redirects: 1.16.0
   unhead: 2.1.13
   minimatch@>=5.0.0 <5.1.8: '>=5.1.8'
@@ -125,8 +125,12 @@ overrides:
   fast-uri@>=3.0.0 <3.1.4: 3.1.4
   # JUSTIFICATION: Fixes GHSA-3jxr-9vmj-r5cp — DoS via exponential-time expansion of consecutive
   # non-expanding {} groups. Covers both the 1.x line and the 3.x/4.x line flagged by the advisory.
+  # Also fixes GHSA-mh99-v99m-4gvg — DoS via unbounded expansion length causing out-of-memory crash (>=5.0.0 <5.0.8).
   brace-expansion@<1.1.16: 1.1.16
-  brace-expansion@>=3.0.0 <5.0.7: 5.0.7
+  # minimatch 3.x requires brace-expansion 1.x (5.x has incompatible API)
+  brace-expansion@>=3.0.0 <5.0.8: 5.0.8
+  # Force brace-expansion 5.x consumers to use patched version
+  brace-expansion@>=5.0.0 <5.0.8: 5.0.8
   lodash: 4.18.1
   # JUSTIFICATION: Fixes GHSA-52cp-r559-cp3m — YAML merge-key chains forcing quadratic CPU consumption.
   js-yaml@>=4.0.0 <4.3.0: 4.3.0
@@ -158,6 +162,32 @@ overrides:
   # JUSTIFICATION: Fixes GHSA-vxpw-j846-p89q (high DoS), GHSA-p88m-4jfj-68fv (HTTP header injection),
   # GHSA-35p6-xmwp-9g52 and GHSA-g8m3-5g58-fq7m — transitive via @codecov/vite-plugin chain.
   undici: '>=6.27.0'
+  # JUSTIFICATION: Fixes entity encoding bypass and RCE vulnerabilities in fast-xml-parser.
+  fast-xml-parser: '>=5.3.6'
+  # JUSTIFICATION: Fixes arbitrary file read vulnerability in Vitest UI server.
+  vitest: '>=4.1.0'
+  # JUSTIFICATION: Fixes command injection vulnerability via -c/--cmd flag in glob CLI.
+  glob: '>=11.1.0'
+  # JUSTIFICATION: Fixes environment variable exposure in Storybook manager bundle.
+  storybook: '>=10.1.10'
+  # JUSTIFICATION: Fixes ReDoS vulnerabilities in minimatch.
+  minimatch@>=9.0.0 <9.0.7: '>=9.0.7'
+  minimatch@>=10.0.0 <10.2.3: '>=10.2.3'
+  # JUSTIFICATION: Fixes path traversal vulnerability in rollup.
+  rollup: '>=4.59.0'
+  # JUSTIFICATION: Fixes prototype pollution and other vulnerabilities in axios.
+  axios: '>=1.16.0'
+  # JUSTIFICATION: Fixes form-data vulnerability.
+  form-data: '>=4.0.6'
+  # JUSTIFICATION: Fixes picomatch ReDoS vulnerability.
+  picomatch: '>=2.3.2'
+  # JUSTIFICATION: Fixes body-parser denial of service vulnerabilities. Covers 1.x <1.20.6 and 2.x <2.3.0 vulnerable ranges.
+  body-parser: '>=2.3.0'
+  # JUSTIFICATION: Fixes webpack-dev-server CSRF and DoS vulnerabilities. Updated to >=5.3.0 to address <=5.2.5 vulnerability.
+  webpack-dev-server: '>=5.3.0'
+  # JUSTIFICATION: Fixes Hono API Gateway and JSX vulnerabilities. Updated to >=4.12.27 to address <4.12.27 vulnerability range.
+  hono: '>=4.12.27'
+  '@hono/node-server': '>=2.0.5'
 
 packageExtensions:
   '@hookform/resolvers':

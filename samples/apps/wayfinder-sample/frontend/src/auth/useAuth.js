@@ -17,7 +17,7 @@
  */
 
 import { useThunderID } from "@thunderid/react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { clearChatAccessToken } from "./chatTokenService";
 import { AUTH_CONFIG } from "./config";
 import { useNativeAuth } from "./NativeAuthContext";

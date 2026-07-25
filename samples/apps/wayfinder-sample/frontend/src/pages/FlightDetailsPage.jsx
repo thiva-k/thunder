@@ -17,7 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router";
 import { ChevronLeft, Plane } from "lucide-react";
 import { getFlight } from "../api";
 import { formatPrice } from "../utils/bookings";
