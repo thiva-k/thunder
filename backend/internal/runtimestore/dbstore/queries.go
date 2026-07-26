@@ -84,3 +84,18 @@ var queryPutIfNotExistsRuntimeStore = dbmodel.DBQuery{
 		`WHERE "RUNTIME_STORE".EXPIRY_TIME IS NOT NULL AND "RUNTIME_STORE".EXPIRY_TIME <= $6 ` +
 		`RETURNING KEY`,
 }
+
+// queryCompareFieldAndSwapRuntimeStore replaces the value of a non-expired entry, but only when the
+// top-level JSON string field named by $6 in the stored value equals $7, preserving its TTL. The
+// field name and expected value are bind parameters; the JSON extraction differs by dialect.
+var queryCompareFieldAndSwapRuntimeStore = dbmodel.DBQuery{
+	ID: "RTS-08",
+	PostgresQuery: `UPDATE "RUNTIME_STORE" SET VALUE = $4, UPDATED_AT = CURRENT_TIMESTAMP ` +
+		`WHERE DEPLOYMENT_ID = $1 AND NAMESPACE = $2 AND KEY = $3 ` +
+		`AND (EXPIRY_TIME IS NULL OR EXPIRY_TIME > $5) ` +
+		`AND (VALUE ->> $6) = $7`,
+	SQLiteQuery: `UPDATE "RUNTIME_STORE" SET VALUE = $4, UPDATED_AT = CURRENT_TIMESTAMP ` +
+		`WHERE DEPLOYMENT_ID = $1 AND NAMESPACE = $2 AND KEY = $3 ` +
+		`AND (EXPIRY_TIME IS NULL OR EXPIRY_TIME > $5) ` +
+		`AND json_extract(VALUE, '$.' || $6) = $7`,
+}

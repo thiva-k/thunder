@@ -63,7 +63,6 @@ DECLARE
     -- Tables located by ctid. Safe because each is a single, non-partitioned
     -- relation, so ctid uniquely identifies a row within it.
     v_ctid_tables TEXT[] := ARRAY[
-        'CIBA_AUTH_REQUEST',
         'WEBAUTHN_SESSION',
     ];
 BEGIN

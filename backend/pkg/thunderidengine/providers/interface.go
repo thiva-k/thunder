@@ -255,6 +255,16 @@ type RuntimeStoreProvider interface {
 	Take(ctx context.Context, namespace RuntimeStoreNamespace, key string) ([]byte, error)
 
 	ExtendTTL(ctx context.Context, namespace RuntimeStoreNamespace, key string, ttlSeconds int64) error
+
+	// CompareFieldAndSwap atomically replaces the value at key with newValue, but only when the
+	// top-level JSON string field in the currently stored value equals expected, preserving the
+	// existing TTL. It returns true when the swap occurred, and false when the field differs or the
+	// key is absent/expired. Callers use it for conditional state transitions (get, inspect, build
+	// the new document, compare-and-swap) that Update cannot perform atomically. Stored values are
+	// assumed to be JSON documents.
+	CompareFieldAndSwap(
+		ctx context.Context, namespace RuntimeStoreNamespace, key, field, expected string, newValue []byte,
+	) (bool, error)
 }
 
 // Transactioner provides transaction management with automatic nesting detection.

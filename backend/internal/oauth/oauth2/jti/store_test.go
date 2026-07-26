@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/runtimestore/inmemory"
+	"github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock"
 )
 
 // JTIStoreTestSuite exercises the jtiStore adapter against a real in-memory runtime store,
@@ -85,7 +86,7 @@ func (suite *JTIStoreTestSuite) TestRecordJTI_AlreadyExpired() {
 }
 
 func (suite *JTIStoreTestSuite) TestRecordJTI_PutIfNotExistsError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().PutIfNotExists(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(false, fmt.Errorf("insert failed"))
 	store := &jtiStore{storeProvider: rt}
