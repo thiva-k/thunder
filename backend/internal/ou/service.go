@@ -92,6 +92,13 @@ type OrganizationUnitServiceInterface interface {
 	) (map[string]string, *tidcommon.ServiceError)
 }
 
+// ouFlowResolver validates that a flow ID exists and matches the expected flow type, for
+// validating an organization unit's default flow fields. Defined locally rather than importing
+// internal/flow/mgt directly to avoid an import cycle (flow/mgt -> flow/executor -> ou).
+type ouFlowResolver interface {
+	IsValidFlow(ctx context.Context, flowID string, flowType providers.FlowType) (bool, *tidcommon.ServiceError)
+}
+
 // ConfigurableOUService extends OrganizationUnitServiceInterface with methods for
 // two-phase initialization of resolvers. This is intentionally separate from the
 // main interface so consumers don't see bootstrap-only methods.
@@ -100,6 +107,7 @@ type ConfigurableOUService interface {
 	SetOUUserResolver(resolver OUUserResolver)
 	SetOUGroupResolver(resolver OUGroupResolver)
 	SetOURoleResolver(resolver OURoleResolver)
+	SetOUFlowResolver(resolver ouFlowResolver)
 	SetDependencyRegistry(r resourcedependency.Registry)
 	GetResourceDependencies(
 		ctx context.Context, resourceType, id string) ([]resourcedependency.ResourceDependency, error)
@@ -113,6 +121,7 @@ type organizationUnitService struct {
 	userResolver       OUUserResolver
 	groupResolver      OUGroupResolver
 	roleResolver       OURoleResolver
+	flowResolver       ouFlowResolver
 	dependencyRegistry resourcedependency.Registry
 }
 
@@ -132,6 +141,10 @@ func (ous *organizationUnitService) SetOUGroupResolver(resolver OUGroupResolver)
 
 func (ous *organizationUnitService) SetOURoleResolver(resolver OURoleResolver) {
 	ous.roleResolver = resolver
+}
+
+func (ous *organizationUnitService) SetOUFlowResolver(resolver ouFlowResolver) {
+	ous.flowResolver = resolver
 }
 
 // newOrganizationUnitService creates a new instance of OrganizationUnitService.
@@ -349,6 +362,11 @@ func (ous *organizationUnitService) CreateOrganizationUnit(
 			}
 		}
 
+		if svcErr := ous.validateDefaultFlows(txCtx, request); svcErr != nil {
+			capturedSvcErr = svcErr
+			return errors.New("validation error")
+		}
+
 		conflict, err := ous.ouStore.CheckOrganizationUnitNameConflict(txCtx, request.Name, request.Parent)
 		if err != nil {
 			return err
@@ -377,19 +395,25 @@ func (ous *organizationUnitService) CreateOrganizationUnit(
 
 		now := time.Now().UTC()
 		createdOU = providers.OrganizationUnit{
-			ID:              ouID,
-			Handle:          request.Handle,
-			Name:            request.Name,
-			Description:     request.Description,
-			Parent:          request.Parent,
-			ThemeID:         request.ThemeID,
-			LayoutID:        request.LayoutID,
-			LogoURL:         request.LogoURL,
-			TosURI:          request.TosURI,
-			PolicyURI:       request.PolicyURI,
-			CookiePolicyURI: request.CookiePolicyURI,
-			CreatedAt:       now,
-			UpdatedAt:       now,
+			ID:                        ouID,
+			Handle:                    request.Handle,
+			Name:                      request.Name,
+			Description:               request.Description,
+			Parent:                    request.Parent,
+			ThemeID:                   request.ThemeID,
+			LayoutID:                  request.LayoutID,
+			AuthFlowID:                request.AuthFlowID,
+			RegistrationFlowID:        request.RegistrationFlowID,
+			IsRegistrationFlowEnabled: request.IsRegistrationFlowEnabled,
+			RecoveryFlowID:            request.RecoveryFlowID,
+			IsRecoveryFlowEnabled:     request.IsRecoveryFlowEnabled,
+			SignOutFlowID:             request.SignOutFlowID,
+			LogoURL:                   request.LogoURL,
+			TosURI:                    request.TosURI,
+			PolicyURI:                 request.PolicyURI,
+			CookiePolicyURI:           request.CookiePolicyURI,
+			CreatedAt:                 now,
+			UpdatedAt:                 now,
 		}
 
 		err = ous.ouStore.CreateOrganizationUnit(txCtx, createdOU)
@@ -638,6 +662,10 @@ func (ous *organizationUnitService) updateOUInternal(
 		return providers.OrganizationUnit{}, err
 	}
 
+	if err := ous.validateDefaultFlows(ctx, request); err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
 	if request.Parent != nil {
 		exists, err := ous.ouStore.IsOrganizationUnitExists(ctx, *request.Parent)
 		if err != nil {
@@ -683,19 +711,25 @@ func (ous *organizationUnitService) updateOUInternal(
 	}
 
 	updatedOU := providers.OrganizationUnit{
-		ID:              existingOU.ID,
-		Handle:          request.Handle,
-		Name:            request.Name,
-		Description:     request.Description,
-		Parent:          request.Parent,
-		ThemeID:         request.ThemeID,
-		LayoutID:        request.LayoutID,
-		LogoURL:         request.LogoURL,
-		TosURI:          request.TosURI,
-		PolicyURI:       request.PolicyURI,
-		CookiePolicyURI: request.CookiePolicyURI,
-		CreatedAt:       existingOU.CreatedAt,
-		UpdatedAt:       time.Now().UTC(),
+		ID:                        existingOU.ID,
+		Handle:                    request.Handle,
+		Name:                      request.Name,
+		Description:               request.Description,
+		Parent:                    request.Parent,
+		ThemeID:                   request.ThemeID,
+		LayoutID:                  request.LayoutID,
+		AuthFlowID:                request.AuthFlowID,
+		RegistrationFlowID:        request.RegistrationFlowID,
+		IsRegistrationFlowEnabled: request.IsRegistrationFlowEnabled,
+		RecoveryFlowID:            request.RecoveryFlowID,
+		IsRecoveryFlowEnabled:     request.IsRecoveryFlowEnabled,
+		SignOutFlowID:             request.SignOutFlowID,
+		LogoURL:                   request.LogoURL,
+		TosURI:                    request.TosURI,
+		PolicyURI:                 request.PolicyURI,
+		CookiePolicyURI:           request.CookiePolicyURI,
+		CreatedAt:                 existingOU.CreatedAt,
+		UpdatedAt:                 time.Now().UTC(),
 	}
 
 	err = ous.ouStore.UpdateOrganizationUnit(ctx, updatedOU)
@@ -1238,6 +1272,48 @@ func (ous *organizationUnitService) validateOUHandle(handle string) *tidcommon.S
 		return &ErrorInvalidRequestFormat
 	}
 
+	return nil
+}
+
+// validateDefaultFlows validates that each configured default flow ID, if set, references an
+// existing flow of the matching flow type.
+func (ous *organizationUnitService) validateDefaultFlows(
+	ctx context.Context, request providers.OrganizationUnitRequestWithID,
+) *tidcommon.ServiceError {
+	if svcErr := ous.validateDefaultFlowID(
+		ctx, request.AuthFlowID, providers.FlowTypeAuthentication, &ErrorInvalidAuthFlowID); svcErr != nil {
+		return svcErr
+	}
+	if svcErr := ous.validateDefaultFlowID(
+		ctx, request.RegistrationFlowID, providers.FlowTypeRegistration,
+		&ErrorInvalidRegistrationFlowID); svcErr != nil {
+		return svcErr
+	}
+	if svcErr := ous.validateDefaultFlowID(
+		ctx, request.RecoveryFlowID, providers.FlowTypeRecovery, &ErrorInvalidRecoveryFlowID); svcErr != nil {
+		return svcErr
+	}
+	if svcErr := ous.validateDefaultFlowID(
+		ctx, request.SignOutFlowID, providers.FlowTypeSignOut, &ErrorInvalidSignOutFlowID); svcErr != nil {
+		return svcErr
+	}
+	return nil
+}
+
+// validateDefaultFlowID validates that a single default flow ID, if set, exists and matches flowType.
+func (ous *organizationUnitService) validateDefaultFlowID(
+	ctx context.Context, flowID string, flowType providers.FlowType, mismatchErr *tidcommon.ServiceError,
+) *tidcommon.ServiceError {
+	if flowID == "" || ous.flowResolver == nil {
+		return nil
+	}
+	valid, svcErr := ous.flowResolver.IsValidFlow(ctx, flowID, flowType)
+	if svcErr != nil {
+		return svcErr
+	}
+	if !valid {
+		return mismatchErr
+	}
 	return nil
 }
 

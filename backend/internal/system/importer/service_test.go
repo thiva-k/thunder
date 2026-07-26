@@ -1673,6 +1673,41 @@ func TestImportResources_OrganizationUnitUpsertCreatePreservesID(t *testing.T) {
 	assert.Equal(t, "ou-123", ouSvc.created[0].ID)
 }
 
+func TestImportResources_OrganizationUnitCarriesDefaultFlowFields(t *testing.T) {
+	ouSvc := &fakeOUService{existing: map[string]providers.OrganizationUnit{}}
+	svc := newImportService(
+		nil, nil, nil, nil, ouSvc, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil,
+	)
+
+	content := strings.Join([]string{
+		"resource_type: organization_unit",
+		"id: ou-456",
+		"handle: eng",
+		"name: Engineering",
+		"authFlowId: auth-flow-1",
+		"registrationFlowId: reg-flow-1",
+		"isRegistrationFlowEnabled: true",
+		"recoveryFlowId: recovery-flow-1",
+		"isRecoveryFlowEnabled: true",
+		"signOutFlowId: signout-flow-1",
+		"",
+	}, "\n")
+
+	resp, err := svc.ImportResources(context.Background(), &ImportRequest{Content: content})
+
+	require.Nil(t, err)
+	require.NotNil(t, resp)
+	require.Len(t, resp.Results, 1)
+	assert.Equal(t, statusSuccess, resp.Results[0].Status)
+	require.Len(t, ouSvc.created, 1)
+	assert.Equal(t, "auth-flow-1", ouSvc.created[0].AuthFlowID)
+	assert.Equal(t, "reg-flow-1", ouSvc.created[0].RegistrationFlowID)
+	assert.True(t, ouSvc.created[0].IsRegistrationFlowEnabled)
+	assert.Equal(t, "recovery-flow-1", ouSvc.created[0].RecoveryFlowID)
+	assert.True(t, ouSvc.created[0].IsRecoveryFlowEnabled)
+	assert.Equal(t, "signout-flow-1", ouSvc.created[0].SignOutFlowID)
+}
+
 func TestImportResources_FlowUpsertCreatePreservesID(t *testing.T) {
 	flowSvc := &fakeFlowService{
 		byID:  map[string]*providers.CompleteFlowDefinition{},
