@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/thunder-id/thunderid/internal/entitytype/model"
 	oupkg "github.com/thunder-id/thunderid/internal/ou"
@@ -33,7 +34,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -90,7 +90,7 @@ type EntityTypeServiceInterface interface {
 type entityTypeService struct {
 	entityTypeStore entityTypeStoreInterface
 	ouService       oupkg.OrganizationUnitServiceInterface
-	transactioner   transaction.Transactioner
+	transactioner   providers.Transactioner
 	authzService    sysauthz.SystemAuthorizationServiceInterface
 }
 
@@ -98,7 +98,7 @@ type entityTypeService struct {
 func newEntityTypeService(
 	ouService oupkg.OrganizationUnitServiceInterface,
 	store entityTypeStoreInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 	authzService sysauthz.SystemAuthorizationServiceInterface,
 ) EntityTypeServiceInterface {
 	return &entityTypeService{

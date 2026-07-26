@@ -256,3 +256,11 @@ type RuntimeStoreProvider interface {
 
 	ExtendTTL(ctx context.Context, namespace RuntimeStoreNamespace, key string, ttlSeconds int64) error
 }
+
+// Transactioner provides transaction management with automatic nesting detection.
+type Transactioner interface {
+	// Transact executes the given function within a transaction.
+	// If a transaction already exists in the context, it reuses it.
+	// Otherwise, it creates a new transaction and commits/rolls back automatically.
+	Transact(ctx context.Context, txFunc func(context.Context) error) error
+}

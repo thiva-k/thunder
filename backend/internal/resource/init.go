@@ -26,7 +26,7 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize initializes the resource service and registers its routes.
@@ -64,7 +64,7 @@ func Initialize(
 }
 
 // initializeStore creates and initializes the appropriate store based on configuration.
-func initializeStore() (resourceStoreInterface, transaction.Transactioner, error) {
+func initializeStore() (resourceStoreInterface, providers.Transactioner, error) {
 	storeMode := getResourceStoreMode()
 
 	switch storeMode {

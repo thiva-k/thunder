@@ -27,6 +27,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/declarative_resource/entity"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 type fileBasedStore struct {
@@ -34,7 +35,7 @@ type fileBasedStore struct {
 }
 
 // newFileBasedStore creates a new file-based store for roles.
-func newFileBasedStore() (roleStoreInterface, transaction.Transactioner) {
+func newFileBasedStore() (roleStoreInterface, providers.Transactioner) {
 	return &fileBasedStore{
 		GenericFileBasedStore: declarativeresource.NewGenericFileBasedStore(entity.KeyTypeRole),
 	}, transaction.NewNoOpTransactioner()

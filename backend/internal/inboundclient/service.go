@@ -44,7 +44,6 @@ import (
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -99,7 +98,7 @@ type InboundClientServiceInterface interface {
 
 type inboundClientService struct {
 	store          inboundClientStoreInterface
-	transactioner  transaction.Transactioner
+	transactioner  providers.Transactioner
 	certService    cert.CertificateServiceInterface
 	entityProvider entityprovider.EntityProviderInterface
 	themeMgt       thememgt.ThemeMgtServiceInterface
@@ -110,7 +109,7 @@ type inboundClientService struct {
 }
 
 // newInboundClientService creates and returns an inboundClientService with all dependencies wired.
-func newInboundClientService(store inboundClientStoreInterface, transactioner transaction.Transactioner,
+func newInboundClientService(store inboundClientStoreInterface, transactioner providers.Transactioner,
 	certService cert.CertificateServiceInterface,
 	entityProvider entityprovider.EntityProviderInterface,
 	themeMgt thememgt.ThemeMgtServiceInterface,

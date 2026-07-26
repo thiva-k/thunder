@@ -49,7 +49,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/kmprovider"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -302,7 +301,6 @@ type engineContext struct {
 	graphBuilder          graphbuilder.GraphBuilderInterface
 	authAssertGen         assert.AuthAssertGeneratorInterface
 	dpopVerifier          dpop.VerifierInterface
-	transactioner         transaction.Transactioner
 	flowExecService       flowexec.FlowExecServiceInterface
 	attributeCacheService attributecache.AttributeCacheServiceInterface
 
@@ -334,6 +332,7 @@ type engineContext struct {
 	authzProvider         providers.AuthorizationProvider
 	attestationProvider   providers.AttestationProvider
 
+	transactioner        providers.Transactioner
 	runtimeStoreProvider providers.RuntimeStoreProvider
 }
 
@@ -488,4 +487,9 @@ func WithLogConfig(config engineconfig.LogConfig) Option {
 // WithAttestationProvider supplies the Attestation provider.
 func WithAttestationProvider(provider providers.AttestationProvider) Option {
 	return func(c *engineContext) { c.attestationProvider = provider }
+}
+
+// WithTransactioner supplies the Transactioner.
+func WithTransactioner(provider providers.Transactioner) Option {
+	return func(c *engineContext) { c.transactioner = provider }
 }

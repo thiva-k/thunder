@@ -129,7 +129,7 @@ func (f *idpFileBasedStore) UpdateIdentityProvider(ctx context.Context, idp *pro
 }
 
 // newIDPFileBasedStore creates a new instance of a file-based store.
-func newIDPFileBasedStore() (idpStoreInterface, transaction.Transactioner) {
+func newIDPFileBasedStore() (idpStoreInterface, providers.Transactioner) {
 	genericStore := declarativeresource.NewGenericFileBasedStore(entity.KeyTypeIDP)
 	return &idpFileBasedStore{
 		GenericFileBasedStore: genericStore,

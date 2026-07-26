@@ -29,7 +29,7 @@ import (
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize initializes the entity type service and registers its routes.
@@ -99,7 +99,7 @@ func Initialize(
 //   - If declarative_resources.enabled = true: behaves as IMMUTABLE mode
 //   - If declarative_resources.enabled = false: behaves as MUTABLE mode
 func initializeStore(storeMode serverconst.StoreMode, cacheManager cache.CacheManagerInterface) (
-	entityTypeStoreInterface, transaction.Transactioner, error) {
+	entityTypeStoreInterface, providers.Transactioner, error) {
 	entityTypeByIDCache := cache.GetCache[*EntityType](cacheManager, "EntityTypeByIDCache")
 	entityTypeByNameCache := cache.GetCache[*EntityType](cacheManager, "EntityTypeByNameCache")
 

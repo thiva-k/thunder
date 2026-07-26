@@ -31,7 +31,6 @@ import (
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -58,7 +57,7 @@ type IDPServiceInterface interface {
 type idpService struct {
 	idpStore           idpStoreInterface
 	entityTypeService  entitytype.EntityTypeServiceInterface
-	transactioner      transaction.Transactioner
+	transactioner      providers.Transactioner
 	dependencyRegistry resourcedependency.Registry
 	logger             *log.Logger
 	uuidGenerator      func() (string, error)
@@ -66,7 +65,7 @@ type idpService struct {
 
 // newIDPService creates a new instance of IdPService.
 func newIDPService(idpStore idpStoreInterface, entityTypeService entitytype.EntityTypeServiceInterface,
-	transactioner transaction.Transactioner) IDPServiceInterface {
+	transactioner providers.Transactioner) IDPServiceInterface {
 	return &idpService{
 		idpStore:          idpStore,
 		entityTypeService: entityTypeService,

@@ -30,7 +30,7 @@ import (
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize initializes the group service and registers its routes.
@@ -100,7 +100,7 @@ func Initialize(
 // non-nil only in composite mode.
 func initializeGroupStore(
 	dbProvider provider.DBProviderInterface,
-) (groupStoreInterface, transaction.Transactioner, *fileBasedGroupStore, groupStoreInterface, error) {
+) (groupStoreInterface, providers.Transactioner, *fileBasedGroupStore, groupStoreInterface, error) {
 	storeMode, err := getGroupStoreMode()
 	if err != nil {
 		return nil, nil, nil, nil, err

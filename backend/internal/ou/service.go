@@ -34,7 +34,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -110,7 +109,7 @@ type ConfigurableOUService interface {
 type organizationUnitService struct {
 	authzService       sysauthz.SystemAuthorizationServiceInterface
 	ouStore            organizationUnitStoreInterface
-	transactioner      transaction.Transactioner
+	transactioner      providers.Transactioner
 	userResolver       OUUserResolver
 	groupResolver      OUGroupResolver
 	roleResolver       OURoleResolver
@@ -139,7 +138,7 @@ func (ous *organizationUnitService) SetOURoleResolver(resolver OURoleResolver) {
 func newOrganizationUnitService(
 	authzService sysauthz.SystemAuthorizationServiceInterface,
 	ouStore organizationUnitStoreInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) ConfigurableOUService {
 	return &organizationUnitService{
 		authzService:  authzService,

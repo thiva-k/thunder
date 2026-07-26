@@ -30,7 +30,7 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize initializes the role service and registers its routes.
@@ -104,7 +104,7 @@ func Initialize(
 // only in composite mode. Callers in those modes invoke loadDeclarativeResources after the
 // role service has been constructed so it can resolve ou_handle.
 func initializeStore() (
-	roleStoreInterface, transaction.Transactioner, *fileBasedStore, roleStoreInterface, error,
+	roleStoreInterface, providers.Transactioner, *fileBasedStore, roleStoreInterface, error,
 ) {
 	storeMode := getRoleStoreMode()
 
