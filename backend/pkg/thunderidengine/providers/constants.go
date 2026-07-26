@@ -526,6 +526,7 @@ const (
 	NamespaceVCINonce       RuntimeStoreNamespace = "vci:nonce"
 	NamespaceVCIOffer       RuntimeStoreNamespace = "vci:offer"
 	NamespaceVPState        RuntimeStoreNamespace = "vp:state"
+	NamespaceWebAuthn       RuntimeStoreNamespace = "webauthn:session"
 )
 
 // Error constants

@@ -24,9 +24,8 @@ set -euo pipefail
 # Deletes expired rows from runtime transient database tables. Designed to be run
 # manually (one-shot) or scheduled via cron for periodic cleanup.
 #
-# Tables cleaned (in order):
-#   1. WEBAUTHN_SESSION
-#   2. RUNTIME_STORE
+# Tables cleaned:
+#   1. RUNTIME_STORE
 #
 # Usage examples:
 #   # SQLite (local development)
@@ -66,7 +65,7 @@ USERNAME=""
 PASSWORD=""
 
 # Tables to clean
-TABLES=("WEBAUTHN_SESSION" "RUNTIME_STORE")
+TABLES=("RUNTIME_STORE")
 
 # Totals for summary.
 TOTAL_DELETED=0
