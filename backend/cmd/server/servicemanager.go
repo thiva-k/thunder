@@ -234,9 +234,6 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	fatalOnError(ctx, logger, err, "Failed to initialize connection declarative resources")
 	exporters = append(exporters, connectionExporter)
 
-	// Initialize passkey service
-	passkeyService := passkey.Initialize(entityService)
-
 	// Initialize magic link service
 	magicLinkService := magiclink.Initialize(jwtService)
 
@@ -259,6 +256,9 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	runtimeStoreProvider, transactioner, err := runtimestore.Initialize(runtime.Config.Database.RuntimeTransient.Type,
 		runtime.Config.Server.Identifier)
 	fatalOnError(ctx, logger, err, "Failed to initialize runtime store")
+
+	// Initialize passkey service
+	passkeyService := passkey.Initialize(entityService, runtimeStoreProvider)
 
 	// Shared DPoP verifier (and its JTI replay cache) so OAuth and OpenID4VCI
 	// share JTI replay protection.

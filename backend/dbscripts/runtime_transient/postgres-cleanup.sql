@@ -59,34 +59,15 @@ AS $$
 DECLARE
     v_now     TIMESTAMP := NOW() AT TIME ZONE 'UTC';
     v_deleted INT;
-    v_table   TEXT;
-    -- Tables located by ctid. Safe because each is a single, non-partitioned
-    -- relation, so ctid uniquely identifies a row within it.
-    v_ctid_tables TEXT[] := ARRAY[
-        'WEBAUTHN_SESSION',
-    ];
 BEGIN
     -- Guard against a batch size that would disable batching or make no progress.
     IF p_batch_size IS NULL OR p_batch_size <= 0 THEN
         p_batch_size := 1000;
     END IF;
 
-    FOREACH v_table IN ARRAY v_ctid_tables LOOP
-        LOOP
-            EXECUTE format(
-                'DELETE FROM %I WHERE ctid IN ' ||
-                '(SELECT ctid FROM %I WHERE EXPIRY_TIME < $1 LIMIT $2)',
-                v_table, v_table
-            ) USING v_now, p_batch_size;
-            GET DIAGNOSTICS v_deleted = ROW_COUNT;
-            COMMIT;
-            EXIT WHEN v_deleted = 0;
-        END LOOP;
-    END LOOP;
-
     -- RUNTIME_STORE is LIST-partitioned by NAMESPACE, where ctid is not unique across
-    -- partitions; match rows by primary key rather than ctid. ORDER BY EXPIRY_TIME lets
-    -- the batch be located via an index scan.
+    -- partitions; match rows by primary key. ORDER BY EXPIRY_TIME lets the batch be
+    -- located via an index scan.
     LOOP
         DELETE FROM "RUNTIME_STORE"
         WHERE (DEPLOYMENT_ID, NAMESPACE, KEY) IN (
