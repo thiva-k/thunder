@@ -67,7 +67,7 @@ export const DefaultThemeConfig = {
           contrastText: '#ffffff',
         },
         background: {
-          default: '#ffffff5c',
+          default: '#ffffff',
           paper: '#ffffff7f',
           acrylic: '#ffffff36',
         },
@@ -167,8 +167,8 @@ export const DefaultThemeConfig = {
         "html[data-color-scheme='light'] body": {
           backgroundAttachment: 'fixed',
           backgroundImage:
-            'radial-gradient(circle at 65% 30%, rgb(0 127 242 / 18%) 10%, rgba(0, 0, 0, 0) 60% 40%), ' +
-            'radial-gradient(circle at 15% 50%, rgb(0 213 255 / 26%) 1%, rgb(0 0 0 / 0%) 40% 70%), ' +
+            'radial-gradient(circle at 65% 30%, rgb(0 127 242 / 19%) 10%, rgba(0, 0, 0, 0) 60% 40%),' +
+            'radial-gradient(circle at 15% 50%, rgb(187 187 187 / 22%) 1%, rgb(0 0 0 / 0%) 40% 70%),' +
             'radial-gradient(circle at center, rgba(255, 255, 255, 0.6) 0%, var(--oxygen-palette-background-default) 100%)',
         },
       },

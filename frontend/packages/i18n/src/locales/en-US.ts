@@ -91,6 +91,7 @@ const translations = {
     // Status messages
     'status.loading': 'Loading...',
     'status.saving': 'Saving...',
+    'status.sending': 'Sending...',
     'status.deleting': 'Deleting...',
     'status.success': 'Success',
     'status.error': 'Error',
@@ -671,9 +672,7 @@ const translations = {
     inviteLinkDescription: 'Share this link with the user to complete their registration.',
     inviteLink: 'Invite Link',
     addAnother: 'Add Another User',
-    inviteAnother: 'Invite Another User',
-    'invite.steps.userdetails': 'User Details',
-    'invite.steps.invitelink': 'Invite Link',
+    'invite.steps.complete': 'Complete',
     editUser: 'Edit User',
     deleteUser: 'Delete User',
     userDetails: 'User Details',
@@ -3724,6 +3723,14 @@ const translations = {
     'core.loginFlowBuilder.errors.saveFailed': 'Failed to save flow. Please try again.',
     'core.loginFlowBuilder.success.flowCreated': 'Flow created successfully.',
     'core.loginFlowBuilder.success.flowUpdated': 'Flow updated successfully.',
+  },
+
+  // ============================================================================
+  // Onboarding namespace - User onboarding flows
+  // ============================================================================
+  onboarding: {
+    'forms.onboarding_mode.actions.create.description': 'Create user account immediately with all details',
+    'forms.onboarding_mode.actions.invite.description': 'Send invitation for user to complete their profile',
   },
 
   /**

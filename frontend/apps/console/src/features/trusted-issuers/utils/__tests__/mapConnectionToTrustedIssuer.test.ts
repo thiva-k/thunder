@@ -16,10 +16,10 @@
  * under the License.
  */
 
+import {ConnectionTypes, type ConnectionResponse} from '@thunderid/configure-connections';
 import {describe, it, expect} from 'vitest';
 import type {TrustedIssuer} from '../../models/trusted-issuer';
 import mapConnectionToTrustedIssuer from '../mapConnectionToTrustedIssuer';
-import {ConnectionTypes, type ConnectionResponse} from '@thunderid/configure-connections';
 
 const BASE_CONNECTION: ConnectionResponse = {
   id: 'ti-1',

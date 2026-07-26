@@ -17,17 +17,17 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
-import {useConfig, useToast} from '@thunderid/contexts';
-import {useThunderID} from '@thunderid/react';
-import {useTranslation} from 'react-i18next';
-import type {TrustedIssuer, TrustedIssuerFormData} from '../models/trusted-issuer';
-import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
 import {
   ConnectionQueryKeys,
   ConnectionTypes,
   isConflictError,
   type ConnectionResponse,
 } from '@thunderid/configure-connections';
+import {useConfig, useToast} from '@thunderid/contexts';
+import {useThunderID} from '@thunderid/react';
+import {useTranslation} from 'react-i18next';
+import type {TrustedIssuer, TrustedIssuerFormData} from '../models/trusted-issuer';
+import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
 
 /**
  * Create a trusted issuer, i.e. a trust-only OIDC connection (POST /connections/oidc).
