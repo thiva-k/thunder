@@ -31,7 +31,6 @@ import (
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 )
 
 // Initialize initializes the organization unit service and registers its routes.
@@ -95,7 +94,7 @@ func Initialize(
 //   - If immutable_resources.enabled = false: behaves as MUTABLE mode
 func initializeStore(
 	cacheManager cache.CacheManagerInterface,
-) (organizationUnitStoreInterface, transaction.Transactioner, error) {
+) (organizationUnitStoreInterface, providers.Transactioner, error) {
 	storeMode := getOrganizationUnitStoreMode()
 
 	switch storeMode {

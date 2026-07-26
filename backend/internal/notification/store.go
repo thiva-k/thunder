@@ -28,7 +28,7 @@ import (
 	dbmodel "github.com/thunder-id/thunderid/internal/system/database/model"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 var (
@@ -56,7 +56,7 @@ type notificationStore struct {
 }
 
 // newNotificationStore returns a new instance of notificationStoreInterface.
-func newNotificationStore() (notificationStoreInterface, transaction.Transactioner, error) {
+func newNotificationStore() (notificationStoreInterface, providers.Transactioner, error) {
 	dbProvider := getDBProvider()
 	client, err := dbProvider.GetConfigDBClient()
 	if err != nil {

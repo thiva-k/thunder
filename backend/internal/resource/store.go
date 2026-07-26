@@ -25,7 +25,6 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -98,7 +97,7 @@ type actionProperties struct {
 }
 
 // newResourceStore creates a new instance of resourceStore.
-func newResourceStore() (resourceStoreInterface, transaction.Transactioner, error) {
+func newResourceStore() (resourceStoreInterface, providers.Transactioner, error) {
 	dbProvider := provider.GetDBProvider()
 	transactioner, err := dbProvider.GetConfigDBTransactioner()
 	if err != nil {

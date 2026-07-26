@@ -36,7 +36,7 @@ type fileBasedStore struct {
 }
 
 // newFileBasedStore creates a new instance of a file-based store.
-func newFileBasedStore() (organizationUnitStoreInterface, transaction.Transactioner) {
+func newFileBasedStore() (organizationUnitStoreInterface, providers.Transactioner) {
 	genericStore := declarativeresource.NewGenericFileBasedStore(entity.KeyTypeOU)
 	return &fileBasedStore{
 		GenericFileBasedStore: genericStore,

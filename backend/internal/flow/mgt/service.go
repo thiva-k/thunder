@@ -36,7 +36,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -85,7 +84,7 @@ type flowMgtService struct {
 	interceptorRegistry interceptor.InterceptorRegistryInterface
 	flowValidator       FlowValidatorInterface
 	compositeStore      *compositeFlowStore
-	transactioner       transaction.Transactioner
+	transactioner       providers.Transactioner
 	dependencyRegistry  resourcedependency.Registry
 	logger              *log.Logger
 }
@@ -99,7 +98,7 @@ func newFlowMgtService(
 	interceptorRegistry interceptor.InterceptorRegistryInterface,
 	flowValidator FlowValidatorInterface,
 	compositeStore *compositeFlowStore,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) FlowMgtServiceInterface {
 	return &flowMgtService{
 		store:               store,

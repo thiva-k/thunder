@@ -30,7 +30,6 @@ import (
 	dbmodel "github.com/thunder-id/thunderid/internal/system/database/model"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -90,7 +89,7 @@ type entityDBStore struct {
 
 // newEntityDBStore creates a new instance of entityDBStore.
 // Indexed attributes start empty; consumers must call LoadIndexedAttributes after init.
-func newEntityDBStore() (entityStoreInterface, transaction.Transactioner, error) {
+func newEntityDBStore() (entityStoreInterface, providers.Transactioner, error) {
 	runtime := config.GetServerRuntime()
 
 	dbProvider := getDBProvider()

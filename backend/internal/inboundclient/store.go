@@ -29,7 +29,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -78,7 +77,7 @@ type store struct {
 var getDBProvider = provider.GetDBProvider
 
 // newStore returns a database-backed inbound client store along with its transactioner.
-func newStore() (inboundClientStoreInterface, transaction.Transactioner, error) {
+func newStore() (inboundClientStoreInterface, providers.Transactioner, error) {
 	dbProvider := getDBProvider()
 	client, err := dbProvider.GetConfigDBClient()
 	if err != nil {

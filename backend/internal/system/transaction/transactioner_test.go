@@ -26,13 +26,15 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 type TransactionerTestSuite struct {
 	suite.Suite
 	db            *sql.DB
 	mock          sqlmock.Sqlmock
-	transactioner Transactioner
+	transactioner providers.Transactioner
 }
 
 func TestTransactionerTestSuite(t *testing.T) {
@@ -292,7 +294,7 @@ func (suite *TransactionerTestSuite) TestTransact_PanicWithNonErrorValue() {
 // NoOpTransactionerTestSuite tests the no-op transactioner implementation.
 type NoOpTransactionerTestSuite struct {
 	suite.Suite
-	transactioner Transactioner
+	transactioner providers.Transactioner
 }
 
 func TestNoOpTransactionerTestSuite(t *testing.T) {

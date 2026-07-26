@@ -28,7 +28,6 @@ import (
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	dre "github.com/thunder-id/thunderid/internal/system/declarative_resource/entity"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -52,7 +51,7 @@ func Initialize(
 
 // initializeStore always creates a composite store (DB + in-memory file store).
 func initializeStore(cacheManager cache.CacheManagerInterface) (
-	inboundClientStoreInterface, transaction.Transactioner, error) {
+	inboundClientStoreInterface, providers.Transactioner, error) {
 	fileStore := newFileBasedStore(dre.KeyTypeInboundAuth)
 	dbStore, transactioner, err := newStore()
 	if err != nil {

@@ -25,12 +25,12 @@ import (
 	"fmt"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/thunder-id/thunderid/internal/notification/common"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -52,14 +52,14 @@ type NotificationSenderMgtSvcInterface interface {
 // notificationSenderMgtService implements the NotificationSenderMgtSvcInterface.
 type notificationSenderMgtService struct {
 	notificationStore  notificationStoreInterface
-	transactioner      transaction.Transactioner
+	transactioner      providers.Transactioner
 	dependencyRegistry resourcedependency.Registry
 	uuidGenerator      func() (string, error)
 }
 
 // newNotificationSenderMgtService returns a new instance of NotificationSenderMgtSvcInterface.
 func newNotificationSenderMgtService(
-	store notificationStoreInterface, tx transaction.Transactioner) NotificationSenderMgtSvcInterface {
+	store notificationStoreInterface, tx providers.Transactioner) NotificationSenderMgtSvcInterface {
 	return &notificationSenderMgtService{
 		notificationStore: store,
 		transactioner:     tx,

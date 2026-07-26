@@ -27,6 +27,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/database/model"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	_ "github.com/lib/pq"
 	_ "modernc.org/sqlite"
@@ -45,7 +46,7 @@ type DBClientInterface interface {
 	// BeginTx starts a new database transaction.
 	BeginTx() (model.TxInterface, error)
 	// GetTransactioner returns the transactioner for this client.
-	GetTransactioner() (transaction.Transactioner, error)
+	GetTransactioner() (providers.Transactioner, error)
 }
 
 // DBClient is the implementation of DBClientInterface.
@@ -182,7 +183,7 @@ func (client *DBClient) BeginTx() (model.TxInterface, error) {
 }
 
 // GetTransactioner returns the transactioner for this client.
-func (client *DBClient) GetTransactioner() (transaction.Transactioner, error) {
+func (client *DBClient) GetTransactioner() (providers.Transactioner, error) {
 	return transaction.NewTransactioner(client.db.GetSQLDB(), client.dbName), nil
 }
 

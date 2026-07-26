@@ -24,6 +24,7 @@ import (
 	"errors"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/thunder-id/thunderid/internal/entity"
 	"github.com/thunder-id/thunderid/internal/group"
@@ -32,7 +33,6 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -64,7 +64,7 @@ type roleService struct {
 	groupService    group.GroupServiceInterface
 	ouService       oupkg.OrganizationUnitServiceInterface
 	resourceService resourcepkg.ResourceServiceInterface
-	transactioner   transaction.Transactioner
+	transactioner   providers.Transactioner
 }
 
 // newRoleService creates a new instance of RoleService with injected dependencies.
@@ -74,7 +74,7 @@ func newRoleService(
 	groupService group.GroupServiceInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	resourceService resourcepkg.ResourceServiceInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) RoleServiceInterface {
 	return &roleService{
 		roleStore:       roleStore,

@@ -34,7 +34,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/security"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -128,7 +127,7 @@ type resourceService struct {
 	resourceStore      resourceStoreInterface
 	ouService          oupkg.OrganizationUnitServiceInterface
 	defaultDelimiter   string
-	transactioner      transaction.Transactioner
+	transactioner      providers.Transactioner
 	dependencyRegistry resourcedependency.Registry
 }
 
@@ -205,7 +204,7 @@ func (rs *resourceService) GetResourceDependencies(
 func newResourceService(
 	ouService oupkg.OrganizationUnitServiceInterface,
 	resourceStore resourceStoreInterface,
-	transactionerInstance transaction.Transactioner,
+	transactionerInstance providers.Transactioner,
 ) (ResourceServiceInterface, error) {
 	// Load default delimiter from config
 	defaultDelimiter := getDefaultDelimiter()

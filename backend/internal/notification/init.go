@@ -25,7 +25,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize creates and configures the notification service components. Declarative resource
@@ -36,7 +36,7 @@ import (
 func Initialize(jwtService jwt.JWTServiceInterface) (
 	NotificationSenderMgtSvcInterface, OTPServiceInterface, NotificationSenderServiceInterface, error) {
 	var notificationStore notificationStoreInterface
-	var tx transaction.Transactioner
+	var tx providers.Transactioner
 
 	if config.GetServerRuntime().Config.DeclarativeResources.Enabled {
 		notificationStore, tx = newNotificationFileBasedStore()

@@ -33,8 +33,8 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Service is the SSO session capability. It wraps every session-store operation so callers (the
@@ -110,7 +110,7 @@ type CriteriaRevoker interface {
 type service struct {
 	store           sessionStore
 	resolver        Resolver
-	transactioner   transaction.Transactioner
+	transactioner   providers.Transactioner
 	criteriaRevoker CriteriaRevoker
 	timeouts        Timeouts
 	logger          *log.Logger

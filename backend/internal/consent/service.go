@@ -26,9 +26,9 @@ import (
 
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // ConsentServiceInterface defines the business operations for managing consents and their purposes.
@@ -55,7 +55,7 @@ type InboundClientProvider interface {
 // consentService is the default implementation of ConsentServiceInterface.
 type consentService struct {
 	consentStore          consentStoreInterface
-	transactioner         transaction.Transactioner
+	transactioner         providers.Transactioner
 	inboundClientProvider InboundClientProvider
 	logger                *log.Logger
 }

@@ -26,7 +26,6 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 )
 
 const cacheBackedStoreLoggerComponentName = "CacheBackedFlowStore"
@@ -43,7 +42,7 @@ type cacheBackedFlowStore struct {
 func newCacheBackedFlowStore(
 	flowByIDCache cache.CacheInterface[*providers.CompleteFlowDefinition],
 	flowByHandleCache cache.CacheInterface[*providers.CompleteFlowDefinition],
-) (flowStoreInterface, transaction.Transactioner, error) {
+) (flowStoreInterface, providers.Transactioner, error) {
 	store, transactioner, err := newFlowStore()
 	if err != nil {
 		return nil, nil, err

@@ -39,7 +39,6 @@ import (
 	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/observability/event"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -52,7 +51,7 @@ type flowExecService struct {
 	flowStore           flowStoreInterface
 	actorProvider       providers.ActorProvider
 	observabilitySvc    providers.ObservabilityProvider
-	transactioner       transaction.Transactioner
+	transactioner       providers.Transactioner
 	cryptoSvc           kmprovider.RuntimeCryptoProvider
 	attestationVerifier providers.AttestationProvider
 	cfg                 flowconfig.Config
@@ -63,7 +62,7 @@ func newFlowExecService(flowProvider providers.FlowProvider,
 	flowStore flowStoreInterface, flowEngine flowEngineInterface,
 	actorProvider providers.ActorProvider,
 	observabilitySvc providers.ObservabilityProvider,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 	cryptoSvc kmprovider.RuntimeCryptoProvider,
 	attestationVerifier providers.AttestationProvider,
 	graphBuilder graphbuilder.GraphBuilderInterface,

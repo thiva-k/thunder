@@ -33,7 +33,6 @@ import (
 	dbmodel "github.com/thunder-id/thunderid/internal/system/database/model"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 )
 
 const storeLoggerComponentName = "OrganizationUnitStore"
@@ -70,7 +69,7 @@ type organizationUnitStore struct {
 }
 
 // newOrganizationUnitStore creates a new instance of organizationUnitStore.
-func newOrganizationUnitStore() (organizationUnitStoreInterface, transaction.Transactioner, error) {
+func newOrganizationUnitStore() (organizationUnitStoreInterface, providers.Transactioner, error) {
 	dbProvider := getDBProvider()
 	transactioner, err := dbProvider.GetEntityDBTransactioner()
 	if err != nil {

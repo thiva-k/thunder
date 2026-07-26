@@ -42,7 +42,6 @@ import (
 	oauth2utils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -67,7 +66,7 @@ type authorizeService struct {
 	parService      par.PARServiceInterface
 	jwtService      jwt.JWTServiceInterface
 	flowExecService flowexec.FlowExecServiceInterface
-	transactioner   transaction.Transactioner
+	transactioner   providers.Transactioner
 	criteriaRevoker revocation.CriteriaRevokerInterface
 	logger          *log.Logger
 }
@@ -81,7 +80,7 @@ func newAuthorizeService(
 	authCodeStore AuthorizationCodeStoreInterface,
 	authReqStore authorizationRequestStoreInterface,
 	parService par.PARServiceInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 	criteriaRevoker revocation.CriteriaRevokerInterface,
 	cfg oauthconfig.Config,
 ) AuthorizeServiceInterface {
