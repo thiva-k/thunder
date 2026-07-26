@@ -203,8 +203,6 @@ func (s *organizationUnitStore) CreateOrganizationUnit(ctx context.Context, ou p
 		ou.Handle,
 		ou.Name,
 		ou.Description,
-		ou.ThemeID,
-		ou.LayoutID,
 		string(ouMetadataBytes),
 		s.deploymentID,
 		ou.CreatedAt,
@@ -401,8 +399,6 @@ func (s *organizationUnitStore) UpdateOrganizationUnit(ctx context.Context, ou p
 		ou.Handle,
 		ou.Name,
 		ou.Description,
-		ou.ThemeID,
-		ou.LayoutID,
 		string(ouMetadataBytes),
 		ou.UpdatedAt,
 		s.deploymentID,
@@ -593,20 +589,6 @@ func buildOrganizationUnitFromResultRow(
 		}
 	}
 
-	themeID := ""
-	if v, ok := row["theme_id"]; ok && v != nil {
-		if s, ok := v.(string); ok {
-			themeID = s
-		}
-	}
-
-	layoutID := ""
-	if v, ok := row["layout_id"]; ok && v != nil {
-		if s, ok := v.(string); ok {
-			layoutID = s
-		}
-	}
-
 	// Extract OU Metadata data
 	ouMetadataData, err := parseOUMetadata(row)
 	if err != nil {
@@ -614,6 +596,46 @@ func buildOrganizationUnitFromResultRow(
 	}
 
 	// Extract fields from OU Metadata
+	themeID, err := extractStringFromOUMetadata(ouMetadataData, "theme_id")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	layoutID, err := extractStringFromOUMetadata(ouMetadataData, "layout_id")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	authFlowID, err := extractStringFromOUMetadata(ouMetadataData, "auth_flow_id")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	registrationFlowID, err := extractStringFromOUMetadata(ouMetadataData, "registration_flow_id")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	isRegistrationFlowEnabled, err := extractBoolFromOUMetadata(ouMetadataData, "is_registration_flow_enabled")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	recoveryFlowID, err := extractStringFromOUMetadata(ouMetadataData, "recovery_flow_id")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	isRecoveryFlowEnabled, err := extractBoolFromOUMetadata(ouMetadataData, "is_recovery_flow_enabled")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
+	signOutFlowID, err := extractStringFromOUMetadata(ouMetadataData, "signout_flow_id")
+	if err != nil {
+		return providers.OrganizationUnit{}, err
+	}
+
 	logoURL, err := extractStringFromOUMetadata(ouMetadataData, "logo_url")
 	if err != nil {
 		return providers.OrganizationUnit{}, err
@@ -645,19 +667,25 @@ func buildOrganizationUnitFromResultRow(
 	}
 
 	return providers.OrganizationUnit{
-		ID:              ou.ID,
-		Handle:          ou.Handle,
-		Name:            ou.Name,
-		Description:     ou.Description,
-		Parent:          parentID,
-		ThemeID:         themeID,
-		LayoutID:        layoutID,
-		LogoURL:         logoURL,
-		TosURI:          tosURI,
-		PolicyURI:       policyURI,
-		CookiePolicyURI: cookiePolicyURI,
-		CreatedAt:       createdAt,
-		UpdatedAt:       updatedAt,
+		ID:                        ou.ID,
+		Handle:                    ou.Handle,
+		Name:                      ou.Name,
+		Description:               ou.Description,
+		Parent:                    parentID,
+		ThemeID:                   themeID,
+		LayoutID:                  layoutID,
+		AuthFlowID:                authFlowID,
+		RegistrationFlowID:        registrationFlowID,
+		IsRegistrationFlowEnabled: isRegistrationFlowEnabled,
+		RecoveryFlowID:            recoveryFlowID,
+		IsRecoveryFlowEnabled:     isRecoveryFlowEnabled,
+		SignOutFlowID:             signOutFlowID,
+		LogoURL:                   logoURL,
+		TosURI:                    tosURI,
+		PolicyURI:                 policyURI,
+		CookiePolicyURI:           cookiePolicyURI,
+		CreatedAt:                 createdAt,
+		UpdatedAt:                 updatedAt,
 	}, nil
 }
 
@@ -732,10 +760,18 @@ func (s *organizationUnitStore) checkConflict(ctx context.Context,
 // getOUMetadataDataBytes constructs the JSON data bytes for the organization unit.
 func getOUMetadataDataBytes(ou *providers.OrganizationUnit) ([]byte, error) {
 	jsonData := map[string]interface{}{
-		"logo_url":          ou.LogoURL,
-		"tos_uri":           ou.TosURI,
-		"policy_uri":        ou.PolicyURI,
-		"cookie_policy_uri": ou.CookiePolicyURI,
+		"theme_id":                     ou.ThemeID,
+		"layout_id":                    ou.LayoutID,
+		"auth_flow_id":                 ou.AuthFlowID,
+		"registration_flow_id":         ou.RegistrationFlowID,
+		"is_registration_flow_enabled": ou.IsRegistrationFlowEnabled,
+		"recovery_flow_id":             ou.RecoveryFlowID,
+		"is_recovery_flow_enabled":     ou.IsRecoveryFlowEnabled,
+		"signout_flow_id":              ou.SignOutFlowID,
+		"logo_url":                     ou.LogoURL,
+		"tos_uri":                      ou.TosURI,
+		"policy_uri":                   ou.PolicyURI,
+		"cookie_policy_uri":            ou.CookiePolicyURI,
 	}
 
 	jsonBytes, err := json.Marshal(jsonData)
@@ -785,4 +821,16 @@ func extractStringFromOUMetadata(data map[string]interface{}, key string) (strin
 		return str, nil
 	}
 	return "", fmt.Errorf("failed to parse %s from OU Metadata", key)
+}
+
+// extractBoolFromOUMetadata extracts a boolean value from OU Metadata data,
+// returns false if not found or invalid.
+func extractBoolFromOUMetadata(data map[string]interface{}, key string) (bool, error) {
+	if data[key] == nil {
+		return false, nil
+	}
+	if b, ok := data[key].(bool); ok {
+		return b, nil
+	}
+	return false, fmt.Errorf("failed to parse %s from OU Metadata", key)
 }
