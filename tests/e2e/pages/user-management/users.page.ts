@@ -105,15 +105,25 @@ export class UsersPage extends BasePage {
     // Search input
     this.searchInput = page.locator('input[placeholder*="search" i], input[type="search"]');
 
-    // Form fields
-    this.usernameInput = page.locator('input[name="username"]').or(page.getByLabel(/username/i));
+    // Form fields - support both embedded flow (by id/label) and traditional form (by name)
+    this.usernameInput = page.locator('input#username')
+      .or(page.locator('input[name="username"]'))
+      .or(page.getByLabel(/username/i));
 
-    this.emailInput = page.locator('input[name="email"]').or(page.getByLabel(/email/i));
+    this.emailInput = page.locator('input#email')
+      .or(page.locator('input[name="email"]'))
+      .or(page.getByLabel(/email/i));
 
-    this.givenNameInput = page.locator('input[name="given_name"]').or(page.getByLabel(/first.*name|given.*name/i));
+    this.givenNameInput = page.locator('input#given_name')
+      .or(page.locator('input[name="given_name"]'))
+      .or(page.getByLabel(/first.*name|given.*name/i));
 
-    this.familyNameInput = page.locator('input[name="family_name"]').or(page.getByLabel(/last.*name|family.*name/i));
-    this.passwordInput = page.locator('input[name="password"]').or(page.getByLabel(/^password$/i));
+    this.familyNameInput = page.locator('input#family_name')
+      .or(page.locator('input[name="family_name"]'))
+      .or(page.getByLabel(/last.*name|family.*name/i));
+    this.passwordInput = page.locator('input#password')
+      .or(page.locator('input[name="password"]'))
+      .or(page.getByLabel(/^password$/i));
 
     // Form buttons
     this.submitButton = page.getByRole("button", { name: /create.*user|add.*user|submit|save/i });
@@ -204,15 +214,42 @@ export class UsersPage extends BasePage {
     await this.continueButton.first().waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
     await this.clickContinueButton();
 
+    // Wait for the page to transition - wait until the user type heading disappears or changes
+    try {
+      await this.userTypeHeading.first().waitFor({ state: "hidden", timeout: Timeouts.FORM_LOAD });
+    } catch {
+      // Heading might not disappear, just wait for page to settle
+      await this.page.waitForLoadState("networkidle", {timeout: Timeouts.FORM_LOAD}).catch(() => {});
+    }
+
+    // Wait a moment for animations to complete
+    await this.page.waitForTimeout(300);
+
     // Handle Organization Unit step if it appears
     if (await this.isLocatorVisible(this.organizationUnitHeading)) {
       await this.continueButton.first().waitFor({ state: "visible", timeout: Timeouts.ELEMENT_VISIBILITY });
       await this.clickContinueButton();
+
+      // Wait for organization unit heading to disappear
+      try {
+        await this.organizationUnitHeading.first().waitFor({ state: "hidden", timeout: Timeouts.FORM_LOAD });
+      } catch {
+        await this.page.waitForLoadState("networkidle", {timeout: Timeouts.FORM_LOAD}).catch(() => {});
+      }
+      await this.page.waitForTimeout(300);
     }
 
-    // Handle Create User action button if it appears
+    // Handle Create User action button if it appears (onboarding mode selection)
     if (await this.isLocatorVisible(this.createUserActionButton)) {
       await this.createUserActionButton.first().click();
+
+      // Wait for page to settle after clicking
+      try {
+        await this.createUserActionButton.first().waitFor({ state: "hidden", timeout: Timeouts.FORM_LOAD });
+      } catch {
+        await this.page.waitForLoadState("networkidle", {timeout: Timeouts.FORM_LOAD}).catch(() => {});
+      }
+      await this.page.waitForTimeout(300);
     }
 
     // Wait for details step to load
@@ -285,10 +322,33 @@ export class UsersPage extends BasePage {
   }
 
   private async waitForDetailsStep() {
-    await this.waitForAnyVisibleLocator(
-      [this.formHeading, this.usernameInput, this.emailInput, this.givenNameInput, this.familyNameInput, this.passwordInput],
-      Timeouts.FORM_LOAD,
-    );
+    // Strategy 1: Wait for specific typed text input fields to be visible (form is interactive)
+    const typedInputs = this.page.locator('input[type="text"], input[type="email"], input[type="password"], input[type="tel"], textarea');
+
+    try {
+      await typedInputs.first().waitFor({ state: "visible", timeout: Timeouts.FORM_LOAD / 2 });
+      return;
+    } catch {
+      // Strategy 2: Wait for ANY input element or form field
+      const anyInputs = this.page.locator('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"])');
+      const anyTextfields = this.page.locator('[role="textbox"]');
+      const formControl = this.page.locator('[role="group"], .MuiFormControl-root');
+
+      try {
+        await Promise.race([
+          anyInputs.first().waitFor({ state: "visible", timeout: Timeouts.FORM_LOAD / 2 }),
+          anyTextfields.first().waitFor({ state: "visible", timeout: Timeouts.FORM_LOAD / 2 }),
+          formControl.first().waitFor({ state: "visible", timeout: Timeouts.FORM_LOAD / 2 }),
+        ]);
+        return;
+      } catch {
+        // Strategy 3: Fallback with detailed error reporting
+        await this.waitForAnyVisibleLocator(
+          [this.formHeading, this.usernameInput, this.emailInput, this.givenNameInput, this.familyNameInput, this.passwordInput, anyInputs, anyTextfields],
+          Timeouts.FORM_LOAD,
+        );
+      }
+    }
   }
 
   private async isLocatorVisible(locator: Locator): Promise<boolean> {
@@ -300,8 +360,38 @@ export class UsersPage extends BasePage {
       await Promise.any(
         locators.map((locator) => locator.first().waitFor({ state: "visible", timeout })),
       );
-    } catch {
-      throw new Error(`Timed out after ${timeout}ms while waiting for the next visible user-creation step.`);
+    } catch (error) {
+      // Provide debug information about what's actually on the page
+      const pageContent = await this.page.content();
+      const hasInputs = pageContent.includes('<input');
+      const hasFormControl = pageContent.includes('FormControl');
+      const hasTextField = pageContent.includes('TextField');
+
+      // Try to find any inputs on the page and log their details
+      const allInputs = await this.page.locator('input').all();
+      const inputDetails = await Promise.all(
+        allInputs.slice(0, 5).map(async (input) => {
+          try {
+            const type = await input.getAttribute('type');
+            const id = await input.getAttribute('id');
+            const name = await input.getAttribute('name');
+            const visible = await input.isVisible().catch(() => false);
+            return {type, id, name, visible};
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      const headingContent = await this.page.locator('h1, h2, h3, h4, h5, h6').first().textContent().catch(() => '');
+
+      throw new Error(
+        `Timed out after ${timeout}ms while waiting for the next visible user-creation step. ` +
+        `Debug: hasInputs=${hasInputs}, hasFormControl=${hasFormControl}, hasTextField=${hasTextField}. ` +
+        `Found ${allInputs.length} inputs: ${JSON.stringify(inputDetails.filter(Boolean))}. ` +
+        `Heading: "${headingContent}". ` +
+        `Error: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

@@ -66,7 +66,6 @@ const TranslationsListPage = lazy(() =>
 const UserAddPage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserAddPage})));
 const UserCreatePage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserCreatePage})));
 const UserEditPage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserEditPage})));
-const UserInvitePage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UserInvitePage})));
 const UsersListPage = lazy(() => import('@thunderid/configure-users').then((m) => ({default: m.UsersListPage})));
 const ResourceServersListPage = lazy(() =>
   import('@thunderid/configure-resource-servers').then((m) => ({default: m.ResourceServersListPage})),
@@ -277,16 +276,6 @@ export default function App(): JSX.Element {
                 }
               >
                 <Route index element={<UserCreatePage />} />
-              </Route>
-              <Route
-                path={RouteConfig.users.addInvite()}
-                element={
-                  <ProtectedRoute>
-                    <FullScreenLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<UserInvitePage />} />
               </Route>
               <Route
                 path={RouteConfig.userTypes.create()}

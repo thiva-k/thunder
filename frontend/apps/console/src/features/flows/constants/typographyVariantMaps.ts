@@ -17,7 +17,7 @@
  */
 
 import type {TypographyProps} from '@wso2/oxygen-ui';
-import {TypographyVariants} from '../models/elements';
+import {TypographyVariants, TypographyColors} from '../models/elements';
 
 /**
  * Maps flow typography variant names to Material UI typography variant names.
@@ -31,4 +31,16 @@ export const VARIANT_TO_MUI_MAP: Record<string, TypographyProps['variant']> = {
   [TypographyVariants.H6]: 'h6',
   [TypographyVariants.Body1]: 'body1',
   [TypographyVariants.Body2]: 'body2',
+};
+
+/**
+ * Maps flow typography color names to Material UI color values.
+ */
+export const COLOR_ENUM_TO_MUI_MAP: Record<string, TypographyProps['color']> = {
+  [TypographyColors.Error]: 'error',
+  [TypographyColors.Warning]: 'warning',
+  [TypographyColors.Success]: 'success',
+  [TypographyColors.Info]: 'info',
+  [TypographyColors.Primary]: 'primary',
+  [TypographyColors.Secondary]: 'secondary',
 };

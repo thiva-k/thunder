@@ -17,12 +17,12 @@
  */
 
 import {useQuery, type UseQueryResult} from '@tanstack/react-query';
+import {ConnectionTypes, type ConnectionResponse} from '@thunderid/configure-connections';
 import {useConfig} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import TrustedIssuerQueryKeys from '../constants/query-keys';
 import type {TrustedIssuer} from '../models/trusted-issuer';
 import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
-import {ConnectionTypes, type ConnectionResponse} from '@thunderid/configure-connections';
 
 /**
  * Fetch a single trusted issuer (GET /connections/oidc/{id}). Disabled until an id is provided.
