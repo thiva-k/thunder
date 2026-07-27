@@ -23,6 +23,7 @@ import ConnectionCreateWizardPage from '../ConnectionCreateWizardPage';
 
 const mutateMock = vi.fn();
 const navigateMock = vi.fn();
+const showToastMock = vi.fn();
 
 vi.mock('react-router', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router')>()),
@@ -34,7 +35,7 @@ vi.mock('@thunderid/contexts', async (importOriginal) => ({
     getGateCallbackUrl: () => 'https://id.acme.io/gate/callback',
     config: {brand: {product_name: 'ThunderID'}},
   }),
-  useToast: () => ({showToast: vi.fn()}),
+  useToast: () => ({showToast: showToastMock}),
 }));
 vi.mock('../../api/useCreateConnection', () => ({default: () => ({mutate: mutateMock, isPending: false})}));
 
@@ -173,6 +174,7 @@ describe('ConnectionCreateWizardPage', () => {
 
     expect(screen.getByTestId('connection-name-step')).toBeInTheDocument();
     expect(screen.getByText('A connection with this name already exists.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith('A connection with this name already exists.', 'error');
   });
 
   it('renders the baked-in trusted-idp step instead of the generic ConnectionForm', () => {
@@ -193,6 +195,7 @@ describe('ConnectionCreateWizardPage', () => {
 
     expect(screen.getByTestId('connection-name-step')).toBeInTheDocument();
     expect(screen.getByText('A connection with this name already exists.')).toBeInTheDocument();
+    expect(showToastMock).toHaveBeenCalledWith('A connection with this name already exists.', 'error');
   });
 
   it('returns to the name step when Back is clicked from the trusted-idp step', () => {

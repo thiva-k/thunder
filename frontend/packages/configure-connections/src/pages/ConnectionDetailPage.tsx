@@ -41,6 +41,7 @@ import {
   responseToFormValues,
   validateConnectionForm,
 } from '../utils/connectionFormMapping';
+import isConflictError from '../utils/isConflictError';
 
 interface TabPanelProps {
   children: ReactNode;
@@ -101,6 +102,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
   const [attrValid, setAttrValid] = useState(true);
   const [attrsKey, setAttrsKey] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
 
   const updateMutation = useUpdateConnection(connectionType, resolvedId ?? '');
   const deleteMutation = useDeleteConnection(connectionType);
@@ -136,6 +138,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
     setEditedAttr(null);
     setAttrValid(true);
     setAttrsKey((k) => k + 1);
+    setNameError(null);
   };
 
   const formDirty: boolean = JSON.stringify(values) !== JSON.stringify(baseline) || secretReplacing;
@@ -147,6 +150,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
     if (!valid || !resolvedId) {
       return;
     }
+    setNameError(null);
     const payload = {
       ...formValuesToRequest(values, fields, {mode: 'edit', secretReplaced: secretReplacing}),
       ...(supportsAttributes ? {attributeConfiguration: editedAttr ?? baselineAttr} : {}),
@@ -155,8 +159,10 @@ export default function ConnectionDetailPage(): JSX.Element | null {
       .mutateAsync(payload)
       .then(() => connectionQuery.refetch())
       .then(() => resetEdits())
-      .catch(() => {
-        // Errors (including the 409 duplicate-name) are surfaced by the mutation hook.
+      .catch((error: unknown) => {
+        if (isConflictError(error)) {
+          setNameError(t('error.duplicateName', 'A connection with this name already exists.'));
+        }
       });
   };
 
@@ -251,8 +257,14 @@ export default function ConnectionDetailPage(): JSX.Element | null {
                   secretReplacing={secretReplacing}
                   hasStoredSecret
                   vendorDisplayName={meta.displayName}
+                  nameError={nameError}
                   showNameField={isCustom}
-                  onFieldChange={(name, value) => setEditedValues((prev) => ({...prev, [name]: value}))}
+                  onFieldChange={(name, value) => {
+                    setEditedValues((prev) => ({...prev, [name]: value}));
+                    if (name === 'name') {
+                      setNameError(null);
+                    }
+                  }}
                   onSecretReplacingChange={setSecretReplacing}
                 />
               </SettingsCard>
