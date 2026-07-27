@@ -37,6 +37,15 @@ import (
 // requestURIPrefix is the URN prefix used for PAR request URIs per RFC 9126.
 const requestURIPrefix = "urn:ietf:params:oauth:request_uri:"
 
+// sensitiveParParams is the deny-list of PAR body parameters that must not be persisted into
+// InitiatorRequest.QueryParams, since they carry client credentials and the PAR store is a
+// plaintext runtime cache.
+var sensitiveParParams = map[string]bool{
+	oauth2const.RequestParamClientSecret:        true,
+	oauth2const.RequestParamClientAssertion:     true,
+	oauth2const.RequestParamClientAssertionType: true,
+}
+
 // PARServiceInterface defines the interface for the PAR service.
 type PARServiceInterface interface {
 	HandlePushedAuthorizationRequest(
@@ -45,7 +54,7 @@ type PARServiceInterface interface {
 	) (*parResponse, string, string)
 	ResolvePushedAuthorizationRequest(
 		ctx context.Context, requestURI string, clientID string,
-	) (*oauth2model.OAuthParameters, error)
+	) (*oauth2model.OAuthParameters, *providers.InitiatorRequest, error)
 }
 
 // parService implements PARServiceInterface.
@@ -155,9 +164,23 @@ func (s *parService) HandlePushedAuthorizationRequest(
 		Prompt:              params[oauth2const.RequestParamPrompt],
 	}
 
+	initiatorQueryParams := make(map[string][]string, len(params)+1)
+	for k, v := range params {
+		if sensitiveParParams[k] {
+			continue
+		}
+		initiatorQueryParams[k] = []string{v}
+	}
+	if len(resources) > 0 {
+		initiatorQueryParams[oauth2const.RequestParamResource] = resources
+	}
+
 	parRequest := pushedAuthorizationRequest{
 		ClientID:        oauthApp.ClientID,
 		OAuthParameters: oauthParams,
+		InitiatorRequest: providers.InitiatorRequest{
+			QueryParams: initiatorQueryParams,
+		},
 	}
 
 	expiresIn := s.cfg.OAuth.PAR.ExpiresIn
@@ -187,19 +210,19 @@ func resolveDPoPJkt(paramJkt, headerJkt string) string {
 // Returns the stored OAuth parameters on success, or an error if the request_uri is invalid.
 func (s *parService) ResolvePushedAuthorizationRequest(
 	ctx context.Context, requestURI string, clientID string,
-) (*oauth2model.OAuthParameters, error) {
+) (*oauth2model.OAuthParameters, *providers.InitiatorRequest, error) {
 	if !strings.HasPrefix(requestURI, requestURIPrefix) {
-		return nil, errInvalidRequestURI
+		return nil, nil, errInvalidRequestURI
 	}
 	randomKey := strings.TrimPrefix(requestURI, requestURIPrefix)
 
 	parRequest, found, err := s.store.Consume(ctx, randomKey)
 	if err != nil {
 		s.logger.Error(ctx, "Failed to consume PAR request", log.Error(err))
-		return nil, ErrPARResolutionFailed
+		return nil, nil, ErrPARResolutionFailed
 	}
 	if !found {
-		return nil, errRequestURINotFound
+		return nil, nil, errRequestURINotFound
 	}
 
 	// Verify client_id binding: the client making the authorization request must match
@@ -208,8 +231,8 @@ func (s *parService) ResolvePushedAuthorizationRequest(
 		s.logger.Debug(ctx, "Client ID mismatch for PAR request",
 			log.String("expected", parRequest.ClientID),
 			log.String("actual", clientID))
-		return nil, errClientIDMismatch
+		return nil, nil, errClientIDMismatch
 	}
 
-	return &parRequest.OAuthParameters, nil
+	return &parRequest.OAuthParameters, &parRequest.InitiatorRequest, nil
 }

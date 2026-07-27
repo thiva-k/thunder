@@ -203,14 +203,9 @@ func (as *authorizeService) HandleInitialAuthorizationRequest(ctx context.Contex
 		}
 	}
 
-	initiatorReq := &providers.InitiatorRequest{
-		Headers:     utils.FilterSensitiveHeaders(msg.RequestHeaders),
-		QueryParams: msg.RequestQueryParams,
-	}
-
 	// If request_uri is present, resolve the pushed authorization request.
 	if requestURI != "" {
-		return as.handlePARAuthorizationRequest(ctx, requestURI, clientID, app, initiatorReq)
+		return as.handlePARAuthorizationRequest(ctx, requestURI, clientID, app)
 	}
 
 	// Enforce PAR requirement: if PAR is required (per-client or global), reject requests without request_uri.
@@ -221,15 +216,20 @@ func (as *authorizeService) HandleInitialAuthorizationRequest(ctx context.Contex
 		}
 	}
 
+	initiatorReq := &providers.InitiatorRequest{
+		Headers:     utils.FilterSensitiveHeaders(msg.RequestHeaders),
+		QueryParams: msg.RequestQueryParams,
+	}
+
 	return as.handleStandardAuthorizationRequest(ctx, msg, app, initiatorReq)
 }
 
 // handlePARAuthorizationRequest resolves a request_uri from a PAR and continues the authorization flow.
 func (as *authorizeService) handlePARAuthorizationRequest(
 	ctx context.Context, requestURI string, clientID string,
-	app *providers.OAuthClient, initiatorReq *providers.InitiatorRequest) (
+	app *providers.OAuthClient) (
 	*AuthorizationInitResult, *AuthorizationError) {
-	oauthParams, err := as.parService.ResolvePushedAuthorizationRequest(ctx, requestURI, clientID)
+	oauthParams, initiatorReq, err := as.parService.ResolvePushedAuthorizationRequest(ctx, requestURI, clientID)
 	if err != nil {
 		as.logger.Debug(ctx, "Failed to resolve PAR request", log.Error(err))
 		if errors.Is(err, par.ErrPARResolutionFailed) {

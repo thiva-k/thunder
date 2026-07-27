@@ -520,6 +520,34 @@ func (s *ServiceTestSuite) TestHandlePAR_NonceTooLong() {
 	assert.Equal(s.T(), oauth2const.ErrorInvalidRequest, errCode)
 }
 
+func (s *ServiceTestSuite) TestHandlePAR_StripsCredentialsFromInitiatorQueryParams() {
+	store := newParStoreInterfaceMock(s.T())
+	var captured pushedAuthorizationRequest
+	store.EXPECT().Store(mock.Anything, mock.Anything, mock.Anything).
+		Run(func(_ context.Context, req pushedAuthorizationRequest, _ int64) {
+			captured = req
+		}).Return("test-uri", nil)
+
+	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
+	app := s.newTestApp()
+	params := s.newValidParams()
+	params[oauth2const.RequestParamClientSecret] = "super-secret"
+	params[oauth2const.RequestParamClientAssertion] = "signed-jwt"
+	params[oauth2const.RequestParamClientAssertionType] = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
+	resources := []string{"https://api.example.com"}
+
+	resp, errCode, _ := svc.HandlePushedAuthorizationRequest(s.ctx, params, resources, app, "")
+
+	assert.Empty(s.T(), errCode)
+	assert.NotNil(s.T(), resp)
+	queryParams := captured.InitiatorRequest.QueryParams
+	assert.NotContains(s.T(), queryParams, oauth2const.RequestParamClientSecret)
+	assert.NotContains(s.T(), queryParams, oauth2const.RequestParamClientAssertion)
+	assert.NotContains(s.T(), queryParams, oauth2const.RequestParamClientAssertionType)
+	assert.Equal(s.T(), []string{"code"}, queryParams[oauth2const.RequestParamResponseType])
+	assert.Equal(s.T(), resources, queryParams[oauth2const.RequestParamResource])
+}
+
 func (s *ServiceTestSuite) TestResolvePAR_Success() {
 	storedRequest := pushedAuthorizationRequest{
 		ClientID: "test-client",
@@ -533,7 +561,7 @@ func (s *ServiceTestSuite) TestResolvePAR_Success() {
 	store.EXPECT().Consume(mock.Anything, mock.Anything).Return(storedRequest, true, nil)
 	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
 
-	result, err := svc.ResolvePushedAuthorizationRequest(
+	result, _, err := svc.ResolvePushedAuthorizationRequest(
 		s.ctx, requestURIPrefix+"test-uri", "test-client")
 
 	assert.NoError(s.T(), err)
@@ -546,7 +574,7 @@ func (s *ServiceTestSuite) TestResolvePAR_InvalidURIFormat() {
 	store := newParStoreInterfaceMock(s.T())
 	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
 
-	result, err := svc.ResolvePushedAuthorizationRequest(s.ctx, "invalid-uri", "test-client")
+	result, _, err := svc.ResolvePushedAuthorizationRequest(s.ctx, "invalid-uri", "test-client")
 
 	assert.Nil(s.T(), result)
 	assert.ErrorIs(s.T(), err, errInvalidRequestURI)
@@ -557,7 +585,7 @@ func (s *ServiceTestSuite) TestResolvePAR_NotFound() {
 	store.EXPECT().Consume(mock.Anything, mock.Anything).Return(pushedAuthorizationRequest{}, false, nil)
 	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
 
-	result, err := svc.ResolvePushedAuthorizationRequest(
+	result, _, err := svc.ResolvePushedAuthorizationRequest(
 		s.ctx, requestURIPrefix+"nonexistent", "test-client")
 
 	assert.Nil(s.T(), result)
@@ -575,7 +603,7 @@ func (s *ServiceTestSuite) TestResolvePAR_ClientIDMismatch() {
 	store.EXPECT().Consume(mock.Anything, mock.Anything).Return(storedRequest, true, nil)
 	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
 
-	result, err := svc.ResolvePushedAuthorizationRequest(
+	result, _, err := svc.ResolvePushedAuthorizationRequest(
 		s.ctx, requestURIPrefix+"test-uri", "client-b")
 
 	assert.Nil(s.T(), result)
@@ -588,7 +616,7 @@ func (s *ServiceTestSuite) TestResolvePAR_ConsumeError() {
 		Return(pushedAuthorizationRequest{}, false, errors.New("cache error"))
 	svc := newPARService(store, s.newPermissiveResourceMock(), s.testCfg)
 
-	result, err := svc.ResolvePushedAuthorizationRequest(
+	result, _, err := svc.ResolvePushedAuthorizationRequest(
 		s.ctx, requestURIPrefix+"test-uri", "test-client")
 
 	assert.Nil(s.T(), result)
