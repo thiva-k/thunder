@@ -29,6 +29,7 @@ import LangChainLogo from '@site/src/components/icons/LangChainLogo';
 import NextLogo from '@site/src/components/icons/NextLogo';
 import NodeLogo from '@site/src/components/icons/NodeLogo';
 import NuxtLogo from '@site/src/components/icons/NuxtLogo';
+import PythonLogo from '@site/src/components/icons/PythonLogo';
 import ReactLogo from '@site/src/components/icons/ReactLogo';
 import VueLogo from '@site/src/components/icons/VueLogo';
 
@@ -58,6 +59,7 @@ const TECH_LOGOS: Record<string, React.ReactElement> = {
   next: <NextLogo size={20} />,
   node: <NodeLogo size={20} />,
   nuxt: <NuxtLogo size={20} />,
+  python: <PythonLogo size={20} />,
   react: <ReactLogo size={20} />,
   vue: <VueLogo size={20} />,
   langchain: <LangChainLogo size={20} />,

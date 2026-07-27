@@ -27,15 +27,14 @@ import {ConnectType, applyConnectType, useConnectType} from '@site/src/utils/con
 
 type OriginalProps = Props;
 
-// The "What are you building?" options (Application / AI Agent / MCP Server)
+// The "What are you building?" options (Application / AI Agent / MCP)
 // render as always-visible cards. Only the one matching the shared connect-type
 // is expanded; clicking a card sets the connect-type, which collapses the
-// others and stays in sync with the docs-home selector. MCP Server is a
-// disabled card while its quickstarts are still coming.
+// others and stays in sync with the docs-home selector.
 const SECTIONS: Record<ConnectType, {Icon: typeof Bot; comingSoon: boolean}> = {
   app: {Icon: MonitorSmartphone, comingSoon: false},
   agent: {Icon: Bot, comingSoon: false},
-  mcp: {Icon: Server, comingSoon: true},
+  mcp: {Icon: Server, comingSoon: false},
 };
 
 function connectTypeFromClassName(className: string | undefined): ConnectType | undefined {

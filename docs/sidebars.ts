@@ -101,10 +101,12 @@ const sidebars: SidebarsConfig = {
         },
         {
           type: 'category',
-          label: 'MCP Server',
+          label: 'MCP',
           className: 'connect-section connect-section--mcp',
           collapsible: true,
-          items: [{type: 'html', value: '<span aria-hidden="true"></span>'}],
+          items: [
+            {type: 'doc', id: 'getting-started/connect-your-mcp/python', label: 'Python', customProps: {icon: 'python'}},
+          ],
         },
       ],
     },

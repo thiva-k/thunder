@@ -30,6 +30,7 @@ import LangChainLogo from './icons/LangChainLogo';
 import NextLogo from './icons/NextLogo';
 import NodeLogo from './icons/NodeLogo';
 import NuxtLogo from './icons/NuxtLogo';
+import PythonLogo from './icons/PythonLogo';
 import ReactLogo from './icons/ReactLogo';
 import VueLogo from './icons/VueLogo';
 import {applyConnectType, useConnectType} from '../utils/connectType';
@@ -53,10 +54,14 @@ const AGENT_QUICKSTARTS = [
   {Logo: LangChainLogo, href: '/docs/next/getting-started/connect-your-agent/langchain', label: 'LangChain'},
 ];
 
+const MCP_QUICKSTARTS = [
+  {Logo: PythonLogo, href: '/docs/next/getting-started/connect-your-mcp/python', label: 'Python'},
+];
+
 const CATEGORIES: {id: ConnectType; icon: React.ReactElement; label: string; description: string; comingSoon: boolean}[] = [
   {id: 'app',   icon: <MonitorSmartphone size={20} />, label: 'Application', description: 'Web, mobile and desktop apps.', comingSoon: false},
   {id: 'agent', icon: <Bot size={20} />,               label: 'AI Agent',    description: 'LLM-powered agents.',            comingSoon: false},
-  {id: 'mcp',   icon: <Server size={20} />,            label: 'MCP Server',  description: 'Model Context Protocol servers.', comingSoon: true},
+  {id: 'mcp',   icon: <Server size={20} />,            label: 'MCP',         description: 'Model Context Protocol servers and clients.', comingSoon: false},
 ];
 
 function selectCategory(type: ConnectType): void {
@@ -161,11 +166,15 @@ export default function DeveloperShortcut({
       ? ALL_FRAMEWORKS.filter(f => ['React', 'Next.js', 'Express', 'Vue'].includes(f.label))
       : selected === 'agent'
         ? AGENT_QUICKSTARTS
-        : null;
+        : selected === 'mcp'
+          ? MCP_QUICKSTARTS
+          : null;
   const quickstartFooter =
     selected === 'app'
       ? 'All application quickstarts are available in the sidebar.'
-      : 'More agent frameworks are coming soon.';
+      : selected === 'agent'
+        ? 'More agent frameworks are coming soon.'
+        : 'All MCP quickstarts are available in the sidebar.';
 
   return (
     <Box

@@ -81,6 +81,7 @@ import {InfographicTimeline, InfographicStep} from '@site/src/components/Infogra
 import IntegrationTypePicker from '@site/src/components/IntegrationTypePicker';
 import {K8sArchDiagram} from '@site/src/components/K8sArchDiagram';
 import {ConsoleUrl, WayFinderSampleUrl, WayFinderMailUrl} from '@site/src/components/LocalUrls';
+import {McpOAuthFlowDiagram} from '@site/src/components/McpQuickstartFlow';
 import {NextSteps, NextStepsCard} from '@site/src/components/NextSteps';
 import ProductName from '@site/src/components/ProductName';
 import RepoLink from '@site/src/components/RepoLink';
@@ -167,6 +168,7 @@ export default {
   AIAgentSolutionPatternsRoadmap,
   AgentOwnTokenFlow,
   AgentOboFlow,
+  McpOAuthFlowDiagram,
   LangTabs,
   Lang,
   AgentModeSelector,
