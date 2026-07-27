@@ -33,9 +33,13 @@ jobs:
   # change detection for docs/PowerShell) so they occupy one runner slot instead
   # of four. Runner concurrency is shared across all PRs, so fewer jobs per run
   # directly reduces queue time on busy periods.
+  #
+  # This is also the root of the job graph: every other job depends on it, so a
+  # run requests one runner up front instead of eight competing for slots, and
+  # nothing expensive starts until these ~20s of checks pass.
   preflight:
     name: 🛡️ Preflight Checks
-    if: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -50,7 +54,10 @@ jobs:
         with:
           persist-credentials: false
 
+      # Diff-based steps need a base/head pair from the pull_request or
+      # merge_group payload, which a manual dispatch does not carry.
       - name: 🔍 Detect Docs and PowerShell Changes
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
         id: filter
         with:
@@ -79,6 +86,7 @@ jobs:
           pnpm audit --ignore-registry-errors --audit-level=high
 
       - name: 🔎 Dependency Review
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
         with:
           fail-on-severity: high
@@ -112,6 +120,7 @@ jobs:
 
   verify-mocks:
     name: 🔍 Verify Mock Files
+    needs: [preflight]
     if: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -148,6 +157,7 @@ jobs:
 
   lint:
     name: 🧹 Lint Code
+    needs: [preflight]
     if: ${{ (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -197,6 +207,7 @@ jobs:
 
   build:
     name: 🛠️ Build Product
+    needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -272,6 +283,7 @@ jobs:
 
   test-backend-unit:
     name: 🧪 Backend Unit Tests
+    needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -331,6 +343,7 @@ jobs:
 
   test-frontend-packages:
     name: 🧪 Frontend Packages Tests
+    needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     container:
@@ -393,6 +406,7 @@ jobs:
 
   test-frontend-gate-app:
     name: 🧪 Gate App Tests with Coverage
+    needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -441,6 +455,7 @@ jobs:
 
   test-frontend-console-app:
     name: 🧪 Console App Tests with Coverage
+    needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -568,6 +583,7 @@ jobs:
 
   build_samples:
     name: 🛠️ Build Sample Apps
+    needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -1128,7 +1144,7 @@ jobs:
   build-docs:
     name: 📚 Build Documentation
     needs: [preflight]
-    if: ${{ always() && needs.preflight.outputs.docs-changed == 'true' }}
+    if: ${{ needs.preflight.outputs.docs-changed == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -1146,7 +1162,7 @@ jobs:
   validate-windows:
     name: 🪟 Validate Windows PowerShell
     needs: preflight
-    if: always() && needs.preflight.outputs.powershell-changed == 'true'
+    if: needs.preflight.outputs.powershell-changed == 'true'
     uses: ./.github/workflows/windows-powershell-validation.yml
 
   cleanup-turbo-cache:
