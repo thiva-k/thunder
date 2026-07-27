@@ -19,13 +19,13 @@
 import {Stack} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
+import SettingsLockNotice from '../../../../applications/components/common/SettingsLockNotice';
 import AuthenticationFlowSection from '../../../../applications/components/edit-application/flows-settings/AuthenticationFlowSection';
 import RecoveryFlowSection from '../../../../applications/components/edit-application/flows-settings/RecoveryFlowSection';
 import RegistrationFlowSection from '../../../../applications/components/edit-application/flows-settings/RegistrationFlowSection';
 import type {Application} from '../../../../applications/models/application';
 import {OAuth2GrantTypes} from '../../../../applications/models/oauth';
 import type {Agent, OAuthAgentConfig} from '../../../models/agent';
-import DelegationLockNotice from '../shared/DelegationLockNotice';
 
 interface EditFlowsSettingsProps {
   agent: Agent;
@@ -53,7 +53,7 @@ export default function EditFlowsSettings({
 
   return (
     <Stack spacing={3}>
-      <DelegationLockNotice
+      <SettingsLockNotice
         isUnlocked={isUnlocked}
         message={t(
           'agents:edit.flows.delegationLock.message',
@@ -80,7 +80,7 @@ export default function EditFlowsSettings({
             entityLabel="agent"
           />
         </Stack>
-      </DelegationLockNotice>
+      </SettingsLockNotice>
     </Stack>
   );
 }

@@ -2521,9 +2521,13 @@ const translations = {
     'edit.page.tabs.token': 'Token',
     'edit.page.tabs.advanced': 'Advanced Settings',
     'edit.page.unsavedChanges': 'Unsaved changes',
+    'edit.page.validation.missingRedirectUri': 'A redirect URI is required.',
+    'edit.page.validation.missingCertificate': 'A certificate is required.',
     'edit.page.reset': 'Reset',
     'edit.page.save': 'Save',
     'edit.page.saving': 'Saving...',
+    'edit.userAccessLock.message':
+      'These settings apply only to user-facing flows. Enable a user-facing grant (e.g. authorization code) in the Advanced tab to configure them.',
 
     'edit.mcp.connect.sections.identity': 'Connection',
     'edit.mcp.connect.sections.identity.description': 'Client identity and credentials for connecting to MCP servers.',
@@ -2663,6 +2667,23 @@ const translations = {
     'edit.token.scopes.add_custom.error.duplicate': 'This scope is already added',
     'edit.token.scopes.add_custom.error.invalid': 'Scope name must not contain spaces',
     'edit.token.scopes.openid_required': 'The openid scope is required and cannot be removed',
+    'edit.token.tabs.application': 'Application',
+    'edit.token.tabs.user': 'User',
+    'edit.token.clientLock.message':
+      'These settings apply only when the client credentials grant is enabled. Add it in the Advanced tab to configure them.',
+    'edit.token.userLock.message':
+      'These settings apply only when a user-facing grant is enabled. Add one in the Advanced tab to configure them.',
+    'edit.token.client.attributes.title': 'Access Token Claims',
+    'edit.token.client.attributes.description':
+      'Optional claims to include in the access token this application receives for its own requests (client_credentials grant).',
+    'edit.token.client.attributes.label': 'Add or Remove Claims',
+    'edit.token.client.attributes.hint': "Click a claim to include it in this application's client access token.",
+    'edit.token.client.attributes.empty': 'No optional claims available.',
+    'edit.token.client.validity.title': 'Token Validity',
+    'edit.token.client.validity.description': 'How long this client access token remains valid before expiration.',
+    'edit.token.client.validity.label': 'Token Validity',
+    'edit.token.client.validity.hint': 'Token validity period in seconds (e.g., 3600 for 1 hour).',
+    'edit.token.client.validity.error': 'Enter a validity period of at least 1 second.',
     'edit.advanced.audience.title': 'Default Audience',
     'edit.advanced.audience.description':
       "The default aud for access tokens that don't target a resource server (OIDC only or scopeless).",

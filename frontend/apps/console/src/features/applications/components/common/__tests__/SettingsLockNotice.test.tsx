@@ -18,14 +18,14 @@
 
 import {render, screen} from '@testing-library/react';
 import {describe, it, expect} from 'vitest';
-import DelegationLockNotice from '../DelegationLockNotice';
+import SettingsLockNotice from '../SettingsLockNotice';
 
-describe('DelegationLockNotice', () => {
+describe('SettingsLockNotice', () => {
   it('renders only the children when unlocked', () => {
     render(
-      <DelegationLockNotice isUnlocked message="Turn on Delegated mode to unlock these settings.">
+      <SettingsLockNotice isUnlocked message="Turn on Delegated mode to unlock these settings.">
         <div data-testid="content">content</div>
-      </DelegationLockNotice>,
+      </SettingsLockNotice>,
     );
 
     expect(screen.getByTestId('content')).toBeInTheDocument();
@@ -34,9 +34,9 @@ describe('DelegationLockNotice', () => {
 
   it('shows the given message and gives the (still visible) children a frozen look when locked', () => {
     render(
-      <DelegationLockNotice isUnlocked={false} message="Turn on Delegated mode to unlock these settings.">
+      <SettingsLockNotice isUnlocked={false} message="Turn on Delegated mode to unlock these settings.">
         <div data-testid="content">content</div>
-      </DelegationLockNotice>,
+      </SettingsLockNotice>,
     );
 
     expect(screen.getByTestId('content')).toBeInTheDocument();
