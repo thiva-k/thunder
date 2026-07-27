@@ -182,8 +182,8 @@ overrides:
   picomatch: '>=2.3.2'
   # JUSTIFICATION: Fixes body-parser denial of service vulnerabilities. Covers 1.x <1.20.6 and 2.x <2.3.0 vulnerable ranges.
   body-parser: '>=2.3.0'
-  # JUSTIFICATION: Fixes webpack-dev-server CSRF and DoS vulnerabilities. Updated to >=5.3.0 to address <=5.2.5 vulnerability.
-  webpack-dev-server: '>=5.3.0'
+  # JUSTIFICATION: Fixes webpack-dev-server CSRF and DoS vulnerabilities. Pinned to 5.2.6 to address <=5.2.5 vulnerability (5.3.0 introduces breaking changes).
+  webpack-dev-server: '5.2.6'
   # JUSTIFICATION: Fixes Hono API Gateway and JSX vulnerabilities. Updated to >=4.12.27 to address <4.12.27 vulnerability range.
   hono: '>=4.12.27'
   '@hono/node-server': '>=2.0.5'
