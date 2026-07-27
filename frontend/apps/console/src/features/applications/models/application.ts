@@ -339,6 +339,13 @@ export interface Application {
   attestation?: AttestationConfig | null;
 
   /**
+   * Allowed origins for WebAuthn/passkey operations initiated through this application.
+   * When set, overrides the server-level passkey allowed origins for flow-based passkey operations.
+   * @example ['https://app.example.com', 'https://mobile.example.com']
+   */
+  passkeyAllowedOrigins?: string[];
+
+  /**
    * Whether this application is read-only (declarative/immutable)
    */
   isReadOnly?: boolean;

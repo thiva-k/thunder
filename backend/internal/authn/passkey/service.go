@@ -125,7 +125,7 @@ func (w *passkeyService) StartRegistration(
 	webAuthnUser := newWebAuthnUserFromEntity(coreEntity, credentials)
 
 	// Initialize WebAuthn service with relying party configuration
-	rpOrigins := getConfiguredOrigins()
+	rpOrigins := resolveAllowedOrigins(req.AllowedOrigins)
 	webAuthnService, err := newDefaultWebAuthnService(req.RelyingPartyID, rpDisplayName, rpOrigins)
 	if err != nil {
 		logger.Error(ctx, "Failed to initialize WebAuthn service", log.String("error", err.Error()))
@@ -245,7 +245,7 @@ func (w *passkeyService) FinishRegistration(ctx context.Context, req *PasskeyReg
 	webAuthnUser := newWebAuthnUserFromEntity(coreEntity, credentials)
 
 	// Initialize WebAuthn service with relying party configuration
-	rpOrigins := getConfiguredOrigins()
+	rpOrigins := resolveAllowedOrigins(req.AllowedOrigins)
 	webAuthnService, err := newDefaultWebAuthnService(relyingPartyID, relyingPartyID, rpOrigins)
 	if err != nil {
 		logger.Error(ctx, "Failed to initialize WebAuthn service", log.String("error", err.Error()))
@@ -301,7 +301,7 @@ func (w *passkeyService) StartAuthentication(ctx context.Context, req *PasskeyAu
 	}
 
 	// Initialize WebAuthn service with relying party configuration
-	rpOrigins := getConfiguredOrigins()
+	rpOrigins := resolveAllowedOrigins(req.AllowedOrigins)
 	webAuthnService, err := newDefaultWebAuthnService(req.RelyingPartyID, req.RelyingPartyID, rpOrigins)
 	if err != nil {
 		logger.Error(ctx, "Failed to initialize WebAuthn service", log.String("error", err.Error()))
@@ -452,7 +452,7 @@ func (w *passkeyService) FinishAuthentication(ctx context.Context, req *PasskeyA
 	webAuthnUser := newWebAuthnUserFromEntity(coreEntity, credentials)
 
 	// Initialize WebAuthn service with relying party configuration
-	rpOrigins := getConfiguredOrigins()
+	rpOrigins := resolveAllowedOrigins(req.AllowedOrigins)
 	webAuthnService, err := newDefaultWebAuthnService(relyingPartyID, relyingPartyID, rpOrigins)
 	if err != nil {
 		logger.Error(ctx, "Failed to initialize WebAuthn service", log.String("error", err.Error()))

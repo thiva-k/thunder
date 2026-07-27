@@ -71,6 +71,7 @@ const (
 	writableVal = "decoded-writable"
 	incomingVal = "decoded-incoming"
 	mergedVal   = "decoded-merged"
+	patchedVal  = "patched"
 )
 
 // --- ListConfigNames ---

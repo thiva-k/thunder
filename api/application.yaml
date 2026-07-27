@@ -116,6 +116,7 @@ paths:
                 validityPeriod: 3600
                 userAttributes: ["email", "username"]
               allowedUserTypes: ["employee", "customer"]
+              passkeyAllowedOrigins: ["https://myapp.example.com", "https://myapp-staging.example.com"]
               loginConsent:
                 validityPeriod: 3600
               inboundAuthConfig:
@@ -192,6 +193,7 @@ paths:
                   validityPeriod: 3600
                   userAttributes: ["email", "username"]
                 allowedUserTypes: ["employee", "customer"]
+                passkeyAllowedOrigins: ["https://myapp.example.com", "https://myapp-staging.example.com"]
                 loginConsent:
                   enabled: true
                   validityPeriod: 3600
@@ -336,6 +338,7 @@ paths:
                   validityPeriod: 3600
                   userAttributes: ["email", "username"]
                 allowedUserTypes: ["employee", "customer"]
+                passkeyAllowedOrigins: ["https://myapp.example.com", "https://myapp-staging.example.com"]
                 loginConsent:
                   enabled: true
                   validityPeriod: 3600
@@ -466,6 +469,7 @@ paths:
                 validityPeriod: 3600
                 userAttributes: ["email", "username"]
               allowedUserTypes: ["employee", "customer"]
+              passkeyAllowedOrigins: ["https://myapp.example.com", "https://myapp-staging.example.com"]
               loginConsent:
                 validityPeriod: 3600
               inboundAuthConfig:
@@ -543,6 +547,7 @@ paths:
                   validityPeriod: 3600
                   userAttributes: ["email", "username"]
                 allowedUserTypes: ["employee", "customer"]
+                passkeyAllowedOrigins: ["https://myapp.example.com", "https://myapp-staging.example.com"]
                 loginConsent:
                   enabled: true
                   validityPeriod: 3600
@@ -849,6 +854,12 @@ components:
             type: string
           description: Array of allowed user types for this application.
           example: ["employee", "customer", "partner"]
+        passkeyAllowedOrigins:
+          type: array
+          items:
+            type: string
+          description: Allowed origins for WebAuthn/passkey operations for this application. When set, overrides the server-level passkey allowed origins for flow-based passkey operations.
+          example: ["https://myapp.example.com", "https://myapp-staging.example.com"]
         loginConsent:
           type: object
           properties:
@@ -988,6 +999,12 @@ components:
             type: string
           description: Array of allowed user types for this application.
           example: ["employee", "customer", "partner"]
+        passkeyAllowedOrigins:
+          type: array
+          items:
+            type: string
+          description: Allowed origins for WebAuthn/passkey operations for this application. When set, overrides the server-level passkey allowed origins for flow-based passkey operations.
+          example: ["https://myapp.example.com", "https://myapp-staging.example.com"]
         loginConsent:
           type: object
           properties:
@@ -1109,6 +1126,12 @@ components:
             type: string
           description: Array of allowed user types for this application.
           example: ["employee", "customer", "partner"]
+        passkeyAllowedOrigins:
+          type: array
+          items:
+            type: string
+          description: Allowed origins for WebAuthn/passkey operations for this application. When set, overrides the server-level passkey allowed origins for flow-based passkey operations.
+          example: ["https://myapp.example.com", "https://myapp-staging.example.com"]
         loginConsent:
           type: object
           properties:

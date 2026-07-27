@@ -38,8 +38,10 @@ import (
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/inboundclient"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
+	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -48,6 +50,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/i18n/mgtmock"
 	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
+	"github.com/thunder-id/thunderid/tests/mocks/serverconfigmock"
 )
 
 const testServiceAppID = "app123"
@@ -4344,4 +4347,91 @@ func (suite *ServiceTestSuite) TestDeleteApplication_EntityDeleteFailsAfterCasca
 	// Dependents were removed even though the application delete did not complete.
 	assert.Equal(suite.T(), 1, cascadeCalls)
 	ep.AssertCalled(suite.T(), "DeleteEntity", mock.Anything)
+}
+
+// ----- syncPasskeyOriginsToCORS -----
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_NilService_Noop() {
+	svc := &applicationService{serverConfigService: nil}
+	// Should not panic when serverConfigService is nil
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{"https://app.example.com"})
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_EmptyOrigins_Noop() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{serverConfigService: mockCfgSvc}
+	// No mock expectations — GetWritableConfig must not be called with empty input
+	svc.syncPasskeyOriginsToCORS(context.Background(), nil)
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{})
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_AddsNewOrigins() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{
+		serverConfigService: mockCfgSvc,
+		logger:              log.GetLogger(),
+	}
+
+	existing := cors.OriginConfig{}
+	mockCfgSvc.On("GetWritableConfig", mock.Anything, string(serverconfig.ConfigNameCORS)).
+		Return(existing, (*tidcommon.ServiceError)(nil))
+
+	var capturedRaw json.RawMessage
+	mockCfgSvc.On("SetConfig", mock.Anything, serverconfig.ConfigNameCORS, mock.MatchedBy(
+		func(raw json.RawMessage) bool {
+			capturedRaw = raw
+			return true
+		})).Return((*tidcommon.ServiceError)(nil))
+
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{"https://app.example.com"})
+
+	var saved map[string]json.RawMessage
+	require.NoError(suite.T(), json.Unmarshal(capturedRaw, &saved))
+	var origins []string
+	require.NoError(suite.T(), json.Unmarshal(saved["allowedOrigins"], &origins))
+	assert.Contains(suite.T(), origins, "https://app.example.com")
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_SkipsDuplicates() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{
+		serverConfigService: mockCfgSvc,
+		logger:              log.GetLogger(),
+	}
+
+	existing := cors.OriginConfig{}
+	_ = json.Unmarshal([]byte(`{"allowedOrigins":["https://app.example.com"]}`), &existing)
+	mockCfgSvc.On("GetWritableConfig", mock.Anything, string(serverconfig.ConfigNameCORS)).
+		Return(existing, (*tidcommon.ServiceError)(nil))
+	// SetConfig must NOT be called because nothing changed
+
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{"https://app.example.com"})
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_SkipsInvalidOrigins() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{
+		serverConfigService: mockCfgSvc,
+		logger:              log.GetLogger(),
+	}
+
+	invalidOrigins := []string{
+		"",                           // empty
+		"   ",                        // whitespace only
+		"*",                          // bare wildcard
+		"http://*.example.com",       // wildcard in hostname
+		"null",                       // null origin
+		"ftp://example.com",          // unsupported scheme
+		"https://example.com/path",   // has path
+		"https://example.com?q=1",    // has query
+		"https://example.com#frag",   // has fragment
+		"https://exam\tple.com",      // control character
+		"https://user:pass@host.com", // userinfo
+	}
+
+	mockCfgSvc.On("GetWritableConfig", mock.Anything, string(serverconfig.ConfigNameCORS)).
+		Return(cors.OriginConfig{}, (*tidcommon.ServiceError)(nil))
+	// SetConfig must NOT be called because all origins are invalid
+
+	svc.syncPasskeyOriginsToCORS(context.Background(), invalidOrigins)
 }

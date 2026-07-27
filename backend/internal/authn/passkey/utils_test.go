@@ -44,6 +44,28 @@ func (suite *UtilsTestSuite) TestGetConfiguredOrigins() {
 	suite.NotEmpty(origins)
 }
 
+func (suite *UtilsTestSuite) TestResolveOrigins_WithOverride() {
+	override := []string{"https://app.example.com", "https://mobile.example.com"}
+
+	result := resolveAllowedOrigins(override)
+
+	suite.Equal(override, result)
+}
+
+func (suite *UtilsTestSuite) TestResolveOrigins_FallbackToServerConfig() {
+	result := resolveAllowedOrigins(nil)
+
+	suite.NotNil(result)
+	suite.NotEmpty(result)
+}
+
+func (suite *UtilsTestSuite) TestResolveOrigins_EmptySliceFallsBack() {
+	result := resolveAllowedOrigins([]string{})
+
+	suite.NotNil(result)
+	suite.NotEmpty(result)
+}
+
 func (suite *UtilsTestSuite) TestParseUserAttributes_ValidJSON() {
 	attrs := json.RawMessage(`{"name":"John Doe","email":"john@example.com"}`)
 

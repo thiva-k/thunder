@@ -933,3 +933,112 @@ func (suite *PasskeyAuthExecutorTestSuite) TestExecuteRegisterStart_UserIDFromUs
 	assert.NotNil(suite.T(), resp)
 	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
 }
+
+// --- Tests verifying app-level PasskeyAllowedOrigins flows through to request structs ---
+
+func (suite *PasskeyAuthExecutorTestSuite) TestExecuteChallenge_PassesAppAllowedOrigins() {
+	appOrigins := []string{"https://app.example.com", "https://mobile.example.com"}
+	ctx := createPasskeyNodeContext(passkeyExecutorModeChallenge, providers.FlowTypeAuthentication)
+	ctx.RuntimeData[userAttributeUserID] = testPasskeyUserID
+	ctx.Application.PasskeyAllowedOrigins = appOrigins
+
+	expectedStartData := &passkey.PasskeyAuthenticationStartData{
+		SessionToken:                      testSessionToken,
+		PublicKeyCredentialRequestOptions: passkey.PublicKeyCredentialRequestOptions{Challenge: "dGVzdA=="},
+	}
+
+	suite.mockAuthnProvider.On("InitiateAuthentication", mock.Anything, passkey.CredentialType, mock.MatchedBy(
+		func(req *passkey.PasskeyAuthenticationStartRequest) bool {
+			return req.RelyingPartyID == testRelyingPartyID &&
+				len(req.AllowedOrigins) == 2 &&
+				req.AllowedOrigins[0] == appOrigins[0] &&
+				req.AllowedOrigins[1] == appOrigins[1]
+		}), mock.Anything).Return(expectedStartData, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+}
+
+func (suite *PasskeyAuthExecutorTestSuite) TestExecuteVerify_PassesAppAllowedOrigins() {
+	appOrigins := []string{"https://app.example.com"}
+	ctx := createPasskeyNodeContext(passkeyExecutorModeVerify, providers.FlowTypeAuthentication)
+	ctx.RuntimeData[userAttributeUserID] = testPasskeyUserID
+	ctx.RuntimeData[runtimePasskeySessionToken] = testSessionToken
+	ctx.Application.PasskeyAllowedOrigins = appOrigins
+	ctx.UserInputs = map[string]string{
+		inputCredentialID:      testCredentialIDValue,
+		inputClientDataJSON:    "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0In0",
+		inputAuthenticatorData: "authenticator-data",
+		inputSignature:         "signature-data",
+		inputUserHandle:        "user-handle",
+	}
+
+	authenticatedAuthUser := newPasskeyAuthenticatedUser()
+	suite.mockAuthnProvider.On("AuthenticateUser", mock.Anything, mock.Anything, mock.MatchedBy(
+		func(creds map[string]interface{}) bool {
+			req, ok := creds[passkey.CredentialType].(*passkey.PasskeyAuthenticationFinishRequest)
+			return ok && len(req.AllowedOrigins) == 1 && req.AllowedOrigins[0] == appOrigins[0]
+		}), mock.Anything, mock.Anything, mock.Anything).
+		Return(authenticatedAuthUser, providers.AuthenticatedClaims{}, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	assert.True(suite.T(), resp.AuthUser.IsAuthenticated())
+}
+
+func (suite *PasskeyAuthExecutorTestSuite) TestExecuteRegisterStart_PassesAppAllowedOrigins() {
+	appOrigins := []string{"https://app.example.com"}
+	ctx := createPasskeyNodeContext(passkeyExecutorModeRegStart, providers.FlowTypeRegistration)
+	ctx.RuntimeData[userAttributeUserID] = testPasskeyUserID
+	ctx.Application.PasskeyAllowedOrigins = appOrigins
+
+	expectedStartData := &passkey.PasskeyRegistrationStartData{
+		SessionToken:                       testSessionToken,
+		PublicKeyCredentialCreationOptions: passkey.PublicKeyCredentialCreationOptions{Challenge: "cmVnQ2hhbGw="},
+	}
+
+	suite.mockAuthnProvider.On("InitiateEnrollment", mock.Anything, passkey.CredentialType, mock.MatchedBy(
+		func(req *passkey.PasskeyRegistrationStartRequest) bool {
+			return req.UserID == testPasskeyUserID &&
+				len(req.AllowedOrigins) == 1 &&
+				req.AllowedOrigins[0] == appOrigins[0]
+		}), mock.Anything).Return(expectedStartData, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+}
+
+func (suite *PasskeyAuthExecutorTestSuite) TestExecuteRegisterFinish_PassesAppAllowedOrigins() {
+	appOrigins := []string{"https://app.example.com"}
+	ctx := createPasskeyNodeContext(passkeyExecutorModeRegFinish, providers.FlowTypeRegistration)
+	ctx.RuntimeData[userAttributeUserID] = testPasskeyUserID
+	ctx.RuntimeData[runtimePasskeySessionToken] = testSessionToken
+	ctx.Application.PasskeyAllowedOrigins = appOrigins
+	ctx.UserInputs = map[string]string{
+		inputCredentialID:      testCredentialIDValue,
+		inputClientDataJSON:    "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIn0",
+		inputAttestationObject: "attestation-object-data",
+	}
+
+	authUser := newPasskeyAuthenticatedUser()
+	suite.mockAuthnProvider.On("Enroll", mock.Anything, mock.Anything, mock.MatchedBy(
+		func(creds map[string]interface{}) bool {
+			req, ok := creds[passkey.CredentialType].(*passkey.PasskeyRegistrationFinishRequest)
+			return ok && len(req.AllowedOrigins) == 1 && req.AllowedOrigins[0] == appOrigins[0]
+		}), mock.Anything, mock.Anything, mock.Anything).Return(authUser, providers.AuthenticatedClaims{}, nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+}
