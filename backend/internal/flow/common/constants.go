@@ -248,10 +248,6 @@ const (
 	// requested without a valid id_token_hint. A sign-out flow's session sign-out node reads it to
 	// decide whether the End-User must confirm the logout before the session is terminated.
 	RuntimeKeyLogoutPromptRequired = "logoutPromptRequired"
-	// RuntimeKeyLogoutPromptShown is the session sign-out node's own guard, set when it routes to the
-	// confirmation prompt so that on re-run (after the user confirms) it terminates instead of
-	// prompting again.
-	RuntimeKeyLogoutPromptShown = "logoutPromptShown"
 )
 
 // SSOCheckpointKey scopes a per-checkpoint SSO control key (RuntimeKeySSOSessionPresent,
@@ -291,6 +287,11 @@ const (
 	ActionTypeSubmit ActionType = "SUBMIT"
 	// ActionTypeReject represents a reject/deny action
 	ActionTypeReject ActionType = "REJECT"
+	// ActionTypeSignOutConfirm marks the confirmation prompt's action edge in a sign-out flow. When the
+	// End-User confirms, the prompt node forwards this type to the session sign-out node (as the action
+	// type in ForwardedData), which reads it to tell a confirmed re-run apart from the initial request,
+	// so no runtime flag has to be persisted.
+	ActionTypeSignOutConfirm ActionType = "SIGN_OUT_CONFIRM"
 )
 
 // ForwardedData key constants define keys used in the ForwardedData map.

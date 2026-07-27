@@ -111,8 +111,8 @@ func (suite *SessionSignOutExecutorTestSuite) TestTerminateError() {
 }
 
 // TestPromptsWhenConfirmationRequired covers a prompt-enabled node whose logout arrived without a
-// valid id_token_hint: the executor routes to the confirmation prompt (incomplete), marks the prompt
-// as shown, and does not terminate the session.
+// valid id_token_hint and no confirmation yet: the executor routes to the confirmation prompt
+// (incomplete) and does not terminate the session.
 func (suite *SessionSignOutExecutorTestSuite) TestPromptsWhenConfirmationRequired() {
 	sso := sessionmock.NewServiceMock(suite.T())
 	exec := suite.newExecutor(sso)
@@ -125,13 +125,13 @@ func (suite *SessionSignOutExecutorTestSuite) TestPromptsWhenConfirmationRequire
 
 	suite.Require().NoError(err)
 	suite.Equal(providers.ExecUserInputRequired, resp.Status)
-	suite.Equal(dataValueTrue, resp.RuntimeData[common.RuntimeKeyLogoutPromptShown])
 	suite.Empty(resp.EngineData[common.RuntimeKeySSOSessionCleared])
 	sso.AssertNotCalled(suite.T(), "Terminate", mock.Anything, mock.Anything, mock.Anything)
 }
 
-// TestTerminatesAfterConfirmation covers the re-run once the prompt has been shown: the guard marker
-// is present, so the executor terminates the session instead of prompting again.
+// TestTerminatesAfterConfirmation covers the re-run after the End-User confirms: the confirmation
+// prompt forwards its sign-out confirm action type, so the executor terminates the session instead of
+// prompting again.
 func (suite *SessionSignOutExecutorTestSuite) TestTerminatesAfterConfirmation() {
 	sso := sessionmock.NewServiceMock(suite.T())
 	sso.EXPECT().Terminate(mock.Anything, "handle-abc", "flow-1").
@@ -140,9 +140,9 @@ func (suite *SessionSignOutExecutorTestSuite) TestTerminatesAfterConfirmation() 
 
 	ctx := signOutNodeContext()
 	ctx.NodeProperties = map[string]interface{}{propertyKeyPromptOnSignOut: true}
-	ctx.RuntimeData = map[string]string{
-		common.RuntimeKeyLogoutPromptRequired: dataValueTrue,
-		common.RuntimeKeyLogoutPromptShown:    dataValueTrue,
+	ctx.RuntimeData = map[string]string{common.RuntimeKeyLogoutPromptRequired: dataValueTrue}
+	ctx.ForwardedData = map[string]interface{}{
+		common.ForwardedDataKeyActionType: string(common.ActionTypeSignOutConfirm),
 	}
 
 	resp, err := exec.Execute(ctx)
@@ -150,6 +150,28 @@ func (suite *SessionSignOutExecutorTestSuite) TestTerminatesAfterConfirmation() 
 	suite.Require().NoError(err)
 	suite.Equal(providers.ExecComplete, resp.Status)
 	suite.Equal(dataValueTrue, resp.EngineData[common.RuntimeKeySSOSessionCleared])
+}
+
+// TestPromptsWhenActionTypeUnrecognized covers a confirmation prompt that forwarded an action type
+// this executor has no case for: an unrecognized type is not consent to end the session, so the
+// executor prompts rather than terminating.
+func (suite *SessionSignOutExecutorTestSuite) TestPromptsWhenActionTypeUnrecognized() {
+	sso := sessionmock.NewServiceMock(suite.T())
+	exec := suite.newExecutor(sso)
+
+	ctx := signOutNodeContext()
+	ctx.NodeProperties = map[string]interface{}{propertyKeyPromptOnSignOut: true}
+	ctx.RuntimeData = map[string]string{common.RuntimeKeyLogoutPromptRequired: dataValueTrue}
+	ctx.ForwardedData = map[string]interface{}{
+		common.ForwardedDataKeyActionType: "SOME_OTHER_ACTION",
+	}
+
+	resp, err := exec.Execute(ctx)
+
+	suite.Require().NoError(err)
+	suite.Equal(providers.ExecUserInputRequired, resp.Status)
+	suite.Empty(resp.EngineData[common.RuntimeKeySSOSessionCleared])
+	sso.AssertNotCalled(suite.T(), "Terminate", mock.Anything, mock.Anything, mock.Anything)
 }
 
 // TestTerminatesWhenHintProvided covers a prompt-enabled node whose logout carried a valid

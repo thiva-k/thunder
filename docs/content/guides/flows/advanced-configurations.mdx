@@ -40,7 +40,7 @@ A prompt entry can carry an action only, or both. The node collects all input va
 |---|---|---|
 | `ref` | Yes | Unique identifier for the action. |
 | `nextNode` | Yes | ID of the node to advance to when this action is selected. |
-| `type` | No | `SUBMIT` or `REJECT`. |
+| `type` | No | Action type forwarded to the next node's executor, so it can tell which action was taken. Recognized values are defined by that executor. |
 
 **Example**
 

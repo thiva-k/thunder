@@ -446,9 +446,9 @@ components:
         type:
           type: string
           description: |
-            Action type forwarded from the PROMPT node definition. Predefined values are
-            `SUBMIT` (approve/confirm) and `REJECT` (deny/cancel). Custom strings are also
-            accepted for executor-specific routing.
+            Action type forwarded from the PROMPT node definition. The value is an opaque string:
+            the flow author and the executor that consumes it agree on the vocabulary, so the
+            recognized values are documented by that executor rather than fixed here.
           example: "SUBMIT"
 
     Input:
