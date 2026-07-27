@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import type {ConnectionResponse} from '@thunderid/configure-connections';
+import type {ConnectionResponse} from '../models/connection';
 import type {TrustedIssuer} from '../models/trusted-issuer';
 
 /**

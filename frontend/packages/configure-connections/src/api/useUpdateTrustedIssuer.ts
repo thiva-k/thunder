@@ -17,17 +17,14 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
-import {
-  ConnectionQueryKeys,
-  ConnectionTypes,
-  isConflictError,
-  type ConnectionResponse,
-} from '@thunderid/configure-connections';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
-import TrustedIssuerQueryKeys from '../constants/query-keys';
+import ConnectionQueryKeys from '../constants/query-keys';
+import type {ConnectionResponse} from '../models/connection';
+import {ConnectionTypes} from '../models/connection';
 import type {TrustedIssuer, TrustedIssuerFormData} from '../models/trusted-issuer';
+import isConflictError from '../utils/isConflictError';
 import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
 
 /**
@@ -73,7 +70,7 @@ export default function useUpdateTrustedIssuer(
       queryClient.invalidateQueries({queryKey: [ConnectionQueryKeys.CONNECTIONS]}).catch(() => {
         // Ignore invalidation errors
       });
-      queryClient.invalidateQueries({queryKey: [TrustedIssuerQueryKeys.TRUSTED_ISSUER, id]}).catch(() => {
+      queryClient.invalidateQueries({queryKey: [ConnectionQueryKeys.TRUSTED_ISSUER, id]}).catch(() => {
         // Ignore invalidation errors
       });
       queryClient
