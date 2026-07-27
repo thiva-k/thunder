@@ -129,7 +129,7 @@ spec:
     #   console:
     #     clientBase: "/console"
     #     clientId: "CONSOLE"
-    #     scopes: '["openid", "profile", "email", "ou", "system", "system:user", "system:group", "system:ou:view", "system:usertype:view"]'
+    #     scopes: '["openid", "profile", "email", "group", "ou", "system"]'
     #   jwt:
     #     validityPeriod: 3600             # seconds
     #   oauth:

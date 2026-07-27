@@ -467,9 +467,14 @@ func ObtainAccessTokenWithPassword(clientID, redirectURI, scope, username, passw
 
 	// Bind the token to a resource server via the RFC 8707 resource parameter, mirroring the
 	// console runtime config. The CONSOLE app targets the bootstrapped System resource server.
+	// optionalParams[1], when non-empty, overrides the resource indicator so a test can bind the
+	// token to a specific resource server (e.g. one declaring fine-grained system scopes).
 	resource := ""
 	if clientID == "CONSOLE" {
 		resource = SystemResourceIdentifier
+	}
+	if len(optionalParams) > 1 && optionalParams[1] != "" {
+		resource = optionalParams[1]
 	}
 
 	// Step 1: Initiate authorization flow with PKCE
