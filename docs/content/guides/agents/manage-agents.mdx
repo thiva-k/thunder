@@ -59,6 +59,12 @@ The **Danger Zone** section at the bottom lets you:
 
 The **Attributes** tab shows the custom attributes defined by the agent schema. Click **Edit** to change the values, then click **Save**.
 
+If the agent schema changed since the agent was last saved, saving the agent reconciles its stored attributes with the current schema:
+
+- Values for attributes that were removed from the schema are discarded.
+- Values for optional attributes that no longer conform to the schema are discarded.
+- Values for required attributes that no longer conform to the schema must be corrected before the save can succeed.
+
 ### Flows
 
 The **Flows** tab is available when the agent has an OAuth 2.0 configuration. It controls:
@@ -103,6 +109,10 @@ In the schema editor you can add, edit, or remove attribute definitions. Each at
 - **Regex**: a validation pattern for string attributes.
 
 Click **Save** in the unsaved-changes bar to apply the schema changes. The updated schema applies to all agents on their next save.
+
+:::warning
+Removing an attribute from the schema does not immediately update existing applications. Any application that lists the removed attribute in its access token, ID token, or userinfo settings continues to return it while agents still hold a stored value. The next time you update and save the application, <ProductName /> removes the references to attributes that no longer exist in the schema. See [Application Settings](../../applications/application-settings#configure-what-goes-into-tokens) for the user attributes on the **Token** tab.
+:::
 
 ## Delete an Agent
 

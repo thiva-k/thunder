@@ -180,6 +180,14 @@ describe('renderSchemaField', () => {
       const checkbox = screen.getByRole('checkbox');
       expect(checkbox).not.toBeChecked();
     });
+
+    it('checkbox is unchecked for a stale non-boolean value', () => {
+      const fieldDef: PropertyDefinition = {type: 'boolean'};
+      render(<TestForm fieldName="isActive" fieldDef={fieldDef} defaultValues={{isActive: 'true'}} />);
+
+      const checkbox = screen.getByRole('checkbox');
+      expect(checkbox).not.toBeChecked();
+    });
   });
 
   describe('Array fields', () => {

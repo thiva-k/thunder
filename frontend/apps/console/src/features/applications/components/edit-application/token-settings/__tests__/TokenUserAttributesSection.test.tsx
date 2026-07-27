@@ -585,4 +585,54 @@ describe('TokenUserAttributesSection', () => {
       expect(screen.getByText('ouHandle')).toBeInTheDocument();
     });
   });
+
+  describe('Selected attributes missing from the schema', () => {
+    it('renders a selected attribute that is no longer in userAttributes', () => {
+      render(
+        <TokenUserAttributesSection {...baseProps} userAttributes={['email']} sharedAttributes={['deletedAttr']} />,
+      );
+
+      const chip = screen.getByText('deletedAttr').closest('.MuiChip-root');
+      expect(chip).toHaveClass('MuiChip-filled');
+    });
+
+    it('allows deselecting an attribute that is no longer in userAttributes', async () => {
+      const onAttributeClick = vi.fn();
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          onAttributeClick={onAttributeClick}
+          userAttributes={['email']}
+          sharedAttributes={['deletedAttr']}
+        />,
+      );
+
+      await userEvent.click(screen.getByText('deletedAttr'));
+
+      expect(onAttributeClick).toHaveBeenCalledWith('deletedAttr', 'shared');
+    });
+
+    it('renders stale selections even when userAttributes is empty', () => {
+      render(<TokenUserAttributesSection {...baseProps} sharedAttributes={['deletedAttr']} />);
+
+      expect(screen.getByText('deletedAttr')).toBeInTheDocument();
+    });
+
+    it('renders a stale access token attribute in OAuth mode', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          userAttributes={['email']}
+          accessTokenAttributes={['deletedAttr']}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="access"
+          onTabChange={vi.fn()}
+        />,
+      );
+
+      const chip = screen.getByText('deletedAttr').closest('.MuiChip-root');
+      expect(chip).toHaveClass('MuiChip-filled');
+    });
+  });
 });
