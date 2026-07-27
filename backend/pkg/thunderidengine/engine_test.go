@@ -43,6 +43,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/attestationprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/providermock"
 	"github.com/thunder-id/thunderid/tests/mocks/authzmock"
+	"github.com/thunder-id/thunderid/tests/mocks/captchamock"
 	"github.com/thunder-id/thunderid/tests/mocks/consentprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/designprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
@@ -80,6 +81,10 @@ func newTestDefaultAuthnProvider(t *testing.T) providers.AuthnProviderInterface 
 
 func newTestAttestationProvider(t *testing.T) providers.AttestationProvider {
 	return attestationprovidermock.NewAttestationProviderMock(t)
+}
+
+func newTestCaptchaValidationProvider(t *testing.T) providers.CaptchaValidationProvider {
+	return captchamock.NewCaptchaValidationProviderMock(t)
 }
 
 func newTestExecutor(t *testing.T, name string) providers.Executor {
@@ -270,6 +275,7 @@ func (suite *EngineTestSuite) TestEngineOptions() {
 		WithRuntimeStoreProvider(runtimeStoreProvider),
 		WithDefaultAuthnProvider(newTestDefaultAuthnProvider(suite.T())),
 		WithAttestationProvider(newTestAttestationProvider(suite.T())),
+		WithCaptchaValidationProvider(newTestCaptchaValidationProvider(suite.T())),
 	}
 	for _, opt := range opts {
 		opt(&ctx)
@@ -294,6 +300,7 @@ func (suite *EngineTestSuite) TestEngineOptions() {
 	assert.NotNil(suite.T(), ctx.authzProvider)
 	assert.NotNil(suite.T(), ctx.defaultAuthnProvider)
 	assert.NotNil(suite.T(), ctx.attestationProvider)
+	assert.NotNil(suite.T(), ctx.captchaValidationProvider)
 }
 
 func (suite *EngineTestSuite) TestJOSEConfig() {

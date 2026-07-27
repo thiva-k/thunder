@@ -148,7 +148,8 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		ResourceService:   engineCtx.resourceProvider,
 	}
 	interceptorDeps := interceptor.InterceptorDependencies{
-		FlowFactory: engineCtx.flowFactory,
+		FlowFactory:    engineCtx.flowFactory,
+		CaptchaService: engineCtx.captchaValidationProvider,
 	}
 
 	engineCtx.execRegistry, err = executor.Initialize(execDeps, flowConfig.Flow)
@@ -317,20 +318,21 @@ type engineContext struct {
 	encryptionConfig       engineconfig.EncryptionConfig
 	logConfig              engineconfig.LogConfig
 
-	actorProvider         providers.ActorProvider
-	defaultAuthnProvider  providers.AuthnProviderInterface
-	customAuthnProviders  map[string]providers.CustomAuthnProvider
-	resourceProvider      providers.ResourceServerProvider
-	ouProvider            providers.OrganizationUnitProvider
-	designResolveProvider providers.DesignProvider
-	flowProvider          providers.FlowProvider
-	i18nProvider          providers.I18nProvider
-	idpProvider           providers.IDPProvider
-	consentProvider       providers.ConsentProvider
-	customExecutors       map[string]providers.Executor
-	observabilitySvc      providers.ObservabilityProvider
-	authzProvider         providers.AuthorizationProvider
-	attestationProvider   providers.AttestationProvider
+	actorProvider             providers.ActorProvider
+	defaultAuthnProvider      providers.AuthnProviderInterface
+	customAuthnProviders      map[string]providers.CustomAuthnProvider
+	resourceProvider          providers.ResourceServerProvider
+	ouProvider                providers.OrganizationUnitProvider
+	designResolveProvider     providers.DesignProvider
+	flowProvider              providers.FlowProvider
+	i18nProvider              providers.I18nProvider
+	idpProvider               providers.IDPProvider
+	consentProvider           providers.ConsentProvider
+	customExecutors           map[string]providers.Executor
+	observabilitySvc          providers.ObservabilityProvider
+	authzProvider             providers.AuthorizationProvider
+	attestationProvider       providers.AttestationProvider
+	captchaValidationProvider providers.CaptchaValidationProvider
 
 	transactioner        providers.Transactioner
 	runtimeStoreProvider providers.RuntimeStoreProvider
@@ -492,4 +494,9 @@ func WithAttestationProvider(provider providers.AttestationProvider) Option {
 // WithTransactioner supplies the Transactioner.
 func WithTransactioner(provider providers.Transactioner) Option {
 	return func(c *engineContext) { c.transactioner = provider }
+}
+
+// WithCaptchaValidationProvider supplies the CaptchaValidationProvider.
+func WithCaptchaValidationProvider(provider providers.CaptchaValidationProvider) Option {
+	return func(c *engineContext) { c.captchaValidationProvider = provider }
 }
