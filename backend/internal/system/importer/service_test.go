@@ -2506,8 +2506,11 @@ func (f *fakeAgentService) UpdateAgent(
 	return &agentmodel.AgentCompleteResponse{ID: agentID, Name: req.Name}, nil
 }
 
+const testAgentLogo = "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
+
 const agentYAML = "resource_type: agent\n" +
-	"id: agent-1\ntype: default\nouId: root\nname: Test Agent\ndescription: desc\n"
+	"id: agent-1\ntype: default\nouId: root\nname: Test Agent\ndescription: desc\n" +
+	"logoUrl: \"" + testAgentLogo + "\"\n"
 
 func TestImportAgent_Create(t *testing.T) {
 	agentSvc := &fakeAgentService{existing: map[string]*agentmodel.AgentGetResponse{}}
@@ -2524,6 +2527,7 @@ func TestImportAgent_Create(t *testing.T) {
 	assert.Equal(t, operationCreate, resp.Results[0].Operation)
 	assert.Len(t, agentSvc.created, 1)
 	assert.Equal(t, "Test Agent", agentSvc.created[0].Name)
+	assert.Equal(t, testAgentLogo, agentSvc.created[0].LogoURL)
 }
 
 func TestImportAgent_UpsertUpdate(t *testing.T) {
@@ -2545,6 +2549,7 @@ func TestImportAgent_UpsertUpdate(t *testing.T) {
 	assert.Equal(t, statusSuccess, resp.Results[0].Status)
 	assert.Equal(t, operationUpdate, resp.Results[0].Operation)
 	assert.Len(t, agentSvc.updated, 1)
+	assert.Equal(t, testAgentLogo, agentSvc.updated[0].LogoURL)
 }
 
 func TestImportAgent_UpsertFallbackCreate(t *testing.T) {

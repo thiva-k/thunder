@@ -419,6 +419,21 @@ describe('TokenUserAttributesSection', () => {
       expect(payload).toContain('agent-id');
     });
 
+    it('does not include an iss field inside the act claim (matches the agent OBO token)', () => {
+      render(<TokenUserAttributesSection {...oauthProps} activeTab="access" showActorClaim />);
+
+      const payload = screen.getByTestId('jwt-preview-payload').textContent ?? '';
+      expect(payload).toContain('"act"');
+      expect(payload).not.toContain('issuer');
+    });
+
+    it('renders the provided actorSub as the act.sub value', () => {
+      render(<TokenUserAttributesSection {...oauthProps} activeTab="access" showActorClaim actorSub="my-agent-123" />);
+
+      const payload = screen.getByTestId('jwt-preview-payload').textContent ?? '';
+      expect(payload).toContain('my-agent-123');
+    });
+
     it('does not include the act claim in the ID token preview even when showActorClaim is true', () => {
       render(<TokenUserAttributesSection {...oauthProps} activeTab="id" showActorClaim />);
 

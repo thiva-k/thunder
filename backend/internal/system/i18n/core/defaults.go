@@ -85,6 +85,8 @@ var defaultMessages = map[string]string{
 	"error.agentservice.invalid_jwks_uri_description": "The JWKS URI must be a publicly reachable HTTPS URL",
 	"error.agentservice.invalid_limit": "Invalid pagination parameter",
 	"error.agentservice.invalid_limit_description": "The limit parameter must be between 1 and 100",
+	"error.agentservice.invalid_logo_url": "Invalid logo URL",
+	"error.agentservice.invalid_logo_url_description": "The provided logo URL is not valid",
 	"error.agentservice.invalid_oauth_configuration": "Invalid OAuth configuration",
 	"error.agentservice.invalid_oauth_configuration_description": "The provided OAuth configuration is invalid",
 	"error.agentservice.invalid_offset": "Invalid pagination parameter",

@@ -221,6 +221,7 @@ func makeAgentEntityParser(
 			Type:               req.Type,
 			Name:               req.Name,
 			Description:        req.Description,
+			LogoURL:            req.LogoURL,
 			Owner:              req.Owner,
 			Attributes:         attributesJSON,
 			InboundAuthProfile: req.InboundAuthProfile,
@@ -275,6 +276,7 @@ func makeAgentInboundParser(agentSvc AgentServiceInterface) func([]byte) (*inbou
 			Type:               req.Type,
 			Name:               req.Name,
 			Description:        req.Description,
+			LogoURL:            req.LogoURL,
 			Owner:              req.Owner,
 			InboundAuthProfile: req.InboundAuthProfile,
 			InboundAuthConfig:  req.InboundAuthConfig,
@@ -287,6 +289,7 @@ func makeAgentInboundParser(agentSvc AgentServiceInterface) func([]byte) (*inbou
 
 		resolvedClient.ID = req.ID
 		resolvedClient.IsReadOnly = true
+		setLogoProperty(&resolvedClient, req.LogoURL)
 
 		oauthProfile := buildOAuthProfile(req.InboundAuthConfig)
 		if oauthProfile != nil {

@@ -51,6 +51,7 @@ const (
 	testAgentName = "test-agent"
 	testAgentType = "employee"
 	testOUID      = "ou-id-abc"
+	testAgentLogo = "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
 )
 
 // AgentServiceTestSuite groups all agent service unit tests.
@@ -484,6 +485,52 @@ func (suite *AgentServiceTestSuite) TestCreateAgent_WithInboundAuth_Success() {
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
+func (suite *AgentServiceTestSuite) TestCreateAgent_WithLogo_PersistsLogoProperty() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	createdEntity := buildAgentEntityFixture(testAgentName, "", "", "")
+	clearMockCalls(mockEntity, "CreateEntity")
+	mockEntity.On("CreateEntity", mock.Anything, mock.Anything, mock.Anything).
+		Return(createdEntity, nil)
+
+	var capturedClient *inboundmodel.InboundClient
+	clearMockCalls(mockInbound, "CreateInboundClient")
+	mockInbound.On("CreateInboundClient",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			capturedClient = args.Get(1).(*inboundmodel.InboundClient)
+		}).Return(nil)
+
+	req := &model.Agent{
+		Name:               testAgentName,
+		Type:               testAgentType,
+		OUID:               testOUID,
+		LogoURL:            testAgentLogo,
+		InboundAuthProfile: providers.InboundAuthProfile{AuthFlowID: "flow-1"},
+	}
+	resp, svcErr := svc.CreateAgent(context.Background(), req)
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(resp)
+	assert.Equal(suite.T(), testAgentLogo, resp.LogoURL)
+	suite.Require().NotNil(capturedClient)
+	assert.Equal(suite.T(), testAgentLogo, capturedClient.Properties[propLogoURL])
+}
+
+func (suite *AgentServiceTestSuite) TestCreateAgent_InvalidLogoURL() {
+	svc, _, _, _, _ := suite.setupService()
+
+	req := &model.Agent{
+		Name:    testAgentName,
+		Type:    testAgentType,
+		OUID:    testOUID,
+		LogoURL: "javascript:alert(1)",
+	}
+	resp, svcErr := svc.CreateAgent(context.Background(), req)
+	assert.Nil(suite.T(), resp)
+	suite.Require().NotNil(svcErr)
+	assert.Equal(suite.T(), ErrorInvalidLogoURL.Code, svcErr.Code)
+}
+
 func (suite *AgentServiceTestSuite) TestCreateAgent_FlowIDResolvedToDefault() {
 	svc, mockEntity, mockInbound, _, _ := suite.setupService()
 
@@ -680,6 +727,27 @@ func (suite *AgentServiceTestSuite) TestGetAgent_Success_WithOAuth() {
 	assert.Equal(suite.T(), "cid-123", resp.InboundAuthConfig[0].OAuthConfig.ClientID)
 }
 
+func (suite *AgentServiceTestSuite) TestGetAgent_ReturnsLogoFromProperties() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	agentEntity := buildAgentEntityFixture(testAgentName, "", "", "")
+	clearMockCalls(mockEntity, "GetEntity")
+	mockEntity.On("GetEntity", mock.Anything, testAgentID).Return(agentEntity, nil)
+
+	inboundRec := &inboundmodel.InboundClient{
+		ID:         testAgentID,
+		AuthFlowID: "flow-1",
+		Properties: map[string]interface{}{propLogoURL: testAgentLogo},
+	}
+	clearMockCalls(mockInbound, "GetInboundClientByEntityID")
+	mockInbound.On("GetInboundClientByEntityID", mock.Anything, testAgentID).Return(inboundRec, nil)
+
+	resp, svcErr := svc.GetAgent(context.Background(), testAgentID, false)
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(resp)
+	assert.Equal(suite.T(), testAgentLogo, resp.LogoURL)
+}
+
 // --- DeleteAgent ---
 
 func (suite *AgentServiceTestSuite) TestDeleteAgent_EmptyID() {
@@ -761,6 +829,53 @@ func (suite *AgentServiceTestSuite) TestGetAgentList_Success() {
 	assert.Equal(suite.T(), 1, resp.TotalResults)
 	suite.Require().Len(resp.Agents, 1)
 	assert.Equal(suite.T(), testAgentName, resp.Agents[0].Name)
+}
+
+func (suite *AgentServiceTestSuite) TestGetAgentList_ReturnsLogoFromInboundClients() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	agentEntity := buildAgentEntityFixture(testAgentName, "", "", "")
+	clearMockCalls(mockEntity, "GetEntityList")
+	mockEntity.On("GetEntityList", mock.Anything, providers.EntityCategoryAgent, 30, 0, mock.Anything).
+		Return([]providers.Entity{*agentEntity}, nil)
+	clearMockCalls(mockEntity, "GetEntityListCount")
+	mockEntity.On("GetEntityListCount", mock.Anything, providers.EntityCategoryAgent, mock.Anything).
+		Return(1, nil)
+
+	clearMockCalls(mockInbound, "GetInboundClientByEntityID")
+	mockInbound.On("GetInboundClientByEntityID", mock.Anything, testAgentID).
+		Return(&inboundmodel.InboundClient{
+			ID:         testAgentID,
+			Properties: map[string]interface{}{propLogoURL: testAgentLogo},
+		}, nil)
+
+	resp, svcErr := svc.GetAgentList(context.Background(), 0, 0, nil, false)
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(resp)
+	suite.Require().Len(resp.Agents, 1)
+	assert.Equal(suite.T(), testAgentLogo, resp.Agents[0].LogoURL)
+}
+
+func (suite *AgentServiceTestSuite) TestGetAgentList_LogoLookupError_StillReturns() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	agentEntity := buildAgentEntityFixture(testAgentName, "", "", "")
+	clearMockCalls(mockEntity, "GetEntityList")
+	mockEntity.On("GetEntityList", mock.Anything, providers.EntityCategoryAgent, 30, 0, mock.Anything).
+		Return([]providers.Entity{*agentEntity}, nil)
+	clearMockCalls(mockEntity, "GetEntityListCount")
+	mockEntity.On("GetEntityListCount", mock.Anything, providers.EntityCategoryAgent, mock.Anything).
+		Return(1, nil)
+
+	clearMockCalls(mockInbound, "GetInboundClientByEntityID")
+	mockInbound.On("GetInboundClientByEntityID", mock.Anything, testAgentID).
+		Return((*inboundmodel.InboundClient)(nil), assert.AnError)
+
+	resp, svcErr := svc.GetAgentList(context.Background(), 0, 0, nil, false)
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(resp)
+	suite.Require().Len(resp.Agents, 1)
+	assert.Empty(suite.T(), resp.Agents[0].LogoURL)
 }
 
 // --- GetAgentGroups ---
@@ -1880,6 +1995,38 @@ func (suite *AgentServiceTestSuite) TestUpdateAgent_WantsInbound_NoExisting_Crea
 	assert.Equal(suite.T(), "new-flow-id", resp.AuthFlowID)
 	mockInbound.AssertCalled(suite.T(), "CreateInboundClient",
 		mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func (suite *AgentServiceTestSuite) TestUpdateAgent_SetsLogoProperty() {
+	svc, mockEntity, mockInbound, _, _ := suite.setupService()
+
+	agentEntity := buildAgentEntityFixture("old-name", "", "", "")
+	clearMockCalls(mockEntity, "GetEntity")
+	mockEntity.On("GetEntity", mock.Anything, testAgentID).Return(agentEntity, nil)
+
+	clearMockCalls(mockEntity, "UpdateEntity")
+	mockEntity.On("UpdateEntity", mock.Anything, testAgentID, mock.Anything).
+		Return(&providers.Entity{}, nil)
+
+	var capturedClient *inboundmodel.InboundClient
+	clearMockCalls(mockInbound, "CreateInboundClient")
+	mockInbound.On("CreateInboundClient",
+		mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Run(func(args mock.Arguments) {
+			capturedClient = args.Get(1).(*inboundmodel.InboundClient)
+		}).Return(nil)
+
+	resp, svcErr := svc.UpdateAgent(context.Background(), testAgentID, &model.UpdateAgentRequest{
+		Name:               testAgentName,
+		Type:               testAgentType,
+		LogoURL:            testAgentLogo,
+		InboundAuthProfile: providers.InboundAuthProfile{AuthFlowID: "new-flow-id"},
+	})
+	suite.Require().Nil(svcErr)
+	suite.Require().NotNil(resp)
+	assert.Equal(suite.T(), testAgentLogo, resp.LogoURL)
+	suite.Require().NotNil(capturedClient)
+	assert.Equal(suite.T(), testAgentLogo, capturedClient.Properties[propLogoURL])
 }
 
 func (suite *AgentServiceTestSuite) TestUpdateAgent_PopulatesOUHandle_SkipsWhenOUIDEmpty() {

@@ -30,3 +30,6 @@ const (
 	fieldClientID     = "clientId"
 	fieldClientSecret = "clientSecret"
 )
+
+// propLogoURL is the inbound-client PROPERTIES key holding the agent logo.
+const propLogoURL = "logo_url"

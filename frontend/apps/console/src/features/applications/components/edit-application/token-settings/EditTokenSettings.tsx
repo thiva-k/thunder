@@ -66,6 +66,10 @@ interface EditTokenSettingsProps {
    * Defaults to false (applications); agents pass true.
    */
   showActorClaim?: boolean;
+  /**
+   * Value shown for `act.sub` in the actor claim preview (the acting agent's ID).
+   */
+  actorSub?: string;
 }
 
 const createTokenConfigSchema = (t: (key: string) => string) => {
@@ -134,6 +138,7 @@ export default function EditTokenSettings({
   entityLabel = 'application',
   showUserInfoTab = true,
   showActorClaim = false,
+  actorSub = '<agent-id>',
 }: EditTokenSettingsProps) {
   const logger = useLogger('EditTokenSettings');
   const {t} = useTranslation();
@@ -722,6 +727,7 @@ export default function EditTokenSettings({
             entityLabel={entityLabel}
             showUserInfoTab={showUserInfoTab}
             showActorClaim={showActorClaim}
+            actorSub={actorSub}
             disabled={application.isReadOnly}
             idTokenResponseType={oauth2Config?.token?.idToken?.responseType}
             idTokenEncryptionAlg={oauth2Config?.token?.idToken?.encryptionAlg}

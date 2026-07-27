@@ -1917,6 +1917,10 @@ components:
           type: string
           description: Brief description of the agent. Stored as a system attribute.
           example: "Agent exposing calendar tools"
+        logoUrl:
+          type: string
+          description: Logo URL or avatar spec for the agent, shown in the console and login flows.
+          example: "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
         clientId:
           type: string
           description: OAuth client ID. Present only when the agent has an OAuth profile.
@@ -1998,6 +2002,12 @@ components:
           type: string
           description: Optional description of the agent.
           example: "Agent exposing calendar tools"
+        logoUrl:
+          type: string
+          description: |
+            Optional logo URL or avatar spec for the agent. Persisted with the agent's inbound
+            client so the console and login flows can display it. Defaults to no logo when omitted.
+          example: "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
         owner:
           type: string
           format: uuid
@@ -2083,6 +2093,13 @@ components:
         description:
           type: string
           example: "Agent exposing calendar tools"
+        logoUrl:
+          type: string
+          description: |
+            Optional logo URL or avatar spec for the agent. Omitting it leaves the stored logo
+            unchanged only when the same value is sent back; a full replacement update that omits
+            it clears the logo.
+          example: "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
         owner:
           type: string
           format: uuid
@@ -2154,6 +2171,10 @@ components:
         description:
           type: string
           example: "Agent exposing calendar tools"
+        logoUrl:
+          type: string
+          description: Logo URL or avatar spec for the agent, shown in the console and login flows.
+          example: "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
         owner:
           type: string
           format: uuid
@@ -2223,6 +2244,10 @@ components:
         description:
           type: string
           example: "Agent exposing calendar tools"
+        logoUrl:
+          type: string
+          description: Logo URL or avatar spec for the agent, shown in the console and login flows.
+          example: "avatar:shape=circle,variant=anonymous_entity,content=bot_head,colors=0"
         clientId:
           type: string
           description: OAuth client ID. Present only when the agent has an OAuth profile.
