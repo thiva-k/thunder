@@ -22,14 +22,19 @@ OAuth 2.0 applications additionally hold:
 
 ## Application Types
 
-<ProductName /> provides four application types. Choose the one that matches your architecture.
+<ProductName /> provides five application types. Choose the one that matches your architecture.
 
 | Type | Description | Client Secret |
 |------|-------------|---------------|
-| ⚛️ **Browser App** | For single-page applications (React, Angular, Vue) that run entirely in the browser.| No - public client |
-| 🌐 **Full-stack App** | For server-rendered web applications (Express, Spring, .NET) where the backend handles the token exchange. | Yes - confidential client |
-| 📱 **Mobile App** | For native or cross-platform mobile apps (Swift, Kotlin, React Native, Flutter).| No - public client |
-| 🤖 **Backend Service** | For server-to-server communication with no user interaction (background jobs, internal APIs, microservices). | Yes - confidential client |
+| **Browser App** | For single-page applications (React, Angular, Vue) that run entirely in the browser.| No - public client |
+| **Full-stack App** | For server-rendered web applications (Express, Spring, .NET) where the backend handles the token exchange. | Yes - confidential client |
+| **Mobile App** | For native or cross-platform mobile apps (Swift, Kotlin, React Native, Flutter).| No - public client |
+| **Backend Service** | For server-to-server communication with no user interaction (background jobs, internal APIs, microservices). | Yes - confidential client |
+| **Custom App** | For applications that do not fit the other types, with full control over configuration. | Depends on configuration |
+
+The application type determines whether <ProductName /> issues a Flow Secret and whether the application can call the Flow Execution API directly to sign users in. See [Integration Models](../../key-concepts/authentication/integration-models.mdx#app-native) for how each type behaves.
+
+You set the application type when you create the application, and you cannot change it afterward. If you're creating applications through the REST API or a declarative resource instead of the Console, provide the `type` attribute with one of `browser`, `fullstack`, `mobile`, `m2m`, or `custom`; the API rejects a create request that omits it.
 
 ## Create an Application
 

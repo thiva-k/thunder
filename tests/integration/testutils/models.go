@@ -46,6 +46,7 @@ type Application struct {
 	OUID                      string                   `json:"ouId,omitempty"`
 	Name                      string                   `json:"name"`
 	Description               string                   `json:"description"`
+	Type                      string                   `json:"type,omitempty"`
 	IsRegistrationFlowEnabled bool                     `json:"isRegistrationFlowEnabled"`
 	IsRecoveryFlowEnabled     bool                     `json:"isRecoveryFlowEnabled,omitempty"`
 	AuthFlowID                string                   `json:"authFlowId,omitempty"`
@@ -242,12 +243,12 @@ type ResourcePermissions struct {
 
 // FlowResponse represents the response from flow execution
 type FlowResponse struct {
-	ExecutionID   string              `json:"executionId"`
-	FlowStatus    string              `json:"flowStatus"`
-	Type          string              `json:"type"`
-	Data          *FlowData           `json:"data,omitempty"`
-	Assertion     string              `json:"assertion,omitempty"`
-	Error         *FlowExecutionError `json:"error,omitempty"`
+	ExecutionID string              `json:"executionId"`
+	FlowStatus  string              `json:"flowStatus"`
+	Type        string              `json:"type"`
+	Data        *FlowData           `json:"data,omitempty"`
+	Assertion   string              `json:"assertion,omitempty"`
+	Error       *FlowExecutionError `json:"error,omitempty"`
 }
 
 // FlowData represents the data returned by flow execution

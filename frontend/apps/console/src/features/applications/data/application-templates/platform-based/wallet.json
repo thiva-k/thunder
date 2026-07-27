@@ -1,5 +1,6 @@
 {
   "id": "wallet",
+  "type": "mobile",
   "displayName": "Digital Wallet",
   "description": "OpenID4VCI wallet that requests verifiable credentials",
   "creationFlow": {

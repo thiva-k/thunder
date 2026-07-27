@@ -185,6 +185,7 @@ spec:
       ouId: 01900000-0000-7000-8000-000000000001
       name: Console
       description: Management application for ThunderID
+      type: browser
       url: https://localhost:8090/console
       logoUrl: emoji:👨‍💻
       authFlowId: 01900000-0000-7000-8000-000000000068

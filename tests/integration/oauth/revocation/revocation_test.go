@@ -110,6 +110,7 @@ func (ts *RevocationTestSuite) createApp(name, clientID, clientSecret string) st
 		"name":                      name,
 		"description":               "Application for token revocation integration tests",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{
 			{

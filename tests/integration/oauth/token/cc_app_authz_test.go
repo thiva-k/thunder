@@ -174,6 +174,7 @@ func (s *CCAppAuthzTestSuite) createOAuthApp() (string, error) {
 		"name":                      "CC Authz Test App",
 		"description":               "Application for CC authorization testing",
 		"ouId":                      s.ouID,
+		"type":                      "m2m",
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{
 			{

@@ -805,6 +805,9 @@ func (ts *OAuthAuthzScopeTestSuite) createOAuthApplication(authFlowID string) (s
 
 // createApplicationRaw creates an application using raw HTTP request
 func (ts *OAuthAuthzScopeTestSuite) createApplicationRaw(app map[string]interface{}) (string, error) {
+	if _, ok := app["type"]; !ok {
+		app["type"] = "fullstack"
+	}
 	jsonData, err := json.Marshal(app)
 	if err != nil {
 		return "", err

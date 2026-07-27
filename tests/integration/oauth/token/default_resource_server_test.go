@@ -95,6 +95,7 @@ func (s *DefaultResourceServerTestSuite) createOAuthApp() string {
 		"name":                      "Default Resource Server Token App",
 		"description":               "Application for default resource server token tests",
 		"ouId":                      s.ouID,
+		"type":                      "m2m",
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{
 			{
@@ -196,6 +197,7 @@ func (s *DefaultResourceServerTestSuite) createOAuthAppWithDefaultAudience() str
 		"name":                      "Default Audience Token App",
 		"description":               "Application for default audience token tests",
 		"ouId":                      s.ouID,
+		"type":                      "m2m",
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{
 			{

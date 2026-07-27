@@ -91,6 +91,7 @@ func (ts *DPoPTestSuite) TestApplicationAPI_RoundTripsFlag() {
 		"name":                      "DPoPRoundTripApp",
 		"description":               "round-trip dpopBoundAccessTokens",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"dpop-test-person"},
@@ -195,13 +196,13 @@ func extractDPoPBoundFlag(app map[string]any) bool {
 // preserves the dpop_bound_access_tokens flag on register and read.
 func (ts *DPoPTestSuite) TestDCR_RoundTripsFlag() {
 	registration := map[string]any{
-		"ou_id":                     "decl-ou-1",
-		"redirect_uris":             []string{"https://dpop-dcr.example.com/callback"},
-		"client_name":               "DPoP DCR Round Trip",
-		"grant_types":               []string{"authorization_code", "refresh_token"},
-		"response_types":            []string{"code"},
+		"ou_id":                      "decl-ou-1",
+		"redirect_uris":              []string{"https://dpop-dcr.example.com/callback"},
+		"client_name":                "DPoP DCR Round Trip",
+		"grant_types":                []string{"authorization_code", "refresh_token"},
+		"response_types":             []string{"code"},
 		"token_endpoint_auth_method": "client_secret_basic",
-		"dpop_bound_access_tokens":  true,
+		"dpop_bound_access_tokens":   true,
 	}
 
 	body, err := json.Marshal(registration)

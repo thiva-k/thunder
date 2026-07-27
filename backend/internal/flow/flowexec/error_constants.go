@@ -239,3 +239,18 @@ var ErrorAttestationInvalid = tidcommon.ServiceError{
 		DefaultValue: "The provided attestation token is invalid",
 	},
 }
+
+// ErrorAttestationNotConfigured defines the error when a mobile application initiates a flow but has
+// no platform attestation configured. Mobile apps must configure attestation to access the flow APIs.
+var ErrorAttestationNotConfigured = tidcommon.ServiceError{
+	Code: "FES-1016",
+	Type: tidcommon.ClientErrorType,
+	Error: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.attestation_not_configured",
+		DefaultValue: "Attestation not configured",
+	},
+	ErrorDescription: tidcommon.I18nMessage{
+		Key:          "error.flowexecservice.attestation_not_configured_description",
+		DefaultValue: "Mobile applications must configure platform attestation to initiate a flow",
+	},
+}
