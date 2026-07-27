@@ -33,6 +33,7 @@ describe('fieldsForMode', () => {
       'clientSecret',
       'redirectUri',
       'scopes',
+      'prompt',
     ]);
   });
 
@@ -53,8 +54,10 @@ describe('fieldsForMode', () => {
       'issuer',
       'userInfoEndpoint',
       'jwksEndpoint',
+      'logoutEndpoint',
       'redirectUri',
       'scopes',
+      'prompt',
       'tokenExchangeEnabled',
       'trustedTokenAudience',
     ]);
@@ -76,8 +79,10 @@ describe('fieldsForMode', () => {
       'authorizationEndpoint',
       'tokenEndpoint',
       'userInfoEndpoint',
+      'logoutEndpoint',
       'redirectUri',
       'scopes',
+      'prompt',
     ]);
   });
 

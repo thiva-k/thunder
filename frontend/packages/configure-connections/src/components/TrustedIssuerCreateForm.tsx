@@ -149,12 +149,11 @@ export default function TrustedIssuerCreateForm({
               value={issuer}
               error={Boolean(touched['issuer'] && errors.issuer)}
               helperText={
-                touched['issuer']
-                  ? fieldErrorMessage(errors.issuer)
-                  : t(
-                      'trustedIssuers:create.form.issuer.hint',
-                      "The issuer URI from the external IdP's OpenID Connect discovery document.",
-                    )
+                (touched['issuer'] ? fieldErrorMessage(errors.issuer) : undefined) ??
+                t(
+                  'trustedIssuers:create.form.issuer.hint',
+                  "The issuer URI from the external IdP's OpenID Connect discovery document.",
+                )
               }
               onChange={(e) => setIssuer(e.target.value)}
               onBlur={() => setTouchedField('issuer')}
@@ -172,12 +171,11 @@ export default function TrustedIssuerCreateForm({
               value={jwksEndpoint}
               error={Boolean(touched['jwksEndpoint'] && errors.jwksEndpoint)}
               helperText={
-                touched['jwksEndpoint']
-                  ? fieldErrorMessage(errors.jwksEndpoint)
-                  : t(
-                      'trustedIssuers:create.form.jwksEndpoint.hint',
-                      'The JWKS endpoint used to validate the signature of incoming identity assertions.',
-                    )
+                (touched['jwksEndpoint'] ? fieldErrorMessage(errors.jwksEndpoint) : undefined) ??
+                t(
+                  'trustedIssuers:create.form.jwksEndpoint.hint',
+                  'The JWKS endpoint used to validate the signature of incoming identity assertions.',
+                )
               }
               onChange={(e) => setJwksEndpoint(e.target.value)}
               onBlur={() => setTouchedField('jwksEndpoint')}

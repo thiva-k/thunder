@@ -53,11 +53,15 @@ Enter the following fields, then click **Create connection**:
 
 </Stepper>
 
-After creation, open the connection and set **Scopes** on its edit page to request space-separated OAuth scopes beyond the provider's default.
+After creation, open the connection. Configure the following on its edit page:
 
-:::note
-The connection also accepts `logoutEndpoint` and `prompt` fields, and an `attributeConfiguration` field to map this provider's claims to local user attributes. These are not available in the Console and can only be set through the [Connections API](../../../apis#tag/connections). See [Attribute Configuration](../add-oidc-provider#attribute-configuration) for the mapping concepts, which apply the same way to OAuth 2.0 connections.
-:::
+| Field | Description |
+|-------|-------------|
+| **Scopes** | Space-separated OAuth scopes to request, beyond the provider's default. |
+| **Logout endpoint** | The provider's logout endpoint, used to end the user session on logout. |
+| **Prompt** | Optional prompt value forwarded to the provider's authorization request, for example `select_account` or `consent`. |
+
+To map this provider's claims to local user attributes, go to the **Attribute Configuration** tab. See [Attribute Configuration](../add-oidc-provider#attribute-configuration) for the mapping concepts, which apply the same way to OAuth 2.0 connections.
 
 ## Next Steps
 

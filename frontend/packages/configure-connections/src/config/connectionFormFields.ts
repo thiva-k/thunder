@@ -32,8 +32,6 @@ export interface ConnectionFieldDef {
   kind: ConnectionFieldKind;
   /** Required on create. Secret fields are required on create but optional (omit-to-keep) on edit. */
   required?: boolean;
-  /** Render an "Optional" tag next to the label. */
-  optional?: boolean;
   placeholder?: string;
   /** Format the value must match (checked only when non-empty). Mirrors backend validation. */
   pattern?: RegExp;
@@ -57,6 +55,24 @@ const NAME_FIELD = (placeholder: string): ConnectionFieldDef => ({
   required: true,
   placeholder,
 });
+
+const PROMPT_FIELD: ConnectionFieldDef = {
+  name: 'prompt',
+  labelKey: 'connections:form.fields.prompt.label',
+  hintKey: 'connections:form.fields.prompt.hint',
+  kind: 'text',
+  placeholder: 'select_account',
+  visibility: 'edit',
+};
+
+const LOGOUT_ENDPOINT_FIELD: ConnectionFieldDef = {
+  name: 'logoutEndpoint',
+  labelKey: 'connections:form.fields.logoutEndpoint.label',
+  hintKey: 'connections:form.fields.logoutEndpoint.hint',
+  kind: 'url',
+  placeholder: 'https://idp.example.com/logout',
+  visibility: 'edit',
+};
 
 const oauthFields = (namePlaceholder: string, clientIdPlaceholder: string): ConnectionFieldDef[] => [
   NAME_FIELD(namePlaceholder),
@@ -89,6 +105,7 @@ const oauthFields = (namePlaceholder: string, clientIdPlaceholder: string): Conn
     placeholder: 'openid email profile',
     visibility: 'edit',
   },
+  PROMPT_FIELD,
 ];
 
 const TOKEN_EXCHANGE_ENABLED_FIELD: ConnectionFieldDef = {
@@ -105,7 +122,6 @@ const TRUSTED_TOKEN_AUDIENCE_FIELD: ConnectionFieldDef = {
   labelKey: 'connections:form.fields.trustedTokenAudience.label',
   hintKey: 'connections:form.fields.trustedTokenAudience.hint',
   kind: 'text',
-  optional: true,
   placeholder: 'my-external-client-id',
   revealedBy: 'tokenExchangeEnabled',
   visibility: 'edit',
@@ -165,7 +181,6 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       labelKey: 'connections:form.fields.userInfoEndpoint.label',
       hintKey: 'connections:form.fields.userInfoEndpoint.hint',
       kind: 'url',
-      optional: true,
       placeholder: 'https://idp.example.com/userinfo',
       visibility: 'edit',
     },
@@ -174,11 +189,11 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       labelKey: 'connections:form.fields.jwksEndpoint.label',
       hintKey: 'connections:form.fields.jwksEndpoint.hint',
       kind: 'url',
-      optional: true,
       placeholder: 'https://idp.example.com/.well-known/jwks.json',
       requiredWhen: 'tokenExchangeEnabled',
       visibility: 'edit',
     },
+    LOGOUT_ENDPOINT_FIELD,
     {
       name: 'redirectUri',
       labelKey: 'connections:form.fields.redirectUri.label',
@@ -193,6 +208,7 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       placeholder: 'openid email profile',
       visibility: 'edit',
     },
+    PROMPT_FIELD,
     TOKEN_EXCHANGE_ENABLED_FIELD,
     TRUSTED_TOKEN_AUDIENCE_FIELD,
   ],
@@ -237,6 +253,7 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       required: true,
       placeholder: 'https://idp.example.com/userinfo',
     },
+    LOGOUT_ENDPOINT_FIELD,
     {
       name: 'redirectUri',
       labelKey: 'connections:form.fields.redirectUri.label',
@@ -251,6 +268,7 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       placeholder: 'read:user email',
       visibility: 'edit',
     },
+    PROMPT_FIELD,
   ],
   [ConnectionTypes.TWILIO]: [
     NAME_FIELD('Twilio SMS'),

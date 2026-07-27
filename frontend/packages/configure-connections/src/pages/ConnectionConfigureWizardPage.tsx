@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {useConfig} from '@thunderid/contexts';
+import {useConfig, useToast} from '@thunderid/contexts';
 import {AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -46,6 +46,7 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
   const navigate = useNavigate();
   const routes = useConnectionRoutes();
   const {getGateCallbackUrl} = useConfig();
+  const {showToast} = useToast();
   const {type} = useParams<{type: string}>();
 
   const connectionType = type as ConnectionType;
@@ -54,7 +55,6 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
   const createMutation = useCreateConnection(connectionType);
 
   const [editedValues, setEditedValues] = useState<ConnectionFormValues>({});
-  const [nameError, setNameError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!meta) {
@@ -83,7 +83,6 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
     if (!formValid) {
       return;
     }
-    setNameError(null);
     const payload = {
       ...formValuesToRequest(values, fields, {mode: 'create', secretReplaced: true}),
       name: meta.displayName,
@@ -92,7 +91,7 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
       onSuccess: (created: ConnectionResponse) => void navigate(routes.connections.detail(connectionType, created.id)),
       onError: (error: Error) => {
         if (isConflictError(error)) {
-          setNameError(t('error.duplicateName'));
+          showToast(t('error.duplicateName', 'A connection with this name already exists.'), 'error');
         }
       },
     });
@@ -139,7 +138,6 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
             secretReplacing={false}
             hasStoredSecret={false}
             vendorDisplayName={meta.displayName}
-            nameError={nameError}
             showNameField={false}
             onFieldChange={(name, value) => setEditedValues((prev) => ({...prev, [name]: value}))}
             onSecretReplacingChange={() => undefined}

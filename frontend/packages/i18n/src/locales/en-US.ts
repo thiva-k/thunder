@@ -1736,6 +1736,10 @@ const translations = {
     'form.fields.jwksEndpoint.label': 'JWKS endpoint',
     'form.fields.jwksEndpoint.hint': 'Endpoint that exposes signing keys for verifying identity tokens.',
     'form.fields.logoutEndpoint.label': 'Logout endpoint',
+    'form.fields.logoutEndpoint.hint': 'Endpoint the provider uses to end the user session on logout.',
+    'form.fields.prompt.label': 'Prompt',
+    'form.fields.prompt.hint':
+      "Optional prompt value forwarded to the provider's authorization request, e.g. select_account or consent.",
     'form.fields.issuer.label': 'Issuer',
     'form.fields.issuer.hint': 'Issuer identifier expected in tokens from this provider.',
     'form.fields.tokenExchangeEnabled.label': 'Enable token exchange',
@@ -1754,7 +1758,6 @@ const translations = {
     'form.fields.senderId.label': 'Sender ID',
     'form.fields.senderId.hint': 'Phone number or alphanumeric sender ID messages are sent from.',
     'form.sections.federation': 'Federation',
-    'form.optional': 'Optional',
     'form.secret.update': 'Update',
     'form.secret.keepHelp': 'Leave unchanged to keep the stored secret.',
     'form.copy': 'Copy',

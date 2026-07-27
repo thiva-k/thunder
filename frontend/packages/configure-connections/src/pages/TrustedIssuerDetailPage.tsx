@@ -203,7 +203,13 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
                     fullWidth
                     value={values.issuer}
                     error={Boolean(touched['issuer'] && errors.issuer)}
-                    helperText={touched['issuer'] ? fieldErrorMessage(errors.issuer) : undefined}
+                    helperText={
+                      (touched['issuer'] ? fieldErrorMessage(errors.issuer) : undefined) ??
+                      t(
+                        'trustedIssuers:create.form.issuer.hint',
+                        "The issuer URI from the external IdP's OpenID Connect discovery document.",
+                      )
+                    }
                     onChange={(e) => setField('issuer', e.target.value)}
                     onBlur={() => setTouchedField('issuer')}
                   />
@@ -218,7 +224,13 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
                     fullWidth
                     value={values.jwksEndpoint}
                     error={Boolean(touched['jwksEndpoint'] && errors.jwksEndpoint)}
-                    helperText={touched['jwksEndpoint'] ? fieldErrorMessage(errors.jwksEndpoint) : undefined}
+                    helperText={
+                      (touched['jwksEndpoint'] ? fieldErrorMessage(errors.jwksEndpoint) : undefined) ??
+                      t(
+                        'trustedIssuers:create.form.jwksEndpoint.hint',
+                        'The JWKS endpoint used to validate the signature of incoming identity assertions.',
+                      )
+                    }
                     onChange={(e) => setField('jwksEndpoint', e.target.value)}
                     onBlur={() => setTouchedField('jwksEndpoint')}
                   />

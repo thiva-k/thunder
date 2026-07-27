@@ -55,7 +55,7 @@ To map GitHub's profile fields (for example, `login` or `avatar_url`) to local u
 :::note
 By default, the connection uses GitHub's own default scope, which does not include the user's email address. To ensure the email address is accessible, open the connection after creation and set **Scopes** to include `user:email` on its edit page.
 
-The GitHub connection also accepts a `prompt` field, forwarded as a query parameter on the authorization request. GitHub's OAuth flow supports `select_account` to force the account picker; other values have no effect. This field is not available in the Console and can only be set through the [Connections API](../../../apis#tag/connections).
+The GitHub connection also accepts a `prompt` field, forwarded as a query parameter on the authorization request. GitHub's OAuth flow supports `select_account` to force the account picker. Set it on the connection's edit page, or through the [Connections API](../../../apis#tag/connections).
 :::
 
 ## Next Steps

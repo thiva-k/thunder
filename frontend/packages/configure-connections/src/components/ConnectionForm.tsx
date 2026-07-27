@@ -182,14 +182,7 @@ export default function ConnectionForm({
           const required: boolean = isRequiredNow(field);
           fieldContent = (
             <FormControl fullWidth required={required} error={Boolean(error)}>
-              <FormLabel htmlFor={`connection-field-${field.name}`}>
-                {label}
-                {field.optional && !required && (
-                  <Typography component="span" variant="caption" color="text.secondary" sx={{ml: 1}}>
-                    {t('form.optional')}
-                  </Typography>
-                )}
-              </FormLabel>
+              <FormLabel htmlFor={`connection-field-${field.name}`}>{label}</FormLabel>
               <TextField
                 id={`connection-field-${field.name}`}
                 fullWidth

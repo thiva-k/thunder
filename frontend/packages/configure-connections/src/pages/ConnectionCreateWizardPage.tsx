@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {useConfig} from '@thunderid/contexts';
+import {useConfig, useToast} from '@thunderid/contexts';
 import {AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {ChevronLeft} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, useMemo, useState} from 'react';
@@ -57,6 +57,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const navigate = useNavigate();
   const routes = useConnectionRoutes();
   const {getGateCallbackUrl} = useConfig();
+  const {showToast} = useToast();
 
   const [step, setStep] = useState<Step>(Step.TYPE);
   const [selectedType, setSelectedType] = useState<SelectableConnectionType | null>(null);
@@ -89,7 +90,9 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const progress: number = ((ALL_STEPS.indexOf(step) + 1) / ALL_STEPS.length) * 100;
 
   const bounceToNameStep = (): void => {
-    setNameError(t('error.duplicateName'));
+    const duplicateNameError = t('error.duplicateName', 'A connection with this name already exists.');
+    setNameError(duplicateNameError);
+    showToast(duplicateNameError, 'error');
     setStep(Step.NAME);
   };
 
