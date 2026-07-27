@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/thunder-id/thunderid/internal/application/model"
@@ -502,6 +503,26 @@ inboundAuthConfig:
 	err = json.Unmarshal(sysCredsJSON, &sysCreds)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "oauth-client-secret", sysCreds[fieldClientSecret])
+}
+
+func (s *ParseToApplicationDTOTestSuite) TestParseToApplicationDTO_AttestationParsed() {
+	yamlData := []byte(`
+id: attested-app
+name: Attested Application
+attestation:
+  android:
+    packageName: com.example.app
+    certificateSha256Digests:
+      - AA:BB:CC
+`)
+
+	appDTO, err := parseToApplicationDTO(yamlData)
+
+	require.NoError(s.T(), err)
+	require.NotNil(s.T(), appDTO.Attestation)
+	require.NotNil(s.T(), appDTO.Attestation.Android)
+	assert.Equal(s.T(), "com.example.app", appDTO.Attestation.Android.PackageName)
+	assert.Contains(s.T(), appDTO.Attestation.Android.CertificateSha256Digests, "AA:BB:CC")
 }
 
 func (s *ParseToApplicationDTOTestSuite) TestParseToApplicationDTO_OUHandlePassedThrough() {
