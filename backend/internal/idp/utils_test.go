@@ -194,7 +194,7 @@ func (s *IDPUtilsTestSuite) TestValidateIDPProperties_Google_WithDefaults() {
 	s.Equal(googleTokenEndpoint, foundProperties[PropTokenEndpoint])
 	s.Equal(googleUserInfoEndpoint, foundProperties[PropUserInfoEndpoint])
 	s.Equal(googleJwksEndpoint, foundProperties[PropJwksEndpoint])
-	s.Contains(foundProperties[PropScopes], "openid")
+	s.Equal("openid,email,profile", foundProperties[PropScopes])
 }
 
 func (s *IDPUtilsTestSuite) TestValidateIDPProperties_Google_WithCustomEndpoints() {
@@ -352,7 +352,7 @@ func (s *IDPUtilsTestSuite) TestEnsureOpenIDScope_NoExistingScopes() {
 
 	scopesProp := propertyMap[PropScopes]
 	value, _ := scopesProp.GetValue()
-	s.Equal("openid", value)
+	s.Equal("openid,email,profile", value)
 }
 
 func (s *IDPUtilsTestSuite) TestEnsureOpenIDScope_WithExistingScopes() {
@@ -400,7 +400,7 @@ func (s *IDPUtilsTestSuite) TestEnsureOpenIDScope_EmptyScopesValue() {
 
 	scopesProp := propertyMap[PropScopes]
 	value, _ := scopesProp.GetValue()
-	s.Equal("openid", value)
+	s.Equal("openid,email,profile", value)
 }
 
 func (s *IDPUtilsTestSuite) TestValidateIDP_ValidOAuth() {
@@ -566,7 +566,7 @@ func (s *IDPUtilsTestSuite) TestEnsureOpenIDScope_WithWhitespaceScopes() {
 
 	scopesProp := propertyMap[PropScopes]
 	value, _ := scopesProp.GetValue()
-	s.Equal("openid", value)
+	s.Equal("openid,email,profile", value)
 }
 
 func (s *IDPUtilsTestSuite) TestEnsureOpenIDScope_CommaSeparatedScopes() {
