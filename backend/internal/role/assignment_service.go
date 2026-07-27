@@ -32,7 +32,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/group"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -59,7 +58,7 @@ type roleAssignmentService struct {
 	entityService     entity.EntityServiceInterface
 	groupService      group.GroupServiceInterface
 	entityTypeService entitytype.EntityTypeServiceInterface
-	transactioner     transaction.Transactioner
+	transactioner     providers.Transactioner
 }
 
 // newRoleAssignmentService creates a new instance of roleAssignmentService.
@@ -68,7 +67,7 @@ func newRoleAssignmentService(
 	entityService entity.EntityServiceInterface,
 	groupService group.GroupServiceInterface,
 	entityTypeService entitytype.EntityTypeServiceInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) RoleAssignmentServiceInterface {
 	return &roleAssignmentService{
 		roleStore:         roleStore,

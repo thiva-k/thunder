@@ -138,6 +138,11 @@ const (
 	RuntimeKeyClientID = "clientId"
 	// RuntimeKeyRequestedPermissions holds the space-separated permission scopes requested by the OAuth client.
 	RuntimeKeyRequestedPermissions = "requested_permissions"
+	// RuntimeKeyResourceServerIdentifier holds the identifier of the single resource server the request is
+	// bound to. When set, the authorization executor resolves it and scopes its permission evaluation to
+	// that resource server. Using the identifier (not the internal ID) keeps the executor contract the
+	// same for OAuth requests and direct flow executions.
+	RuntimeKeyResourceServerIdentifier = "resource_server_identifier"
 	// RuntimeKeyConsentedPermissions holds the space-separated permission scopes the user has consented to
 	// release to the client, as produced by the ConsentExecutor.
 	RuntimeKeyConsentedPermissions = "consented_permissions"
@@ -233,6 +238,20 @@ const (
 	// cookie. Like RuntimeKeySSOSessionHandle it rides the engine-only EngineData channel, keeping SSO
 	// concepts off the reusable engine contract.
 	RuntimeKeySSOSessionCleared = "ssoSessionCleared"
+	// RuntimeKeyTokenFamilyID carries the token family id (tfid) minted once per login flow execution
+	// by the Session node. It is stamped onto the auth assertion, and from there onto the grant's
+	// access and refresh tokens, so revocation can target a whole family. It is deliberately excluded
+	// from the SSO checkpoint snapshot so each flow execution mints a fresh tfid rather than reusing a
+	// prior one on SSO reuse.
+	RuntimeKeyTokenFamilyID = "tokenFamilyId"
+	// RuntimeKeyLogoutPromptRequired is set by the OAuth RP-initiated logout layer when a logout was
+	// requested without a valid id_token_hint. A sign-out flow's session sign-out node reads it to
+	// decide whether the End-User must confirm the logout before the session is terminated.
+	RuntimeKeyLogoutPromptRequired = "logoutPromptRequired"
+	// RuntimeKeyLogoutPromptShown is the session sign-out node's own guard, set when it routes to the
+	// confirmation prompt so that on re-run (after the user confirms) it terminates instead of
+	// prompting again.
+	RuntimeKeyLogoutPromptShown = "logoutPromptShown"
 )
 
 // SSOCheckpointKey scopes a per-checkpoint SSO control key (RuntimeKeySSOSessionPresent,

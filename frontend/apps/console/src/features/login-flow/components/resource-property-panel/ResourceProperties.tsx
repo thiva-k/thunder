@@ -26,6 +26,7 @@ import FieldExtendedProperties from './extended-properties/FieldExtendedProperti
 import RulesProperties from './nodes/RulesProperties';
 import ResourcePropertyFactory from './ResourcePropertyFactory';
 import ClassesPropertyField from '@/features/flows/components/resource-property-panel/ClassesPropertyField';
+import ColorSelect from '@/features/flows/components/resource-property-panel/ColorSelect';
 import TextPropertyField from '@/features/flows/components/resource-property-panel/TextPropertyField';
 import VariantSelect from '@/features/flows/components/resource-property-panel/VariantSelect';
 import type {ResourcePropertiesProps} from '@/features/flows/context/FlowBuilderCoreProvider';
@@ -180,12 +181,17 @@ function ResourceProperties({
           <>
             {renderElementId()}
             {renderElementClasses()}
-            <VariantSelect resource={resource} selectedVariant={selectedVariant} onVariantChange={onVariantChange} />
             <TextPropertyField
               resource={resource}
               propertyKey="label"
               propertyValue={(resource as Element & {label?: string}).label ?? ''}
               onChange={(_key, value, res) => handleChange('label', value, res, true)}
+            />
+            <VariantSelect resource={resource} selectedVariant={selectedVariant} onVariantChange={onVariantChange} />
+            <ColorSelect
+              resource={resource}
+              selectedColor={(resource as Element & {color?: string}).color}
+              onColorChange={(newColor: string) => handleChange('color', newColor, resource)}
             />
             <FormControl fullWidth size="small">
               <FormLabel htmlFor="align-select">{t('flows:core.elements.text.align.label')}</FormLabel>

@@ -44,7 +44,6 @@ import (
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -99,7 +98,7 @@ type InboundClientServiceInterface interface {
 
 type inboundClientService struct {
 	store          inboundClientStoreInterface
-	transactioner  transaction.Transactioner
+	transactioner  providers.Transactioner
 	certService    cert.CertificateServiceInterface
 	entityProvider entityprovider.EntityProviderInterface
 	themeMgt       thememgt.ThemeMgtServiceInterface
@@ -110,7 +109,7 @@ type inboundClientService struct {
 }
 
 // newInboundClientService creates and returns an inboundClientService with all dependencies wired.
-func newInboundClientService(store inboundClientStoreInterface, transactioner transaction.Transactioner,
+func newInboundClientService(store inboundClientStoreInterface, transactioner providers.Transactioner,
 	certService cert.CertificateServiceInterface,
 	entityProvider entityprovider.EntityProviderInterface,
 	themeMgt thememgt.ThemeMgtServiceInterface,
@@ -586,7 +585,7 @@ func BuildOAuthClient(
 	return client
 }
 
-// resolveFlowDefaults fills AuthFlowID, RegistrationFlowID, and RecoveryFlowID with system
+// resolveFlowDefaults fills AuthFlowID, RegistrationFlowID, RecoveryFlowID, and SignOutFlowID with system
 // defaults when empty, using the auth flow's handle to locate matching flows of each type.
 func (s *inboundClientService) resolveFlowDefaults(ctx context.Context, c *inboundmodel.InboundClient) error {
 	if s.flowMgt == nil || c == nil {
@@ -625,8 +624,21 @@ func (s *inboundClientService) resolveFlowDefaults(ctx context.Context, c *inbou
 		c.IsRecoveryFlowEnabled = false
 	}
 	if c.SignOutFlowID == "" {
-		// If a sign-out flow is not defined, disable sign-out for the application.
-		c.IsSignOutFlowEnabled = false
+		defaultHandle := config.GetServerRuntime().Config.Flow.DefaultSignOutFlowHandle
+		if defaultHandle != "" {
+			flow, svcErr := s.flowMgt.GetFlowByHandle(ctx, defaultHandle, providers.FlowTypeSignOut)
+			switch {
+			case svcErr == nil:
+				c.SignOutFlowID = flow.ID
+			case svcErr.Type == tidcommon.ServerErrorType:
+				return ErrFKFlowServerError
+			case svcErr.Code == flowmgt.ErrorFlowNotFound.Code:
+				// Sign-out is optional; if the default sign-out flow does not exist, leave it
+				// unconfigured rather than failing.
+			default:
+				return ErrFKFlowDefinitionRetrievalFailed
+			}
+		}
 	}
 	return nil
 }
@@ -1653,7 +1665,6 @@ func (s *inboundClientService) walkReferencedFlows(
 					c.IsRecoveryFlowEnabled = false
 				case providers.FlowTypeSignOut:
 					c.SignOutFlowID = t.FlowID
-					c.IsSignOutFlowEnabled = false
 				}
 				continue
 			}

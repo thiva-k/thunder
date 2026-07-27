@@ -442,11 +442,13 @@ func TestBuildOrganizationUnitFromResultRow(t *testing.T) {
 			"name":        "Root",
 			"description": "desc",
 			"parent_id":   nil,
-			"theme_id":    "theme-abc",
-			"layout_id":   "layout-def",
 			"created_at":  "2025-01-01 10:00:00",
 			"updated_at":  "2025-06-15 12:30:00",
-			"metadata": `{"logo_url":"https://example.com/logo.png","tos_uri":""` +
+			"metadata": `{"theme_id":"theme-abc","layout_id":"layout-def",` +
+				`"auth_flow_id":"auth-flow-abc","registration_flow_id":"registration-flow-abc",` +
+				`"is_registration_flow_enabled":true,"recovery_flow_id":"recovery-flow-abc",` +
+				`"is_recovery_flow_enabled":true,"signout_flow_id":"signout-flow-abc",` +
+				`"logo_url":"https://example.com/logo.png","tos_uri":""` +
 				`,"policy_uri":"","cookie_policy_uri":""}`,
 		}
 
@@ -456,6 +458,12 @@ func TestBuildOrganizationUnitFromResultRow(t *testing.T) {
 		require.Nil(t, ou.Parent)
 		require.Equal(t, "theme-abc", ou.ThemeID)
 		require.Equal(t, "layout-def", ou.LayoutID)
+		require.Equal(t, "auth-flow-abc", ou.AuthFlowID)
+		require.Equal(t, "registration-flow-abc", ou.RegistrationFlowID)
+		require.True(t, ou.IsRegistrationFlowEnabled)
+		require.Equal(t, "recovery-flow-abc", ou.RecoveryFlowID)
+		require.True(t, ou.IsRecoveryFlowEnabled)
+		require.Equal(t, "signout-flow-abc", ou.SignOutFlowID)
 		require.Equal(t, "https://example.com/logo.png", ou.LogoURL)
 	})
 
@@ -712,9 +720,10 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_UpdateOrganizationUnit(
 						ou.Handle,
 						ou.Name,
 						ou.Description,
-						ou.ThemeID,
-						ou.LayoutID,
-						`{"cookie_policy_uri":"","logo_url":"","policy_uri":"","tos_uri":""}`,
+						`{"auth_flow_id":"","cookie_policy_uri":"","is_recovery_flow_enabled":false,`+
+							`"is_registration_flow_enabled":false,"layout_id":"","logo_url":"",`+
+							`"policy_uri":"","recovery_flow_id":"","registration_flow_id":"",`+
+							`"signout_flow_id":"","theme_id":"","tos_uri":""}`,
 						mock.Anything,
 						testDeploymentID,
 					).
@@ -727,14 +736,20 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_UpdateOrganizationUnit(
 			ou: func() providers.OrganizationUnit {
 				parent := "parent1"
 				return providers.OrganizationUnit{
-					ID:          "ou1",
-					Parent:      &parent,
-					Handle:      "root",
-					Name:        "Root",
-					Description: "desc",
-					ThemeID:     "theme-123",
-					LayoutID:    "layout-456",
-					LogoURL:     "https://example.com/logo.png",
+					ID:                        "ou1",
+					Parent:                    &parent,
+					Handle:                    "root",
+					Name:                      "Root",
+					Description:               "desc",
+					ThemeID:                   "theme-123",
+					LayoutID:                  "layout-456",
+					AuthFlowID:                "auth-flow-123",
+					RegistrationFlowID:        "registration-flow-123",
+					IsRegistrationFlowEnabled: true,
+					RecoveryFlowID:            "recovery-flow-123",
+					IsRecoveryFlowEnabled:     true,
+					SignOutFlowID:             "signout-flow-123",
+					LogoURL:                   "https://example.com/logo.png",
 				}
 			}(),
 			setup: func(ou providers.OrganizationUnit) {
@@ -748,10 +763,12 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_UpdateOrganizationUnit(
 						ou.Handle,
 						ou.Name,
 						ou.Description,
-						ou.ThemeID,
-						ou.LayoutID,
-						`{"cookie_policy_uri":"","logo_url":"https://example.com/logo.png",`+
-							`"policy_uri":"","tos_uri":""}`,
+						`{"auth_flow_id":"auth-flow-123","cookie_policy_uri":"",`+
+							`"is_recovery_flow_enabled":true,"is_registration_flow_enabled":true,`+
+							`"layout_id":"layout-456","logo_url":"https://example.com/logo.png",`+
+							`"policy_uri":"","recovery_flow_id":"recovery-flow-123",`+
+							`"registration_flow_id":"registration-flow-123",`+
+							`"signout_flow_id":"signout-flow-123","theme_id":"theme-123","tos_uri":""}`,
 						mock.Anything,
 						testDeploymentID,
 					).
@@ -773,9 +790,10 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_UpdateOrganizationUnit(
 						ou.Handle,
 						ou.Name,
 						ou.Description,
-						ou.ThemeID,
-						ou.LayoutID,
-						`{"cookie_policy_uri":"","logo_url":"","policy_uri":"","tos_uri":""}`,
+						`{"auth_flow_id":"","cookie_policy_uri":"","is_recovery_flow_enabled":false,`+
+							`"is_registration_flow_enabled":false,"layout_id":"","logo_url":"",`+
+							`"policy_uri":"","recovery_flow_id":"","registration_flow_id":"",`+
+							`"signout_flow_id":"","theme_id":"","tos_uri":""}`,
 						mock.Anything,
 						testDeploymentID,
 					).
@@ -1382,9 +1400,10 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_CreateOrganizationUnit(
 						ou.Handle,
 						ou.Name,
 						ou.Description,
-						ou.ThemeID,
-						ou.LayoutID,
-						`{"cookie_policy_uri":"","logo_url":"","policy_uri":"","tos_uri":""}`,
+						`{"auth_flow_id":"","cookie_policy_uri":"","is_recovery_flow_enabled":false,`+
+							`"is_registration_flow_enabled":false,"layout_id":"","logo_url":"",`+
+							`"policy_uri":"","recovery_flow_id":"","registration_flow_id":"",`+
+							`"signout_flow_id":"","theme_id":"","tos_uri":""}`,
 						testDeploymentID,
 						mock.Anything,
 						mock.Anything,
@@ -1396,13 +1415,19 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_CreateOrganizationUnit(
 		{
 			name: "success with design fields",
 			ou: providers.OrganizationUnit{
-				ID:          "ou1",
-				Handle:      "root",
-				Name:        "Root",
-				Description: "desc",
-				ThemeID:     "theme-123",
-				LayoutID:    "layout-456",
-				LogoURL:     "https://example.com/logo.png",
+				ID:                        "ou1",
+				Handle:                    "root",
+				Name:                      "Root",
+				Description:               "desc",
+				ThemeID:                   "theme-123",
+				LayoutID:                  "layout-456",
+				AuthFlowID:                "auth-flow-123",
+				RegistrationFlowID:        "registration-flow-123",
+				IsRegistrationFlowEnabled: true,
+				RecoveryFlowID:            "recovery-flow-123",
+				IsRecoveryFlowEnabled:     true,
+				SignOutFlowID:             "signout-flow-123",
+				LogoURL:                   "https://example.com/logo.png",
 			},
 			setup: func(ou providers.OrganizationUnit) {
 				suite.expectDBClient()
@@ -1415,10 +1440,12 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_CreateOrganizationUnit(
 						ou.Handle,
 						ou.Name,
 						ou.Description,
-						ou.ThemeID,
-						ou.LayoutID,
-						`{"cookie_policy_uri":"","logo_url":"https://example.com/logo.png",`+
-							`"policy_uri":"","tos_uri":""}`,
+						`{"auth_flow_id":"auth-flow-123","cookie_policy_uri":"",`+
+							`"is_recovery_flow_enabled":true,"is_registration_flow_enabled":true,`+
+							`"layout_id":"layout-456","logo_url":"https://example.com/logo.png",`+
+							`"policy_uri":"","recovery_flow_id":"recovery-flow-123",`+
+							`"registration_flow_id":"registration-flow-123",`+
+							`"signout_flow_id":"signout-flow-123","theme_id":"theme-123","tos_uri":""}`,
 						testDeploymentID,
 						mock.Anything,
 						mock.Anything,
@@ -1446,9 +1473,10 @@ func (suite *OrganizationUnitStoreTestSuite) TestOUStore_CreateOrganizationUnit(
 						ou.Handle,
 						ou.Name,
 						ou.Description,
-						ou.ThemeID,
-						ou.LayoutID,
-						`{"cookie_policy_uri":"","logo_url":"","policy_uri":"","tos_uri":""}`,
+						`{"auth_flow_id":"","cookie_policy_uri":"","is_recovery_flow_enabled":false,`+
+							`"is_registration_flow_enabled":false,"layout_id":"","logo_url":"",`+
+							`"policy_uri":"","recovery_flow_id":"","registration_flow_id":"",`+
+							`"signout_flow_id":"","theme_id":"","tos_uri":""}`,
 						testDeploymentID,
 						mock.Anything,
 						mock.Anything,
@@ -2070,6 +2098,46 @@ func TestBuildOrganizationUnitFromResultRow_MetadataFieldErrors(t *testing.T) {
 			metadata: `{"logo_url":"https://example.com/logo.png","tos_uri":"","policy_uri":"","cookie_policy_uri":1}`,
 			wantErr:  "failed to parse cookie_policy_uri from OU Metadata",
 		},
+		{
+			name:     "theme_id type error",
+			metadata: `{"theme_id":123}`,
+			wantErr:  "failed to parse theme_id from OU Metadata",
+		},
+		{
+			name:     "layout_id type error",
+			metadata: `{"layout_id":true}`,
+			wantErr:  "failed to parse layout_id from OU Metadata",
+		},
+		{
+			name:     "auth_flow_id type error",
+			metadata: `{"auth_flow_id":123}`,
+			wantErr:  "failed to parse auth_flow_id from OU Metadata",
+		},
+		{
+			name:     "registration_flow_id type error",
+			metadata: `{"registration_flow_id":true}`,
+			wantErr:  "failed to parse registration_flow_id from OU Metadata",
+		},
+		{
+			name:     "is_registration_flow_enabled type error",
+			metadata: `{"is_registration_flow_enabled":1}`,
+			wantErr:  "failed to parse is_registration_flow_enabled from OU Metadata",
+		},
+		{
+			name:     "recovery_flow_id type error",
+			metadata: `{"recovery_flow_id":456}`,
+			wantErr:  "failed to parse recovery_flow_id from OU Metadata",
+		},
+		{
+			name:     "is_recovery_flow_enabled type error",
+			metadata: `{"is_recovery_flow_enabled":1}`,
+			wantErr:  "failed to parse is_recovery_flow_enabled from OU Metadata",
+		},
+		{
+			name:     "signout_flow_id type error",
+			metadata: `{"signout_flow_id":false}`,
+			wantErr:  "failed to parse signout_flow_id from OU Metadata",
+		},
 	}
 
 	for _, tc := range tests {
@@ -2091,28 +2159,6 @@ func TestBuildOrganizationUnitFromResultRow_MetadataFieldErrors(t *testing.T) {
 			require.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
-}
-
-func TestBuildOrganizationUnitFromResultRow_NonStringThemeAndLayout(t *testing.T) {
-	row := map[string]interface{}{
-		"ou_id":       "ou1",
-		"handle":      "root",
-		"name":        "Root",
-		"description": "desc",
-		"parent_id":   nil,
-		"theme_id":    123,
-		"layout_id":   true,
-		"metadata":    []byte(`{"logo_url":"https://example.com/logo.png"}`),
-		"created_at":  "2025-01-01 10:00:00",
-		"updated_at":  "2025-01-01 10:00:00",
-	}
-
-	ou, err := buildOrganizationUnitFromResultRow(row)
-
-	require.NoError(t, err)
-	require.Equal(t, "", ou.ThemeID)
-	require.Equal(t, "", ou.LayoutID)
-	require.Equal(t, "https://example.com/logo.png", ou.LogoURL)
 }
 
 func TestBuildOUFilterGroup(t *testing.T) {

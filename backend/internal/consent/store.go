@@ -27,8 +27,8 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // consentStoreInterface defines the persistence operations for consent records.
@@ -48,7 +48,7 @@ type consentStore struct {
 // newConsentStore creates a new consentStore along with a transactioner that callers can use to
 // wrap the multi-table create and update operations in a single database transaction. Consent
 // records are long-lived persistent state, so they are persisted to the runtime persistent datasource.
-func newConsentStore() (consentStoreInterface, transaction.Transactioner, error) {
+func newConsentStore() (consentStoreInterface, providers.Transactioner, error) {
 	dbProvider := provider.GetDBProvider()
 
 	transactioner, err := dbProvider.GetRuntimePersistentDBTransactioner()

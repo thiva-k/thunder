@@ -52,35 +52,47 @@ type DesignResponse struct {
 
 // OrganizationUnit represents an organization unit.
 type OrganizationUnit struct {
-	ID              string    `json:"id"                        yaml:"id"`
-	Handle          string    `json:"handle"                    yaml:"handle"`
-	Name            string    `json:"name"                      yaml:"name"`
-	Description     string    `json:"description,omitempty"     yaml:"description,omitempty"`
-	Parent          *string   `json:"parent"                    yaml:"parent"`
-	ThemeID         string    `json:"themeId,omitempty"         yaml:"themeId,omitempty"`
-	LayoutID        string    `json:"layoutId,omitempty"        yaml:"layoutId,omitempty"`
-	LogoURL         string    `json:"logoUrl,omitempty"         yaml:"logoUrl,omitempty"`
-	TosURI          string    `json:"tosUri,omitempty"          yaml:"tosUri,omitempty"`
-	PolicyURI       string    `json:"policyUri,omitempty"       yaml:"policyUri,omitempty"`
-	CookiePolicyURI string    `json:"cookiePolicyUri,omitempty" yaml:"cookiePolicyUri,omitempty"`
-	CreatedAt       time.Time `json:"createdAt"                 yaml:"createdAt"`
-	UpdatedAt       time.Time `json:"updatedAt"                 yaml:"updatedAt"`
+	ID                        string    `json:"id"                           yaml:"id"`
+	Handle                    string    `json:"handle"                       yaml:"handle"`
+	Name                      string    `json:"name"                         yaml:"name"`
+	Description               string    `json:"description,omitempty"        yaml:"description,omitempty"`
+	Parent                    *string   `json:"parent"                       yaml:"parent"`
+	ThemeID                   string    `json:"themeId,omitempty"            yaml:"themeId,omitempty"`
+	LayoutID                  string    `json:"layoutId,omitempty"           yaml:"layoutId,omitempty"`
+	AuthFlowID                string    `json:"authFlowId,omitempty"         yaml:"authFlowId,omitempty"`
+	RegistrationFlowID        string    `json:"registrationFlowId,omitempty" yaml:"registrationFlowId,omitempty"`
+	IsRegistrationFlowEnabled bool      `json:"isRegistrationFlowEnabled"    yaml:"isRegistrationFlowEnabled"`
+	RecoveryFlowID            string    `json:"recoveryFlowId,omitempty"     yaml:"recoveryFlowId,omitempty"`
+	IsRecoveryFlowEnabled     bool      `json:"isRecoveryFlowEnabled"        yaml:"isRecoveryFlowEnabled"`
+	SignOutFlowID             string    `json:"signOutFlowId,omitempty"      yaml:"signOutFlowId,omitempty"`
+	LogoURL                   string    `json:"logoUrl,omitempty"            yaml:"logoUrl,omitempty"`
+	TosURI                    string    `json:"tosUri,omitempty"             yaml:"tosUri,omitempty"`
+	PolicyURI                 string    `json:"policyUri,omitempty"          yaml:"policyUri,omitempty"`
+	CookiePolicyURI           string    `json:"cookiePolicyUri,omitempty"    yaml:"cookiePolicyUri,omitempty"`
+	CreatedAt                 time.Time `json:"createdAt"                    yaml:"createdAt"`
+	UpdatedAt                 time.Time `json:"updatedAt"                    yaml:"updatedAt"`
 }
 
 // OrganizationUnitRequestWithID represents the request body for creating an organization unit
 // in import/declarative paths where preserving IDs is required.
 type OrganizationUnitRequestWithID struct {
-	ID              string  `json:"id"                        yaml:"id"                        native:"required"`
-	Handle          string  `json:"handle"                    yaml:"handle"                    native:"required,min=3,max=50"`
-	Name            string  `json:"name"                      yaml:"name"                      native:"required,min=2,max=100"`
-	Description     string  `json:"description,omitempty"     yaml:"description,omitempty"`
-	Parent          *string `json:"parent"                    yaml:"parent"`
-	ThemeID         string  `json:"themeId,omitempty"         yaml:"themeId,omitempty"`
-	LayoutID        string  `json:"layoutId,omitempty"        yaml:"layoutId,omitempty"`
-	LogoURL         string  `json:"logoUrl,omitempty"         yaml:"logoUrl,omitempty"         native:"omitempty,url,max=2048"`
-	TosURI          string  `json:"tosUri,omitempty"          yaml:"tosUri,omitempty"          native:"omitempty,url,max=2048"`
-	PolicyURI       string  `json:"policyUri,omitempty"       yaml:"policyUri,omitempty"       native:"omitempty,url,max=2048"`
-	CookiePolicyURI string  `json:"cookiePolicyUri,omitempty" yaml:"cookiePolicyUri,omitempty" native:"url,max=2048"`
+	ID                        string  `json:"id"                           yaml:"id"                           native:"required"`
+	Handle                    string  `json:"handle"                       yaml:"handle"                       native:"required,min=3,max=50"`
+	Name                      string  `json:"name"                         yaml:"name"                         native:"required,min=2,max=100"`
+	Description               string  `json:"description,omitempty"        yaml:"description,omitempty"`
+	Parent                    *string `json:"parent"                       yaml:"parent"`
+	ThemeID                   string  `json:"themeId,omitempty"            yaml:"themeId,omitempty"`
+	LayoutID                  string  `json:"layoutId,omitempty"           yaml:"layoutId,omitempty"`
+	AuthFlowID                string  `json:"authFlowId,omitempty"         yaml:"authFlowId,omitempty"`
+	RegistrationFlowID        string  `json:"registrationFlowId,omitempty" yaml:"registrationFlowId,omitempty"`
+	IsRegistrationFlowEnabled bool    `json:"isRegistrationFlowEnabled"    yaml:"isRegistrationFlowEnabled"`
+	RecoveryFlowID            string  `json:"recoveryFlowId,omitempty"     yaml:"recoveryFlowId,omitempty"`
+	IsRecoveryFlowEnabled     bool    `json:"isRecoveryFlowEnabled"        yaml:"isRecoveryFlowEnabled"`
+	SignOutFlowID             string  `json:"signOutFlowId,omitempty"      yaml:"signOutFlowId,omitempty"`
+	LogoURL                   string  `json:"logoUrl,omitempty"            yaml:"logoUrl,omitempty"            native:"omitempty,url,max=2048"`
+	TosURI                    string  `json:"tosUri,omitempty"             yaml:"tosUri,omitempty"             native:"omitempty,url,max=2048"`
+	PolicyURI                 string  `json:"policyUri,omitempty"          yaml:"policyUri,omitempty"          native:"omitempty,url,max=2048"`
+	CookiePolicyURI           string  `json:"cookiePolicyUri,omitempty"    yaml:"cookiePolicyUri,omitempty"    native:"url,max=2048"`
 }
 
 // OrganizationUnitListResponse represents the response for listing organization units with pagination.
@@ -698,7 +710,6 @@ type InboundClient struct {
 	RecoveryFlowID            string
 	IsRecoveryFlowEnabled     bool
 	SignOutFlowID             string
-	IsSignOutFlowEnabled      bool
 	ThemeID                   string
 	LayoutID                  string
 	Assertion                 *AssertionConfig
@@ -1015,7 +1026,6 @@ type InboundAuthProfile struct {
 	IsRecoveryFlowEnabled     bool                `json:"isRecoveryFlowEnabled"            yaml:"isRecoveryFlowEnabled"            jsonschema:"Enable self-service recovery. Set to true to allow users to recover their accounts (e.g., password reset). Requires recoveryFlowId or recoveryFlowHandle to be set."`
 	SignOutFlowID             string              `json:"signOutFlowId,omitempty"           yaml:"signOutFlowId,omitempty"           jsonschema:"Sign-out flow ID. Optional. Specifies the flow that terminates the SSO session established by the authentication flow."`
 	SignOutFlowHandle         string              `json:"signOutFlowHandle,omitempty"       yaml:"signOutFlowHandle,omitempty"       jsonschema:"Sign-out flow handle. Optional. Alternative to signOutFlowId — resolved to an ID at import time."`
-	IsSignOutFlowEnabled      bool                `json:"isSignOutFlowEnabled"              yaml:"isSignOutFlowEnabled"              jsonschema:"Enable sign-out. Set to true to allow terminating the SSO session for this application. Requires signOutFlowId or signOutFlowHandle to be set."`
 	ThemeID                   string              `json:"themeId,omitempty"                yaml:"themeId,omitempty"                jsonschema:"Theme configuration ID. Optional. Customizes the visual styling of login pages."`
 	LayoutID                  string              `json:"layoutId,omitempty"               yaml:"layoutId,omitempty"               jsonschema:"Layout configuration ID. Optional. Customizes the screen structure and component positioning of login pages."`
 	Assertion                 *AssertionConfig    `json:"assertion,omitempty"              yaml:"assertion,omitempty"              jsonschema:"Assertion configuration. Optional. Customize assertion validity periods and included user attributes."`
@@ -1302,4 +1312,10 @@ func (e *Event) Validate() error {
 type CaptchaVerificationResult struct {
 	// Success reports whether the provider accepted the token as valid.
 	Success bool
+}
+
+// CustomAuthnProvider pairs a provider instance with the credential keys it handles.
+type CustomAuthnProvider struct {
+	Instance AuthnProviderInterface
+	Creds    []string
 }

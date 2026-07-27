@@ -156,10 +156,21 @@
     },
     "logout" : {
       "enabled" : true
+    },
+    "revocation": {
+      "token_family": {
+        "on_refresh_replay": true,
+        "on_explicit_revoke": true,
+        "on_code_replay": true
+      }
+    },
+    "token_exchange": {
+      "token_family": "none"
     }
   },
   "flow": {
     "default_auth_flow_handle": "default-flow",
+    "default_signout_flow_handle": "default-flow",
     "user_onboarding_flow_handle": "default-flow",
     "max_version_history": 10,
     "auto_infer_registration": false,

@@ -91,6 +91,7 @@ const translations = {
     // Status messages
     'status.loading': 'Loading...',
     'status.saving': 'Saving...',
+    'status.sending': 'Sending...',
     'status.deleting': 'Deleting...',
     'status.success': 'Success',
     'status.error': 'Error',
@@ -671,9 +672,7 @@ const translations = {
     inviteLinkDescription: 'Share this link with the user to complete their registration.',
     inviteLink: 'Invite Link',
     addAnother: 'Add Another User',
-    inviteAnother: 'Invite Another User',
-    'invite.steps.userdetails': 'User Details',
-    'invite.steps.invitelink': 'Invite Link',
+    'invite.steps.complete': 'Complete',
     editUser: 'Edit User',
     deleteUser: 'Delete User',
     userDetails: 'User Details',
@@ -1211,7 +1210,7 @@ const translations = {
     'edit.tokens.agent.attributes.description':
       'Attributes included in the access token this agent receives for its own requests (client_credentials grant).',
     'edit.tokens.agent.attributes.label': 'Add or Remove Attributes',
-    'edit.tokens.agent.attributes.hint': "Click on this agent's attributes to add them to its access token.",
+    'edit.tokens.agent.attributes.hint': 'Click on agent attributes to add them to its access token.',
     'edit.tokens.agent.attributes.empty':
       'No attributes available. Configure attributes for this agent in the Attributes tab.',
     'edit.tokens.agent.validity.title': 'Token Validity',
@@ -2603,7 +2602,7 @@ const translations = {
     'edit.flows.recoveryFlow.alert':
       'To modify the selected flow, <0>open the flow builder</0>. To create a new flow, visit the <1>Flows page</1>.',
     'edit.flows.labels.signOutFlow': 'Sign Out Flow',
-    'edit.flows.labels.signOutFlow.description': 'Confirm and terminate the SSO session when people sign out.',
+    'edit.flows.labels.signOutFlow.description': 'Choose the flow that handles user sign-out and session termination.',
     'edit.flows.signOutFlow.placeholder': 'Select a sign-out flow',
     'edit.flows.signOutFlow.hint': 'Select the flow that runs when a user signs out of this {{entity}}.',
     'edit.flows.signOutFlow.alert':
@@ -3183,6 +3182,14 @@ const translations = {
 
     // OTP executor
     'core.executions.otp.description': 'Configure the OTP executor settings.',
+    'core.executions.otp.otpLength.label': 'OTP Length',
+    'core.executions.otp.otpLength.placeholder': 'e.g., 6',
+    'core.executions.otp.otpLength.hint': 'Number of characters in the generated OTP (4-10).',
+    'core.executions.otp.otpUseNumericOnly.label': 'Numeric Only',
+    'core.executions.otp.otpUseNumericOnly.hint': 'When enabled, OTP will contain only numeric characters.',
+    'core.executions.otp.otpValidityPeriodSeconds.label': 'Validity Period (seconds)',
+    'core.executions.otp.otpValidityPeriodSeconds.placeholder': 'e.g., 120',
+    'core.executions.otp.otpValidityPeriodSeconds.hint': 'Time in seconds before the OTP expires (30-600).',
     'core.executions.otp.maxAttempts.label': 'Maximum Attempts',
     'core.executions.otp.maxAttempts.placeholder': 'e.g., 3',
     'core.executions.otp.maxAttempts.hint': 'The maximum number of OTP verification attempts before the flow fails.',
@@ -3310,6 +3317,12 @@ const translations = {
     'core.executions.provisioning.assignGroup.placeholder': 'Comma-separated group IDs to assign',
     'core.executions.provisioning.assignRole.label': 'Assign Role',
     'core.executions.provisioning.assignRole.placeholder': 'Comma-separated role IDs to assign',
+
+    // Session sign out executor
+    'core.executions.sessionSignOut.description': 'Configure the session sign out executor settings.',
+    'core.executions.sessionSignOut.promptOnSignOut.label': 'Prompt for Confirmation',
+    'core.executions.sessionSignOut.promptOnSignOut.hint':
+      'Ask the user to confirm before signing out when the logout request has no valid ID token hint.',
     'core.placeholders.dynamicInputPlaceholder.title': 'Dynamic Input',
     'core.placeholders.dynamicInputPlaceholder.hint': 'Resolves input fields passed from runtime.',
 
@@ -3718,6 +3731,14 @@ const translations = {
     'core.loginFlowBuilder.errors.saveFailed': 'Failed to save flow. Please try again.',
     'core.loginFlowBuilder.success.flowCreated': 'Flow created successfully.',
     'core.loginFlowBuilder.success.flowUpdated': 'Flow updated successfully.',
+  },
+
+  // ============================================================================
+  // Onboarding namespace - User onboarding flows
+  // ============================================================================
+  onboarding: {
+    'forms.onboarding_mode.actions.create.description': 'Create user account immediately with all details',
+    'forms.onboarding_mode.actions.invite.description': 'Send invitation for user to complete their profile',
   },
 
   /**

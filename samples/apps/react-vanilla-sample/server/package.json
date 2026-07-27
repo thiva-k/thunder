@@ -12,6 +12,7 @@
     "express": "4.22.2"
   },
   "overrides": {
-    "path-to-regexp": "0.1.13"
+    "path-to-regexp": "0.1.13",
+    "body-parser": ">=2.3.0"
   }
 }

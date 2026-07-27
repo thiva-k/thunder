@@ -305,6 +305,48 @@ func (s *RedisStoreTestSuite) TestExtendTTL_BackendError() {
 	s.Contains(err.Error(), "failed to extend TTL in Redis")
 }
 
+func (s *RedisStoreTestSuite) TestCompareFieldAndSwap_Swapped() {
+	key := s.store.getFormattedKey(providers.NamespaceFlow, "k")
+	newValue := []byte(`{"State":"AUTHENTICATED"}`)
+	s.client.On("EvalSha", mock.Anything, mock.Anything, []string{key}, "State", "PENDING", newValue).
+		Return(redis.NewCmdResult(int64(1), nil))
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, providers.NamespaceFlow, "k", "State", "PENDING", newValue)
+	s.NoError(err)
+	s.True(swapped)
+}
+
+func (s *RedisStoreTestSuite) TestCompareFieldAndSwap_FieldDiffers_NoSwap() {
+	s.client.On("EvalSha", mock.Anything, mock.Anything, mock.Anything, "State", "PENDING", mock.Anything).
+		Return(redis.NewCmdResult(int64(0), nil))
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, providers.NamespaceFlow, "k", "State", "PENDING",
+		[]byte(`{"State":"CONSUMED"}`))
+	s.NoError(err)
+	s.False(swapped)
+}
+
+func (s *RedisStoreTestSuite) TestCompareFieldAndSwap_MissingKey_NoSwap() {
+	s.client.On("EvalSha", mock.Anything, mock.Anything, mock.Anything, "State", "PENDING", mock.Anything).
+		Return(redis.NewCmdResult(nil, redis.Nil))
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, providers.NamespaceFlow, "k", "State", "PENDING",
+		[]byte(`{"State":"AUTHENTICATED"}`))
+	s.NoError(err)
+	s.False(swapped)
+}
+
+func (s *RedisStoreTestSuite) TestCompareFieldAndSwap_BackendError() {
+	s.client.On("EvalSha", mock.Anything, mock.Anything, mock.Anything, "State", "PENDING", mock.Anything).
+		Return(redis.NewCmdResult(nil, errors.New("connection refused")))
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, providers.NamespaceFlow, "k", "State", "PENDING",
+		[]byte(`{"State":"AUTHENTICATED"}`))
+	s.Error(err)
+	s.False(swapped)
+	s.Contains(err.Error(), "failed to compare-and-swap in Redis")
+}
+
 func (s *RedisStoreTestSuite) TestExtendTTL_ValuePreserved() {
 	key := s.store.getFormattedKey(providers.NamespaceFlow, "k")
 	s.client.On("Set", mock.Anything, key, []byte("v"), time.Duration(0)).

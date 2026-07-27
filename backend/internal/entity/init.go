@@ -23,7 +23,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -48,7 +47,7 @@ func Initialize(
 
 // initializeStore always creates a composite store (DB + in-memory file store).
 func initializeStore(cacheManager cache.CacheManagerInterface) (
-	entityStoreInterface, transaction.Transactioner, error) {
+	entityStoreInterface, providers.Transactioner, error) {
 	fileStore := newEntityFileBasedStore()
 	dbStore, transactioner, err := newEntityDBStore()
 	if err != nil {

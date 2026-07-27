@@ -24,10 +24,13 @@
 // tier. No OAuth client registration is needed — the request object is signed by
 // ThunderID's verifier key (x509_san_dns), which the wallet trusts.
 
+import "dotenv/config";
+
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import QRCode from "qrcode";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -114,9 +117,11 @@ const server = createServer(async (request, response) => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ definition_id: DEFINITION_ID }),
       });
+      const qrDataUrl = await QRCode.toDataURL(initiated.wallet_url, { width: 480, margin: 1 });
       return sendJson(response, 200, {
         txnId: initiated.txn_id,
         walletUrl: initiated.wallet_url,
+        qrDataUrl,
       });
     }
 

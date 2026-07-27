@@ -21,12 +21,11 @@ package dbstore
 
 import (
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize creates and returns a new DBStore instance for the given deployment.
-func Initialize(deploymentID string) (providers.RuntimeStoreProvider, transaction.Transactioner, error) {
+func Initialize(deploymentID string) (providers.RuntimeStoreProvider, providers.Transactioner, error) {
 	dbProvider := provider.GetDBProvider()
 	transactioner, error := dbProvider.GetRuntimeTransientDBTransactioner()
 	if error != nil {

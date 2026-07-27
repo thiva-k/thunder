@@ -24,9 +24,9 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/flowexec"
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/par"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -38,16 +38,17 @@ func Initialize(
 	jwtService jwt.JWTServiceInterface,
 	flowExecService flowexec.FlowExecServiceInterface,
 	parService par.PARServiceInterface,
+	criteriaRevoker revocation.CriteriaRevokerInterface,
 	cfg oauthconfig.Config,
 	storeProvider providers.RuntimeStoreProvider,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) (AuthorizeServiceInterface, error) {
 	authzCodeStore := newAuthorizationCodeStore(storeProvider)
 	authzReqStore := newAuthorizationRequestStore(storeProvider)
 
 	authzService := newAuthorizeService(
 		actorProvider, resourceService, jwtService, flowExecService,
-		authzCodeStore, authzReqStore, parService, transactioner, cfg,
+		authzCodeStore, authzReqStore, parService, transactioner, criteriaRevoker, cfg,
 	)
 	authzHandler := newAuthorizeHandler(authzService, cfg)
 	registerRoutes(mux, authzHandler)

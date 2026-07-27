@@ -99,5 +99,6 @@ export {default as TimerAdapter} from './components/flow/adapters/TimerAdapter';
 // Utils
 export {default as extractLayoutFromDesign} from './utils/extractLayoutFromDesign';
 export {default as getIntegrationIcon} from './utils/getIntegrationIcon';
+export {default as mapEmbeddedFlowTextColor} from './utils/mapEmbeddedFlowTextColor';
 export {default as mapEmbeddedFlowTextVariant} from './utils/mapEmbeddedFlowTextVariant';
 export {sanitizeCss, isValidStylesheetUrl, isInsecureStylesheetUrl} from './utils/cssSanitizer';

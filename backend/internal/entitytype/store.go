@@ -27,7 +27,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // marshalSystemAttributes marshals SystemAttributes to a JSON string for DB storage.
@@ -96,7 +96,7 @@ type entityTypeStore struct {
 }
 
 // newEntityTypeStore creates a new instance of entityTypeStore.
-func newEntityTypeStore() (entityTypeStoreInterface, transaction.Transactioner, error) {
+func newEntityTypeStore() (entityTypeStoreInterface, providers.Transactioner, error) {
 	dbProvider := provider.GetDBProvider()
 	transactioner, err := dbProvider.GetConfigDBTransactioner()
 	if err != nil {

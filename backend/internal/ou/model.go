@@ -27,16 +27,22 @@ import (
 
 // OrganizationUnitRequest represents the request body for creating an organization unit.
 type OrganizationUnitRequest struct {
-	Handle          string  `json:"handle"                    native:"required,min=3,max=50"`
-	Name            string  `json:"name"                      native:"required,min=2,max=100"`
-	Description     string  `json:"description,omitempty"`
-	Parent          *string `json:"parent"                    native:"omitempty,max=255"`
-	ThemeID         string  `json:"themeId,omitempty"`
-	LayoutID        string  `json:"layoutId,omitempty"`
-	LogoURL         string  `json:"logoUrl,omitempty"         native:"omitempty,url,max=2048"`
-	TosURI          string  `json:"tosUri,omitempty"          native:"omitempty,url,max=2048"`
-	PolicyURI       string  `json:"policyUri,omitempty"       native:"omitempty,url,max=2048"`
-	CookiePolicyURI string  `json:"cookiePolicyUri,omitempty" native:"omitempty,url,max=2048"`
+	Handle                    string  `json:"handle"                    native:"required,min=3,max=50"`
+	Name                      string  `json:"name"                      native:"required,min=2,max=100"`
+	Description               string  `json:"description,omitempty"`
+	Parent                    *string `json:"parent"                    native:"omitempty,max=255"`
+	ThemeID                   string  `json:"themeId,omitempty"`
+	LayoutID                  string  `json:"layoutId,omitempty"`
+	AuthFlowID                string  `json:"authFlowId,omitempty"`
+	RegistrationFlowID        string  `json:"registrationFlowId,omitempty"`
+	IsRegistrationFlowEnabled bool    `json:"isRegistrationFlowEnabled"`
+	RecoveryFlowID            string  `json:"recoveryFlowId,omitempty"`
+	IsRecoveryFlowEnabled     bool    `json:"isRecoveryFlowEnabled"`
+	SignOutFlowID             string  `json:"signOutFlowId,omitempty"`
+	LogoURL                   string  `json:"logoUrl,omitempty"         native:"omitempty,url,max=2048"`
+	TosURI                    string  `json:"tosUri,omitempty"          native:"omitempty,url,max=2048"`
+	PolicyURI                 string  `json:"policyUri,omitempty"       native:"omitempty,url,max=2048"`
+	CookiePolicyURI           string  `json:"cookiePolicyUri,omitempty" native:"omitempty,url,max=2048"`
 }
 
 // User represents a user with basic information for OU endpoints.

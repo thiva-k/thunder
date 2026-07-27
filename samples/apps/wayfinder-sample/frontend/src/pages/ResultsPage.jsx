@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "../auth/useAuth";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { SearchPanel } from "../components/SearchPanel";
 import {
   createBooking,

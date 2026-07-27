@@ -46,6 +46,16 @@ Use `make` / `pnpm` targets, not Nx (frontend build tooling is migrating to Turb
   (`pnpm test`, `pnpm lint`, and `pnpm prettier --check` scoped to the affected app or package), not the full frontend
   suite.
 
+## Cross-OS Path Handling
+
+Build tooling and Node scripts must work on Windows as well as macOS/Linux. Node's `path` (`join`, `resolve`, `sep`)
+produces the OS-native separator, a backslash on Windows, while many build-tool APIs and identifiers (e.g. Vite module
+ids/importers, glob patterns) are always POSIX forward-slash. Never compare an OS-native path against one of these with
+`startsWith`/`===`, and never hand a backslash path back to a tool that expects POSIX paths. Normalize to forward
+slashes first (e.g. `normalizePath` from `vite`, or replacing `\` with `/`) and compare using a literal `'/'` rather
+than `sep`. This applies to any string built from `join`/`resolve`/`realpathSync` that will be matched against, or
+returned to, such a tool.
+
 ## i18n Fallback Values
 
 Every `t('key')` call must pass a fallback default string, either positionally as the second argument (third if

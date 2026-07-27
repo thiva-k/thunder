@@ -29,7 +29,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -107,7 +106,7 @@ type entityService struct {
 	hashService             cryptolib.HashServiceInterface
 	entityTypeService       entitytype.EntityTypeServiceInterface
 	ouService               ou.OrganizationUnitServiceInterface
-	transactioner           transaction.Transactioner
+	transactioner           providers.Transactioner
 	logger                  *log.Logger
 	groupMembershipProvider GroupMembershipProvider
 }
@@ -124,7 +123,7 @@ func newEntityService(
 	hashService cryptolib.HashServiceInterface,
 	entityTypeService entitytype.EntityTypeServiceInterface,
 	ouService ou.OrganizationUnitServiceInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) EntityServiceInterface {
 	return &entityService{
 		store:             store,

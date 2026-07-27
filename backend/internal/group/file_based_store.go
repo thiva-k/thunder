@@ -35,7 +35,7 @@ type fileBasedGroupStore struct {
 }
 
 // newFileBasedGroupStore creates a new file-based store for groups.
-func newFileBasedGroupStore() (groupStoreInterface, transaction.Transactioner) {
+func newFileBasedGroupStore() (groupStoreInterface, providers.Transactioner) {
 	return &fileBasedGroupStore{
 		GenericFileBasedStore: declarativeresource.NewGenericFileBasedStore(entitystore.KeyTypeGroup),
 	}, transaction.NewNoOpTransactioner()

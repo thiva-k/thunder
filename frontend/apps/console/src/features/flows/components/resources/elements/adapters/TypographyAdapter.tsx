@@ -21,7 +21,7 @@ import {Typography, type TypographyProps} from '@wso2/oxygen-ui';
 import {useMemo, type CSSProperties, type ReactElement, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
 import TemplatePlaceholder, {containsTemplateLiteral} from './TemplatePlaceholder';
-import {VARIANT_TO_MUI_MAP} from '@/features/flows/constants/typographyVariantMaps';
+import {VARIANT_TO_MUI_MAP, COLOR_ENUM_TO_MUI_MAP} from '@/features/flows/constants/typographyVariantMaps';
 import {TypographyVariants, type Element} from '@/features/flows/models/elements';
 
 /**
@@ -38,6 +38,7 @@ export interface TypographyElement extends Element<TypographyConfig> {
   variant: (typeof TypographyVariants)[keyof typeof TypographyVariants];
   label?: string;
   align?: 'inherit' | 'left' | 'center' | 'right' | 'justify';
+  color?: string;
 }
 
 /**
@@ -72,6 +73,8 @@ function TypographyAdapter({resource}: TypographyAdapterPropsInterface): ReactEl
 
   const muiVariant = variantStr ? VARIANT_TO_MUI_MAP[variantStr] : undefined;
   const align = typographyElement?.align;
+  const colorEnum = typographyElement?.color;
+  const color = colorEnum ? COLOR_ENUM_TO_MUI_MAP[colorEnum] : undefined;
 
   const rawLabel = typographyElement?.label ?? '';
   const labelNode: ReactNode = containsTemplateLiteral(rawLabel) ? (
@@ -81,7 +84,7 @@ function TypographyAdapter({resource}: TypographyAdapterPropsInterface): ReactEl
   );
 
   return (
-    <Typography variant={muiVariant} align={align} style={typographyConfig?.styles} {...config}>
+    <Typography variant={muiVariant} align={align} color={color} style={typographyConfig?.styles} {...config}>
       {labelNode}
     </Typography>
   );

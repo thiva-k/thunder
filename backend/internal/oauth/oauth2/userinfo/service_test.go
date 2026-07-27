@@ -87,7 +87,7 @@ func (s *UserInfoServiceTestSuite) SetupTest() {
 	s.mockAttributeCacheService = attributecachemock.NewAttributeCacheServiceInterfaceMock(s.T())
 	s.userInfoService = newUserInfoService(
 		s.mockJWTService, nil, nil, s.mockTokenValidator,
-		actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr()),
+		actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr(), nil),
 		s.mockAttributeCacheService, nil,
 		oauthconfig.Config{JWT: engineconfig.JWTConfig{Issuer: testUserInfoIssuer, ValidityPeriod: 600}},
 	)
@@ -152,7 +152,7 @@ func (s *UserInfoServiceTestSuite) TestGetUserInfo_RevocationUnavailable() {
 // path: the request is rejected with a server error before any proof binding checks.
 func (s *UserInfoServiceTestSuite) TestGetUserInfoForDPoP_RevocationUnavailable() {
 	verifier := dpopmock.NewVerifierInterfaceMock(s.T())
-	actorProv := actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr())
+	actorProv := actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr(), nil)
 	s.userInfoService = newUserInfoService(
 		s.mockJWTService, nil, nil, s.mockTokenValidator,
 		actorProv, s.mockAttributeCacheService, verifier, userInfoTestConfig())
@@ -1185,7 +1185,7 @@ func (s *UserInfoServiceTestSuite) TestGetUserInfo_BearerScheme_DPoPBoundToken_R
 // presented under the DPoP scheme is rejected.
 func (s *UserInfoServiceTestSuite) TestGetUserInfoForDPoP_NotBoundToken_Rejected() {
 	verifier := dpopmock.NewVerifierInterfaceMock(s.T())
-	actorProv := actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr())
+	actorProv := actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr(), nil)
 	s.userInfoService = newUserInfoService(
 		s.mockJWTService, nil, nil, s.mockTokenValidator,
 		actorProv, s.mockAttributeCacheService, verifier, userInfoTestConfig())
@@ -1211,7 +1211,7 @@ func (s *UserInfoServiceTestSuite) TestGetUserInfoForDPoP_NotBoundToken_Rejected
 // token whose proof fails verification is rejected.
 func (s *UserInfoServiceTestSuite) TestGetUserInfoForDPoP_VerifierFails_Rejected() {
 	verifier := dpopmock.NewVerifierInterfaceMock(s.T())
-	actorProv := actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr())
+	actorProv := actorprovider.Initialize(s.mockInboundClient, s.mockEntityProvider, noopAuthnMgr(), nil)
 	s.userInfoService = newUserInfoService(
 		s.mockJWTService, nil, nil, s.mockTokenValidator,
 		actorProv, s.mockAttributeCacheService, verifier, userInfoTestConfig())

@@ -27,7 +27,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -79,7 +78,7 @@ func Initialize(
 // Note: the file-based store here is populated by the connection package's declarative loader
 // (backend/internal/connection/declarative_resource.go), not by this package — see
 // ShouldLoadDeclarativeIDPResources.
-func initializeStore(cacheManager cache.CacheManagerInterface) (idpStoreInterface, transaction.Transactioner, error) {
+func initializeStore(cacheManager cache.CacheManagerInterface) (idpStoreInterface, providers.Transactioner, error) {
 	storeMode := getIdentityProviderStoreMode()
 
 	idpByIDCache := cache.GetCache[*providers.IDPDTO](cacheManager, "IDPByIDCache")

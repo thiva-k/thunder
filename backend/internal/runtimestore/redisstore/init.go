@@ -25,6 +25,6 @@ import (
 )
 
 // Initialize creates and returns a new RedisStore instance for the given deployment.
-func Initialize(deploymentID string) (providers.RuntimeStoreProvider, transaction.Transactioner, error) {
+func Initialize(deploymentID string) (providers.RuntimeStoreProvider, providers.Transactioner, error) {
 	return newRedisStore(deploymentID), transaction.NewNoOpTransactioner(), nil
 }

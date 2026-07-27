@@ -18,7 +18,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../auth/useAuth";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { getBookedFlights } from "../api";
 import { formatPrice, getBookingReference } from "../utils/bookings";
 

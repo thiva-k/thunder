@@ -24,9 +24,9 @@ import (
 	"errors"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -50,12 +50,12 @@ type CertificateServiceInterface interface {
 // certificateService implements the CertificateServiceInterface for managing certificates.
 type certificateService struct {
 	store         certificateStoreInterface
-	transactioner transaction.Transactioner
+	transactioner providers.Transactioner
 }
 
 // newCertificateService creates a new instance of CertificateService.
 func newCertificateService(store certificateStoreInterface,
-	transactioner transaction.Transactioner) CertificateServiceInterface {
+	transactioner providers.Transactioner) CertificateServiceInterface {
 	return &certificateService{
 		store:         store,
 		transactioner: transactioner,

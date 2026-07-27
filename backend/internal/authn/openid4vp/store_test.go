@@ -91,6 +91,12 @@ func (errRuntimeStore) ExtendTTL(context.Context, providers.RuntimeStoreNamespac
 	return errors.New("store failure")
 }
 
+func (errRuntimeStore) CompareFieldAndSwap(
+	context.Context, providers.RuntimeStoreNamespace, string, string, string, []byte,
+) (bool, error) {
+	return false, errors.New("store failure")
+}
+
 // OpenID4VPStoreTestSuite exercises the openID4VPStore adapter against a real in-memory
 // runtime store, verifying the encrypt/marshal/namespace round-trip and not-found semantics.
 type OpenID4VPStoreTestSuite struct {

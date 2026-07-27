@@ -211,7 +211,7 @@ func (f *fileBasedStore) IsFlowExistsByHandle(_ context.Context, handle string,
 }
 
 // newFileBasedStore creates a new instance of a file-based store.
-func newFileBasedStore() (flowStoreInterface, transaction.Transactioner) {
+func newFileBasedStore() (flowStoreInterface, providers.Transactioner) {
 	return &fileBasedStore{
 		GenericFileBasedStore: declarativeresource.NewGenericFileBasedStore(entity.KeyTypeFlow),
 	}, transaction.NewNoOpTransactioner()

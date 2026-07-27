@@ -26,18 +26,11 @@ import (
 	"runtime/debug"
 
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
-// Transactioner provides transaction management with automatic nesting detection.
-type Transactioner interface {
-	// Transact executes the given function within a transaction.
-	// If a transaction already exists in the context, it reuses it.
-	// Otherwise, it creates a new transaction and commits/rolls back automatically.
-	Transact(ctx context.Context, txFunc func(context.Context) error) error
-}
-
 // NewTransactioner creates a new database-backed Transactioner instance.
-func NewTransactioner(db *sql.DB, dbName string) Transactioner {
+func NewTransactioner(db *sql.DB, dbName string) providers.Transactioner {
 	return &dbTransactioner{
 		db:     db,
 		dbName: dbName,
@@ -47,7 +40,7 @@ func NewTransactioner(db *sql.DB, dbName string) Transactioner {
 // NewNoOpTransactioner creates a Transactioner that simply executes the function without
 // wrapping it in a database transaction. This is used for file-based (declarative) store modes
 // where no database transaction management is needed.
-func NewNoOpTransactioner() Transactioner {
+func NewNoOpTransactioner() providers.Transactioner {
 	return &noOpTransactioner{}
 }
 

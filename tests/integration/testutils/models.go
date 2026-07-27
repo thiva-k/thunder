@@ -353,3 +353,72 @@ type AgentListResponse struct {
 	Count        int     `json:"count"`
 	Agents       []Agent `json:"agents"`
 }
+
+// ClaimMapping is a single selectively-disclosable claim in a credential
+// configuration. Name must match a user profile attribute key.
+type ClaimMapping struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"displayName,omitempty"`
+}
+
+// CredentialDisplay is the optional display metadata of a credential configuration.
+type CredentialDisplay struct {
+	Locale  string `json:"locale,omitempty"`
+	LogoURI string `json:"logoUri,omitempty"`
+}
+
+// CredentialConfiguration is the request body for the OpenID4VCI credential
+// configuration management API. Handle is both the credential_configuration_id
+// and the OAuth scope; VCT and an OU (OUID or OUHandle) are required.
+type CredentialConfiguration struct {
+	Handle          string             `json:"handle"`
+	OUID            string             `json:"ouId,omitempty"`
+	OUHandle        string             `json:"ouHandle,omitempty"`
+	Name            string             `json:"name,omitempty"`
+	Description     string             `json:"description,omitempty"`
+	Format          string             `json:"format,omitempty"`
+	VCT             string             `json:"vct"`
+	Claims          []ClaimMapping     `json:"claims,omitempty"`
+	Display         *CredentialDisplay `json:"display,omitempty"`
+	ValiditySeconds *int               `json:"validitySeconds,omitempty"`
+}
+
+// PresentationDefinition is the request body for the OpenID4VP presentation
+// definition management API. Handle is the definition_id used on initiate and
+// the DCQL credential id; VCT and an OU (OUID or OUHandle) are required.
+type PresentationDefinition struct {
+	Handle               string              `json:"handle"`
+	OUID                 string              `json:"ouId,omitempty"`
+	OUHandle             string              `json:"ouHandle,omitempty"`
+	Name                 string              `json:"name,omitempty"`
+	Description          string              `json:"description,omitempty"`
+	VCT                  string              `json:"vct"`
+	Format               string              `json:"format,omitempty"`
+	RequestedClaims      []string            `json:"requestedClaims,omitempty"`
+	MandatoryClaims      []string            `json:"mandatoryClaims,omitempty"`
+	OptionalClaims       []string            `json:"optionalClaims,omitempty"`
+	ClaimValues          map[string][]string `json:"claimValues,omitempty"`
+	EnforceTrustedIssuer *bool               `json:"enforceTrustedIssuer,omitempty"`
+	TrustedAuthorities   []string            `json:"trustedAuthorities,omitempty"`
+}
+
+// VPInitiateResponse is the body returned by POST /openid4vp/initiate.
+type VPInitiateResponse struct {
+	TxnID     string `json:"txn_id"`
+	WalletURL string `json:"wallet_url"`
+	StatusURL string `json:"status_url"`
+	ExpiresAt string `json:"expires_at"`
+}
+
+// VPStatusResponse is the body returned by GET /openid4vp/status/{txn_id}.
+type VPStatusResponse struct {
+	Status      string `json:"status"`
+	ResultToken string `json:"result_token"`
+	Error       string `json:"error"`
+}
+
+// VCHTTPResult captures a raw HTTP status and body from a VC endpoint for assertions.
+type VCHTTPResult struct {
+	StatusCode int
+	Body       []byte
+}

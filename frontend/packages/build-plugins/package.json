@@ -42,6 +42,8 @@
     "clean:node_modules": "rimraf node_modules",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.lib.json"
   },
   "devDependencies": {
@@ -53,7 +55,8 @@
     "rimraf": "catalog:",
     "rolldown": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "vite": ">=5.0.0"

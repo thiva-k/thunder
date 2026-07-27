@@ -38,6 +38,96 @@ func (_m *RuntimeStoreProviderMock) EXPECT() *RuntimeStoreProviderMock_Expecter 
 	return &RuntimeStoreProviderMock_Expecter{mock: &_m.Mock}
 }
 
+// CompareFieldAndSwap provides a mock function for the type RuntimeStoreProviderMock
+func (_mock *RuntimeStoreProviderMock) CompareFieldAndSwap(ctx context.Context, namespace providers.RuntimeStoreNamespace, key string, field string, expected string, newValue []byte) (bool, error) {
+	ret := _mock.Called(ctx, namespace, key, field, expected, newValue)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CompareFieldAndSwap")
+	}
+
+	var r0 bool
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.RuntimeStoreNamespace, string, string, string, []byte) (bool, error)); ok {
+		return returnFunc(ctx, namespace, key, field, expected, newValue)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, providers.RuntimeStoreNamespace, string, string, string, []byte) bool); ok {
+		r0 = returnFunc(ctx, namespace, key, field, expected, newValue)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, providers.RuntimeStoreNamespace, string, string, string, []byte) error); ok {
+		r1 = returnFunc(ctx, namespace, key, field, expected, newValue)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// RuntimeStoreProviderMock_CompareFieldAndSwap_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CompareFieldAndSwap'
+type RuntimeStoreProviderMock_CompareFieldAndSwap_Call struct {
+	*mock.Call
+}
+
+// CompareFieldAndSwap is a helper method to define mock.On call
+//   - ctx context.Context
+//   - namespace providers.RuntimeStoreNamespace
+//   - key string
+//   - field string
+//   - expected string
+//   - newValue []byte
+func (_e *RuntimeStoreProviderMock_Expecter) CompareFieldAndSwap(ctx interface{}, namespace interface{}, key interface{}, field interface{}, expected interface{}, newValue interface{}) *RuntimeStoreProviderMock_CompareFieldAndSwap_Call {
+	return &RuntimeStoreProviderMock_CompareFieldAndSwap_Call{Call: _e.mock.On("CompareFieldAndSwap", ctx, namespace, key, field, expected, newValue)}
+}
+
+func (_c *RuntimeStoreProviderMock_CompareFieldAndSwap_Call) Run(run func(ctx context.Context, namespace providers.RuntimeStoreNamespace, key string, field string, expected string, newValue []byte)) *RuntimeStoreProviderMock_CompareFieldAndSwap_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 providers.RuntimeStoreNamespace
+		if args[1] != nil {
+			arg1 = args[1].(providers.RuntimeStoreNamespace)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 string
+		if args[3] != nil {
+			arg3 = args[3].(string)
+		}
+		var arg4 string
+		if args[4] != nil {
+			arg4 = args[4].(string)
+		}
+		var arg5 []byte
+		if args[5] != nil {
+			arg5 = args[5].([]byte)
+		}
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3,
+			arg4,
+			arg5,
+		)
+	})
+	return _c
+}
+
+func (_c *RuntimeStoreProviderMock_CompareFieldAndSwap_Call) Return(b bool, err error) *RuntimeStoreProviderMock_CompareFieldAndSwap_Call {
+	_c.Call.Return(b, err)
+	return _c
+}
+
+func (_c *RuntimeStoreProviderMock_CompareFieldAndSwap_Call) RunAndReturn(run func(ctx context.Context, namespace providers.RuntimeStoreNamespace, key string, field string, expected string, newValue []byte) (bool, error)) *RuntimeStoreProviderMock_CompareFieldAndSwap_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Delete provides a mock function for the type RuntimeStoreProviderMock
 func (_mock *RuntimeStoreProviderMock) Delete(ctx context.Context, namespace providers.RuntimeStoreNamespace, key string) error {
 	ret := _mock.Called(ctx, namespace, key)

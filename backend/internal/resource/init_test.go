@@ -33,7 +33,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 )
 
-// fakeTransactioner is a test double for transaction.Transactioner
+// fakeTransactioner is a test double for providers.Transactioner
 type fakeTransactioner struct{}
 
 func (f *fakeTransactioner) Transact(ctx context.Context, txFunc func(context.Context) error) error {

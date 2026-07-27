@@ -265,6 +265,80 @@ func (s *InMemoryStoreTestSuite) TestExtendTTL_ExpiredKey_ReturnsError() {
 	s.ErrorIs(err, providers.ErrRuntimeStoreKeyNotFound)
 }
 
+func (s *InMemoryStoreTestSuite) TestCompareFieldAndSwap_FieldMatches_SwapsPreservingTTL() {
+	fk := s.store.getFormattedKey(testNamespace, testKey)
+	expiry := time.Now().Add(time.Minute)
+	s.store.data[fk] = &entry{value: []byte(`{"State":"PENDING","UserID":""}`), expiresAt: expiry}
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING",
+		[]byte(`{"State":"AUTHENTICATED","UserID":"u1"}`))
+	s.NoError(err)
+	s.True(swapped)
+
+	got, err := s.store.Get(s.ctx, testNamespace, testKey)
+	s.NoError(err)
+	s.Equal([]byte(`{"State":"AUTHENTICATED","UserID":"u1"}`), got)
+	s.Equal(expiry.Unix(), s.store.data[fk].expiresAt.Unix())
+}
+
+func (s *InMemoryStoreTestSuite) TestCompareFieldAndSwap_FieldDiffers_NoSwap() {
+	original := []byte(`{"State":"AUTHENTICATED"}`)
+	_ = s.store.Put(s.ctx, testNamespace, testKey, original, 60)
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING",
+		[]byte(`{"State":"CONSUMED"}`))
+	s.NoError(err)
+	s.False(swapped)
+
+	got, err := s.store.Get(s.ctx, testNamespace, testKey)
+	s.NoError(err)
+	s.Equal(original, got, "a non-matching CompareFieldAndSwap must not overwrite the value")
+}
+
+func (s *InMemoryStoreTestSuite) TestCompareFieldAndSwap_MissingKey_NoSwap() {
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, "missing", "State", "PENDING",
+		[]byte(`{"State":"AUTHENTICATED"}`))
+	s.NoError(err)
+	s.False(swapped)
+}
+
+func (s *InMemoryStoreTestSuite) TestCompareFieldAndSwap_ExpiredKey_NoSwap() {
+	fk := s.store.getFormattedKey(testNamespace, testKey)
+	s.store.data[fk] = &entry{value: []byte(`{"State":"PENDING"}`), expiresAt: time.Now().Add(-time.Second)}
+
+	swapped, err := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING",
+		[]byte(`{"State":"AUTHENTICATED"}`))
+	s.NoError(err)
+	s.False(swapped)
+}
+
+func (s *InMemoryStoreTestSuite) TestConcurrentCompareFieldAndSwap() {
+	const workers = 10
+	_ = s.store.Put(s.ctx, testNamespace, testKey, []byte(`{"State":"PENDING"}`), 60)
+
+	var wg sync.WaitGroup
+	results := make([]bool, workers)
+	wg.Add(workers)
+	for i := 0; i < workers; i++ {
+		go func(i int) {
+			defer wg.Done()
+			ok, _ := s.store.CompareFieldAndSwap(s.ctx, testNamespace, testKey, "State", "PENDING",
+				[]byte(`{"State":"AUTHENTICATED"}`))
+			results[i] = ok
+		}(i)
+	}
+	wg.Wait()
+
+	// Only the first transition out of PENDING should win.
+	wins := 0
+	for _, ok := range results {
+		if ok {
+			wins++
+		}
+	}
+	s.Equal(1, wins)
+}
+
 func (s *InMemoryStoreTestSuite) TestGetFormattedKey() {
 	key := s.store.getFormattedKey("ns", "k")
 	s.Equal("runtime:test-deployment:ns:k", key)

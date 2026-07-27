@@ -49,6 +49,23 @@ type AuthnProviderManager interface {
 		authUser AuthUser) (AuthUser, *AttributesResponse, *common.ServiceError)
 }
 
+// AuthnProviderInterface defines the interface for authentication providers.
+type AuthnProviderInterface interface {
+	InitiateAuthentication(ctx context.Context, credentialType string, initData any,
+		metadata *AuthnMetadata) (any, *common.ServiceError)
+	Authenticate(ctx context.Context, identifiers, credentials map[string]interface{},
+		metadata *AuthnMetadata) (*AuthnResult, *common.ServiceError)
+	GetEntityReference(ctx context.Context, entityReferenceToken any) (*EntityReference,
+		*common.ServiceError)
+	GetAttributes(ctx context.Context, attributeToken any, consentedAttributes *RequestedAttributes,
+		metadata *GetAttributesMetadata) (
+		*AttributesResponse, *common.ServiceError)
+	InitiateEnrollment(ctx context.Context, credentialType string, initData any,
+		metadata *AuthnMetadata) (any, *common.ServiceError)
+	Enroll(ctx context.Context, identifiers, credentials map[string]interface{},
+		metadata *AuthnMetadata) (*AuthnResult, *common.ServiceError)
+}
+
 // ActorProvider resolves inbound actors and exposes their OAuth and membership data.
 type ActorProvider interface {
 	GetOAuthClientByClientID(
@@ -65,6 +82,7 @@ type ActorProvider interface {
 	) *common.ServiceError
 	GetActor(actorID string) (*Entity, *common.ServiceError)
 	GetActorGroups(actorID string) ([]EntityGroup, *common.ServiceError)
+	GetActorRoles(actorID string, groupIDs []string) ([]string, *common.ServiceError)
 }
 
 // I18nProvider defines the interface for the i18n provider.
@@ -237,4 +255,22 @@ type RuntimeStoreProvider interface {
 	Take(ctx context.Context, namespace RuntimeStoreNamespace, key string) ([]byte, error)
 
 	ExtendTTL(ctx context.Context, namespace RuntimeStoreNamespace, key string, ttlSeconds int64) error
+
+	// CompareFieldAndSwap atomically replaces the value at key with newValue, but only when the
+	// top-level JSON string field in the currently stored value equals expected, preserving the
+	// existing TTL. It returns true when the swap occurred, and false when the field differs or the
+	// key is absent/expired. Callers use it for conditional state transitions (get, inspect, build
+	// the new document, compare-and-swap) that Update cannot perform atomically. Stored values are
+	// assumed to be JSON documents.
+	CompareFieldAndSwap(
+		ctx context.Context, namespace RuntimeStoreNamespace, key, field, expected string, newValue []byte,
+	) (bool, error)
+}
+
+// Transactioner provides transaction management with automatic nesting detection.
+type Transactioner interface {
+	// Transact executes the given function within a transaction.
+	// If a transaction already exists in the context, it reuses it.
+	// Otherwise, it creates a new transaction and commits/rolls back automatically.
+	Transact(ctx context.Context, txFunc func(context.Context) error) error
 }

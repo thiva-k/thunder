@@ -30,6 +30,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/runtimestore/inmemory"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/runtimestoreprovidermock"
 )
 
 // AuthorizationCodeStoreTestSuite exercises the authorizationCodeStore adapter against a real
@@ -69,6 +70,34 @@ func (suite *AuthorizationCodeStoreTestSuite) TestNewAuthorizationCodeStore() {
 	assert.Implements(suite.T(), (*AuthorizationCodeStoreInterface)(nil), store)
 }
 
+// Tests for the consumed-code replay markers
+
+func (suite *AuthorizationCodeStoreTestSuite) TestMarkAndReadConsumedTokenFamily() {
+	err := suite.store.MarkConsumedTokenFamily(context.Background(), "code-x", "tfid-x", time.Minute)
+	suite.NoError(err)
+
+	tfid, found, err := suite.store.ConsumedTokenFamily(context.Background(), "code-x")
+	suite.NoError(err)
+	suite.True(found)
+	suite.Equal("tfid-x", tfid)
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestConsumedTokenFamily_Missing() {
+	tfid, found, err := suite.store.ConsumedTokenFamily(context.Background(), "no-such-code")
+	suite.NoError(err)
+	suite.False(found)
+	suite.Empty(tfid)
+}
+
+func (suite *AuthorizationCodeStoreTestSuite) TestMarkConsumedTokenFamily_EmptyTokenFamilyIsNoOp() {
+	err := suite.store.MarkConsumedTokenFamily(context.Background(), "code-y", "", time.Minute)
+	suite.NoError(err)
+
+	_, found, err := suite.store.ConsumedTokenFamily(context.Background(), "code-y")
+	suite.NoError(err)
+	suite.False(found)
+}
+
 // Tests for InsertAuthorizationCode
 
 func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_Success() {
@@ -77,7 +106,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_Succes
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestInsertAuthorizationCode_PutError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Put(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(fmt.Errorf("put failed"))
 	store := &authorizationCodeStore{storeProvider: rt}
@@ -121,7 +150,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_NotFound(
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestGetAuthorizationCode_GetError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Get(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("get failed"))
 	store := &authorizationCodeStore{storeProvider: rt}
 
@@ -172,7 +201,7 @@ func (suite *AuthorizationCodeStoreTestSuite) TestConsumeAuthorizationCode_NotFo
 }
 
 func (suite *AuthorizationCodeStoreTestSuite) TestConsumeAuthorizationCode_TakeError() {
-	rt := NewRuntimeStoreProviderMock(suite.T())
+	rt := runtimestoreprovidermock.NewRuntimeStoreProviderMock(suite.T())
 	rt.EXPECT().Take(mock.Anything, mock.Anything, mock.Anything).Return(nil, fmt.Errorf("take failed"))
 	store := &authorizationCodeStore{storeProvider: rt}
 

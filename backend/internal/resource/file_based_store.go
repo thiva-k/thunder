@@ -39,7 +39,7 @@ type fileBasedResourceStore struct {
 }
 
 // newFileBasedResourceStore creates a new file-based resource store.
-func newFileBasedResourceStore() (resourceStoreInterface, transaction.Transactioner, error) {
+func newFileBasedResourceStore() (resourceStoreInterface, providers.Transactioner, error) {
 	genericStore := declarativeresource.NewGenericFileBasedStore(entity.KeyTypeResourceServer)
 	store := &fileBasedResourceStore{
 		GenericFileBasedStore: genericStore,

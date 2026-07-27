@@ -109,6 +109,15 @@ export const TypographyVariants = {
   Body2: 'BODY_2',
 } as const;
 
+export const TypographyColors = {
+  Error: 'ERROR',
+  Warning: 'WARNING',
+  Success: 'SUCCESS',
+  Info: 'INFO',
+  Primary: 'PRIMARY',
+  Secondary: 'SECONDARY',
+} as const;
+
 export const DividerVariants = {
   Horizontal: 'HORIZONTAL',
   Vertical: 'VERTICAL',

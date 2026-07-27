@@ -602,7 +602,7 @@ nodes:
 resource_type: flow
 id: 01900000-0000-7000-8000-00000000006a
 name: Default Sign Out Flow
-handle: console-signout-flow
+handle: default-flow
 flowType: SIGNOUT
 nodes:
 - id: start
@@ -1603,14 +1603,10 @@ nodes:
     components:
     - align: left
       type: TEXT
-      id: admin_registration_complete_icon
-      label: ✅
-      variant: HEADING_1
-    - align: left
-      type: TEXT
       id: admin_registration_complete_heading
       label: '{{ t(onboarding:forms.add_user_complete.title) }}'
       variant: HEADING_1
+      color: SUCCESS
     - align: left
       type: TEXT
       id: admin_registration_complete_message
@@ -1762,14 +1758,10 @@ nodes:
     components:
     - align: left
       type: TEXT
-      id: email_status_icon
-      label: ✅
-      variant: HEADING_1
-    - align: left
-      type: TEXT
       id: email_status_heading
       label: '{{ t(onboarding:forms.invite_email_sent.title) }}'
       variant: HEADING_1
+      color: SUCCESS
     - align: left
       type: TEXT
       id: email_status_message
@@ -1790,14 +1782,10 @@ nodes:
     components:
     - align: left
       type: TEXT
-      id: email_unavailable_icon
-      label: ⚠️
-      variant: HEADING_1
-    - align: left
-      type: TEXT
       id: email_unavailable_heading
       label: '{{ t(onboarding:forms.invite_email_unavailable.title) }}'
       variant: HEADING_1
+      color: ERROR
     - align: left
       type: TEXT
       id: email_unavailable_message
@@ -1833,11 +1821,6 @@ nodes:
   type: PROMPT
   meta:
     components:
-    - align: left
-      type: TEXT
-      id: link_status_icon
-      label: ✅
-      variant: HEADING_1
     - align: left
       type: TEXT
       id: link_status_heading
@@ -1937,14 +1920,10 @@ nodes:
     components:
     - align: left
       type: TEXT
-      id: registration_complete_icon
-      label: ✅
-      variant: HEADING_1
-    - align: left
-      type: TEXT
       id: registration_complete_heading
       label: '{{ t(invite:complete.title) }}'
       variant: HEADING_1
+      color: SUCCESS
     - align: left
       type: TEXT
       id: registration_complete_message
@@ -4988,7 +4967,6 @@ authFlowId: 01900000-0000-7000-8000-000000000068
 registrationFlowId: 01900000-0000-7000-8000-000000000069
 isRegistrationFlowEnabled: false
 signOutFlowId: 01900000-0000-7000-8000-00000000006a
-isSignOutFlowEnabled: true
 recoveryFlowId: 01900000-0000-7000-8000-000000000070
 isRecoveryFlowEnabled: false
 allowedUserTypes:

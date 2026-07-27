@@ -206,6 +206,25 @@ func (d *dbStore) ExtendTTL(ctx context.Context, namespace providers.RuntimeStor
 	return nil
 }
 
+// CompareFieldAndSwap replaces the stored value with newValue only when the top-level JSON string
+// field of the current, non-expired value equals expected, preserving its TTL.
+func (d *dbStore) CompareFieldAndSwap(ctx context.Context, namespace providers.RuntimeStoreNamespace,
+	key, field, expected string, newValue []byte) (bool, error) {
+	dbClient, err := d.dbProvider.GetRuntimeTransientDBClient()
+	if err != nil {
+		return false, fmt.Errorf("failed to get database client: %w", err)
+	}
+
+	rowsAffected, err := dbClient.ExecuteContext(
+		ctx, queryCompareFieldAndSwapRuntimeStore,
+		d.deploymentID, string(namespace), key, newValue, time.Now().UTC(), field, expected,
+	)
+	if err != nil {
+		return false, fmt.Errorf("failed to compare-and-swap in database: %w", err)
+	}
+	return rowsAffected > 0, nil
+}
+
 // parseStoreValue extracts the VALUE column from a result row, handling both string and []byte.
 func parseStoreValue(row map[string]interface{}) ([]byte, error) {
 	switch v := row[columnNameValue].(type) {

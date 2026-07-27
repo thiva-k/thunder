@@ -26,7 +26,7 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 const storeLoggerComponentName = "RoleStore"
@@ -75,7 +75,7 @@ type roleStore struct {
 }
 
 // newRoleStore creates a new instance of roleStore.
-func newRoleStore() (roleStoreInterface, transaction.Transactioner, error) {
+func newRoleStore() (roleStoreInterface, providers.Transactioner, error) {
 	dbProvider := getDBProvider()
 	client, err := dbProvider.GetConfigDBClient()
 	if err != nil {

@@ -17,11 +17,11 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
+import {ConnectionQueryKeys, ConnectionTypes} from '@thunderid/configure-connections';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import TrustedIssuerQueryKeys from '../constants/query-keys';
-import {ConnectionQueryKeys, ConnectionTypes} from '@thunderid/configure-connections';
 
 /**
  * Delete a trusted issuer (DELETE /connections/oidc/{id}).

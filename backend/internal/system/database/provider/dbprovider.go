@@ -32,6 +32,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/database/model"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 const (
@@ -56,10 +57,10 @@ type DBProviderInterface interface {
 	GetRuntimeTransientDBClient() (DBClientInterface, error)
 	GetEntityDBClient() (DBClientInterface, error)
 	GetRuntimePersistentDBClient() (DBClientInterface, error)
-	GetConfigDBTransactioner() (transaction.Transactioner, error)
-	GetEntityDBTransactioner() (transaction.Transactioner, error)
-	GetRuntimeTransientDBTransactioner() (transaction.Transactioner, error)
-	GetRuntimePersistentDBTransactioner() (transaction.Transactioner, error)
+	GetConfigDBTransactioner() (providers.Transactioner, error)
+	GetEntityDBTransactioner() (providers.Transactioner, error)
+	GetRuntimeTransientDBTransactioner() (providers.Transactioner, error)
+	GetRuntimePersistentDBTransactioner() (providers.Transactioner, error)
 }
 
 // DBProviderCloser is a separate interface for closing the provider.
@@ -138,18 +139,18 @@ func (d *dbProvider) GetRuntimePersistentDBClient() (DBClientInterface, error) {
 
 // GetConfigDBTransactioner returns a transactioner for the config database.
 // The transactioner manages database transactions with automatic nesting detection.
-func (d *dbProvider) GetConfigDBTransactioner() (transaction.Transactioner, error) {
+func (d *dbProvider) GetConfigDBTransactioner() (providers.Transactioner, error) {
 	return d.getTransactioner(d.GetConfigDBClient, dbNameConfig)
 }
 
 // GetEntityDBTransactioner returns a transactioner for the entity database.
 // The transactioner manages database transactions with automatic nesting detection.
-func (d *dbProvider) GetEntityDBTransactioner() (transaction.Transactioner, error) {
+func (d *dbProvider) GetEntityDBTransactioner() (providers.Transactioner, error) {
 	return d.getTransactioner(d.GetEntityDBClient, dbNameEntity)
 }
 
 // GetRuntimeTransientDBTransactioner returns a transactioner for the runtime transient database.
-func (d *dbProvider) GetRuntimeTransientDBTransactioner() (transaction.Transactioner, error) {
+func (d *dbProvider) GetRuntimeTransientDBTransactioner() (providers.Transactioner, error) {
 	// When the runtime store is Redis, a no-op transactioner is returned since Redis does
 	// not support SQL-style transactions.
 	if config.GetServerRuntime().Config.Database.RuntimeTransient.Type == DataSourceTypeRedis {
@@ -160,7 +161,7 @@ func (d *dbProvider) GetRuntimeTransientDBTransactioner() (transaction.Transacti
 
 // GetRuntimePersistentDBTransactioner returns a transactioner for the runtime persistent database.
 // The transactioner manages database transactions with automatic nesting detection.
-func (d *dbProvider) GetRuntimePersistentDBTransactioner() (transaction.Transactioner, error) {
+func (d *dbProvider) GetRuntimePersistentDBTransactioner() (providers.Transactioner, error) {
 	return d.getTransactioner(d.GetRuntimePersistentDBClient, dbNameRuntimePersistent)
 }
 
@@ -168,7 +169,7 @@ func (d *dbProvider) GetRuntimePersistentDBTransactioner() (transaction.Transact
 func (d *dbProvider) getTransactioner(
 	clientGetter func() (DBClientInterface, error),
 	dbName string,
-) (transaction.Transactioner, error) {
+) (providers.Transactioner, error) {
 	client, err := clientGetter()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get %s database client: %w", dbName, err)

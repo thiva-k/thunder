@@ -37,7 +37,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/entitymock"
@@ -2070,7 +2069,7 @@ func (suite *GroupServiceTestSuite) TestGroupService_AddMembersToGroups() {
 				tc.setup(storeMock, entityMock)
 			}
 
-			var txner transaction.Transactioner
+			var txner providers.Transactioner
 			if tc.txErr != nil {
 				txMock := transactionmock.NewTransactionerMock(suite.T())
 				txMock.On("Transact", mock.Anything, mock.Anything).Return(tc.txErr)

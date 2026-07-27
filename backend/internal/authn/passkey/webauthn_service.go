@@ -83,12 +83,6 @@ type authenticatorAttachment = protocol.AuthenticatorAttachment
 // residentKeyRequirement wraps library-specific resident key requirement.
 type residentKeyRequirement = protocol.ResidentKeyRequirement
 
-// credentialType wraps library-specific credential type.
-type credentialType = protocol.CredentialType
-
-// credentialMediationRequirement wraps library-specific credential mediation requirement.
-type credentialMediationRequirement = protocol.CredentialMediationRequirement
-
 // Wrapper constants for protocol constants.
 var (
 	verificationPreferred = protocol.VerificationPreferred

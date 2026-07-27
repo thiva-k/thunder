@@ -29,7 +29,7 @@ import {
   UserCog,
   X
 } from "lucide-react";
-import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router";
 import { getLocations } from "./api";
 import { getCachedChatAccessToken, getChatAccessToken } from "./auth/chatTokenService";
 import { AUTH_CONFIG } from "./auth/config";

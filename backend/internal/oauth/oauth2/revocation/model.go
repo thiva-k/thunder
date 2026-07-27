@@ -39,6 +39,16 @@ const (
 	RevocationReasonExplicit RevocationReason = "explicit"
 	// RevocationReasonRefreshRotation denotes revocation of a consumed refresh token on rotation.
 	RevocationReasonRefreshRotation RevocationReason = "refresh_rotation"
+	// RevocationReasonRefreshReplay denotes family revocation triggered by refresh-token replay
+	// (a rotated, already-revoked refresh token presented again).
+	RevocationReasonRefreshReplay RevocationReason = "refresh_replay"
+	// RevocationReasonSessionLogout denotes family revocation triggered by an SSO session sign-out.
+	RevocationReasonSessionLogout RevocationReason = "session_logout"
+	// RevocationReasonCodeReplay denotes family revocation triggered by authorization-code replay.
+	RevocationReasonCodeReplay RevocationReason = "code_replay"
+	// RevocationReasonExplicitTokenFamily denotes family revocation triggered by an explicit (RFC 7009)
+	// revocation of a token that carries a token family id.
+	RevocationReasonExplicitTokenFamily RevocationReason = "explicit_token_family"
 )
 
 // RevokedToken represents a single revoked token entry in the deny list.

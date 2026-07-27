@@ -26,6 +26,7 @@ import (
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/declarative_resource/entity"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 type notificationFileBasedStore struct {
@@ -115,7 +116,7 @@ func (f *notificationFileBasedStore) updateSender(
 }
 
 // newNotificationFileBasedStore creates a new instance of a file-based store.
-func newNotificationFileBasedStore() (notificationStoreInterface, transaction.Transactioner) {
+func newNotificationFileBasedStore() (notificationStoreInterface, providers.Transactioner) {
 	genericStore := declarativeresource.NewGenericFileBasedStore(entity.KeyTypeNotificationSender)
 	return &notificationFileBasedStore{
 		GenericFileBasedStore: genericStore,

@@ -28,7 +28,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/session"
 	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -44,7 +43,7 @@ func Initialize(
 	attestationVerifier providers.AttestationProvider,
 	graphBuilder graphbuilder.GraphBuilderInterface,
 	storeProvider providers.RuntimeStoreProvider,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 	cfg flowconfig.Config,
 ) (FlowExecServiceInterface, error) {
 	flowStore := newFlowStore(storeProvider)

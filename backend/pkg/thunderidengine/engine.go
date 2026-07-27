@@ -25,9 +25,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/thunder-id/thunderid/internal/attestation"
 	"github.com/thunder-id/thunderid/internal/attributecache"
 	"github.com/thunder-id/thunderid/internal/authn/assert"
+	authnprovidermgr "github.com/thunder-id/thunderid/internal/authnprovider/manager"
 	flowconfig "github.com/thunder-id/thunderid/internal/flow/config"
 	"github.com/thunder-id/thunderid/internal/flow/core"
 	"github.com/thunder-id/thunderid/internal/flow/executor"
@@ -49,7 +49,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/kmprovider"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -122,6 +121,12 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 	engineCtx.attributeCacheService = attributecache.Initialize(engineCtx.runtimeStoreProvider)
 	engineCtx.authAssertGen = assert.Initialize()
 
+	authnProviderManager, err := authnprovidermgr.Initialize(
+		engineCtx.defaultAuthnProvider, engineCtx.customAuthnProviders)
+	if err != nil {
+		logger.Fatal(ctx, "Failed to initialize authn provider manager", log.Error(err))
+	}
+
 	// Initialize flow metadata service
 	_ = flowmeta.Initialize(mux, engineCtx.actorProvider, engineCtx.ouProvider,
 		engineCtx.designResolveProvider, engineCtx.i18nProvider)
@@ -137,9 +142,10 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		AttributeCacheSvc: engineCtx.attributeCacheService,
 		AuthZService:      engineCtx.authzProvider,
 		ConsentEnforcer:   engineCtx.consentProvider,
-		AuthnProvider:     engineCtx.authnProvider,
+		AuthnProvider:     authnProviderManager,
 		JWTService:        engineCtx.jwtService,
 		AuthAssertGen:     engineCtx.authAssertGen,
+		ResourceService:   engineCtx.resourceProvider,
 	}
 	interceptorDeps := interceptor.InterceptorDependencies{
 		FlowFactory: engineCtx.flowFactory,
@@ -162,13 +168,9 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 	engineCtx.graphBuilder = graphbuilder.Initialize(engineCtx.flowFactory, engineCtx.execRegistry,
 		engineCtx.interceptorRegistry, graphCache)
 
-	attestationProvider, err := attestation.Initialize(engineCtx.runtimeCryptoSvc)
-	if err != nil {
-		logger.Fatal(ctx, "Failed to initialize attestation provider", log.Error(err))
-	}
 	engineCtx.flowExecService, err = flowexec.Initialize(mux, engineCtx.flowProvider, engineCtx.actorProvider,
 		engineCtx.execRegistry, engineCtx.interceptorRegistry, engineCtx.observabilitySvc,
-		engineCtx.runtimeCryptoSvc, attestationProvider, engineCtx.graphBuilder,
+		engineCtx.runtimeCryptoSvc, engineCtx.attestationProvider, engineCtx.graphBuilder,
 		engineCtx.runtimeStoreProvider, engineCtx.transactioner, flowConfig)
 	if err != nil {
 		logger.Fatal(ctx, "Failed to initialize flow execution service", log.Error(err))
@@ -185,13 +187,14 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 
 	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider))
 
-	// The embedded engine has no server-config store, so no default resource server is available.
-	// Implicit no-resource requests that carry permission scopes are rejected; OIDC-only or
+	// The embedded engine has no server-config store, so no default resource server is available: the
+	// resource provider is passed undecorated. Implicit no-resource requests that carry permission
+	// scopes are rejected (the provider resolves no server for an empty identifier); OIDC-only or
 	// scopeless requests do not need resource-server binding.
-	err = oauth.Initialize(mux, engineCtx.actorProvider, engineCtx.authnProvider, engineCtx.jwtService,
+	err = oauth.Initialize(mux, engineCtx.actorProvider, authnProviderManager, engineCtx.jwtService,
 		engineCtx.jweService, engineCtx.flowExecService, engineCtx.observabilitySvc, engineCtx.runtimeCryptoSvc,
 		engineCtx.ouProvider, engineCtx.attributeCacheService, engineCtx.authzProvider, engineCtx.resourceProvider,
-		nil, engineCtx.i18nProvider, engineCtx.idpProvider, engineCtx.dpopVerifier, engineCtx.runtimeStoreProvider,
+		engineCtx.i18nProvider, engineCtx.idpProvider, engineCtx.dpopVerifier, engineCtx.runtimeStoreProvider,
 		engineCtx.transactioner, oauthConfig)
 	if err != nil {
 		logger.Fatal(ctx, "Failed to initialize OAuth services", log.Error(err))
@@ -233,9 +236,6 @@ func validateEngineContext(ctx *engineContext) error {
 	if ctx.actorProvider == nil {
 		return errors.New("thunderidengine: actor provider is not set")
 	}
-	if ctx.authnProvider == nil {
-		return errors.New("thunderidengine: authn provider is not set")
-	}
 	if ctx.resourceProvider == nil {
 		return errors.New("thunderidengine: resource server provider is not set")
 	}
@@ -256,6 +256,9 @@ func validateEngineContext(ctx *engineContext) error {
 	}
 	if ctx.consentProvider == nil {
 		return errors.New("thunderidengine: consent provider is not set")
+	}
+	if ctx.defaultAuthnProvider == nil {
+		return errors.New("thunderidengine: default authentication provider is not set")
 	}
 	return nil
 }
@@ -298,7 +301,6 @@ type engineContext struct {
 	graphBuilder          graphbuilder.GraphBuilderInterface
 	authAssertGen         assert.AuthAssertGeneratorInterface
 	dpopVerifier          dpop.VerifierInterface
-	transactioner         transaction.Transactioner
 	flowExecService       flowexec.FlowExecServiceInterface
 	attributeCacheService attributecache.AttributeCacheServiceInterface
 
@@ -316,7 +318,8 @@ type engineContext struct {
 	logConfig              engineconfig.LogConfig
 
 	actorProvider         providers.ActorProvider
-	authnProvider         providers.AuthnProviderManager
+	defaultAuthnProvider  providers.AuthnProviderInterface
+	customAuthnProviders  map[string]providers.CustomAuthnProvider
 	resourceProvider      providers.ResourceServerProvider
 	ouProvider            providers.OrganizationUnitProvider
 	designResolveProvider providers.DesignProvider
@@ -327,7 +330,9 @@ type engineContext struct {
 	customExecutors       map[string]providers.Executor
 	observabilitySvc      providers.ObservabilityProvider
 	authzProvider         providers.AuthorizationProvider
+	attestationProvider   providers.AttestationProvider
 
+	transactioner        providers.Transactioner
 	runtimeStoreProvider providers.RuntimeStoreProvider
 }
 
@@ -395,9 +400,19 @@ func WithActorProvider(provider providers.ActorProvider) Option {
 	return func(c *engineContext) { c.actorProvider = provider }
 }
 
-// WithAuthnProvider supplies the authentication provider manager.
-func WithAuthnProvider(provider providers.AuthnProviderManager) Option {
-	return func(c *engineContext) { c.authnProvider = provider }
+// WithDefaultAuthnProvider supplies the default authentication provider.
+func WithDefaultAuthnProvider(provider providers.AuthnProviderInterface) Option {
+	return func(c *engineContext) { c.defaultAuthnProvider = provider }
+}
+
+// WithCustomAuthnProvider supplies a custom authentication provider with its associated credential keys.
+func WithCustomAuthnProvider(name string, provider providers.CustomAuthnProvider) Option {
+	return func(c *engineContext) {
+		if c.customAuthnProviders == nil {
+			c.customAuthnProviders = make(map[string]providers.CustomAuthnProvider)
+		}
+		c.customAuthnProviders[name] = provider
+	}
 }
 
 // WithResourceProvider supplies the resource provider.
@@ -467,4 +482,14 @@ func WithLogConfig(config engineconfig.LogConfig) Option {
 	return func(ctx *engineContext) {
 		ctx.logConfig = config
 	}
+}
+
+// WithAttestationProvider supplies the Attestation provider.
+func WithAttestationProvider(provider providers.AttestationProvider) Option {
+	return func(c *engineContext) { c.attestationProvider = provider }
+}
+
+// WithTransactioner supplies the Transactioner.
+func WithTransactioner(provider providers.Transactioner) Option {
+	return func(c *engineContext) { c.transactioner = provider }
 }

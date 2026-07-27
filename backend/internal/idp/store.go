@@ -28,7 +28,6 @@ import (
 	dbmodel "github.com/thunder-id/thunderid/internal/system/database/model"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -53,7 +52,7 @@ type idpStore struct {
 }
 
 // newIDPStore creates a new instance of IDPStore.
-func newIDPStore() (idpStoreInterface, transaction.Transactioner, error) {
+func newIDPStore() (idpStoreInterface, providers.Transactioner, error) {
 	dbProvider := getDBProvider()
 	client, err := dbProvider.GetConfigDBClient()
 	if err != nil {

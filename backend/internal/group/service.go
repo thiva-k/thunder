@@ -37,7 +37,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/internal/system/sysauthz"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -76,7 +75,7 @@ type groupService struct {
 	ouService          oupkg.OrganizationUnitServiceInterface
 	entityService      entity.EntityServiceInterface
 	entityTypeService  entitytype.EntityTypeServiceInterface
-	transactioner      transaction.Transactioner
+	transactioner      providers.Transactioner
 	authzService       sysauthz.SystemAuthorizationServiceInterface
 	dependencyRegistry resourcedependency.Registry
 }
@@ -88,7 +87,7 @@ func newGroupServiceWithStore(
 	entityService entity.EntityServiceInterface,
 	entityTypeService entitytype.EntityTypeServiceInterface,
 	authzService sysauthz.SystemAuthorizationServiceInterface,
-	transactioner transaction.Transactioner,
+	transactioner providers.Transactioner,
 ) GroupServiceInterface {
 	return &groupService{
 		groupStore:        store,

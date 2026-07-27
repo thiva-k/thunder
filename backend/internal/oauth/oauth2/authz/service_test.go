@@ -24,6 +24,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -40,6 +41,7 @@ import (
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	oauth2model "github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
@@ -48,6 +50,8 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/flow/flowexecmock"
 	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
 	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
+	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/revocationmock"
+	"github.com/thunder-id/thunderid/tests/mocks/resourcemock"
 )
 
 func authorizeServiceCfgFromRuntime() oauthconfig.Config {
@@ -103,6 +107,7 @@ type AuthorizeServiceTestSuite struct {
 	mockAuthReqStore    *authorizationRequestStoreInterfaceMock
 	mockFlowExecService *flowexecmock.FlowExecServiceInterfaceMock
 	mockValidator       *AuthorizationValidatorInterfaceMock
+	mockResourceService *resourcemock.ResourceServiceInterfaceMock
 }
 
 func TestAuthorizeServiceTestSuite(t *testing.T) {
@@ -141,13 +146,24 @@ func (suite *AuthorizeServiceTestSuite) SetupTest() {
 	suite.mockAuthReqStore = newAuthorizationRequestStoreInterfaceMock(suite.T())
 	suite.mockFlowExecService = flowexecmock.NewFlowExecServiceInterfaceMock(suite.T())
 	suite.mockValidator = NewAuthorizationValidatorInterfaceMock(suite.T())
+	suite.mockResourceService = resourcemock.NewResourceServiceInterfaceMock(suite.T())
+
+	// Default resolution path: permission-bearing requests without an explicit resource resolve the
+	// configured default resource server via the empty identifier. Declared optional so tests that
+	// never reach flow initiation (or that exercise resource-binding specifics) are unaffected.
+	suite.mockResourceService.EXPECT().GetResourceServerByIdentifier(mock.Anything, "").
+		Return(&providers.ResourceServer{ID: "rs-default", Identifier: "https://rs-default.example.com"}, nil).Maybe()
+	suite.mockResourceService.EXPECT().ValidatePermissions(mock.Anything, "rs-default", mock.Anything).
+		Return([]string{}, nil).Maybe()
 }
 
 // newService builds an authorizeService with all mocked dependencies.
 func (suite *AuthorizeServiceTestSuite) newService() *authorizeService {
+	inboundClient := actorprovider.Initialize(suite.mockInboundClient, suite.mockEntityProvider, noopAuthnMgr(), nil)
 	return &authorizeService{
 		cfg:             authorizeServiceCfgFromRuntime(),
-		inboundClient:   actorprovider.Initialize(suite.mockInboundClient, suite.mockEntityProvider, noopAuthnMgr()),
+		inboundClient:   inboundClient,
+		resourceService: suite.mockResourceService,
 		authZValidator:  suite.mockValidator,
 		authCodeStore:   suite.mockAuthzCodeStore,
 		authReqStore:    suite.mockAuthReqStore,
@@ -337,6 +353,99 @@ func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_Su
 	assert.Equal(suite.T(), testAuthID, result.QueryParams[oauth2const.AuthID])
 	assert.Equal(suite.T(), "test-app-id", result.QueryParams[oauth2const.AppID])
 	assert.Equal(suite.T(), "test-flow-id", result.QueryParams[oauth2const.ExecutionID])
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_ExplicitResourceSetsRuntimeRSID() {
+	app := suite.testApp()
+	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
+	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
+		Return(false, "", "")
+	suite.mockResourceService.EXPECT().GetResourceServerByIdentifier(mock.Anything, "https://api.example.com").
+		Return(&providers.ResourceServer{ID: "rs-api", Identifier: "https://api.example.com"}, nil)
+	suite.mockResourceService.EXPECT().ValidatePermissions(mock.Anything, "rs-api", mock.Anything).
+		Return([]string{}, nil)
+
+	var captured *flowexec.FlowInitContext
+	suite.mockFlowExecService.EXPECT().InitiateFlow(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, ic *flowexec.FlowInitContext) { captured = ic }).
+		Return("test-flow-id", nil)
+	suite.mockAuthReqStore.EXPECT().AddRequest(mock.Anything, mock.Anything).Return(testAuthID, nil)
+
+	msg := suite.testMsg()
+	msg.Resources = []string{"https://api.example.com"}
+
+	svc := suite.newService()
+	_, authErr := svc.HandleInitialAuthorizationRequest(context.Background(), msg)
+
+	suite.Require().Nil(authErr)
+	suite.Require().NotNil(captured)
+	assert.Equal(suite.T(), "https://api.example.com", captured.RuntimeData[flowcm.RuntimeKeyResourceServerIdentifier])
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_DefaultResourceServerFallback() {
+	app := suite.testApp()
+	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
+	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
+		Return(false, "", "")
+
+	var captured *flowexec.FlowInitContext
+	suite.mockFlowExecService.EXPECT().InitiateFlow(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, ic *flowexec.FlowInitContext) { captured = ic }).
+		Return("test-flow-id", nil)
+	suite.mockAuthReqStore.EXPECT().AddRequest(mock.Anything, mock.Anything).Return(testAuthID, nil)
+
+	// No resource supplied; resolves the default resource server stubbed in SetupTest.
+	svc := suite.newService()
+	_, authErr := svc.HandleInitialAuthorizationRequest(context.Background(), suite.testMsg())
+
+	suite.Require().Nil(authErr)
+	suite.Require().NotNil(captured)
+	assert.Equal(suite.T(), "https://rs-default.example.com",
+		captured.RuntimeData[flowcm.RuntimeKeyResourceServerIdentifier])
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_NoResourceNoDefaultRejects() {
+	app := suite.testApp()
+	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
+	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
+		Return(false, "", "")
+
+	// No default resource server configured; resolving the empty identifier fails, so the
+	// permission-bearing request cannot bind and is rejected with invalid_target.
+	rs := resourcemock.NewResourceServiceInterfaceMock(suite.T())
+	rs.EXPECT().GetResourceServerByIdentifier(mock.Anything, "").
+		Return(nil, &tidcommon.ServiceError{Type: tidcommon.ClientErrorType, Code: "RES-1003"})
+
+	svc := suite.newService()
+	svc.resourceService = rs
+
+	_, authErr := svc.HandleInitialAuthorizationRequest(context.Background(), suite.testMsg())
+
+	suite.Require().NotNil(authErr)
+	assert.Equal(suite.T(), oauth2const.ErrorInvalidTarget, authErr.Code)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_OIDCOnlyLeavesRSIDEmpty() {
+	app := suite.testApp()
+	suite.mockInboundClient.EXPECT().GetOAuthClientByClientID(mock.Anything, "test-client-id").Return(app, nil)
+	suite.mockValidator.On("validateInitialAuthorizationRequest", mock.Anything, mock.Anything, app).
+		Return(false, "", "")
+
+	var captured *flowexec.FlowInitContext
+	suite.mockFlowExecService.EXPECT().InitiateFlow(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, ic *flowexec.FlowInitContext) { captured = ic }).
+		Return("test-flow-id", nil)
+	suite.mockAuthReqStore.EXPECT().AddRequest(mock.Anything, mock.Anything).Return(testAuthID, nil)
+
+	msg := suite.testMsg()
+	msg.RequestQueryParams["scope"] = []string{"openid profile"}
+
+	svc := suite.newService()
+	_, authErr := svc.HandleInitialAuthorizationRequest(context.Background(), msg)
+
+	suite.Require().Nil(authErr)
+	suite.Require().NotNil(captured)
+	assert.Empty(suite.T(), captured.RuntimeData[flowcm.RuntimeKeyResourceServerIdentifier])
 }
 
 func (suite *AuthorizeServiceTestSuite) TestHandleInitialAuthorizationRequest_FiltersOIDCScopesByAppScopes() {
@@ -857,6 +966,62 @@ func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_AlreadyC
 
 	assert.Nil(suite.T(), result)
 	assert.ErrorIs(suite.T(), err, errAuthorizationCodeAlreadyConsumed)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_ReplayRevokesTokenFamily() {
+	// A replay of an already-consumed code: the code is gone from the store, but the replay marker
+	// written at first redemption still carries the grant's tfid, so the whole family is revoked.
+	suite.mockAuthzCodeStore.EXPECT().GetAuthorizationCode(mock.Anything, "code").
+		Return(nil, errAuthorizationCodeNotFound)
+	suite.mockAuthzCodeStore.EXPECT().ConsumedTokenFamily(mock.Anything, "code").
+		Return("tfid-replay", true, nil)
+
+	revoker := revocationmock.NewCriteriaRevokerInterfaceMock(suite.T())
+	revoker.EXPECT().RevokeTokenFamily(mock.Anything, "tfid-replay", revocation.RevocationReasonCodeReplay).
+		Return(nil)
+
+	svc := suite.newService()
+	svc.criteriaRevoker = revoker
+	svc.cfg.OAuth.Revocation.TokenFamily.OnCodeReplay = true
+
+	result, err := svc.GetAuthorizationCodeDetails(context.Background(), "client-id", "code")
+
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, errAuthorizationCodeNotFound)
+	revoker.AssertExpectations(suite.T())
+}
+
+func (suite *AuthorizeServiceTestSuite) TestCreateAuthorizationCode_MintsFallbackTokenFamilyID() {
+	// A non-SSO flow issues no token family id, so the code must mint one to anchor a revocable family.
+	authCtx := &authRequestContext{
+		OAuthParameters: oauth2model.OAuthParameters{
+			ClientID:    "test-client",
+			RedirectURI: "https://client.example.com/callback",
+		},
+	}
+	claims := &assertionClaims{userID: "user-1"}
+
+	code, err := createAuthorizationCode(authorizeServiceCfgFromRuntime(), authCtx, claims, time.Now())
+
+	assert.NoError(suite.T(), err)
+	assert.NotEmpty(suite.T(), code.TokenFamilyID)
+}
+
+func (suite *AuthorizeServiceTestSuite) TestCreateAuthorizationCode_PreservesIncomingTokenFamilyID() {
+	// An SSO flow already minted the tfid at the session node; the code must carry that same value so
+	// its session-participant linkage stays consistent.
+	authCtx := &authRequestContext{
+		OAuthParameters: oauth2model.OAuthParameters{
+			ClientID:    "test-client",
+			RedirectURI: "https://client.example.com/callback",
+		},
+	}
+	claims := &assertionClaims{userID: "user-1", tokenFamilyID: "tfid-from-sso"}
+
+	code, err := createAuthorizationCode(authorizeServiceCfgFromRuntime(), authCtx, claims, time.Now())
+
+	assert.NoError(suite.T(), err)
+	assert.Equal(suite.T(), "tfid-from-sso", code.TokenFamilyID)
 }
 
 func (suite *AuthorizeServiceTestSuite) TestGetAuthorizationCodeDetails_Success() {

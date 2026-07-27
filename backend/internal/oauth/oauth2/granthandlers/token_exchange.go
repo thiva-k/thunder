@@ -23,6 +23,7 @@ import (
 	"errors"
 	"slices"
 
+	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
@@ -30,19 +31,18 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	oauth2utils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
-	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // tokenExchangeGrantHandler handles the token exchange grant type.
 type tokenExchangeGrantHandler struct {
-	tokenBuilder        tokenservice.TokenBuilderInterface
-	tokenValidator      tokenservice.TokenValidatorInterface
-	authzService        providers.AuthorizationProvider
-	actorProvider       providers.ActorProvider
-	resourceService     providers.ResourceServerProvider
-	serverConfigService serverconfig.ServerConfigService
+	tokenBuilder    tokenservice.TokenBuilderInterface
+	tokenValidator  tokenservice.TokenValidatorInterface
+	authzService    providers.AuthorizationProvider
+	actorProvider   providers.ActorProvider
+	resourceService providers.ResourceServerProvider
+	cfg             oauthconfig.Config
 }
 
 // newTokenExchangeGrantHandler creates a new instance of tokenExchangeGrantHandler.
@@ -52,15 +52,15 @@ func newTokenExchangeGrantHandler(
 	authzService providers.AuthorizationProvider,
 	actorProvider providers.ActorProvider,
 	resourceService providers.ResourceServerProvider,
-	serverConfigService serverconfig.ServerConfigService,
+	cfg oauthconfig.Config,
 ) GrantHandlerInterface {
 	return &tokenExchangeGrantHandler{
-		tokenBuilder:        tokenBuilder,
-		tokenValidator:      tokenValidator,
-		authzService:        authzService,
-		actorProvider:       actorProvider,
-		resourceService:     resourceService,
-		serverConfigService: serverConfigService,
+		tokenBuilder:    tokenBuilder,
+		tokenValidator:  tokenValidator,
+		authzService:    authzService,
+		actorProvider:   actorProvider,
+		resourceService: resourceService,
+		cfg:             cfg,
 	}
 }
 
@@ -174,15 +174,33 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 	subjectClaims, err := h.tokenValidator.ValidateSubjectToken(ctx, tokenRequest.SubjectToken, oauthApp)
 	if err != nil {
 		logger.Debug(ctx, "Failed to validate subject token", log.Error(err))
-		if errors.Is(err, revocation.ErrEnforcementUnavailable) {
+		switch {
+		case errors.Is(err, revocation.ErrEnforcementUnavailable):
 			return nil, &model.ErrorResponse{
 				Error:            constants.ErrorServerError,
 				ErrorDescription: "Token revocation status could not be verified",
 			}
-		}
-		return nil, &model.ErrorResponse{
-			Error:            constants.ErrorInvalidRequest,
-			ErrorDescription: "Invalid subject_token",
+		case errors.Is(err, tokenservice.ErrTokenExpired):
+			return nil, &model.ErrorResponse{
+				Error:            constants.ErrorInvalidRequest,
+				ErrorDescription: "The subject_token has expired",
+			}
+		case errors.Is(err, tokenservice.ErrIssuerNotTrusted):
+			return nil, &model.ErrorResponse{
+				Error:            constants.ErrorInvalidRequest,
+				ErrorDescription: "The subject_token issuer is not registered as a trusted token exchange issuer",
+			}
+		case errors.Is(err, tokenservice.ErrAudienceNotAccepted):
+			return nil, &model.ErrorResponse{
+				Error: constants.ErrorInvalidRequest,
+				ErrorDescription: "The subject_token audience does not contain this server's issuer or the " +
+					"trusted token audience configured for its issuer",
+			}
+		default:
+			return nil, &model.ErrorResponse{
+				Error:            constants.ErrorInvalidRequest,
+				ErrorDescription: "Invalid subject_token",
+			}
 		}
 	}
 
@@ -198,15 +216,34 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 		actorClaims, err = h.tokenValidator.ValidateSubjectToken(ctx, tokenRequest.ActorToken, oauthApp)
 		if err != nil {
 			logger.Debug(ctx, "Failed to validate actor token", log.Error(err))
-			if errors.Is(err, revocation.ErrEnforcementUnavailable) {
+			// Attribute the actor_token rejection the same way as the subject_token above.
+			switch {
+			case errors.Is(err, revocation.ErrEnforcementUnavailable):
 				return nil, &model.ErrorResponse{
 					Error:            constants.ErrorServerError,
 					ErrorDescription: "Token revocation status could not be verified",
 				}
-			}
-			return nil, &model.ErrorResponse{
-				Error:            constants.ErrorInvalidRequest,
-				ErrorDescription: "Invalid actor_token",
+			case errors.Is(err, tokenservice.ErrTokenExpired):
+				return nil, &model.ErrorResponse{
+					Error:            constants.ErrorInvalidRequest,
+					ErrorDescription: "The actor_token has expired",
+				}
+			case errors.Is(err, tokenservice.ErrIssuerNotTrusted):
+				return nil, &model.ErrorResponse{
+					Error:            constants.ErrorInvalidRequest,
+					ErrorDescription: "The actor_token issuer is not registered as a trusted token exchange issuer",
+				}
+			case errors.Is(err, tokenservice.ErrAudienceNotAccepted):
+				return nil, &model.ErrorResponse{
+					Error: constants.ErrorInvalidRequest,
+					ErrorDescription: "The actor_token audience does not contain this server's issuer or the " +
+						"trusted token audience configured for its issuer",
+				}
+			default:
+				return nil, &model.ErrorResponse{
+					Error:            constants.ErrorInvalidRequest,
+					ErrorDescription: "Invalid actor_token",
+				}
 			}
 		}
 	}
@@ -228,7 +265,7 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 	// and carries no resource is not bound to a resource server: its audience is the app's configured
 	// default audiences, falling back to the client_id.
 	targetRS, resErr := resourceindicators.ResolveAudienceBinding(
-		ctx, h.resourceService, h.serverConfigService, tokenRequest.Resources, permissionScopes)
+		ctx, h.resourceService, tokenRequest.Resources, permissionScopes)
 	if resErr != nil {
 		return nil, resErr
 	}
@@ -255,6 +292,19 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 		finalAudiences = []string{targetRS.Identifier}
 	}
 
+	// Resolve how the exchanged token relates to the subject token's revocation family: inherit joins
+	// the subject's family (both revoked together); none (the default, and the empty value) issues an
+	// independent token with no tfid. An unrecognized value is treated as none and surfaced.
+	var exchangedTokenFamilyID string
+	switch h.cfg.OAuth.TokenExchange.TokenFamily {
+	case constants.TokenExchangeTokenFamilyInherit:
+		exchangedTokenFamilyID = subjectClaims.TokenFamilyID
+	case constants.TokenExchangeTokenFamilyNone, "":
+	default:
+		logger.Warn(ctx, "Unrecognized oauth.token_exchange.token_family mode; issuing an independent token",
+			log.String("mode", h.cfg.OAuth.TokenExchange.TokenFamily))
+	}
+
 	// Build access token using token builder
 	userSubConfig := oauthApp.UserAccessTokenConfig()
 	accessToken, err := h.tokenBuilder.BuildAccessToken(ctx, &tokenservice.AccessTokenBuildContext{
@@ -268,6 +318,7 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 		ActorClaims:       actorClaims,
 		ValidityPeriod:    userSubConfig.ValidityPeriodOrZero(),
 		DPoPJkt:           dpop.GetJkt(ctx),
+		TokenFamilyID:     exchangedTokenFamilyID,
 	})
 	if err != nil {
 		logger.Error(ctx, "Failed to generate token", log.Error(err))

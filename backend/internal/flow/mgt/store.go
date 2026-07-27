@@ -29,7 +29,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/log"
-	"github.com/thunder-id/thunderid/internal/system/transaction"
 )
 
 // Database column names
@@ -78,7 +77,7 @@ type flowStore struct {
 }
 
 // newFlowStore creates a new instance of flowStore.
-func newFlowStore() (flowStoreInterface, transaction.Transactioner, error) {
+func newFlowStore() (flowStoreInterface, providers.Transactioner, error) {
 	dbProvider := getDBProvider()
 	transactioner, err := dbProvider.GetConfigDBTransactioner()
 	if err != nil {

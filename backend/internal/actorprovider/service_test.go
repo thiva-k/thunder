@@ -35,6 +35,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/authnprovider/managermock"
 	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
+	"github.com/thunder-id/thunderid/tests/mocks/rolemock"
 )
 
 type ActorProviderTestSuite struct {
@@ -42,6 +43,7 @@ type ActorProviderTestSuite struct {
 	mockInbound *inboundclientmock.InboundClientServiceInterfaceMock
 	mockEntity  *entityprovidermock.EntityProviderInterfaceMock
 	mockAuthn   *managermock.AuthnProviderManagerMock
+	mockRole    *rolemock.RoleServiceInterfaceMock
 	provider    providers.ActorProvider
 }
 
@@ -53,7 +55,8 @@ func (s *ActorProviderTestSuite) SetupTest() {
 	s.mockInbound = inboundclientmock.NewInboundClientServiceInterfaceMock(s.T())
 	s.mockEntity = entityprovidermock.NewEntityProviderInterfaceMock(s.T())
 	s.mockAuthn = managermock.NewAuthnProviderManagerMock(s.T())
-	s.provider = Initialize(s.mockInbound, s.mockEntity, s.mockAuthn)
+	s.mockRole = rolemock.NewRoleServiceInterfaceMock(s.T())
+	s.provider = Initialize(s.mockInbound, s.mockEntity, s.mockAuthn, s.mockRole)
 }
 
 func (s *ActorProviderTestSuite) TestGetOAuthClientByClientID_Delegates() {
@@ -163,4 +166,38 @@ func (s *ActorProviderTestSuite) TestGetActorGroups_Delegates() {
 
 	s.Nil(err)
 	s.Equal(expected, groups)
+}
+
+func (s *ActorProviderTestSuite) TestGetActorRoles_Delegates() {
+	expected := []string{"admin", "editor"}
+	groupIDs := []string{"group-1"}
+	s.mockRole.On("GetUserRoles", mock.Anything, "app-1", groupIDs).
+		Return(expected, (*tidcommon.ServiceError)(nil))
+
+	roles, err := s.provider.GetActorRoles("app-1", groupIDs)
+
+	s.Nil(err)
+	s.Equal(expected, roles)
+}
+
+func (s *ActorProviderTestSuite) TestGetActorRoles_PropagatesError() {
+	svcErr := &tidcommon.ServiceError{
+		Code:  "ROLE-0001",
+		Error: tidcommon.I18nMessage{Key: "error.test.role", DefaultValue: "role lookup failed"},
+	}
+	s.mockRole.On("GetUserRoles", mock.Anything, "app-1", []string{"group-1"}).Return(nil, svcErr)
+
+	roles, err := s.provider.GetActorRoles("app-1", []string{"group-1"})
+
+	s.Nil(roles)
+	s.Equal(svcErr, err)
+}
+
+func (s *ActorProviderTestSuite) TestGetActorRoles_NilRoleService_ReturnsNil() {
+	provider := Initialize(s.mockInbound, s.mockEntity, s.mockAuthn, nil)
+
+	roles, err := provider.GetActorRoles("app-1", []string{"group-1"})
+
+	s.Nil(err)
+	s.Nil(roles)
 }
