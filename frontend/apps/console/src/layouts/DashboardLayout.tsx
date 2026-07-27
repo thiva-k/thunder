@@ -29,6 +29,7 @@ import {
   Footer,
   Header,
   Sidebar,
+  useAppShell,
   useSidebar,
   UserMenu,
 } from '@wso2/oxygen-ui';
@@ -126,6 +127,31 @@ export interface DashboardLayoutProps {
    * pages need the full screen width (e.g. the flow builder canvas).
    */
   collapseSidebar?: boolean;
+}
+
+/**
+ * Applies a route's sidebar preference to the shell.
+ *
+ * The preference is applied when it changes rather than being bound to the sidebar,
+ * so builder routes still start collapsed while the header toggle stays free to
+ * collapse and expand it afterwards.
+ */
+function SidebarPreference({collapsed}: {collapsed: boolean}): null {
+  const {actions} = useAppShell();
+  const {collapseSidebar, expandSidebar} = actions;
+
+  useEffect(() => {
+    if (collapsed) {
+      collapseSidebar();
+    } else {
+      expandSidebar();
+    }
+    // Runs on the route's preference only: re-running whenever the shell actions are
+    // re-created would undo a manual toggle on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [collapsed]);
+
+  return null;
 }
 
 export default function DashboardLayout({collapseSidebar = false}: DashboardLayoutProps): ReactNode {
@@ -339,7 +365,11 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
   }, [appRoutes, activeItem]);
 
   return (
-    <AppShell>
+    // `collapseSidebar` seeds AppShell's own state rather than force-controlling the
+    // Sidebar. Passing `collapsed` to the Sidebar would override the shell's state and
+    // leave the header toggle with nothing to drive.
+    <AppShell initialCollapsed={collapseSidebar}>
+      <SidebarPreference collapsed={collapseSidebar} />
       <AppShell.Navbar>
         <Header>
           <Header.Toggle />
@@ -389,12 +419,7 @@ export default function DashboardLayout({collapseSidebar = false}: DashboardLayo
       </AppShell.Navbar>
 
       <AppShell.Sidebar>
-        <Sidebar
-          activeItem={activeItem}
-          expandedMenus={expandedMenus}
-          onToggleExpand={handleToggleExpand}
-          collapsed={collapseSidebar}
-        >
+        <Sidebar activeItem={activeItem} expandedMenus={expandedMenus} onToggleExpand={handleToggleExpand}>
           <Sidebar.Nav>
             {appRoutes.map((categoryGroup) => (
               <Sidebar.Category key={categoryGroup.category}>

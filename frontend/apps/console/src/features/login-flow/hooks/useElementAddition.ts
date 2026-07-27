@@ -43,8 +43,33 @@ export interface UseElementAdditionProps {
 export interface UseElementAdditionReturn {
   /** Add an element to a view from the context menu. */
   handleAddElementToView: (element: Element, viewId: string) => void;
-  /** Add an element to a form from the context menu. */
-  handleAddElementToForm: (element: Element, formId: string) => void;
+  /** Add an element to a container (form or stack) from the context menu. */
+  handleAddElementToForm: (element: Element, containerId: string) => void;
+}
+
+/**
+ * Whether the component tree holds a container with the given id. Containers can be
+ * nested (a stack inside a form), so the search walks the whole tree.
+ */
+function containsComponent(components: Element[], containerId: string): boolean {
+  return components.some(
+    (component: Element) => component.id === containerId || containsComponent(component.components ?? [], containerId),
+  );
+}
+
+/**
+ * Appends an element to the container with the given id, at any nesting depth.
+ */
+function appendToComponent(components: Element[], containerId: string, element: Element): Element[] {
+  return components.map((component: Element) => {
+    if (component.id === containerId) {
+      return {...component, components: [...(component.components ?? []), element]};
+    }
+    if (component.components) {
+      return {...component, components: appendToComponent(component.components, containerId, element)};
+    }
+    return component;
+  });
 }
 
 /**
@@ -177,13 +202,12 @@ const useElementAddition = (props: UseElementAdditionProps): UseElementAdditionR
       let viewStepId: string | null = null;
 
       setNodes((prevNodes: Node[]) => {
-        // Find the View node that contains the form with the given formId
+        // Find the View node that contains the target container. Containers nest
+        // (a stack inside a form), so both the lookup and the insert recurse.
         const existingViewStep = prevNodes.find((node) => {
           if (node.type !== StepTypes.View) return false;
           const nodeData = node.data as {components?: Element[]} | undefined;
-          const components = nodeData?.components ?? [];
-          // Check if this view contains the form with the given formId
-          return components.some((component: Element) => component.id === formId && component.type === BlockTypes.Form);
+          return containsComponent(nodeData?.components ?? [], formId);
         });
 
         if (!existingViewStep) {
@@ -197,16 +221,8 @@ const useElementAddition = (props: UseElementAdditionProps): UseElementAdditionR
             const nodeData = node.data as {components?: Element[]} | undefined;
             const existingComponents: Element[] = cloneDeep(nodeData?.components ?? []);
 
-            // Find the form and add the element to it
-            const updatedComponents = existingComponents.map((component: Element) => {
-              if (component.id === formId && component.type === BlockTypes.Form) {
-                return {
-                  ...component,
-                  components: [...(component.components ?? []), generatedElement],
-                };
-              }
-              return component;
-            });
+            // Find the container and add the element to it
+            const updatedComponents = appendToComponent(existingComponents, formId, generatedElement);
 
             return {
               ...node,

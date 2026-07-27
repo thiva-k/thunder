@@ -17,11 +17,13 @@
  */
 
 import {CollisionPriority} from '@dnd-kit/abstract';
-import {Badge, Box, Typography} from '@wso2/oxygen-ui';
+import {Badge, Box, Button, Menu, MenuItem, Typography} from '@wso2/oxygen-ui';
+import {PlusIcon} from '@wso2/oxygen-ui-icons-react';
 import classNames from 'classnames';
-import {useMemo, type ReactElement} from 'react';
+import {useMemo, useState, type MouseEvent, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
 import Droppable from '../../../dnd/Droppable';
+import dashedAddButtonSx from '../../steps/view/dashedAddButtonSx';
 import ReorderableFlowElement from '../../steps/view/ReorderableElement';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import useFlowPlugins from '@/features/flows/hooks/useFlowPlugins';
@@ -72,6 +74,13 @@ function FormAdapter({
 }: FormAdapterPropsInterface): ReactElement {
   const {t} = useTranslation();
   const {emitElementFilter} = useFlowPlugins();
+  const [addAnchorEl, setAddAnchorEl] = useState<null | HTMLElement>(null);
+
+  const addableElements: FlowElement[] = availableElements.filter(
+    (element: FlowElement) =>
+      VisualFlowConstants.FLOW_BUILDER_FORM_ALLOWED_RESOURCE_TYPES.includes(element.type) &&
+      element.display?.showOnResourcePanel !== false,
+  );
 
   const hasInputFields = resource?.components?.some(
     (element: FlowElement) =>
@@ -125,6 +134,46 @@ function FormAdapter({
             />
           ))}
         </Droppable>
+        {/* Rendered inside the form outline so the container encloses its own add
+            affordance, the same way a stack does. */}
+        {addableElements.length > 0 && (
+          <Box sx={{px: 2, pb: 2}}>
+            <Button
+              fullWidth
+              size="small"
+              className="nodrag"
+              data-testid="form-add-field-button"
+              startIcon={<PlusIcon size={15} />}
+              onClick={(event: MouseEvent<HTMLElement>) => {
+                event.stopPropagation();
+                setAddAnchorEl(event.currentTarget);
+              }}
+              sx={dashedAddButtonSx}
+            >
+              {t('flows:core.steps.view.addField', 'Add Field')}
+            </Button>
+          </Box>
+        )}
+        <Menu
+          anchorEl={addAnchorEl}
+          open={Boolean(addAnchorEl)}
+          onClose={() => setAddAnchorEl(null)}
+          anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
+          transformOrigin={{vertical: 'top', horizontal: 'right'}}
+        >
+          {addableElements.map((element: FlowElement) => (
+            <MenuItem
+              key={`${element.type}-${element.id}`}
+              onClick={() => {
+                setAddAnchorEl(null);
+                onAddElementToForm?.(element, resource.id);
+              }}
+              sx={{minWidth: 200}}
+            >
+              {element.display?.label ?? element.type}
+            </MenuItem>
+          ))}
+        </Menu>
       </Box>
     </Badge>
   );

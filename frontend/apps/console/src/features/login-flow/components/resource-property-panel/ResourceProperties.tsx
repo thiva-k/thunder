@@ -27,8 +27,10 @@ import RulesProperties from './nodes/RulesProperties';
 import ResourcePropertyFactory from './ResourcePropertyFactory';
 import ClassesPropertyField from '@/features/flows/components/resource-property-panel/ClassesPropertyField';
 import ColorSelect from '@/features/flows/components/resource-property-panel/ColorSelect';
+import PropertySection from '@/features/flows/components/resource-property-panel/PropertySection';
 import TextPropertyField from '@/features/flows/components/resource-property-panel/TextPropertyField';
 import VariantSelect from '@/features/flows/components/resource-property-panel/VariantSelect';
+import ResourcePropertyPanelConstants from '@/features/flows/constants/ResourcePropertyPanelConstants';
 import type {ResourcePropertiesProps} from '@/features/flows/context/FlowBuilderCoreProvider';
 import type {FieldKey, FieldValue} from '@/features/flows/models/base';
 import {ElementCategories, ElementTypes, type Element} from '@/features/flows/models/elements';
@@ -78,41 +80,72 @@ function ResourceProperties({
     return resource.variants.find((v: Element) => v.variant === (resource as Element).variant) as Element | undefined;
   }, [resource]);
 
-  const renderElementId = (): ReactElement => (
-    <ResourcePropertyFactory
-      key={`${resource.id}-$id`}
-      resource={resource}
-      propertyKey="id"
-      propertyValue={resource.id}
-      onChange={handleChange}
-    />
+  const renderElementId = (withClasses = false): ReactElement => (
+    <PropertySection key={`${resource.id}-general`} title={sectionTitle('General')}>
+      <ResourcePropertyFactory
+        key={`${resource.id}-$id`}
+        resource={resource}
+        propertyKey="id"
+        propertyValue={resource.id}
+        onChange={handleChange}
+      />
+      {withClasses && (
+        <ClassesPropertyField
+          key={`${resource.id}-$classes`}
+          resource={resource}
+          propertyKey="classes"
+          propertyValue={(resource as Element & {classes?: string}).classes ?? ''}
+          onChange={handleChange}
+        />
+      )}
+    </PropertySection>
   );
 
-  const renderElementClasses = (): ReactElement => (
-    <ClassesPropertyField
-      key={`${resource.id}-$classes`}
+  const sectionTitle = (title: string): string =>
+    t(`flows:core.propertiesPanel.sections.${title.toLowerCase()}`, title);
+
+  const renderProperty = ([key, value]: [FieldKey, FieldValue]): ReactElement => (
+    <ResourcePropertyFactory
+      key={`${resource.id}-${key}`}
       resource={resource}
-      propertyKey="classes"
-      propertyValue={(resource as Element & {classes?: string}).classes ?? ''}
+      propertyKey={key}
+      propertyValue={value}
+      data-componentid={`${resource.id}-${key}`}
       onChange={handleChange}
     />
   );
 
   const renderElementPropertyFactory = () => {
+    const entries: [FieldKey, FieldValue][] = properties ? Object.entries(properties) : [];
+    const grouped: string[] = ResourcePropertyPanelConstants.PROPERTY_SECTIONS.flatMap((section) => section.keys);
+    const ungrouped: [FieldKey, FieldValue][] = entries.filter(([key]) => !grouped.includes(key));
+
     return (
       <>
-        <VariantSelect resource={resource} selectedVariant={selectedVariant} onVariantChange={onVariantChange} />
-        {properties &&
-          Object.entries(properties)?.map(([key, value]: [FieldKey, FieldValue]) => (
-            <ResourcePropertyFactory
-              key={`${resource.id}-${key}`}
-              resource={resource}
-              propertyKey={key}
-              propertyValue={value}
-              data-componentid={`${resource.id}-${key}`}
-              onChange={handleChange}
-            />
-          ))}
+        {ResourcePropertyPanelConstants.PROPERTY_SECTIONS.map((section) => {
+          const sectionEntries: [FieldKey, FieldValue][] = entries.filter(([key]) => section.keys.includes(key));
+          // The variant picker is an appearance control, but it renders nothing when
+          // the element has no variants. An empty heading would be worse than none.
+          const showVariant: boolean = section.title === 'Appearance' && (resource.variants?.length ?? 0) > 0;
+          if (sectionEntries.length === 0 && !showVariant) {
+            return null;
+          }
+          return (
+            <PropertySection key={section.title} title={sectionTitle(section.title)}>
+              {showVariant && (
+                <VariantSelect
+                  resource={resource}
+                  selectedVariant={selectedVariant}
+                  onVariantChange={onVariantChange}
+                />
+              )}
+              {sectionEntries.map(renderProperty)}
+            </PropertySection>
+          );
+        })}
+        {ungrouped.length > 0 && (
+          <PropertySection title={sectionTitle('Other')}>{ungrouped.map(renderProperty)}</PropertySection>
+        )}
       </>
     );
   };
@@ -132,8 +165,7 @@ function ResourceProperties({
     case ElementCategories.Field:
       return (
         <>
-          {renderElementId()}
-          {renderElementClasses()}
+          {renderElementId(true)}
           <FieldExtendedProperties resource={resource} onChange={handleChange} />
           {renderElementPropertyFactory()}
         </>
@@ -141,8 +173,7 @@ function ResourceProperties({
     case ElementCategories.Action:
       return (
         <>
-          {renderElementId()}
-          {renderElementClasses()}
+          {renderElementId(true)}
           {resource.type === ElementTypes.Action && (
             <ButtonExtendedProperties resource={resource} onChange={handleChange} onVariantChange={onVariantChange} />
           )}
@@ -179,8 +210,7 @@ function ResourceProperties({
       if (resource.type === ElementTypes.Text) {
         return (
           <>
-            {renderElementId()}
-            {renderElementClasses()}
+            {renderElementId(true)}
             <TextPropertyField
               resource={resource}
               propertyKey="label"
@@ -213,8 +243,7 @@ function ResourceProperties({
       if (resource.type === ElementTypes.Image) {
         return (
           <>
-            {renderElementId()}
-            {renderElementClasses()}
+            {renderElementId(true)}
             <TextPropertyField
               resource={resource}
               propertyKey="src"
@@ -244,8 +273,7 @@ function ResourceProperties({
       }
       return (
         <>
-          {renderElementId()}
-          {renderElementClasses()}
+          {renderElementId(true)}
           {renderElementPropertyFactory()}
         </>
       );
@@ -253,8 +281,7 @@ function ResourceProperties({
     default:
       return (
         <>
-          {renderElementId()}
-          {renderElementClasses()}
+          {renderElementId(true)}
           {renderElementPropertyFactory()}
         </>
       );
