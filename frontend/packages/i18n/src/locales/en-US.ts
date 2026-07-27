@@ -1171,11 +1171,11 @@ const translations = {
     'edit.flows.allowedUserTypes.placeholder': 'Select or add user types',
     'edit.flows.allowedUserTypes.hint': 'Only these user types can authenticate or register through this agent.',
     'edit.flows.allowedUserTypes.required': 'Select at least one user type that can sign in through this agent.',
-    'edit.flows.delegationToggle.label': 'Delegated mode',
     'edit.flows.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode above to unlock and start using them.',
+      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
 
     // Edit page - Advanced tab
+    'edit.advanced.delegationToggle.label': 'Delegated mode',
     'edit.advanced.redirectUris.title': 'Authorized redirect URIs',
     'edit.advanced.redirectUris.description': 'For use with requests from a web server',
     'edit.advanced.redirectUris.empty': 'No redirect URIs configured.',
@@ -1187,7 +1187,7 @@ const translations = {
     'edit.advanced.oauthAccess.description': 'The grants and redirect URIs this agent is authorized to use.',
     'edit.advanced.oauthAccess.grantTypes.label': 'Grant Types',
     'edit.advanced.oauthAccess.grantTypes.hint':
-      'The greyed-out grants unlock once you turn on Delegated mode in the Flows tab.',
+      'The greyed-out grants unlock once you turn on Delegated mode at the top of this tab.',
     'edit.advanced.security.title': 'Security',
     'edit.advanced.security.description':
       'Controls how this agent protects the authorization code exchange when a user signs in.',
@@ -1205,7 +1205,7 @@ const translations = {
     'edit.tokens.tabs.user': 'User',
     'edit.tokens.tabs.agent': 'Agent',
     'edit.tokens.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode in the Flows tab to unlock and start using them.',
+      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
     'edit.tokens.agent.attributes.title': 'Access Token Attributes',
     'edit.tokens.agent.attributes.description':
       'Attributes included in the access token this agent receives for its own requests (client_credentials grant).',
@@ -1841,7 +1841,6 @@ const translations = {
     'create.subtitle':
       'Register an external identity provider whose identity assertions ThunderID can exchange for access tokens.',
     'create.duplicateName': 'A trusted issuer with this name already exists.',
-    'create.submit': 'Add trusted issuer',
     'create.form.name.label': 'Name',
     'create.form.issuer.label': 'Issuer URI',
     'create.form.issuer.hint': "The issuer URI from the external IdP's OpenID Connect discovery document.",
@@ -1876,18 +1875,11 @@ const translations = {
     'detail.saveBar.discard': 'Discard',
     'detail.saveBar.save': 'Save changes',
 
-    // Delete dialog
-    'delete.title': 'Delete trusted issuer',
-    'delete.message':
-      'Delete "{{name}}"? Applications relying on assertions from this issuer will stop receiving tokens. This cannot be undone.',
-
     // Toasts
     'create.success': 'Trusted issuer created successfully.',
     'create.error': 'Failed to create trusted issuer. Please try again.',
     'update.success': 'Trusted issuer updated successfully.',
     'update.error': 'Failed to update trusted issuer. Please try again.',
-    'delete.success': 'Trusted issuer deleted successfully.',
-    'delete.error': 'Failed to delete trusted issuer. Please try again.',
   },
 
   // ============================================================================
@@ -2154,6 +2146,8 @@ const translations = {
     'onboarding.configure.approach.native.title': 'Embedded sign-in/sign-up components in your app',
     'onboarding.configure.approach.native.description':
       'Users will sign in or sign up through your app using the UI components or APIs provided by {{product}}. You can customize and brand the flows using the designer or through code.',
+    'onboarding.configure.approach.native.attestationNotice':
+      'Mobile apps authenticate to the Flow Execution API using platform attestation instead of a flow secret. After creating this application, configure attestation under Advanced settings to access the flow APIs.',
     'onboarding.configure.stack.title': 'Choose a type',
     'onboarding.configure.stack.subtitle': 'Select the type that best matches your application.',
     'onboarding.templateSelect.subtitle':
@@ -2501,6 +2495,16 @@ const translations = {
     'edit.advanced.attestation.hint.teamId': 'The Apple Developer Team ID.',
     'edit.advanced.attestation.hint.bundleId': 'The iOS bundle identifier that must match the attested app.',
     'edit.advanced.attestation.error.appleIncomplete': 'Both Team ID and Bundle ID are required together.',
+
+    /* Passkeys section */
+    'edit.advanced.labels.passkeys': 'Passkey Allowed Origins',
+    'edit.advanced.passkeys.intro': 'Allowed origins for passkey operations initiated through this application.',
+    'edit.advanced.passkeys.serverFallbackHint':
+      'Origins listed here are automatically included in the server CORS allowed origins.',
+    'edit.advanced.passkeys.allowedOrigins.placeholder': 'https://app.example.com',
+    'edit.advanced.passkeys.allowedOrigins.addOrigin': 'Add Origin',
+    'edit.advanced.passkeys.allowedOrigins.error.empty': 'Origin cannot be empty',
+    'edit.advanced.passkeys.allowedOrigins.error.invalid': 'Enter a valid URL',
 
     /* -------------------- Edit page -------------------- */
     // Common
@@ -3620,6 +3624,13 @@ const translations = {
     'sso.properties.checkpointLabel': 'Session checkpoint',
     'sso.properties.checkpointDangling': 'The referenced session step no longer exists. Select a valid session step.',
 
+    // Discard unsaved changes dialog
+    'core.dialogs.discardChanges.title': 'Discard unsaved changes?',
+    'core.dialogs.discardChanges.description':
+      'You have unsaved changes to this flow. If you leave now, your changes will be lost.',
+    'core.dialogs.discardChanges.cancelButton': 'Keep editing',
+    'core.dialogs.discardChanges.confirmButton': 'Discard changes',
+
     // Form adapter
     'core.adapters.form.badgeLabel': 'Form',
     'core.adapters.form.placeholder': 'DROP FORM COMPONENTS HERE',
@@ -3628,6 +3639,11 @@ const translations = {
     'core.headerPanel.goBack': 'Go back to Flows',
     'core.headerPanel.autoLayout': 'Auto Layout',
     'core.headerPanel.save': 'Save',
+    'core.headerPanel.unsavedChanges': 'You have unsaved changes',
+    'core.headerPanel.undo': 'Undo',
+    'core.headerPanel.undoTooltip': 'Undo (Ctrl+Z / Cmd+Z)',
+    'core.headerPanel.redo': 'Redo',
+    'core.headerPanel.redoTooltip': 'Redo (Ctrl+Shift+Z / Cmd+Shift+Z)',
     'core.headerPanel.editTitle': 'Edit flow name',
     'core.headerPanel.saveTitle': 'Save flow name',
     'core.headerPanel.cancelEdit': 'Cancel',

@@ -21,6 +21,7 @@ package serverconfig
 import (
 	"context"
 	"encoding/json"
+	"sync"
 
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/common"
@@ -43,6 +44,7 @@ type serverConfigService struct {
 	store    serverConfigStoreInterface
 	handlers map[ConfigName]ServerConfigHandlerInterface
 	logger   *log.Logger
+	configMu sync.Mutex
 }
 
 // newServerConfigService creates a new instance of serverConfigService. Handlers are injected at
@@ -148,6 +150,9 @@ func (s *serverConfigService) SetConfig(ctx context.Context,
 		s.logger.Debug(ctx, "Config value decode failed", log.String("name", string(name)), log.Error(err))
 		return &ErrorInvalidConfigValue
 	}
+
+	s.configMu.Lock()
+	defer s.configMu.Unlock()
 
 	rawLayers, err := s.store.GetServerConfig(ctx, name)
 	if err != nil {

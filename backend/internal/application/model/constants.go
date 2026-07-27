@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,6 +20,20 @@ package model
 
 import (
 	"errors"
+)
+
+// ApplicationType identifies the platform/client class of an application. It is the canonical
+// discriminator the backend uses to apply type-specific behavior (Flow Secret issuance, direct
+// flow initiation, and so on). The free-form Template string remains display metadata only.
+type ApplicationType string
+
+// Supported application types.
+const (
+	ApplicationTypeBrowser   ApplicationType = "browser"
+	ApplicationTypeFullStack ApplicationType = "fullstack"
+	ApplicationTypeMobile    ApplicationType = "mobile"
+	ApplicationTypeM2M       ApplicationType = "m2m"
+	ApplicationTypeCustom    ApplicationType = "custom"
 )
 
 // ApplicationNotFoundError is the error returned when an application is not found.

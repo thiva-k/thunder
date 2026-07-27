@@ -33,8 +33,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 const (
@@ -130,13 +130,13 @@ var (
 // DPoPTestSuite is the umbrella test suite shared by every phase's test file.
 type DPoPTestSuite struct {
 	suite.Suite
-	ouID             string
-	userSchemaID     string
-	authFlowID       string
-	userID           string
-	voluntaryAppID   string
-	enforcedAppID    string
-	client           *http.Client
+	ouID           string
+	userSchemaID   string
+	authFlowID     string
+	userID         string
+	voluntaryAppID string
+	enforcedAppID  string
+	client         *http.Client
 }
 
 // TestDPoPTestSuite is the single entrypoint that runs every Test* method
@@ -206,6 +206,7 @@ func (ts *DPoPTestSuite) createApp(name, clientID, clientSecret string, dpopBoun
 		"name":                      name,
 		"description":               "DPoP integration test app",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"dpop-test-person"},

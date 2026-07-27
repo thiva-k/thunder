@@ -17,43 +17,54 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
-import {ConnectionQueryKeys, ConnectionTypes} from '@thunderid/configure-connections';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
-import TrustedIssuerQueryKeys from '../constants/query-keys';
+import ConnectionQueryKeys from '../constants/query-keys';
+import type {ConnectionResponse} from '../models/connection';
+import {ConnectionTypes} from '../models/connection';
+import type {TrustedIssuer, TrustedIssuerFormData} from '../models/trusted-issuer';
+import isConflictError from '../utils/isConflictError';
+import mapConnectionToTrustedIssuer from '../utils/mapConnectionToTrustedIssuer';
 
 /**
- * Delete a trusted issuer (DELETE /connections/oidc/{id}).
+ * Create a trusted issuer, i.e. a trust-only OIDC connection (POST /connections/oidc).
+ *
+ * Conflicts (409 duplicate name) are not toasted here — the caller surfaces them inline next
+ * to the name field.
  *
  * @example
  * ```tsx
- * const deleteTrustedIssuer = useDeleteTrustedIssuer();
- * deleteTrustedIssuer.mutate(id);
+ * const createTrustedIssuer = useCreateTrustedIssuer();
+ * createTrustedIssuer.mutate({name, issuer, jwksEndpoint, idJagEnabled: true});
  * ```
  *
  * @public
  */
-export default function useDeleteTrustedIssuer(): UseMutationResult<void, Error, string> {
+export default function useCreateTrustedIssuer(): UseMutationResult<TrustedIssuer, Error, TrustedIssuerFormData> {
   const {http} = useThunderID();
   const {getServerUrl} = useConfig();
   const queryClient: ReturnType<typeof useQueryClient> = useQueryClient();
   const {t} = useTranslation();
   const {showToast} = useToast();
 
-  return useMutation<void, Error, string>({
-    mutationFn: async (id: string): Promise<void> => {
+  return useMutation<TrustedIssuer, Error, TrustedIssuerFormData>({
+    mutationFn: async (data: TrustedIssuerFormData): Promise<TrustedIssuer> => {
       const serverUrl: string = getServerUrl();
-      await http.request({
-        url: `${serverUrl}/connections/${ConnectionTypes.OIDC}/${id}`,
-        method: 'DELETE',
+      const response: {
+        data: ConnectionResponse;
+      } = await http.request({
+        url: `${serverUrl}/connections/${ConnectionTypes.OIDC}`,
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        data,
       } as unknown as Parameters<typeof http.request>[0]);
+
+      return mapConnectionToTrustedIssuer(response.data);
     },
-    onSuccess: (_data, id) => {
-      queryClient.removeQueries({queryKey: [TrustedIssuerQueryKeys.TRUSTED_ISSUER, id]});
+    onSuccess: () => {
       queryClient.invalidateQueries({queryKey: [ConnectionQueryKeys.CONNECTIONS]}).catch(() => {
         // Ignore invalidation errors
       });
@@ -62,10 +73,12 @@ export default function useDeleteTrustedIssuer(): UseMutationResult<void, Error,
         .catch(() => {
           // Ignore invalidation errors
         });
-      showToast(t('trustedIssuers:delete.success', 'Trusted issuer deleted successfully.'), 'success');
+      showToast(t('trustedIssuers:create.success', 'Trusted issuer created successfully.'), 'success');
     },
-    onError: () => {
-      showToast(t('trustedIssuers:delete.error', 'Failed to delete trusted issuer. Please try again.'), 'error');
+    onError: (error) => {
+      if (!isConflictError(error)) {
+        showToast(t('trustedIssuers:create.error', 'Failed to create trusted issuer. Please try again.'), 'error');
+      }
     },
   });
 }

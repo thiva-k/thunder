@@ -26,8 +26,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 // GroupAuthzTestSuite validates that group CRUD operations respect OU-scoped authz.
@@ -63,6 +63,7 @@ type GroupAuthzTestSuite struct {
 	// Test role and manager
 	groupMgrRoleID      string
 	groupMgrUserID      string
+	scopedRSID          string
 	targetGroupOU1ID    string
 	deletableGroupOU1ID string
 	targetGroupOU2ID    string
@@ -126,7 +127,7 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 
 	// ---- 2. Create user type for user-manager in OU1 ----
 	schemaOU1ID, err := testutils.CreateUserType(testutils.UserType{
-		Name:               entityTypeOU1Name,
+		Name: entityTypeOU1Name,
 		OUID: ts.groupOU1ID,
 		Schema: map[string]interface{}{
 			"username":     map[string]interface{}{"type": "string"},
@@ -139,7 +140,7 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 
 	// ---- 3. Create the user-manager in OU1 ----
 	userMgrID, err := testutils.CreateUser(testutils.User{
-		Type:             entityTypeOU1Name,
+		Type: entityTypeOU1Name,
 		OUID: ts.groupOU1ID,
 		Attributes: json.RawMessage(fmt.Sprintf(
 			`{"username": %q, "password": %q, "display_name": "Group Manager"}`,
@@ -151,7 +152,7 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 
 	// ---- 3b. Create a plain member user in OU1 (used in membership authz tests) ----
 	memberOU1ID, err := testutils.CreateUser(testutils.User{
-		Type:             entityTypeOU1Name,
+		Type: entityTypeOU1Name,
 		OUID: ts.groupOU1ID,
 		Attributes: json.RawMessage(fmt.Sprintf(
 			`{"username": %q, "password": %q, "display_name": "Member OU1"}`,
@@ -163,7 +164,7 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 
 	// ---- 3c. Create a user type for OU2 ----
 	schemaOU2ID, err := testutils.CreateUserType(testutils.UserType{
-		Name:               memberSchemaOU2Name,
+		Name: memberSchemaOU2Name,
 		OUID: ts.groupOU2ID,
 		Schema: map[string]interface{}{
 			"username":     map[string]interface{}{"type": "string"},
@@ -176,7 +177,7 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 
 	// ---- 3d. Create a plain member user in OU2 (used in membership authz tests) ----
 	memberOU2ID, err := testutils.CreateUser(testutils.User{
-		Type:             memberSchemaOU2Name,
+		Type: memberSchemaOU2Name,
 		OUID: ts.groupOU2ID,
 		Attributes: json.RawMessage(fmt.Sprintf(
 			`{"username": %q, "password": %q, "display_name": "Member OU2"}`,
@@ -188,36 +189,42 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 
 	// ---- 4. Create target groups ----
 	targetOU1ID, err := testutils.CreateGroup(testutils.Group{
-		Name:               "authz-target-ou1",
-		Description:        "Target Group OU1",
-		OUID: ts.groupOU1ID,
+		Name:        "authz-target-ou1",
+		Description: "Target Group OU1",
+		OUID:        ts.groupOU1ID,
 	})
 	ts.Require().NoError(err, "create target group in OU1")
 	ts.targetGroupOU1ID = targetOU1ID
 
 	deletableID, err := testutils.CreateGroup(testutils.Group{
-		Name:               "authz-deletable-ou1",
-		Description:        "Deletable Group OU1",
-		OUID: ts.groupOU1ID,
+		Name:        "authz-deletable-ou1",
+		Description: "Deletable Group OU1",
+		OUID:        ts.groupOU1ID,
 	})
 	ts.Require().NoError(err, "create deletable group in OU1")
 	ts.deletableGroupOU1ID = deletableID
 
 	targetOU2ID, err := testutils.CreateGroup(testutils.Group{
-		Name:               "authz-target-ou2",
-		Description:        "Target Group OU2",
-		OUID: ts.groupOU2ID,
+		Name:        "authz-target-ou2",
+		Description: "Target Group OU2",
+		OUID:        ts.groupOU2ID,
 	})
 	ts.Require().NoError(err, "create target group in OU2")
 	ts.targetGroupOU2ID = targetOU2ID
 
-	// ---- 5. Look up the system resource server seeded by bootstrap ----
-	systemRSID, err := testutils.GetResourceServerByName("System")
-	ts.Require().NoError(err, "look up system resource server")
+	// ---- 5. Create a custom resource server declaring the fine-grained system scopes ----
+	// The product ships only the root "system" scope; this reproduces "system:ou:view",
+	// "system:group" and "system:group:view" so the suite can verify resource-level enforcement
+	// when configured.
+	const scopedRSIdentifier = "https://authz-test.example.com/group"
+	systemRSID, err := testutils.CreateSystemScopedResourceServer(
+		ts.groupOU1ID, "Authz Test RS (group)", scopedRSIdentifier, "ou", "group")
+	ts.Require().NoError(err, "create scoped resource server")
+	ts.scopedRSID = systemRSID
 
 	// ---- 6. Create a role with system:group permission and assign to the user-manager ----
 	roleID, err := testutils.CreateRole(testutils.Role{
-		Name:               groupMgrRoleName,
+		Name: groupMgrRoleName,
 		OUID: ts.groupOU1ID,
 		Permissions: []testutils.ResourcePermissions{
 			{
@@ -240,6 +247,8 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 		groupMgrUsername,
 		groupMgrPassword,
 		true,
+		"",
+		scopedRSIdentifier,
 	)
 	ts.Require().NoError(err, "obtain group-manager token")
 	ts.Require().NotEmpty(tokenResp.AccessToken, "group-manager token must be non-empty")
@@ -252,6 +261,11 @@ func (ts *GroupAuthzTestSuite) SetupSuite() {
 // ---------------------------------------------------------------------------
 
 func (ts *GroupAuthzTestSuite) TearDownSuite() {
+	if ts.scopedRSID != "" {
+		if err := testutils.DeleteResourceServer(ts.scopedRSID); err != nil {
+			ts.T().Logf("teardown: delete scoped resource server: %v", err)
+		}
+	}
 	if ts.groupMgrRoleID != "" {
 		if err := testutils.DeleteRole(ts.groupMgrRoleID); err != nil {
 			ts.T().Logf("teardown: delete group-manager role: %v", err)
@@ -379,9 +393,9 @@ func (ts *GroupAuthzTestSuite) TestGetGroupInOtherOU() {
 // TestCreateGroupInOwnOU verifies the group-manager can create a group in their own OU.
 func (ts *GroupAuthzTestSuite) TestCreateGroupInOwnOU() {
 	payload, err := json.Marshal(map[string]interface{}{
-		"ouId": ts.groupOU1ID,
-		"name":               "authz-created-group",
-		"description":        "Created Group",
+		"ouId":        ts.groupOU1ID,
+		"name":        "authz-created-group",
+		"description": "Created Group",
 	})
 	ts.Require().NoError(err)
 
@@ -403,9 +417,9 @@ func (ts *GroupAuthzTestSuite) TestCreateGroupInOwnOU() {
 // TestCreateGroupInOtherOU verifies the group-manager is denied creating a group in OU2.
 func (ts *GroupAuthzTestSuite) TestCreateGroupInOtherOU() {
 	payload, err := json.Marshal(map[string]interface{}{
-		"ouId": ts.groupOU2ID,
-		"name":               "authz-denied-group",
-		"description":        "Denied Group",
+		"ouId":        ts.groupOU2ID,
+		"name":        "authz-denied-group",
+		"description": "Denied Group",
 	})
 	ts.Require().NoError(err)
 
@@ -419,9 +433,9 @@ func (ts *GroupAuthzTestSuite) TestCreateGroupInOtherOU() {
 // TestUpdateGroupInOwnOU verifies the group-manager can update a group in their own OU.
 func (ts *GroupAuthzTestSuite) TestUpdateGroupInOwnOU() {
 	payload, err := json.Marshal(map[string]interface{}{
-		"ouId": ts.groupOU1ID,
-		"name":               "authz-target-ou1",
-		"description":        "Updated Description",
+		"ouId":        ts.groupOU1ID,
+		"name":        "authz-target-ou1",
+		"description": "Updated Description",
 	})
 	ts.Require().NoError(err)
 
@@ -436,7 +450,7 @@ func (ts *GroupAuthzTestSuite) TestUpdateGroupInOwnOU() {
 func (ts *GroupAuthzTestSuite) TestUpdateGroupInOtherOU() {
 	payload, err := json.Marshal(map[string]interface{}{
 		"ouId": ts.groupOU2ID,
-		"name":               "Should Not Update",
+		"name": "Should Not Update",
 	})
 	ts.Require().NoError(err)
 

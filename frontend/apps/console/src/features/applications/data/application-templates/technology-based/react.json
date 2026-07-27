@@ -1,5 +1,6 @@
 {
   "id": "react",
+  "type": "browser",
   "displayName": "React",
   "description": "Single Page Application built with React",
   "defaults": {

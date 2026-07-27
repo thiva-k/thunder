@@ -1,5 +1,6 @@
 {
   "id": "browser",
+  "type": "browser",
   "displayName": "Browser",
   "description": "Web application running in browser",
   "defaults": {

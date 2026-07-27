@@ -202,6 +202,46 @@ describe('useFlowSave', () => {
 
       expect(mockShowError).toHaveBeenCalledWith('flows:core.loginFlowBuilder.errors.saveFailed');
     });
+
+    it('should invoke onSaved with the persisted canvas data on create success', () => {
+      mockCreateFlowMutate.mockImplementation((_, options: {onSuccess: () => void}) => {
+        options.onSuccess();
+      });
+      const onSaved = vi.fn();
+      const canvasData = createMockCanvasData();
+
+      const {result} = renderUseFlowSave({
+        isEditingExistingFlow: false,
+        isFlowValid: true,
+        onSaved,
+      });
+
+      act(() => {
+        result.current.handleSave(canvasData);
+      });
+
+      expect(onSaved).toHaveBeenCalledTimes(1);
+      expect(onSaved).toHaveBeenCalledWith(canvasData);
+    });
+
+    it('should not invoke onSaved on create failure', () => {
+      mockCreateFlowMutate.mockImplementation((_, options: {onError: () => void}) => {
+        options.onError();
+      });
+      const onSaved = vi.fn();
+
+      const {result} = renderUseFlowSave({
+        isEditingExistingFlow: false,
+        isFlowValid: true,
+        onSaved,
+      });
+
+      act(() => {
+        result.current.handleSave(createMockCanvasData());
+      });
+
+      expect(onSaved).not.toHaveBeenCalled();
+    });
   });
 
   describe('handleSave - update existing flow', () => {
@@ -255,6 +295,28 @@ describe('useFlowSave', () => {
       });
 
       expect(mockShowSuccess).toHaveBeenCalledWith('flows:core.loginFlowBuilder.success.flowUpdated');
+    });
+
+    it('should invoke onSaved with the persisted canvas data on update success', () => {
+      mockUpdateFlowMutate.mockImplementation((_, options: {onSuccess: () => void}) => {
+        options.onSuccess();
+      });
+      const onSaved = vi.fn();
+      const canvasData = createMockCanvasData();
+
+      const {result} = renderUseFlowSave({
+        flowId: 'flow-123',
+        isEditingExistingFlow: true,
+        isFlowValid: true,
+        onSaved,
+      });
+
+      act(() => {
+        result.current.handleSave(canvasData);
+      });
+
+      expect(onSaved).toHaveBeenCalledTimes(1);
+      expect(onSaved).toHaveBeenCalledWith(canvasData);
     });
 
     it('should show error message on update failure', () => {

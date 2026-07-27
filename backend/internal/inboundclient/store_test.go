@@ -97,8 +97,9 @@ func (suite *InboundClientStoreTestSuite) TestBuildInboundClientFromRow_Success(
 		LoginConsent: &inboundmodel.LoginConsentConfig{
 			ValidityPeriod: 5400,
 		},
-		AllowedUserTypes: []string{"admin", "user"},
-		Properties:       map[string]interface{}{"template": "spa"},
+		AllowedUserTypes:      []string{"admin", "user"},
+		PasskeyAllowedOrigins: []string{"https://app.example.com"},
+		Properties:            map[string]interface{}{"template": "spa"},
 	}
 	blobBytes, _ := json.Marshal(blob)
 
@@ -131,8 +132,46 @@ func (suite *InboundClientStoreTestSuite) TestBuildInboundClientFromRow_Success(
 	suite.NotNil(result.LoginConsent)
 	suite.Equal(int64(5400), result.LoginConsent.ValidityPeriod)
 	suite.Equal([]string{"admin", "user"}, result.AllowedUserTypes)
+	suite.Equal([]string{"https://app.example.com"}, result.PasskeyAllowedOrigins)
 	suite.NotNil(result.Properties)
 	suite.Equal("spa", result.Properties["template"])
+}
+
+func (suite *InboundClientStoreTestSuite) TestPasskeyAllowedOrigins_RoundTrip() {
+	origins := []string{"https://app.example.com", "https://mobile.example.com"}
+
+	blob := inboundClientJSONBlob{
+		PasskeyAllowedOrigins: origins,
+	}
+	blobBytes, _ := json.Marshal(blob)
+
+	row := map[string]interface{}{
+		"entity_id":  testEntityID,
+		"properties": string(blobBytes),
+	}
+	result, err := buildInboundClientFromRow(context.Background(), row)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Equal(origins, result.PasskeyAllowedOrigins)
+}
+
+func (suite *InboundClientStoreTestSuite) TestBuildInboundClientFromRow_NoPasskeyAllowedOrigins() {
+	blob := inboundClientJSONBlob{
+		AllowedUserTypes: []string{"user"},
+	}
+	blobBytes, _ := json.Marshal(blob)
+
+	row := map[string]interface{}{
+		"entity_id":  "app1",
+		"properties": string(blobBytes),
+	}
+
+	result, err := buildInboundClientFromRow(context.Background(), row)
+
+	suite.NoError(err)
+	suite.NotNil(result)
+	suite.Nil(result.PasskeyAllowedOrigins)
 }
 
 func (suite *InboundClientStoreTestSuite) TestBuildInboundClientFromRow_InvalidID() {

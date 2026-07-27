@@ -58,6 +58,13 @@ export interface UseFlowSaveProps {
   showSuccess: (message: string) => void;
   /** Callback to open the validation panel. */
   setOpenValidationPanel?: (open: boolean) => void;
+  /**
+   * Called after the flow is persisted successfully, with the canvas data that
+   * was actually saved. Saving is async and editing stays enabled meanwhile, so
+   * dirty tracking must be rebased on this snapshot rather than on the live
+   * graph at success time.
+   */
+  onSaved?: (savedCanvas: CanvasData) => void;
 }
 
 /**
@@ -87,6 +94,7 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
     showError,
     showSuccess,
     setOpenValidationPanel,
+    onSaved,
   } = props;
 
   const {t} = useTranslation();
@@ -124,6 +132,7 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
           {
             onSuccess: () => {
               showSuccess(t('flows:core.loginFlowBuilder.success.flowUpdated'));
+              onSaved?.(canvasData);
             },
             onError: () => {
               showError(t('flows:core.loginFlowBuilder.errors.saveFailed'));
@@ -135,6 +144,7 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
         createFlow.mutate(flowConfig as CreateFlowRequest, {
           onSuccess: () => {
             showSuccess(t('flows:core.loginFlowBuilder.success.flowCreated'));
+            onSaved?.(canvasData);
           },
           onError: () => {
             showError(t('flows:core.loginFlowBuilder.errors.saveFailed'));
@@ -152,6 +162,7 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
       showError,
       showSuccess,
       setOpenValidationPanel,
+      onSaved,
       t,
       createFlow,
       updateFlow,

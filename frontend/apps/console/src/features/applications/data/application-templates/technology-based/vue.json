@@ -1,5 +1,6 @@
 {
   "id": "vue",
+  "type": "browser",
   "displayName": "Vue",
   "description": "Single Page Application built with Vue 3",
   "defaults": {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -408,6 +408,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, 'WALLET', {
             id: 'wallet',
+            type: 'mobile',
             creationFlow: {
               steps: ['NAME', 'ORGANIZATION_UNIT', 'CONFIGURE', 'DESIGN', 'OPTIONS', 'EXPERIENCE', 'COMPLETE'],
             },
@@ -431,6 +432,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, 'BROWSER', {
             id: 'browser',
+            type: 'browser',
             defaults: {
               inboundAuthConfig: [
                 {
@@ -443,6 +445,32 @@ function TemplateSeeder(): JSX.Element {
         }
       >
         Select Browser
+      </button>
+      <button
+        type="button"
+        aria-label="seed full-stack template"
+        data-testid="select-fullstack-platform"
+        onClick={() =>
+          seed(null, 'FULLSTACK', {
+            id: 'full-stack',
+            type: 'fullstack',
+            defaults: {
+              inboundAuthConfig: [
+                {
+                  type: 'oauth2',
+                  config: {
+                    grantTypes: ['authorization_code', 'refresh_token'],
+                    responseTypes: ['code'],
+                    publicClient: false,
+                    tokenEndpointAuthMethod: 'client_secret_basic',
+                  },
+                },
+              ],
+            },
+          })
+        }
+      >
+        Select Full-stack
       </button>
       <button
         type="button"
@@ -820,6 +848,8 @@ describe('ApplicationCreatePage', () => {
       expect(createAppCall.inboundAuthConfig).toBeDefined();
       expect(createAppCall.inboundAuthConfig?.[0]).toBeDefined();
       expect(createAppCall.inboundAuthConfig?.[0]?.type).toBe('oauth2');
+      // A template without an explicit type resolves to the custom fallback.
+      expect(createAppCall.type).toBe('custom');
     });
 
     it('should navigate to application details page after creation', async () => {
@@ -996,6 +1026,45 @@ describe('ApplicationCreatePage', () => {
       await goToExperienceStep();
 
       expect(screen.getByTestId('allow-embedded-approach')).toHaveTextContent('false');
+    });
+
+    it('should send the canonical type in the create payload for the wallet (mobile) platform', async () => {
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-mobile', name: 'My App'} as Application);
+      });
+
+      renderWithProviders();
+      await user.click(screen.getByTestId('select-wallet-platform'));
+      await goToExperienceStep();
+      // EXPERIENCE → COMPLETE (creates) for the wallet flow.
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+
+      await waitFor(() => {
+        expect(mockCreateApplication).toHaveBeenCalled();
+      });
+      expect((mockCreateApplication.mock.calls[0][0] as Application).type).toBe('mobile');
+    });
+
+    it('should send the canonical type in the create payload for the full-stack platform', async () => {
+      mockCreateApplication.mockImplementation((_data, {onSuccess}: {onSuccess: (app: Application) => void}) => {
+        onSuccess({id: 'app-fullstack', name: 'My App'} as Application);
+      });
+
+      renderWithProviders();
+      await user.click(screen.getByTestId('select-fullstack-platform'));
+      await goToExperienceStep();
+      // EXPERIENCE → CONFIGURE
+      await user.click(screen.getByRole('button', {name: /continue/i}));
+      await waitFor(() => {
+        expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+      });
+      // CONFIGURE → create
+      await user.click(screen.getByTestId('application-wizard-next-button'));
+
+      await waitFor(() => {
+        expect(mockCreateApplication).toHaveBeenCalled();
+      });
+      expect((mockCreateApplication.mock.calls[0][0] as Application).type).toBe('fullstack');
     });
   });
 
@@ -2093,6 +2162,8 @@ describe('ApplicationCreatePage', () => {
         isRegistrationFlowEnabled?: boolean;
       };
       expect(requestBody.template).toBe('mcp-client');
+      // The user-delegated MCP client resolves to the browser type.
+      expect(requestBody.type).toBe('browser');
 
       const oauth2Config = requestBody.inboundAuthConfig?.[0];
       expect(oauth2Config?.type).toBe('oauth2');
@@ -2152,6 +2223,8 @@ describe('ApplicationCreatePage', () => {
         isRegistrationFlowEnabled?: boolean;
       };
       expect(requestBody.template).toBe('mcp-client');
+      // The machine-to-machine MCP client override resolves to the m2m type.
+      expect(requestBody.type).toBe('m2m');
 
       const oauth2Config = requestBody.inboundAuthConfig?.[0];
       expect(oauth2Config?.type).toBe('oauth2');

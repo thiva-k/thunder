@@ -28,6 +28,7 @@ import (
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 
 	"github.com/thunder-id/thunderid/internal/actorprovider"
+	appmodel "github.com/thunder-id/thunderid/internal/application/model"
 	authnprovidercm "github.com/thunder-id/thunderid/internal/authnprovider/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
 	flowconfig "github.com/thunder-id/thunderid/internal/flow/config"
@@ -245,6 +246,10 @@ func (s *flowExecService) checkDirectFlowInitiationAllowed(ctx context.Context, 
 		if svcErr.Code == actorprovider.ErrorActorNotFound.Code {
 			return &ErrorInvalidAppID
 		}
+		// Surface client errors (e.g. mobile attestation not configured) as-is.
+		if svcErr.Type == tidcommon.ClientErrorType {
+			return svcErr
+		}
 		logger.Error(ctx, "Failed to resolve flow initiation mode for guard",
 			log.String("appID", appID))
 		return &tidcommon.InternalServerError
@@ -294,42 +299,50 @@ func (s *flowExecService) verifyAttestation(ctx context.Context,
 	return nil
 }
 
-// resolveFlowInitiationMode derives how the given application is permitted to initiate a new
-// authentication flow, using neutral actor data resolved through the actor layer. A non-existent
-// application returns ErrorActorNotFound so the caller can distinguish an unknown app from a
-// backend app. The resolved OAuth profile (nil for embedded apps) is returned for downstream
-// credential checks.
+// resolveFlowInitiationMode decides how an application may initiate a flow, based on its type. An
+// unknown application returns ErrorActorNotFound so the caller can map it to an invalid app.
 func (s *flowExecService) resolveFlowInitiationMode(
 	ctx context.Context, appID string,
 ) (flowInitiationMode, *providers.AttestationConfig, *tidcommon.ServiceError) {
-	// The inbound client is protocol-agnostic and exists for every valid application. Platform
-	// attestation is a client-level binary-identity check, so it is resolved here first and takes
-	// precedence regardless of whether the application also has an OAuth2 protocol profile. An
-	// unknown application surfaces as ErrorActorNotFound so the caller can map it to an invalid app.
 	client, clientErr := s.actorProvider.GetInboundClientByID(ctx, appID)
 	if clientErr != nil {
 		return 0, nil, clientErr
 	}
-	if client.Attestation != nil && (client.Attestation.Android != nil || client.Attestation.Apple != nil) {
-		return flowInitiationAttestation, client.Attestation, nil
-	}
 
-	// No attestation configured: classify by protocol profile.
+	rawAppType, _ := client.Properties[applicationTypePropertyKey].(string)
+	switch appmodel.ResolveApplicationType(rawAppType) {
+	case appmodel.ApplicationTypeM2M, appmodel.ApplicationTypeBrowser:
+		// M2M apps get tokens directly; browser apps are public redirect clients. Neither runs flows.
+		return flowInitiationNotPermitted, nil, nil
+	case appmodel.ApplicationTypeMobile:
+		// Mobile apps authenticate with platform attestation, which must be configured first.
+		if client.Attestation == nil || (client.Attestation.Android == nil && client.Attestation.Apple == nil) {
+			return 0, nil, &ErrorAttestationNotConfigured
+		}
+		return flowInitiationAttestation, client.Attestation, nil
+	default:
+		// Full-stack and custom apps may be embedded or redirect-based; derive from the OAuth profile.
+		return s.resolveFlowInitiationModeFromProfile(ctx, appID)
+	}
+}
+
+// resolveFlowInitiationModeFromProfile derives the mode from the OAuth profile, for types that do
+// not encode embedded vs redirect in the type itself.
+func (s *flowExecService) resolveFlowInitiationModeFromProfile(
+	ctx context.Context, appID string,
+) (flowInitiationMode, *providers.AttestationConfig, *tidcommon.ServiceError) {
 	profile, svcErr := s.actorProvider.GetOAuthProfileByID(ctx, appID)
 	if svcErr != nil && svcErr.Code != actorprovider.ErrorActorNotFound.Code {
 		return 0, nil, svcErr
 	}
 
-	// No protocol profile means a server-side embedded app: it initiates flows directly by
-	// presenting its Flow Secret.
+	// No profile means an embedded app; it initiates flows directly with its Flow Secret.
 	if profile == nil {
 		return flowInitiationFlowSecret, nil, nil
 	}
 
-	// A redirect-based (authorization_code) profile — public or confidential — must initiate flows
-	// through the protocol component, not via a direct HTTP call. A machine-to-machine app
-	// (client_credentials as its only grant) obtains tokens directly and does not run flows. Neither
-	// may initiate a flow directly.
+	// Redirect (authorization_code) apps initiate through the OAuth component; M2M apps get tokens
+	// directly. Neither may initiate a flow directly.
 	if slices.Contains(profile.GrantTypes, string(providers.GrantTypeAuthorizationCode)) ||
 		isClientCredentialsOnly(profile.GrantTypes) {
 		return flowInitiationNotPermitted, nil, nil

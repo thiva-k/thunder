@@ -54,6 +54,7 @@ id: 019e3a5c-0532-7b06-aa66-ec42ad05784e
 ouHandle: default
 name: React SDK Sample
 description: Sample React application using ThunderID React SDK
+type: browser
 url: https://localhost:3000
 logoUrl: emoji:🛍️
 tosUri: https://localhost:3000/terms

@@ -1,5 +1,6 @@
 {
   "id": "nextjs",
+  "type": "fullstack",
   "displayName": "Next.js",
   "description": "Server-side rendered application built with Next.js",
   "defaults": {

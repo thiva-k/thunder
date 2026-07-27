@@ -347,6 +347,7 @@ func (ts *SSOLogoutTestSuite) createApplication() string {
 		"name":                      appName,
 		"description":               "Application for SSO session and logout integration tests",
 		"ouId":                      testOUID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"signOutFlowId":             ts.signOutFlowID,

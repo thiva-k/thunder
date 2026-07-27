@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -38,8 +38,10 @@ import (
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/inboundclient"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
+	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -48,6 +50,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/i18n/mgtmock"
 	"github.com/thunder-id/thunderid/tests/mocks/inboundclientmock"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
+	"github.com/thunder-id/thunderid/tests/mocks/serverconfigmock"
 )
 
 const testServiceAppID = "app123"
@@ -882,6 +885,79 @@ func (suite *ServiceTestSuite) TestValidateApplicationForUpdate_Success() {
 	assert.Equal(suite.T(), "Test App", result.Name)
 }
 
+func (suite *ServiceTestSuite) TestValidateApplicationForUpdate_TypeImmutable() {
+	testConfig := &config.Config{
+		DeclarativeResources: config.DeclarativeResources{
+			Enabled: false,
+		},
+	}
+	config.ResetServerRuntime()
+	err := config.InitializeServerRuntime("/tmp/test", testConfig)
+	require.NoError(suite.T(), err)
+	defer config.ResetServerRuntime()
+
+	service, mockStore := suite.setupTestService()
+
+	existingApp := &model.ApplicationProcessedDTO{
+		ID:   testServiceAppID,
+		Name: "Test App",
+		Type: model.ApplicationTypeMobile,
+	}
+
+	app := &model.ApplicationDTO{
+		Name:    "Test App",
+		OUID:    testOUID,
+		Type:    model.ApplicationTypeBrowser,
+		URL:     "https://example.com",
+		LogoURL: "https://example.com/logo.png",
+	}
+
+	mockStore.On("IsDeclarative", mock.Anything, testServiceAppID).Maybe().Return(false)
+	mockLoadFullApplication(mockStore, service, existingApp)
+
+	result, _, svcErr := service.validateApplicationForUpdate(context.Background(), testServiceAppID, app)
+
+	assert.Nil(suite.T(), result)
+	require.NotNil(suite.T(), svcErr)
+	assert.Equal(suite.T(), ErrorApplicationTypeImmutable.Code, svcErr.Code)
+}
+
+func (suite *ServiceTestSuite) TestValidateApplicationForUpdate_TypeInheritedWhenOmitted() {
+	testConfig := &config.Config{
+		DeclarativeResources: config.DeclarativeResources{
+			Enabled: false,
+		},
+	}
+	config.ResetServerRuntime()
+	err := config.InitializeServerRuntime("/tmp/test", testConfig)
+	require.NoError(suite.T(), err)
+	defer config.ResetServerRuntime()
+
+	service, mockStore := suite.setupTestService()
+
+	existingApp := &model.ApplicationProcessedDTO{
+		ID:   testServiceAppID,
+		Name: "Test App",
+		Type: model.ApplicationTypeMobile,
+	}
+
+	app := &model.ApplicationDTO{
+		Name:    "Test App",
+		OUID:    testOUID,
+		URL:     "https://example.com",
+		LogoURL: "https://example.com/logo.png",
+	}
+
+	mockStore.On("IsDeclarative", mock.Anything, testServiceAppID).Maybe().Return(false)
+	mockLoadFullApplication(mockStore, service, existingApp)
+
+	result, _, svcErr := service.validateApplicationForUpdate(context.Background(), testServiceAppID, app)
+
+	require.Nil(suite.T(), svcErr)
+	assert.NotNil(suite.T(), result)
+	assert.Equal(suite.T(), model.ApplicationTypeMobile, app.Type)
+}
+
 func (suite *ServiceTestSuite) TestDeleteApplication_EmptyAppID() {
 	testConfig := &config.Config{
 		DeclarativeResources: config.DeclarativeResources{
@@ -1470,6 +1546,7 @@ func (suite *ServiceTestSuite) runCreateApplicationStoreErrorTest() {
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1685,6 +1762,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_WithAttestation_EncryptsAnd
 		}).Return(nil)
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeMobile,
 		Name: "Mobile App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1818,6 +1896,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_WithOAuthCertificate_Succes
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test OAuth Cert App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1868,6 +1947,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_IssuesFlowSecretForEmbedded
 
 	// An embedded server-side app: no OAuth config, so no OAuth profile.
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Embedded App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1909,6 +1989,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForM2MClient() 
 	// A machine-to-machine app using client_credentials only. It obtains tokens directly and cannot
 	// consume a flow assertion, so it gets no Flow Secret. A caller-supplied FlowSecret is ignored.
 	app := &model.ApplicationDTO{
+		Type:       model.ApplicationTypeM2M,
 		Name:       "M2M App",
 		OUID:       testOUID,
 		FlowSecret: "caller-supplied-secret",
@@ -1961,6 +2042,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForRedirectClie
 	// client secret but no Flow Secret, since it cannot initiate flows directly. A caller-supplied
 	// FlowSecret must be ignored for such an ineligible app.
 	app := &model.ApplicationDTO{
+		Type:       model.ApplicationTypeFullStack,
 		Name:       "Full-stack App",
 		OUID:       testOUID,
 		FlowSecret: "caller-supplied-secret",
@@ -2016,6 +2098,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_NoFlowSecretForPublicClient
 
 	// A browser SPA: public client, no client secret. A caller-supplied FlowSecret must be ignored.
 	app := &model.ApplicationDTO{
+		Type:       model.ApplicationTypeBrowser,
 		Name:       "SPA App",
 		OUID:       testOUID,
 		FlowSecret: "caller-supplied-secret",
@@ -2076,6 +2159,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_StoreErrorWithOAuthCertRoll
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test OAuth Cert App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -3023,6 +3107,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_DeclarativeMode() {
 	service, _ := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test App",
 		OUID: testOUID,
 	}
@@ -3958,6 +4043,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_CreateInboundClientFailsAnd
 	service, mockStore := suite.setupTestService()
 
 	app := &model.ApplicationDTO{
+		Type: model.ApplicationTypeFullStack,
 		Name: "Test App",
 		OUID: testOUID,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -3980,6 +4066,22 @@ func (suite *ServiceTestSuite) TestCreateApplication_CreateInboundClientFailsAnd
 	assert.Equal(suite.T(), &tidcommon.InternalServerError, svcErr)
 }
 
+func (suite *ServiceTestSuite) TestValidateApplication_TypeRequired() {
+	service, _ := suite.setupTestService()
+
+	app := &model.ApplicationDTO{
+		Name: "Test App",
+		OUID: testOUID,
+	}
+
+	processed, inboundAuthConfig, svcErr := service.ValidateApplication(context.Background(), app)
+
+	assert.Nil(suite.T(), processed)
+	assert.Nil(suite.T(), inboundAuthConfig)
+	assert.NotNil(suite.T(), svcErr)
+	assert.Equal(suite.T(), &ErrorApplicationTypeRequired, svcErr)
+}
+
 func (suite *ServiceTestSuite) TestValidateApplication_InboundClientValidateError() {
 	service, mockStore := suite.setupTestService()
 
@@ -3995,6 +4097,7 @@ func (suite *ServiceTestSuite) TestValidateApplication_InboundClientValidateErro
 	app := &model.ApplicationDTO{
 		Name: "Test App",
 		OUID: testOUID,
+		Type: model.ApplicationTypeFullStack,
 	}
 
 	processed, inboundAuthConfig, svcErr := service.ValidateApplication(context.Background(), app)
@@ -4244,4 +4347,91 @@ func (suite *ServiceTestSuite) TestDeleteApplication_EntityDeleteFailsAfterCasca
 	// Dependents were removed even though the application delete did not complete.
 	assert.Equal(suite.T(), 1, cascadeCalls)
 	ep.AssertCalled(suite.T(), "DeleteEntity", mock.Anything)
+}
+
+// ----- syncPasskeyOriginsToCORS -----
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_NilService_Noop() {
+	svc := &applicationService{serverConfigService: nil}
+	// Should not panic when serverConfigService is nil
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{"https://app.example.com"})
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_EmptyOrigins_Noop() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{serverConfigService: mockCfgSvc}
+	// No mock expectations — GetWritableConfig must not be called with empty input
+	svc.syncPasskeyOriginsToCORS(context.Background(), nil)
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{})
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_AddsNewOrigins() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{
+		serverConfigService: mockCfgSvc,
+		logger:              log.GetLogger(),
+	}
+
+	existing := cors.OriginConfig{}
+	mockCfgSvc.On("GetWritableConfig", mock.Anything, string(serverconfig.ConfigNameCORS)).
+		Return(existing, (*tidcommon.ServiceError)(nil))
+
+	var capturedRaw json.RawMessage
+	mockCfgSvc.On("SetConfig", mock.Anything, serverconfig.ConfigNameCORS, mock.MatchedBy(
+		func(raw json.RawMessage) bool {
+			capturedRaw = raw
+			return true
+		})).Return((*tidcommon.ServiceError)(nil))
+
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{"https://app.example.com"})
+
+	var saved map[string]json.RawMessage
+	require.NoError(suite.T(), json.Unmarshal(capturedRaw, &saved))
+	var origins []string
+	require.NoError(suite.T(), json.Unmarshal(saved["allowedOrigins"], &origins))
+	assert.Contains(suite.T(), origins, "https://app.example.com")
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_SkipsDuplicates() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{
+		serverConfigService: mockCfgSvc,
+		logger:              log.GetLogger(),
+	}
+
+	existing := cors.OriginConfig{}
+	_ = json.Unmarshal([]byte(`{"allowedOrigins":["https://app.example.com"]}`), &existing)
+	mockCfgSvc.On("GetWritableConfig", mock.Anything, string(serverconfig.ConfigNameCORS)).
+		Return(existing, (*tidcommon.ServiceError)(nil))
+	// SetConfig must NOT be called because nothing changed
+
+	svc.syncPasskeyOriginsToCORS(context.Background(), []string{"https://app.example.com"})
+}
+
+func (suite *ServiceTestSuite) TestSyncPasskeyOriginsToCORS_SkipsInvalidOrigins() {
+	mockCfgSvc := serverconfigmock.NewServerConfigServiceMock(suite.T())
+	svc := &applicationService{
+		serverConfigService: mockCfgSvc,
+		logger:              log.GetLogger(),
+	}
+
+	invalidOrigins := []string{
+		"",                           // empty
+		"   ",                        // whitespace only
+		"*",                          // bare wildcard
+		"http://*.example.com",       // wildcard in hostname
+		"null",                       // null origin
+		"ftp://example.com",          // unsupported scheme
+		"https://example.com/path",   // has path
+		"https://example.com?q=1",    // has query
+		"https://example.com#frag",   // has fragment
+		"https://exam\tple.com",      // control character
+		"https://user:pass@host.com", // userinfo
+	}
+
+	mockCfgSvc.On("GetWritableConfig", mock.Anything, string(serverconfig.ConfigNameCORS)).
+		Return(cors.OriginConfig{}, (*tidcommon.ServiceError)(nil))
+	// SetConfig must NOT be called because all origins are invalid
+
+	svc.syncPasskeyOriginsToCORS(context.Background(), invalidOrigins)
 }

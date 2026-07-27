@@ -222,6 +222,7 @@ func (ts *RefreshTokenTestSuite) createTestApplication() string {
 		"name":                      refreshTokenTestAppName,
 		"description":               "Application for refresh token integration tests",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"refresh-token-test-person"},

@@ -196,6 +196,7 @@ func (p *passkeyAuthExecutor) executeChallenge(ctx *providers.NodeContext,
 	startReq := &passkey.PasskeyAuthenticationStartRequest{
 		UserID:         userID, // May be empty for usernameless flow
 		RelyingPartyID: relyingPartyID,
+		AllowedOrigins: ctx.Application.PasskeyAllowedOrigins,
 	}
 	initResponse, svcErr := p.authnProvider.InitiateAuthentication(ctx.Context, passkey.CredentialType, startReq, nil)
 	if svcErr != nil {
@@ -305,6 +306,7 @@ func (p *passkeyAuthExecutor) validatePasskey(ctx *providers.NodeContext, execRe
 		Signature:         signature,
 		UserHandle:        userHandle,
 		SessionToken:      sessionToken,
+		AllowedOrigins:    ctx.Application.PasskeyAllowedOrigins,
 	}
 	credentials := map[string]interface{}{passkey.CredentialType: passkeyCredential}
 	authUser, authenticatedClaims, svcErr := p.authnProvider.AuthenticateUser(
@@ -369,6 +371,7 @@ func (p *passkeyAuthExecutor) executeRegisterStart(ctx *providers.NodeContext,
 		// Optional: Get authenticator selection and attestation from node properties
 		AuthenticatorSelection: p.getAuthenticatorSelection(ctx),
 		Attestation:            p.getAttestation(ctx),
+		AllowedOrigins:         ctx.Application.PasskeyAllowedOrigins,
 	}
 
 	// Start passkey registration
@@ -465,6 +468,7 @@ func (p *passkeyAuthExecutor) executeRegisterFinish(ctx *providers.NodeContext,
 		ClientDataJSON:    clientDataJSON,
 		AttestationObject: attestationObject,
 		SessionToken:      sessionToken,
+		AllowedOrigins:    ctx.Application.PasskeyAllowedOrigins,
 	}
 	credentials := map[string]interface{}{passkey.CredentialType: finishReq}
 	authUser, authenticatedClaims, svcErr := p.authnProvider.Enroll(

@@ -715,6 +715,7 @@ type InboundClient struct {
 	Assertion                 *AssertionConfig
 	LoginConsent              *LoginConsentConfig
 	AllowedUserTypes          []string
+	PasskeyAllowedOrigins     []string
 	// Attestation holds the optional platform attestation config that lets a mobile client prove
 	// its binary identity to initiate a flow directly, independent of any protocol profile.
 	Attestation *AttestationConfig
@@ -1001,6 +1002,7 @@ type Application struct {
 	OUID        string `yaml:"ouId,omitempty" json:"ouId,omitempty" jsonschema:"Organization unit ID. The OU this application belongs to."`
 	Name        string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"Application name."`
 	Description string `yaml:"description,omitempty" json:"description,omitempty" jsonschema:"Optional description of the application's purpose."`
+	Type        string `yaml:"type,omitempty" json:"type,omitempty" jsonschema:"Application type (browser, fullstack, mobile, m2m, custom)."`
 	Template    string `yaml:"template,omitempty" json:"template,omitempty" jsonschema:"Template used to create the application."`
 
 	URL       string   `yaml:"url,omitempty" json:"url,omitempty" jsonschema:"Application home URL."`
@@ -1030,8 +1032,9 @@ type InboundAuthProfile struct {
 	LayoutID                  string              `json:"layoutId,omitempty"               yaml:"layoutId,omitempty"               jsonschema:"Layout configuration ID. Optional. Customizes the screen structure and component positioning of login pages."`
 	Assertion                 *AssertionConfig    `json:"assertion,omitempty"              yaml:"assertion,omitempty"              jsonschema:"Assertion configuration. Optional. Customize assertion validity periods and included user attributes."`
 	LoginConsent              *LoginConsentConfig `json:"loginConsent,omitempty"           yaml:"loginConsent,omitempty"           jsonschema:"Login consent configuration settings."`
-	AllowedUserTypes          []string            `json:"allowedUserTypes,omitempty"       yaml:"allowedUserTypes,omitempty"       jsonschema:"Allowed user types. Optional. Restricts which user types can authenticate to and register against this resource."`
-	Attestation               *AttestationConfig  `json:"attestation,omitempty"            yaml:"attestation,omitempty"            jsonschema:"Platform attestation configuration. Optional. Enables a mobile client to initiate flows directly by proving its binary identity (e.g. Google Play Integrity), regardless of protocol. The service account credentials are write-only and never returned in responses."`
+	AllowedUserTypes          []string            `json:"allowedUserTypes,omitempty"           yaml:"allowedUserTypes,omitempty"           jsonschema:"Allowed user types. Optional. Restricts which user types can authenticate to and register against this resource."`
+	PasskeyAllowedOrigins     []string            `json:"passkeyAllowedOrigins,omitempty"      yaml:"passkeyAllowedOrigins,omitempty"      jsonschema:"Allowed origins for WebAuthn/passkey operations for this application. Optional. When set, overrides the server-level passkey allowed origins for flow-based passkey operations."`
+	Attestation               *AttestationConfig  `json:"attestation,omitempty"                yaml:"attestation,omitempty"                jsonschema:"Platform attestation configuration. Optional. Enables a mobile client to initiate flows directly by proving its binary identity (e.g. Google Play Integrity), regardless of protocol. The service account credentials are write-only and never returned in responses."`
 }
 
 // OAuthConfigWithSecret is the wire input shape and the create/update echo response shape.

@@ -24,6 +24,7 @@ import CertificateSection from './CertificateSection';
 import IdentityAssertionsSection from './IdentityAssertionsSection';
 import MetadataSection from './MetadataSection';
 import OAuth2ConfigSection from './OAuth2ConfigSection';
+import PasskeysSection from './PasskeysSection';
 import type {Application} from '../../../models/application';
 import type {ApplicationTemplate} from '../../../models/application-templates';
 import type {InboundAuthConfig} from '../../../models/inbound-auth';
@@ -98,12 +99,16 @@ export default function EditAdvancedSettings({
   // Identity assertions and attestation validate independently; each is tracked separately so one
   // resolving doesn't clobber the other's still-invalid state when both report to the single
   // upward onValidationChange prop.
+  // Identity assertions, attestation, and passkeys validate independently; each is tracked
+  // separately so one resolving doesn't clobber the other's still-invalid state when both report
+  // to the single upward onValidationChange prop.
   const [identityAssertionsInvalid, setIdentityAssertionsInvalid] = useState(false);
   const [attestationInvalid, setAttestationInvalid] = useState(false);
+  const [passkeysInvalid, setPasskeysInvalid] = useState(false);
 
   useEffect(() => {
-    onValidationChange?.(identityAssertionsInvalid || attestationInvalid);
-  }, [identityAssertionsInvalid, attestationInvalid, onValidationChange]);
+    onValidationChange?.(identityAssertionsInvalid || attestationInvalid || passkeysInvalid);
+  }, [identityAssertionsInvalid, attestationInvalid, passkeysInvalid, onValidationChange]);
 
   const handleOAuth2ConfigChange = (updates: Partial<OAuth2Config>) => {
     const currentInboundAuth: InboundAuthConfig[] = editedApp.inboundAuthConfig ?? application.inboundAuthConfig ?? [];
@@ -127,6 +132,12 @@ export default function EditAdvancedSettings({
   // Prefer the edited value whenever it has been set — including an explicit null, which represents
   // the user clearing attestation. Only fall back to the stored value when the field is untouched.
   const currentAttestation = 'attestation' in editedApp ? editedApp.attestation : application.attestation;
+
+  const handlePasskeysChange = (origins: string[]): void => {
+    onFieldChange('passkeyAllowedOrigins', origins);
+  };
+
+  const currentPasskeyOrigins = editedApp.passkeyAllowedOrigins ?? application.passkeyAllowedOrigins ?? [];
 
   const handleTokenConfigChange = (tokenUpdates: Partial<OAuth2Token>, oauth2Updates: Partial<OAuth2Config> = {}) => {
     const currentInboundAuth: InboundAuthConfig[] = editedApp.inboundAuthConfig ?? application.inboundAuthConfig ?? [];
@@ -189,6 +200,12 @@ export default function EditAdvancedSettings({
           onValidationChange={setAttestationInvalid}
         />
       )}
+      <PasskeysSection
+        allowedOrigins={currentPasskeyOrigins}
+        onPasskeysChange={application.isReadOnly ? undefined : handlePasskeysChange}
+        disabled={application.isReadOnly}
+        onValidationChange={setPasskeysInvalid}
+      />
       <MetadataSection application={application} />
     </Stack>
   );

@@ -27,8 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 const (
@@ -187,6 +187,7 @@ func (ts *PARTestSuite) SetupSuite() {
 		"name":                      appName,
 		"description":               "Application for PAR integration tests",
 		"ouId":                      testOUID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"par-test-person"},

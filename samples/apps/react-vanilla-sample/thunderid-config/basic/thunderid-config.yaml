@@ -54,6 +54,7 @@ id: 019e3a5c-0500-7f3e-a66e-66fc7918c3a7
 ouHandle: default
 name: Sample App
 description: Sample application for testing
+type: browser
 url: https://localhost:3000
 logoUrl: emoji:🎁
 tosUri: https://localhost:3000/terms

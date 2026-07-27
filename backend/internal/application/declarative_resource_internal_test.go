@@ -74,6 +74,9 @@ certificate:
 allowedUserTypes:
   - internal
   - external
+passkeyAllowedOrigins:
+  - https://app.example.com
+  - https://login.example.com
 `
 
 	appDTO, err := parseToApplicationDTO([]byte(yamlData))
@@ -99,6 +102,7 @@ allowedUserTypes:
 	assert.NotNil(s.T(), appDTO.Assertion)
 	assert.Equal(s.T(), int64(3600), appDTO.Assertion.ValidityPeriod)
 	assert.Equal(s.T(), 2, len(appDTO.AllowedUserTypes))
+	assert.Equal(s.T(), []string{"https://app.example.com", "https://login.example.com"}, appDTO.PasskeyAllowedOrigins)
 }
 
 func (s *ParseToApplicationDTOTestSuite) TestParseToApplicationDTO_MinimalFields() {
@@ -512,4 +516,28 @@ func (s *ParseToApplicationDTOTestSuite) TestParseToApplicationDTO_OUHandlePasse
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), "default", appDTO.OUHandle)
 	assert.Empty(s.T(), appDTO.OUID)
+}
+
+func (s *ParseToApplicationDTOTestSuite) TestParseToApplicationDTO_PasskeyAllowedOriginsParsed() {
+	yamlData := []byte(`
+id: passkey-app
+name: Passkey Application
+passkeyAllowedOrigins:
+  - https://app.example.com
+  - https://login.example.com
+`)
+
+	appDTO, err := parseToApplicationDTO(yamlData)
+
+	assert.NoError(s.T(), err)
+	assert.Equal(s.T(), []string{"https://app.example.com", "https://login.example.com"}, appDTO.PasskeyAllowedOrigins)
+}
+
+func (s *ParseToApplicationDTOTestSuite) TestParseToApplicationDTO_PasskeyAllowedOriginsAbsent() {
+	yamlData := []byte("id: no-passkey-app\nname: No Passkey App\n")
+
+	appDTO, err := parseToApplicationDTO(yamlData)
+
+	assert.NoError(s.T(), err)
+	assert.Nil(s.T(), appDTO.PasskeyAllowedOrigins)
 }
