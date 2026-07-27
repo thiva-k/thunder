@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -45,7 +45,7 @@ import McpConnectComplete from '../components/create-application/mcp/McpConnectC
 import ShowClientSecret from '../components/create-application/ShowClientSecret';
 import TemplateConstants from '../constants/template-constants';
 import useApplicationCreate from '../contexts/ApplicationCreate/useApplicationCreate';
-import type {Application} from '../models/application';
+import type {Application, ApplicationType} from '../models/application';
 import {
   ApplicationCreateFlowConfiguration,
   ApplicationCreateFlowSignInApproach,
@@ -56,6 +56,7 @@ import {McpClientTypes} from '../models/mcp-client';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../models/oauth';
 import type {CreateApplicationRequest} from '../models/requests';
 import getConfigurationTypeFromTemplate from '../utils/getConfigurationTypeFromTemplate';
+import resolveApplicationType from '../utils/resolveApplicationType';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
 import GatePreview from '@/components/GatePreview/GatePreview';
 import buildPreviewMock from '@/components/GatePreview/mocks/buildPreviewMock';
@@ -222,22 +223,17 @@ export default function ApplicationCreatePage(): JSX.Element {
 
   const creationFlow = useMemo(() => resolveCreationFlow(selectedTemplateConfig), [selectedTemplateConfig]);
 
-  // Browser-based SPAs are public clients that must use the redirect-based flow, so the
-  // embedded (native) sign-in approach is not offered for them. Native mobile apps and digital
-  // wallets are also public clients but legitimately use app-native flows, so they are excluded
-  // from this rule.
-  const isBrowserSpaTemplate = useMemo((): boolean => {
-    if (
-      selectedPlatform === PlatformApplicationTemplate.MOBILE ||
-      selectedPlatform === PlatformApplicationTemplate.WALLET
-    ) {
-      return false;
-    }
-    const oauthConfig = selectedTemplateConfig?.defaults?.inboundAuthConfig?.find(
-      (config) => config.type === 'oauth2',
-    )?.config;
-    return oauthConfig?.publicClient === true;
-  }, [selectedTemplateConfig, selectedPlatform]);
+  // The canonical application type, resolved once from the template, falling back to the OAuth
+  // profile for legacy/custom templates without an explicit type.
+  const resolvedApplicationType = useMemo<ApplicationType>(
+    () => resolveApplicationType(selectedTemplateConfig?.type, oauthConfig ?? undefined),
+    [selectedTemplateConfig, oauthConfig],
+  );
+
+  // The embedded (native) sign-in approach is only supported by full-stack and mobile applications.
+  // Browser (SPA) apps are public clients that must use the redirect-based flow, and m2m apps never
+  // reach this step. Derived from the canonical application type rather than the OAuth config shape.
+  const allowEmbeddedApproach = resolvedApplicationType === 'fullstack' || resolvedApplicationType === 'mobile';
 
   const needsConfigure = useMemo((): boolean => {
     const isPasskeyEnabled = !selectedAuthFlow && (integrations[AuthenticatorTypes.PASSKEY] ?? false);
@@ -304,6 +300,11 @@ export default function ApplicationCreatePage(): JSX.Element {
         ? `${templateId}${TemplateConstants.EMBEDDED_SUFFIX}`
         : templateId;
 
+    // The canonical application type resolved above. The MCP client template can resolve to two
+    // types, so the machine-to-machine selection overrides it.
+    const applicationType: ApplicationType =
+      isMcpClientTemplate && mcpClientType === McpClientTypes.M2M ? 'm2m' : resolvedApplicationType;
+
     // The mcp-client template branches the oauth2 config off the template-seeded config (never
     // rebuilt from scratch): user-delegated keeps the seeded authorization_code/refresh_token/PKCE/
     // public-client shape and adds the collected redirect URIs; machine-to-machine overrides it to a
@@ -328,6 +329,7 @@ export default function ApplicationCreatePage(): JSX.Element {
       ...(hostingUrl && {url: hostingUrl}),
       ...(authFlowId && {authFlowId}),
       ...(effectiveOuId && {ouId: effectiveOuId}),
+      ...(applicationType && {type: applicationType}),
       ...(finalTemplateId && {template: finalTemplateId}),
       ...(includesDesign && {
         logoUrl: appLogo ?? undefined,
@@ -578,7 +580,8 @@ export default function ApplicationCreatePage(): JSX.Element {
           <ConfigureExperience
             selectedApproach={signInApproach}
             onApproachChange={setSignInApproach}
-            allowEmbeddedApproach={!isBrowserSpaTemplate}
+            allowEmbeddedApproach={allowEmbeddedApproach}
+            embeddedRequiresAttestation={resolvedApplicationType === 'mobile'}
             onReadyChange={handleApproachStepReadyChange}
             userTypes={userTypesData?.types ?? []}
             selectedUserTypes={selectedUserTypes}

@@ -27,8 +27,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 const (
@@ -81,9 +81,9 @@ var acrValuesAuthzFlow = testutils.Flow{
 			"onSuccess": "auth_assert",
 		},
 		{
-			"id":   "auth_assert",
-			"type": "TASK_EXECUTION",
-			"executor": map[string]interface{}{"name": "AuthAssertExecutor"},
+			"id":        "auth_assert",
+			"type":      "TASK_EXECUTION",
+			"executor":  map[string]interface{}{"name": "AuthAssertExecutor"},
 			"onSuccess": "end",
 		},
 		{
@@ -121,6 +121,7 @@ func (ts *AcrValuesAuthzTestSuite) SetupSuite() {
 		"name":                      acrAppName,
 		"description":               "Application for acr_values authorization integration tests",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"inboundAuthConfig": []map[string]interface{}{

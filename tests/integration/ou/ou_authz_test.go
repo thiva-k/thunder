@@ -28,16 +28,17 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 // OUAuthzTestSuite validates the OU authorization model end-to-end.
 //
-// The in-process bootstrap (backend/cmd/server/bootstrap/01-default-resources.yaml)
-// seeds the following hierarchical permission structure under the "system" resource server:
+// The product ships only the root "system" scope by default. This suite creates a custom
+// resource server that declares the following hierarchical permission structure, simulating an
+// operator configuring fine-grained scopes:
 //
-//	system RS  (name: "System")
+//	Authz Test RS (ou)
 //	└── Resource  "system"      → permission "system"
 //	    └── Resource  "ou"      → permission "system:ou"
 //	        └── Action "view"   → permission "system:ou:view"
@@ -67,6 +68,7 @@ type OUAuthzTestSuite struct {
 	// Test-specific role and OU-admin user
 	ouAdminRoleID string
 	ouAdminUserID string
+	scopedRSID    string
 
 	// HTTP client that carries the OU-admin's view-only access token
 	ouViewClient *http.Client
@@ -144,8 +146,8 @@ func (ts *OUAuthzTestSuite) SetupSuite() {
 
 	// ---- 3. Create the OU-admin user in OU1 ----
 	userID, err := testutils.CreateUser(testutils.User{
-		Type:             schema.Name,
-		OUID:             ts.ou1ID,
+		Type: schema.Name,
+		OUID: ts.ou1ID,
 		Attributes: json.RawMessage(fmt.Sprintf(
 			`{"username": %q, "password": %q}`,
 			ouAdminUsername, ouAdminPassword,
@@ -154,15 +156,19 @@ func (ts *OUAuthzTestSuite) SetupSuite() {
 	ts.Require().NoError(err, "create ou-admin user")
 	ts.ouAdminUserID = userID
 
-	// ---- 4. Look up the system resource server that was seeded by bootstrap ----
-	// We use the system RS ID to attach the correct permission to the test role.
-	systemRSID, err := testutils.GetResourceServerByName("System")
-	ts.Require().NoError(err, "look up system resource server")
+	// ---- 4. Create a custom resource server declaring the fine-grained system scopes ----
+	// The product ships only the root "system" scope; this reproduces the "system:ou:view"
+	// permission so the suite can verify resource-level enforcement when configured.
+	const scopedRSIdentifier = "https://authz-test.example.com/ou"
+	systemRSID, err := testutils.CreateSystemScopedResourceServer(
+		ts.ou1ID, "Authz Test RS (ou)", scopedRSIdentifier, "ou")
+	ts.Require().NoError(err, "create scoped resource server")
+	ts.scopedRSID = systemRSID
 
 	// ---- 5. Create a role with permission system:ou:view ----
 	role := testutils.Role{
-		Name:               ouViewRoleName,
-		OUID:               ts.ou1ID,
+		Name: ouViewRoleName,
+		OUID: ts.ou1ID,
 		Permissions: []testutils.ResourcePermissions{
 			{
 				ResourceServerID: systemRSID,
@@ -185,6 +191,8 @@ func (ts *OUAuthzTestSuite) SetupSuite() {
 		ouAdminUsername,
 		ouAdminPassword,
 		true,
+		"",
+		scopedRSIdentifier,
 	)
 	ts.Require().NoError(err, "obtain ou-admin scoped token")
 	ts.Require().NotEmpty(tokenResp.AccessToken, "ou-admin token must be non-empty")
@@ -206,6 +214,11 @@ func (ts *OUAuthzTestSuite) TearDownSuite() {
 	if ts.ouAdminUserID != "" {
 		if err := testutils.DeleteUser(ts.ouAdminUserID); err != nil {
 			ts.T().Logf("teardown: delete ou-admin user: %v", err)
+		}
+	}
+	if ts.scopedRSID != "" {
+		if err := testutils.DeleteResourceServer(ts.scopedRSID); err != nil {
+			ts.T().Logf("teardown: delete scoped resource server: %v", err)
 		}
 	}
 	if authzEntityTypeID != "" {

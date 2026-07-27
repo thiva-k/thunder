@@ -2433,3 +2433,66 @@ func (suite *HandlerTestSuite) TestHandleApplicationGetRequest_EmptyResponseType
 
 	mockService.AssertExpectations(suite.T())
 }
+
+func (suite *HandlerTestSuite) TestHandleApplicationPostRequest_ForwardsPasskeyAllowedOrigins() {
+	mockService := NewApplicationServiceInterfaceMock(suite.T())
+	handler := newApplicationHandler(mockService)
+
+	origins := []string{"https://app.example.com", "https://other.example.com"}
+	appRequest := model.ApplicationRequest{
+		OUID: "ou-123",
+		Name: "TestApp",
+	}
+	appRequest.PasskeyAllowedOrigins = origins
+
+	expectedApp := &model.ApplicationDTO{ID: "test-app-id", Name: "TestApp"}
+	expectedApp.PasskeyAllowedOrigins = origins
+
+	mockService.On("CreateApplication", mock.Anything,
+		mock.MatchedBy(func(dto *model.ApplicationDTO) bool {
+			return assert.Equal(suite.T(), origins, dto.PasskeyAllowedOrigins)
+		}),
+	).Return(expectedApp, nil)
+
+	body, _ := json.Marshal(appRequest)
+	req := httptest.NewRequest(http.MethodPost, "/applications", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	handler.HandleApplicationPostRequest(w, req)
+
+	assert.Equal(suite.T(), http.StatusCreated, w.Code)
+	mockService.AssertExpectations(suite.T())
+}
+
+func (suite *HandlerTestSuite) TestHandleApplicationPutRequest_ForwardsPasskeyAllowedOrigins() {
+	mockService := NewApplicationServiceInterfaceMock(suite.T())
+	handler := newApplicationHandler(mockService)
+
+	origins := []string{"https://app.example.com"}
+	appRequest := model.ApplicationRequest{
+		OUID: "ou-123",
+		Name: "UpdatedApp",
+	}
+	appRequest.PasskeyAllowedOrigins = origins
+
+	expectedApp := &model.ApplicationDTO{ID: "test-app-id", Name: "UpdatedApp"}
+	expectedApp.PasskeyAllowedOrigins = origins
+
+	mockService.On("UpdateApplication", mock.Anything, "test-app-id",
+		mock.MatchedBy(func(dto *model.ApplicationDTO) bool {
+			return assert.Equal(suite.T(), origins, dto.PasskeyAllowedOrigins)
+		}),
+	).Return(expectedApp, nil)
+
+	body, _ := json.Marshal(appRequest)
+	req := httptest.NewRequest(http.MethodPut, "/applications/test-app-id", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.SetPathValue("id", "test-app-id")
+	w := httptest.NewRecorder()
+
+	handler.HandleApplicationPutRequest(w, req)
+
+	assert.Equal(suite.T(), http.StatusOK, w.Code)
+	mockService.AssertExpectations(suite.T())
+}

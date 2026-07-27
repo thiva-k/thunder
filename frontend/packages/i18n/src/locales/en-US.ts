@@ -1171,11 +1171,11 @@ const translations = {
     'edit.flows.allowedUserTypes.placeholder': 'Select or add user types',
     'edit.flows.allowedUserTypes.hint': 'Only these user types can authenticate or register through this agent.',
     'edit.flows.allowedUserTypes.required': 'Select at least one user type that can sign in through this agent.',
-    'edit.flows.delegationToggle.label': 'Delegated mode',
     'edit.flows.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode above to unlock and start using them.',
+      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
 
     // Edit page - Advanced tab
+    'edit.advanced.delegationToggle.label': 'Delegated mode',
     'edit.advanced.redirectUris.title': 'Authorized redirect URIs',
     'edit.advanced.redirectUris.description': 'For use with requests from a web server',
     'edit.advanced.redirectUris.empty': 'No redirect URIs configured.',
@@ -1187,7 +1187,7 @@ const translations = {
     'edit.advanced.oauthAccess.description': 'The grants and redirect URIs this agent is authorized to use.',
     'edit.advanced.oauthAccess.grantTypes.label': 'Grant Types',
     'edit.advanced.oauthAccess.grantTypes.hint':
-      'The greyed-out grants unlock once you turn on Delegated mode in the Flows tab.',
+      'The greyed-out grants unlock once you turn on Delegated mode at the top of this tab.',
     'edit.advanced.security.title': 'Security',
     'edit.advanced.security.description':
       'Controls how this agent protects the authorization code exchange when a user signs in.',
@@ -1205,7 +1205,7 @@ const translations = {
     'edit.tokens.tabs.user': 'User',
     'edit.tokens.tabs.agent': 'Agent',
     'edit.tokens.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode in the Flows tab to unlock and start using them.',
+      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
     'edit.tokens.agent.attributes.title': 'Access Token Attributes',
     'edit.tokens.agent.attributes.description':
       'Attributes included in the access token this agent receives for its own requests (client_credentials grant).',
@@ -1736,6 +1736,10 @@ const translations = {
     'form.fields.jwksEndpoint.label': 'JWKS endpoint',
     'form.fields.jwksEndpoint.hint': 'Endpoint that exposes signing keys for verifying identity tokens.',
     'form.fields.logoutEndpoint.label': 'Logout endpoint',
+    'form.fields.logoutEndpoint.hint': 'Endpoint the provider uses to end the user session on logout.',
+    'form.fields.prompt.label': 'Prompt',
+    'form.fields.prompt.hint':
+      "Optional prompt value forwarded to the provider's authorization request, e.g. select_account or consent.",
     'form.fields.issuer.label': 'Issuer',
     'form.fields.issuer.hint': 'Issuer identifier expected in tokens from this provider.',
     'form.fields.tokenExchangeEnabled.label': 'Enable token exchange',
@@ -1754,7 +1758,6 @@ const translations = {
     'form.fields.senderId.label': 'Sender ID',
     'form.fields.senderId.hint': 'Phone number or alphanumeric sender ID messages are sent from.',
     'form.sections.federation': 'Federation',
-    'form.optional': 'Optional',
     'form.secret.update': 'Update',
     'form.secret.keepHelp': 'Leave unchanged to keep the stored secret.',
     'form.copy': 'Copy',
@@ -1841,7 +1844,6 @@ const translations = {
     'create.subtitle':
       'Register an external identity provider whose identity assertions ThunderID can exchange for access tokens.',
     'create.duplicateName': 'A trusted issuer with this name already exists.',
-    'create.submit': 'Add trusted issuer',
     'create.form.name.label': 'Name',
     'create.form.issuer.label': 'Issuer URI',
     'create.form.issuer.hint': "The issuer URI from the external IdP's OpenID Connect discovery document.",
@@ -1876,18 +1878,11 @@ const translations = {
     'detail.saveBar.discard': 'Discard',
     'detail.saveBar.save': 'Save changes',
 
-    // Delete dialog
-    'delete.title': 'Delete trusted issuer',
-    'delete.message':
-      'Delete "{{name}}"? Applications relying on assertions from this issuer will stop receiving tokens. This cannot be undone.',
-
     // Toasts
     'create.success': 'Trusted issuer created successfully.',
     'create.error': 'Failed to create trusted issuer. Please try again.',
     'update.success': 'Trusted issuer updated successfully.',
     'update.error': 'Failed to update trusted issuer. Please try again.',
-    'delete.success': 'Trusted issuer deleted successfully.',
-    'delete.error': 'Failed to delete trusted issuer. Please try again.',
   },
 
   // ============================================================================
@@ -2154,6 +2149,8 @@ const translations = {
     'onboarding.configure.approach.native.title': 'Embedded sign-in/sign-up components in your app',
     'onboarding.configure.approach.native.description':
       'Users will sign in or sign up through your app using the UI components or APIs provided by {{product}}. You can customize and brand the flows using the designer or through code.',
+    'onboarding.configure.approach.native.attestationNotice':
+      'Mobile apps authenticate to the Flow Execution API using platform attestation instead of a flow secret. After creating this application, configure attestation under Advanced settings to access the flow APIs.',
     'onboarding.configure.stack.title': 'Choose a type',
     'onboarding.configure.stack.subtitle': 'Select the type that best matches your application.',
     'onboarding.templateSelect.subtitle':
@@ -2502,6 +2499,16 @@ const translations = {
     'edit.advanced.attestation.hint.bundleId': 'The iOS bundle identifier that must match the attested app.',
     'edit.advanced.attestation.error.appleIncomplete': 'Both Team ID and Bundle ID are required together.',
 
+    /* Passkeys section */
+    'edit.advanced.labels.passkeys': 'Passkey Allowed Origins',
+    'edit.advanced.passkeys.intro': 'Allowed origins for passkey operations initiated through this application.',
+    'edit.advanced.passkeys.serverFallbackHint':
+      'Origins listed here are automatically included in the server CORS allowed origins.',
+    'edit.advanced.passkeys.allowedOrigins.placeholder': 'https://app.example.com',
+    'edit.advanced.passkeys.allowedOrigins.addOrigin': 'Add Origin',
+    'edit.advanced.passkeys.allowedOrigins.error.empty': 'Origin cannot be empty',
+    'edit.advanced.passkeys.allowedOrigins.error.invalid': 'Enter a valid URL',
+
     /* -------------------- Edit page -------------------- */
     // Common
     'edit.page.error': 'Failed to load application information',
@@ -2517,9 +2524,13 @@ const translations = {
     'edit.page.tabs.token': 'Token',
     'edit.page.tabs.advanced': 'Advanced Settings',
     'edit.page.unsavedChanges': 'Unsaved changes',
+    'edit.page.validation.missingRedirectUri': 'A redirect URI is required.',
+    'edit.page.validation.missingCertificate': 'A certificate is required.',
     'edit.page.reset': 'Reset',
     'edit.page.save': 'Save',
     'edit.page.saving': 'Saving...',
+    'edit.userAccessLock.message':
+      'These settings apply only to user-facing flows. Enable a user-facing grant (e.g. authorization code) in the Advanced tab to configure them.',
 
     'edit.mcp.connect.sections.identity': 'Connection',
     'edit.mcp.connect.sections.identity.description': 'Client identity and credentials for connecting to MCP servers.',
@@ -2659,6 +2670,23 @@ const translations = {
     'edit.token.scopes.add_custom.error.duplicate': 'This scope is already added',
     'edit.token.scopes.add_custom.error.invalid': 'Scope name must not contain spaces',
     'edit.token.scopes.openid_required': 'The openid scope is required and cannot be removed',
+    'edit.token.tabs.application': 'Application',
+    'edit.token.tabs.user': 'User',
+    'edit.token.clientLock.message':
+      'These settings apply only when the client credentials grant is enabled. Add it in the Advanced tab to configure them.',
+    'edit.token.userLock.message':
+      'These settings apply only when a user-facing grant is enabled. Add one in the Advanced tab to configure them.',
+    'edit.token.client.attributes.title': 'Access Token Claims',
+    'edit.token.client.attributes.description':
+      'Optional claims to include in the access token this application receives for its own requests (client_credentials grant).',
+    'edit.token.client.attributes.label': 'Add or Remove Claims',
+    'edit.token.client.attributes.hint': "Click a claim to include it in this application's client access token.",
+    'edit.token.client.attributes.empty': 'No optional claims available.',
+    'edit.token.client.validity.title': 'Token Validity',
+    'edit.token.client.validity.description': 'How long this client access token remains valid before expiration.',
+    'edit.token.client.validity.label': 'Token Validity',
+    'edit.token.client.validity.hint': 'Token validity period in seconds (e.g., 3600 for 1 hour).',
+    'edit.token.client.validity.error': 'Enter a validity period of at least 1 second.',
     'edit.advanced.audience.title': 'Default Audience',
     'edit.advanced.audience.description':
       "The default aud for access tokens that don't target a resource server (OIDC only or scopeless).",
@@ -3620,6 +3648,13 @@ const translations = {
     'sso.properties.checkpointLabel': 'Session checkpoint',
     'sso.properties.checkpointDangling': 'The referenced session step no longer exists. Select a valid session step.',
 
+    // Discard unsaved changes dialog
+    'core.dialogs.discardChanges.title': 'Discard unsaved changes?',
+    'core.dialogs.discardChanges.description':
+      'You have unsaved changes to this flow. If you leave now, your changes will be lost.',
+    'core.dialogs.discardChanges.cancelButton': 'Keep editing',
+    'core.dialogs.discardChanges.confirmButton': 'Discard changes',
+
     // Form adapter
     'core.adapters.form.badgeLabel': 'Form',
     'core.adapters.form.placeholder': 'DROP FORM COMPONENTS HERE',
@@ -3628,6 +3663,11 @@ const translations = {
     'core.headerPanel.goBack': 'Go back to Flows',
     'core.headerPanel.autoLayout': 'Auto Layout',
     'core.headerPanel.save': 'Save',
+    'core.headerPanel.unsavedChanges': 'You have unsaved changes',
+    'core.headerPanel.undo': 'Undo',
+    'core.headerPanel.undoTooltip': 'Undo (Ctrl+Z / Cmd+Z)',
+    'core.headerPanel.redo': 'Redo',
+    'core.headerPanel.redoTooltip': 'Redo (Ctrl+Shift+Z / Cmd+Shift+Z)',
     'core.headerPanel.editTitle': 'Edit flow name',
     'core.headerPanel.saveTitle': 'Save flow name',
     'core.headerPanel.cancelEdit': 'Cancel',

@@ -17,9 +17,17 @@
  */
 
 import {fireEvent, render, screen, within} from '@testing-library/react';
+import {useState} from 'react';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
 import type {AttributeConfiguration} from '../../models/connection';
 import AttributeMappingSection from '../AttributeMappingSection';
+
+// Mirrors ConnectionDetailPage's real usage: an inline (identity-unstable) onChange handler, so a
+// regression of the report-up effect depending on onChange's identity would loop here too.
+function Harness({initialConfig = undefined}: {initialConfig?: AttributeConfiguration}): JSX.Element {
+  const [, setConfig] = useState<AttributeConfiguration | undefined>(undefined);
+  return <AttributeMappingSection initialConfig={initialConfig} onChange={(config) => setConfig(config)} />;
+}
 
 // The package's test setup renders real translations, so assert on the resolved English strings.
 const RESOLUTION_TITLE = 'User type resolution';
@@ -97,6 +105,17 @@ describe('AttributeMappingSection', () => {
     };
     render(<AttributeMappingSection initialConfig={initial} onChange={onChange} />);
     expect(onChange).toHaveBeenLastCalledWith(initial, true);
+  });
+
+  it('does not loop when an inline onChange stores an existing mapping config (regression)', () => {
+    const initial: AttributeConfiguration = {
+      userTypeResolution: {default: 'Person'},
+      userTypeAttributeMappings: [
+        {userType: 'Person', attributes: [{externalAttribute: 'given_name', localAttribute: 'firstName'}]},
+      ],
+    };
+    expect(() => render(<Harness initialConfig={initial} />)).not.toThrow();
+    expect(screen.getByTestId('attribute-mapping-section')).toBeInTheDocument();
   });
 
   it('pre-enables the value mapping toggle and shows existing entries on edit prefill', () => {

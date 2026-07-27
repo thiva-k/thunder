@@ -1,5 +1,6 @@
 {
   "id": "node",
+  "type": "fullstack",
   "displayName": "Node.js",
   "description": "Backend service built with Node.js",
   "creationFlow": {

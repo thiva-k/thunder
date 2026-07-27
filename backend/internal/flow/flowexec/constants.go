@@ -23,8 +23,13 @@ const (
 	defaultRegistrationFlowExpiry   int64 = 3600  // 60 minutes in seconds
 	defaultUserOnboardingFlowExpiry int64 = 86400 // 24 hours in seconds
 	defaultRecoveryFlowExpiry       int64 = 1800  // 30 minutes in seconds
+	defaultSignOutFlowExpiry        int64 = 1800  // 30 minutes in seconds
 
 	fieldFlowSecret = "flowSecret"
+
+	// applicationTypePropertyKey is the InboundClient.Properties key under which the application
+	// type is stored.
+	applicationTypePropertyKey = "type"
 )
 
 // flowInitiationMode classifies how an application is permitted to initiate a new authentication

@@ -1,5 +1,6 @@
 {
   "id": "mobile",
+  "type": "mobile",
   "displayName": "Mobile",
   "description": "Native mobile application",
   "defaults": {

@@ -556,6 +556,9 @@ func retrieveAndValidateApplicationDetails(ts *ApplicationAPITestSuite, expected
 }
 
 func createApplication(app Application) (string, error) {
+	if app.Type == "" {
+		app.Type = "fullstack"
+	}
 	appJSON, err := json.Marshal(app)
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal application: %w", err)
@@ -3993,6 +3996,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidThemeAndLayoutID() 
 		OUID:        testOUID,
 		Name:        "App With Invalid Theme",
 		Description: "Application with invalid theme ID",
+		Type:        "fullstack",
 		ThemeID:     "00000000-0000-0000-0000-000000000000",
 		Certificate: nil,
 		InboundAuthConfig: []InboundAuthConfig{
@@ -4338,6 +4342,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithInvalidAllowedUserTypes() 
 		OUID:                      testOUID,
 		Name:                      "App With Invalid User Types",
 		Description:               "Application with invalid user types",
+		Type:                      "fullstack",
 		IsRegistrationFlowEnabled: false,
 		AllowedUserTypes:          []string{"nonexistent_type_1", "nonexistent_type_2"},
 		Certificate:               nil,
@@ -4620,6 +4625,7 @@ func (ts *ApplicationAPITestSuite) TestApplicationWithPartialInvalidAllowedUserT
 		OUID:                      testOUID,
 		Name:                      "App With Partial Invalid User Types",
 		Description:               "Application with mix of valid and invalid user types",
+		Type:                      "fullstack",
 		IsRegistrationFlowEnabled: false,
 		AllowedUserTypes:          []string{"valid_user_type", "invalid_user_type"},
 		Certificate:               nil,

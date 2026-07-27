@@ -1,5 +1,6 @@
 {
   "id": "vanilla-js",
+  "type": "browser",
   "displayName": "JavaScript",
   "description": "Browser application built with vanilla JavaScript",
   "defaults": {

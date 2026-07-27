@@ -12,6 +12,10 @@ description: Import declarative YAML resources into runtime stores and control m
 Declarative resource attributes use camelCase (for example `ouId`, `authFlowId`, `clientId`), matching the REST API.
 :::
 
+:::note
+An application resource requires a `type` attribute (`browser`, `fullstack`, `mobile`, `m2m`, or `custom`). The type is set on creation and does not change on a later import. See [Application Types](../applications/manage-applications.mdx#application-types).
+:::
+
 Use this API when you want to:
 
 - Bootstrap resources from a YAML bundle.
@@ -104,7 +108,7 @@ curl -X POST "https://localhost:8090/import" \
   -H "Authorization: Bearer <access_token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "content": "resource_type: application\nname: Console\nauthFlowId: {{.AUTH_FLOW_ID}}\n",
+    "content": "resource_type: application\nname: Console\ntype: browser\nauthFlowId: {{.AUTH_FLOW_ID}}\n",
     "variables": {
       "AUTH_FLOW_ID": "edc013d0-e893-4dc0-990c-3e1d203e005b"
     },
@@ -140,6 +144,7 @@ If a handle cannot be resolved (because the target resource does not exist or th
 ```yaml
 resource_type: application
 name: My App
+type: fullstack
 ouHandle: default
 authFlowHandle: default-basic-flow
 registrationFlowHandle: default-registration-flow

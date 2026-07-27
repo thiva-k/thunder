@@ -436,7 +436,7 @@ describe('DecoratedVisualFlow', () => {
       expect(screen.getByTestId('simulate-flow-button')).toBeInTheDocument();
     });
 
-    it('should disable save while previewing so the zoomed viewport is not persisted', () => {
+    it('should keep save enabled while previewing (clicking it stops the preview first)', () => {
       const nodes = [{id: 'node-1', position: {x: 0, y: 0}, data: {}}] as Node[];
       renderComponent(<DecoratedVisualFlow {...defaultProps} nodes={nodes} onSave={vi.fn()} />);
 
@@ -444,7 +444,7 @@ describe('DecoratedVisualFlow', () => {
 
       fireEvent.click(screen.getByTestId('simulate-flow-button'));
 
-      expect(screen.getByTestId('save-flow-button')).toBeDisabled();
+      expect(screen.getByTestId('save-flow-button')).toBeEnabled();
     });
 
     it('should focus the clicked node via fitView', () => {
@@ -512,7 +512,7 @@ describe('DecoratedVisualFlow', () => {
     it('should render save button in top bar', () => {
       renderComponent(<DecoratedVisualFlow {...defaultProps} onSave={vi.fn()} />);
 
-      expect(screen.getByText('core.headerPanel.save')).toBeInTheDocument();
+      expect(screen.getByTestId('save-flow-button')).toBeInTheDocument();
     });
 
     it('should render canvas toolbar', () => {
@@ -531,7 +531,7 @@ describe('DecoratedVisualFlow', () => {
 
       renderComponent(<DecoratedVisualFlow {...defaultProps} onSave={mockOnSave} />);
 
-      const saveButton = screen.getByText('core.headerPanel.save');
+      const saveButton = screen.getByTestId('save-flow-button');
       fireEvent.click(saveButton);
 
       expect(mockOnSave).toHaveBeenCalledWith({
@@ -544,7 +544,7 @@ describe('DecoratedVisualFlow', () => {
     it('should not throw when onSave is not provided', () => {
       renderComponent(<DecoratedVisualFlow {...defaultProps} onSave={undefined} />);
 
-      const saveButton = screen.getByText('core.headerPanel.save');
+      const saveButton = screen.getByTestId('save-flow-button');
       expect(() => fireEvent.click(saveButton)).not.toThrow();
     });
   });

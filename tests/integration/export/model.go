@@ -47,6 +47,7 @@ type Application struct {
 	OUID                      string              `json:"ouId,omitempty"`
 	Name                      string              `json:"name"`
 	Description               string              `json:"description,omitempty"`
+	Type                      string              `json:"type,omitempty"`
 	ClientID                  string              `json:"clientId,omitempty"`
 	ClientSecret              string              `json:"clientSecret,omitempty"`
 	AuthFlowID                string              `json:"authFlowId,omitempty"`

@@ -991,6 +991,7 @@ resource_type: application
 id: wayfinder-app
 name: Wayfinder
 description: Wayfinder Travel sample application
+type: browser
 ouHandle: default
 url: http://localhost:5173
 logoUrl: "emoji:✈️"
@@ -1669,6 +1670,7 @@ resource_type: application
 id: external-mcp-client
 name: External MCP Client
 description: Public OAuth client for external MCP clients connecting to the Wayfinder MCP server.
+type: browser
 ouHandle: default
 url: http://localhost:8787/mcp
 # Reuse the Concierge's auth flow so the OAuth consent screen surfaces the
@@ -1897,6 +1899,7 @@ resource_type: application
 id: heidi-wallet-app
 name: Heidi Wallet
 description: OpenID4VCI issuance client for the Heidi / Funke wallet
+type: mobile
 template: wallet
 ouHandle: default
 url: http://localhost:3000
@@ -1927,6 +1930,7 @@ resource_type: application
 id: lissi-wallet-app
 name: Lissi Wallet
 description: OpenID4VCI issuance client for the Lissi wallet
+type: mobile
 template: wallet
 ouHandle: default
 url: http://localhost:3000

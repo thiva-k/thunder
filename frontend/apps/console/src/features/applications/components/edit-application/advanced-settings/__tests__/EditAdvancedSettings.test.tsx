@@ -17,6 +17,7 @@
  */
 
 import {fireEvent, render, screen} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import CertificateTypes from '../../../../constants/certificate-types';
 import type {Application} from '../../../../models/application';
@@ -379,6 +380,157 @@ describe('EditAdvancedSettings', () => {
       );
 
       expect(onValidationChange).toHaveBeenLastCalledWith(true);
+    });
+  });
+
+  describe('PasskeysSection Integration', () => {
+    it('renders the Passkeys section', () => {
+      render(
+        <EditAdvancedSettings
+          application={mockApplication}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByText('applications:edit.advanced.labels.passkeys')).toBeInTheDocument();
+    });
+
+    it('displays existing passkeyAllowedOrigins from the application', () => {
+      const appWithOrigins: Application = {
+        ...mockApplication,
+        passkeyAllowedOrigins: ['https://app.example.com'],
+      };
+
+      render(
+        <EditAdvancedSettings
+          application={appWithOrigins}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByDisplayValue('https://app.example.com')).toBeInTheDocument();
+    });
+
+    it('prefers editedApp.passkeyAllowedOrigins over application.passkeyAllowedOrigins', () => {
+      const appWithOrigins: Application = {
+        ...mockApplication,
+        passkeyAllowedOrigins: ['https://old.example.com'],
+      };
+
+      render(
+        <EditAdvancedSettings
+          application={appWithOrigins}
+          editedApp={{passkeyAllowedOrigins: ['https://new.example.com']}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      expect(screen.getByDisplayValue('https://new.example.com')).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('https://old.example.com')).not.toBeInTheDocument();
+    });
+
+    it('calls onFieldChange with passkeyAllowedOrigins when origins change', async () => {
+      const user = userEvent.setup();
+      render(
+        <EditAdvancedSettings
+          application={mockApplication}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      await user.click(
+        screen.getByRole('button', {name: /applications:edit.advanced.passkeys.allowedOrigins.addOrigin/i}),
+      );
+
+      expect(mockOnFieldChange).toHaveBeenCalledWith('passkeyAllowedOrigins', ['']);
+    });
+
+    it('passes disabled=true to PasskeysSection when the application is read-only', () => {
+      const readOnlyApp: Application = {...mockApplication, isReadOnly: true};
+
+      render(
+        <EditAdvancedSettings
+          application={readOnlyApp}
+          editedApp={{}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+        />,
+      );
+
+      // In read-only mode the Add Origin button should not be present
+      expect(screen.queryByRole('button', {name: /Add Origin/i})).not.toBeInTheDocument();
+    });
+
+    it('reports hasErrors=true via onValidationChange when an origin is empty', () => {
+      const onValidationChange = vi.fn();
+
+      render(
+        <EditAdvancedSettings
+          application={mockApplication}
+          editedApp={{passkeyAllowedOrigins: ['']}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      // An empty string origin is immediately invalid; the effect fires on mount.
+      expect(onValidationChange).toHaveBeenCalledWith(true);
+    });
+
+    it('reports hasErrors=true via onValidationChange when an origin is not a valid URL', () => {
+      const onValidationChange = vi.fn();
+
+      render(
+        <EditAdvancedSettings
+          application={mockApplication}
+          editedApp={{passkeyAllowedOrigins: ['not-a-url']}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      expect(onValidationChange).toHaveBeenCalledWith(true);
+    });
+
+    it('reports hasErrors=false via onValidationChange when all origins are valid URLs', () => {
+      const onValidationChange = vi.fn();
+
+      render(
+        <EditAdvancedSettings
+          application={mockApplication}
+          editedApp={{passkeyAllowedOrigins: ['https://app.example.com']}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      expect(onValidationChange).toHaveBeenLastCalledWith(false);
+    });
+
+    it('reports hasErrors=false via onValidationChange when the origins list is empty', () => {
+      const onValidationChange = vi.fn();
+
+      render(
+        <EditAdvancedSettings
+          application={mockApplication}
+          editedApp={{passkeyAllowedOrigins: []}}
+          oauth2Config={mockOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          onValidationChange={onValidationChange}
+        />,
+      );
+
+      expect(onValidationChange).toHaveBeenLastCalledWith(false);
     });
   });
 });

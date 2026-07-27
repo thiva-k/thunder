@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -32,8 +32,9 @@ import {
   Autocomplete,
   TextField,
   Grid,
+  Alert,
 } from '@wso2/oxygen-ui';
-import {ExternalLink, Code, User} from '@wso2/oxygen-ui-icons-react';
+import {ExternalLink, Code, User, Info} from '@wso2/oxygen-ui-icons-react';
 import type {JSX, ChangeEvent} from 'react';
 import {useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -61,6 +62,13 @@ export interface ConfigureExperienceProps {
    * hidden for them. Defaults to true.
    */
   allowEmbeddedApproach?: boolean;
+
+  /**
+   * Whether choosing the embedded approach requires configuring platform attestation. Mobile apps
+   * authenticate to the Flow Execution API via attestation rather than a flow secret, so a notice is
+   * shown when they select the embedded approach. Defaults to false.
+   */
+  embeddedRequiresAttestation?: boolean;
 
   /**
    * Callback function to broadcast whether this step is ready to proceed
@@ -127,6 +135,7 @@ export default function ConfigureExperience({
   selectedApproach,
   onApproachChange,
   allowEmbeddedApproach = true,
+  embeddedRequiresAttestation = false,
   onReadyChange = undefined,
   userTypes = [],
   selectedUserTypes = [],
@@ -295,6 +304,14 @@ export default function ConfigureExperience({
                 </CardActionArea>
               </Card>
             )}
+
+            {allowEmbeddedApproach &&
+              embeddedRequiresAttestation &&
+              selectedApproach === ApplicationCreateFlowSignInApproach.EMBEDDED && (
+                <Alert severity="info" icon={<Info size={20} />}>
+                  {t('applications:onboarding.configure.approach.native.attestationNotice')}
+                </Alert>
+              )}
           </Stack>
         </RadioGroup>
       </Stack>

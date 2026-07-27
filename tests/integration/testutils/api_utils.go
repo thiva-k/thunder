@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -387,6 +387,14 @@ func CreateApplication(app Application) (string, error) {
 		redirectURIs = []string{"http://localhost:8080/callback"}
 	}
 
+	// The application type is required. Tests that do not care about the type default to full-stack,
+	// whose flow behavior is derived from the OAuth config shape (matching what an untyped app used
+	// to do). Tests exercising type-specific behavior set Type explicitly.
+	appType := app.Type
+	if appType == "" {
+		appType = "fullstack"
+	}
+
 	inboundAuthConfig := app.InboundAuthConfig
 	if len(inboundAuthConfig) == 0 && !app.Embedded {
 		// Include token-exchange so the default test app is flow-native capable (eligible for a Flow
@@ -429,6 +437,9 @@ func CreateApplication(app Application) (string, error) {
 	if app.AssertionConfig != nil {
 		appData["assertion"] = app.AssertionConfig
 	}
+
+	// Add the application type (explicit, or defaulted to full-stack above).
+	appData["type"] = appType
 
 	// Add client-level attestation config if provided
 	if app.Attestation != nil {
@@ -1444,6 +1455,128 @@ func createAction(resourceServerID string, action Action) (string, error) {
 	return createdAction.ID, nil
 }
 
+// CreateResource creates a resource under a resource server via API and returns the created
+// resource ID. parentID may be empty to create a top-level resource.
+func CreateResource(resourceServerID, name, handle, parentID string) (string, error) {
+	client := GetHTTPClient()
+
+	body := map[string]interface{}{"name": name, "handle": handle}
+	if parentID != "" {
+		body["parent"] = parentID
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal resource: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/resource-servers/%s/resources", TestServerURL, resourceServerID)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(bodyBytes, &created); err != nil {
+		return "", fmt.Errorf("failed to unmarshal resource response: %w", err)
+	}
+	return created.ID, nil
+}
+
+// createActionUnderResource creates an action nested under a resource and returns the action ID.
+func createActionUnderResource(resourceServerID, resourceID string, action Action) (string, error) {
+	client := GetHTTPClient()
+
+	actionJSON, err := json.Marshal(action)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal action: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/resource-servers/%s/resources/%s/actions", TestServerURL, resourceServerID, resourceID)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(actionJSON))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(bodyBytes, &created); err != nil {
+		return "", fmt.Errorf("failed to unmarshal action response: %w", err)
+	}
+	return created.ID, nil
+}
+
+// CreateSystemScopedResourceServer creates a custom resource server that reproduces the
+// hierarchical "system:<handle>:view" permission strings used by the built-in system management
+// APIs. The product ships only the root "system" scope by default; this helper simulates an
+// operator declaring fine-grained scopes, letting the authz suites verify that resource-level
+// permissions still enforce when configured. It builds a "system" root resource, then one child
+// resource per handle (each with a "view" action), yielding the permissions "system",
+// "system:<handle>" and "system:<handle>:view". Returns the resource server ID; delete it with
+// DeleteResourceServer during teardown.
+func CreateSystemScopedResourceServer(ouID, name, identifier string, childHandles ...string) (string, error) {
+	rsID, err := createResourceServer(ResourceServer{
+		Name:       name,
+		Identifier: identifier,
+		OUID:       ouID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create resource server: %w", err)
+	}
+
+	systemID, err := CreateResource(rsID, "System", "system", "")
+	if err != nil {
+		return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create system resource: %w", err))
+	}
+
+	for _, handle := range childHandles {
+		childID, err := CreateResource(rsID, handle, handle, systemID)
+		if err != nil {
+			return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create %q resource: %w", handle, err))
+		}
+		if _, err := createActionUnderResource(rsID, childID, Action{Name: "View", Handle: "view"}); err != nil {
+			return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create view action for %q: %w", handle, err))
+		}
+	}
+
+	return rsID, nil
+}
+
+// rollbackResourceServer deletes a partially built resource server after a setup step failed. It
+// returns the original cause, wrapping any cleanup failure so neither error is silently discarded.
+func rollbackResourceServer(rsID string, cause error) error {
+	if delErr := DeleteResourceServer(rsID); delErr != nil {
+		return fmt.Errorf("%w (resource server cleanup also failed: %v)", cause, delErr)
+	}
+	return cause
+}
+
 // CreateFlow creates a flow via API and returns the flow ID
 func CreateFlow(flowDefinition Flow) (string, error) {
 	flowJSON, err := json.Marshal(flowDefinition)
@@ -1506,6 +1639,45 @@ func CreateIsolatedAuthFlow(handle string) (string, error) {
 				"id":        "auth_assert",
 				"type":      "TASK_EXECUTION",
 				"executor":  map[string]interface{}{"name": "AuthAssertExecutor"},
+				"onSuccess": "end",
+			},
+			{
+				"id":   "end",
+				"type": "END",
+			},
+		},
+	})
+}
+
+// CreateIsolatedRegistrationFlow creates a minimal REGISTRATION flow suitable for tests that need
+// an app with IsRegistrationFlowEnabled set without triggering cross-type reference validation.
+// The handle is caller-supplied so tests can craft unique values per suite and clean up
+// deterministically.
+func CreateIsolatedRegistrationFlow(handle string) (string, error) {
+	return CreateFlow(Flow{
+		Name:     "Isolated Registration Flow " + handle,
+		FlowType: "REGISTRATION",
+		Handle:   handle,
+		Nodes: []map[string]interface{}{
+			{
+				"id":        "start",
+				"type":      "START",
+				"onSuccess": "user_type_resolver",
+			},
+			{
+				"id":   "user_type_resolver",
+				"type": "TASK_EXECUTION",
+				"executor": map[string]interface{}{
+					"name": "UserTypeResolver",
+				},
+				"onSuccess": "provisioning",
+			},
+			{
+				"id":   "provisioning",
+				"type": "TASK_EXECUTION",
+				"executor": map[string]interface{}{
+					"name": "ProvisioningExecutor",
+				},
 				"onSuccess": "end",
 			},
 			{

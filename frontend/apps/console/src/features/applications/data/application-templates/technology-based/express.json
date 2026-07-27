@@ -1,5 +1,6 @@
 {
   "id": "express",
+  "type": "fullstack",
   "displayName": "Express",
   "description": "Server-side Node.js application built with Express",
   "defaults": {

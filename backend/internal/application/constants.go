@@ -34,6 +34,7 @@ const (
 	propTosURI      = "tos_uri"
 	propPolicyURI   = "policy_uri"
 	propContacts    = "contacts"
+	propType        = "type"
 	propTemplate    = "template"
 	propMetadata    = "metadata"
 	propOAuthConfig = "oauth_config"

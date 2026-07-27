@@ -1,5 +1,6 @@
 {
   "id": "custom",
+  "type": "custom",
   "displayName": "Custom",
   "description": "Fully customizable application with all configuration options available",
   "creationFlow": {

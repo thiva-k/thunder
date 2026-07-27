@@ -25,6 +25,8 @@ import {
   deriveOAuth2Flags,
   getPkceCaption,
   getPublicClientCaption,
+  hasClientAccess,
+  hasUserAccess,
   isGrantItemDisabled,
 } from '../oauth2Rules';
 
@@ -251,6 +253,28 @@ describe('getPublicClientCaption', () => {
     expect(getPublicClientCaption(deriveOAuth2Flags(confidentialConfig), confidentialConfig)[0]).toBe(
       'applications:edit.advanced.publicClient.confidential',
     );
+  });
+});
+
+describe('hasUserAccess', () => {
+  it('is true for authorization_code, CIBA, and password grants', () => {
+    expect(hasUserAccess([OAuth2GrantTypes.AUTHORIZATION_CODE])).toBe(true);
+    expect(hasUserAccess([OAuth2GrantTypes.CIBA])).toBe(true);
+    expect(hasUserAccess([OAuth2GrantTypes.PASSWORD])).toBe(true);
+  });
+
+  it('is false for client_credentials only and for no grants', () => {
+    expect(hasUserAccess([OAuth2GrantTypes.CLIENT_CREDENTIALS])).toBe(false);
+    expect(hasUserAccess([])).toBe(false);
+    expect(hasUserAccess(undefined)).toBe(false);
+  });
+});
+
+describe('hasClientAccess', () => {
+  it('is true only when client_credentials is granted', () => {
+    expect(hasClientAccess([OAuth2GrantTypes.CLIENT_CREDENTIALS])).toBe(true);
+    expect(hasClientAccess([OAuth2GrantTypes.AUTHORIZATION_CODE])).toBe(false);
+    expect(hasClientAccess(undefined)).toBe(false);
   });
 });
 

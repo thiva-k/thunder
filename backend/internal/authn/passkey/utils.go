@@ -34,6 +34,15 @@ const (
 	defaultOriginHTTP = "https://localhost:8090"
 )
 
+// resolveAllowedOrigins returns overrideOrigins when non-empty; otherwise falls back to
+// the server-level configured origins from deployment configuration.
+func resolveAllowedOrigins(overrideOrigins []string) []string {
+	if len(overrideOrigins) > 0 {
+		return overrideOrigins
+	}
+	return getConfiguredOrigins()
+}
+
 // getConfiguredOrigins retrieves the allowed origins from runtime configuration.
 func getConfiguredOrigins() []string {
 	// Default origins if not configured

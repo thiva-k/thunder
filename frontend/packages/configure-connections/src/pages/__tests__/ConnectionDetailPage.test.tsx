@@ -53,6 +53,17 @@ const TWILIO_CONNECTION = {
   senderId: '+15005550006',
 };
 
+const OIDC_CONNECTION = {
+  id: 'oidc1',
+  type: 'oidc',
+  name: 'Acme Workforce OIDC',
+  clientId: 'cid',
+  clientSecret: '******',
+  authorizationEndpoint: 'https://idp.example.com/authorize',
+  tokenEndpoint: 'https://idp.example.com/token',
+  redirectUri: 'https://id.acme.io/oauth/callback/oidc',
+};
+
 const mockParams: {type: string; id: string} = {type: 'google', id: 'g1'};
 const mockConn: {data: Record<string, unknown>} = {data: CONNECTION};
 
@@ -88,12 +99,22 @@ vi.mock('../../api/useGetConnectionUsages', () => ({
 }));
 
 vi.mock('../../components/ConnectionForm', () => ({
-  default: function StubConnectionForm({onFieldChange}: {onFieldChange: (name: string, value: string) => void}) {
+  default: function StubConnectionForm({
+    onFieldChange,
+    nameError,
+  }: {
+    onFieldChange: (name: string, value: string) => void;
+    nameError?: string | null;
+  }) {
     return (
       <div data-testid="stub-connection-form">
         <button type="button" data-testid="edit-client-id" onClick={() => onFieldChange('clientId', 'changed')}>
           edit
         </button>
+        <button type="button" data-testid="edit-name" onClick={() => onFieldChange('name', 'Renamed')}>
+          edit name
+        </button>
+        {nameError && <div data-testid="stub-name-error">{nameError}</div>}
       </div>
     );
   },
@@ -153,6 +174,23 @@ describe('ConnectionDetailPage', () => {
 
     await waitFor(() => expect(refetchMock).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(screen.queryByTestId('save-bar')).not.toBeInTheDocument());
+  });
+
+  it('shows an inline name error on a 409 update conflict, and clears it when the name is edited', async () => {
+    mockParams.type = 'oidc';
+    mockParams.id = 'oidc1';
+    mockConn.data = OIDC_CONNECTION;
+    updateMock.mockRejectedValueOnce({response: {status: 409}});
+    render(<ConnectionDetailPage />);
+    fireEvent.click(screen.getByTestId('edit-client-id'));
+    fireEvent.click(screen.getByTestId('save-bar'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('stub-name-error')).toHaveTextContent('A connection with this name already exists.'),
+    );
+
+    fireEvent.click(screen.getByTestId('edit-name'));
+    expect(screen.queryByTestId('stub-name-error')).not.toBeInTheDocument();
   });
 
   it('deletes the connection and returns to the list', () => {

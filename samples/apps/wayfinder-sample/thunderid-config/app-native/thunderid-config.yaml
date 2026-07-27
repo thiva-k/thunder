@@ -1128,6 +1128,7 @@ resource_type: application
 id: wayfinder-app
 name: Wayfinder
 description: Wayfinder Travel sample application
+type: custom
 ouHandle: default
 url: http://localhost:5173
 logoUrl: "emoji:✈️"
@@ -1808,6 +1809,7 @@ resource_type: application
 id: external-mcp-client
 name: External MCP Client
 description: Public OAuth client for external MCP clients connecting to the Wayfinder MCP server.
+type: browser
 ouHandle: default
 url: http://localhost:8787/mcp
 # Reuse the Concierge's auth flow so the OAuth consent screen surfaces the

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
+ * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
  *
  * WSO2 LLC. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -20,15 +20,11 @@ package application
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
-
-	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
-	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
-
-	"encoding/json"
 
 	"github.com/thunder-id/thunderid/internal/application/model"
 	"github.com/thunder-id/thunderid/internal/cert"
@@ -37,14 +33,18 @@ import (
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	oauthutils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	oupkg "github.com/thunder-id/thunderid/internal/ou"
+	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
 	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
+	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // ApplicationServiceInterface defines the interface for the application service.
@@ -75,6 +75,7 @@ type applicationService struct {
 	i18nService          i18nmgt.I18nServiceInterface
 	cryptoSvc            kmprovider.RuntimeCryptoProvider
 	dependencyRegistry   resourcedependency.Registry
+	serverConfigService  serverconfig.ServerConfigService
 }
 
 // newApplicationService creates a new instance of ApplicationService.
@@ -84,6 +85,7 @@ func newApplicationService(
 	ouService oupkg.OrganizationUnitServiceInterface,
 	i18nService i18nmgt.I18nServiceInterface,
 	cryptoSvc kmprovider.RuntimeCryptoProvider,
+	serverConfigSvc serverconfig.ServerConfigService,
 ) ApplicationServiceInterface {
 	return &applicationService{
 		logger:               log.GetLogger().With(log.String(log.LoggerKeyComponentName, "ApplicationService")),
@@ -92,6 +94,7 @@ func newApplicationService(
 		ouService:            ouService,
 		i18nService:          i18nService,
 		cryptoSvc:            cryptoSvc,
+		serverConfigService:  serverConfigSvc,
 	}
 }
 
@@ -146,7 +149,7 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 	// value for such apps is ignored. For eligible apps, an explicitly provided value (e.g.
 	// declarative resources) is preserved; otherwise one is generated.
 	flowSecret := ""
-	if isFlowSecretEligible(inboundAuthConfig) {
+	if isFlowSecretEligible(app.Type, inboundAuthConfig) {
 		flowSecret = app.FlowSecret
 		if flowSecret == "" {
 			generatedFlowSecret, secretErr := oauthutils.GenerateOAuth2ClientSecret()
@@ -185,6 +188,8 @@ func (as *applicationService) CreateApplication(ctx context.Context, app *model.
 		as.logger.Error(ctx, "Failed to create application", log.Error(err), log.String("appID", appID))
 		return nil, &tidcommon.InternalServerError
 	}
+
+	as.syncPasskeyOriginsToCORS(ctx, processedDTO.PasskeyAllowedOrigins)
 
 	appForReturn := *app
 	appForReturn.AuthFlowID = inboundClient.AuthFlowID
@@ -235,6 +240,11 @@ func (as *applicationService) ValidateApplication(ctx context.Context, app *mode
 
 	if svcErr := as.validateApplicationFields(ctx, app); svcErr != nil {
 		return nil, nil, svcErr
+	}
+
+	// A type is required on creation; there is no implicit default.
+	if app.Type == "" {
+		return nil, nil, &ErrorApplicationTypeRequired
 	}
 
 	appID := app.ID
@@ -434,6 +444,8 @@ func (as *applicationService) UpdateApplication(ctx context.Context, appID strin
 		return nil, svcErr
 	}
 
+	as.syncPasskeyOriginsToCORS(ctx, processedDTO.PasskeyAllowedOrigins)
+
 	appForReturn := *app
 	appForReturn.AuthFlowID = inboundClient.AuthFlowID
 	appForReturn.RegistrationFlowID = inboundClient.RegistrationFlowID
@@ -487,7 +499,7 @@ func (as *applicationService) updateEntityDataForApplicationUpdate(ctx context.C
 	// public nor redirect-based — may have one set; a value supplied for an ineligible app is
 	// ignored. Credential updates merge, so this preserves the stored client secret, and an empty
 	// value leaves the existing Flow Secret intact.
-	if app.FlowSecret != "" && isFlowSecretEligible(inboundAuthConfig) {
+	if app.FlowSecret != "" && isFlowSecretEligible(app.Type, inboundAuthConfig) {
 		flowSecretJSON, marshalErr := buildSystemCredentials("", app.FlowSecret)
 		if marshalErr != nil {
 			as.logger.Error(ctx, "Failed to build flow secret credentials for update", log.Error(marshalErr))
@@ -533,27 +545,28 @@ func (as *applicationService) updateEntityDataForApplicationUpdate(ctx context.C
 	return nil
 }
 
-// isFlowSecretEligible reports whether an application may hold a Flow Secret. Eligible apps initiate
-// flows directly: embedded apps with no OAuth config, or confidential non-redirect apps. Public,
-// redirect (authorization_code), and machine-to-machine (client_credentials as the only grant) apps
-// are not eligible.
-func isFlowSecretEligible(inboundAuthConfig *providers.InboundAuthConfigWithSecret) bool {
-	if inboundAuthConfig == nil || inboundAuthConfig.OAuthConfig == nil {
-		return true
-	}
-	oauthConfig := inboundAuthConfig.OAuthConfig
-	if oauthConfig.PublicClient {
+// isFlowSecretEligible reports whether an application may hold a Flow Secret. Browser (public
+// redirect), mobile (attestation), and m2m (direct token) apps never hold one. Full-stack and custom
+// apps derive eligibility from the OAuth config shape: only confidential, non-redirect clients (or
+// embedded apps with no OAuth config) are eligible.
+func isFlowSecretEligible(appType model.ApplicationType,
+	inboundAuthConfig *providers.InboundAuthConfigWithSecret) bool {
+	switch appType {
+	case model.ApplicationTypeBrowser, model.ApplicationTypeMobile, model.ApplicationTypeM2M:
 		return false
+	default:
+		if inboundAuthConfig == nil || inboundAuthConfig.OAuthConfig == nil {
+			return true
+		}
+		oauthConfig := inboundAuthConfig.OAuthConfig
+		if oauthConfig.PublicClient {
+			return false
+		}
+		if slices.Contains(oauthConfig.GrantTypes, providers.GrantTypeAuthorizationCode) {
+			return false
+		}
+		return !isM2MGrantSet(oauthConfig.GrantTypes)
 	}
-	if slices.Contains(oauthConfig.GrantTypes, providers.GrantTypeAuthorizationCode) {
-		return false
-	}
-	// Machine-to-machine apps use client_credentials as their only grant; they obtain tokens directly
-	// and do not initiate flows, so they are not issued a Flow Secret.
-	if isM2MGrantSet(oauthConfig.GrantTypes) {
-		return false
-	}
-	return true
 }
 
 // isM2MGrantSet reports whether client_credentials is the only configured grant type.
@@ -815,6 +828,7 @@ func toInboundClient(dto *model.ApplicationProcessedDTO) inboundmodel.InboundCli
 		Assertion:                 dto.Assertion,
 		LoginConsent:              dto.LoginConsent,
 		AllowedUserTypes:          dto.AllowedUserTypes,
+		PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 		Attestation:               dto.Attestation,
 	}
 
@@ -834,6 +848,9 @@ func toInboundClient(dto *model.ApplicationProcessedDTO) inboundmodel.InboundCli
 	}
 	if len(dto.Contacts) > 0 {
 		props[propContacts] = dto.Contacts
+	}
+	if dto.Type != "" {
+		props[propType] = string(dto.Type)
 	}
 	if dto.Template != "" {
 		props[propTemplate] = dto.Template
@@ -867,6 +884,7 @@ func toProcessedDTO(
 			Assertion:                 dao.Assertion,
 			LoginConsent:              dao.LoginConsent,
 			AllowedUserTypes:          dao.AllowedUserTypes,
+			PasskeyAllowedOrigins:     dao.PasskeyAllowedOrigins,
 			Attestation:               dao.Attestation.WithoutCredentials(),
 		},
 	}
@@ -911,6 +929,9 @@ func toProcessedDTO(
 					dto.Contacts = append(dto.Contacts, s)
 				}
 			}
+		}
+		if t, ok := dao.Properties[propType].(string); ok {
+			dto.Type = model.ApplicationType(t)
 		}
 		if template, ok := dao.Properties[propTemplate].(string); ok {
 			dto.Template = template
@@ -1103,6 +1124,13 @@ func (as *applicationService) validateApplicationForUpdate(
 		return nil, nil, svcErr
 	}
 
+	// The application type is immutable. Reject a request that attempts to change it; inherit the
+	// existing type when the request omits it.
+	if app.Type != "" && app.Type != existingApp.Type {
+		return nil, nil, &ErrorApplicationTypeImmutable
+	}
+	app.Type = existingApp.Type
+
 	inboundAuthConfig, svcErr := as.processInboundAuthConfig(ctx, app, existingApp)
 	if svcErr != nil {
 		return nil, nil, svcErr
@@ -1143,6 +1171,14 @@ func (as *applicationService) validateApplicationFields(
 	}
 	if app.LogoURL != "" && !sysutils.IsValidLogoURI(app.LogoURL) {
 		return &ErrorInvalidLogoURL
+	}
+	// Reject an unrecognized application type. Requiring a type (create) and enforcing
+	// immutability (update) are handled by the respective callers.
+	switch app.Type {
+	case "", model.ApplicationTypeBrowser, model.ApplicationTypeFullStack,
+		model.ApplicationTypeMobile, model.ApplicationTypeM2M, model.ApplicationTypeCustom:
+	default:
+		return &ErrorInvalidApplicationType
 	}
 	// Reject requests with more than one OAuth-typed inbound auth entry — at most one
 	// inbound auth config per protocol per application is allowed.
@@ -1785,9 +1821,11 @@ func buildApplicationResponse(dto *model.ApplicationProcessedDTO) *providers.App
 			LayoutID:                  dto.LayoutID,
 			Assertion:                 dto.Assertion,
 			AllowedUserTypes:          dto.AllowedUserTypes,
+			PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 			LoginConsent:              dto.LoginConsent,
 			Attestation:               dto.Attestation,
 		},
+		Type:      string(dto.Type),
 		Template:  dto.Template,
 		URL:       dto.URL,
 		LogoURL:   dto.LogoURL,
@@ -1844,6 +1882,9 @@ func buildBasicApplicationResponse(
 		IsReadOnly:                cfg.IsReadOnly,
 	}
 	if cfg.Properties != nil {
+		if t, ok := cfg.Properties[propType].(string); ok {
+			resp.Type = model.ApplicationType(t)
+		}
 		if t, ok := cfg.Properties[propTemplate].(string); ok {
 			resp.Template = t
 		}
@@ -1892,9 +1933,11 @@ func buildBaseApplicationProcessedDTO(appID string, app *model.ApplicationDTO,
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation,
 		},
+		Type:      app.Type,
 		Template:  app.Template,
 		URL:       app.URL,
 		LogoURL:   app.LogoURL,
@@ -1975,9 +2018,11 @@ func buildReturnApplicationDTO(
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation.WithoutCredentials(),
 		},
+		Type:      app.Type,
 		Template:  app.Template,
 		URL:       app.URL,
 		LogoURL:   app.LogoURL,
@@ -2084,4 +2129,74 @@ func (as *applicationService) cleanupStaleI18nKeys(
 		return &tidcommon.InternalServerError
 	}
 	return nil
+}
+
+// syncPasskeyOriginsToCORS merges the application's passkey allowed origins into the CORS writable
+// layer so the browser can reach the ThunderID server from those origins. This is additive: origins
+// already present are skipped; origins removed from an application are not pruned here.
+func (as *applicationService) syncPasskeyOriginsToCORS(ctx context.Context, origins []string) {
+	if as.serverConfigService == nil || len(origins) == 0 {
+		return
+	}
+
+	writableAny, svcErr := as.serverConfigService.GetWritableConfig(ctx, string(serverconfig.ConfigNameCORS))
+	if svcErr != nil {
+		as.logger.Warn(ctx, "Failed to read CORS writable config for passkey origin sync",
+			log.String("error", svcErr.ErrorDescription.DefaultValue))
+		return
+	}
+
+	cfg, _ := writableAny.(cors.OriginConfig)
+
+	existingJSON, err := json.Marshal(cfg.AllowedOrigins)
+	if err != nil {
+		as.logger.Warn(ctx, "Failed to marshal existing CORS allowed origins", log.Error(err))
+		return
+	}
+	existingItems := make([]json.RawMessage, 0, len(cfg.AllowedOrigins))
+	_ = json.Unmarshal(existingJSON, &existingItems)
+
+	existingLiterals := make(map[string]struct{}, len(existingItems))
+	for _, item := range existingItems {
+		var s string
+		if json.Unmarshal(item, &s) == nil {
+			existingLiterals[s] = struct{}{}
+		}
+	}
+
+	added := false
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed == "" || strings.Contains(trimmed, "*") || trimmed == "null" {
+			continue
+		}
+		if _, err := cors.ParseOrigin(trimmed); err != nil {
+			as.logger.Debug(ctx, "Skipping invalid passkey origin for CORS sync",
+				log.String("origin", trimmed), log.String("error", err.Error()))
+			continue
+		}
+		if _, found := existingLiterals[trimmed]; found {
+			continue
+		}
+		originJSON, _ := json.Marshal(trimmed)
+		existingItems = append(existingItems, json.RawMessage(originJSON))
+		existingLiterals[trimmed] = struct{}{}
+		added = true
+	}
+
+	if !added {
+		return
+	}
+
+	newConfigJSON, err := json.Marshal(map[string]any{"allowedOrigins": existingItems})
+	if err != nil {
+		as.logger.Warn(ctx, "Failed to marshal updated CORS config", log.Error(err))
+		return
+	}
+	if svcErr := as.serverConfigService.SetConfig(
+		ctx, serverconfig.ConfigNameCORS, json.RawMessage(newConfigJSON),
+	); svcErr != nil {
+		as.logger.Warn(ctx, "Failed to update CORS config with passkey allowed origins",
+			log.String("error", svcErr.ErrorDescription.DefaultValue))
+	}
 }

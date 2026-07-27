@@ -68,6 +68,7 @@ export const CONNECTION_VENDOR_META: ConnectionVendorMeta[] = [
     logo: <KeyRound />,
     categories: ['enterprise', 'custom'],
     presentation: 'custom',
+    supportsAttributeMapping: true,
   },
   {
     key: 'twilio',

@@ -26,8 +26,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/thunder-id/thunderid/tests/integration/testutils"
 	"github.com/stretchr/testify/suite"
+	"github.com/thunder-id/thunderid/tests/integration/testutils"
 )
 
 // UserAuthzTestSuite validates that user CRUD operations respect OU-scoped authz.
@@ -64,6 +64,7 @@ type UserAuthzTestSuite struct {
 	// Test role and users
 	userMgrRoleID      string
 	userMgrUserID      string
+	scopedRSID         string
 	targetUserOU1ID    string
 	deletableUserOU1ID string
 	targetUserOU2ID    string
@@ -116,7 +117,7 @@ func (ts *UserAuthzTestSuite) SetupSuite() {
 
 	// ---- 2. Create user types (one per OU) ----
 	schemaOU1ID, err := testutils.CreateUserType(testutils.UserType{
-		Name:               entityTypeOU1Name,
+		Name: entityTypeOU1Name,
 		OUID: ts.userOU1ID,
 		Schema: map[string]interface{}{
 			"username":     map[string]interface{}{"type": "string"},
@@ -128,7 +129,7 @@ func (ts *UserAuthzTestSuite) SetupSuite() {
 	ts.entityTypeOU1ID = schemaOU1ID
 
 	schemaOU2ID, err := testutils.CreateUserType(testutils.UserType{
-		Name:               entityTypeOU2Name,
+		Name: entityTypeOU2Name,
 		OUID: ts.userOU2ID,
 		Schema: map[string]interface{}{
 			"display_name": map[string]interface{}{"type": "string"},
@@ -139,7 +140,7 @@ func (ts *UserAuthzTestSuite) SetupSuite() {
 
 	// ---- 3. Create the user-manager in OU1 (needs username+password for token grant) ----
 	userMgrID, err := testutils.CreateUser(testutils.User{
-		Type:             entityTypeOU1Name,
+		Type: entityTypeOU1Name,
 		OUID: ts.userOU1ID,
 		Attributes: json.RawMessage(fmt.Sprintf(
 			`{"username": %q, "password": %q, "display_name": "User Manager"}`,
@@ -151,36 +152,41 @@ func (ts *UserAuthzTestSuite) SetupSuite() {
 
 	// ---- 4. Create target users ----
 	targetOU1ID, err := testutils.CreateUser(testutils.User{
-		Type:             entityTypeOU1Name,
-		OUID: ts.userOU1ID,
-		Attributes:       json.RawMessage(`{"username": "authz-target-ou1", "display_name": "Target User OU1"}`),
+		Type:       entityTypeOU1Name,
+		OUID:       ts.userOU1ID,
+		Attributes: json.RawMessage(`{"username": "authz-target-ou1", "display_name": "Target User OU1"}`),
 	})
 	ts.Require().NoError(err, "create target user in OU1")
 	ts.targetUserOU1ID = targetOU1ID
 
 	deletableID, err := testutils.CreateUser(testutils.User{
-		Type:             entityTypeOU1Name,
-		OUID: ts.userOU1ID,
-		Attributes:       json.RawMessage(`{"username": "authz-deletable-ou1", "display_name": "Deletable User OU1"}`),
+		Type:       entityTypeOU1Name,
+		OUID:       ts.userOU1ID,
+		Attributes: json.RawMessage(`{"username": "authz-deletable-ou1", "display_name": "Deletable User OU1"}`),
 	})
 	ts.Require().NoError(err, "create deletable user in OU1")
 	ts.deletableUserOU1ID = deletableID
 
 	targetOU2ID, err := testutils.CreateUser(testutils.User{
-		Type:             entityTypeOU2Name,
-		OUID: ts.userOU2ID,
-		Attributes:       json.RawMessage(`{"display_name": "Target User OU2"}`),
+		Type:       entityTypeOU2Name,
+		OUID:       ts.userOU2ID,
+		Attributes: json.RawMessage(`{"display_name": "Target User OU2"}`),
 	})
 	ts.Require().NoError(err, "create target user in OU2")
 	ts.targetUserOU2ID = targetOU2ID
 
-	// ---- 5. Look up the system resource server seeded by bootstrap ----
-	systemRSID, err := testutils.GetResourceServerByName("System")
-	ts.Require().NoError(err, "look up system resource server")
+	// ---- 5. Create a custom resource server declaring the fine-grained system scopes ----
+	// The product ships only the root "system" scope; this reproduces "system:user" and
+	// "system:usertype:view" so the suite can verify resource-level enforcement when configured.
+	const scopedRSIdentifier = "https://authz-test.example.com/user"
+	systemRSID, err := testutils.CreateSystemScopedResourceServer(
+		ts.userOU1ID, "Authz Test RS (user)", scopedRSIdentifier, "user", "usertype")
+	ts.Require().NoError(err, "create scoped resource server")
+	ts.scopedRSID = systemRSID
 
 	// ---- 6. Create a role with system:user permission and assign to the user-manager ----
 	roleID, err := testutils.CreateRole(testutils.Role{
-		Name:               userMgrRoleName,
+		Name: userMgrRoleName,
 		OUID: ts.userOU1ID,
 		Permissions: []testutils.ResourcePermissions{
 			{
@@ -203,6 +209,8 @@ func (ts *UserAuthzTestSuite) SetupSuite() {
 		userMgrUsername,
 		userMgrPassword,
 		true,
+		"",
+		scopedRSIdentifier,
 	)
 	ts.Require().NoError(err, "obtain user-manager token")
 	ts.Require().NotEmpty(tokenResp.AccessToken, "user-manager token must be non-empty")
@@ -218,6 +226,11 @@ func (ts *UserAuthzTestSuite) TearDownSuite() {
 	if ts.userMgrRoleID != "" {
 		if err := testutils.DeleteRole(ts.userMgrRoleID); err != nil {
 			ts.T().Logf("teardown: delete user-manager role: %v", err)
+		}
+	}
+	if ts.scopedRSID != "" {
+		if err := testutils.DeleteResourceServer(ts.scopedRSID); err != nil {
+			ts.T().Logf("teardown: delete scoped resource server: %v", err)
 		}
 	}
 	for _, id := range []string{ts.targetUserOU1ID, ts.deletableUserOU1ID, ts.userMgrUserID} {
@@ -328,7 +341,7 @@ func (ts *UserAuthzTestSuite) TestGetUserInOtherOU() {
 func (ts *UserAuthzTestSuite) TestCreateUserInOwnOU() {
 	payload, err := json.Marshal(map[string]interface{}{
 		"ouId": ts.userOU1ID,
-		"type":             entityTypeOU1Name,
+		"type": entityTypeOU1Name,
 		"attributes": map[string]interface{}{
 			"username":     "authz-created-user",
 			"display_name": "Created User",
@@ -355,7 +368,7 @@ func (ts *UserAuthzTestSuite) TestCreateUserInOwnOU() {
 func (ts *UserAuthzTestSuite) TestCreateUserInOtherOU() {
 	payload, err := json.Marshal(map[string]interface{}{
 		"ouId": ts.userOU2ID,
-		"type":             entityTypeOU2Name,
+		"type": entityTypeOU2Name,
 		"attributes": map[string]interface{}{
 			"display_name": "Denied User",
 		},
@@ -372,7 +385,7 @@ func (ts *UserAuthzTestSuite) TestCreateUserInOtherOU() {
 // TestUpdateUserInOwnOU verifies the user-manager can update a user in their own OU.
 func (ts *UserAuthzTestSuite) TestUpdateUserInOwnOU() {
 	payload, err := json.Marshal(map[string]interface{}{
-		"type":             entityTypeOU1Name,
+		"type": entityTypeOU1Name,
 		"ouId": ts.userOU1ID,
 		"attributes": map[string]interface{}{
 			"username":     "authz-target-ou1",
@@ -391,7 +404,7 @@ func (ts *UserAuthzTestSuite) TestUpdateUserInOwnOU() {
 // TestUpdateUserInOtherOU verifies the user-manager is denied updating a user in OU2.
 func (ts *UserAuthzTestSuite) TestUpdateUserInOtherOU() {
 	payload, err := json.Marshal(map[string]interface{}{
-		"type":             entityTypeOU2Name,
+		"type": entityTypeOU2Name,
 		"ouId": ts.userOU2ID,
 		"attributes": map[string]interface{}{
 			"display_name": "Should Not Update",

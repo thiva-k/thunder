@@ -23,6 +23,7 @@ import ConnectionConfigureWizardPage from '../ConnectionConfigureWizardPage';
 
 const mutateMock = vi.fn();
 const navigateMock = vi.fn();
+const showToastMock = vi.fn();
 const mockParams = {type: 'google'};
 
 vi.mock('react-router', async (importOriginal) => ({
@@ -33,7 +34,7 @@ vi.mock('react-router', async (importOriginal) => ({
 vi.mock('@thunderid/contexts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@thunderid/contexts')>()),
   useConfig: () => ({getGateCallbackUrl: () => 'https://id.acme.io/gate/callback'}),
-  useToast: () => ({showToast: vi.fn()}),
+  useToast: () => ({showToast: showToastMock}),
 }));
 vi.mock('../../api/useCreateConnection', () => ({default: () => ({mutate: mutateMock, isPending: false})}));
 
@@ -102,6 +103,17 @@ describe('ConnectionConfigureWizardPage', () => {
     onSuccess({id: 'conn-1'});
 
     expect(navigateMock).toHaveBeenCalledWith('/connections/google/conn-1');
+  });
+
+  it('shows a toast with the duplicate-name error on a 409 create conflict', () => {
+    render(<ConnectionConfigureWizardPage />);
+
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    const {onError} = mutateMock.mock.calls[0][1] as {onError: (error: unknown) => void};
+    onError({response: {status: 409}});
+
+    expect(showToastMock).toHaveBeenCalledWith('A connection with this name already exists.', 'error');
   });
 
   it('SMS vendor: single configure step creates without attribute mapping', () => {

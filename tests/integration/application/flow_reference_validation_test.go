@@ -647,6 +647,7 @@ func (suite *FlowReferenceValidationTestSuite) applicationRequestBody(
 		"ouId":                      app.OUID,
 		"name":                      app.Name,
 		"description":               app.Description,
+		"type":                      "fullstack",
 		"isRegistrationFlowEnabled": app.IsRegistrationFlowEnabled,
 		"isRecoveryFlowEnabled":     app.IsRecoveryFlowEnabled,
 		"authFlowId":                app.AuthFlowID,

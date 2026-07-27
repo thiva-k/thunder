@@ -349,14 +349,13 @@ A second `HTTPRoute` is rendered for that hostname and the Console's
 | `runtime.tls.verifyBackend` | Verify the backend certificate at the gateway against the `ca.crt` property at `runtime.certs.storeKey` (publish `ca.crt` there when enabling this); off skips verification (encrypted, unverified) | `false` |
 | `runtime.certs.storeKey` | Optional separate store entry for the certificate/key files. Empty (default): read them from `secretStore.key` alongside the environment values. Set: materialize them from this entry into a dedicated `-certs` Secret. Either way the JWT signing pairs are always mounted over `config/certs/`, plus the serving pair when `tls.enabled` | `""` (use `secretStore.key`) |
 | `runtime.certs.extraFiles` | Additional properties to project over `config/certs/` beyond the always-mounted signing (and, with TLS, serving) pairs | `[]` |
-| `runtime.defaultAuthFlowHandle` | Flow handle used when an application does not pin its own `authFlowId`; empty inherits the server default | `""` |
 | `runtime.dbType` | Database engine — `sqlite` (bundled files, ephemeral pod-local storage, development only) or `postgres` (externally hosted, production) | `sqlite` |
 | `runtime.imagePullPolicy` | `Always` / `IfNotPresent` / `Never` | `Always` |
 | `runtime.port` | Port the ThunderID server listens on | `8090` |
 | `runtime.gate.clientBase` | Gate frontend base path | `/gate` |
 | `runtime.console.clientBase` | Console frontend base path | `/console` |
 | `runtime.console.clientId` | Console OAuth client ID | `CONSOLE` |
-| `runtime.console.scopes` | Console OAuth scopes (JSON array string) — the default covers the management scopes the Console requests | `["openid", "profile", "email", "ou", "system", "system:user", "system:group", "system:ou:view", "system:usertype:view"]` |
+| `runtime.console.scopes` | Console OAuth scopes (JSON array string). The default covers the management scopes the Console requests | `["openid", "profile", "email", "group", "ou", "system"]` |
 | `runtime.jwt.validityPeriod` | JWT validity in seconds | `3600` |
 | `runtime.oauth.refreshTokenValidityPeriod` | Refresh token validity in seconds | `86400` |
 | `runtime.cache.size` | Maximum in-memory cache entries | `10000` |

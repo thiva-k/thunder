@@ -207,6 +207,7 @@ func (ts *OpenID4VCITestSuite) createApp() string {
 		"name":                      vciAppName,
 		"description":               "OpenID4VCI integration test app",
 		"ouId":                      ts.ouID,
+		"type":                      "fullstack",
 		"authFlowId":                ts.authFlowID,
 		"isRegistrationFlowEnabled": false,
 		"allowedUserTypes":          []string{"openid4vci-test-person"},

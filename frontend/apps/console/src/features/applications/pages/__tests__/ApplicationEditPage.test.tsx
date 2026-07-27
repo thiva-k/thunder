@@ -115,6 +115,10 @@ vi.mock('../../components/edit-application/token-settings/EditTokenSettings', ()
   default: vi.fn(() => <div data-testid="edit-token-settings">Token Settings</div>),
 }));
 
+vi.mock('../../components/edit-application/token-settings/EditTokenSettingsTabs', () => ({
+  default: vi.fn(() => <div data-testid="edit-token-settings">Token Settings</div>),
+}));
+
 vi.mock('../../components/edit-application/advanced-settings/EditAdvancedSettings', () => ({
   default: vi.fn(() => <div data-testid="edit-advanced-settings">Advanced Settings</div>),
 }));
@@ -229,6 +233,7 @@ describe('ApplicationEditPage', () => {
     template: 'react',
     logoUrl: 'https://example.com/logo.png',
     url: 'https://example.com',
+    allowedUserTypes: ['user'],
     inboundAuthConfig: [
       {
         type: 'oauth2',
@@ -742,6 +747,74 @@ describe('ApplicationEditPage', () => {
       await waitFor(() => {
         expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
       });
+    });
+
+    it('keeps save enabled for a user-facing client with a redirect URI but no allowed user types', async () => {
+      const user = userEvent.setup();
+      mockUseGetApplication.mockReturnValue({
+        data: {...mockApplication, allowedUserTypes: []},
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as UseQueryResult<Application>);
+      renderComponent();
+
+      const nameSection = screen.getByText('Test Application').closest('div');
+      const editButton = nameSection?.querySelector('button');
+      await user.click(editButton!);
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Application{Enter}');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /save changes/i})).toBeEnabled();
+      });
+    });
+
+    it('disables save with a named issue when authorization_code has no redirect URI', async () => {
+      const user = userEvent.setup();
+      mockUseGetApplication.mockReturnValue({
+        data: {
+          ...mockApplication,
+          inboundAuthConfig: [
+            {type: 'oauth2', config: {grantTypes: ['authorization_code'], responseTypes: ['code'], redirectUris: []}},
+          ],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as UseQueryResult<Application>);
+      renderComponent();
+
+      const nameSection = screen.getByText('Test Application').closest('div');
+      const editButton = nameSection?.querySelector('button');
+      await user.click(editButton!);
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Application{Enter}');
+
+      await waitFor(() => {
+        expect(screen.getByText('applications:edit.page.validation.missingRedirectUri')).toBeInTheDocument();
+      });
+      expect(screen.getByRole('button', {name: /save changes/i})).toBeDisabled();
+    });
+
+    it('freezes the flows tab when no user-facing grant is granted', async () => {
+      const user = userEvent.setup();
+      mockUseGetApplication.mockReturnValue({
+        data: {
+          ...mockApplication,
+          inboundAuthConfig: [{type: 'oauth2', config: {grantTypes: ['client_credentials'], responseTypes: []}}],
+        },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as UseQueryResult<Application>);
+      renderComponent();
+
+      await user.click(screen.getByRole('tab', {name: /flows/i}));
+
+      expect(screen.getByText('applications:edit.userAccessLock.message')).toBeInTheDocument();
     });
 
     it('should display reset and save buttons in action bar', async () => {
