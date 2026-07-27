@@ -356,7 +356,7 @@ A second `HTTPRoute` is rendered for that hostname and the Console's
 | `runtime.gate.clientBase` | Gate frontend base path | `/gate` |
 | `runtime.console.clientBase` | Console frontend base path | `/console` |
 | `runtime.console.clientId` | Console OAuth client ID | `CONSOLE` |
-| `runtime.console.scopes` | Console OAuth scopes (JSON array string) — the default covers the management scopes the Console requests | `["openid", "profile", "email", "ou", "system", "system:user", "system:group", "system:ou:view", "system:usertype:view"]` |
+| `runtime.console.scopes` | Console OAuth scopes (JSON array string). The default covers the management scopes the Console requests | `["openid", "profile", "email", "group", "ou", "system"]` |
 | `runtime.jwt.validityPeriod` | JWT validity in seconds | `3600` |
 | `runtime.oauth.refreshTokenValidityPeriod` | Refresh token validity in seconds | `86400` |
 | `runtime.cache.size` | Maximum in-memory cache entries | `10000` |

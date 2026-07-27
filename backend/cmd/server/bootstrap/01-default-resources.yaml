@@ -102,38 +102,6 @@ resources:
   - name: System
     handle: system
     description: System resource
-  - name: Organization Unit
-    handle: ou
-    description: Organization unit resource
-    parent: system
-    actions:
-      - name: View
-        handle: view
-        description: Read-only access to organization units
-  - name: User
-    handle: user
-    description: User resource
-    parent: system
-    actions:
-      - name: View
-        handle: view
-        description: Read-only access to users
-  - name: Group
-    handle: group
-    description: Group resource
-    parent: system
-    actions:
-      - name: View
-        handle: view
-        description: Read-only access to groups
-  - name: User Type
-    handle: usertype
-    description: User type resource
-    parent: system
-    actions:
-      - name: View
-        handle: view
-        description: Read-only access to user types
 ---
 resource_type: flow
 id: 01900000-0000-7000-8000-000000000061

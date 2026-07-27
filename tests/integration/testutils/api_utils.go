@@ -1455,6 +1455,128 @@ func createAction(resourceServerID string, action Action) (string, error) {
 	return createdAction.ID, nil
 }
 
+// CreateResource creates a resource under a resource server via API and returns the created
+// resource ID. parentID may be empty to create a top-level resource.
+func CreateResource(resourceServerID, name, handle, parentID string) (string, error) {
+	client := GetHTTPClient()
+
+	body := map[string]interface{}{"name": name, "handle": handle}
+	if parentID != "" {
+		body["parent"] = parentID
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal resource: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/resource-servers/%s/resources", TestServerURL, resourceServerID)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(payload))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(bodyBytes, &created); err != nil {
+		return "", fmt.Errorf("failed to unmarshal resource response: %w", err)
+	}
+	return created.ID, nil
+}
+
+// createActionUnderResource creates an action nested under a resource and returns the action ID.
+func createActionUnderResource(resourceServerID, resourceID string, action Action) (string, error) {
+	client := GetHTTPClient()
+
+	actionJSON, err := json.Marshal(action)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal action: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/resource-servers/%s/resources/%s/actions", TestServerURL, resourceServerID, resourceID)
+	req, err := http.NewRequest("POST", url, bytes.NewReader(actionJSON))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to send request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("expected status 201, got %d. Response: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var created struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(bodyBytes, &created); err != nil {
+		return "", fmt.Errorf("failed to unmarshal action response: %w", err)
+	}
+	return created.ID, nil
+}
+
+// CreateSystemScopedResourceServer creates a custom resource server that reproduces the
+// hierarchical "system:<handle>:view" permission strings used by the built-in system management
+// APIs. The product ships only the root "system" scope by default; this helper simulates an
+// operator declaring fine-grained scopes, letting the authz suites verify that resource-level
+// permissions still enforce when configured. It builds a "system" root resource, then one child
+// resource per handle (each with a "view" action), yielding the permissions "system",
+// "system:<handle>" and "system:<handle>:view". Returns the resource server ID; delete it with
+// DeleteResourceServer during teardown.
+func CreateSystemScopedResourceServer(ouID, name, identifier string, childHandles ...string) (string, error) {
+	rsID, err := createResourceServer(ResourceServer{
+		Name:       name,
+		Identifier: identifier,
+		OUID:       ouID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to create resource server: %w", err)
+	}
+
+	systemID, err := CreateResource(rsID, "System", "system", "")
+	if err != nil {
+		return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create system resource: %w", err))
+	}
+
+	for _, handle := range childHandles {
+		childID, err := CreateResource(rsID, handle, handle, systemID)
+		if err != nil {
+			return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create %q resource: %w", handle, err))
+		}
+		if _, err := createActionUnderResource(rsID, childID, Action{Name: "View", Handle: "view"}); err != nil {
+			return "", rollbackResourceServer(rsID, fmt.Errorf("failed to create view action for %q: %w", handle, err))
+		}
+	}
+
+	return rsID, nil
+}
+
+// rollbackResourceServer deletes a partially built resource server after a setup step failed. It
+// returns the original cause, wrapping any cleanup failure so neither error is silently discarded.
+func rollbackResourceServer(rsID string, cause error) error {
+	if delErr := DeleteResourceServer(rsID); delErr != nil {
+		return fmt.Errorf("%w (resource server cleanup also failed: %v)", cause, delErr)
+	}
+	return cause
+}
+
 // CreateFlow creates a flow via API and returns the flow ID
 func CreateFlow(flowDefinition Flow) (string, error) {
 	flowJSON, err := json.Marshal(flowDefinition)
