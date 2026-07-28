@@ -975,7 +975,6 @@
                 "onIncomplete": ""
               },
               "properties": {
-                "senderId": "",
                 "emailTemplate": "OTP"
               }
             }
