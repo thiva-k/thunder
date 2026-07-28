@@ -439,7 +439,7 @@ configuration:
   # Flow configuration
   flow:
     maxVersionHistory: 3
-    autoInferRegistration: true
+    autoInferRegistration: false
     # Optional whitelist of built-in executor names to register at startup.
     # Leave empty to register all built-in executors.
     executors: []
