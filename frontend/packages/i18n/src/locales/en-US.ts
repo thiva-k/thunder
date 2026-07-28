@@ -2817,6 +2817,13 @@ const translations = {
     'errors.APP-1036': 'The provided recovery flow ID is invalid.',
     'errors.APP-1037': 'Native flow execution is not allowed for single-page applications as it requires PKCE.',
     'errors.APP-1038': 'Attestation configuration may configure only one platform (android or apple) at a time.',
+    'errors.APP-1039':
+      'A referenced flow conflicts with the flow configured on the application. Both must point to the same flow.',
+    'errors.APP-1040': 'The application type is invalid. It must be one of: browser, fullstack, mobile, m2m, custom.',
+    'errors.APP-1041': 'The application type is set at creation and cannot be modified.',
+    'errors.APP-1042': 'An application type must be provided',
+    'errors.APP-1043': 'The provided Terms of Service URI is not a valid URI.',
+    'errors.APP-1044': 'The provided Privacy Policy URI is not a valid URI.',
     'errors.APP-5001': 'An unexpected error occurred while processing the request.',
     'errors.APP-5002': 'An error occurred while performing the certificate operation.',
   },
