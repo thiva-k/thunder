@@ -21,6 +21,7 @@ package par
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/clientauth"
@@ -97,8 +98,18 @@ func (h *parHandler) HandlePARRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := make(map[string]string)
+	// Only the resource parameter is permitted to be repeated (RFC 8707 §2). Any other parameter
+	// appearing more than once is rejected with invalid_request per RFC 6749 §3.1.
+	params := make(map[string]string, len(r.PostForm))
 	for key, values := range r.PostForm {
+		if key == oauth2const.RequestParamResource {
+			continue
+		}
+		if len(values) > 1 {
+			utils.WriteJSONError(ctx, w, oauth2const.ErrorInvalidRequest,
+				fmt.Sprintf("Parameter %q must not be repeated", key), http.StatusBadRequest, nil)
+			return
+		}
 		if len(values) > 0 {
 			params[key] = values[0]
 		}
