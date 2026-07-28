@@ -20,7 +20,7 @@ import type {ApplicationType} from '../models/application';
 import type {OAuth2Config} from '../models/oauth';
 import {OAuth2GrantTypes} from '../models/oauth';
 
-const KNOWN_TYPES: readonly ApplicationType[] = ['browser', 'fullstack', 'mobile', 'm2m', 'custom'];
+const KNOWN_TYPES: readonly ApplicationType[] = ['browser', 'fullstack', 'mobile', 'm2m', 'mcp', 'custom'];
 
 /**
  * Resolves the canonical application type for behavior decisions.
@@ -44,8 +44,7 @@ export default function resolveApplicationType(
   }
 
   const grantTypes = oauth2Config?.grantTypes ?? [];
-  const isClientCredentialsOnly = grantTypes.length === 1 && grantTypes[0] === OAuth2GrantTypes.CLIENT_CREDENTIALS;
-  if (isClientCredentialsOnly) {
+  if (isClientCredentialsOnlyGrantSet(grantTypes)) {
     return 'm2m';
   }
   if (oauth2Config?.publicClient) {
@@ -64,4 +63,13 @@ export default function resolveApplicationType(
  */
 export function isM2MApplication(type: ApplicationType | undefined, oauth2Config?: OAuth2Config): boolean {
   return resolveApplicationType(type, oauth2Config) === 'm2m';
+}
+
+/**
+ * Reports whether `client_credentials` is the only configured grant type, mirroring the backend's
+ * `isM2MGrantSet`. Used to exclude m2m-shaped configurations from confidential, non-redirect
+ * (flow-native) eligibility checks for `fullstack`/`custom`/`mcp` applications.
+ */
+export function isClientCredentialsOnlyGrantSet(grantTypes: readonly string[] | undefined): boolean {
+  return (grantTypes ?? []).length === 1 && grantTypes?.[0] === OAuth2GrantTypes.CLIENT_CREDENTIALS;
 }

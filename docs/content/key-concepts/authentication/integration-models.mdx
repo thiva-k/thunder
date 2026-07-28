@@ -62,7 +62,7 @@ Whether an application may initiate one of these flows directly depends on its [
 
 - **Browser** and **Backend Service (m2m)** applications can never initiate these flows directly. A browser application must sign users in through the [Authorization endpoint](../../../apis#tag/authorization) (`GET /oauth2/authorize`), which drives the flow internally. A Backend Service application authenticates itself with the `client_credentials` grant instead of signing in a user.
 - **Mobile** applications must present a valid platform attestation token. See [Attestation](#attestation).
-- **Full-stack** and **Custom** applications are derived from their OAuth 2.0 configuration. An application with no OAuth 2.0 configuration, or one that is confidential and does not use the `authorization_code` grant, authenticates with a Flow Secret. An application configured with the `authorization_code` grant, or with `client_credentials` as its only grant, cannot initiate the flow directly.
+- **Full-stack**, **Custom**, and **MCP Client** applications are derived from their OAuth 2.0 configuration. An application with no OAuth 2.0 configuration, or one that is confidential, does not use the `authorization_code` grant, and is not configured with `client_credentials` as its only grant, authenticates with a Flow Secret. An application configured with the `authorization_code` grant, or with `client_credentials` as its only grant, cannot initiate the flow directly.
 :::
 
 ### Key Features

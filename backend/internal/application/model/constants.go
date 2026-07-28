@@ -33,6 +33,7 @@ const (
 	ApplicationTypeFullStack ApplicationType = "fullstack"
 	ApplicationTypeMobile    ApplicationType = "mobile"
 	ApplicationTypeM2M       ApplicationType = "m2m"
+	ApplicationTypeMCP       ApplicationType = "mcp"
 	ApplicationTypeCustom    ApplicationType = "custom"
 )
 

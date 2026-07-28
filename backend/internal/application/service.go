@@ -546,9 +546,9 @@ func (as *applicationService) updateEntityDataForApplicationUpdate(ctx context.C
 }
 
 // isFlowSecretEligible reports whether an application may hold a Flow Secret. Browser (public
-// redirect), mobile (attestation), and m2m (direct token) apps never hold one. Full-stack and custom
-// apps derive eligibility from the OAuth config shape: only confidential, non-redirect clients (or
-// embedded apps with no OAuth config) are eligible.
+// redirect), mobile (attestation), and m2m (direct token) apps never hold one. Full-stack, custom,
+// and mcp apps derive eligibility from the OAuth config shape: only confidential, non-redirect
+// clients (or embedded apps with no OAuth config) are eligible.
 func isFlowSecretEligible(appType model.ApplicationType,
 	inboundAuthConfig *providers.InboundAuthConfigWithSecret) bool {
 	switch appType {
@@ -1176,7 +1176,8 @@ func (as *applicationService) validateApplicationFields(
 	// immutability (update) are handled by the respective callers.
 	switch app.Type {
 	case "", model.ApplicationTypeBrowser, model.ApplicationTypeFullStack,
-		model.ApplicationTypeMobile, model.ApplicationTypeM2M, model.ApplicationTypeCustom:
+		model.ApplicationTypeMobile, model.ApplicationTypeM2M, model.ApplicationTypeMCP,
+		model.ApplicationTypeCustom:
 	default:
 		return &ErrorInvalidApplicationType
 	}

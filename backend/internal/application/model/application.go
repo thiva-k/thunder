@@ -33,9 +33,9 @@ type ApplicationDTO struct {
 	OUHandle    string          `json:"ouHandle,omitempty" jsonschema:"Organization unit handle. Resolved to an ID by the service layer."`
 	Name        string          `json:"name" jsonschema:"Application name."`
 	Description string          `json:"description,omitempty" jsonschema:"Optional description of the application's purpose or functionality."`
-	Type        ApplicationType `json:"type,omitempty" jsonschema:"Application type. Canonical platform/client class: browser, fullstack, mobile, m2m, or custom. Required at creation and immutable."`
+	Type        ApplicationType `json:"type,omitempty" jsonschema:"Application type. Canonical platform/client class: browser, fullstack, mobile, m2m, mcp, or custom. Required at creation and immutable."`
 	Template    string          `json:"template,omitempty" jsonschema:"Application template. Optional. Display metadata identifying the frontend template used to create the application."`
-	FlowSecret  string          `json:"flowSecret,omitempty" jsonschema:"Flow Secret used to authenticate when initiating a flow directly via the Flow Execution API. Issued once on creation only to full-stack and custom applications that either have no OAuth 2.0 configuration (embedded) or are configured as a confidential, non-redirect OAuth 2.0 client. Browser, mobile, and m2m applications are never issued one."`
+	FlowSecret  string          `json:"flowSecret,omitempty" jsonschema:"Flow Secret used to authenticate when initiating a flow directly via the Flow Execution API. Issued once on creation only to full-stack, custom, and mcp applications that either have no OAuth 2.0 configuration (embedded) or are configured as a confidential, non-redirect OAuth 2.0 client. Browser, mobile, and m2m applications are never issued one."`
 
 	URL       string   `json:"url,omitempty" jsonschema:"Application home URL. Optional. The main URL where your application is hosted."`
 	LogoURL   string   `json:"logoUrl,omitempty" jsonschema:"Logo image URL. Optional. Displayed in login pages and application listings."`
@@ -187,7 +187,7 @@ type BasicApplicationResponse struct {
 	IsSignOutFlowEnabled      bool            `json:"isSignOutFlowEnabled" jsonschema:"Sign-out enabled status."`
 	ThemeID                   string          `json:"themeId,omitempty" jsonschema:"Theme ID."`
 	LayoutID                  string          `json:"layoutId,omitempty" jsonschema:"Layout ID."`
-	Type                      ApplicationType `json:"type,omitempty" jsonschema:"Application type (browser, fullstack, mobile, m2m, custom)."`
+	Type                      ApplicationType `json:"type,omitempty" jsonschema:"Application type (browser, fullstack, mobile, m2m, mcp, custom)."`
 	Template                  string          `json:"template,omitempty" jsonschema:"Application Template."`
 	IsReadOnly                bool            `json:"isReadOnly" jsonschema:"Indicates if the application is read-only (declarative/immutable)."`
 }

@@ -532,7 +532,7 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key: "error.applicationservice.invalid_application_type_description",
 			DefaultValue: "The provided application type is not supported. It must be one of: " +
-				"browser, fullstack, mobile, m2m, custom.",
+				"browser, fullstack, mobile, m2m, mcp, custom.",
 		},
 	}
 	// ErrorApplicationTypeImmutable is returned when an update attempts to change the application type.
@@ -559,7 +559,7 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key: "error.applicationservice.application_type_required_description",
 			DefaultValue: "An application type must be provided. It must be one of: " +
-				"browser, fullstack, mobile, m2m, custom.",
+				"browser, fullstack, mobile, m2m, mcp, custom.",
 		},
 	}
 )

@@ -2417,7 +2417,7 @@ func (s *ServiceTestSuite) TestSetApplicationToContext_BuildApplicationError() {
 
 // The flow-initiation mode is resolved from the application type. Machine-to-machine, browser, and
 // mobile (without attestation) apps may not initiate a flow directly and never consult the OAuth
-// profile. Full-stack and custom apps derive the mode from their profile.
+// profile. Full-stack, custom, and mcp apps derive the mode from their profile.
 func (s *ServiceTestSuite) TestResolveFlowInitiationMode_ByType() {
 	const appID = "test-app"
 	tokenExchange := string(providers.GrantTypeTokenExchange)
@@ -2444,6 +2444,16 @@ func (s *ServiceTestSuite) TestResolveFlowInitiationMode_ByType() {
 			name: "mobile with attestation uses attestation", appType: model.ApplicationTypeMobile,
 			attestation: &providers.AttestationConfig{Apple: &providers.AppleAttestationConfig{}},
 			expectMode:  flowInitiationAttestation,
+		},
+		{
+			name: "mcp embedded uses flow secret", appType: model.ApplicationTypeMCP,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{"client_credentials", tokenExchange}},
+			expectMode: flowInitiationFlowSecret,
+		},
+		{
+			name: "mcp redirect not permitted", appType: model.ApplicationTypeMCP,
+			profile:    &providers.OAuthProfile{GrantTypes: []string{"authorization_code"}},
+			expectMode: flowInitiationNotPermitted,
 		},
 		{
 			name: "fullstack redirect not permitted", appType: model.ApplicationTypeFullStack,
@@ -2489,8 +2499,9 @@ func (s *ServiceTestSuite) TestResolveFlowInitiationMode_ByType() {
 			}
 			mockActorProvider.EXPECT().GetInboundClientByID(mock.Anything, appID).Return(client, nil)
 
-			// The OAuth profile is consulted for full-stack and custom apps.
-			if tc.appType == model.ApplicationTypeFullStack || tc.appType == model.ApplicationTypeCustom {
+			// The OAuth profile is consulted for full-stack, custom, and mcp apps.
+			if tc.appType == model.ApplicationTypeFullStack || tc.appType == model.ApplicationTypeCustom ||
+				tc.appType == model.ApplicationTypeMCP {
 				mockActorProvider.EXPECT().GetOAuthProfileByID(mock.Anything, appID).Return(tc.profile, tc.profileErr)
 			}
 

@@ -803,7 +803,7 @@ components:
           example: "770e8400-e29b-41d4-a716-446655440002"
         type:
           type: string
-          enum: [browser, fullstack, mobile, m2m, custom]
+          enum: [browser, fullstack, mobile, m2m, mcp, custom]
           description: >
             The canonical application type (platform/client class). Required at creation and
             immutable thereafter. Use custom for applications that do not fit the other classes.
@@ -878,10 +878,11 @@ components:
           type: string
           description: >
             Flow Secret used to authenticate when initiating a flow directly via the Flow Execution API.
-            Issued only to full-stack and custom applications that either have no OAuth 2.0 configuration
-            (embedded) or are configured as a confidential, non-redirect OAuth 2.0 client. Browser, mobile,
-            and machine-to-machine applications are never issued one. When omitted on creation, a secret is
-            generated automatically for eligible applications and returned once in the creation response.
+            Issued only to full-stack, custom, and mcp applications that either have no OAuth 2.0
+            configuration (embedded) or are configured as a confidential, non-redirect OAuth 2.0 client.
+            Browser, mobile, and machine-to-machine applications are never issued one. When omitted
+            on creation, a secret is generated automatically for eligible applications and returned once in
+            the creation response.
           example: "550e8400e29b41d4a716446655440000abcdef0123456789"
 
     ApplicationCompleteResponse:
@@ -939,7 +940,7 @@ components:
           example: "660e8400-e29b-41d4-a716-446655440001"
         type:
           type: string
-          enum: [browser, fullstack, mobile, m2m, custom]
+          enum: [browser, fullstack, mobile, m2m, mcp, custom]
           description: >
             The canonical application type (platform/client class). Required at creation and
             immutable thereafter. Use custom for applications that do not fit the other classes.
@@ -952,10 +953,10 @@ components:
           type: string
           description: >
             Flow Secret used to authenticate when initiating a flow directly via the Flow Execution API.
-            Issued and returned once in the creation response only for full-stack and custom applications
-            that either have no OAuth 2.0 configuration (embedded) or are configured as a confidential,
-            non-redirect OAuth 2.0 client. Browser, mobile, and machine-to-machine applications are never
-            issued one.
+            Issued and returned once in the creation response only for full-stack, custom, and mcp
+            applications that either have no OAuth 2.0 configuration (embedded) or are configured as a
+            confidential, non-redirect OAuth 2.0 client. Browser, mobile, and machine-to-machine
+            applications are never issued one.
           example: "550e8400e29b41d4a716446655440000abcdef0123456789"
         url:
           type: string
@@ -1075,7 +1076,7 @@ components:
           example: "770e8400-e29b-41d4-a716-446655440002"
         type:
           type: string
-          enum: [browser, fullstack, mobile, m2m, custom]
+          enum: [browser, fullstack, mobile, m2m, mcp, custom]
           description: >
             The canonical application type (platform/client class). Required at creation and
             immutable thereafter. Use custom for applications that do not fit the other classes.
@@ -1203,7 +1204,7 @@ components:
           example: "770e8400-e29b-41d4-a716-446655440002"
         type:
           type: string
-          enum: [browser, fullstack, mobile, m2m, custom]
+          enum: [browser, fullstack, mobile, m2m, mcp, custom]
           description: >
             The canonical application type (platform/client class). Required at creation and
             immutable thereafter. Use custom for applications that do not fit the other classes.

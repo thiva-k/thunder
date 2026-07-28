@@ -479,6 +479,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, null, {
             id: 'mcp-client',
+            type: 'mcp',
             creationFlow: {steps: ['NAME', 'ORGANIZATION_UNIT', 'CLIENT_TYPE', 'COMPLETE']},
             defaults: {
               inboundAuthConfig: [
@@ -2162,8 +2163,8 @@ describe('ApplicationCreatePage', () => {
         isRegistrationFlowEnabled?: boolean;
       };
       expect(requestBody.template).toBe('mcp-client');
-      // The user-delegated MCP client resolves to the browser type.
-      expect(requestBody.type).toBe('browser');
+      // The user-delegated MCP client resolves to the mcp type.
+      expect(requestBody.type).toBe('mcp');
 
       const oauth2Config = requestBody.inboundAuthConfig?.[0];
       expect(oauth2Config?.type).toBe('oauth2');

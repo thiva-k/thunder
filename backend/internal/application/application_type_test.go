@@ -116,9 +116,10 @@ func (s *ApplicationTypeTestSuite) TestFlowSecretIneligibleByType() {
 	}
 }
 
-// TestFullStackAndCustomFlowSecretEligibility verifies full-stack and custom apps derive eligibility
-// from the OAuth config shape: only confidential, non-redirect (embedded) clients are eligible.
-func (s *ApplicationTypeTestSuite) TestFullStackAndCustomFlowSecretEligibility() {
+// TestFullStackCustomAndMCPFlowSecretEligibility verifies full-stack, custom, and mcp apps derive
+// eligibility from the OAuth config shape: an app with no OAuth configuration (embedded), or a
+// confidential, non-redirect client, is eligible; a redirect or m2m-shaped client is not.
+func (s *ApplicationTypeTestSuite) TestFullStackCustomAndMCPFlowSecretEligibility() {
 	embedded := &providers.InboundAuthConfigWithSecret{
 		Type: providers.OAuthInboundAuthType,
 		OAuthConfig: &providers.OAuthConfigWithSecret{
@@ -145,6 +146,7 @@ func (s *ApplicationTypeTestSuite) TestFullStackAndCustomFlowSecretEligibility()
 	for _, appType := range []model.ApplicationType{
 		model.ApplicationTypeFullStack,
 		model.ApplicationTypeCustom,
+		model.ApplicationTypeMCP,
 	} {
 		// Embedded app with no OAuth config, and confidential non-redirect app, are eligible.
 		s.True(isFlowSecretEligible(appType, nil), "type %q embedded should be eligible", appType)
