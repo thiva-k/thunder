@@ -17,9 +17,9 @@
  */
 
 import {useMutation, type UseMutationResult} from '@tanstack/react-query';
+import type {InitiateVerificationResponse} from '@thunderid/configure-verifiable-presentations';
 import {useConfig} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import type {InitiateVerificationResponse} from '../models/vp';
 
 /**
  * Initiates an OpenID4VP verification transaction for a presentation definition

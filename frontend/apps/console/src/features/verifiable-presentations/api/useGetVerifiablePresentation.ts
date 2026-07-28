@@ -17,10 +17,10 @@
  */
 
 import {useQuery, type UseQueryResult} from '@tanstack/react-query';
+import {VerifiablePresentationQueryKeys} from '@thunderid/configure-verifiable-presentations';
+import type {VerifiablePresentation} from '@thunderid/configure-verifiable-presentations';
 import {useConfig} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import VerifiablePresentationQueryKeys from '../constants/vp-query-keys';
-import type {VerifiablePresentation} from '../models/vp';
 
 /**
  * Fetches a single OpenID4VP presentation definition by id.

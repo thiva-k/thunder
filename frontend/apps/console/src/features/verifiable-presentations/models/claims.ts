@@ -16,8 +16,8 @@
  * under the License.
  */
 
+import type {VerifiablePresentation} from '@thunderid/configure-verifiable-presentations';
 import type {CreateVerifiablePresentationRequest} from './requests';
-import type {VerifiablePresentation} from './vp';
 
 export type ClaimRequirement = 'mandatory' | 'optional';
 
