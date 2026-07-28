@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {render, screen} from '@testing-library/react';
+import {render, screen, fireEvent} from '@testing-library/react';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import FormAdapter from '../FormAdapter';
@@ -233,6 +233,50 @@ describe('FormAdapter', () => {
       // All components should render since our mock returns true
       expect(screen.getByTestId('reorderable-element-comp-1')).toBeInTheDocument();
       expect(screen.getByTestId('reorderable-element-comp-2')).toBeInTheDocument();
+    });
+  });
+
+  describe('Add field', () => {
+    const formElements = [
+      {id: 'text-input', type: 'TEXT_INPUT', display: {label: 'Text Input', showOnResourcePanel: true}},
+      {id: 'hidden', type: 'TEXT_INPUT', display: {label: 'Hidden', showOnResourcePanel: false}},
+      {id: 'captcha', type: 'CAPTCHA', display: {label: 'Captcha', showOnResourcePanel: true}},
+    ] as never[];
+
+    it('should render the add field button inside the form outline', () => {
+      render(<FormAdapter resource={createMockElement()} stepId="step-1" availableElements={formElements} />);
+
+      expect(screen.getByTestId('form-add-field-button')).toBeInTheDocument();
+    });
+
+    it('should offer only form-compatible elements shown on the resource panel', () => {
+      render(<FormAdapter resource={createMockElement()} stepId="step-1" availableElements={formElements} />);
+
+      fireEvent.click(screen.getByTestId('form-add-field-button'));
+
+      expect(screen.getByText('Text Input')).toBeInTheDocument();
+      expect(screen.queryByText('Hidden')).not.toBeInTheDocument();
+      expect(screen.queryByText('Captcha')).not.toBeInTheDocument();
+    });
+
+    it('should add the chosen field to this form', () => {
+      const onAddElementToForm = vi.fn();
+      render(
+        <FormAdapter
+          resource={createMockElement()}
+          stepId="step-1"
+          availableElements={formElements}
+          onAddElementToForm={onAddElementToForm}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('form-add-field-button'));
+      fireEvent.click(screen.getByText('Text Input'));
+
+      expect(onAddElementToForm).toHaveBeenCalledWith(
+        expect.objectContaining({type: 'TEXT_INPUT'}),
+        createMockElement().id,
+      );
     });
   });
 });

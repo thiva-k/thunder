@@ -17,9 +17,8 @@
  */
 
 import type {EmbeddedFlowComponent} from '@thunderid/react';
-import {cn} from '@thunderid/utils';
-import {Stack} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
+import StackContainer from './StackContainer';
 import type {FlowComponent} from '../../../models/flow';
 import FlowComponentRenderer from '../FlowComponentRenderer';
 
@@ -51,14 +50,7 @@ export default function StackAdapter({
   const nestedComponents = (component.components ?? []) as FlowComponent[];
 
   return (
-    <Stack
-      id={component.id}
-      className={[cn('Flow--stack'), component.classes].filter(Boolean).join(' ')}
-      direction={component.direction ?? 'column'}
-      spacing={component.gap ?? 2}
-      alignItems={component.align ?? 'center'}
-      justifyContent={component.justify ?? 'flex-start'}
-    >
+    <StackContainer component={component}>
       {nestedComponents.map((nested: FlowComponent, nestedIndex: number) => (
         <FlowComponentRenderer
           key={nested.id ?? nestedIndex}
@@ -75,6 +67,6 @@ export default function StackAdapter({
           maxImageSize={STACK_IMAGE_MAX_SIZE}
         />
       ))}
-    </Stack>
+    </StackContainer>
   );
 }

@@ -111,7 +111,9 @@ function ResourcePropertyPanel({open = false, onComponentDelete}: ResourceProper
         <ResourceProperties />
       </Box>
       {lastInteractedResource && lastInteractedResource.deletable !== false && (
-        <Box flexShrink={0}>
+        // Footer: a destructive action should read as separate from the fields above
+        // it, not as the next item in the list.
+        <Box flexShrink={0} sx={{borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 1}}>
           <PanelActionButton accent="error" onClick={handleDelete} startIcon={<TrashIcon size={16} />}>
             {t('flows:core.propertiesPanel.delete', 'Delete')}
           </PanelActionButton>
