@@ -40,10 +40,49 @@ describe('FlowConstants', () => {
     });
   });
 
+  describe('step identifiers', () => {
+    it('should have START_STEP_ID set to the lowercased start static step type', () => {
+      expect(FlowConstants.START_STEP_ID).toBe('start');
+    });
+
+    it('should have END_STEP_ID set to the end step type', () => {
+      expect(FlowConstants.END_STEP_ID).toBe('END');
+    });
+  });
+
+  describe('DEFAULT_EDGE_TYPE', () => {
+    it('should have DEFAULT_EDGE_TYPE set to base-edge', () => {
+      expect(FlowConstants.DEFAULT_EDGE_TYPE).toBe('base-edge');
+    });
+  });
+
+  describe('ExecutorNames', () => {
+    it('should have the password provisioning executor name', () => {
+      expect(FlowConstants.ExecutorNames.PASSWORD_PROVISIONING).toBe(
+        'AskPasswordFlowExecutorConstants.PASSWORD_PROVISIONING_EXECUTOR',
+      );
+    });
+
+    it('should have the email OTP executor name', () => {
+      expect(FlowConstants.ExecutorNames.EMAIL_OTP).toBe('AskPasswordFlowExecutorConstants.EMAIL_OTP_EXECUTOR');
+    });
+  });
+
+  describe('ActionTypes', () => {
+    it('should have the EXECUTOR action type', () => {
+      expect(FlowConstants.ActionTypes.EXECUTOR).toBe('EXECUTOR');
+    });
+  });
+
   describe('class structure', () => {
-    it('should have both constants defined', () => {
+    it('should have all constants defined', () => {
       expect(FlowConstants).toHaveProperty('AUTO_SAVE_INTERVAL');
       expect(FlowConstants).toHaveProperty('MAX_HISTORY_ITEMS');
+      expect(FlowConstants).toHaveProperty('START_STEP_ID');
+      expect(FlowConstants).toHaveProperty('END_STEP_ID');
+      expect(FlowConstants).toHaveProperty('DEFAULT_EDGE_TYPE');
+      expect(FlowConstants).toHaveProperty('ExecutorNames');
+      expect(FlowConstants).toHaveProperty('ActionTypes');
     });
 
     it('should be accessible as static properties', () => {

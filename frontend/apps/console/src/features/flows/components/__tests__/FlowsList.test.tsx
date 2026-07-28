@@ -330,7 +330,7 @@ describe('FlowsList', () => {
       fireEvent.click(authFlowRow);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-1');
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-1');
       });
     });
 
@@ -346,7 +346,7 @@ describe('FlowsList', () => {
       fireEvent.click(registrationFlowRow);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-2');
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-2');
       });
     });
   });
@@ -423,7 +423,7 @@ describe('FlowsList', () => {
       capturedOnRowClick.value?.({row: {id: 'flow-2', flowType: 'REGISTRATION'}});
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-2');
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-2');
       });
     });
 
@@ -686,7 +686,7 @@ describe('FlowsList', () => {
       fireEvent.click(buttons[0]);
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-1');
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-1');
       });
     });
 

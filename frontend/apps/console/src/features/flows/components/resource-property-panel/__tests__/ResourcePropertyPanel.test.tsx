@@ -45,8 +45,8 @@ vi.mock('@xyflow/react', async () => {
   };
 });
 
-// Mock ResourceProperties component
-vi.mock('../ResourceProperties', () => ({
+// Mock CommonResourceProperties component
+vi.mock('../CommonResourceProperties', () => ({
   default: () => <div data-testid="resource-properties">Resource Properties Content</div>,
 }));
 
@@ -125,7 +125,7 @@ describe('ResourcePropertyPanel', () => {
       expect(screen.getByText('Test Panel Heading')).toBeInTheDocument();
     });
 
-    it('should render ResourceProperties component', () => {
+    it('should render CommonResourceProperties component', () => {
       render(<ResourcePropertyPanel open onComponentDelete={mockOnComponentDelete} />, {wrapper: createWrapper()});
 
       expect(screen.getByTestId('resource-properties')).toBeInTheDocument();

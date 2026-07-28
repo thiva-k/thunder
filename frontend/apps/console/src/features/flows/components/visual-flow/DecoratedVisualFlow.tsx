@@ -51,7 +51,6 @@ import FormRequiresViewDialog from './FormRequiresViewDialog';
 import SimulationStepPreview from './SimulationStepPreview';
 import ValidationBadge from './ValidationBadge';
 import VisualFlow, {type VisualFlowPropsInterface} from './VisualFlow';
-import RouteConfig from '../../../../configs/RouteConfig';
 import VisualFlowConstants from '../../constants/VisualFlowConstants';
 import StepPreviewContext from '../../context/StepPreviewContext';
 import useComponentDelete from '../../hooks/useComponentDelete';
@@ -61,6 +60,7 @@ import useDeleteExecutionResource from '../../hooks/useDeleteExecutionResource';
 import useDragDropHandlers from '../../hooks/useDragDropHandlers';
 import useFlowConfig from '../../hooks/useFlowConfig';
 import useFlowEvents from '../../hooks/useFlowEvents';
+import useFlowRoutes from '../../hooks/useFlowRoutes';
 import useFlowSimulation from '../../hooks/useFlowSimulation';
 import useGenerateStepElement from '../../hooks/useGenerateStepElement';
 import useInteractionState from '../../hooks/useInteractionState';
@@ -232,6 +232,7 @@ function DecoratedVisualFlow({
   const {generateStepElement} = useGenerateStepElement();
   const {t} = useTranslation();
   const navigate = useNavigate();
+  const flowRoutes = useFlowRoutes();
   const {notifications, openValidationPanel} = useValidationStatus();
 
   const {errorCount, warningCount} = useMemo(() => {
@@ -750,14 +751,14 @@ function DecoratedVisualFlow({
       return;
     }
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    navigate(RouteConfig.flows.list());
-  }, [isDirty, navigate]);
+    navigate(flowRoutes.flows.list());
+  }, [flowRoutes, isDirty, navigate]);
 
   const handleConfirmDiscard = useCallback((): void => {
     setIsDiscardDialogOpen(false);
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    navigate(RouteConfig.flows.list());
-  }, [navigate]);
+    navigate(flowRoutes.flows.list());
+  }, [flowRoutes, navigate]);
 
   const simulationNode = useMemo(
     () => nodes.find((node: Node) => node.id === simulation.currentNodeId) ?? null,

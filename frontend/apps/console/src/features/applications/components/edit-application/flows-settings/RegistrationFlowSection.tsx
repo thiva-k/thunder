@@ -91,10 +91,7 @@ export default function RegistrationFlowSection({
             components={[
               <Link
                 key="edit"
-                to={RouteConfig.flows.detail(
-                  'registration',
-                  editedApp.registrationFlowId ?? application.registrationFlowId ?? '',
-                )}
+                to={RouteConfig.flows.detail(editedApp.registrationFlowId ?? application.registrationFlowId ?? '')}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link

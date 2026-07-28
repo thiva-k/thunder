@@ -71,8 +71,7 @@ export interface ConsoleRoutePaths {
   flows: {
     list: () => string;
     create: () => string;
-    byType: (type: string) => string;
-    detail: (type: string, flowId: string) => string;
+    detail: (flowId: string) => string;
   };
   design: {
     list: () => string;
@@ -242,8 +241,7 @@ const RouteConfig: RouteConfig = {
   flows: {
     list: () => `/${ROUTE_SEGMENTS.flows}`,
     create: () => `/${ROUTE_SEGMENTS.flows}/create`,
-    byType: (type) => `/${ROUTE_SEGMENTS.flows}/${type}`,
-    detail: (type, flowId) => `/${ROUTE_SEGMENTS.flows}/${type}/${flowId}`,
+    detail: (flowId) => `/${ROUTE_SEGMENTS.flows}/${flowId}`,
   },
   design: {
     list: () => `/${ROUTE_SEGMENTS.design}`,

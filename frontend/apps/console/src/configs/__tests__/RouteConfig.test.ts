@@ -112,8 +112,7 @@ describe('RouteConfig', () => {
   it('flows builds paths from the segment', () => {
     expect(RouteConfig.flows.list()).toBe('/flows');
     expect(RouteConfig.flows.create()).toBe('/flows/create');
-    expect(RouteConfig.flows.byType('signin')).toBe('/flows/signin');
-    expect(RouteConfig.flows.detail('signin', 'flow-1')).toBe('/flows/signin/flow-1');
+    expect(RouteConfig.flows.detail('flow-1')).toBe('/flows/flow-1');
   });
 
   it('design builds paths from the segment', () => {

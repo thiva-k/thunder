@@ -88,7 +88,7 @@ export default function AuthenticationFlowSection({
             components={[
               <Link
                 key="edit"
-                to={RouteConfig.flows.detail('signin', editedApp.authFlowId ?? application.authFlowId ?? '')}
+                to={RouteConfig.flows.detail(editedApp.authFlowId ?? application.authFlowId ?? '')}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link
