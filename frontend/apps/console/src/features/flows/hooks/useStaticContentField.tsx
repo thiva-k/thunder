@@ -20,7 +20,7 @@ import {type Node, useReactFlow} from '@xyflow/react';
 import cloneDeep from 'lodash-es/cloneDeep';
 import {useCallback, useEffect} from 'react';
 import useFlowPlugins from './useFlowPlugins';
-import useGetFlowBuilderCoreResources from '../api/useGetFlowBuilderCoreResources';
+import useGetFlowBuilderResources from '../api/useGetFlowBuilderResources';
 import VisualFlowConstants from '../constants/VisualFlowConstants';
 import type {Properties} from '../models/base';
 import {type Element, ElementCategories, ElementTypes} from '../models/elements';
@@ -34,7 +34,7 @@ const STATIC_CONTENT_ENABLED_PROPERTY = 'enableStaticContent';
  */
 const useStaticContentField = (): void => {
   const {getNode, updateNodeData} = useReactFlow();
-  const {data: resources} = useGetFlowBuilderCoreResources();
+  const {data: resources} = useGetFlowBuilderResources();
   const {onPropertyChange, onPropertyPanelOpen} = useFlowPlugins();
 
   /**

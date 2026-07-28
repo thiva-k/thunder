@@ -34,7 +34,7 @@ import {Handle, Position, useNodeId, useReactFlow} from '@xyflow/react';
 import {memo, useMemo, useState, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
-import RouteConfig from '../../../../../../configs/RouteConfig';
+import useFlowRoutes from '../../../../hooks/useFlowRoutes';
 import ValidationErrorBoundary from '../../../validation-panel/ValidationErrorBoundary';
 import type {CommonStepFactoryPropsInterface} from '../CommonStepFactory';
 import StepTitle from '../StepTitle';
@@ -42,7 +42,6 @@ import useGetFlows from '@/features/flows/api/useGetFlows';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import useInteractionState from '@/features/flows/hooks/useInteractionState';
 import useUIPanelState from '@/features/flows/hooks/useUIPanelState';
-import {FlowType} from '@/features/flows/models/flows';
 import {ResourceTypes} from '@/features/flows/models/resources';
 import type {BasicFlowDefinition} from '@/features/flows/models/responses';
 import {StepCategories, StepTypes, type Step, type StepData} from '@/features/flows/models/steps';
@@ -54,14 +53,6 @@ type CallStepData = StepData & {flow?: {ref?: string}};
 
 const CALL_NODE_WIDTH = 260;
 
-// Sign-out flows are intentionally absent: they cannot be selected as call targets, so a Call node
-// never references one and there is nothing to open.
-const FLOW_TYPE_TO_ROUTE_SEGMENT: Record<string, string> = {
-  [FlowType.AUTHENTICATION]: 'signin',
-  [FlowType.REGISTRATION]: 'registration',
-  [FlowType.RECOVERY]: 'recovery',
-};
-
 /**
  * Call Node component for cross-flow invocation. Visually mirrors ExecutionMinimal but
  * exposes a flow reference instead of an executor and exposes both `onSuccess` (right) and
@@ -72,6 +63,7 @@ function Call({resources, data}: CallPropsInterface): ReactElement {
   const stepId: string | null = useNodeId();
   const {t} = useTranslation();
   const navigate = useNavigate();
+  const flowRoutes = useFlowRoutes();
   const {setLastInteractedResource, setLastInteractedStepId} = useInteractionState();
   const {setIsOpenResourcePropertiesPanel} = useUIPanelState();
   const {deleteElements} = useReactFlow();
@@ -88,7 +80,7 @@ function Call({resources, data}: CallPropsInterface): ReactElement {
     [flowsData, flowRef],
   );
 
-  const canOpen = Boolean(referencedFlow && FLOW_TYPE_TO_ROUTE_SEGMENT[referencedFlow.flowType]);
+  const canOpen = Boolean(referencedFlow);
 
   const resource: Step = {
     ...(paletteEntry ?? ({} as Step)),
@@ -131,9 +123,6 @@ function Call({resources, data}: CallPropsInterface): ReactElement {
     if (!referencedFlow) {
       return;
     }
-    if (!FLOW_TYPE_TO_ROUTE_SEGMENT[referencedFlow.flowType]) {
-      return;
-    }
     setIsOpenConfirmDialog(true);
   };
 
@@ -142,12 +131,8 @@ function Call({resources, data}: CallPropsInterface): ReactElement {
     if (!referencedFlow) {
       return;
     }
-    const segment: string | undefined = FLOW_TYPE_TO_ROUTE_SEGMENT[referencedFlow.flowType];
-    if (!segment) {
-      return;
-    }
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    navigate(RouteConfig.flows.detail(segment, referencedFlow.id));
+    navigate(flowRoutes.flows.detail(referencedFlow.id));
   };
 
   const bodyLabel: string = referencedFlow

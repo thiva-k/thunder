@@ -24,12 +24,13 @@ import {useMemo, useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import FlowDeleteDialog from './FlowDeleteDialog';
-import RouteConfig from '../../../configs/RouteConfig';
 import useGetFlows from '../api/useGetFlows';
+import useFlowRoutes from '../hooks/useFlowRoutes';
 import type {BasicFlowDefinition} from '../models/responses';
 
 export default function FlowsList(): JSX.Element {
   const navigate = useNavigate();
+  const flowRoutes = useFlowRoutes();
   const {t} = useTranslation();
   const logger = useLogger('FlowsList');
   const dataGridLocaleText = useDataGridLocaleText();
@@ -51,12 +52,12 @@ export default function FlowsList(): JSX.Element {
   const handleEditClick = useCallback(
     (flow: BasicFlowDefinition): void => {
       (async (): Promise<void> => {
-        await navigate(RouteConfig.flows.detail('signin', flow.id));
+        await navigate(flowRoutes.flows.detail(flow.id));
       })().catch((_error: unknown) => {
         logger.error('Failed to navigate to flow builder', {error: _error, flowId: flow.id});
       });
     },
-    [logger, navigate],
+    [flowRoutes, logger, navigate],
   );
 
   const columns: DataGrid.GridColDef<BasicFlowDefinition>[] = useMemo(

@@ -89,7 +89,7 @@ export default function RecoveryFlowSection({
             components={[
               <Link
                 key="edit"
-                to={RouteConfig.flows.detail('recovery', editedApp.recoveryFlowId ?? application.recoveryFlowId ?? '')}
+                to={RouteConfig.flows.detail(editedApp.recoveryFlowId ?? application.recoveryFlowId ?? '')}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link

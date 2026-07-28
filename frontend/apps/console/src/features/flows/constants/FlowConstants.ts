@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {StaticStepTypes, StepTypes} from '../models/steps';
+
 class FlowConstants {
   /**
    * Private constructor to avoid object instantiation from outside
@@ -29,6 +31,37 @@ class FlowConstants {
 
   // Maximum number of history items to keep
   public static readonly MAX_HISTORY_ITEMS: number = 20;
+
+  /**
+   * The ID for the start step in the flow.
+   * Uses lowercase to match ReactFlow node type conventions.
+   */
+  public static readonly START_STEP_ID: string = StaticStepTypes.Start.toLowerCase();
+
+  /**
+   * The ID for the end/user onboard step in the flow.
+   */
+  public static readonly END_STEP_ID: string = StepTypes.End;
+
+  /**
+   * Default edge type for the flow canvas.
+   */
+  public static readonly DEFAULT_EDGE_TYPE: string = 'base-edge';
+
+  /**
+   * Executor names for auto-assignment based on field types.
+   */
+  public static readonly ExecutorNames = {
+    PASSWORD_PROVISIONING: 'AskPasswordFlowExecutorConstants.PASSWORD_PROVISIONING_EXECUTOR',
+    EMAIL_OTP: 'AskPasswordFlowExecutorConstants.EMAIL_OTP_EXECUTOR',
+  } as const;
+
+  /**
+   * Action types for button actions.
+   */
+  public static readonly ActionTypes = {
+    EXECUTOR: 'EXECUTOR',
+  } as const;
 }
 
 export default FlowConstants;

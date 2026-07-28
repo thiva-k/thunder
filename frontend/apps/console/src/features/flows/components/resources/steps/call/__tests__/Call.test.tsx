@@ -219,7 +219,7 @@ describe('Call', () => {
       renderCall({flow: {ref: 'flow-a'}});
       fireEvent.click(screen.getByTestId('call-open-referenced-flow'));
       fireEvent.click(screen.getByRole('button', {name: /continue/i}));
-      expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-a');
+      expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-a');
     });
 
     it('navigates to the referenced REGISTRATION flow after confirmation', () => {
@@ -231,7 +231,7 @@ describe('Call', () => {
       renderCall({flow: {ref: 'flow-r'}});
       fireEvent.click(screen.getByTestId('call-open-referenced-flow'));
       fireEvent.click(screen.getByRole('button', {name: /continue/i}));
-      expect(mockNavigate).toHaveBeenCalledWith('/flows/registration/flow-r');
+      expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-r');
     });
 
     it('navigates to the referenced RECOVERY flow after confirmation', () => {
@@ -243,18 +243,19 @@ describe('Call', () => {
       renderCall({flow: {ref: 'flow-rec'}});
       fireEvent.click(screen.getByTestId('call-open-referenced-flow'));
       fireEvent.click(screen.getByRole('button', {name: /continue/i}));
-      expect(mockNavigate).toHaveBeenCalledWith('/flows/recovery/flow-rec');
+      expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-rec');
     });
 
-    it('does not offer opening a referenced SIGNOUT flow', () => {
-      // Sign-out flows cannot be call targets, so there is no route to open one.
+    it('opens a referenced SIGNOUT flow', () => {
       mockUseGetFlows.mockReturnValue({
         data: {flows: [{id: 'flow-so', name: 'Sign Out', flowType: 'SIGNOUT'}]},
         isLoading: false,
         error: null,
       });
       renderCall({flow: {ref: 'flow-so'}});
-      expect(screen.getByTestId('call-open-referenced-flow')).toBeDisabled();
+      fireEvent.click(screen.getByTestId('call-open-referenced-flow'));
+      fireEvent.click(screen.getByRole('button', {name: /continue/i}));
+      expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-so');
     });
 
     it('does not navigate when the user cancels the confirmation dialog', () => {

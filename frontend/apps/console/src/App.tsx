@@ -123,7 +123,7 @@ const ConnectionConfigureWizardPage = lazy(() =>
 const ConnectionCreateWizardPage = lazy(() =>
   import('@thunderid/configure-connections').then((m) => ({default: m.ConnectionCreateWizardPage})),
 );
-const LoginFlowBuilderPage = lazy(() => import('./features/login-flow/pages/LoginFlowPage'));
+const FlowBuilderPage = lazy(() => import('./features/flows/pages/FlowBuilderPage'));
 const CreateRolePage = lazy(() => import('./features/roles/pages/CreateRolePage'));
 const RoleEditPage = lazy(() => import('./features/roles/pages/RoleEditPage'));
 const RolesListPage = lazy(() => import('./features/roles/pages/RolesListPage'));
@@ -382,64 +382,14 @@ export default function App(): JSX.Element {
                 <Route index element={<ConnectionConfigureWizardPage />} />
               </Route>
               <Route
-                path={RouteConfig.flows.byType('signin')}
+                path={RouteConfig.flows.detail(':flowId')}
                 element={
                   <ProtectedRoute>
                     <DashboardLayout collapseSidebar />
                   </ProtectedRoute>
                 }
               >
-                <Route index element={<LoginFlowBuilderPage />} />
-              </Route>
-              <Route
-                path={`${RouteConfig.flows.byType('signin')}/:flowId`}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout collapseSidebar />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
-              </Route>
-              <Route
-                path={RouteConfig.flows.byType('registration')}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout collapseSidebar />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
-              </Route>
-              <Route
-                path={`${RouteConfig.flows.byType('registration')}/:flowId`}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout collapseSidebar />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
-              </Route>
-              <Route
-                path={RouteConfig.flows.byType('recovery')}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout collapseSidebar />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
-              </Route>
-              <Route
-                path={`${RouteConfig.flows.byType('recovery')}/:flowId`}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout collapseSidebar />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
+                <Route index element={<FlowBuilderPage />} />
               </Route>
               <Route
                 path={RouteConfig.importExport.list()}
@@ -450,26 +400,6 @@ export default function App(): JSX.Element {
                 }
               >
                 <Route index element={<ImportExportPage />} />
-              </Route>
-              <Route
-                path={RouteConfig.flows.byType('signout')}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
-              </Route>
-              <Route
-                path={`${RouteConfig.flows.byType('signout')}/:flowId`}
-                element={
-                  <ProtectedRoute>
-                    <DashboardLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<LoginFlowBuilderPage />} />
               </Route>
               <Route
                 path={RouteConfig.export.page()}
