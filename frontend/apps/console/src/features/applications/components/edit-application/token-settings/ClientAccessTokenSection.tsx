@@ -64,6 +64,8 @@ interface ClientAccessTokenSectionProps {
   onValidationChange?: (hasErrors: boolean) => void;
   copy: ClientAccessTokenCopy;
   inputId?: string;
+  /** Value shown for the `sub` claim in the preview (the client entity's own ID). */
+  subjectValue?: string;
 }
 
 /**
@@ -82,6 +84,7 @@ export default function ClientAccessTokenSection({
   onValidationChange = undefined,
   copy,
   inputId = 'client-access-token-validity',
+  subjectValue = '<sub>',
 }: ClientAccessTokenSectionProps): JSX.Element {
   const {t} = useTranslation();
 
@@ -132,7 +135,7 @@ export default function ClientAccessTokenSection({
 
   const jwtPreview: Record<string, unknown> = {};
   ACCESS_TOKEN_DEFAULT_CLAIMS.forEach((attr) => {
-    jwtPreview[attr] = `<${attr}>`;
+    jwtPreview[attr] = attr === 'sub' ? subjectValue : `<${attr}>`;
   });
   currentAttributes.forEach((attr) => {
     jwtPreview[attr] = `<${attr}>`;

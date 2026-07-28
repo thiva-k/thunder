@@ -39,6 +39,7 @@ type AgentRequestWithID struct {
 	Type        string                 `json:"type"                  yaml:"type"`
 	Name        string                 `json:"name"                  yaml:"name"`
 	Description string                 `json:"description,omitempty" yaml:"description,omitempty"`
+	LogoURL     string                 `json:"logoUrl,omitempty"     yaml:"logoUrl,omitempty"`
 	Owner       string                 `json:"owner,omitempty"       yaml:"owner,omitempty"`
 	Attributes  map[string]interface{} `json:"attributes,omitempty"  yaml:"attributes,omitempty"`
 
@@ -54,6 +55,7 @@ type Agent struct {
 	Type        string          `json:"type"`
 	Name        string          `json:"name"`
 	Description string          `json:"description,omitempty"`
+	LogoURL     string          `json:"logoUrl,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
@@ -68,6 +70,7 @@ type CreateAgentRequest struct {
 	Type        string          `json:"type" native:"required"`
 	Name        string          `json:"name" native:"required,min=3,max=100"`
 	Description string          `json:"description,omitempty"`
+	LogoURL     string          `json:"logoUrl,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
@@ -82,6 +85,7 @@ type UpdateAgentRequest struct {
 	Type        string          `json:"type,omitempty"`
 	Name        string          `json:"name,omitempty"`
 	Description string          `json:"description,omitempty"`
+	LogoURL     string          `json:"logoUrl,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
@@ -98,6 +102,7 @@ type AgentCompleteResponse struct {
 	Type        string          `json:"type,omitempty"`
 	Name        string          `json:"name,omitempty"`
 	Description string          `json:"description,omitempty"`
+	LogoURL     string          `json:"logoUrl,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`
 
@@ -113,6 +118,7 @@ type AgentGetResponse struct {
 	Type        string `json:"type,omitempty"        yaml:"type,omitempty"`
 	Name        string `json:"name,omitempty"        yaml:"name,omitempty"`
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	LogoURL     string `json:"logoUrl,omitempty"     yaml:"logoUrl,omitempty"`
 	ClientID    string `json:"clientId,omitempty"    yaml:"-"`
 	Owner       string `json:"owner,omitempty"       yaml:"owner,omitempty"`
 	// Attributes holds the raw JSON for API responses; json.RawMessage cannot be
@@ -132,6 +138,7 @@ type BasicAgentResponse struct {
 	Type        string          `json:"type,omitempty"`
 	Name        string          `json:"name,omitempty"`
 	Description string          `json:"description,omitempty"`
+	LogoURL     string          `json:"logoUrl,omitempty"`
 	ClientID    string          `json:"clientId,omitempty"`
 	Owner       string          `json:"owner,omitempty"`
 	Attributes  json.RawMessage `json:"attributes,omitempty"`

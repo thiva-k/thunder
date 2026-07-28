@@ -74,6 +74,7 @@ export default function AgentAccessTokenSection({
       disabled={agent.isReadOnly === true}
       onValidationChange={onValidationChange}
       inputId="agent-access-token-validity"
+      subjectValue={agent.id}
       copy={{
         attributesTitle: t('agents:edit.tokens.agent.attributes.title', 'Access Token Attributes'),
         attributesDescription: t(

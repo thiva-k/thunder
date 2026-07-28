@@ -33,6 +33,7 @@ import ConfigureAgentDetails from '../components/create-agent/ConfigureAgentDeta
 import ConfigureName from '../components/create-agent/ConfigureName';
 import ConfigureOwner from '../components/create-agent/ConfigureOwner';
 import ShowClientSecret from '../components/create-agent/ShowClientSecret';
+import AgentConstants from '../constants/agent-constants';
 import useAgentCreate from '../contexts/AgentCreate/useAgentCreate';
 import {DEFAULT_AGENT_TYPE_NAME, type Agent, type AgentInboundAuthConfig} from '../models/agent';
 import {AgentCreateFlowStep} from '../models/agent-create-flow';
@@ -164,6 +165,7 @@ export default function AgentCreatePage(): JSX.Element {
       ouId,
       type: selectedSchema.name,
       name: agentName,
+      logoUrl: AgentConstants.DEFAULT_AVATAR,
       ...(selectedOwnerId && {owner: selectedOwnerId}),
       ...(Object.keys(filteredAttributes).length > 0 && {attributes: filteredAttributes}),
       inboundAuthConfig,

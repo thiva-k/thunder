@@ -356,7 +356,7 @@ export default function AgentEditPage(): JSX.Element {
           {t('agents:edit.page.back', 'Back to agents')}
         </PageTitle.BackButton>
         <PageTitle.Avatar sx={{overflow: 'visible'}}>
-          <ResourceAvatar size={55} fallback={AgentConstants.DEFAULT_AVATAR} />
+          <ResourceAvatar size={55} value={agent.logoUrl} fallback={AgentConstants.DEFAULT_AVATAR} />
         </PageTitle.Avatar>
         <PageTitle.Header>
           <Stack direction="row" alignItems="center" spacing={1} mb={1}>

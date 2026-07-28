@@ -500,4 +500,18 @@ var (
 			DefaultValue: "One or more user attributes are not valid for the configured allowed user types",
 		},
 	}
+
+	// ErrorInvalidLogoURL is returned when the supplied logo URL fails validation.
+	ErrorInvalidLogoURL = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "AGT-1041",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.agentservice.invalid_logo_url",
+			DefaultValue: "Invalid logo URL",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.agentservice.invalid_logo_url_description",
+			DefaultValue: "The provided logo URL is not valid",
+		},
+	}
 )

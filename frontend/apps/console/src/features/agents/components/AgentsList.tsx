@@ -71,7 +71,7 @@ export default function AgentsList(): JSX.Element {
         renderCell: (params: DataGrid.GridRenderCellParams<BasicAgent>): JSX.Element => (
           <ListingTable.CellIcon
             sx={{width: '100%'}}
-            icon={<ResourceAvatar size={30} fallback={AgentConstants.DEFAULT_AVATAR} />}
+            icon={<ResourceAvatar size={30} value={params.row.logoUrl} fallback={AgentConstants.DEFAULT_AVATAR} />}
             primary={params.row.name}
             secondary={params.row.description}
           />
