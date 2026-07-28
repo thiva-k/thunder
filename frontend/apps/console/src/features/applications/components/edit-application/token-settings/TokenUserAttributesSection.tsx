@@ -311,8 +311,9 @@ export default function TokenUserAttributesSection({
       tokenType === 'userinfo' ? TokenConstants.USER_INFO_DEFAULT_ATTRIBUTES : TokenConstants.DEFAULT_TOKEN_ATTRIBUTES;
     const isPendingTab = tokenType === 'shared' || activeTab === tokenType;
 
+    // Include already selected attributes so ones dropped from the schema stay visible and removable.
     const availableAttributes = Array.from(
-      new Set([...userAttributes, ...TokenConstants.ADDITIONAL_USER_ATTRIBUTES]),
+      new Set([...userAttributes, ...TokenConstants.ADDITIONAL_USER_ATTRIBUTES, ...currentAttrs]),
     ).filter((attr) => !(defaultAttrs as readonly string[]).includes(attr));
 
     return (
@@ -334,7 +335,7 @@ export default function TokenUserAttributesSection({
                 {t('applications:edit.token.loading_attributes', 'Loading user attributes...')}
               </Typography>
             )}
-            {!isLoadingUserAttributes && userAttributes.length > 0 && (
+            {!isLoadingUserAttributes && (userAttributes.length > 0 || currentAttrs.length > 0) && (
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                 {availableAttributes.sort().map((attr) => {
                   const isAdded = currentAttrs.includes(attr);

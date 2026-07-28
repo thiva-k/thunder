@@ -1115,6 +1115,9 @@ importers:
       '@thunderid/components':
         specifier: workspace:^
         version: link:../components
+      '@thunderid/configure-user-types':
+        specifier: workspace:^
+        version: link:../configure-user-types
       '@thunderid/contexts':
         specifier: workspace:^
         version: link:../contexts
@@ -1775,6 +1778,9 @@ importers:
       '@thunderid/types':
         specifier: workspace:^
         version: link:../types
+      '@thunderid/utils':
+        specifier: workspace:^
+        version: link:../utils
       '@types/node':
         specifier: 'catalog:'
         version: 24.7.2
