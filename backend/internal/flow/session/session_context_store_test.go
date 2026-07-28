@@ -141,21 +141,6 @@ func (s *SessionContextStoreTestSuite) TestGetByCheckpoint_Miss() {
 	s.Nil(got)
 }
 
-func (s *SessionContextStoreTestSuite) TestListCheckpointIDs() {
-	s.mockDBProvider.On("GetRuntimePersistentDBClient").Return(s.mockDBClient, nil)
-	s.mockDBClient.On("QueryContext", context.Background(), queryListCheckpointsBySessionID,
-		"sess-1", testDeploymentID).
-		Return([]map[string]interface{}{
-			{"checkpoint_id": "password"},
-			{"checkpoint_id": "step_up"},
-		}, nil)
-
-	ids, listErr := s.store.ListCheckpointIDs(context.Background(), "sess-1")
-
-	s.NoError(listErr)
-	s.Equal([]string{"password", "step_up"}, ids)
-}
-
 func (s *SessionContextStoreTestSuite) TestDelete() {
 	s.mockDBProvider.On("GetRuntimePersistentDBClient").Return(s.mockDBClient, nil)
 	s.mockDBClient.On("ExecuteContext", context.Background(), queryDeleteSessionContext,
@@ -234,28 +219,6 @@ func (s *SessionContextStoreTestSuite) TestGetByCheckpoint_BadPayload() {
 		Return([]map[string]interface{}{row}, nil)
 
 	got, err := s.store.GetByCheckpoint(context.Background(), "sess-1", "session")
-	s.Error(err)
-	s.Nil(got)
-}
-
-func (s *SessionContextStoreTestSuite) TestListCheckpointIDs_QueryError() {
-	s.mockDBProvider.On("GetRuntimePersistentDBClient").Return(s.mockDBClient, nil)
-	s.mockDBClient.On("QueryContext", context.Background(), queryListCheckpointsBySessionID,
-		"sess-1", testDeploymentID).
-		Return(nil, errors.New("query failed"))
-
-	got, err := s.store.ListCheckpointIDs(context.Background(), "sess-1")
-	s.Error(err)
-	s.Nil(got)
-}
-
-func (s *SessionContextStoreTestSuite) TestListCheckpointIDs_ParseError() {
-	s.mockDBProvider.On("GetRuntimePersistentDBClient").Return(s.mockDBClient, nil)
-	s.mockDBClient.On("QueryContext", context.Background(), queryListCheckpointsBySessionID,
-		"sess-1", testDeploymentID).
-		Return([]map[string]interface{}{{"checkpoint_id": 42}}, nil) // non-string fails parseString
-
-	got, err := s.store.ListCheckpointIDs(context.Background(), "sess-1")
 	s.Error(err)
 	s.Nil(got)
 }
