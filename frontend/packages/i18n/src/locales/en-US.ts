@@ -4148,10 +4148,9 @@ const translations = {
     'next_steps.section.title': 'Quick Links',
 
     // Invite Members card
-    'next_steps.invite_members.title': 'Invite Members',
-    'next_steps.invite_members.description': 'Add collaborators to help manage your organization and act as a backup.',
+    'next_steps.invite_members.title': 'Add Users',
+    'next_steps.invite_members.description': 'Add or invite collaborators to help manage your organization.',
     'next_steps.invite_members.actions.primary.label': 'Add User',
-    'next_steps.invite_members.actions.secondary.label': 'Invite User',
     'next_steps.invite_members.status.count': '{{count}} member',
     'next_steps.invite_members.status.count_other': '{{count}} members',
     'next_steps.invite_members.status.empty': 'No members yet — add collaborators',

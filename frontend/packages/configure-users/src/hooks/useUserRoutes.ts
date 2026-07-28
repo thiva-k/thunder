@@ -33,7 +33,6 @@ export interface UserRoutePaths {
     detail: (userId: string) => string;
     add: () => string;
     addCreate: () => string;
-    addInvite: () => string;
   };
 }
 
@@ -48,7 +47,6 @@ export const defaultUserRoutePaths: UserRoutePaths = {
     detail: (userId) => `/users/${userId}`,
     add: () => '/users/add',
     addCreate: () => '/users/add/create',
-    addInvite: () => '/users/add/invite',
   },
 };
 
