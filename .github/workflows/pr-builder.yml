@@ -858,13 +858,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: 🔧 Install Required OS Utilities
-        # jq/lsof/unzip are used by the bash setup steps below.
-        # build-essential is needed because `pnpm install --frozen-lockfile` at the workspace root
-        # triggers the better-sqlite3 postinstall, which falls back to `node-gyp rebuild` (needs
-        # make + g++) when no prebuilt binary matches the container's Node version.
+        # jq/lsof/unzip are used by the bash setup steps below. No toolchain is
+        # needed: the install below is scoped to @thunderid/e2e, so it never
+        # reaches the better-sqlite3 postinstall that would want node-gyp.
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends jq lsof unzip build-essential
+          apt-get install -y --no-install-recommends jq lsof unzip
 
       - name: 📥 Checkout Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -1214,8 +1213,11 @@ jobs:
           
           echo "Sample App started successfully!"
 
+      # Scoped to the E2E package: it has no workspace dependencies, so installing
+      # the whole monorepo here only added time and dragged in native builds from
+      # unrelated sample apps.
       - name: 📦 Install E2E Dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter @thunderid/e2e
 
       - name: 🎭 Run Playwright E2E Tests
         run: pnpm test
