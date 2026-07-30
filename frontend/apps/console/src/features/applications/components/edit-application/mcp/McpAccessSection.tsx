@@ -348,7 +348,8 @@ export default function McpAccessSection({
 
             <Box>
               <Button
-                variant="outlined"
+                variant="text"
+                color="primary"
                 size="small"
                 startIcon={<Plus size={16} />}
                 onClick={handleAddUri}

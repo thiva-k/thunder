@@ -22,8 +22,8 @@ import {X, TrashIcon} from '@wso2/oxygen-ui-icons-react';
 import {useReactFlow} from '@xyflow/react';
 import {memo, useCallback, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
+import CommonResourceProperties from './CommonResourceProperties';
 import PanelActionButton from './PanelActionButton';
-import ResourceProperties from './ResourceProperties';
 import useInteractionState from '../../hooks/useInteractionState';
 import useUIPanelState from '../../hooks/useUIPanelState';
 import {type Element} from '../../models/elements';
@@ -108,10 +108,12 @@ function ResourcePropertyPanel({open = false, onComponentDelete}: ResourceProper
           },
         }}
       >
-        <ResourceProperties />
+        <CommonResourceProperties />
       </Box>
       {lastInteractedResource && lastInteractedResource.deletable !== false && (
-        <Box flexShrink={0}>
+        // Footer: a destructive action should read as separate from the fields above
+        // it, not as the next item in the list.
+        <Box flexShrink={0} sx={{borderTop: '1px solid', borderColor: 'divider', pt: 2, mt: 1}}>
           <PanelActionButton accent="error" onClick={handleDelete} startIcon={<TrashIcon size={16} />}>
             {t('flows:core.propertiesPanel.delete', 'Delete')}
           </PanelActionButton>

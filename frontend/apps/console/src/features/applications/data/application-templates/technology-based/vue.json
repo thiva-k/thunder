@@ -3,6 +3,18 @@
   "type": "browser",
   "displayName": "Vue",
   "description": "Single Page Application built with Vue 3",
+  "capabilities": {
+    "cors": true
+  },
+  "devServer": {
+    "id": "vite",
+    "label": "Vite",
+    "url": "http://localhost:5173"
+  },
+  "creationFlow": {
+    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
+  },
   "defaults": {
     "name": "Vue Application",
     "inboundAuthConfig": [

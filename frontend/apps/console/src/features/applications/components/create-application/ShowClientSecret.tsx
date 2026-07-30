@@ -17,21 +17,24 @@
  */
 
 import {useCopyToClipboard} from '@thunderid/hooks';
-import {Box, Typography, Stack, TextField, IconButton, InputAdornment, Alert, Button, Divider} from '@wso2/oxygen-ui';
+import {
+  Box,
+  Typography,
+  Stack,
+  TextField,
+  IconButton,
+  InputAdornment,
+  Alert,
+  Button,
+  Divider,
+  useTheme,
+} from '@wso2/oxygen-ui';
 import {Copy, Eye, EyeOff, AlertTriangle} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 
 export interface ShowClientSecretProps {
-  /**
-   * The name of the created application
-   */
-  appName: string;
-  /**
-   * The client ID of the created application
-   */
-  clientId?: string;
   /**
    * The OAuth client secret that needs to be saved. Used to authenticate at the token endpoint.
    */
@@ -58,19 +61,15 @@ export interface ShowClientSecretProps {
  * initiation via the Flow Execution API.
  */
 export default function ShowClientSecret({
-  appName,
-  clientId = '',
   clientSecret = '',
   flowSecret = '',
   onCopySecret = () => null,
   onContinue,
 }: ShowClientSecretProps): JSX.Element {
   const {t} = useTranslation();
+  const theme = useTheme();
   const [showSecret, setShowSecret] = useState(false);
   const [showFlowSecret, setShowFlowSecret] = useState(false);
-  const {copy: copyClientId} = useCopyToClipboard({
-    resetDelay: 2000,
-  }) as {copied: boolean; copy: (text: string) => Promise<void>};
   const {copied, copy} = useCopyToClipboard({
     resetDelay: 2000,
     onCopy: onCopySecret,
@@ -82,10 +81,6 @@ export default function ShowClientSecret({
   // The primary secret backs the footer copy button: prefer the client secret, fall back to the
   // Flow Secret for embedded apps that only have the latter.
   const primarySecret = clientSecret || flowSecret;
-
-  const handleClientIdCopy = async (): Promise<void> => {
-    await copyClientId(clientId);
-  };
 
   const handleCopy = async (): Promise<void> => {
     await copy(primarySecret);
@@ -117,7 +112,7 @@ export default function ShowClientSecret({
           alignSelf: 'center',
         }}
       >
-        <AlertTriangle size={64} color="var(--mui-palette-warning-main)" />
+        <AlertTriangle size={64} color={theme.vars?.palette.warning.main} />
       </Box>
 
       {/* Header */}
@@ -130,7 +125,7 @@ export default function ShowClientSecret({
         </Typography>
       </Stack>
 
-      {/* Application Name & Client Secret Card */}
+      {/* Client Secret Card */}
       <Box
         sx={{
           p: 3,
@@ -141,101 +136,54 @@ export default function ShowClientSecret({
         }}
       >
         <Stack direction="column" spacing={2}>
-          <Box>
-            <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>
-              {t('applications:clientSecret.appNameLabel')}
-            </Typography>
-            <Typography variant="body1">{appName}</Typography>
-          </Box>
-
-          {clientId && (
-            <>
-              <Divider />
-
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
-                  {t('applications:clientSecret.clientIdLabel')}
-                </Typography>
-                <TextField
-                  fullWidth
-                  data-testid="application-client-id-value"
-                  value={clientId}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label={`${t('common:actions.copy')} ${t('applications:clientSecret.clientIdLabel')}`}
-                          onClick={() => {
-                            handleClientIdCopy().catch(() => {
-                              // Error already handled in handleClientIdCopy
-                            });
-                          }}
-                          edge="end"
-                          size="small"
-                        >
-                          <Copy size={16} />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Box>
-            </>
-          )}
-
           {clientSecret && (
-            <>
-              <Divider />
-
-              <Box>
-                <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>
-                  {t('applications:clientSecret.clientSecretLabel')}
-                </Typography>
-                <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
-                  {t('applications:clientSecret.purpose')}
-                </Typography>
-                <TextField
-                  fullWidth
-                  data-testid="application-client-secret-value"
-                  type={showSecret ? 'text' : 'password'}
-                  value={clientSecret}
-                  InputProps={{
-                    readOnly: true,
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          aria-label={t('applications:regenerateSecret.success.toggleVisibility')}
-                          onClick={handleToggleVisibility}
-                          edge="end"
-                          size="small"
-                        >
-                          {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </IconButton>
-                        <IconButton
-                          aria-label={`${t('common:actions.copy')} ${t('applications:clientSecret.clientSecretLabel')}`}
-                          onClick={() => {
-                            copy(clientSecret).catch(() => {
-                              // Error already handled in copy
-                            });
-                          }}
-                          edge="end"
-                          size="small"
-                          sx={{ml: 0.5}}
-                        >
-                          <Copy size={16} />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Box>
-            </>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>
+                {t('applications:clientSecret.clientSecretLabel')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 1}}>
+                {t('applications:clientSecret.purpose')}
+              </Typography>
+              <TextField
+                fullWidth
+                data-testid="application-client-secret-value"
+                type={showSecret ? 'text' : 'password'}
+                value={clientSecret}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={t('applications:regenerateSecret.success.toggleVisibility')}
+                        onClick={handleToggleVisibility}
+                        edge="end"
+                        size="small"
+                      >
+                        {showSecret ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </IconButton>
+                      <IconButton
+                        aria-label={`${t('common:actions.copy')} ${t('applications:clientSecret.clientSecretLabel')}`}
+                        onClick={() => {
+                          copy(clientSecret).catch(() => {
+                            // Error already handled in copy
+                          });
+                        }}
+                        edge="end"
+                        size="small"
+                        sx={{ml: 0.5}}
+                      >
+                        <Copy size={16} />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
           )}
 
           {flowSecret && (
             <>
-              <Divider />
+              {clientSecret && <Divider />}
 
               <Box>
                 <Typography variant="caption" color="text.secondary" sx={{display: 'block', mb: 0.5}}>

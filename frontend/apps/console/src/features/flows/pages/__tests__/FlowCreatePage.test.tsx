@@ -281,7 +281,7 @@ describe('FlowCreatePage', () => {
       fireEvent.click(screen.getByText('Create'));
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/flows/signin/flow-123');
+        expect(mockNavigate).toHaveBeenCalledWith('/flows/flow-123');
       });
     });
 

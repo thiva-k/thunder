@@ -23,12 +23,12 @@ import type {JSX} from 'react';
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
-import RouteConfig from '../../../configs/RouteConfig';
 import useCreateFlow from '../api/useCreateFlow';
 import ConfigureFlowName from '../components/create-flow/ConfigureFlowName';
 import type {ConfigureFlowNameValue} from '../components/create-flow/ConfigureFlowName';
 import SelectFlowTemplate from '../components/create-flow/SelectFlowTemplate';
 import SelectFlowType from '../components/create-flow/SelectFlowType';
+import useFlowRoutes from '../hooks/useFlowRoutes';
 import type {FlowType} from '../models/flows';
 import type {FlowTemplate} from '../models/templates';
 
@@ -45,6 +45,7 @@ const ALL_STEPS = [FlowCreateStep.TYPE, FlowCreateStep.TEMPLATE, FlowCreateStep.
 export default function FlowCreatePage(): JSX.Element {
   const {t} = useTranslation();
   const navigate = useNavigate();
+  const flowRoutes = useFlowRoutes();
   const logger = useLogger('FlowCreatePage');
   const createFlow = useCreateFlow();
 
@@ -66,7 +67,7 @@ export default function FlowCreatePage(): JSX.Element {
   );
 
   const handleClose = (): void => {
-    void navigate(RouteConfig.flows.list());
+    void navigate(flowRoutes.flows.list());
   };
 
   const handleNextStep = (): void => {
@@ -90,9 +91,7 @@ export default function FlowCreatePage(): JSX.Element {
       createFlow.mutate(flowRequest, {
         onSuccess: (savedFlow) => {
           (async () => {
-            const flowTypeRoute =
-              selectedType === 'AUTHENTICATION' ? 'signin' : (selectedType?.toLowerCase() ?? 'signin');
-            await navigate(RouteConfig.flows.detail(flowTypeRoute, savedFlow.id));
+            await navigate(flowRoutes.flows.detail(savedFlow.id));
           })().catch((_error: unknown) => {
             logger.error('Failed to navigate to flow builder', {error: _error, flowId: savedFlow.id});
           });

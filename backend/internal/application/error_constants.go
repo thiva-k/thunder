@@ -532,7 +532,7 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key: "error.applicationservice.invalid_application_type_description",
 			DefaultValue: "The provided application type is not supported. It must be one of: " +
-				"browser, fullstack, mobile, m2m, custom.",
+				"browser, fullstack, mobile, m2m, mcp, custom.",
 		},
 	}
 	// ErrorApplicationTypeImmutable is returned when an update attempts to change the application type.
@@ -559,7 +559,33 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key: "error.applicationservice.application_type_required_description",
 			DefaultValue: "An application type must be provided. It must be one of: " +
-				"browser, fullstack, mobile, m2m, custom.",
+				"browser, fullstack, mobile, m2m, mcp, custom.",
+		},
+	}
+	// ErrorInvalidTosURI is the error returned when an invalid Terms of Service URI is provided.
+	ErrorInvalidTosURI = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "APP-1043",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_tos_uri",
+			DefaultValue: "Invalid Terms of Service URI",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_tos_uri_description",
+			DefaultValue: "The provided Terms of Service URI is not a valid URI",
+		},
+	}
+	// ErrorInvalidPolicyURI is the error returned when an invalid Privacy Policy URI is provided
+	ErrorInvalidPolicyURI = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "APP-1044",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_policy_uri",
+			DefaultValue: "Invalid Privacy Policy URI",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_policy_uri_description",
+			DefaultValue: "The provided Privacy Policy URI is not a valid URI",
 		},
 	}
 )

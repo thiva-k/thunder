@@ -86,7 +86,7 @@ export default function SignOutFlowSection({
             components={[
               <Link
                 key="edit"
-                to={RouteConfig.flows.detail('signout', editedApp.signOutFlowId ?? application.signOutFlowId ?? '')}
+                to={RouteConfig.flows.detail(editedApp.signOutFlowId ?? application.signOutFlowId ?? '')}
                 style={{color: 'inherit', fontWeight: 'bold', textDecoration: 'underline'}}
               />,
               <Link

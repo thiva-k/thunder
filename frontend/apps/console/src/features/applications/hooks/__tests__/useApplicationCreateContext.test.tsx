@@ -31,7 +31,7 @@ describe('useApplicationCreateContext', () => {
     setRelyingPartyId: vi.fn(),
     relyingPartyName: '',
     setRelyingPartyName: vi.fn(),
-    currentStep: ApplicationCreateFlowStep.NAME,
+    currentStep: ApplicationCreateFlowStep.DETAILS,
     setCurrentStep: vi.fn(),
     appName: 'Test App',
     setAppName: vi.fn(),
@@ -41,6 +41,10 @@ describe('useApplicationCreateContext', () => {
     setThemeId: vi.fn(),
     selectedTheme: null,
     setSelectedTheme: vi.fn(),
+    layoutId: null,
+    setLayoutId: vi.fn(),
+    selectedLayout: null,
+    setSelectedLayout: vi.fn(),
     appLogo: null,
     setAppLogo: vi.fn(),
     selectedColor: '',
@@ -48,10 +52,36 @@ describe('useApplicationCreateContext', () => {
     integrations: {},
     setIntegrations: vi.fn(),
     toggleIntegration: vi.fn(),
+    isEmailOtpMfaEnabled: false,
+    setIsEmailOtpMfaEnabled: vi.fn(),
+    isSmsOtpMfaEnabled: false,
+    setIsSmsOtpMfaEnabled: vi.fn(),
+    smsOtpSenderId: '',
+    setSmsOtpSenderId: vi.fn(),
     selectedAuthFlow: null,
     setSelectedAuthFlow: vi.fn(),
     signInApproach: ApplicationCreateFlowSignInApproach.INBUILT,
     setSignInApproach: vi.fn(),
+    registrationFlowId: null,
+    setRegistrationFlowId: vi.fn(),
+    isRegistrationFlowEnabled: false,
+    setIsRegistrationFlowEnabled: vi.fn(),
+    recoveryFlowId: null,
+    setRecoveryFlowId: vi.fn(),
+    isRecoveryFlowEnabled: false,
+    setIsRecoveryFlowEnabled: vi.fn(),
+    signOutFlowId: null,
+    setSignOutFlowId: vi.fn(),
+    isSignOutFlowEnabled: false,
+    setIsSignOutFlowEnabled: vi.fn(),
+    redirectUris: [],
+    setRedirectUris: vi.fn(),
+    postLogoutRedirectUris: [],
+    setPostLogoutRedirectUris: vi.fn(),
+    corsOrigins: [],
+    setCorsOrigins: vi.fn(),
+    ouDefaults: {signIn: false, signUp: false, recovery: false, signOut: false, theme: false, layout: false},
+    setOuDefaults: vi.fn(),
     selectedTechnology: null,
     setSelectedTechnology: vi.fn(),
     selectedPlatform: null,
@@ -85,7 +115,7 @@ describe('useApplicationCreateContext', () => {
       wrapper: createWrapper(mockContextValue),
     });
 
-    expect(result.current.currentStep).toBe(ApplicationCreateFlowStep.NAME);
+    expect(result.current.currentStep).toBe(ApplicationCreateFlowStep.DETAILS);
     expect(result.current.appName).toBe('Test App');
     expect(result.current.selectedTheme).toBeNull();
     expect(result.current.signInApproach).toBe(ApplicationCreateFlowSignInApproach.INBUILT);
@@ -184,10 +214,9 @@ describe('useApplicationCreateContext', () => {
 
   it('should return different flow steps', () => {
     const steps = [
-      ApplicationCreateFlowStep.NAME,
+      ApplicationCreateFlowStep.DETAILS,
       ApplicationCreateFlowStep.DESIGN,
-      ApplicationCreateFlowStep.OPTIONS,
-      ApplicationCreateFlowStep.EXPERIENCE,
+      ApplicationCreateFlowStep.SECURITY,
       ApplicationCreateFlowStep.STACK,
       ApplicationCreateFlowStep.CONFIGURE,
     ];

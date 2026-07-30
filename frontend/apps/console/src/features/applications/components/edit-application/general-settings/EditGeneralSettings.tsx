@@ -27,7 +27,7 @@ import QuickCopySection from './QuickCopySection';
 import type {Application} from '../../../models/application';
 import {TokenEndpointAuthMethods} from '../../../models/oauth';
 import type {OAuth2Config} from '../../../models/oauth';
-import resolveApplicationType from '../../../utils/resolveApplicationType';
+import resolveApplicationType, {isClientCredentialsOnlyGrantSet} from '../../../utils/resolveApplicationType';
 import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';
 import RegenerateFlowSecretDialog from '../../RegenerateFlowSecretDialog';
@@ -118,15 +118,19 @@ export default function EditGeneralSettings({
     oauth2Config?.tokenEndpointAuthMethod === TokenEndpointAuthMethods.CLIENT_SECRET_BASIC ||
     oauth2Config?.tokenEndpointAuthMethod === TokenEndpointAuthMethods.CLIENT_SECRET_POST;
 
-  // Only flow-native apps are issued a Flow Secret and can rotate it: full-stack or custom apps
-  // using the embedded (non-redirect) sign-in option. Browser (public redirect), mobile
-  // (attestation), and m2m (direct token) apps never hold one. The canonical application type is the
-  // discriminator, falling back to the OAuth config shape for legacy/custom apps.
+  // Only flow-native apps are issued a Flow Secret and can rotate it: full-stack, custom, or mcp
+  // apps using the embedded (non-redirect) sign-in option. Browser (public redirect), mobile
+  // (attestation), and m2m (direct token, including client_credentials-only mcp configs) apps never
+  // hold one. The canonical application type is the discriminator, falling back to the OAuth config
+  // shape for legacy/custom apps.
   const resolvedType = resolveApplicationType(application.type, oauth2Config);
   const grantTypes = oauth2Config?.grantTypes ?? [];
   const isFlowNativeClient =
-    (resolvedType === 'fullstack' || resolvedType === 'custom') &&
-    (!oauth2Config || (!oauth2Config.publicClient && !grantTypes.includes('authorization_code')));
+    (resolvedType === 'fullstack' || resolvedType === 'custom' || resolvedType === 'mcp') &&
+    (!oauth2Config ||
+      (!oauth2Config.publicClient &&
+        !grantTypes.includes('authorization_code') &&
+        !isClientCredentialsOnlyGrantSet(grantTypes)));
 
   const handleRegenerateClick = useCallback((): void => {
     setRegenerateDialogOpen(true);

@@ -139,6 +139,16 @@ export default function EditAdvancedSettings({
 
   const currentPasskeyOrigins = editedApp.passkeyAllowedOrigins ?? application.passkeyAllowedOrigins ?? [];
 
+  // Encrypted ID token / UserInfo formats are encrypted to the client certificate, so removing the
+  // certificate while one is selected would produce an invalid config. Used to block that removal.
+  const idTokenResponseType = oauth2Config?.token?.idToken?.responseType;
+  const userInfoResponseType = oauth2Config?.userInfo?.responseType;
+  const encryptionDependsOnCert =
+    idTokenResponseType === 'JWE' ||
+    idTokenResponseType === 'NESTED_JWT' ||
+    userInfoResponseType === 'JWE' ||
+    userInfoResponseType === 'NESTED_JWT';
+
   const handleTokenConfigChange = (tokenUpdates: Partial<OAuth2Token>, oauth2Updates: Partial<OAuth2Config> = {}) => {
     const currentInboundAuth: InboundAuthConfig[] = editedApp.inboundAuthConfig ?? application.inboundAuthConfig ?? [];
     const updatedInboundAuth = currentInboundAuth.map((auth) =>
@@ -190,6 +200,7 @@ export default function EditAdvancedSettings({
         certificate={oauth2Config?.certificate}
         onCertificateChange={handleCertificateChange}
         required={oauth2Config?.tokenEndpointAuthMethod === 'private_key_jwt'}
+        encryptionDependsOnCert={encryptionDependsOnCert}
         disabled={application.isReadOnly}
       />
       {showAttestation && (

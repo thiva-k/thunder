@@ -34,8 +34,6 @@ describe('ShowClientSecret', () => {
   const mockCopy = vi.fn().mockResolvedValue(undefined);
 
   const defaultProps: ShowClientSecretProps = {
-    appName: 'Test Application',
-    clientId: 'test_client_id_12345',
     clientSecret: 'test_secret_12345',
     onCopySecret: mockOnCopySecret,
     onContinue: mockOnContinue,
@@ -65,22 +63,6 @@ describe('ShowClientSecret', () => {
 
       expect(screen.getByRole('heading', {level: 1, name: /save your client secret/i})).toBeInTheDocument();
       expect(screen.getByText(/store it somewhere safe/i)).toBeInTheDocument();
-    });
-
-    it('should display the application name', () => {
-      renderComponent();
-
-      expect(screen.getByText('App Name')).toBeInTheDocument();
-      expect(screen.getByText('Test Application')).toBeInTheDocument();
-    });
-
-    it('should render the client ID field', () => {
-      renderComponent();
-
-      expect(screen.getByText('Client ID')).toBeInTheDocument();
-      const input = screen.getByDisplayValue('test_client_id_12345');
-      expect(input).toBeInTheDocument();
-      expect(input).toHaveAttribute('readonly');
     });
 
     it('should render the client secret field', () => {
@@ -145,19 +127,6 @@ describe('ShowClientSecret', () => {
       });
     });
 
-    it('should call copy function when copy client ID button is clicked', async () => {
-      const user = userEvent.setup();
-      renderComponent();
-
-      const copyButton = screen.getByRole('button', {name: 'Copy Client ID'});
-
-      await user.click(copyButton);
-
-      await waitFor(() => {
-        expect(mockCopy).toHaveBeenCalledWith('test_client_id_12345');
-      });
-    });
-
     it('should call copy function when main copy button is clicked', async () => {
       const user = userEvent.setup();
       renderComponent();
@@ -218,23 +187,11 @@ describe('ShowClientSecret', () => {
   });
 
   describe('props variations', () => {
-    it('should render with different app name', () => {
-      renderComponent({appName: 'Another App'});
-
-      expect(screen.getByText('Another App')).toBeInTheDocument();
-    });
-
     it('should render with different client secret', () => {
       renderComponent({clientSecret: 'different_secret_abc'});
 
       const input = screen.getByDisplayValue('different_secret_abc');
       expect(input).toBeInTheDocument();
-    });
-
-    it('should not render the client ID field when not provided', () => {
-      renderComponent({clientId: ''});
-
-      expect(screen.queryByText('Client ID')).not.toBeInTheDocument();
     });
   });
 

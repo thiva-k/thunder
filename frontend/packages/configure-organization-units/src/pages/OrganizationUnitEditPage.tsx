@@ -71,7 +71,27 @@ function TabPanel({children = null, value, index, ...other}: TabPanelProps): JSX
   );
 }
 
-export default function OrganizationUnitEditPage(): JSX.Element {
+/**
+ * Props passed to a {@link OrganizationUnitEditPageProps.renderDefaultFlowsSettings} renderer.
+ */
+export interface DefaultFlowsSettingsRenderProps {
+  organizationUnit: OrganizationUnit;
+  editedOU: Partial<OrganizationUnit>;
+  onFieldChange: (field: keyof OrganizationUnit, value: unknown) => void;
+}
+
+export interface OrganizationUnitEditPageProps {
+  /**
+   * Renders the "Default Flows" tab content. This package has no access to the console app's
+   * flow-fetching API, so the consuming app supplies the tab via this render prop instead. The
+   * tab is omitted entirely when this is not provided.
+   */
+  renderDefaultFlowsSettings?: (renderProps: DefaultFlowsSettingsRenderProps) => ReactNode;
+}
+
+export default function OrganizationUnitEditPage({
+  renderDefaultFlowsSettings = undefined,
+}: OrganizationUnitEditPageProps): JSX.Element {
   const {id} = useParams<{id: string}>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -126,6 +146,15 @@ export default function OrganizationUnitEditPage(): JSX.Element {
       description: editedOU.description !== undefined ? editedOU.description : organizationUnit.description,
       parent: organizationUnit.parent ?? null,
       themeId: editedOU.themeId !== undefined ? editedOU.themeId : organizationUnit.themeId,
+      layoutId: editedOU.layoutId !== undefined ? editedOU.layoutId : organizationUnit.layoutId,
+      authFlowId: editedOU.authFlowId !== undefined ? editedOU.authFlowId : organizationUnit.authFlowId,
+      registrationFlowId:
+        editedOU.registrationFlowId !== undefined ? editedOU.registrationFlowId : organizationUnit.registrationFlowId,
+      isRegistrationFlowEnabled: editedOU.isRegistrationFlowEnabled ?? organizationUnit.isRegistrationFlowEnabled,
+      recoveryFlowId: editedOU.recoveryFlowId !== undefined ? editedOU.recoveryFlowId : organizationUnit.recoveryFlowId,
+      isRecoveryFlowEnabled: editedOU.isRecoveryFlowEnabled ?? organizationUnit.isRecoveryFlowEnabled,
+      signOutFlowId: editedOU.signOutFlowId !== undefined ? editedOU.signOutFlowId : organizationUnit.signOutFlowId,
+      isSignOutFlowEnabled: editedOU.isSignOutFlowEnabled ?? organizationUnit.isSignOutFlowEnabled,
       logoUrl: editedOU.logoUrl ?? organizationUnit.logoUrl,
     };
 
@@ -378,10 +407,18 @@ export default function OrganizationUnitEditPage(): JSX.Element {
           aria-controls="ou-tabpanel-3"
           sx={{textTransform: 'none'}}
         />
+        {renderDefaultFlowsSettings && (
+          <Tab
+            label={t('organizationUnits:edit.page.tabs.defaultFlows')}
+            id="ou-tab-4"
+            aria-controls="ou-tabpanel-4"
+            sx={{textTransform: 'none'}}
+          />
+        )}
         <Tab
           label={t('organizationUnits:edit.page.tabs.customization')}
-          id="ou-tab-4"
-          aria-controls="ou-tabpanel-4"
+          id={renderDefaultFlowsSettings ? 'ou-tab-5' : 'ou-tab-4'}
+          aria-controls={renderDefaultFlowsSettings ? 'ou-tabpanel-5' : 'ou-tabpanel-4'}
           sx={{textTransform: 'none'}}
         />
       </Tabs>
@@ -411,8 +448,15 @@ export default function OrganizationUnitEditPage(): JSX.Element {
           <EditGroups organizationUnitId={id!} />
         </TabPanel>
 
+        {/* Default Flows Tab */}
+        {renderDefaultFlowsSettings && (
+          <TabPanel value={activeTab} index={4}>
+            {renderDefaultFlowsSettings({organizationUnit, editedOU, onFieldChange: handleFieldChange})}
+          </TabPanel>
+        )}
+
         {/* Customization Tab */}
-        <TabPanel value={activeTab} index={4}>
+        <TabPanel value={activeTab} index={renderDefaultFlowsSettings ? 5 : 4}>
           <EditCustomization
             organizationUnit={organizationUnit}
             editedOU={editedOU}

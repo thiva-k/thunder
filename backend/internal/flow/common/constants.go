@@ -309,6 +309,12 @@ const (
 	// ForwardedDataKeyExpiryMinutes is the key for the OTP expiry duration (in minutes) inside the
 	// ForwardedData[ForwardedDataKeyTemplateData] map forwarded by OTPExecutor to sender executors.
 	ForwardedDataKeyExpiryMinutes = "expiryMinutes"
+	// ForwardedDataKeySSOSession holds the SSO session the SSO-Check node resolved, forwarded to the
+	// paired Session node so it restores the checkpoint without reading the same row again.
+	ForwardedDataKeySSOSession = "ssoSession"
+	// ForwardedDataKeySSOSessionContext holds the checkpoint context the SSO-Check node fetched,
+	// forwarded alongside ForwardedDataKeySSOSession.
+	ForwardedDataKeySSOSessionContext = "ssoSessionContext"
 )
 
 // InterceptorStatus represents the outcome of an interceptor execution.

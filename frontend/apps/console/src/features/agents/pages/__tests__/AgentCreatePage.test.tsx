@@ -105,17 +105,6 @@ vi.mock('../../components/create-agent/ConfigureOwner', () => ({
   ),
 }));
 
-vi.mock('../../components/create-agent/ShowClientSecret', () => ({
-  default: ({clientSecret, onContinue}: {clientSecret: string; onContinue: () => void}) => (
-    <div data-testid="step-complete">
-      <span data-testid="complete-secret">{clientSecret}</span>
-      <button type="button" onClick={onContinue}>
-        Continue Done
-      </button>
-    </div>
-  ),
-}));
-
 vi.mock('@thunderid/configure-users', () => ({
   ConfigureOrganizationUnit: ({onReadyChange}: {onReadyChange?: (isReady: boolean) => void}) => (
     <div data-testid="step-organization-unit">
@@ -251,7 +240,7 @@ describe('AgentCreatePage', () => {
     );
   });
 
-  it('shows the complete screen with the new client secret on success', async () => {
+  it('navigates to the agent details page with justCreatedSecret state on success', async () => {
     const user = userEvent.setup();
     agentCreateState.currentStep = AgentCreateFlowStep.OWNER;
 
@@ -262,7 +251,15 @@ describe('AgentCreatePage', () => {
         type: 'default',
         name: 'My Agent',
         inboundAuthConfig: [
-          {type: 'oauth2', config: {grantTypes: ['client_credentials'], responseTypes: [], clientSecret: 'shh'}},
+          {
+            type: 'oauth2',
+            config: {
+              grantTypes: ['client_credentials'],
+              responseTypes: [],
+              clientId: 'agent-client-id',
+              clientSecret: 'shh',
+            },
+          },
         ],
       });
     });
@@ -272,24 +269,29 @@ describe('AgentCreatePage', () => {
     await user.click(screen.getByRole('button', {name: /Create agent/i}));
 
     await waitFor(() => {
-      expect(screen.getByTestId('step-complete')).toBeInTheDocument();
-      expect(screen.getByTestId('complete-secret')).toHaveTextContent('shh');
+      expect(mockNavigate).toHaveBeenCalledWith('/agents/agent-1', {
+        state: {
+          justCreatedSecret: {
+            agentName: 'My Agent',
+            clientId: 'agent-client-id',
+            clientSecret: 'shh',
+          },
+        },
+      });
     });
   });
 
-  it('navigates to the agent details page from the complete screen', async () => {
+  it('navigates to the agent details page without navigation state when no client secret is returned', async () => {
     const user = userEvent.setup();
     agentCreateState.currentStep = AgentCreateFlowStep.OWNER;
 
     mockMutate.mockImplementation((_data, opts) => {
       opts.onSuccess({
-        id: 'agent-1',
+        id: 'agent-2',
         ouId: 'ou-1',
         type: 'default',
         name: 'My Agent',
-        inboundAuthConfig: [
-          {type: 'oauth2', config: {grantTypes: ['client_credentials'], responseTypes: [], clientSecret: 'shh'}},
-        ],
+        inboundAuthConfig: [],
       });
     });
 
@@ -298,12 +300,8 @@ describe('AgentCreatePage', () => {
     await user.click(screen.getByRole('button', {name: /Create agent/i}));
 
     await waitFor(() => {
-      expect(screen.getByTestId('step-complete')).toBeInTheDocument();
+      expect(mockNavigate).toHaveBeenCalledWith('/agents/agent-2');
     });
-
-    await user.click(screen.getByText('Continue Done'));
-
-    expect(mockNavigate).toHaveBeenCalledWith('/agents/agent-1');
   });
 
   it('triggers an error path when create fails', async () => {

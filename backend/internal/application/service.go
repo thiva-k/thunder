@@ -546,9 +546,9 @@ func (as *applicationService) updateEntityDataForApplicationUpdate(ctx context.C
 }
 
 // isFlowSecretEligible reports whether an application may hold a Flow Secret. Browser (public
-// redirect), mobile (attestation), and m2m (direct token) apps never hold one. Full-stack and custom
-// apps derive eligibility from the OAuth config shape: only confidential, non-redirect clients (or
-// embedded apps with no OAuth config) are eligible.
+// redirect), mobile (attestation), and m2m (direct token) apps never hold one. Full-stack, custom,
+// and mcp apps derive eligibility from the OAuth config shape: only confidential, non-redirect
+// clients (or embedded apps with no OAuth config) are eligible.
 func isFlowSecretEligible(appType model.ApplicationType,
 	inboundAuthConfig *providers.InboundAuthConfigWithSecret) bool {
 	switch appType {
@@ -1172,11 +1172,18 @@ func (as *applicationService) validateApplicationFields(
 	if app.LogoURL != "" && !sysutils.IsValidLogoURI(app.LogoURL) {
 		return &ErrorInvalidLogoURL
 	}
+	if app.TosURI != "" && !sysutils.IsValidURI(app.TosURI) {
+		return &ErrorInvalidTosURI
+	}
+	if app.PolicyURI != "" && !sysutils.IsValidURI(app.PolicyURI) {
+		return &ErrorInvalidPolicyURI
+	}
 	// Reject an unrecognized application type. Requiring a type (create) and enforcing
 	// immutability (update) are handled by the respective callers.
 	switch app.Type {
 	case "", model.ApplicationTypeBrowser, model.ApplicationTypeFullStack,
-		model.ApplicationTypeMobile, model.ApplicationTypeM2M, model.ApplicationTypeCustom:
+		model.ApplicationTypeMobile, model.ApplicationTypeM2M, model.ApplicationTypeMCP,
+		model.ApplicationTypeCustom:
 	default:
 		return &ErrorInvalidApplicationType
 	}
@@ -1384,20 +1391,15 @@ func translateOAuthValidationError(err error) *tidcommon.ServiceError {
 			Key:          "error.applicationservice.private_key_jwt_cannot_have_client_secret_description",
 			DefaultValue: "private_key_jwt authentication method cannot have a client secret",
 		})
-	case errors.Is(err, inboundclient.ErrOAuthClientSecretCannotHaveCertificate):
-		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
-			Key:          "error.applicationservice.client_secret_cannot_have_certificate_description",
-			DefaultValue: "client_secret authentication methods cannot have a certificate",
-		})
 	case errors.Is(err, inboundclient.ErrOAuthNoneAuthRequiresPublicClient):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key:          "error.applicationservice.none_auth_method_requires_public_client_description",
 			DefaultValue: "'none' authentication method requires the client to be a public client",
 		})
-	case errors.Is(err, inboundclient.ErrOAuthNoneAuthCannotHaveCertOrSecret):
+	case errors.Is(err, inboundclient.ErrOAuthNoneAuthCannotHaveSecret):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
-			Key:          "error.applicationservice.none_auth_method_cannot_have_cert_or_secret_description",
-			DefaultValue: "'none' authentication method cannot have a certificate or client secret",
+			Key:          "error.applicationservice.none_auth_method_cannot_have_secret_description",
+			DefaultValue: "'none' authentication method cannot have a client secret",
 		})
 	case errors.Is(err, inboundclient.ErrOAuthClientCredentialsCannotUseNoneAuth):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
@@ -1464,11 +1466,6 @@ func translateUserInfoValidationError(err error) *tidcommon.ServiceError {
 			Key:          "error.applicationservice.userinfo_unsupported_response_type_description",
 			DefaultValue: "userinfo responseType is not supported",
 		})
-	case errors.Is(err, inboundclient.ErrOAuthUserInfoJWSRequiresSigningAlg):
-		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
-			Key:          "error.applicationservice.userinfo_jws_requires_signing_alg_description",
-			DefaultValue: "signingAlg is required when userinfo responseType is JWS",
-		})
 	case errors.Is(err, inboundclient.ErrOAuthUserInfoJWERequiresEncryption):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key:          "error.applicationservice.userinfo_jwe_requires_encryption_description",
@@ -1477,7 +1474,7 @@ func translateUserInfoValidationError(err error) *tidcommon.ServiceError {
 	case errors.Is(err, inboundclient.ErrOAuthUserInfoNestedJWTRequiresAll):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key: "error.applicationservice.userinfo_nested_jwt_requires_all_description",
-			DefaultValue: "signingAlg, encryptionAlg, and encryptionEnc are required " +
+			DefaultValue: "encryptionAlg and encryptionEnc are required " +
 				"when userinfo responseType is NESTED_JWT",
 		})
 	case errors.Is(err, inboundclient.ErrOAuthUserInfoAlgRequiresResponseType):

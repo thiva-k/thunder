@@ -30,7 +30,10 @@ The sample ships with a `thunderid-config/` directory containing a declarative Y
     ```bash
     REACT_SDK_SAMPLE_CLIENT_ID=REACT_SDK_SAMPLE
     REACT_SDK_SAMPLE_REDIRECT_URIS=["https://localhost:3000"]
+    REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS=["https://localhost:3000"]
     ```
+
+    `REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS` lists the URLs the server is allowed to return the browser to after sign-out. Sign-out fails unless the URL the app lands on is registered here.
 
 2. Import via the ThunderID Console ([https://localhost:8090/console](https://localhost:8090/console)):
    - **First-time login**: a welcome screen appears with an **Open** button to upload the YAML file directly.

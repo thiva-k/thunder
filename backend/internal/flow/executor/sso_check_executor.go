@@ -89,16 +89,24 @@ func (e *ssoCheckExecutor) Execute(ctx *providers.NodeContext) (*providers.Execu
 		execResp.RuntimeData[common.RuntimeKeySSOSessionHandle] = resolved.HandleID
 	}
 
-	present := false
+	var snapshot *session.SessionContext
 	if resolved != nil && checkpoint != "" {
-		if present, err = e.sso.HasCheckpoint(ctx.Context, resolved.SessionID, checkpoint); err != nil {
+		if snapshot, err = e.sso.FindCheckpoint(ctx.Context, resolved.SessionID, checkpoint); err != nil {
 			return execResp, err
 		}
 	}
 
-	if present {
+	if snapshot != nil {
 		execResp.Status = providers.ExecComplete
 		execResp.RuntimeData[presentKey] = dataValueTrue
+		// Hand the two rows this node just read to the paired Session node, which needs the same ones
+		// to restore the checkpoint. ForwardedData reaches the immediate next node only, so this is
+		// set on the Skip outcome alone: on the Authenticate outcome the flow prompts and suspends,
+		// and forwarded data that outlived the node would be persisted with the flow context.
+		execResp.ForwardedData = map[string]interface{}{
+			common.ForwardedDataKeySSOSession:        resolved,
+			common.ForwardedDataKeySSOSessionContext: snapshot,
+		}
 		logger.Debug(ctx.Context, "Live SSO checkpoint present; routing to the Skip outcome",
 			log.String("flowId", in.FlowID),
 			log.String("checkpoint", checkpoint))

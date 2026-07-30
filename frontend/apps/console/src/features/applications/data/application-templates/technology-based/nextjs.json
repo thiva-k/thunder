@@ -3,8 +3,18 @@
   "type": "fullstack",
   "displayName": "Next.js",
   "description": "Server-side rendered application built with Next.js",
+  "devServer": {
+    "id": "nextjs",
+    "label": "Create Next App",
+    "url": "http://localhost:3000"
+  },
+  "creationFlow": {
+    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
+  },
   "defaults": {
     "name": "Next.js Application",
+    "signInApproach": "EMBEDDED",
     "inboundAuthConfig": [
       {
         "type": "oauth2",

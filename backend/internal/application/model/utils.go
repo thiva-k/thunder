@@ -22,7 +22,7 @@ package model
 func IsValidApplicationType(t ApplicationType) bool {
 	switch t {
 	case ApplicationTypeBrowser, ApplicationTypeFullStack, ApplicationTypeMobile,
-		ApplicationTypeM2M, ApplicationTypeCustom:
+		ApplicationTypeM2M, ApplicationTypeMCP, ApplicationTypeCustom:
 		return true
 	default:
 		return false

@@ -46,9 +46,6 @@ type sessionStore interface {
 	Delete(ctx context.Context, sessionID string) error
 	// DeleteSession removes the session row itself.
 	DeleteSession(ctx context.Context, sessionID string) error
-	// ListCheckpointIDs returns the checkpoint ids a session has saved, without loading any context
-	// payload — the existence check the SSO-Check node uses to decide checkpoint availability.
-	ListCheckpointIDs(ctx context.Context, sessionID string) ([]string, error)
 
 	// Record inserts the participant, or refreshes its LAST_ACTIVE_AT (preserving FIRST_JOINED_AT)
 	// when the application has already joined the session.

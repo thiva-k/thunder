@@ -467,6 +467,52 @@ describe('EditGeneralSettings', () => {
       expect(screen.getByTestId('regenerate-flow-secret-button')).toBeInTheDocument();
     });
 
+    it('should show regenerate Flow Secret for an mcp type app configured as confidential', () => {
+      const mcpApplication: Application = {...mockApplication, type: 'mcp'} as Application;
+      const flowNativeConfig: OAuth2Config = {
+        clientId: 'mcp-flow-native-123',
+        tokenEndpointAuthMethod: 'client_secret_basic',
+        publicClient: false,
+        grantTypes: ['client_credentials', 'urn:ietf:params:oauth:grant-type:token-exchange'],
+      } as OAuth2Config;
+
+      render(
+        <EditGeneralSettings
+          application={mcpApplication}
+          editedApp={{}}
+          onFieldChange={mockOnFieldChange}
+          oauth2Config={flowNativeConfig}
+          copiedField={null}
+          onCopyToClipboard={mockOnCopyToClipboard}
+        />,
+      );
+
+      expect(screen.getByTestId('regenerate-flow-secret-button')).toBeInTheDocument();
+    });
+
+    it('should not show regenerate Flow Secret for an mcp type app with a client_credentials-only config', () => {
+      const mcpApplication: Application = {...mockApplication, type: 'mcp'} as Application;
+      const m2mShapedConfig: OAuth2Config = {
+        clientId: 'mcp-m2m-123',
+        tokenEndpointAuthMethod: 'client_secret_basic',
+        publicClient: false,
+        grantTypes: ['client_credentials'],
+      } as OAuth2Config;
+
+      render(
+        <EditGeneralSettings
+          application={mcpApplication}
+          editedApp={{}}
+          onFieldChange={mockOnFieldChange}
+          oauth2Config={m2mShapedConfig}
+          copiedField={null}
+          onCopyToClipboard={mockOnCopyToClipboard}
+        />,
+      );
+
+      expect(screen.queryByTestId('regenerate-flow-secret-button')).not.toBeInTheDocument();
+    });
+
     it('should not show regenerate Flow Secret for an M2M (client_credentials only) app', () => {
       const m2mConfig: OAuth2Config = {
         clientId: 'm2m-123',

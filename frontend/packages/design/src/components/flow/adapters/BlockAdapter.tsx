@@ -18,7 +18,7 @@
 
 import {EmbeddedFlowComponentType, EmbeddedFlowEventType, type EmbeddedFlowComponent} from '@thunderid/react';
 import {cn} from '@thunderid/utils';
-import {Box, Button, Stack} from '@wso2/oxygen-ui';
+import {Box, Button} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import DividerAdapter from './DividerAdapter';
@@ -26,6 +26,7 @@ import OtpInputAdapter from './OtpInputAdapter';
 import PasswordInputAdapter from './PasswordInputAdapter';
 import RichTextAdapter from './RichTextAdapter';
 import SelectAdapter from './SelectAdapter';
+import StackContainer from './StackContainer';
 import TextInputAdapter from './TextInputAdapter';
 import type {FlowComponent, FlowFieldProps} from '../../../models/flow';
 import getIntegrationIcon from '../../../utils/getIntegrationIcon';
@@ -37,6 +38,7 @@ interface BlockContext {
   isLoading: boolean;
   resolve: (template: string | undefined) => string | undefined;
   onInputChange: (field: string, value: string) => void;
+  onBlur?: (field: string) => void;
   onSubmit: (action: EmbeddedFlowComponent, inputs: Record<string, string>) => void;
   onValidate?: (components: EmbeddedFlowComponent[]) => boolean;
   passwordAutoComplete?: 'current-password' | 'new-password';
@@ -179,19 +181,11 @@ function renderFormSubComponent(
   // in the form context so nested submit/trigger actions stay wired.
   if (sub.type === 'STACK') {
     return (
-      <Stack
-        key={sub.id ?? compIndex}
-        id={sub.id}
-        className={cn('Flow--stack')}
-        direction={sub.direction ?? 'column'}
-        spacing={sub.gap ?? 2}
-        alignItems={sub.align ?? 'center'}
-        justifyContent={sub.justify ?? 'flex-start'}
-      >
+      <StackContainer key={sub.id ?? compIndex} component={sub}>
         {(sub.components ?? []).map((nested: EmbeddedFlowComponent, nestedIndex: number) =>
           renderFormSubComponent(nested, nestedIndex, ctx),
         )}
-      </Stack>
+      </StackContainer>
     );
   }
   const fieldProps: FlowFieldProps = {
@@ -202,6 +196,7 @@ function renderFormSubComponent(
     isLoading: ctx.isLoading,
     resolve: ctx.resolve,
     onInputChange: ctx.onInputChange,
+    onBlur: ctx.onBlur,
   };
 
   if (
@@ -357,19 +352,11 @@ function TriggerBlockAdapter({component, index, ...ctx}: TriggerBlockAdapterProp
         const sub = actionComponent as FlowComponent;
         if (sub.type === 'STACK') {
           return (
-            <Stack
-              key={sub.id ?? actionIndex}
-              id={sub.id}
-              className={cn('Flow--stack')}
-              direction={sub.direction ?? 'column'}
-              spacing={sub.gap ?? 2}
-              alignItems={sub.align ?? 'center'}
-              justifyContent={sub.justify ?? 'flex-start'}
-            >
+            <StackContainer key={sub.id ?? actionIndex} component={sub}>
               {(sub.components ?? []).map((nested: EmbeddedFlowComponent, nestedIndex: number) =>
                 renderTriggerSub(nested, nestedIndex),
               )}
-            </Stack>
+            </StackContainer>
           );
         }
         if (

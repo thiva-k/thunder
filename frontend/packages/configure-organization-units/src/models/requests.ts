@@ -44,8 +44,8 @@ export type CreateOrganizationUnitRequest = Pick<OrganizationUnit, 'handle' | 'n
 /**
  * Request body for updating an organization unit.
  *
- * Derived from {@link OrganizationUnit} by omitting only the server-managed
- * `id` and `layoutId` fields. All other fields can be updated.
+ * Derived from {@link OrganizationUnit} by omitting only the server-managed `id` field.
+ * All other fields, including `layoutId` and the default-flow fields, can be updated.
  *
  * @public
  * @remarks
@@ -63,7 +63,7 @@ export type CreateOrganizationUnitRequest = Pick<OrganizationUnit, 'handle' | 'n
  * };
  * ```
  */
-export type UpdateOrganizationUnitRequest = Omit<OrganizationUnit, 'id' | 'layoutId'>;
+export type UpdateOrganizationUnitRequest = Omit<OrganizationUnit, 'id'>;
 
 /**
  * Query parameters for listing organization units.

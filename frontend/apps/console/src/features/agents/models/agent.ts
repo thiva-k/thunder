@@ -43,6 +43,7 @@ export interface Agent {
   type: string;
   name: string;
   description?: string;
+  logoUrl?: string;
   owner?: string;
   clientId?: string;
   attributes?: Record<string, unknown>;
@@ -67,6 +68,7 @@ export interface BasicAgent {
   type: string;
   name: string;
   description?: string;
+  logoUrl?: string;
   clientId?: string;
   isReadOnly?: boolean;
 }
@@ -83,6 +85,7 @@ export interface CreateAgentRequest {
   type: string;
   name: string;
   description?: string;
+  logoUrl?: string;
   owner?: string;
   attributes?: Record<string, unknown>;
   inboundAuthConfig?: AgentInboundAuthConfig[];
@@ -93,6 +96,7 @@ export interface UpdateAgentRequest {
   type?: string;
   name?: string;
   description?: string;
+  logoUrl?: string;
   owner?: string;
   attributes?: Record<string, unknown>;
   allowedUserTypes?: string[];

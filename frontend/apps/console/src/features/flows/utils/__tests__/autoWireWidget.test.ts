@@ -20,7 +20,7 @@ import type {Edge, Node} from '@xyflow/react';
 import {describe, expect, it} from 'vitest';
 import VisualFlowConstants from '../../constants/VisualFlowConstants';
 import autoWireWidget, {type AutoWireMeta} from '../autoWireWidget';
-import generateUnconnectedEdges from '@/features/login-flow/utils/edgeUtils';
+import generateUnconnectedEdges from '../edgeUtils';
 
 const NEXT = VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX;
 const EDGE_STYLE = 'base-edge';

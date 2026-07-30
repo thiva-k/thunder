@@ -400,12 +400,13 @@ func validateIDPProperties(ctx context.Context, idpType providers.IDPType, prope
 	return propertyMapToSlice(filteredPropsMap), nil
 }
 
-// ensureOpenIDScope ensures that the openid scope is present in the scopes property.
+// ensureOpenIDScope ensures that the openid scope is present in the scopes property,
+// defaulting to the standard OIDC scopes (openid, email, profile) when none are supplied.
 func ensureOpenIDScope(ctx context.Context, propertyMap map[string]cmodels.Property,
 	logger *log.Logger) *tidcommon.ServiceError {
 	scopesProp, exists := propertyMap[PropScopes]
 	if !exists {
-		err := createAndAppendProperty(ctx, propertyMap, PropScopes, "openid", false, logger)
+		err := createAndAppendProperty(ctx, propertyMap, PropScopes, defaultOIDCScopes, false, logger)
 		if err != nil {
 			return err
 		}
@@ -431,7 +432,7 @@ func ensureOpenIDScope(ctx context.Context, propertyMap map[string]cmodels.Prope
 	scopes = filteredScopes
 
 	if len(scopes) == 0 {
-		err := createAndAppendProperty(ctx, propertyMap, PropScopes, "openid", false, logger)
+		err := createAndAppendProperty(ctx, propertyMap, PropScopes, defaultOIDCScopes, false, logger)
 		if err != nil {
 			return err
 		}

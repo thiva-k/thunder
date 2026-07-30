@@ -90,14 +90,6 @@ var (
 		Query: `DELETE FROM "SSO_SESSION_CONTEXT" WHERE SESSION_ID = $1 AND DEPLOYMENT_ID = $2`,
 	}
 
-	// queryListCheckpointsBySessionID returns the checkpoint ids a session has saved. It is the
-	// existence check the SSO-Check node uses to decide availability without decrypting any context.
-	queryListCheckpointsBySessionID = model.DBQuery{
-		ID: "SSO-SESS-08",
-		Query: `SELECT CHECKPOINT_ID FROM "SSO_SESSION_CONTEXT" ` +
-			`WHERE SESSION_ID = $1 AND DEPLOYMENT_ID = $2`,
-	}
-
 	// queryUpsertParticipant records an application as a participant of a session, refreshing
 	// LAST_ACTIVE_AT and the current-grant TFID (but preserving FIRST_JOINED_AT) when the application
 	// has already joined. TFID moves to the latest grant so logout revokes the most recent family.

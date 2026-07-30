@@ -71,7 +71,7 @@ describe('AuthenticationFlowSection', () => {
         </MemoryRouter>,
       );
 
-      expect(screen.getByTestId('card-title')).toHaveTextContent('Authentication Flow');
+      expect(screen.getByTestId('card-title')).toHaveTextContent('Sign-in Flow');
       expect(screen.getByTestId('card-description')).toHaveTextContent(
         'Choose the flow that handles user login and authentication.',
       );
@@ -354,8 +354,8 @@ describe('AuthenticationFlowSection', () => {
       );
 
       const links = container.querySelectorAll('a');
-      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/signin/'));
-      expect(editLink).toHaveAttribute('href', '/flows/signin/auth-flow-1');
+      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/auth-flow-'));
+      expect(editLink).toHaveAttribute('href', '/flows/auth-flow-1');
     });
 
     it('should display edit link with correct flow ID from editedApp', () => {
@@ -375,8 +375,8 @@ describe('AuthenticationFlowSection', () => {
       );
 
       const links = container.querySelectorAll('a');
-      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/signin/'));
-      expect(editLink).toHaveAttribute('href', '/flows/signin/auth-flow-2');
+      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/auth-flow-'));
+      expect(editLink).toHaveAttribute('href', '/flows/auth-flow-2');
     });
 
     it('should display create link', () => {

@@ -59,6 +59,12 @@ The **Danger Zone** section at the bottom lets you:
 
 The **Attributes** tab shows the custom attributes defined by the agent schema. Click **Edit** to change the values, then click **Save**.
 
+If the agent schema changed since the agent was last saved, saving the agent reconciles its stored attributes with the current schema:
+
+- Values for attributes that were removed from the schema are discarded.
+- Values for optional attributes that no longer conform to the schema are discarded.
+- Values for required attributes that no longer conform to the schema must be corrected before the save can succeed.
+
 ### Flows
 
 The **Flows** tab is available when the agent has an OAuth 2.0 configuration. It controls:
@@ -81,8 +87,8 @@ The **Advanced Settings** tab configures the OAuth 2.0 protocol settings:
 
 - **Grant types**: the OAuth 2.0 flows the agent can use (for example, `client_credentials`, `authorization_code`, `urn:ietf:params:oauth:grant-type:token-exchange`).
 - **Response types**: applies to the authorization code flow.
-- **Token endpoint auth method**: how the agent authenticates at the token endpoint (`client_secret_basic`, `client_secret_post`, `private_key_jwt`, or `none`).
-- **Public client**: marks the agent as a public client (no secret). Forces the token endpoint auth method to `none`.
+- **Client authentication method**: how the agent authenticates at <ProductName />'s client-authenticated endpoints, such as token, introspection, revocation, PAR, and CIBA (`client_secret_basic`, `client_secret_post`, `private_key_jwt`, or `none`).
+- **Public client**: marks the agent as a public client (no secret). Forces the client authentication method to `none`.
 - **PKCE required**: requires PKCE on all authorization code requests.
 - **Redirect URIs**: allowed redirect URIs for authorization code flows.
 - **Certificate**: a public certificate for `private_key_jwt` authentication or signed/encrypted token verification.
@@ -103,6 +109,10 @@ In the schema editor you can add, edit, or remove attribute definitions. Each at
 - **Regex**: a validation pattern for string attributes.
 
 Click **Save** in the unsaved-changes bar to apply the schema changes. The updated schema applies to all agents on their next save.
+
+:::warning
+Removing an attribute from the schema does not immediately update existing applications. Any application that lists the removed attribute in its access token, ID token, or userinfo settings continues to return it while agents still hold a stored value. The next time you update and save the application, <ProductName /> removes the references to attributes that no longer exist in the schema. See [Application Settings](../../applications/application-settings#configure-what-goes-into-tokens) for the user attributes on the **Token** tab.
+:::
 
 ## Delete an Agent
 

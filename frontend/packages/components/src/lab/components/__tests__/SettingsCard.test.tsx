@@ -350,4 +350,25 @@ describe('SettingsCard', () => {
     const papers = container.querySelectorAll('.MuiPaper-root');
     expect(papers.length).toBe(2); // Outer card + Inner content card
   });
+
+  it('should not render a divider when toggle is disabled and content is hidden', () => {
+    const mockOnToggle = vi.fn();
+    const {container} = render(
+      <SettingsCard title="Test Settings" enabled={false} onToggle={mockOnToggle}>
+        <div>Hidden Content</div>
+      </SettingsCard>,
+    );
+
+    expect(container.querySelectorAll('.MuiDivider-root').length).toBe(0);
+  });
+
+  it('should render a divider when content is visible', () => {
+    const {container} = render(
+      <SettingsCard title="Test Settings">
+        <div>Content</div>
+      </SettingsCard>,
+    );
+
+    expect(container.querySelectorAll('.MuiDivider-root').length).toBe(1);
+  });
 });

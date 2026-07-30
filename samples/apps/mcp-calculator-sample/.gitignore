@@ -1,0 +1,3 @@
+server/.env
+server/thunderid.cert
+client/.mcp-oauth-cache/

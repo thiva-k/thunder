@@ -194,9 +194,11 @@ function FlowContextWrapper({
     const headerText = resource?.display?.header ?? startCase(resource?.type?.toLowerCase());
 
     setResourcePropertiesPanelHeadingRef.current(
-      <Stack direction="row" className="sub-title" gap={1} alignItems="center">
-        <CogIcon />
-        <Typography variant="h5">{headerText} Properties</Typography>
+      <Stack direction="row" className="sub-title" gap={1.25} alignItems="center" sx={{minWidth: 0}}>
+        <CogIcon size={18} />
+        <Typography variant="h6" noWrap title={`${headerText} Properties`}>
+          {headerText} Properties
+        </Typography>
       </Stack>,
     );
     setLastInteractedElementInternalRef.current(resource);

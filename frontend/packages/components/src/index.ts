@@ -23,6 +23,13 @@ export {default as I18nTextInput} from './I18nTextInput/I18nTextInput';
 export type {I18nTextInputLabels, I18nTextInputProps} from './I18nTextInput/I18nTextInput';
 export {default as PageLoader} from './PageLoader/PageLoader';
 
+/* -------------------------- ICONS -------------------------- */
+
+export {default as GithubIcon} from './icons/logos/vendor/GithubIcon';
+export {default as GoogleIcon} from './icons/logos/vendor/GoogleIcon';
+export {default as HeidiIcon} from './icons/logos/vendor/HeidiIcon';
+export {default as LissiIcon} from './icons/logos/vendor/LissiIcon';
+
 /* -------------------------- LAB -------------------------- */
 
 export {default as BuilderFloatingPanel} from './lab/components/BuilderLayout/BuilderFloatingPanel';

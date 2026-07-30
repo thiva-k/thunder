@@ -239,7 +239,7 @@ const renderSchemaField = <T extends Record<string, unknown>>(
                   <Checkbox
                     id={fieldName}
                     name={field.name}
-                    checked={!!field.value}
+                    checked={field.value === true}
                     onChange={(e) => field.onChange(e.target.checked)}
                     onBlur={field.onBlur}
                     ref={field.ref}

@@ -28,11 +28,12 @@ import type {AssertionConfig} from './token';
  * - `fullstack`: confidential client with a server component.
  * - `mobile`: native/public client, uses platform attestation.
  * - `m2m`: machine-to-machine, `client_credentials` only.
+ * - `mcp`: MCP client, may be public or confidential; derives behavior from its OAuth profile.
  * - `custom`: no enforced constraints (escape hatch / legacy).
  *
  * @public
  */
-export type ApplicationType = 'browser' | 'fullstack' | 'mobile' | 'm2m' | 'custom';
+export type ApplicationType = 'browser' | 'fullstack' | 'mobile' | 'm2m' | 'mcp' | 'custom';
 
 /**
  * Application Response Model (Basic)

@@ -31,13 +31,13 @@ export interface McpClientTypeMetadata {
 const McpClientTypeMetadataList: McpClientTypeMetadata[] = [
   {
     value: McpClientTypes.USER_DELEGATED,
-    icon: <UserRound size={32} />,
+    icon: <UserRound size={20} />,
     titleKey: 'applications:onboarding.mcp.clientType.userDelegated.title',
     descriptionKey: 'applications:onboarding.mcp.clientType.userDelegated.description',
   },
   {
     value: McpClientTypes.M2M,
-    icon: <Bot size={32} />,
+    icon: <Bot size={20} />,
     titleKey: 'applications:onboarding.mcp.clientType.m2m.title',
     descriptionKey: 'applications:onboarding.mcp.clientType.m2m.description',
   },

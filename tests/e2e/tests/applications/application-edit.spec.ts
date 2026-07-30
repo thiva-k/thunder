@@ -203,17 +203,17 @@ test.describe("Application Edit", () => {
       await applicationsPage.screenshot("tc009-flows-tab");
     });
 
-    await test.step("Verify authentication and registration flow selectors are visible", async () => {
+    await test.step("Verify sign-in and sign-up flow selectors are visible", async () => {
       const authFlowSelector = applicationsPage.page
-        .getByText(/authentication flow/i)
-        .or(applicationsPage.page.getByLabel(/authentication flow/i));
+        .getByText(/sign-in flow/i)
+        .or(applicationsPage.page.getByLabel(/sign-in flow/i));
       const registrationFlowSelector = applicationsPage.page
-        .getByText(/registration flow/i)
-        .or(applicationsPage.page.getByLabel(/registration flow/i));
+        .getByText(/sign-up flow/i)
+        .or(applicationsPage.page.getByLabel(/sign-up flow/i));
 
       await expect(authFlowSelector.first()).toBeVisible();
       await expect(registrationFlowSelector.first()).toBeVisible();
-      console.log("Authentication and Registration flow selectors visible");
+      console.log("Sign-in and Sign-up flow selectors visible");
       await applicationsPage.screenshot("tc009-flow-selectors");
     });
   });

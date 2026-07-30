@@ -39,6 +39,9 @@ const (
 	PropIDJagEnabled          = "id_jag_enabled"
 )
 
+// defaultOIDCScopes is seeded for OIDC and Google connections when no scopes are supplied.
+const defaultOIDCScopes = "openid,email,profile"
+
 // Known endpoints for Google OAuth2/OIDC.
 const (
 	googleAuthorizationEndpoint = "https://accounts.google.com/o/oauth2/v2/auth"

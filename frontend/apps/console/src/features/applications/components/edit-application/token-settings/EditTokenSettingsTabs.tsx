@@ -90,6 +90,7 @@ export default function EditTokenSettingsTabs({
               availableAttributes={[...TokenConstants.CLIENT_TOKEN_OPTIONAL_CLAIMS]}
               disabled={(application.isReadOnly ?? false) || !clientUnlocked}
               onValidationChange={setClientTabHasError}
+              subjectValue={application.id}
               copy={{
                 attributesTitle: t('applications:edit.token.client.attributes.title', 'Access Token Claims'),
                 attributesDescription: t(

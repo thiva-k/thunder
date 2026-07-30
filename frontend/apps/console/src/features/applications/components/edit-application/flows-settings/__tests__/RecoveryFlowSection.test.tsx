@@ -482,8 +482,8 @@ describe('RecoveryFlowSection', () => {
       );
 
       const links = container.querySelectorAll('a');
-      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/recovery/'));
-      expect(editLink).toHaveAttribute('href', '/flows/recovery/rec-flow-1');
+      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/rec-flow-'));
+      expect(editLink).toHaveAttribute('href', '/flows/rec-flow-1');
     });
 
     it('should display edit link with correct flow ID from editedApp', () => {
@@ -503,8 +503,8 @@ describe('RecoveryFlowSection', () => {
       );
 
       const links = container.querySelectorAll('a');
-      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/recovery/'));
-      expect(editLink).toHaveAttribute('href', '/flows/recovery/rec-flow-2');
+      const editLink = Array.from(links).find((link) => link.getAttribute('href')?.includes('/flows/rec-flow-'));
+      expect(editLink).toHaveAttribute('href', '/flows/rec-flow-2');
     });
 
     it('should display create link pointing to flows page', () => {

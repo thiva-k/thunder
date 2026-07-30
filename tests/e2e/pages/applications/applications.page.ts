@@ -45,7 +45,6 @@ export class ApplicationsPage extends BasePage {
   readonly configureOrganizationUnitStep: Locator;
   readonly configureDesignStep: Locator;
   readonly configureSignInStep: Locator;
-  readonly configureExperienceStep: Locator;
   readonly configureDetailsStep: Locator;
   readonly inbuiltExperienceCard: Locator;
   readonly embeddedExperienceCard: Locator;
@@ -93,7 +92,6 @@ export class ApplicationsPage extends BasePage {
     this.configureOrganizationUnitStep = page.locator('[data-testid="application-configure-organization-unit"]');
     this.configureDesignStep = page.locator('[data-testid="application-configure-design"]');
     this.configureSignInStep = page.locator('[data-testid="application-configure-sign-in"]');
-    this.configureExperienceStep = page.locator('[data-testid="application-configure-experience"]');
     this.configureDetailsStep = page.locator('[data-testid="application-configure-details"]');
     this.inbuiltExperienceCard = page.locator('div:has(input[value="INBUILT"])');
     this.embeddedExperienceCard = page.locator('div:has(input[value="EMBEDDED"])');

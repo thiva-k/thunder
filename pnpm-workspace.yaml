@@ -38,8 +38,8 @@ catalog:
   '@testing-library/jest-dom': 6.9.1
   '@testing-library/react': 16.3.0
   '@testing-library/user-event': 14.6.1
-  '@thunderid/react': 0.10.0
-  '@thunderid/react-router': 0.9.0
+  '@thunderid/react': 0.11.1
+  '@thunderid/react-router': 0.10.1
   '@types/lodash-es': 4.17.12
   '@types/node': 24.7.2
   '@types/react': 19.2.14
@@ -56,6 +56,7 @@ catalog:
   dayjs: 1.11.18
   dompurify: 3.4.12
   eslint: 9.39.5
+  framer-motion: 12.39.0
   globals: 16.4.0
   i18next: 25.6.0
   jsdom: 27.0.1
@@ -182,8 +183,8 @@ overrides:
   picomatch: '>=2.3.2'
   # JUSTIFICATION: Fixes body-parser denial of service vulnerabilities. Covers 1.x <1.20.6 and 2.x <2.3.0 vulnerable ranges.
   body-parser: '>=2.3.0'
-  # JUSTIFICATION: Fixes webpack-dev-server CSRF and DoS vulnerabilities. Updated to >=5.3.0 to address <=5.2.5 vulnerability.
-  webpack-dev-server: '>=5.3.0'
+  # JUSTIFICATION: Fixes webpack-dev-server CSRF and DoS vulnerabilities. Pinned to 5.2.6 to address <=5.2.5 vulnerability (5.3.0 introduces breaking changes).
+  webpack-dev-server: '5.2.6'
   # JUSTIFICATION: Fixes Hono API Gateway and JSX vulnerabilities. Updated to >=4.12.27 to address <4.12.27 vulnerability range.
   hono: '>=4.12.27'
   '@hono/node-server': '>=2.0.5'

@@ -159,7 +159,7 @@ func (s *agentService) CreateAgent(ctx context.Context, agent *model.Agent) (
 	}
 
 	resp := buildCompleteResponse(agentID, owner, clientID, clientSecret,
-		agent.Type, agent.Name, agent.Description, createdEntity.Attributes,
+		agent.Type, agent.Name, agent.Description, agent.LogoURL, createdEntity.Attributes,
 		authFlowID, regFlowID, agent.IsRegistrationFlowEnabled,
 		agent.ThemeID, agent.LayoutID, assertion, loginConsent,
 		agent.AllowedUserTypes, inboundConfigs)
@@ -236,6 +236,9 @@ func (s *agentService) UpdateAgent(ctx context.Context, agentID string,
 		return nil, &ErrorInvalidRequestFormat
 	}
 	if svcErr := validateBaseFields(req.Name, req.Type); svcErr != nil {
+		return nil, svcErr
+	}
+	if svcErr := validateLogoURL(req.LogoURL); svcErr != nil {
 		return nil, svcErr
 	}
 	existing, err := s.entityService.GetEntity(ctx, agentID)
@@ -348,7 +351,7 @@ func (s *agentService) UpdateAgent(ctx context.Context, agentID string,
 	}
 
 	resp := buildCompleteResponse(agentID, owner, clientID, clientSecret,
-		req.Type, req.Name, req.Description, req.Attributes,
+		req.Type, req.Name, req.Description, req.LogoURL, req.Attributes,
 		authFlowID, regFlowID, resolvedClient.IsRegistrationFlowEnabled,
 		req.ThemeID, req.LayoutID, assertion, loginConsent,
 		req.AllowedUserTypes, inboundConfigs)
@@ -637,6 +640,9 @@ func (s *agentService) ValidateAgent(ctx context.Context, agent *model.Agent, ex
 	if svcErr := validateBaseFields(agent.Name, agent.Type); svcErr != nil {
 		return "", "", inboundmodel.InboundClient{}, svcErr
 	}
+	if svcErr := validateLogoURL(agent.LogoURL); svcErr != nil {
+		return "", "", inboundmodel.InboundClient{}, svcErr
+	}
 	if agent.OUID == "" && agent.OUHandle != "" {
 		ou, svcErr := s.ouService.GetOrganizationUnitByPath(ctx, agent.OUHandle)
 		if svcErr != nil {
@@ -911,6 +917,7 @@ func (s *agentService) createInboundForAgent(ctx context.Context, agentID string
 	client := buildInboundClientRecord(agentID, agent.AuthFlowID, agent.RegistrationFlowID,
 		agent.IsRegistrationFlowEnabled, agent.ThemeID, agent.LayoutID, agent.Assertion,
 		agent.LoginConsent, agent.AllowedUserTypes)
+	setLogoProperty(&client, agent.LogoURL)
 
 	oauthProfile := buildOAuthProfile(agent.InboundAuthConfig)
 
@@ -955,6 +962,7 @@ func (s *agentService) reconcileInboundForUpdate(ctx context.Context, agentID st
 	client := buildInboundClientRecord(agentID, req.AuthFlowID, req.RegistrationFlowID,
 		req.IsRegistrationFlowEnabled, req.ThemeID, req.LayoutID, req.Assertion,
 		req.LoginConsent, req.AllowedUserTypes)
+	setLogoProperty(&client, req.LogoURL)
 	oauthProfile := buildOAuthProfile(req.InboundAuthConfig)
 	hasSecret := clientSecret != ""
 
@@ -1017,6 +1025,7 @@ func (s *agentService) composeGetResponse(ctx context.Context, e *providers.Enti
 	resp.Assertion = inbound.Assertion
 	resp.LoginConsent = inbound.LoginConsent
 	resp.AllowedUserTypes = inbound.AllowedUserTypes
+	resp.LogoURL = logoURLFromProperties(inbound.Properties)
 
 	oauth, oauthErr := s.inboundClientService.GetOAuthProfileByEntityID(ctx, e.ID)
 	if oauthErr != nil && !errors.Is(oauthErr, inboundclient.ErrInboundClientNotFound) {
@@ -1050,6 +1059,7 @@ func (s *agentService) composeGetResponse(ctx context.Context, e *providers.Enti
 // buildListResponse builds the paged agent list response from a slice of entities and pagination metadata.
 func (s *agentService) buildListResponse(ctx context.Context, entities []providers.Entity,
 	totalCount, limit, offset int, includeDisplay bool) *model.AgentListResponse {
+	logoByID := s.agentLogoMap(ctx, entities)
 	agents := make([]model.BasicAgentResponse, 0, len(entities))
 	for i := range entities {
 		e := &entities[i]
@@ -1061,6 +1071,7 @@ func (s *agentService) buildListResponse(ctx context.Context, entities []provide
 			Type:        e.Type,
 			Name:        name,
 			Description: description,
+			LogoURL:     logoByID[e.ID],
 			ClientID:    clientID,
 			Owner:       owner,
 			Attributes:  e.Attributes,
@@ -1171,6 +1182,14 @@ func updateNeedsInboundClient(req *model.UpdateAgentRequest) bool {
 		req.LoginConsent != nil ||
 		len(req.AllowedUserTypes) > 0 ||
 		len(req.InboundAuthConfig) > 0
+}
+
+// validateLogoURL validates the optional logo URL; an empty value is allowed.
+func validateLogoURL(logoURL string) *tidcommon.ServiceError {
+	if logoURL != "" && !sysutils.IsValidLogoURI(logoURL) {
+		return &ErrorInvalidLogoURL
+	}
+	return nil
 }
 
 // validateBaseFields validates the mandatory top-level fields required for both create and update.
@@ -1344,6 +1363,52 @@ func buildInboundClientRecord(agentID, authFlowID, regFlowID string, isRegEnable
 	}
 }
 
+// setLogoProperty stores the logo URL in the inbound client's PROPERTIES. An empty value is left unset.
+func setLogoProperty(client *inboundmodel.InboundClient, logoURL string) {
+	if logoURL == "" {
+		return
+	}
+	if client.Properties == nil {
+		client.Properties = map[string]interface{}{}
+	}
+	client.Properties[propLogoURL] = logoURL
+}
+
+// logoURLFromProperties reads the logo URL from an inbound client's PROPERTIES blob.
+func logoURLFromProperties(props map[string]interface{}) string {
+	if props == nil {
+		return ""
+	}
+	if logoURL, ok := props[propLogoURL].(string); ok {
+		return logoURL
+	}
+	return ""
+}
+
+// agentLogoMap builds a map of entity ID to logo URL for the given agents, looking up only
+// the current page's inbound clients.
+func (s *agentService) agentLogoMap(ctx context.Context, entities []providers.Entity) map[string]string {
+	logoByID := make(map[string]string, len(entities))
+	for i := range entities {
+		id := entities[i].ID
+		inbound, err := s.inboundClientService.GetInboundClientByEntityID(ctx, id)
+		if err != nil {
+			if !errors.Is(err, inboundclient.ErrInboundClientNotFound) {
+				s.logger.Error(ctx, "Failed to load inbound client for agent logo",
+					log.String("agentID", id), log.Error(err))
+			}
+			continue
+		}
+		if inbound == nil {
+			continue
+		}
+		if logoURL := logoURLFromProperties(inbound.Properties); logoURL != "" {
+			logoByID[id] = logoURL
+		}
+	}
+	return logoByID
+}
+
 // buildOAuthProfile maps the agent OAuth config to the inbound client profile shape.
 func buildOAuthProfile(configs []providers.InboundAuthConfigWithSecret) *providers.OAuthProfile {
 	cfg, _ := pickOAuthConfig(configs)
@@ -1421,7 +1486,7 @@ func convertGrantAndResponseTypes(
 }
 
 // buildCompleteResponse constructs the full create/update response including credentials and all inbound auth fields.
-func buildCompleteResponse(agentID, owner, clientID, clientSecret, agentType, name, description string,
+func buildCompleteResponse(agentID, owner, clientID, clientSecret, agentType, name, description, logoURL string,
 	attributes json.RawMessage, authFlowID, regFlowID string, isRegEnabled bool,
 	themeID, layoutID string, assertion *inboundmodel.AssertionConfig,
 	loginConsent *inboundmodel.LoginConsentConfig, allowedUserTypes []string,
@@ -1432,6 +1497,7 @@ func buildCompleteResponse(agentID, owner, clientID, clientSecret, agentType, na
 		Type:        agentType,
 		Name:        name,
 		Description: description,
+		LogoURL:     logoURL,
 		Owner:       owner,
 		Attributes:  attributes,
 		InboundAuthProfile: providers.InboundAuthProfile{
@@ -1585,20 +1651,15 @@ func translateOAuthValidationError(err error) *tidcommon.ServiceError {
 			Key:          "error.agentservice.private_key_jwt_cannot_have_client_secret_description",
 			DefaultValue: "private_key_jwt authentication method cannot have a client secret",
 		})
-	case errors.Is(err, inboundclient.ErrOAuthClientSecretCannotHaveCertificate):
-		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
-			Key:          "error.agentservice.client_secret_cannot_have_certificate_description",
-			DefaultValue: "client_secret authentication methods cannot have a certificate",
-		})
 	case errors.Is(err, inboundclient.ErrOAuthNoneAuthRequiresPublicClient):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key:          "error.agentservice.none_auth_method_requires_public_client_description",
 			DefaultValue: "'none' authentication method requires the client to be a public client",
 		})
-	case errors.Is(err, inboundclient.ErrOAuthNoneAuthCannotHaveCertOrSecret):
+	case errors.Is(err, inboundclient.ErrOAuthNoneAuthCannotHaveSecret):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
-			Key:          "error.agentservice.none_auth_method_cannot_have_cert_or_secret_description",
-			DefaultValue: "'none' authentication method cannot have a certificate or client secret",
+			Key:          "error.agentservice.none_auth_method_cannot_have_secret_description",
+			DefaultValue: "'none' authentication method cannot have a client secret",
 		})
 	case errors.Is(err, inboundclient.ErrOAuthClientCredentialsCannotUseNoneAuth):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
@@ -1664,11 +1725,6 @@ func translateUserInfoValidationError(err error) *tidcommon.ServiceError {
 			Key:          "error.agentservice.userinfo_unsupported_response_type_description",
 			DefaultValue: "userinfo responseType is not supported",
 		})
-	case errors.Is(err, inboundclient.ErrOAuthUserInfoJWSRequiresSigningAlg):
-		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
-			Key:          "error.agentservice.userinfo_jws_requires_signing_alg_description",
-			DefaultValue: "signingAlg is required when userinfo responseType is JWS",
-		})
 	case errors.Is(err, inboundclient.ErrOAuthUserInfoJWERequiresEncryption):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key:          "error.agentservice.userinfo_jwe_requires_encryption_description",
@@ -1677,7 +1733,7 @@ func translateUserInfoValidationError(err error) *tidcommon.ServiceError {
 	case errors.Is(err, inboundclient.ErrOAuthUserInfoNestedJWTRequiresAll):
 		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
 			Key: "error.agentservice.userinfo_nested_jwt_requires_all_description",
-			DefaultValue: "signingAlg, encryptionAlg, and encryptionEnc are required " +
+			DefaultValue: "encryptionAlg and encryptionEnc are required " +
 				"when userinfo responseType is NESTED_JWT",
 		})
 	case errors.Is(err, inboundclient.ErrOAuthUserInfoAlgRequiresResponseType):

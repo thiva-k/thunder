@@ -91,8 +91,8 @@ vi.mock('@xyflow/react', async () => {
   };
 });
 
-// Mock useGetFlowBuilderCoreResources
-vi.mock('../../api/useGetFlowBuilderCoreResources', () => ({
+// Mock useGetFlowBuilderResources
+vi.mock('../../api/useGetFlowBuilderResources', () => ({
   default: () => ({
     data: {
       elements: [

@@ -68,3 +68,4 @@ export {defaultUserRoutePaths, default as useUserRoutes} from './hooks/useUserRo
 
 // Utils
 export {default as renderSchemaField} from './utils/renderSchemaField';
+export * from './utils/dropNonConformingAttributes';

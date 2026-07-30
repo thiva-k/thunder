@@ -23,12 +23,33 @@ import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import AgentEditPage from '../AgentEditPage';
 
-const {mockNavigate, mockRefetch, mockUseGetAgent, mockUseUpdateAgent, mockMutateAsync} = vi.hoisted(() => ({
+const {
+  mockNavigate,
+  mockRefetch,
+  mockUseGetAgent,
+  mockUseUpdateAgent,
+  mockMutateAsync,
+  mockUseGetAgentTypes,
+  mockUseGetAgentType,
+  mockUseLocation,
+} = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockRefetch: vi.fn(),
   mockUseGetAgent: vi.fn(),
   mockUseUpdateAgent: vi.fn(),
   mockMutateAsync: vi.fn(),
+  mockUseGetAgentTypes: vi.fn(),
+  mockUseGetAgentType: vi.fn(),
+  mockUseLocation: vi.fn(
+    (): {
+      state: {justCreatedSecret: {agentName: string; clientId?: string; clientSecret: string}} | null;
+    } => ({state: null}),
+  ),
+}));
+
+vi.mock('@thunderid/configure-agent-types', () => ({
+  useGetAgentTypes: () => mockUseGetAgentTypes(),
+  useGetAgentType: () => mockUseGetAgentType(),
 }));
 
 vi.mock('react-router', async () => {
@@ -37,6 +58,7 @@ vi.mock('react-router', async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => ({agentId: 'agent-1'}),
+    useLocation: () => mockUseLocation(),
     Link: ({to, children = undefined, ...props}: {to: string; children?: ReactNode; [key: string]: unknown}) => (
       <a
         {...(props as Record<string, unknown>)}
@@ -152,6 +174,16 @@ describe('AgentEditPage', () => {
     });
     mockMutateAsync.mockResolvedValue(undefined);
     mockRefetch.mockResolvedValue({});
+    mockUseGetAgentTypes.mockReturnValue({
+      data: {types: [{id: 'default-type', name: 'default'}]},
+      isLoading: false,
+      error: null,
+    });
+    mockUseGetAgentType.mockReturnValue({
+      data: {id: 'default-type', name: 'default', schema: {}},
+      isLoading: false,
+      error: null,
+    });
   });
 
   describe('Loading and Error States', () => {
@@ -163,6 +195,14 @@ describe('AgentEditPage', () => {
         isError: false,
         refetch: mockRefetch,
       });
+
+      render(<AgentEditPage />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('renders a progressbar while the type schema is still resolving', () => {
+      mockUseGetAgentType.mockReturnValue({data: undefined, isLoading: true, error: null});
 
       render(<AgentEditPage />);
 
@@ -332,6 +372,53 @@ describe('AgentEditPage', () => {
 
     it('includes staged attribute edits when the page-level Save button is clicked', async () => {
       const user = userEvent.setup();
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+      await user.click(screen.getByRole('button', {name: 'Save'}));
+
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({attributes: {department: 'sales'}}) as Record<string, unknown>,
+          }),
+        );
+      });
+    });
+
+    it('drops an optional attribute whose value no longer matches the schema', async () => {
+      const user = userEvent.setup();
+      // department is optional and typed number, but the staged value is the string 'sales'.
+      mockUseGetAgentType.mockReturnValue({
+        data: {id: 'default-type', name: 'default', schema: {department: {type: 'number'}}},
+        isLoading: false,
+        error: null,
+      });
+
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+      await user.click(screen.getByRole('button', {name: 'Save'}));
+
+      await waitFor(() => {
+        expect(mockMutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({attributes: {}}) as Record<string, unknown>,
+          }),
+        );
+      });
+    });
+
+    it('keeps a required attribute even when its value no longer matches the schema', async () => {
+      const user = userEvent.setup();
+      mockUseGetAgentType.mockReturnValue({
+        data: {id: 'default-type', name: 'default', schema: {department: {type: 'number', required: true}}},
+        isLoading: false,
+        error: null,
+      });
+
       render(<AgentEditPage />);
 
       await user.click(screen.getByRole('tab', {name: 'Attributes'}));
@@ -539,6 +626,55 @@ describe('AgentEditPage', () => {
       await triggerAChange(user);
 
       expect(screen.getByRole('button', {name: 'Save'})).not.toBeDisabled();
+    });
+  });
+
+  describe('Client Secret Popup (just created)', () => {
+    afterEach(() => {
+      mockUseLocation.mockReturnValue({state: null});
+    });
+
+    it('does not render the secret dialog when there is no justCreatedSecret navigation state', () => {
+      render(<AgentEditPage />);
+
+      expect(screen.queryByTestId('agent-show-client-secret')).not.toBeInTheDocument();
+    });
+
+    it('renders the secret dialog when justCreatedSecret is present in location state', () => {
+      mockUseLocation.mockReturnValue({
+        state: {
+          justCreatedSecret: {
+            agentName: 'My New Agent',
+            clientId: 'new-agent-client-id',
+            clientSecret: 'brand-new-agent-secret',
+          },
+        },
+      });
+
+      render(<AgentEditPage />);
+
+      expect(screen.getByTestId('agent-show-client-secret')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('brand-new-agent-secret')).toBeInTheDocument();
+    });
+
+    it('closes the secret dialog when Continue is clicked', async () => {
+      const user = userEvent.setup();
+      mockUseLocation.mockReturnValue({
+        state: {
+          justCreatedSecret: {
+            agentName: 'My New Agent',
+            clientSecret: 'brand-new-agent-secret',
+          },
+        },
+      });
+
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByTestId('agent-client-secret-continue'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('agent-show-client-secret')).not.toBeInTheDocument();
+      });
     });
   });
 });

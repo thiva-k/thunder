@@ -224,6 +224,18 @@ func setHandleOut(execResp *providers.ExecutorResponse, handle string) {
 	execResp.EngineData[common.RuntimeKeySSOSessionHandle] = handle
 }
 
+// readForwardedSSOData returns the session and checkpoint context the paired SSO-Check node read and
+// forwarded, or nils when this node was not reached directly from it. The service re-reads whatever it
+// is not given, so a missing or partial handover costs a query rather than correctness.
+func readForwardedSSOData(ctx *providers.NodeContext) (*session.Session, *session.SessionContext) {
+	if ctx.ForwardedData == nil {
+		return nil, nil
+	}
+	forwardedSession, _ := ctx.ForwardedData[common.ForwardedDataKeySSOSession].(*session.Session)
+	forwardedContext, _ := ctx.ForwardedData[common.ForwardedDataKeySSOSessionContext].(*session.SessionContext)
+	return forwardedSession, forwardedContext
+}
+
 // loadCheckpoint loads a checkpoint's saved flow state into the execution context so downstream
 // nodes continue with the authenticated subject and claims. The SSO session service fetches the
 // session and its checkpoint context (and refreshes the session's activity); this executor
@@ -234,7 +246,15 @@ func (e *sessionExecutor) loadCheckpoint(ctx *providers.NodeContext, execResp *p
 	// An SSO reuse still issues a fresh grant, so mint a new token family id and record it against the
 	// joining participant. It is published onto RuntimeData after the snapshot replay below.
 	tokenFamilyID := e.resolveTokenFamilyID(ctx, logger)
-	sess, sc, err := e.sso.LoadCheckpoint(ctx.Context, handle, checkpoint, ctx.Application.ID, tokenFamilyID)
+	forwardedSession, forwardedContext := readForwardedSSOData(ctx)
+	ssoSession, snapshot, err := e.sso.LoadCheckpoint(ctx.Context, session.LoadCheckpointInput{
+		Handle:        handle,
+		Checkpoint:    checkpoint,
+		AppID:         ctx.Application.ID,
+		TokenFamilyID: tokenFamilyID,
+		Session:       forwardedSession,
+		Context:       forwardedContext,
+	})
 	if err != nil {
 		return err
 	}
@@ -242,20 +262,21 @@ func (e *sessionExecutor) loadCheckpoint(ctx *providers.NodeContext, execResp *p
 	// Rehydrate the AuthUser from the snapshot verbatim — it was stored as-is — so downstream nodes
 	// continue with the same subject and attributes this session resolved when the checkpoint was saved.
 	var authUser providers.AuthUser
-	if err := json.Unmarshal(sc.AuthUser, &authUser); err != nil {
+	if err := json.Unmarshal(snapshot.AuthUser, &authUser); err != nil {
 		return fmt.Errorf("failed to rehydrate subject reference from snapshot: %w", err)
 	}
 	execResp.AuthUser = authUser
 
 	// Replay the snapshotted RuntimeData (the effective attribute set captured at save) so downstream
 	// nodes see the same attributes the fresh path produced.
-	for k, v := range sc.RuntimeData {
+	for k, v := range snapshot.RuntimeData {
 		execResp.RuntimeData[k] = v
 	}
 	// auth_time comes from the lean session, not the context. Set it after the RuntimeData replay so
 	// the live, session-derived value wins over any stale snapshot copy.
-	if !sess.AuthenticatedAt.IsZero() {
-		execResp.RuntimeData[common.RuntimeKeyAuthTime] = strconv.FormatInt(sess.AuthenticatedAt.Unix(), 10)
+	if !ssoSession.AuthenticatedAt.IsZero() {
+		execResp.RuntimeData[common.RuntimeKeyAuthTime] =
+			strconv.FormatInt(ssoSession.AuthenticatedAt.Unix(), 10)
 	}
 	// Publish the freshly minted token family id after the snapshot replay so it is never shadowed by
 	// a stale copy (the tfid is excluded from the snapshot, so this is the only source).

@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {useGetVerifiablePresentations} from '@thunderid/configure-verifiable-presentations';
+import type {VerifiablePresentationSummary} from '@thunderid/configure-verifiable-presentations';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {Box, IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
@@ -26,8 +28,6 @@ import {useNavigate} from 'react-router';
 import VerifiablePresentationDeleteDialog from './VerifiablePresentationDeleteDialog';
 import VerificationDialog from './VerificationDialog';
 import RouteConfig from '../../../configs/RouteConfig';
-import useGetVerifiablePresentations from '../api/useGetVerifiablePresentations';
-import type {VerifiablePresentationSummary} from '../models/vp';
 
 /**
  * DataGrid listing of OpenID4VP presentation definitions.

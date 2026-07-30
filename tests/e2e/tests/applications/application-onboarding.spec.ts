@@ -104,28 +104,21 @@ test.describe("Application Onboarding", () => {
         await applicationsPage.handleOptionalOuStep();
       });
 
-      await test.step("Step 2 [configure-design]: Skip and click Next", async () => {
-        await applicationsPage.waitForStep("application-configure-design");
-        console.log("Step 2 (configure-design) visible - skipping");
+      await test.step("Step 2 [configure-sign-in]: Skip and click Next", async () => {
+        await applicationsPage.waitForStep("application-configure-sign-in");
+        console.log("Step 2 (configure-sign-in) visible - skipping");
         await applicationsPage.clickNext();
         await applicationsPage.screenshot("tc002-step2-done");
       });
 
-      await test.step("Step 3 [configure-sign-in]: Skip and click Next", async () => {
-        await applicationsPage.waitForStep("application-configure-sign-in");
-        console.log("Step 3 (configure-sign-in) visible - skipping");
+      await test.step("Step 3 [configure-design]: Verify INBUILT is default and click Next", async () => {
+        await applicationsPage.waitForStep("application-configure-design");
+        console.log("Step 3 (configure-design) visible - INBUILT is default, clicking Next");
         await applicationsPage.clickNext();
         await applicationsPage.screenshot("tc002-step3-done");
       });
 
-      await test.step("Step 4 [configure-experience]: Verify INBUILT is default and click Next", async () => {
-        await applicationsPage.waitForStep("application-configure-experience");
-        console.log("Step 4 (configure-experience) visible - INBUILT is default, clicking Next");
-        await applicationsPage.clickNext();
-        await applicationsPage.screenshot("tc002-step4-done");
-      });
-
-      await test.step("Step 5: Wait for wizard completion (secret screen or edit page)", async () => {
+      await test.step("Step 4: Wait for wizard completion (secret screen or edit page)", async () => {
         createdAppUrl = await applicationsPage.completeWizardCreation();
         createdAppIds.push(createdAppUrl.split("/").pop()!);
         await applicationsPage.screenshot("tc002-wizard-done");
@@ -165,7 +158,7 @@ test.describe("Application Onboarding", () => {
       });
     });
 
-    /** TC004: SPA (public client) hides the EMBEDDED experience option */
+    /** TC004: SPA (public client) hides the sign-in approach picker entirely */
     test("TC004: Create application - SPA stack hides EMBEDDED experience", async ({ applicationsPage }) => {
       await test.step("Navigate and select the React (SPA) template", async () => {
         await applicationsPage.goto();
@@ -181,18 +174,16 @@ test.describe("Application Onboarding", () => {
         await applicationsPage.handleOptionalOuStep();
       });
 
-      await test.step("Steps 2 & 3: Skip design and sign-in", async () => {
-        await applicationsPage.waitForStep("application-configure-design");
-        await applicationsPage.clickNext();
+      await test.step("Step 2: Skip sign-in", async () => {
         await applicationsPage.waitForStep("application-configure-sign-in");
         await applicationsPage.clickNext();
       });
 
-      await test.step("Step 4: Verify only the redirect-based option is offered", async () => {
-        await applicationsPage.waitForStep("application-configure-experience");
-        await expect(applicationsPage.inbuiltExperienceCard.first()).toBeVisible();
+      await test.step("Step 3: Verify the sign-in approach picker is hidden (redirect-only)", async () => {
+        await applicationsPage.waitForStep("application-configure-design");
+        await expect(applicationsPage.inbuiltExperienceCard).toHaveCount(0);
         await expect(applicationsPage.embeddedExperienceCard).toHaveCount(0);
-        console.log("EMBEDDED experience hidden for SPA — correct");
+        console.log("Sign-in approach picker hidden for SPA (redirect-only) — correct");
         await applicationsPage.screenshot("tc004-spa-embedded-hidden");
       });
     });
@@ -213,11 +204,9 @@ test.describe("Application Onboarding", () => {
         await applicationsPage.clickNext();
         await applicationsPage.handleOptionalOuStep();
 
-        await applicationsPage.waitForStep("application-configure-design");
-        await applicationsPage.clickNext();
         await applicationsPage.waitForStep("application-configure-sign-in");
         await applicationsPage.clickNext();
-        await applicationsPage.waitForStep("application-configure-experience");
+        await applicationsPage.waitForStep("application-configure-design");
         await applicationsPage.clickNext();
 
         createdAppUrl = await applicationsPage.completeWizardCreation();

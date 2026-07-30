@@ -33,6 +33,10 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/transactionmock"
 )
 
+// testOtherFlowID is a flow other than the one under test, used to assert that a session grouped
+// under a different flow is never reused.
+const testOtherFlowID = "other-flow"
+
 type ServiceTestSuite struct {
 	suite.Suite
 }
@@ -110,7 +114,7 @@ func (suite *ServiceTestSuite) TestResolve_NoHandle() {
 func (suite *ServiceTestSuite) TestResolve_DifferentFlow() {
 	svc, m := suite.newService()
 	s := liveStoreSession()
-	s.FlowID = "other-flow"
+	s.FlowID = testOtherFlowID
 	m.store.EXPECT().GetByHandle(mock.Anything, mock.Anything).Return(s, nil)
 
 	got, err := svc.Resolve(context.Background(), "handle-abc", "flow-1", 3, time.Now().UTC())
@@ -141,34 +145,38 @@ func (suite *ServiceTestSuite) TestResolve_StoreError() {
 	suite.Contains(err.Error(), "failed to resolve SSO session")
 }
 
-// --- HasCheckpoint ---
+// --- FindCheckpoint ---
 
-func (suite *ServiceTestSuite) TestHasCheckpoint_Present() {
+// TestFindCheckpoint_Present also pins that the row itself is returned, not just its existence: the
+// SSO-Check node forwards it to the Session node so the load path does not fetch it again.
+func (suite *ServiceTestSuite) TestFindCheckpoint_Present() {
 	svc, m := suite.newService()
-	m.store.EXPECT().ListCheckpointIDs(mock.Anything, "sess-1").Return([]string{"password", "session"}, nil)
+	sc := &SessionContext{SessionID: "sess-1", CheckpointID: "session"}
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, "sess-1", "session").Return(sc, nil)
 
-	present, err := svc.HasCheckpoint(context.Background(), "sess-1", "session")
+	got, err := svc.FindCheckpoint(context.Background(), "sess-1", "session")
 	suite.Require().NoError(err)
-	suite.True(present)
+	suite.Same(sc, got)
 }
 
-func (suite *ServiceTestSuite) TestHasCheckpoint_Absent() {
+func (suite *ServiceTestSuite) TestFindCheckpoint_Absent() {
 	svc, m := suite.newService()
-	m.store.EXPECT().ListCheckpointIDs(mock.Anything, "sess-1").Return([]string{"password"}, nil)
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, "sess-1", "session").Return(nil, nil)
 
-	present, err := svc.HasCheckpoint(context.Background(), "sess-1", "session")
+	got, err := svc.FindCheckpoint(context.Background(), "sess-1", "session")
 	suite.Require().NoError(err)
-	suite.False(present)
+	suite.Nil(got)
 }
 
-func (suite *ServiceTestSuite) TestHasCheckpoint_ListError() {
+func (suite *ServiceTestSuite) TestFindCheckpoint_ReadError() {
 	svc, m := suite.newService()
-	m.store.EXPECT().ListCheckpointIDs(mock.Anything, mock.Anything).Return(nil, errors.New("store down"))
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, mock.Anything, mock.Anything).
+		Return(nil, errors.New("store down"))
 
-	_, err := svc.HasCheckpoint(context.Background(), "sess-1", "session")
+	_, err := svc.FindCheckpoint(context.Background(), "sess-1", "session")
 
 	suite.Require().Error(err)
-	suite.Contains(err.Error(), "failed to list SSO session checkpoints")
+	suite.Contains(err.Error(), "failed to read SSO session checkpoint")
 }
 
 // --- SaveCheckpoint ---
@@ -272,6 +280,21 @@ func (suite *ServiceTestSuite) TestSaveCheckpoint_ContextWriteError() {
 
 // --- LoadCheckpoint ---
 
+// loadInput is the baseline load input: a handle to resolve and nothing forwarded, so the service
+// reads both rows itself. Tests override the fields they are exercising.
+func loadInput() LoadCheckpointInput {
+	return LoadCheckpointInput{
+		Handle: "handle-abc", Checkpoint: "session", AppID: "app-456", TokenFamilyID: "tfid-1",
+	}
+}
+
+// noTFIDLoadInput is a load with no token family minted, where the participant write is best-effort.
+func noTFIDLoadInput() LoadCheckpointInput {
+	in := loadInput()
+	in.TokenFamilyID = ""
+	return in
+}
+
 func (suite *ServiceTestSuite) TestLoadCheckpoint_Success() {
 	originalIdle := time.Unix(1700000600, 0).UTC()
 	originalAbsolute := time.Unix(1700050000, 0).UTC()
@@ -289,12 +312,12 @@ func (suite *ServiceTestSuite) TestLoadCheckpoint_Success() {
 	m.store.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, p Participant) error { recorded = p; return nil })
 
-	sess, sc, err := svc.LoadCheckpoint(context.Background(), "handle-abc", "session", "app-456", "tfid-1")
+	sess, sc, err := svc.LoadCheckpoint(context.Background(), loadInput())
 	suite.Require().NoError(err)
 
 	suite.Require().NotNil(sess)
 	suite.Require().NotNil(sc)
-	// Activity touch: last-active refreshed, idle slid forward, absolute unchanged.
+	// Activity refresh: last-active refreshed, idle slid forward, absolute unchanged.
 	suite.Require().NotNil(updated)
 	suite.False(updated.LastActiveAt.IsZero())
 	suite.True(updated.IdleExpiresAt.After(originalIdle))
@@ -303,10 +326,73 @@ func (suite *ServiceTestSuite) TestLoadCheckpoint_Success() {
 	suite.Equal("app-456", recorded.AppID)
 }
 
+// TestLoadCheckpoint_UsesForwardedReads is the guard for the reuse-path read reduction: given the rows
+// the SSO-Check node forwarded, the load path must issue neither read. No GetByHandle or
+// GetByCheckpoint expectation is registered, so the mock fails the test if either query comes back.
+func (suite *ServiceTestSuite) TestLoadCheckpoint_UsesForwardedReads() {
+	svc, m := suite.newService()
+	m.store.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
+	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(nil)
+
+	in := loadInput()
+	in.Session = liveStoreSession()
+	in.Context = &SessionContext{SessionID: "sess-1", CheckpointID: "session"}
+
+	sess, sc, err := svc.LoadCheckpoint(context.Background(), in)
+
+	suite.Require().NoError(err)
+	suite.Same(in.Session, sess)
+	suite.Same(in.Context, sc)
+}
+
+// TestLoadCheckpoint_ReadsWhenForwardedSessionIsAnotherHandle rejects a forwarded session that does
+// not belong to the handle being loaded, rather than trusting whatever arrived.
+func (suite *ServiceTestSuite) TestLoadCheckpoint_ReadsWhenForwardedSessionIsAnotherHandle() {
+	svc, m := suite.newService()
+	m.store.EXPECT().GetByHandle(mock.Anything, "handle-xyz").Return(&Session{
+		SessionID: "sess-2", HandleID: "handle-xyz", State: StateActive,
+	}, nil)
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, "sess-2", "session").
+		Return(&SessionContext{SessionID: "sess-2", CheckpointID: "session"}, nil)
+	m.store.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
+	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(nil)
+
+	in := loadInput()
+	in.Handle = "handle-xyz"
+	in.Session = liveStoreSession() // handle-abc, not the handle being loaded
+	in.Context = &SessionContext{SessionID: "sess-1", CheckpointID: "session"}
+
+	sess, sc, err := svc.LoadCheckpoint(context.Background(), in)
+
+	suite.Require().NoError(err)
+	suite.Equal("sess-2", sess.SessionID)
+	suite.Equal("sess-2", sc.SessionID)
+}
+
+// TestLoadCheckpoint_ReadsWhenForwardedContextIsAnotherCheckpoint rejects a forwarded context that
+// describes a different checkpoint, so a flow holding several checkpoints cannot cross-load them.
+func (suite *ServiceTestSuite) TestLoadCheckpoint_ReadsWhenForwardedContextIsAnotherCheckpoint() {
+	svc, m := suite.newService()
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, "sess-1", "step_up").
+		Return(&SessionContext{SessionID: "sess-1", CheckpointID: "step_up"}, nil)
+	m.store.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
+	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(nil)
+
+	in := loadInput()
+	in.Checkpoint = "step_up"
+	in.Session = liveStoreSession()
+	in.Context = &SessionContext{SessionID: "sess-1", CheckpointID: "session"}
+
+	_, sc, err := svc.LoadCheckpoint(context.Background(), in)
+
+	suite.Require().NoError(err)
+	suite.Equal("step_up", sc.CheckpointID)
+}
+
 func (suite *ServiceTestSuite) TestLoadCheckpoint_NoHandle() {
 	svc, _ := suite.newService()
 
-	_, _, err := svc.LoadCheckpoint(context.Background(), "", "session", "app-456", "tfid-1")
+	_, _, err := svc.LoadCheckpoint(context.Background(), LoadCheckpointInput{Checkpoint: "session", AppID: "app-456"})
 
 	suite.Require().Error(err)
 	suite.Contains(err.Error(), "no resolved session handle")
@@ -316,7 +402,7 @@ func (suite *ServiceTestSuite) TestLoadCheckpoint_MissingSession() {
 	svc, m := suite.newService()
 	m.store.EXPECT().GetByHandle(mock.Anything, mock.Anything).Return(nil, nil)
 
-	_, _, err := svc.LoadCheckpoint(context.Background(), "handle-abc", "session", "app-456", "tfid-1")
+	_, _, err := svc.LoadCheckpoint(context.Background(), loadInput())
 
 	suite.Require().Error(err)
 	suite.Contains(err.Error(), "resolved session no longer exists")
@@ -328,7 +414,7 @@ func (suite *ServiceTestSuite) TestLoadCheckpoint_MissingContext() {
 		Return(&Session{SessionID: "sess-1", HandleID: "handle-abc", State: StateActive}, nil)
 	m.store.EXPECT().GetByCheckpoint(mock.Anything, mock.Anything, mock.Anything).Return(nil, nil)
 
-	_, _, err := svc.LoadCheckpoint(context.Background(), "handle-abc", "session", "app-456", "tfid-1")
+	_, _, err := svc.LoadCheckpoint(context.Background(), loadInput())
 
 	suite.Require().Error(err)
 	suite.Contains(err.Error(), "session context for checkpoint")
@@ -343,7 +429,7 @@ func (suite *ServiceTestSuite) TestLoadCheckpoint_ParticipantErrorWithTokenFamil
 	m.store.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
-	sess, sc, err := svc.LoadCheckpoint(context.Background(), "handle-abc", "session", "app-456", "tfid-1")
+	sess, sc, err := svc.LoadCheckpoint(context.Background(), loadInput())
 
 	suite.Require().Error(err, "issuing a token family whose mapping cannot persist must fail the load")
 	suite.Contains(err.Error(), "token family")
@@ -360,11 +446,56 @@ func (suite *ServiceTestSuite) TestLoadCheckpoint_ParticipantErrorWithoutTokenFa
 	m.store.EXPECT().Update(mock.Anything, mock.Anything).Return(nil)
 	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(errors.New("db down"))
 
-	sess, sc, err := svc.LoadCheckpoint(context.Background(), "handle-abc", "session", "app-456", "")
+	sess, sc, err := svc.LoadCheckpoint(context.Background(), noTFIDLoadInput())
 
 	suite.Require().NoError(err, "with no token family there is nothing to revoke, so the load survives")
 	suite.NotNil(sess)
 	suite.NotNil(sc)
+}
+
+func (suite *ServiceTestSuite) TestLoadCheckpoint_ThrottledRefreshSkipsUpdate() {
+	svc, m := suite.newService()
+	// The last persisted activity refresh is within the activity-refresh window, so the idle-slide
+	// UPDATE is skipped. No Update expectation is set: the store mock fails the test if the throttled
+	// path writes.
+	recent := time.Now().UTC()
+	m.store.EXPECT().GetByHandle(mock.Anything, "handle-abc").Return(&Session{
+		SessionID: "sess-1", HandleID: "handle-abc", State: StateActive, LastActiveAt: recent,
+	}, nil)
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, "sess-1", "session").
+		Return(&SessionContext{SessionID: "sess-1"}, nil)
+	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(nil)
+
+	sess, sc, err := svc.LoadCheckpoint(context.Background(), noTFIDLoadInput())
+	suite.Require().NoError(err)
+
+	suite.Require().NotNil(sess)
+	suite.Require().NotNil(sc)
+	suite.Equal(recent, sess.LastActiveAt, "a throttled load must leave the persisted last-active untouched")
+}
+
+func (suite *ServiceTestSuite) TestLoadCheckpoint_WritesAfterRefreshWindow() {
+	svc, m := suite.newService()
+	// The last persisted activity refresh is older than the activity-refresh window, so the activity refresh persists.
+	stale := time.Now().UTC().Add(-2 * defaultActivityRefreshInterval)
+	originalIdle := stale.Add(time.Minute)
+	m.store.EXPECT().GetByHandle(mock.Anything, "handle-abc").Return(&Session{
+		SessionID: "sess-1", HandleID: "handle-abc", State: StateActive,
+		LastActiveAt: stale, IdleExpiresAt: originalIdle,
+	}, nil)
+	m.store.EXPECT().GetByCheckpoint(mock.Anything, "sess-1", "session").
+		Return(&SessionContext{SessionID: "sess-1"}, nil)
+	var updated *Session
+	m.store.EXPECT().Update(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, s *Session) error { updated = s; return nil })
+	m.store.EXPECT().Record(mock.Anything, mock.Anything).Return(nil)
+
+	_, _, err := svc.LoadCheckpoint(context.Background(), noTFIDLoadInput())
+	suite.Require().NoError(err)
+
+	suite.Require().NotNil(updated, "an activity refresh past the throttle window must persist")
+	suite.True(updated.LastActiveAt.After(stale), "last-active slides forward")
+	suite.True(updated.IdleExpiresAt.After(originalIdle), "idle deadline slides forward")
 }
 
 // --- Terminate ---
@@ -441,7 +572,7 @@ func (suite *ServiceTestSuite) TestTerminate_MissingSessionIsNoOp() {
 func (suite *ServiceTestSuite) TestTerminate_DifferentFlowErrors() {
 	svc, m := suite.newService()
 	s := liveStoreSession()
-	s.FlowID = "other-flow"
+	s.FlowID = testOtherFlowID
 	m.store.EXPECT().GetByHandle(mock.Anything, "handle-abc").Return(s, nil)
 
 	got, err := svc.Terminate(context.Background(), "handle-abc", "flow-1")

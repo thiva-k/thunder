@@ -17,10 +17,10 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
+import {VerifiablePresentationQueryKeys} from '@thunderid/configure-verifiable-presentations';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
-import VerifiablePresentationQueryKeys from '../constants/vp-query-keys';
 
 /**
  * Deletes an OpenID4VP presentation definition by id.

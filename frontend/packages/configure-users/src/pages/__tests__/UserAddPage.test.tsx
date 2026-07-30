@@ -342,7 +342,7 @@ describe('UserAddPage', () => {
       const closeButton = screen.getByRole('button', {name: /close/i});
       await userEvent.click(closeButton);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/users');
+      expect(mockNavigate).toHaveBeenCalledWith(-1);
     });
 
     it('should reset flow when Add User breadcrumb is clicked', async () => {
@@ -569,7 +569,7 @@ describe('UserAddPage', () => {
       const closeButtons = screen.getAllByRole('button', {name: /close/i});
       await userEvent.click(closeButtons[closeButtons.length - 1]);
 
-      expect(mockNavigate).toHaveBeenCalledWith('/users');
+      expect(mockNavigate).toHaveBeenCalledWith(-1);
     });
 
     it('should render COPYABLE_TEXT component with value from additionalData', () => {

@@ -331,7 +331,7 @@ func (s *flowExecService) resolveFlowInitiationMode(
 		}
 		return flowInitiationAttestation, client.Attestation, nil
 	default:
-		// Full-stack and custom apps may be embedded or redirect-based; derive from the OAuth profile.
+		// Full-stack, custom, and mcp apps may be embedded or redirect-based; derive from the OAuth profile.
 		return s.resolveFlowInitiationModeFromProfile(ctx, appID)
 	}
 }

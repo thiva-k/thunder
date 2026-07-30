@@ -1,0 +1,109 @@
+---
+toc_progress: quickstart
+title: MCP Inspector
+docType: quickstart
+sidebar_position: 1
+persona: app
+description: Connect MCP Inspector to a {{ProductName}}-protected MCP server using a pre-registered client application.
+---
+
+import {
+  Plug,
+  ScanEye,
+  Clock,
+  ListChecks,
+  Server,
+} from '@wso2/oxygen-ui-icons-react';
+
+# MCP Inspector
+
+Use this guide to connect MCP Inspector to the Calculator server you secured in the previous quickstart, and see <ProductName />'s scope enforcement from Inspector's seat.
+
+<TutorialHero>
+
+## What You Will Learn
+
+<TutorialHeroItem icon={<Plug />}>Connect MCP Inspector to the scope-protected Calculator server</TutorialHeroItem>
+<TutorialHeroItem icon={<ScanEye />}>Watch a tool disappear from the tool list the moment its scope is missing from the token</TutorialHeroItem>
+
+## Prerequisites
+
+<TutorialHeroItem icon={<Clock />}>About 5 minutes</TutorialHeroItem>
+<TutorialHeroItem icon={<ListChecks />}>Completed Secure Your MCP Server: the Calculator server registered and runnable, <code>thunderid.cert</code> exported, and the <code>Calculator Inspector</code> application and CORS entry created</TutorialHeroItem>
+<TutorialHeroItem icon={<Server />}>Node.js 20+ (for MCP Inspector)</TutorialHeroItem>
+
+</TutorialHero>
+
+<Stepper stepNode="h2" as="h2">
+
+## Run <ProductName /> and the Calculator Server
+
+This guide continues directly from [Secure Your MCP Server](../../../server/python). If <ProductName /> and the Calculator server from that guide are not already running, start them again.
+
+Run <ProductName /> with the method you chose there, then start the Calculator server from the same directory as `server.py`:
+
+```bash
+uv run server.py
+```
+
+The server listens at `http://localhost:8000/mcp`.
+
+## Connect with MCP Inspector
+
+You already registered the `Calculator Inspector` application and allowed its origin in CORS in [Secure Your MCP Server](../../../server/python), so reuse both here. Launch Inspector from the same directory as `server.py`, reusing the exported certificate:
+
+```bash
+NODE_EXTRA_CA_CERTS=./thunderid.cert npx @modelcontextprotocol/inspector
+```
+
+:::note Running this from a clone of the repository?
+If you launch this command from inside a clone of the <ProductName /> repository (for example, from `samples/apps/mcp-calculator-sample/server/`), it fails with `npm error code EBADDEVENGINES`, because npm walks up to the repository's root `package.json`, which pins `pnpm` as the package manager. Launch Inspector from a directory outside the repository instead, and point `NODE_EXTRA_CA_CERTS` at the absolute path of `thunderid.cert`.
+:::
+
+Inspector opens in your browser at `http://localhost:6274`.
+
+1. Set **Transport Type** to **Streamable HTTP** and **URL** to `http://localhost:8000/mcp`.
+2. Expand the **Authentication** section.
+3. Under **OAuth 2.0 Flow**, enter the **Client ID** you copied earlier. Leave **Client Secret** empty.
+4. Click **Connect**. A browser tab opens with <ProductName />'s sign-in page. Sign in with your test user.
+5. Open the **Tools** tab and click **List Tools**. You see `add`, `subtract`, `multiply`, and `divide`.
+
+Now see scope enforcement from the client's seat: click **Disconnect**, then in the Auth panel's **Scope** field, type `add subtract multiply`, leaving out `divide`, and **Connect** again. Sign in once more and list the tools. `divide` is gone, because the token Inspector requests this time never carries that scope, and the server hides any tool the token's scopes do not cover.
+
+If the sign-in page never appears, see the "Sign-in page never appears" note in the [Launch and Connect](../../../server/python#launch-and-connect) step of the server quickstart.
+
+:::tip Success
+The tools you see in Inspector are exactly the ones your token's scopes allow. Remove `divide` from the scope list, reconnect, and the tool vanishes from the list.
+:::
+
+</Stepper>
+
+## What's Next
+
+<div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginTop: '1.5rem'}}>
+  <a href="../claude-code" style={{textDecoration: 'none', color: 'inherit'}}>
+    <div style={{border: '1px solid var(--ifm-color-emphasis-300)', borderRadius: '10px', padding: '1.25rem', cursor: 'pointer'}}>
+      <div style={{fontSize: '1rem', fontWeight: '700', marginBottom: '0.4rem'}}>Claude Code</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', marginBottom: '0.75rem'}}>Connect Claude Code to the same server using Dynamic Client Registration.</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-primary)', fontWeight: 600}}>Connect Claude Code →</div>
+    </div>
+  </a>
+  <a href="../../build-a-client/python" style={{textDecoration: 'none', color: 'inherit'}}>
+    <div style={{border: '1px solid var(--ifm-color-emphasis-300)', borderRadius: '10px', padding: '1.25rem', cursor: 'pointer'}}>
+      <div style={{fontSize: '1rem', fontWeight: '700', marginBottom: '0.4rem'}}>Build an MCP Client</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', marginBottom: '0.75rem'}}>Build your own MCP client that authenticates with <ProductName />, instead of connecting an existing one.</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-primary)', fontWeight: 600}}>Build an MCP Client →</div>
+    </div>
+  </a>
+  <a href="../../../../../use-cases/ai-agents/mcp-authorization/overview" style={{textDecoration: 'none', color: 'inherit'}}>
+    <div style={{border: '1px solid var(--ifm-color-emphasis-300)', borderRadius: '10px', padding: '1.25rem', cursor: 'pointer'}}>
+      <div style={{fontSize: '1rem', fontWeight: '700', marginBottom: '0.4rem'}}>Securing MCP</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', marginBottom: '0.75rem'}}>Authorization patterns for MCP servers, audience binding, and AuthZEN policy decisions.</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-primary)', fontWeight: 600}}>MCP Authorization →</div>
+    </div>
+  </a>
+</div>
+
+:::tip Example Source Code
+Check out the complete <RepoLink path="/tree/main/samples/apps/mcp-calculator-sample">Calculator MCP Sample</RepoLink> in the <ProductName /> repository.
+:::

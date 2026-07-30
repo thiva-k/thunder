@@ -35,6 +35,7 @@ vi.mock('react-router', async () => {
     ...actual,
     useNavigate: vi.fn(() => vi.fn()),
     useParams: vi.fn(() => ({applicationId: 'test-app-id'})),
+    useLocation: vi.fn(() => ({state: null})),
   };
 });
 
@@ -1735,6 +1736,58 @@ describe('ApplicationEditPage', () => {
       });
 
       expect(screen.getByRole('button', {name: 'Save Changes'})).toBeDisabled();
+    });
+  });
+
+  describe('Client Secret Popup (just created)', () => {
+    afterEach(async () => {
+      const {useLocation} = await import('react-router');
+      (useLocation as ReturnType<typeof vi.fn>).mockReturnValue({state: null});
+    });
+
+    it('should not render the secret dialog when there is no justCreatedSecret navigation state', () => {
+      renderComponent();
+
+      expect(screen.queryByTestId('application-show-client-secret')).not.toBeInTheDocument();
+    });
+
+    it('should render the secret dialog when justCreatedSecret is present in location state', async () => {
+      const {useLocation} = await import('react-router');
+      (useLocation as ReturnType<typeof vi.fn>).mockReturnValue({
+        state: {
+          justCreatedSecret: {
+            appName: 'My New App',
+            clientId: 'new-client-id',
+            clientSecret: 'brand-new-secret',
+          },
+        },
+      });
+
+      renderComponent();
+
+      expect(screen.getByTestId('application-show-client-secret')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('brand-new-secret')).toBeInTheDocument();
+    });
+
+    it('should close the secret dialog when Continue is clicked', async () => {
+      const {useLocation} = await import('react-router');
+      (useLocation as ReturnType<typeof vi.fn>).mockReturnValue({
+        state: {
+          justCreatedSecret: {
+            appName: 'My New App',
+            clientSecret: 'brand-new-secret',
+          },
+        },
+      });
+
+      renderComponent();
+
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId('application-client-secret-continue'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('application-show-client-secret')).not.toBeInTheDocument();
+      });
     });
   });
 });

@@ -23,6 +23,7 @@ import {UsersRound} from '@wso2/oxygen-ui-icons-react';
 import {motion} from 'framer-motion';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
+import RouteConfig from '../../../../configs/RouteConfig';
 import HomeNextStepCard from './HomeNextStepCard';
 
 const AVATAR_LIMIT = 5;
@@ -125,15 +126,13 @@ export default function InviteMembersCard(): JSX.Element {
   return (
     <HomeNextStepCard
       icon={<UsersRound size={24} />}
-      title={t('next_steps.invite_members.title', 'Invite Members')}
+      title={t('next_steps.invite_members.title', 'Add Users')}
       description={t(
         'next_steps.invite_members.description',
-        'Add collaborators to help manage your organization and act as a backup.',
+        'Add or invite collaborators to help manage your organization.',
       )}
       primaryLabel={t('next_steps.invite_members.actions.primary.label', 'Add User')}
-      primaryRoute="/users/add"
-      secondaryLabel={t('next_steps.invite_members.actions.secondary.label', 'Invite User')}
-      secondaryRoute="/users/add/invite"
+      primaryRoute={RouteConfig.users.add()}
       preview={preview}
     />
   );

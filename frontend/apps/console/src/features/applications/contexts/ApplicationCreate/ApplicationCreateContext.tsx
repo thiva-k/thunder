@@ -16,13 +16,14 @@
  * under the License.
  */
 
-import type {Theme} from '@thunderid/design';
+import type {LayoutConfig, Theme} from '@thunderid/design';
 import type {Context} from 'react';
 import {createContext} from 'react';
 import type {BasicFlowDefinition} from '../../../flows/models/responses';
 import type {
   ApplicationCreateFlowSignInApproach,
   ApplicationCreateFlowStep,
+  OrganizationUnitDefaultsSelection,
 } from '../../models/application-create-flow';
 import type {
   TechnologyApplicationTemplate,
@@ -154,6 +155,42 @@ export interface ApplicationCreateContextType {
   setSelectedAuthFlow: (flow: BasicFlowDefinition | null) => void;
 
   /**
+   * Whether Email OTP is required as a second factor after the primary sign-in method.
+   * @remark Needed for the Security Settings step.
+   */
+  isEmailOtpMfaEnabled: boolean;
+
+  /**
+   * Sets whether Email OTP MFA is enabled.
+   * @remark Needed for the Security Settings step.
+   */
+  setIsEmailOtpMfaEnabled: (enabled: boolean) => void;
+
+  /**
+   * Whether SMS OTP is required as a second factor after the primary sign-in method.
+   * @remark Needed for the Security Settings step.
+   */
+  isSmsOtpMfaEnabled: boolean;
+
+  /**
+   * Sets whether SMS OTP MFA is enabled.
+   * @remark Needed for the Security Settings step.
+   */
+  setIsSmsOtpMfaEnabled: (enabled: boolean) => void;
+
+  /**
+   * The SMS provider connection ID used to deliver SMS OTP MFA codes.
+   * @remark Needed for the Security Settings step.
+   */
+  smsOtpSenderId: string;
+
+  /**
+   * Sets the SMS provider connection ID used for SMS OTP MFA.
+   * @remark Needed for the Security Settings step.
+   */
+  setSmsOtpSenderId: (senderId: string) => void;
+
+  /**
    * The selected sign-in approach (INBUILT or CUSTOM).
    * @remark Needed for step 04: Configure Approach.
    */
@@ -164,6 +201,152 @@ export interface ApplicationCreateContextType {
    * @remark Needed for step 04: Configure Approach.
    */
   setSignInApproach: (approach: ApplicationCreateFlowSignInApproach) => void;
+
+  /**
+   * The ID of the selected layout.
+   * @remark Needed for the Design step.
+   */
+  layoutId: string | null;
+
+  /**
+   * Sets the selected layout ID.
+   * @remark Needed for the Design step.
+   */
+  setLayoutId: (layoutId: string | null) => void;
+
+  /**
+   * The selected layout configuration (UI layout data only, not the API response wrapper).
+   * @remark Needed for the Design step.
+   */
+  selectedLayout: LayoutConfig | null;
+
+  /**
+   * Sets the selected layout configuration.
+   * @remark Needed for the Design step.
+   */
+  setSelectedLayout: (layout: LayoutConfig | null) => void;
+
+  /**
+   * The selected registration (sign-up) flow ID.
+   * @remark Needed for the Security Settings step.
+   */
+  registrationFlowId: string | null;
+
+  /**
+   * Sets the selected registration flow ID.
+   * @remark Needed for the Security Settings step.
+   */
+  setRegistrationFlowId: (flowId: string | null) => void;
+
+  /**
+   * Whether registration (sign-up) is enabled for the application being created.
+   * @remark Needed for the Security Settings step.
+   */
+  isRegistrationFlowEnabled: boolean;
+
+  /**
+   * Sets whether registration is enabled.
+   * @remark Needed for the Security Settings step.
+   */
+  setIsRegistrationFlowEnabled: (enabled: boolean) => void;
+
+  /**
+   * The selected recovery flow ID.
+   * @remark Needed for the Security Settings step.
+   */
+  recoveryFlowId: string | null;
+
+  /**
+   * Sets the selected recovery flow ID.
+   * @remark Needed for the Security Settings step.
+   */
+  setRecoveryFlowId: (flowId: string | null) => void;
+
+  /**
+   * Whether recovery is enabled for the application being created.
+   * @remark Needed for the Security Settings step.
+   */
+  isRecoveryFlowEnabled: boolean;
+
+  /**
+   * Sets whether recovery is enabled.
+   * @remark Needed for the Security Settings step.
+   */
+  setIsRecoveryFlowEnabled: (enabled: boolean) => void;
+
+  /**
+   * The sign-out flow ID, only ever populated via an organization unit default snapshot.
+   * @remark Needed for the Details step's organization unit defaults.
+   */
+  signOutFlowId: string | null;
+
+  /**
+   * Sets the sign-out flow ID.
+   * @remark Needed for the Details step's organization unit defaults.
+   */
+  setSignOutFlowId: (flowId: string | null) => void;
+
+  /**
+   * Whether sign-out is enabled for the application being created.
+   * @remark Needed for the Details step's organization unit defaults.
+   */
+  isSignOutFlowEnabled: boolean;
+
+  /**
+   * Sets whether sign-out is enabled.
+   * @remark Needed for the Details step's organization unit defaults.
+   */
+  setIsSignOutFlowEnabled: (enabled: boolean) => void;
+
+  /**
+   * Allowed OAuth2 redirect URIs entered in the Configuration step.
+   * @remark Needed for the Configuration step.
+   */
+  redirectUris: string[];
+
+  /**
+   * Sets the allowed redirect URIs.
+   * @remark Needed for the Configuration step.
+   */
+  setRedirectUris: (uris: string[]) => void;
+
+  /**
+   * Allowed post-logout redirect URIs entered in the Configuration step.
+   * @remark Needed for the Configuration step.
+   */
+  postLogoutRedirectUris: string[];
+
+  /**
+   * Sets the allowed post-logout redirect URIs.
+   * @remark Needed for the Configuration step.
+   */
+  setPostLogoutRedirectUris: (uris: string[]) => void;
+
+  /**
+   * CORS allowed origins entered in the Configuration step, for templates whose Configuration
+   * step offers a CORS editor. These are merged into the deployment's CORS allow-list on submit.
+   * @remark Needed for the Configuration step.
+   */
+  corsOrigins: string[];
+
+  /**
+   * Sets the CORS allowed origins.
+   * @remark Needed for the Configuration step.
+   */
+  setCorsOrigins: (origins: string[]) => void;
+
+  /**
+   * Per-item "use the organization unit's default" selection, backing the Details step's
+   * accordion (sign in / sign up / recovery / sign out flow, theme, layout).
+   * @remark Needed for the Details step.
+   */
+  ouDefaults: OrganizationUnitDefaultsSelection;
+
+  /**
+   * Sets the organization unit defaults selection.
+   * @remark Needed for the Details step.
+   */
+  setOuDefaults: (selection: OrganizationUnitDefaultsSelection) => void;
 
   /**
    * The selected application technology (e.g., react, nextjs, other).

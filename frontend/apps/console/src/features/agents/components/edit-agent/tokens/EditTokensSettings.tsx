@@ -94,6 +94,8 @@ export default function EditTokensSettings({
                 entityLabel="agent"
                 showUserInfoTab={false}
                 showActorClaim
+                actorSub={agent.id}
+                certificateLocation="Credentials"
               />
             </Stack>
           </SettingsLockNotice>

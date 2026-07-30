@@ -22,18 +22,21 @@ import {
   useIdentityProviders,
   type IdentityProvider,
 } from '@thunderid/configure-connections';
-import {Typography, Stack, CircularProgress, Alert, Box, useTheme} from '@wso2/oxygen-ui';
+import {Typography, Stack, CircularProgress, Alert, Box, Divider, useTheme} from '@wso2/oxygen-ui';
 import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useEffect, useMemo, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import FlowsListView from './FlowsListView';
-import IndividualMethodsToggleView from './IndividualMethodsToggleView';
+import PasswordlessLoginGroup from './PasswordlessLoginGroup';
+import PromptForCredentialsGroup from './PromptForCredentialsGroup';
+import SocialLoginGroup from './SocialLoginGroup';
 import useGetFlows from '../../../../flows/api/useGetFlows';
 import {FlowType} from '../../../../flows/models/flows';
 import {type BasicFlowDefinition} from '../../../../flows/models/responses';
 import findMatchingFlowForIntegrations from '../../../../flows/utils/findMatchingFlowForIntegrations';
 import useApplicationCreateContext from '../../../hooks/useApplicationCreateContext';
+import ConfigureMfaSettings from '../configure-security-settings/ConfigureMfaSettings';
 
 /**
  * Props for the {@link ConfigureSignInOptions} component.
@@ -56,6 +59,13 @@ export interface ConfigureSignInOptionsProps {
    * Callback function to broadcast whether this step is ready to proceed
    */
   onReadyChange?: (isReady: boolean) => void;
+
+  /**
+   * Whether to render this step's own heading. Set to false when composed inside a larger step
+   * (e.g. Sign-in Experience) that already renders its own title.
+   * @defaultValue true
+   */
+  showTitle?: boolean;
 }
 
 /**
@@ -130,10 +140,12 @@ export default function ConfigureSignInOptions({
   integrations,
   onIntegrationToggle,
   onReadyChange = undefined,
+  showTitle = true,
 }: ConfigureSignInOptionsProps): JSX.Element {
   const {t} = useTranslation();
   const theme = useTheme();
-  const {selectedAuthFlow, setSelectedAuthFlow, setIntegrations} = useApplicationCreateContext();
+  const {selectedAuthFlow, setSelectedAuthFlow, setIntegrations, setIsEmailOtpMfaEnabled, setIsSmsOtpMfaEnabled} =
+    useApplicationCreateContext();
 
   const {data, isLoading, error} = useIdentityProviders();
   const {
@@ -263,6 +275,8 @@ export default function ConfigureSignInOptions({
 
     if (selectedFlow) {
       setIntegrations({});
+      setIsEmailOtpMfaEnabled(false);
+      setIsSmsOtpMfaEnabled(false);
     }
   };
 
@@ -270,39 +284,30 @@ export default function ConfigureSignInOptions({
     setSelectedAuthFlow(null);
   };
 
+  // The picker should only reveal/fill itself in response to an actual manual pick, not a
+  // background auto-match riding along with active toggles (see the effect above) — otherwise
+  // flipping a switch makes an unrelated section of the page silently pop open and fill in.
+  const hasEnabledIntegrations = Object.values(integrations).some(Boolean);
+  const visibleSelectedFlow = hasEnabledIntegrations ? null : selectedAuthFlow;
+
+  // A flow only genuinely blocks the individual toggles when it was manually picked from the
+  // pre-configured flows list (an opaque, arbitrary graph) — see handleFlowSelect, which clears
+  // `integrations` on pick. Auto-matched flows (integrations still enabled) are regenerated on
+  // submit from the toggle state, so they don't need to disable anything here.
+  const isDisabledByPreConfiguredFlow = selectedAuthFlow !== null && !hasEnabledIntegrations;
+
   return (
-    <Stack direction="column" spacing={4} data-testid="application-configure-sign-in">
-      <Stack direction="column" spacing={1}>
-        <Typography variant="h1" gutterBottom>
-          {t('applications:onboarding.configure.SignInOptions.title')}
-        </Typography>
-        <Typography variant="subtitle1" gutterBottom>
-          {t('applications:onboarding.configure.SignInOptions.subtitle')}
-        </Typography>
-      </Stack>
-
-      {/* Validation warning if no options selected */}
-      {!hasAtLeastOneSelectedOption && (
-        <Alert severity="warning" sx={{mb: 2}}>
-          {t('applications:onboarding.configure.SignInOptions.noSelectionWarning')}
-        </Alert>
+    <Stack direction="column" spacing={3} data-testid="application-configure-sign-in">
+      {showTitle && (
+        <Stack direction="column" spacing={1}>
+          <Typography variant="h1" gutterBottom>
+            {t('applications:onboarding.configure.SignInOptions.title')}
+          </Typography>
+          <Typography variant="subtitle1" gutterBottom>
+            {t('applications:onboarding.configure.SignInOptions.subtitle')}
+          </Typography>
+        </Stack>
       )}
-
-      {/* Individual Authentication Methods */}
-      <IndividualMethodsToggleView
-        integrations={integrations}
-        availableIntegrations={availableIntegrations}
-        onIntegrationToggle={handleIntegrationToggle}
-      />
-
-      {/* Pre-configured Authentication Flows */}
-      <FlowsListView
-        availableFlows={availableFlows}
-        selectedAuthFlow={selectedAuthFlow}
-        onFlowSelect={handleFlowSelect}
-        onClearSelection={handleClearFlowSelection}
-        disabled={false}
-      />
 
       <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
         <Stack direction="row" alignItems="center" spacing={1}>
@@ -312,6 +317,53 @@ export default function ConfigureSignInOptions({
           </Typography>
         </Stack>
       </Stack>
+
+      {/* Validation warning if no options selected */}
+      {!hasAtLeastOneSelectedOption && (
+        <Alert severity="warning" sx={{mb: 2}}>
+          {t('applications:onboarding.configure.SignInOptions.noSelectionWarning')}
+        </Alert>
+      )}
+
+      <Box sx={{border: '1px solid', borderColor: 'divider', borderRadius: '10px', overflow: 'hidden'}}>
+        <PromptForCredentialsGroup
+          integrations={integrations}
+          onIntegrationToggle={handleIntegrationToggle}
+          disabled={isDisabledByPreConfiguredFlow}
+        />
+
+        <Divider />
+
+        <PasswordlessLoginGroup
+          integrations={integrations}
+          onIntegrationToggle={handleIntegrationToggle}
+          disabled={isDisabledByPreConfiguredFlow}
+        />
+
+        <Divider />
+
+        <SocialLoginGroup
+          integrations={integrations}
+          availableIntegrations={availableIntegrations}
+          onIntegrationToggle={handleIntegrationToggle}
+          disabled={isDisabledByPreConfiguredFlow}
+        />
+
+        <Divider />
+
+        <ConfigureMfaSettings />
+      </Box>
+
+      {/* Pre-configured Authentication Flows — a distinct choice (pick one flow) rather than a
+          toggleable method, so it's visually set apart from the boxed groups above rather than
+          folded into the same card. */}
+      <FlowsListView
+        availableFlows={availableFlows}
+        selectedAuthFlow={visibleSelectedFlow}
+        onFlowSelect={handleFlowSelect}
+        onClearSelection={handleClearFlowSelection}
+        disabled={false}
+      />
     </Stack>
   );
 }

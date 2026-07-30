@@ -47,7 +47,9 @@ Each user type belongs to a single OU. Users of that type can only exist under t
 3. Click **Save**.
 
 :::warning
-Updating a user type schema replaces the entire attribute definition. Changes do not retroactively validate existing users. New users created after the change must conform to the updated schema. Removing a `required` attribute from the schema does not remove that attribute's data from existing users.
+Updating a user type schema replaces the entire attribute definition and does not retroactively validate existing users. New users created after the change must conform to the updated schema. Existing users keep their stored values until each user is next saved. See [Manage Users](../manage-users#update-a-user) for what happens to values that no longer fit the schema on the next save.
+
+Removing an attribute from the schema does not immediately update existing applications. Any application that lists the removed attribute in its access token, ID token, or userinfo settings continues to return it while users still hold a stored value. The next time you update and save the application, <ProductName /> removes the references to attributes that no longer exist in the schema. See [Application Settings](../../applications/application-settings#configure-what-goes-into-tokens) for the user attributes on the **Token** tab.
 :::
 
 ## Delete a User Type

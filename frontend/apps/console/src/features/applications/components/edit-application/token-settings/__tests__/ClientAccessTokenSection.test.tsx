@@ -155,6 +155,37 @@ describe('ClientAccessTokenSection', () => {
     expect(onFieldChange).not.toHaveBeenCalled();
   });
 
+  it('shows the supplied subjectValue as the sub claim in the preview', () => {
+    render(
+      <ClientAccessTokenSection
+        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
+        inboundAuthConfig={inboundAuthConfig}
+        onFieldChange={onFieldChange}
+        availableAttributes={['groups']}
+        copy={copy}
+        subjectValue="my-agent-123"
+      />,
+    );
+
+    const preview = JSON.parse(screen.getByTestId('jwt-preview').textContent ?? '{}') as {sub?: string};
+    expect(preview.sub).toBe('my-agent-123');
+  });
+
+  it('falls back to the <sub> placeholder when no subjectValue is supplied', () => {
+    render(
+      <ClientAccessTokenSection
+        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
+        inboundAuthConfig={inboundAuthConfig}
+        onFieldChange={onFieldChange}
+        availableAttributes={['groups']}
+        copy={copy}
+      />,
+    );
+
+    const preview = JSON.parse(screen.getByTestId('jwt-preview').textContent ?? '{}') as {sub?: string};
+    expect(preview.sub).toBe('<sub>');
+  });
+
   it('disables the validity input when disabled', () => {
     render(
       <ClientAccessTokenSection

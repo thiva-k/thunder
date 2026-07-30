@@ -377,6 +377,19 @@ describe('McpConnectTab', () => {
       expect(screen.queryByTestId('danger-zone-regenerate-flow-secret-button')).not.toBeInTheDocument();
     });
 
+    it('does not show regenerate Flow Secret for an explicit mcp type with a client_credentials-only config', () => {
+      render(
+        <McpConnectTab
+          application={buildApplication({type: 'mcp'})}
+          oauth2Config={m2mOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          isReadOnly={false}
+        />,
+      );
+
+      expect(screen.queryByTestId('danger-zone-regenerate-flow-secret-button')).not.toBeInTheDocument();
+    });
+
     it('shows and wires regenerate Flow Secret for a flow-native oauth2Config', async () => {
       const user = userEvent.setup();
       const flowNativeOAuth2Config: OAuth2Config = {

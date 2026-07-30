@@ -28,6 +28,7 @@ const translations = {
     // Actions
     'actions.add': 'Add',
     'actions.edit': 'Edit',
+    'actions.change': 'Change',
     'actions.delete': 'Delete',
     'actions.cancel': 'Cancel',
     'actions.save': 'Save',
@@ -64,6 +65,8 @@ const translations = {
     'actions.settings': 'Settings',
     'actions.logout': 'Logout',
     'actions.login': 'Login',
+    'actions.collapse': 'Collapse',
+    'actions.expand': 'Expand',
 
     // Dictionary
     'dictionary.unknown': 'Unknown',
@@ -753,6 +756,11 @@ const translations = {
     'updateCredentials.hint': 'Fill in only the credentials you want to update. Empty fields will be skipped.',
     'updateCredentials.success': 'Credentials updated successfully.',
     'updateCredentials.error': 'Failed to update credentials. Please try again.',
+
+    // Backend error code translations (per user service error envelope).
+    'errors.USR-1014': 'A user with the same unique attribute value already exists.',
+    'errors.USR-1019':
+      "Some attributes no longer match this user type's schema. Review the user type or the user's attributes.",
   },
 
   // ============================================================================
@@ -830,6 +838,12 @@ const translations = {
     'edit.saveError': 'Failed to save user type',
     'edit.loadError': 'Failed to load user type information',
     'edit.notFound': 'User type not found',
+    'schemaChangeWarning.title': 'Confirm schema changes',
+    'schemaChangeWarning.description':
+      'Existing users may require updates if their attributes no longer match the revised schema. Applications that return removed attributes in tokens or userinfo must also be updated.',
+    'schemaChangeWarning.affected': 'Affected attributes:',
+    'schemaChangeWarning.areYouSure': 'Do you want to continue?',
+    'schemaChangeWarning.confirm': 'Continue',
     'edit.general.organizationUnit.title': 'Organization Unit',
     'edit.general.organizationUnit.description': 'The organization unit this user type belongs to.',
     'edit.general.selfRegistration.title': 'Self Registration',
@@ -946,6 +960,12 @@ const translations = {
     'edit.saveError': 'Failed to save agent type',
     'edit.loadError': 'Failed to load agent type information',
     'edit.notFound': 'Agent type not found',
+    'schemaChangeWarning.title': 'Confirm schema changes',
+    'schemaChangeWarning.description':
+      'Existing agents may require updates if their attributes no longer match the revised schema. Applications that return removed attributes in tokens or userinfo must also be updated.',
+    'schemaChangeWarning.affected': 'Affected attributes:',
+    'schemaChangeWarning.areYouSure': 'Do you want to continue?',
+    'schemaChangeWarning.confirm': 'Continue',
     'edit.general.organizationUnit.title': 'Organization Unit',
     'edit.general.organizationUnit.description': 'The organization unit this agent type belongs to.',
     'edit.general.displayAttribute.title': 'Display Attribute',
@@ -1127,12 +1147,11 @@ const translations = {
     'edit.credentials.clientSecret.regenerateHint':
       'Client secret was shown once at creation. Regenerate to issue a new one.',
     'edit.credentials.clientSecret.regenerateButton': 'Regenerate secret',
-    'edit.credentials.tokenEndpointAuthMethod.title': 'Token Endpoint Auth Method',
+    'edit.credentials.tokenEndpointAuthMethod.title': 'Client Authentication Method',
     'edit.credentials.tokenEndpointAuthMethod.description':
-      'Defines how this agent authenticates when requesting tokens.',
+      'Defines how this agent authenticates at protected endpoints.',
     'edit.credentials.tokenEndpointAuthMethod.placeholder': 'Select an auth method',
-    'edit.credentials.tokenEndpointAuthMethod.hint':
-      'How this agent proves its identity when it calls the token endpoint.',
+    'edit.credentials.tokenEndpointAuthMethod.hint': 'How this agent proves its identity at protected endpoints.',
     'edit.credentials.tokenEndpointAuthMethod.lockedHint': 'Set to "none" because this agent is a public client.',
     'edit.credentials.certificate.title': 'Certificate',
     'edit.credentials.certificate.description':
@@ -1148,6 +1167,8 @@ const translations = {
     'edit.credentials.certificate.error.required':
       'This agent needs a certificate before it can use private_key_jwt authentication.',
     'edit.credentials.certificate.error.valueRequired': 'This field cannot be empty.',
+    'edit.credentials.certificate.error.encryptionDependsOnCert':
+      'This certificate is used to encrypt the ID token. Change the ID token format to a non-encrypted type before removing the certificate.',
 
     // Edit page - Access tab
     'edit.access.groups.title': 'Groups',
@@ -1309,6 +1330,7 @@ const translations = {
     'edit.page.tabs.users': 'Users',
     'edit.page.tabs.groups': 'Groups',
     'edit.page.tabs.customization': 'Customization',
+    'edit.page.tabs.defaultFlows': 'Flows',
     'edit.page.tabs.advanced': 'Advanced Settings',
     'edit.actions.unsavedChanges.label': 'You have unsaved changes',
     'edit.actions.reset.label': 'Reset',
@@ -1371,6 +1393,43 @@ const translations = {
     'edit.customization.labels.theme': 'Theme',
     'edit.customization.theme.placeholder': 'Select a theme',
     'edit.customization.theme.hint': 'The theme applied to this organization unit.',
+    'edit.customization.labels.layout': 'Layout',
+    'edit.customization.layout.placeholder': 'Select a layout',
+    'edit.customization.layout.hint': 'The layout applied to this organization unit.',
+
+    // Default Flows tab
+    'edit.flows.labels.authenticationFlow': 'Sign-in Flow',
+    'edit.flows.authenticationFlow.description':
+      'Choose the default flow that handles user login and authentication for applications under this organization unit.',
+    'edit.flows.authenticationFlow.placeholder': 'Select an authentication flow',
+    'edit.flows.authenticationFlow.hint':
+      'Select the flow that handles user sign-in for applications under this organization unit.',
+    'edit.flows.authenticationFlow.alert':
+      'To modify the selected flow, <0>open the flow builder</0>. To create a new flow, visit the <1>Flows page</1>.',
+    'edit.flows.labels.registrationFlow': 'Sign-up Flow',
+    'edit.flows.registrationFlow.description':
+      'Choose the default flow that handles user sign-up and account creation for applications under this organization unit.',
+    'edit.flows.registrationFlow.placeholder': 'Select a registration flow',
+    'edit.flows.registrationFlow.hint':
+      'Select the flow that handles user registration for applications under this organization unit.',
+    'edit.flows.registrationFlow.alert':
+      'To modify the selected flow, <0>open the flow builder</0>. To create a new flow, visit the <1>Flows page</1>.',
+    'edit.flows.labels.recoveryFlow': 'Recovery Flow',
+    'edit.flows.recoveryFlow.description':
+      'Choose the default flow that handles password and account recovery for applications under this organization unit.',
+    'edit.flows.recoveryFlow.placeholder': 'Select a recovery flow',
+    'edit.flows.recoveryFlow.hint':
+      'Select the flow that handles account recovery for applications under this organization unit.',
+    'edit.flows.recoveryFlow.alert':
+      'To modify the selected flow, <0>open the flow builder</0>. To create a new flow, visit the <1>Flows page</1>.',
+    'edit.flows.labels.signOutFlow': 'Sign Out Flow',
+    'edit.flows.signOutFlow.description':
+      'Choose the default flow that handles user sign-out and session termination for applications under this organization unit.',
+    'edit.flows.signOutFlow.placeholder': 'Select a sign-out flow',
+    'edit.flows.signOutFlow.hint':
+      'Select the flow that runs when a user signs out of applications under this organization unit.',
+    'edit.flows.signOutFlow.alert':
+      'To modify the selected flow, <0>open the flow builder</0>. To create a new flow, visit the <1>Flows page</1>.',
     'create.success': 'Organization unit created successfully.',
     'update.success': 'Organization unit updated successfully.',
     'update.error': 'Failed to update organization unit. Please try again.',
@@ -1707,7 +1766,7 @@ const translations = {
     'detail.saveBar.unsaved': 'You have unsaved changes',
     'detail.saveBar.save': 'Save changes',
     'detail.saveBar.saving': 'Saving...',
-    'detail.saveBar.discard': 'Discard',
+    'detail.saveBar.reset': 'Reset',
 
     // Per-vendor configure / edit form
     'form.chrome.configure': 'Configure connection',
@@ -1875,7 +1934,7 @@ const translations = {
     'detail.dangerZone.delete.description':
       'Applications relying on assertions from this issuer will stop receiving tokens. This cannot be undone.',
     'detail.saveBar.unsaved': 'You have unsaved changes',
-    'detail.saveBar.discard': 'Discard',
+    'detail.saveBar.reset': 'Reset',
     'detail.saveBar.save': 'Save changes',
 
     // Toasts
@@ -2037,27 +2096,40 @@ const translations = {
     'onboarding.preview.sendOtpButton': 'Send OTP',
     'onboarding.preview.dividerText': 'or',
     'onboarding.preview.continueWith': 'Continue with {{providerName}}',
-    'onboarding.steps.name': 'Create an Application',
-    'onboarding.steps.organizationUnit': 'Organization Unit',
-    'onboarding.steps.design': 'Design',
-    'onboarding.steps.options': 'Sign In Options',
-    'onboarding.steps.experience': 'Sign-In Experience',
+    'onboarding.preview.stepOf': 'Step {{n}} of {{total}}',
+    'onboarding.steps.details': 'Details',
+    'onboarding.steps.design': 'Experience',
+    'onboarding.steps.security': 'Security',
     'onboarding.steps.stack': 'Technology Stack',
     'onboarding.steps.configure': 'Configuration',
-    'onboarding.steps.walletConfigure': 'Connect Your Wallet',
-    'onboarding.steps.clientType': 'Client type',
     'onboarding.steps.quickTest': 'Quick Test',
     'onboarding.steps.export': 'Integration Setup',
     'onboarding.steps.complete': 'Setup Complete',
     'onboarding.steps.summary': 'Summary',
-    'onboarding.organizationUnit.title': 'Select an organization unit',
-    'onboarding.organizationUnit.subtitle': 'Choose the organization unit this application will belong to.',
+    'onboarding.organizationUnit.title': 'Where should this application belong?',
+    'onboarding.organizationUnit.subtitle':
+      "Choose the organization unit that will own this application. You can't change this once created.",
     'onboarding.organizationUnit.fieldLabel': 'Organization Unit',
     'onboarding.configure.name.title': "Let's give a name to your application",
-    'onboarding.configure.name.fieldLabel': 'Application Name',
+    'onboarding.configure.name.fieldLabel': 'Name & Logo',
     'onboarding.configure.name.placeholder': 'Enter your application name',
-    'onboarding.configure.name.suggestions.label': 'In a hurry? Pick a random name:',
-    'onboarding.mcp.clientType.title': 'Client type',
+    'onboarding.configure.name.logoAriaLabel': 'Change application logo',
+    'onboarding.configure.name.suggestions.prefix': 'Need inspiration? How about',
+    'onboarding.configure.name.suggestions.shuffleAriaLabel': 'Try another suggestion',
+    'onboarding.configure.applicationDetails.title': "Let's collect some details about your application",
+    'onboarding.configure.applicationDetails.ouDefaults.title': 'Use organization defaults',
+    'onboarding.configure.applicationDetails.ouDefaults.subtitle':
+      "Inherit {{ouName}}'s flows, theme & layout instead of configuring from scratch.",
+    'onboarding.configure.applicationDetails.ouDefaults.flows.title': 'Sign-in, sign-up & recovery flows',
+    'onboarding.configure.applicationDetails.ouDefaults.flows.description':
+      'Follow the flows configured for {{ouName}}',
+    'onboarding.configure.applicationDetails.ouDefaults.design.title': 'Design',
+    'onboarding.configure.applicationDetails.ouDefaults.design.description':
+      'Use the same theme & layout as {{ouName}}',
+    'onboarding.configure.applicationDetails.userAccess.title': 'Allow all user types to access this application',
+    'onboarding.configure.applicationDetails.userAccess.subtitle': 'Every user type can sign in to this application',
+    'onboarding.configure.applicationDetails.userAccess.placeholder': 'Select user types',
+    'onboarding.mcp.clientType.title': 'Client Type',
     'onboarding.mcp.clientType.subtitle': 'How will this client obtain tokens?',
     'onboarding.mcp.clientType.userDelegated.title': 'On behalf of a user',
     'onboarding.mcp.clientType.userDelegated.description':
@@ -2066,8 +2138,6 @@ const translations = {
     'onboarding.mcp.clientType.m2m.description':
       'A client that authenticates with its own credentials without user interaction. Uses Client Credentials.',
     'onboarding.mcp.clientType.preview.label': 'What you get',
-    'onboarding.mcp.clientType.preview.nextUserDelegated': 'Add your redirect URIs below.',
-    'onboarding.mcp.clientType.preview.nextM2m': 'Next: your client ID and secret are generated.',
     'onboarding.mcp.connection.title': 'Add a redirect URI',
     'onboarding.mcp.connection.subtitle': 'Where should users be sent after they authorize this client?',
     'onboarding.mcp.connection.redirectUris.label': 'Redirect URIs',
@@ -2077,8 +2147,7 @@ const translations = {
     'onboarding.mcp.connection.redirectUris.remove': 'Remove redirect URI',
     'onboarding.mcp.connection.redirectUris.error.empty': 'Enter a redirect URI.',
     'onboarding.mcp.connection.redirectUris.error.invalid': 'Enter a valid loopback (http://127.0.0.1) or HTTPS URI.',
-    'onboarding.mcp.connection.inspectorHint': 'Testing with MCP Inspector? Use {{uri}}',
-    'onboarding.mcp.connection.inspectorHint.copyAriaLabel': 'Copy MCP Inspector callback URI',
+    'onboarding.mcp.connection.inspectorHint.prefix': 'Testing with MCP Inspector? Use',
     'onboarding.mcp.oauthProfile.label': 'OAuth profile',
     'onboarding.mcp.oauthProfile.authCodePkce': 'Authorization Code + PKCE (required)',
     'onboarding.mcp.oauthProfile.publicClient': 'Public client',
@@ -2086,42 +2155,21 @@ const translations = {
     'onboarding.mcp.oauthProfile.clientCredentials': 'Client Credentials',
     'onboarding.mcp.oauthProfile.confidentialClient': 'Confidential client',
     'onboarding.mcp.oauthProfile.clientSecretIssued': 'Client secret issued',
-    'onboarding.mcp.complete.title': 'Your MCP client is ready',
-    'onboarding.mcp.complete.subtitle.userDelegated':
-      'Use these pre-registered credentials and endpoints to connect your client.',
-    'onboarding.mcp.complete.subtitle.m2m': "Save your client secret now — it's shown only once.",
-    'onboarding.mcp.complete.credentials.title': 'Pre-registered client credentials',
-    'onboarding.mcp.complete.endpoints.title': 'Endpoints',
-    'onboarding.mcp.complete.endpoints.issuer': 'Issuer',
-    'onboarding.mcp.complete.endpoints.asMetadata': 'Authorization server metadata',
-    'onboarding.mcp.complete.endpoints.oidcDiscovery': 'OpenID Connect discovery',
-    'onboarding.mcp.complete.endpoints.authorize': 'Authorization endpoint',
-    'onboarding.mcp.complete.endpoints.token': 'Token endpoint',
-    'onboarding.mcp.complete.redirectUris.title': 'Registered redirect URIs',
-    'onboarding.mcp.complete.m2m.secretPurpose': 'Used to authenticate at the token endpoint.',
-    'onboarding.mcp.complete.m2m.warning.title': 'Save your client secret now',
-    'onboarding.mcp.complete.m2m.warning.body':
-      "This secret is shown only once. Store it securely — you'll need to regenerate it if it's lost.",
-    'onboarding.mcp.complete.m2m.tokenHint':
-      "Request tokens with grant_type=client_credentials and include the target MCP server's resource parameter so the token is audience-scoped.",
-    'onboarding.mcp.complete.goToApp': 'Go to MCP client',
-    'onboarding.mcp.complete.copySecret': 'Copy secret',
-    'onboarding.mcp.complete.copied': 'Copied',
-    'onboarding.configure.design.title': 'Design Your Application',
-    'onboarding.configure.design.subtitle': 'Customize the appearance of your application',
-    'onboarding.configure.design.logo.title': 'Application Logo',
-    'onboarding.configure.design.logo.shuffle': 'Shuffle',
-    'onboarding.configure.design.logo.chooseLogo': 'Choose logo or emoji',
+    'onboarding.configure.design.title': 'Customize the appearance of your application',
     'onboarding.configure.design.theme.title': 'Theme',
     'onboarding.configure.design.theme.emptyState': 'No themes configured',
     'onboarding.configure.design.theme.noDescription': 'No description',
     'onboarding.configure.design.theme.emptyStateHint': 'You can configure themes later from the Design settings.',
+    'onboarding.configure.design.layout.title': 'Layout',
+    'onboarding.configure.security.title': 'Choose how people sign in to your application',
     'onboarding.configure.SignInOptions.title': 'Sign In Options',
     'onboarding.configure.SignInOptions.subtitle': 'Choose how users will sign-in to your application',
     'onboarding.configure.SignInOptions.usernamePassword': 'Username & Password',
     'onboarding.configure.SignInOptions.google': 'Google',
     'onboarding.configure.SignInOptions.github': 'GitHub',
     'onboarding.configure.SignInOptions.passkey': 'Passkey',
+    'onboarding.configure.SignInOptions.magicLink': 'Magic Link',
+    'onboarding.configure.SignInOptions.magicLink.hint': "Send a one-time sign-in link to the user's email",
     'onboarding.configure.SignInOptions.notConfigured': 'Not configured',
     'onboarding.configure.SignInOptions.noFlowFound':
       'No flow found for the selected sign-in options. Please try a different combination.',
@@ -2131,24 +2179,31 @@ const translations = {
       'No social sign-in integrations available. Please configure an integration first.',
     'onboarding.configure.SignInOptions.hint':
       'You can always change these settings later in the application settings.',
-    'onboarding.configure.SignInOptions.preConfiguredFlows.selectFlow': 'Select already configured flow',
     'onboarding.configure.SignInOptions.preConfiguredFlows.searchFlows': 'Search flows...',
+    'onboarding.configure.SignInOptions.preConfiguredFlows.toggleLabel': 'Use a pre-configured flow instead',
     'onboarding.configure.SignInOptions.smsOtp': 'SMS OTP',
     'onboarding.configure.SignInOptions.loading': 'Loading...',
     'onboarding.configure.SignInOptions.error': 'Failed to load authentication methods: {{error}}',
-    'onboarding.configure.experience.title': 'Sign-In Experience',
-    'onboarding.configure.experience.subtitle': 'Select how and who can access your application',
-    'onboarding.configure.experience.subtitleWithoutUserTypes': 'Select how users access your application',
-    'onboarding.configure.experience.access.userTypes.title': 'User Access',
-    'onboarding.configure.experience.access.userTypes.subtitle': 'Select which user types can access this application',
-    'onboarding.configure.experience.approach.title': 'Sign-In Approach',
-    'onboarding.configure.experience.approach.subtitle': 'Select how users will access this application',
-    'onboarding.configure.approach.inbuilt.title': 'Redirect to {{product}} sign-in/sign-up handling pages',
+    'onboarding.configure.security.promptForCredentials.title': 'Prompt for Credentials',
+    'onboarding.configure.security.passwordlessLogin.title': 'Passwordless Login',
+    'onboarding.configure.security.socialLogin.title': 'Social Login',
+    'onboarding.configure.security.mfa.title': 'Multi-Factor Login',
+    'onboarding.configure.security.mfa.disabledForPreConfiguredFlow':
+      "MFA isn't available for the selected pre-configured flow. Clear it, or choose individual sign-in methods above instead.",
+    'onboarding.configure.security.mfa.emailOtp': 'Email OTP',
+    'onboarding.configure.security.mfa.emailOtp.hint': "Send a one-time code to the user's email",
+    'onboarding.configure.security.mfa.smsOtp.hint': 'Send a one-time code via SMS',
+    'onboarding.configure.security.mfa.smsOtp.noSenders':
+      'Connect an SMS provider under Connections to enable SMS OTP.',
+    'onboarding.configure.approach.title': 'Sign-In Approach',
+    'onboarding.configure.approach.subtitle': 'Select how users will access this application',
+    'onboarding.configure.approach.inbuilt.title': 'Redirect to {{product}} Gate',
     'onboarding.configure.approach.inbuilt.description':
-      'Users will be redirected to system-hosted sign-in and sign-up pages, which can be customized and branded using the Flow Designer and easily integrated with SDKs in just a few steps.',
-    'onboarding.configure.approach.native.title': 'Embedded sign-in/sign-up components in your app',
+      "Users are redirected to Gate, {{product}}'s hosted sign-in and sign-up experience. Brand it in minutes with the Flow Designer, then wire it up with an SDK.",
+    'onboarding.configure.approach.inbuilt.preview.title': 'Sign in to {{appName}}',
+    'onboarding.configure.approach.native.title': 'Bring Your Own UI',
     'onboarding.configure.approach.native.description':
-      'Users will sign in or sign up through your app using the UI components or APIs provided by {{product}}. You can customize and brand the flows using the designer or through code.',
+      "Build your own sign-in and sign-up screens and call {{product}}'s APIs directly, or move faster with our SDK suite: prebuilt components, hooks, and helpers for web and mobile.",
     'onboarding.configure.approach.native.attestationNotice':
       'Mobile apps authenticate to the Flow Execution API using platform attestation instead of a flow secret. After creating this application, configure attestation under Advanced settings to access the flow APIs.',
     'onboarding.configure.stack.title': 'Choose a type',
@@ -2208,22 +2263,20 @@ const translations = {
     'onboarding.configure.stack.platform.custom.title': 'Custom',
     'onboarding.configure.stack.platform.custom.description':
       'Fully customizable application with all configuration options available',
-    'onboarding.configure.details.wallet.vendor.label': 'Wallet',
+    'onboarding.configure.details.wallet.title': 'Wallet',
     'onboarding.configure.details.wallet.vendor.custom': 'Custom',
     'onboarding.configure.details.wallet.clientId.label': 'Client ID',
     'onboarding.configure.details.wallet.clientId.placeholder': 'The wallet’s client ID',
     'onboarding.configure.details.wallet.clientId.helperText':
       'Leave empty to auto-generate. Known wallets pre-fill their fixed client ID.',
     'onboarding.configure.details.wallet.prefilled.helperText': 'Pre-filled for the selected wallet and not editable.',
-    'onboarding.configure.details.title': 'Configuration',
-    'onboarding.configure.details.description': 'Configure where your application is hosted and callback settings',
-    'onboarding.configure.details.wallet.title': 'Connect Your Wallet',
-    'onboarding.configure.details.wallet.description':
-      'Pick a known wallet, or choose Custom to add your own client ID.',
     'onboarding.configure.details.wallet.duplicate.known':
-      'A {{vendor}} wallet application already exists — each wallet can be connected only once.',
+      'A {{vendor}} wallet application already exists. Each wallet can be connected only once.',
     'onboarding.configure.details.wallet.duplicate.custom':
       'An application with this client ID already exists. Enter a different client ID.',
+    'onboarding.configure.details.redirectUris.placeholder': 'https://example.com/callback',
+    'onboarding.configure.details.postLogoutRedirectUris.placeholder': 'https://example.com/logged-out',
+    'onboarding.configure.details.urls.title': 'URLs',
     'onboarding.configure.details.hostingUrl.label': 'Where is your application hosted?',
     'onboarding.configure.details.hostingUrl.placeholder': 'https://myapp.example.com',
     'onboarding.configure.details.hostingUrl.helperText': 'The URL where users will access your application',
@@ -2242,14 +2295,12 @@ const translations = {
     'onboarding.configure.details.callbackMode.same': 'Same as Application Access URL',
     'onboarding.configure.details.callbackMode.custom': 'Custom URL',
     'onboarding.configure.details.mobile.title': 'Mobile Application Configuration',
-    'onboarding.configure.details.mobile.description':
-      'Configure the deep link or universal link for your mobile application',
     'onboarding.configure.details.mobile.info':
       'Deep links (e.g., myapp://callback) or universal links (e.g., https://example.com/callback) are used to redirect users back to your mobile app after authentication.',
     'onboarding.configure.details.deeplink.label': 'Deep Link / Universal Link',
     'onboarding.configure.details.deeplink.placeholder': 'myapp://callback or https://example.com/callback',
     'onboarding.configure.details.deeplink.helperText': 'The custom URL scheme or universal link for your mobile app',
-    'onboarding.configure.details.passkey.title': 'Passkey Settings',
+    'onboarding.configure.details.passkey.title': 'Passkeys',
 
     'onboarding.configure.passkey.title': 'Passkey Configuration',
     'onboarding.configure.passkey.description': 'Configure the Relying Party details for Passkey authentication.',
@@ -2259,10 +2310,6 @@ const translations = {
     'onboarding.configure.details.relyingPartyName.label': 'Relying Party Name',
     'onboarding.configure.details.relyingPartyName.placeholder': 'e.g., My Application',
     'onboarding.configure.details.relyingPartyName.helperText': 'A user-friendly name for the Relying Party',
-    'onboarding.configure.details.noConfigRequired.title': 'No Additional Configuration Needed',
-    'onboarding.configure.details.noConfigRequired.description':
-      'Your application is ready to go! You can proceed to the next step.',
-    'onboarding.configure.details.userTypes.description': 'Select which user types can access this application',
     'onboarding.configure.details.userTypes.error': 'Please select at least one user type',
     'onboarding.configure.setup.title': 'Application Setup',
     'onboarding.configure.setup.subtitle': 'Select the technology stack for your application',
@@ -2299,7 +2346,7 @@ const translations = {
     'onboarding.configure.oauth.grantTypes.authorizationCode': 'Authorization Code',
     'onboarding.configure.oauth.grantTypes.refreshToken': 'Refresh Token',
     'onboarding.configure.oauth.grantTypes.clientCredentials': 'Client Credentials',
-    'onboarding.configure.oauth.tokenEndpointAuthMethod.label': 'Token Endpoint Authentication Method',
+    'onboarding.configure.oauth.tokenEndpointAuthMethod.label': 'Client Authentication Method',
     'onboarding.configure.oauth.tokenEndpointAuthMethod.clientSecretBasic': 'Client Secret Basic',
     'onboarding.configure.oauth.tokenEndpointAuthMethod.clientSecretPost': 'Client Secret Post',
     'onboarding.configure.oauth.tokenEndpointAuthMethod.none': 'None',
@@ -2397,7 +2444,6 @@ const translations = {
     'onboarding.summary.guides.divider': 'or',
     'clientSecret.saveTitle': 'Save Your Client Secret',
     'clientSecret.saveSubtitle': "This is the only time you'll see this secret. Store it somewhere safe.",
-    'clientSecret.appNameLabel': 'App Name',
     'clientSecret.warning':
       "Make sure to copy your client secret now. You won't be able to see it again for security reasons.",
     'clientSecret.clientIdLabel': 'Client ID',
@@ -2464,7 +2510,7 @@ const translations = {
     'edit.advanced.responseTypes.notApplicable': 'Response types apply only to the authorization code flow.',
     'edit.advanced.tokenEndpointAuthMethod.placeholder': 'Select authentication method',
     'edit.advanced.tokenEndpointAuthMethod.hint':
-      'Defines how the client authenticates at the token endpoint. Use client_secret_basic or client_secret_post for confidential clients, and none for public clients.',
+      'Defines how the client authenticates at protected endpoints. Use a confidential method (for example, client_secret_basic, client_secret_post, or private_key_jwt) for confidential clients, and none for public clients.',
     'edit.advanced.tokenEndpointAuthMethod.lockedHint': 'Locked to "none" because the client is public.',
     'edit.advanced.lockedByTemplate': 'Set by template',
     'edit.advanced.certificate.intro': 'Configure certificates for client authentication and token encryption.',
@@ -2575,6 +2621,19 @@ const translations = {
       'Allowed URIs to redirect to after logout. A post_logout_redirect_uri passed to the logout endpoint must match one of these.',
     'edit.general.postLogoutRedirectUris.addUri': 'Add URI',
     'edit.general.postLogoutRedirectUris.error.invalid': 'Invalid Redirect: Please enter a valid URL.',
+    'edit.general.postLogoutRedirectUris.sameAsRedirect.title': 'Use the same URLs for post-logout redirect',
+    'edit.general.postLogoutRedirectUris.sameAsRedirect.description':
+      'Reuse the redirect URIs above instead of maintaining a separate list',
+    'onboarding.configure.details.devServer.banner': 'Using {{label}}? Its dev server runs on',
+    'onboarding.configure.details.devServer.byDefault': 'by default.',
+    'onboarding.configure.details.devServer.addToRedirectAndCors': 'Add it to redirect URIs & CORS origins',
+    'onboarding.configure.details.devServer.addToRedirect': 'Add it to redirect URIs',
+    'onboarding.configure.details.corsOrigins.title': 'CORS Allowed Origins',
+    'onboarding.configure.details.corsOrigins.description':
+      'Origins allowed to make cross-origin requests to the token and userinfo endpoints.',
+    'onboarding.configure.details.corsOrigins.placeholder': 'https://example.com',
+    'onboarding.configure.details.corsOrigins.addOrigin': 'Add Origin',
+    'onboarding.configure.details.corsOrigins.error.invalid': 'Enter a valid origin, e.g. https://app.example.com.',
     'edit.general.allowedUserTypes.placeholder': 'Select user types',
     'edit.general.allowedUserTypes.hint': 'Users of these types can authenticate with this application',
     'edit.general.applicationUrl.hint': 'The homepage URL of your application',
@@ -2594,9 +2653,9 @@ const translations = {
     'edit.general.sections.dangerZone.deleteApplication.button': 'Delete Application',
 
     // Flows section
-    'edit.flows.labels.authFlow': 'Authentication Flow',
+    'edit.flows.labels.authFlow': 'Sign-in Flow',
     'edit.flows.labels.authFlow.description': 'Choose the flow that handles user login and authentication.',
-    'edit.flows.labels.registrationFlow': 'Registration Flow',
+    'edit.flows.labels.registrationFlow': 'Sign-up Flow',
     'edit.flows.labels.registrationFlow.description': 'Choose the flow that handles user sign-up and account creation.',
     'edit.flows.authFlow.placeholder': 'Select an authentication flow',
     'edit.flows.authFlow.hint': 'Select the flow that handles user sign-in for this {{entity}}.',
@@ -2706,9 +2765,27 @@ const translations = {
     'edit.token.id_token.encryption_alg_placeholder': 'Select encryption algorithm',
     'edit.token.id_token.encryption_enc_placeholder': 'Select content encryption',
     'edit.token.user_info.response_type_placeholder': 'Select response type',
-    'edit.token.user_info.signing_alg_placeholder': 'Select signing algorithm',
     'edit.token.user_info.encryption_alg_placeholder': 'Select encryption algorithm',
     'edit.token.user_info.encryption_enc_placeholder': 'Select content encryption',
+    'edit.token.encryption_requires_certificate':
+      'Encrypted formats require an OAuth client certificate (JWKS or JWKS URI) configured under the {{location}} tab.',
+    'edit.token.signed_with': 'Signed with {{alg}}.',
+    'edit.token.id_token.response_type_options.JWT.label': 'Signed (JWS)',
+    'edit.token.id_token.response_type_options.JWT.description': 'Signed with the server key. Recommended default.',
+    'edit.token.id_token.response_type_options.JWE.label': 'Encrypted (JWE)',
+    'edit.token.id_token.response_type_options.JWE.description': 'Encrypted to the client certificate.',
+    'edit.token.id_token.response_type_options.NESTED_JWT.label': 'Signed then encrypted (Nested JWT)',
+    'edit.token.id_token.response_type_options.NESTED_JWT.description':
+      'Signed with the server key, then encrypted to the client certificate.',
+    'edit.token.user_info.response_type_options.JSON.label': 'Plain JSON',
+    'edit.token.user_info.response_type_options.JSON.description': 'Unsigned JSON response. Recommended default.',
+    'edit.token.user_info.response_type_options.JWS.label': 'Signed (JWS)',
+    'edit.token.user_info.response_type_options.JWS.description': 'Signed with the server key.',
+    'edit.token.user_info.response_type_options.JWE.label': 'Encrypted (JWE)',
+    'edit.token.user_info.response_type_options.JWE.description': 'Encrypted to the client certificate.',
+    'edit.token.user_info.response_type_options.NESTED_JWT.label': 'Signed then encrypted (Nested JWT)',
+    'edit.token.user_info.response_type_options.NESTED_JWT.description':
+      'Signed with the server key, then encrypted to the client certificate.',
 
     // Advanced section
     'edit.advanced.labels.oauth2Config': 'OAuth2 Configuration',
@@ -2719,7 +2796,7 @@ const translations = {
     'edit.advanced.labels.pkceRequired': 'PKCE Required',
     'edit.advanced.labels.requirePAR': 'Require Pushed Authorization Requests',
     'edit.advanced.par.hint': 'Require the client to use the PAR endpoint before authorization.',
-    'edit.advanced.labels.tokenEndpointAuthMethod': 'Token Endpoint Auth Method',
+    'edit.advanced.labels.tokenEndpointAuthMethod': 'Client Authentication Method',
     'edit.advanced.labels.certificate': 'Certificate',
     'edit.advanced.labels.certificateType': 'Certificate Type',
     'edit.advanced.labels.metadata': 'Metadata',
@@ -2733,6 +2810,10 @@ const translations = {
     'edit.advanced.certificate.placeholder.jwks': 'Enter JWKS JSON',
     'edit.advanced.certificate.hint.jwksUri': 'URL to the JWKS endpoint',
     'edit.advanced.certificate.hint.jwks': 'JSON Web Key Set',
+    'edit.advanced.certificate.error.required': 'A certificate is required for private_key_jwt authentication.',
+    'edit.advanced.certificate.error.valueRequired': 'Please enter a value for the selected certificate type.',
+    'edit.advanced.certificate.error.encryptionDependsOnCert':
+      'This certificate is used to encrypt the ID token or UserInfo response. Change those formats to a non-encrypted type before removing the certificate.',
     'edit.advanced.labels.acrValues': 'ACR Values',
     'edit.advanced.acrValues.intro': 'Authentication context classes permitted for this application.',
     'edit.advanced.acrValues.placeholder': 'Select ACR values',
@@ -2762,46 +2843,15 @@ const translations = {
     'delete.success': 'Application deleted successfully.',
     'delete.error': 'Failed to delete application. Please try again.',
     'regenerateSecret.snackbar.success': 'Client secret regenerated successfully.',
-    'errors.APP-1001': 'The requested application could not be found.',
-    'errors.APP-1002': 'The provided application ID is invalid or empty.',
-    'errors.APP-1003': 'The provided client ID is invalid or empty.',
-    'errors.APP-1004': 'The provided application name is invalid or empty.',
-    'errors.APP-1005': 'The provided application URL is not a valid URI.',
-    'errors.APP-1006': 'The provided logo URL is not a valid URI.',
-    'errors.APP-1007': 'The provided authentication flow ID is invalid.',
-    'errors.APP-1008': 'The provided registration flow ID is invalid.',
-    'errors.APP-1009': 'The provided inbound authentication configuration is invalid.',
-    'errors.APP-1010': 'One or more provided grant types are invalid.',
-    'errors.APP-1011': 'One or more provided response types are invalid.',
-    'errors.APP-1012': 'One or more provided redirect URIs are not valid URIs.',
-    'errors.APP-1013': 'The provided token endpoint authentication method is invalid.',
-    'errors.APP-1014': 'The provided certificate type is not supported.',
-    'errors.APP-1015': 'The provided certificate value is invalid.',
-    'errors.APP-1016': 'The provided JWKS URI is not a valid URI.',
-    'errors.APP-1017': 'The provided application object is nil.',
-    'errors.APP-1018': 'The request body is malformed or contains invalid data.',
-    'errors.APP-1019': 'An error occurred while processing the application certificate.',
-    'errors.APP-1020': 'An application with the same name already exists.',
-    'errors.APP-1021': 'An application with the same client ID already exists.',
-    'errors.APP-1022': "'jwks_uri' must use HTTPS scheme.",
-    'errors.APP-1023': 'The public client configuration is invalid.',
-    'errors.APP-1024': 'The OAuth configuration is invalid.',
-    'errors.APP-1025': 'One or more user types in allowed_user_types do not exist in the system.',
-    'errors.APP-1026': 'The specified theme configuration does not exist.',
-    'errors.APP-1027': 'The specified layout configuration does not exist.',
-    'errors.APP-1028': 'An error occurred while retrieving the flow definition.',
-    'errors.APP-1029': 'The result limit has been exceeded.',
-    'errors.APP-1030': 'The application is declarative and cannot be modified or deleted.',
-    'errors.APP-1031': 'Failed to synchronize consent configurations for the application.',
-    'errors.APP-1032': 'Cannot enable consent for the application as the consent service is not enabled.',
-    'errors.APP-1033': 'One or more ACR values in acr_values are not recognized by the system.',
-    'errors.APP-1034': 'An application may have at most one inbound auth config per protocol.',
-    'errors.APP-1035': 'One or more user attributes are not valid for the configured allowed user types.',
-    'errors.APP-1036': 'The provided recovery flow ID is invalid.',
-    'errors.APP-1037': 'Native flow execution is not allowed for single-page applications as it requires PKCE.',
-    'errors.APP-1038': 'Attestation configuration may configure only one platform (android or apple) at a time.',
-    'errors.APP-5001': 'An unexpected error occurred while processing the request.',
-    'errors.APP-5002': 'An error occurred while performing the certificate operation.',
+    'errors.APP-1012': 'One or more redirect URIs are not valid.',
+    'errors.APP-1015': 'The certificate value is invalid. Check the JWKS content and try again.',
+    'errors.APP-1016': 'The JWKS URL is not valid.',
+    'errors.APP-1020': 'An application with this name already exists. Choose a different name.',
+    'errors.APP-1022': 'The JWKS URL must use HTTPS.',
+    'errors.APP-1030': 'This application is managed declaratively and cannot be edited or deleted.',
+    'errors.APP-1035': 'One or more user attributes are not valid for the selected user types.',
+    'errors.APP-1039':
+      "A referenced flow does not match the application's flow configuration. Ensure the registration and authentication flows are consistent.",
   },
 
   // ============================================================================
@@ -3116,6 +3166,10 @@ const translations = {
   // ============================================================================
   validations: {
     'form.field.required': '{{field}} is required.',
+    'field.email.invalid': 'Please enter a valid email address.',
+    'validation.pattern.invalid': '{{field}} format is invalid.',
+    'validation.minLength.invalid': '{{field}} must be at least {{minLength}} characters.',
+    'validation.maxLength.invalid': '{{field}} must not exceed {{maxLength}} characters.',
   },
 
   // ============================================================================
@@ -3286,14 +3340,22 @@ const translations = {
     // Email executor
     'core.executions.email.description': 'Configure the email executor settings.',
     'core.executions.email.emailTemplate.label': 'Email Template',
-    'core.executions.email.emailTemplate.placeholder': 'e.g., UserInvite',
+    'core.executions.email.emailTemplate.placeholder': 'Select an email template',
     'core.executions.email.emailTemplate.hint': 'The email template scenario to use when sending the email.',
 
     // SMS executor
     'core.executions.sms.description': 'Configure the SMS executor settings.',
     'core.executions.sms.smsTemplate.label': 'SMS Template',
-    'core.executions.sms.smsTemplate.placeholder': 'e.g., OTPVerification',
+    'core.executions.sms.smsTemplate.placeholder': 'Select an SMS template',
     'core.executions.sms.smsTemplate.hint': 'The SMS template scenario to use when sending the message.',
+
+    // Template scenarios shared by the Email and SMS executors
+    'core.executions.templateScenarios.userInvite': 'User Invite',
+    'core.executions.templateScenarios.magicLink': 'Magic Link',
+    'core.executions.templateScenarios.selfRegistration': 'Self Registration',
+    'core.executions.templateScenarios.otp': 'OTP Verification',
+    'core.executions.templateScenarios.passwordRecovery': 'Password Recovery',
+    'core.executions.templateScenarios.cibaNotification': 'CIBA Notification',
 
     // OpenID4VP verifier executor
     'core.executions.openid4vp.description':
@@ -4107,6 +4169,7 @@ const translations = {
     'common.preview.toolbar.viewports.desktop.label': 'Desktop (1440px)',
     'common.preview.toolbar.actions.zoom_out.tooltip': 'Zoom out',
     'common.preview.toolbar.actions.zoom_in.tooltip': 'Zoom in',
+    'common.preview.toolbar.actions.cycle_color_scheme.tooltip': 'Toggle color scheme',
     'common.item_card.actions.open_in_builder.label': 'Open in builder',
     'common.section_header.badges.coming_soon.label': 'COMING SOON',
   },
@@ -4131,10 +4194,9 @@ const translations = {
     'next_steps.section.title': 'Quick Links',
 
     // Invite Members card
-    'next_steps.invite_members.title': 'Invite Members',
-    'next_steps.invite_members.description': 'Add collaborators to help manage your organization and act as a backup.',
+    'next_steps.invite_members.title': 'Add Users',
+    'next_steps.invite_members.description': 'Add or invite collaborators to help manage your organization.',
     'next_steps.invite_members.actions.primary.label': 'Add User',
-    'next_steps.invite_members.actions.secondary.label': 'Invite User',
     'next_steps.invite_members.status.count': '{{count}} member',
     'next_steps.invite_members.status.count_other': '{{count}} members',
     'next_steps.invite_members.status.empty': 'No members yet — add collaborators',
@@ -4662,9 +4724,9 @@ const translations = {
     'cors.validation.invalid': 'Enter a valid origin (e.g. https://app.example.com) or a valid regular expression.',
     'cors.validation.duplicate': 'This origin is already in the list.',
     'cors.unsavedChanges': 'You have unsaved changes',
-    'cors.discard': 'Discard',
+    'cors.reset': 'Reset',
     'cors.save': 'Save changes',
-    'cors.saving': 'Saving…',
+    'cors.saving': 'Saving...',
     'cors.load.error': 'Failed to load allowed origins.',
     'cors.save.success': 'Allowed origins updated.',
     'cors.save.error': 'Failed to update allowed origins.',

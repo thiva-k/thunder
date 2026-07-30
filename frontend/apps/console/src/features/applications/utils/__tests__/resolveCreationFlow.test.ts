@@ -27,27 +27,28 @@ const CustomPlatformTemplate = CustomPlatformTemplateJson as ApplicationTemplate
 const MCPClientTemplate = MCPClientTemplateJson as ApplicationTemplate;
 
 describe('resolveCreationFlow', () => {
-  it('returns the default user-facing flow (7 steps) when template is null', () => {
+  it('returns the default user-facing flow (5 steps) when template is null', () => {
     const flow = resolveCreationFlow(null);
     expect(flow.steps).toEqual([
-      ApplicationCreateFlowStep.NAME,
-      ApplicationCreateFlowStep.ORGANIZATION_UNIT,
+      ApplicationCreateFlowStep.DETAILS,
+      ApplicationCreateFlowStep.SECURITY,
       ApplicationCreateFlowStep.DESIGN,
-      ApplicationCreateFlowStep.OPTIONS,
-      ApplicationCreateFlowStep.EXPERIENCE,
       ApplicationCreateFlowStep.CONFIGURE,
       ApplicationCreateFlowStep.COMPLETE,
+    ]);
+    expect(flow.previewSteps).toEqual([
+      ApplicationCreateFlowStep.DETAILS,
+      ApplicationCreateFlowStep.SECURITY,
+      ApplicationCreateFlowStep.DESIGN,
     ]);
   });
 
   it('returns the default user-facing flow when the template has no creationFlow field', () => {
     const flow = resolveCreationFlow({id: 'react', displayName: 'React'});
     expect(flow.steps).toEqual([
-      ApplicationCreateFlowStep.NAME,
-      ApplicationCreateFlowStep.ORGANIZATION_UNIT,
+      ApplicationCreateFlowStep.DETAILS,
+      ApplicationCreateFlowStep.SECURITY,
       ApplicationCreateFlowStep.DESIGN,
-      ApplicationCreateFlowStep.OPTIONS,
-      ApplicationCreateFlowStep.EXPERIENCE,
       ApplicationCreateFlowStep.CONFIGURE,
       ApplicationCreateFlowStep.COMPLETE,
     ]);
@@ -57,32 +58,30 @@ describe('resolveCreationFlow', () => {
     const flow = resolveCreationFlow({
       id: 'backend',
       creationFlow: {
-        steps: [ApplicationCreateFlowStep.STACK, ApplicationCreateFlowStep.NAME, ApplicationCreateFlowStep.COMPLETE],
+        steps: [ApplicationCreateFlowStep.STACK, ApplicationCreateFlowStep.DETAILS, ApplicationCreateFlowStep.COMPLETE],
+        previewSteps: [],
       },
     });
     expect(flow.steps).toEqual([
       ApplicationCreateFlowStep.STACK,
-      ApplicationCreateFlowStep.NAME,
+      ApplicationCreateFlowStep.DETAILS,
       ApplicationCreateFlowStep.COMPLETE,
     ]);
   });
 
-  it('returns only NAME and COMPLETE steps for the custom platform template', () => {
+  it('returns only DETAILS and COMPLETE steps, with no preview steps, for the custom platform template', () => {
     const flow = resolveCreationFlow(CustomPlatformTemplate);
-    expect(flow.steps).toEqual([
-      ApplicationCreateFlowStep.NAME,
-      ApplicationCreateFlowStep.ORGANIZATION_UNIT,
-      ApplicationCreateFlowStep.COMPLETE,
-    ]);
+    expect(flow.steps).toEqual([ApplicationCreateFlowStep.DETAILS, ApplicationCreateFlowStep.COMPLETE]);
+    expect(flow.previewSteps).toEqual([]);
   });
 
-  it('returns NAME, ORGANIZATION_UNIT, CLIENT_TYPE, and COMPLETE steps for the mcp-client template', () => {
+  it('returns DETAILS, CLIENT_TYPE, and COMPLETE steps, with no preview steps, for the mcp-client template', () => {
     const flow = resolveCreationFlow(MCPClientTemplate);
     expect(flow.steps).toEqual([
-      ApplicationCreateFlowStep.NAME,
-      ApplicationCreateFlowStep.ORGANIZATION_UNIT,
+      ApplicationCreateFlowStep.DETAILS,
       ApplicationCreateFlowStep.CLIENT_TYPE,
       ApplicationCreateFlowStep.COMPLETE,
     ]);
+    expect(flow.previewSteps).toEqual([]);
   });
 });

@@ -154,11 +154,13 @@ export default function SettingsCard({
           </Typography>
         )}
       </Box>
-      <Divider />
       {(!hasToggle || enabled) && children && (
-        <Paper {...contentProps} sx={{p: 3, ...(contentSx as object)}}>
-          {children}
-        </Paper>
+        <>
+          <Divider />
+          <Paper {...contentProps} sx={{p: 3, ...(contentSx as object)}}>
+            {children}
+          </Paper>
+        </>
       )}
     </Paper>
   );

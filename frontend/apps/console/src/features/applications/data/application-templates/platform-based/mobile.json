@@ -3,6 +3,10 @@
   "type": "mobile",
   "displayName": "Mobile",
   "description": "Native mobile application",
+  "creationFlow": {
+    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
+  },
   "defaults": {
     "name": "Mobile Application",
     "inboundAuthConfig": [

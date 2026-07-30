@@ -294,7 +294,7 @@ export default function OAuth2ConfigSection({
         {/* Token Endpoint Auth Method */}
         <FormControl fullWidth size="small">
           <FormLabel htmlFor="token_endpoint_auth_method">
-            {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Token Endpoint Auth Method')}
+            {t('applications:edit.advanced.labels.tokenEndpointAuthMethod', 'Client Authentication Method')}
           </FormLabel>
           <Select
             id="token_endpoint_auth_method"
@@ -335,7 +335,7 @@ export default function OAuth2ConfigSection({
                   )
               : t(
                   'applications:edit.advanced.tokenEndpointAuthMethod.hint',
-                  'Defines how the client authenticates at the token endpoint.',
+                  'Defines how the client authenticates at protected endpoints.',
                 )}
           </Typography>
         </FormControl>

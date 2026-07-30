@@ -25,6 +25,10 @@ const (
 	// TokenTypeAccessToken is the JWT type header value for access tokens as defined in RFC 9068.
 	TokenTypeAccessToken = "at+jwt"
 
+	// TokenTypeAccessTokenWithPrefix is the media-type form of the access token typ header. RFC 9068
+	// requires validators to accept both this and TokenTypeAccessToken.
+	TokenTypeAccessTokenWithPrefix = "application/at+jwt"
+
 	// TokenTypeIDJAG is the JWT type header value for an Identity Assertion Authorization Grant
 	// (draft-ietf-oauth-identity-assertion-authz-grant).
 	TokenTypeIDJAG = "oauth-id-jag+jwt" //nolint:gosec // JWT typ header value, not a credential

@@ -3,6 +3,10 @@
   "type": "fullstack",
   "displayName": "Express",
   "description": "Server-side Node.js application built with Express",
+  "creationFlow": {
+    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
+  },
   "defaults": {
     "name": "Express Application",
     "inboundAuthConfig": [

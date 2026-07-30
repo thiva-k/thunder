@@ -19,34 +19,31 @@
 import userEvent from '@testing-library/user-event';
 import {render, screen} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, vi} from 'vitest';
+import {ApplicationCreateFlowSignInApproach} from '../../../models/application-create-flow';
 import ConfigureDesign, {type ConfigureDesignProps} from '../ConfigureDesign';
 
 // Mock the Packages
-vi.mock('@thunderid/components', () => ({
-  LogoPicker: vi.fn(({value, onChange}: {value: string; onChange: (value: string) => void}) => (
-    <button type="button" data-testid="logo-picker" onClick={() => onChange('emoji:🚀')}>
-      {value}
-    </button>
-  )),
-}));
-vi.mock('@thunderid/react', () => ({
-  buildAvatarSpec: vi.fn(() => 'avatar:shape=rounded,variant=anonymous_entity,content=briefcase,colors=0'),
-  pickAnonymousEntityName: vi.fn(() => 'briefcase'),
-}));
 vi.mock('@thunderid/design');
 
-const {useGetThemes, useGetTheme} = await import('@thunderid/design');
+vi.mock('@/features/applications/hooks/useApplicationCreateContext', () => ({
+  default: () => ({
+    ouDefaults: {signIn: false, signUp: false, recovery: false, signOut: false, theme: false, layout: false},
+    selectedTemplateConfig: null,
+  }),
+}));
+
+const {useGetThemes, useGetTheme, useGetLayouts, useGetLayout} = await import('@thunderid/design');
 
 describe('ConfigureDesign', () => {
-  const mockOnLogoSelect = vi.fn();
   const mockOnThemeSelect = vi.fn();
-
-  const mockDefaultEntityLogo = 'avatar:shape=rounded,variant=anonymous_entity,content=briefcase,colors=0';
+  const mockOnLayoutSelect = vi.fn();
 
   const defaultProps: ConfigureDesignProps = {
-    appLogo: null,
-    onLogoSelect: mockOnLogoSelect,
     onThemeSelect: mockOnThemeSelect,
+    onLayoutSelect: mockOnLayoutSelect,
+    selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+    onApproachChange: vi.fn(),
+    showApproachSection: false,
   };
 
   beforeEach(() => {
@@ -63,6 +60,18 @@ describe('ConfigureDesign', () => {
       isLoading: false,
       error: null,
     } as ReturnType<typeof useGetTheme>);
+
+    vi.mocked(useGetLayouts).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetLayouts>);
+
+    vi.mocked(useGetLayout).mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useGetLayout>);
   });
 
   const renderComponent = (props: Partial<ConfigureDesignProps> = {}) =>
@@ -80,51 +89,53 @@ describe('ConfigureDesign', () => {
     expect(screen.getByText('Customize the appearance of your application')).toBeInTheDocument();
   });
 
-  it('should render logo section title', () => {
-    renderComponent();
-
-    expect(screen.getByRole('heading', {name: 'Application Logo'})).toBeInTheDocument();
-  });
-
-  it('should render the LogoPicker with the current logo value', () => {
-    renderComponent({appLogo: 'emoji:🐼'});
-
-    expect(screen.getByTestId('logo-picker')).toHaveTextContent('emoji:🐼');
-  });
-
-  it('should auto-select a default entity avatar when appLogo is null', () => {
-    renderComponent();
-
-    expect(mockOnLogoSelect).toHaveBeenCalledWith(mockDefaultEntityLogo);
-  });
-
-  it('should not auto-select when appLogo is already set', () => {
-    renderComponent({appLogo: 'emoji:🐼'});
-
-    expect(mockOnLogoSelect).not.toHaveBeenCalled();
-  });
-
-  it('should call onLogoSelect when the LogoPicker fires onChange', async () => {
-    const user = userEvent.setup();
-    renderComponent({appLogo: 'emoji:🐼'});
-
-    await user.click(screen.getByTestId('logo-picker'));
-
-    expect(mockOnLogoSelect).toHaveBeenCalledWith('emoji:🚀');
-  });
-
-  it('should handle null appLogo prop without errors', () => {
-    renderComponent({appLogo: null});
-
-    expect(screen.getByRole('heading', {level: 1})).toBeInTheDocument();
-  });
-
   describe('onReadyChange callback', () => {
     it('should call onReadyChange with true on mount', () => {
       const mockOnReadyChange = vi.fn();
       renderComponent({onReadyChange: mockOnReadyChange});
 
       expect(mockOnReadyChange).toHaveBeenCalledWith(true);
+    });
+  });
+
+  describe('Sign-In Approach', () => {
+    it('renders both approach options and reflects the selected one', () => {
+      renderComponent({
+        showApproachSection: true,
+        selectedApproach: ApplicationCreateFlowSignInApproach.EMBEDDED,
+      });
+
+      expect(screen.getByText('Sign-In Approach')).toBeInTheDocument();
+      expect(screen.getByText(/Redirect to .* Gate/)).toBeInTheDocument();
+      expect(screen.getByText('Bring Your Own UI')).toBeInTheDocument();
+      expect(screen.getAllByRole('radio')[1]).toBeChecked();
+    });
+
+    it('calls onApproachChange when a different card is clicked', async () => {
+      const onApproachChange = vi.fn();
+      const user = userEvent.setup();
+
+      renderComponent({
+        showApproachSection: true,
+        selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+        onApproachChange,
+      });
+
+      await user.click(screen.getAllByRole('radio')[1]);
+
+      expect(onApproachChange).toHaveBeenCalledWith(ApplicationCreateFlowSignInApproach.EMBEDDED);
+    });
+
+    it('hides the embedded option when allowEmbeddedApproach is false', () => {
+      renderComponent({
+        showApproachSection: true,
+        allowEmbeddedApproach: false,
+        selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+      });
+
+      expect(screen.getByText(/Redirect to .* Gate/)).toBeInTheDocument();
+      expect(screen.queryByText('Bring Your Own UI')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('radio')).toHaveLength(1);
     });
   });
 
@@ -241,6 +252,57 @@ describe('ConfigureDesign', () => {
       await user.click(secondThemeCard);
 
       expect(mockOnThemeSelectLocal).toHaveBeenCalledWith('theme-1', mockThemeDetails.theme);
+    });
+  });
+
+  describe('Layout selection', () => {
+    const mockLayoutDetails = {
+      id: 'layout-1',
+      displayName: 'Split Screen',
+      layout: {screens: {}},
+    };
+
+    const mockLayoutsList = [
+      {id: 'layout-1', displayName: 'Split Screen'},
+      {id: 'layout-2', displayName: 'Centered Card'},
+    ];
+
+    it('should call onLayoutSelect with layout details when layout is loaded, even though the picker UI is hidden', () => {
+      vi.mocked(useGetLayouts).mockReturnValue({
+        data: {layouts: mockLayoutsList},
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayouts>);
+
+      vi.mocked(useGetLayout).mockReturnValue({
+        data: mockLayoutDetails,
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayout>);
+
+      renderComponent();
+
+      expect(mockOnLayoutSelect).toHaveBeenCalledWith('layout-1', mockLayoutDetails.layout);
+    });
+
+    it('should never render the layout section, even when layouts are available', () => {
+      vi.mocked(useGetLayouts).mockReturnValue({
+        data: {layouts: mockLayoutsList},
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayouts>);
+
+      vi.mocked(useGetLayout).mockReturnValue({
+        data: mockLayoutDetails,
+        isLoading: false,
+        error: null,
+      } as unknown as ReturnType<typeof useGetLayout>);
+
+      renderComponent();
+
+      expect(screen.queryByText('Layout')).not.toBeInTheDocument();
+      expect(screen.queryByText('Split Screen')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('layout-card-layout-1')).not.toBeInTheDocument();
     });
   });
 });

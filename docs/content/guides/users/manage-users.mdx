@@ -58,6 +58,12 @@ The attributes available during onboarding depend on the selected user type. See
 3. To update group membership, add or remove groups on the **Groups** tab.
 4. Click **Save**.
 
+If the user type schema changed since the user was last saved, saving the user reconciles its stored attributes with the current schema:
+
+- Values for attributes that were removed from the schema are discarded.
+- Values for optional attributes that no longer conform to the schema are discarded.
+- Values for required attributes that no longer conform to the schema must be corrected before the save can succeed.
+
 ### Update User Credentials
 
 Credential fields (such as passwords) are write-only and cannot be viewed. To set new credential values for a user:

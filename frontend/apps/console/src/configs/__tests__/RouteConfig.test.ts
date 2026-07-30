@@ -31,7 +31,6 @@ describe('RouteConfig', () => {
     expect(RouteConfig.users.detail('user-1')).toBe('/users/user-1');
     expect(RouteConfig.users.add()).toBe('/users/add');
     expect(RouteConfig.users.addCreate()).toBe('/users/add/create');
-    expect(RouteConfig.users.addInvite()).toBe('/users/add/invite');
   });
 
   it('userTypes builds paths from the segment', () => {
@@ -112,8 +111,7 @@ describe('RouteConfig', () => {
   it('flows builds paths from the segment', () => {
     expect(RouteConfig.flows.list()).toBe('/flows');
     expect(RouteConfig.flows.create()).toBe('/flows/create');
-    expect(RouteConfig.flows.byType('signin')).toBe('/flows/signin');
-    expect(RouteConfig.flows.detail('signin', 'flow-1')).toBe('/flows/signin/flow-1');
+    expect(RouteConfig.flows.detail('flow-1')).toBe('/flows/flow-1');
   });
 
   it('design builds paths from the segment', () => {
