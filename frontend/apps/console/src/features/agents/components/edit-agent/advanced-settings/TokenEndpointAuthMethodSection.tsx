@@ -53,15 +53,15 @@ export default function TokenEndpointAuthMethodSection({
 
   return (
     <SettingsCard
-      title={t('agents:edit.credentials.tokenEndpointAuthMethod.title', 'Token Endpoint Auth Method')}
+      title={t('agents:edit.credentials.tokenEndpointAuthMethod.title', 'Client Authentication Method')}
       description={t(
         'agents:edit.credentials.tokenEndpointAuthMethod.description',
-        'Defines how this agent authenticates when requesting tokens.',
+        'Defines how this agent authenticates at protected endpoints.',
       )}
     >
       <FormControl fullWidth size="small">
         <FormLabel htmlFor="agent_token_endpoint_auth_method">
-          {t('agents:edit.credentials.tokenEndpointAuthMethod.title', 'Token Endpoint Auth Method')}
+          {t('agents:edit.credentials.tokenEndpointAuthMethod.title', 'Client Authentication Method')}
         </FormLabel>
         <Select
           id="agent_token_endpoint_auth_method"
@@ -97,7 +97,7 @@ export default function TokenEndpointAuthMethodSection({
               )
             : t(
                 'agents:edit.credentials.tokenEndpointAuthMethod.hint',
-                'How this agent proves its identity when it calls the token endpoint.',
+                'How this agent proves its identity at protected endpoints.',
               )}
         </Typography>
       </FormControl>

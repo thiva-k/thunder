@@ -1144,12 +1144,11 @@ const translations = {
     'edit.credentials.clientSecret.regenerateHint':
       'Client secret was shown once at creation. Regenerate to issue a new one.',
     'edit.credentials.clientSecret.regenerateButton': 'Regenerate secret',
-    'edit.credentials.tokenEndpointAuthMethod.title': 'Token Endpoint Auth Method',
+    'edit.credentials.tokenEndpointAuthMethod.title': 'Client Authentication Method',
     'edit.credentials.tokenEndpointAuthMethod.description':
-      'Defines how this agent authenticates when requesting tokens.',
+      'Defines how this agent authenticates at protected endpoints.',
     'edit.credentials.tokenEndpointAuthMethod.placeholder': 'Select an auth method',
-    'edit.credentials.tokenEndpointAuthMethod.hint':
-      'How this agent proves its identity when it calls the token endpoint.',
+    'edit.credentials.tokenEndpointAuthMethod.hint': 'How this agent proves its identity at protected endpoints.',
     'edit.credentials.tokenEndpointAuthMethod.lockedHint': 'Set to "none" because this agent is a public client.',
     'edit.credentials.certificate.title': 'Certificate',
     'edit.credentials.certificate.description':
@@ -2316,7 +2315,7 @@ const translations = {
     'onboarding.configure.oauth.grantTypes.authorizationCode': 'Authorization Code',
     'onboarding.configure.oauth.grantTypes.refreshToken': 'Refresh Token',
     'onboarding.configure.oauth.grantTypes.clientCredentials': 'Client Credentials',
-    'onboarding.configure.oauth.tokenEndpointAuthMethod.label': 'Token Endpoint Authentication Method',
+    'onboarding.configure.oauth.tokenEndpointAuthMethod.label': 'Client Authentication Method',
     'onboarding.configure.oauth.tokenEndpointAuthMethod.clientSecretBasic': 'Client Secret Basic',
     'onboarding.configure.oauth.tokenEndpointAuthMethod.clientSecretPost': 'Client Secret Post',
     'onboarding.configure.oauth.tokenEndpointAuthMethod.none': 'None',
@@ -2481,7 +2480,7 @@ const translations = {
     'edit.advanced.responseTypes.notApplicable': 'Response types apply only to the authorization code flow.',
     'edit.advanced.tokenEndpointAuthMethod.placeholder': 'Select authentication method',
     'edit.advanced.tokenEndpointAuthMethod.hint':
-      'Defines how the client authenticates at the token endpoint. Use client_secret_basic or client_secret_post for confidential clients, and none for public clients.',
+      'Defines how the client authenticates at protected endpoints. Use a confidential method (for example, client_secret_basic, client_secret_post, or private_key_jwt) for confidential clients, and none for public clients.',
     'edit.advanced.tokenEndpointAuthMethod.lockedHint': 'Locked to "none" because the client is public.',
     'edit.advanced.lockedByTemplate': 'Set by template',
     'edit.advanced.certificate.intro': 'Configure certificates for client authentication and token encryption.',
@@ -2736,7 +2735,7 @@ const translations = {
     'edit.advanced.labels.pkceRequired': 'PKCE Required',
     'edit.advanced.labels.requirePAR': 'Require Pushed Authorization Requests',
     'edit.advanced.par.hint': 'Require the client to use the PAR endpoint before authorization.',
-    'edit.advanced.labels.tokenEndpointAuthMethod': 'Token Endpoint Auth Method',
+    'edit.advanced.labels.tokenEndpointAuthMethod': 'Client Authentication Method',
     'edit.advanced.labels.certificate': 'Certificate',
     'edit.advanced.labels.certificateType': 'Certificate Type',
     'edit.advanced.labels.metadata': 'Metadata',
