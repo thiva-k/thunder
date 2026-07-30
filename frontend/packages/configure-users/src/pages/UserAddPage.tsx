@@ -30,6 +30,7 @@ import {
   type InviteUserRenderProps,
 } from '@thunderid/react';
 import type {ApiError} from '@thunderid/types';
+import {EMAIL_REGEX} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -310,7 +311,10 @@ function InviteUserStepContent({
             control={formControl}
             rules={{
               required: required ? `${resolve(labelText) ?? labelText} is required` : false,
-              pattern: {value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email address'},
+              pattern: {
+                value: EMAIL_REGEX,
+                message: t('validations:field.email.invalid', 'Please enter a valid email address.'),
+              },
             }}
             render={({field}) => (
               <TextField

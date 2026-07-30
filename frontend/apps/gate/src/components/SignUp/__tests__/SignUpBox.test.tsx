@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import {act} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {DesignContext, type DesignContextType} from '@thunderid/design';
 import {screen, fireEvent, waitFor, render as testRender} from '@thunderid/test-utils';
@@ -122,6 +123,9 @@ vi.mock('@thunderid/react', async () => {
       Block: 'BLOCK',
       TextInput: 'TEXT_INPUT',
       PasswordInput: 'PASSWORD_INPUT',
+      EmailInput: 'EMAIL_INPUT',
+      PhoneInput: 'PHONE_INPUT',
+      OtpInput: 'OTP_INPUT',
       Action: 'ACTION',
     },
     EmbeddedFlowEventType: {
@@ -169,7 +173,7 @@ describe('SignUpBox', () => {
       components: [],
     });
     render(<SignUpBox />);
-    expect(screen.getByText("Oops, that didn't work")).toBeInTheDocument();
+    expect(screen.getByText('Error')).toBeInTheDocument();
   });
 
   it('always shows sign-in link regardless of flow state', () => {
@@ -1759,5 +1763,187 @@ describe('SignUpBox', () => {
     });
     render(<SignUpBox />);
     expect(screen.getByTestId('thunderid-signup')).toBeInTheDocument();
+  });
+
+  it('shows email format error after debounce while typing', () => {
+    vi.useFakeTimers();
+    mockSignUpRenderProps = createMockSignUpRenderProps({
+      components: [
+        {
+          id: 'block-1',
+          type: 'BLOCK',
+          components: [
+            {
+              id: 'email-input',
+              type: 'EMAIL_INPUT',
+              ref: 'email',
+              label: 'Email',
+              required: true,
+            },
+            {
+              id: 'submit-btn',
+              type: 'ACTION',
+              eventType: 'SUBMIT',
+              label: 'Sign Up',
+              variant: 'PRIMARY',
+            },
+          ],
+        },
+      ],
+    });
+    render(<SignUpBox />);
+
+    const emailInput = screen.getByLabelText(/Email/);
+    fireEvent.change(emailInput, {target: {value: 'notanemail'}});
+
+    // Before debounce — no error
+    expect(screen.queryByText('Please enter a valid email address.')).not.toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    // After debounce — format error shown
+    expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('clears email format error after typing valid email', () => {
+    vi.useFakeTimers();
+    mockSignUpRenderProps = createMockSignUpRenderProps({
+      components: [
+        {
+          id: 'block-1',
+          type: 'BLOCK',
+          components: [
+            {
+              id: 'email-input',
+              type: 'EMAIL_INPUT',
+              ref: 'email',
+              label: 'Email',
+              required: false,
+            },
+            {
+              id: 'submit-btn',
+              type: 'ACTION',
+              eventType: 'SUBMIT',
+              label: 'Sign Up',
+              variant: 'PRIMARY',
+            },
+          ],
+        },
+      ],
+    });
+    render(<SignUpBox />);
+
+    const emailInput = screen.getByLabelText(/Email/);
+
+    // Type invalid email and wait for debounce
+    fireEvent.change(emailInput, {target: {value: 'abc'}});
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
+
+    // Type valid email and wait for debounce
+    fireEvent.change(emailInput, {target: {value: 'abc@example.com'}});
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+    expect(screen.queryByText('Please enter a valid email address.')).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('does not show format error for non-email fields after debounce', () => {
+    vi.useFakeTimers();
+    mockSignUpRenderProps = createMockSignUpRenderProps({
+      components: [
+        {
+          id: 'block-1',
+          type: 'BLOCK',
+          components: [
+            {
+              id: 'username-input',
+              type: 'TEXT_INPUT',
+              ref: 'username',
+              label: 'Username',
+              required: true,
+            },
+            {
+              id: 'submit-btn',
+              type: 'ACTION',
+              eventType: 'SUBMIT',
+              label: 'Sign Up',
+              variant: 'PRIMARY',
+            },
+          ],
+        },
+      ],
+    });
+    render(<SignUpBox />);
+
+    const usernameInput = screen.getByLabelText(/Username/);
+    fireEvent.change(usernameInput, {target: {value: 'test'}});
+
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    expect(screen.queryByText(/is required/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/valid email/)).not.toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('merges local format errors with SDK validation errors', () => {
+    vi.useFakeTimers();
+    mockSignUpRenderProps = createMockSignUpRenderProps({
+      touched: {password: true},
+      fieldErrors: {password: 'Password is too weak'},
+      components: [
+        {
+          id: 'block-1',
+          type: 'BLOCK',
+          components: [
+            {
+              id: 'email-input',
+              type: 'EMAIL_INPUT',
+              ref: 'email',
+              label: 'Email',
+              required: true,
+            },
+            {
+              id: 'password-input',
+              type: 'PASSWORD_INPUT',
+              ref: 'password',
+              label: 'Password',
+              required: true,
+            },
+            {
+              id: 'submit-btn',
+              type: 'ACTION',
+              eventType: 'SUBMIT',
+              label: 'Sign Up',
+              variant: 'PRIMARY',
+            },
+          ],
+        },
+      ],
+    });
+    render(<SignUpBox />);
+
+    // SDK error should be visible
+    expect(screen.getByText('Password is too weak')).toBeInTheDocument();
+
+    // Type invalid email to trigger local format error
+    const emailInput = screen.getByLabelText(/Email/);
+    fireEvent.change(emailInput, {target: {value: 'bad'}});
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    // Both errors should be visible
+    expect(screen.getByText('Password is too weak')).toBeInTheDocument();
+    expect(screen.getByText('Please enter a valid email address.')).toBeInTheDocument();
+    vi.useRealTimers();
   });
 });

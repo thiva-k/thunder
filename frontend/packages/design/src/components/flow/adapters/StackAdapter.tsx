@@ -32,6 +32,7 @@ interface StackAdapterProps {
   fieldErrors?: Record<string, string>;
   isLoading?: boolean;
   onInputChange?: (field: string, value: string) => void;
+  onBlur?: (field: string) => void;
   onSubmit?: (action: EmbeddedFlowComponent, inputs: Record<string, string>) => void;
   onValidate?: (components: EmbeddedFlowComponent[]) => boolean;
 }
@@ -44,6 +45,7 @@ export default function StackAdapter({
   fieldErrors = undefined,
   isLoading = false,
   onInputChange = () => null,
+  onBlur = undefined,
   onSubmit = () => null,
   onValidate = undefined,
 }: StackAdapterProps): JSX.Element {
@@ -62,6 +64,7 @@ export default function StackAdapter({
           isLoading={isLoading}
           resolve={resolve}
           onInputChange={onInputChange}
+          onBlur={onBlur}
           onSubmit={onSubmit}
           onValidate={onValidate}
           maxImageSize={STACK_IMAGE_MAX_SIZE}

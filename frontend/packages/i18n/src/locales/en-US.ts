@@ -3133,6 +3133,10 @@ const translations = {
   // ============================================================================
   validations: {
     'form.field.required': '{{field}} is required.',
+    'field.email.invalid': 'Please enter a valid email address.',
+    'validation.pattern.invalid': '{{field}} format is invalid.',
+    'validation.minLength.invalid': '{{field}} must be at least {{minLength}} characters.',
+    'validation.maxLength.invalid': '{{field}} must not exceed {{maxLength}} characters.',
   },
 
   // ============================================================================
