@@ -500,11 +500,17 @@ export default function SchemaPropertyEditor({
 
         {!disabled && (
           <Button
-            variant="outlined"
+            variant="text"
+            color="primary"
             startIcon={<Plus size={16} />}
             onClick={handleAddCustomProperty}
             fullWidth
-            sx={{py: 1.5, borderStyle: 'dashed', '&:hover': {borderStyle: 'dashed'}}}
+            sx={{
+              py: 1.5,
+              border: '1px dashed',
+              borderColor: 'divider',
+              '&:hover': {border: '1px dashed', borderColor: 'primary.main'},
+            }}
           >
             {t('userTypes:addProperty', 'Add Property')}
           </Button>

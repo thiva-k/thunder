@@ -89,7 +89,7 @@ describe('RegistrationFlowSection', () => {
         </MemoryRouter>,
       );
 
-      expect(screen.getByTestId('card-title')).toHaveTextContent('Registration Flow');
+      expect(screen.getByTestId('card-title')).toHaveTextContent('Sign-up Flow');
       expect(screen.getByTestId('card-description')).toHaveTextContent(
         'Choose the flow that handles user sign-up and account creation.',
       );

@@ -771,4 +771,78 @@ describe('OrganizationUnitTreePicker', () => {
       });
     });
   });
+
+  describe('autoSelectFirst', () => {
+    it('should call onChange with the first root organization unit when nothing is selected', async () => {
+      const onChange = vi.fn();
+      renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} onChange={onChange} autoSelectFirst />);
+
+      await waitFor(() => {
+        expect(onChange).toHaveBeenCalledWith('ou-1');
+      });
+    });
+
+    it('should not override an already-selected value', async () => {
+      const onChange = vi.fn();
+      renderWithProviders(
+        <OrganizationUnitTreePicker {...defaultProps} value="ou-2" onChange={onChange} autoSelectFirst />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Root Organization')).toBeInTheDocument();
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+
+    it('should not auto-select in rootOuId mode', async () => {
+      const rootOu: OrganizationUnit = {id: 'root-ou-1', handle: 'root-ou', name: 'Root OU', parent: null};
+      const rootOuChildren: OrganizationUnitListResponse = {
+        totalResults: 0,
+        startIndex: 1,
+        count: 0,
+        organizationUnits: [],
+      };
+
+      mockUseGetOrganizationUnit.mockReturnValue({data: rootOu, isLoading: false, error: null});
+      mockUseGetChildOrganizationUnits.mockReturnValue({data: rootOuChildren, isLoading: false, error: null});
+      const onChange = vi.fn();
+
+      renderWithProviders(
+        <OrganizationUnitTreePicker {...defaultProps} rootOuId="root-ou-1" onChange={onChange} autoSelectFirst />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText('Root OU')).toBeInTheDocument();
+      });
+
+      expect(onChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('spacious variant', () => {
+    it('should still show the "no children" placeholder text when expanded node has no children', async () => {
+      const emptyChildResponse: OrganizationUnitListResponse = {
+        totalResults: 0,
+        startIndex: 1,
+        count: 0,
+        organizationUnits: [],
+      };
+
+      mockHttpRequest.mockResolvedValue({data: emptyChildResponse});
+
+      renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} spacious />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Root Organization')).toBeInTheDocument();
+      });
+
+      const expandIcons = document.querySelectorAll('.MuiTreeItem-iconContainer');
+      fireEvent.click(expandIcons[0]);
+
+      await waitFor(() => {
+        expect(screen.getByText(t('organizationUnits:listing.treeView.noChildren'))).toBeInTheDocument();
+      });
+    });
+  });
 });

@@ -27,7 +27,7 @@ const dashedAddButtonSx: SxProps<Theme> = {
   borderRadius: 1.5,
   border: '1.5px dashed',
   borderColor: 'divider',
-  color: 'text.secondary',
+  color: 'primary.main',
   fontWeight: 500,
   textTransform: 'none',
   backgroundColor: 'action.hover',

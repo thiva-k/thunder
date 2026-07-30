@@ -39,6 +39,7 @@ import TryoutSecuringApplicationPage from './features/welcome/pages/TryoutSecuri
 import TryoutSecuringMCPPage from './features/welcome/pages/TryoutSecuringMCPPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import FullScreenLayout from './layouts/FullScreenLayout';
+import OrganizationUnitDefaultFlowsSettings from './features/organization-units/OrganizationUnitDefaultFlowsSettings';
 
 const ViewAgentTypePage = lazy(() =>
   import('@thunderid/configure-agent-types').then((m) => ({default: m.ViewAgentTypePage})),
@@ -229,7 +230,14 @@ export default function App(): JSX.Element {
               >
                 <Route element={<DashboardLayout />}>
                   <Route index element={<OrganizationUnitsListPage />} />
-                  <Route path=":id" element={<OrganizationUnitEditPage />} />
+                  <Route
+                    path=":id"
+                    element={
+                      <OrganizationUnitEditPage
+                        renderDefaultFlowsSettings={(props) => <OrganizationUnitDefaultFlowsSettings {...props} />}
+                      />
+                    }
+                  />
                 </Route>
                 <Route path="create" element={<FullScreenLayout />}>
                   <Route index element={<CreateOrganizationUnitPage />} />

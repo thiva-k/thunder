@@ -25,20 +25,16 @@ import {
 
 describe('application-create-flow models', () => {
   describe('ApplicationCreateFlowStep', () => {
-    it('should have NAME step', () => {
-      expect(ApplicationCreateFlowStep.NAME).toBe('NAME');
+    it('should have DETAILS step', () => {
+      expect(ApplicationCreateFlowStep.DETAILS).toBe('DETAILS');
+    });
+
+    it('should have SECURITY step', () => {
+      expect(ApplicationCreateFlowStep.SECURITY).toBe('SECURITY');
     });
 
     it('should have DESIGN step', () => {
       expect(ApplicationCreateFlowStep.DESIGN).toBe('DESIGN');
-    });
-
-    it('should have OPTIONS step', () => {
-      expect(ApplicationCreateFlowStep.OPTIONS).toBe('OPTIONS');
-    });
-
-    it('should have EXPERIENCE step', () => {
-      expect(ApplicationCreateFlowStep.EXPERIENCE).toBe('EXPERIENCE');
     });
 
     it('should have STACK step', () => {
@@ -57,8 +53,8 @@ describe('application-create-flow models', () => {
       expect(ApplicationCreateFlowStep.CLIENT_TYPE).toBe('CLIENT_TYPE');
     });
 
-    it('should have exactly 9 steps', () => {
-      expect(Object.keys(ApplicationCreateFlowStep)).toHaveLength(9);
+    it('should have exactly 7 steps', () => {
+      expect(Object.keys(ApplicationCreateFlowStep)).toHaveLength(7);
     });
   });
 

@@ -31,6 +31,7 @@ const {
   mockMutateAsync,
   mockUseGetAgentTypes,
   mockUseGetAgentType,
+  mockUseLocation,
 } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   mockRefetch: vi.fn(),
@@ -39,6 +40,11 @@ const {
   mockMutateAsync: vi.fn(),
   mockUseGetAgentTypes: vi.fn(),
   mockUseGetAgentType: vi.fn(),
+  mockUseLocation: vi.fn(
+    (): {
+      state: {justCreatedSecret: {agentName: string; clientId?: string; clientSecret: string}} | null;
+    } => ({state: null}),
+  ),
 }));
 
 vi.mock('@thunderid/configure-agent-types', () => ({
@@ -52,6 +58,7 @@ vi.mock('react-router', async () => {
     ...actual,
     useNavigate: () => mockNavigate,
     useParams: () => ({agentId: 'agent-1'}),
+    useLocation: () => mockUseLocation(),
     Link: ({to, children = undefined, ...props}: {to: string; children?: ReactNode; [key: string]: unknown}) => (
       <a
         {...(props as Record<string, unknown>)}
@@ -619,6 +626,55 @@ describe('AgentEditPage', () => {
       await triggerAChange(user);
 
       expect(screen.getByRole('button', {name: 'Save'})).not.toBeDisabled();
+    });
+  });
+
+  describe('Client Secret Popup (just created)', () => {
+    afterEach(() => {
+      mockUseLocation.mockReturnValue({state: null});
+    });
+
+    it('does not render the secret dialog when there is no justCreatedSecret navigation state', () => {
+      render(<AgentEditPage />);
+
+      expect(screen.queryByTestId('agent-show-client-secret')).not.toBeInTheDocument();
+    });
+
+    it('renders the secret dialog when justCreatedSecret is present in location state', () => {
+      mockUseLocation.mockReturnValue({
+        state: {
+          justCreatedSecret: {
+            agentName: 'My New Agent',
+            clientId: 'new-agent-client-id',
+            clientSecret: 'brand-new-agent-secret',
+          },
+        },
+      });
+
+      render(<AgentEditPage />);
+
+      expect(screen.getByTestId('agent-show-client-secret')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('brand-new-agent-secret')).toBeInTheDocument();
+    });
+
+    it('closes the secret dialog when Continue is clicked', async () => {
+      const user = userEvent.setup();
+      mockUseLocation.mockReturnValue({
+        state: {
+          justCreatedSecret: {
+            agentName: 'My New Agent',
+            clientSecret: 'brand-new-agent-secret',
+          },
+        },
+      });
+
+      render(<AgentEditPage />);
+
+      await user.click(screen.getByTestId('agent-client-secret-continue'));
+
+      await waitFor(() => {
+        expect(screen.queryByTestId('agent-show-client-secret')).not.toBeInTheDocument();
+      });
     });
   });
 });

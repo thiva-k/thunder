@@ -24,10 +24,21 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import ApplicationCreateContext, {
   type ApplicationCreateContextType,
 } from '../../../contexts/ApplicationCreate/ApplicationCreateContext';
+import {ApplicationCreateFlowSignInApproach} from '../../../models/application-create-flow';
 import {TechnologyApplicationTemplate, PlatformApplicationTemplate} from '../../../models/application-templates';
 import type {ApplicationTemplate} from '../../../models/application-templates';
 import {TokenEndpointAuthMethods} from '../../../models/oauth';
 import ConfigureDetails from '../ConfigureDetails';
+
+// Real @thunderid/configure-connections (imported for AuthenticatorTypes above) transitively
+// resolves @thunderid/configure-organization-units' dist build, which fails to resolve its
+// framer-motion import under vitest's transform. Stubbed here to avoid that (same workaround
+// ApplicationCreatePage.test.tsx already applies); this component never renders anything from it.
+vi.mock('@thunderid/configure-organization-units', () => ({
+  useHasMultipleOUs: () => ({hasMultipleOUs: false, isLoading: false, ouList: []}),
+  useGetOrganizationUnit: () => ({data: undefined}),
+  OrganizationUnitPickerScreen: () => null,
+}));
 
 let translationLookup = (key: string): string => key;
 
@@ -63,8 +74,19 @@ const createWalletTemplate = (): ApplicationTemplate => ({
   ...createTemplate('Digital Wallet', []),
 });
 
+// The sign-in approach picker itself now lives on the Design step (ConfigureDesign); this
+// component only reacts to the currently selected approach (e.g. hiding URL fields for Embedded).
+const defaultProps: Parameters<typeof ConfigureDetails>[0] = {
+  technology: null,
+  platform: null,
+  onHostingUrlChange: vi.fn(),
+  onCallbackUrlChange: vi.fn(),
+  onReadyChange: vi.fn(),
+  selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+};
+
 const renderWithContext = (
-  props: Parameters<typeof ConfigureDetails>[0],
+  props: Partial<Parameters<typeof ConfigureDetails>[0]> = {},
   contextOverrides: Partial<ApplicationCreateContextType> = {},
 ) => {
   const baseContext: ApplicationCreateContextType = {
@@ -78,6 +100,10 @@ const renderWithContext = (
     setThemeId: vi.fn(),
     selectedTheme: null,
     setSelectedTheme: vi.fn(),
+    layoutId: null,
+    setLayoutId: vi.fn(),
+    selectedLayout: null,
+    setSelectedLayout: vi.fn(),
     appLogo: null,
     setAppLogo: vi.fn(),
     selectedColor: '',
@@ -85,10 +111,36 @@ const renderWithContext = (
     integrations: {},
     setIntegrations: vi.fn(),
     toggleIntegration: vi.fn(),
+    isEmailOtpMfaEnabled: false,
+    setIsEmailOtpMfaEnabled: vi.fn(),
+    isSmsOtpMfaEnabled: false,
+    setIsSmsOtpMfaEnabled: vi.fn(),
+    smsOtpSenderId: '',
+    setSmsOtpSenderId: vi.fn(),
     selectedAuthFlow: null,
     setSelectedAuthFlow: vi.fn(),
     signInApproach: null as unknown as ApplicationCreateContextType['signInApproach'],
     setSignInApproach: vi.fn(),
+    registrationFlowId: null,
+    setRegistrationFlowId: vi.fn(),
+    isRegistrationFlowEnabled: false,
+    setIsRegistrationFlowEnabled: vi.fn(),
+    recoveryFlowId: null,
+    setRecoveryFlowId: vi.fn(),
+    isRecoveryFlowEnabled: false,
+    setIsRecoveryFlowEnabled: vi.fn(),
+    signOutFlowId: null,
+    setSignOutFlowId: vi.fn(),
+    isSignOutFlowEnabled: false,
+    setIsSignOutFlowEnabled: vi.fn(),
+    redirectUris: [],
+    setRedirectUris: vi.fn(),
+    postLogoutRedirectUris: [],
+    setPostLogoutRedirectUris: vi.fn(),
+    corsOrigins: [],
+    setCorsOrigins: vi.fn(),
+    ouDefaults: {signIn: false, signUp: false, recovery: false, signOut: false, theme: false, layout: false},
+    setOuDefaults: vi.fn(),
     selectedTechnology: null,
     setSelectedTechnology: vi.fn(),
     selectedPlatform: null,
@@ -123,7 +175,7 @@ const renderWithContext = (
       }}
     >
       <ApplicationCreateContext.Provider value={baseContext}>
-        <ConfigureDetails {...props} />
+        <ConfigureDetails {...defaultProps} {...props} />
       </ApplicationCreateContext.Provider>
     </LoggerProvider>,
   );
@@ -135,7 +187,7 @@ describe('ConfigureDetails', () => {
     translationLookup = (key: string): string => key;
   });
 
-  it('renders the no-configuration message when redirect URIs are already populated', () => {
+  it('renders the redirect URI editor for a redirect-capable template with a prefilled placeholder URI', () => {
     const template = createTemplate('Browser App', ['https://example.com/callback']);
 
     renderWithContext(
@@ -149,9 +201,45 @@ describe('ConfigureDetails', () => {
       {selectedTemplateConfig: template},
     );
 
+    expect(screen.getByTestId('application-configure-redirect-uris')).toBeInTheDocument();
+  });
+
+  it('renders no configuration UI for a non-redirect-capable template with a prefilled redirect URI', () => {
+    const template: ApplicationTemplate = {
+      description: 'Backend App description',
+      defaults: {
+        name: 'Backend App',
+        inboundAuthConfig: [
+          {
+            type: 'oauth2',
+            config: {
+              redirectUris: ['https://example.com/callback'],
+              grantTypes: ['client_credentials'],
+              responseTypes: [],
+              tokenEndpointAuthMethod: TokenEndpointAuthMethods.CLIENT_SECRET_BASIC,
+            },
+          },
+        ],
+      },
+    };
+
+    renderWithContext(
+      {
+        technology: TechnologyApplicationTemplate.REACT,
+        platform: PlatformApplicationTemplate.BROWSER,
+        onHostingUrlChange: vi.fn(),
+        onCallbackUrlChange: vi.fn(),
+        onReadyChange: vi.fn(),
+      },
+      {selectedTemplateConfig: template},
+    );
+
+    // Nothing left to configure: no URLs section, no redirect URI editor, no passkey fields.
+    expect(screen.queryByTestId('application-configure-redirect-uris')).not.toBeInTheDocument();
     expect(
-      screen.getByText('applications:onboarding.configure.details.noConfigRequired.description'),
-    ).toBeInTheDocument();
+      screen.queryByPlaceholderText('applications:onboarding.configure.details.hostingUrl.placeholder'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('applications:onboarding.configure.details.passkey.title')).not.toBeInTheDocument();
   });
 
   it('renders passkey configuration even when no other configuration is required', () => {
@@ -172,9 +260,6 @@ describe('ConfigureDetails', () => {
       },
     );
 
-    expect(
-      screen.queryByText('applications:onboarding.configure.details.noConfigRequired.title'),
-    ).not.toBeInTheDocument();
     expect(screen.getByText('applications:onboarding.configure.details.passkey.title')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('applications:onboarding.configure.details.relyingPartyId.placeholder'),
@@ -521,7 +606,7 @@ describe('ConfigureDetails', () => {
       {selectedTemplateConfig: template},
     );
 
-    expect(screen.getByText('applications:onboarding.configure.details.title')).toBeInTheDocument();
+    expect(screen.getByText('applications:onboarding.configure.details.urls.title')).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText('applications:onboarding.configure.details.hostingUrl.placeholder'),
     ).toBeInTheDocument();
@@ -688,15 +773,15 @@ describe('ConfigureDetails', () => {
       },
     );
 
-    expect(screen.getByText('Passkey Settings')).toBeInTheDocument();
+    expect(screen.getByText('Passkeys')).toBeInTheDocument();
     expect(screen.getByText('Relying Party ID')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g., example.com')).toBeInTheDocument();
     expect(screen.getByText('Relying Party Name')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('e.g., My App')).toBeInTheDocument();
   });
 
-  it('warns and blocks the step when a known wallet vendor is already connected', async () => {
-    const onReadyChange = vi.fn();
+  it('disables the card and does not select an already-connected wallet vendor', async () => {
+    const onClientIdChange = vi.fn();
     const user = userEvent.setup();
 
     renderWithContext(
@@ -705,17 +790,17 @@ describe('ConfigureDetails', () => {
         platform: PlatformApplicationTemplate.WALLET,
         onHostingUrlChange: vi.fn(),
         onCallbackUrlChange: vi.fn(),
-        onReadyChange,
+        onReadyChange: vi.fn(),
+        onClientIdChange,
         existingClientIds: [HEIDI_CLIENT_ID],
       },
       {selectedTemplateConfig: createWalletTemplate()},
     );
 
-    await user.click(screen.getByRole('combobox'));
-    await user.click(screen.getByRole('option', {name: 'Heidi'}));
+    await user.click(screen.getByTestId('wallet-vendor-card-heidi'));
 
-    expect(await screen.findByTestId('wallet-duplicate-client-id-alert')).toBeInTheDocument();
-    await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(false));
+    expect(onClientIdChange).not.toHaveBeenCalledWith(HEIDI_CLIENT_ID);
+    expect(screen.queryByTestId('wallet-duplicate-client-id-alert')).not.toBeInTheDocument();
   });
 
   it('warns and blocks the step when a custom client id is already in use', async () => {
@@ -759,10 +844,80 @@ describe('ConfigureDetails', () => {
       {selectedTemplateConfig: createWalletTemplate()},
     );
 
-    await user.click(screen.getByRole('combobox'));
-    await user.click(screen.getByRole('option', {name: 'Heidi'}));
+    await user.click(screen.getByTestId('wallet-vendor-card-heidi'));
 
     expect(screen.queryByTestId('wallet-duplicate-client-id-alert')).not.toBeInTheDocument();
     await waitFor(() => expect(onReadyChange).toHaveBeenLastCalledWith(true));
+  });
+
+  it('shows the client id and deep link fields for Custom but hides them for a known wallet vendor', async () => {
+    const user = userEvent.setup();
+
+    renderWithContext(
+      {
+        technology: TechnologyApplicationTemplate.OTHER,
+        platform: PlatformApplicationTemplate.WALLET,
+        onHostingUrlChange: vi.fn(),
+        onCallbackUrlChange: vi.fn(),
+        onReadyChange: vi.fn(),
+      },
+      {selectedTemplateConfig: createWalletTemplate()},
+    );
+
+    expect(
+      screen.getByPlaceholderText('applications:onboarding.configure.details.wallet.clientId.placeholder'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText('applications:onboarding.configure.details.deeplink.placeholder'),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByTestId('wallet-vendor-card-heidi'));
+
+    expect(
+      screen.queryByPlaceholderText('applications:onboarding.configure.details.wallet.clientId.placeholder'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByPlaceholderText('applications:onboarding.configure.details.deeplink.placeholder'),
+    ).not.toBeInTheDocument();
+  });
+
+  describe('Sign-in approach reactions', () => {
+    it('hides the URL fields underneath and is ready when Embedded is selected', async () => {
+      const onReadyChange = vi.fn();
+      const template = createTemplate('Browser App', []);
+
+      renderWithContext(
+        {
+          technology: TechnologyApplicationTemplate.REACT,
+          platform: PlatformApplicationTemplate.BROWSER,
+          selectedApproach: ApplicationCreateFlowSignInApproach.EMBEDDED,
+          onReadyChange,
+        },
+        {selectedTemplateConfig: template},
+      );
+
+      expect(
+        screen.queryByPlaceholderText('applications:onboarding.configure.details.hostingUrl.placeholder'),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId('application-configure-redirect-uris')).not.toBeInTheDocument();
+      await waitFor(() => expect(onReadyChange).toHaveBeenCalledWith(true));
+    });
+
+    it('shows the URL fields underneath when Inbuilt is selected', () => {
+      const template = createTemplate('Browser App', []);
+
+      renderWithContext(
+        {
+          technology: TechnologyApplicationTemplate.REACT,
+          platform: PlatformApplicationTemplate.BROWSER,
+          selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+        },
+        {selectedTemplateConfig: template},
+      );
+
+      expect(
+        screen.getByPlaceholderText('applications:onboarding.configure.details.hostingUrl.placeholder'),
+      ).toBeInTheDocument();
+    });
   });
 });

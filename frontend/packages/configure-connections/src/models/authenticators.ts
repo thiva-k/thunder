@@ -27,6 +27,7 @@
 export const AuthenticatorTypes = {
   CREDENTIALS_AUTH: 'credentials_auth',
   PASSKEY: 'passkey',
+  MAGIC_LINK: 'magic_link',
 } as const;
 
 /**

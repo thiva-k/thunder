@@ -32,7 +32,6 @@ import useCreateAgent from '../api/useCreateAgent';
 import ConfigureAgentDetails from '../components/create-agent/ConfigureAgentDetails';
 import ConfigureName from '../components/create-agent/ConfigureName';
 import ConfigureOwner from '../components/create-agent/ConfigureOwner';
-import ShowClientSecret from '../components/create-agent/ShowClientSecret';
 import AgentConstants from '../constants/agent-constants';
 import useAgentCreate from '../contexts/AgentCreate/useAgentCreate';
 import {DEFAULT_AGENT_TYPE_NAME, type Agent, type AgentInboundAuthConfig} from '../models/agent';
@@ -74,7 +73,6 @@ export default function AgentCreatePage(): JSX.Element {
   const hasChildOUs = !isChildOuLoading && !childOuError && (childOuData?.totalResults ?? 0) > 0;
 
   const agentTypes = useMemo(() => agentTypesData?.types ?? [], [agentTypesData]);
-  const [createdAgent, setCreatedAgent] = useState<Agent | null>(null);
 
   // Agent types are restricted to a single bootstrap-provisioned `default` schema. Auto-pick it
   // once the list loads so the wizard never shows a type-selection step.
@@ -174,23 +172,26 @@ export default function AgentCreatePage(): JSX.Element {
     createAgent.mutate(agentData, {
       onSuccess: (created: Agent): void => {
         // The backend always returns a fresh client secret in the create response when an OAuth
-        // profile is provisioned. Show the completion screen so the operator can copy it once.
-        setCreatedAgent(created);
+        // profile is provisioned. Surface it as a popup on the agent's detail page.
+        const oauth2Config = created.inboundAuthConfig?.find((c) => c.type === 'oauth2')?.config;
+        const clientSecret = oauth2Config?.clientSecret;
+        (async () => {
+          if (clientSecret) {
+            await navigate(RouteConfig.agents.detail(created.id), {
+              state: {justCreatedSecret: {agentName: created.name, clientId: oauth2Config?.clientId, clientSecret}},
+            });
+          } else {
+            await navigate(RouteConfig.agents.detail(created.id));
+          }
+        })().catch((_error: unknown) => {
+          logger.error('Failed to navigate to agent details', {error: _error, agentId: created.id});
+        });
       },
       onError: (err: Error) => {
         setError(
           err.message ?? t('agents:createWizard.errors.createFailed', 'Failed to create agent. Please try again.'),
         );
       },
-    });
-  };
-
-  const handleCompleteContinue = (): void => {
-    if (!createdAgent) return;
-    (async () => {
-      await navigate(RouteConfig.agents.detail(createdAgent.id));
-    })().catch((_error: unknown) => {
-      logger.error('Failed to navigate to agent details', {error: _error, agentId: createdAgent.id});
     });
   };
 
@@ -267,26 +268,7 @@ export default function AgentCreatePage(): JSX.Element {
     return activeSteps.slice(0, idx + 1);
   };
 
-  const showCompleteScreen = Boolean(
-    createdAgent?.inboundAuthConfig?.find((c) => c.type === 'oauth2')?.config?.clientSecret,
-  );
-
   const renderStepContent = (): JSX.Element | null => {
-    if (showCompleteScreen && createdAgent) {
-      const oauth2Config = createdAgent.inboundAuthConfig?.find((c) => c.type === 'oauth2')?.config;
-      const clientSecret = oauth2Config?.clientSecret;
-      if (clientSecret) {
-        return (
-          <ShowClientSecret
-            agentName={createdAgent.name}
-            clientId={oauth2Config?.clientId}
-            clientSecret={clientSecret}
-            onContinue={handleCompleteContinue}
-          />
-        );
-      }
-    }
-
     switch (currentStep) {
       case AgentCreateFlowStep.NAME:
         return (
@@ -379,11 +361,11 @@ export default function AgentCreatePage(): JSX.Element {
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
-              pt: showCompleteScreen ? 2 : 8,
+              pt: 8,
               pb: 8,
               px: 20,
               mx: 'auto',
-              alignItems: showCompleteScreen ? 'center' : 'flex-start',
+              alignItems: 'flex-start',
               justifyContent: 'flex-start',
             }}
           >
@@ -396,31 +378,29 @@ export default function AgentCreatePage(): JSX.Element {
 
               {renderStepContent()}
 
-              {!showCompleteScreen && (
-                <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} sx={{mt: 4}}>
-                  {currentStep !== AgentCreateFlowStep.NAME && (
-                    <Button variant="text" onClick={handlePrevStep} disabled={createAgent.isPending}>
-                      {t('common:actions.back')}
-                    </Button>
-                  )}
-                  <Button
-                    variant="contained"
-                    disabled={
-                      !stepReady[currentStep] ||
-                      createAgent.isPending ||
-                      (currentStep === AgentCreateFlowStep.NAME && Boolean(selectedSchema?.ouId) && isChildOuLoading)
-                    }
-                    sx={{minWidth: 140}}
-                    onClick={handleNextStep}
-                  >
-                    {(() => {
-                      if (!isLastStep) return t('common:actions.continue');
-                      if (createAgent.isPending) return t('common:status.saving');
-                      return t('agents:createWizard.createAgent', 'Create agent');
-                    })()}
+              <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} sx={{mt: 4}}>
+                {currentStep !== AgentCreateFlowStep.NAME && (
+                  <Button variant="text" onClick={handlePrevStep} disabled={createAgent.isPending}>
+                    {t('common:actions.back')}
                   </Button>
-                </Stack>
-              )}
+                )}
+                <Button
+                  variant="contained"
+                  disabled={
+                    !stepReady[currentStep] ||
+                    createAgent.isPending ||
+                    (currentStep === AgentCreateFlowStep.NAME && Boolean(selectedSchema?.ouId) && isChildOuLoading)
+                  }
+                  sx={{minWidth: 140}}
+                  onClick={handleNextStep}
+                >
+                  {(() => {
+                    if (!isLastStep) return t('common:actions.continue');
+                    if (createAgent.isPending) return t('common:status.saving');
+                    return t('agents:createWizard.createAgent', 'Create agent');
+                  })()}
+                </Button>
+              </Stack>
             </Box>
           </Box>
         </Box>

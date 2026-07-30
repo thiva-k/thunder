@@ -3,6 +3,15 @@
   "type": "fullstack",
   "displayName": "Nuxt",
   "description": "Full-stack Vue framework with server-side rendering",
+  "devServer": {
+    "id": "nuxt",
+    "label": "Nuxt",
+    "url": "http://localhost:3000"
+  },
+  "creationFlow": {
+    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
+  },
   "defaults": {
     "name": "Nuxt Application",
     "inboundAuthConfig": [

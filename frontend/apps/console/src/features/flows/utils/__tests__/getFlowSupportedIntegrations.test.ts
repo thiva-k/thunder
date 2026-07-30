@@ -46,6 +46,11 @@ describe('getFlowSupportedIntegrations', () => {
       const result = getFlowSupportedIntegrations('passkey-flow');
       expect(result).toContain(AuthenticatorTypes.PASSKEY);
     });
+
+    it('should detect magic link from handle containing "magiclink"', () => {
+      const result = getFlowSupportedIntegrations('magiclink-flow');
+      expect(result).toContain(AuthenticatorTypes.MAGIC_LINK);
+    });
   });
 
   describe('Multiple Integration Detection', () => {

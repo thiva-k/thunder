@@ -372,15 +372,17 @@ export default function EditSchemaSettings({
 
       {/* Add Property Button */}
       <Button
-        variant="outlined"
+        variant="text"
+        color="primary"
         startIcon={<Plus size={16} />}
         onClick={handleAddProperty}
         fullWidth
         sx={{
           py: 1.5,
           mb: 2,
-          borderStyle: 'dashed',
-          '&:hover': {borderStyle: 'dashed'},
+          border: '1px dashed',
+          borderColor: 'divider',
+          '&:hover': {border: '1px dashed', borderColor: 'primary.main'},
         }}
       >
         {t('agentTypes:addProperty', 'Add Property')}

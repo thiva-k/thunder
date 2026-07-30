@@ -56,7 +56,7 @@ const PlatformBasedApplicationTemplateMetadata: ApplicationTemplateMetadata<Plat
     icon: <Code size={32} />,
     titleKey: 'applications:onboarding.configure.stack.platform.backend.title',
     descriptionKey: 'applications:onboarding.configure.stack.platform.backend.description',
-    template: BackendPlatformTemplate as ApplicationTemplate,
+    template: BackendPlatformTemplate as unknown as ApplicationTemplate,
     categories: ['backend'],
   },
   {

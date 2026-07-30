@@ -239,7 +239,8 @@ function MappingGroupEditor({
         })}
         <Box>
           <Button
-            variant="outlined"
+            variant="text"
+            color="primary"
             size="small"
             startIcon={<Plus size={16} />}
             onClick={onAddRow}
@@ -589,7 +590,8 @@ export default function AttributeMappingSection({
                       {showAddValue && (
                         <Box>
                           <Button
-                            variant="outlined"
+                            variant="text"
+                            color="primary"
                             size="small"
                             startIcon={<Plus size={16} />}
                             onClick={addValue}
@@ -665,7 +667,8 @@ export default function AttributeMappingSection({
           {showAddUserType && (
             <Box>
               <Button
-                variant="outlined"
+                variant="text"
+                color="primary"
                 size="small"
                 startIcon={<Plus size={16} />}
                 onClick={addGroup}
@@ -725,7 +728,8 @@ export default function AttributeMappingSection({
           })}
           <Box>
             <Button
-              variant="outlined"
+              variant="text"
+              color="primary"
               size="small"
               startIcon={<Plus size={16} />}
               onClick={addLink}

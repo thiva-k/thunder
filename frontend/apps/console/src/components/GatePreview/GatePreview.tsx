@@ -18,18 +18,29 @@
 
 import type {ColorSchemeOption, Stylesheet, Theme} from '@thunderid/design';
 import type {EmbeddedFlowComponent} from '@thunderid/react';
-import {Box, CircularProgress, Typography, useColorScheme} from '@wso2/oxygen-ui';
+import {Box, CircularProgress, IconButton, Tooltip, Typography, useColorScheme} from '@wso2/oxygen-ui';
 import {useCallback, useLayoutEffect, useRef, useState, type JSX, type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {useTranslation} from 'react-i18next';
 import IframeContent from './IframeContent';
 import buildPreviewMock from './mocks/buildPreviewMock';
+import ColorSchemeOptions from '../../features/design/constants/ColorSchemeOptions';
 import PreviewToolbar from '../../features/design/components/PreviewToolbar';
 import {VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '../../features/design/components/viewportConstants';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const ZOOM_STEPS = [25, 50, 75, 100, 125, 150];
+
+/**
+ * Neutral studio backdrop shown behind the preview card in 'minimal' toolbar mode, independent
+ * of the previewed theme's own background — keeps the card as the only themed element, like a
+ * product screenshot rather than a literal edge-to-edge simulation of the live page.
+ */
+const NEUTRAL_CANVAS_BACKGROUND: Record<'light' | 'dark', string> = {
+  light: '#f4f4f5',
+  dark: '#18181b',
+};
 
 /** Minimum width (px) the content needs so the 450px sign-in card + padding renders without clipping. */
 const MIN_CONTENT_WIDTH = 520;
@@ -58,6 +69,16 @@ export interface GatePreviewProps {
   theme: Theme | null | undefined;
   displayName?: string;
   showToolbar?: boolean;
+  /**
+   * 'full' renders the pill toolbar (viewport/zoom/color-scheme controls). 'minimal' renders just
+   * a single floating icon button that cycles the color scheme, for full-bleed preview panels.
+   * Defaults to 'full'.
+   */
+  toolbarVariant?: 'full' | 'minimal';
+  /** Whether the toolbar shows the mobile/tablet/desktop viewport switcher. Defaults to true. */
+  showViewportControls?: boolean;
+  /** Whether the toolbar shows zoom in/out controls. Defaults to true. */
+  showZoomControls?: boolean;
   viewport?: {
     width: string | number;
     height: string | number;
@@ -105,6 +126,12 @@ export interface GatePreviewProps {
    * Useful for placing the toolbar in a full-width top bar outside the preview area.
    */
   toolbarPortal?: HTMLElement | null;
+  /**
+   * Content rendered inside the preview frame, below the canvas (e.g. a step changer for
+   * multi-screen onboarding previews). Rendered within the same bordered window as the
+   * browser chrome, unlike toolbarStart/toolbarEnd which sit outside it.
+   */
+  footer?: ReactNode;
 }
 
 // ── Main component ───────────────────────────────────────────────────────────
@@ -113,6 +140,9 @@ export default function GatePreview({
   theme,
   displayName = '',
   showToolbar = true,
+  toolbarVariant = 'full',
+  showViewportControls = true,
+  showZoomControls = true,
   viewport = undefined,
   mock = buildPreviewMock(),
   colorScheme = undefined,
@@ -130,11 +160,13 @@ export default function GatePreview({
   toolbarStart = undefined,
   toolbarEnd = undefined,
   toolbarPortal = undefined,
+  footer = undefined,
 }: GatePreviewProps): JSX.Element {
   const {t} = useTranslation('design');
   const {mode, systemMode} = useColorScheme();
   const resolvedSystemMode: 'light' | 'dark' = (mode === 'system' ? systemMode : mode) === 'dark' ? 'dark' : 'light';
   const [previewEffectiveScheme, setPreviewEffectiveScheme] = useState<'light' | 'dark'>(resolvedSystemMode);
+  const [minimalColorScheme, setMinimalColorScheme] = useState<ColorSchemeOption>('system');
   const [viewportState, setViewport] = useState<Viewport>('desktop');
   const [zoom, setZoom] = useState(75);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -169,9 +201,20 @@ export default function GatePreview({
     effectiveScheme = activeScheme;
   } else if (syncColorSchemeWithSystem) {
     effectiveScheme = resolvedSystemMode;
+  } else if (toolbarVariant === 'minimal') {
+    effectiveScheme = minimalColorScheme === 'system' ? resolvedSystemMode : minimalColorScheme;
   } else {
     effectiveScheme = previewEffectiveScheme;
   }
+
+  const handleCycleMinimalColorScheme = (): void => {
+    const currentIdx = ColorSchemeOptions.findIndex((option) => option.id === minimalColorScheme);
+    const next = ColorSchemeOptions[(currentIdx + 1) % ColorSchemeOptions.length];
+    setMinimalColorScheme(next.id);
+  };
+
+  const resolvedPageBackground =
+    pageBackground ?? (toolbarVariant === 'minimal' ? NEUTRAL_CANVAS_BACKGROUND[effectiveScheme] : undefined);
 
   const zoomIdx = ZOOM_STEPS.indexOf(zoom);
 
@@ -223,9 +266,33 @@ export default function GatePreview({
   }
 
   return (
-    <Box sx={{height: '100%', display: 'flex', flexDirection: 'column'}}>
+    <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', position: 'relative'}}>
+      {/* Minimal toolbar — a single floating icon that cycles the color scheme, for full-bleed previews */}
+      {showToolbar && toolbarVariant === 'minimal' && (
+        <Tooltip title={t('common.preview.toolbar.actions.cycle_color_scheme.tooltip', 'Toggle color scheme')}>
+          <IconButton
+            onClick={handleCycleMinimalColorScheme}
+            size="small"
+            sx={{
+              position: 'absolute',
+              top: 16,
+              right: 16,
+              zIndex: 10,
+              bgcolor: 'background.paper',
+              boxShadow: '0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+              border: '1px solid',
+              borderColor: 'divider',
+              '&:hover': {bgcolor: 'action.hover'},
+            }}
+          >
+            {ColorSchemeOptions.find((option) => option.id === minimalColorScheme)?.icon}
+          </IconButton>
+        </Tooltip>
+      )}
+
       {/* Toolbar — portaled to external container when toolbarPortal is set, otherwise rendered inline */}
       {showToolbar &&
+        toolbarVariant === 'full' &&
         (() => {
           const toolbar = (
             <PreviewToolbar
@@ -236,6 +303,8 @@ export default function GatePreview({
               setZoom={setZoom}
               zoomIdx={zoomIdx}
               extraContent={toolbarEnd}
+              showViewportControls={showViewportControls}
+              showZoomControls={showZoomControls}
             />
           );
 
@@ -264,7 +333,7 @@ export default function GatePreview({
       >
         <Box
           sx={{
-            backgroundColor: 'background.paper',
+            backgroundColor: toolbarVariant === 'minimal' ? resolvedPageBackground : 'background.paper',
             borderRadius: frameless ? 0 : 1,
             width: frameless ? '100%' : (viewport?.width ?? VIEWPORT_WIDTHS[viewportState]),
             height: frameless ? '100%' : (viewport?.height ?? VIEWPORT_HEIGHTS[viewportState]),
@@ -320,22 +389,24 @@ export default function GatePreview({
               position: 'relative',
             }}
           >
-            <Typography
-              component="span"
-              ref={dimensionsRef}
-              variant="caption"
-              sx={{
-                position: 'absolute',
-                top: 4,
-                right: 6,
-                zIndex: 1,
-                fontSize: 9,
-                fontFamily: 'monospace',
-                color: 'text.disabled',
-                opacity: 0.7,
-                pointerEvents: 'none',
-              }}
-            />
+            {!frameless && (
+              <Typography
+                component="span"
+                ref={dimensionsRef}
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  top: 4,
+                  right: 6,
+                  zIndex: 1,
+                  fontSize: 9,
+                  fontFamily: 'monospace',
+                  color: 'text.disabled',
+                  opacity: 0.7,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
             <iframe
               ref={iframeCallbackRef}
               title={t('themes.builder.preview.iframe_title', 'Gate Preview')}
@@ -348,7 +419,7 @@ export default function GatePreview({
                   colorScheme={effectiveScheme}
                   theme={theme}
                   stylesheets={stylesheets}
-                  pageBackground={pageBackground}
+                  pageBackground={resolvedPageBackground}
                   mock={mock}
                   inspectorEnabled={inspectorEnabled}
                   onSelectSelector={onSelectSelector}
@@ -361,6 +432,8 @@ export default function GatePreview({
                 iframeDoc.getElementById('root')!,
               )}
           </Box>
+
+          {footer && <Box sx={{borderTop: '1px solid', borderColor: 'divider', flexShrink: 0}}>{footer}</Box>}
         </Box>
       </Box>
     </Box>
