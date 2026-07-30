@@ -17,7 +17,8 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
-import {Stack, TextField, FormControl, FormLabel, Autocomplete, FormHelperText} from '@wso2/oxygen-ui';
+import {Stack, TextField, FormControl, FormLabel, Autocomplete, FormHelperText, Alert} from '@wso2/oxygen-ui';
+import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import CertificateTypes from '../../../constants/certificate-types';
 
@@ -41,6 +42,12 @@ interface CertificateSectionProps {
    */
   required?: boolean;
   /**
+   * When true, an encrypted ID token / UserInfo response format depends on this certificate.
+   * Removing the certificate is blocked (the backend would reject the config) and a warning is
+   * shown telling the user to change the encrypted format first.
+   */
+  encryptionDependsOnCert?: boolean;
+  /**
    * Whether inputs should be disabled (e.g. read-only resource).
    */
   disabled?: boolean;
@@ -63,9 +70,12 @@ export default function CertificateSection({
   certificate = undefined,
   onCertificateChange,
   required = false,
+  encryptionDependsOnCert = false,
   disabled = false,
 }: CertificateSectionProps) {
   const {t} = useTranslation();
+  // Set when the user attempts to remove a certificate that an encrypted token format still needs.
+  const [blockedRemoval, setBlockedRemoval] = useState(false);
 
   const certificateTypeOptions = [
     {value: CertificateTypes.NONE, label: t('applications:edit.advanced.certificate.type.none')},
@@ -90,10 +100,17 @@ export default function CertificateSection({
             onChange={(_, newValue) => {
               const newType = newValue?.value ?? CertificateTypes.NONE;
               if (newType === CertificateTypes.NONE) {
+                // Removing the certificate would invalidate an encrypted token format, so block it
+                // and prompt the user to change the format first instead of failing on save.
+                if (encryptionDependsOnCert) {
+                  setBlockedRemoval(true);
+                  return;
+                }
                 onCertificateChange(null);
               } else {
                 onCertificateChange({type: newType, value: currentCertValue});
               }
+              setBlockedRemoval(false);
             }}
             options={certificateTypeOptions}
             getOptionLabel={(option) => option.label}
@@ -113,6 +130,15 @@ export default function CertificateSection({
             </FormHelperText>
           )}
         </FormControl>
+
+        {blockedRemoval && encryptionDependsOnCert && (
+          <Alert severity="warning">
+            {t(
+              'applications:edit.advanced.certificate.error.encryptionDependsOnCert',
+              'This certificate is used to encrypt the ID token or UserInfo response. Change those formats to a non-encrypted type before removing the certificate.',
+            )}
+          </Alert>
+        )}
 
         {currentCertType !== CertificateTypes.NONE && (
           <TextField

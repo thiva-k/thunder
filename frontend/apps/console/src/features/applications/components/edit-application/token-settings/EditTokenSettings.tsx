@@ -70,6 +70,12 @@ interface EditTokenSettingsProps {
    * Value shown for `act.sub` in the actor claim preview (the acting agent's ID).
    */
   actorSub?: string;
+  /**
+   * Name of the tab where the OAuth client certificate is configured, used in the
+   * certificate-required hint. Defaults to "Advanced Settings" (applications); agents pass
+   * "Credentials".
+   */
+  certificateLocation?: string;
 }
 
 const createTokenConfigSchema = (t: (key: string) => string) => {
@@ -139,6 +145,7 @@ export default function EditTokenSettings({
   showUserInfoTab = true,
   showActorClaim = false,
   actorSub = '<agent-id>',
+  certificateLocation = 'Advanced Settings',
 }: EditTokenSettingsProps) {
   const logger = useLogger('EditTokenSettings');
   const {t} = useTranslation();
@@ -146,6 +153,9 @@ export default function EditTokenSettings({
   const {getServerUrl} = useConfig();
 
   const [userTypes, setUserTypes] = useState<ApiUserType[]>([]);
+  // The algorithm tokens are signed with is determined by the deployment's signing key, not a
+  // per-application choice. It is surfaced read-only from the OIDC discovery document.
+  const [signingAlg, setSigningAlg] = useState<string | undefined>(undefined);
 
   const {data: userTypesData, isLoading: userTypesLoading} = useGetUserTypes();
   const [activeTokenType, setActiveTokenType] = useState<'access' | 'id' | 'userinfo'>('access');
@@ -320,6 +330,47 @@ export default function EditTokenSettings({
     });
   }, [schemaIds, http, getServerUrl, logger]);
 
+  /**
+   * Fetch the deployment's signing algorithm from the OIDC discovery document. Signing is done
+   * with the server key, so this is informational only and shown read-only in the token sections.
+   * The discovery document is public, so it is fetched without credentials; sending an
+   * Authorization header would fail its CORS preflight (only Content-Type is allowed).
+   */
+  useEffect(() => {
+    if (!isOAuthMode) return undefined;
+
+    let cancelled = false;
+
+    const fetchSigningAlg = async () => {
+      try {
+        const response = await fetch(`${getServerUrl()}/.well-known/openid-configuration`);
+        if (cancelled) return;
+        if (!response.ok) {
+          logger.error('Discovery request for signing algorithm returned a non-OK status', {
+            status: response.status,
+          });
+          return;
+        }
+        const data = (await response.json()) as {id_token_signing_alg_values_supported?: string[]};
+        if (cancelled) return;
+        const algs = data?.id_token_signing_alg_values_supported;
+        if (Array.isArray(algs) && algs.length > 0) {
+          setSigningAlg(algs[0]);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          logger.error('Failed to fetch signing algorithm from discovery', {error: err});
+        }
+      }
+    };
+
+    void fetchSigningAlg();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOAuthMode, getServerUrl, logger]);
+
   const userAttributes = useMemo(() => {
     if (userTypes.length === 0) return [];
 
@@ -468,16 +519,23 @@ export default function EditTokenSettings({
   };
 
   const handleIdTokenConfigChange = (field: string, value: string) => {
+    const nextIdToken = {
+      ...oauth2Config?.token?.idToken,
+      userAttributes: oauth2Config?.token?.idToken?.userAttributes ?? [],
+      validityPeriod: oauth2Config?.token?.idToken?.validityPeriod ?? 3600,
+      [field]: value,
+    };
+    // Switching to a non-encrypted format must drop the encryption fields, otherwise the backend
+    // rejects the config (encryption fields require an encrypted response type and a certificate).
+    if (field === 'responseType' && value !== 'JWE' && value !== 'NESTED_JWT') {
+      delete nextIdToken.encryptionAlg;
+      delete nextIdToken.encryptionEnc;
+    }
     const updatedConfig = {
       ...oauth2Config,
       token: {
         ...oauth2Config?.token,
-        idToken: {
-          ...oauth2Config?.token?.idToken,
-          userAttributes: oauth2Config?.token?.idToken?.userAttributes ?? [],
-          validityPeriod: oauth2Config?.token?.idToken?.validityPeriod ?? 3600,
-          [field]: value,
-        },
+        idToken: nextIdToken,
       },
     };
     const updatedInboundAuth = application.inboundAuthConfig?.map((config) => {
@@ -490,13 +548,24 @@ export default function EditTokenSettings({
   };
 
   const handleUserInfoConfigChange = (field: string, value: string) => {
+    const nextUserInfo = {
+      ...oauth2Config?.userInfo,
+      userAttributes: oauth2Config?.userInfo?.userAttributes ?? oauth2Config?.token?.idToken?.userAttributes ?? [],
+      [field]: value,
+    };
+    // Switching to a non-encrypted format must drop the encryption fields, otherwise the backend
+    // rejects the config (encryption fields require an encrypted response type and a certificate).
+    if (field === 'responseType' && value !== 'JWE' && value !== 'NESTED_JWT') {
+      delete nextUserInfo.encryptionAlg;
+      delete nextUserInfo.encryptionEnc;
+    }
+    // Signing always uses the server key, so a stale per-app signing algorithm is never sent.
+    if (field === 'responseType') {
+      delete nextUserInfo.signingAlg;
+    }
     const updatedConfig = {
       ...oauth2Config,
-      userInfo: {
-        ...oauth2Config?.userInfo,
-        userAttributes: oauth2Config?.userInfo?.userAttributes ?? oauth2Config?.token?.idToken?.userAttributes ?? [],
-        [field]: value,
-      },
+      userInfo: nextUserInfo,
     };
     const updatedInboundAuth = application.inboundAuthConfig?.map((config) => {
       if (config.type === 'oauth2') {
@@ -729,12 +798,14 @@ export default function EditTokenSettings({
             showActorClaim={showActorClaim}
             actorSub={actorSub}
             disabled={application.isReadOnly}
+            signingAlg={signingAlg}
+            hasCertificate={Boolean(oauth2Config?.certificate?.type)}
+            certificateLocation={certificateLocation}
             idTokenResponseType={oauth2Config?.token?.idToken?.responseType}
             idTokenEncryptionAlg={oauth2Config?.token?.idToken?.encryptionAlg}
             idTokenEncryptionEnc={oauth2Config?.token?.idToken?.encryptionEnc}
             onIdTokenConfigChange={handleIdTokenConfigChange}
             userInfoResponseType={oauth2Config?.userInfo?.responseType}
-            userInfoSigningAlg={oauth2Config?.userInfo?.signingAlg}
             userInfoEncryptionAlg={oauth2Config?.userInfo?.encryptionAlg}
             userInfoEncryptionEnc={oauth2Config?.userInfo?.encryptionEnc}
             onUserInfoConfigChange={handleUserInfoConfigChange}

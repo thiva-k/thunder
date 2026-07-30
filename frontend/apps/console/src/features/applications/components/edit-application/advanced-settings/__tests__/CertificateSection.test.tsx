@@ -121,6 +121,52 @@ describe('CertificateSection', () => {
       expect(mockOnCertificateChange).toHaveBeenCalledWith(null);
     });
 
+    it('should block removal and warn when an encrypted token format depends on the certificate', async () => {
+      const user = userEvent.setup();
+      render(
+        <CertificateSection
+          certificate={{type: CertificateTypes.JWKS, value: 'jwks'}}
+          onCertificateChange={mockOnCertificateChange}
+          encryptionDependsOnCert
+        />,
+      );
+
+      const autocomplete = screen.getByRole('combobox');
+      await user.click(autocomplete);
+
+      const listbox = screen.getByRole('listbox');
+      const noneOption = within(listbox).getByText('applications:edit.advanced.certificate.type.none');
+      await user.click(noneOption);
+
+      expect(mockOnCertificateChange).not.toHaveBeenCalled();
+      expect(
+        screen.getByText('applications:edit.advanced.certificate.error.encryptionDependsOnCert'),
+      ).toBeInTheDocument();
+    });
+
+    it('should allow switching to another certificate type even when encryption depends on the certificate', async () => {
+      const user = userEvent.setup();
+      render(
+        <CertificateSection
+          certificate={{type: CertificateTypes.JWKS, value: 'jwks'}}
+          onCertificateChange={mockOnCertificateChange}
+          encryptionDependsOnCert
+        />,
+      );
+
+      const autocomplete = screen.getByRole('combobox');
+      await user.click(autocomplete);
+
+      const listbox = screen.getByRole('listbox');
+      const jwksUriOption = within(listbox).getByText('applications:edit.advanced.certificate.type.jwksUri');
+      await user.click(jwksUriOption);
+
+      expect(mockOnCertificateChange).toHaveBeenCalledWith({
+        type: CertificateTypes.JWKS_URI,
+        value: 'jwks',
+      });
+    });
+
     it('should call onCertificateChange with certificate when JWKS is selected', async () => {
       const user = userEvent.setup();
       render(<CertificateSection certificate={null} onCertificateChange={mockOnCertificateChange} />);

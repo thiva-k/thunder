@@ -865,15 +865,13 @@ func validateUserInfoConfig(p *providers.OAuthProfile) error {
 	if cfg.ResponseType != "" {
 		switch cfg.ResponseType {
 		case providers.UserInfoResponseTypeJWS:
-			if cfg.SigningAlg == "" {
-				return ErrOAuthUserInfoJWSRequiresSigningAlg
-			}
+			// Signing uses only the server's signing key as of now.
 		case providers.UserInfoResponseTypeJWE:
 			if cfg.EncryptionAlg == "" || cfg.EncryptionEnc == "" {
 				return ErrOAuthUserInfoJWERequiresEncryption
 			}
 		case providers.UserInfoResponseTypeNESTEDJWT:
-			if cfg.SigningAlg == "" || cfg.EncryptionAlg == "" || cfg.EncryptionEnc == "" {
+			if cfg.EncryptionAlg == "" || cfg.EncryptionEnc == "" {
 				return ErrOAuthUserInfoNestedJWTRequiresAll
 			}
 		case providers.UserInfoResponseTypeJSON:
@@ -1050,11 +1048,6 @@ func validateTokenEndpointAuthMethod(p *providers.OAuthProfile, hasClientSecret 
 		return err
 	}
 	hasCert := p.Certificate != nil && p.Certificate.Type != ""
-	userInfoNeedsCert := p.UserInfo != nil && p.UserInfo.EncryptionAlg != ""
-	idTokenNeedsCert := p.Token != nil && p.Token.IDToken != nil &&
-		(p.Token.IDToken.ResponseType == providers.IDTokenResponseTypeJWE ||
-			p.Token.IDToken.ResponseType == providers.IDTokenResponseTypeNESTEDJWT)
-	needsCert := userInfoNeedsCert || idTokenNeedsCert
 
 	switch providers.TokenEndpointAuthMethod(p.TokenEndpointAuthMethod) {
 	case providers.TokenEndpointAuthMethodPrivateKeyJWT:
@@ -1065,15 +1058,14 @@ func validateTokenEndpointAuthMethod(p *providers.OAuthProfile, hasClientSecret 
 			return ErrOAuthPrivateKeyJWTCannotHaveClientSecret
 		}
 	case providers.TokenEndpointAuthMethodClientSecretBasic, providers.TokenEndpointAuthMethodClientSecretPost:
-		if hasCert && !needsCert {
-			return ErrOAuthClientSecretCannotHaveCertificate
-		}
+		// A certificate is allowed: it carries the client's public key for token encryption
+		// (JWE / NESTED_JWT), independent of how the client authenticates.
 	case providers.TokenEndpointAuthMethodNone:
 		if !p.PublicClient {
 			return ErrOAuthNoneAuthRequiresPublicClient
 		}
-		if (hasCert && !needsCert) || hasClientSecret {
-			return ErrOAuthNoneAuthCannotHaveCertOrSecret
+		if hasClientSecret {
+			return ErrOAuthNoneAuthCannotHaveSecret
 		}
 		if slices.Contains(p.GrantTypes, string(providers.GrantTypeClientCredentials)) {
 			return ErrOAuthClientCredentialsCannotUseNoneAuth

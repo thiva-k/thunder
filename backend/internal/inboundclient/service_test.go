@@ -761,13 +761,14 @@ func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpoint_CertAllowe
 	assert.NoError(suite.T(), validateTokenEndpointAuthMethod(p, true))
 }
 
-func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpoint_CertRejectedWhenUserInfoDoesNotNeedIt() {
+func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpoint_CertAllowedUnderClientSecret() {
+	// A certificate is allowed under client_secret auth even without encryption configured: it may
+	// be staged before enabling an encrypted token format, and an unused certificate is harmless.
 	p := &providers.OAuthProfile{
 		TokenEndpointAuthMethod: "client_secret_basic",
 		Certificate:             &inboundmodel.Certificate{Type: cert.CertificateTypeJWKS, Value: "{}"},
 	}
-	err := validateTokenEndpointAuthMethod(p, true)
-	assert.ErrorIs(suite.T(), err, ErrOAuthClientSecretCannotHaveCertificate)
+	assert.NoError(suite.T(), validateTokenEndpointAuthMethod(p, true))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_PrivateKeyJWTHappy() {
@@ -799,14 +800,24 @@ func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_
 	assert.ErrorIs(suite.T(), err, ErrOAuthNoneAuthRequiresPublicClient)
 }
 
-func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_NoneRejectsCertOrSecret() {
+func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_NoneAllowsCert() {
+	// A certificate is allowed under none auth (e.g. to encrypt tokens to a public client's key);
+	// only a client secret is rejected.
 	p := &providers.OAuthProfile{
 		TokenEndpointAuthMethod: "none",
 		PublicClient:            true,
 		Certificate:             &inboundmodel.Certificate{Type: cert.CertificateTypeJWKS, Value: "{}"},
 	}
-	err := validateTokenEndpointAuthMethod(p, false)
-	assert.ErrorIs(suite.T(), err, ErrOAuthNoneAuthCannotHaveCertOrSecret)
+	assert.NoError(suite.T(), validateTokenEndpointAuthMethod(p, false))
+}
+
+func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_NoneRejectsSecret() {
+	p := &providers.OAuthProfile{
+		TokenEndpointAuthMethod: "none",
+		PublicClient:            true,
+	}
+	err := validateTokenEndpointAuthMethod(p, true)
+	assert.ErrorIs(suite.T(), err, ErrOAuthNoneAuthCannotHaveSecret)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_NoneClientCredentialsRejected() {
@@ -889,6 +900,18 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWT
 	assert.NoError(suite.T(), validateUserInfoConfig(p))
 }
 
+func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWTWithoutSigningAlg() {
+	p := &providers.OAuthProfile{
+		Certificate: &inboundmodel.Certificate{Type: cert.CertificateTypeJWKS, Value: "{}"},
+		UserInfo: &providers.UserInfoConfig{
+			ResponseType:  providers.UserInfoResponseTypeNESTEDJWT,
+			EncryptionAlg: "RSA-OAEP-256",
+			EncryptionEnc: "A256GCM",
+		},
+	}
+	assert.NoError(suite.T(), validateUserInfoConfig(p))
+}
+
 // validateUserInfoConfig — error paths
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_UnsupportedSigningAlg() {
@@ -943,11 +966,11 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWKSURISS
 	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoJWKSURINotSSRFSafe)
 }
 
-func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWSMissingSigningAlg() {
+func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWSWithoutSigningAlg() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{ResponseType: providers.UserInfoResponseTypeJWS},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoJWSRequiresSigningAlg)
+	assert.NoError(suite.T(), validateUserInfoConfig(p))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWEMissingEncryption() {

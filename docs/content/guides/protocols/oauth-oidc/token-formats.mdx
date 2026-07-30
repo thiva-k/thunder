@@ -2,7 +2,7 @@
 title: Token Formats
 docType: reference
 sidebar_position: 4
-description: ID Token and UserInfo response formats in {{ProductName}}, JWS, JWE, and NESTED_JWT, with supported signing and encryption algorithms.
+description: ID Token and UserInfo response formats in {{ProductName}}, JWS, JWE, and NESTED_JWT, how signing keys are chosen, and the supported encryption algorithms.
 ---
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -26,21 +26,13 @@ For the **ID Token**, JWS is the default and the most widely supported. Pick JWE
 
 For **UserInfo**, JSON is the default. Switch to JWS when integrity matters; to JWE or NESTED_JWT when confidentiality matters.
 
-## Supported Signing Algorithms (JWS)
+## Signing Algorithm (JWS)
 
 Applies to `JWS` and the signing step of `NESTED_JWT`.
 
-| Algorithm | Family | Recommendation |
-|---|---|---|
-| `RS256` | RSA-PKCS#1 v1.5 | Widely supported. Strong default. |
-| `RS512` | RSA-PKCS#1 v1.5 | Stronger hash. Higher CPU. |
-| `PS256` | RSA-PSS | Probabilistic RSA. Preferred over `RS*` for new deployments. |
-| `ES256` | ECDSA P-256 | Smaller signatures than RSA. Good default for performance-sensitive paths. |
-| `ES384` | ECDSA P-384 | Larger curve. |
-| `ES512` | ECDSA P-521 | Largest curve. |
-| `EdDSA` | Ed25519 | Fastest signing and verification. Newest. |
+<ProductName /> signs every token (access token, ID Token, and signed UserInfo response) with the deployment signing key, and the algorithm follows that key's type, for example an RSA key signs with `RS256` and an Ed25519 key signs with `EdDSA`.
 
-Symmetric algorithms (`HS256`, `HS384`, `HS512`) are **not** supported for token signing.
+To see which algorithm a deployment signs with, read `id_token_signing_alg_values_supported` (and `userinfo_signing_alg_values_supported`) in the [Server Metadata](../server-metadata) document, or inspect the published keys at the [JWKS](../jwks) endpoint. Clients verify signatures against those keys.
 
 ## Supported Encryption Algorithms (JWE)
 
@@ -52,6 +44,8 @@ Applies to `JWE` and the encryption step of `NESTED_JWT`.
 |---|---|
 | `RSA-OAEP` | RSA-OAEP with SHA-1 |
 | `RSA-OAEP-256` | RSA-OAEP with SHA-256 (preferred) |
+
+Both `alg` values are RSA-based, so the client certificate must contain an RSA encryption key (`use: enc`, or no `use`) that the selected `alg` can use.
 
 ### Content Encryption (`enc`)
 
@@ -99,7 +93,7 @@ Encrypted responses (`JWE`, `NESTED_JWT`) and `private_key_jwt` client authentic
 
 1. Open **Applications** or **Agents** in the <ProductName /> Console and select your client.
 2. Open the **Token** tab.
-3. Use the **ID Token** section to configure ID Token format, signing, and encryption.
+3. Use the **ID Token** section to configure ID Token format and, for encrypted formats, encryption. Signing uses the deployment signing key.
 4. Use the **UserInfo** section to configure the UserInfo response format.
 5. For encrypted responses, configure a **Certificate** in the OAuth client settings.
 6. Save.
@@ -119,11 +113,9 @@ Content-Type: application/json
   "grant_types": ["authorization_code"],
   "response_types": ["code"],
 
-  "id_token_signed_response_alg": "PS256",
   "id_token_encrypted_response_alg": "RSA-OAEP-256",
   "id_token_encrypted_response_enc": "A256GCM",
 
-  "userinfo_signed_response_alg": "PS256",
   "userinfo_encrypted_response_alg": "RSA-OAEP-256",
   "userinfo_encrypted_response_enc": "A256GCM",
 

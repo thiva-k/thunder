@@ -3502,22 +3502,16 @@ func (suite *ServiceTestSuite) TestTranslateOAuthValidationError() {
 			wantDescKey: "error.applicationservice.private_key_jwt_cannot_have_client_secret_description",
 		},
 		{
-			name:        "ClientSecretCannotHaveCertificate",
-			err:         inboundclient.ErrOAuthClientSecretCannotHaveCertificate,
-			wantCode:    ErrorInvalidOAuthConfiguration.Code,
-			wantDescKey: "error.applicationservice.client_secret_cannot_have_certificate_description",
-		},
-		{
 			name:        "NoneAuthRequiresPublicClient",
 			err:         inboundclient.ErrOAuthNoneAuthRequiresPublicClient,
 			wantCode:    ErrorInvalidOAuthConfiguration.Code,
 			wantDescKey: "error.applicationservice.none_auth_method_requires_public_client_description",
 		},
 		{
-			name:        "NoneAuthCannotHaveCertOrSecret",
-			err:         inboundclient.ErrOAuthNoneAuthCannotHaveCertOrSecret,
+			name:        "NoneAuthCannotHaveSecret",
+			err:         inboundclient.ErrOAuthNoneAuthCannotHaveSecret,
 			wantCode:    ErrorInvalidOAuthConfiguration.Code,
-			wantDescKey: "error.applicationservice.none_auth_method_cannot_have_cert_or_secret_description",
+			wantDescKey: "error.applicationservice.none_auth_method_cannot_have_secret_description",
 		},
 		{
 			name:        "ClientCredentialsCannotUseNoneAuth",
@@ -3596,11 +3590,6 @@ func (suite *ServiceTestSuite) TestTranslateUserInfoValidationError() {
 			name:        "UnsupportedResponseType",
 			err:         inboundclient.ErrOAuthUserInfoUnsupportedResponseType,
 			wantDescKey: "error.applicationservice.userinfo_unsupported_response_type_description",
-		},
-		{
-			name:        "JWSRequiresSigningAlg",
-			err:         inboundclient.ErrOAuthUserInfoJWSRequiresSigningAlg,
-			wantDescKey: "error.applicationservice.userinfo_jws_requires_signing_alg_description",
 		},
 		{
 			name:        "JWERequiresEncryption",

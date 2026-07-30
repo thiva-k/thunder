@@ -68,11 +68,6 @@ const TokenConstants = {
   USER_INFO_RESPONSE_TYPES: ['JSON', 'JWS', 'JWE', 'NESTED_JWT'],
 
   /**
-   * Supported JWS signing algorithms for UserInfo responses
-   */
-  USER_INFO_SIGNING_ALGS: ['RS256', 'RS512', 'PS256', 'ES256', 'ES384', 'ES512', 'EdDSA'],
-
-  /**
    * Supported JWE key-management algorithms for UserInfo responses
    */
   USER_INFO_ENCRYPTION_ALGS: ['RSA-OAEP', 'RSA-OAEP-256'],

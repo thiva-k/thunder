@@ -1165,6 +1165,8 @@ const translations = {
     'edit.credentials.certificate.error.required':
       'This agent needs a certificate before it can use private_key_jwt authentication.',
     'edit.credentials.certificate.error.valueRequired': 'This field cannot be empty.',
+    'edit.credentials.certificate.error.encryptionDependsOnCert':
+      'This certificate is used to encrypt the ID token. Change the ID token format to a non-encrypted type before removing the certificate.',
 
     // Edit page - Access tab
     'edit.access.groups.title': 'Groups',
@@ -2723,9 +2725,27 @@ const translations = {
     'edit.token.id_token.encryption_alg_placeholder': 'Select encryption algorithm',
     'edit.token.id_token.encryption_enc_placeholder': 'Select content encryption',
     'edit.token.user_info.response_type_placeholder': 'Select response type',
-    'edit.token.user_info.signing_alg_placeholder': 'Select signing algorithm',
     'edit.token.user_info.encryption_alg_placeholder': 'Select encryption algorithm',
     'edit.token.user_info.encryption_enc_placeholder': 'Select content encryption',
+    'edit.token.encryption_requires_certificate':
+      'Encrypted formats require an OAuth client certificate (JWKS or JWKS URI) configured under the {{location}} tab.',
+    'edit.token.signed_with': 'Signed with {{alg}}.',
+    'edit.token.id_token.response_type_options.JWT.label': 'Signed (JWS)',
+    'edit.token.id_token.response_type_options.JWT.description': 'Signed with the server key. Recommended default.',
+    'edit.token.id_token.response_type_options.JWE.label': 'Encrypted (JWE)',
+    'edit.token.id_token.response_type_options.JWE.description': 'Encrypted to the client certificate.',
+    'edit.token.id_token.response_type_options.NESTED_JWT.label': 'Signed then encrypted (Nested JWT)',
+    'edit.token.id_token.response_type_options.NESTED_JWT.description':
+      'Signed with the server key, then encrypted to the client certificate.',
+    'edit.token.user_info.response_type_options.JSON.label': 'Plain JSON',
+    'edit.token.user_info.response_type_options.JSON.description': 'Unsigned JSON response. Recommended default.',
+    'edit.token.user_info.response_type_options.JWS.label': 'Signed (JWS)',
+    'edit.token.user_info.response_type_options.JWS.description': 'Signed with the server key.',
+    'edit.token.user_info.response_type_options.JWE.label': 'Encrypted (JWE)',
+    'edit.token.user_info.response_type_options.JWE.description': 'Encrypted to the client certificate.',
+    'edit.token.user_info.response_type_options.NESTED_JWT.label': 'Signed then encrypted (Nested JWT)',
+    'edit.token.user_info.response_type_options.NESTED_JWT.description':
+      'Signed with the server key, then encrypted to the client certificate.',
 
     // Advanced section
     'edit.advanced.labels.oauth2Config': 'OAuth2 Configuration',
@@ -2750,6 +2770,10 @@ const translations = {
     'edit.advanced.certificate.placeholder.jwks': 'Enter JWKS JSON',
     'edit.advanced.certificate.hint.jwksUri': 'URL to the JWKS endpoint',
     'edit.advanced.certificate.hint.jwks': 'JSON Web Key Set',
+    'edit.advanced.certificate.error.required': 'A certificate is required for private_key_jwt authentication.',
+    'edit.advanced.certificate.error.valueRequired': 'Please enter a value for the selected certificate type.',
+    'edit.advanced.certificate.error.encryptionDependsOnCert':
+      'This certificate is used to encrypt the ID token or UserInfo response. Change those formats to a non-encrypted type before removing the certificate.',
     'edit.advanced.labels.acrValues': 'ACR Values',
     'edit.advanced.acrValues.intro': 'Authentication context classes permitted for this application.',
     'edit.advanced.acrValues.placeholder': 'Select ACR values',
