@@ -24,14 +24,15 @@ import {
   MenuItem,
   Select,
   Stack,
-  TextField,
   Typography,
 } from '@wso2/oxygen-ui';
 import {useCallback, useMemo, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
 import {HTTP_METHODS} from './constants';
+import DraftTextField from './DraftTextField';
 import KeyValueEditor from './KeyValueEditor';
 import type {CommonResourcePropertiesPropsInterface} from './types';
+import {clampToInteger} from './utils';
 import type {StepData} from '@/features/flows/models/steps';
 
 function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPropsInterface): ReactNode {
@@ -55,24 +56,14 @@ function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPro
 
   const handleStringPropertyChange = useCallback(
     (propertyName: string, value: string): void => {
-      onChange(`data.properties.${propertyName}`, value, resource, true);
+      onChange(`data.properties.${propertyName}`, value, resource);
     },
     [resource, onChange],
   );
 
   const handleNumberPropertyChange = useCallback(
-    (propertyName: string, value: string, min: number, max: number): void => {
-      if (value === '') {
-        onChange(`data.properties.${propertyName}`, min, resource);
-        return;
-      }
-
-      const num = Number(value);
-      if (Number.isNaN(num)) {
-        return;
-      }
-
-      onChange(`data.properties.${propertyName}`, Math.min(max, Math.max(min, Math.floor(num))), resource);
+    (propertyName: string, value: string): void => {
+      onChange(`data.properties.${propertyName}`, Number(value), resource);
     },
     [resource, onChange],
   );
@@ -95,10 +86,10 @@ function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPro
 
       <div>
         <FormLabel htmlFor="http-url">{t('flows:core.executions.httpRequest.url.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="http-url"
           value={(properties.url as string) || ''}
-          onChange={(e) => handleStringPropertyChange('url', e.target.value)}
+          onCommit={(value) => handleStringPropertyChange('url', value)}
           placeholder={t('flows:core.executions.httpRequest.url.placeholder')}
           fullWidth
           size="small"
@@ -140,15 +131,17 @@ function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPro
 
       <div>
         <FormLabel htmlFor="http-body">{t('flows:core.executions.httpRequest.body.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="http-body"
           value={typeof properties.body === 'string' ? properties.body : JSON.stringify(properties.body ?? {}, null, 2)}
-          onChange={(e) => {
+          // Committing on blur also means a half-typed body is not repeatedly parsed and
+          // stored as a raw string on the way to becoming valid JSON.
+          onCommit={(value) => {
             try {
-              const parsed: unknown = JSON.parse(e.target.value);
+              const parsed: unknown = JSON.parse(value);
               onChange('data.properties.body', parsed, resource);
             } catch {
-              onChange('data.properties.body', e.target.value, resource);
+              onChange('data.properties.body', value, resource);
             }
           }}
           placeholder={t('flows:core.executions.httpRequest.body.placeholder')}
@@ -161,10 +154,11 @@ function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPro
 
       <div>
         <FormLabel htmlFor="http-timeout">{t('flows:core.executions.httpRequest.timeout.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="http-timeout"
-          value={properties.timeout ?? 10}
-          onChange={(e) => handleNumberPropertyChange('timeout', e.target.value, 1, 20)}
+          value={String((properties.timeout as number | string | undefined) ?? 10)}
+          onCommit={(value) => handleNumberPropertyChange('timeout', value)}
+          normalize={(raw) => clampToInteger(raw, 1, 20)}
           placeholder={t('flows:core.executions.httpRequest.timeout.placeholder')}
           fullWidth
           size="small"
@@ -215,13 +209,13 @@ function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPro
             <FormLabel htmlFor="retry-count">
               {t('flows:core.executions.httpRequest.errorHandling.retryCount.label')}
             </FormLabel>
-            <TextField
+            <DraftTextField
               id="retry-count"
-              value={errorHandling.retryCount ?? 0}
-              onChange={(e) => {
-                const val = Math.min(5, Math.max(0, Math.floor(Number(e.target.value) || 0)));
-                onChange('data.properties.errorHandling', {...errorHandling, retryCount: val}, resource, true);
-              }}
+              value={String(errorHandling.retryCount ?? 0)}
+              onCommit={(value) =>
+                onChange('data.properties.errorHandling', {...errorHandling, retryCount: Number(value)}, resource)
+              }
+              normalize={(raw) => clampToInteger(raw, 0, 5)}
               placeholder={t('flows:core.executions.httpRequest.errorHandling.retryCount.placeholder')}
               fullWidth
               size="small"
@@ -235,13 +229,13 @@ function HttpRequestProperties({resource, onChange}: CommonResourcePropertiesPro
             <FormLabel htmlFor="retry-delay">
               {t('flows:core.executions.httpRequest.errorHandling.retryDelay.label')}
             </FormLabel>
-            <TextField
+            <DraftTextField
               id="retry-delay"
-              value={errorHandling.retryDelay ?? 0}
-              onChange={(e) => {
-                const val = Math.min(5000, Math.max(0, Math.floor(Number(e.target.value) || 0)));
-                onChange('data.properties.errorHandling', {...errorHandling, retryDelay: val}, resource, true);
-              }}
+              value={String(errorHandling.retryDelay ?? 0)}
+              onCommit={(value) =>
+                onChange('data.properties.errorHandling', {...errorHandling, retryDelay: Number(value)}, resource)
+              }
+              normalize={(raw) => clampToInteger(raw, 0, 5000)}
               placeholder={t('flows:core.executions.httpRequest.errorHandling.retryDelay.placeholder')}
               fullWidth
               size="small"

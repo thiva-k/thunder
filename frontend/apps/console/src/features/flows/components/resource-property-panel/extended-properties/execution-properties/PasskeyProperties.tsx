@@ -16,10 +16,11 @@
  * under the License.
  */
 
-import {FormHelperText, FormLabel, MenuItem, Select, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {FormHelperText, FormLabel, MenuItem, Select, Stack, Typography} from '@wso2/oxygen-ui';
 import {useMemo, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
 import {PASSKEY_MODES, PASSKEY_MODES_WITH_RELYING_PARTY} from './constants';
+import DraftTextField from './DraftTextField';
 import type {CommonResourcePropertiesPropsInterface} from './types';
 import type {StepData} from '@/features/flows/models/steps';
 
@@ -96,10 +97,10 @@ function PasskeyProperties({resource, onChange}: CommonResourcePropertiesPropsIn
         <>
           <div>
             <FormLabel htmlFor="relying-party-id">{t('flows:core.executions.passkey.relyingPartyId.label')}</FormLabel>
-            <TextField
+            <DraftTextField
               id="relying-party-id"
               value={currentRelyingPartyId}
-              onChange={(e) => onChange('data.properties.relyingPartyId', e.target.value, resource, true)}
+              onCommit={(value) => onChange('data.properties.relyingPartyId', value, resource)}
               placeholder={t('flows:core.executions.passkey.relyingPartyId.placeholder')}
               fullWidth
               size="small"
@@ -111,10 +112,10 @@ function PasskeyProperties({resource, onChange}: CommonResourcePropertiesPropsIn
             <FormLabel htmlFor="relying-party-name">
               {t('flows:core.executions.passkey.relyingPartyName.label')}
             </FormLabel>
-            <TextField
+            <DraftTextField
               id="relying-party-name"
               value={currentRelyingPartyName}
-              onChange={(e) => onChange('data.properties.relyingPartyName', e.target.value, resource, true)}
+              onCommit={(value) => onChange('data.properties.relyingPartyName', value, resource)}
               placeholder={t('flows:core.executions.passkey.relyingPartyName.placeholder')}
               fullWidth
               size="small"

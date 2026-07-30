@@ -16,9 +16,10 @@
  * under the License.
  */
 
-import {FormHelperText, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {FormHelperText, FormLabel, Stack, Typography} from '@wso2/oxygen-ui';
 import {useMemo, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
+import DraftTextField from './DraftTextField';
 import type {CommonResourcePropertiesPropsInterface} from './types';
 import type {StepData} from '@/features/flows/models/steps';
 
@@ -38,10 +39,10 @@ function OUExecutorProperties({resource, onChange}: CommonResourcePropertiesProp
 
       <div>
         <FormLabel htmlFor="parent-ou-id">{t('flows:core.executions.ouExecutor.parentOuId.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="parent-ou-id"
           value={(properties.parentOuId as string) || ''}
-          onChange={(e) => onChange('data.properties.parentOuId', e.target.value, resource, true)}
+          onCommit={(value) => onChange('data.properties.parentOuId', value, resource)}
           placeholder={t('flows:core.executions.ouExecutor.parentOuId.placeholder')}
           fullWidth
           size="small"

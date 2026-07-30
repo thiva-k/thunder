@@ -17,10 +17,22 @@
  */
 
 import {useSMSProviders} from '@thunderid/configure-connections';
-import {Alert, FormHelperText, FormLabel, MenuItem, Select, Stack, TextField, Typography} from '@wso2/oxygen-ui';
-import {useMemo, type ReactNode} from 'react';
+import {
+  Alert,
+  Autocomplete,
+  FormHelperText,
+  FormLabel,
+  MenuItem,
+  Select,
+  Stack,
+  TextField,
+  Typography,
+  type AutocompleteRenderInputParams,
+} from '@wso2/oxygen-ui';
+import {useMemo, type ReactNode, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CommonResourcePropertiesPropsInterface} from './types';
+import {getTemplateScenarioLabel, getTemplateScenarioOptions} from './utils';
 import type {StepData} from '@/features/flows/models/steps';
 
 function SmsProperties({resource, onChange}: CommonResourcePropertiesPropsInterface): ReactNode {
@@ -36,6 +48,10 @@ function SmsProperties({resource, onChange}: CommonResourcePropertiesPropsInterf
   const smsSenderId = (properties.senderId as string) || '';
   const isSenderPlaceholder = smsSenderId === '' || smsSenderId === '{{SENDER_ID}}';
 
+  const smsTemplate = (properties.smsTemplate as string) || '';
+
+  const templateOptions = useMemo((): string[] => getTemplateScenarioOptions(smsTemplate), [smsTemplate]);
+
   return (
     <Stack gap={2}>
       <Typography variant="body2" color="text.secondary">
@@ -44,11 +60,21 @@ function SmsProperties({resource, onChange}: CommonResourcePropertiesPropsInterf
 
       <div>
         <FormLabel htmlFor="sms-template">{t('flows:core.executions.sms.smsTemplate.label')}</FormLabel>
-        <TextField
+        <Autocomplete
           id="sms-template"
-          value={(properties.smsTemplate as string) || ''}
-          onChange={(e) => onChange('data.properties.smsTemplate', e.target.value, resource, true)}
-          placeholder={t('flows:core.executions.sms.smsTemplate.placeholder')}
+          options={templateOptions}
+          value={smsTemplate || null}
+          getOptionLabel={(option: string) => getTemplateScenarioLabel(option, t)}
+          onChange={(_event: SyntheticEvent, newValue: string | null) =>
+            onChange('data.properties.smsTemplate', newValue ?? '', resource)
+          }
+          renderInput={(params: AutocompleteRenderInputParams) => (
+            <TextField
+              {...params}
+              placeholder={t('flows:core.executions.sms.smsTemplate.placeholder', 'Select an SMS template')}
+              size="small"
+            />
+          )}
           fullWidth
           size="small"
         />

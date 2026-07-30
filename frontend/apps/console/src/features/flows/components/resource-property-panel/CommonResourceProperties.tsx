@@ -362,9 +362,21 @@ function CommonResourceProperties(): ReactElement {
     handlePropertyChangeDebouncedRef.current = debouncedFn;
 
     return () => {
-      debouncedFn.cancel();
+      // Commit rather than discard: closing the panel within the debounce window would
+      // otherwise silently drop the last thing the user typed.
+      debouncedFn.flush();
     };
   }, []);
+
+  // A pending edit resolves the target step from refs at fire time, so selecting another
+  // resource first would write it to the newly selected one. Cleanup runs before the refs
+  // are re-synced below, so the flush still lands on the resource it was typed into.
+  useEffect(
+    () => () => {
+      (handlePropertyChangeDebouncedRef.current as ReturnType<typeof debounce> | null)?.flush();
+    },
+    [lastInteractedResource?.id, lastInteractedStepId],
+  );
 
   /**
    * Unified property change handler.

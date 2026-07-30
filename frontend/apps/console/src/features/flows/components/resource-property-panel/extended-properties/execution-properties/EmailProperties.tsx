@@ -16,10 +16,19 @@
  * under the License.
  */
 
-import {FormHelperText, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
-import {useMemo, type ReactNode} from 'react';
+import {
+  Autocomplete,
+  FormHelperText,
+  FormLabel,
+  Stack,
+  TextField,
+  Typography,
+  type AutocompleteRenderInputParams,
+} from '@wso2/oxygen-ui';
+import {useMemo, type ReactNode, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CommonResourcePropertiesPropsInterface} from './types';
+import {getTemplateScenarioLabel, getTemplateScenarioOptions} from './utils';
 import type {StepData} from '@/features/flows/models/steps';
 
 function EmailProperties({resource, onChange}: CommonResourcePropertiesPropsInterface): ReactNode {
@@ -30,6 +39,10 @@ function EmailProperties({resource, onChange}: CommonResourcePropertiesPropsInte
     return stepData?.properties ?? {};
   }, [resource]);
 
+  const emailTemplate = (properties.emailTemplate as string) || '';
+
+  const options = useMemo((): string[] => getTemplateScenarioOptions(emailTemplate), [emailTemplate]);
+
   return (
     <Stack gap={2}>
       <Typography variant="body2" color="text.secondary">
@@ -38,11 +51,21 @@ function EmailProperties({resource, onChange}: CommonResourcePropertiesPropsInte
 
       <div>
         <FormLabel htmlFor="email-template">{t('flows:core.executions.email.emailTemplate.label')}</FormLabel>
-        <TextField
+        <Autocomplete
           id="email-template"
-          value={(properties.emailTemplate as string) || ''}
-          onChange={(e) => onChange('data.properties.emailTemplate', e.target.value, resource, true)}
-          placeholder={t('flows:core.executions.email.emailTemplate.placeholder')}
+          options={options}
+          value={emailTemplate || null}
+          getOptionLabel={(option: string) => getTemplateScenarioLabel(option, t)}
+          onChange={(_event: SyntheticEvent, newValue: string | null) =>
+            onChange('data.properties.emailTemplate', newValue ?? '', resource)
+          }
+          renderInput={(params: AutocompleteRenderInputParams) => (
+            <TextField
+              {...params}
+              placeholder={t('flows:core.executions.email.emailTemplate.placeholder', 'Select an email template')}
+              size="small"
+            />
+          )}
           fullWidth
           size="small"
         />

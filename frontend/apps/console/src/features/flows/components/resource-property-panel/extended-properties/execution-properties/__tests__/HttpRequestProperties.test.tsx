@@ -77,6 +77,7 @@ describe('HttpRequestProperties', () => {
 
       const timeoutInput = screen.getByLabelText('Timeout');
       fireEvent.change(timeoutInput, {target: {value: ''}});
+      fireEvent.blur(timeoutInput);
 
       expect(mockOnChange).toHaveBeenCalledWith('data.properties.timeout', 1, resource);
     });
