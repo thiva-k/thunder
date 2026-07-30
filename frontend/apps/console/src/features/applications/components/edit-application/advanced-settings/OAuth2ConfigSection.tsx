@@ -180,6 +180,7 @@ export default function OAuth2ConfigSection({
     isPkceDisabledByGrants,
     isPkceForcedByPublicClient,
     isPublicClientDisabledByGrants,
+    isParDisabledByGrants,
   } = flags;
 
   return (
@@ -428,8 +429,8 @@ export default function OAuth2ConfigSection({
           <FormControlLabel
             control={
               <Switch
-                checked={oauth2Config.requirePushedAuthorizationRequests ?? false}
-                disabled={!isEditable || isParLocked}
+                checked={isParDisabledByGrants ? false : (oauth2Config.requirePushedAuthorizationRequests ?? false)}
+                disabled={!isEditable || isParLocked || isParDisabledByGrants}
                 onChange={(e) => onOAuth2ConfigChange?.({requirePushedAuthorizationRequests: e.target.checked})}
                 inputProps={{
                   'aria-label': t(
@@ -453,10 +454,15 @@ export default function OAuth2ConfigSection({
             }
           />
           <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {t(
-              'applications:edit.advanced.par.hint',
-              'Require the client to use the PAR endpoint before authorization.',
-            )}
+            {isParDisabledByGrants
+              ? t(
+                  'applications:edit.advanced.par.requiresAuthorizationCode',
+                  'Available only when the authorization code grant is enabled.',
+                )
+              : t(
+                  'applications:edit.advanced.par.hint',
+                  'Require the client to use the PAR endpoint before authorization.',
+                )}
           </Typography>
         </Box>
       </Stack>
