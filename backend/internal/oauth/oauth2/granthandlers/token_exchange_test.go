@@ -172,9 +172,14 @@ func (suite *TokenExchangeGrantHandlerTestSuite) getDefaultAudience() string {
 
 // Helper function to create a test JWT token
 func (suite *TokenExchangeGrantHandlerTestSuite) createTestJWT(claims map[string]interface{}) string {
+	return suite.createTestJWTWithTyp("at+jwt", claims)
+}
+
+func (suite *TokenExchangeGrantHandlerTestSuite) createTestJWTWithTyp(
+	typ string, claims map[string]interface{}) string {
 	header := map[string]interface{}{
 		"alg": "RS256",
-		"typ": "JWT",
+		"typ": typ,
 	}
 
 	headerJSON, _ := json.Marshal(header)
@@ -1288,6 +1293,171 @@ func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_InvalidScope() 
 	assert.Nil(suite.T(), errResp)
 	assert.NotNil(suite.T(), result)
 	assert.Equal(suite.T(), []string{"read", "write"}, result.AccessToken.Scopes)
+}
+
+// An id_token (typ "JWT") presented as subject_token_type=access_token is rejected per RFC 9068: an
+// access token must carry the at+jwt typ header. This is the reported confusion vector where an
+// id_token is exchanged under the access_token type.
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_IDTokenAsAccessTokenRejected() {
+	now := time.Now().Unix()
+	// createTestJWTWithTyp stamps "JWT" (an id token), but the request declares access_token.
+	subjectToken := suite.createTestJWTWithTyp("JWT", map[string]interface{}{
+		"sub":   "user123",
+		"iss":   testCustomIssuer,
+		"exp":   float64(now + 3600),
+		"nbf":   float64(now - 60),
+		"scope": "read",
+	})
+
+	tokenRequest := &model.TokenRequest{
+		GrantType:        string(providers.GrantTypeTokenExchange),
+		ClientID:         testClientID,
+		SubjectToken:     subjectToken,
+		SubjectTokenType: string(constants.TokenTypeIdentifierAccessToken),
+	}
+
+	suite.mockTokenValidator.On("ValidateSubjectToken", mock.Anything, subjectToken, suite.oauthApp).
+		Return(&tokenservice.SubjectTokenClaims{
+			Sub: testUserID, Iss: testCustomIssuer, Scopes: []string{"read"},
+		}, nil).Maybe()
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), tokenRequest, suite.oauthApp)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), errResp)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errResp.Error)
+	assert.Contains(suite.T(), errResp.ErrorDescription, "at+jwt")
+}
+
+// A token with no typ header presented as subject_token_type=access_token is rejected. This is the
+// exact reported scenario: an external id_token (no typ) exchanged under the access_token type.
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_NoTypAsAccessTokenRejected() {
+	now := time.Now().Unix()
+	// A JWT with only alg/kid in the header, no typ (as issued by some external IdPs for id tokens).
+	claims := map[string]interface{}{
+		"sub":   "user123",
+		"iss":   testCustomIssuer,
+		"exp":   float64(now + 3600),
+		"nbf":   float64(now - 60),
+		"scope": "read",
+	}
+	headerJSON, _ := json.Marshal(map[string]interface{}{"alg": "RS256", "kid": "abc"})
+	claimsJSON, _ := json.Marshal(claims)
+	subjectToken := fmt.Sprintf("%s.%s.signature",
+		base64.RawURLEncoding.EncodeToString(headerJSON),
+		base64.RawURLEncoding.EncodeToString(claimsJSON))
+
+	tokenRequest := &model.TokenRequest{
+		GrantType:        string(providers.GrantTypeTokenExchange),
+		ClientID:         testClientID,
+		SubjectToken:     subjectToken,
+		SubjectTokenType: string(constants.TokenTypeIdentifierAccessToken),
+	}
+
+	suite.mockTokenValidator.On("ValidateSubjectToken", mock.Anything, subjectToken, suite.oauthApp).
+		Return(&tokenservice.SubjectTokenClaims{
+			Sub: testUserID, Iss: testCustomIssuer, Scopes: []string{"read"},
+		}, nil).Maybe()
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), tokenRequest, suite.oauthApp)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), errResp)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errResp.Error)
+	assert.Contains(suite.T(), errResp.ErrorDescription, "at+jwt")
+}
+
+// A subject token whose typ header is not access-token-constrained is accepted for exchange:
+// subject_token_type=jwt is never typ-constrained (a plain "JWT" external token is fine), and an
+// access token presented with the RFC 9068 media-type form "application/at+jwt" is also accepted.
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_AcceptedSubjectTokenTypes() {
+	cases := []struct {
+		name             string
+		typ              string
+		subjectTokenType constants.TokenTypeIdentifier
+	}{
+		{"plain JWT under jwt type", "JWT", constants.TokenTypeIdentifierJWT},
+		{"media-type access token", "application/at+jwt", constants.TokenTypeIdentifierAccessToken},
+		{"uppercase access token typ", "AT+JWT", constants.TokenTypeIdentifierAccessToken},
+		{"uppercase media-type access token", "application/AT+JWT", constants.TokenTypeIdentifierAccessToken},
+	}
+
+	for _, tc := range cases {
+		suite.Run(tc.name, func() {
+			now := time.Now().Unix()
+			subjectToken := suite.createTestJWTWithTyp(tc.typ, map[string]interface{}{
+				"sub":   "user123",
+				"iss":   testCustomIssuer,
+				"exp":   float64(now + 3600),
+				"nbf":   float64(now - 60),
+				"scope": "read",
+			})
+
+			tokenRequest := &model.TokenRequest{
+				GrantType:        string(providers.GrantTypeTokenExchange),
+				ClientID:         testClientID,
+				SubjectToken:     subjectToken,
+				SubjectTokenType: string(tc.subjectTokenType),
+			}
+
+			suite.mockTokenValidator.On("ValidateSubjectToken", mock.Anything, subjectToken, suite.oauthApp).
+				Return(&tokenservice.SubjectTokenClaims{
+					Sub:    testUserID,
+					Iss:    testCustomIssuer,
+					Scopes: []string{"read"},
+				}, nil)
+			suite.mockTokenBuilder.On("BuildAccessToken", mock.Anything, mock.Anything).
+				Return(&model.TokenDTO{
+					Token:     testTokenExchangeJWT,
+					TokenType: constants.TokenTypeBearer,
+					IssuedAt:  now,
+					ExpiresIn: 7200,
+					Scopes:    []string{"read"},
+					ClientID:  testClientID,
+				}, nil)
+
+			result, errResp := suite.handler.HandleGrant(context.Background(), tokenRequest, suite.oauthApp)
+
+			assert.Nil(suite.T(), errResp)
+			assert.NotNil(suite.T(), result)
+		})
+	}
+}
+
+// The RFC 9068 access-token typ enforcement applies to the actor_token as well: an id_token (typ
+// "JWT") presented as actor_token_type=access_token is rejected.
+func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_ActorTokenIDTokenAsAccessTokenRejected() {
+	now := time.Now().Unix()
+	subjectToken := suite.createTestJWT(map[string]interface{}{
+		"sub": "user123", "iss": testCustomIssuer,
+		"exp": float64(now + 3600), "nbf": float64(now - 60), "scope": "read",
+	})
+	// Actor token is an id token (typ "JWT") but declared as an access token.
+	actorToken := suite.createTestJWTWithTyp("JWT", map[string]interface{}{
+		"sub": "svc123", "iss": testCustomIssuer,
+		"exp": float64(now + 3600), "nbf": float64(now - 60),
+	})
+
+	tokenRequest := suite.createBasicTokenRequest(subjectToken)
+	tokenRequest.ActorToken = actorToken
+	tokenRequest.ActorTokenType = string(constants.TokenTypeIdentifierAccessToken)
+
+	suite.mockTokenValidator.On("ValidateSubjectToken", mock.Anything, subjectToken, suite.oauthApp).
+		Return(&tokenservice.SubjectTokenClaims{
+			Sub: testUserID, Iss: testCustomIssuer, Scopes: []string{"read"},
+		}, nil).Maybe()
+	suite.mockTokenValidator.On("ValidateSubjectToken", mock.Anything, actorToken, suite.oauthApp).
+		Return(&tokenservice.SubjectTokenClaims{
+			Sub: "svc123", Iss: testCustomIssuer,
+		}, nil).Maybe()
+
+	result, errResp := suite.handler.HandleGrant(context.Background(), tokenRequest, suite.oauthApp)
+
+	assert.Nil(suite.T(), result)
+	assert.NotNil(suite.T(), errResp)
+	assert.Equal(suite.T(), constants.ErrorInvalidRequest, errResp.Error)
+	assert.Contains(suite.T(), errResp.ErrorDescription, "actor_token")
+	assert.Contains(suite.T(), errResp.ErrorDescription, "at+jwt")
 }
 
 func (suite *TokenExchangeGrantHandlerTestSuite) TestHandleGrant_ScopeEscalationPrevention() {

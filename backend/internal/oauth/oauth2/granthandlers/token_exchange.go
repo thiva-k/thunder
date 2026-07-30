@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -31,6 +32,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/tokenservice"
 	oauth2utils "github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -204,6 +206,13 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 		}
 	}
 
+	// Enforce RFC 9068: a token presented as subject_token_type=access_token must carry the at+jwt typ
+	// header.
+	if errResp := h.validateAccessTokenType(tokenRequest.SubjectToken,
+		tokenRequest.SubjectTokenType, "subject_token"); errResp != nil {
+		return nil, errResp
+	}
+
 	// Enforce subject_token DPoP binding. The proof's jkt is verified earlier in the
 	// token service and propagated via context.
 	if errResp := dpop.VerifyProofBinding(ctx, subjectClaims.CnfJkt, "subject_token"); errResp != nil {
@@ -245,6 +254,12 @@ func (h *tokenExchangeGrantHandler) HandleGrant(ctx context.Context, tokenReques
 					ErrorDescription: "Invalid actor_token",
 				}
 			}
+		}
+
+		// Apply the same RFC 9068 access-token typ enforcement to the actor_token.
+		if errResp := h.validateAccessTokenType(tokenRequest.ActorToken,
+			tokenRequest.ActorTokenType, "actor_token"); errResp != nil {
+			return nil, errResp
 		}
 	}
 
@@ -434,6 +449,37 @@ func (h *tokenExchangeGrantHandler) handleIDJAGGrant(ctx context.Context, tokenR
 	return &model.TokenResponseDTO{
 		AccessToken: *idjag,
 	}, nil
+}
+
+// validateAccessTokenType enforces the RFC 9068 typ header for a token presented as an access token.
+// When the declared token type is urn:ietf:params:oauth:token-type:access_token, the token's typ
+// header must be at+jwt.
+func (h *tokenExchangeGrantHandler) validateAccessTokenType(
+	token string,
+	tokenType string,
+	tokenLabel string,
+) *model.ErrorResponse {
+	if constants.TokenTypeIdentifier(tokenType) != constants.TokenTypeIdentifierAccessToken {
+		return nil
+	}
+
+	header, err := jwt.DecodeJWTHeader(token)
+	if err != nil {
+		return &model.ErrorResponse{
+			Error:            constants.ErrorInvalidRequest,
+			ErrorDescription: "Invalid " + tokenLabel,
+		}
+	}
+
+	if typ, _ := header["typ"].(string); !strings.EqualFold(typ, jwt.TokenTypeAccessToken) &&
+		!strings.EqualFold(typ, jwt.TokenTypeAccessTokenWithPrefix) {
+		return &model.ErrorResponse{
+			Error:            constants.ErrorInvalidRequest,
+			ErrorDescription: "The " + tokenLabel + " is not an access token (missing at+jwt typ header)",
+		}
+	}
+
+	return nil
 }
 
 // getScopes validates and determines the scopes for the new token.
