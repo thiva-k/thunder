@@ -78,6 +78,10 @@ inboundAuthConfig:
         {{- range .REACT_SDK_SAMPLE_REDIRECT_URIS}}
         - {{.}}
         {{- end}}
+      postLogoutRedirectUris:
+        {{- range .REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS}}
+        - {{.}}
+        {{- end}}
       grantTypes:
         - authorization_code
       responseTypes:

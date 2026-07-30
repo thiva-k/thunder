@@ -33,6 +33,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import ThemeToggle from "../theme/ThemeToggle";
 import useAuth from "../hooks/useAuth";
+import { signOutNatively } from "../services/authService";
 
 /**
  * PageLayout component serves as a wrapper for the main content of the application.
@@ -77,7 +78,15 @@ const PageLayout = ({ children }: { children: React.ReactNode }) => {
         return trimmed.slice(0, 1).toUpperCase();
     }, [userLabel]);
     
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        // End the SSO session server-side first, so signing in again prompts for credentials
+        // instead of being skipped by the session check. The local state is cleared either way.
+        try {
+            await signOutNatively();
+        } catch (error) {
+            console.error('Failed to end the SSO session', error);
+        }
+
         sessionStorage.removeItem("isSignupMode");
         sessionStorage.removeItem("startInit");
         sessionStorage.removeItem("executionId");
