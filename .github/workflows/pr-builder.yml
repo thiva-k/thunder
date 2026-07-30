@@ -1069,8 +1069,8 @@ jobs:
 
       - name: 📦 Import Sample App Resources
         run: |
-          echo "Importing React Vanilla Sample declarative resources..."
-          YAML_CONTENT=$(cat samples/apps/react-vanilla-sample/thunderid-config/basic/thunderid-config.yaml)
+          echo "Importing Vanilla Sample declarative resources..."
+          YAML_CONTENT=$(cat samples/apps/vanilla-sample/thunderid-config/basic/thunderid-config.yaml)
           HTTP_STATUS=$(curl -k -s -o /tmp/import_response.json -w "%{http_code}" \
             -X POST https://localhost:8090/import \
             -H 'Content-Type: application/json' \
@@ -1078,8 +1078,7 @@ jobs:
             -d "{
               \"content\": $(echo "$YAML_CONTENT" | jq -Rs .),
               \"variables\": {
-                \"SAMPLE_APP_CLIENT_ID\": \"sample_app_client\",
-                \"SAMPLE_APP_REDIRECT_URIS\": [\"https://localhost:3000\"],
+                \"SAMPLE_APP_FLOW_SECRET\": \"sample-app-flow-secret\",
                 \"SAMPLE_APP_GOOGLE_CLIENT_ID\": \"test-google-client-id\",
                 \"SAMPLE_APP_GOOGLE_CLIENT_SECRET\": \"test-google-client-secret\",
                 \"SAMPLE_APP_GOOGLE_REDIRECT_URI\": \"https://localhost:3000/\",
@@ -1094,10 +1093,10 @@ jobs:
           echo "Import HTTP status: $HTTP_STATUS"
           cat /tmp/import_response.json | jq . || cat /tmp/import_response.json
           if [ "$HTTP_STATUS" != "200" ]; then
-            echo "❌ Failed to import React Vanilla Sample resources (HTTP $HTTP_STATUS)"
+            echo "❌ Failed to import Vanilla Sample resources (HTTP $HTTP_STATUS)"
             exit 1
           fi
-          echo "✅ React Vanilla Sample resources imported successfully"
+          echo "✅ Vanilla Sample resources imported successfully"
 
           echo "Importing React SDK Sample declarative resources..."
           YAML_CONTENT=$(cat samples/apps/react-sdk-sample/thunderid-config/thunderid-config.yaml)
