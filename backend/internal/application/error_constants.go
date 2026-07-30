@@ -562,4 +562,30 @@ var (
 				"browser, fullstack, mobile, m2m, custom.",
 		},
 	}
+	// ErrorInvalidTosURI is the error returned when an invalid Terms of Service URI is provided.
+	ErrorInvalidTosURI = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "APP-1043",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_tos_uri",
+			DefaultValue: "Invalid Terms of Service URI",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_tos_uri_description",
+			DefaultValue: "The provided Terms of Service URI is not a valid URI",
+		},
+	}
+	// ErrorInvalidPolicyURI is the error returned when an invalid Privacy Policy URI is provided
+	ErrorInvalidPolicyURI = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "APP-1044",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_policy_uri",
+			DefaultValue: "Invalid Privacy Policy URI",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_policy_uri_description",
+			DefaultValue: "The provided Privacy Policy URI is not a valid URI",
+		},
+	}
 )

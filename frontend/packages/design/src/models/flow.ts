@@ -90,6 +90,8 @@ export interface FlowFieldProps {
   resolve: (template: string | undefined) => string | undefined;
   /** Input change handler */
   onInputChange: (field: string, value: string) => void;
+  /** Blur handler for triggering validation when a field loses focus */
+  onBlur?: (field: string) => void;
 }
 
 /**
@@ -116,6 +118,8 @@ export interface FlowComponentRendererProps {
   resolve: (template: string | undefined) => string | undefined;
   /** Input change handler */
   onInputChange: (field: string, value: string) => void;
+  /** Blur handler for triggering validation when a field loses focus */
+  onBlur?: (field: string) => void;
   /**
    * Called whenever an ACTION fires (submit or trigger).
    * @param action - The action component that fired.

@@ -17,9 +17,9 @@
  */
 
 import {useQuery, type UseQueryResult} from '@tanstack/react-query';
+import type {VerificationStatusResponse} from '@thunderid/configure-verifiable-presentations';
 import {useConfig} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import type {VerificationStatusResponse} from '../models/vp';
 
 const TERMINAL_STATUSES: ReadonlySet<string> = new Set(['COMPLETED', 'FAILED', 'EXPIRED']);
 

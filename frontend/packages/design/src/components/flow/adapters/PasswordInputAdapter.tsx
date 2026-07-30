@@ -41,6 +41,7 @@ export default function PasswordInputAdapter({
   isLoading,
   resolve,
   onInputChange,
+  onBlur,
   passwordAutoComplete = 'current-password',
 }: PasswordInputAdapterProps): JSX.Element | null {
   const {t} = useTranslation();
@@ -74,6 +75,7 @@ export default function PasswordInputAdapter({
         color={hasError ? 'error' : 'primary'}
         value={value}
         onChange={(e) => onInputChange(ref, e.target.value)}
+        onBlur={() => onBlur?.(ref)}
         slotProps={{
           input: {
             endAdornment: (

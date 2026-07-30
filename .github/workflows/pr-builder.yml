@@ -618,8 +618,9 @@ jobs:
     name: 🛡️ Patch Coverage Gate
     # Deterministic patch coverage check that always reports, unlike the external
     # codecov/patch status which can hang at "Expected" (fork PRs, merge queue
-    # commits, Codecov processing stalls). Mirrors coverage.status.patch.default
-    # in codecov.yml (target 80%, threshold 1%). The enforcement logic lives in
+    # commits, Codecov processing stalls). The threshold and the ignored paths are
+    # read from codecov.yml, so this enforces the same rules as codecov/patch
+    # without a second copy of them here. The enforcement logic lives in
     # .github/actions/patch-coverage-gate.
     needs: [build, test-backend-unit, test-integration, test-frontend-console-app, test-frontend-gate-app, upload-frontend-coverage]
     if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.build.result == 'success' && needs.test-backend-unit.result == 'success' && needs.test-integration.result == 'success' && needs.test-frontend-console-app.result == 'success' && needs.test-frontend-gate-app.result == 'success' && needs.upload-frontend-coverage.result == 'success' }}
@@ -627,6 +628,8 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
+      pull-requests: read
+      checks: read
     steps:
       - name: 📥 Checkout Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -634,12 +637,53 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Codecov never processes merge queue commits, so a queue entry is compared
+      # through the pull request it was created from: the queue commit carries
+      # that same diff rebased onto main. The pull request number is embedded in
+      # the queue ref, and its head commit already has a fully processed Codecov
+      # report from the pull request run. Leaving the outputs empty makes the gate
+      # compute patch coverage locally, which is what queue runs did before.
+      # On merge queue runs the commit under test is not the commit Codecov
+      # reported on, so the codecov/patch check run is read from the head of the
+      # pull request the queue entry was created from. The queue commit carries
+      # that same diff rebased onto main, which is the premise the
+      # codecov-merge-queue-status job already relies on.
+      - name: 🔢 Resolve the commit whose codecov/patch verdict applies
+        id: codecov-target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          # refs/heads/gh-readonly-queue/<base>/pr-<number>-<base sha>
+          QUEUE_REF: ${{ github.event.merge_group.head_ref }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            echo "pr-number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "head-sha=$PR_HEAD_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PR=$(printf '%s' "$QUEUE_REF" | sed -nE 's|.*/pr-([0-9]+)-[0-9a-f]+$|\1|p')
+          if [ -z "$PR" ]; then
+            echo "⚠️ No pull request number in '$QUEUE_REF'; computing patch coverage locally."
+            exit 0
+          fi
+          SHA=$(gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR}" --jq '.head.sha' 2>/dev/null || true)
+          if [ -z "$SHA" ]; then
+            echo "⚠️ Could not resolve the head commit of PR #${PR}; computing patch coverage locally."
+            exit 0
+          fi
+          echo "Comparing through PR #${PR} (head ${SHA})"
+          echo "pr-number=$PR" >> "$GITHUB_OUTPUT"
+          echo "head-sha=$SHA" >> "$GITHUB_OUTPUT"
+
       - name: 🛡️ Enforce Patch Coverage
         uses: ./.github/actions/patch-coverage-gate
         with:
-          fail-under: "79"
-          pr-number: ${{ github.event_name == 'pull_request' && github.event.pull_request.number || '' }}
-          head-sha: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          github-token: ${{ github.token }}
+          pr-number: ${{ steps.codecov-target.outputs.pr-number }}
+          head-sha: ${{ steps.codecov-target.outputs.head-sha || github.sha }}
           base-ref: ${{ github.event_name == 'merge_group' && github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
 
   build_samples:
@@ -814,13 +858,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: 🔧 Install Required OS Utilities
-        # jq/lsof/unzip are used by the bash setup steps below.
-        # build-essential is needed because `pnpm install --frozen-lockfile` at the workspace root
-        # triggers the better-sqlite3 postinstall, which falls back to `node-gyp rebuild` (needs
-        # make + g++) when no prebuilt binary matches the container's Node version.
+        # jq/lsof/unzip are used by the bash setup steps below. No toolchain is
+        # needed: the install below is scoped to @thunderid/e2e, so it never
+        # reaches the better-sqlite3 postinstall that would want node-gyp.
         run: |
           apt-get update
-          apt-get install -y --no-install-recommends jq lsof unzip build-essential
+          apt-get install -y --no-install-recommends jq lsof unzip
 
       - name: 📥 Checkout Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -1170,8 +1213,11 @@ jobs:
           
           echo "Sample App started successfully!"
 
+      # Scoped to the E2E package: it has no workspace dependencies, so installing
+      # the whole monorepo here only added time and dragged in native builds from
+      # unrelated sample apps.
       - name: 📦 Install E2E Dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --filter @thunderid/e2e
 
       - name: 🎭 Run Playwright E2E Tests
         run: pnpm test

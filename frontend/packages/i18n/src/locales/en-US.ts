@@ -1724,7 +1724,7 @@ const translations = {
     'detail.saveBar.unsaved': 'You have unsaved changes',
     'detail.saveBar.save': 'Save changes',
     'detail.saveBar.saving': 'Saving...',
-    'detail.saveBar.discard': 'Discard',
+    'detail.saveBar.reset': 'Reset',
 
     // Per-vendor configure / edit form
     'form.chrome.configure': 'Configure connection',
@@ -1892,7 +1892,7 @@ const translations = {
     'detail.dangerZone.delete.description':
       'Applications relying on assertions from this issuer will stop receiving tokens. This cannot be undone.',
     'detail.saveBar.unsaved': 'You have unsaved changes',
-    'detail.saveBar.discard': 'Discard',
+    'detail.saveBar.reset': 'Reset',
     'detail.saveBar.save': 'Save changes',
 
     // Toasts
@@ -3102,6 +3102,10 @@ const translations = {
   // ============================================================================
   validations: {
     'form.field.required': '{{field}} is required.',
+    'field.email.invalid': 'Please enter a valid email address.',
+    'validation.pattern.invalid': '{{field}} format is invalid.',
+    'validation.minLength.invalid': '{{field}} must be at least {{minLength}} characters.',
+    'validation.maxLength.invalid': '{{field}} must not exceed {{maxLength}} characters.',
   },
 
   // ============================================================================
@@ -4117,10 +4121,9 @@ const translations = {
     'next_steps.section.title': 'Quick Links',
 
     // Invite Members card
-    'next_steps.invite_members.title': 'Invite Members',
-    'next_steps.invite_members.description': 'Add collaborators to help manage your organization and act as a backup.',
+    'next_steps.invite_members.title': 'Add Users',
+    'next_steps.invite_members.description': 'Add or invite collaborators to help manage your organization.',
     'next_steps.invite_members.actions.primary.label': 'Add User',
-    'next_steps.invite_members.actions.secondary.label': 'Invite User',
     'next_steps.invite_members.status.count': '{{count}} member',
     'next_steps.invite_members.status.count_other': '{{count}} members',
     'next_steps.invite_members.status.empty': 'No members yet — add collaborators',
@@ -4648,9 +4651,9 @@ const translations = {
     'cors.validation.invalid': 'Enter a valid origin (e.g. https://app.example.com) or a valid regular expression.',
     'cors.validation.duplicate': 'This origin is already in the list.',
     'cors.unsavedChanges': 'You have unsaved changes',
-    'cors.discard': 'Discard',
+    'cors.reset': 'Reset',
     'cors.save': 'Save changes',
-    'cors.saving': 'Saving…',
+    'cors.saving': 'Saving...',
     'cors.load.error': 'Failed to load allowed origins.',
     'cors.save.success': 'Allowed origins updated.',
     'cors.save.error': 'Failed to update allowed origins.',

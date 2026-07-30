@@ -18,6 +18,7 @@
 
 import {SettingsCard, UnsavedChangesBar} from '@thunderid/components';
 import {OrganizationUnitTreePicker, useHasMultipleOUs} from '@thunderid/configure-organization-units';
+import type {TrustAnchor, VerifiablePresentation} from '@thunderid/configure-verifiable-presentations';
 import {
   Autocomplete,
   Box,
@@ -57,7 +58,6 @@ import ClaimsEditor from './ClaimsEditor';
 import useGetTrustAnchors from '../api/useGetTrustAnchors';
 import {claimRowsToRequest, definitionToClaimRows, type ClaimRow} from '../models/claims';
 import type {CreateVerifiablePresentationRequest} from '../models/requests';
-import type {TrustAnchor, VerifiablePresentation} from '../models/vp';
 
 export interface VerifiablePresentationFormProps {
   initial?: VerifiablePresentation;

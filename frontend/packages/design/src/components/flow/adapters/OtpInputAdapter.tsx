@@ -32,6 +32,7 @@ export default function OtpInputAdapter({
   isLoading,
   resolve,
   onInputChange,
+  onBlur,
 }: FlowFieldProps): JSX.Element | null {
   const {t} = useTranslation();
   const {ref} = component;
@@ -52,7 +53,14 @@ export default function OtpInputAdapter({
       <FormLabel htmlFor={ref} className={cn('Label--root')}>
         {t(resolve(component.label)!)}
       </FormLabel>
-      <Box sx={{display: 'flex', gap: 1, justifyContent: 'center', mt: 1}}>
+      <Box
+        sx={{display: 'flex', gap: 1, justifyContent: 'center', mt: 1}}
+        onBlur={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+            onBlur?.(ref);
+          }
+        }}
+      >
         {otpDigits.map((digit, idx) => (
           <TextField
             // eslint-disable-next-line react/no-array-index-key

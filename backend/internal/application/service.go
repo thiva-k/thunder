@@ -1172,6 +1172,12 @@ func (as *applicationService) validateApplicationFields(
 	if app.LogoURL != "" && !sysutils.IsValidLogoURI(app.LogoURL) {
 		return &ErrorInvalidLogoURL
 	}
+	if app.TosURI != "" && !sysutils.IsValidURI(app.TosURI) {
+		return &ErrorInvalidTosURI
+	}
+	if app.PolicyURI != "" && !sysutils.IsValidURI(app.PolicyURI) {
+		return &ErrorInvalidPolicyURI
+	}
 	// Reject an unrecognized application type. Requiring a type (create) and enforcing
 	// immutability (update) are handled by the respective callers.
 	switch app.Type {

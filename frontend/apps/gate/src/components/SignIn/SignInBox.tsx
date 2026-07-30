@@ -19,9 +19,9 @@
 import {useDesign, FlowComponentRenderer, AuthCardLayout} from '@thunderid/design';
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
 import {EmbeddedFlowComponentType, SignIn, type EmbeddedFlowComponent} from '@thunderid/react';
-import {TemplateLiteralType} from '@thunderid/utils';
+import {EMAIL_REGEX, TemplateLiteralType} from '@thunderid/utils';
 import {Box, Alert, CircularProgress} from '@wso2/oxygen-ui';
-import {useState} from 'react';
+import {useRef, useState} from 'react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 
@@ -32,39 +32,107 @@ export default function SignInBox(): JSX.Element {
 
   const [formInputs, setFormInputs] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const componentsRef = useRef<EmbeddedFlowComponent[]>([]);
+  const debounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const collectInputComponents = (components: EmbeddedFlowComponent[]): void => {
+    const fields: EmbeddedFlowComponent[] = [];
+    const walk = (comps: EmbeddedFlowComponent[]) => {
+      comps.forEach((c: EmbeddedFlowComponent) => {
+        if (
+          ((c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.TextInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PasswordInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.EmailInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PhoneInput ||
+            (c.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.OtpInput) &&
+          c.ref &&
+          typeof c.ref === 'string'
+        ) {
+          fields.push(c);
+        }
+        if (c.components && Array.isArray(c.components)) walk(c.components);
+      });
+    };
+    walk(components);
+    componentsRef.current = fields;
+  };
+
+  const validateFieldFormat = (field: string, value: string): void => {
+    const component = componentsRef.current.find((c) => typeof c.ref === 'string' && c.ref === field);
+    if (!component) return;
+
+    let error = '';
+    if (
+      (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.EmailInput &&
+      value.trim() &&
+      !EMAIL_REGEX.test(value)
+    ) {
+      error = `${t('validations:field.email.invalid', 'Please enter a valid email address.')}`;
+    }
+
+    setFieldErrors((prev) => ({...prev, [field]: error}));
+    if (error) {
+      setTouched((prev) => ({...prev, [field]: true}));
+    } else {
+      setTouched((prev) => ({...prev, [field]: false}));
+    }
+  };
 
   const validateForm = (components: EmbeddedFlowComponent[]): boolean => {
     const errors: Record<string, string> = {};
+    const touchedFields: Record<string, boolean> = {};
     let isValid = true;
 
-    components.forEach((component: EmbeddedFlowComponent) => {
-      if (
-        ((component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.TextInput ||
-          (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PasswordInput ||
-          component.type === 'PHONE_INPUT' ||
-          component.type === 'OTP_INPUT') &&
-        component.required &&
-        component.ref &&
-        typeof component.ref === 'string' &&
-        typeof component.label === 'string'
-      ) {
-        const value = formInputs[component.ref] ?? '';
-        if (!value.trim()) {
-          errors[component.ref] = `${t('validations:form.field.required', {field: t(resolve(component.label)!)})}`;
-          isValid = false;
+    const check = (comps: EmbeddedFlowComponent[]) => {
+      comps.forEach((component: EmbeddedFlowComponent) => {
+        if (
+          ((component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.TextInput ||
+            (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PasswordInput ||
+            (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.EmailInput ||
+            (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.PhoneInput ||
+            (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.OtpInput) &&
+          component.ref &&
+          typeof component.ref === 'string' &&
+          typeof component.label === 'string'
+        ) {
+          const value = formInputs[component.ref] ?? '';
+          if (component.required && !value.trim()) {
+            const fieldLabel = t(resolve(component.label)!, component.label);
+            errors[component.ref] =
+              `${t('validations:form.field.required', {defaultValue: '{{field}} is required.', field: fieldLabel})}`;
+            touchedFields[component.ref] = true;
+            isValid = false;
+          } else if (
+            (component.type as EmbeddedFlowComponentType) === EmbeddedFlowComponentType.EmailInput &&
+            value.trim() &&
+            !EMAIL_REGEX.test(value)
+          ) {
+            errors[component.ref] = `${t('validations:field.email.invalid', 'Please enter a valid email address.')}`;
+            touchedFields[component.ref] = true;
+            isValid = false;
+          }
         }
-      }
-    });
+        if (component.components && Array.isArray(component.components)) check(component.components);
+      });
+    };
+    check(components);
 
     setFieldErrors(errors);
+    setTouched((prev) => ({...prev, ...touchedFields}));
     return isValid;
   };
 
   const updateInput = (field: string, value: string): void => {
     setFormInputs((prev) => ({...prev, [field]: value}));
-    if (fieldErrors[field]) {
-      setFieldErrors((prev) => ({...prev, [field]: ''}));
+
+    if (debounceTimers.current[field]) {
+      clearTimeout(debounceTimers.current[field]);
     }
+
+    debounceTimers.current[field] = setTimeout(() => {
+      validateFieldFormat(field, value);
+    }, 600);
   };
 
   return (
@@ -96,6 +164,7 @@ export default function SignInBox(): JSX.Element {
               {(() => {
                 const renderComponents = components && components.length > 0 ? components : [];
 
+                collectInputComponents(renderComponents);
                 if (renderComponents.length > 0) {
                   return (
                     <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
@@ -105,6 +174,7 @@ export default function SignInBox(): JSX.Element {
                           component={component}
                           index={index}
                           values={formInputs}
+                          touched={touched}
                           fieldErrors={fieldErrors}
                           isLoading={isLoading}
                           additionalData={additionalData}

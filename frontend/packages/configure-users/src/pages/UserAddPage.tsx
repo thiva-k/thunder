@@ -30,6 +30,7 @@ import {
   type InviteUserRenderProps,
 } from '@thunderid/react';
 import type {ApiError} from '@thunderid/types';
+import {EMAIL_REGEX} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -310,7 +311,10 @@ function InviteUserStepContent({
             control={formControl}
             rules={{
               required: required ? `${resolve(labelText) ?? labelText} is required` : false,
-              pattern: {value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email address'},
+              pattern: {
+                value: EMAIL_REGEX,
+                message: t('validations:field.email.invalid', 'Please enter a valid email address.'),
+              },
             }}
             render={({field}) => (
               <TextField
@@ -927,10 +931,10 @@ export default function UserAddPage(): JSX.Element {
   const [hasOuStep, setHasOuStep] = useState(false);
 
   const handleClose = useCallback(() => {
-    Promise.resolve(navigate(routes.list())).catch((error: unknown) => {
-      logger.error('Failed to navigate to users page', {error});
+    Promise.resolve(navigate(-1)).catch((error: unknown) => {
+      logger.error('Failed to navigate back', {error});
     });
-  }, [navigate, routes, logger]);
+  }, [navigate, logger]);
 
   const handleManualCreateFallback = useCallback(() => {
     logger.info('Falling back to manual user creation because the onboarding flow is unavailable');

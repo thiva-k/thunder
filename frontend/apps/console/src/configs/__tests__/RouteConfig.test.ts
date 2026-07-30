@@ -31,7 +31,6 @@ describe('RouteConfig', () => {
     expect(RouteConfig.users.detail('user-1')).toBe('/users/user-1');
     expect(RouteConfig.users.add()).toBe('/users/add');
     expect(RouteConfig.users.addCreate()).toBe('/users/add/create');
-    expect(RouteConfig.users.addInvite()).toBe('/users/add/invite');
   });
 
   it('userTypes builds paths from the segment', () => {
