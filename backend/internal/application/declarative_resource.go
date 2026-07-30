@@ -191,6 +191,7 @@ func parseToApplicationDTO(data []byte) (*model.ApplicationDTO, error) {
 			AllowedUserTypes:          appRequest.AllowedUserTypes,
 			PasskeyAllowedOrigins:     appRequest.PasskeyAllowedOrigins,
 			LoginConsent:              appRequest.LoginConsent,
+			Attestation:               appRequest.Attestation,
 		},
 		Type:       appRequest.Type,
 		Template:   appRequest.Template,
