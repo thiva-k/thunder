@@ -229,9 +229,81 @@ type NativeAuthSubmitPayload =
 
 const { applicationID, flowEndpoint } = config;
 
+interface SignOutFlowResponse {
+    flowStatus?: string;
+    executionId?: string;
+    data?: {
+        actions?: Array<{ ref: string }>;
+    };
+}
+
+/**
+ * Terminates the SSO session by running the application's sign-out flow.
+ *
+ * The sign-out flow is driven natively, exactly like the authentication flow: it is initiated with
+ * the SIGNOUT flow type and any confirmation step it returns is submitted straight away, since
+ * clicking sign out in the app is itself the confirmation. The SSO session is identified by the
+ * per-flow cookie the server set during sign-in, so every call sends credentials.
+ *
+ * @returns {Promise<void>} - Resolves only once the flow reports COMPLETE. Rejects otherwise, so a
+ *                            caller is never told the session ended when it may still be alive.
+ */
+export const signOutNatively = async (): Promise<void> => {
+    const headers = {
+        'Content-Type': 'application/json'
+    };
+
+    const execute = async (body: Record<string, string>): Promise<SignOutFlowResponse> => {
+        const response = await fetch(`${flowEndpoint}/execute`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            credentials: 'include',
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({})) as { message?: { defaultValue?: string } };
+            throw new Error(errorData?.message?.defaultValue || 'Error initiating native sign out request.');
+        }
+
+        return await response.json() as SignOutFlowResponse;
+    };
+
+    let step = await execute({ applicationId: applicationID, flowType: 'SIGNOUT' });
+
+    // The default sign-out flow confirms with the user before ending the session. Submit that
+    // confirmation automatically; guard the loop so a flow that never completes cannot spin.
+    for (let i = 0; i < 5 && step.flowStatus !== 'COMPLETE'; i++) {
+        const actions = step.data?.actions ?? [];
+        if (actions.length === 0 || !step.executionId) {
+            break;
+        }
+
+        // A step offering a choice cannot be answered without knowing what each option means, so
+        // only an unambiguous single action is submitted rather than guessing by list position.
+        if (actions.length > 1) {
+            throw new Error(
+                `Sign-out flow returned ${actions.length} actions (${actions.map(a => a.ref).join(', ')}); ` +
+                'this sample only drives a single-action confirmation.',
+            );
+        }
+
+        step = await execute({
+            applicationId: applicationID,
+            flowType: 'SIGNOUT',
+            executionId: step.executionId,
+            action: actions[0].ref,
+        });
+    }
+
+    if (step.flowStatus !== 'COMPLETE') {
+        throw new Error(`Sign-out flow did not complete (flowStatus: ${step.flowStatus ?? 'unknown'}).`);
+    }
+};
+
 /**
  * Initiates the native authentication or registration flow by sending a POST request to the flow endpoint.
- * 
+ *
  * @param {string} flowType - The type of flow to initiate. Defaults to 'LOGIN'.
  * @returns {Promise<object>} - A promise that resolves to the response data from the server.
  */
@@ -256,6 +328,7 @@ export const initiateNativeAuthFlow = async (flowType: 'LOGIN' | 'REGISTRATION' 
         method: 'POST',
         headers,
         body: JSON.stringify(data),
+        credentials: 'include',
     });
 
     if (!response.ok) {
@@ -311,6 +384,7 @@ export const initiateNativeAuthFlowWithData = async (flowType: 'LOGIN' | 'REGIST
         method: 'POST',
         headers,
         body: JSON.stringify(data),
+        credentials: 'include',
     });
 
     if (!response.ok) {
@@ -357,6 +431,7 @@ export const submitAuthDecision = async (executionId: string, actionId: string, 
         method: 'POST',
         headers,
         body: JSON.stringify(data),
+        credentials: 'include',
     });
 
     if (!response.ok) {
@@ -426,6 +501,7 @@ export const submitNativeAuth = async (
         method: 'POST',
         headers,
         body: JSON.stringify(data),
+        credentials: 'include',
     });
 
     if (!response.ok) {

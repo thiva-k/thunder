@@ -1010,7 +1010,8 @@ jobs:
               \"content\": $(echo "$YAML_CONTENT" | jq -Rs .),
               \"variables\": {
                 \"REACT_SDK_SAMPLE_CLIENT_ID\": \"REACT_SDK_SAMPLE\",
-                \"REACT_SDK_SAMPLE_REDIRECT_URIS\": [\"https://localhost:3000\"]
+                \"REACT_SDK_SAMPLE_REDIRECT_URIS\": [\"https://localhost:3000\"],
+                \"REACT_SDK_SAMPLE_POST_LOGOUT_REDIRECT_URIS\": [\"https://localhost:3000\"]
               },
               \"options\": {\"upsert\": true}
             }")
