@@ -189,6 +189,14 @@ attestation:
 ```
 :::
 
+### Dev Mode
+
+Configuring `attestation.android` or `attestation.apple` requires a signed build with the exact package name, signing certificate, or bundle identifier registered above. A sample application or a local development build usually cannot produce a valid attestation. **Dev Mode** lets a Mobile application initiate a flow directly without presenting an attestation token, regardless of whether an Android or iOS platform is configured. Enable it from the toggle in the **Platform Attestation** card header, or set `attestation.devMode` to `true` in a declarative resource. **Dev Mode** is disabled by default.
+
+:::warning
+**Dev Mode** skips the platform-attestation check only when this application initiates a flow directly. It does not affect any other application operation. Use it only for testing, or to try out a sample or development client. Disable it before the application goes to production.
+:::
+
 ## Related Guides
 
 - [Manage Applications](../manage-applications) - Create, update, and delete applications

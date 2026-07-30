@@ -294,3 +294,11 @@ func (suite *ModelTestSuite) TestAttestationConfig_WithoutCredentials_PassesAppl
 	assert.Equal(suite.T(), "com.example.app", sanitized.Apple.BundleID)
 	assert.Nil(suite.T(), sanitized.Android)
 }
+
+func (suite *ModelTestSuite) TestAttestationConfig_WithoutCredentials_PassesDevModeThrough() {
+	cfg := &AttestationConfig{DevMode: true}
+
+	sanitized := cfg.WithoutCredentials()
+
+	assert.True(suite.T(), sanitized.DevMode)
+}

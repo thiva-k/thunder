@@ -38,4 +38,8 @@ const (
 	// identity. This takes precedence over the redirect-based classification for apps that configure
 	// attestation.
 	flowInitiationAttestation
+	// flowInitiationDevMode indicates a mobile application with attestation dev mode enabled, which may
+	// initiate a flow directly without presenting a platform attestation. Intended for testing and
+	// trying out sample or development mobile clients; disabled by default.
+	flowInitiationDevMode
 )

@@ -635,6 +635,7 @@ type Certificate struct {
 type AttestationConfig struct {
 	Android *AndroidAttestationConfig `json:"android,omitempty" yaml:"android,omitempty" jsonschema:"Google Play Integrity attestation configuration for Android clients."`
 	Apple   *AppleAttestationConfig   `json:"apple,omitempty"   yaml:"apple,omitempty"   jsonschema:"Apple App Attest attestation configuration for iOS clients."`
+	DevMode bool                      `json:"devMode,omitempty" yaml:"devMode,omitempty" jsonschema:"When true, skips the platform-attestation check for a mobile application during direct flow initiation. Disabled by default; enable only for testing or trying out sample/development mobile clients."`
 }
 
 // AndroidAttestationConfig holds the Google Play Integrity settings for an Android application.
@@ -656,7 +657,7 @@ func (c *AttestationConfig) WithoutCredentials() *AttestationConfig {
 	if c == nil {
 		return nil
 	}
-	sanitized := &AttestationConfig{}
+	sanitized := &AttestationConfig{DevMode: c.DevMode}
 	if c.Android != nil {
 		android := *c.Android
 		android.ServiceAccountCredentials = ""

@@ -1833,6 +1833,30 @@ func (suite *ServiceTestSuite) TestResolveAttestationCredentials_PreservesExisti
 	assert.Equal(suite.T(), "com.example.app", inboundClient.Attestation.Android.PackageName)
 }
 
+// The Android credential rebuild must not drop a DevMode setting configured alongside it.
+func (suite *ServiceTestSuite) TestResolveAttestationCredentials_PreservesDevMode() {
+	service, mockStore := suite.setupTestService()
+
+	const appID = "app-1"
+	mockStore.On("GetInboundClientByEntityID", mock.Anything, appID).Return(
+		&inboundmodel.InboundClient{
+			Attestation: &providers.AttestationConfig{
+				Android: &providers.AndroidAttestationConfig{ServiceAccountCredentials: "stored-encrypted"},
+			},
+		}, nil)
+
+	inboundClient := &inboundmodel.InboundClient{
+		Attestation: &providers.AttestationConfig{
+			Android: &providers.AndroidAttestationConfig{PackageName: "com.example.app"},
+			DevMode: true,
+		},
+	}
+
+	svcErr := service.resolveAttestationCredentialsForPersist(context.Background(), appID, inboundClient)
+	require.Nil(suite.T(), svcErr)
+	assert.True(suite.T(), inboundClient.Attestation.DevMode)
+}
+
 // A non-"not found" lookup failure while preserving omitted credentials is propagated as an internal
 // error, so a transient store failure cannot silently overwrite stored credentials with an empty
 // value.

@@ -489,11 +489,22 @@ export interface OAuth2Config {
 }
 
 /**
- * Platform attestation configuration for an application. An application configures exactly one
- * platform: the `android` and `apple` variants are mutually exclusive, so `{}` and a config with
- * both set are both compile-time errors.
+ * Platform attestation configuration for an application. `android` and `apple` are mutually
+ * exclusive: configuring both is a compile-time error, matching the backend's rejection of a
+ * config with both set. `devMode` is independent of the platform fields, so it may be set on its
+ * own with neither platform configured.
  */
-export type AttestationConfig =
+export type AttestationConfig = {
+  /**
+   * When true, skips attestation verification for this application. Disabled by default; enable
+   * only for testing or trying out sample/development mobile clients.
+   */
+  devMode?: boolean;
+} & (
+  | {
+      android?: undefined;
+      apple?: undefined;
+    }
   | {
       /**
        * Google Play Integrity attestation configuration for Android clients.
@@ -507,7 +518,8 @@ export type AttestationConfig =
        * Apple App Attest attestation configuration for iOS clients.
        */
       apple: AppleAttestationConfig;
-    };
+    }
+);
 
 /**
  * Google Play Integrity attestation settings for an Android application.

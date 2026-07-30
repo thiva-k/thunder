@@ -1435,15 +1435,22 @@ components:
       type: object
       description: >
         Platform attestation configuration used to verify the binary identity of a mobile client
-        when it initiates a flow directly over HTTP. Configure exactly one platform.
-      oneOf:
-        - required: [android]
-        - required: [apple]
+        when it initiates a flow directly over HTTP. Configure at most one platform; devMode is
+        independent of the platform fields and may be set with neither configured.
+      not:
+        required: [android, apple]
       properties:
         android:
           $ref: '#/components/schemas/AndroidAttestation'
         apple:
           $ref: '#/components/schemas/AppleAttestation'
+        devMode:
+          type: boolean
+          default: false
+          description: >
+            When true, skips the platform-attestation check for a mobile application during direct
+            flow initiation. Disabled by default; enable only for testing or trying out
+            sample/development mobile clients.
 
     AndroidAttestation:
       type: object
