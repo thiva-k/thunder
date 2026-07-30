@@ -35,6 +35,7 @@ describe('resolveApplicationType', () => {
     expect(resolveApplicationType('m2m')).toBe('m2m');
     expect(resolveApplicationType('mobile')).toBe('mobile');
     expect(resolveApplicationType('browser', makeConfig({grantTypes: ['client_credentials']}))).toBe('browser');
+    expect(resolveApplicationType('mcp', makeConfig({grantTypes: ['client_credentials']}))).toBe('mcp');
   });
 
   it('falls back to config inference for legacy (undefined) type', () => {
