@@ -16,10 +16,12 @@
  * under the License.
  */
 
-import {Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack, Typography} from '@wso2/oxygen-ui';
 import {useCallback, useMemo, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
+import DraftTextField from './DraftTextField';
 import type {CommonResourcePropertiesPropsInterface} from './types';
+import {clampToInteger} from './utils';
 import type {StepData} from '@/features/flows/models/steps';
 
 function ProvisioningProperties({resource, onChange}: CommonResourcePropertiesPropsInterface): ReactNode {
@@ -39,25 +41,14 @@ function ProvisioningProperties({resource, onChange}: CommonResourcePropertiesPr
 
   const handleStringPropertyChange = useCallback(
     (propertyName: string, value: string): void => {
-      onChange(`data.properties.${propertyName}`, value, resource, true);
+      onChange(`data.properties.${propertyName}`, value, resource);
     },
     [resource, onChange],
   );
 
   const handleNumberPropertyChange = useCallback(
     (propertyName: string, value: string): void => {
-      if (value === '') {
-        onChange(`data.properties.${propertyName}`, 0, resource, true);
-        return;
-      }
-
-      const numericValue = Number(value);
-
-      if (!Number.isFinite(numericValue)) {
-        return;
-      }
-
-      onChange(`data.properties.${propertyName}`, Math.max(0, Math.floor(numericValue)), resource, true);
+      onChange(`data.properties.${propertyName}`, Number(value), resource);
     },
     [resource, onChange],
   );
@@ -113,11 +104,12 @@ function ProvisioningProperties({resource, onChange}: CommonResourcePropertiesPr
 
       <div>
         <FormLabel htmlFor="max-per-prompt">{t('flows:core.executions.provisioning.maxPerPrompt.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="max-per-prompt"
           type="number"
-          value={maxPerPromptValue}
-          onChange={(e) => handleNumberPropertyChange('maxPerPrompt', e.target.value)}
+          value={String(maxPerPromptValue)}
+          onCommit={(value) => handleNumberPropertyChange('maxPerPrompt', value)}
+          normalize={(raw) => clampToInteger(raw, 0)}
           placeholder={t('flows:core.executions.provisioning.maxPerPrompt.placeholder')}
           fullWidth
           size="small"
@@ -132,10 +124,10 @@ function ProvisioningProperties({resource, onChange}: CommonResourcePropertiesPr
 
       <div>
         <FormLabel htmlFor="assign-group">{t('flows:core.executions.provisioning.assignGroup.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="assign-group"
           value={(properties.assignGroup as string) || ''}
-          onChange={(e) => handleStringPropertyChange('assignGroup', e.target.value)}
+          onCommit={(value) => handleStringPropertyChange('assignGroup', value)}
           placeholder={t('flows:core.executions.provisioning.assignGroup.placeholder')}
           fullWidth
           size="small"
@@ -144,10 +136,10 @@ function ProvisioningProperties({resource, onChange}: CommonResourcePropertiesPr
 
       <div>
         <FormLabel htmlFor="assign-role">{t('flows:core.executions.provisioning.assignRole.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="assign-role"
           value={(properties.assignRole as string) || ''}
-          onChange={(e) => handleStringPropertyChange('assignRole', e.target.value)}
+          onCommit={(value) => handleStringPropertyChange('assignRole', value)}
           placeholder={t('flows:core.executions.provisioning.assignRole.placeholder')}
           fullWidth
           size="small"

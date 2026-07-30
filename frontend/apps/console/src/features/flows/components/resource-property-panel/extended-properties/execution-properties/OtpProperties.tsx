@@ -16,10 +16,12 @@
  * under the License.
  */
 
-import {Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {Checkbox, FormControlLabel, FormHelperText, FormLabel, Stack, Typography} from '@wso2/oxygen-ui';
 import {useMemo, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
+import DraftTextField from './DraftTextField';
 import type {CommonResourcePropertiesPropsInterface} from './types';
+import {clampToInteger} from './utils';
 import type {StepData} from '@/features/flows/models/steps';
 
 function OtpProperties({resource, onChange}: CommonResourcePropertiesPropsInterface): ReactNode {
@@ -34,6 +36,12 @@ function OtpProperties({resource, onChange}: CommonResourcePropertiesPropsInterf
     onChange(`data.properties.${propertyName}`, value, resource);
   };
 
+  // The executor reads these through a numeric conversion that rejects strings, so a
+  // string would leave the configured value silently ignored at runtime.
+  const handleNumberPropertyChange = (propertyName: string, value: string): void => {
+    onChange(`data.properties.${propertyName}`, Number(value), resource);
+  };
+
   return (
     <Stack gap={2}>
       <Typography variant="body2" color="text.secondary">
@@ -42,11 +50,12 @@ function OtpProperties({resource, onChange}: CommonResourcePropertiesPropsInterf
 
       <div>
         <FormLabel htmlFor="otp-length">{t('flows:core.executions.otp.otpLength.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="otp-length"
           type="number"
-          value={(properties.otpLength as string) ?? ''}
-          onChange={(e) => onChange('data.properties.otpLength', e.target.value, resource, true)}
+          value={String((properties.otpLength as number | string | undefined) ?? '')}
+          onCommit={(value) => handleNumberPropertyChange('otpLength', value)}
+          normalize={(raw) => clampToInteger(raw, 4, 10)}
           placeholder={t('flows:core.executions.otp.otpLength.placeholder')}
           fullWidth
           size="small"
@@ -57,11 +66,12 @@ function OtpProperties({resource, onChange}: CommonResourcePropertiesPropsInterf
 
       <div>
         <FormLabel htmlFor="otp-validity">{t('flows:core.executions.otp.otpValidityPeriodSeconds.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="otp-validity"
           type="number"
-          value={(properties.otpValidityPeriodSeconds as string) ?? ''}
-          onChange={(e) => onChange('data.properties.otpValidityPeriodSeconds', e.target.value, resource, true)}
+          value={String((properties.otpValidityPeriodSeconds as number | string | undefined) ?? '')}
+          onCommit={(value) => handleNumberPropertyChange('otpValidityPeriodSeconds', value)}
+          normalize={(raw) => clampToInteger(raw, 30, 600)}
           placeholder={t('flows:core.executions.otp.otpValidityPeriodSeconds.placeholder')}
           fullWidth
           size="small"
@@ -86,11 +96,12 @@ function OtpProperties({resource, onChange}: CommonResourcePropertiesPropsInterf
 
       <div>
         <FormLabel htmlFor="otp-max-attempts">{t('flows:core.executions.otp.maxAttempts.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="otp-max-attempts"
           type="number"
-          value={(properties.maxAttempts as string) || ''}
-          onChange={(e) => onChange('data.properties.maxAttempts', e.target.value, resource, true)}
+          value={String((properties.maxAttempts as number | string | undefined) ?? '')}
+          onCommit={(value) => handleNumberPropertyChange('maxAttempts', value)}
+          normalize={(raw) => clampToInteger(raw, 1)}
           placeholder={t('flows:core.executions.otp.maxAttempts.placeholder')}
           fullWidth
           size="small"

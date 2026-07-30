@@ -52,6 +52,12 @@ vi.mock('react-i18next', () => ({
         'flows:core.executions.passkey.relyingPartyName.label': 'Relying Party Name',
         'flows:core.executions.passkey.relyingPartyName.placeholder': 'Enter relying party name',
         'flows:core.executions.passkey.relyingPartyName.hint': 'Relying party name hint',
+        'flows:core.executions.templateScenarios.userInvite': 'User Invite',
+        'flows:core.executions.templateScenarios.magicLink': 'Magic Link',
+        'flows:core.executions.templateScenarios.selfRegistration': 'Self Registration',
+        'flows:core.executions.templateScenarios.otp': 'OTP Verification',
+        'flows:core.executions.templateScenarios.passwordRecovery': 'Password Recovery',
+        'flows:core.executions.templateScenarios.cibaNotification': 'CIBA Notification',
         'flows:core.executions.consent.description': 'Configure the consent executor settings.',
         'flows:core.executions.consent.timeout.label': 'Consent Timeout (seconds)',
         'flows:core.executions.consent.timeout.placeholder': '0',
@@ -528,24 +534,23 @@ describe('ExecutionExtendedProperties', () => {
 
       render(<ExecutionExtendedProperties resource={resourceWithChallengeMode} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('Relying Party ID'), {
-        target: {value: 'localhost'},
-      });
-      fireEvent.change(screen.getByLabelText('Relying Party Name'), {
-        target: {value: 'ThunderID'},
-      });
+      const relyingPartyIdInput = screen.getByLabelText('Relying Party ID');
+      const relyingPartyNameInput = screen.getByLabelText('Relying Party Name');
+
+      fireEvent.change(relyingPartyIdInput, {target: {value: 'localhost'}});
+      fireEvent.blur(relyingPartyIdInput);
+      fireEvent.change(relyingPartyNameInput, {target: {value: 'ThunderID'}});
+      fireEvent.blur(relyingPartyNameInput);
 
       expect(mockOnChange).toHaveBeenCalledWith(
         'data.properties.relyingPartyId',
         'localhost',
         resourceWithChallengeMode,
-        true,
       );
       expect(mockOnChange).toHaveBeenCalledWith(
         'data.properties.relyingPartyName',
         'ThunderID',
         resourceWithChallengeMode,
-        true,
       );
     });
 
@@ -629,7 +634,7 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByLabelText('Consent Timeout (seconds)')).toHaveValue(0);
     });
 
-    it('should call onChange when timeout changes', () => {
+    it('should commit the timeout on blur', () => {
       const consentResourceWithTimeout = {
         ...consentResource,
         data: {
@@ -646,35 +651,152 @@ describe('ExecutionExtendedProperties', () => {
       fireEvent.change(timeoutInput, {
         target: {value: '45'},
       });
+      fireEvent.blur(timeoutInput);
 
-      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '45', consentResourceWithTimeout, true);
+      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '45', consentResourceWithTimeout);
     });
 
-    it('should normalize empty timeout to 0', () => {
+    it('should not commit the timeout while typing', () => {
       render(<ExecutionExtendedProperties resource={consentResource} onChange={mockOnChange} />);
+
+      const timeoutInput = screen.getByLabelText('Consent Timeout (seconds)');
+      fireEvent.change(timeoutInput, {target: {value: '45'}});
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+      expect(timeoutInput).toHaveValue(45);
+    });
+
+    it('should normalize empty timeout to 0 on blur', () => {
+      const consentResourceWithTimeout = {
+        ...consentResource,
+        data: {
+          ...(consentResource as unknown as {data: object}).data,
+          properties: {timeout: '20'},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={consentResourceWithTimeout} onChange={mockOnChange} />);
 
       const timeoutInput = screen.getByLabelText('Consent Timeout (seconds)');
       fireEvent.change(timeoutInput, {target: {value: ''}});
+      fireEvent.blur(timeoutInput);
 
-      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '0', consentResource, true);
+      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '0', consentResourceWithTimeout);
     });
 
-    it('should clamp negative timeout to 0', () => {
-      render(<ExecutionExtendedProperties resource={consentResource} onChange={mockOnChange} />);
+    it('should clamp negative timeout to 0 on blur', () => {
+      const consentResourceWithTimeout = {
+        ...consentResource,
+        data: {
+          ...(consentResource as unknown as {data: object}).data,
+          properties: {timeout: '20'},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={consentResourceWithTimeout} onChange={mockOnChange} />);
 
       const timeoutInput = screen.getByLabelText('Consent Timeout (seconds)');
       fireEvent.change(timeoutInput, {target: {value: '-5'}});
+      fireEvent.blur(timeoutInput);
 
-      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '0', consentResource, true);
+      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '0', consentResourceWithTimeout);
     });
 
-    it('should floor decimal timeout to integer', () => {
+    it('should floor decimal timeout to integer on blur', () => {
       render(<ExecutionExtendedProperties resource={consentResource} onChange={mockOnChange} />);
 
       const timeoutInput = screen.getByLabelText('Consent Timeout (seconds)');
       fireEvent.change(timeoutInput, {target: {value: '3.7'}});
+      fireEvent.blur(timeoutInput);
 
-      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '3', consentResource, true);
+      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '3', consentResource);
+    });
+
+    it('should commit the timeout on Enter', () => {
+      render(<ExecutionExtendedProperties resource={consentResource} onChange={mockOnChange} />);
+
+      const timeoutInput = screen.getByLabelText('Consent Timeout (seconds)');
+      fireEvent.change(timeoutInput, {target: {value: '15'}});
+      fireEvent.keyDown(timeoutInput, {key: 'Enter'});
+
+      expect(mockOnChange).toHaveBeenLastCalledWith('data.properties.timeout', '15', consentResource);
+    });
+  });
+
+  describe('OTP Executor', () => {
+    const otpResource = {
+      id: 'otp-executor-1',
+      data: {
+        action: {
+          executor: {
+            name: ExecutionTypes.OTPExecutor,
+          },
+        },
+        properties: {
+          otpLength: 6,
+          otpValidityPeriodSeconds: 120,
+        },
+      },
+    } as unknown as Resource;
+
+    // The executor resolves these through a numeric conversion that rejects strings, so
+    // committing them as text would leave the configured value ignored at runtime.
+    it('should commit otpLength as a number', () => {
+      render(<ExecutionExtendedProperties resource={otpResource} onChange={mockOnChange} />);
+
+      const otpLengthInput = screen.getByLabelText('flows:core.executions.otp.otpLength.label');
+      fireEvent.change(otpLengthInput, {target: {value: '8'}});
+      fireEvent.blur(otpLengthInput);
+
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.otpLength', 8, otpResource);
+    });
+
+    it('should commit otpValidityPeriodSeconds as a number', () => {
+      render(<ExecutionExtendedProperties resource={otpResource} onChange={mockOnChange} />);
+
+      const validityInput = screen.getByLabelText('flows:core.executions.otp.otpValidityPeriodSeconds.label');
+      fireEvent.change(validityInput, {target: {value: '300'}});
+      fireEvent.blur(validityInput);
+
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.otpValidityPeriodSeconds', 300, otpResource);
+    });
+
+    it('should commit maxAttempts as a number', () => {
+      render(<ExecutionExtendedProperties resource={otpResource} onChange={mockOnChange} />);
+
+      const maxAttemptsInput = screen.getByLabelText('flows:core.executions.otp.maxAttempts.label');
+      fireEvent.change(maxAttemptsInput, {target: {value: '5'}});
+      fireEvent.blur(maxAttemptsInput);
+
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.maxAttempts', 5, otpResource);
+    });
+
+    it('should not commit otpLength while typing', () => {
+      render(<ExecutionExtendedProperties resource={otpResource} onChange={mockOnChange} />);
+
+      const otpLengthInput = screen.getByLabelText('flows:core.executions.otp.otpLength.label');
+      fireEvent.change(otpLengthInput, {target: {value: '8'}});
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+      expect(otpLengthInput).toHaveValue(8);
+    });
+
+    it('should clamp otpLength to the supported range on blur', () => {
+      render(<ExecutionExtendedProperties resource={otpResource} onChange={mockOnChange} />);
+
+      const otpLengthInput = screen.getByLabelText('flows:core.executions.otp.otpLength.label');
+      fireEvent.change(otpLengthInput, {target: {value: '25'}});
+      fireEvent.blur(otpLengthInput);
+
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.otpLength', 10, otpResource);
+    });
+
+    it('should still commit booleans immediately', () => {
+      render(<ExecutionExtendedProperties resource={otpResource} onChange={mockOnChange} />);
+
+      fireEvent.click(screen.getByRole('checkbox'));
+
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.otpUseNumericOnly', true, otpResource);
     });
   });
 
@@ -701,28 +823,64 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByLabelText('flows:core.executions.email.emailTemplate.label')).toBeInTheDocument();
     });
 
-    it('should call onChange with debounce when email template changes', () => {
+    it('should offer the supported template scenarios with readable labels', async () => {
       render(<ExecutionExtendedProperties resource={emailResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.email.emailTemplate.label'), {
-        target: {value: 'welcome-email'},
-      });
+      await userEvent.click(screen.getByLabelText('flows:core.executions.email.emailTemplate.label'));
 
-      expect(mockOnChange).toHaveBeenCalledWith('data.properties.emailTemplate', 'welcome-email', emailResource, true);
+      expect(screen.getByRole('option', {name: 'OTP Verification'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'User Invite'})).toBeInTheDocument();
+      expect(screen.getByRole('option', {name: 'Password Recovery'})).toBeInTheDocument();
     });
 
-    it('should display existing email template value', () => {
+    it('should commit the raw scenario value for the selected label', async () => {
+      render(<ExecutionExtendedProperties resource={emailResource} onChange={mockOnChange} />);
+
+      await userEvent.click(screen.getByLabelText('flows:core.executions.email.emailTemplate.label'));
+      await userEvent.click(screen.getByRole('option', {name: 'Magic Link'}));
+
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.emailTemplate', 'MAGIC_LINK', emailResource);
+    });
+
+    it('should find a scenario by searching its readable label', async () => {
+      render(<ExecutionExtendedProperties resource={emailResource} onChange={mockOnChange} />);
+
+      await userEvent.type(screen.getByLabelText('flows:core.executions.email.emailTemplate.label'), 'recov');
+
+      expect(screen.getByRole('option', {name: 'Password Recovery'})).toBeInTheDocument();
+      expect(screen.queryByRole('option', {name: 'User Invite'})).not.toBeInTheDocument();
+    });
+
+    it('should display the label for the existing email template value', () => {
       const resourceWithTemplate = {
         ...emailResource,
         data: {
           ...(emailResource as unknown as {data: object}).data,
-          properties: {emailTemplate: 'reset-password'},
+          properties: {emailTemplate: 'PASSWORD_RECOVERY'},
         },
       } as unknown as Resource;
 
       render(<ExecutionExtendedProperties resource={resourceWithTemplate} onChange={mockOnChange} />);
 
-      expect(screen.getByLabelText('flows:core.executions.email.emailTemplate.label')).toHaveValue('reset-password');
+      expect(screen.getByLabelText('flows:core.executions.email.emailTemplate.label')).toHaveValue('Password Recovery');
+    });
+
+    it('should preserve a template scenario it does not know about', async () => {
+      const resourceWithUnknownTemplate = {
+        ...emailResource,
+        data: {
+          ...(emailResource as unknown as {data: object}).data,
+          properties: {emailTemplate: 'CUSTOM_SCENARIO'},
+        },
+      } as unknown as Resource;
+
+      render(<ExecutionExtendedProperties resource={resourceWithUnknownTemplate} onChange={mockOnChange} />);
+
+      const input = screen.getByLabelText('flows:core.executions.email.emailTemplate.label');
+      expect(input).toHaveValue('CUSTOM_SCENARIO');
+
+      await userEvent.click(input);
+      expect(screen.getByRole('option', {name: 'CUSTOM_SCENARIO'})).toBeInTheDocument();
     });
   });
 
@@ -756,7 +914,7 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByText('Sender')).toBeInTheDocument();
     });
 
-    it('should call onChange with debounce when SMS template changes', () => {
+    it('should commit the selected SMS template immediately', async () => {
       mockSMSProviders.mockReturnValue({
         data: [],
         isLoading: false,
@@ -764,11 +922,10 @@ describe('ExecutionExtendedProperties', () => {
 
       render(<ExecutionExtendedProperties resource={smsResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.sms.smsTemplate.label'), {
-        target: {value: 'otp-message'},
-      });
+      await userEvent.click(screen.getByLabelText('flows:core.executions.sms.smsTemplate.label'));
+      await userEvent.click(screen.getByRole('option', {name: 'OTP Verification'}));
 
-      expect(mockOnChange).toHaveBeenCalledWith('data.properties.smsTemplate', 'otp-message', smsResource, true);
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.smsTemplate', 'OTP', smsResource);
     });
 
     it('should show warning when no senders are available', () => {
@@ -1017,14 +1174,14 @@ describe('ExecutionExtendedProperties', () => {
       );
     });
 
-    it('should call onChange with debounce when maxPerPrompt changes', () => {
+    it('should commit maxPerPrompt as a number on blur', () => {
       render(<ExecutionExtendedProperties resource={provisioningResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.provisioning.maxPerPrompt.label'), {
-        target: {value: '3'},
-      });
+      const maxPerPromptInput = screen.getByLabelText('flows:core.executions.provisioning.maxPerPrompt.label');
+      fireEvent.change(maxPerPromptInput, {target: {value: '3'}});
+      fireEvent.blur(maxPerPromptInput);
 
-      expect(mockOnChange).toHaveBeenCalledWith('data.properties.maxPerPrompt', 3, provisioningResource, true);
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.maxPerPrompt', 3, provisioningResource);
     });
 
     it('should fall back to 0 for malformed persisted maxPerPrompt values', () => {
@@ -1061,34 +1218,24 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByLabelText('flows:core.executions.provisioning.maxPerPrompt.label')).toHaveValue(0);
     });
 
-    it('should call onChange with debounce when assignGroup changes', () => {
+    it('should commit assignGroup on blur', () => {
       render(<ExecutionExtendedProperties resource={provisioningResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.provisioning.assignGroup.label'), {
-        target: {value: 'admin-group'},
-      });
+      const assignGroupInput = screen.getByLabelText('flows:core.executions.provisioning.assignGroup.label');
+      fireEvent.change(assignGroupInput, {target: {value: 'admin-group'}});
+      fireEvent.blur(assignGroupInput);
 
-      expect(mockOnChange).toHaveBeenCalledWith(
-        'data.properties.assignGroup',
-        'admin-group',
-        provisioningResource,
-        true,
-      );
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.assignGroup', 'admin-group', provisioningResource);
     });
 
-    it('should call onChange with debounce when assignRole changes', () => {
+    it('should commit assignRole on blur', () => {
       render(<ExecutionExtendedProperties resource={provisioningResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.provisioning.assignRole.label'), {
-        target: {value: 'editor-role'},
-      });
+      const assignRoleInput = screen.getByLabelText('flows:core.executions.provisioning.assignRole.label');
+      fireEvent.change(assignRoleInput, {target: {value: 'editor-role'}});
+      fireEvent.blur(assignRoleInput);
 
-      expect(mockOnChange).toHaveBeenCalledWith(
-        'data.properties.assignRole',
-        'editor-role',
-        provisioningResource,
-        true,
-      );
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.assignRole', 'editor-role', provisioningResource);
     });
   });
 
@@ -1146,14 +1293,14 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByLabelText('flows:core.executions.ouExecutor.parentOuId.label')).toBeInTheDocument();
     });
 
-    it('should call onChange with debounce when parentOuId changes', () => {
+    it('should commit parentOuId on blur', () => {
       render(<ExecutionExtendedProperties resource={ouResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.ouExecutor.parentOuId.label'), {
-        target: {value: 'ou-123'},
-      });
+      const parentOuIdInput = screen.getByLabelText('flows:core.executions.ouExecutor.parentOuId.label');
+      fireEvent.change(parentOuIdInput, {target: {value: 'ou-123'}});
+      fireEvent.blur(parentOuIdInput);
 
-      expect(mockOnChange).toHaveBeenCalledWith('data.properties.parentOuId', 'ou-123', ouResource, true);
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.parentOuId', 'ou-123', ouResource);
     });
 
     it('should display existing parentOuId value', () => {
@@ -1262,14 +1409,24 @@ describe('ExecutionExtendedProperties', () => {
       expect(screen.getByLabelText('flows:core.executions.httpRequest.timeout.label')).toBeInTheDocument();
     });
 
-    it('should call onChange with debounce when URL changes', () => {
+    it('should commit the URL on blur', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.url.label'), {
-        target: {value: 'https://api.example.com'},
-      });
+      const urlInput = screen.getByLabelText('flows:core.executions.httpRequest.url.label');
+      fireEvent.change(urlInput, {target: {value: 'https://api.example.com'}});
+      fireEvent.blur(urlInput);
 
-      expect(mockOnChange).toHaveBeenCalledWith('data.properties.url', 'https://api.example.com', httpResource, true);
+      expect(mockOnChange).toHaveBeenCalledWith('data.properties.url', 'https://api.example.com', httpResource);
+    });
+
+    it('should not commit the URL while typing', () => {
+      render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
+
+      const urlInput = screen.getByLabelText('flows:core.executions.httpRequest.url.label');
+      fireEvent.change(urlInput, {target: {value: 'https://api.example.com'}});
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+      expect(urlInput).toHaveValue('https://api.example.com');
     });
 
     it('should call onChange without debounce when method changes', async () => {
@@ -1297,73 +1454,92 @@ describe('ExecutionExtendedProperties', () => {
       );
     });
 
-    it('should call onChange with debounce when timeout changes', () => {
+    it('should commit the timeout on blur', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.timeout.label'), {
-        target: {value: '15'},
-      });
+      const timeoutInput = screen.getByLabelText('flows:core.executions.httpRequest.timeout.label');
+      fireEvent.change(timeoutInput, {target: {value: '15'}});
+      fireEvent.blur(timeoutInput);
 
       expect(mockOnChange).toHaveBeenCalledWith('data.properties.timeout', 15, httpResource);
     });
 
-    it('should clamp timeout to max 20', () => {
+    it('should clamp timeout to max 20 on blur', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.timeout.label'), {
-        target: {value: '99'},
-      });
+      const timeoutInput = screen.getByLabelText('flows:core.executions.httpRequest.timeout.label');
+      fireEvent.change(timeoutInput, {target: {value: '99'}});
+      fireEvent.blur(timeoutInput);
 
       expect(mockOnChange).toHaveBeenCalledWith('data.properties.timeout', 20, httpResource);
+      expect(timeoutInput).toHaveValue(20);
     });
 
-    it('should call onChange with debounce when body changes', () => {
+    it('should commit a raw body on blur', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.body.label'), {
-        target: {value: 'raw body text'},
-      });
+      const bodyInput = screen.getByLabelText('flows:core.executions.httpRequest.body.label');
+      fireEvent.change(bodyInput, {target: {value: 'raw body text'}});
+      fireEvent.blur(bodyInput);
 
       expect(mockOnChange).toHaveBeenCalledWith('data.properties.body', 'raw body text', httpResource);
     });
 
-    it('should parse valid JSON body', () => {
+    it('should parse valid JSON body on blur', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.body.label'), {
-        target: {value: '{"key":"value"}'},
-      });
+      const bodyInput = screen.getByLabelText('flows:core.executions.httpRequest.body.label');
+      fireEvent.change(bodyInput, {target: {value: '{"key":"value"}'}});
+      fireEvent.blur(bodyInput);
 
       expect(mockOnChange).toHaveBeenCalledWith('data.properties.body', {key: 'value'}, httpResource);
     });
 
-    it('should call onChange with debounce when retryCount changes', () => {
+    it('should not store a half-typed body while typing JSON', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.errorHandling.retryCount.label'), {
-        target: {value: '3'},
-      });
+      const bodyInput = screen.getByLabelText('flows:core.executions.httpRequest.body.label');
+      fireEvent.change(bodyInput, {target: {value: '{"key"'}});
+      fireEvent.change(bodyInput, {target: {value: '{"key":"value"}'}});
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('should keep Enter as a newline in the multiline body', () => {
+      render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
+
+      const bodyInput = screen.getByLabelText('flows:core.executions.httpRequest.body.label');
+      fireEvent.change(bodyInput, {target: {value: 'line one'}});
+      fireEvent.keyDown(bodyInput, {key: 'Enter'});
+
+      expect(mockOnChange).not.toHaveBeenCalled();
+    });
+
+    it('should commit retryCount on blur', () => {
+      render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
+
+      const retryCountInput = screen.getByLabelText('flows:core.executions.httpRequest.errorHandling.retryCount.label');
+      fireEvent.change(retryCountInput, {target: {value: '3'}});
+      fireEvent.blur(retryCountInput);
 
       expect(mockOnChange).toHaveBeenCalledWith(
         'data.properties.errorHandling',
         expect.objectContaining({retryCount: 3}),
         httpResource,
-        true,
       );
     });
 
-    it('should call onChange with debounce when retryDelay changes', () => {
+    it('should commit retryDelay on blur', () => {
       render(<ExecutionExtendedProperties resource={httpResource} onChange={mockOnChange} />);
 
-      fireEvent.change(screen.getByLabelText('flows:core.executions.httpRequest.errorHandling.retryDelay.label'), {
-        target: {value: '1000'},
-      });
+      const retryDelayInput = screen.getByLabelText('flows:core.executions.httpRequest.errorHandling.retryDelay.label');
+      fireEvent.change(retryDelayInput, {target: {value: '1000'}});
+      fireEvent.blur(retryDelayInput);
 
       expect(mockOnChange).toHaveBeenCalledWith(
         'data.properties.errorHandling',
         expect.objectContaining({retryDelay: 1000}),
         httpResource,
-        true,
       );
     });
   });

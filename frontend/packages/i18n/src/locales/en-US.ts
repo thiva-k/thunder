@@ -3314,14 +3314,22 @@ const translations = {
     // Email executor
     'core.executions.email.description': 'Configure the email executor settings.',
     'core.executions.email.emailTemplate.label': 'Email Template',
-    'core.executions.email.emailTemplate.placeholder': 'e.g., UserInvite',
+    'core.executions.email.emailTemplate.placeholder': 'Select an email template',
     'core.executions.email.emailTemplate.hint': 'The email template scenario to use when sending the email.',
 
     // SMS executor
     'core.executions.sms.description': 'Configure the SMS executor settings.',
     'core.executions.sms.smsTemplate.label': 'SMS Template',
-    'core.executions.sms.smsTemplate.placeholder': 'e.g., OTPVerification',
+    'core.executions.sms.smsTemplate.placeholder': 'Select an SMS template',
     'core.executions.sms.smsTemplate.hint': 'The SMS template scenario to use when sending the message.',
+
+    // Template scenarios shared by the Email and SMS executors
+    'core.executions.templateScenarios.userInvite': 'User Invite',
+    'core.executions.templateScenarios.magicLink': 'Magic Link',
+    'core.executions.templateScenarios.selfRegistration': 'Self Registration',
+    'core.executions.templateScenarios.otp': 'OTP Verification',
+    'core.executions.templateScenarios.passwordRecovery': 'Password Recovery',
+    'core.executions.templateScenarios.cibaNotification': 'CIBA Notification',
 
     // OpenID4VP verifier executor
     'core.executions.openid4vp.description':

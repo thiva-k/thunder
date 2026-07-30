@@ -16,9 +16,9 @@
  * under the License.
  */
 
-import {render, screen} from '@testing-library/react';
+import {fireEvent, render, screen} from '@testing-library/react';
 import {ReactFlowProvider} from '@xyflow/react';
-import type {ReactNode} from 'react';
+import {useState, type ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import FlowConfigContext, {type FlowConfigContextProps} from '../../../context/FlowConfigContext';
 import InteractionContext, {type InteractionContextProps} from '../../../context/InteractionContext';
@@ -2159,6 +2159,99 @@ describe('CommonResourceProperties', () => {
       });
 
       expect(mockUpdateNodeData).toHaveBeenCalled();
+    });
+  });
+
+  describe('Flushing pending debounced changes', () => {
+    const DebouncedChangeComponent = ({
+      resource,
+      onChange,
+    }: {
+      resource: Resource;
+      onChange: (key: string, value: string, resource: Resource, debounce?: boolean) => void;
+    }) => (
+      <button type="button" onClick={() => onChange('data.properties.template', 'typed', resource, true)}>
+        Type
+      </button>
+    );
+
+    it('should commit a pending change when the panel unmounts', () => {
+      const context = createContextValue({
+        ResourceProperties: DebouncedChangeComponent as unknown as FlowConfigContextProps['ResourceProperties'],
+      });
+
+      const {unmount} = render(<CommonResourceProperties />, {wrapper: createWrapper(context)});
+
+      fireEvent.click(screen.getByText('Type'));
+      expect(mockUpdateNodeData).not.toHaveBeenCalled();
+
+      // Closing the panel inside the debounce window must not discard the edit.
+      unmount();
+
+      expect(mockUpdateNodeData).toHaveBeenCalledWith('step-1', expect.any(Function));
+    });
+
+    it('should commit a pending change to the resource it was typed into when the selection moves', () => {
+      const resourceB = {...mockBaseResource, id: 'resource-2'} as Base;
+
+      function SelectionHarness() {
+        const [selection, setSelection] = useState<{resource: Base; stepId: string}>({
+          resource: mockBaseResource,
+          stepId: 'step-1',
+        });
+
+        const interactionValue: InteractionContextProps = {
+          lastInteractedResource: selection.resource,
+          lastInteractedStepId: selection.stepId,
+          setLastInteractedResource: mockSetLastInteractedResource,
+          setLastInteractedStepId: vi.fn(),
+          onResourceDropOnCanvas: vi.fn(),
+          selectedAttributes: {},
+          setSelectedAttributes: vi.fn(),
+        };
+
+        const flowConfigValue = {
+          ElementFactory: () => null,
+          ResourceProperties: DebouncedChangeComponent,
+          flowCompletionConfigs: {},
+          setFlowCompletionConfigs: vi.fn(),
+          isVerboseMode: false,
+          setIsVerboseMode: vi.fn(),
+          edgeStyle: EdgeStyleTypes.SmoothStep,
+          setEdgeStyle: vi.fn(),
+          flowNodeTypes: {},
+          flowEdgeTypes: {},
+          setFlowNodeTypes: vi.fn(),
+          setFlowEdgeTypes: vi.fn(),
+          flowNodes: [],
+          setFlowNodes: vi.fn(),
+          graphValidationRules: [],
+          setGraphValidationRules: vi.fn(),
+        } as unknown as FlowConfigContextProps;
+
+        return (
+          <ReactFlowProvider>
+            <InteractionContext.Provider value={interactionValue}>
+              <FlowConfigContext.Provider value={flowConfigValue}>
+                <button type="button" onClick={() => setSelection({resource: resourceB, stepId: 'step-2'})}>
+                  Select Other Step
+                </button>
+                <CommonResourceProperties />
+              </FlowConfigContext.Provider>
+            </InteractionContext.Provider>
+          </ReactFlowProvider>
+        );
+      }
+
+      render(<SelectionHarness />);
+
+      fireEvent.click(screen.getByText('Type'));
+      fireEvent.click(screen.getByText('Select Other Step'));
+
+      // The pending edit resolves its target step when it fires, so selecting another
+      // step first must not redirect the write to that step.
+      expect(mockUpdateNodeData).toHaveBeenCalledWith('step-1', expect.any(Function));
+      expect(mockUpdateNodeData).not.toHaveBeenCalledWith('step-2', expect.any(Function));
     });
   });
 });

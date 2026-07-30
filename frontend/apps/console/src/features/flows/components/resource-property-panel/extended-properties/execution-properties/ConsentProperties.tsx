@@ -16,10 +16,12 @@
  * under the License.
  */
 
-import {FormHelperText, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {FormHelperText, FormLabel, Stack, Typography} from '@wso2/oxygen-ui';
 import {useMemo, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
+import DraftTextField from './DraftTextField';
 import type {CommonResourcePropertiesPropsInterface} from './types';
+import {clampToInteger} from './utils';
 import type {StepData} from '@/features/flows/models/steps';
 
 function ConsentProperties({resource, onChange}: CommonResourcePropertiesPropsInterface): ReactNode {
@@ -30,21 +32,6 @@ function ConsentProperties({resource, onChange}: CommonResourcePropertiesPropsIn
     return (stepData?.properties as {timeout?: string})?.timeout ?? '0';
   }, [resource]);
 
-  const handleTimeoutChange = (value: string): void => {
-    if (value === '') {
-      onChange('data.properties.timeout', '0', resource, true);
-      return;
-    }
-
-    const num = Number(value);
-    if (Number.isNaN(num)) {
-      return;
-    }
-
-    const parsed = Math.max(0, Math.floor(num));
-    onChange('data.properties.timeout', String(parsed), resource, true);
-  };
-
   return (
     <Stack gap={2}>
       <Typography variant="body2" color="text.secondary">
@@ -53,10 +40,12 @@ function ConsentProperties({resource, onChange}: CommonResourcePropertiesPropsIn
 
       <div>
         <FormLabel htmlFor="consent-timeout">{t('flows:core.executions.consent.timeout.label')}</FormLabel>
-        <TextField
+        <DraftTextField
           id="consent-timeout"
           value={currentTimeout}
-          onChange={(e) => handleTimeoutChange(e.target.value)}
+          // The executor parses this property as a string, so it is stored as one.
+          onCommit={(value) => onChange('data.properties.timeout', value, resource)}
+          normalize={(raw) => clampToInteger(raw, 0)}
           placeholder={t('flows:core.executions.consent.timeout.placeholder')}
           fullWidth
           size="small"
