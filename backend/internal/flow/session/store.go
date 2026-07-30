@@ -173,30 +173,6 @@ func (st *store) GetByCheckpoint(ctx context.Context, sessionID,
 	return result, nil
 }
 
-// ListCheckpointIDs returns the checkpoint ids a session has saved, without decrypting any payload.
-func (st *store) ListCheckpointIDs(ctx context.Context, sessionID string) ([]string, error) {
-	var ids []string
-
-	err := withRuntimePersistentDBClient(st.dbProvider, func(dbClient provider.DBClientInterface) error {
-		results, queryErr := dbClient.QueryContext(ctx, queryListCheckpointsBySessionID, sessionID, st.deploymentID)
-		if queryErr != nil {
-			return fmt.Errorf("failed to execute query: %w", queryErr)
-		}
-		for _, row := range results {
-			id, parseErr := parseString(row["checkpoint_id"], "checkpoint_id")
-			if parseErr != nil {
-				return parseErr
-			}
-			ids = append(ids, id)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return ids, nil
-}
-
 // Delete removes a session's session context.
 func (st *store) Delete(ctx context.Context, sessionID string) error {
 	return withRuntimePersistentDBClient(st.dbProvider, func(dbClient provider.DBClientInterface) error {
