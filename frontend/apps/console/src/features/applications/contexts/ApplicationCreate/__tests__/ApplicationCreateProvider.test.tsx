@@ -38,6 +38,16 @@ vi.mock('../../utils/generateAppPrimaryColorSuggestions', () => ({
   default: () => ['#3B82F6'],
 }));
 
+// Real @thunderid/configure-connections (imported for AuthenticatorTypes below) transitively
+// resolves @thunderid/configure-organization-units' dist build, which fails to resolve its
+// framer-motion import under vitest's transform. Stubbed here to avoid that (same workaround
+// ApplicationCreatePage.test.tsx already applies); this provider never renders anything from it.
+vi.mock('@thunderid/configure-organization-units', () => ({
+  useHasMultipleOUs: () => ({hasMultipleOUs: false, isLoading: false, ouList: []}),
+  useGetOrganizationUnit: () => ({data: undefined}),
+  OrganizationUnitPickerScreen: () => null,
+}));
+
 // Mock useConfig to avoid ConfigProvider requirement
 vi.mock('@thunderid/contexts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/contexts')>();
@@ -63,6 +73,9 @@ function TestConsumer() {
       <div data-testid="app-logo">{context.appLogo ?? 'null'}</div>
       <div data-testid="selected-color">{context.selectedColor}</div>
       <div data-testid="integrations">{JSON.stringify(context.integrations)}</div>
+      <div data-testid="email-otp-mfa">{String(context.isEmailOtpMfaEnabled)}</div>
+      <div data-testid="sms-otp-mfa">{String(context.isSmsOtpMfaEnabled)}</div>
+      <div data-testid="sms-otp-sender-id">{context.smsOtpSenderId}</div>
       <div data-testid="sign-in-approach">{context.signInApproach}</div>
       <div data-testid="selected-technology">{context.selectedTechnology ?? 'null'}</div>
       <div data-testid="selected-platform">{context.selectedPlatform ?? 'null'}</div>
@@ -86,6 +99,15 @@ function TestConsumer() {
       </button>
       <button type="button" onClick={() => context.toggleIntegration('test-integration')}>
         Toggle Integration
+      </button>
+      <button type="button" onClick={() => context.setIsEmailOtpMfaEnabled(true)}>
+        Enable Email OTP MFA
+      </button>
+      <button type="button" onClick={() => context.setIsSmsOtpMfaEnabled(true)}>
+        Enable SMS OTP MFA
+      </button>
+      <button type="button" onClick={() => context.setSmsOtpSenderId('sender-123')}>
+        Set SMS Sender
       </button>
       <button type="button" onClick={() => context.setSignInApproach(ApplicationCreateFlowSignInApproach.EMBEDDED)}>
         Set Custom Approach
@@ -138,13 +160,16 @@ describe('ApplicationCreateProvider', () => {
       </ApplicationCreateProvider>,
     );
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(ApplicationCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(ApplicationCreateFlowStep.DETAILS);
     expect(screen.getByTestId('app-name')).toHaveTextContent('');
     expect(screen.getByTestId('selected-theme')).toHaveTextContent('null');
     expect(screen.getByTestId('app-logo')).toHaveTextContent('null');
     expect(screen.getByTestId('integrations')).toHaveTextContent(
       JSON.stringify({[AuthenticatorTypes.CREDENTIALS_AUTH]: true}),
     );
+    expect(screen.getByTestId('email-otp-mfa')).toHaveTextContent('false');
+    expect(screen.getByTestId('sms-otp-mfa')).toHaveTextContent('false');
+    expect(screen.getByTestId('sms-otp-sender-id')).toHaveTextContent('');
     expect(screen.getByTestId('sign-in-approach')).toHaveTextContent(ApplicationCreateFlowSignInApproach.INBUILT);
     expect(screen.getByTestId('selected-technology')).toHaveTextContent('null');
     expect(screen.getByTestId('selected-platform')).toHaveTextContent('null');
@@ -234,6 +259,36 @@ describe('ApplicationCreateProvider', () => {
     // Should now have test-integration set to false
     expect(screen.getByTestId('integrations')).toHaveTextContent('test-integration');
     expect(screen.getByTestId('integrations')).toHaveTextContent('false');
+  });
+
+  it('enables Email OTP MFA when setIsEmailOtpMfaEnabled is called', async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <ApplicationCreateProvider>
+        <TestConsumer />
+      </ApplicationCreateProvider>,
+    );
+
+    await user.click(screen.getByText('Enable Email OTP MFA'));
+
+    expect(screen.getByTestId('email-otp-mfa')).toHaveTextContent('true');
+  });
+
+  it('enables SMS OTP MFA and stores the sender id when set', async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <ApplicationCreateProvider>
+        <TestConsumer />
+      </ApplicationCreateProvider>,
+    );
+
+    await user.click(screen.getByText('Enable SMS OTP MFA'));
+    await user.click(screen.getByText('Set SMS Sender'));
+
+    expect(screen.getByTestId('sms-otp-mfa')).toHaveTextContent('true');
+    expect(screen.getByTestId('sms-otp-sender-id')).toHaveTextContent('sender-123');
   });
 
   it('updates sign-in approach when setSignInApproach is called', async () => {
@@ -383,6 +438,9 @@ describe('ApplicationCreateProvider', () => {
     await user.click(screen.getByText('Set Error'));
     await user.click(screen.getByText('Set M2M Client Type'));
     await user.click(screen.getByText('Set MCP Redirect URIs'));
+    await user.click(screen.getByText('Enable Email OTP MFA'));
+    await user.click(screen.getByText('Enable SMS OTP MFA'));
+    await user.click(screen.getByText('Set SMS Sender'));
 
     // Verify values are set
     expect(screen.getByTestId('app-name')).toHaveTextContent('Test App');
@@ -390,17 +448,23 @@ describe('ApplicationCreateProvider', () => {
     expect(screen.getByTestId('error')).toHaveTextContent('Test error');
     expect(screen.getByTestId('mcp-client-type')).toHaveTextContent('m2m');
     expect(screen.getByTestId('mcp-redirect-uris')).toHaveTextContent(JSON.stringify(['http://127.0.0.1:*/callback']));
+    expect(screen.getByTestId('email-otp-mfa')).toHaveTextContent('true');
+    expect(screen.getByTestId('sms-otp-mfa')).toHaveTextContent('true');
+    expect(screen.getByTestId('sms-otp-sender-id')).toHaveTextContent('sender-123');
 
     // Reset
     await user.click(screen.getByText('Reset'));
 
     // Verify back to initial state
-    expect(screen.getByTestId('current-step')).toHaveTextContent(ApplicationCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(ApplicationCreateFlowStep.DETAILS);
     expect(screen.getByTestId('app-name')).toHaveTextContent('');
     expect(screen.getByTestId('error')).toHaveTextContent('null');
     expect(screen.getByTestId('selected-theme')).toHaveTextContent('null');
     expect(screen.getByTestId('mcp-client-type')).toHaveTextContent('userDelegated');
     expect(screen.getByTestId('mcp-redirect-uris')).toHaveTextContent('[]');
+    expect(screen.getByTestId('email-otp-mfa')).toHaveTextContent('false');
+    expect(screen.getByTestId('sms-otp-mfa')).toHaveTextContent('false');
+    expect(screen.getByTestId('sms-otp-sender-id')).toHaveTextContent('');
   });
 
   it('memoizes context value to prevent unnecessary re-renders', () => {

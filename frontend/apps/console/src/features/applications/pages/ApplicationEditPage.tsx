@@ -31,15 +31,18 @@ import {
   Tab,
   PageContent,
   PageTitle,
+  Dialog,
+  DialogContent,
 } from '@wso2/oxygen-ui';
 import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useMemo, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Link, useNavigate, useParams} from 'react-router';
+import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
 import useGetApplication from '../api/useGetApplication';
 import useUpdateApplication from '../api/useUpdateApplication';
 import SettingsLockNotice from '../components/common/SettingsLockNotice';
+import ShowClientSecret from '../components/create-application/ShowClientSecret';
 import EditAdvancedSettings from '../components/edit-application/advanced-settings/EditAdvancedSettings';
 import EditCustomizationSettings from '../components/edit-application/customization-settings/EditCustomizationSettings';
 import EditFlowsSettings from '../components/edit-application/flows-settings/EditFlowsSettings';
@@ -74,6 +77,13 @@ interface TabPanelProps {
   value: number;
 }
 
+interface JustCreatedSecret {
+  appName: string;
+  clientId?: string;
+  clientSecret?: string;
+  flowSecret?: string;
+}
+
 function TabPanel({children = null, value, index, ...other}: TabPanelProps) {
   return (
     <div
@@ -92,10 +102,14 @@ export default function ApplicationEditPage() {
   const logger = useLogger('ApplicationEditPage');
   const {t} = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const {applicationId} = useParams<{applicationId: string}>();
 
   const {data: application, isLoading, error, isError, refetch} = useGetApplication(applicationId ?? '');
   const updateApplication = useUpdateApplication();
+
+  const justCreatedSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
+  const [secretDialogOpen, setSecretDialogOpen] = useState(Boolean(justCreatedSecret));
 
   const [activeTab, setActiveTab] = useState(0);
   const [editedApp, setEditedApp] = useState<Partial<Application>>({});
@@ -664,6 +678,18 @@ export default function ApplicationEditPage() {
             handleSave().catch(() => null);
           }}
         />
+      )}
+
+      {justCreatedSecret && (
+        <Dialog open={secretDialogOpen} onClose={() => setSecretDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogContent>
+            <ShowClientSecret
+              clientSecret={justCreatedSecret.clientSecret}
+              flowSecret={justCreatedSecret.flowSecret}
+              onContinue={() => setSecretDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </PageContent>
   );

@@ -48,6 +48,7 @@ interface PickerTreeItemProps extends TreeView.TreeItemProps {
   loadingItems?: Set<string>;
   loadMoreLoadingItems?: Set<string>;
   onLoadMore?: (parentId: string) => void;
+  spacious?: boolean;
 }
 
 function PickerTreeItem(allProps: PickerTreeItemProps): JSX.Element {
@@ -56,6 +57,7 @@ function PickerTreeItem(allProps: PickerTreeItemProps): JSX.Element {
     loadingItems: loadingItemsProp,
     loadMoreLoadingItems: loadMoreLoadingItemsProp,
     onLoadMore: onLoadMoreProp,
+    spacious = false,
     itemId,
     label,
     ...restProps
@@ -141,7 +143,11 @@ function PickerTreeItem(allProps: PickerTreeItemProps): JSX.Element {
           },
         }}
         label={
-          <Typography variant="caption" color="text.secondary" sx={{fontStyle: 'italic', pl: 1}}>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{fontStyle: spacious ? 'normal' : 'italic', pl: spacious ? 0 : 1}}
+          >
             {labelStr}
           </Typography>
         }
@@ -176,15 +182,15 @@ function PickerTreeItem(allProps: PickerTreeItemProps): JSX.Element {
       {...treeItemProps}
       {...(isItemLoading ? {slots: {collapseIcon: PickerLoadingIcon, expandIcon: PickerLoadingIcon}} : {})}
       label={
-        <Box sx={{display: 'flex', alignItems: 'center', gap: 1.5}}>
+        <Box sx={{display: 'flex', alignItems: 'center', gap: spacious ? 2 : 1.5}}>
           <ResourceAvatar
             variant="rounded"
             value={itemData?.logoUrl}
-            size={30}
+            size={spacious ? 40 : 30}
             fallback={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
           />
           <Box sx={{flexGrow: 1, minWidth: 0}}>
-            <Typography variant="body2" sx={{fontWeight: 500, lineHeight: 1.3}}>
+            <Typography variant={spacious ? 'body1' : 'body2'} sx={{fontWeight: 600, lineHeight: 1.3}}>
               {labelStr}
             </Typography>
             {itemData?.handle && (
@@ -207,6 +213,16 @@ interface OrganizationUnitTreePickerProps {
   helperText?: string;
   rootOuId?: string;
   maxHeight?: number;
+  /**
+   * Renders larger rows with softer, borderless cards and no dashed nesting guide, for standalone
+   * full-screen pickers. Defaults to the compact look used inline in forms.
+   */
+  spacious?: boolean;
+  /**
+   * Auto-picks the first root organization unit once loaded, if nothing is selected yet. Only
+   * applies in global-root mode (i.e. when `rootOuId` isn't set).
+   */
+  autoSelectFirst?: boolean;
 }
 
 export default function OrganizationUnitTreePicker({
@@ -217,6 +233,8 @@ export default function OrganizationUnitTreePicker({
   helperText = '',
   rootOuId = undefined,
   maxHeight = 300,
+  spacious = false,
+  autoSelectFirst = false,
 }: OrganizationUnitTreePickerProps): JSX.Element {
   const theme = useTheme();
   const {t} = useTranslation();
@@ -225,6 +243,12 @@ export default function OrganizationUnitTreePicker({
   const {getServerUrl} = useConfig();
   const queryClient = useQueryClient();
   const {data, isLoading} = useGetOrganizationUnits(undefined, !rootOuId);
+
+  useEffect((): void => {
+    if (!autoSelectFirst || rootOuId || value) return;
+    const firstRootOuId = data?.organizationUnits[0]?.id;
+    if (firstRootOuId) onChange(firstRootOuId);
+  }, [autoSelectFirst, rootOuId, value, data, onChange]);
   const {data: rootOuData, isLoading: isRootOuLoading, error: rootOuError} = useGetOrganizationUnit(rootOuId);
   const {
     data: rootOuChildrenData,
@@ -577,39 +601,73 @@ export default function OrganizationUnitTreePicker({
               loadingItems,
               loadMoreLoadingItems: combinedLoadMoreLoadingItems,
               onLoadMore: handleLoadMoreWithErrorLogging,
+              spacious,
             } as Record<string, unknown>,
           }}
           getItemLabel={(item: OrganizationUnitTreeItem) => item.label}
-          sx={{
-            '& .MuiTreeItem-content': {
-              cursor: 'pointer',
-              border: '1px solid',
-              borderColor: theme.vars?.palette.divider,
-              borderRadius: 0.5,
-              py: 0.75,
-              px: 1,
-              mb: 0.5,
-              transition: 'all 0.15s ease-in-out',
-              '&:hover': {
-                backgroundColor: theme.vars?.palette.action.hover,
-                borderColor: theme.vars?.palette.primary.main,
-              },
-            },
-            '& .Mui-selected > .MuiTreeItem-content': {
-              backgroundColor: `${theme.vars?.palette.primary.main}14`,
-              borderColor: theme.vars?.palette.primary.main,
-            },
-            '& .MuiTreeItem-iconContainer': {
-              color: theme.vars?.palette.text.secondary,
-              mr: 0.5,
-            },
-            '& .MuiTreeItem-groupTransition': {
-              ml: 2,
-              pl: 2,
-              borderLeft: '1px dashed',
-              borderColor: theme.vars?.palette.divider,
-            },
-          }}
+          sx={
+            spacious
+              ? {
+                  '& .MuiTreeItem-content': {
+                    cursor: 'pointer',
+                    border: '1.5px solid',
+                    borderColor: theme.vars?.palette.divider,
+                    borderRadius: '14px',
+                    bgcolor: theme.vars?.palette.background.paper,
+                    py: '18px',
+                    px: '20px',
+                    mb: 1.5,
+                    transition: 'border-color 0.2s, background-color 0.2s',
+                    '&:hover': {
+                      borderColor: theme.vars?.palette.text.secondary,
+                    },
+                  },
+                  '& .Mui-selected > .MuiTreeItem-content': {
+                    backgroundColor: `${theme.vars?.palette.primary.main}1f`,
+                    borderColor: theme.vars?.palette.primary.main,
+                  },
+                  '& .MuiTreeItem-iconContainer': {
+                    color: theme.vars?.palette.text.secondary,
+                    mr: 0.75,
+                  },
+                  '& .MuiTreeItem-groupTransition': {
+                    ml: 2.5,
+                    pl: 2,
+                    borderLeft: '1px dashed',
+                    borderColor: theme.vars?.palette.divider,
+                  },
+                }
+              : {
+                  '& .MuiTreeItem-content': {
+                    cursor: 'pointer',
+                    border: '1px solid',
+                    borderColor: theme.vars?.palette.divider,
+                    borderRadius: 0.5,
+                    py: 0.75,
+                    px: 1,
+                    mb: 0.5,
+                    transition: 'all 0.15s ease-in-out',
+                    '&:hover': {
+                      backgroundColor: theme.vars?.palette.action.hover,
+                      borderColor: theme.vars?.palette.primary.main,
+                    },
+                  },
+                  '& .Mui-selected > .MuiTreeItem-content': {
+                    backgroundColor: `${theme.vars?.palette.primary.main}14`,
+                    borderColor: theme.vars?.palette.primary.main,
+                  },
+                  '& .MuiTreeItem-iconContainer': {
+                    color: theme.vars?.palette.text.secondary,
+                    mr: 0.5,
+                  },
+                  '& .MuiTreeItem-groupTransition': {
+                    ml: 2,
+                    pl: 2,
+                    borderLeft: '1px dashed',
+                    borderColor: theme.vars?.palette.divider,
+                  },
+                }
+          }
         />
       </Box>
       {helperText && (

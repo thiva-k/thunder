@@ -107,7 +107,7 @@ export default function CorsSection(): JSX.Element {
           ))}
         </Stack>
 
-        <Button variant="outlined" startIcon={<Plus size={18} />} onClick={origins.addRow} sx={{mt: 2}}>
+        <Button variant="text" color="primary" startIcon={<Plus size={18} />} onClick={origins.addRow} sx={{mt: 2}}>
           {t('settings:cors.addOrigin')}
         </Button>
 

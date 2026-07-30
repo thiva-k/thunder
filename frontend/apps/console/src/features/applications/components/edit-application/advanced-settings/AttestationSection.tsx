@@ -363,7 +363,8 @@ export default function AttestationSection({
                 ))}
                 <Box>
                   <Button
-                    variant="outlined"
+                    variant="text"
+                    color="primary"
                     startIcon={<Plus />}
                     onClick={handleAddDigest}
                     size="small"

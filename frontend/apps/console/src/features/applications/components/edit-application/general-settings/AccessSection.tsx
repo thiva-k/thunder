@@ -400,7 +400,8 @@ export default function AccessSection({
 
               <Box>
                 <Button
-                  variant="outlined"
+                  variant="text"
+                  color="primary"
                   startIcon={<Plus />}
                   onClick={handleAddUri}
                   size="small"
@@ -458,7 +459,8 @@ export default function AccessSection({
 
               <Box>
                 <Button
-                  variant="outlined"
+                  variant="text"
+                  color="primary"
                   startIcon={<Plus />}
                   onClick={handleAddPostLogoutUri}
                   size="small"

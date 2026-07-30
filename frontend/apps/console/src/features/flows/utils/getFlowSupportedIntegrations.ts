@@ -61,6 +61,11 @@ function getFlowSupportedIntegrations(flowHandle: string): string[] {
     integrations.push(AuthenticatorTypes.PASSKEY);
   }
 
+  // Check for Magic Link
+  if (flowHandle.includes('magiclink')) {
+    integrations.push(AuthenticatorTypes.MAGIC_LINK);
+  }
+
   return integrations;
 }
 

@@ -16,17 +16,40 @@
  * under the License.
  */
 
-import {LogoPicker} from '@thunderid/components';
-import {useGetThemes, useGetTheme, type ThemeListItem, type Theme} from '@thunderid/design';
-import {buildAvatarSpec, pickAnonymousEntityName, type AvatarShape} from '@thunderid/react';
-import {Typography, Stack, Card, Box, Grid, useTheme, Autocomplete, TextField, CircularProgress} from '@wso2/oxygen-ui';
-import {Palette} from '@wso2/oxygen-ui-icons-react';
-import type {JSX} from 'react';
+import {useConfig} from '@thunderid/contexts';
+import {
+  useGetThemes,
+  useGetTheme,
+  useGetLayouts,
+  useGetLayout,
+  type ThemeListItem,
+  type Theme,
+  type LayoutConfig,
+} from '@thunderid/design';
+import {
+  Typography,
+  Stack,
+  Card,
+  CardContent,
+  CardActionArea,
+  Box,
+  Grid,
+  useTheme,
+  Autocomplete,
+  TextField,
+  CircularProgress,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  ColorSchemeImage,
+} from '@wso2/oxygen-ui';
+import {Palette, ExternalLink, Code, Lightbulb} from '@wso2/oxygen-ui-icons-react';
+import type {JSX, ChangeEvent} from 'react';
 import {useState, useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 import ThemeThumbnail from '../../../design/components/themes/ThemeThumbnail';
-
-const LOGO_SUPPORTED_SHAPES: AvatarShape[] = ['rounded'];
+import useApplicationCreateContext from '../../hooks/useApplicationCreateContext';
+import {ApplicationCreateFlowSignInApproach, OrganizationUnitDefaultItem} from '../../models/application-create-flow';
 
 /**
  * Props for the {@link ConfigureDesign} component.
@@ -35,24 +58,14 @@ const LOGO_SUPPORTED_SHAPES: AvatarShape[] = ['rounded'];
  */
 export interface ConfigureDesignProps {
   /**
-   * URL or emoji of the currently selected application logo.
-   */
-  appLogo: string | null;
-
-  /**
-   * The application's current name, used to seed the avatar picker's default text.
-   */
-  appName?: string | null;
-
-  /**
    * The ID of the currently selected theme (from API response)
    */
   themeId?: string | null;
 
   /**
-   * Callback function when a logo is selected
+   * The ID of the currently selected layout (from API response)
    */
-  onLogoSelect: (logoUrl: string) => void;
+  layoutId?: string | null;
 
   /**
    * Callback function when a theme is selected, receives theme ID and config separately
@@ -60,70 +73,94 @@ export interface ConfigureDesignProps {
   onThemeSelect: (themeId: string, themeConfig: Theme) => void;
 
   /**
+   * Callback function when a layout is selected, receives layout ID and config separately
+   */
+  onLayoutSelect: (layoutId: string, layoutConfig: LayoutConfig) => void;
+
+  /**
    * Callback function to broadcast whether this step is ready to proceed
    */
   onReadyChange?: (isReady: boolean) => void;
+
+  /**
+   * Currently selected sign-in approach.
+   */
+  selectedApproach: ApplicationCreateFlowSignInApproach;
+
+  /**
+   * Callback invoked when the sign-in approach changes.
+   */
+  onApproachChange: (approach: ApplicationCreateFlowSignInApproach) => void;
+
+  /**
+   * Whether the embedded (native) sign-in approach is allowed. Browser-based SPAs (public
+   * clients) must use the redirect-based approach, so the embedded option is hidden for them.
+   * Defaults to true.
+   */
+  allowEmbeddedApproach?: boolean;
+
+  /**
+   * Whether the sign-in approach picker (hosted pages vs. custom UI) is shown at all. Browser
+   * SPAs have no choice to make here (redirect-only). Defaults to true.
+   */
+  showApproachSection?: boolean;
 }
 
 /**
- * React component that renders the design customization step in the
- * application creation onboarding flow.
- *
- * This component allows users to customize their application's visual identity by:
- * 1. Selecting a logo via the {@link LogoPicker} (emoji, generated letter avatar, curated
- *    anonymous animal icon, or a custom image URL)
- * 2. Selecting a theme from available theme configurations
+ * React component that renders the experience step in the application creation onboarding
+ * flow: choosing a sign-in approach and a theme for the application. The application's logo is
+ * picked earlier, inline with its name on the Details step.
  *
  * @param props - The component props
- * @returns JSX element displaying the design customization interface
+ * @returns JSX element displaying the experience customization interface
  *
  * @public
  */
 export default function ConfigureDesign({
-  appLogo,
-  appName = null,
   themeId: externallyProvidedThemeId = null,
-  onLogoSelect,
+  layoutId: externallyProvidedLayoutId = null,
   onThemeSelect,
+  onLayoutSelect,
   onReadyChange = undefined,
+  selectedApproach,
+  onApproachChange,
+  allowEmbeddedApproach = true,
+  showApproachSection = true,
 }: ConfigureDesignProps): JSX.Element {
   const {t} = useTranslation();
   const theme = useTheme();
+  const {config} = useConfig();
+  const {brand} = config;
+  const {product_name: productName} = brand || {};
+  const {ouDefaults, selectedTemplateConfig, appName} = useApplicationCreateContext();
   const {data: themesData, isLoading: loadingThemes} = useGetThemes({limit: 100});
+  const {data: layoutsData} = useGetLayouts({limit: 100});
 
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(externallyProvidedThemeId ?? null);
-  const {data: selectedThemeDetails} = useGetTheme(selectedThemeId ?? '');
+  const selectedLayoutId = externallyProvidedLayoutId ?? null;
+
+  const showTheme = !ouDefaults[OrganizationUnitDefaultItem.THEME];
+  const showLayout = !ouDefaults[OrganizationUnitDefaultItem.LAYOUT];
 
   const THEME_GRID_THRESHOLD = 8;
   const themeList = themesData?.themes ?? [];
   const hasThemes = Boolean(themeList.length);
   const useAutocomplete = themeList.length > THEME_GRID_THRESHOLD;
 
-  /**
-   * Auto-select a default logo when the component mounts, if none is set yet.
-   */
-  useEffect((): void => {
-    if (!appLogo) {
-      onLogoSelect(
-        buildAvatarSpec({
-          colors: 0,
-          content: pickAnonymousEntityName(appName ?? undefined),
-          shape: 'rounded',
-          variant: 'anonymous_entity',
-        }),
-      );
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Falls back to the first available theme/layout until the user (or an OU default) makes an
+  // explicit choice, so a selection is always in effect once data loads.
+  const effectiveThemeId = selectedThemeId ?? (showTheme ? (themeList[0]?.id ?? null) : null);
+  const effectiveLayoutId = selectedLayoutId ?? (showLayout ? (layoutsData?.layouts?.[0]?.id ?? null) : null);
 
-  /**
-   * Auto-select the first theme when themes load and none is selected yet.
-   */
-  useEffect((): void => {
-    if (themesData?.themes?.length && !selectedThemeId) {
-      setSelectedThemeId(themesData.themes[0].id);
-    }
-  }, [themesData, selectedThemeId]);
+  const {data: selectedThemeDetails} = useGetTheme(effectiveThemeId ?? '');
+  const {data: selectedLayoutDetails} = useGetLayout(effectiveLayoutId ?? '');
+
+  // The template's preferred approach leads the picker, so e.g. a template defaulting to Embedded
+  // shows that card first instead of always leading with Hosted Pages. This is fixed at the
+  // template's default rather than the currently selected approach, so the cards don't reorder
+  // themselves as the user clicks between them.
+  const isEmbeddedApproachDefault =
+    selectedTemplateConfig?.defaults?.signInApproach === ApplicationCreateFlowSignInApproach.EMBEDDED;
 
   /**
    * Notify parent when theme details load.
@@ -135,7 +172,16 @@ export default function ConfigureDesign({
   }, [selectedThemeDetails, onThemeSelect]);
 
   /**
-   * Broadcast readiness — Design step is always ready since it has default values.
+   * Notify parent when layout details load.
+   */
+  useEffect((): void => {
+    if (selectedLayoutDetails) {
+      onLayoutSelect(selectedLayoutDetails.id, selectedLayoutDetails.layout);
+    }
+  }, [selectedLayoutDetails, onLayoutSelect]);
+
+  /**
+   * Broadcast readiness — Experience step is always ready since it has default values.
    */
   useEffect((): void => {
     if (onReadyChange) {
@@ -143,12 +189,12 @@ export default function ConfigureDesign({
     }
   }, [onReadyChange]);
 
-  const handleLogoSelect = (logoValue: string): void => {
-    onLogoSelect(logoValue);
-  };
-
   const handleThemeSelect = (themeItem: ThemeListItem): void => {
     setSelectedThemeId(themeItem.id);
+  };
+
+  const handleApproachChange = (event: ChangeEvent<HTMLInputElement>): void => {
+    onApproachChange(event.target.value as ApplicationCreateFlowSignInApproach);
   };
 
   let themeSelectionContent: JSX.Element;
@@ -180,7 +226,7 @@ export default function ConfigureDesign({
         fullWidth
         options={themeList}
         getOptionLabel={(option) => (typeof option === 'string' ? option : option.displayName)}
-        value={themeList.find((themeListItem) => themeListItem.id === selectedThemeId) ?? null}
+        value={themeList.find((themeListItem) => themeListItem.id === effectiveThemeId) ?? null}
         onChange={(_event, newValue): void => {
           if (newValue) handleThemeSelect(newValue);
         }}
@@ -208,9 +254,9 @@ export default function ConfigureDesign({
     themeSelectionContent = (
       <Grid container spacing={2}>
         {themeList.map((themeItem: ThemeListItem) => {
-          const isSelected: boolean = selectedThemeId === themeItem.id;
+          const isSelected: boolean = effectiveThemeId === themeItem.id;
           return (
-            <Grid key={themeItem.id} size={{xs: 2, sm: 3, md: 4, lg: 3}}>
+            <Grid key={themeItem.id} size={{xs: 3, sm: 4, md: 3, lg: 2}}>
               <Card
                 data-testid={`theme-card-${themeItem.id}`}
                 onClick={(): void => handleThemeSelect(themeItem)}
@@ -227,12 +273,12 @@ export default function ConfigureDesign({
                 <Box sx={{aspectRatio: '4/3', overflow: 'hidden', position: 'relative'}}>
                   <ThemeThumbnail theme={themeItem} />
                 </Box>
-                <Box sx={{px: 1.5, py: 1, borderTop: '1px solid', borderColor: 'divider'}}>
+                <Box sx={{px: 1.25, py: 0.75, borderTop: '1px solid', borderColor: 'divider'}}>
                   <Typography
                     variant="body2"
                     sx={{
                       fontWeight: isSelected ? 600 : 500,
-                      fontSize: '0.8125rem',
+                      fontSize: '0.75rem',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -251,37 +297,228 @@ export default function ConfigureDesign({
 
   return (
     <Stack direction="column" spacing={4} data-testid="application-configure-design">
-      <Stack direction="column" spacing={1}>
+      {/* Sign-In Approach is the leading heading for this step when shown; otherwise the page
+          falls back to the generic experience title below. */}
+      {showApproachSection ? (
+        <Stack direction="column" spacing={1}>
+          <Typography variant="h1" gutterBottom>
+            {t('applications:onboarding.configure.approach.title')}
+          </Typography>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
+            <Typography variant="body2" color="text.secondary">
+              {t('applications:onboarding.configure.approach.subtitle')}
+            </Typography>
+          </Stack>
+        </Stack>
+      ) : (
         <Typography variant="h1" gutterBottom>
           {t('applications:onboarding.configure.design.title')}
         </Typography>
-        <Typography variant="subtitle1" gutterBottom>
-          {t('applications:onboarding.configure.design.subtitle')}
-        </Typography>
-      </Stack>
+      )}
 
-      {/* Logo Selection */}
-      <Stack direction="column" spacing={2}>
-        <Typography variant="h6">
-          {t('applications:onboarding.configure.design.logo.title', 'Application Logo')}
-        </Typography>
-        <LogoPicker
-          value={appLogo ?? ''}
-          onChange={handleLogoSelect}
-          seedText={appName ?? ''}
-          supportedShapes={LOGO_SUPPORTED_SHAPES}
-        />
-      </Stack>
+      {/* Sign-In Approach - hosted pages vs. custom UI. Hidden for browser SPAs, which are
+          redirect-only and have no choice to make here. */}
+      {showApproachSection &&
+        (() => {
+          const isInbuiltSelected = selectedApproach === ApplicationCreateFlowSignInApproach.INBUILT;
+          const isEmbeddedSelected = selectedApproach === ApplicationCreateFlowSignInApproach.EMBEDDED;
+
+          const hostedPagesCard = (
+            <Card
+              key="hosted-pages"
+              variant="outlined"
+              onClick={() => onApproachChange(ApplicationCreateFlowSignInApproach.INBUILT)}
+              sx={{borderRadius: '14px'}}
+            >
+              <CardActionArea
+                sx={{
+                  height: '100%',
+                  cursor: 'pointer',
+                  border: 1,
+                  borderColor: isInbuiltSelected ? 'primary.main' : 'divider',
+                  bgcolor: isInbuiltSelected ? 'action.selected' : 'transparent',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: isInbuiltSelected ? 'action.selected' : 'action.hover',
+                  },
+                }}
+              >
+                <CardContent sx={{p: 3}}>
+                  <Stack direction="row" spacing={2} alignItems="flex-start">
+                    <FormControlLabel
+                      value={ApplicationCreateFlowSignInApproach.INBUILT}
+                      control={<Radio />}
+                      label=""
+                      sx={{m: 0, mt: 0.25}}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Box sx={{flex: 1}}>
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 1}}>
+                        <ExternalLink size={20} />
+                        <Typography variant="h6">
+                          {t('applications:onboarding.configure.approach.inbuilt.title', {
+                            product: productName,
+                          })}
+                        </Typography>
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary" sx={{mb: 2.5}}>
+                        {t('applications:onboarding.configure.approach.inbuilt.description', {
+                          product: productName,
+                        })}
+                      </Typography>
+
+                      {/* Illustrative preview of the hosted sign-in page, not a live render. */}
+                      <Box
+                        sx={{
+                          width: 260,
+                          maxWidth: '100%',
+                          borderRadius: '10px',
+                          overflow: 'hidden',
+                          border: 1,
+                          borderColor: 'divider',
+                          bgcolor: 'background.paper',
+                          boxShadow: 2,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 0.75,
+                            px: 1.25,
+                            py: 1,
+                            bgcolor: 'action.hover',
+                            borderBottom: 1,
+                            borderColor: 'divider',
+                          }}
+                        >
+                          <Box sx={{width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.disabled'}} />
+                          <Box sx={{width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.disabled'}} />
+                          <Box sx={{width: 6, height: 6, borderRadius: '50%', bgcolor: 'text.disabled'}} />
+                        </Box>
+                        <Box sx={{p: 2.5, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.25}}>
+                          <ColorSchemeImage
+                            src={{
+                              light: `${import.meta.env.BASE_URL}/assets/images/logo-mini.svg`,
+                              dark: `${import.meta.env.BASE_URL}/assets/images/logo-mini-inverted.svg`,
+                            }}
+                            alt={{light: 'ThunderID', dark: 'ThunderID'}}
+                            height={20}
+                            width="auto"
+                          />
+                          <Typography variant="caption" sx={{fontWeight: 600, textAlign: 'center'}}>
+                            {t('applications:onboarding.configure.approach.inbuilt.preview.title', {
+                              appName: appName || productName,
+                            })}
+                          </Typography>
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: 20,
+                              borderRadius: '6px',
+                              bgcolor: 'action.hover',
+                              border: 1,
+                              borderColor: 'divider',
+                            }}
+                          />
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: 20,
+                              borderRadius: '6px',
+                              bgcolor: 'action.hover',
+                              border: 1,
+                              borderColor: 'divider',
+                            }}
+                          />
+                          <Box sx={{width: '100%', height: 22, borderRadius: '6px', bgcolor: 'primary.main'}} />
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          );
+
+          // Hidden for public-client SPAs which must use redirect-based flows.
+          const embeddedCard = allowEmbeddedApproach && (
+            <Card
+              key="embedded"
+              variant="outlined"
+              onClick={() => onApproachChange(ApplicationCreateFlowSignInApproach.EMBEDDED)}
+              sx={{borderRadius: '14px'}}
+            >
+              <CardActionArea
+                sx={{
+                  height: '100%',
+                  cursor: 'pointer',
+                  border: 1,
+                  borderColor: isEmbeddedSelected ? 'primary.main' : 'divider',
+                  bgcolor: isEmbeddedSelected ? 'action.selected' : 'transparent',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    borderColor: 'primary.main',
+                    bgcolor: isEmbeddedSelected ? 'action.selected' : 'action.hover',
+                  },
+                }}
+              >
+                <CardContent sx={{p: 3}}>
+                  <Stack direction="row" spacing={2} alignItems="flex-start">
+                    <FormControlLabel
+                      value={ApplicationCreateFlowSignInApproach.EMBEDDED}
+                      control={<Radio />}
+                      label=""
+                      sx={{m: 0, mt: 0.25}}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <Box sx={{flex: 1}}>
+                      <Stack direction="row" spacing={1} alignItems="center" sx={{mb: 1}}>
+                        <Code size={20} />
+                        <Typography variant="h6">
+                          {t('applications:onboarding.configure.approach.native.title')}
+                        </Typography>
+                      </Stack>
+                      <Typography variant="body2" color="text.secondary">
+                        {t('applications:onboarding.configure.approach.native.description', {
+                          product: productName,
+                        })}
+                      </Typography>
+                    </Box>
+                  </Stack>
+                </CardContent>
+              </CardActionArea>
+            </Card>
+          );
+
+          const orderedCards = isEmbeddedApproachDefault
+            ? [embeddedCard, hostedPagesCard]
+            : [hostedPagesCard, embeddedCard];
+
+          return (
+            <Stack direction="column" spacing={2}>
+              <RadioGroup value={selectedApproach} onChange={handleApproachChange}>
+                <Stack direction="column" spacing={2}>
+                  {orderedCards}
+                </Stack>
+              </RadioGroup>
+            </Stack>
+          );
+        })()}
 
       {/* Theme Selection */}
-      <Stack direction="column" spacing={3}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Palette size={14} />
-          <Typography variant="h6">{t('applications:onboarding.configure.design.theme.title')}</Typography>
-        </Stack>
+      {showTheme && (
+        <Stack direction="column" spacing={3}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <Palette size={14} />
+            <Typography variant="h6">{t('applications:onboarding.configure.design.theme.title')}</Typography>
+          </Stack>
 
-        {themeSelectionContent}
-      </Stack>
+          {themeSelectionContent}
+        </Stack>
+      )}
     </Stack>
   );
 }

@@ -158,11 +158,17 @@ export default function ClaimsEditor({claims, onChange}: ClaimsEditorProps): JSX
       ))}
 
       <Button
-        variant="outlined"
+        variant="text"
+        color="primary"
         startIcon={<Plus size={16} />}
         onClick={add}
         fullWidth
-        sx={{py: 1.5, borderStyle: 'dashed', '&:hover': {borderStyle: 'dashed'}}}
+        sx={{
+          py: 1.5,
+          border: '1px dashed',
+          borderColor: 'divider',
+          '&:hover': {border: '1px dashed', borderColor: 'primary.main'},
+        }}
       >
         {t('claims.add')}
       </Button>

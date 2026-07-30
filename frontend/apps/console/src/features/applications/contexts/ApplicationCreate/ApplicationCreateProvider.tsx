@@ -17,13 +17,18 @@
  */
 
 import {AuthenticatorTypes} from '@thunderid/configure-connections';
-import type {Theme} from '@thunderid/design';
+import type {LayoutConfig, Theme} from '@thunderid/design';
 import type {PropsWithChildren} from 'react';
 import {useState, useMemo, useCallback} from 'react';
 import ApplicationCreateContext, {type ApplicationCreateContextType} from './ApplicationCreateContext';
 import type {BasicFlowDefinition} from '../../../flows/models/responses';
 import useGetApplications from '../../api/useGetApplications';
-import {ApplicationCreateFlowSignInApproach, ApplicationCreateFlowStep} from '../../models/application-create-flow';
+import {
+  ApplicationCreateFlowSignInApproach,
+  ApplicationCreateFlowStep,
+  OrganizationUnitDefaultItem,
+  type OrganizationUnitDefaultsSelection,
+} from '../../models/application-create-flow';
 import type {
   TechnologyApplicationTemplate,
   PlatformApplicationTemplate,
@@ -39,6 +44,21 @@ import {McpClientTypes, type McpClientType} from '../../models/mcp-client';
 export type ApplicationCreateProviderProps = PropsWithChildren;
 
 /**
+ * Default organization-unit-defaults selection: nothing selected until the Details step
+ * resolves the chosen OU's configured defaults.
+ *
+ * @internal
+ */
+const NO_OU_DEFAULTS: OrganizationUnitDefaultsSelection = {
+  [OrganizationUnitDefaultItem.SIGN_IN]: false,
+  [OrganizationUnitDefaultItem.SIGN_UP]: false,
+  [OrganizationUnitDefaultItem.RECOVERY]: false,
+  [OrganizationUnitDefaultItem.SIGN_OUT]: false,
+  [OrganizationUnitDefaultItem.THEME]: false,
+  [OrganizationUnitDefaultItem.LAYOUT]: false,
+};
+
+/**
  * Initial state values for application creation
  *
  * @internal
@@ -49,11 +69,26 @@ const INITIAL_STATE: {
   ouId: string;
   themeId: string | null;
   selectedTheme: Theme | null;
+  layoutId: string | null;
+  selectedLayout: LayoutConfig | null;
   appLogo: string | null;
   selectedColor: string;
   integrations: Record<string, boolean>;
+  isEmailOtpMfaEnabled: boolean;
+  isSmsOtpMfaEnabled: boolean;
+  smsOtpSenderId: string;
   selectedAuthFlow: BasicFlowDefinition | null;
   signInApproach: ApplicationCreateFlowSignInApproach;
+  registrationFlowId: string | null;
+  isRegistrationFlowEnabled: boolean;
+  recoveryFlowId: string | null;
+  isRecoveryFlowEnabled: boolean;
+  signOutFlowId: string | null;
+  isSignOutFlowEnabled: boolean;
+  redirectUris: string[];
+  postLogoutRedirectUris: string[];
+  corsOrigins: string[];
+  ouDefaults: OrganizationUnitDefaultsSelection;
   selectedTechnology: TechnologyApplicationTemplate | null;
   selectedPlatform: PlatformApplicationTemplate | null;
   mcpClientType: McpClientType;
@@ -65,18 +100,33 @@ const INITIAL_STATE: {
   hasCompletedOnboarding: boolean;
   error: string | null;
 } = {
-  currentStep: ApplicationCreateFlowStep.NAME,
+  currentStep: ApplicationCreateFlowStep.DETAILS,
   appName: '',
   ouId: '',
   themeId: null,
   selectedTheme: null,
+  layoutId: null,
+  selectedLayout: null,
   appLogo: null,
   selectedColor: '#3B82F6',
   integrations: {
     [AuthenticatorTypes.CREDENTIALS_AUTH]: true,
   },
+  isEmailOtpMfaEnabled: false,
+  isSmsOtpMfaEnabled: false,
+  smsOtpSenderId: '',
   selectedAuthFlow: null,
   signInApproach: ApplicationCreateFlowSignInApproach.INBUILT as ApplicationCreateFlowSignInApproach,
+  registrationFlowId: null,
+  isRegistrationFlowEnabled: false,
+  recoveryFlowId: null,
+  isRecoveryFlowEnabled: false,
+  signOutFlowId: null,
+  isSignOutFlowEnabled: false,
+  redirectUris: [],
+  postLogoutRedirectUris: [],
+  corsOrigins: [],
+  ouDefaults: NO_OU_DEFAULTS,
   selectedTechnology: null,
   selectedPlatform: null,
   mcpClientType: McpClientTypes.USER_DELEGATED,
@@ -131,10 +181,27 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
   const [appLogo, setAppLogo] = useState<string | null>(INITIAL_STATE.appLogo);
   const [selectedColor, setSelectedColor] = useState<string>(INITIAL_STATE.selectedColor);
   const [integrations, setIntegrations] = useState<Record<string, boolean>>(INITIAL_STATE.integrations);
+  const [isEmailOtpMfaEnabled, setIsEmailOtpMfaEnabled] = useState<boolean>(INITIAL_STATE.isEmailOtpMfaEnabled);
+  const [isSmsOtpMfaEnabled, setIsSmsOtpMfaEnabled] = useState<boolean>(INITIAL_STATE.isSmsOtpMfaEnabled);
+  const [smsOtpSenderId, setSmsOtpSenderId] = useState<string>(INITIAL_STATE.smsOtpSenderId);
   const [selectedAuthFlow, setSelectedAuthFlow] = useState<BasicFlowDefinition | null>(INITIAL_STATE.selectedAuthFlow);
   const [signInApproach, setSignInApproach] = useState<ApplicationCreateFlowSignInApproach>(
     INITIAL_STATE.signInApproach,
   );
+  const [layoutId, setLayoutId] = useState<string | null>(INITIAL_STATE.layoutId);
+  const [selectedLayout, setSelectedLayout] = useState<LayoutConfig | null>(INITIAL_STATE.selectedLayout);
+  const [registrationFlowId, setRegistrationFlowId] = useState<string | null>(INITIAL_STATE.registrationFlowId);
+  const [isRegistrationFlowEnabled, setIsRegistrationFlowEnabled] = useState<boolean>(
+    INITIAL_STATE.isRegistrationFlowEnabled,
+  );
+  const [recoveryFlowId, setRecoveryFlowId] = useState<string | null>(INITIAL_STATE.recoveryFlowId);
+  const [isRecoveryFlowEnabled, setIsRecoveryFlowEnabled] = useState<boolean>(INITIAL_STATE.isRecoveryFlowEnabled);
+  const [signOutFlowId, setSignOutFlowId] = useState<string | null>(INITIAL_STATE.signOutFlowId);
+  const [isSignOutFlowEnabled, setIsSignOutFlowEnabled] = useState<boolean>(INITIAL_STATE.isSignOutFlowEnabled);
+  const [redirectUris, setRedirectUris] = useState<string[]>(INITIAL_STATE.redirectUris);
+  const [postLogoutRedirectUris, setPostLogoutRedirectUris] = useState<string[]>(INITIAL_STATE.postLogoutRedirectUris);
+  const [corsOrigins, setCorsOrigins] = useState<string[]>(INITIAL_STATE.corsOrigins);
+  const [ouDefaults, setOuDefaults] = useState<OrganizationUnitDefaultsSelection>(INITIAL_STATE.ouDefaults);
   const [selectedTechnology, setSelectedTechnology] = useState<TechnologyApplicationTemplate | null>(
     INITIAL_STATE.selectedTechnology,
   );
@@ -175,8 +242,23 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
     setAppLogo(INITIAL_STATE.appLogo);
     setSelectedColor(INITIAL_STATE.selectedColor);
     setIntegrations(INITIAL_STATE.integrations);
+    setIsEmailOtpMfaEnabled(INITIAL_STATE.isEmailOtpMfaEnabled);
+    setIsSmsOtpMfaEnabled(INITIAL_STATE.isSmsOtpMfaEnabled);
+    setSmsOtpSenderId(INITIAL_STATE.smsOtpSenderId);
     setSelectedAuthFlow(INITIAL_STATE.selectedAuthFlow);
     setSignInApproach(INITIAL_STATE.signInApproach);
+    setLayoutId(INITIAL_STATE.layoutId);
+    setSelectedLayout(INITIAL_STATE.selectedLayout);
+    setRegistrationFlowId(INITIAL_STATE.registrationFlowId);
+    setIsRegistrationFlowEnabled(INITIAL_STATE.isRegistrationFlowEnabled);
+    setRecoveryFlowId(INITIAL_STATE.recoveryFlowId);
+    setIsRecoveryFlowEnabled(INITIAL_STATE.isRecoveryFlowEnabled);
+    setSignOutFlowId(INITIAL_STATE.signOutFlowId);
+    setIsSignOutFlowEnabled(INITIAL_STATE.isSignOutFlowEnabled);
+    setRedirectUris(INITIAL_STATE.redirectUris);
+    setPostLogoutRedirectUris(INITIAL_STATE.postLogoutRedirectUris);
+    setCorsOrigins(INITIAL_STATE.corsOrigins);
+    setOuDefaults(INITIAL_STATE.ouDefaults);
     setSelectedTechnology(INITIAL_STATE.selectedTechnology);
     setSelectedPlatform(INITIAL_STATE.selectedPlatform);
     setMcpClientType(INITIAL_STATE.mcpClientType);
@@ -207,10 +289,40 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
       integrations,
       setIntegrations,
       toggleIntegration,
+      isEmailOtpMfaEnabled,
+      setIsEmailOtpMfaEnabled,
+      isSmsOtpMfaEnabled,
+      setIsSmsOtpMfaEnabled,
+      smsOtpSenderId,
+      setSmsOtpSenderId,
       selectedAuthFlow,
       setSelectedAuthFlow,
       signInApproach,
       setSignInApproach,
+      layoutId,
+      setLayoutId,
+      selectedLayout,
+      setSelectedLayout,
+      registrationFlowId,
+      setRegistrationFlowId,
+      isRegistrationFlowEnabled,
+      setIsRegistrationFlowEnabled,
+      recoveryFlowId,
+      setRecoveryFlowId,
+      isRecoveryFlowEnabled,
+      setIsRecoveryFlowEnabled,
+      signOutFlowId,
+      setSignOutFlowId,
+      isSignOutFlowEnabled,
+      setIsSignOutFlowEnabled,
+      redirectUris,
+      setRedirectUris,
+      postLogoutRedirectUris,
+      setPostLogoutRedirectUris,
+      corsOrigins,
+      setCorsOrigins,
+      ouDefaults,
+      setOuDefaults,
       selectedTechnology,
       setSelectedTechnology,
       selectedPlatform,
@@ -245,8 +357,23 @@ export default function ApplicationCreateProvider({children}: ApplicationCreateP
       selectedColor,
       integrations,
       toggleIntegration,
+      isEmailOtpMfaEnabled,
+      isSmsOtpMfaEnabled,
+      smsOtpSenderId,
       selectedAuthFlow,
       signInApproach,
+      layoutId,
+      selectedLayout,
+      registrationFlowId,
+      isRegistrationFlowEnabled,
+      recoveryFlowId,
+      isRecoveryFlowEnabled,
+      signOutFlowId,
+      isSignOutFlowEnabled,
+      redirectUris,
+      postLogoutRedirectUris,
+      corsOrigins,
+      ouDefaults,
       selectedTechnology,
       selectedPlatform,
       selectedTemplateConfig,

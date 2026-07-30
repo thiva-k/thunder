@@ -179,7 +179,7 @@ export default function RedirectURIsSection({
           ))}
           {isEditable && (
             <Box>
-              <Button variant="outlined" startIcon={<Plus />} onClick={handleAdd} size="small">
+              <Button variant="text" color="primary" startIcon={<Plus />} onClick={handleAdd} size="small">
                 {t('agents:edit.advanced.redirectUris.addUri', 'Add URI')}
               </Button>
             </Box>

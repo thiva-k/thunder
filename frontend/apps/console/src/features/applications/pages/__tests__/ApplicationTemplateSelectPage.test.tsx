@@ -49,7 +49,7 @@ vi.mock('react-router', async () => {
 
 const buildContext = (overrides: Partial<ApplicationCreateContextType> = {}): ApplicationCreateContextType =>
   ({
-    currentStep: ApplicationCreateFlowStep.NAME,
+    currentStep: ApplicationCreateFlowStep.DETAILS,
     setCurrentStep: vi.fn(),
     appName: '',
     setAppName: vi.fn(),
@@ -144,7 +144,7 @@ describe('ApplicationTemplateSelectPage', () => {
     expect(setSelectedPlatform).toHaveBeenCalledWith(null);
     expect(setSelectedTemplateConfig).toHaveBeenCalled();
     // React uses the default flow whose first step is NAME.
-    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.NAME);
+    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.DETAILS);
     expect(mockNavigate).toHaveBeenCalledWith(`/applications/create?type=${TechnologyApplicationTemplate.REACT}`);
   });
 
@@ -171,7 +171,7 @@ describe('ApplicationTemplateSelectPage', () => {
     await user.click(screen.getByTestId(`template-card-${TechnologyApplicationTemplate.MCP_CLIENT}`));
 
     // mcp-client flow: NAME → ORGANIZATION_UNIT → CLIENT_TYPE → COMPLETE; first step is NAME.
-    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.NAME);
+    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.DETAILS);
     expect(mockNavigate).toHaveBeenCalledWith(`/applications/create?type=${TechnologyApplicationTemplate.MCP_CLIENT}`);
   });
 

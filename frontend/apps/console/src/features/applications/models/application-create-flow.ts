@@ -42,11 +42,9 @@
  */
 export const ApplicationCreateFlowStep = {
   STACK: 'STACK',
-  NAME: 'NAME',
-  ORGANIZATION_UNIT: 'ORGANIZATION_UNIT',
+  DETAILS: 'DETAILS',
+  SECURITY: 'SECURITY',
   DESIGN: 'DESIGN',
-  OPTIONS: 'OPTIONS',
-  EXPERIENCE: 'EXPERIENCE',
   CONFIGURE: 'CONFIGURE',
   CLIENT_TYPE: 'CLIENT_TYPE',
   COMPLETE: 'COMPLETE',
@@ -93,3 +91,33 @@ export type ApplicationCreateFlowSignInApproach = keyof typeof ApplicationCreate
  * @public
  */
 export type ApplicationCreateFlowConfiguration = keyof typeof ApplicationCreateFlowConfiguration;
+
+/**
+ * The organization-unit-defaultable items shown in the Details step's "Use organization unit
+ * defaults" accordion.
+ *
+ * @public
+ */
+export const OrganizationUnitDefaultItem = {
+  SIGN_IN: 'signIn',
+  SIGN_UP: 'signUp',
+  RECOVERY: 'recovery',
+  SIGN_OUT: 'signOut',
+  THEME: 'theme',
+  LAYOUT: 'layout',
+} as const;
+
+/**
+ * Organization-unit-defaultable item type
+ *
+ * @public
+ */
+export type OrganizationUnitDefaultItem =
+  (typeof OrganizationUnitDefaultItem)[keyof typeof OrganizationUnitDefaultItem];
+
+/**
+ * Per-item "use the organization unit's default" selection backing the Details step's accordion.
+ *
+ * @public
+ */
+export type OrganizationUnitDefaultsSelection = Record<OrganizationUnitDefaultItem, boolean>;

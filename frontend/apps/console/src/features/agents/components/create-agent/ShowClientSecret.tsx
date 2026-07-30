@@ -17,7 +17,18 @@
  */
 
 import {useCopyToClipboard} from '@thunderid/hooks';
-import {Box, Typography, Stack, TextField, IconButton, InputAdornment, Alert, Button, Divider} from '@wso2/oxygen-ui';
+import {
+  Box,
+  Typography,
+  Stack,
+  TextField,
+  IconButton,
+  InputAdornment,
+  Alert,
+  Button,
+  Divider,
+  useTheme,
+} from '@wso2/oxygen-ui';
 import {Copy, Eye, EyeOff, AlertTriangle} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useState} from 'react';
@@ -37,6 +48,7 @@ export default function ShowClientSecret({
   onContinue,
 }: ShowClientSecretProps): JSX.Element {
   const {t} = useTranslation();
+  const theme = useTheme();
   const [showSecret, setShowSecret] = useState(false);
   const {copied, copy} = useCopyToClipboard({resetDelay: 2000}) as {
     copied: boolean;
@@ -60,7 +72,7 @@ export default function ShowClientSecret({
           alignSelf: 'center',
         }}
       >
-        <AlertTriangle size={64} color="var(--mui-palette-warning-main)" />
+        <AlertTriangle size={64} color={theme.vars?.palette.warning.main} />
       </Box>
 
       <Stack direction="column" spacing={1} sx={{textAlign: 'center'}}>

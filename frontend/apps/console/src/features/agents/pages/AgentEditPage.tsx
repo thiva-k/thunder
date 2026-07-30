@@ -24,6 +24,8 @@ import {
   Alert,
   Box,
   Button,
+  Dialog,
+  DialogContent,
   IconButton,
   PageContent,
   PageTitle,
@@ -36,10 +38,11 @@ import {
 import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useMemo, type SyntheticEvent, type JSX, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Link, useNavigate, useParams} from 'react-router';
+import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
 import useGetAgent from '../api/useGetAgent';
 import useUpdateAgent from '../api/useUpdateAgent';
+import ShowClientSecret from '../components/create-agent/ShowClientSecret';
 import EditAccessSettings from '../components/edit-agent/access/EditAccessSettings';
 import EditAdvancedSettings from '../components/edit-agent/advanced-settings/EditAdvancedSettings';
 import EditAgentAttributes from '../components/edit-agent/attributes/EditAgentAttributes';
@@ -54,6 +57,12 @@ interface TabPanelProps {
   children?: ReactNode;
   index: number;
   value: number;
+}
+
+interface JustCreatedSecret {
+  agentName: string;
+  clientId?: string;
+  clientSecret: string;
 }
 
 function TabPanel({children = null, value, index, ...other}: TabPanelProps) {
@@ -73,11 +82,15 @@ function TabPanel({children = null, value, index, ...other}: TabPanelProps) {
 export default function AgentEditPage(): JSX.Element {
   const {t} = useTranslation();
   const navigate = useNavigate();
+  const location = useLocation();
   const logger = useLogger('AgentEditPage');
   const {agentId} = useParams<{agentId: string}>();
 
   const {data: agent, isLoading, error, isError, refetch} = useGetAgent(agentId ?? '');
   const updateAgent = useUpdateAgent();
+
+  const justCreatedSecret = (location.state as {justCreatedSecret?: JustCreatedSecret} | null)?.justCreatedSecret;
+  const [secretDialogOpen, setSecretDialogOpen] = useState(Boolean(justCreatedSecret));
 
   // The agent's type schema, used to drop stale attribute values on save.
   const {data: agentTypesData, isLoading: isTypesLoading} = useGetAgentTypes();
@@ -480,6 +493,19 @@ export default function AgentEditPage(): JSX.Element {
             void handleSave();
           }}
         />
+      )}
+
+      {justCreatedSecret && (
+        <Dialog open={secretDialogOpen} onClose={() => setSecretDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogContent>
+            <ShowClientSecret
+              agentName={justCreatedSecret.agentName}
+              clientId={justCreatedSecret.clientId}
+              clientSecret={justCreatedSecret.clientSecret}
+              onContinue={() => setSecretDialogOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </PageContent>
   );

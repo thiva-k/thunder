@@ -80,7 +80,7 @@
     "dayjs": "catalog:",
     "dompurify": "catalog:",
     "elkjs": "^0.11.0",
-    "framer-motion": "^12.35.2",
+    "framer-motion": "catalog:",
     "html-react-parser": "5.2.10",
     "i18next": "catalog:",
     "lexical": "0.38.2",

@@ -28,6 +28,7 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@wso2/oxygen-ui';
 import {AlertTriangle, Copy, Eye, EyeOff} from '@wso2/oxygen-ui-icons-react';
 import {useEffect, useRef, useState, type JSX} from 'react';
@@ -45,6 +46,7 @@ export default function ClientSecretSuccessDialog({
   onClose,
 }: ClientSecretSuccessDialogProps): JSX.Element {
   const {t} = useTranslation();
+  const theme = useTheme();
   const [copied, setCopied] = useState(false);
   const [showSecret, setShowSecret] = useState(false);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -84,7 +86,7 @@ export default function ClientSecretSuccessDialog({
               alignSelf: 'center',
             }}
           >
-            <AlertTriangle size={64} color="var(--mui-palette-warning-main)" />
+            <AlertTriangle size={64} color={theme.vars?.palette.warning.main} />
           </Box>
 
           <Stack direction="column" spacing={1} sx={{textAlign: 'center'}}>

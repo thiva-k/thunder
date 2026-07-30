@@ -289,6 +289,9 @@ catalogs:
     eslint:
       specifier: 9.39.5
       version: 9.39.5
+    framer-motion:
+      specifier: 12.39.0
+      version: 12.39.0
     globals:
       specifier: 16.4.0
       version: 16.4.0
@@ -692,7 +695,7 @@ importers:
         specifier: ^0.11.0
         version: 0.11.1
       framer-motion:
-        specifier: ^12.35.2
+        specifier: 'catalog:'
         version: 12.39.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       html-react-parser:
         specifier: 5.2.10
@@ -1357,6 +1360,9 @@ importers:
       eslint:
         specifier: 'catalog:'
         version: 9.39.5(jiti@2.7.0)
+      framer-motion:
+        specifier: 'catalog:'
+        version: 12.39.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       prettier:
         specifier: 'catalog:'
         version: 3.6.2

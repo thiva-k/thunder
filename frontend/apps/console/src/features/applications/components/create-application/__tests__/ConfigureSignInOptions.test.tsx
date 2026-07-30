@@ -24,7 +24,7 @@ import {
   useIdentityProviders,
   type IdentityProvider,
 } from '@thunderid/configure-connections';
-import {render, screen, within} from '@thunderid/test-utils';
+import {fireEvent, render, screen, within} from '@thunderid/test-utils';
 import type {JSX} from 'react';
 import {describe, it, expect, beforeEach, vi} from 'vitest';
 import ApplicationCreateProvider from '../../../contexts/ApplicationCreate/ApplicationCreateProvider';
@@ -157,21 +157,31 @@ describe('ConfigureSignInOptions', () => {
     } as unknown as ReturnType<typeof useGetFlows>);
   });
 
+  // Only the first accordion (Prompt for Credentials) starts expanded; expand the rest so this
+  // file's assertions can keep reaching into Passwordless Login, Social Login, and MFA rows the
+  // same way they did before those groups became collapsible accordions.
+  const expandAllAccordions = (): void => {
+    screen.queryAllByRole('button', {expanded: false}).forEach((summary) => fireEvent.click(summary));
+  };
+
   const renderComponent = (props: Partial<ConfigureSignInOptionsProps> = {}) => {
     const renderResult = render(
       <ApplicationCreateProvider>
         <ConfigureSignInOptions {...defaultProps} {...props} />
       </ApplicationCreateProvider>,
     );
+    expandAllAccordions();
 
     return {
       ...renderResult,
-      rerender: (newProps: Partial<ConfigureSignInOptionsProps> = {}) =>
+      rerender: (newProps: Partial<ConfigureSignInOptionsProps> = {}) => {
         renderResult.rerender(
           <ApplicationCreateProvider>
             <ConfigureSignInOptions {...defaultProps} {...newProps} />
           </ApplicationCreateProvider>,
-        ),
+        );
+        expandAllAccordions();
+      },
     };
   };
 
@@ -285,10 +295,8 @@ describe('ConfigureSignInOptions', () => {
 
     renderComponent();
 
-    const usernamePasswordButton = screen.getByText('Username & Password').closest('.MuiListItemButton-root');
-    if (usernamePasswordButton) {
-      await user.click(usernamePasswordButton);
-    }
+    const usernamePasswordRow = screen.getByTestId(`auth-method-${AuthenticatorTypes.CREDENTIALS_AUTH}`);
+    await user.click(within(usernamePasswordRow).getByRole('switch'));
 
     expect(mockOnIntegrationToggle).toHaveBeenCalledWith(AuthenticatorTypes.CREDENTIALS_AUTH);
   });
@@ -304,12 +312,29 @@ describe('ConfigureSignInOptions', () => {
 
     renderComponent();
 
-    const googleButton = screen.getByText('Google').closest('.MuiListItemButton-root');
-    if (googleButton) {
-      await user.click(googleButton);
-    }
+    const googleRow = screen.getByTestId('auth-method-google-idp');
+    await user.click(within(googleRow).getByRole('switch'));
 
     expect(mockOnIntegrationToggle).toHaveBeenCalledWith('google-idp');
+  });
+
+  it('should render Magic Link under Passwordless Login and call onIntegrationToggle when toggled', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useIdentityProviders).mockReturnValue({
+      data: mockIdentityProviders,
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useIdentityProviders>);
+
+    renderComponent();
+
+    const magicLinkRow = screen.getByTestId(`auth-method-${AuthenticatorTypes.MAGIC_LINK}`);
+    expect(magicLinkRow).toBeInTheDocument();
+
+    await user.click(within(magicLinkRow).getByRole('switch'));
+
+    expect(mockOnIntegrationToggle).toHaveBeenCalledWith(AuthenticatorTypes.MAGIC_LINK);
   });
 
   it('should call onIntegrationToggle when toggling switch', async () => {
@@ -324,7 +349,7 @@ describe('ConfigureSignInOptions', () => {
     renderComponent();
 
     const switches = screen.getAllByRole('switch');
-    await user.click(switches[2]); // Click Google switch
+    await user.click(switches[3]); // Click Google switch (0=Username&Password, 1=Passkey, 2=Magic Link, 3=Google)
 
     expect(mockOnIntegrationToggle).toHaveBeenCalledWith('google-idp');
   });
@@ -346,8 +371,8 @@ describe('ConfigureSignInOptions', () => {
 
     const switches = screen.getAllByRole('switch');
     expect(switches[0]).toBeChecked(); // Username & Password
-    expect(switches[2]).toBeChecked(); // Google
-    expect(switches[3]).not.toBeChecked(); // GitHub
+    expect(switches[3]).toBeChecked(); // Google (0=Username&Password, 1=Passkey, 2=Magic Link, 3=Google)
+    expect(switches[4]).not.toBeChecked(); // GitHub
   });
 
   it('should show username/password option when no integrations are available', () => {
@@ -361,7 +386,7 @@ describe('ConfigureSignInOptions', () => {
 
     // Should show username/password in the list with a switch (always toggleable)
     expect(screen.getByText('Username & Password')).toBeInTheDocument();
-    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getAllByRole('list').length).toBeGreaterThan(0);
 
     // Should have a toggle/switch (username/password is always toggleable)
     const switches = screen.getAllByRole('switch');
@@ -497,7 +522,7 @@ describe('ConfigureSignInOptions', () => {
     });
 
     let switches = screen.getAllByRole('switch');
-    expect(switches[2]).toBeChecked();
+    expect(switches[3]).toBeChecked(); // Google (0=Username&Password, 1=Passkey, 2=Magic Link, 3=Google)
 
     rerender({
       integrations: {
@@ -507,7 +532,7 @@ describe('ConfigureSignInOptions', () => {
     });
 
     switches = screen.getAllByRole('switch');
-    expect(switches[2]).toBeChecked();
+    expect(switches[3]).toBeChecked();
   });
 
   describe('Google and GitHub always shown', () => {
@@ -544,22 +569,15 @@ describe('ConfigureSignInOptions', () => {
 
       renderComponent();
 
-      const googleText = screen.getByText('Google');
-      const listItem = googleText.closest('.MuiListItem-root');
-      expect(listItem).toBeInTheDocument();
+      const googleRow = screen.getByTestId('auth-method-google');
+      expect(googleRow).toBeInTheDocument();
 
-      // Should have "Not configured" as secondary text (both Google and GitHub show it)
+      // Should have "Not configured" as trailing text (both Google and GitHub show it)
       const notConfiguredTexts = screen.getAllByText('Not configured');
       expect(notConfiguredTexts.length).toBeGreaterThanOrEqual(1);
 
-      // Should not have a switch for Google (disabled)
-      const switches = screen.getAllByRole('switch');
-      // Only username/password and passkey should have a switch
-      expect(switches.length).toBe(2);
-
-      // Google button should be disabled
-      const googleButton = googleText.closest('.MuiListItemButton-root');
-      expect(googleButton).toHaveAttribute('aria-disabled', 'true');
+      // No switch renders when unavailable; "Not configured" text takes its place.
+      expect(within(googleRow).queryByRole('switch')).not.toBeInTheDocument();
     });
 
     it('should show GitHub as disabled with "Not configured" when not in API', () => {
@@ -571,13 +589,13 @@ describe('ConfigureSignInOptions', () => {
 
       renderComponent();
 
-      const githubText = screen.getByText('GitHub');
-      const listItem = githubText.closest('.MuiListItem-root');
-      expect(listItem).toBeInTheDocument();
+      const githubRow = screen.getByTestId('auth-method-github');
+      expect(githubRow).toBeInTheDocument();
 
-      // Should have "Not configured" as secondary text
+      // Should have "Not configured" as trailing text
       const notConfiguredTexts = screen.getAllByText('Not configured');
       expect(notConfiguredTexts.length).toBeGreaterThan(0);
+      expect(within(githubRow).queryByRole('switch')).not.toBeInTheDocument();
     });
 
     it('should show Google as enabled with switch when configured in API', () => {
@@ -589,13 +607,9 @@ describe('ConfigureSignInOptions', () => {
 
       renderComponent();
 
-      const switches = screen.getAllByRole('switch');
-      // Should have switches for username/password, passkey, Google, and GitHub
-      expect(switches.length).toBe(4);
-
       // Google should be toggleable
-      const googleButton = screen.getByText('Google').closest('.MuiListItemButton-root');
-      expect(googleButton).not.toBeDisabled();
+      const googleRow = screen.getByTestId('auth-method-google-idp');
+      expect(within(googleRow).getByRole('switch')).not.toBeDisabled();
     });
 
     it('should show GitHub as enabled with switch when configured in API', () => {
@@ -607,13 +621,9 @@ describe('ConfigureSignInOptions', () => {
 
       renderComponent();
 
-      const switches = screen.getAllByRole('switch');
-      // Should have switches for username/password, passkey, Google, and GitHub
-      expect(switches.length).toBe(4);
-
       // GitHub should be toggleable
-      const githubButton = screen.getByText('GitHub').closest('.MuiListItemButton-root');
-      expect(githubButton).not.toBeDisabled();
+      const githubRow = screen.getByTestId('auth-method-github-idp');
+      expect(within(githubRow).getByRole('switch')).not.toBeDisabled();
     });
 
     it('should show Google enabled and GitHub disabled when only Google is configured', () => {
@@ -626,12 +636,12 @@ describe('ConfigureSignInOptions', () => {
       renderComponent();
 
       // Google should be enabled
-      const googleButton = screen.getByText('Google').closest('.MuiListItemButton-root');
-      expect(googleButton).not.toHaveAttribute('aria-disabled', 'true');
+      const googleRow = screen.getByTestId('auth-method-google-idp');
+      expect(within(googleRow).getByRole('switch')).not.toBeDisabled();
 
-      // GitHub should be disabled
-      const githubButton = screen.getByText('GitHub').closest('.MuiListItemButton-root');
-      expect(githubButton).toHaveAttribute('aria-disabled', 'true');
+      // GitHub should show no switch since it's not configured
+      const githubRow = screen.getByTestId('auth-method-github');
+      expect(within(githubRow).queryByRole('switch')).not.toBeInTheDocument();
 
       // Should show "Not configured" for GitHub
       const notConfiguredTexts = screen.getAllByText('Not configured');
@@ -893,10 +903,8 @@ describe('ConfigureSignInOptions', () => {
 
       renderComponent();
 
-      const oidcButton = screen.getByText('OIDC Provider').closest('.MuiListItemButton-root');
-      if (oidcButton) {
-        await user.click(oidcButton);
-      }
+      const oidcRow = screen.getByTestId('auth-method-oidc-idp');
+      await user.click(within(oidcRow).getByRole('switch'));
 
       expect(mockOnIntegrationToggle).toHaveBeenCalledWith('oidc-idp');
     });
@@ -943,19 +951,24 @@ describe('ConfigureSignInOptions', () => {
       );
     };
 
-    const renderWired = (onReadyChange?: (isReady: boolean) => void) =>
-      render(
+    const renderWired = (onReadyChange?: (isReady: boolean) => void) => {
+      const result = render(
         <ApplicationCreateProvider>
           <WiredHarness onReadyChange={onReadyChange} />
         </ApplicationCreateProvider>,
       );
+      // The pre-configured flow card is collapsed by default; expand it so these tests can reach
+      // the autocomplete inside.
+      fireEvent.click(screen.getByRole('button', {name: /preConfiguredFlows|pre-configured flow/i}));
+      return result;
+    };
 
     const usernamePasswordSwitch = (): HTMLElement => {
-      const item = screen.getByText('Username & Password').closest('li');
+      const item = screen.getByText('Username & Password').closest('[role="listitem"]');
       if (!item) {
         throw new Error('Username & Password list item not found');
       }
-      return within(item).getByRole('switch');
+      return within(item as HTMLElement).getByRole('switch');
     };
 
     beforeEach(() => {
@@ -1020,11 +1033,18 @@ describe('ConfigureSignInOptions', () => {
       expect(usernamePasswordSwitch()).not.toBeChecked();
       expect(screen.getByTestId('selected-flow-id')).toHaveTextContent('custom-flow-id');
 
-      await user.click(screen.getByText('Username & Password'));
+      // Toggles stay disabled while the flow is selected — clearing the flow via the
+      // autocomplete's "Clear" (X) control is what returns to toggle-driven mode.
+      expect(usernamePasswordSwitch()).toBeDisabled();
+      await user.click(screen.getByTitle('Clear'));
 
-      expect(usernamePasswordSwitch()).toBeChecked();
       expect(screen.getByTestId('selected-flow-id')).toHaveTextContent('');
       expect(screen.getByRole('combobox')).toHaveValue('');
+      expect(usernamePasswordSwitch()).not.toBeDisabled();
+
+      await user.click(usernamePasswordSwitch());
+
+      expect(usernamePasswordSwitch()).toBeChecked();
       expect(onReadyChange).toHaveBeenLastCalledWith(true);
     });
   });

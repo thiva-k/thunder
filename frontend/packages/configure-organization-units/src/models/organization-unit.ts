@@ -95,6 +95,46 @@ export interface OrganizationUnit {
   layoutId?: string | null;
 
   /**
+   * Sign-in (authentication) flow ID. Applications created under this organization unit can
+   * snapshot this flow instead of building their own.
+   * @example '550e8400-e29b-41d4-a716-446655440000'
+   */
+  authFlowId?: string | null;
+
+  /**
+   * Sign-up (registration) flow ID.
+   * @example '550e8400-e29b-41d4-a716-446655440000'
+   */
+  registrationFlowId?: string | null;
+
+  /**
+   * Whether the default sign-up flow is enabled.
+   */
+  isRegistrationFlowEnabled?: boolean;
+
+  /**
+   * Recovery flow ID.
+   * @example '550e8400-e29b-41d4-a716-446655440000'
+   */
+  recoveryFlowId?: string | null;
+
+  /**
+   * Whether the default recovery flow is enabled.
+   */
+  isRecoveryFlowEnabled?: boolean;
+
+  /**
+   * Sign-out flow ID.
+   * @example '550e8400-e29b-41d4-a716-446655440000'
+   */
+  signOutFlowId?: string | null;
+
+  /**
+   * Whether the default sign-out flow is enabled.
+   */
+  isSignOutFlowEnabled?: boolean;
+
+  /**
    * Organization unit logo URL
    * @example 'https://example.com/logo.png'
    */

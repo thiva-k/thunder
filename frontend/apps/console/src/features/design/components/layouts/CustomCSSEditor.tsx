@@ -161,18 +161,20 @@ const CustomCSSEditor = forwardRef<CustomCSSEditorHandle, CustomCSSEditorProps>(
           <Button
             size="small"
             variant="text"
+            color="primary"
             startIcon={<Plus size={12} />}
             onClick={() => handleAdd('inline')}
-            sx={{textTransform: 'none', fontSize: '0.7rem', color: 'text.secondary', px: 1, minWidth: 0}}
+            sx={{textTransform: 'none', fontSize: '0.7rem', px: 1, minWidth: 0}}
           >
             {t('layouts.config.custom_css.actions.add_inline.label', 'Inline')}
           </Button>
           <Button
             size="small"
             variant="text"
+            color="primary"
             startIcon={<Plus size={12} />}
             onClick={() => handleAdd('url')}
-            sx={{textTransform: 'none', fontSize: '0.7rem', color: 'text.secondary', px: 1, minWidth: 0}}
+            sx={{textTransform: 'none', fontSize: '0.7rem', px: 1, minWidth: 0}}
           >
             {t('layouts.config.custom_css.actions.add_url.label', 'External URL')}
           </Button>

@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {Box, Chip, Stack, Typography} from '@wso2/oxygen-ui';
+import {Chip, Stack, Typography} from '@wso2/oxygen-ui';
 import {KeyRound, Lock, RefreshCw, ShieldCheck} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -30,22 +30,20 @@ import type {McpClientType} from '../../../models/mcp-client';
  */
 export interface McpClientTypePreviewProps {
   /**
-   * The currently selected MCP client type, whose OAuth profile and next-step guidance the
-   * panel previews
+   * The currently selected MCP client type, whose OAuth profile the panel previews
    */
   clientType: McpClientType;
 }
 
 /**
- * React component that renders the "what you get" preview panel shown below the client type
- * cards on the mcp-client template's Client type step. Reuses the OAuth-profile-strip styling
- * from the Connection step: an eyebrow label followed by outlined profile chips, plus a
- * muted next-step line, both of which swap with the selected client type.
+ * React component that renders the "what you get" preview shown inside the selected client type
+ * card on the mcp-client template's Client type step: an eyebrow label followed by outlined
+ * profile chips that swap with the selected client type.
  *
  * @param props - The component props
  * @param props.clientType - The currently selected MCP client type
  *
- * @returns JSX element displaying the client type preview panel
+ * @returns JSX element displaying the client type preview
  *
  * @example
  * ```tsx
@@ -63,16 +61,7 @@ export default function McpClientTypePreview({clientType}: McpClientTypePreviewP
   const isM2m = clientType === McpClientTypes.M2M;
 
   return (
-    <Box
-      data-testid="application-mcp-client-type-preview"
-      sx={{
-        border: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 1,
-        p: 1.5,
-        bgcolor: 'background.default',
-      }}
-    >
+    <Stack spacing={1} data-testid="application-mcp-client-type-preview">
       <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
         <Typography
           variant="caption"
@@ -119,14 +108,6 @@ export default function McpClientTypePreview({clientType}: McpClientTypePreviewP
           </>
         )}
       </Stack>
-      <Typography variant="body2" color="text.secondary" sx={{mt: 1}}>
-        {isM2m
-          ? t(
-              'applications:onboarding.mcp.clientType.preview.nextM2m',
-              'Next: your client ID and secret are generated.',
-            )
-          : t('applications:onboarding.mcp.clientType.preview.nextUserDelegated', 'Add your redirect URIs below.')}
-      </Typography>
-    </Box>
+    </Stack>
   );
 }

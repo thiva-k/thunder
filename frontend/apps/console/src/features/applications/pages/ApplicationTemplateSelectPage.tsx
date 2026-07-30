@@ -83,8 +83,14 @@ export default function ApplicationTemplateSelectPage(): JSX.Element {
 
   const isWelcomeFlow = pathname.startsWith('/welcome');
 
-  const {reset, setSelectedTechnology, setSelectedPlatform, setSelectedTemplateConfig, setCurrentStep} =
-    useApplicationCreate();
+  const {
+    reset,
+    setSelectedTechnology,
+    setSelectedPlatform,
+    setSelectedTemplateConfig,
+    setSignInApproach,
+    setCurrentStep,
+  } = useApplicationCreate();
 
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -112,6 +118,10 @@ export default function ApplicationTemplateSelectPage(): JSX.Element {
     }
 
     setSelectedTemplateConfig(option.template);
+
+    if (option.template.defaults?.signInApproach) {
+      setSignInApproach(option.template.defaults.signInApproach);
+    }
 
     // The wizard no longer owns the template step, so advance to the first real step of this
     // template's creation flow before handing off.

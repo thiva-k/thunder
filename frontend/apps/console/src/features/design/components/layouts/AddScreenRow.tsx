@@ -44,18 +44,17 @@ export default function AddScreenRow({baseScreens, onAdd}: AddScreenRowProps): J
       <Button
         size="small"
         variant="text"
+        color="primary"
         startIcon={<Plus size={13} />}
         onClick={() => setOpen(true)}
         sx={{
           textTransform: 'none',
           fontSize: '0.8rem',
-          color: 'text.secondary',
           justifyContent: 'flex-start',
           px: 1.5,
           py: 0.75,
           borderRadius: 1.5,
           width: '100%',
-          '&:hover': {color: 'primary.main'},
         }}
       >
         {t('layouts.forms.add_screen.actions.add.label', 'Add screen')}
