@@ -692,8 +692,6 @@ var defaultMessages = map[string]string{
 	"error.flowmgtservice.unsupported_executor_property_description": "Node '{{param(nodeID)}}': executor '{{param(executorName)}}' does not support property '{{param(propertyKey)}}'",
 	"error.groupservice.cannot_create_group_in_declarative_only_mode": "Cannot create group in declarative-only mode",
 	"error.groupservice.cannot_create_group_in_declarative_only_mode_description": "Group creation is not allowed when running in declarative-only mode. Groups must be defined in declarative configuration files",
-	"error.groupservice.cannot_delete_group": "Cannot delete group",
-	"error.groupservice.cannot_delete_group_description": "Cannot delete group with child groups",
 	"error.groupservice.cannot_modify_declarative_group": "Cannot modify declarative group",
 	"error.groupservice.cannot_modify_declarative_group_description": "The group is defined in declarative configuration and cannot be modified",
 	"error.groupservice.create_group_by_path_request_parse_failed_description": "Failed to parse request body: {{param(error)}}",

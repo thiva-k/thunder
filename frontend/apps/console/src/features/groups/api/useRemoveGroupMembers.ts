@@ -67,8 +67,5 @@ export default function useRemoveGroupMembers(): UseMutationResult<void, Error, 
       });
       showToast(t('removeMember.success'), 'success');
     },
-    onError: () => {
-      showToast(t('removeMember.error'), 'error');
-    },
   });
 }

@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Stack, Button, Alert} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, type JSX} from 'react';
@@ -35,7 +36,7 @@ interface EditMembersSettingsProps {
  * Provides member listing, add, and remove functionality.
  */
 export default function EditMembersSettings({group}: EditMembersSettingsProps): JSX.Element {
-  const {t} = useTranslation();
+  const {t} = useTranslation('groups');
   const addGroupMembers = useAddGroupMembers();
   const removeGroupMembers = useRemoveGroupMembers();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -54,7 +55,7 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
             setError(null);
           },
           onError: (err: Error) => {
-            setError(err.message ?? t('groups:addMember.error'));
+            setError(getErrorMessage(err, t, 'addMember.error'));
           },
         },
       );
@@ -74,7 +75,7 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
             setError(null);
           },
           onError: (err: Error) => {
-            setError(err.message ?? t('groups:removeMember.error'));
+            setError(getErrorMessage(err, t, 'removeMember.error'));
           },
         },
       );
@@ -102,7 +103,7 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
               startIcon={<Plus size={16} />}
               onClick={() => setAddDialogOpen(true)}
             >
-              {t('groups:edit.members.sections.manage.addMember')}
+              {t('edit.members.sections.manage.addMember', 'Add Member')}
             </Button>
           ) : undefined
         }

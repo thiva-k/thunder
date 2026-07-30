@@ -415,7 +415,7 @@ func (gh *groupHandler) handleError(ctx context.Context, w http.ResponseWriter, 
 			statusCode = http.StatusNotFound
 		case ErrorGroupNameConflict.Code:
 			statusCode = http.StatusConflict
-		case ErrorInvalidOUID.Code, ErrorCannotDeleteGroup.Code,
+		case ErrorInvalidOUID.Code,
 			ErrorInvalidRequestFormat.Code, ErrorMissingGroupID.Code,
 			ErrorInvalidLimit.Code, ErrorInvalidOffset.Code,
 			ErrorEmptyMembers.Code, ErrorInvalidMemberType.Code,

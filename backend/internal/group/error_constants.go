@@ -91,19 +91,6 @@ var (
 			DefaultValue: "Organization unit does not exists",
 		},
 	}
-	// ErrorCannotDeleteGroup is the error returned when group cannot be deleted.
-	ErrorCannotDeleteGroup = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "GRP-1006",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.groupservice.cannot_delete_group",
-			DefaultValue: "Cannot delete group",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.groupservice.cannot_delete_group_description",
-			DefaultValue: "Cannot delete group with child groups",
-		},
-	}
 	// ErrorInvalidMemberID is the error returned when a user or app member ID is invalid.
 	ErrorInvalidMemberID = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,

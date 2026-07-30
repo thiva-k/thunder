@@ -1546,6 +1546,11 @@ const translations = {
     'delete.success': 'Group deleted successfully.',
     'addMember.success': 'Member added successfully.',
     'removeMember.success': 'Member removed successfully.',
+    'errors.GRP-1003': 'This group no longer exists. It may have already been deleted.',
+    'errors.GRP-1004': 'A group with this name already exists in this organization unit. Choose a different name.',
+    'errors.GRP-1007': 'One or more selected members no longer exist. Refresh and try again.',
+    'errors.GRP-1015': 'This group is managed declaratively and cannot be edited or deleted.',
+    'errors.GRP-1016': 'New groups cannot be created while the server is running in declarative-only mode.',
   },
 
   // ============================================================================

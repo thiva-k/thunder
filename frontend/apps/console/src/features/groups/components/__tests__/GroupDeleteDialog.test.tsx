@@ -108,7 +108,26 @@ describe('GroupDeleteDialog', () => {
     await user.click(screen.getByText('Delete'));
 
     await waitFor(() => {
-      expect(screen.getByText('Delete failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to delete group. Please try again.')).toBeInTheDocument();
+    });
+  });
+
+  it('should display mapped error message for a declarative group', async () => {
+    mockMutate.mockImplementation((_id: string, opts: {onError: (err: Error) => void}) => {
+      const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+      error.response = {data: {code: 'GRP-1015'}};
+      opts.onError(error);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<GroupDeleteDialog {...defaultProps} />);
+
+    await user.click(screen.getByText('Delete'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('This group is managed declaratively and cannot be edited or deleted.'),
+      ).toBeInTheDocument();
     });
   });
 

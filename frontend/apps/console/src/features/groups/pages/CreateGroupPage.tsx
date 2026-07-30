@@ -18,6 +18,7 @@
 
 import {useHasMultipleOUs} from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -43,7 +44,7 @@ import type {CreateGroupRequest} from '../models/requests';
 
 export default function CreateGroupPage(): JSX.Element {
   const navigate = useNavigate();
-  const {t} = useTranslation();
+  const {t} = useTranslation('groups');
   const logger = useLogger('CreateGroupPage');
   const createGroup = useCreateGroup();
 
@@ -69,10 +70,10 @@ export default function CreateGroupPage(): JSX.Element {
 
   const steps: Partial<Record<GroupCreateFlowStep, {label: string}>> = useMemo(() => {
     const map: Partial<Record<GroupCreateFlowStep, {label: string}>> = {
-      NAME: {label: t('groups:createWizard.steps.name')},
+      NAME: {label: t('createWizard.steps.name', 'Create a Group')},
     };
     if (hasMultipleOUs) {
-      map.ORGANIZATION_UNIT = {label: t('groups:createWizard.steps.organizationUnit')};
+      map.ORGANIZATION_UNIT = {label: t('createWizard.steps.organizationUnit', 'Organization Unit')};
     }
     return map;
   }, [t, hasMultipleOUs]);
@@ -110,7 +111,7 @@ export default function CreateGroupPage(): JSX.Element {
     setError(null);
 
     if (!name.trim()) {
-      setValidationError(t('groups:create.form.name.required'));
+      setValidationError(t('create.form.name.required', 'Group name is required'));
       setSnackbarOpen(true);
       return;
     }
@@ -118,7 +119,7 @@ export default function CreateGroupPage(): JSX.Element {
     // If only one OU, use it directly
     const selectedOuId = hasMultipleOUs ? ouId : ouList[0]?.id;
     if (!selectedOuId) {
-      setValidationError(t('groups:create.form.organizationUnit.required'));
+      setValidationError(t('create.form.organizationUnit.required', 'Organization unit is required'));
       setSnackbarOpen(true);
       return;
     }
@@ -267,7 +268,7 @@ export default function CreateGroupPage(): JSX.Element {
                 {createGroup.error && (
                   <Alert severity="error" sx={{mb: 3}}>
                     <Typography variant="body2" sx={{fontWeight: 'bold', mb: 0.5}}>
-                      {createGroup.error.message}
+                      {getErrorMessage(createGroup.error, t, 'create.error')}
                     </Typography>
                   </Alert>
                 )}

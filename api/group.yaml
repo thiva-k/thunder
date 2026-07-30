@@ -416,16 +416,6 @@ paths:
                     description:
                       key: "error.groupservice.missing_group_id_description"
                       defaultValue: "Group ID is required"
-                cannot-delete-group:
-                  summary: Cannot delete group
-                  value:
-                    code: "GRP-1006"
-                    message:
-                      key: "error.groupservice.cannot_delete_group"
-                      defaultValue: "Cannot delete group"
-                    description:
-                      key: "error.groupservice.cannot_delete_group_description"
-                      defaultValue: "Cannot delete group with child groups"
         "404":
           description: Group not found
           content:
