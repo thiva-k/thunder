@@ -55,15 +55,7 @@ func registerRoutes(mux *http.ServeMux, exportHandler *exportHandler) {
 	mux.HandleFunc(middleware.WithCORS("POST /export",
 		exportHandler.HandleExportRequest, opts))
 
-	// ZIP export endpoint - returns application/zip with individual files
-	mux.HandleFunc(middleware.WithCORS("POST /export/zip",
-		exportHandler.HandleExportZipRequest, opts))
-
 	mux.HandleFunc(middleware.WithCORS("OPTIONS /export",
-		func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusNoContent)
-		}, opts))
-	mux.HandleFunc(middleware.WithCORS("OPTIONS /export/zip",
 		func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 		}, opts))
