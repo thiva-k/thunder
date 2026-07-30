@@ -1275,7 +1275,7 @@ func (suite *AuthorizationCodeGrantHandlerTestSuite) TestRetrieveAndValidateAuth
 
 	assert.Nil(suite.T(), result)
 	assert.NotNil(suite.T(), err)
-	assert.Equal(suite.T(), constants.ErrorInvalidRequest, err.Error)
+	assert.Equal(suite.T(), constants.ErrorInvalidGrant, err.Error)
 	assert.Contains(suite.T(), err.ErrorDescription, "code_verifier is required")
 
 	suite.mockAuthzService.AssertExpectations(suite.T())
