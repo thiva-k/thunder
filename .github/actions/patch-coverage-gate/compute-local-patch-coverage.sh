@@ -9,12 +9,15 @@
 # and no third-party converters are needed.
 #
 # Environment:
-#   BASE_REF, FAIL_UNDER  - provided by the composite action
-#   GITHUB_STEP_SUMMARY   - provided by the runner
+#   BASE_REF                                - provided by the composite action
+#   FAIL_UNDER, CODECOV_IGNORE_FILE         - from read-codecov-config.sh
+#   GITHUB_STEP_SUMMARY                     - provided by the runner
 #
 # Expects the coverage artifacts to be downloaded under coverage-artifacts/.
 
 set -euo pipefail
+
+SOURCE_LABEL="computed here by diff-cover from the coverage artifacts (fallback 2 of 2; Codecov reported nothing)"
 
 DIFF_COVER_VERSION="10.4.0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -43,25 +46,40 @@ for app in console gate; do
 done
 
 if [ "${#FILES[@]}" -eq 0 ]; then
-  # Fail rather than pass silently when coverable code changed but no
-  # coverage data reached the gate; passing would defeat its purpose.
-  COVERABLE=$(git diff --name-only "${BASE_REF}...HEAD" \
-    | { grep -E '^(backend/.*\.go$|frontend/apps/(console|gate)/src/.*\.(ts|tsx)$)' || true; } \
-    | { grep -vE '(^backend/tests/|_test\.go$|\.test\.(ts|tsx)$|__tests__/|__mocks__/)' || true; })
-  if [ -n "$COVERABLE" ]; then
-    echo "❌ Coverable files changed but no coverage artifacts were found." | tee -a "$GITHUB_STEP_SUMMARY"
-    exit 1
-  fi
-  echo "✅ No coverage artifacts and no coverable changes; nothing to gate." | tee -a "$GITHUB_STEP_SUMMARY"
-  exit 0
+  # This source only runs when the diff was found to contain files that report
+  # coverage, so missing artifacts mean the measurement went missing rather than
+  # that there was nothing to measure. Passing here would defeat the gate.
+  echo "❌ Patch coverage failed. Source: ${SOURCE_LABEL}. Files that report coverage changed, but no coverage artifacts reached the gate." | tee -a "$GITHUB_STEP_SUMMARY"
+  exit 1
+fi
+
+# The excluded paths come from codecov.yml's ignore list, so a line that Codecov
+# would count is never dropped here.
+EXCLUDES=()
+while IFS= read -r glob; do
+  [ -n "$glob" ] || continue
+  EXCLUDES+=("$glob")
+done < "$CODECOV_IGNORE_FILE"
+# --exclude takes all of its patterns as one flag, so build the flag only when
+# there is at least one; a bare --exclude would be a usage error.
+EXCLUDE_ARGS=()
+if [ "${#EXCLUDES[@]}" -gt 0 ]; then
+  EXCLUDE_ARGS=(--exclude "${EXCLUDES[@]}")
 fi
 
 STATUS=0
 diff-cover "${FILES[@]}" \
   --compare-branch "$BASE_REF" \
   --fail-under "$FAIL_UNDER" \
-  --exclude 'backend/tests/**' '**/*_test.go' 'tests/**' 'samples/**' 'docs/**' 'api/**' \
-            '**/*.test.ts' '**/*.test.tsx' '**/__tests__/**' '**/__mocks__/**' \
+  "${EXCLUDE_ARGS[@]}" \
   --format markdown:patch-coverage.md || STATUS=$?
+
+# Named explicitly because this number is computed here rather than reported by
+# Codecov, and the two are close but not identical.
+if [ "$STATUS" -eq 0 ]; then
+  echo "✅ Patch coverage passed. Source: ${SOURCE_LABEL} (required: ≥ ${FAIL_UNDER}%)" | tee -a "$GITHUB_STEP_SUMMARY"
+else
+  echo "❌ Patch coverage failed. Source: ${SOURCE_LABEL} (required: ≥ ${FAIL_UNDER}%)" | tee -a "$GITHUB_STEP_SUMMARY"
+fi
 cat patch-coverage.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
 exit "$STATUS"
