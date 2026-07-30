@@ -931,10 +931,10 @@ export default function UserAddPage(): JSX.Element {
   const [hasOuStep, setHasOuStep] = useState(false);
 
   const handleClose = useCallback(() => {
-    Promise.resolve(navigate(routes.list())).catch((error: unknown) => {
-      logger.error('Failed to navigate to users page', {error});
+    Promise.resolve(navigate(-1)).catch((error: unknown) => {
+      logger.error('Failed to navigate back', {error});
     });
-  }, [navigate, routes, logger]);
+  }, [navigate, logger]);
 
   const handleManualCreateFallback = useCallback(() => {
     logger.info('Falling back to manual user creation because the onboarding flow is unavailable');

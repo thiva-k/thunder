@@ -174,7 +174,6 @@ const RouteConfig: RouteConfig = {
     detail: (userId) => `/${ROUTE_SEGMENTS.users}/${userId}`,
     add: () => `/${ROUTE_SEGMENTS.users}/add`,
     addCreate: () => `/${ROUTE_SEGMENTS.users}/add/create`,
-    addInvite: () => `/${ROUTE_SEGMENTS.users}/add/invite`,
   },
   userTypes: {
     list: () => `/${ROUTE_SEGMENTS.userTypes}`,
