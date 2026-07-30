@@ -73,10 +73,13 @@ jobs:
               - '**.ps1'
               - '.github/workflows/windows-powershell-validation.yml'
 
+      # This job only audits the lockfile, so it must not cache a pnpm store:
+      # an empty store published here is what every later job restored.
       - name: ⚙️ Set up Node.js and pnpm
         uses: ./.github/actions/setup-pnpm
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache-store: 'false'
 
       - name: 🔍 Run pnpm audit
         run: |
@@ -1285,13 +1288,29 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: 🗑️ Delete stale Turbo caches
+      - name: 🗑️ Delete superseded Turbo and pnpm store caches
         continue-on-error: true
         env:
           GH_TOKEN: ${{ github.token }}
+          CACHE_REF: ${{ github.ref }}
         run: |
-          # Keep the single most-recently-created Turbo cache per OS; delete the rest.
-          gh api "repos/${{ github.repository }}/actions/caches?per_page=100&key=turbo-Linux-" \
-            --jq '.actions_caches | sort_by(.created_at) | reverse | .[1:] | .[].id' \
+          # Both cache families end in "--<run id>-<attempt>", so each run and each
+          # re-run publishes a fresh entry, and the older ones for the same lineage
+          # (the key without that suffix) can never be reached by a restore-key
+          # again. The separator is a
+          # double dash because a hex lockfile hash cannot contain one, so trimming
+          # it can never mangle a key that predates this scheme; those are left
+          # alone and expire on their own.
+          #
+          # Scoped to this run's ref on purpose: GitHub stores caches per branch,
+          # and the previous version of this step matched every ref, so it deleted
+          # other pull requests' warm caches along with this one's stale copies.
+          gh api --paginate \
+            "repos/${{ github.repository }}/actions/caches?per_page=100&ref=${CACHE_REF}" \
+            --jq '.actions_caches[]
+                  | select(.key | test("^(turbo|pnpm-store)-"))
+                  | select(.key | test("--[0-9]+-[0-9]+$"))
+                  | {id, created_at, lineage: (.key | sub("--[0-9]+-[0-9]+$"; ""))}' \
+          | jq -s 'group_by(.lineage)[]
+                   | sort_by(.created_at) | reverse | .[1:] | .[].id' \
           | xargs -r -I{} gh api --method DELETE "repos/${{ github.repository }}/actions/caches/{}"
-
