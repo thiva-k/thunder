@@ -48,6 +48,11 @@ export default function EditCredentialsSettings({
     onFieldChange('inboundAuthConfig', updatedInboundAuth);
   };
 
+  // An encrypted ID token is encrypted to this certificate, so removing it while such a format is
+  // selected would produce an invalid config. Used to block that removal. Agents have no UserInfo.
+  const idTokenResponseType = oauth2Config?.token?.idToken?.responseType;
+  const encryptionDependsOnCert = idTokenResponseType === 'JWE' || idTokenResponseType === 'NESTED_JWT';
+
   return (
     <Stack spacing={3}>
       <ClientIdSection oauth2Config={oauth2Config} copiedField={copiedField} onCopyToClipboard={onCopyToClipboard} />
@@ -56,6 +61,7 @@ export default function EditCredentialsSettings({
         certificate={oauth2Config?.certificate}
         onCertificateChange={(cert) => handleOAuth2ConfigChange({certificate: cert})}
         required={oauth2Config?.tokenEndpointAuthMethod === 'private_key_jwt'}
+        encryptionDependsOnCert={encryptionDependsOnCert}
         disabled={agent.isReadOnly}
       />
     </Stack>

@@ -103,12 +103,10 @@ var (
 	ErrOAuthCertificateRequiresClientID = errors.New("certificate requires an OAuth client ID")
 	// ErrOAuthPrivateKeyJWTCannotHaveClientSecret is returned when private_key_jwt is used with a client secret.
 	ErrOAuthPrivateKeyJWTCannotHaveClientSecret = errors.New("private_key_jwt cannot have a client secret")
-	// ErrOAuthClientSecretCannotHaveCertificate is returned when client-secret auth is used with a certificate.
-	ErrOAuthClientSecretCannotHaveCertificate = errors.New("client secret auth cannot have a certificate")
 	// ErrOAuthNoneAuthRequiresPublicClient is returned when none auth method is used without a public client.
 	ErrOAuthNoneAuthRequiresPublicClient = errors.New("none auth method requires a public client")
-	// ErrOAuthNoneAuthCannotHaveCertOrSecret is returned when none auth method is used with a certificate or secret.
-	ErrOAuthNoneAuthCannotHaveCertOrSecret = errors.New("none auth method cannot have certificate or secret")
+	// ErrOAuthNoneAuthCannotHaveSecret is returned when none auth method is used with a client secret.
+	ErrOAuthNoneAuthCannotHaveSecret = errors.New("none auth method cannot have a client secret")
 	// ErrOAuthClientCredentialsCannotUseNoneAuth is returned when client_credentials uses none auth method.
 	ErrOAuthClientCredentialsCannotUseNoneAuth = errors.New("client_credentials cannot use none auth method")
 	// ErrOAuthClientJWTBearerCannotUseNoneAuth is returned when the jwt-bearer grant uses none auth method.
@@ -148,14 +146,12 @@ var (
 	ErrOAuthUserInfoJWKSURINotSSRFSafe = errors.New("userinfo JWKS URI must be a publicly reachable HTTPS URL")
 	// ErrOAuthUserInfoUnsupportedResponseType is returned when an unsupported userinfo response type is specified.
 	ErrOAuthUserInfoUnsupportedResponseType = errors.New("unsupported userinfo response type")
-	// ErrOAuthUserInfoJWSRequiresSigningAlg is returned when responseType is JWS but signingAlg is not set.
-	ErrOAuthUserInfoJWSRequiresSigningAlg = errors.New("signingAlg is required when userinfo responseType is JWS")
 	// ErrOAuthUserInfoJWERequiresEncryption is returned when responseType is JWE but encryption fields are missing.
 	ErrOAuthUserInfoJWERequiresEncryption = errors.New(
 		"encryptionAlg and encryptionEnc are required when userinfo responseType is JWE")
-	// ErrOAuthUserInfoNestedJWTRequiresAll is returned when responseType is NESTED_JWT but fields are missing.
+	// ErrOAuthUserInfoNestedJWTRequiresAll is returned when responseType is NESTED_JWT but encryption is missing.
 	ErrOAuthUserInfoNestedJWTRequiresAll = errors.New(
-		"signingAlg, encryptionAlg, and encryptionEnc are required when userinfo responseType is NESTED_JWT")
+		"encryptionAlg and encryptionEnc are required when userinfo responseType is NESTED_JWT")
 	// ErrOAuthUserInfoAlgRequiresResponseType is returned when algorithm fields
 	// are set without an explicit responseType.
 	ErrOAuthUserInfoAlgRequiresResponseType = errors.New(

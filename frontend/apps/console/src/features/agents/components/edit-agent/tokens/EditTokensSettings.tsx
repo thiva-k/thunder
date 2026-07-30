@@ -95,6 +95,7 @@ export default function EditTokensSettings({
                 showUserInfoTab={false}
                 showActorClaim
                 actorSub={agent.id}
+                certificateLocation="Credentials"
               />
             </Stack>
           </SettingsLockNotice>

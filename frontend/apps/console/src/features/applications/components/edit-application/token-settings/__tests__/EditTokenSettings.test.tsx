@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {render, screen, waitFor} from '@thunderid/test-utils';
+import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {Application} from '../../../../models/application';
 import type {OAuth2Config} from '../../../../models/oauth';
@@ -62,12 +62,16 @@ vi.mock('../TokenUserAttributesSection', () => ({
     idTokenAttributes,
     isUserInfoCustomAttributes,
     onToggleUserInfo,
+    onIdTokenConfigChange,
+    onUserInfoConfigChange,
     userAttributes,
   }: {
     accessTokenAttributes?: string[];
     idTokenAttributes?: string[];
     isUserInfoCustomAttributes?: boolean;
     onToggleUserInfo?: (checked: boolean) => void;
+    onIdTokenConfigChange?: (field: string, value: string) => void;
+    onUserInfoConfigChange?: (field: string, value: string) => void;
     userAttributes?: string[];
   }) => {
     const isOAuthMode = accessTokenAttributes !== undefined || idTokenAttributes !== undefined;
@@ -77,6 +81,12 @@ vi.mock('../TokenUserAttributesSection', () => ({
           <div data-testid="token-user-attributes-section-access">Access Token Attributes</div>
           <div data-testid="token-user-attributes-section-id">ID Token Attributes</div>
           {userAttributes && <div data-testid="user-attributes-list">{userAttributes.join(',')}</div>}
+          <button type="button" onClick={() => onIdTokenConfigChange?.('responseType', 'JWT')}>
+            id-token-to-jwt
+          </button>
+          <button type="button" onClick={() => onUserInfoConfigChange?.('responseType', 'JSON')}>
+            user-info-to-json
+          </button>
           <label>
             <input
               type="checkbox"
@@ -421,6 +431,71 @@ describe('EditTokenSettings', () => {
 
       const checkbox = screen.getByRole('checkbox', {name: /Use same attributes as ID Token/i});
       expect(checkbox).not.toBeChecked();
+    });
+  });
+
+  describe('Response Format Change Clears Stale Fields', () => {
+    const buildApp = (config: OAuth2Config): Application =>
+      ({
+        ...mockApplication,
+        inboundAuthConfig: [{type: 'oauth2', config}],
+      }) as Application;
+
+    const lastEmittedOAuthConfig = (): OAuth2Config => {
+      const lastCall = mockOnFieldChange.mock.calls[mockOnFieldChange.mock.calls.length - 1];
+      const inboundAuthConfig = lastCall[1] as {type: string; config: OAuth2Config}[];
+      return inboundAuthConfig.find((c) => c.type === 'oauth2')!.config;
+    };
+
+    it('drops ID token encryption fields when switching from an encrypted format to JWT', () => {
+      const config = {
+        token: {
+          idToken: {
+            userAttributes: ['sub'],
+            responseType: 'JWE',
+            encryptionAlg: 'RSA-OAEP',
+            encryptionEnc: 'A128CBC-HS256',
+          },
+        },
+      } as OAuth2Config;
+
+      render(
+        <EditTokenSettings application={buildApp(config)} oauth2Config={config} onFieldChange={mockOnFieldChange} />,
+      );
+
+      fireEvent.click(screen.getByText('id-token-to-jwt'));
+
+      const emitted = lastEmittedOAuthConfig();
+      expect(emitted.token?.idToken?.responseType).toBe('JWT');
+      expect(emitted.token?.idToken?.encryptionAlg).toBeUndefined();
+      expect(emitted.token?.idToken?.encryptionEnc).toBeUndefined();
+    });
+
+    it('drops UserInfo encryption and signing fields when switching to JSON', () => {
+      const config = {
+        token: {
+          idToken: {userAttributes: ['sub']},
+        },
+        userInfo: {
+          userAttributes: ['sub'],
+          responseType: 'JWE',
+          signingAlg: 'RS256',
+          encryptionAlg: 'RSA-OAEP',
+          encryptionEnc: 'A128CBC-HS256',
+        },
+      } as OAuth2Config;
+
+      render(
+        <EditTokenSettings application={buildApp(config)} oauth2Config={config} onFieldChange={mockOnFieldChange} />,
+      );
+
+      fireEvent.click(screen.getByText('user-info-to-json'));
+
+      const emitted = lastEmittedOAuthConfig();
+      expect(emitted.userInfo?.responseType).toBe('JSON');
+      expect(emitted.userInfo?.encryptionAlg).toBeUndefined();
+      expect(emitted.userInfo?.encryptionEnc).toBeUndefined();
+      expect(emitted.userInfo?.signingAlg).toBeUndefined();
     });
   });
 

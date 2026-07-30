@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import {render, screen} from '@testing-library/react';
+import {render, screen, fireEvent, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {describe, it, expect, vi} from 'vitest';
 import TokenUserAttributesSection from '../TokenUserAttributesSection';
@@ -67,7 +67,6 @@ vi.mock('../../../../constants/token-constants', () => ({
     ID_TOKEN_ENCRYPTION_ALGS: ['RSA-OAEP', 'RSA-OAEP-256'],
     ID_TOKEN_ENCRYPTION_ENCS: ['A128CBC-HS256', 'A256GCM'],
     USER_INFO_RESPONSE_TYPES: ['JSON', 'JWS', 'JWE', 'NESTED_JWT'],
-    USER_INFO_SIGNING_ALGS: ['RS256', 'RS512'],
     USER_INFO_ENCRYPTION_ALGS: ['RSA-OAEP', 'RSA-OAEP-256'],
     USER_INFO_ENCRYPTION_ENCS: ['A128CBC-HS256', 'A256GCM'],
   },
@@ -531,7 +530,7 @@ describe('TokenUserAttributesSection', () => {
       expect(screen.getByText('Response Format')).toBeInTheDocument();
     });
 
-    it('shows signing algorithm when UserInfo response type is JWS', () => {
+    it('does not show a signing algorithm selector when UserInfo response type is JWS', () => {
       render(
         <TokenUserAttributesSection
           {...baseProps}
@@ -547,7 +546,9 @@ describe('TokenUserAttributesSection', () => {
         />,
       );
 
-      expect(screen.getByText('Signing Algorithm')).toBeInTheDocument();
+      // Signing always uses the server key, so no algorithm is chosen or encryption shown for JWS.
+      expect(screen.queryByText('Signing Algorithm')).not.toBeInTheDocument();
+      expect(screen.queryByText('Encryption Algorithm')).not.toBeInTheDocument();
     });
 
     it('shows encryption fields when UserInfo response type is JWE', () => {
@@ -582,12 +583,188 @@ describe('TokenUserAttributesSection', () => {
           isUserInfoCustomAttributes
           onToggleUserInfo={vi.fn()}
           userInfoResponseType="JSON"
+          hasCertificate
           onUserInfoConfigChange={vi.fn()}
         />,
       );
 
       expect(screen.queryByText('Signing Algorithm')).not.toBeInTheDocument();
       expect(screen.queryByText('Encryption Algorithm')).not.toBeInTheDocument();
+      // With a certificate configured, the certificate-required hint is not shown.
+      expect(screen.queryByText(/Encrypted formats require an OAuth client certificate/)).not.toBeInTheDocument();
+    });
+
+    it('shows the certificate requirement hint for an encrypted UserInfo format', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="userinfo"
+          onTabChange={vi.fn()}
+          isUserInfoCustomAttributes
+          onToggleUserInfo={vi.fn()}
+          userInfoResponseType="JWE"
+          onUserInfoConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/Encrypted formats require an OAuth client certificate/)).toBeInTheDocument();
+    });
+
+    it('shows the certificate requirement hint for an encrypted ID token format', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWE"
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText('Encryption Algorithm')).toBeInTheDocument();
+      expect(screen.getByText(/Encrypted formats require an OAuth client certificate/)).toBeInTheDocument();
+    });
+
+    it('names the configured certificate location in the requirement hint', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWT"
+          certificateLocation="Credentials"
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/configured under the Credentials tab/)).toBeInTheDocument();
+    });
+
+    it('hides the certificate requirement hint when a certificate is configured', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWT"
+          hasCertificate
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByText(/Encrypted formats require an OAuth client certificate/)).not.toBeInTheDocument();
+    });
+
+    it('shows the read-only signing algorithm from discovery on the ID token tab', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWT"
+          signingAlg="ES256"
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.getByText(/Signed with ES256/)).toBeInTheDocument();
+    });
+
+    it('hides the signing algorithm on the ID token tab when the format is encrypt-only (JWE)', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWE"
+          signingAlg="ES256"
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByText(/Signed with/)).not.toBeInTheDocument();
+    });
+
+    it('hides the signing algorithm when it cannot be resolved from discovery', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWT"
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      expect(screen.queryByText(/Signed with/)).not.toBeInTheDocument();
+    });
+
+    it('disables encrypted ID token format options when no certificate is configured', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWT"
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      // Open the response type dropdown. In tests the i18n mock renders the raw format values.
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      const options = within(screen.getByRole('listbox')).getAllByRole('option');
+      const optionByValue = (value: string) => options.find((o) => o.getAttribute('data-value') === value);
+
+      expect(optionByValue('JWE')).toHaveAttribute('aria-disabled', 'true');
+      expect(optionByValue('NESTED_JWT')).toHaveAttribute('aria-disabled', 'true');
+      expect(optionByValue('JWT')).not.toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('enables encrypted ID token format options when a certificate is configured', () => {
+      render(
+        <TokenUserAttributesSection
+          {...baseProps}
+          accessTokenAttributes={[]}
+          idTokenAttributes={[]}
+          userInfoAttributes={[]}
+          activeTab="id"
+          onTabChange={vi.fn()}
+          idTokenResponseType="JWT"
+          hasCertificate
+          onIdTokenConfigChange={vi.fn()}
+        />,
+      );
+
+      fireEvent.mouseDown(screen.getByRole('combobox'));
+      const options = within(screen.getByRole('listbox')).getAllByRole('option');
+      const optionByValue = (value: string) => options.find((o) => o.getAttribute('data-value') === value);
+
+      expect(optionByValue('JWE')).not.toHaveAttribute('aria-disabled', 'true');
+      expect(optionByValue('NESTED_JWT')).not.toHaveAttribute('aria-disabled', 'true');
     });
   });
 
