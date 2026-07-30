@@ -20,6 +20,7 @@ import {AuthenticatorTypes, IdentityProviderTypes, useIdentityProviders} from '@
 import {useHasMultipleOUs} from '@thunderid/configure-organization-units';
 import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {Box, Stack, Button, IconButton, LinearProgress, Alert, CircularProgress, AppBreadcrumbs} from '@wso2/oxygen-ui';
 import {X} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
@@ -374,7 +375,7 @@ export default function ApplicationCreatePage(): JSX.Element {
         }
       },
       onError: (err: Error) => {
-        setError(err.message ?? 'Failed to create application. Please try again.');
+        setError(getErrorMessage(err, (key, options) => t(`applications:${key}`, options), 'create.error'));
       },
     });
   };
