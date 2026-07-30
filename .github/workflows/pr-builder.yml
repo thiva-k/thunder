@@ -1217,10 +1217,27 @@ jobs:
       - name: 📦 Install E2E Dependencies
         run: pnpm install --frozen-lockfile
 
+      # Pull requests run the Chromium projects only, and the merge queue runs all
+      # three browsers, so nothing reaches main without the full matrix. On a pull
+      # request that is 45 of the 133 tests, and it also collapses the serial
+      # project chain (the CORS and MFA specs, which cannot overlap) from three
+      # sequential browsers to one, which is the part of the suite that no amount
+      # of workers can shorten.
       - name: 🎭 Run Playwright E2E Tests
-        run: pnpm test
+        run: |
+          if [ -n "$PLAYWRIGHT_PROJECT_FILTER" ]; then
+            echo "Running Playwright projects matching '$PLAYWRIGHT_PROJECT_FILTER'"
+            pnpm test --project="$PLAYWRIGHT_PROJECT_FILTER"
+          else
+            echo "Running every Playwright project"
+            pnpm test
+          fi
         working-directory: tests/e2e
         env:
+          # Matches the chromium and serial-chromium projects; setup comes along as
+          # their dependency. Empty on merge_group and workflow_dispatch, which run
+          # every project.
+          PLAYWRIGHT_PROJECT_FILTER: ${{ github.event_name == 'pull_request' && '*chromium*' || '' }}
           # Configuration Priority: Secret > Variable > Hardcoded Default
           BASE_URL: ${{ secrets.PLAYWRIGHT_BASE_URL || vars.PLAYWRIGHT_BASE_URL || 'https://localhost:8090' }}
           ADMIN_USERNAME: ${{ secrets.PLAYWRIGHT_ADMIN_USERNAME || 'admin' }}
