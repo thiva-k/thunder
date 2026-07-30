@@ -56,9 +56,10 @@ type Service interface {
 	SaveCheckpoint(ctx context.Context, in SaveCheckpointInput) (SaveCheckpointResult, error)
 
 	// LoadCheckpoint fetches the session referenced by handle and its checkpoint context, refreshes
-	// the session's last-active timestamp and idle deadline, and records the joining participant with
-	// the grant's token family id (all best-effort). It errors when the session or its checkpoint
-	// context no longer exists.
+	// the session's last-active timestamp and idle deadline (throttled: skipped when the last refresh
+	// is within the activity-refresh window), and records the joining participant with the grant's
+	// token family id (all best-effort). It errors when the session or its checkpoint context no
+	// longer exists.
 	LoadCheckpoint(ctx context.Context, handle, checkpoint, appID, tokenFamilyID string) (
 		*Session, *SessionContext, error)
 
@@ -216,11 +217,19 @@ func (s *service) LoadCheckpoint(ctx context.Context, handle, checkpoint, appID,
 	// Refresh last-active and slide the idle deadline under the optimistic-lock guard — touches
 	// SESSION only. The absolute deadline is left unchanged so it keeps capping total lifetime. A
 	// conflict here is non-fatal: the session loaded successfully.
+	//
+	// Throttle the write: within ActivityRefresh of the last persisted activity refresh, skip it. This
+	// hot path fires on every session reuse, and an unthrottled UPDATE per reuse is the dominant write
+	// load (and, on Postgres, the main source of dead tuples) on the session table. The persisted idle
+	// deadline then lags real activity by at most ActivityRefresh; config validation keeps that below
+	// the idle window so an active session is never skipped past its idle deadline.
 	now := time.Now().UTC()
-	sess.LastActiveAt = now
-	sess.IdleExpiresAt = now.Add(s.timeouts.Idle)
-	if updErr := s.store.Update(ctx, sess); updErr != nil {
-		s.logger.Warn(ctx, "Failed to refresh session last-active timestamp", log.Error(updErr))
+	if now.Sub(sess.LastActiveAt) >= s.timeouts.ActivityRefresh {
+		sess.LastActiveAt = now
+		sess.IdleExpiresAt = now.Add(s.timeouts.Idle)
+		if updErr := s.store.Update(ctx, sess); updErr != nil {
+			s.logger.Warn(ctx, "Failed to refresh session last-active timestamp", log.Error(updErr))
+		}
 	}
 
 	// Record the joining application as a participant. When this reused session issues a token family,
@@ -228,7 +237,8 @@ func (s *service) LoadCheckpoint(ctx context.Context, handle, checkpoint, appID,
 	// these rows, so a token stamped with a tfid that has no persisted mapping would be unrevocable.
 	// Fail closed in that case so the reuse does not issue an unrevocable family (the caller aborts the
 	// load before publishing the tfid, forcing full re-authentication). Without a tfid there is nothing
-	// to revoke, so the write stays best-effort.
+	// to revoke, so the write stays best-effort. Either way it is not throttled with the activity
+	// refresh above: the upsert also registers an application joining the session for the first time.
 	if partErr := s.recordParticipant(ctx, sess.SessionID, appID, tokenFamilyID, now); partErr != nil {
 		if tokenFamilyID != "" {
 			return nil, nil, fmt.Errorf("failed to record SSO session participant for token family: %w", partErr)
@@ -355,7 +365,7 @@ func (s *service) establishSession(ctx context.Context, in SaveCheckpointInput) 
 		AuthenticatedAt: now,
 		CreatedAt:       now,
 		LastActiveAt:    now,
-		// The idle deadline slides on each activity touch; the absolute deadline is fixed here and
+		// The idle deadline slides on each activity refresh; the absolute deadline is fixed here and
 		// caps the session's total lifetime. The resolver rejects a session past either deadline.
 		IdleExpiresAt:     now.Add(s.timeouts.Idle),
 		AbsoluteExpiresAt: now.Add(s.timeouts.Absolute),

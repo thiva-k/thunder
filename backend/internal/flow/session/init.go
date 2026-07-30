@@ -42,6 +42,9 @@ func Initialize(dbProvider provider.DBProviderInterface, deploymentID string,
 	if timeouts.Absolute <= 0 {
 		timeouts.Absolute = def.Absolute
 	}
+	if timeouts.ActivityRefresh <= 0 {
+		timeouts.ActivityRefresh = def.ActivityRefresh
+	}
 
 	store := newStore(dbProvider, deploymentID)
 	return &service{
