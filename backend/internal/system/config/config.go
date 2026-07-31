@@ -572,40 +572,41 @@ type LogTimeRotationConfig struct {
 
 // Config holds the complete configuration details of the server.
 type Config struct {
-	Server               engineconfig.ServerConfig        `yaml:"server"                json:"server"`
-	Log                  LogConfig                        `yaml:"log"                   json:"log"`
-	GateClient           engineconfig.GateClientConfig    `yaml:"gate_client"           json:"gate_client"`
-	TLS                  TLSConfig                        `yaml:"tls"                   json:"tls"`
-	Database             DatabaseConfig                   `yaml:"database"              json:"database"`
-	Cache                engineconfig.CacheConfig         `yaml:"cache"                 json:"cache"`
-	JWT                  engineconfig.JWTConfig           `yaml:"jwt"                   json:"jwt"`
-	OAuth                engineconfig.OAuthConfig         `yaml:"oauth"                 json:"oauth"`
-	Flow                 engineconfig.FlowConfig          `yaml:"flow"                  json:"flow"`
-	Crypto               CryptoConfig                     `yaml:"crypto"                json:"crypto"`
-	User                 UserConfig                       `yaml:"user"                  json:"user"`
-	DeclarativeResources DeclarativeResources             `yaml:"declarative_resources" json:"declarative_resources"`
-	Resource             engineconfig.ResourceConfig      `yaml:"resource"              json:"resource"`
-	OrganizationUnit     OrganizationUnitConfig           `yaml:"organization_unit"     json:"organization_unit"`
-	IdentityProvider     IdentityProviderConfig           `yaml:"identity_provider"     json:"identity_provider"`
-	Application          ApplicationConfig                `yaml:"application"           json:"application"`
-	ServerConfig         ServerConfigConfig               `yaml:"server_config" json:"server_config"`
-	Agent                AgentConfig                      `yaml:"agent"                 json:"agent"`
-	EntityType           EntityTypeConfig                 `yaml:"user_type"             json:"user_type"`
-	Observability        engineconfig.ObservabilityConfig `yaml:"observability"         json:"observability"`
-	Passkey              PasskeyConfig                    `yaml:"passkey"               json:"passkey"`
-	Attestation          AttestationConfig                `yaml:"attestation"           json:"attestation"`
-	OpenID4VP            OpenID4VPConfig                  `yaml:"openid4vp"             json:"openid4vp"`
-	OpenID4VCI           OpenID4VCIConfig                 `yaml:"openid4vci"            json:"openid4vci"`
-	AuthnProvider        AuthnProviderConfig              `yaml:"authn_provider"        json:"authn_provider"`
-	UserProvider         UserProviderConfig               `yaml:"user_provider"         json:"user_provider"`
-	EntityProvider       EntityProviderConfig             `yaml:"entity_provider"       json:"entity_provider"`
-	Group                GroupConfig                      `yaml:"group"                 json:"group"`
-	Role                 RoleConfig                       `yaml:"role"                  json:"role"`
-	Theme                ThemeConfig                      `yaml:"theme"                 json:"theme"`
-	Layout               LayoutConfig                     `yaml:"layout"                json:"layout"`
-	Translation          TranslationConfig                `yaml:"translation"           json:"translation"`
-	Email                EmailConfig                      `yaml:"email"                 json:"email"`
-	Notification         NotificationConfig               `yaml:"notification"          json:"notification"`
+	Server               engineconfig.ServerConfig         `yaml:"server"                json:"server"`
+	Log                  LogConfig                         `yaml:"log"                   json:"log"`
+	GateClient           engineconfig.GateClientConfig     `yaml:"gate_client"           json:"gate_client"`
+	TLS                  TLSConfig                         `yaml:"tls"                   json:"tls"`
+	Database             DatabaseConfig                    `yaml:"database"              json:"database"`
+	Cache                engineconfig.CacheConfig          `yaml:"cache"                 json:"cache"`
+	JWT                  engineconfig.JWTConfig            `yaml:"jwt"                   json:"jwt"`
+	OAuth                engineconfig.OAuthConfig          `yaml:"oauth"                 json:"oauth"`
+	Flow                 engineconfig.FlowConfig           `yaml:"flow"                  json:"flow"`
+	Crypto               CryptoConfig                      `yaml:"crypto"                json:"crypto"`
+	User                 UserConfig                        `yaml:"user"                  json:"user"`
+	DeclarativeResources DeclarativeResources              `yaml:"declarative_resources" json:"declarative_resources"`
+	Resource             engineconfig.ResourceConfig       `yaml:"resource"              json:"resource"`
+	OrganizationUnit     OrganizationUnitConfig            `yaml:"organization_unit"     json:"organization_unit"`
+	IdentityProvider     IdentityProviderConfig            `yaml:"identity_provider"     json:"identity_provider"`
+	Application          ApplicationConfig                 `yaml:"application"           json:"application"`
+	ServerConfig         ServerConfigConfig                `yaml:"server_config" json:"server_config"`
+	Agent                AgentConfig                       `yaml:"agent"                 json:"agent"`
+	EntityType           EntityTypeConfig                  `yaml:"user_type"             json:"user_type"`
+	Observability        engineconfig.ObservabilityConfig  `yaml:"observability"         json:"observability"`
+	Passkey              PasskeyConfig                     `yaml:"passkey"               json:"passkey"`
+	Attestation          AttestationConfig                 `yaml:"attestation"           json:"attestation"`
+	OpenID4VP            OpenID4VPConfig                   `yaml:"openid4vp"             json:"openid4vp"`
+	OpenID4VCI           OpenID4VCIConfig                  `yaml:"openid4vci"            json:"openid4vci"`
+	AuthnProvider        AuthnProviderConfig               `yaml:"authn_provider"        json:"authn_provider"`
+	UserProvider         UserProviderConfig                `yaml:"user_provider"         json:"user_provider"`
+	EntityProvider       EntityProviderConfig              `yaml:"entity_provider"       json:"entity_provider"`
+	Group                GroupConfig                       `yaml:"group"                 json:"group"`
+	Role                 RoleConfig                        `yaml:"role"                  json:"role"`
+	Theme                ThemeConfig                       `yaml:"theme"                 json:"theme"`
+	Layout               LayoutConfig                      `yaml:"layout"                json:"layout"`
+	Translation          TranslationConfig                 `yaml:"translation"           json:"translation"`
+	Email                EmailConfig                       `yaml:"email"                 json:"email"`
+	Notification         NotificationConfig                `yaml:"notification"          json:"notification"`
+	AttributeCache       engineconfig.AttributeCacheConfig `yaml:"attribute_cache" json:"attribute_cache"`
 }
 
 // LoadConfig loads the configurations from the specified YAML file and applies defaults.

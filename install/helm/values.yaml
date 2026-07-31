@@ -258,6 +258,11 @@ configuration:
         certFile: "config/certs/ecdsa-signing.cert"
         keyFile: "config/certs/ecdsa-signing.key"
 
+  # Attribute cache configuration
+  attributeCache:
+    encryption:
+      enabled: false
+
   # Database configuration
   database:
     config:

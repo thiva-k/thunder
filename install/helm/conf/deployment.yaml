@@ -98,6 +98,10 @@ crypto:
       key_file: {{ .keyFile | quote }}
   {{- end }}
 
+attribute_cache:
+  encryption:
+    enabled: {{ .Values.configuration.attributeCache.encryption.enabled }}
+
 database:
   config:
     type: {{ .Values.configuration.database.config.type | quote }}

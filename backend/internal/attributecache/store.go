@@ -20,7 +20,6 @@ package attributecache
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -29,10 +28,10 @@ import (
 // attributeCacheStoreInterface defines the interface for the attribute cache store.
 type attributeCacheStoreInterface interface {
 	// CreateAttributeCache creates a new attribute cache entry in the store.
-	CreateAttributeCache(ctx context.Context, cache AttributeCache) error
+	CreateAttributeCache(ctx context.Context, id string, data []byte, ttlSeconds int64) error
 
 	// GetAttributeCache retrieves an attribute cache entry by ID from the store.
-	GetAttributeCache(ctx context.Context, id string) (AttributeCache, error)
+	GetAttributeCache(ctx context.Context, id string) ([]byte, error)
 
 	// ExtendAttributeCacheTTL extends the TTL of an attribute cache entry in the store.
 	ExtendAttributeCacheTTL(ctx context.Context, id string, ttlSeconds int) error
@@ -54,33 +53,21 @@ func newAttributeCacheStore(store providers.RuntimeStoreProvider) attributeCache
 }
 
 // CreateAttributeCache creates a new attribute cache entry in the database.
-func (s *attributeCacheStore) CreateAttributeCache(ctx context.Context, cache AttributeCache) error {
-	data, err := json.Marshal(cache.Attributes)
-	if err != nil {
-		return fmt.Errorf("failed to marshal attributes: %w", err)
-	}
-	return s.store.Put(ctx, providers.NamespaceAttributeCache, cache.ID, data, cache.TTLSeconds)
+func (s *attributeCacheStore) CreateAttributeCache(
+	ctx context.Context, id string, data []byte, ttlSeconds int64) error {
+	return s.store.Put(ctx, providers.NamespaceAttributeCache, id, data, ttlSeconds)
 }
 
 // GetAttributeCache retrieves an attribute cache entry by ID from the database.
-func (s *attributeCacheStore) GetAttributeCache(ctx context.Context, id string) (AttributeCache, error) {
+func (s *attributeCacheStore) GetAttributeCache(ctx context.Context, id string) ([]byte, error) {
 	data, err := s.store.Get(ctx, providers.NamespaceAttributeCache, id)
 	if err != nil {
-		return AttributeCache{}, fmt.Errorf("failed to get attribute cache: %w", err)
+		return nil, fmt.Errorf("failed to get attribute cache: %w", err)
 	}
 	if data == nil {
-		return AttributeCache{}, errAttributeCacheNotFound
+		return nil, errAttributeCacheNotFound
 	}
-
-	var attributes map[string]interface{}
-	if err := json.Unmarshal(data, &attributes); err != nil {
-		return AttributeCache{}, fmt.Errorf("failed to unmarshal attributes: %w", err)
-	}
-
-	return AttributeCache{
-		ID:         id,
-		Attributes: attributes,
-	}, nil
+	return data, nil
 }
 
 // ExtendAttributeCacheTTL extends the TTL of an attribute cache entry in the database.
