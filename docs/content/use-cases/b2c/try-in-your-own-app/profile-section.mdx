@@ -22,7 +22,7 @@ Complete the [Login](../add-login) walkthrough first. The user type and applicat
 <details open>
   <summary>Redirect-based</summary>
 
-In the redirect-based pattern, your application renders the profile UI itself. Profile attributes are read from the ID token on sign-in. Attribute updates and credential changes go to <ProductName />'s self-service endpoints, which act on the signed-in user's own record: no additional permissions are needed beyond the access token.
+In the redirect-based pattern, the consumer app renders the profile screen itself. Profile attributes are read from `/users/me` and ID token. Schema metadata is retrieved from `/users/me/meta`. Attribute updates go through `/users/me` and password changes go through `/users/me/update-credentials`. These endpoints act on the signed-in user's own record, so no extra permissions are needed; the access token alone is enough.
 
 ### Configure <ProductName />
 
@@ -51,11 +51,12 @@ Your app reads profile attributes from the ID token and calls the self-service e
 
 For direct API access, profile attributes are read and updated through the self-service endpoints:
 
-| Operation         | Endpoint                             | Method |
-| ----------------- | ------------------------------------ | ------ |
-| Read profile      | `/users/me`                          | GET    |
-| Update attributes | `/users/me`                          | PATCH  |
-| Change password   | `/users/me/update-credentials`       | POST   |
+| Operation            | Endpoint                       | Method |
+| -------------------- | ------------------------------ | ------ |
+| Read profile         | `/users/me`                    | GET    |
+| Read schema metadata | `/users/me/meta`               | GET    |
+| Update attributes    | `/users/me`                    | PUT    |
+| Change password      | `/users/me/update-credentials` | POST   |
 
 See the [APIs reference](../../../../apis).
 
