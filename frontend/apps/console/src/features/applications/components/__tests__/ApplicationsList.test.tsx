@@ -17,10 +17,10 @@
  */
 
 import userEvent from '@testing-library/user-event';
+import type {ApplicationListResponse} from '@thunderid/configure-applications';
 import {render, screen, waitFor} from '@thunderid/test-utils';
 import type {NavigateFunction} from 'react-router';
 import {describe, it, expect, beforeEach, vi} from 'vitest';
-import type {ApplicationListResponse} from '../../models/responses';
 import ApplicationsList from '../ApplicationsList';
 
 const {mockLoggerError} = vi.hoisted(() => ({
@@ -28,7 +28,10 @@ const {mockLoggerError} = vi.hoisted(() => ({
 }));
 
 // Mock the dependencies
-vi.mock('../../api/useGetApplications');
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: vi.fn(),
+}));
 vi.mock('react-router', async () => {
   const actual = await vi.importActual('react-router');
   return {
@@ -137,7 +140,7 @@ vi.mock('@thunderid/logger/react', () => ({
   }),
 }));
 
-const {default: useGetApplications} = await import('../../api/useGetApplications');
+const {useGetApplications} = await import('@thunderid/configure-applications');
 const {useNavigate} = await import('react-router');
 const {useDataGridLocaleText} = await import('@thunderid/hooks');
 

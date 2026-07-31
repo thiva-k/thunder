@@ -23,8 +23,8 @@ import {UsersRound} from '@wso2/oxygen-ui-icons-react';
 import {motion} from 'framer-motion';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
-import RouteConfig from '../../../../configs/RouteConfig';
 import HomeNextStepCard from './HomeNextStepCard';
+import RouteConfig from '../../../../configs/RouteConfig';
 
 const AVATAR_LIMIT = 5;
 

@@ -16,9 +16,9 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
 import {McpClientTypes} from '../models/mcp-client';
 import type {McpClientType} from '../models/mcp-client';
-import {OAuth2GrantTypes} from '../models/oauth';
 
 /**
  * Derives the MCP client type from an OAuth2 configuration's granted grant types.

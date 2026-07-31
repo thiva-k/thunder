@@ -17,6 +17,8 @@
  */
 
 import {BuilderStaticPanel} from '@thunderid/components';
+import {useGetApplication, useGetApplications} from '@thunderid/configure-applications';
+import type {BasicApplication} from '@thunderid/configure-applications';
 import {DefaultTheme, DesignResolveType, useGetDesignResolve, type Theme} from '@thunderid/design';
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
 import type {EmbeddedFlowComponent} from '@thunderid/react';
@@ -72,9 +74,6 @@ import {
 } from '../../utils/gatePreviewTransforms';
 import type {SimulationOption} from '../../utils/getSimulationOptions';
 import GatePreview from '@/components/GatePreview/GatePreview';
-import useGetApplication from '@/features/applications/api/useGetApplication';
-import useGetApplications from '@/features/applications/api/useGetApplications';
-import type {BasicApplication} from '@/features/applications/models/application';
 
 /**
  * Props interface of {@link SimulationStepPreview}

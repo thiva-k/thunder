@@ -17,11 +17,11 @@
  */
 
 import {Kbd, SettingsCard} from '@thunderid/components';
+import type {Application} from '@thunderid/configure-applications';
 import {Autocomplete, Chip, TextField} from '@wso2/oxygen-ui';
 import {useState} from 'react';
 import {useTranslation, Trans} from 'react-i18next';
 import {z} from 'zod';
-import type {Application} from '../../../models/application';
 
 /**
  * Props for the {@link ContactsSection} component.

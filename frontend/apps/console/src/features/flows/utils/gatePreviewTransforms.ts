@@ -16,10 +16,10 @@
  * under the License.
  */
 
+import type {Application} from '@thunderid/configure-applications';
 import {deriveEventType, shouldPromoteToSubmit} from './reactFlowTransformer';
 import {containsTemplateLiteral} from '../components/resources/elements/adapters/TemplatePlaceholder';
 import {ActionEventTypes, ElementCategories, ElementTypes, type Element} from '../models/elements';
-import type {Application} from '@/features/applications/models/application';
 
 /**
  * A flow element as consumed by the simulation preview, with the presentation

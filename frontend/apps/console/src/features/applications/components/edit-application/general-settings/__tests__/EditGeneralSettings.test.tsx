@@ -17,9 +17,8 @@
  */
 
 import {render, screen, fireEvent} from '@testing-library/react';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {Application} from '../../../../models/application';
-import type {OAuth2Config} from '../../../../models/oauth';
 import EditGeneralSettings from '../EditGeneralSettings';
 
 vi.mock('@thunderid/contexts', () => ({

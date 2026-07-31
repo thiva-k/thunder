@@ -18,6 +18,7 @@
 
 import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
 import {AuthenticatorTypes} from '@thunderid/configure-connections';
 import {LoggerProvider, LogLevel} from '@thunderid/logger';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
@@ -27,7 +28,6 @@ import ApplicationCreateContext, {
 import {ApplicationCreateFlowSignInApproach} from '../../../models/application-create-flow';
 import {TechnologyApplicationTemplate, PlatformApplicationTemplate} from '../../../models/application-templates';
 import type {ApplicationTemplate} from '../../../models/application-templates';
-import {TokenEndpointAuthMethods} from '../../../models/oauth';
 import ConfigureDetails from '../ConfigureDetails';
 
 // Real @thunderid/configure-connections (imported for AuthenticatorTypes above) transitively

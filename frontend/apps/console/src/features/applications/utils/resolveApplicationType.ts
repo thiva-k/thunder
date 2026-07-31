@@ -16,9 +16,8 @@
  * under the License.
  */
 
-import type {ApplicationType} from '../models/application';
-import type {OAuth2Config} from '../models/oauth';
-import {OAuth2GrantTypes} from '../models/oauth';
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
+import type {ApplicationType, OAuth2Config} from '@thunderid/configure-applications';
 
 const KNOWN_TYPES: readonly ApplicationType[] = ['browser', 'fullstack', 'mobile', 'm2m', 'mcp', 'custom'];
 

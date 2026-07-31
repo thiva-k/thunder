@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {FormControlLabel, Stack, Switch} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
 import AllowedUserTypesSection from './AllowedUserTypesSection';
@@ -24,7 +26,6 @@ import OwnerSection from './OwnerSection';
 import SecuritySection from './SecuritySection';
 import TokenEndpointAuthMethodSection from './TokenEndpointAuthMethodSection';
 import AudienceSection from '../../../../applications/components/edit-application/advanced-settings/AudienceSection';
-import {OAuth2GrantTypes, type OAuth2Config} from '../../../../applications/models/oauth';
 import {applyGrantTypesChange} from '../../../../applications/utils/oauth2Rules';
 import {DELEGATED_ONLY_GRANTS} from '../../../constants/delegationGrants';
 import type {Agent, AgentInboundAuthConfig, OAuthAgentConfig} from '../../../models/agent';

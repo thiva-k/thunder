@@ -47,8 +47,9 @@ vi.mock('react-router', async () => {
 });
 
 const mockUseGetApplications = vi.fn();
-vi.mock('../../../applications/api/useGetApplications', () => ({
-  default: (args: unknown) => mockUseGetApplications(args) as unknown,
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: (args: unknown) => mockUseGetApplications(args) as unknown,
 }));
 
 vi.mock('../HomeFloatingLogos', () => ({

@@ -16,14 +16,13 @@
  * under the License.
  */
 
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {Box, Tab, Tabs} from '@wso2/oxygen-ui';
 import {useEffect, useState, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import ClientAccessTokenSection from './ClientAccessTokenSection';
 import EditTokenSettings from './EditTokenSettings';
 import TokenConstants from '../../../constants/token-constants';
-import type {Application} from '../../../models/application';
-import type {OAuth2Config} from '../../../models/oauth';
 import {hasClientAccess, hasUserAccess} from '../../../utils/oauth2Rules';
 import SettingsLockNotice from '../../common/SettingsLockNotice';
 

@@ -16,12 +16,12 @@
  * under the License.
  */
 
+import {ApplicationQueryKeys} from '@thunderid/configure-applications';
+import type {Application} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {waitFor, act, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
-import ApplicationQueryKeys from '../../constants/application-query-keys';
-import type {Application} from '../../models/application';
 import type {CreateApplicationRequest} from '../../models/requests';
 import useCreateApplication from '../useCreateApplication';
 

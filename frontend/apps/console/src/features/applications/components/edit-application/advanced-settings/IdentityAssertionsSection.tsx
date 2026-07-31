@@ -17,6 +17,8 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import {OAuth2GrantTypes, TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {IDJAGConfig, OAuth2Config, OAuth2Token} from '@thunderid/configure-applications';
 import {
   Autocomplete,
   Chip,
@@ -31,13 +33,6 @@ import {
 } from '@wso2/oxygen-ui';
 import {useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {
-  OAuth2GrantTypes,
-  TokenEndpointAuthMethods,
-  type IDJAGConfig,
-  type OAuth2Config,
-  type OAuth2Token,
-} from '../../../models/oauth';
 import {applyGrantTypesChange} from '../../../utils/oauth2Rules';
 
 const DEFAULT_VALIDITY_PERIOD = 300;

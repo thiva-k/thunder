@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import type {Application} from '@thunderid/configure-applications';
 import {describe, expect, it} from 'vitest';
 import {
   resolveApplicationMeta,
@@ -25,7 +26,6 @@ import {
   withRichTextActionRefs,
   type PreviewComponent,
 } from '../gatePreviewTransforms';
-import type {Application} from '@/features/applications/models/application';
 
 const application = {
   id: 'app-1',

@@ -16,11 +16,11 @@
  * under the License.
  */
 
+import type {Application} from '@thunderid/configure-applications';
 import {Stack} from '@wso2/oxygen-ui';
 import AppearanceSection from './AppearanceSection';
 import ContactsSection from './ContactsSection';
 import UrlsSection from './UrlsSection';
-import type {Application} from '../../../models/application';
 
 /**
  * Props for the {@link EditCustomizationSettings} component.

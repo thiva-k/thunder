@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
+import type {Application} from '@thunderid/configure-applications';
 import {Stack} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -23,8 +25,6 @@ import SettingsLockNotice from '../../../../applications/components/common/Setti
 import AuthenticationFlowSection from '../../../../applications/components/edit-application/flows-settings/AuthenticationFlowSection';
 import RecoveryFlowSection from '../../../../applications/components/edit-application/flows-settings/RecoveryFlowSection';
 import RegistrationFlowSection from '../../../../applications/components/edit-application/flows-settings/RegistrationFlowSection';
-import type {Application} from '../../../../applications/models/application';
-import {OAuth2GrantTypes} from '../../../../applications/models/oauth';
 import type {Agent, OAuthAgentConfig} from '../../../models/agent';
 
 interface EditFlowsSettingsProps {

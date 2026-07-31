@@ -18,8 +18,8 @@
 
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {AttestationConfig} from '@thunderid/configure-applications';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {AttestationConfig} from '../../../../models/oauth';
 import AttestationSection from '../AttestationSection';
 
 vi.mock('react-i18next', () => ({

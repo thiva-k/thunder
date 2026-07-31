@@ -19,9 +19,9 @@
 import type {UseQueryResult} from '@tanstack/react-query';
 import {render, screen, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {Application} from '@thunderid/configure-applications';
 import {useGetThemes, type ThemeListResponse} from '@thunderid/design';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {Application} from '../../../../models/application';
 import AppearanceSection from '../AppearanceSection';
 
 vi.mock('react-i18next', () => ({

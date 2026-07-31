@@ -16,8 +16,7 @@
  * under the License.
  */
 
-import type {Application} from './application';
-
+import type {Application} from '@thunderid/configure-applications';
 /**
  * Application Request Model
  *

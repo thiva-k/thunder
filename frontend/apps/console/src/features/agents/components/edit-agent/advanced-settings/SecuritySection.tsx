@@ -17,10 +17,10 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {Box, FormControlLabel, Switch, Typography} from '@wso2/oxygen-ui';
 import type {ReactNode} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
-import type {OAuth2Config} from '../../../../applications/models/oauth';
 import {deriveOAuth2Flags} from '../../../../applications/utils/oauth2Rules';
 import {codeComponents} from '../shared/transCodeComponents';
 

@@ -16,9 +16,9 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {TechnologyApplicationTemplate} from '../models/application-templates';
-import type {OAuth2Config} from '../models/oauth';
-import {OAuth2GrantTypes} from '../models/oauth';
 
 /**
  * Infers the application template technology type from an OAuth2 configuration.

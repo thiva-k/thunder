@@ -17,6 +17,8 @@
  */
 
 import {ResourceAvatar} from '@thunderid/components';
+import {useGetApplications} from '@thunderid/configure-applications';
+import type {BasicApplication} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
@@ -27,9 +29,7 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import ApplicationDeleteDialog from './ApplicationDeleteDialog';
 import RouteConfig from '../../../configs/RouteConfig';
-import useGetApplications from '../api/useGetApplications';
 import ApplicationConstants from '../constants/application-constants';
-import type {BasicApplication} from '../models/application';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
 
 export default function ApplicationsList(): JSX.Element {

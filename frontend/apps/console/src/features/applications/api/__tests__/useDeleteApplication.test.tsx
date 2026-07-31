@@ -16,10 +16,10 @@
  * under the License.
  */
 
+import {ApplicationQueryKeys} from '@thunderid/configure-applications';
+import type {ApplicationListResponse} from '@thunderid/configure-applications';
 import {waitFor, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
-import ApplicationQueryKeys from '../../constants/application-query-keys';
-import type {ApplicationListResponse} from '../../models/responses';
 import useDeleteApplication from '../useDeleteApplication';
 
 // Mock the dependencies

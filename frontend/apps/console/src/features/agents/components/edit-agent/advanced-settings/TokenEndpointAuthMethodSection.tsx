@@ -17,10 +17,11 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {useThunderID} from '@thunderid/react';
 import {FormControl, FormLabel, MenuItem, Select, Typography} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
-import {TokenEndpointAuthMethods, type OAuth2Config} from '../../../../applications/models/oauth';
 import {applyTokenEndpointAuthMethodChange, deriveOAuth2Flags} from '../../../../applications/utils/oauth2Rules';
 
 interface OidcDiscovery {

@@ -17,6 +17,8 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import {OAuth2ResponseTypes, TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {useThunderID} from '@thunderid/react';
 import {
   Box,
@@ -37,7 +39,6 @@ import {
 import {Lock} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import type {ApplicationTemplate} from '../../../models/application-templates';
-import {OAuth2ResponseTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../../../models/oauth';
 import {getGrantTypeLabel} from '../../../utils/getGrantTypeLabel';
 import {
   applyGrantTypesChange,

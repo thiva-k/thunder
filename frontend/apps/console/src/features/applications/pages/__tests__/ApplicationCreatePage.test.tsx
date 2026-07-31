@@ -17,6 +17,7 @@
  */
 
 import userEvent from '@testing-library/user-event';
+import type {Application} from '@thunderid/configure-applications';
 import type {Theme} from '@thunderid/design';
 import {render, screen, waitFor, within} from '@thunderid/test-utils';
 import type {JSX} from 'react';
@@ -24,7 +25,6 @@ import {useEffect} from 'react';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import ApplicationCreateProvider from '../../contexts/ApplicationCreate/ApplicationCreateProvider';
 import useApplicationCreateContext from '../../hooks/useApplicationCreateContext';
-import type {Application} from '../../models/application';
 import {OrganizationUnitDefaultItem} from '../../models/application-create-flow';
 import ApplicationCreatePage from '../ApplicationCreatePage';
 

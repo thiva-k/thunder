@@ -17,9 +17,9 @@
  */
 
 import {render, screen} from '@testing-library/react';
+import type {Application} from '@thunderid/configure-applications';
 import {MemoryRouter} from 'react-router';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {Application} from '../../../../models/application';
 import EditFlowsSettings from '../EditFlowsSettings';
 
 // Mock the child components

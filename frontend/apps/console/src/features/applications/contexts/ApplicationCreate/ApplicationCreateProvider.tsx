@@ -16,13 +16,13 @@
  * under the License.
  */
 
+import {useGetApplications} from '@thunderid/configure-applications';
 import {AuthenticatorTypes} from '@thunderid/configure-connections';
 import type {LayoutConfig, Theme} from '@thunderid/design';
 import type {PropsWithChildren} from 'react';
 import {useState, useMemo, useCallback} from 'react';
 import ApplicationCreateContext, {type ApplicationCreateContextType} from './ApplicationCreateContext';
 import type {BasicFlowDefinition} from '../../../flows/models/responses';
-import useGetApplications from '../../api/useGetApplications';
 import {
   ApplicationCreateFlowSignInApproach,
   ApplicationCreateFlowStep,

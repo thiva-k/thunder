@@ -17,8 +17,8 @@
  */
 
 import {render, screen} from '@testing-library/react';
+import type {Application} from '@thunderid/configure-applications';
 import {describe, it, expect, vi} from 'vitest';
-import type {Application} from '../../../../models/application';
 import EditCustomizationSettings from '../EditCustomizationSettings';
 
 vi.mock('react-i18next', () => ({

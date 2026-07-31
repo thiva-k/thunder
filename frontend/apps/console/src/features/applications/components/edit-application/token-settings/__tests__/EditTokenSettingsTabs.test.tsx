@@ -17,9 +17,9 @@
  */
 
 import userEvent from '@testing-library/user-event';
+import type {Application} from '@thunderid/configure-applications';
 import {render, screen} from '@thunderid/test-utils';
 import {describe, it, expect, vi} from 'vitest';
-import type {Application} from '../../../../models/application';
 import EditTokenSettingsTabs from '../EditTokenSettingsTabs';
 
 vi.mock('../ClientAccessTokenSection', () => ({

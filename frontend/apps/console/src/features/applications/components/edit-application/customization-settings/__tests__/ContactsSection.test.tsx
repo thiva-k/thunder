@@ -18,8 +18,8 @@
 
 import {render, screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {Application} from '@thunderid/configure-applications';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {Application} from '../../../../models/application';
 import ContactsSection from '../ContactsSection';
 
 vi.mock('react-i18next', () => ({

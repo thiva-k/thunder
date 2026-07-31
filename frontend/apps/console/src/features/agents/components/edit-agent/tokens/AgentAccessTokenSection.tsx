@@ -17,11 +17,11 @@
  */
 
 import {useGetAgentType, useGetAgentTypes} from '@thunderid/configure-agent-types';
+import type {InboundAuthConfig} from '@thunderid/configure-applications';
 import {type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import ClientAccessTokenSection from '../../../../applications/components/edit-application/token-settings/ClientAccessTokenSection';
 import TokenConstants from '../../../../applications/constants/token-constants';
-import type {InboundAuthConfig} from '../../../../applications/models/inbound-auth';
 import type {Agent, OAuthAgentConfig} from '../../../models/agent';
 
 interface AgentAccessTokenSectionProps {

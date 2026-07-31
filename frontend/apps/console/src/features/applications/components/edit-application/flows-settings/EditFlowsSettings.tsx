@@ -16,12 +16,12 @@
  * under the License.
  */
 
+import type {Application} from '@thunderid/configure-applications';
 import {Stack} from '@wso2/oxygen-ui';
 import AuthenticationFlowSection from './AuthenticationFlowSection';
 import RecoveryFlowSection from './RecoveryFlowSection';
 import RegistrationFlowSection from './RegistrationFlowSection';
 import SignOutFlowSection from './SignOutFlowSection';
-import type {Application} from '../../../models/application';
 
 /**
  * Props for the {@link EditFlowsSettings} component.

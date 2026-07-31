@@ -16,8 +16,7 @@
  * under the License.
  */
 
-import {OAuth2GrantTypes} from '../models/oauth';
-
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
 /**
  * Returns a human-readable label for a given OAuth2 grant type value.
  * For known grant types with long URN identifiers a friendly name is returned.

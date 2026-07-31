@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import {useGetApplications} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {Box, Button, Card, Chip, Stack, Typography} from '@wso2/oxygen-ui';
 import {motion} from 'framer-motion';
@@ -24,7 +25,6 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import HomeFloatingLogos from './HomeFloatingLogos';
 import RouteConfig from '../../../configs/RouteConfig';
-import useGetApplications from '../../applications/api/useGetApplications';
 
 export default function StartBuildingSection(): JSX.Element {
   const navigate = useNavigate();

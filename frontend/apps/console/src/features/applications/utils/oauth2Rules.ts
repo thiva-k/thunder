@@ -21,9 +21,8 @@ import {
   OAuth2ResponseTypes,
   REFRESH_TOKEN_ISSUING_GRANTS,
   TokenEndpointAuthMethods,
-  type OAuth2Config,
-} from '../models/oauth';
-
+} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 /**
  * Derived boolean flags describing the current OAuth2 configuration state.
  * Used by the OAuth2 config UI to drive toggle/picker disabled states and captions.

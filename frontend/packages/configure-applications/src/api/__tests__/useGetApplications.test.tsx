@@ -16,15 +16,18 @@
  * under the License.
  */
 
+import {useConfig} from '@thunderid/contexts';
 import {waitFor, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
 import ApplicationQueryKeys from '../../constants/application-query-keys';
 import type {ApplicationListResponse} from '../../models/responses';
 import useGetApplications from '../useGetApplications';
 
+const mockHttpRequest = vi.fn();
+
 // Mock the dependencies
 vi.mock('@thunderid/react', () => ({
-  useThunderID: vi.fn(),
+  useThunderID: () => ({http: {request: mockHttpRequest}}),
 }));
 
 vi.mock('@thunderid/contexts', async (importOriginal) => {
@@ -35,11 +38,7 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
   };
 });
 
-const {useThunderID} = await import('@thunderid/react');
-const {useConfig} = await import('@thunderid/contexts');
-
 describe('useGetApplications', () => {
-  let mockHttpRequest: ReturnType<typeof vi.fn>;
   let mockGetServerUrl: ReturnType<typeof vi.fn>;
 
   const mockApplicationListResponse: ApplicationListResponse = {
@@ -68,14 +67,8 @@ describe('useGetApplications', () => {
   };
 
   beforeEach(() => {
-    mockHttpRequest = vi.fn();
+    mockHttpRequest.mockReset();
     mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
-
-    vi.mocked(useThunderID).mockReturnValue({
-      http: {
-        request: mockHttpRequest,
-      },
-    } as unknown as ReturnType<typeof useThunderID>);
 
     vi.mocked(useConfig).mockReturnValue({
       getServerUrl: mockGetServerUrl,

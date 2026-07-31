@@ -16,11 +16,11 @@
  * under the License.
  */
 
+import type {ScopeClaims} from '@thunderid/configure-applications';
 import {Box, Stack, Typography, Chip, Alert, Divider} from '@wso2/oxygen-ui';
 import {useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import TokenConstants from '../../../constants/token-constants';
-import type {ScopeClaims} from '../../../models/oauth';
 
 /**
  * Props for the {@link ScopeMapper} component.

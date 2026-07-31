@@ -18,12 +18,12 @@
 
 import {zodResolver} from '@hookform/resolvers/zod';
 import {SettingsCard} from '@thunderid/components';
+import type {Application} from '@thunderid/configure-applications';
 import {Box, Stack, Typography, TextField} from '@wso2/oxygen-ui';
 import {useEffect} from 'react';
 import {useForm, Controller} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import {z} from 'zod';
-import type {Application} from '../../../models/application';
 
 /**
  * Props for the {@link UrlsSection} component.

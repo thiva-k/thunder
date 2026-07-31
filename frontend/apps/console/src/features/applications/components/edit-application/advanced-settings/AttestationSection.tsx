@@ -17,6 +17,7 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import type {AttestationConfig} from '@thunderid/configure-applications';
 import {
   Autocomplete,
   Box,
@@ -32,7 +33,6 @@ import {
 import {Plus, Trash} from '@wso2/oxygen-ui-icons-react';
 import {useEffect, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import type {AttestationConfig} from '../../../models/oauth';
 
 /**
  * The attestation platform an application is configured for. An application configures exactly one
