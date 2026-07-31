@@ -42,8 +42,9 @@ const mockUseGetApplications = vi.fn<(params: unknown) => MockUseGetApplications
 let mockDiscovery: {wellKnown?: {end_session_endpoint?: string}} | undefined;
 let mockIsTrustedIssuerGenericOidc = false;
 
-vi.mock('../../features/applications/api/useGetApplications', () => ({
-  default: (params: unknown) => mockUseGetApplications(params),
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: (params: unknown) => mockUseGetApplications(params),
 }));
 
 // Mock ThunderID

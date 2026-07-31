@@ -17,6 +17,7 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import type {IDTokenResponseType, UserInfoResponseType} from '@thunderid/configure-applications';
 import {
   Box,
   Stack,
@@ -40,7 +41,6 @@ import type React from 'react';
 import {useTranslation} from 'react-i18next';
 import JwtPreview from './JwtPreview';
 import TokenConstants from '../../../constants/token-constants';
-import type {IDTokenResponseType, UserInfoResponseType} from '../../../models/oauth';
 
 /**
  * Props for the {@link TokenUserAttributesSection} component.

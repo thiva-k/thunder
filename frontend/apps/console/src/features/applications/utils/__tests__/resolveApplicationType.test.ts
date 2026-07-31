@@ -16,8 +16,8 @@
  * under the License.
  */
 
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {describe, expect, it} from 'vitest';
-import type {OAuth2Config} from '../../models/oauth';
 import resolveApplicationType, {isM2MApplication} from '../resolveApplicationType';
 
 const makeConfig = (overrides: Partial<OAuth2Config>): OAuth2Config => ({

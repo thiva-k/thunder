@@ -18,6 +18,7 @@
 
 import {zodResolver} from '@hookform/resolvers/zod';
 import {SettingsCard} from '@thunderid/components';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {
   Box,
@@ -38,8 +39,6 @@ import {useState, useEffect} from 'react';
 import {useForm, Controller} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import {z} from 'zod';
-import type {Application} from '../../../models/application';
-import type {OAuth2Config} from '../../../models/oauth';
 import isValidRedirectUriFormat from '../../../utils/isValidRedirectUriFormat';
 
 /**

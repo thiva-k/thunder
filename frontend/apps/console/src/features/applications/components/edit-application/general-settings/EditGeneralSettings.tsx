@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {Stack} from '@wso2/oxygen-ui';
 import {useState, useCallback} from 'react';
@@ -24,9 +26,6 @@ import {useTranslation} from 'react-i18next';
 import AccessSection from './AccessSection';
 import DangerZoneSection from './DangerZoneSection';
 import QuickCopySection from './QuickCopySection';
-import type {Application} from '../../../models/application';
-import {TokenEndpointAuthMethods} from '../../../models/oauth';
-import type {OAuth2Config} from '../../../models/oauth';
 import resolveApplicationType, {isClientCredentialsOnlyGrantSet} from '../../../utils/resolveApplicationType';
 import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';

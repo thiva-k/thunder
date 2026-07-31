@@ -16,6 +16,13 @@
  * under the License.
  */
 
+import type {
+  Application,
+  AttestationConfig,
+  InboundAuthConfig,
+  OAuth2Config,
+  OAuth2Token,
+} from '@thunderid/configure-applications';
 import {Stack} from '@wso2/oxygen-ui';
 import {useEffect, useState} from 'react';
 import AttestationSection from './AttestationSection';
@@ -25,10 +32,7 @@ import IdentityAssertionsSection from './IdentityAssertionsSection';
 import MetadataSection from './MetadataSection';
 import OAuth2ConfigSection from './OAuth2ConfigSection';
 import PasskeysSection from './PasskeysSection';
-import type {Application} from '../../../models/application';
 import type {ApplicationTemplate} from '../../../models/application-templates';
-import type {InboundAuthConfig} from '../../../models/inbound-auth';
-import type {AttestationConfig, OAuth2Config, OAuth2Token} from '../../../models/oauth';
 
 /**
  * Props for the {@link EditAdvancedSettings} component.

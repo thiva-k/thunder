@@ -18,8 +18,8 @@
 
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {describe, it, expect, vi} from 'vitest';
-import type {OAuth2Config} from '../../../../../applications/models/oauth';
 import SecuritySection from '../SecuritySection';
 
 vi.mock('react-i18next', () => ({

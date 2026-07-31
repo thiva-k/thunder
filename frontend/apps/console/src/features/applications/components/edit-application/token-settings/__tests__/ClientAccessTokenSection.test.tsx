@@ -17,9 +17,9 @@
  */
 
 import userEvent from '@testing-library/user-event';
+import type {InboundAuthConfig} from '@thunderid/configure-applications';
 import {render, screen} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {InboundAuthConfig} from '../../../../models/inbound-auth';
 import ClientAccessTokenSection, {type ClientAccessTokenCopy} from '../ClientAccessTokenSection';
 
 vi.mock('../JwtPreview', () => ({

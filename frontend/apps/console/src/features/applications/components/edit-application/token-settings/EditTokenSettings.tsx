@@ -17,6 +17,7 @@
  */
 
 import {zodResolver} from '@hookform/resolvers/zod';
+import type {Application, OAuth2Config, ScopeClaims} from '@thunderid/configure-applications';
 import type {PropertyDefinition, ApiUserType} from '@thunderid/configure-user-types';
 import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {useConfig} from '@thunderid/contexts';
@@ -30,8 +31,6 @@ import {z} from 'zod';
 import ScopeSection from './ScopeSection';
 import TokenUserAttributesSection from './TokenUserAttributesSection';
 import TokenValidationSection from './TokenValidationSection';
-import type {Application} from '../../../models/application';
-import type {OAuth2Config, ScopeClaims} from '../../../models/oauth';
 
 /**
  * Props for the {@link EditTokenSettings} component.

@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {useGetApplications} from '@thunderid/configure-applications';
+import type {BasicApplication} from '@thunderid/configure-applications';
 import {useGetUsers} from '@thunderid/configure-users';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import type {User} from '@thunderid/types';
@@ -40,8 +42,6 @@ import {useState, useMemo, useCallback, type JSX, type SyntheticEvent} from 'rea
 import {useTranslation} from 'react-i18next';
 import useGetAgents from '../../../../agents/api/useGetAgents';
 import type {BasicAgent} from '../../../../agents/models/agent';
-import useGetApplications from '../../../../applications/api/useGetApplications';
-import type {BasicApplication} from '../../../../applications/models/application';
 import useGetGroups from '../../../../groups/api/useGetGroups';
 import type {GroupBasic} from '../../../../groups/models/group';
 import useGetRoleAssignments from '../../../api/useGetRoleAssignments';

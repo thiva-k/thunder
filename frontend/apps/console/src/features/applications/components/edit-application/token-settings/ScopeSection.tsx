@@ -17,11 +17,11 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import type {ScopeClaims} from '@thunderid/configure-applications';
 import {Box, Stack, Typography, Divider} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
 import ScopeMapper from './ScopeMapper';
 import ScopeSelector from './ScopeSelector';
-import type {ScopeClaims} from '../../../models/oauth';
 
 /**
  * Props for the {@link ScopeSection} component.

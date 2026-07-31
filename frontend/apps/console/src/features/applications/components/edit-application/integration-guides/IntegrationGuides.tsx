@@ -16,11 +16,10 @@
  * under the License.
  */
 
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {Box, Stack, Typography} from '@wso2/oxygen-ui';
 import {useTranslation} from 'react-i18next';
 import IntegrationGuide from './IntegrationGuide';
-import type {Application} from '../../../models/application';
-import type {OAuth2Config} from '../../../models/oauth';
 import getIntegrationGuidesForTemplate from '../../../utils/getIntegrationGuidesForTemplate';
 
 /**

@@ -18,12 +18,12 @@
 
 import type {UseQueryResult, UseMutationResult} from '@tanstack/react-query';
 import userEvent from '@testing-library/user-event';
+import {useGetApplication} from '@thunderid/configure-applications';
+import type {Application} from '@thunderid/configure-applications';
 import {render, screen, waitFor, fireEvent, within} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
-import useGetApplication from '../../api/useGetApplication';
 import useUpdateApplication from '../../api/useUpdateApplication';
 import EditAdvancedSettings from '../../components/edit-application/advanced-settings/EditAdvancedSettings';
-import type {Application} from '../../models/application';
 import {getIntegrationGuideForTemplate} from '../../utils/getIntegrationGuidesForTemplate';
 import getTemplateMetadata from '../../utils/getTemplateMetadata';
 import ApplicationEditPage from '../ApplicationEditPage';
@@ -66,8 +66,9 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('../../api/useGetApplication', () => ({
-  default: vi.fn(),
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplication: vi.fn(),
 }));
 
 vi.mock('../../api/useUpdateApplication', () => ({

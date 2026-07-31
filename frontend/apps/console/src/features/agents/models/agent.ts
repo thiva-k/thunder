@@ -16,9 +16,7 @@
  * under the License.
  */
 
-import type {OAuth2Config} from '../../applications/models/oauth';
-import type {AssertionConfig} from '../../applications/models/token';
-
+import type {AssertionConfig, OAuth2Config} from '@thunderid/configure-applications';
 /**
  * Agent types are restricted to a single bootstrap-provisioned `default` schema. The constant
  * is shared by the create wizard (auto-pick the singleton) and the agent listing's Schema button.

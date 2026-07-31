@@ -31,6 +31,7 @@ import ApplicationCreateProvider from './features/applications/contexts/Applicat
 import LayoutBuilderProvider from './features/design/contexts/LayoutBuilder/LayoutBuilderProvider';
 import ThemeBuilderProvider from './features/design/contexts/ThemeBuilder/ThemeBuilderProvider';
 import GroupCreateProvider from './features/groups/contexts/GroupCreate/GroupCreateProvider';
+import OrganizationUnitDefaultFlowsSettings from './features/organization-units/OrganizationUnitDefaultFlowsSettings';
 import RoleCreateProvider from './features/roles/contexts/RoleCreate/RoleCreateProvider';
 import WelcomeRedirect from './features/welcome/components/WelcomeRedirect';
 import GetStartedPage from './features/welcome/pages/GetStartedPage';
@@ -39,7 +40,6 @@ import TryoutSecuringApplicationPage from './features/welcome/pages/TryoutSecuri
 import TryoutSecuringMCPPage from './features/welcome/pages/TryoutSecuringMCPPage';
 import DashboardLayout from './layouts/DashboardLayout';
 import FullScreenLayout from './layouts/FullScreenLayout';
-import OrganizationUnitDefaultFlowsSettings from './features/organization-units/OrganizationUnitDefaultFlowsSettings';
 
 const ViewAgentTypePage = lazy(() =>
   import('@thunderid/configure-agent-types').then((m) => ({default: m.ViewAgentTypePage})),

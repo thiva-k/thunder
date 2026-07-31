@@ -18,6 +18,8 @@
 
 import {zodResolver} from '@hookform/resolvers/zod';
 import {SettingsCard} from '@thunderid/components';
+import {InboundAuthTypes} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {
   Autocomplete,
@@ -39,9 +41,6 @@ import {useEffect, useState} from 'react';
 import {Controller, useForm} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import {z} from 'zod';
-import type {Application} from '../../../models/application';
-import {InboundAuthTypes} from '../../../models/inbound-auth';
-import type {OAuth2Config} from '../../../models/oauth';
 import validateMcpRedirectUri from '../../../utils/validateMcpRedirectUri';
 
 /**

@@ -68,8 +68,9 @@ const mockUseGetApplications = vi.fn();
 vi.mock('@thunderid/configure-users', () => ({
   useGetUsers: (...args: unknown[]): unknown => mockUseGetUsers(...args),
 }));
-vi.mock('../../../applications/api/useGetApplications', () => ({
-  default: (...args: unknown[]): unknown => mockUseGetApplications(...args),
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: (...args: unknown[]): unknown => mockUseGetApplications(...args),
 }));
 
 describe('AddMemberDialog', () => {

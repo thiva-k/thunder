@@ -16,12 +16,10 @@
  * under the License.
  */
 
+import type {ApplicationType, InboundAuthConfig, OAuth2Config} from '@thunderid/configure-applications';
 import type {JSX} from 'react';
-import type {ApplicationType} from './application';
 import type {ApplicationCreateFlowSignInApproach} from './application-create-flow';
 import type {CreationFlow} from './creation-flow';
-import type {InboundAuthConfig} from './inbound-auth';
-import type {OAuth2Config} from './oauth';
 
 /**
  * Technology-based application template identifiers.

@@ -24,9 +24,9 @@ import {createPortal} from 'react-dom';
 import {useTranslation} from 'react-i18next';
 import IframeContent from './IframeContent';
 import buildPreviewMock from './mocks/buildPreviewMock';
-import ColorSchemeOptions from '../../features/design/constants/ColorSchemeOptions';
 import PreviewToolbar from '../../features/design/components/PreviewToolbar';
 import {VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '../../features/design/components/viewportConstants';
+import ColorSchemeOptions from '../../features/design/constants/ColorSchemeOptions';
 
 // ── Constants ────────────────────────────────────────────────────────────────
 

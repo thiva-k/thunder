@@ -17,10 +17,10 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
 import {Button, Typography} from '@wso2/oxygen-ui';
 import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
-import {TokenEndpointAuthMethods} from '../../../../applications/models/oauth';
 import type {OAuthAgentConfig} from '../../../models/agent';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';
 import RegenerateSecretDialog from '../../RegenerateSecretDialog';

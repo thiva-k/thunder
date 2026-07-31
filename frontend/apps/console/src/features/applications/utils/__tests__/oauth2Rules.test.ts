@@ -16,8 +16,9 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes, OAuth2ResponseTypes, TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {describe, it, expect} from 'vitest';
-import {OAuth2GrantTypes, OAuth2ResponseTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../../models/oauth';
 import {
   applyGrantTypesChange,
   applyPublicClientChange,

@@ -16,10 +16,10 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {describe, expect, it} from 'vitest';
 import {TechnologyApplicationTemplate} from '../../models/application-templates';
-import {OAuth2GrantTypes} from '../../models/oauth';
-import type {OAuth2Config} from '../../models/oauth';
 import inferApplicationTemplateTechnologyFromConfig from '../inferApplicationTemplateTechnologyFromConfig';
 
 describe('inferApplicationTemplateTechnologyFromConfig', () => {

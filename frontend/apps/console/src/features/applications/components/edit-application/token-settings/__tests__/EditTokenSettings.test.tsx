@@ -16,10 +16,9 @@
  * under the License.
  */
 
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {fireEvent, render, screen, waitFor} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {Application} from '../../../../models/application';
-import type {OAuth2Config} from '../../../../models/oauth';
 import EditTokenSettings from '../EditTokenSettings';
 
 // Stable mock references — must be created via vi.hoisted so they are available

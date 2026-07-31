@@ -16,6 +16,8 @@
  * under the License.
  */
 
+import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplications} from '@thunderid/configure-applications';
+import type {Application, ApplicationType, OAuth2Config} from '@thunderid/configure-applications';
 import {AuthenticatorTypes, IdentityProviderTypes, useIdentityProviders} from '@thunderid/configure-connections';
 import {
   OrganizationUnitPickerScreen,
@@ -44,7 +46,6 @@ import getFlowPromptComponentsSequence from '../../flows/utils/getFlowPromptComp
 import useGetCorsConfig from '../../settings/api/useGetCorsConfig';
 import useUpdateCorsConfig from '../../settings/api/useUpdateCorsConfig';
 import useCreateApplication from '../api/useCreateApplication';
-import useGetApplications from '../api/useGetApplications';
 import ConfigureSecuritySettings from '../components/create-application/configure-security-settings/ConfigureSecuritySettings';
 import ConfigureApplicationDetails from '../components/create-application/ConfigureApplicationDetails';
 import ConfigureDesign from '../components/create-application/ConfigureDesign';
@@ -52,7 +53,6 @@ import ConfigureDetails from '../components/create-application/ConfigureDetails'
 import ConfigureMcpClientType from '../components/create-application/mcp/ConfigureMcpClientType';
 import TemplateConstants from '../constants/template-constants';
 import useApplicationCreate from '../contexts/ApplicationCreate/useApplicationCreate';
-import type {Application, ApplicationType} from '../models/application';
 import {
   ApplicationCreateFlowConfiguration,
   ApplicationCreateFlowSignInApproach,
@@ -61,7 +61,6 @@ import {
 } from '../models/application-create-flow';
 import {PlatformApplicationTemplate} from '../models/application-templates';
 import {McpClientTypes} from '../models/mcp-client';
-import {OAuth2GrantTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../models/oauth';
 import type {CreateApplicationRequest} from '../models/requests';
 import getConfigurationTypeFromTemplate from '../utils/getConfigurationTypeFromTemplate';
 import isRedirectCapableTemplate from '../utils/isRedirectCapableTemplate';

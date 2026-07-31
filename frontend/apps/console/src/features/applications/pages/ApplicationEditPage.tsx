@@ -17,6 +17,8 @@
  */
 
 import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplication} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useLogger} from '@thunderid/logger/react';
 import {
   Box,
@@ -39,7 +41,6 @@ import {useState, useCallback, useMemo, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
-import useGetApplication from '../api/useGetApplication';
 import useUpdateApplication from '../api/useUpdateApplication';
 import SettingsLockNotice from '../components/common/SettingsLockNotice';
 import ShowClientSecret from '../components/create-application/ShowClientSecret';
@@ -53,9 +54,7 @@ import EditTokenSettings from '../components/edit-application/token-settings/Edi
 import EditTokenSettingsTabs from '../components/edit-application/token-settings/EditTokenSettingsTabs';
 import ApplicationConstants from '../constants/application-constants';
 import TemplateConstants from '../constants/template-constants';
-import type {Application} from '../models/application';
 import {McpClientTypes} from '../models/mcp-client';
-import {OAuth2GrantTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../models/oauth';
 import deriveMcpClientType from '../utils/deriveMcpClientType';
 import {getIntegrationGuideForTemplate} from '../utils/getIntegrationGuidesForTemplate';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';

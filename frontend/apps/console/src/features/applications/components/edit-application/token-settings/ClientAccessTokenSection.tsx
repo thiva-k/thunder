@@ -17,6 +17,7 @@
  */
 
 import {SettingsCard} from '@thunderid/components';
+import type {InboundAuthConfig, OAuth2Config} from '@thunderid/configure-applications';
 import {
   Alert,
   Card,
@@ -33,8 +34,6 @@ import {useEffect, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import JwtPreview from './JwtPreview';
 import TokenConstants from '../../../constants/token-constants';
-import type {InboundAuthConfig} from '../../../models/inbound-auth';
-import type {OAuth2Config} from '../../../models/oauth';
 
 // The client_credentials grant carries no scopes, so `scope` never appears on this token.
 const ACCESS_TOKEN_DEFAULT_CLAIMS = TokenConstants.DEFAULT_TOKEN_ATTRIBUTES.filter((attr) => attr !== 'scope');

@@ -16,11 +16,10 @@
  * under the License.
  */
 
+import {ApplicationQueryKeys} from '@thunderid/configure-applications';
+import type {Application, InboundAuthConfig} from '@thunderid/configure-applications';
 import {waitFor, renderHook} from '@thunderid/test-utils';
 import {describe, it, expect, beforeEach, afterEach, vi} from 'vitest';
-import ApplicationQueryKeys from '../../constants/application-query-keys';
-import type {Application} from '../../models/application';
-import type {InboundAuthConfig} from '../../models/inbound-auth';
 import useRegenerateClientSecret from '../useRegenerateClientSecret';
 
 vi.mock('@thunderid/react', () => ({

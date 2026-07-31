@@ -64,9 +64,9 @@ vi.mock('@thunderid/configure-connections', async (importOriginal) => ({
 vi.mock('@/features/flows/api/useGetFlows');
 
 // Mock useGetApplications
-vi.mock('../../../api/useGetApplications', () => ({
-  __esModule: true,
-  default: vi.fn(),
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: vi.fn(),
 }));
 
 // Mock generateAppPrimaryColorSuggestions
@@ -89,7 +89,7 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
 });
 
 const {default: useGetFlows} = await import('@/features/flows/api/useGetFlows');
-const {default: useGetApplications} = await import('../../../api/useGetApplications');
+const {useGetApplications} = await import('@thunderid/configure-applications');
 
 describe('ConfigureSignInOptions', () => {
   const mockOnIntegrationToggle = vi.fn();

@@ -18,8 +18,8 @@
 
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {Application} from '@thunderid/configure-applications';
 import {describe, it, expect, vi} from 'vitest';
-import type {Application} from '../../../../../applications/models/application';
 import type {Agent} from '../../../../models/agent';
 import EditTokensSettings from '../EditTokensSettings';
 

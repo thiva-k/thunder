@@ -17,12 +17,12 @@
  */
 
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
+import {ApplicationQueryKeys} from '@thunderid/configure-applications';
+import type {Application} from '@thunderid/configure-applications';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
-import ApplicationQueryKeys from '../constants/application-query-keys';
-import type {Application} from '../models/application';
 
 /**
  * Variables for the {@link useRegenerateFlowSecret} mutation.

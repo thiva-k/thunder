@@ -18,10 +18,9 @@
 
 import {fireEvent, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import CertificateTypes from '../../../../constants/certificate-types';
-import type {Application} from '../../../../models/application';
-import type {OAuth2Config} from '../../../../models/oauth';
 import EditAdvancedSettings from '../EditAdvancedSettings';
 
 const {mockUseThunderID} = vi.hoisted(() => ({
