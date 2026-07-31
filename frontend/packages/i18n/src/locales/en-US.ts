@@ -3481,6 +3481,8 @@ const translations = {
     'core.executions.landing.message': 'This {{executor}} step will redirect users to a landing page.',
 
     // Execution steps - branching handles
+    'core.executions.stack.expandHint': 'Click to expand',
+    'core.executions.stack.restack': 'Restack executors',
     'core.executions.handles.success': 'onSuccess',
     'core.executions.handles.failure': 'onFailure',
     'core.executions.handles.incomplete': 'onIncomplete',
@@ -3734,6 +3736,9 @@ const translations = {
     'core.headerPanel.saveTitle': 'Save flow name',
     'core.headerPanel.cancelEdit': 'Cancel',
     'core.headerPanel.edgeStyleTooltip': 'Change edge style',
+    'core.headerPanel.compactView': 'Compact view',
+    'core.headerPanel.compactViewTooltip': 'Switch to compact view',
+    'core.headerPanel.detailedViewTooltip': 'Switch to detailed view',
     'core.headerPanel.simulate': 'Preview',
     'core.headerPanel.stopSimulation': 'Stop preview',
     'core.headerPanel.saveDisabledDuringPreview': 'Stop the preview before saving',

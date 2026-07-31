@@ -1,0 +1,171 @@
+/**
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+.execution-stack-step {
+  position: relative;
+  height: 48px;
+
+  // Scale the handle dots down to chip proportions.
+  .react-flow__handle.react-flow__handle {
+    width: 8px !important;
+    height: 8px !important;
+    border-width: 1px !important;
+  }
+
+  .execution-stack-step-content {
+    position: relative;
+    height: 48px;
+    cursor: pointer;
+  }
+
+  // Card-deck layers peeking out behind the chip, one per extra member
+  // (capped), suggesting the collapsed run at a glance. On hover the real
+  // member chips push out past them, so they fade away.
+  .execution-stack-layer {
+    position: absolute;
+    top: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--flow-builder-execution-step-background-color) 70%, transparent);
+    transition: opacity 0.2s ease;
+  }
+
+  .execution-stack-step-content:hover .execution-stack-layer {
+    opacity: 0;
+  }
+
+  .execution-stack-layer-1 {
+    left: 4px;
+  }
+
+  .execution-stack-layer-2 {
+    left: 8px;
+  }
+
+  .execution-stack-chip {
+    position: relative;
+    z-index: 1;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    border-radius: 50%;
+    background-color: var(--flow-builder-execution-step-background-color);
+    color: var(--flow-builder-execution-step-text-color);
+    border: 2px solid var(--oxygen-palette-background-default);
+  }
+
+  .execution-stack-step-content:hover .execution-stack-chip {
+    background-color: color-mix(
+      in srgb,
+      var(--flow-builder-execution-step-background-color) 92%,
+      var(--oxygen-palette-primary-main)
+    );
+  }
+
+  .execution-stack-chip-fallback {
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  // The "+N" count sits inside the circle, under the first executor's icon.
+  .execution-stack-badge {
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    opacity: 0.85;
+  }
+
+  // Hover preview: the stacked members stay stacked but each is pushed a bit
+  // further right from underneath the one above it, like cards nudged out of a
+  // deck. They sit behind the main chip (no z-index of their own, so the
+  // chip's z-index 1 keeps it on top) and only their right sliver shows. Pure
+  // decoration; pointer events stay off so neighboring nodes and edges remain
+  // interactive. The main chip never moves: its only hover change is the
+  // background color above.
+  .execution-stack-fan-chip {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: color-mix(in srgb, var(--flow-builder-execution-step-background-color) 92%, transparent);
+    color: var(--flow-builder-execution-step-text-color);
+    border: 2px solid var(--oxygen-palette-background-default);
+    opacity: 0;
+    transform: translateX(0);
+    transition:
+      transform 0.25s ease,
+      opacity 0.2s ease;
+    transition-delay: calc(var(--fan-index) * 40ms);
+    pointer-events: none;
+  }
+
+  // 32px per step is the smallest push that clears the icon of the chip above
+  // it (icon half-width + the top chip's right edge), so every icon stays
+  // centered in its own circle and fully visible while the circles still
+  // overlap enough to read as a stack.
+  .execution-stack-step-content:hover .execution-stack-fan-chip {
+    opacity: 1;
+    transform: translateX(calc((var(--fan-index) + 1) * 32px));
+  }
+}
+
+// While the fan preview is out, lift the hovered stack above neighboring nodes
+// and edges so the pushed-out chips render on top of them. The canvas puts the
+// edge layer at z-index 9999 (see DecoratedVisualFlow), and `.react-flow__nodes`
+// creates no stacking context, so the node competes with that layer directly
+// and has to clear it.
+.react-flow__node:has(.execution-stack-step-content:hover) {
+  z-index: 10000 !important;
+}
+
+.react-flow__node.selected .execution-stack-step .execution-stack-chip {
+  outline: 2px solid var(--oxygen-palette-primary-main);
+  outline-offset: 2px;
+}
+
+// Round the validation boundary to match the chip. A stack is wider than it is
+// tall, so a pill radius (rather than 50%, which would ellipse it) follows the
+// rounded ends of the deck.
+.validation-error-boundary:has(.execution-stack-step),
+.validation-error-boundary.padded:has(.execution-stack-step) {
+  border-radius: 999px;
+}
+
+html[data-color-scheme='light'] .execution-stack-step .execution-stack-chip {
+  box-shadow:
+    0 10px 22px 0 rgba(6, 6, 14, 0.1),
+    0 24px 48px 0 rgba(199, 211, 234, 0.05) inset,
+    0 1px 1px 0 rgba(199, 211, 234, 0.12) inset;
+}
+
+html[data-color-scheme='dark'] .execution-stack-step .execution-stack-chip {
+  box-shadow:
+    0 24px 32px 0 rgba(6, 6, 14, 0.7),
+    0 24px 48px 0 rgba(199, 211, 234, 0.05) inset,
+    0 1px 1px 0 rgba(199, 211, 234, 0.12) inset;
+}

@@ -21,10 +21,12 @@ import {useEffect, useMemo, useRef} from 'react';
 import StepFactory from '../components/resources/steps/StepFactory';
 import BaseEdge from '@/features/flows/components/react-flow-overrides/BaseEdge';
 import {CommonStaticStepFactory} from '@/features/flows/components/resources/steps/CommonStaticStepFactory';
+import ExecutionStack from '@/features/flows/components/resources/steps/execution/ExecutionStack';
 import FlowConstants from '@/features/flows/constants/FlowConstants';
 import type {Element} from '@/features/flows/models/elements';
 import type {Resources} from '@/features/flows/models/resources';
 import {StaticStepTypes, type Step} from '@/features/flows/models/steps';
+import {EXECUTION_STACK_NODE_TYPE} from '@/features/flows/utils/compactGraphTransforms';
 
 /**
  * Props for the useNodeTypes hook.
@@ -122,6 +124,8 @@ const useNodeTypes = (props: UseNodeTypesProps): UseNodeTypesReturn => {
     return {
       ...staticStepNodes,
       ...stepNodes,
+      // Synthetic display node for collapsed executor runs in compact mode.
+      [EXECUTION_STACK_NODE_TYPE]: (nodeProps: NodeProps) => <ExecutionStack {...nodeProps} />,
     };
     // IMPORTANT: Only depend on the step types array, not resources
     // The actual data is accessed via refs at render time

@@ -45,6 +45,15 @@ export interface AutoLayoutOptions {
   offsetY?: number;
 }
 
+/**
+ * Whether a freshly loaded graph still has to be laid out: flows saved without
+ * layout data come back with every node at the origin, so more than one node
+ * sitting there means the load-time auto-layout has not run yet.
+ */
+export function hasUnpositionedNodes(nodes: Node[]): boolean {
+  return nodes.filter((node) => node.position?.x === 0 && node.position?.y === 0).length > 1;
+}
+
 // ELK (the layout engine) is ~1.5MB. It is only needed when a layout is actually
 // requested (toolbar button, or opening a flow with no stored positions), so it is
 // dynamically imported and cached rather than bundled into the builder's entry chunk.

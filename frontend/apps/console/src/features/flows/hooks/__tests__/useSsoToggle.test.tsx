@@ -159,15 +159,16 @@ describe('useSsoToggle', () => {
     expect(hook.result.current.focusRequest?.ssoCheckId).toMatch(/^sso_check_/);
   });
 
-  it('should force verbose mode on before inserting when it is off', () => {
+  it('should not force verbose mode when enabling while compact mode is on', () => {
     mockFlowConfig.isVerboseMode = false;
-    const {hook} = renderSsoToggle();
+    const {hook, setNodes} = renderSsoToggle();
 
     act(() => {
       hook.result.current.handleEnable();
     });
 
-    expect(mockSetIsVerboseMode).toHaveBeenCalledWith(true);
+    expect(setNodes).toHaveBeenCalledTimes(1);
+    expect(mockSetIsVerboseMode).not.toHaveBeenCalled();
   });
 
   it('should clear the focus request', () => {

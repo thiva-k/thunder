@@ -45,9 +45,14 @@ vi.mock('../../../hooks/useUIPanelState', () => ({
   }),
 }));
 
+const {mockFlowConfigState} = vi.hoisted(() => ({
+  mockFlowConfigState: {isVerboseMode: true},
+}));
+
 vi.mock('../../../hooks/useFlowConfig', () => ({
   default: () => ({
     isFlowMetadataLoading: false,
+    isVerboseMode: mockFlowConfigState.isVerboseMode,
     metadata: undefined,
     setFlowNodes: vi.fn(),
   }),
@@ -130,7 +135,8 @@ const {mockApplyAutoLayout} = vi.hoisted(() => ({
   mockApplyAutoLayout: vi.fn().mockResolvedValue([]),
 }));
 
-vi.mock('../../../utils/applyAutoLayout', () => ({
+vi.mock('../../../utils/applyAutoLayout', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../utils/applyAutoLayout')>()),
   default: mockApplyAutoLayout,
 }));
 
@@ -375,6 +381,7 @@ describe('DecoratedVisualFlow', () => {
     vi.clearAllMocks();
     mockGetNodes.mockReturnValue([]);
     mockGetEdges.mockReturnValue([]);
+    mockFlowConfigState.isVerboseMode = true;
     // Reset applyAutoLayout to return a resolved promise by default
     mockApplyAutoLayout.mockResolvedValue([]);
     // Reset fitView to return a resolved promise by default
@@ -557,6 +564,100 @@ describe('DecoratedVisualFlow', () => {
 
       const autoLayoutButton = screen.getByTestId('auto-layout-trigger');
       fireEvent.click(autoLayoutButton);
+
+      await waitFor(() => {
+        expect(mockApplyAutoLayout).toHaveBeenCalled();
+      });
+    });
+
+    it('should use detailed spacing and measured sizes in verbose mode', async () => {
+      mockGetNodes.mockReturnValue([
+        {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 0, y: 0}, data: {}, measured: {width: 350, height: 140}},
+      ]);
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      fireEvent.click(screen.getByTestId('auto-layout-trigger'));
+
+      await waitFor(() => {
+        expect(mockApplyAutoLayout).toHaveBeenCalled();
+      });
+      const [layoutNodes, , options] = mockApplyAutoLayout.mock.calls[0] as [Node[], Edge[], Record<string, number>];
+      expect(layoutNodes[0].measured).toEqual({width: 350, height: 140});
+      expect(options).toMatchObject({nodeSpacing: 100, rankSpacing: 160});
+    });
+
+    it('should use tight spacing and chip sizes in compact mode', async () => {
+      mockFlowConfigState.isVerboseMode = false;
+      mockGetNodes.mockReturnValue([
+        {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 0, y: 0}, data: {}, measured: {width: 350, height: 140}},
+        {
+          id: 'stack-1',
+          type: 'EXECUTION_STACK',
+          position: {x: 0, y: 0},
+          data: {memberIds: ['a', 'b', 'c'], members: []},
+        },
+      ]);
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      fireEvent.click(screen.getByTestId('auto-layout-trigger'));
+
+      await waitFor(() => {
+        expect(mockApplyAutoLayout).toHaveBeenCalled();
+      });
+      const [layoutNodes, , options] = mockApplyAutoLayout.mock.calls[0] as [Node[], Edge[], Record<string, number>];
+      expect(layoutNodes[0].measured).toEqual({width: 48, height: 48});
+      // 3 members: 48 chip + 2 deck-layer offsets of 4
+      expect(layoutNodes[1].measured).toEqual({width: 56, height: 48});
+      expect(options).toMatchObject({nodeSpacing: 60, rankSpacing: 80});
+    });
+
+    it('should map stack positions back onto member nodes', async () => {
+      const setNodes = vi.fn();
+      mockGetNodes.mockReturnValue([
+        {id: 'stack-1', type: 'EXECUTION_STACK', position: {x: 0, y: 0}, data: {memberIds: ['a', 'b'], members: []}},
+      ]);
+      mockApplyAutoLayout.mockResolvedValue([
+        {id: 'stack-1', position: {x: 200, y: 300}, data: {memberIds: ['a', 'b'], members: []}},
+      ]);
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} setNodes={setNodes} />);
+      fireEvent.click(screen.getByTestId('auto-layout-trigger'));
+
+      await waitFor(() => {
+        expect(setNodes).toHaveBeenCalled();
+      });
+      const updater = setNodes.mock.calls[0][0] as (nodes: Node[]) => Node[];
+      const updated = updater([
+        {id: 'a', position: {x: 1, y: 1}, data: {}},
+        {id: 'b', position: {x: 2, y: 2}, data: {}},
+        {id: 'other', position: {x: 3, y: 3}, data: {}},
+      ]);
+      expect(updated[0].position).toEqual({x: 200, y: 300});
+      expect(updated[1].position).toEqual({x: 200, y: 300});
+      expect(updated[2].position).toEqual({x: 3, y: 3});
+    });
+  });
+
+  describe('Compact Mode Toggle', () => {
+    it('should run the shared auto layout when switching to compact mode', async () => {
+      const {rerender} = renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      expect(mockApplyAutoLayout).not.toHaveBeenCalled();
+
+      mockFlowConfigState.isVerboseMode = false;
+      rerender(<DecoratedVisualFlow {...defaultProps} />);
+
+      await waitFor(() => {
+        expect(mockApplyAutoLayout).toHaveBeenCalled();
+      });
+    });
+
+    it('should run the shared auto layout when switching back to detailed mode', async () => {
+      mockFlowConfigState.isVerboseMode = false;
+      const {rerender} = renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      expect(mockApplyAutoLayout).not.toHaveBeenCalled();
+
+      mockFlowConfigState.isVerboseMode = true;
+      rerender(<DecoratedVisualFlow {...defaultProps} />);
 
       await waitFor(() => {
         expect(mockApplyAutoLayout).toHaveBeenCalled();

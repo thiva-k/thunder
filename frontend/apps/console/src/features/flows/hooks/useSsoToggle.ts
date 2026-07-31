@@ -118,7 +118,7 @@ const useSsoToggle = ({
   showSuccess,
 }: UseSsoToggleProps): UseSsoToggleReturn => {
   const {t} = useTranslation();
-  const {edgeStyle, isVerboseMode, setIsVerboseMode} = useFlowConfig();
+  const {edgeStyle} = useFlowConfig();
   const {lastInteractedResource, lastInteractedStepId} = useInteractionState();
   const {setIsOpenResourcePropertiesPanel} = useUIPanelState();
 
@@ -174,11 +174,6 @@ const useSsoToggle = ({
         return;
       }
 
-      // Execution nodes are hidden in non-verbose mode; never mutate the graph invisibly.
-      if (!isVerboseMode) {
-        setIsVerboseMode(true);
-      }
-
       const resolvedNodes = resolveCollisions(result.nodes, {
         margin: 50,
         maxIterations: 10,
@@ -204,7 +199,7 @@ const useSsoToggle = ({
         ),
       );
     },
-    [ssoResources, edgeStyle, isVerboseMode, setIsVerboseMode, setNodes, setEdges, showInfo, t],
+    [ssoResources, edgeStyle, setNodes, setEdges, showInfo, t],
   );
 
   const handleEnable = useCallback((): void => {
@@ -218,15 +213,10 @@ const useSsoToggle = ({
     }
 
     if (joinResolution.status === 'ambiguous') {
-      // The candidate edges enter execution nodes, which non-verbose mode
-      // hides; force verbose mode so the highlights are actually visible.
-      if (!isVerboseMode) {
-        setIsVerboseMode(true);
-      }
       // Don't guess the join point; let the user click one of the candidate edges.
       setPlacement({active: true, candidateEdgeIds: joinResolution.candidateEdgeIds});
     }
-  }, [ssoState.enabled, joinResolution, applyEnable, isVerboseMode, setIsVerboseMode]);
+  }, [ssoState.enabled, joinResolution, applyEnable]);
 
   const handleDisableRequest = useCallback((): void => {
     if (ssoState.enabled) {
