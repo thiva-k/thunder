@@ -49,24 +49,6 @@
     width: 100%;
     border-radius: 8px;
 
-    &.MuiAlert-standardError {
-      background-color: rgba(var(--oxygen-palette-error-mainChannel) / 0.12);
-      border: 1px solid rgba(var(--oxygen-palette-error-mainChannel) / 0.3);
-      color: var(--oxygen-palette-error-light);
-    }
-
-    &.MuiAlert-standardWarning {
-      background-color: rgba(var(--oxygen-palette-warning-mainChannel) / 0.12);
-      border: 1px solid rgba(var(--oxygen-palette-warning-mainChannel) / 0.3);
-      color: var(--oxygen-palette-warning-light);
-    }
-
-    &.MuiAlert-standardInfo {
-      background-color: rgba(var(--oxygen-palette-info-mainChannel) / 0.12);
-      border: 1px solid rgba(var(--oxygen-palette-info-mainChannel) / 0.3);
-      color: var(--oxygen-palette-info-light);
-    }
-
     .notification-action-button {
       padding: 0;
       width: auto;
