@@ -48,6 +48,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.lib.json"
   },
@@ -57,6 +58,7 @@
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
     "@types/estree": "1.0.8",
     "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "rimraf": "catalog:",

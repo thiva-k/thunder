@@ -46,6 +46,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.lib.json"
   },
@@ -59,15 +60,16 @@
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@vitest/browser-playwright": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
+    "playwright": "catalog:",
     "prettier": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "rimraf": "catalog:",
     "rolldown": "catalog:",
-    "typescript": "catalog:",
-    "playwright": "catalog:",
     "tslib": "catalog:",
+    "typescript": "catalog:",
     "vitest": "catalog:"
   },
   "publishConfig": {

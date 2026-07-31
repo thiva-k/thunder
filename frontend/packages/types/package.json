@@ -48,6 +48,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.lib.json"
   },
@@ -57,6 +58,7 @@
     "@thunderid/prettier-config": "workspace:^",
     "@thunderid/test-utils": "workspace:^",
     "@types/node": "catalog:",
+    "@vitest/coverage-istanbul": "catalog:",
     "eslint": "catalog:",
     "prettier": "catalog:",
     "rimraf": "catalog:",
