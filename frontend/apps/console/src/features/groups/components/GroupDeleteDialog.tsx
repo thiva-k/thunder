@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
 import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -37,7 +38,7 @@ export default function GroupDeleteDialog({
   onClose,
   onSuccess = undefined,
 }: GroupDeleteDialogProps): JSX.Element {
-  const {t} = useTranslation();
+  const {t} = useTranslation('groups');
   const deleteGroup = useDeleteGroup();
   const [error, setError] = useState<string | null>(null);
 
@@ -58,18 +59,20 @@ export default function GroupDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('groups:delete.error'));
+        setError(getErrorMessage(err, t, 'delete.error'));
       },
     });
   };
 
   return (
     <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>{t('groups:delete.title')}</DialogTitle>
+      <DialogTitle>{t('delete.title', 'Delete Group')}</DialogTitle>
       <DialogContent>
-        <DialogContentText sx={{mb: 2}}>{t('groups:delete.message')}</DialogContentText>
+        <DialogContentText sx={{mb: 2}}>
+          {t('delete.message', 'Are you sure you want to delete this group?')}
+        </DialogContentText>
         <Alert severity="warning" sx={{mb: 2}}>
-          {t('groups:delete.disclaimer')}
+          {t('delete.disclaimer', 'This action cannot be undone. All group associations will be permanently removed.')}
         </Alert>
         {error && (
           <Alert severity="error" sx={{mt: 2}}>

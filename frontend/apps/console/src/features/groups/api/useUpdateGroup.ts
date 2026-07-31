@@ -72,8 +72,5 @@ export default function useUpdateGroup(): UseMutationResult<Group, Error, Update
       });
       showToast(t('update.success'), 'success');
     },
-    onError: () => {
-      showToast(t('update.error'), 'error');
-    },
   });
 }

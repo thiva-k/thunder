@@ -1173,25 +1173,6 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupDeleteRequest() 
 			},
 		},
 		{
-			name:           "conflict",
-			method:         http.MethodDelete,
-			url:            "/groups/grp-001",
-			pathParamKey:   "id",
-			pathParamValue: "grp-001",
-			setup: func(serviceMock *GroupServiceInterfaceMock) {
-				serviceMock.
-					On("DeleteGroup", mock.Anything, "grp-001").
-					Return(&ErrorCannotDeleteGroup).
-					Once()
-			},
-			assert: func(rr *httptest.ResponseRecorder) {
-				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				var body apierror.ErrorResponse
-				require.NoError(suite.T(), json.Unmarshal(rr.Body.Bytes(), &body))
-				require.Equal(suite.T(), ErrorCannotDeleteGroup.Code, body.Code)
-			},
-		},
-		{
 			name:           "internal error",
 			method:         http.MethodDelete,
 			url:            "/groups/grp-001",

@@ -58,8 +58,5 @@ export default function useCreateGroup(): UseMutationResult<Group, Error, Create
       });
       showToast(t('create.success'), 'success');
     },
-    onError: () => {
-      showToast(t('create.error'), 'error');
-    },
   });
 }

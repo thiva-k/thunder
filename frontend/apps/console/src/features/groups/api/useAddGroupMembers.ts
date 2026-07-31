@@ -67,8 +67,5 @@ export default function useAddGroupMembers(): UseMutationResult<void, Error, Add
       });
       showToast(t('addMember.success'), 'success');
     },
-    onError: () => {
-      showToast(t('addMember.error'), 'error');
-    },
   });
 }
