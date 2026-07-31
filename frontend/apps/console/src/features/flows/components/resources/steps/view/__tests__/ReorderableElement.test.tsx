@@ -160,9 +160,6 @@ vi.mock('../../../../dnd/Handle', () => ({
   ),
 }));
 
-// Mock SCSS
-vi.mock('../ReorderableElement.scss', () => ({}));
-
 describe('ReorderableElement', () => {
   const mockElement: Resource = {
     id: 'element-1',

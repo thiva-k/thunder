@@ -8,7 +8,6 @@ import {useTranslation} from 'react-i18next';
 import useUIPanelState from '../../hooks/useUIPanelState';
 import useValidationStatus from '../../hooks/useValidationStatus';
 import Notification, {NotificationType} from '../../models/notification';
-import './ValidationStatusLabels.scss';
 
 /**
  * Component to render a list of validation status labels.
