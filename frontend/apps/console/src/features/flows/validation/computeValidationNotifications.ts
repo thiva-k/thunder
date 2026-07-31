@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import type {Node} from '@xyflow/react';
+import type {Edge, Node} from '@xyflow/react';
 import type {TFunction} from 'i18next';
 import get from 'lodash-es/get';
 import {createElement, type ReactElement} from 'react';
@@ -153,6 +153,8 @@ function walkElements(
  * @param graphRules - Cross-node rules applied against the whole node set.
  *                     Empty by default; the host registers the rules that
  *                     apply to the current flow type.
+ * @param edges - All React Flow edges, for graph rules that check what a node
+ *                or one of its elements connects to.
  * @returns A map of notification ID → Notification.
  */
 export function computeValidationNotifications(
@@ -160,6 +162,7 @@ export function computeValidationNotifications(
   rules: ValidationRuleDefinition[],
   t: TFunction,
   graphRules: GraphValidationRule[] = [],
+  edges: Edge[] = [],
 ): Map<string, Notification> {
   const notifications = new Map<string, Notification>();
 
@@ -176,7 +179,7 @@ export function computeValidationNotifications(
   }
 
   for (const graphRule of graphRules) {
-    for (const notification of graphRule(nodes)) {
+    for (const notification of graphRule(nodes, edges)) {
       notifications.set(notification.getId(), notification);
     }
   }

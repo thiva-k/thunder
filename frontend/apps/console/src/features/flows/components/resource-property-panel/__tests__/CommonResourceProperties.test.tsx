@@ -163,6 +163,8 @@ describe('CommonResourceProperties', () => {
       setFlowEdgeTypes: vi.fn(),
       flowNodes: [],
       setFlowNodes: vi.fn(),
+      flowEdges: [],
+      setFlowEdges: vi.fn(),
       graphValidationRules: [],
       setGraphValidationRules: vi.fn(),
     };

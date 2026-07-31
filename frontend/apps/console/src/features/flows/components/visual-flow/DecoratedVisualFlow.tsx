@@ -211,7 +211,7 @@ function DecoratedVisualFlow({
   const {isResourcePanelOpen, isResourcePropertiesPanelOpen, setIsResourcePanelOpen, setIsOpenResourcePropertiesPanel} =
     useUIPanelState();
   const {notifyElementAdded, onAutoLayout} = useFlowEvents();
-  const {isFlowMetadataLoading, isVerboseMode, metadata, setFlowNodes} = useFlowConfig();
+  const {isFlowMetadataLoading, isVerboseMode, metadata, setFlowNodes, setFlowEdges} = useFlowConfig();
   const {onResourceDropOnCanvas} = useInteractionState();
 
   // Sync controlled nodes to the shared FlowConfig context so that
@@ -246,6 +246,21 @@ function DecoratedVisualFlow({
       setFlowNodes(validationNodes);
     }
   }, [nodes, sourceNodes, setFlowNodes]);
+
+  // Edges are pushed alongside the nodes so graph validation rules can inspect
+  // what an element connects to. Like the nodes, these must be the real graph
+  // rather than the compact display transform, whose stack rewiring would hide
+  // an element's true target. Keyed on a structural signature rather than array
+  // identity, which also changes on hover and simulation decoration.
+  const validationEdges = sourceEdges ?? edges;
+  const edgeSignature = validationEdges
+    .map((edge) => `${edge.id}|${edge.source}|${edge.sourceHandle ?? ''}|${edge.target}`)
+    .join(';');
+
+  useEffect(() => {
+    setFlowEdges(validationEdges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edgeSignature, setFlowEdges]);
   const {generateStepElement} = useGenerateStepElement();
   const {t} = useTranslation();
   const navigate = useNavigate();

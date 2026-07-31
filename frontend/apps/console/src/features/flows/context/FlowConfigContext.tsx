@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import type {EdgeTypes, Node, NodeTypes} from '@xyflow/react';
+import type {Edge, EdgeTypes, Node, NodeTypes} from '@xyflow/react';
 import type {Context, Dispatch, FunctionComponent, SetStateAction} from 'react';
 import {createContext} from 'react';
 import type {FlowCompletionConfigsInterface} from '../models/flows';
@@ -113,6 +113,15 @@ export interface FlowConfigContextProps {
    * Setter to push the latest nodes into the shared context.
    */
   setFlowNodes: Dispatch<SetStateAction<Node[]>>;
+  /**
+   * Current React Flow edges, alongside {@link flowNodes}, so graph validation
+   * rules can also check what a node or one of its elements connects to.
+   */
+  flowEdges: Edge[];
+  /**
+   * Setter to push the latest edges into the shared context.
+   */
+  setFlowEdges: Dispatch<SetStateAction<Edge[]>>;
   /**
    * Cross-node validation rules active for the current flow. Empty by
    * default; flow-type-specific hosts register the rules that apply
