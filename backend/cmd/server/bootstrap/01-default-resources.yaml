@@ -575,7 +575,7 @@ flowType: SIGNOUT
 nodes:
 - id: start
   type: START
-  onSuccess: prompt_confirm
+  onSuccess: session_signout
   layout:
     size:
       width: 101
@@ -583,37 +583,6 @@ nodes:
     position:
       x: 62
       y: 278
-- id: prompt_confirm
-  type: PROMPT
-  layout:
-    size:
-      width: 350
-      height: 300
-    position:
-      x: 463
-      y: 150
-  meta:
-    components:
-    - type: TEXT
-      id: text_signout_title
-      label: '{{ t(signout:forms.confirm.title) }}'
-      variant: HEADING_1
-    - type: TEXT
-      id: text_signout_desc
-      label: '{{ t(signout:forms.confirm.description) }}'
-      variant: BODY_1
-    - type: BLOCK
-      id: block_signout
-      components:
-      - type: ACTION
-        id: action_confirm
-        label: '{{ t(signout:forms.confirm.actions.submit.label) }}'
-        variant: PRIMARY
-        eventType: SUBMIT
-  prompts:
-  - action:
-      ref: action_confirm
-      nextNode: session_signout
 - id: session_signout
   type: TASK_EXECUTION
   layout:
@@ -621,7 +590,7 @@ nodes:
       width: 217
       height: 113
     position:
-      x: 960
+      x: 463
       y: 240
   executor:
     name: SessionSignOutExecutor
@@ -633,7 +602,7 @@ nodes:
       width: 85
       height: 34
     position:
-      x: 1400
+      x: 900
       y: 278
 ---
 resource_type: flow

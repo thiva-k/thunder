@@ -12898,6 +12898,72 @@
   {
     "resourceType": "TEMPLATE",
     "category": "STARTER",
+    "type": "DIRECT",
+    "flowType": "SIGNOUT",
+    "display": {
+      "label": "Silent Sign Out",
+      "description": "Terminate the user's SSO session immediately, with no confirmation step",
+      "image": "assets/images/icons/arrowhead-right-outline.svg",
+      "showOnResourcePanel": true
+    },
+    "config": {
+      "name": "Silent Sign Out Flow",
+      "handle": "silent-signout-flow",
+      "nodes": [
+        {
+          "id": "start",
+          "type": "START",
+          "layout": {
+            "size": {
+              "width": 101,
+              "height": 34
+            },
+            "position": {
+              "x": 62,
+              "y": 278
+            }
+          },
+          "onSuccess": "session_signout"
+        },
+        {
+          "id": "session_signout",
+          "type": "TASK_EXECUTION",
+          "layout": {
+            "size": {
+              "width": 217,
+              "height": 113
+            },
+            "position": {
+              "x": 463,
+              "y": 240
+            }
+          },
+          "executor": {
+            "name": "SessionSignOutExecutor"
+          },
+          "onSuccess": "end"
+        },
+        {
+          "id": "end",
+          "type": "END",
+          "layout": {
+            "size": {
+              "width": 85,
+              "height": 34
+            },
+            "position": {
+              "x": 900,
+              "y": 278
+            }
+          }
+        }
+      ]
+    },
+    "nodes": []
+  },
+  {
+    "resourceType": "TEMPLATE",
+    "category": "STARTER",
     "type": "BASIC",
     "flowType": "SIGNOUT",
     "display": {
@@ -13028,8 +13094,8 @@
     "type": "BASIC_CONDITIONAL",
     "flowType": "SIGNOUT",
     "display": {
-      "label": "Confirm Sign Out Without a Hint",
-      "description": "Ask the user to confirm only when no valid id_token_hint was provided, otherwise sign out directly",
+      "label": "Conditional Confirmation",
+      "description": "Ask the user to confirm only when the request has no ID token hint, otherwise sign out immediately",
       "image": "assets/images/icons/arrowhead-right-outline.svg",
       "showOnResourcePanel": true
     },

@@ -46,6 +46,7 @@ export default function withConfig<P extends object>(WrappedComponent: Component
     const sdkDefaults: Partial<ThunderIDProviderProps> = {
       discovery: {wellKnown: {enabled: true}},
       ...(resourceIdentifier ? {signInOptions: {resource: resourceIdentifier}} : {}),
+      sendIdTokenInLogoutRequest: false,
       // When the trusted issuer is a generic OIDC provider, suppress the SDK's
       // product-specific bootstrap calls that would otherwise 404 / be CORS-blocked
       // at the external authorization server: flow metadata (`{baseUrl}/flow/meta`).
