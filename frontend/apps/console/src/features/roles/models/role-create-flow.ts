@@ -23,8 +23,8 @@
  * @public
  */
 export const RoleCreateFlowStep = {
-  BASIC_INFO: 'BASIC_INFO',
   ORGANIZATION_UNIT: 'ORGANIZATION_UNIT',
+  BASIC_INFO: 'BASIC_INFO',
   PERMISSIONS: 'PERMISSIONS',
 } as const;
 

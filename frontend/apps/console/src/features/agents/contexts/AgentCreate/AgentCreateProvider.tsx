@@ -21,7 +21,7 @@ import AgentCreateContext from './AgentCreateContext';
 import {AgentCreateFlowStep} from '../../models/agent-create-flow';
 
 export default function AgentCreateProvider({children}: {children: ReactNode}) {
-  const [currentStep, setCurrentStep] = useState<AgentCreateFlowStep>(AgentCreateFlowStep.NAME);
+  const [currentStep, setCurrentStep] = useState<AgentCreateFlowStep>(AgentCreateFlowStep.ORGANIZATION_UNIT);
   const [selectedSchema, setSelectedSchema] = useState<{id: string; name: string; ouId: string} | null>(null);
   const [selectedOuId, setSelectedOuId] = useState<string | null>(null);
   const [agentName, setAgentName] = useState('');
@@ -30,7 +30,7 @@ export default function AgentCreateProvider({children}: {children: ReactNode}) {
   const [error, setError] = useState<string | null>(null);
 
   const reset = useCallback((): void => {
-    setCurrentStep(AgentCreateFlowStep.NAME);
+    setCurrentStep(AgentCreateFlowStep.ORGANIZATION_UNIT);
     setSelectedSchema(null);
     setSelectedOuId(null);
     setAgentName('');

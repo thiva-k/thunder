@@ -17,8 +17,8 @@
  */
 
 export const AgentCreateFlowStep = {
-  NAME: 'NAME',
   ORGANIZATION_UNIT: 'ORGANIZATION_UNIT',
+  NAME: 'NAME',
   PROFILE: 'PROFILE',
   OWNER: 'OWNER',
 } as const;

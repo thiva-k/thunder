@@ -55,6 +55,20 @@ vi.mock('@thunderid/configure-agent-types', () => ({
 vi.mock('@thunderid/configure-organization-units', () => ({
   useGetChildOrganizationUnits: (ouId: string | undefined, opts: unknown) =>
     mockUseGetChildOrganizationUnits(ouId, opts),
+  useGetOrganizationUnit: (id?: string) => ({
+    data: id ? {id, name: 'Test Organization Unit'} : undefined,
+    isLoading: false,
+  }),
+  OrganizationUnitPickerScreen: ({onChange, onContinue}: {onChange: (id: string) => void; onContinue: () => void}) => (
+    <div data-testid="step-organization-unit">
+      <button type="button" onClick={() => onChange('ou-2')}>
+        Select OU
+      </button>
+      <button type="button" onClick={onContinue}>
+        OU Continue
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock('../../api/useCreateAgent', () => ({
@@ -100,16 +114,6 @@ vi.mock('../../components/create-agent/ConfigureOwner', () => ({
     <div data-testid="step-owner">
       <button type="button" onClick={() => onReadyChange?.(true)}>
         Owner Ready
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock('@thunderid/configure-users', () => ({
-  ConfigureOrganizationUnit: ({onReadyChange}: {onReadyChange?: (isReady: boolean) => void}) => (
-    <div data-testid="step-organization-unit">
-      <button type="button" onClick={() => onReadyChange?.(true)}>
-        OU Ready
       </button>
     </div>
   ),
@@ -331,7 +335,7 @@ describe('AgentCreatePage', () => {
     expect(setError).toHaveBeenCalledWith('Create failed');
   });
 
-  it('renders the OU step when child organization units exist', () => {
+  it('renders the OU picker on the organization unit step when child organization units exist', () => {
     mockUseGetChildOrganizationUnits.mockReturnValue({
       data: {totalResults: 3},
       isLoading: false,
@@ -342,6 +346,34 @@ describe('AgentCreatePage', () => {
     render(<AgentCreatePage />);
 
     expect(screen.getByTestId('step-organization-unit')).toBeInTheDocument();
+    expect(screen.queryByTestId('step-name')).not.toBeInTheDocument();
+  });
+
+  it('renders the name step directly when currentStep is NAME, even with child organization units', () => {
+    mockUseGetChildOrganizationUnits.mockReturnValue({
+      data: {totalResults: 3},
+      isLoading: false,
+      error: null,
+    });
+
+    render(<AgentCreatePage />);
+
+    expect(screen.getByTestId('step-name')).toBeInTheDocument();
+    expect(screen.queryByTestId('step-organization-unit')).not.toBeInTheDocument();
+  });
+
+  it('shows a loading indicator on the organization unit step while child OUs are loading', () => {
+    mockUseGetChildOrganizationUnits.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    });
+    agentCreateState.currentStep = AgentCreateFlowStep.ORGANIZATION_UNIT;
+
+    render(<AgentCreatePage />);
+
+    expect(screen.queryByTestId('step-organization-unit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('step-name')).not.toBeInTheDocument();
   });
 
   it('renders the profile step when schema has fields', () => {

@@ -37,8 +37,8 @@ describe('application-create-flow models', () => {
       expect(ApplicationCreateFlowStep.DESIGN).toBe('DESIGN');
     });
 
-    it('should have STACK step', () => {
-      expect(ApplicationCreateFlowStep.STACK).toBe('STACK');
+    it('should have ORGANIZATION_UNIT step', () => {
+      expect(ApplicationCreateFlowStep.ORGANIZATION_UNIT).toBe('ORGANIZATION_UNIT');
     });
 
     it('should have CONFIGURE step', () => {

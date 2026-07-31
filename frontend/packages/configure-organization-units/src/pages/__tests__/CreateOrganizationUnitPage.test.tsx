@@ -65,9 +65,13 @@ vi.mock('@/contexts/useOrganizationUnit', () => ({
 }));
 
 // Mock name suggestions utility
-vi.mock('@thunderid/utils', () => ({
-  generateRandomHumanReadableIdentifiers: () => ['Suggested Name One', 'Suggested Name Two', 'Suggested Name Three'],
-}));
+vi.mock('@thunderid/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thunderid/utils')>();
+  return {
+    ...actual,
+    generateRandomHumanReadableIdentifiers: () => ['Suggested Name One', 'Suggested Name Two', 'Suggested Name Three'],
+  };
+});
 
 describe('CreateOrganizationUnitPage', () => {
   let t: (key: string) => string;
@@ -108,12 +112,10 @@ describe('CreateOrganizationUnitPage', () => {
     expect(screen.getByLabelText(/Description/i)).toBeInTheDocument();
   });
 
-  it('should render name suggestions', () => {
+  it('should render a name suggestion', () => {
     renderWithProviders(<CreateOrganizationUnitPage />);
 
     expect(screen.getByRole('button', {name: 'Suggested Name One'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Suggested Name Two'})).toBeInTheDocument();
-    expect(screen.getByRole('button', {name: 'Suggested Name Three'})).toBeInTheDocument();
   });
 
   it('should auto-generate handle from name', () => {
@@ -434,7 +436,7 @@ describe('CreateOrganizationUnitPage', () => {
     const handleInput = screen.getByLabelText(/Handle/i);
     fireEvent.change(handleInput, {target: {value: 'my-custom-handle'}});
 
-    fireEvent.click(screen.getByRole('button', {name: 'Suggested Name Two'}));
+    fireEvent.click(screen.getByRole('button', {name: 'Suggested Name One'}));
 
     // Handle should not change after suggestion click since it was manually edited
     expect(handleInput).toHaveValue('my-custom-handle');
@@ -542,9 +544,9 @@ describe('CreateOrganizationUnitPage', () => {
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
-  it('should render suggestions label', () => {
+  it('should render the suggestion prefix label', () => {
     renderWithProviders(<CreateOrganizationUnitPage />);
 
-    expect(screen.getByText(t('organizationUnits:create.suggestions.label'))).toBeInTheDocument();
+    expect(screen.getByText('Need inspiration? How about')).toBeInTheDocument();
   });
 });

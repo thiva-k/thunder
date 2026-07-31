@@ -46,6 +46,11 @@ export interface OrganizationUnitPickerScreenProps {
   value: string;
 
   /**
+   * When set, scopes the tree to this organization unit's subtree instead of the global root.
+   */
+  rootOuId?: string;
+
+  /**
    * Callback invoked when the user picks a different organization unit.
    */
   onChange: (ouId: string) => void;
@@ -85,6 +90,7 @@ export default function OrganizationUnitPickerScreen({
   title,
   subtitle,
   value,
+  rootOuId = undefined,
   onChange,
   onBack,
   onContinue,
@@ -168,6 +174,7 @@ export default function OrganizationUnitPickerScreen({
           <OrganizationUnitTreePicker
             id="organization-unit-picker-screen-tree"
             value={value}
+            rootOuId={rootOuId}
             onChange={onChange}
             maxHeight={420}
             spacious

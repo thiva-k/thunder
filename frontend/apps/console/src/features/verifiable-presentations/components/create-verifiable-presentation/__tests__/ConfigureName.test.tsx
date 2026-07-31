@@ -134,12 +134,10 @@ describe('ConfigureName', () => {
     expect(mockOnHandleChange).toHaveBeenCalledWith('');
   });
 
-  it('should render name suggestions', () => {
+  it('should render a name suggestion', () => {
     renderComponent();
 
-    mockSuggestions.forEach((suggestion) => {
-      expect(screen.getByText(suggestion)).toBeInTheDocument();
-    });
+    expect(screen.getByText('Alpha PID')).toBeInTheDocument();
   });
 
   it('should call onNameChange, onHandleChange and reset handleEdited when clicking a suggestion chip', async () => {

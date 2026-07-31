@@ -20,12 +20,12 @@ import {describe, it, expect} from 'vitest';
 import {AgentCreateFlowStep} from '../agent-create-flow';
 
 describe('AgentCreateFlowStep', () => {
-  it('should have NAME step', () => {
-    expect(AgentCreateFlowStep.NAME).toBe('NAME');
-  });
-
   it('should have ORGANIZATION_UNIT step', () => {
     expect(AgentCreateFlowStep.ORGANIZATION_UNIT).toBe('ORGANIZATION_UNIT');
+  });
+
+  it('should have NAME step', () => {
+    expect(AgentCreateFlowStep.NAME).toBe('NAME');
   });
 
   it('should have PROFILE step', () => {

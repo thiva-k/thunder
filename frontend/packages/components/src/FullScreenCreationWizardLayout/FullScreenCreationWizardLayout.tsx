@@ -19,6 +19,7 @@
 import {AppBreadcrumbs, Box, IconButton, LinearProgress} from '@wso2/oxygen-ui';
 import {X} from '@wso2/oxygen-ui-icons-react';
 import type {ComponentProps, JSX, ReactNode} from 'react';
+import {useTranslation} from 'react-i18next';
 
 export interface FullScreenCreationWizardLayoutProps {
   /**
@@ -58,12 +59,12 @@ export interface FullScreenCreationWizardLayoutProps {
 }
 
 /**
- * Full-screen chrome for the application creation wizard: a close+breadcrumb header, a progress
+ * Full-screen chrome for multi-step creation wizards: a close+breadcrumb header, a progress
  * bar, and a content area that scrolls independently (optionally split with a live preview
  * panel). The footer action row is rendered directly below the step content, in the same column,
  * so it stays together with the form instead of being pinned to the viewport.
  *
- * Mounted under `FullScreenLayout` (no console sidebar).
+ * Meant to be mounted full-screen, outside any app chrome (sidebar/nav).
  */
 export default function FullScreenCreationWizardLayout({
   breadcrumbItems,
@@ -73,6 +74,8 @@ export default function FullScreenCreationWizardLayout({
   preview = undefined,
   footer,
 }: FullScreenCreationWizardLayoutProps): JSX.Element {
+  const {t} = useTranslation('common');
+
   return (
     <Box sx={{height: '100vh', display: 'flex', flexDirection: 'column'}}>
       <LinearProgress variant="determinate" value={progress} sx={{height: 6, flexShrink: 0}} />
@@ -83,7 +86,7 @@ export default function FullScreenCreationWizardLayout({
             <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
               <IconButton
                 onClick={onClose}
-                aria-label="close"
+                aria-label={t('actions.close', 'Close')}
                 sx={{bgcolor: 'background.paper', '&:hover': {bgcolor: 'action.hover'}, boxShadow: 1}}
               >
                 <X size={24} />

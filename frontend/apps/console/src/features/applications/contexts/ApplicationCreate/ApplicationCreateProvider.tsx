@@ -100,7 +100,7 @@ const INITIAL_STATE: {
   hasCompletedOnboarding: boolean;
   error: string | null;
 } = {
-  currentStep: ApplicationCreateFlowStep.DETAILS,
+  currentStep: ApplicationCreateFlowStep.ORGANIZATION_UNIT,
   appName: '',
   ouId: '',
   themeId: null,

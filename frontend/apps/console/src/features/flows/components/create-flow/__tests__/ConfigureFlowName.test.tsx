@@ -78,7 +78,7 @@ describe('ConfigureFlowName', () => {
     it('should render the title', () => {
       render(<ConfigureFlowName {...defaultProps} />);
 
-      expect(screen.getByText('Name your flow')).toBeInTheDocument();
+      expect(screen.getByText("Let's collect some details about your flow")).toBeInTheDocument();
     });
 
     it('should render the name input with label', () => {
@@ -95,18 +95,10 @@ describe('ConfigureFlowName', () => {
       expect(screen.getByPlaceholderText('e.g. customer-sign-in')).toBeInTheDocument();
     });
 
-    it('should render suggestion chips', () => {
+    it('should render a name suggestion', () => {
       render(<ConfigureFlowName {...defaultProps} />);
 
-      for (const suggestion of mockSuggestions) {
-        expect(screen.getByText(suggestion)).toBeInTheDocument();
-      }
-    });
-
-    it('should render the suggestions label text', () => {
-      render(<ConfigureFlowName {...defaultProps} />);
-
-      expect(screen.getByText('Need inspiration? Try one of these:')).toBeInTheDocument();
+      expect(screen.getByText(mockSuggestions[0])).toBeInTheDocument();
     });
   });
 
@@ -156,7 +148,7 @@ describe('ConfigureFlowName', () => {
   });
 
   describe('Suggestion Chips', () => {
-    it('should set name when a suggestion chip is clicked', async () => {
+    it('should set name and derive the handle when the suggestion is clicked', async () => {
       render(<ConfigureFlowName {...defaultProps} />);
 
       fireEvent.click(screen.getByText('Cosmic Gateway'));
@@ -165,19 +157,6 @@ describe('ConfigureFlowName', () => {
         expect(mockOnChange).toHaveBeenCalledWith({
           name: 'Cosmic Gateway',
           handle: 'cosmic-gateway',
-        });
-      });
-    });
-
-    it('should derive handle from suggestion when handle was not manually edited', async () => {
-      render(<ConfigureFlowName {...defaultProps} />);
-
-      fireEvent.click(screen.getByText('Lunar Portal'));
-
-      await waitFor(() => {
-        expect(mockOnChange).toHaveBeenCalledWith({
-          name: 'Lunar Portal',
-          handle: 'lunar-portal',
         });
       });
     });

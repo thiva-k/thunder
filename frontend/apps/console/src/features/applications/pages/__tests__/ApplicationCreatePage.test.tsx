@@ -392,7 +392,7 @@ function TemplateSeeder(): JSX.Element {
     setSelectedTechnology(technology as never);
     setSelectedPlatform(platform as never);
     setSelectedTemplateConfig(template as never);
-    setCurrentStep('DETAILS');
+    setCurrentStep('ORGANIZATION_UNIT');
   };
 
   return (
@@ -455,7 +455,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, 'BACKEND', {
             id: 'backend',
-            creationFlow: {steps: ['DETAILS', 'COMPLETE'], previewSteps: []},
+            creationFlow: {steps: ['ORGANIZATION_UNIT', 'DETAILS', 'COMPLETE'], previewSteps: []},
           })
         }
       >
@@ -470,7 +470,7 @@ function TemplateSeeder(): JSX.Element {
             id: 'wallet',
             type: 'mobile',
             creationFlow: {
-              steps: ['DETAILS', 'SECURITY', 'DESIGN', 'CONFIGURE', 'COMPLETE'],
+              steps: ['ORGANIZATION_UNIT', 'DETAILS', 'SECURITY', 'DESIGN', 'CONFIGURE', 'COMPLETE'],
               previewSteps: ['DETAILS', 'SECURITY', 'DESIGN'],
             },
             defaults: {
@@ -540,7 +540,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, null, {
             id: 'mcp-client',
-            creationFlow: {steps: ['DETAILS', 'CLIENT_TYPE', 'COMPLETE'], previewSteps: []},
+            creationFlow: {steps: ['ORGANIZATION_UNIT', 'DETAILS', 'CLIENT_TYPE', 'COMPLETE'], previewSteps: []},
             defaults: {
               inboundAuthConfig: [
                 {

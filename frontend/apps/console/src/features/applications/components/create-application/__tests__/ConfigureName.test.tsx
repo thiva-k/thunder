@@ -25,21 +25,31 @@ import ConfigureName, {type ConfigureNameProps} from '../ConfigureName';
 vi.mock('@thunderid/utils');
 
 // Mock the shared logo picker so tests only assert on the wiring, not LogoPicker's own behavior.
-vi.mock('@thunderid/components', () => ({
-  ResourceAvatar: ({
-    value,
-    onSelect,
-    editAriaLabel,
-  }: {
-    value: string;
-    onSelect: (value: string) => void;
-    editAriaLabel: string;
-  }) => (
-    <button type="button" data-testid="resource-avatar" aria-label={editAriaLabel} onClick={() => onSelect('emoji:🚀')}>
-      {value}
-    </button>
-  ),
-}));
+// NameSuggestion is left as the real implementation since these tests exercise its wiring too.
+vi.mock('@thunderid/components', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thunderid/components')>();
+  return {
+    ...actual,
+    ResourceAvatar: ({
+      value,
+      onSelect,
+      editAriaLabel,
+    }: {
+      value: string;
+      onSelect: (value: string) => void;
+      editAriaLabel: string;
+    }) => (
+      <button
+        type="button"
+        data-testid="resource-avatar"
+        aria-label={editAriaLabel}
+        onClick={() => onSelect('emoji:🚀')}
+      >
+        {value}
+      </button>
+    ),
+  };
+});
 
 vi.mock('@thunderid/react', () => ({
   buildAvatarSpec: vi.fn(() => 'avatar:shape=rounded,variant=anonymous_entity,content=briefcase,colors=0'),

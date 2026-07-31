@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import {ToggleCard} from '@thunderid/components';
 import type {UserTypeListItem} from '@thunderid/configure-user-types';
 import {Autocomplete, Box, Checkbox, Collapse, Divider, IconButton, TextField, Typography} from '@wso2/oxygen-ui';
 import {ChevronDown, ChevronUp} from '@wso2/oxygen-ui-icons-react';
@@ -81,48 +82,38 @@ export default function UserAccessSection({
     onUserTypesChange(checked ? [...selectedUserTypes, name] : selectedUserTypes.filter((n) => n !== name));
   };
 
+  const title = t(
+    'applications:onboarding.configure.applicationDetails.userAccess.title',
+    'Allow all user types to access this application',
+  );
+
   return (
     <Box data-testid="application-configure-user-access">
-      <Box sx={{display: 'flex', alignItems: 'flex-start', gap: 1, p: 2}}>
-        <Checkbox
-          checked={allSelected}
-          indeterminate={indeterminate}
-          onChange={(_event, checked) => handleMasterChange(checked)}
-          inputProps={{
-            'aria-label': t(
-              'applications:onboarding.configure.applicationDetails.userAccess.title',
-              'Allow all user types to access this application',
-            ),
-          }}
-          sx={{mt: -0.5}}
-        />
-        <Box sx={{flex: 1, minWidth: 0}}>
-          <Typography variant="body1" fontWeight={600}>
-            {t(
-              'applications:onboarding.configure.applicationDetails.userAccess.title',
-              'Allow all user types to access this application',
-            )}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {t(
-              'applications:onboarding.configure.applicationDetails.userAccess.subtitle',
-              'Every user type can sign in to this application',
-            )}
-          </Typography>
-          {noneSelected && (
-            <Typography variant="caption" color="error" sx={{display: 'block', mt: 0.5}}>
-              {t('applications:onboarding.configure.details.userTypes.error', 'Please select at least one user type')}
-            </Typography>
-          )}
-        </Box>
-        <IconButton
-          size="small"
-          onClick={() => setExpanded((prev) => !prev)}
-          aria-label={expanded ? t('common:actions.collapse', 'Collapse') : t('common:actions.expand', 'Expand')}
-        >
-          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </IconButton>
-      </Box>
+      <ToggleCard
+        bordered={false}
+        checked={allSelected}
+        indeterminate={indeterminate}
+        onChange={handleMasterChange}
+        title={title}
+        subtitle={t(
+          'applications:onboarding.configure.applicationDetails.userAccess.subtitle',
+          'Every user type can sign in to this application',
+        )}
+        error={
+          noneSelected
+            ? t('applications:onboarding.configure.details.userTypes.error', 'Please select at least one user type')
+            : undefined
+        }
+        action={
+          <IconButton
+            size="small"
+            onClick={() => setExpanded((prev) => !prev)}
+            aria-label={expanded ? t('common:actions.collapse', 'Collapse') : t('common:actions.expand', 'Expand')}
+          >
+            {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </IconButton>
+        }
+      />
 
       <Collapse in={expanded}>
         <Divider />

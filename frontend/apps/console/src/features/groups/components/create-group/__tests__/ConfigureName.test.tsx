@@ -78,37 +78,33 @@ describe('ConfigureName', () => {
     expect(mockOnNameChange).toHaveBeenCalledTimes(9); // Once per character
   });
 
-  it('should render name suggestions', () => {
+  it('should render a name suggestion', () => {
     renderComponent();
 
-    mockSuggestions.forEach((suggestion) => {
-      expect(screen.getByText(suggestion)).toBeInTheDocument();
-    });
+    expect(screen.getByText('Brave Tigers Squad')).toBeInTheDocument();
   });
 
-  it('should display suggestions label', () => {
+  it('should display the suggestion prefix label', () => {
     renderComponent();
 
-    expect(screen.getByText('In a hurry? Pick a random name:')).toBeInTheDocument();
+    expect(screen.getByText('Need inspiration? How about')).toBeInTheDocument();
   });
 
-  it('should call onNameChange when clicking a suggestion chip', async () => {
+  it('should call onNameChange when clicking the suggestion', async () => {
     const user = userEvent.setup();
     renderComponent();
 
-    const suggestionChip = screen.getByText('Brave Tigers Squad');
-    await user.click(suggestionChip);
+    const suggestion = screen.getByText('Brave Tigers Squad');
+    await user.click(suggestion);
 
     expect(mockOnNameChange).toHaveBeenCalledWith('Brave Tigers Squad');
   });
 
-  it('should render all suggestion chips as clickable', () => {
+  it('should render the suggestion as clickable', () => {
     renderComponent();
 
-    mockSuggestions.forEach((suggestion) => {
-      const chip = screen.getByText(suggestion);
-      expect(chip.closest('div[role="button"]')).toBeInTheDocument();
-    });
+    const suggestion = screen.getByText('Brave Tigers Squad');
+    expect(suggestion).toHaveAttribute('role', 'button');
   });
 
   it('should generate suggestions only once on mount', () => {
@@ -146,16 +142,18 @@ describe('ConfigureName', () => {
     expect(mockOnNameChange).toHaveBeenCalledWith('');
   });
 
-  it('should handle rapid suggestion clicks', async () => {
+  it('should request a new suggestion when the shuffle button is clicked', async () => {
     const user = userEvent.setup();
+    vi.mocked(generateRandomHumanReadableIdentifiers)
+      .mockReturnValueOnce(['Brave Tigers Squad'])
+      .mockReturnValueOnce(['Crimson Hawks Team']);
     renderComponent();
 
-    await user.click(screen.getByText('Brave Tigers Squad'));
+    await user.click(screen.getByRole('button', {name: 'Try another suggestion'}));
     await user.click(screen.getByText('Crimson Hawks Team'));
 
-    expect(mockOnNameChange).toHaveBeenCalledWith('Brave Tigers Squad');
     expect(mockOnNameChange).toHaveBeenCalledWith('Crimson Hawks Team');
-    expect(mockOnNameChange).toHaveBeenCalledTimes(2);
+    expect(mockOnNameChange).toHaveBeenCalledTimes(1);
   });
 
   it('should update input value when name prop changes', () => {

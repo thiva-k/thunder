@@ -4,7 +4,7 @@
   "displayName": "Full-Stack",
   "description": "Apps with both server and client code",
   "creationFlow": {
-    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "steps": ["ORGANIZATION_UNIT", "DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
     "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
   },
   "defaults": {

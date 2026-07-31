@@ -37,7 +37,6 @@ import {Link, useLocation, useNavigate, useSearchParams} from 'react-router';
 import PlatformBasedApplicationTemplateMetadata from '../config/PlatformBasedApplicationTemplateMetadata';
 import TechnologyBasedApplicationTemplateMetadata from '../config/TechnologyBasedApplicationTemplateMetadata';
 import useApplicationCreate from '../contexts/ApplicationCreate/useApplicationCreate';
-import {ApplicationCreateFlowStep} from '../models/application-create-flow';
 import type {ApplicationTemplateMetadata, TemplateCategory} from '../models/application-templates';
 import {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../models/application-templates';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
@@ -124,10 +123,9 @@ export default function ApplicationTemplateSelectPage(): JSX.Element {
     }
 
     // The wizard no longer owns the template step, so advance to the first real step of this
-    // template's creation flow before handing off.
-    const firstStep = resolveCreationFlow(option.template).steps.find(
-      (step) => step !== ApplicationCreateFlowStep.STACK,
-    );
+    // template's creation flow before handing off (the organization unit, when there's a choice
+    // of one; otherwise the Details step).
+    const firstStep = resolveCreationFlow(option.template).steps[0];
     if (firstStep) {
       setCurrentStep(firstStep);
     }
