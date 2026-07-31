@@ -89,6 +89,10 @@ const TOP_LEVEL_EDITABLE_PROPS = [
   'startIcon',
   'endIcon',
   'eventType',
+  // Paired with eventType by the button's Action selector. Without it here the
+  // change is written into `data` instead of onto the element, so the selector
+  // cannot read its own value back and cannot clear it again.
+  'actionType',
   'items',
   'direction',
   'gap',
@@ -279,6 +283,7 @@ function CommonResourceProperties(): ReactElement {
         if (element.id === lastInteractedResourceIdRef.current && currentResource) {
           const updatedResource: Resource = cloneDeep(currentResource);
           set(updatedResource as unknown as Record<string, unknown>, propertyKey, newValue);
+          lastInteractedResourceRef.current = updatedResource;
           setLastInteractedResourceRef.current(updatedResource);
         }
         return;
@@ -338,6 +343,11 @@ function CommonResourceProperties(): ReactElement {
         } else {
           set(updatedResource.data as Record<string, unknown>, propertyKey, newValue);
         }
+        // The ref otherwise only catches up on the next render, so a second
+        // change applied in the same tick (a control that writes a pair of
+        // properties, such as the button's Action selector) would rebase on the
+        // pre-change resource and drop the first one.
+        lastInteractedResourceRef.current = updatedResource;
         setLastInteractedResourceRef.current(updatedResource);
       }
     };

@@ -256,6 +256,51 @@ describe('reactFlowTransformer', () => {
         });
       });
 
+      it("should carry a button's action type into the prompt action", () => {
+        const components: Element[] = [
+          {
+            id: 'button-1',
+            type: ElementTypes.Action,
+            category: ElementCategories.Action,
+            eventType: 'SUBMIT',
+            actionType: 'SIGN_OUT_CONFIRM',
+          } as Element & {eventType: string},
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
+          edges: [createEdge('edge-1', 'view-1', 'session_signout', 'button-1_NEXT')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        expect(result.nodes[0].prompts?.[0].action).toEqual({
+          ref: 'button-1',
+          nextNode: 'session_signout',
+          type: 'SIGN_OUT_CONFIRM',
+        });
+      });
+
+      it('should omit the action type when the button does not declare one', () => {
+        const components: Element[] = [
+          {
+            id: 'button-1',
+            type: ElementTypes.Action,
+            category: ElementCategories.Action,
+            eventType: 'SUBMIT',
+          } as Element & {eventType: string},
+        ];
+
+        const canvasData: ReactFlowCanvasData = {
+          nodes: [createNode('view-1', StepTypes.View, {x: 0, y: 0}, {components})],
+          edges: [createEdge('edge-1', 'view-1', 'next-node', 'button-1_NEXT')],
+        };
+
+        const result = transformReactFlow(canvasData);
+
+        expect(result.nodes[0].prompts?.[0].action).not.toHaveProperty('type');
+      });
+
       it('should handle nested components in forms', () => {
         const formComponent: Element = {
           id: 'form-1',

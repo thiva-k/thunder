@@ -53,6 +53,7 @@ class ResourcePropertyPanelConstants {
     'startIcon',
     'endIcon',
     'eventType',
+    'actionType',
     'classes',
   ];
 }

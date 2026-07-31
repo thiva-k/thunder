@@ -110,6 +110,18 @@ describe('CommonResourceProperties', () => {
         <button type="button" onClick={() => onChange('label', 'New Label', resource)}>
           Change Label
         </button>
+        <button type="button" onClick={() => onChange('actionType', 'SIGN_OUT_CONFIRM', resource)}>
+          Change Action Type
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            onChange('eventType', 'SUBMIT', resource);
+            onChange('actionType', '', resource);
+          }}
+        >
+          Change Pair
+        </button>
         <button type="button" onClick={() => onVariantChange?.('variant-1')}>
           Change Variant
         </button>
@@ -239,6 +251,24 @@ describe('CommonResourceProperties', () => {
       expect(properties.hint).toBe('Test Hint');
       expect(properties.placeholder).toBe('Test Placeholder');
       expect(properties.required).toBe(true);
+    });
+
+    it('should keep actionType out of the generic property list', () => {
+      // The button's Action selector owns it, so it must not also render as a
+      // generic field.
+      const resourceWithActionType: Base = {
+        ...mockBaseResource,
+        actionType: 'SIGN_OUT_CONFIRM',
+      } as Base & {actionType: string};
+
+      render(<CommonResourceProperties />, {
+        wrapper: createWrapper(createContextValue({lastInteractedResource: resourceWithActionType})),
+      });
+
+      const propertiesDiv = screen.getByTestId('properties');
+      const properties = JSON.parse(propertiesDiv.textContent ?? '{}') as Record<string, unknown>;
+
+      expect(properties).not.toHaveProperty('actionType');
     });
 
     it('should expose step data.properties under data.properties.* keys', () => {
@@ -378,6 +408,41 @@ describe('CommonResourceProperties', () => {
   });
 
   describe('Property Change Handler', () => {
+    it('should write actionType onto the element rather than into its data', async () => {
+      render(<CommonResourceProperties />, {wrapper: createWrapper()});
+
+      screen.getByText('Change Action Type').click();
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 400);
+      });
+
+      // Landing under `data` would leave the Action selector unable to read its
+      // own value back, so it could neither show Sign out nor clear it again.
+      const updated = mockSetLastInteractedResource.mock.calls.at(-1)?.[0] as Record<string, unknown> & {
+        data?: Record<string, unknown>;
+      };
+      expect(updated.actionType).toBe('SIGN_OUT_CONFIRM');
+      expect(updated.data?.actionType).toBeUndefined();
+    });
+
+    it('should keep both properties when two changes are applied in the same tick', async () => {
+      render(<CommonResourceProperties />, {wrapper: createWrapper()});
+
+      // The button's Action selector writes eventType and actionType together.
+      // Rebasing the second change on the pre-change resource would drop the
+      // first, leaving the selector showing the previous action.
+      screen.getByText('Change Pair').click();
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 400);
+      });
+
+      const updated = mockSetLastInteractedResource.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+      expect(updated.eventType).toBe('SUBMIT');
+      expect(updated.actionType).toBe('');
+    });
+
     it('should trigger onChange callback when property changes', () => {
       render(<CommonResourceProperties />, {wrapper: createWrapper()});
 
