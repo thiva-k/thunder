@@ -349,6 +349,10 @@ jobs:
     needs: [preflight]
     if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'trigger-pr-builder') && (github.event.action != 'labeled' || github.event.label.name == 'trigger-pr-builder')) || github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
+    # Checkout, turbo cache and artifact upload need nothing beyond read access; the
+    # artifact action authenticates with its own token rather than the GITHUB_TOKEN.
+    permissions:
+      contents: read
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
       options: --user root
@@ -402,10 +406,19 @@ jobs:
         run: |
           pnpm build:packages
 
-      - name: 🧪 Run Tests for Frontend Packages
+      - name: 🧪 Run Tests for Frontend Packages with Coverage
         working-directory: frontend
         run: |
-          pnpm test:packages
+          pnpm test:packages:coverage
+
+      # Each package writes its own coverage/lcov.info with repo-relative paths, so the
+      # whole set is uploaded under one flag rather than one flag per package.
+      - name: 📤 Upload packages coverage artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: packages-coverage
+          path: frontend/packages/*/coverage/lcov.info
+          if-no-files-found: error
 
   test-frontend-gate-app:
     name: 🧪 Gate App Tests with Coverage
@@ -568,8 +581,8 @@ jobs:
 
   upload-frontend-coverage:
     name: 📊 Upload Frontend Coverage
-    needs: [test-frontend-gate-app, test-frontend-console-app]
-    if: always() && (needs.test-frontend-gate-app.result == 'success' && needs.test-frontend-console-app.result == 'success')
+    needs: [test-frontend-gate-app, test-frontend-console-app, test-frontend-packages]
+    if: always() && (needs.test-frontend-gate-app.result == 'success' && needs.test-frontend-console-app.result == 'success' && needs.test-frontend-packages.result == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -590,6 +603,12 @@ jobs:
         with:
           name: gate-coverage
           path: coverage/gate
+
+      - name: 📥 Download packages coverage artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: packages-coverage
+          path: coverage/packages
 
       - name: 📊 Upload `@thunderid/console` Unit Test Coverage Report to Codecov
         if: github.event_name != 'merge_group'
@@ -615,6 +634,21 @@ jobs:
           disable_search: true
           flags: frontend-apps-gate-unit
           name: Frontend Gate App Unit Tests
+          fail_ci_if_error: false
+
+      # One report per package, so search the downloaded tree instead of naming a single
+      # file. Without this every package under frontend/packages/ stays unmeasured, which
+      # is why moving console features into packages silently dropped them from coverage.
+      - name: 📊 Upload Frontend Packages Unit Test Coverage Report to Codecov
+        if: github.event_name != 'merge_group'
+        uses: codecov/codecov-action@v5
+        timeout-minutes: 5
+        continue-on-error: true
+        with:
+          use_oidc: true
+          directory: coverage/packages
+          flags: frontend-packages-unit
+          name: Frontend Packages Unit Tests
           fail_ci_if_error: false
 
   patch-coverage-gate:
