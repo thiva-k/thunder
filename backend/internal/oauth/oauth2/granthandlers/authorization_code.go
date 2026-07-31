@@ -251,7 +251,7 @@ func (h *authorizationCodeGrantHandler) retrieveAndValidateAuthCode(
 	if oauthApp.RequiresPKCE() || authCode.CodeChallenge != "" {
 		if tokenRequest.CodeVerifier == "" {
 			return nil, &model.ErrorResponse{
-				Error:            constants.ErrorInvalidRequest,
+				Error:            constants.ErrorInvalidGrant,
 				ErrorDescription: "code_verifier is required",
 			}
 		}
