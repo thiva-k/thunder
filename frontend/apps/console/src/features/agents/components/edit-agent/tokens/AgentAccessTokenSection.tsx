@@ -64,7 +64,7 @@ export default function AgentAccessTokenSection({
         attributesTitle: t('agents:edit.tokens.agent.attributes.title', 'Access Token Attributes'),
         attributesDescription: t(
           'agents:edit.tokens.agent.attributes.description',
-          'Attributes included in the access token this agent receives for its own requests (client_credentials grant).',
+          'Extra attributes to add to the access token this agent receives for itself.',
         ),
         attributesLabel: t('agents:edit.tokens.agent.attributes.label', 'Add or Remove Attributes'),
         attributesHint: t(

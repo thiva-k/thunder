@@ -14,6 +14,7 @@ import {
   hasClientAccess,
   hasUserAccess,
   isGrantItemDisabled,
+  isOAuthTokenMode,
 } from '../oauth2Rules';
 
 const baseConfig = (overrides: Partial<OAuth2Config> = {}): OAuth2Config => ({
@@ -261,6 +262,32 @@ describe('hasClientAccess', () => {
     expect(hasClientAccess([OAuth2GrantTypes.CLIENT_CREDENTIALS])).toBe(true);
     expect(hasClientAccess([OAuth2GrantTypes.AUTHORIZATION_CODE])).toBe(false);
     expect(hasClientAccess(undefined)).toBe(false);
+  });
+});
+
+describe('isOAuthTokenMode', () => {
+  // Either block alone flips the flag, so each case is asserted with only one of them populated.
+  const partialToken = (block: Record<string, unknown>): OAuth2Config['token'] =>
+    block as unknown as OAuth2Config['token'];
+
+  it('is true when the access token config is present', () => {
+    expect(
+      isOAuthTokenMode(baseConfig({token: partialToken({accessToken: {userConfig: {validityPeriod: 3600}}})})),
+    ).toBe(true);
+  });
+
+  it('is true when only the ID token config is present', () => {
+    expect(
+      isOAuthTokenMode(baseConfig({token: partialToken({idToken: {validityPeriod: 3600, userAttributes: []}})})),
+    ).toBe(true);
+  });
+
+  it('is false for an app-native application with no OAuth config', () => {
+    expect(isOAuthTokenMode(undefined)).toBe(false);
+  });
+
+  it('is false when an OAuth config carries no token block', () => {
+    expect(isOAuthTokenMode(baseConfig({grantTypes: [OAuth2GrantTypes.AUTHORIZATION_CODE]}))).toBe(false);
   });
 });
 

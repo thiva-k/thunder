@@ -16,6 +16,7 @@ import {z} from 'zod';
 import ScopeSection from './ScopeSection';
 import TokenUserAttributesSection from './TokenUserAttributesSection';
 import TokenValidationSection from './TokenValidationSection';
+import {isOAuthTokenMode} from '../../../utils/oauth2Rules';
 
 /**
  * Props for the {@link EditTokenSettings} component.
@@ -180,10 +181,7 @@ export default function EditTokenSettings({
   }, [userTypesData, allowedUserTypes]);
 
   // Determine if this is OAuth/OIDC mode (has separate token configs) or Native mode
-  const isOAuthMode = useMemo(
-    () => oauth2Config?.token?.accessToken !== undefined || oauth2Config?.token?.idToken !== undefined,
-    [oauth2Config],
-  );
+  const isOAuthMode = useMemo(() => isOAuthTokenMode(oauth2Config), [oauth2Config]);
 
   const tokenConfigSchema = useMemo(() => createTokenConfigSchema(t), [t]);
 

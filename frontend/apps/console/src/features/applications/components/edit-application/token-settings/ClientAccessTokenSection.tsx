@@ -129,7 +129,7 @@ export default function ClientAccessTokenSection({
     <Stack spacing={3}>
       <SettingsCard title={copy.attributesTitle} description={copy.attributesDescription}>
         <Grid container spacing={3}>
-          <Grid size={{xs: 12, md: 7}}>
+          <Grid size={{xs: 12, lg: 7}}>
             <Typography variant="body2" sx={{mb: 1}}>
               {copy.attributesLabel}
             </Typography>
@@ -167,7 +167,7 @@ export default function ClientAccessTokenSection({
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{xs: 12, md: 5}}>
+          <Grid size={{xs: 12, lg: 5}}>
             <JwtPreview payload={jwtPreview} defaultClaims={ACCESS_TOKEN_DEFAULT_CLAIMS} />
           </Grid>
         </Grid>
