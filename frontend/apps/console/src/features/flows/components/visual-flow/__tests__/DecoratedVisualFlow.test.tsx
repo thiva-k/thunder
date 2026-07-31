@@ -279,8 +279,10 @@ vi.mock('../VisualFlow', () => ({
       <button data-testid="node-drag-stop-trigger" onClick={onNodeDragStop}>
         Node Drag Stop
       </button>
-      <button
+      {/* A click on the node body: not a button, so it focuses the node. */}
+      <div
         data-testid="node-click-trigger"
+        role="presentation"
         onClick={(event) =>
           (onNodeClick as ((e: unknown, n: unknown) => void) | undefined)?.(event, {
             id: 'clicked-node',
@@ -289,6 +291,19 @@ vi.mock('../VisualFlow', () => ({
         }
       >
         Node Click
+      </div>
+      {/* A click on a node header action (configure, delete), which reaches
+          onNodeClick through the node but must not move the camera. */}
+      <button
+        data-testid="node-action-click-trigger"
+        onClick={(event) =>
+          (onNodeClick as ((e: unknown, n: unknown) => void) | undefined)?.(event, {
+            id: 'clicked-node',
+            position: {x: 0, y: 0},
+          })
+        }
+      >
+        Node Action Click
       </button>
     </div>
   ),
@@ -457,6 +472,9 @@ describe('DecoratedVisualFlow', () => {
     });
 
     it('should focus the clicked node via fitView', () => {
+      // Focusing is skipped for a node that is no longer on the canvas.
+      mockGetNodes.mockReturnValue([{id: 'clicked-node', position: {x: 0, y: 0}, data: {}}]);
+
       renderComponent(<DecoratedVisualFlow {...defaultProps} />);
 
       fireEvent.click(screen.getByTestId('node-click-trigger'));
@@ -687,6 +705,45 @@ describe('DecoratedVisualFlow', () => {
       await waitFor(() => {
         expect(mockApplyAutoLayout).toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('Node focus on click', () => {
+    it('should focus a node that is still on the canvas', () => {
+      mockGetNodes.mockReturnValue([{id: 'clicked-node', position: {x: 0, y: 0}, data: {}}]);
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      screen.getByTestId('node-click-trigger').click();
+
+      expect(mockFitView).toHaveBeenCalledWith({
+        nodes: [{id: 'clicked-node'}],
+        padding: 0.3,
+        maxZoom: 1.2,
+        duration: 500,
+      });
+    });
+
+    it('should leave the viewport alone when a node header action is clicked', () => {
+      // Deleting from the node header queues a fitView that resolves after the
+      // node is gone, which fits nothing and snaps the canvas to the origin.
+      mockGetNodes.mockReturnValue([{id: 'clicked-node', position: {x: 0, y: 0}, data: {}}]);
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      screen.getByTestId('node-action-click-trigger').click();
+
+      expect(mockFitView).not.toHaveBeenCalled();
+    });
+
+    it('should leave the viewport alone when the clicked node is already gone', () => {
+      // Deleting a node clicks it on the way out, and React Flow can deliver
+      // that click after the removal. Fitting to it would match nothing and
+      // snap the canvas to the origin.
+      mockGetNodes.mockReturnValue([{id: 'some-other-node', position: {x: 0, y: 0}, data: {}}]);
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} />);
+      screen.getByTestId('node-click-trigger').click();
+
+      expect(mockFitView).not.toHaveBeenCalled();
     });
   });
 
