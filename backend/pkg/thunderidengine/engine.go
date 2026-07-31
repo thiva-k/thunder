@@ -83,6 +83,7 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 			Keys:       engineCtx.keyConfigs,
 			Encryption: engineCtx.encryptionConfig,
 		},
+		AttributeCache: engineCtx.attributeCacheConfig,
 	}
 
 	err = systemconfig.InitializeServerRuntime(engineCtx.serverHome, &sysConfig)
@@ -118,7 +119,8 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		}
 	}
 
-	engineCtx.attributeCacheService = attributecache.Initialize(engineCtx.runtimeStoreProvider)
+	engineCtx.attributeCacheService = attributecache.Initialize(engineCtx.runtimeStoreProvider,
+		engineCtx.runtimeCryptoSvc, systemconfig.GetServerRuntime().Config.AttributeCache.Encryption.Enabled)
 	engineCtx.authAssertGen = assert.Initialize()
 
 	authnProviderManager, err := authnprovidermgr.Initialize(
@@ -317,6 +319,7 @@ type engineContext struct {
 	keyConfigs             []engineconfig.KeyConfig
 	encryptionConfig       engineconfig.EncryptionConfig
 	logConfig              engineconfig.LogConfig
+	attributeCacheConfig   engineconfig.AttributeCacheConfig
 
 	actorProvider             providers.ActorProvider
 	defaultAuthnProvider      providers.AuthnProviderInterface
@@ -360,6 +363,11 @@ func WithKeyConfigs(keyConfigs []engineconfig.KeyConfig) Option {
 // WithEncryptionConfig supplies the encryption configs.
 func WithEncryptionConfig(encryptionConfig engineconfig.EncryptionConfig) Option {
 	return func(c *engineContext) { c.encryptionConfig = encryptionConfig }
+}
+
+// WithAttributeCacheConfig supplies the attribute cache configuration.
+func WithAttributeCacheConfig(config engineconfig.AttributeCacheConfig) Option {
+	return func(c *engineContext) { c.attributeCacheConfig = config }
 }
 
 // WithServerConfig supplies the server configuration.

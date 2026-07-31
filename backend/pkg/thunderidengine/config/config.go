@@ -150,6 +150,16 @@ type EncryptionConfig struct {
 	Key string `yaml:"key" json:"key"`
 }
 
+// AttributeCacheConfig holds the attribute cache configuration details.
+type AttributeCacheConfig struct {
+	Encryption AttributeCacheEncryptionConfig `yaml:"encryption" json:"encryption"`
+}
+
+// AttributeCacheEncryptionConfig holds the attribute cache encryption configuration details.
+type AttributeCacheEncryptionConfig struct {
+	Enabled bool `yaml:"enabled" json:"enabled"`
+}
+
 // JWTConfig holds the JWT configuration details.
 type JWTConfig struct {
 	Issuer         string `yaml:"issuer"           json:"issuer"`

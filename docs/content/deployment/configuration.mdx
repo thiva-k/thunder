@@ -783,6 +783,18 @@ Signing keys are configured as an array. Each key has the following properties:
 
 The key type under `crypto.keys` determines the algorithm in `id_token_signing_alg_values_supported` in the OIDC discovery document. RSA keys advertise `RS256`; ECDSA `P-256`, `P-384`, and `P-521` keys advertise `ES256`, `ES384`, and `ES512`; Ed25519 keys advertise `EdDSA`. If multiple keys are configured, all resulting algorithms are included without duplicates.
 
+## Attribute Cache Configuration
+
+During an authorization flow, <ProductName /> caches the resolved user attributes in the runtime store and references them from tokens through the `aci` claim. These attributes are stored as plaintext by default. Enable encryption to store them encrypted at rest using the key from `crypto.encryption.key`.
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `attribute_cache.encryption.enabled` | `false` | When `true`, cached user attributes are encrypted (AES-GCM) before being written to the runtime store and decrypted on read. Requires `crypto.encryption.key` to be configured. |
+
+:::warning
+Treat `attribute_cache.encryption.enabled` as a set-once value. It is applied on both write and read with no format detection, so changing it while cached entries still exist causes failures: after enabling it, entries written as plaintext can no longer be decrypted; after disabling it, encrypted entries are read without decryption. Before changing it, clear the attribute cache (or wait for all entries to expire), then restart.
+:::
+
 ## Email Configuration
 
 <ProductName /> sends emails through an SMTP server for features such as magic link authentication and user invitations. This configuration is optional. Without a configured SMTP server, email-dependent features remain unavailable. Add the following configuration to `deployment.yaml` to configure an SMTP server.

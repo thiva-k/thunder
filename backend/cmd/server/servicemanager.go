@@ -300,7 +300,8 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// guard created by the authn service.
 	authzen.Initialize(mux, authZService, entityProvider, resourceService, directAuthGuard)
 
-	attributeCacheService := attributecache.Initialize(runtimeStoreProvider)
+	attributeCacheService := attributecache.Initialize(runtimeStoreProvider, runtimeCryptoSvc,
+		runtime.Config.AttributeCache.Encryption.Enabled)
 
 	emailClient := initEmailClient(ctx, logger)
 
