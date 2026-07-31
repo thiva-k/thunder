@@ -45,8 +45,9 @@ vi.mock('../../../hooks/useUIPanelState', () => ({
   }),
 }));
 
-const {mockFlowConfigState} = vi.hoisted(() => ({
+const {mockFlowConfigState, mockSetFlowEdges} = vi.hoisted(() => ({
   mockFlowConfigState: {isVerboseMode: true},
+  mockSetFlowEdges: vi.fn(),
 }));
 
 vi.mock('../../../hooks/useFlowConfig', () => ({
@@ -55,6 +56,7 @@ vi.mock('../../../hooks/useFlowConfig', () => ({
     isVerboseMode: mockFlowConfigState.isVerboseMode,
     metadata: undefined,
     setFlowNodes: vi.fn(),
+    setFlowEdges: mockSetFlowEdges,
   }),
 }));
 
@@ -635,6 +637,29 @@ describe('DecoratedVisualFlow', () => {
       expect(updated[0].position).toEqual({x: 200, y: 300});
       expect(updated[1].position).toEqual({x: 200, y: 300});
       expect(updated[2].position).toEqual({x: 3, y: 3});
+    });
+  });
+
+  describe('Validation graph sync', () => {
+    it('should publish the source edges rather than the compact display edges', () => {
+      const displayEdges = [
+        {id: 'e1', source: 'view-1', sourceHandle: 'button-1_NEXT', target: 'execution-stack_exec-a'},
+      ] as Edge[];
+      const sourceEdges = [{id: 'e1', source: 'view-1', sourceHandle: 'button-1_NEXT', target: 'exec-a'}] as Edge[];
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} edges={displayEdges} sourceEdges={sourceEdges} />);
+
+      // A stack rewires an edge onto a synthetic id, which would hide the
+      // element's real target from graph validation rules.
+      expect(mockSetFlowEdges).toHaveBeenCalledWith(sourceEdges);
+    });
+
+    it('should publish the edges as-is when there is no display transform', () => {
+      const edges = [{id: 'e1', source: 'view-1', sourceHandle: 'button-1_NEXT', target: 'exec-a'}] as Edge[];
+
+      renderComponent(<DecoratedVisualFlow {...defaultProps} edges={edges} />);
+
+      expect(mockSetFlowEdges).toHaveBeenCalledWith(edges);
     });
   });
 

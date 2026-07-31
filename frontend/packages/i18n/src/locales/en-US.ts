@@ -3573,6 +3573,12 @@ const translations = {
     'core.validation.sso.orphanSession':
       'Session step <code>{{id}}</code> is not referenced by any SSO check. Add an SSO check that uses it, or remove the step.',
 
+    // Validation messages - sign out
+    'core.validation.signOut.confirmNotConnected':
+      'Sign-out button <code>{{id}}</code> is not connected, so it will not sign the user out. Connect it to the session sign-out step, or change its action.',
+    'core.validation.signOut.confirmInvalidTarget':
+      'Sign-out button <code>{{id}}</code> does not lead to a session sign-out step, so it will not sign the user out. Connect it to one, or change its action.',
+
     // Elements - rich text
     'core.elements.richText.placeholder': 'Enter text here...',
     'core.elements.richText.resolvedI18nValue': 'Resolved i18n value',
