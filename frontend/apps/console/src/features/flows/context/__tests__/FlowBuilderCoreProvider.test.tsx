@@ -32,9 +32,13 @@ vi.mock('@wso2/oxygen-ui', () => ({
   Typography: ({children}: {children: React.ReactNode}) => <span>{children}</span>,
 }));
 
-vi.mock('@wso2/oxygen-ui-icons-react', () => ({
-  CogIcon: () => <span data-testid="settings-icon" />,
-}));
+vi.mock('@wso2/oxygen-ui-icons-react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@wso2/oxygen-ui-icons-react')>();
+  return {
+    ...actual,
+    CogIcon: () => <span data-testid="settings-icon" />,
+  };
+});
 
 const mockCloseValidationCallback = vi.fn();
 
