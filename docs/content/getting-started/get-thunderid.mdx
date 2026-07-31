@@ -224,6 +224,7 @@ Install <ProductName /> using the [<ProductName /> Helm chart](https://github.co
 
 ```bash
 helm install {{productSlug}} oci://ghcr.io/thunder-id/helm-charts/{{productSlug}} \
+  --devel \
   --set configuration.database.config.postgres.hostname=postgresql \
   --set configuration.database.config.postgres.sslmode=disable \
   --set configuration.database.runtime_transient.postgres.hostname=postgresql \
