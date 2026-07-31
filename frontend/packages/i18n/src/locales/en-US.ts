@@ -3813,9 +3813,11 @@ const translations = {
     'core.fieldExtendedProperties.selectAttribute': 'Select an attribute',
 
     // Button extended properties
-    'core.buttonExtendedProperties.type.label': 'Type',
-    'core.buttonExtendedProperties.type.submit': 'Submit',
-    'core.buttonExtendedProperties.type.trigger': 'Trigger',
+    'core.buttonExtendedProperties.action.label': 'Action',
+    'core.buttonExtendedProperties.action.submit': 'Submit Form',
+    'core.buttonExtendedProperties.action.trigger': 'Trigger Action',
+    'core.buttonExtendedProperties.action.signOut': 'Trigger Signout',
+    'core.buttonExtendedProperties.action.hint': 'What happens when the button is activated',
     'core.buttonExtendedProperties.startIcon.label': 'Start Icon',
     'core.buttonExtendedProperties.startIcon.placeholder': 'Enter icon path (e.g., assets/images/icons/icon.svg)',
     'core.buttonExtendedProperties.startIcon.hint': 'Optional icon displayed before the button label',

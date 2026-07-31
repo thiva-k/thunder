@@ -94,6 +94,12 @@ interface FlowInput {
 interface FlowAction {
   ref: string;
   nextNode: string;
+  /**
+   * Semantic action type forwarded by the prompt node to the next executor
+   * (e.g. `SIGN_OUT_CONFIRM`, which tells the session sign-out executor the
+   * End-User has confirmed).
+   */
+  type?: string;
   executor?: {
     name: string;
     [key: string]: unknown;
@@ -373,6 +379,13 @@ function extractPrompts(components: Element[], nodeId: string, edges: Edge[]): F
 
       if (component.action?.executor) {
         action.executor = component.action.executor as {name: string; [key: string]: unknown};
+      }
+
+      // Authored on the button itself, so it survives the connection being
+      // redrawn; a prompt action only exists once the button is wired, which
+      // the `nextNode` guard below enforces.
+      if (component.actionType) {
+        action.type = component.actionType;
       }
 
       return action.nextNode ? action : undefined;

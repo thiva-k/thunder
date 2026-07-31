@@ -32,6 +32,12 @@ export interface Element<T = unknown> extends Base<T> {
     [key: string]: unknown;
   };
   /**
+   * Semantic prompt action this element raises (see {@link PromptActionTypes}).
+   * Lives on the element rather than the edge so the choice survives redrawing
+   * the connection, and round-trips for free through `meta.components`.
+   */
+  actionType?: string;
+  /**
    * Space-separated list of CSS class names to apply to the rendered element.
    */
   classes?: string;
@@ -137,3 +143,16 @@ export const ActionEventTypes = {
 } as const;
 
 export type ActionEventTypes = (typeof ActionEventTypes)[keyof typeof ActionEventTypes];
+
+/**
+ * Semantic type of the prompt action a button raises, serialized as
+ * `prompts[].action.type` and forwarded by the prompt node to the next
+ * executor as edge metadata. Distinct from {@link ActionEventTypes}, which
+ * describes how the button behaves in the rendered form, and from
+ * `action.type` on the element, which carries canvas navigation semantics.
+ */
+export const PromptActionTypes = {
+  SignOutConfirm: 'SIGN_OUT_CONFIRM',
+} as const;
+
+export type PromptActionTypes = (typeof PromptActionTypes)[keyof typeof PromptActionTypes];

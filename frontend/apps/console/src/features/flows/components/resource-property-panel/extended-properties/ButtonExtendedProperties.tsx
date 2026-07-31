@@ -21,7 +21,23 @@ import {useState, type ReactNode, type ChangeEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/CommonResourceProperties';
 import type {Element} from '@/features/flows/models/elements';
-import {ActionEventTypes} from '@/features/flows/models/elements';
+import {ActionEventTypes, PromptActionTypes} from '@/features/flows/models/elements';
+
+/**
+ * The options offered by the Action selector. `Submit` and `Trigger` are the
+ * button's `eventType`; `SignOut` is a submit button that additionally raises
+ * the `SIGN_OUT_CONFIRM` prompt action, so one selection maps onto two fields.
+ *
+ * The remaining `ActionEventTypes` (navigate, cancel, reset, back) are handled
+ * by the SDK renderers but deliberately not offered here.
+ */
+const ACTION_OPTIONS = {
+  Submit: 'SUBMIT',
+  Trigger: 'TRIGGER',
+  SignOut: 'SIGN_OUT',
+} as const;
+
+type ActionOption = (typeof ACTION_OPTIONS)[keyof typeof ACTION_OPTIONS];
 
 /**
  * Props interface of {@link ButtonExtendedProperties}
@@ -38,7 +54,32 @@ export type ButtonExtendedPropertiesPropsInterface = CommonResourcePropertiesPro
 function ButtonExtendedProperties({resource, onChange}: ButtonExtendedPropertiesPropsInterface): ReactNode {
   const {t} = useTranslation();
 
-  const eventTypeValue = (resource as Element & {eventType?: string})?.eventType ?? ActionEventTypes.Trigger;
+  const element = resource as Element & {eventType?: string};
+  const eventTypeValue = element?.eventType ?? ActionEventTypes.Trigger;
+
+  // Sign out is a submit button carrying an extra prompt action type, so it
+  // takes precedence over the plain event type when deriving the selection.
+  const actionValue: ActionOption =
+    element?.actionType === PromptActionTypes.SignOutConfirm
+      ? ACTION_OPTIONS.SignOut
+      : eventTypeValue === ActionEventTypes.Submit
+        ? ACTION_OPTIONS.Submit
+        : ACTION_OPTIONS.Trigger;
+
+  const handleActionChange = (nextAction: ActionOption): void => {
+    if (nextAction === ACTION_OPTIONS.SignOut) {
+      onChange('eventType', ActionEventTypes.Submit, resource);
+      onChange('actionType', PromptActionTypes.SignOutConfirm, resource);
+      return;
+    }
+
+    onChange('eventType', nextAction, resource);
+    // Clearing keeps the button from silently staying a sign-out confirmation
+    // after the author picks a plain action.
+    if (element?.actionType) {
+      onChange('actionType', '', resource);
+    }
+  };
 
   // Use local state for text inputs — provides immediate keystroke feedback while onChange is debounced
   const [startIconValue, setStartIconValue] = useState(() => {
@@ -77,17 +118,29 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
       <Divider sx={{marginY: 2}} />
 
       <div>
-        <FormLabel htmlFor="event-type-select">{t('flows:core.buttonExtendedProperties.type.label')}</FormLabel>
+        <FormLabel htmlFor="event-type-select">
+          {t('flows:core.buttonExtendedProperties.action.label', 'Action')}
+        </FormLabel>
         <Select
           id="event-type-select"
-          value={eventTypeValue}
-          onChange={(e) => onChange('eventType', e.target.value, resource)}
+          value={actionValue}
+          onChange={(e) => handleActionChange(e.target.value as ActionOption)}
           fullWidth
           size="small"
         >
-          <MenuItem value={ActionEventTypes.Submit}>{t('flows:core.buttonExtendedProperties.type.submit')}</MenuItem>
-          <MenuItem value={ActionEventTypes.Trigger}>{t('flows:core.buttonExtendedProperties.type.trigger')}</MenuItem>
+          <MenuItem value={ACTION_OPTIONS.Submit}>
+            {t('flows:core.buttonExtendedProperties.action.submit', 'Submit Form')}
+          </MenuItem>
+          <MenuItem value={ACTION_OPTIONS.Trigger}>
+            {t('flows:core.buttonExtendedProperties.action.trigger', 'Trigger Action')}
+          </MenuItem>
+          <MenuItem value={ACTION_OPTIONS.SignOut}>
+            {t('flows:core.buttonExtendedProperties.action.signOut', 'Trigger Signout')}
+          </MenuItem>
         </Select>
+        <FormHelperText>
+          {t('flows:core.buttonExtendedProperties.action.hint', 'What happens when the button is activated')}
+        </FormHelperText>
       </div>
 
       <div>

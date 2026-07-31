@@ -17,6 +17,7 @@
  */
 
 import {render, screen, fireEvent} from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import ButtonExtendedProperties from '../ButtonExtendedProperties';
 import type {Resource} from '@/features/flows/models/resources';
@@ -205,13 +206,13 @@ describe('ButtonExtendedProperties', () => {
     });
   });
 
-  describe('Event Type', () => {
-    it('should render the event type label', () => {
+  describe('Action', () => {
+    it('should render the action label', () => {
       const resource = createMockResource();
 
       render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
 
-      expect(screen.getByText('flows:core.buttonExtendedProperties.type.label')).toBeInTheDocument();
+      expect(screen.getByText('flows:core.buttonExtendedProperties.action.label')).toBeInTheDocument();
     });
 
     it('should default to TRIGGER when eventType is not set', () => {
@@ -220,7 +221,7 @@ describe('ButtonExtendedProperties', () => {
       const {container} = render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
 
       const select = container.querySelector('#event-type-select');
-      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.type.trigger');
+      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.action.trigger');
     });
 
     it('should display SUBMIT when eventType is SUBMIT', () => {
@@ -229,7 +230,63 @@ describe('ButtonExtendedProperties', () => {
       const {container} = render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
 
       const select = container.querySelector('#event-type-select');
-      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.type.submit');
+      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.action.submit');
+    });
+
+    it('should display Sign out when the button carries the sign-out confirm action', () => {
+      // A sign-out button is a submit button plus the prompt action type, so
+      // the action type has to win over the plain event type.
+      const resource = createMockResource({
+        actionType: 'SIGN_OUT_CONFIRM',
+        eventType: 'SUBMIT',
+      } as Partial<Resource>);
+
+      const {container} = render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      const select = container.querySelector('#event-type-select');
+      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.action.signOut');
+    });
+
+    it('should write both the event type and the action type when Sign out is picked', async () => {
+      const user = userEvent.setup();
+      const resource = createMockResource({eventType: 'TRIGGER'} as Partial<Resource>);
+
+      render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', {name: 'flows:core.buttonExtendedProperties.action.signOut'}));
+
+      expect(mockOnChange).toHaveBeenCalledWith('eventType', 'SUBMIT', resource);
+      expect(mockOnChange).toHaveBeenCalledWith('actionType', 'SIGN_OUT_CONFIRM', resource);
+    });
+
+    it('should clear the action type when moving from Sign out back to a plain action', async () => {
+      const user = userEvent.setup();
+      const resource = createMockResource({
+        actionType: 'SIGN_OUT_CONFIRM',
+        eventType: 'SUBMIT',
+      } as Partial<Resource>);
+
+      render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', {name: 'flows:core.buttonExtendedProperties.action.trigger'}));
+
+      expect(mockOnChange).toHaveBeenCalledWith('eventType', 'TRIGGER', resource);
+      expect(mockOnChange).toHaveBeenCalledWith('actionType', '', resource);
+    });
+
+    it('should not clear the action type when it was never set', async () => {
+      const user = userEvent.setup();
+      const resource = createMockResource({eventType: 'TRIGGER'} as Partial<Resource>);
+
+      render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
+
+      await user.click(screen.getByRole('combobox'));
+      await user.click(screen.getByRole('option', {name: 'flows:core.buttonExtendedProperties.action.submit'}));
+
+      expect(mockOnChange).toHaveBeenCalledWith('eventType', 'SUBMIT', resource);
+      expect(mockOnChange).not.toHaveBeenCalledWith('actionType', '', resource);
     });
   });
 
