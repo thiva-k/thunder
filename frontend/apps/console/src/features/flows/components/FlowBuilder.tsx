@@ -18,7 +18,7 @@
 
 import {useIdentityProviders, useSMSProviders} from '@thunderid/configure-connections';
 import {Alert, Box, Snackbar, Stack} from '@wso2/oxygen-ui';
-import type {Edge, Node} from '@xyflow/react';
+import type {Edge, Node, NodeChange} from '@xyflow/react';
 import {useEdgesState, useNodesState, useUpdateNodeInternals} from '@xyflow/react';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -28,6 +28,7 @@ import '@xyflow/react/dist/style.css';
 import {EXECUTOR_TO_IDP_TYPE_MAP} from '../components/resource-property-panel/extended-properties/execution-properties/constants';
 import SsoDisableConfirmDialog from '../components/SsoDisableConfirmDialog';
 import SsoToggle from '../components/SsoToggle';
+import CompactStacksContext from '../context/CompactStacksContext';
 import useEdgeGeneration from '../hooks/useEdgeGeneration';
 import useElementAddition from '../hooks/useElementAddition';
 import useFlowHistory, {computeGraphSignature} from '../hooks/useFlowHistory';
@@ -38,6 +39,8 @@ import useNodeTypes from '../hooks/useNodeTypes';
 import useSnackbarNotifications from '../hooks/useSnackbarNotifications';
 import useSsoToggle from '../hooks/useSsoToggle';
 import useTemplateAndWidgetLoading from '../hooks/useTemplateAndWidgetLoading';
+import {hasUnpositionedNodes} from '../utils/applyAutoLayout';
+import collapseExecutorChains, {getExecutionStackHeadId} from '../utils/compactGraphTransforms';
 import {mutateComponents} from '../utils/componentMutations';
 import GradientBorderButton from '@/features/applications/components/GradientBorderButton';
 import useGetFlowBuilderResources from '@/features/flows/api/useGetFlowBuilderResources';
@@ -63,6 +66,12 @@ function FlowBuilder() {
   const {triggerAutoLayout, onRestoreFromHistory, onElementAdded} = useFlowEvents();
   const {isValid: isFlowValid, setOpenValidationPanel} = useValidationStatus();
   const updateNodeInternals = useUpdateNodeInternals();
+
+  // View-mode relayouts (the compact toggle and stack expand/collapse) move
+  // nodes without the user editing anything, which would otherwise light up the
+  // Save indicator. When the flow is clean as one starts, this flag rebases the
+  // clean baseline onto whatever the relayout settles into.
+  const [isBaselineRebasePending, setIsBaselineRebasePending] = useState<boolean>(false);
 
   // Fetch the existing flow if flowId is provided (editing an existing flow)
   const {data: existingFlowData, isLoading: isLoadingExistingFlow} = useGetFlowById(flowId);
@@ -115,8 +124,8 @@ function FlowBuilder() {
   });
 
   // Auto-assign connections for executor nodes with placeholder IDP/sender IDs
-  const {data: identityProviders} = useIdentityProviders();
-  const {data: smsProviders} = useSMSProviders();
+  const {data: identityProviders, isPending: isIdentityProvidersPending} = useIdentityProviders();
+  const {data: smsProviders, isPending: isSMSProvidersPending} = useSMSProviders();
   const hasAutoAssignedRef = useRef<boolean>(false);
 
   useEffect(() => {
@@ -243,15 +252,48 @@ function FlowBuilder() {
   const [savedSignature, setSavedSignature] = useState<string | null>(null);
   const isDirty = savedSignature !== null && settledSignature !== null && settledSignature !== savedSignature;
 
+  // Apply a pending rebase once the relayout settles (state adjustment during
+  // render rather than an effect, so no extra render pass).
+  const [settledSignatureAtLastRebaseCheck, setSettledSignatureAtLastRebaseCheck] = useState<string | null>(
+    settledSignature,
+  );
+  if (settledSignature !== settledSignatureAtLastRebaseCheck) {
+    setSettledSignatureAtLastRebaseCheck(settledSignature);
+    if (isBaselineRebasePending && settledSignature !== null) {
+      setIsBaselineRebasePending(false);
+      if (savedSignature !== null) {
+        setSavedSignature(settledSignature);
+      }
+    }
+  }
+
   const resetHistoryRef = useRef(resetHistory);
   useEffect(() => {
     resetHistoryRef.current = resetHistory;
   }, [resetHistory]);
 
+  // The graph keeps mutating on its own until the load has fully settled: the
+  // flow request resolves, the connection lookups that fill in a sole provider
+  // resolve, and the load-time auto-layout positions a flow stored without
+  // layout data. Freezing the clean baseline before all of that lands would
+  // make those app-driven changes look like edits, so the freeze waits.
+  const isLoadSettlingRef = useRef<boolean>(true);
+  useEffect(() => {
+    isLoadSettlingRef.current =
+      isLoadingExistingFlow || isIdentityProvidersPending || isSMSProvidersPending || hasUnpositionedNodes(nodes);
+  }, [isLoadingExistingFlow, isIdentityProvidersPending, isSMSProvidersPending, nodes]);
+
   const hasInteractedRef = useRef<boolean>(false);
   useEffect(() => {
     const freezeBaseline = (): void => {
-      if (hasInteractedRef.current) {
+      // A real interaction cancels any pending view-mode rebase, so an edit
+      // made while a relayout is still settling is never absorbed into the
+      // clean baseline.
+      setIsBaselineRebasePending(false);
+      if (hasInteractedRef.current || isLoadSettlingRef.current) {
+        // While the load is still settling the baseline is left unfrozen (and
+        // the flow stays clean); the next interaction after it settles takes
+        // the baseline instead.
         return;
       }
       hasInteractedRef.current = true;
@@ -301,7 +343,150 @@ function FlowBuilder() {
     showSuccess,
   });
 
-  const onNodesChange = defaultOnNodesChange;
+  // In compact mode, runs of consecutive non-branching executors are collapsed
+  // into synthetic stack nodes for display only; the underlying graph state is
+  // untouched. Measured dimensions of the synthetic nodes are kept in local
+  // state (fed by React Flow's dimension changes below): React Flow only
+  // renders edges once both endpoint nodes are measured, so dropping the
+  // dimension roundtrip would silently hide every edge touching a stack.
+  const [stackDimensions, setStackDimensions] = useState<Map<string, {height: number; width: number}>>(
+    () => new Map<string, {height: number; width: number}>(),
+  );
+
+  // Stacks the user opened into their individual chips. Reset when leaving
+  // compact mode so the next visit starts collapsed again (state adjustment
+  // during render, per the React "adjusting state when props change" pattern).
+  const [expandedStackIds, setExpandedStackIds] = useState<Set<string>>(() => new Set<string>());
+  const [prevVerboseForExpansion, setPrevVerboseForExpansion] = useState<boolean>(isVerboseMode);
+  if (prevVerboseForExpansion !== isVerboseMode) {
+    setPrevVerboseForExpansion(isVerboseMode);
+    if (isVerboseMode && expandedStackIds.size > 0) {
+      setExpandedStackIds(new Set<string>());
+    }
+    // Switching view mode relayouts the canvas; that is not a user edit.
+    if (!isDirty) {
+      setIsBaselineRebasePending(true);
+    }
+  }
+
+  const handleExpandStack = useCallback(
+    (stackId: string, memberIds: string[]) => {
+      setExpandedStackIds((current) => new Set(current).add(stackId));
+      // Fan the members out from the head position so the freshly split chips
+      // do not sit on top of each other while the auto-layout below settles.
+      setNodes((currentNodes) => {
+        const headNode = currentNodes.find((node) => node.id === memberIds[0]);
+        if (!headNode) {
+          return currentNodes;
+        }
+        const spacing = 64;
+        const positionById = new Map(
+          memberIds.map((memberId, index) => [
+            memberId,
+            {x: headNode.position.x + index * spacing, y: headNode.position.y},
+          ]),
+        );
+        return currentNodes.map((node) => {
+          const position = positionById.get(node.id);
+          return position ? {...node, position} : node;
+        });
+      });
+      // Re-run the compact auto-layout once the split chips are committed so
+      // the canvas makes room for them. Expanding is a view operation, so the
+      // relayout it causes must not mark the flow dirty.
+      if (!isDirty) {
+        setIsBaselineRebasePending(true);
+      }
+      requestAnimationFrame(() => triggerAutoLayout());
+    },
+    [setNodes, triggerAutoLayout, isDirty],
+  );
+
+  const handleCollapseStack = useCallback(
+    (stackId: string) => {
+      setExpandedStackIds((current) => {
+        const next = new Set(current);
+        next.delete(stackId);
+        return next;
+      });
+      if (!isDirty) {
+        setIsBaselineRebasePending(true);
+      }
+      requestAnimationFrame(() => triggerAutoLayout());
+    },
+    [triggerAutoLayout, isDirty],
+  );
+
+  const compactStacksContextValue = useMemo(
+    () => ({
+      collapseStack: handleCollapseStack,
+      expandStack: handleExpandStack,
+      expandedHeadIdToStackId: new Map(
+        [...expandedStackIds].map((stackId) => [getExecutionStackHeadId(stackId), stackId]),
+      ),
+    }),
+    [handleCollapseStack, handleExpandStack, expandedStackIds],
+  );
+
+  const compactGraph = useMemo(
+    () => (isVerboseMode ? null : collapseExecutorChains(nodes, edges, expandedStackIds)),
+    [nodes, edges, isVerboseMode, expandedStackIds],
+  );
+  const displayNodes = useMemo(() => {
+    if (!compactGraph) {
+      return nodes;
+    }
+    return compactGraph.nodes.map((node) => {
+      const dimensions = stackDimensions.get(node.id);
+      return dimensions ? {...node, measured: dimensions} : node;
+    });
+  }, [compactGraph, nodes, stackDimensions]);
+  const baseDisplayEdges = compactGraph?.edges ?? edges;
+
+  const stackMembersRef = useRef<Map<string, string[]>>(new Map<string, string[]>());
+  useEffect(() => {
+    stackMembersRef.current = compactGraph?.stackMembersById ?? new Map<string, string[]>();
+  }, [compactGraph]);
+
+  // Canvas changes that address a synthetic stack node are translated onto its
+  // member nodes so drags and deletions land on the real graph state.
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const stackMembers = stackMembersRef.current;
+      if (stackMembers.size === 0) {
+        defaultOnNodesChange(changes);
+        return;
+      }
+      const expandedChanges = changes.flatMap((change): NodeChange[] => {
+        const changeId = 'id' in change ? change.id : undefined;
+        const memberIds = changeId ? stackMembers.get(changeId) : undefined;
+        if (!memberIds) {
+          return [change];
+        }
+        if (change.type === 'position' || change.type === 'select' || change.type === 'remove') {
+          return memberIds.map((memberId) => ({...change, id: memberId}));
+        }
+        if (change.type === 'dimensions' && change.dimensions && changeId) {
+          // Synthetic nodes have no state counterpart; record their measured
+          // size locally so React Flow sees them as initialized and keeps
+          // rendering their edges.
+          const {dimensions} = change;
+          setStackDimensions((current) => {
+            const known = current.get(changeId);
+            if (known?.width === dimensions.width && known?.height === dimensions.height) {
+              return current;
+            }
+            const next = new Map(current);
+            next.set(changeId, {height: dimensions.height, width: dimensions.width});
+            return next;
+          });
+        }
+        return [];
+      });
+      defaultOnNodesChange(expandedChanges);
+    },
+    [defaultOnNodesChange],
+  );
 
   // Undo/redo keyboard shortcuts. Ignore edits inside text fields / rich text so
   // native text undo keeps working there.
@@ -393,36 +578,20 @@ function FlowBuilder() {
     );
   }, [edgeStyle, setEdges]);
 
-  // Filter nodes and edges based on verbose mode
-  const filteredNodes = useMemo(() => {
-    if (isVerboseMode) {
-      return nodes;
-    }
-    // Hide execution nodes in non-verbose mode
-    return nodes.filter((node) => node.type !== StepTypes.Execution);
-  }, [nodes, isVerboseMode]);
-
-  const filteredEdges = useMemo(() => {
-    if (isVerboseMode) {
-      return edges;
-    }
-    // Hide edges connected to execution nodes in non-verbose mode
-    const executionNodeIds = new Set(nodes.filter((node) => node.type === StepTypes.Execution).map((node) => node.id));
-    return edges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
-  }, [edges, nodes, isVerboseMode]);
-
   // While the SSO placement mode is active, spotlight the candidate join edges
   // and dim the rest (same visual language as the simulation path decoration).
+  // Edge ids survive the compact-mode rewiring, so the candidate lookup works
+  // on the display edges in both modes.
   const displayEdges = useMemo(() => {
     if (!sso.placement.active) {
-      return filteredEdges;
+      return baseDisplayEdges;
     }
     const candidateEdgeIds = new Set(sso.placement.candidateEdgeIds);
-    return filteredEdges.map((edge) => ({
+    return baseDisplayEdges.map((edge) => ({
       ...edge,
       className: candidateEdgeIds.has(edge.id) ? 'sso-placement-candidate' : 'sso-placement-dimmed',
     }));
-  }, [filteredEdges, sso.placement]);
+  }, [baseDisplayEdges, sso.placement]);
 
   const isReadOnlyFlow = Boolean(existingFlowData?.isReadOnly);
 
@@ -477,34 +646,38 @@ function FlowBuilder() {
           {t('common:messages.readOnlyResource', 'This resource is read-only and cannot be modified.')}
         </Alert>
       )}
-      <FlowCanvas
-        resources={resources}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        mutateComponents={mutateComponents}
-        onTemplateLoad={handleTemplateLoad}
-        onWidgetLoad={handleWidgetLoad}
-        onStepLoad={handleStepLoad}
-        onResourceAdd={handleResourceAdd}
-        onSave={existingFlowData?.isReadOnly ? undefined : handleSave}
-        nodes={filteredNodes}
-        edges={displayEdges}
-        setNodes={setNodes}
-        setEdges={setEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onEdgeClick={sso.handleEdgeClick}
-        flowTitle={flowName}
-        flowHandle={flowHandle}
-        onFlowTitleChange={handleFlowNameChange}
-        triggerAutoLayoutOnLoad={needsAutoLayout}
-        resourcePanelFooter={ssoToggleFooter}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
-        isDirty={isDirty}
-      />
+      <CompactStacksContext.Provider value={compactStacksContextValue}>
+        <FlowCanvas
+          resources={resources}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          mutateComponents={mutateComponents}
+          onTemplateLoad={handleTemplateLoad}
+          onWidgetLoad={handleWidgetLoad}
+          onStepLoad={handleStepLoad}
+          onResourceAdd={handleResourceAdd}
+          onSave={existingFlowData?.isReadOnly ? undefined : handleSave}
+          nodes={displayNodes}
+          sourceNodes={nodes}
+          sourceEdges={edges}
+          edges={displayEdges}
+          setNodes={setNodes}
+          setEdges={setEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onEdgeClick={sso.handleEdgeClick}
+          flowTitle={flowName}
+          flowHandle={flowHandle}
+          onFlowTitleChange={handleFlowNameChange}
+          triggerAutoLayoutOnLoad={needsAutoLayout}
+          resourcePanelFooter={ssoToggleFooter}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          isDirty={isDirty}
+        />
+      </CompactStacksContext.Provider>
       <SsoDisableConfirmDialog
         open={sso.isConfirmDialogOpen}
         checkpointCount={sso.ssoState.ssoCheckIds.length}

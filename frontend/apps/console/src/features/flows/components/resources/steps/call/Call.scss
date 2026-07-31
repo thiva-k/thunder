@@ -1,0 +1,66 @@
+/**
+ * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
+ *
+ * WSO2 LLC. licenses this file to you under the Apache License,
+ * Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+// Call steps reference another flow rather than executing logic here. They
+// share the executor header, and carry the distinguishing "reference"
+// treatment: a dashed primary-tinted outline around the node, plus a primary
+// wash and a workflow glyph in the body beside the referenced flow name.
+// Note: only the `--oxygen-palette-*` custom properties exist in this app;
+// `--mui-palette-*` is undefined and would invalidate these declarations.
+.execution-minimal-step.call-step {
+  // The dashed outline wraps the whole node (header included). It cannot be
+  // paired with `overflow: hidden` to clip the children to it, because the
+  // outcome handles are positioned outside the card.
+  border: 1.5px dashed color-mix(in srgb, var(--oxygen-palette-primary-main) 45%, transparent);
+  border-radius: 8px;
+
+  .execution-minimal-step-content {
+    background-color: color-mix(
+      in srgb,
+      var(--flow-builder-execution-step-background-color) 92%,
+      var(--oxygen-palette-primary-main)
+    );
+
+    &:hover {
+      background-color: color-mix(
+        in srgb,
+        var(--flow-builder-execution-step-background-color) 86%,
+        var(--oxygen-palette-primary-main)
+      );
+    }
+  }
+
+  .call-step-reference-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: var(--oxygen-palette-primary-main);
+    background-color: color-mix(in srgb, var(--oxygen-palette-primary-main) 12%, transparent);
+  }
+
+  .call-step-reference-label {
+    color: var(--oxygen-palette-primary-main);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}

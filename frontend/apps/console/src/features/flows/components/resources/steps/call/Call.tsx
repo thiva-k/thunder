@@ -29,7 +29,12 @@ import {
   Tooltip,
   Typography,
 } from '@wso2/oxygen-ui';
-import {CogIcon, ExternalLink as ExternalLinkIcon, TrashIcon} from '@wso2/oxygen-ui-icons-react';
+import {
+  CogIcon,
+  ExternalLink as ExternalLinkIcon,
+  TrashIcon,
+  Workflow as WorkflowIcon,
+} from '@wso2/oxygen-ui-icons-react';
 import {Handle, Position, useNodeId, useReactFlow} from '@xyflow/react';
 import {memo, useMemo, useState, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -46,6 +51,7 @@ import {ResourceTypes} from '@/features/flows/models/resources';
 import type {BasicFlowDefinition} from '@/features/flows/models/responses';
 import {StepCategories, StepTypes, type Step, type StepData} from '@/features/flows/models/steps';
 import '../execution/ExecutionMinimal.scss';
+import './Call.scss';
 
 export type CallPropsInterface = CommonStepFactoryPropsInterface;
 
@@ -54,10 +60,12 @@ type CallStepData = StepData & {flow?: {ref?: string}};
 const CALL_NODE_WIDTH = 260;
 
 /**
- * Call Node component for cross-flow invocation. Visually mirrors ExecutionMinimal but
- * exposes a flow reference instead of an executor and exposes both `onSuccess` (right) and
- * `onFailure` (bottom) handles. The node card also carries an "open referenced flow"
- * shortcut that jumps the builder to the callee flow (with an unsaved-changes confirm).
+ * Call Node component for cross-flow invocation. It shares the executor card's header but
+ * its body carries a distinct "reference" treatment (dashed primary-tinted outline, primary
+ * wash, and a workflow glyph) so it does not read as an executor, and it exposes a flow
+ * reference instead of an executor along with both `onSuccess` (right) and `onFailure`
+ * (bottom) handles. The node card also carries an "open referenced flow" shortcut that jumps
+ * the builder to the callee flow (with an unsaved-changes confirm).
  */
 function Call({resources, data}: CallPropsInterface): ReactElement {
   const stepId: string | null = useNodeId();
@@ -175,8 +183,11 @@ function Call({resources, data}: CallPropsInterface): ReactElement {
           data-testid="call-node-content"
         >
           <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
+            <Box className="call-step-reference-icon">
+              <WorkflowIcon size={18} />
+            </Box>
             <Box sx={{minWidth: 0, flex: 1}}>
-              <Typography variant="caption" sx={{display: 'block', opacity: 0.7}}>
+              <Typography variant="caption" className="call-step-reference-label" sx={{display: 'block'}}>
                 {t('flows:core.call.referencedFlow', 'Referenced flow')}
               </Typography>
               <Typography

@@ -41,10 +41,11 @@ html[data-color-scheme='dark'] {
   --flow-builder-execution-disallowed-droppable-area-highlight: #442222;
 }
 
-.execution-minimal-step {
-  border-radius: 8px;
-  position: relative;
-
+// Handle wrapper positioning and outcome-handle colors are shared between the
+// full (minimal) executor card and the compact chip so edges anchor identically
+// in both modes.
+.execution-minimal-step,
+.execution-compact-step {
   // Handle wrapper for tooltip functionality
   .handle-wrapper {
     position: absolute;
@@ -106,6 +107,11 @@ html[data-color-scheme='dark'] {
     left: auto !important;
     transform: none !important;
   }
+}
+
+.execution-minimal-step {
+  border-radius: 8px;
+  position: relative;
 
   // When branching is active, ensure proper spacing
   &.has-branching {

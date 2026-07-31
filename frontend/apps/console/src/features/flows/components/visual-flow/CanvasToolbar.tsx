@@ -17,7 +17,7 @@
  */
 
 import {Box, IconButton, Tooltip} from '@wso2/oxygen-ui';
-import {LayoutGrid, Maximize, Minus, Plus, Redo2, Undo2} from '@wso2/oxygen-ui-icons-react';
+import {Expand, LayoutGrid, Maximize, Minus, Plus, Redo2, Shrink, Undo2} from '@wso2/oxygen-ui-icons-react';
 import {useReactFlow} from '@xyflow/react';
 import {type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -51,7 +51,7 @@ export default function CanvasToolbar({
 }: CanvasToolbarProps): ReactElement {
   const {t} = useTranslation();
   const {fitView, zoomIn, zoomOut} = useReactFlow();
-  const {edgeStyle} = useFlowConfig();
+  const {edgeStyle, isVerboseMode, setIsVerboseMode} = useFlowConfig();
   const {anchorEl, handleClick: handleEdgeStyleClick, handleClose: handleEdgeStyleClose} = useEdgeStyleSelector();
 
   const showHistoryControls = Boolean(onUndo ?? onRedo);
@@ -131,6 +131,29 @@ export default function CanvasToolbar({
             aria-expanded={Boolean(anchorEl)}
           >
             {getEdgeStyleIcon(edgeStyle)}
+          </IconButton>
+        </Tooltip>
+
+        <ToolbarDivider />
+
+        <Tooltip
+          title={
+            isVerboseMode
+              ? t('flows:core.headerPanel.compactViewTooltip', 'Switch to compact view')
+              : t('flows:core.headerPanel.detailedViewTooltip', 'Switch to detailed view')
+          }
+        >
+          <IconButton
+            size="small"
+            onClick={() => setIsVerboseMode((prev) => !prev)}
+            sx={{borderRadius: 1, color: 'text.secondary'}}
+            // The name stays fixed because `aria-pressed` already carries the
+            // state; an action name that flips with it would announce
+            // "switch to detailed view, pressed" while compact view is on.
+            aria-label={t('flows:core.headerPanel.compactView', 'Compact view')}
+            aria-pressed={!isVerboseMode}
+          >
+            {isVerboseMode ? <Shrink size={16} /> : <Expand size={16} />}
           </IconButton>
         </Tooltip>
 

@@ -74,10 +74,11 @@ import {BlockTypes, type Element} from '../../models/elements';
 import type {MetadataInterface} from '../../models/metadata';
 import Notification, {NotificationType} from '../../models/notification';
 import {ResourceTypes, type Resource, type Resources} from '../../models/resources';
-import {type Step, type StepData} from '../../models/steps';
+import {StepTypes, type Step, type StepData} from '../../models/steps';
 import {type Template} from '../../models/templates';
 import type {Widget} from '../../models/widget';
-import applyAutoLayout from '../../utils/applyAutoLayout';
+import applyAutoLayout, {hasUnpositionedNodes} from '../../utils/applyAutoLayout';
+import {EXECUTION_STACK_NODE_TYPE, getExecutionStackWidth} from '../../utils/compactGraphTransforms';
 import computeExecutorConnections from '../../utils/computeExecutorConnections';
 import generateResourceId from '../../utils/generateResourceId';
 import {resolveCollisions} from '../../utils/resolveCollisions';
@@ -105,6 +106,17 @@ export interface DecoratedVisualFlowPropsInterface extends Omit<VisualFlowPropsI
   initialEdges?: Edge[];
   nodes: Node[];
   edges: Edge[];
+  /**
+   * The untransformed graph nodes when `nodes` carries a display-only
+   * transform (compact-mode executor stacks). Used for validation syncing and
+   * persistence so hidden stack members are never lost. Defaults to `nodes`.
+   */
+  sourceNodes?: Node[];
+  /**
+   * The untransformed graph edges accompanying `sourceNodes`. Defaults to
+   * `edges`.
+   */
+  sourceEdges?: Edge[];
   mutateComponents: (components: Element[]) => Element[];
   onTemplateLoad: (template: Template) => [Node[], Edge[], Resource?, string?];
   onWidgetLoad: (
@@ -164,6 +176,8 @@ function DecoratedVisualFlow({
   resources,
   nodes,
   edges,
+  sourceNodes = undefined,
+  sourceEdges = undefined,
   setNodes,
   setEdges,
   onNodesChange,
@@ -197,7 +211,7 @@ function DecoratedVisualFlow({
   const {isResourcePanelOpen, isResourcePropertiesPanelOpen, setIsResourcePanelOpen, setIsOpenResourcePropertiesPanel} =
     useUIPanelState();
   const {notifyElementAdded, onAutoLayout} = useFlowEvents();
-  const {isFlowMetadataLoading, metadata, setFlowNodes} = useFlowConfig();
+  const {isFlowMetadataLoading, isVerboseMode, metadata, setFlowNodes} = useFlowConfig();
   const {onResourceDropOnCanvas} = useInteractionState();
 
   // Sync controlled nodes to the shared FlowConfig context so that
@@ -209,10 +223,13 @@ function DecoratedVisualFlow({
   const prevNodeDataRefsRef = useRef<Map<string, unknown>>(new Map());
 
   useEffect(() => {
-    let dataChanged = nodes.length !== prevNodeDataRefsRef.current.size;
+    // Validation must see the real graph, not the compact display transform
+    // (which hides stacked executor members).
+    const validationNodes = sourceNodes ?? nodes;
+    let dataChanged = validationNodes.length !== prevNodeDataRefsRef.current.size;
 
     if (!dataChanged) {
-      for (const node of nodes) {
+      for (const node of validationNodes) {
         if (prevNodeDataRefsRef.current.get(node.id) !== node.data) {
           dataChanged = true;
           break;
@@ -222,13 +239,13 @@ function DecoratedVisualFlow({
 
     if (dataChanged) {
       const newRefs = new Map<string, unknown>();
-      for (const node of nodes) {
+      for (const node of validationNodes) {
         newRefs.set(node.id, node.data);
       }
       prevNodeDataRefsRef.current = newRefs;
-      setFlowNodes(nodes);
+      setFlowNodes(validationNodes);
     }
-  }, [nodes, setFlowNodes]);
+  }, [nodes, sourceNodes, setFlowNodes]);
   const {generateStepElement} = useGenerateStepElement();
   const {t} = useTranslation();
   const navigate = useNavigate();
@@ -327,25 +344,58 @@ function DecoratedVisualFlow({
   // styling so it is never persisted into the flow's layout data.
   const persistCanvas = useCallback((): void => {
     const {viewport} = toObject();
+    // Persist the real graph: in compact mode the canvas holds a display-only
+    // transform (executor stacks) that must never reach the flow definition.
     const canvasData = {
-      nodes: stripSimulationNodeClasses(getNodes()),
-      edges: stripSimulationEdgeClasses(getEdges()),
+      nodes: sourceNodes ?? stripSimulationNodeClasses(getNodes()),
+      edges: sourceEdges ?? stripSimulationEdgeClasses(getEdges()),
       viewport,
     };
     onSave?.(canvasData);
-  }, [toObject, getNodes, getEdges, onSave]);
+  }, [toObject, getNodes, getEdges, onSave, sourceNodes, sourceEdges]);
 
+  // The one auto-layout path for both the toolbar button and the compact
+  // toggle. It is mode-aware: compact mode uses tighter spacing and feeds the
+  // layout engine the known chip/stack sizes (which may not be measured yet
+  // right after a toggle), so re-running it in compact mode reproduces the
+  // same tight layout instead of rearranging with detailed-mode metrics.
   const handleAutoLayout = useCallback((): void => {
     const currentNodes = stripSimulationNodeClasses(getNodes());
     const currentEdges = getEdges();
-    applyAutoLayout(currentNodes, currentEdges, {
-      nodeSpacing: 100,
-      rankSpacing: 160,
-      offsetX: 50,
-      offsetY: 50,
-    })
+
+    const chipSize = VisualFlowConstants.FLOW_BUILDER_COMPACT_EXECUTION_NODE_SIZE;
+    const layoutNodes = isVerboseMode
+      ? currentNodes
+      : currentNodes.map((node) => {
+          if (node.type === StepTypes.Execution) {
+            return {...node, measured: {height: chipSize, width: chipSize}};
+          }
+          if (node.type === EXECUTION_STACK_NODE_TYPE) {
+            const memberCount = (node.data as {memberIds?: string[]} | undefined)?.memberIds?.length ?? 1;
+            return {...node, measured: {height: chipSize, width: getExecutionStackWidth(memberCount)}};
+          }
+          return node;
+        });
+
+    const spacing = isVerboseMode ? {nodeSpacing: 100, rankSpacing: 160} : {nodeSpacing: 60, rankSpacing: 80};
+
+    applyAutoLayout(layoutNodes, currentEdges, {...spacing, offsetX: 50, offsetY: 50})
       .then((layoutedNodes) => {
-        setNodes(layoutedNodes);
+        // Map positions back onto the graph state by id. Synthetic stack
+        // nodes expand onto their members so the state graph follows the
+        // display layout without ever absorbing display-only nodes.
+        const positionById = new Map<string, {x: number; y: number}>();
+        layoutedNodes.forEach((node) => {
+          positionById.set(node.id, node.position);
+          const memberIds = (node.data as {memberIds?: string[]} | undefined)?.memberIds;
+          memberIds?.forEach((memberId) => positionById.set(memberId, node.position));
+        });
+        setNodes((nodesNow) =>
+          nodesNow.map((node) => {
+            const position = positionById.get(node.id);
+            return position ? {...node, position} : node;
+          }),
+        );
         requestAnimationFrame(() => {
           fitView({padding: 0.2, duration: 300}).catch(() => {
             // Ignore fitView errors - layout is still applied
@@ -355,7 +405,27 @@ function DecoratedVisualFlow({
       .catch(() => {
         // Layout failed, keep original positions
       });
-  }, [getNodes, getEdges, setNodes, fitView]);
+  }, [getNodes, getEdges, setNodes, fitView, isVerboseMode]);
+
+  // Every compact/detailed toggle re-runs the shared auto-layout path above
+  // so the canvas always fits the size the nodes render at in the new mode.
+  // Two frames are awaited so the swapped node components are committed and
+  // re-measured before the layout reads their sizes (compact feeds explicit
+  // chip sizes; detailed relies on the fresh measurements).
+  const prevVerboseModeRef = useRef<boolean>(isVerboseMode);
+
+  useEffect(() => {
+    if (prevVerboseModeRef.current === isVerboseMode) {
+      return;
+    }
+    prevVerboseModeRef.current = isVerboseMode;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        handleAutoLayout();
+      });
+    });
+  }, [isVerboseMode, handleAutoLayout]);
 
   // Track whether auto-layout has been triggered to prevent multiple triggers
   const autoLayoutTriggeredRef = useRef<boolean>(false);
@@ -376,14 +446,10 @@ function DecoratedVisualFlow({
       return;
     }
 
-    // Check if nodes need auto-layout by detecting if multiple nodes are at the same position
-    // (which happens when layout data is missing and all default to {x: 0, y: 0})
-    const nodesAtOrigin = currentNodes.filter((node) => node.position.x === 0 && node.position.y === 0);
-
-    // If more than one node is at the origin, we need auto-layout
-    const needsAutoLayout = nodesAtOrigin.length > 1;
-
-    if (needsAutoLayout) {
+    // Nodes need a layout when several sit at the origin, i.e. the flow was
+    // stored without layout data. FlowBuilder uses the same check to know the
+    // load-time layout is still pending, so it must stay shared.
+    if (hasUnpositionedNodes(currentNodes)) {
       autoLayoutTriggeredRef.current = true;
       // Delay slightly to ensure nodes are fully rendered with their measured dimensions
       requestAnimationFrame(() => {
@@ -483,6 +549,11 @@ function DecoratedVisualFlow({
       // especially in large flows viewed zoomed-out. Honors the simulation's
       // static-view toggle — no camera jumps when the user opted out.
       if (simulation.isSimulating && !simulation.followCamera) {
+        return;
+      }
+      // Clicking a stack expands it: the node disappears mid-animation, so
+      // focusing it would strand the viewport (the expansion re-layouts).
+      if (node.type === EXECUTION_STACK_NODE_TYPE) {
         return;
       }
       fitView({nodes: [{id: node.id}], padding: 0.3, maxZoom: 1.2, duration: 500}).catch(() => {
@@ -938,11 +1009,18 @@ function DecoratedVisualFlow({
                     // the filled Save button so it stays visible.
                     border: `2px solid ${theme.palette.background.default}`,
                     boxShadow: `0 0 0 1px ${theme.palette.primary.main}`,
+                  },
+                  // The pulse animates `transform`, and an animation outranks the
+                  // `scale(0)` MUI hides a badge with — running it unconditionally
+                  // would keep the dot on screen for a clean flow. It is scoped to
+                  // the visible state, and its keyframes carry MUI's own translate
+                  // so the dot stays anchored to the button's corner.
+                  '& .MuiBadge-badge:not(.MuiBadge-invisible)': {
                     animation: 'save-dirty-pulse 1.8s ease-in-out infinite',
                   },
                   '@keyframes save-dirty-pulse': {
-                    '0%, 100%': {transform: 'scale(1)', opacity: 1},
-                    '50%': {transform: 'scale(1.25)', opacity: 0.75},
+                    '0%, 100%': {transform: 'scale(1) translate(50%, -50%)', opacity: 1},
+                    '50%': {transform: 'scale(1.25) translate(50%, -50%)', opacity: 0.75},
                   },
                 })}
               >

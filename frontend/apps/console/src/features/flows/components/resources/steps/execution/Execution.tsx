@@ -18,11 +18,13 @@
 
 import {useNodeId} from '@xyflow/react';
 import {memo, useMemo, type ReactElement} from 'react';
+import ExecutionCompact from './ExecutionCompact';
 import ExecutionMinimal from './ExecutionMinimal';
 import ValidationErrorBoundary from '../../../validation-panel/ValidationErrorBoundary';
 import type {CommonStepFactoryPropsInterface} from '../CommonStepFactory';
 import View from '../view/View';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
+import useFlowConfig from '@/features/flows/hooks/useFlowConfig';
 import useInteractionState from '@/features/flows/hooks/useInteractionState';
 import type {Element} from '@/features/flows/models/elements';
 import {ResourceTypes} from '@/features/flows/models/resources';
@@ -46,6 +48,7 @@ export type ExecutionPropsInterface = CommonStepFactoryPropsInterface;
 function Execution({data, resources}: ExecutionPropsInterface): ReactElement | null {
   const stepId: string | null = useNodeId();
   const {setLastInteractedResource, setLastInteractedStepId} = useInteractionState();
+  const {isVerboseMode} = useFlowConfig();
 
   const executorName = (data?.action as StepAction | undefined)?.executor?.name ?? 'Executor';
   // Get display metadata from data (set by resolveStepMetadata)
@@ -100,7 +103,9 @@ function Execution({data, resources}: ExecutionPropsInterface): ReactElement | n
 
   return (
     <ValidationErrorBoundary resource={resource}>
-      {hasComponents ? (
+      {!isVerboseMode ? (
+        <ExecutionCompact resource={resource} />
+      ) : hasComponents ? (
         <View
           heading={executorName}
           data={data}

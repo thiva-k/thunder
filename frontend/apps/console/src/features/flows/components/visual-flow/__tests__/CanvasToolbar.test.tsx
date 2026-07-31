@@ -205,4 +205,40 @@ describe('CanvasToolbar', () => {
     expect(onUndo).toHaveBeenCalledTimes(1);
     expect(onRedo).toHaveBeenCalledTimes(1);
   });
+
+  describe('Verbose mode toggle', () => {
+    const renderWithConfig = (overrides: Partial<FlowConfigContextProps>) =>
+      render(
+        <FlowConfigContext.Provider value={{...defaultFlowConfigValue, ...overrides}}>
+          <CanvasToolbar onAutoLayout={mockOnAutoLayout} />
+        </FlowConfigContext.Provider>,
+      );
+
+    it('should report the compact view as unpressed while in detailed (verbose) mode', () => {
+      renderWithConfig({isVerboseMode: true});
+
+      const toggle = screen.getByRole('button', {name: 'Compact view'});
+      expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('should report the compact view as pressed while in compact mode', () => {
+      renderWithConfig({isVerboseMode: false});
+
+      // The name stays put so the state is not announced twice, and inverted.
+      const toggle = screen.getByRole('button', {name: 'Compact view'});
+      expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    });
+
+    it('should flip the verbose mode when the toggle is clicked', () => {
+      const setIsVerboseMode = vi.fn();
+      renderWithConfig({isVerboseMode: true, setIsVerboseMode});
+
+      fireEvent.click(screen.getByRole('button', {name: 'Compact view'}));
+
+      expect(setIsVerboseMode).toHaveBeenCalledTimes(1);
+      const updater = setIsVerboseMode.mock.calls[0][0] as (prev: boolean) => boolean;
+      expect(updater(true)).toBe(false);
+      expect(updater(false)).toBe(true);
+    });
+  });
 });
