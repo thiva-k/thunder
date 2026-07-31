@@ -267,7 +267,7 @@
         "id": "call_registration",
         "type": "CALL",
         "flow": {
-            "ref": "01900000-0000-7000-8000-000000000064"
+            "ref": "{{REGISTRATION_FLOW_ID}}"
         },
         "onSuccess": "auth_assert"
     },
