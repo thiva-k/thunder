@@ -39,6 +39,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type MouseEvent as ReactMouseEvent,
   type ReactElement,
   type ReactNode,
   type SetStateAction,
@@ -544,7 +545,7 @@ function DecoratedVisualFlow({
   }, [edges, simulation.isSimulating, simulation.pathEdges, simulation.previewedOption]);
 
   const handleNodeClick = useCallback(
-    (_event: unknown, node: Node): void => {
+    (event: ReactMouseEvent, node: Node): void => {
       // Bring the clicked node into focus so it is comfortable to configure,
       // especially in large flows viewed zoomed-out. Honors the simulation's
       // static-view toggle — no camera jumps when the user opted out.
@@ -556,11 +557,24 @@ function DecoratedVisualFlow({
       if (node.type === EXECUTION_STACK_NODE_TYPE) {
         return;
       }
+      // The node header's actions (configure, delete) are inside the node, so
+      // their clicks arrive here too. Deleting this way used to throw the
+      // canvas to the origin: React Flow queues a fitView and runs it after the
+      // next node update, which is the deletion itself, leaving it with no node
+      // to fit. Re-centring on a button press is unwanted regardless, so the
+      // header actions never move the camera.
+      if (event.target instanceof Element && event.target.closest('button')) {
+        return;
+      }
+      // Also skip a node that has already left the canvas, for the same reason.
+      if (!getNodes().some((candidate) => candidate.id === node.id)) {
+        return;
+      }
       fitView({nodes: [{id: node.id}], padding: 0.3, maxZoom: 1.2, duration: 500}).catch(() => {
         // Ignore fitView errors - focusing is best-effort
       });
     },
-    [fitView, simulation.isSimulating, simulation.followCamera],
+    [fitView, getNodes, simulation.isSimulating, simulation.followCamera],
   );
 
   const handleEdgeMouseEnter = useCallback(
