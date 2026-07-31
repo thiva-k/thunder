@@ -65,6 +65,7 @@ vi.mock('@thunderid/react', () => ({
     signInOptions,
     preferences,
     sendCookiesInRequests,
+    sendIdTokenInLogoutRequest,
     discovery,
     /* eslint-enable react/require-default-props */
   }: {
@@ -77,6 +78,7 @@ vi.mock('@thunderid/react', () => ({
     signInOptions?: Record<string, string>;
     preferences?: Record<string, unknown>;
     sendCookiesInRequests?: boolean;
+    sendIdTokenInLogoutRequest?: boolean;
     discovery?: Record<string, unknown>;
   }) => {
     capturedProviderProps = {
@@ -88,6 +90,7 @@ vi.mock('@thunderid/react', () => ({
       signInOptions,
       preferences,
       sendCookiesInRequests,
+      sendIdTokenInLogoutRequest,
       discovery,
     };
     return (
@@ -366,6 +369,17 @@ describe('withConfig (console)', () => {
 
       render(<WithConfigComponent />);
       expect(capturedProviderProps.sendCookiesInRequests).toBe(false);
+    });
+  });
+
+  // --- RP-initiated logout ---
+
+  describe('rp-initiated logout', () => {
+    it('sets sendIdTokenInLogoutRequest=false so the ID token stays out of the sign-out URL', () => {
+      mockGetClientUrl.mockReturnValue('https://client.example.com');
+
+      render(<WithConfigComponent />);
+      expect(capturedProviderProps.sendIdTokenInLogoutRequest).toBe(false);
     });
   });
 

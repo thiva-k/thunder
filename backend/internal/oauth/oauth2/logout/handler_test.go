@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -32,6 +33,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/flow/flowexec"
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
@@ -166,19 +168,33 @@ func (suite *LogoutHandlerTestSuite) TestHandleLogout_FlowInitiationError_MapsSt
 	}
 }
 
-// A POST to the end_session_endpoint initiates the flow and redirects to the gate, exactly like GET.
-func (suite *LogoutHandlerTestSuite) TestHandleLogout_POSTInitiatesAndRedirects() {
+// A POST to the end_session_endpoint carries its parameters in the form body rather than the query
+// string. The handler must read them from there and forward them to the sign-out flow, so that a POST
+// behaves exactly like a GET.
+func (suite *LogoutHandlerTestSuite) TestHandleLogout_POSTReadsFormBodyAndRedirects() {
 	actor := actorprovidermock.NewActorProviderMock(suite.T())
-	actor.EXPECT().GetOAuthClientByClientID(mock.Anything, "client-x").Return(clientWithPostLogout(), nil)
+	actor.EXPECT().GetOAuthClientByClientID(mock.Anything, "client-x").
+		Return(clientWithPostLogout("https://rp.example/after"), nil)
 	flowSvc := flowexecmock.NewFlowExecServiceInterfaceMock(suite.T())
-	flowSvc.EXPECT().InitiateFlow(mock.Anything, mock.Anything).Return("exec-2", nil)
+	var capturedParams map[string][]string
+	flowSvc.EXPECT().InitiateFlow(mock.Anything, mock.Anything).RunAndReturn(
+		func(_ context.Context, ic *flowexec.FlowInitContext) (string, *tidcommon.ServiceError) {
+			capturedParams = ic.InitiatorRequest.QueryParams
+			return "exec-2", nil
+		})
 	store := newLogoutRequestStoreInterfaceMock(suite.T())
 	store.EXPECT().AddRequest(mock.Anything, mock.Anything).Return("logout-1", nil)
 	svc := newLogoutService(jwtmock.NewJWTServiceInterfaceMock(suite.T()), actor, flowSvc,
 		store, testIssuer)
 	handler := newLogoutHandler(svc, gateConfig())
 
-	req := httptest.NewRequest(http.MethodPost, "/oauth2/logout?client_id=client-x", nil)
+	body := url.Values{
+		"client_id":                {"client-x"},
+		"post_logout_redirect_uri": {"https://rp.example/after"},
+		"state":                    {"xyz"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/oauth2/logout", strings.NewReader(body.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rec := httptest.NewRecorder()
 
 	handler.HandleLogout(rec, req)
@@ -187,6 +203,8 @@ func (suite *LogoutHandlerTestSuite) TestHandleLogout_POSTInitiatesAndRedirects(
 	location := rec.Header().Get("Location")
 	suite.Contains(location, "https://gate.example:9443/signout")
 	suite.Contains(location, "executionId=exec-2")
+	suite.Equal([]string{"xyz"}, capturedParams[constants.RequestParamState],
+		"body parameters must reach the sign-out flow the same way query parameters do")
 }
 
 // The completion callback consumes the stored logout request and returns the post-logout redirect URI.
