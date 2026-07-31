@@ -28,13 +28,17 @@ import {ActionEventTypes, PromptActionTypes} from '@/features/flows/models/eleme
  * button's `eventType`; `SignOut` is a submit button that additionally raises
  * the `SIGN_OUT_CONFIRM` prompt action, so one selection maps onto two fields.
  *
+ * `SignOut` deliberately carries the same literal that is persisted as
+ * `prompts[].action.type`, so the value selected here and the value in the flow
+ * definition are one vocabulary rather than a UI-only alias.
+ *
  * The remaining `ActionEventTypes` (navigate, cancel, reset, back) are handled
  * by the SDK renderers but deliberately not offered here.
  */
 const ACTION_OPTIONS = {
   Submit: 'SUBMIT',
   Trigger: 'TRIGGER',
-  SignOut: 'SIGN_OUT',
+  SignOut: PromptActionTypes.SignOutConfirm,
 } as const;
 
 type ActionOption = (typeof ACTION_OPTIONS)[keyof typeof ACTION_OPTIONS];
@@ -75,8 +79,10 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
 
     onChange('eventType', nextAction, resource);
     // Clearing keeps the button from silently staying a sign-out confirmation
-    // after the author picks a plain action.
-    if (element?.actionType) {
+    // after the author picks a plain action. Only the type this selector owns is
+    // cleared, so an action type it does not model (e.g. REJECT, authored in the
+    // flow definition directly) is left untouched rather than discarded.
+    if (element?.actionType === PromptActionTypes.SignOutConfirm) {
       onChange('actionType', '', resource);
     }
   };
@@ -135,7 +141,7 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
             {t('flows:core.buttonExtendedProperties.action.trigger', 'Trigger Action')}
           </MenuItem>
           <MenuItem value={ACTION_OPTIONS.SignOut}>
-            {t('flows:core.buttonExtendedProperties.action.signOut', 'Trigger Signout')}
+            {t('flows:core.buttonExtendedProperties.action.signOut', 'Sign Out Action')}
           </MenuItem>
         </Select>
         <FormHelperText>
