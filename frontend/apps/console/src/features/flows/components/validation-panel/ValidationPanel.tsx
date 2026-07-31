@@ -209,7 +209,6 @@ function ValidationPanel({open = false}: ValidationPanelProps): ReactElement {
       {/* Tabs */}
       <Box
         sx={{
-          px: 2,
           borderBottom: '1px solid',
           borderColor: 'divider',
         }}
