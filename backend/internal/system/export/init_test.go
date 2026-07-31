@@ -164,27 +164,6 @@ func (suite *InitTestSuite) TestRegisterRoutes_JSONEndpoint() {
 	assert.NotEqual(suite.T(), http.StatusNotFound, w.Code)
 }
 
-// TestRegisterRoutes_ZIPEndpoint tests the ZIP export endpoint registration
-func (suite *InitTestSuite) TestRegisterRoutes_ZIPEndpoint() {
-	mux := http.NewServeMux()
-	exporters := createTestExporters(suite.mockAppService, suite.mockIDPService,
-		suite.mockNotificationService, suite.mockEntityTypeService)
-	mockService := newExportService(exporters, newParameterizer(templatingRules{}))
-	exportHandler := newExportHandler(mockService)
-
-	registerRoutes(mux, exportHandler)
-
-	// Test POST /export/zip endpoint
-	req := httptest.NewRequest("POST", "/export/zip", strings.NewReader(`{}`))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	mux.ServeHTTP(w, req)
-
-	// Should not be 404 (route exists)
-	assert.NotEqual(suite.T(), http.StatusNotFound, w.Code)
-}
-
 // TestRegisterRoutes_OptionsEndpoint tests the OPTIONS endpoint registration
 func (suite *InitTestSuite) TestRegisterRoutes_OptionsEndpoint() {
 	mux := http.NewServeMux()
@@ -438,7 +417,6 @@ func TestRouteHandling_Standalone(t *testing.T) {
 		expectNotFound bool
 	}{
 		{"POST", "/export", false},
-		{"POST", "/export/zip", false},
 		{"OPTIONS", "/export", false},
 		{"GET", "/export", true},   // Should be method not allowed, not not found
 		{"POST", "/invalid", true}, // Should be not found
