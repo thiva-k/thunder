@@ -75,7 +75,7 @@ describe('AgentCreateProvider', () => {
   it('provides initial state values', () => {
     renderInProvider();
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(AgentCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(AgentCreateFlowStep.ORGANIZATION_UNIT);
     expect(screen.getByTestId('agent-name')).toHaveTextContent('');
     expect(screen.getByTestId('selected-schema')).toHaveTextContent('null');
     expect(screen.getByTestId('selected-ouid')).toHaveTextContent('null');
@@ -156,7 +156,7 @@ describe('AgentCreateProvider', () => {
 
     await user.click(screen.getByText('Reset'));
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(AgentCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(AgentCreateFlowStep.ORGANIZATION_UNIT);
     expect(screen.getByTestId('agent-name')).toHaveTextContent('');
     expect(screen.getByTestId('selected-schema')).toHaveTextContent('null');
     expect(screen.getByTestId('selected-owner')).toHaveTextContent('null');

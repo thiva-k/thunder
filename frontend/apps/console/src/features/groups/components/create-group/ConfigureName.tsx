@@ -16,11 +16,11 @@
  * under the License.
  */
 
-import {generateRandomHumanReadableIdentifiers} from '@thunderid/utils';
-import {Box, Typography, Stack, TextField, Chip, FormControl, FormLabel, useTheme} from '@wso2/oxygen-ui';
-import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
+import {NameSuggestion, OrganizationUnitSummaryChip} from '@thunderid/components';
+import {OrganizationUnitTreeConstants} from '@thunderid/configure-organization-units';
+import {Typography, Stack, TextField, FormControl, FormLabel} from '@wso2/oxygen-ui';
 import type {ChangeEvent, JSX} from 'react';
-import {useMemo, useEffect} from 'react';
+import {useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 
 /**
@@ -32,6 +32,32 @@ export interface ConfigureNameProps {
   name: string;
   onNameChange: (name: string) => void;
   onReadyChange?: (isReady: boolean) => void;
+
+  /**
+   * Whether the wizard's organization unit was picked on a dedicated earlier step (only then is
+   * the summary chip shown).
+   */
+  hasMultipleOUs?: boolean;
+
+  /**
+   * The resolved organization unit's display name, shown in the summary chip.
+   */
+  organizationUnitName?: string;
+
+  /**
+   * The resolved organization unit's logo, shown in the summary chip.
+   */
+  organizationUnitLogoUrl?: string;
+
+  /**
+   * Whether the organization unit is still being resolved.
+   */
+  isOrganizationUnitLoading?: boolean;
+
+  /**
+   * Invoked when the chip's "Change" link is clicked, returning to the organization unit step.
+   */
+  onChangeOu?: () => void;
 }
 
 /**
@@ -43,11 +69,13 @@ export default function ConfigureName({
   name,
   onNameChange,
   onReadyChange = undefined,
+  hasMultipleOUs = false,
+  organizationUnitName = undefined,
+  organizationUnitLogoUrl = undefined,
+  isOrganizationUnitLoading = false,
+  onChangeOu = undefined,
 }: ConfigureNameProps): JSX.Element {
   const {t} = useTranslation();
-  const theme = useTheme();
-
-  const nameSuggestions: string[] = useMemo((): string[] => generateRandomHumanReadableIdentifiers(), []);
 
   useEffect((): void => {
     if (onReadyChange) {
@@ -55,15 +83,21 @@ export default function ConfigureName({
     }
   }, [name, onReadyChange]);
 
-  const handleNameSuggestionClick = (suggestion: string): void => {
-    onNameChange(suggestion);
-  };
-
   return (
     <Stack direction="column" spacing={4} data-testid="configure-name">
       <Typography variant="h1" gutterBottom>
         {t('groups:createWizard.name.title')}
       </Typography>
+
+      {hasMultipleOUs && onChangeOu && (
+        <OrganizationUnitSummaryChip
+          logoUrl={organizationUnitLogoUrl}
+          icon={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
+          label={t('groups:createWizard.organizationUnit.fieldLabel', 'Organization Unit')}
+          value={isOrganizationUnitLoading ? t('common:status.loading', 'Loading...') : organizationUnitName}
+          onChange={onChangeOu}
+        />
+      )}
 
       <FormControl fullWidth required>
         <FormLabel htmlFor="group-name-input">{t('groups:create.form.name.label')}</FormLabel>
@@ -77,37 +111,9 @@ export default function ConfigureName({
             'data-testid': 'group-name-input',
           }}
         />
-      </FormControl>
 
-      {/* Name suggestions */}
-      <Stack direction="column" spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
-          <Typography variant="body2" color="text.secondary">
-            {t('groups:createWizard.name.suggestions.label')}
-          </Typography>
-        </Stack>
-        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>
-          {nameSuggestions.map(
-            (suggestion: string): JSX.Element => (
-              <Chip
-                key={suggestion}
-                label={suggestion}
-                onClick={(): void => handleNameSuggestionClick(suggestion)}
-                variant="outlined"
-                clickable
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'primary.main',
-                    color: 'text.primary',
-                    borderColor: 'primary.main',
-                  },
-                }}
-              />
-            ),
-          )}
-        </Box>
-      </Stack>
+        <NameSuggestion onSelect={onNameChange} />
+      </FormControl>
     </Stack>
   );
 }

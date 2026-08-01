@@ -4,7 +4,7 @@
   "displayName": "Backend",
   "description": "Machine-to-machine backend service",
   "creationFlow": {
-    "steps": ["DETAILS", "COMPLETE"],
+    "steps": ["ORGANIZATION_UNIT", "DETAILS", "COMPLETE"],
     "previewSteps": []
   },
   "defaults": {

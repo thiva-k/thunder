@@ -27,7 +27,7 @@ import {GroupCreateFlowStep} from '../../models/group-create-flow';
  * @internal
  */
 const INITIAL_STATE = {
-  currentStep: GroupCreateFlowStep.NAME as GroupCreateFlowStep,
+  currentStep: GroupCreateFlowStep.ORGANIZATION_UNIT as GroupCreateFlowStep,
   name: '',
   description: '',
   ouId: '',

@@ -41,7 +41,7 @@
  * @public
  */
 export const ApplicationCreateFlowStep = {
-  STACK: 'STACK',
+  ORGANIZATION_UNIT: 'ORGANIZATION_UNIT',
   DETAILS: 'DETAILS',
   SECURITY: 'SECURITY',
   DESIGN: 'DESIGN',

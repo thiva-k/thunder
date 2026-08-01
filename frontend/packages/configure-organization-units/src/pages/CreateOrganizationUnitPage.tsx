@@ -17,8 +17,8 @@
  */
 
 import {zodResolver} from '@hookform/resolvers/zod';
+import {NameSuggestion} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
-import {generateRandomHumanReadableIdentifiers} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -30,10 +30,8 @@ import {
   LinearProgress,
   FormControl,
   FormLabel,
-  Chip,
-  useTheme,
 } from '@wso2/oxygen-ui';
-import {X, Lightbulb} from '@wso2/oxygen-ui-icons-react';
+import {X} from '@wso2/oxygen-ui-icons-react';
 import {useState, useMemo, useRef, type JSX} from 'react';
 import {useForm, Controller} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
@@ -70,7 +68,6 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
   const location = useLocation();
   const routes = useOrganizationUnitRoutes();
   const {t} = useTranslation();
-  const theme = useTheme();
   const logger = useLogger('CreateOrganizationUnitPage');
   const createOrganizationUnit = useCreateOrganizationUnit();
   const {resetTreeState} = useOrganizationUnit();
@@ -101,8 +98,6 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
     },
   });
 
-  const nameSuggestions: string[] = useMemo((): string[] => generateRandomHumanReadableIdentifiers(), []);
-
   /**
    * Generates a handle from the name by lowercasing and replacing spaces with hyphens.
    */
@@ -131,7 +126,7 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
     isHandleManuallyEditedRef.current = true;
   };
 
-  const handleNameSuggestionClick = (suggestion: string): void => {
+  const handleNameSuggestionSelect = (suggestion: string): void => {
     setValue('name', suggestion, {shouldValidate: true});
     // Auto-generate handle from suggestion if user hasn't manually edited it
     if (!isHandleManuallyEditedRef.current) {
@@ -253,37 +248,9 @@ export default function CreateOrganizationUnitPage(): JSX.Element {
                           />
                         )}
                       />
-                    </FormControl>
 
-                    {/* Name suggestions */}
-                    <Stack direction="column" spacing={2}>
-                      <Stack direction="row" alignItems="center" spacing={1}>
-                        <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
-                        <Typography variant="body2" color="text.secondary">
-                          {t('organizationUnits:create.suggestions.label')}
-                        </Typography>
-                      </Stack>
-                      <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>
-                        {nameSuggestions.map(
-                          (suggestion: string): JSX.Element => (
-                            <Chip
-                              key={suggestion}
-                              label={suggestion}
-                              onClick={(): void => handleNameSuggestionClick(suggestion)}
-                              variant="outlined"
-                              clickable
-                              sx={{
-                                '&:hover': {
-                                  bgcolor: 'primary.main',
-                                  color: 'text.primary',
-                                  borderColor: 'primary.main',
-                                },
-                              }}
-                            />
-                          ),
-                        )}
-                      </Box>
-                    </Stack>
+                      <NameSuggestion onSelect={handleNameSuggestionSelect} />
+                    </FormControl>
 
                     {/* Handle field */}
                     <FormControl fullWidth required>

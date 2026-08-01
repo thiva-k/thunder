@@ -74,20 +74,18 @@ describe('ConfigureName', () => {
     expect(mockOnAgentNameChange).toHaveBeenLastCalledWith('o');
   });
 
-  it('should render name suggestions', () => {
+  it('should render a name suggestion', () => {
     renderComponent();
 
-    mockSuggestions.forEach((suggestion) => {
-      expect(screen.getByText(suggestion)).toBeInTheDocument();
-    });
+    expect(screen.getByText('Billing Service')).toBeInTheDocument();
   });
 
-  it('should call onAgentNameChange when clicking a suggestion chip', async () => {
+  it('should call onAgentNameChange when clicking the suggestion', async () => {
     const user = userEvent.setup();
     renderComponent();
 
-    const chip = screen.getByText('Billing Service');
-    await user.click(chip);
+    const suggestion = screen.getByText('Billing Service');
+    await user.click(suggestion);
 
     expect(mockOnAgentNameChange).toHaveBeenCalledWith('Billing Service');
   });

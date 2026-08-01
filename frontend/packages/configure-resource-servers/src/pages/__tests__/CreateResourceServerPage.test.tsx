@@ -31,9 +31,13 @@ vi.mock('react-router', async () => {
   };
 });
 
-vi.mock('@thunderid/react', () => ({
-  useThunderID: () => ({http: {request: vi.fn()}}),
-}));
+vi.mock('@thunderid/react', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    useThunderID: () => ({http: {request: vi.fn()}}),
+  };
+});
 
 const mockShowToast = vi.fn();
 
@@ -50,9 +54,13 @@ vi.mock('@thunderid/logger/react', () => ({
   useLogger: () => ({error: vi.fn(), info: vi.fn(), debug: vi.fn()}),
 }));
 
-vi.mock('@thunderid/utils', () => ({
-  generateRandomHumanReadableIdentifiers: () => ['Alpha Service', 'Beta Platform'],
-}));
+vi.mock('@thunderid/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thunderid/utils')>();
+  return {
+    ...actual,
+    generateRandomHumanReadableIdentifiers: () => ['Alpha Service', 'Beta Platform'],
+  };
+});
 
 const mockCreateResourceServerMutate = vi.fn();
 

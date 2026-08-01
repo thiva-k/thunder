@@ -16,6 +16,7 @@
  * under the License.
  */
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplications} from '@thunderid/configure-applications';
 import type {Application, ApplicationType, OAuth2Config} from '@thunderid/configure-applications';
 import {AuthenticatorTypes, IdentityProviderTypes, useIdentityProviders} from '@thunderid/configure-connections';
@@ -68,7 +69,6 @@ import mergeCorsOrigins from '../utils/mergeCorsOrigins';
 import resolveApplicationType from '../utils/resolveApplicationType';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
 import GatePreview from '@/components/GatePreview/GatePreview';
-import FullScreenCreationWizardLayout from '@/layouts/FullScreenCreationWizardLayout';
 
 export default function ApplicationCreatePage(): JSX.Element {
   const {t} = useTranslation();
@@ -130,7 +130,7 @@ export default function ApplicationCreatePage(): JSX.Element {
 
   const steps: Record<ApplicationCreateFlowStep, {label: string; order: number}> = useMemo(
     () => ({
-      STACK: {label: t('applications:onboarding.steps.stack'), order: 1},
+      ORGANIZATION_UNIT: {label: t('applications:onboarding.steps.organizationUnit', 'Organization Unit'), order: 1},
       DETAILS: {label: t('applications:onboarding.steps.details'), order: 2},
       SECURITY: {label: t('applications:onboarding.steps.security'), order: 3},
       DESIGN: {label: t('applications:onboarding.steps.design'), order: 4},
@@ -153,15 +153,6 @@ export default function ApplicationCreatePage(): JSX.Element {
   const {data: corsConfigData} = useGetCorsConfig();
   const updateCorsConfig = useUpdateCorsConfig();
   const {hasMultipleOUs, isLoading: isOuLoading, ouList} = useHasMultipleOUs();
-
-  // Full-screen, pre-wizard step for picking the organization unit this application will belong
-  // to. Shown whenever an OU hasn't been picked yet, or reopened via the Details step's "Change"
-  // link, without needing a mount-time effect (which would flash the wizard for a frame first).
-  // The picked value is staged in pendingOuId until Continue is clicked, so ouId (and the rest of
-  // the wizard it gates) isn't committed just by clicking a card.
-  const [isChangingOu, setIsChangingOu] = useState<boolean>(false);
-  const [pendingOuId, setPendingOuId] = useState<string>('');
-  const showOuPicker = hasMultipleOUs && (!ouId || isChangingOu);
 
   const handleBackToTemplates = (): void => {
     void navigate(isWelcomeFlow ? '/welcome/get-started/applications/types' : '/applications/types');
@@ -295,7 +286,7 @@ export default function ApplicationCreatePage(): JSX.Element {
   const activePreviewMock = allPreviewScreens[previewStepIndex] ?? [];
 
   const [stepReady, setStepReady] = useState<Record<ApplicationCreateFlowStep, boolean>>({
-    STACK: true,
+    ORGANIZATION_UNIT: false,
     DETAILS: false,
     SECURITY: true,
     DESIGN: true,
@@ -363,6 +354,14 @@ export default function ApplicationCreatePage(): JSX.Element {
   }, [oauthConfig, callbackUrlFromConfig, walletClientId, redirectUris, postLogoutRedirectUris]);
 
   const creationFlow = useMemo(() => resolveCreationFlow(selectedTemplateConfig), [selectedTemplateConfig]);
+
+  // The organization unit is the wizard's first step whenever there's a choice to make. Single-OU
+  // deployments never need it, so once that's known, skip straight past it.
+  useEffect((): void => {
+    if (isOuLoading || hasMultipleOUs || currentStep !== ApplicationCreateFlowStep.ORGANIZATION_UNIT) return;
+    const next = creationFlow.steps[creationFlow.steps.indexOf(ApplicationCreateFlowStep.ORGANIZATION_UNIT) + 1];
+    if (next) setCurrentStep(next);
+  }, [isOuLoading, hasMultipleOUs, currentStep, creationFlow, setCurrentStep]);
 
   // The canonical application type, resolved once from the template, falling back to the OAuth
   // profile for legacy/custom templates without an explicit type.
@@ -446,6 +445,8 @@ export default function ApplicationCreatePage(): JSX.Element {
 
   const visibleSteps = useMemo((): ApplicationCreateFlowStep[] => {
     return creationFlow.steps.filter((step) => {
+      // Single-OU deployments have no organization unit choice to make.
+      if (step === ApplicationCreateFlowStep.ORGANIZATION_UNIT) return hasMultipleOUs;
       if (step === ApplicationCreateFlowStep.CONFIGURE) return showConfigureStep;
       // Nothing left to show once the Sign In section is snapshotted from the organization
       // unit's default — Sign Up/Recovery/Sign Out live elsewhere and aren't configured here.
@@ -472,7 +473,15 @@ export default function ApplicationCreatePage(): JSX.Element {
       if (step === ApplicationCreateFlowStep.COMPLETE) return false;
       return true;
     });
-  }, [creationFlow, showConfigureStep, showApproachSection, isWalletTemplate, ouDefaults, resolvedOrganizationUnit]);
+  }, [
+    creationFlow,
+    hasMultipleOUs,
+    showConfigureStep,
+    showApproachSection,
+    isWalletTemplate,
+    ouDefaults,
+    resolvedOrganizationUnit,
+  ]);
 
   const handleClose = (): void => {
     void navigate(isWelcomeFlow ? '/home' : '/applications');
@@ -781,10 +790,7 @@ export default function ApplicationCreatePage(): JSX.Element {
           <ConfigureApplicationDetails
             hasMultipleOUs={hasMultipleOUs}
             selectedOuId={ouId}
-            onChangeOu={() => {
-              setPendingOuId(ouId);
-              setIsChangingOu(true);
-            }}
+            onChangeOu={() => setCurrentStep(ApplicationCreateFlowStep.ORGANIZATION_UNIT)}
             resolvedOuId={resolvedOuId}
             appName={appName}
             onAppNameChange={setAppName}
@@ -900,27 +906,39 @@ export default function ApplicationCreatePage(): JSX.Element {
   const isFirstStep = visibleSteps.indexOf(currentStep) === 0;
   const isLastStep = visibleSteps.indexOf(currentStep) === visibleSteps.length - 1;
 
-  if (isOuLoading) {
-    return (
-      <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // Switching the organization unit invalidates any previously inherited defaults: the new OU may
+  // not offer the same defaultable items, and the Details step's reseeding effect only turns
+  // items *on* for what's available on the new OU, it never turns stale ones back off.
+  const handleOuIdChange = (newOuId: string): void => {
+    setOuId(newOuId);
+    setOuDefaults({
+      [OrganizationUnitDefaultItem.SIGN_IN]: false,
+      [OrganizationUnitDefaultItem.SIGN_UP]: false,
+      [OrganizationUnitDefaultItem.RECOVERY]: false,
+      [OrganizationUnitDefaultItem.SIGN_OUT]: false,
+      [OrganizationUnitDefaultItem.THEME]: false,
+      [OrganizationUnitDefaultItem.LAYOUT]: false,
+    });
+  };
 
-  if (showOuPicker) {
+  if (currentStep === ApplicationCreateFlowStep.ORGANIZATION_UNIT) {
+    if (isOuLoading || !hasMultipleOUs) {
+      return (
+        <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
     return (
       <OrganizationUnitPickerScreen
         icon={<Home size={26} />}
         title={t('applications:onboarding.organizationUnit.title')}
         subtitle={t('applications:onboarding.organizationUnit.subtitle')}
-        value={pendingOuId}
-        onChange={setPendingOuId}
-        onBack={ouId ? () => setIsChangingOu(false) : handleBackToTemplates}
-        onContinue={() => {
-          setOuId(pendingOuId);
-          setIsChangingOu(false);
-        }}
+        value={ouId}
+        onChange={handleOuIdChange}
+        onBack={ouId ? () => setCurrentStep(ApplicationCreateFlowStep.DETAILS) : handleBackToTemplates}
+        onContinue={handleNextStep}
         backLabel={t('common:actions.back')}
         continueLabel={t('common:actions.continue')}
       />

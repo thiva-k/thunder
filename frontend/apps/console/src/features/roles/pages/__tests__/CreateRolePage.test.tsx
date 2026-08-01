@@ -26,14 +26,26 @@ import CreateRolePage from '../CreateRolePage';
 // Mock dependencies
 vi.mock('../../api/useCreateRole');
 vi.mock('../../contexts/RoleCreate/useRoleCreate');
-vi.mock('@thunderid/configure-organization-units');
+vi.mock('@thunderid/configure-organization-units', () => ({
+  useHasMultipleOUs: vi.fn(),
+  useGetOrganizationUnit: (id?: string) => ({
+    data: id ? {id, name: 'Test Organization Unit'} : undefined,
+    isLoading: false,
+  }),
+  OrganizationUnitPickerScreen: ({onBack, onContinue}: {onBack: () => void; onContinue: () => void}) => (
+    <div data-testid="organization-unit-picker-screen">
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+      <button type="button" onClick={onContinue}>
+        Continue
+      </button>
+    </div>
+  ),
+}));
 
 vi.mock('../../components/create-role/ConfigureBasicInfo', () => ({
   default: () => <div data-testid="configure-basic-info">Configure Basic Info</div>,
-}));
-
-vi.mock('../../components/create-role/ConfigureOrganizationUnit', () => ({
-  default: () => <div data-testid="configure-organization-unit">Configure Organization Unit</div>,
 }));
 
 vi.mock('../../components/create-role/ConfigurePermissions', () => ({
@@ -168,7 +180,7 @@ describe('CreateRolePage', () => {
     expect(screen.queryByRole('button', {name: /back/i})).not.toBeInTheDocument();
   });
 
-  it('should render ConfigureOrganizationUnit on OU step', () => {
+  it('should render OrganizationUnitPickerScreen on the organization unit step', () => {
     vi.mocked(useRoleCreate).mockReturnValue({
       currentStep: RoleCreateFlowStep.ORGANIZATION_UNIT,
       setCurrentStep: mockSetCurrentStep,
@@ -194,10 +206,10 @@ describe('CreateRolePage', () => {
 
     render(<CreateRolePage />);
 
-    expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
+    expect(screen.getByTestId('organization-unit-picker-screen')).toBeInTheDocument();
   });
 
-  it('should render Back button on OU step', () => {
+  it('should render Back button on the OU picker', () => {
     vi.mocked(useRoleCreate).mockReturnValue({
       currentStep: RoleCreateFlowStep.ORGANIZATION_UNIT,
       setCurrentStep: mockSetCurrentStep,

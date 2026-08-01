@@ -217,7 +217,7 @@ describe('useApplicationCreateContext', () => {
       ApplicationCreateFlowStep.DETAILS,
       ApplicationCreateFlowStep.DESIGN,
       ApplicationCreateFlowStep.SECURITY,
-      ApplicationCreateFlowStep.STACK,
+      ApplicationCreateFlowStep.ORGANIZATION_UNIT,
       ApplicationCreateFlowStep.CONFIGURE,
     ];
 

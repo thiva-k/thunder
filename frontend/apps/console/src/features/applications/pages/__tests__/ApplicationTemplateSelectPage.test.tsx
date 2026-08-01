@@ -143,8 +143,8 @@ describe('ApplicationTemplateSelectPage', () => {
     expect(setSelectedTechnology).toHaveBeenCalledWith(TechnologyApplicationTemplate.REACT);
     expect(setSelectedPlatform).toHaveBeenCalledWith(null);
     expect(setSelectedTemplateConfig).toHaveBeenCalled();
-    // React uses the default flow whose first step is NAME.
-    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.DETAILS);
+    // React uses the default flow whose first step is ORGANIZATION_UNIT.
+    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.ORGANIZATION_UNIT);
     expect(mockNavigate).toHaveBeenCalledWith(`/applications/create?type=${TechnologyApplicationTemplate.REACT}`);
   });
 
@@ -162,7 +162,7 @@ describe('ApplicationTemplateSelectPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith(`/applications/create?type=${PlatformApplicationTemplate.BACKEND}`);
   });
 
-  it('advances to NAME first for the MCP client template', async () => {
+  it('advances to ORGANIZATION_UNIT first for the MCP client template', async () => {
     const user = userEvent.setup();
     const setCurrentStep = vi.fn();
 
@@ -170,8 +170,8 @@ describe('ApplicationTemplateSelectPage', () => {
 
     await user.click(screen.getByTestId(`template-card-${TechnologyApplicationTemplate.MCP_CLIENT}`));
 
-    // mcp-client flow: NAME → ORGANIZATION_UNIT → CLIENT_TYPE → COMPLETE; first step is NAME.
-    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.DETAILS);
+    // mcp-client flow: ORGANIZATION_UNIT → DETAILS → CLIENT_TYPE → COMPLETE; first step is ORGANIZATION_UNIT.
+    expect(setCurrentStep).toHaveBeenCalledWith(ApplicationCreateFlowStep.ORGANIZATION_UNIT);
     expect(mockNavigate).toHaveBeenCalledWith(`/applications/create?type=${TechnologyApplicationTemplate.MCP_CLIENT}`);
   });
 

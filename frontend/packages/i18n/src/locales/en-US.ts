@@ -862,15 +862,17 @@ const translations = {
     'createUserType.subtitle': 'Add a new user type to your organization',
 
     // Create wizard steps
-    'createWizard.steps.name': 'Create a User Type',
-    'createWizard.steps.general': 'General',
+    'createWizard.steps.organizationUnit': 'Organization Unit',
+    'createWizard.steps.name': 'Details',
     'createWizard.steps.properties': 'Properties',
-    'createWizard.name.title': "Let's name your user type",
+    'createWizard.organizationUnit.title': 'Where should this user type belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this user type. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
+    'createWizard.name.title': "Let's collect some details about your user type",
     'createWizard.name.fieldLabel': 'User Type Name',
     'createWizard.name.placeholder': 'Enter your user type name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
-    'createWizard.general.title': 'Configure general settings',
-    'createWizard.general.subtitle': 'Choose an organization unit and set registration preferences',
+    'createWizard.general.subtitle': 'Set registration preferences for this user type.',
     'createWizard.properties.title': 'Define your schema properties',
     'createWizard.properties.subtitle': 'Add the fields that make up this user type',
     'create.success': 'User type created successfully.',
@@ -987,7 +989,6 @@ const translations = {
     'createWizard.name.title': "Let's name your agent type",
     'createWizard.name.fieldLabel': 'Agent Type Name',
     'createWizard.name.placeholder': 'Enter your agent type name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
     'createWizard.general.title': 'Configure general settings',
     'createWizard.general.subtitle': 'Choose an organization unit and set registration preferences',
     'createWizard.properties.title': 'Define your schema properties',
@@ -1026,14 +1027,17 @@ const translations = {
     'createWizard.errors.createFailed': 'Failed to create agent. Please try again.',
     'createWizard.errors.ouRequired': 'Organization unit is required',
     'createWizard.errors.schemaRequired': 'Schema is required',
-    'createWizard.steps.name': 'Name',
+    'createWizard.steps.name': 'Details',
     'createWizard.steps.organizationUnit': 'Organization unit',
     'createWizard.steps.profile': 'Profile',
     'createWizard.steps.owner': 'Owner',
-    'createWizard.name.title': "What's this agent called?",
+    'createWizard.organizationUnit.title': 'Where should this agent belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this agent. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
+    'createWizard.name.title': "Let's collect some details about your agent",
     'createWizard.name.fieldLabel': 'Agent name',
     'createWizard.name.placeholder': 'e.g. Billing Service',
-    'createWizard.name.suggestions.label': 'Need inspiration? Pick one:',
     'createWizard.agentDetails.title': 'Agent attributes',
     'createWizard.agentDetails.subtitle': 'Provide values for the attributes defined by the agent schema.',
     'createWizard.owner.title': 'Owner',
@@ -1307,7 +1311,6 @@ const translations = {
     'create.heading': "Let's set up your organization unit",
     'create.subtitle': 'Define a new organization unit',
     'create.error': 'Failed to create organization unit. Please try again.',
-    'create.suggestions.label': 'In a hurry? Pick a random name:',
 
     'delete.dialog.title': 'Delete Organization Unit',
     'delete.dialog.message': 'Are you sure you want to delete this organization unit? This action cannot be undone.',
@@ -1466,12 +1469,13 @@ const translations = {
     'create.form.organizationUnit.required': 'Organization unit is required',
 
     // Create wizard
-    'createWizard.steps.name': 'Create a Group',
+    'createWizard.steps.name': 'Details',
     'createWizard.steps.organizationUnit': 'Organization Unit',
-    'createWizard.name.title': "Let's give a name to your group",
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
-    'createWizard.organizationUnit.title': 'Select an organization unit',
-    'createWizard.organizationUnit.subtitle': 'Choose the organization unit this group will belong to.',
+    'createWizard.name.title': "Let's collect some details about your group",
+    'createWizard.organizationUnit.title': 'Where should this group belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this group. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
     'createWizard.createGroup': 'Create Group',
 
     // Edit page
@@ -1580,13 +1584,14 @@ const translations = {
     'create.form.organizationUnit.required': 'Organization unit is required',
 
     // Create wizard
-    'createWizard.steps.basicInfo': 'Create a Role',
+    'createWizard.steps.basicInfo': 'Details',
     'createWizard.steps.organizationUnit': 'Organization Unit',
     'createWizard.steps.permissions': 'Permissions',
-    'createWizard.basicInfo.title': "Let's give a name to your role",
-    'createWizard.basicInfo.suggestions.label': 'In a hurry? Pick a random name:',
-    'createWizard.organizationUnit.title': 'Select an organization unit',
-    'createWizard.organizationUnit.subtitle': 'Choose the organization unit this role will belong to.',
+    'createWizard.basicInfo.title': "Let's collect some details about your role",
+    'createWizard.organizationUnit.title': 'Where should this role belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this role. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
     'createWizard.permissions.title': 'Assign permissions (optional)',
     'createWizard.permissions.subtitle':
       'Choose what this role grants. You can skip this step and add permissions later.',
@@ -1717,7 +1722,7 @@ const translations = {
     // Add custom connection wizard
     'wizard.title': 'Add custom connection',
     'wizard.steps.type': 'Connection type',
-    'wizard.steps.name': 'Name',
+    'wizard.steps.name': 'Details',
     'wizard.steps.configure': 'Configure',
     'wizard.type.heading': 'What kind of connection do you want to add?',
     'wizard.type.subheading':
@@ -1735,10 +1740,9 @@ const translations = {
     'wizard.type.trustedIdp.description':
       "Trust an external IdP's identity assertions and exchange them for access tokens.",
     'wizard.type.trustedIdp.tag': 'Token exchange · ID-JAG',
-    'wizard.name.title': "Let's give a name to your connection",
+    'wizard.name.title': "Let's collect some details about your connection",
     'wizard.name.fieldLabel': 'Connection name',
     'wizard.name.placeholder': 'Enter your connection name',
-    'wizard.name.suggestions.label': 'In a hurry? Pick a random name:',
     'wizard.configure.heading': 'Configure your connection',
     'wizard.configure.subheading':
       'Enter the credentials and endpoints for your custom connection. Secrets are stored write-only.',
@@ -2102,10 +2106,10 @@ const translations = {
     'onboarding.preview.dividerText': 'or',
     'onboarding.preview.continueWith': 'Continue with {{providerName}}',
     'onboarding.preview.stepOf': 'Step {{n}} of {{total}}',
+    'onboarding.steps.organizationUnit': 'Organization Unit',
     'onboarding.steps.details': 'Details',
     'onboarding.steps.design': 'Experience',
     'onboarding.steps.security': 'Security',
-    'onboarding.steps.stack': 'Technology Stack',
     'onboarding.steps.configure': 'Configuration',
     'onboarding.steps.quickTest': 'Quick Test',
     'onboarding.steps.export': 'Integration Setup',
@@ -2119,8 +2123,6 @@ const translations = {
     'onboarding.configure.name.fieldLabel': 'Name & Logo',
     'onboarding.configure.name.placeholder': 'Enter your application name',
     'onboarding.configure.name.logoAriaLabel': 'Change application logo',
-    'onboarding.configure.name.suggestions.prefix': 'Need inspiration? How about',
-    'onboarding.configure.name.suggestions.shuffleAriaLabel': 'Try another suggestion',
     'onboarding.configure.applicationDetails.title': "Let's collect some details about your application",
     'onboarding.configure.applicationDetails.ouDefaults.title': 'Use organization defaults',
     'onboarding.configure.applicationDetails.ouDefaults.subtitle':
@@ -3151,6 +3153,11 @@ const translations = {
     'logo_picker.emoji_dialog.title': 'Choose an emoji',
     'logo_picker.shuffle': 'Shuffle',
 
+    // Name suggestion
+    'name_suggestion.prefix': 'Need inspiration? How about',
+    'name_suggestion.suffix': '?',
+    'name_suggestion.shuffle_aria_label': 'Try another suggestion',
+
     // Resource logo dialog
     'resource_logo_dialog.title': 'Choose a Logo',
     'resource_logo_dialog.divider.or': 'Or',
@@ -3203,11 +3210,10 @@ const translations = {
     // Create flow wizard
     'create.steps.type': 'Flow Type',
     'create.steps.template': 'Template',
-    'create.steps.configure': 'Configure',
-    'create.configure.title': 'Name your flow',
+    'create.steps.configure': 'Details',
+    'create.configure.title': "Let's collect some details about your flow",
     'create.configure.name.label': 'Flow name',
     'create.configure.name.placeholder': 'e.g. Customer Sign-in',
-    'create.configure.suggestions.label': 'Need inspiration? Try one of these:',
     'create.configure.handle.label': 'Handle',
     'create.configure.handle.placeholder': 'e.g. customer-sign-in',
     'create.configure.handle.hint': 'Lowercase letters, numbers, and hyphens only',
@@ -3999,7 +4005,10 @@ const translations = {
     'themes.builder.sections.typography.description': 'Font family & type scale',
     'themes.config.select_theme.message': 'Select a theme to view configuration',
     'themes.config.errors.load.message': 'Failed to load theme configuration.',
-    'themes.forms.configure_name.title': 'Create a Theme',
+    'themes.createWizard.steps.name': 'Details',
+    'themes.forms.configure_name.title': "Let's collect some details about your theme",
+    'themes.forms.configure_name.fieldLabel': 'Theme name',
+    'themes.forms.configure_name.placeholder': 'e.g. Solarized Light',
     'themes.forms.configure_color.title': 'Primary Color',
     'themes.forms.configure_color.actions.back.label': 'Back',
     'themes.forms.configure_color.actions.continue.label': 'Continue',
@@ -4347,7 +4356,7 @@ const translations = {
     'delete.disclaimer':
       'Warning: All associated resources, actions, and permission strings will be permanently removed.',
     'create.steps.type': 'Type',
-    'create.steps.name': 'Name',
+    'create.steps.name': 'Details',
     'create.steps.separator': 'Permission Delimiter',
     'create.steps.organizationUnit': 'Organization',
     'create.type.title': 'What type of resource server are you adding?',
@@ -4410,12 +4419,11 @@ const translations = {
     'common.confirm': 'Confirm',
     'common.back': 'Back',
     'common.next': 'Next',
-    'create.name.title': 'Name your resource server',
-    'create.name.titleMcp': 'Name your MCP server',
+    'create.name.title': "Let's collect some details about your resource server",
+    'create.name.titleMcp': "Let's collect some details about your MCP server",
     'create.name.nameLabel': 'Resource Server Name',
     'create.name.nameLabelMcp': 'MCP Server Name',
     'create.name.namePlaceholder': 'e.g. Payments API',
-    'create.name.suggestions': 'Need inspiration? Pick one:',
     'create.name.identifierLabel': 'Identifier',
     'create.name.identifierPlaceholder': 'https://api.example.com',
     'create.name.identifierPlaceholderMcp': 'https://mcp.example.com',
@@ -4596,12 +4604,17 @@ const translations = {
     'claims.add': 'Add Claim',
 
     // Create wizard
-    'createWizard.steps.name': 'Name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
+    'createWizard.steps.name': 'Details',
+    'createWizard.name.title': "Let's collect some details about your verifiable presentation",
     'create.title': 'New Presentation Definition',
     'create.subtitle': 'Configure the credential type and the claims to request from the wallet.',
-    'create.steps.details': 'Details',
+    'create.steps.organizationUnit': 'Organization Unit',
+    'create.steps.details': 'Type',
     'create.steps.claims': 'Claims',
+    'create.organizationUnit.title': 'Where should this verifiable presentation belong?',
+    'create.organizationUnit.subtitle':
+      "Choose the organization unit that will own this verifiable presentation. You can't change this once created.",
+    'create.organizationUnit.fieldLabel': 'Organization Unit',
     'create.claims.help': 'Add each claim once and set whether it is mandatory and restrict its allowed values.',
     'create.success': 'Presentation definition created',
     'create.error': 'Failed to create presentation definition',
@@ -4638,12 +4651,17 @@ const translations = {
     'listing.columns.actions': 'Actions',
 
     // Create page
-    'createWizard.steps.name': 'Name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
+    'createWizard.steps.name': 'Details',
+    'createWizard.name.title': "Let's collect some details about your verifiable credential",
     'create.title': 'New Credential Template',
     'create.subtitle': 'Define the credential type, claims and display shown in wallets.',
-    'create.steps.details': 'Details',
+    'create.steps.organizationUnit': 'Organization Unit',
+    'create.steps.details': 'Type',
     'create.steps.claims': 'Claims',
+    'create.organizationUnit.title': 'Where should this verifiable credential belong?',
+    'create.organizationUnit.subtitle':
+      "Choose the organization unit that will own this verifiable credential. You can't change this once created.",
+    'create.organizationUnit.fieldLabel': 'Organization Unit',
     'create.claims.help':
       'Add each claim once and set the attribute name as it appears in the user profile and how it should be displayed in the wallet.',
     'create.success': 'Credential template created',

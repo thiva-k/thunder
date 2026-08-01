@@ -16,10 +16,9 @@
  * under the License.
  */
 
-import {generateRandomHumanReadableIdentifiers} from '@thunderid/utils';
-import {Box, Chip, FormControl, FormLabel, Stack, TextField, Typography, useTheme} from '@wso2/oxygen-ui';
-import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
-import {useEffect, useMemo, type ChangeEvent, type JSX} from 'react';
+import {NameSuggestion} from '@thunderid/components';
+import {FormControl, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {useEffect, type ChangeEvent, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {ResourceServerType} from '../../models/resource-server';
 
@@ -42,9 +41,6 @@ export default function ConfigureName({
   onReadyChange = undefined,
 }: ConfigureNameProps): JSX.Element {
   const {t} = useTranslation();
-  const theme = useTheme();
-
-  const suggestions: string[] = useMemo((): string[] => generateRandomHumanReadableIdentifiers(), []);
 
   useEffect((): void => {
     if (onReadyChange) {
@@ -56,10 +52,6 @@ export default function ConfigureName({
     onNameChange(e.target.value);
   };
 
-  const handleSuggestionClick = (suggestion: string): void => {
-    onNameChange(suggestion);
-  };
-
   const handleIdentifierChange = (e: ChangeEvent<HTMLInputElement>): void => {
     onIdentifierChange(e.target.value);
   };
@@ -68,8 +60,8 @@ export default function ConfigureName({
     <Stack direction="column" spacing={4}>
       <Typography variant="h1" gutterBottom>
         {selectedType === 'MCP'
-          ? t('resourceServers:create.name.titleMcp', 'Name your MCP server')
-          : t('resourceServers:create.name.title', 'Name your resource server')}
+          ? t('resourceServers:create.name.titleMcp', "Let's collect some details about your MCP server")
+          : t('resourceServers:create.name.title', "Let's collect some details about your resource server")}
       </Typography>
 
       <FormControl fullWidth required>
@@ -85,36 +77,9 @@ export default function ConfigureName({
           onChange={handleNameChange}
           placeholder={t('resourceServers:create.name.namePlaceholder', 'e.g. Payments API')}
         />
-      </FormControl>
 
-      <Stack direction="column" spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
-          <Typography variant="body2" color="text.secondary">
-            {t('resourceServers:create.name.suggestions', 'Need inspiration? Pick one:')}
-          </Typography>
-        </Stack>
-        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>
-          {suggestions.map(
-            (suggestion: string): JSX.Element => (
-              <Chip
-                key={suggestion}
-                label={suggestion}
-                onClick={(): void => handleSuggestionClick(suggestion)}
-                variant="outlined"
-                clickable
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'primary.main',
-                    color: 'primary.contrastText',
-                    borderColor: 'primary.main',
-                  },
-                }}
-              />
-            ),
-          )}
-        </Box>
-      </Stack>
+        <NameSuggestion onSelect={onNameChange} />
+      </FormControl>
 
       <FormControl fullWidth required>
         <FormLabel htmlFor="resource-server-identifier-input">

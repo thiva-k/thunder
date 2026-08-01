@@ -28,7 +28,7 @@ import type {SchemaPropertyInput} from '../../types/user-types';
  * @internal
  */
 const INITIAL_STATE = {
-  currentStep: UserTypeCreateFlowStep.NAME as UserTypeCreateFlowStep,
+  currentStep: UserTypeCreateFlowStep.ORGANIZATION_UNIT as UserTypeCreateFlowStep,
   name: '',
   ouId: '',
   allowSelfRegistration: false,

@@ -40,6 +40,7 @@ beforeAll(async () => {
         mfa: enUS.mfa,
         social: enUS.social,
         consent: enUS.consent,
+        elements: enUS.elements,
         errors: enUS.errors,
         signin: enUS.signin,
         signup: enUS.signup,

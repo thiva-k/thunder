@@ -34,8 +34,8 @@ function TestConsumer() {
       <div data-testid="organization-unit-id">{context.ouId || 'empty'}</div>
       <div data-testid="error">{context.error ?? 'null'}</div>
 
-      <button type="button" onClick={() => context.setCurrentStep(GroupCreateFlowStep.ORGANIZATION_UNIT)}>
-        Set OU Step
+      <button type="button" onClick={() => context.setCurrentStep(GroupCreateFlowStep.NAME)}>
+        Set Name Step
       </button>
       <button type="button" onClick={() => context.setName('Test Group')}>
         Set Name
@@ -68,7 +68,7 @@ describe('GroupCreateProvider', () => {
       </GroupCreateProvider>,
     );
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
     expect(screen.getByTestId('name')).toHaveTextContent('empty');
     expect(screen.getByTestId('description')).toHaveTextContent('empty');
     expect(screen.getByTestId('organization-unit-id')).toHaveTextContent('empty');
@@ -84,9 +84,9 @@ describe('GroupCreateProvider', () => {
       </GroupCreateProvider>,
     );
 
-    await user.click(screen.getByText('Set OU Step'));
+    await user.click(screen.getByText('Set Name Step'));
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
   });
 
   it('updates name when setName is called', async () => {
@@ -155,14 +155,14 @@ describe('GroupCreateProvider', () => {
     );
 
     // Set some values
-    await user.click(screen.getByText('Set OU Step'));
+    await user.click(screen.getByText('Set Name Step'));
     await user.click(screen.getByText('Set Name'));
     await user.click(screen.getByText('Set Description'));
     await user.click(screen.getByText('Set OU Id'));
     await user.click(screen.getByText('Set Error'));
 
     // Verify values are set
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
     expect(screen.getByTestId('name')).toHaveTextContent('Test Group');
     expect(screen.getByTestId('description')).toHaveTextContent('A test description');
     expect(screen.getByTestId('organization-unit-id')).toHaveTextContent('ou-123');
@@ -172,7 +172,7 @@ describe('GroupCreateProvider', () => {
     await user.click(screen.getByText('Reset'));
 
     // Verify back to initial state
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
     expect(screen.getByTestId('name')).toHaveTextContent('empty');
     expect(screen.getByTestId('description')).toHaveTextContent('empty');
     expect(screen.getByTestId('organization-unit-id')).toHaveTextContent('empty');

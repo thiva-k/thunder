@@ -16,9 +16,9 @@
  * under the License.
  */
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
-import {Alert, Box, Button, CircularProgress, IconButton, LinearProgress, Stack, AppBreadcrumbs} from '@wso2/oxygen-ui';
-import {X} from '@wso2/oxygen-ui-icons-react';
+import {Alert, Box, Button, CircularProgress} from '@wso2/oxygen-ui';
 import type {JSX} from 'react';
 import {useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -61,7 +61,7 @@ export default function FlowCreatePage(): JSX.Element {
     () => ({
       [FlowCreateStep.TYPE]: {label: t('flows:create.steps.type', 'Flow Type'), order: 1},
       [FlowCreateStep.TEMPLATE]: {label: t('flows:create.steps.template', 'Template'), order: 2},
-      [FlowCreateStep.CONFIGURE]: {label: t('flows:create.steps.configure', 'Configure'), order: 3},
+      [FlowCreateStep.CONFIGURE]: {label: t('flows:create.steps.configure', 'Details'), order: 3},
     }),
     [t],
   );
@@ -133,8 +133,6 @@ export default function FlowCreatePage(): JSX.Element {
     return false;
   };
 
-  const isNarrowStep = currentStep === FlowCreateStep.TYPE || currentStep === FlowCreateStep.CONFIGURE;
-
   const renderStepContent = (): JSX.Element | null => {
     if (currentStep === FlowCreateStep.TYPE) {
       return (
@@ -161,85 +159,45 @@ export default function FlowCreatePage(): JSX.Element {
   };
 
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      <LinearProgress variant="determinate" value={getStepProgress()} sx={{height: 6}} />
-
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>
-        {/* Header */}
-        <Box sx={{p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <IconButton
-              onClick={handleClose}
-              sx={{bgcolor: 'background.paper', '&:hover': {bgcolor: 'action.hover'}, boxShadow: 1}}
-            >
-              <X size={24} />
-            </IconButton>
-            <AppBreadcrumbs
-              items={getBreadcrumbSteps().map((step, index, array) => ({
-                key: step,
-                label: steps[step].label,
-                onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
-              }))}
-            />
-          </Stack>
-        </Box>
-
-        {/* Main content */}
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={getStepProgress()}
+      breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
+        key: step,
+        label: steps[step].label,
+        onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
+      }))}
+      footer={
         <Box
           sx={{
-            flex: 1,
             display: 'flex',
-            flexDirection: 'column',
-            py: 8,
-            px: 10,
-            width: '100%',
+            justifyContent: currentStep === FlowCreateStep.TYPE ? 'flex-end' : 'space-between',
+            gap: 2,
           }}
         >
-          {error && (
-            <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
-              {error}
-            </Alert>
+          {currentStep !== FlowCreateStep.TYPE && (
+            <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createFlow.isPending}>
+              {t('common:actions.back', 'Back')}
+            </Button>
           )}
-
-          <Box sx={isNarrowStep ? {maxWidth: 780} : undefined}>
-            {renderStepContent()}
-
-            {/* Navigation buttons */}
-            <Box
-              sx={{
-                mt: 4,
-                display: 'flex',
-                justifyContent: currentStep === FlowCreateStep.TYPE ? 'flex-end' : 'space-between',
-                gap: 2,
-              }}
-            >
-              {currentStep !== FlowCreateStep.TYPE && (
-                <Button
-                  variant="outlined"
-                  onClick={handlePrevStep}
-                  sx={{minWidth: 100}}
-                  disabled={createFlow.isPending}
-                >
-                  {t('common:actions.back', 'Back')}
-                </Button>
-              )}
-              <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-                {createFlow.isPending && <CircularProgress size={20} />}
-                <Button
-                  variant="contained"
-                  onClick={handleNextStep}
-                  sx={{minWidth: 100}}
-                  disabled={isContinueDisabled()}
-                >
-                  {currentStep === FlowCreateStep.CONFIGURE
-                    ? t('common:actions.create', 'Create')
-                    : t('common:actions.continue', 'Continue')}
-                </Button>
-              </Box>
-            </Box>
+          <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
+            {createFlow.isPending && <CircularProgress size={20} />}
+            <Button variant="contained" onClick={handleNextStep} sx={{minWidth: 100}} disabled={isContinueDisabled()}>
+              {currentStep === FlowCreateStep.CONFIGURE
+                ? t('common:actions.create', 'Create')
+                : t('common:actions.continue', 'Continue')}
+            </Button>
           </Box>
         </Box>
-      </Box>
-    </Box>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {renderStepContent()}
+    </FullScreenCreationWizardLayout>
   );
 }

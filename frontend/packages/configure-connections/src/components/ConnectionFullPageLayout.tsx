@@ -71,8 +71,8 @@ export default function ConnectionFullPageLayout({
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            py: {xs: 4, md: 8},
-            px: {xs: 0, md: 10},
+            py: 4,
+            px: {xs: 4, md: 10},
             width: '100%',
           }}
         >

@@ -4,7 +4,7 @@
   "displayName": "Digital Wallet",
   "description": "OpenID4VCI wallet that requests verifiable credentials",
   "creationFlow": {
-    "steps": ["DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
+    "steps": ["ORGANIZATION_UNIT", "DETAILS", "SECURITY", "DESIGN", "CONFIGURE", "COMPLETE"],
     "previewSteps": ["DETAILS", "SECURITY", "DESIGN"]
   },
   "defaults": {

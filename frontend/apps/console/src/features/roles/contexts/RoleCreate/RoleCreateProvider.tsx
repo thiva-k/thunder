@@ -23,7 +23,7 @@ import type {ResourcePermissions} from '../../models/role';
 import {RoleCreateFlowStep} from '../../models/role-create-flow';
 
 const INITIAL_STATE = {
-  currentStep: RoleCreateFlowStep.BASIC_INFO as RoleCreateFlowStep,
+  currentStep: RoleCreateFlowStep.ORGANIZATION_UNIT as RoleCreateFlowStep,
   name: '',
   ouId: '',
   error: null as string | null,

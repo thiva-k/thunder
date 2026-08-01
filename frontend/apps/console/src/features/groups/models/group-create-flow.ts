@@ -23,8 +23,8 @@
  * @public
  */
 export const GroupCreateFlowStep = {
-  NAME: 'NAME',
   ORGANIZATION_UNIT: 'ORGANIZATION_UNIT',
+  NAME: 'NAME',
 } as const;
 
 /**

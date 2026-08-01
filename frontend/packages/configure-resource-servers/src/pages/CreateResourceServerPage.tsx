@@ -85,7 +85,7 @@ export default function CreateResourceServerPage(): JSX.Element {
   const steps: Record<ResourceServerCreateStep, {label: string; order: number}> = useMemo(
     () => ({
       TYPE: {label: t('resourceServers:create.steps.type', 'Type'), order: 1},
-      NAME: {label: t('resourceServers:create.steps.name', 'Name'), order: 2},
+      NAME: {label: t('resourceServers:create.steps.name', 'Details'), order: 2},
       SEPARATOR: {label: t('resourceServers:create.steps.separator', 'Permission Delimiter'), order: 3},
       ORGANIZATION_UNIT: {label: t('resourceServers:create.steps.organizationUnit', 'Organization'), order: 4},
     }),
@@ -288,9 +288,8 @@ export default function CreateResourceServerPage(): JSX.Element {
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                py: 8,
-                px: 20,
-                mx: 'auto',
+                py: 4,
+                px: {xs: 4, md: 10},
               }}
             >
               <Box sx={{width: '100%', maxWidth: 800, display: 'flex', flexDirection: 'column'}}>

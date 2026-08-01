@@ -26,8 +26,6 @@ export type {UpdateUserTypeVariables} from './api/useUpdateUserType';
 
 // Components
 export {default as UserTypesList} from './components/UserTypesList';
-export {default as ConfigureGeneral} from './components/create-user-type/ConfigureGeneral';
-export type {ConfigureGeneralProps} from './components/create-user-type/ConfigureGeneral';
 export {default as ConfigureName} from './components/create-user-type/ConfigureName';
 export type {ConfigureNameProps} from './components/create-user-type/ConfigureName';
 export {default as ConfigureProperties} from './components/create-user-type/ConfigureProperties';

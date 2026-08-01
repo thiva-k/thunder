@@ -116,7 +116,7 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
     {key: 'connections', label: t('listing.title'), onClick: close},
     {key: 'add', label: t('wizard.title'), onClick: () => setStep(Step.TYPE)},
     ...(step === Step.TYPE ? [{key: 'type', label: t('wizard.steps.type')}] : []),
-    ...(step === Step.NAME ? [{key: 'name', label: t('wizard.steps.name', 'Name')}] : []),
+    ...(step === Step.NAME ? [{key: 'name', label: t('wizard.steps.name', 'Details')}] : []),
     ...(step === Step.CONFIGURE ? [{key: 'configure', label: t('form.chrome.configure')}] : []),
   ];
 

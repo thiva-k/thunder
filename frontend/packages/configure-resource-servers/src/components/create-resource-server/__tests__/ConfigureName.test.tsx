@@ -107,14 +107,13 @@ describe('ConfigureName', () => {
     expect(onReadyChange).toHaveBeenCalledWith(false);
   });
 
-  it('renders suggestion chips from the returned suggestions', () => {
+  it('renders a name suggestion', () => {
     render(<ConfigureName name="" identifier="" onNameChange={vi.fn()} onIdentifierChange={vi.fn()} />);
 
     expect(screen.getByText('Alpha Service')).toBeInTheDocument();
-    expect(screen.getByText('Beta Platform')).toBeInTheDocument();
   });
 
-  it('fills name when a suggestion chip is clicked', () => {
+  it('fills name when the suggestion is clicked', () => {
     const onNameChange = vi.fn();
     const onIdentifierChange = vi.fn();
     render(<ConfigureName name="" identifier="" onNameChange={onNameChange} onIdentifierChange={onIdentifierChange} />);
@@ -130,7 +129,7 @@ describe('ConfigureName', () => {
       <ConfigureName name="" identifier="" selectedType="API" onNameChange={vi.fn()} onIdentifierChange={vi.fn()} />,
     );
 
-    expect(screen.getByText('Name your resource server')).toBeInTheDocument();
+    expect(screen.getByText("Let's collect some details about your resource server")).toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
   });
 
@@ -139,7 +138,7 @@ describe('ConfigureName', () => {
       <ConfigureName name="" identifier="" selectedType="MCP" onNameChange={vi.fn()} onIdentifierChange={vi.fn()} />,
     );
 
-    expect(screen.getByText('Name your MCP server')).toBeInTheDocument();
+    expect(screen.getByText("Let's collect some details about your MCP server")).toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: /mcp server name/i})).toBeInTheDocument();
   });
 

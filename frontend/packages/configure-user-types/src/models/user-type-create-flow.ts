@@ -23,8 +23,8 @@
  * @public
  */
 export const UserTypeCreateFlowStep = {
+  ORGANIZATION_UNIT: 'ORGANIZATION_UNIT',
   NAME: 'NAME',
-  GENERAL: 'GENERAL',
   PROPERTIES: 'PROPERTIES',
 } as const;
 

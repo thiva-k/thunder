@@ -16,10 +16,10 @@
  * under the License.
  */
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useCreateTheme, useGetTheme, useGetThemes, type Theme} from '@thunderid/design';
 import {kebabCase} from '@thunderid/utils';
-import {Alert, Box, Button, CircularProgress, IconButton, LinearProgress, Stack, AppBreadcrumbs} from '@wso2/oxygen-ui';
-import {X} from '@wso2/oxygen-ui-icons-react';
+import {Alert, Box, Button, CircularProgress} from '@wso2/oxygen-ui';
 import {useState, useCallback, useMemo, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -67,7 +67,7 @@ export default function ThemeCreatePage(): JSX.Element {
   const {data: themesData} = useGetThemes();
 
   const STEPS: Record<ThemeCreateStep, {label: string}> = {
-    NAME: {label: t('themes.forms.configure_name.title', 'Create a Theme')},
+    NAME: {label: t('themes.createWizard.steps.name', 'Details')},
     COLOR: {label: t('themes.forms.configure_color.title', 'Primary Color')},
   };
 
@@ -165,105 +165,57 @@ export default function ThemeCreatePage(): JSX.Element {
   };
 
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      <LinearProgress variant="determinate" value={stepProgress} sx={{height: 6}} />
-
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'row'}}>
-        {/* Left panel */}
-        <Box
-          sx={{
-            flex: currentStep === 'NAME' ? 1 : '0 0 50%',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* Header */}
-          <Box sx={{p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-            <Stack direction="row" alignItems="center" spacing={2}>
-              <IconButton
-                onClick={handleClose}
-                sx={{bgcolor: 'background.paper', '&:hover': {bgcolor: 'action.hover'}, boxShadow: 1}}
-              >
-                <X size={24} />
-              </IconButton>
-              <AppBreadcrumbs
-                items={breadcrumbSteps.map((step, index, arr) => ({
-                  key: step,
-                  label: STEPS[step].label,
-                  onClick: index < arr.length - 1 ? () => setCurrentStep(step) : undefined,
-                }))}
-              />
-            </Stack>
-          </Box>
-
-          {/* Step content */}
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              py: 8,
-              px: 20,
-            }}
-          >
-            <Box sx={{width: '100%', maxWidth: 800}}>
-              {error && (
-                <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
-                  {error}
-                </Alert>
-              )}
-
-              {renderStep()}
-
-              {/* Navigation */}
-              <Box
-                sx={{
-                  mt: 5,
-                  display: 'flex',
-                  justifyContent: currentStep === 'NAME' ? 'flex-start' : 'space-between',
-                  gap: 2,
-                }}
-              >
-                {currentStep !== 'NAME' && (
-                  <Button variant="outlined" onClick={handleBack} sx={{minWidth: 100}}>
-                    {t('themes.forms.configure_color.actions.back.label', 'Back')}
-                  </Button>
-                )}
-
-                {currentStep === 'COLOR' ? (
-                  <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
-                    {createTheme.isPending && <CircularProgress size={20} />}
-                    <Button
-                      variant="contained"
-                      onClick={handleCreate}
-                      disabled={createTheme.isPending}
-                      sx={{minWidth: 140}}
-                    >
-                      {t('themes.forms.configure_color.actions.create.label', 'Create Theme')}
-                    </Button>
-                  </Box>
-                ) : (
-                  <Button
-                    variant="contained"
-                    onClick={handleNext}
-                    disabled={!stepReady[currentStep]}
-                    sx={{minWidth: 100}}
-                  >
-                    {t('themes.forms.configure_color.actions.continue.label', 'Continue')}
-                  </Button>
-                )}
-              </Box>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* Right panel — live preview (only on COLOR step) */}
-        {currentStep !== 'NAME' && (
-          <Box sx={{flex: '0 0 50%', display: 'flex', flexDirection: 'column', p: 5}}>
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={stepProgress}
+      breadcrumbItems={breadcrumbSteps.map((step, index, arr) => ({
+        key: step,
+        label: STEPS[step].label,
+        onClick: index < arr.length - 1 ? () => setCurrentStep(step) : undefined,
+      }))}
+      preview={
+        currentStep === 'NAME' ? undefined : (
+          <Box sx={{flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', p: 5}}>
             <GatePreview theme={previewTheme} displayName={themeName} />
           </Box>
-        )}
-      </Box>
-    </Box>
+        )
+      }
+      footer={
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: currentStep === 'NAME' ? 'flex-end' : 'space-between',
+            gap: 2,
+          }}
+        >
+          {currentStep !== 'NAME' && (
+            <Button variant="outlined" onClick={handleBack} sx={{minWidth: 100}}>
+              {t('themes.forms.configure_color.actions.back.label', 'Back')}
+            </Button>
+          )}
+
+          {currentStep === 'COLOR' ? (
+            <Box sx={{display: 'flex', alignItems: 'center', gap: 2}}>
+              {createTheme.isPending && <CircularProgress size={20} />}
+              <Button variant="contained" onClick={handleCreate} disabled={createTheme.isPending} sx={{minWidth: 140}}>
+                {t('themes.forms.configure_color.actions.create.label', 'Create Theme')}
+              </Button>
+            </Box>
+          ) : (
+            <Button variant="contained" onClick={handleNext} disabled={!stepReady[currentStep]} sx={{minWidth: 100}}>
+              {t('themes.forms.configure_color.actions.continue.label', 'Continue')}
+            </Button>
+          )}
+        </Box>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {renderStep()}
+    </FullScreenCreationWizardLayout>
   );
 }

@@ -16,27 +16,55 @@
  * under the License.
  */
 
-import {generateRandomHumanReadableIdentifiers} from '@thunderid/utils';
-import {Box, Chip, FormControl, FormLabel, Stack, TextField, Typography, useTheme} from '@wso2/oxygen-ui';
-import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
-import {useEffect, useMemo, type ChangeEvent, type JSX} from 'react';
+import {NameSuggestion, OrganizationUnitSummaryChip} from '@thunderid/components';
+import {OrganizationUnitTreeConstants} from '@thunderid/configure-organization-units';
+import {FormControl, FormLabel, Stack, TextField, Typography} from '@wso2/oxygen-ui';
+import {useEffect, type ChangeEvent, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 
 export interface ConfigureNameProps {
   agentName: string;
   onAgentNameChange: (name: string) => void;
   onReadyChange?: (isReady: boolean) => void;
+
+  /**
+   * Whether the wizard's organization unit was picked on a dedicated earlier step (only then is
+   * the summary chip shown).
+   */
+  hasChildOUs?: boolean;
+
+  /**
+   * The resolved organization unit's display name, shown in the summary chip.
+   */
+  organizationUnitName?: string;
+
+  /**
+   * The resolved organization unit's logo, shown in the summary chip.
+   */
+  organizationUnitLogoUrl?: string;
+
+  /**
+   * Whether the organization unit is still being resolved.
+   */
+  isOrganizationUnitLoading?: boolean;
+
+  /**
+   * Invoked when the chip's "Change" link is clicked, returning to the organization unit step.
+   */
+  onChangeOu?: () => void;
 }
 
 export default function ConfigureName({
   agentName,
   onAgentNameChange,
   onReadyChange = undefined,
+  hasChildOUs = false,
+  organizationUnitName = undefined,
+  organizationUnitLogoUrl = undefined,
+  isOrganizationUnitLoading = false,
+  onChangeOu = undefined,
 }: ConfigureNameProps): JSX.Element {
   const {t} = useTranslation();
-  const theme = useTheme();
-
-  const nameSuggestions: string[] = useMemo(() => generateRandomHumanReadableIdentifiers(), []);
 
   useEffect((): void => {
     onReadyChange?.(agentName.trim().length > 0);
@@ -45,8 +73,18 @@ export default function ConfigureName({
   return (
     <Stack direction="column" spacing={4} data-testid="configure-agent-name">
       <Typography variant="h1" gutterBottom>
-        {t('agents:createWizard.name.title', "What's this agent called?")}
+        {t('agents:createWizard.name.title', "Let's collect some details about your agent")}
       </Typography>
+
+      {hasChildOUs && onChangeOu && (
+        <OrganizationUnitSummaryChip
+          logoUrl={organizationUnitLogoUrl}
+          icon={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
+          label={t('agents:createWizard.organizationUnit.fieldLabel', 'Organization Unit')}
+          value={isOrganizationUnitLoading ? t('common:status.loading', 'Loading...') : organizationUnitName}
+          onChange={onChangeOu}
+        />
+      )}
 
       <FormControl fullWidth required>
         <FormLabel htmlFor="agent-name-input">{t('agents:createWizard.name.fieldLabel', 'Agent name')}</FormLabel>
@@ -58,36 +96,9 @@ export default function ConfigureName({
           placeholder={t('agents:createWizard.name.placeholder', 'e.g. Billing Service')}
           inputProps={{'data-testid': 'agent-name-input'}}
         />
-      </FormControl>
 
-      <Stack direction="column" spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
-          <Typography variant="body2" color="text.secondary">
-            {t('agents:createWizard.name.suggestions.label', 'Need inspiration? Pick one:')}
-          </Typography>
-        </Stack>
-        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>
-          {nameSuggestions.map(
-            (suggestion: string): JSX.Element => (
-              <Chip
-                key={suggestion}
-                label={suggestion}
-                onClick={(): void => onAgentNameChange(suggestion)}
-                variant="outlined"
-                clickable
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'primary.main',
-                    color: 'text.primary',
-                    borderColor: 'primary.main',
-                  },
-                }}
-              />
-            ),
-          )}
-        </Box>
-      </Stack>
+        <NameSuggestion onSelect={onAgentNameChange} />
+      </FormControl>
     </Stack>
   );
 }

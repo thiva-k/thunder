@@ -4,7 +4,7 @@
   "displayName": "Custom",
   "description": "Fully customizable application with all configuration options available",
   "creationFlow": {
-    "steps": ["DETAILS", "COMPLETE"],
+    "steps": ["ORGANIZATION_UNIT", "DETAILS", "COMPLETE"],
     "previewSteps": []
   },
   "defaults": {

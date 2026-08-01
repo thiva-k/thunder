@@ -74,12 +74,10 @@ describe('ConfigureBasicInfo', () => {
     expect(mockOnNameChange).toHaveBeenCalledWith('A');
   });
 
-  it('should render name suggestions', () => {
+  it('should render a name suggestion', () => {
     renderComponent();
 
-    mockSuggestions.forEach((suggestion) => {
-      expect(screen.getByText(suggestion)).toBeInTheDocument();
-    });
+    expect(screen.getByText('Alpha Manager')).toBeInTheDocument();
   });
 
   it('should call onNameChange when clicking a suggestion chip', async () => {

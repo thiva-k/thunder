@@ -16,11 +16,11 @@
  * under the License.
  */
 
-import {generateRandomHumanReadableIdentifiers} from '@thunderid/utils';
-import {Box, Typography, Stack, TextField, Chip, FormControl, FormLabel, useTheme} from '@wso2/oxygen-ui';
-import {Lightbulb} from '@wso2/oxygen-ui-icons-react';
+import {NameSuggestion, OrganizationUnitSummaryChip} from '@thunderid/components';
+import {OrganizationUnitTreeConstants} from '@thunderid/configure-organization-units';
+import {Stack, TextField, FormControl, FormLabel, Typography} from '@wso2/oxygen-ui';
 import type {ChangeEvent, JSX} from 'react';
-import {useMemo, useEffect} from 'react';
+import {useEffect} from 'react';
 import {useTranslation} from 'react-i18next';
 import deriveHandle from '@/lib/deriveHandle';
 
@@ -32,6 +32,32 @@ export interface ConfigureNameProps {
   onHandleChange: (handle: string) => void;
   onHandleEditedChange: (edited: boolean) => void;
   onReadyChange?: (isReady: boolean) => void;
+
+  /**
+   * Whether the wizard's organization unit was picked on a dedicated earlier step (only then is
+   * the summary chip shown).
+   */
+  hasMultipleOUs?: boolean;
+
+  /**
+   * The resolved organization unit's display name, shown in the summary chip.
+   */
+  organizationUnitName?: string;
+
+  /**
+   * The resolved organization unit's logo, shown in the summary chip.
+   */
+  organizationUnitLogoUrl?: string;
+
+  /**
+   * Whether the organization unit is still being resolved.
+   */
+  isOrganizationUnitLoading?: boolean;
+
+  /**
+   * Invoked when the chip's "Change" link is clicked, returning to the organization unit step.
+   */
+  onChangeOu?: () => void;
 }
 
 /** Create-wizard step 1: the name and its auto-derived (but editable) handle. */
@@ -43,11 +69,13 @@ export default function ConfigureName({
   onHandleChange,
   onHandleEditedChange,
   onReadyChange = undefined,
+  hasMultipleOUs = false,
+  organizationUnitName = undefined,
+  organizationUnitLogoUrl = undefined,
+  isOrganizationUnitLoading = false,
+  onChangeOu = undefined,
 }: ConfigureNameProps): JSX.Element {
   const {t} = useTranslation('verifiable-presentations');
-  const theme = useTheme();
-
-  const nameSuggestions: string[] = useMemo((): string[] => generateRandomHumanReadableIdentifiers(), []);
 
   useEffect((): void => {
     if (onReadyChange) {
@@ -63,7 +91,7 @@ export default function ConfigureName({
     }
   };
 
-  const handleSuggestionClick = (suggestion: string): void => {
+  const handleSuggestionSelect = (suggestion: string): void => {
     onNameChange(suggestion);
     onHandleChange(deriveHandle(suggestion));
     onHandleEditedChange(false);
@@ -76,6 +104,20 @@ export default function ConfigureName({
 
   return (
     <Stack direction="column" spacing={4} data-testid="configure-name">
+      <Typography variant="h1" gutterBottom>
+        {t('createWizard.name.title', "Let's collect some details about your verifiable presentation")}
+      </Typography>
+
+      {hasMultipleOUs && onChangeOu && (
+        <OrganizationUnitSummaryChip
+          logoUrl={organizationUnitLogoUrl}
+          icon={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
+          label={t('create.organizationUnit.fieldLabel', 'Organization Unit')}
+          value={isOrganizationUnitLoading ? t('common:status.loading', 'Loading...') : organizationUnitName}
+          onChange={onChangeOu}
+        />
+      )}
+
       <FormControl fullWidth required>
         <FormLabel htmlFor="vp-name-input">{t('form.name.label')}</FormLabel>
         <TextField
@@ -86,36 +128,9 @@ export default function ConfigureName({
           placeholder={t('form.name.placeholder')}
           helperText={t('form.name.hint')}
         />
-      </FormControl>
 
-      <Stack direction="column" spacing={2}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Lightbulb size={20} color={theme.vars?.palette.warning.main} />
-          <Typography variant="body2" color="text.secondary">
-            {t('createWizard.name.suggestions.label')}
-          </Typography>
-        </Stack>
-        <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>
-          {nameSuggestions.map(
-            (suggestion: string): JSX.Element => (
-              <Chip
-                key={suggestion}
-                label={suggestion}
-                onClick={(): void => handleSuggestionClick(suggestion)}
-                variant="outlined"
-                clickable
-                sx={{
-                  '&:hover': {
-                    bgcolor: 'primary.main',
-                    color: 'text.primary',
-                    borderColor: 'primary.main',
-                  },
-                }}
-              />
-            ),
-          )}
-        </Box>
-      </Stack>
+        <NameSuggestion onSelect={handleSuggestionSelect} />
+      </FormControl>
 
       <FormControl fullWidth required>
         <FormLabel htmlFor="vp-handle-input">{t('form.handle.label')}</FormLabel>
