@@ -123,6 +123,13 @@ function restoreButtonAction(
   if (matchingAction) {
     return {
       ...component,
+      // Backfill the prompt action's type onto the element, which is where the property panel reads
+      // it from and where serialization projects it back out of. Only when the element does not
+      // already carry one: an unwired button keeps its type on the element alone, since a prompt
+      // action is only emitted once the button has a nextNode. Clearing the selector writes an empty
+      // string rather than dropping the key, and that empty string is persisted, so treat it as no
+      // type rather than as a type worth preserving.
+      ...(matchingAction.type && !component.actionType ? {actionType: matchingAction.type} : {}),
       action: {
         type: matchingAction.executor ? 'EXECUTOR' : 'NEXT',
         onSuccess: matchingAction.nextNode,

@@ -21,6 +21,7 @@ import VisualFlowConstants from '../../constants/VisualFlowConstants';
 import type {FlowDefinitionResponse, FlowNode} from '../../models/responses';
 import {StaticStepTypes, StepTypes} from '../../models/steps';
 import {transformFlowToCanvas} from '../flowToCanvasTransformer';
+import {transformReactFlow} from '../reactFlowTransformer';
 
 describe('flowToCanvasTransformer', () => {
   const createBaseFlowData = (nodes: FlowNode[]): FlowDefinitionResponse => ({
@@ -462,6 +463,89 @@ describe('flowToCanvasTransformer', () => {
         });
       });
 
+      it("should restore the prompt action's type onto the element", () => {
+        // A definition authored outside the builder carries the type only on the prompt action.
+        // Without restoring it the property panel cannot show it and serialization drops it.
+        const flowData = createBaseFlowData([
+          {
+            id: 'prompt-node',
+            type: 'PROMPT',
+            meta: {
+              components: [{id: 'action_confirm', type: 'ACTION', label: 'Sign out'}],
+            },
+            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'next-node'}}],
+            layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        const component = result.nodes[0].data.components?.[0] as Record<string, unknown> | undefined;
+        expect(component?.actionType).toBe('SIGN_OUT_CONFIRM');
+      });
+
+      it('should restore the type when the element carries a cleared action type', () => {
+        // Clearing the Action selector writes an empty string rather than dropping the key, and
+        // cleanComponents keeps it, so a definition saved after a clear carries actionType: ''.
+        // That means no type, so it must not block the backfill.
+        const flowData = createBaseFlowData([
+          {
+            id: 'prompt-node',
+            type: 'PROMPT',
+            meta: {
+              components: [{id: 'action_confirm', type: 'ACTION', actionType: '', label: 'Sign out'}],
+            },
+            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'next-node'}}],
+            layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        const component = result.nodes[0].data.components?.[0] as Record<string, unknown> | undefined;
+        expect(component?.actionType).toBe('SIGN_OUT_CONFIRM');
+      });
+
+      it('should keep an action type already on the element over the prompt action', () => {
+        // The element is the authoring surface, so an unwired button that still carries a type
+        // must not have it overwritten by a stale prompt action.
+        const flowData = createBaseFlowData([
+          {
+            id: 'prompt-node',
+            type: 'PROMPT',
+            meta: {
+              components: [{id: 'action_confirm', type: 'ACTION', actionType: 'REJECT', label: 'No'}],
+            },
+            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'next-node'}}],
+            layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        const component = result.nodes[0].data.components?.[0] as Record<string, unknown> | undefined;
+        expect(component?.actionType).toBe('REJECT');
+      });
+
+      it('should leave the element without an action type when the prompt action has none', () => {
+        const flowData = createBaseFlowData([
+          {
+            id: 'prompt-node',
+            type: 'PROMPT',
+            meta: {
+              components: [{id: 'submit-btn', type: 'ACTION', label: 'Submit'}],
+            },
+            prompts: [{action: {ref: 'submit-btn', nextNode: 'next-node'}}],
+            layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
+          },
+        ]);
+
+        const result = transformFlowToCanvas(flowData);
+
+        const component = result.nodes[0].data.components?.[0] as Record<string, unknown> | undefined;
+        expect(component).not.toHaveProperty('actionType');
+      });
+
       it('should normalize INPUT element properties', () => {
         const flowData = createBaseFlowData([
           {
@@ -677,6 +761,43 @@ describe('flowToCanvasTransformer', () => {
         const result = transformFlowToCanvas(flowData);
 
         expect(result.edges).toHaveLength(0);
+      });
+    });
+
+    describe('Action Type Round Trip', () => {
+      const signOutFlow = (): FlowDefinitionResponse =>
+        createBaseFlowData([
+          {
+            id: 'prompt_confirm',
+            type: 'PROMPT',
+            meta: {
+              components: [{id: 'action_confirm', type: 'ACTION', label: 'Sign out'}],
+            },
+            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'session_signout'}}],
+            layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
+          },
+          {
+            id: 'session_signout',
+            type: 'TASK_EXECUTION',
+            executor: {name: 'SessionSignOutExecutor'},
+            layout: {position: {x: 400, y: 0}, size: {width: 200, height: 100}},
+          },
+        ]);
+
+      it('should keep the action type when a definition is loaded and serialized again', () => {
+        // Opening a flow in the builder and saving it must not change its meaning. Before the type
+        // was restored onto the element, this round trip silently dropped it and a sign-out flow
+        // regressed into an endless confirmation loop.
+        const canvas = transformFlowToCanvas(signOutFlow());
+
+        const saved = transformReactFlow({edges: canvas.edges, nodes: canvas.nodes});
+
+        const prompt = saved.nodes.find((node) => node.id === 'prompt_confirm');
+        expect(prompt?.prompts?.[0].action).toMatchObject({
+          ref: 'action_confirm',
+          nextNode: 'session_signout',
+          type: 'SIGN_OUT_CONFIRM',
+        });
       });
     });
   });

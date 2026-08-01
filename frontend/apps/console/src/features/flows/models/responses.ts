@@ -152,6 +152,12 @@ export interface FlowNodeAction {
    */
   nextNode: string;
   /**
+   * Semantic action type forwarded to the next node's executor (e.g. `SUBMIT`, `REJECT`,
+   * `SIGN_OUT_CONFIRM`). Restored onto the element as `actionType` on load so a definition
+   * authored outside the builder keeps its type when the flow is saved again.
+   */
+  type?: string;
+  /**
    * Executor configuration for actions that trigger executors
    */
   executor?: FlowExecutor;
