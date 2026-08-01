@@ -1,6 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
+import {Box} from '@wso2/oxygen-ui';
 import {Position, useNodeId, useUpdateNodeInternals} from '@xyflow/react';
 import DOMPurify from 'dompurify';
 import parse from 'html-react-parser';
@@ -9,7 +10,6 @@ import {useTranslation} from 'react-i18next';
 import NodeHandle from './NodeHandle';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import type {Element as FlowElement} from '@/features/flows/models/elements';
-import './RichTextAdapter.scss';
 
 // Register DOMPurify hook once at module level to handle anchor tags.
 (DOMPurify as unknown as {addHook: (name: string, fn: (node: globalThis.Element) => void) => void}).addHook(
@@ -92,7 +92,32 @@ function RichTextAdapter({resource, elementIndex = undefined}: RichTextAdapterPr
   );
 
   return (
-    <div className="rich-text-content rich-text-adapter">
+    // The `rich-text-*` classes below are the editor's serialization classes: they
+    // are part of the stored HTML and reach the DOM through `parse()`, so they are
+    // styled from here rather than owned by this component.
+    <Box
+      data-testid="rich-text-content"
+      sx={{
+        '& .rich-text-pre-wrap': {whiteSpace: 'pre-wrap'},
+        '& .rich-text-align-left': {textAlign: 'left'},
+        '& .rich-text-align-center': {textAlign: 'center'},
+        '& .rich-text-align-right': {textAlign: 'right'},
+        '& .rich-text-align-justify': {textAlign: 'justify'},
+        '& .rich-text-bold': {fontWeight: 'bold'},
+        '& .rich-text-italic': {fontStyle: 'italic'},
+        '& .rich-text-underline': {textDecoration: 'underline'},
+        '& .rich-text-paragraph': {margin: '0.5em 0'},
+        '& .rich-text-i18n-placeholder .rich-text-i18n-placeholder-key': {
+          backgroundColor: 'rgba(var(--oxygen-palette-primary-mainChannel) / 0.1)',
+          borderRadius: 1,
+          color: 'primary.main',
+          display: 'inline-block',
+          fontFamily: 'monospace',
+          fontSize: '13px',
+          padding: '2px 4px',
+        },
+      }}
+    >
       {parse(sanitizedHtml)}
       {isActionEnabled && (
         <NodeHandle
@@ -102,7 +127,7 @@ function RichTextAdapter({resource, elementIndex = undefined}: RichTextAdapterPr
           positionKey={elementIndex}
         />
       )}
-    </div>
+    </Box>
   );
 }
 

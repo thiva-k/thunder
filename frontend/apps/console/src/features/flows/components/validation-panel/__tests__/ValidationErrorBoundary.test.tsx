@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, fireEvent} from '@testing-library/react';
+import {createTheme, type Theme} from '@wso2/oxygen-ui';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import {ValidationContext, type ValidationContextProps} from '../../../context/ValidationContext';
@@ -9,8 +10,7 @@ import Notification, {NotificationType} from '../../../models/notification';
 import type {Resource} from '../../../models/resources';
 import ValidationErrorBoundary from '../ValidationErrorBoundary';
 
-// Mock the SCSS file
-vi.mock('../ValidationErrorBoundary.scss', () => ({}));
+const theme: Theme = createTheme();
 
 describe('ValidationErrorBoundary', () => {
   const mockResource: Resource = {
@@ -76,7 +76,7 @@ describe('ValidationErrorBoundary', () => {
       );
 
       // CircleAlertIcon should not be rendered
-      expect(document.querySelector('.circle-alert-icon')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('validation-boundary-icon')).not.toBeInTheDocument();
     });
   });
 
@@ -94,15 +94,14 @@ describe('ValidationErrorBoundary', () => {
         notifications: [errorNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithError)},
       );
 
-      expect(container.querySelector('.validation-error-boundary')).toBeInTheDocument();
-      expect(container.querySelector('.error')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-error-boundary')).toHaveStyle({borderColor: theme.palette.error.main});
     });
 
     it('should show alert icon for error notification', () => {
@@ -125,7 +124,7 @@ describe('ValidationErrorBoundary', () => {
         {wrapper: createWrapper(contextWithError)},
       );
 
-      expect(document.querySelector('.circle-alert-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-boundary-icon')).toBeInTheDocument();
     });
   });
 
@@ -143,15 +142,14 @@ describe('ValidationErrorBoundary', () => {
         notifications: [warningNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithWarning)},
       );
 
-      expect(container.querySelector('.validation-error-boundary')).toBeInTheDocument();
-      expect(container.querySelector('.warning')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-error-boundary')).toHaveStyle({borderColor: theme.palette.warning.main});
     });
   });
 
@@ -169,15 +167,14 @@ describe('ValidationErrorBoundary', () => {
         notifications: [infoNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithInfo)},
       );
 
-      expect(container.querySelector('.validation-error-boundary')).toBeInTheDocument();
-      expect(container.querySelector('.info')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-error-boundary')).toHaveStyle({borderColor: theme.palette.info.main});
     });
   });
 
@@ -202,15 +199,17 @@ describe('ValidationErrorBoundary', () => {
         notifications: [warningNotification, errorNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithBoth)},
       );
 
-      expect(container.querySelector('.error')).toBeInTheDocument();
-      expect(container.querySelector('.warning')).not.toBeInTheDocument();
+      const boundary = screen.getByTestId('validation-error-boundary');
+
+      expect(boundary).toHaveStyle({borderColor: theme.palette.error.main});
+      expect(boundary).not.toHaveStyle({borderColor: theme.palette.warning.main});
     });
 
     it('should prioritize warning over info notification', () => {
@@ -233,15 +232,17 @@ describe('ValidationErrorBoundary', () => {
         notifications: [infoNotification, warningNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithBoth)},
       );
 
-      expect(container.querySelector('.warning')).toBeInTheDocument();
-      expect(container.querySelector('.info')).not.toBeInTheDocument();
+      const boundary = screen.getByTestId('validation-error-boundary');
+
+      expect(boundary).toHaveStyle({borderColor: theme.palette.warning.main});
+      expect(boundary).not.toHaveStyle({borderColor: theme.palette.info.main});
     });
   });
 
@@ -268,14 +269,14 @@ describe('ValidationErrorBoundary', () => {
 
       const boundaryDiv = container.firstChild as HTMLElement;
 
-      // Initially should not have 'active' class
-      expect(boundaryDiv).not.toHaveClass('active');
+      // The boundary marks itself initially
+      expect(screen.getByTestId('validation-boundary-icon')).toBeInTheDocument();
 
       // Simulate mouse over
       fireEvent.mouseOver(boundaryDiv);
 
-      // Should now have 'active' class
-      expect(boundaryDiv).toHaveClass('active');
+      // The marking is dropped while hovered
+      expect(screen.queryByTestId('validation-boundary-icon')).not.toBeInTheDocument();
     });
 
     it('should restore error boundary when mouse leaves after hover', () => {
@@ -302,11 +303,11 @@ describe('ValidationErrorBoundary', () => {
 
       // Mouse over
       fireEvent.mouseOver(boundaryDiv);
-      expect(boundaryDiv).toHaveClass('active');
+      expect(screen.queryByTestId('validation-boundary-icon')).not.toBeInTheDocument();
 
       // Mouse out
       fireEvent.mouseOut(boundaryDiv);
-      expect(boundaryDiv).not.toHaveClass('active');
+      expect(screen.getByTestId('validation-boundary-icon')).toBeInTheDocument();
     });
 
     it('should handle focus/blur events for accessibility', () => {
@@ -333,11 +334,11 @@ describe('ValidationErrorBoundary', () => {
 
       // Focus
       fireEvent.focus(boundaryDiv);
-      expect(boundaryDiv).toHaveClass('active');
+      expect(screen.queryByTestId('validation-boundary-icon')).not.toBeInTheDocument();
 
       // Blur
       fireEvent.blur(boundaryDiv);
-      expect(boundaryDiv).not.toHaveClass('active');
+      expect(screen.getByTestId('validation-boundary-icon')).toBeInTheDocument();
     });
 
     it('should not activate on hover when disableErrorBoundaryOnHover is false', () => {
@@ -363,7 +364,7 @@ describe('ValidationErrorBoundary', () => {
       const boundaryDiv = container.firstChild as HTMLElement;
 
       fireEvent.mouseOver(boundaryDiv);
-      expect(boundaryDiv).not.toHaveClass('active');
+      expect(screen.getByTestId('validation-boundary-icon')).toBeInTheDocument();
     });
   });
 
@@ -389,19 +390,19 @@ describe('ValidationErrorBoundary', () => {
       );
 
       // Alert icon should be visible initially
-      expect(document.querySelector('.circle-alert-icon')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-boundary-icon')).toBeInTheDocument();
 
       // Mouse over
       const boundaryDiv = container.firstChild as HTMLElement;
       fireEvent.mouseOver(boundaryDiv);
 
       // Alert icon should be hidden
-      expect(document.querySelector('.circle-alert-icon')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('validation-boundary-icon')).not.toBeInTheDocument();
     });
   });
 
-  describe('Padded Class', () => {
-    it('should add padded class when notification exists and disableErrorBoundaryOnHover is false', () => {
+  describe('Padded Radius', () => {
+    it('should round the boundary when notification exists and disableErrorBoundaryOnHover is false', () => {
       const errorNotification = createNotificationWithResource(
         'notification-1',
         'Error Message',
@@ -414,17 +415,19 @@ describe('ValidationErrorBoundary', () => {
         notifications: [errorNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource} disableErrorBoundaryOnHover={false}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithError)},
       );
 
-      expect(container.querySelector('.padded')).toBeInTheDocument();
+      expect(screen.getByTestId('validation-error-boundary')).toHaveStyle({
+        borderRadius: `${theme.shape.borderRadius}px`,
+      });
     });
 
-    it('should not add padded class when disableErrorBoundaryOnHover is true', () => {
+    it('should not round the boundary when disableErrorBoundaryOnHover is true', () => {
       const errorNotification = createNotificationWithResource(
         'notification-1',
         'Error Message',
@@ -437,14 +440,39 @@ describe('ValidationErrorBoundary', () => {
         notifications: [errorNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource} disableErrorBoundaryOnHover>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithError)},
       );
 
-      expect(container.querySelector('.padded')).not.toBeInTheDocument();
+      expect(screen.getByTestId('validation-error-boundary')).not.toHaveStyle({
+        borderRadius: `${theme.shape.borderRadius}px`,
+      });
+    });
+
+    it('should use the borderRadius prop instead of the padded radius', () => {
+      const errorNotification = createNotificationWithResource(
+        'notification-1',
+        'Error Message',
+        NotificationType.ERROR,
+        'resource-1',
+      );
+
+      const contextWithError: ValidationContextProps = {
+        ...defaultContextValue,
+        notifications: [errorNotification],
+      };
+
+      render(
+        <ValidationErrorBoundary resource={mockResource} borderRadius="50%">
+          <div>Content</div>
+        </ValidationErrorBoundary>,
+        {wrapper: createWrapper(contextWithError)},
+      );
+
+      expect(screen.getByTestId('validation-error-boundary')).toHaveStyle({borderRadius: '50%'});
     });
   });
 
@@ -462,14 +490,14 @@ describe('ValidationErrorBoundary', () => {
         notifications: [errorNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithError)},
       );
 
-      expect(container.querySelector('.validation-error-boundary')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('validation-error-boundary')).not.toBeInTheDocument();
     });
   });
 
@@ -487,15 +515,17 @@ describe('ValidationErrorBoundary', () => {
         notifications: [errorNotification],
       };
 
-      const {container} = render(
+      render(
         <ValidationErrorBoundary resource={mockResource}>
           <div>Content</div>
         </ValidationErrorBoundary>,
         {wrapper: createWrapper(contextWithError)},
       );
 
-      // Should have padded class (which means disableErrorBoundaryOnHover is false)
-      expect(container.querySelector('.padded')).toBeInTheDocument();
+      // Should be rounded (which means disableErrorBoundaryOnHover is false)
+      expect(screen.getByTestId('validation-error-boundary')).toHaveStyle({
+        borderRadius: `${theme.shape.borderRadius}px`,
+      });
     });
 
     it('should render with null children by default', () => {

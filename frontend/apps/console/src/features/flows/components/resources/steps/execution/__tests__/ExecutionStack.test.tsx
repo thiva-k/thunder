@@ -127,7 +127,7 @@ describe('ExecutionStack', () => {
       member('exec-b', 'Send OTP', {display: {label: 'Send OTP', image: 'otp.svg'}}),
     ]);
 
-    const chipImages = [...container.querySelectorAll('.execution-stack-chip [data-testid="resource-display-image"]')];
+    const chipImages = [...container.querySelectorAll('[data-stack-chip] [data-testid="resource-display-image"]')];
     expect(chipImages).toHaveLength(1);
     expect(chipImages[0]).toHaveAttribute('data-image', 'collector.svg');
   });
@@ -153,14 +153,14 @@ describe('ExecutionStack', () => {
       member('e', 'Five'),
     ]);
 
-    expect(container.querySelectorAll('.execution-stack-layer')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-stack-layer]')).toHaveLength(2);
     expect(screen.getByTestId('execution-stack-badge')).toHaveTextContent('+4');
   });
 
   it('should render a hover fan chip for every stacked member after the first', () => {
     const {container} = renderStack([member('a', 'One'), member('b', 'Two'), member('c', 'Three')]);
 
-    expect(container.querySelectorAll('.execution-stack-fan-chip')).toHaveLength(2);
+    expect(container.querySelectorAll('[data-stack-fan-chip]')).toHaveLength(2);
   });
 
   it('should expand the stack on click', () => {

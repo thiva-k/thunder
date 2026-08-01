@@ -40,7 +40,7 @@ class VisualFlowConstants {
   public static readonly FLOW_BUILDER_INCOMPLETE_HANDLE_SUFFIX: string = `_${ActionTypes.Incomplete}`;
 
   // Rendered size of the circular executor chip in compact (non-verbose) mode.
-  // Must match the dimensions in ExecutionCompact.scss; used to feed the
+  // Must match the dimensions in ExecutionCompact.tsx; used to feed the
   // auto-layout engine the post-toggle node size before it is measured.
   public static readonly FLOW_BUILDER_COMPACT_EXECUTION_NODE_SIZE: number = 48;
 

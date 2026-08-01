@@ -7,7 +7,6 @@ import type {ReactElement} from 'react';
 import type {CommonStepFactoryPropsInterface} from '../CommonStepFactory';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import {StaticStepTypes} from '@/features/flows/models/steps';
-import './Start.scss';
 
 /**
  * Props interface of {@link Start}
@@ -26,11 +25,17 @@ export type StartPropsInterface = CommonStepFactoryPropsInterface;
 function Start(): ReactElement {
   return (
     <div>
-      <Fab aria-label="start" className="start" variant="extended" size="small">
+      <Fab
+        aria-label="start"
+        color="primary"
+        variant="extended"
+        size="small"
+        data-flow-node-surface
+        sx={{boxShadow: 'none', pointerEvents: 'none', zIndex: 0}}
+      >
         Start
       </Fab>
       <Handle
-        className="hidden-handle"
         id={`${StaticStepTypes.Start.toLowerCase()}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}
         type="source"
         position={Position.Right}

@@ -1,10 +1,11 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {Box, Typography} from '@wso2/oxygen-ui';
+import {Box, Typography, type CSSObject, type Theme} from '@wso2/oxygen-ui';
 import {Handle, Position, useNodeId, type NodeProps} from '@xyflow/react';
 import {useContext, useMemo, type CSSProperties, type KeyboardEvent, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
+import {executionSurfaceMixin, executionSurfaceScheme, mixWithPrimary, nodeShadowMixin} from '../flowNodeStyles';
 import ResourceDisplayImage from '@/features/flows/components/ResourceDisplayImage';
 import ValidationErrorBoundary from '@/features/flows/components/validation-panel/ValidationErrorBoundary';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
@@ -17,7 +18,53 @@ import {
   type ExecutionStackData,
   type ExecutionStackMember,
 } from '@/features/flows/utils/compactGraphTransforms';
-import './ExecutionStack.scss';
+
+// Card-deck layers peeking out behind the chip, one per extra member (capped),
+// suggesting the collapsed run at a glance. On hover the real member chips push
+// out past them, so they fade away.
+const stackLayerSurfaceSx = (theme: Theme): CSSObject =>
+  executionSurfaceScheme(theme, (surface: string) => ({
+    backgroundColor: `color-mix(in srgb, ${surface} 70%, transparent)`,
+  }));
+
+const stackLayerSx: CSSObject = {
+  borderRadius: '50%',
+  height: 48,
+  position: 'absolute',
+  top: 0,
+  transition: 'opacity 0.2s ease',
+  width: 48,
+};
+
+const stackFanChipSurfaceSx = (theme: Theme): CSSObject =>
+  executionSurfaceScheme(theme, (surface: string) => ({
+    backgroundColor: `color-mix(in srgb, ${surface} 92%, transparent)`,
+  }));
+
+// Hover preview: the stacked members stay stacked but each is pushed a bit
+// further right from underneath the one above it, like cards nudged out of a
+// deck. They sit behind the main chip (no z-index of their own, so the chip's
+// z-index 1 keeps it on top) and only their right sliver shows. Pure decoration;
+// pointer events stay off so neighboring nodes and edges remain interactive.
+const stackFanChipSx: CSSObject = {
+  alignItems: 'center',
+  border: '2px solid',
+  borderColor: 'background.default',
+  borderRadius: '50%',
+  color: 'text.primary',
+  display: 'flex',
+  height: 44,
+  justifyContent: 'center',
+  left: 2,
+  opacity: 0,
+  pointerEvents: 'none',
+  position: 'absolute',
+  top: 2,
+  transform: 'translateX(0)',
+  transition: 'transform 0.25s ease, opacity 0.2s ease',
+  transitionDelay: 'calc(var(--fan-index) * 40ms)',
+  width: 44,
+};
 
 interface MemberDisplay {
   description?: string;
@@ -80,10 +127,41 @@ function ExecutionStack({data}: NodeProps): ReactElement {
   };
 
   return (
-    <ValidationErrorBoundary resource={{id: notifiedMemberId ?? stackId ?? ''} as Resource}>
-      <Box className="execution-stack-step">
+    // A stack is wider than it is tall, so the boundary follows the rounded ends
+    // of the deck with a pill radius rather than the default rounded rectangle.
+    <ValidationErrorBoundary borderRadius="999px" resource={{id: notifiedMemberId ?? stackId ?? ''} as Resource}>
+      <Box
+        data-testid="execution-stack-step"
+        sx={{
+          height: 48,
+          position: 'relative',
+          // Scale the handle dots down to chip proportions. The class is doubled
+          // so this wins over the canvas-wide sizing rule.
+          '& .react-flow__handle.react-flow__handle': {borderWidth: 1, height: 8, width: 8},
+        }}
+      >
         <Box
-          className="execution-stack-step-content"
+          data-execution-stack-content
+          sx={[
+            (theme: Theme) =>
+              executionSurfaceScheme(theme, (surface: string) => ({
+                '&:hover [data-stack-chip]': {backgroundColor: mixWithPrimary(theme, surface, 92)},
+              })),
+            {
+              cursor: 'pointer',
+              height: 48,
+              position: 'relative',
+              '&:hover [data-stack-layer]': {opacity: 0},
+              // 32px per step is the smallest push that clears the icon of the
+              // chip above it, so every icon stays centered in its own circle and
+              // fully visible while the circles still overlap enough to read as a
+              // stack.
+              '&:hover [data-stack-fan-chip]': {
+                opacity: 1,
+                transform: 'translateX(calc((var(--fan-index) + 1) * 32px))',
+              },
+            },
+          ]}
           role="button"
           tabIndex={0}
           aria-label={members.map((member) => resolveMemberDisplay(member).label).join(', ')}
@@ -100,14 +178,19 @@ function ExecutionStack({data}: NodeProps): ReactElement {
           }}
         >
           {Array.from({length: layerCount}, (_, index) => (
-            <Box key={index} className={`execution-stack-layer execution-stack-layer-${index + 1}`} />
+            <Box key={index} data-stack-layer sx={[stackLayerSurfaceSx, stackLayerSx, {left: (index + 1) * 4}]} />
           ))}
           {/* Hover preview: the stacked members slide out of the deck to the
             right. The main chip itself stays put; only its color changes. */}
           {members.slice(1).map((member, index) => {
             const display = resolveMemberDisplay(member);
             return (
-              <Box key={member.id} className="execution-stack-fan-chip" style={{'--fan-index': index} as CSSProperties}>
+              <Box
+                key={member.id}
+                data-stack-fan-chip
+                sx={[stackFanChipSurfaceSx, stackFanChipSx]}
+                style={{'--fan-index': index} as CSSProperties}
+              >
                 {display.image ? (
                   <ResourceDisplayImage
                     image={display.image}
@@ -116,14 +199,42 @@ function ExecutionStack({data}: NodeProps): ReactElement {
                     preserveColor={display.preserveImageColor}
                   />
                 ) : (
-                  <Typography variant="caption" className="execution-stack-chip-fallback">
+                  <Typography variant="caption" sx={{fontWeight: 600, lineHeight: 1}}>
                     {display.label.charAt(0).toUpperCase()}
                   </Typography>
                 )}
               </Box>
             );
           })}
-          <Box className="execution-stack-chip">
+          <Box
+            data-flow-node-surface
+            data-stack-chip
+            sx={[
+              executionSurfaceMixin,
+              nodeShadowMixin,
+              {
+                alignItems: 'center',
+                border: '2px solid',
+                borderColor: 'background.default',
+                borderRadius: '50%',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '1px',
+                height: 48,
+                justifyContent: 'center',
+                position: 'relative',
+                width: 48,
+                zIndex: 1,
+                // Selection lives on React Flow's own node element, which is not
+                // an ancestor in this component's tree.
+                '.react-flow__node.selected &': {
+                  outline: '2px solid',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '2px',
+                },
+              },
+            ]}
+          >
             {headDisplay?.image ? (
               <ResourceDisplayImage
                 image={headDisplay.image}
@@ -132,12 +243,17 @@ function ExecutionStack({data}: NodeProps): ReactElement {
                 preserveColor={headDisplay.preserveImageColor}
               />
             ) : (
-              <Typography variant="subtitle1" className="execution-stack-chip-fallback">
+              <Typography variant="subtitle1" sx={{fontWeight: 600, lineHeight: 1}}>
                 {(headDisplay?.label ?? 'Executor').charAt(0).toUpperCase()}
               </Typography>
             )}
+            {/* The "+N" count sits inside the circle, under the first executor's icon. */}
             {stackedCount > 0 && (
-              <Typography variant="caption" className="execution-stack-badge" data-testid="execution-stack-badge">
+              <Typography
+                variant="caption"
+                data-testid="execution-stack-badge"
+                sx={{fontSize: '10px', fontWeight: 600, lineHeight: 1, opacity: 0.85}}
+              >
                 +{stackedCount}
               </Typography>
             )}

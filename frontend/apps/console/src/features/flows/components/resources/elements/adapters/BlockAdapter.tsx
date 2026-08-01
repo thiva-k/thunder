@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Box} from '@wso2/oxygen-ui';
-import classNames from 'classnames';
 import {useMemo, type ReactElement} from 'react';
 import {ReorderableElement} from '../../steps/view/ReorderableElement';
 import useFlowPlugins from '@/features/flows/hooks/useFlowPlugins';
 import {type Element as FlowElement} from '@/features/flows/models/elements';
-import './BlockAdapter.scss';
 
 /**
  * Props interface of {@link BlockAdapter}
@@ -50,14 +48,13 @@ function BlockAdapter({
   }, [resource?.components, emitElementFilter]);
 
   return (
-    <Box className="adapter block-adapter">
+    <Box data-testid="block-adapter" sx={{display: 'block', width: '100%'}}>
       {filteredComponents.map((component: FlowElement, index: number) => (
         <ReorderableElement
           key={component.id}
           id={component.id}
           index={index}
           element={component}
-          className={classNames('flow-builder-step-content-form-field')}
           availableElements={availableElements}
           onAddElementToForm={onAddElementToForm}
           // Action blocks are managed as a single unit via the parent's chrome —

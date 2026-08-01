@@ -8,7 +8,6 @@ import FormAdapter from '../FormAdapter';
 import {ElementCategories, type Element as FlowElement} from '@/features/flows/models/elements';
 
 // Mock dependencies
-vi.mock('../FormAdapter.scss', () => ({}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -72,9 +71,9 @@ describe('FormAdapter', () => {
     it('should render the form adapter with Badge', () => {
       const resource = createMockElement();
 
-      const {container} = render(<FormAdapter resource={resource} stepId="step-1" />);
+      render(<FormAdapter resource={resource} stepId="step-1" />);
 
-      expect(container.querySelector('.form-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('form-adapter')).toBeInTheDocument();
     });
 
     it('should render Badge with form label', () => {
@@ -191,17 +190,17 @@ describe('FormAdapter', () => {
     it('should work with undefined availableElements', () => {
       const resource = createMockElement();
 
-      const {container} = render(<FormAdapter resource={resource} stepId="step-1" />);
+      render(<FormAdapter resource={resource} stepId="step-1" />);
 
-      expect(container.querySelector('.form-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('form-adapter')).toBeInTheDocument();
     });
 
     it('should work with undefined onAddElementToForm', () => {
       const resource = createMockElement();
 
-      const {container} = render(<FormAdapter resource={resource} stepId="step-1" />);
+      render(<FormAdapter resource={resource} stepId="step-1" />);
 
-      expect(container.querySelector('.form-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('form-adapter')).toBeInTheDocument();
     });
   });
 

@@ -9,7 +9,6 @@ import BlockAdapter from '../BlockAdapter';
 import type {Element as FlowElement} from '@/features/flows/models/elements';
 
 // Mock dependencies
-vi.mock('../BlockAdapter.scss', () => ({}));
 
 vi.mock('@/features/flows/components/resources/steps/view/ReorderableElement', () => ({
   ReorderableElement: ({element, id, hideChrome = false}: {element: FlowElement; id: string; hideChrome?: boolean}) => (
@@ -60,13 +59,12 @@ describe('BlockAdapter', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the adapter with correct class names', () => {
+    it('should render the adapter container', () => {
       const resource = createMockElement();
 
-      const {container} = render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
+      render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
 
-      expect(container.querySelector('.adapter')).toBeInTheDocument();
-      expect(container.querySelector('.block-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('block-adapter')).toBeInTheDocument();
     });
 
     it('should render empty when resource has no components', () => {
@@ -74,7 +72,7 @@ describe('BlockAdapter', () => {
 
       const {container} = render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
 
-      expect(container.querySelector('.block-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('block-adapter')).toBeInTheDocument();
       expect(container.querySelectorAll('[data-testid^="reorderable-element"]')).toHaveLength(0);
     });
 
@@ -83,7 +81,7 @@ describe('BlockAdapter', () => {
 
       const {container} = render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
 
-      expect(container.querySelector('.block-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('block-adapter')).toBeInTheDocument();
       expect(container.querySelectorAll('[data-testid^="reorderable-element"]')).toHaveLength(0);
     });
   });
@@ -138,17 +136,17 @@ describe('BlockAdapter', () => {
     it('should work with undefined availableElements', () => {
       const resource = createMockElement({components: [createMockElement({id: 'comp-1'})]});
 
-      const {container} = render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
+      render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
 
-      expect(container.querySelector('.block-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('block-adapter')).toBeInTheDocument();
     });
 
     it('should work with undefined onAddElementToForm', () => {
       const resource = createMockElement({components: [createMockElement({id: 'comp-1'})]});
 
-      const {container} = render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
+      render(<BlockAdapter resource={resource} />, {wrapper: createWrapper()});
 
-      expect(container.querySelector('.block-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('block-adapter')).toBeInTheDocument();
     });
   });
 

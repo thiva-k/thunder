@@ -87,7 +87,9 @@ function Execution({data, resources}: ExecutionPropsInterface): ReactElement | n
   );
 
   return (
-    <ValidationErrorBoundary resource={resource}>
+    // The compact chip is a circle, so the boundary is rounded to match it
+    // instead of boxing it in the default rounded rectangle.
+    <ValidationErrorBoundary borderRadius={isVerboseMode ? undefined : '50%'} resource={resource}>
       {!isVerboseMode ? (
         <ExecutionCompact resource={resource} />
       ) : hasComponents ? (

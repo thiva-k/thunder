@@ -6,7 +6,6 @@ import {getStackGridSx, parseStackItems} from '@thunderid/design';
 import {Box, Button, Menu, MenuItem, Typography, type SxProps, type Theme} from '@wso2/oxygen-ui';
 import {ChevronDown, ChevronLeft, ChevronRight, ChevronUp, PlusIcon} from '@wso2/oxygen-ui-icons-react';
 import {useReactFlow, type Node} from '@xyflow/react';
-import classNames from 'classnames';
 import {useMemo, useCallback, useState, type MouseEvent, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
 import Droppable from '../../../dnd/Droppable';
@@ -269,7 +268,6 @@ function StackAdapter({
             id={component.id}
             index={index}
             element={component}
-            className={classNames('flow-builder-step-content-form-field')}
             group={resource.id}
             type={resource.id}
             accept={[resource.id, ...VisualFlowConstants.FLOW_BUILDER_STACK_ALLOWED_RESOURCE_TYPES]}

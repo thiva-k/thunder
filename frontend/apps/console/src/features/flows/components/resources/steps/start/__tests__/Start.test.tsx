@@ -18,9 +18,6 @@ vi.mock('@xyflow/react', () => ({
   },
 }));
 
-// Mock SCSS
-vi.mock('../Start.scss', () => ({}));
-
 describe('Start', () => {
   describe('Rendering', () => {
     it('should render the Start node', () => {
@@ -36,11 +33,10 @@ describe('Start', () => {
       expect(fab).toBeInTheDocument();
     });
 
-    it('should render with start class on Fab', () => {
+    it('should render the Fab in the primary color', () => {
       render(<Start />);
 
-      const fab = screen.getByRole('button');
-      expect(fab).toHaveClass('start');
+      expect(screen.getByRole('button', {name: 'start'})).toHaveClass('MuiFab-primary');
     });
   });
 
@@ -66,15 +62,6 @@ describe('Start', () => {
       // Handle id should contain 'start' and '_NEXT' suffix
       expect(handle.getAttribute('data-handle-id')).toContain('start');
       expect(handle.getAttribute('data-handle-id')).toContain('_NEXT');
-    });
-
-    it('should have hidden-handle class', () => {
-      // Note: Since we're mocking Handle, we can't directly test the class
-      // but the component should pass the className prop
-      render(<Start />);
-
-      const handle = screen.getByTestId('handle-source');
-      expect(handle).toBeInTheDocument();
     });
   });
 

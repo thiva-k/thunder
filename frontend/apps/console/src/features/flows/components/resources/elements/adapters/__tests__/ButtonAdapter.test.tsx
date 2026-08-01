@@ -66,13 +66,12 @@ describe('ButtonAdapter', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the button adapter with correct class names', () => {
+    it('should render the button adapter container', () => {
       const resource = createMockElement();
 
-      const {container} = render(<ButtonAdapter resource={resource} />, {wrapper: createWrapper()});
+      render(<ButtonAdapter resource={resource} />, {wrapper: createWrapper()});
 
-      expect(container.querySelector('.adapter')).toBeInTheDocument();
-      expect(container.querySelector('.button-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('button-adapter')).toBeInTheDocument();
     });
 
     it('should render a Button component', () => {
