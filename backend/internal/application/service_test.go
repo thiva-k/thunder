@@ -1763,7 +1763,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_WithAttestation_EncryptsAnd
 	service.cryptoSvc = mockCrypto
 
 	const rawCreds = `{"type":"service_account"}`
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, []byte(rawCreds)).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, []byte(rawCreds)).
 		Return([]byte("encrypted-creds"), nil, nil)
 
 	var persistedClient *inboundmodel.InboundClient

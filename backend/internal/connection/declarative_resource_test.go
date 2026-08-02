@@ -52,7 +52,7 @@ func TestDeclarativeResourceSuite(t *testing.T) {
 }
 
 func (s *DeclarativeResourceTestSuite) SetupTest() {
-	initConfigWithTestCryptoKey()
+	initConfigWithTestCryptoKey(s.T())
 	s.T().Cleanup(config.ResetServerRuntime)
 	s.mockIDP = idpmock.NewIDPServiceInterfaceMock(s.T())
 	s.mockNotif = notificationmock.NewNotificationSenderMgtSvcInterfaceMock(s.T())

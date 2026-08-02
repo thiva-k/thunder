@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -48,14 +47,14 @@ const (
 // playIntegrityVerifier verifies Google Play Integrity tokens for Android clients.
 type playIntegrityVerifier struct {
 	decoder   integrityTokenDecoder
-	cryptoSvc kmprovider.RuntimeCryptoProvider
+	cryptoSvc providers.RuntimeCryptoProvider
 	logger    *log.Logger
 }
 
 // newPlayIntegrityVerifier creates a platform attestation verifier backed by the given token
 // decoder.
 func newPlayIntegrityVerifier(decoder integrityTokenDecoder,
-	cryptoSvc kmprovider.RuntimeCryptoProvider) providers.AttestationProvider {
+	cryptoSvc providers.RuntimeCryptoProvider) providers.AttestationProvider {
 	return &playIntegrityVerifier{
 		decoder:   decoder,
 		cryptoSvc: cryptoSvc,
@@ -119,8 +118,8 @@ func (v *playIntegrityVerifier) decryptConfig(ctx context.Context, cfg *provider
 		return &android, nil
 	}
 
-	params := cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}
-	plaintext, err := v.cryptoSvc.Decrypt(ctx, nil, params, []byte(android.ServiceAccountCredentials))
+	plaintext, err := v.cryptoSvc.Decrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM),
+		nil, []byte(android.ServiceAccountCredentials))
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt attestation credentials: %w", err)
 	}

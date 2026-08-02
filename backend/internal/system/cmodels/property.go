@@ -22,10 +22,23 @@ package cmodels
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
-	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 )
+
+// configCryptoProvider is injected once during application startup via
+// SetConfigCryptoProvider. cmodels cannot import the kmprovider/defaultkm package directly
+// to obtain it, since that package depends on cmodels and would create an import cycle.
+var configCryptoProvider kmprovider.ConfigCryptoProvider
+
+// SetConfigCryptoProvider sets the ConfigCryptoProvider used to encrypt and decrypt secret
+// property values. It must be called once during application startup before any secret
+// Property is created or read.
+func SetConfigCryptoProvider(provider kmprovider.ConfigCryptoProvider) {
+	configCryptoProvider = provider
+}
 
 // Property represents a generic property with name, value, and isSecret fields.
 type Property struct {
@@ -75,11 +88,10 @@ func (p *Property) GetValue() (string, error) {
 		return p.value, nil
 	}
 
-	cryptoProvider, err := defaultkm.GetConfigCryptoService()
-	if err != nil {
-		return "", fmt.Errorf("failed to initialize encryption service: %w", err)
+	if configCryptoProvider == nil {
+		return "", errors.New("config crypto provider not initialized")
 	}
-	decryptedBytes, err := cryptoProvider.Decrypt(context.Background(), []byte(p.value))
+	decryptedBytes, err := configCryptoProvider.Decrypt(context.Background(), []byte(p.value))
 	if err != nil {
 		return "", fmt.Errorf("failed to decrypt secret property %s: %w", p.GetName(), err)
 	}
@@ -93,11 +105,10 @@ func (p *Property) Encrypt() error {
 		return nil
 	}
 
-	cryptoProvider, err := defaultkm.GetConfigCryptoService()
-	if err != nil {
-		return fmt.Errorf("failed to initialize encryption service: %w", err)
+	if configCryptoProvider == nil {
+		return errors.New("config crypto provider not initialized")
 	}
-	encryptedBytes, err := cryptoProvider.Encrypt(context.Background(), []byte(p.value))
+	encryptedBytes, err := configCryptoProvider.Encrypt(context.Background(), []byte(p.value))
 	if err != nil {
 		return fmt.Errorf("failed to encrypt secret property %s: %w", p.GetName(), err)
 	}

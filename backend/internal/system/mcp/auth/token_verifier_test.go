@@ -29,6 +29,7 @@ import (
 	"time"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	"github.com/modelcontextprotocol/go-sdk/auth"
 	"github.com/stretchr/testify/assert"
@@ -81,11 +82,11 @@ func (m *MockJWTService) VerifyJWT(
 func (m *MockJWTService) VerifyJWTWithPublicKey(
 	ctx context.Context,
 	jwtToken string,
-	jwtPublicKey crypto.PublicKey,
+	keyRef providers.KeyRef,
 	expectedAud string,
 	expectedIss string,
 ) *tidcommon.ServiceError {
-	args := m.Called(ctx, jwtToken, jwtPublicKey, expectedAud, expectedIss)
+	args := m.Called(ctx, jwtToken, keyRef, expectedAud, expectedIss)
 	if args.Get(0) == nil {
 		return nil
 	}
@@ -115,10 +116,11 @@ func (m *MockJWTService) VerifyJWTSignature(ctx context.Context, jwtToken string
 }
 
 func (m *MockJWTService) VerifyJWTSignatureWithPublicKey(
+	ctx context.Context,
 	jwtToken string,
-	jwtPublicKey crypto.PublicKey,
+	keyRef providers.KeyRef,
 ) *tidcommon.ServiceError {
-	args := m.Called(jwtToken, jwtPublicKey)
+	args := m.Called(ctx, jwtToken, keyRef)
 	if args.Get(0) == nil {
 		return nil
 	}

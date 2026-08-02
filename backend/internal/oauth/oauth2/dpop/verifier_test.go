@@ -27,6 +27,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -40,6 +41,9 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
 	"github.com/thunder-id/thunderid/internal/system/jose/jws"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
+	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/jtimock"
 )
 
@@ -144,16 +148,37 @@ func defaultParams() VerifyParams {
 	}
 }
 
-func newTestVerifier(store jti.JTIStoreInterface, now time.Time) *verifier {
+// newTestCryptoProvider returns a RuntimeCryptoProvider mock whose Verify method performs
+// real cryptographic verification against the key carried in KeyRef.PublicKeyJWK.
+func newTestCryptoProvider(t *testing.T) providers.RuntimeCryptoProvider {
+	t.Helper()
+	provider := cryptomock.NewRuntimeCryptoProviderMock(t)
+	provider.EXPECT().Verify(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, keyRef providers.KeyRef, alg string, content, signature []byte) error {
+			signAlg, err := cryptolib.SignAlgorithmFor(cryptolib.Algorithm(alg))
+			if err != nil {
+				return fmt.Errorf("%w: %q", providers.ErrUnsupportedAlgorithm, alg)
+			}
+			pubKey, err := defaultkm.JWKToPublicKey(keyRef.PublicKeyJWK)
+			if err != nil {
+				return fmt.Errorf("invalid JWK public key: %w", err)
+			}
+			return cryptolib.Verify(content, signature, signAlg, pubKey)
+		}).Maybe()
+	return provider
+}
+
+func newTestVerifier(t *testing.T, store jti.JTIStoreInterface, now time.Time) *verifier {
 	v := &verifier{
 		jtiStore: store,
 		allowedAlgs: map[string]struct{}{
 			"ES256": {}, "PS256": {}, "EdDSA": {}, "ES384": {}, "ES512": {}, "RS256": {},
 		},
-		iatWindow:    60 * time.Second,
-		leeway:       5 * time.Second,
-		maxJTILength: 256,
-		now:          func() time.Time { return now },
+		iatWindow:             60 * time.Second,
+		leeway:                5 * time.Second,
+		maxJTILength:          256,
+		now:                   func() time.Time { return now },
+		runtimeCryptoProvider: newTestCryptoProvider(t),
 	}
 	return v
 }
@@ -180,7 +205,7 @@ func (suite *DpopTestSuite) SetupTest() {
 
 func (suite *DpopTestSuite) TestVerify_HappyPath_PS256() {
 	expectInsert(suite.jtiStore)
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	params := defaultParams()
@@ -193,7 +218,7 @@ func (suite *DpopTestSuite) TestVerify_HappyPath_PS256() {
 
 func (suite *DpopTestSuite) TestVerify_HappyPath_RS256() {
 	expectInsert(suite.jtiStore)
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newRS256Signer(suite.T())
 
 	params := defaultParams()
@@ -206,7 +231,7 @@ func (suite *DpopTestSuite) TestVerify_HappyPath_RS256() {
 
 func (suite *DpopTestSuite) TestVerify_HappyPath_EdDSA() {
 	expectInsert(suite.jtiStore)
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newEdDSASigner(suite.T())
 
 	params := defaultParams()
@@ -219,7 +244,7 @@ func (suite *DpopTestSuite) TestVerify_HappyPath_EdDSA() {
 
 func (suite *DpopTestSuite) TestVerify_ExpectedJktMatch() {
 	expectInsert(suite.jtiStore)
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	jkt, err := jws.ComputeJKT(s.jwk)
@@ -236,7 +261,7 @@ func (suite *DpopTestSuite) TestVerify_ExpectedJktMatch() {
 
 func (suite *DpopTestSuite) TestVerify_ExpectedJktMismatch() {
 	// Mismatch is detected before the store is touched, so no expectation is registered.
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	params := defaultParams()
@@ -249,7 +274,7 @@ func (suite *DpopTestSuite) TestVerify_ExpectedJktMismatch() {
 
 func (suite *DpopTestSuite) TestVerify_AccessTokenHashMatch() {
 	expectInsert(suite.jtiStore)
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	at := testAccessToken
@@ -267,7 +292,7 @@ func (suite *DpopTestSuite) TestVerify_AccessTokenHashMatch() {
 }
 
 func (suite *DpopTestSuite) TestVerify_AccessTokenHashMismatch() {
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	payload := defaultPayload(suite.now)
@@ -281,7 +306,7 @@ func (suite *DpopTestSuite) TestVerify_AccessTokenHashMismatch() {
 }
 
 func (suite *DpopTestSuite) TestVerify_AccessTokenHashMissingClaim() {
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	params := defaultParams()
@@ -298,7 +323,7 @@ func (suite *DpopTestSuite) TestVerify_Replay() {
 	suite.jtiStore.On("RecordJTI", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(false, nil).Once()
 
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	proof := s.signProof(suite.T(), nil, defaultPayload(suite.now))
@@ -315,7 +340,7 @@ func (suite *DpopTestSuite) TestVerify_Replay() {
 func (suite *DpopTestSuite) TestVerify_StoreError() {
 	suite.jtiStore.On("RecordJTI", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(false, errors.New("store down")).Once()
-	v := newTestVerifier(suite.jtiStore, suite.now)
+	v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 	s := newPS256Signer(suite.T())
 
 	params := defaultParams()
@@ -332,7 +357,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	// (the one subtest that needs an insert builds a fresh local mock).
 
 	suite.Run("missing typ", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		proof := s.signProof(suite.T(), map[string]any{"typ": "JWT"}, defaultPayload(suite.now))
 		params := defaultParams()
@@ -342,7 +367,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("alg none rejected", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		header := map[string]any{"typ": dpopJWTType, "alg": "none", "jwk": s.jwk}
 		hb, _ := json.Marshal(header)
@@ -356,7 +381,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("alg HS256 rejected", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		header := map[string]any{"typ": dpopJWTType, "alg": "HS256", "jwk": s.jwk}
 		hb, _ := json.Marshal(header)
@@ -370,7 +395,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("alg outside allowlist rejected", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		v.allowedAlgs = map[string]struct{}{"ES256": {}}
 		s := newPS256Signer(suite.T())
 		params := defaultParams()
@@ -380,7 +405,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("missing jwk header", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		proof := s.signProof(suite.T(), map[string]any{"jwk": nil}, defaultPayload(suite.now))
 		params := defaultParams()
@@ -390,7 +415,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("private key in jwk rejected", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		jwkWithPriv := map[string]any{}
 		for k, v := range s.jwk {
@@ -406,7 +431,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("htm mismatch", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		payload := defaultPayload(suite.now)
 		payload["htm"] = "GET"
@@ -418,7 +443,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("htu mismatch", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		payload := defaultPayload(suite.now)
 		payload["htu"] = "https://other.example.com/token"
@@ -433,7 +458,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 		// Different surface form, same canonical URL ⇒ accepted, so the store is touched.
 		store := jtimock.NewStoreInterfaceMock(suite.T())
 		expectInsert(store)
-		v := newTestVerifier(store, suite.now)
+		v := newTestVerifier(suite.T(), store, suite.now)
 		s := newPS256Signer(suite.T())
 		payload := defaultPayload(suite.now)
 		payload["htu"] = "HTTPS://AS.EXAMPLE.COM:443/oauth2/token?ignored=1"
@@ -445,7 +470,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("iat too old", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		old := suite.now.Add(-2 * time.Minute) // outside iatWindow + leeway = 65s
 		payload := defaultPayload(old)
@@ -457,7 +482,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("iat in future beyond leeway", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		future := suite.now.Add(1 * time.Hour)
 		payload := defaultPayload(future)
@@ -469,7 +494,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("missing jti", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		payload := defaultPayload(suite.now)
 		delete(payload, "jti")
@@ -481,7 +506,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("jti too long", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		payload := defaultPayload(suite.now)
 		long := make([]byte, 257)
@@ -497,7 +522,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("tampered signature", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		s := newPS256Signer(suite.T())
 		proof := s.signProof(suite.T(), nil, defaultPayload(suite.now))
 		// Flip a char in the middle of the signature segment. Tampering only the very last
@@ -516,7 +541,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("malformed proof", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		params := defaultParams()
 		params.Proof = "not.a.jwt"
 		_, err := v.Verify(context.Background(), params)
@@ -524,7 +549,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 	})
 
 	suite.Run("empty proof", func() {
-		v := newTestVerifier(suite.jtiStore, suite.now)
+		v := newTestVerifier(suite.T(), suite.jtiStore, suite.now)
 		params := defaultParams()
 		params.Proof = ""
 		_, err := v.Verify(context.Background(), params)
@@ -533,7 +558,7 @@ func (suite *DpopTestSuite) TestVerify_FailureModes() {
 }
 
 func (suite *DpopTestSuite) TestVerify_NewVerifierConstruction() {
-	v := newVerifier(suite.jtiStore, []string{"ES256", "EdDSA"}, 60, 5, 256)
+	v := newVerifier(suite.jtiStore, []string{"ES256", "EdDSA"}, 60, 5, 256, newTestCryptoProvider(suite.T()))
 	require.NotNil(suite.T(), v)
 	impl, ok := v.(*verifier)
 	require.True(suite.T(), ok)

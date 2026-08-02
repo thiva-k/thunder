@@ -42,7 +42,7 @@ func TestMappingSuite(t *testing.T) {
 }
 
 func (s *MappingTestSuite) SetupTest() {
-	initConfigWithTestCryptoKey()
+	initConfigWithTestCryptoKey(s.T())
 }
 
 func (s *MappingTestSuite) TearDownTest() {

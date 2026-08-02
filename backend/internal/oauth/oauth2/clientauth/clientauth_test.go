@@ -1170,10 +1170,25 @@ func (suite *ClientAuthTestSuite) TestValidateClientAssertion_InvalidJWKCannotCo
 	fakeJWT := buildTestJWT(map[string]any{"alg": "RS256", "kid": "test-kid", "typ": "JWT"},
 		map[string]any{"sub": "test-client"})
 
+	// JWK-to-public-key conversion now happens inside the JWT service's crypto provider
+	// rather than locally, so the invalid JWK surfaces as a verification failure.
+	suite.mockJwtService.EXPECT().
+		VerifyJWTWithPublicKey(
+			mock.Anything,
+			fakeJWT,
+			mock.Anything,
+			testIssuer,
+			"test-client").
+		Return(&tidcommon.ServiceError{
+			Code:  "JWT-00001",
+			Type:  tidcommon.ClientErrorType,
+			Error: tidcommon.I18nMessage{DefaultValue: "invalid_token"},
+		})
+
 	err := validateClientAssertion(context.Background(),
 		oauthApp, suite.mockJwtService, testIssuer, "test-client", fakeJWT)
 	assert.NotNil(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to convert JWK to public key")
+	assert.Contains(suite.T(), err.Error(), "client assertion verification failed")
 }
 
 func (suite *ClientAuthTestSuite) TestValidateClientAssertion_VerificationFails() {

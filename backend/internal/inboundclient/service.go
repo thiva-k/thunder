@@ -42,6 +42,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -105,6 +106,7 @@ type inboundClientService struct {
 	layoutMgt      layoutmgt.LayoutMgtServiceInterface
 	flowMgt        flowmgt.FlowMgtServiceInterface
 	entityType     entitytype.EntityTypeServiceInterface
+	cryptoProvider providers.RuntimeCryptoProvider
 	logger         *log.Logger
 }
 
@@ -116,6 +118,7 @@ func newInboundClientService(store inboundClientStoreInterface, transactioner pr
 	layoutMgt layoutmgt.LayoutMgtServiceInterface,
 	flowMgt flowmgt.FlowMgtServiceInterface,
 	entityType entitytype.EntityTypeServiceInterface,
+	cryptoProvider providers.RuntimeCryptoProvider,
 ) InboundClientServiceInterface {
 	return &inboundClientService{
 		store:          store,
@@ -126,6 +129,7 @@ func newInboundClientService(store inboundClientStoreInterface, transactioner pr
 		layoutMgt:      layoutMgt,
 		flowMgt:        flowMgt,
 		entityType:     entityType,
+		cryptoProvider: cryptoProvider,
 		logger:         log.GetLogger().With(log.String(log.LoggerKeyComponentName, "InboundClientService")),
 	}
 }
@@ -153,7 +157,7 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
 	}
@@ -233,7 +237,7 @@ func (s *inboundClientService) UpdateInboundClient(ctx context.Context, client *
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
 	}
@@ -289,7 +293,7 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
 	}
@@ -777,7 +781,8 @@ func validateCertificateInput(refID, existingCertID string, in *inboundmodel.Cer
 }
 
 // validateOAuthProfile validates all fields of an OAuth profile data object.
-func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool) error {
+func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool,
+	cryptoProvider providers.RuntimeCryptoProvider) error {
 	if p == nil {
 		return nil
 	}
@@ -795,10 +800,10 @@ func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool) error
 			return err
 		}
 	}
-	if err := validateUserInfoConfig(p); err != nil {
+	if err := validateUserInfoConfig(p, cryptoProvider); err != nil {
 		return err
 	}
-	if err := validateIDTokenConfig(p); err != nil {
+	if err := validateIDTokenConfig(p, cryptoProvider); err != nil {
 		return err
 	}
 	if err := validateAccessTokenConfig(p); err != nil {
@@ -823,13 +828,13 @@ func validateAccessTokenConfig(p *providers.OAuthProfile) error {
 }
 
 // validateUserInfoConfig validates the UserInfo signing and encryption configuration.
-func validateUserInfoConfig(p *providers.OAuthProfile) error {
+func validateUserInfoConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider) error {
 	if p.UserInfo == nil {
 		return nil
 	}
 	cfg := p.UserInfo
 
-	if cfg.SigningAlg != "" && !slices.Contains(inboundmodel.SupportedUserInfoSigningAlgs, cfg.SigningAlg) {
+	if cfg.SigningAlg != "" && !slices.Contains(cryptoProvider.GetSupportedSigningAlgorithms(), cfg.SigningAlg) {
 		return ErrOAuthUserInfoUnsupportedSigningAlg
 	}
 
@@ -838,13 +843,13 @@ func validateUserInfoConfig(p *providers.OAuthProfile) error {
 	}
 
 	if cfg.EncryptionAlg != "" {
-		if !slices.Contains(inboundmodel.SupportedUserInfoEncryptionAlgs, cfg.EncryptionAlg) {
+		if !slices.Contains(cryptoProvider.GetSupportedEncryptionAlgorithms(), cfg.EncryptionAlg) {
 			return ErrOAuthUserInfoUnsupportedEncryptionAlg
 		}
 		if cfg.EncryptionEnc == "" {
 			return ErrOAuthUserInfoEncryptionAlgRequiresEnc
 		}
-		if !slices.Contains(inboundmodel.SupportedUserInfoEncryptionEncs, cfg.EncryptionEnc) {
+		if !slices.Contains(jwe.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
 			return ErrOAuthUserInfoUnsupportedEncryptionEnc
 		}
 		hasCert := p.Certificate != nil && p.Certificate.Type != ""
@@ -885,7 +890,7 @@ func validateUserInfoConfig(p *providers.OAuthProfile) error {
 
 // validateIDTokenConfig validates the ID token configuration.
 // responseType is the authoritative field; empty defaults to JWT.
-func validateIDTokenConfig(p *providers.OAuthProfile) error {
+func validateIDTokenConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider) error {
 	if p.Token == nil || p.Token.IDToken == nil {
 		return nil
 	}
@@ -904,10 +909,10 @@ func validateIDTokenConfig(p *providers.OAuthProfile) error {
 		if cfg.EncryptionAlg == "" || cfg.EncryptionEnc == "" {
 			return ErrOAuthIDTokenEncryptionAlgRequiresEnc
 		}
-		if !slices.Contains(inboundmodel.SupportedIDTokenEncryptionAlgs, cfg.EncryptionAlg) {
+		if !slices.Contains(cryptoProvider.GetSupportedEncryptionAlgorithms(), cfg.EncryptionAlg) {
 			return ErrOAuthIDTokenUnsupportedEncryptionAlg
 		}
-		if !slices.Contains(inboundmodel.SupportedIDTokenEncryptionEncs, cfg.EncryptionEnc) {
+		if !slices.Contains(jwe.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
 			return ErrOAuthIDTokenUnsupportedEncryptionEnc
 		}
 		hasCert := p.Certificate != nil && p.Certificate.Type != ""

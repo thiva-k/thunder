@@ -35,6 +35,7 @@ import (
 	ncommon "github.com/thunder-id/thunderid/internal/notification/common"
 	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -45,12 +46,17 @@ import (
 // testCryptoKey is the shared key used so secret property encryption works in tests.
 const testCryptoKey = "0579f866ac7c9273580d0ff163fa01a7b2401a7ff3ddc3e3b14ae3136fa6025e"
 
-// initConfigWithTestCryptoKey initializes the server runtime with the test crypto key.
-func initConfigWithTestCryptoKey() {
+// initConfigWithTestCryptoKey initializes the server runtime with the test crypto key and
+// wires cmodels' package-level config crypto provider so secret Property encryption works.
+func initConfigWithTestCryptoKey(t *testing.T) {
+	t.Helper()
 	config.ResetServerRuntime()
-	_ = config.InitializeServerRuntime("/tmp/test", &config.Config{
+	require.NoError(t, config.InitializeServerRuntime("/tmp/test", &config.Config{
 		Crypto: config.CryptoConfig{Encryption: engineconfig.EncryptionConfig{Key: testCryptoKey}},
-	})
+	}))
+	_, cfgCryptoSvc, err := defaultkm.Initialize(nil)
+	require.NoError(t, err)
+	cmodels.SetConfigCryptoProvider(cfgCryptoSvc)
 }
 
 // newConnectionTestHandler returns a connection handler over fresh mock IdP and
@@ -59,7 +65,7 @@ func initConfigWithTestCryptoKey() {
 func newConnectionTestHandler(t *testing.T) (*handler, *idpmock.IDPServiceInterfaceMock,
 	*notificationmock.NotificationSenderMgtSvcInterfaceMock) {
 	t.Helper()
-	initConfigWithTestCryptoKey()
+	initConfigWithTestCryptoKey(t)
 	t.Cleanup(config.ResetServerRuntime)
 	mockIDP := idpmock.NewIDPServiceInterfaceMock(t)
 	mockNotif := notificationmock.NewNotificationSenderMgtSvcInterfaceMock(t)
@@ -90,7 +96,7 @@ func TestInitSuite(t *testing.T) {
 }
 
 func (s *InitTestSuite) SetupTest() {
-	initConfigWithTestCryptoKey()
+	initConfigWithTestCryptoKey(s.T())
 	s.mockIDP = idpmock.NewIDPServiceInterfaceMock(s.T())
 	s.mockNotif = notificationmock.NewNotificationSenderMgtSvcInterfaceMock(s.T())
 	s.mux = http.NewServeMux()

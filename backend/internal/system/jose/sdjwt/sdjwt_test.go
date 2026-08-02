@@ -621,18 +621,14 @@ func TestVerifyKeyBindingMissingConfirmationKey(t *testing.T) {
 	assert.ErrorIs(t, err, ErrMissingConfirmationKey)
 }
 
-func TestJWKToECDSAPublicKeyErrors(t *testing.T) {
-	tests := map[string]map[string]interface{}{
-		"missing coords": {"kty": "EC", "crv": "P-256"},
-		"bad curve":      {"kty": "EC", "crv": "P-999", "x": "AA", "y": "BB"},
-		"bad base64":     {"kty": "EC", "crv": "P-256", "x": "!!!", "y": "BB"},
-	}
-	for name, jwk := range tests {
-		t.Run(name, func(t *testing.T) {
-			_, err := jwkToECDSAPublicKey(jwk)
-			assert.Error(t, err)
-		})
-	}
+func TestMapAlgorithmToSignAlg(t *testing.T) {
+	signAlg, err := mapAlgorithmToSignAlg("ES256")
+	require.NoError(t, err)
+	assert.NotEmpty(t, signAlg)
+
+	_, err = mapAlgorithmToSignAlg("not-a-real-alg")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported JWS alg")
 }
 
 func TestErrorsAreDistinct(t *testing.T) {

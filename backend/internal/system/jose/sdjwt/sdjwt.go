@@ -20,8 +20,6 @@ package sdjwt
 
 import (
 	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -30,6 +28,7 @@ import (
 
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/jose/jws"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 )
 
 // Parse splits a combined-format SD-JWT into the issuer-signed JWT, its
@@ -183,7 +182,7 @@ func VerifyKeyBinding(p *Presentation, cred *VerifiedCredential, opts VerifyOpti
 		return ErrMissingConfirmationKey
 	}
 
-	holderKey, err := jwkToPublicKey(cred.ConfirmationKey)
+	holderKey, err := defaultkm.JWKToPublicKey(cred.ConfirmationKey)
 	if err != nil {
 		return fmt.Errorf("%w: invalid cnf.jwk: %w", ErrMissingConfirmationKey, err)
 	}
@@ -478,7 +477,7 @@ func verifyJWS(token string, key crypto.PublicKey) error {
 		return err
 	}
 	algStr, _ := header["alg"].(string)
-	signAlg, err := jws.MapAlgorithmToSignAlg(jws.Algorithm(algStr))
+	signAlg, err := mapAlgorithmToSignAlg(algStr)
 	if err != nil {
 		return err
 	}
@@ -508,68 +507,19 @@ func decodeJWTPayload(token string) (map[string]interface{}, error) {
 	return out, nil
 }
 
-// jwkToPublicKey converts a JWK to a crypto.PublicKey usable with cryptolib.Verify.
-// EC keys are returned as *ecdsa.PublicKey (cryptolib's ECDSA path requires it);
-// other key types are delegated to jws.JWKToPublicKey.
-func jwkToPublicKey(jwk map[string]interface{}) (crypto.PublicKey, error) {
-	if kty, _ := jwk["kty"].(string); kty == "EC" {
-		return jwkToECDSAPublicKey(jwk)
-	}
-	return jws.JWKToPublicKey(jwk)
-}
-
-// jwkToECDSAPublicKey builds an *ecdsa.PublicKey from an EC JWK. The coordinates
-// are assembled into an uncompressed SEC1 point and parsed via
-// ecdsa.ParseUncompressedPublicKey, which performs on-curve validation.
-func jwkToECDSAPublicKey(jwk map[string]interface{}) (*ecdsa.PublicKey, error) {
-	crv, _ := jwk["crv"].(string)
-	xStr, _ := jwk["x"].(string)
-	yStr, _ := jwk["y"].(string)
-	if crv == "" || xStr == "" || yStr == "" {
-		return nil, fmt.Errorf("EC JWK missing crv/x/y")
-	}
-
-	var curve elliptic.Curve
-	var coordLen int
-	switch crv {
-	case jws.P256:
-		curve, coordLen = elliptic.P256(), 32
-	case jws.P384:
-		curve, coordLen = elliptic.P384(), 48
-	case jws.P521:
-		curve, coordLen = elliptic.P521(), 66
-	default:
-		return nil, fmt.Errorf("unsupported EC curve: %s", crv)
-	}
-
-	xBytes, err := base64.RawURLEncoding.DecodeString(xStr)
-	if err != nil {
-		return nil, fmt.Errorf("decode EC x: %w", err)
-	}
-	yBytes, err := base64.RawURLEncoding.DecodeString(yStr)
-	if err != nil {
-		return nil, fmt.Errorf("decode EC y: %w", err)
-	}
-	if len(xBytes) > coordLen || len(yBytes) > coordLen {
-		return nil, fmt.Errorf("EC coordinate exceeds curve size for %s", crv)
-	}
-
-	uncompressed := make([]byte, 1+2*coordLen)
-	uncompressed[0] = 0x04
-	copy(uncompressed[1+coordLen-len(xBytes):1+coordLen], xBytes)
-	copy(uncompressed[1+2*coordLen-len(yBytes):], yBytes)
-
-	pub, err := ecdsa.ParseUncompressedPublicKey(curve, uncompressed)
-	if err != nil {
-		return nil, fmt.Errorf("invalid EC public key: %w", err)
-	}
-	return pub, nil
-}
-
 // joinPath joins a dotted claim path.
 func joinPath(base, key string) string {
 	if base == "" {
 		return key
 	}
 	return base + "." + key
+}
+
+// mapAlgorithmToSignAlg maps JWS alg header values to internal SignAlgorithm.
+func mapAlgorithmToSignAlg(jwsAlg string) (cryptolib.SignAlgorithm, error) {
+	signAlg, err := cryptolib.SignAlgorithmFor(cryptolib.Algorithm(defaultkm.JWSAlgorithm(jwsAlg)))
+	if err != nil {
+		return "", fmt.Errorf("unsupported JWS alg: %s", jwsAlg)
+	}
+	return signAlg, nil
 }

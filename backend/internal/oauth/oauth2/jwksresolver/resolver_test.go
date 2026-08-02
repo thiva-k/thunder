@@ -283,6 +283,15 @@ func (suite *ResolverTestSuite) TestParseEncryptionKeyFromJWKS_NoRSAKeys() {
 	assert.NotNil(suite.T(), svcErr)
 }
 
+func (suite *ResolverTestSuite) TestParseEncryptionKeyFromJWKS_ECDHESKeyType() {
+	jwks := `{"keys":[{"kty":"EC","use":"enc","crv":"P-256","x":"x","y":"y","kid":"ec1"}]}`
+	r := newJWKSResolver(nil)
+	pub, kid, svcErr := r.parseEncryptionKeyFromJWKS(context.Background(), []byte(jwks), "ECDH-ES", KeyUseLenientEnc)
+	suite.Require().Nil(svcErr)
+	suite.Equal("ec1", kid)
+	suite.Equal("EC", pub["kty"])
+}
+
 func (suite *ResolverTestSuite) TestParseEncryptionKeyFromJWKS_AlgMismatch() {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	suite.Require().NoError(err)

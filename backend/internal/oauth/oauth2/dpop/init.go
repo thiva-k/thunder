@@ -21,11 +21,13 @@ package dpop
 import (
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize builds a DPoP verifier from the OAuth config, using the provided
 // JTI replay-cache store.
-func Initialize(cfg oauthconfig.Config, jtiStore jti.JTIStoreInterface) VerifierInterface {
+func Initialize(cfg oauthconfig.Config, jtiStore jti.JTIStoreInterface,
+	runtimeCryptoProvider providers.RuntimeCryptoProvider) VerifierInterface {
 	dpopCfg := cfg.OAuth.DPoP
 
 	return newVerifier(
@@ -34,5 +36,6 @@ func Initialize(cfg oauthconfig.Config, jtiStore jti.JTIStoreInterface) Verifier
 		dpopCfg.IatWindow,
 		dpopCfg.Leeway,
 		dpopCfg.MaxJTILength,
+		runtimeCryptoProvider,
 	)
 }

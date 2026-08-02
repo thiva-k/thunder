@@ -157,17 +157,3 @@ type ECDHESParams struct {
 	APU                        []byte
 	APV                        []byte
 }
-
-// CryptoDetails carries algorithm-specific outputs from an Encrypt operation.
-// EPK is the generated ephemeral public key for ECDH-ES variants, to be embedded in the JWE header.
-// CEK is the content encryption key generated or derived during key establishment.
-// Nil CryptoDetails is returned for algorithms that produce no extra output (e.g. AES-GCM).
-// For RSA-OAEP, RSA-OAEP-256 and ECDH-ES variants, both EPK (where applicable) and CEK are populated.
-// CEK is nil for AES-GCM; EPK is nil for RSA-OAEP and RSA-OAEP-256 (no ephemeral key is generated).
-// IV and Tag are set only for AES-GCM Key Wrap (A128GCMKW etc.) and must be embedded in the JWE protected header.
-type CryptoDetails struct {
-	EPK gocrypto.PublicKey // ECDH-ES variants only; nil for RSA-OAEP, RSA-OAEP-256 and AES-GCM
-	CEK []byte             // Generated or derived CEK; nil for AES-GCM
-	IV  []byte             // AES-GCM Key Wrap only: IV used to wrap the CEK
-	Tag []byte             // AES-GCM Key Wrap only: authentication tag from wrapping the CEK
-}

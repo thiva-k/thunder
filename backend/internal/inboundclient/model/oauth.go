@@ -22,21 +22,7 @@
 package model
 
 import (
-	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
-	"github.com/thunder-id/thunderid/internal/system/jose/jws"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
-)
-
-// Supported JOSE algorithms for userinfo responses.
-var (
-	SupportedUserInfoSigningAlgs = []string{
-		string(jws.RS256), string(jws.RS512), string(jws.PS256),
-		string(jws.ES256), string(jws.ES384), string(jws.ES512),
-		string(jws.EdDSA),
-		string(jws.MLDSA44), string(jws.MLDSA65), string(jws.MLDSA87),
-	}
-	SupportedUserInfoEncryptionAlgs = []string{string(jwe.RSAOAEP), string(jwe.RSAOAEP256)}
-	SupportedUserInfoEncryptionEncs = []string{string(jwe.A128CBCHS256), string(jwe.A256GCM)}
 )
 
 // OAuthConfig is the wire output shape (GET responses). ClientSecret is structurally absent.
@@ -61,12 +47,6 @@ type OAuthConfig struct {
 	Certificate                        *providers.Certificate            `json:"certificate,omitempty"              yaml:"certificate,omitempty"`
 	AcrValues                          []string                          `json:"acrValues,omitempty"                yaml:"acrValues,omitempty"`
 }
-
-// SupportedIDTokenEncryptionAlgs lists JWE key-management algorithms supported for ID token encryption.
-var SupportedIDTokenEncryptionAlgs = []string{string(jwe.RSAOAEP), string(jwe.RSAOAEP256)}
-
-// SupportedIDTokenEncryptionEncs lists JWE content-encryption algorithms supported for ID token encryption.
-var SupportedIDTokenEncryptionEncs = []string{string(jwe.A128CBCHS256), string(jwe.A256GCM)}
 
 // InboundAuthConfig is the wire output wrapper (GET responses).
 type InboundAuthConfig struct {

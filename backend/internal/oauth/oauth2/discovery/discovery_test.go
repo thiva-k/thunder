@@ -37,7 +37,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 )
 
@@ -96,6 +95,10 @@ func (suite *DiscoveryTestSuite) SetupTest() {
 
 	suite.oauthCfg = oauthCfgFromServerConfig(testConfig)
 	suite.cryptoMock = cryptomock.NewRuntimeCryptoProviderMock(suite.T())
+	suite.cryptoMock.EXPECT().GetSupportedSigningAlgorithms().
+		Return(testConfig.OAuth.DPoP.AllowedAlgs).Maybe()
+	suite.cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().
+		Return([]string{string(cryptolib.AlgorithmRSAOAEP256)}).Maybe()
 	suite.discoveryService = newDiscoveryService(suite.cryptoMock, suite.oauthCfg)
 	suite.handler = newDiscoveryHandler(suite.discoveryService)
 }
@@ -154,8 +157,8 @@ func (suite *DiscoveryTestSuite) TestCIBAMetadataAdvertised() {
 }
 
 func (suite *DiscoveryTestSuite) TestOIDCDiscovery() {
-	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, kmprovider.PublicKeyFilter{}).
-		Return([]kmprovider.PublicKeyInfo{{KeyID: "k1", Algorithm: cryptolib.AlgorithmRS256}}, nil)
+	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
 
 	req := httptest.NewRequest("GET", "/.well-known/openid-configuration", nil)
 	w := httptest.NewRecorder()
@@ -199,8 +202,8 @@ func (suite *DiscoveryTestSuite) TestDPoPSigningAlgValuesAdvertised() {
 	oauth2Meta := suite.discoveryService.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Equal(suite.T(), expected, oauth2Meta.DPoPSigningAlgValuesSupported)
 
-	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, kmprovider.PublicKeyFilter{}).
-		Return([]kmprovider.PublicKeyInfo{{KeyID: "k1", Algorithm: cryptolib.AlgorithmRS256}}, nil)
+	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
 
 	oidcMeta, err := suite.discoveryService.GetOIDCMetadata(context.Background())
 	assert.NoError(suite.T(), err)
@@ -216,7 +219,10 @@ func (suite *DiscoveryTestSuite) TestDPoPSigningAlgValuesOmittedWhenUnconfigured
 	_ = config.InitializeServerRuntime("test", testConfig)
 	defer config.ResetServerRuntime()
 
-	svc := newDiscoveryService(suite.cryptoMock, oauthCfgFromServerConfig(testConfig))
+	cryptoMock := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
+	cryptoMock.EXPECT().GetSupportedSigningAlgorithms().Return(nil)
+
+	svc := newDiscoveryService(cryptoMock, oauthCfgFromServerConfig(testConfig))
 	oauth2Meta := svc.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Nil(suite.T(), oauth2Meta.DPoPSigningAlgValuesSupported)
 
@@ -239,8 +245,8 @@ func (suite *DiscoveryTestSuite) TestDCRRevocationLogoutEndpointsOmittedWhenDisa
 	assert.Empty(suite.T(), oauth2Meta.RegistrationEndpoint)
 	assert.Empty(suite.T(), oauth2Meta.RevocationEndpoint)
 
-	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, kmprovider.PublicKeyFilter{}).
-		Return([]kmprovider.PublicKeyInfo{{KeyID: "k1", Algorithm: cryptolib.AlgorithmRS256}}, nil)
+	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
 	oidcMeta, err := svc.GetOIDCMetadata(context.Background())
 	assert.NoError(suite.T(), err)
 	assert.Empty(suite.T(), oidcMeta.EndSessionEndpoint)
@@ -384,8 +390,8 @@ func TestGetStandardClaims(t *testing.T) {
 }
 
 func (suite *DiscoveryTestSuite) TestInitialize() {
-	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, kmprovider.PublicKeyFilter{}).
-		Return([]kmprovider.PublicKeyInfo{{KeyID: "k1", Algorithm: cryptolib.AlgorithmRS256}}, nil)
+	suite.cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
 
 	mux := http.NewServeMux()
 	service := Initialize(mux, suite.cryptoMock, suite.oauthCfg)
@@ -458,11 +464,13 @@ func (suite *DiscoveryTestSuite) TestGetBaseURL_WithHTTPOnly() {
 
 func (suite *DiscoveryTestSuite) TestOIDCDiscovery_MultipleKeyAlgorithms() {
 	cryptoMock := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
-	cryptoMock.EXPECT().GetPublicKeys(mock.Anything, kmprovider.PublicKeyFilter{}).
-		Return([]kmprovider.PublicKeyInfo{
-			{KeyID: "k1", Algorithm: cryptolib.AlgorithmRS256},
-			{KeyID: "k2", Algorithm: cryptolib.AlgorithmES256},
-			{KeyID: "k3", Algorithm: cryptolib.AlgorithmEdDSA},
+	cryptoMock.EXPECT().GetSupportedSigningAlgorithms().Return(suite.oauthCfg.OAuth.DPoP.AllowedAlgs)
+	cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().Return([]string{string(cryptolib.AlgorithmRSAOAEP256)})
+	cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{
+			{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)},
+			{KeyID: "k2", Algorithm: string(cryptolib.AlgorithmES256)},
+			{KeyID: "k3", Algorithm: string(cryptolib.AlgorithmEdDSA)},
 		}, nil)
 	svc := newDiscoveryService(cryptoMock, suite.oauthCfg)
 	meta, err := svc.GetOIDCMetadata(context.Background())
@@ -477,10 +485,12 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery_MultipleKeyAlgorithms() {
 
 func (suite *DiscoveryTestSuite) TestOIDCDiscovery_DeduplicatesAlgorithms() {
 	cryptoMock := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
-	cryptoMock.EXPECT().GetPublicKeys(mock.Anything, kmprovider.PublicKeyFilter{}).
-		Return([]kmprovider.PublicKeyInfo{
-			{KeyID: "k1", Algorithm: cryptolib.AlgorithmRS256},
-			{KeyID: "k2", Algorithm: cryptolib.AlgorithmRS256},
+	cryptoMock.EXPECT().GetSupportedSigningAlgorithms().Return(suite.oauthCfg.OAuth.DPoP.AllowedAlgs)
+	cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().Return([]string{string(cryptolib.AlgorithmRSAOAEP256)})
+	cryptoMock.EXPECT().GetPublicKeys(mock.Anything, providers.PublicKeyFilter{}).
+		Return([]providers.PublicKeyInfo{
+			{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)},
+			{KeyID: "k2", Algorithm: string(cryptolib.AlgorithmRS256)},
 		}, nil)
 	svc := newDiscoveryService(cryptoMock, suite.oauthCfg)
 	meta, err := svc.GetOIDCMetadata(context.Background())

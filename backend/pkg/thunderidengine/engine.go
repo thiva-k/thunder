@@ -188,7 +188,8 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		GateClient:             engineCtx.gateClientConfig,
 	}
 
-	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider))
+	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider),
+		engineCtx.runtimeCryptoSvc)
 
 	// The embedded engine has no server-config store, so no default resource server is available: the
 	// resource provider is passed undecorated. Implicit no-resource requests that carry permission

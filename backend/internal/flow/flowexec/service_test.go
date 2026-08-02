@@ -47,7 +47,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -261,7 +260,7 @@ func TestInitiateFlowSuccessScenarios(t *testing.T) {
 			mockFlowProvider := NewFlowProviderMock(t)
 			mockGraphBuilder := NewGraphBuilderInterfaceMock(t)
 			mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-			mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return([]byte("encrypted-ctx"), nil, nil)
 
 			// Create service with mocked dependencies
@@ -453,7 +452,7 @@ func TestInitiateFlowErrorScenarios(t *testing.T) {
 			mockFlowProvider := NewFlowProviderMock(t)
 			mockGraphBuilder := NewGraphBuilderInterfaceMock(t)
 			mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-			mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return([]byte("encrypted-ctx"), nil, nil).Maybe()
 
 			// Create service with mocked dependencies
@@ -518,7 +517,7 @@ func TestInitiateFlowFallsBackToDefaultFlow(t *testing.T) {
 		mockFlowProvider := NewFlowProviderMock(t)
 		mockGraphBuilder := NewGraphBuilderInterfaceMock(t)
 		mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-		mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return([]byte("encrypted-ctx"), nil, nil)
 
 		service := &flowExecService{
@@ -691,7 +690,7 @@ func TestEncryptedPayloadStoredBeforeWrite(t *testing.T) {
 	mockFlowProvider := NewFlowProviderMock(t)
 	mockGraphBuilder := NewGraphBuilderInterfaceMock(t)
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte(encryptedPayload), nil, nil)
 
 	mockInboundClient.EXPECT().GetInboundClientByEntityID(mock.Anything, "test-app").Return(
@@ -764,11 +763,11 @@ func TestDecryptCalledForEncryptedStoredContext(t *testing.T) {
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
 
 	// Decrypt should be called with the encrypted blob and return the plain JSON
-	mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything,
+	mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything,
 		[]byte(encryptedStoredCtx.Context)).
 		Return([]byte(plainCtx.Context), nil)
 	// Encrypt called when updating context after engine runs
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("re-encrypted"), nil, nil)
 
 	mockStore.EXPECT().GetFlowContext(mock.Anything, existingExecutionID).Return(encryptedStoredCtx, nil)
@@ -837,13 +836,14 @@ func TestEncryptedContext_SensitiveFieldsHidden(t *testing.T) {
 		})
 
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(
 			func(
 				ctx context.Context,
-				_ *kmprovider.KeyRef,
-				_ cryptolib.AlgorithmParams,
-				content []byte) ([]byte, *cryptolib.CryptoDetails, error) {
+				_ *providers.KeyRef,
+				_ string,
+				_ map[string]interface{},
+				content []byte) ([]byte, *providers.CryptoDetails, error) {
 				encrypted, encErr := mockConfigCryptoService.Encrypt(ctx, content)
 				return encrypted, nil, encErr
 			})
@@ -933,20 +933,21 @@ func TestEncryptDecryptRoundTrip_AllFieldsPreserved(t *testing.T) {
 		})
 
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(
 			ctx context.Context,
-			_ *kmprovider.KeyRef,
-			_ cryptolib.AlgorithmParams,
-			content []byte) ([]byte, *cryptolib.CryptoDetails, error) {
+			_ *providers.KeyRef,
+			_ string,
+			_ map[string]interface{},
+			content []byte) ([]byte, *providers.CryptoDetails, error) {
 			encrypted, encErr := mockConfigCryptoService.Encrypt(ctx, content)
 			return encrypted, nil, encErr
 		})
-	mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		RunAndReturn(func(
 			ctx context.Context,
-			_ *kmprovider.KeyRef,
-			_ cryptolib.AlgorithmParams, content []byte) ([]byte, error) {
+			_ *providers.KeyRef,
+			_ string, _ map[string]interface{}, content []byte) ([]byte, error) {
 			return mockConfigCryptoService.Decrypt(ctx, content)
 		})
 
@@ -983,7 +984,7 @@ func TestEncryptDecryptRoundTrip_AllFieldsPreserved(t *testing.T) {
 	// Step 2: Simulate getFlowContext decrypt path — call through the mock so RunAndReturn fires
 	decryptedBytes, err := mockCrypto.Decrypt(
 		context.Background(), nil,
-		cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM},
+		string(cryptolib.AlgorithmAESGCM), nil,
 		[]byte(encryptedEngineCtx.Context))
 	assert.NoError(t, err)
 
@@ -1014,7 +1015,7 @@ func TestExecute_ContextDecryptionFailure(t *testing.T) {
 	// Execute returns an InternalServerError without proceeding further.
 	mockStore := newFlowStoreInterfaceMock(t)
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, errors.New("decryption failed"))
 
 	// Context looks encrypted (has "alg" field) but the ciphertext is invalid
@@ -1066,7 +1067,7 @@ func TestExecute_ContextDecryptionSuccess(t *testing.T) {
 	mockInboundClient := inboundclientmock.NewInboundClientServiceInterfaceMock(t)
 	mockEntityProvider := entityprovidermock.NewEntityProviderInterfaceMock(t)
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted-ctx"), nil, nil)
 
 	mockStore.EXPECT().GetFlowContext(mock.Anything, existingExecutionID).Return(storedCtx, nil)
@@ -1145,7 +1146,7 @@ func TestExecute_ExistingFlowWithoutChallengeToken(t *testing.T) {
 		(*entityprovider.EntityProviderError)(nil))
 
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted-ctx"), nil, nil)
 
 	mockEngine.EXPECT().Execute(mock.MatchedBy(func(ctx *EngineContext) bool {
@@ -1240,7 +1241,7 @@ func TestExecute_ExistingFlowWithDifferentChallengeTokens(t *testing.T) {
 				(*entityprovider.EntityProviderError)(nil))
 
 			mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-			mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 				Return([]byte("encrypted-ctx"), nil, nil)
 
 			mockEngine.EXPECT().Execute(mock.MatchedBy(func(ctx *EngineContext) bool {
@@ -1314,7 +1315,7 @@ func TestExecute_EngineError_InvalidChallengeToken_PreservesContext(t *testing.T
 	mockEntityProvider.EXPECT().GetEntity("test-app-id").Return(
 		&providers.Entity{ID: "test-app-id", Category: providers.EntityCategoryApp},
 		(*entityprovider.EntityProviderError)(nil))
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted-ctx"), nil, nil)
 
 	// Engine returns challenge token error as a FlowStep with ERROR status (interceptor-based).
@@ -1452,7 +1453,7 @@ func TestExecute_EngineError_NewFlow_ContextNeverRemoved(t *testing.T) {
 		GetFlow(mock.Anything, "auth-graph-1").
 		Return(&providers.CompleteFlowDefinition{ID: "auth-graph-1"}, nil)
 	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(testGraph, nil)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted-ctx"), nil, nil)
 
 	// Engine returns challenge token error as a FlowStep with ERROR status (interceptor-based).
@@ -1629,7 +1630,7 @@ func TestEncryptEngineContext_EncryptError(t *testing.T) {
 	}
 
 	mockCrypto := cryptomock.NewRuntimeCryptoProviderMock(t)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, nil, errors.New("encryption backend unavailable"))
 
 	svc := &flowExecService{cryptoSvc: mockCrypto, cfg: testFlowExecCfg}
@@ -1694,7 +1695,7 @@ func TestInitiateAndExecute_CustomExpiryUsed(t *testing.T) {
 		GetFlow(mock.Anything, "auth-graph-expiry").
 		Return(&providers.CompleteFlowDefinition{ID: "auth-graph-expiry"}, nil)
 	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(testGraph, nil)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted"), nil, nil)
 
 	const customExpiry int64 = 300
@@ -1751,7 +1752,7 @@ func TestInitiateAndExecute_ZeroExpiryUsesDefault(t *testing.T) {
 		GetFlow(mock.Anything, "auth-graph-defexp").
 		Return(&providers.CompleteFlowDefinition{ID: "auth-graph-defexp"}, nil)
 	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(testGraph, nil)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted"), nil, nil)
 	mockStore.EXPECT().StoreFlowContext(mock.Anything, mock.Anything,
 		mock.MatchedBy(func(exp int64) bool { return exp == int64(1800) })).
@@ -1816,7 +1817,7 @@ func TestInitiateAndExecute_InitialInputsAndRuntimeData(t *testing.T) {
 		GetFlow(mock.Anything, "auth-graph-ia").
 		Return(&providers.CompleteFlowDefinition{ID: "auth-graph-ia"}, nil)
 	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(testGraph, nil)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted"), nil, nil)
 	mockStore.EXPECT().StoreFlowContext(mock.Anything, mock.Anything, mock.Anything).Return(nil)
 
@@ -1981,7 +1982,7 @@ func TestInitiateAndExecute_StoreError_ReturnsError(t *testing.T) {
 		GetFlow(mock.Anything, "auth-graph-se").
 		Return(&providers.CompleteFlowDefinition{ID: "auth-graph-se"}, nil)
 	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(testGraph, nil)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted"), nil, nil)
 	mockStore.EXPECT().StoreFlowContext(mock.Anything, mock.Anything, mock.Anything).
 		Return(errors.New("store failed"))
@@ -2193,7 +2194,7 @@ func (s *ServiceTestSuite) TestExecute_NewFlow_IncompleteStoresContext() {
 		GetFlow(mock.Anything, "auth-graph-new").
 		Return(&providers.CompleteFlowDefinition{ID: "auth-graph-new"}, nil)
 	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, mock.Anything).Return(testGraph, nil)
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted-ctx"), nil, nil)
 	mockEngine.EXPECT().Execute(mock.Anything).
 		Return(FlowStep{Status: providers.FlowStatusIncomplete}, nil)

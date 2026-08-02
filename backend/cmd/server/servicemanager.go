@@ -83,6 +83,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/runtimestore"
 	"github.com/thunder-id/thunderid/internal/serverconfig"
 	"github.com/thunder-id/thunderid/internal/system/cache"
+	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
@@ -133,6 +134,9 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	runtimeCryptoSvc, configCryptoSvc, err := kmprovider.Initialize(pkiService)
 	fatalOnError(ctx, logger, err, "Failed to initialize key manager provider")
+	// Inject the ConfigCryptoProvider into cmodels. This breaks the import cycle that would
+	// arise if cmodels were to directly import the kmprovider/defaultkm package.
+	cmodels.SetConfigCryptoProvider(configCryptoSvc)
 
 	runtime := config.GetServerRuntime()
 	joseCfg := joseconfig.Config{
@@ -263,7 +267,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 	// Shared DPoP verifier (and its JTI replay cache) so OAuth and OpenID4VCI
 	// share JTI replay protection.
 	oauthCfg := oauthconfig.FromServerRuntime()
-	dpopVerifier := dpop.Initialize(oauthCfg, jti.Initialize(runtimeStoreProvider))
+	dpopVerifier := dpop.Initialize(oauthCfg, jti.Initialize(runtimeStoreProvider), runtimeCryptoSvc)
 
 	openid4vpSvc, openid4vpDefSvc, openid4vciCredSvc, exporters :=
 		initializeVCServices(ctx, logger, mux, runtimeCryptoSvc, configCryptoSvc, jwtService, userService,
@@ -396,7 +400,7 @@ func registerServices(mux *http.ServeMux, cacheManager cache.CacheManagerInterfa
 
 	inboundClientService, err := inboundclient.Initialize(
 		cacheManager, certservice, entityProvider,
-		themeMgtService, layoutMgtService, flowMgtService, entityTypeService)
+		themeMgtService, layoutMgtService, flowMgtService, entityTypeService, runtimeCryptoSvc)
 	fatalOnError(ctx, logger, err, "Failed to initialize InboundClientService")
 
 	// Inject the consent service into the consent enforcer. It is wired here rather than at enforcer
@@ -638,7 +642,7 @@ func initializeFlowCoreAndExecutor(
 // appending their declarative-resource exporters to exporters.
 func initializeVCServices(
 	ctx context.Context, logger *log.Logger, mux *http.ServeMux,
-	runtimeCrypto kmprovider.RuntimeCryptoProvider, configCrypto kmprovider.ConfigCryptoProvider,
+	runtimeCrypto providers.RuntimeCryptoProvider, configCrypto kmprovider.ConfigCryptoProvider,
 	jwtService jwt.JWTServiceInterface, userService user.UserServiceInterface,
 	ouService ou.OrganizationUnitServiceInterface,
 	dpopVerifier dpop.VerifierInterface,
