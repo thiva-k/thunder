@@ -43,6 +43,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	"github.com/thunder-id/thunderid/internal/system/transaction"
 	"github.com/thunder-id/thunderid/tests/mocks/certmock"
+	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 	"github.com/thunder-id/thunderid/tests/mocks/design/layoutmock"
 	"github.com/thunder-id/thunderid/tests/mocks/design/thememock"
 	"github.com/thunder-id/thunderid/tests/mocks/entityprovidermock"
@@ -52,6 +53,7 @@ import (
 
 type InboundClientServiceTestSuite struct {
 	suite.Suite
+	cryptoMock *cryptomock.RuntimeCryptoProviderMock
 }
 
 func TestInboundClientServiceTestSuite(t *testing.T) {
@@ -61,22 +63,30 @@ func TestInboundClientServiceTestSuite(t *testing.T) {
 func (suite *InboundClientServiceTestSuite) SetupTest() {
 	sysconfig.ResetServerRuntime()
 	suite.Require().NoError(sysconfig.InitializeServerRuntime("/tmp/test", &sysconfig.Config{}))
+
+	suite.cryptoMock = cryptomock.NewRuntimeCryptoProviderMock(suite.T())
+	suite.cryptoMock.EXPECT().GetSupportedSigningAlgorithms().Return([]string{
+		"RS256", "RS512", "PS256", "ES256", "ES384", "ES512", "EdDSA", "ML-DSA-44", "ML-DSA-65", "ML-DSA-87",
+	}).Maybe()
+	suite.cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().Return([]string{
+		"RSA-OAEP", "RSA-OAEP-256", "ECDH-ES", "ECDH-ES+A128KW", "ECDH-ES+A192KW", "ECDH-ES+A256KW",
+	}).Maybe()
 }
 
 func newServiceForTest(store inboundClientStoreInterface) InboundClientServiceInterface {
-	return newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil)
+	return newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil, nil)
 }
 
 func newServiceWithCert(certService cert.CertificateServiceInterface) *inboundClientService {
 	svc := newInboundClientService(
-		nil, transaction.NewNoOpTransactioner(), certService, nil, nil, nil, nil, nil,
+		nil, transaction.NewNoOpTransactioner(), certService, nil, nil, nil, nil, nil, nil,
 	)
 	return svc.(*inboundClientService)
 }
 
 func newServiceWithEntityType(et entitytypepkg.EntityTypeServiceInterface) *inboundClientService {
 	svc := newInboundClientService(
-		nil, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et,
+		nil, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil,
 	)
 	return svc.(*inboundClientService)
 }
@@ -565,7 +575,7 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_Succeeds() {
 	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, "p1").Return(nil, ErrInboundClientNotFound)
 	store.EXPECT().CreateOAuthProfile(mock.Anything, "p1", mock.Anything).Return(nil)
 
-	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil, nil)
 	err := svc.UpdateInboundClient(context.Background(), ptrInboundClient(), validOAuthProfile(), true, "")
 	assert.NoError(suite.T(), err)
 }
@@ -657,7 +667,7 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_StripsUndecl
 		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}}, nil).
 		Once()
 
-	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, et, nil)
 
 	client := ptrInboundClient()
 	client.AllowedUserTypes = []string{"users"}
@@ -855,14 +865,14 @@ func (suite *InboundClientServiceTestSuite) TestValidateTokenEndpointAuthMethod_
 // validateUserInfoConfig — happy paths
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NilUserInfo() {
-	assert.NoError(suite.T(), validateUserInfoConfig(&providers.OAuthProfile{}))
+	assert.NoError(suite.T(), validateUserInfoConfig(&providers.OAuthProfile{}, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_PlainJSON() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{ResponseType: providers.UserInfoResponseTypeJSON},
 	}
-	assert.NoError(suite.T(), validateUserInfoConfig(p))
+	assert.NoError(suite.T(), validateUserInfoConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWSHappy() {
@@ -872,7 +882,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWSHappy(
 			SigningAlg:   "RS256",
 		},
 	}
-	assert.NoError(suite.T(), validateUserInfoConfig(p))
+	assert.NoError(suite.T(), validateUserInfoConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWEHappy() {
@@ -884,7 +894,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWEHappy(
 			EncryptionEnc: "A256GCM",
 		},
 	}
-	assert.NoError(suite.T(), validateUserInfoConfig(p))
+	assert.NoError(suite.T(), validateUserInfoConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWTHappy() {
@@ -897,7 +907,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWT
 			EncryptionEnc: "A256GCM",
 		},
 	}
-	assert.NoError(suite.T(), validateUserInfoConfig(p))
+	assert.NoError(suite.T(), validateUserInfoConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWTWithoutSigningAlg() {
@@ -909,7 +919,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWT
 			EncryptionEnc: "A256GCM",
 		},
 	}
-	assert.NoError(suite.T(), validateUserInfoConfig(p))
+	assert.NoError(suite.T(), validateUserInfoConfig(p, suite.cryptoMock))
 }
 
 // validateUserInfoConfig — error paths
@@ -918,42 +928,43 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_Unsupport
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{SigningAlg: "BOGUS"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoUnsupportedSigningAlg)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoUnsupportedSigningAlg)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_EncryptionEncWithoutAlg() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{EncryptionEnc: "A256GCM"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoEncryptionEncRequiresAlg)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoEncryptionEncRequiresAlg)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_UnsupportedEncryptionAlg() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{EncryptionAlg: "BOGUS", EncryptionEnc: "A256GCM"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoUnsupportedEncryptionAlg)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoUnsupportedEncryptionAlg)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_EncryptionAlgWithoutEnc() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{EncryptionAlg: "RSA-OAEP-256"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoEncryptionAlgRequiresEnc)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoEncryptionAlgRequiresEnc)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_UnsupportedEncryptionEnc() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{EncryptionAlg: "RSA-OAEP-256", EncryptionEnc: "BOGUS"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoUnsupportedEncryptionEnc)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoUnsupportedEncryptionEnc)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_EncryptionRequiresCertificate() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{EncryptionAlg: "RSA-OAEP-256", EncryptionEnc: "A256GCM"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoEncryptionRequiresCertificate)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock),
+		ErrOAuthUserInfoEncryptionRequiresCertificate)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWKSURISSRFRejection() {
@@ -963,42 +974,42 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWKSURISS
 			EncryptionAlg: "RSA-OAEP-256", EncryptionEnc: "A256GCM",
 		},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoJWKSURINotSSRFSafe)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoJWKSURINotSSRFSafe)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWSWithoutSigningAlg() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{ResponseType: providers.UserInfoResponseTypeJWS},
 	}
-	assert.NoError(suite.T(), validateUserInfoConfig(p))
+	assert.NoError(suite.T(), validateUserInfoConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_JWEMissingEncryption() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{ResponseType: providers.UserInfoResponseTypeJWE},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoJWERequiresEncryption)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoJWERequiresEncryption)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_NestedJWTMissingFields() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{ResponseType: providers.UserInfoResponseTypeNESTEDJWT},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoNestedJWTRequiresAll)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoNestedJWTRequiresAll)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_UnsupportedResponseType() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{ResponseType: "BOGUS"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoUnsupportedResponseType)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoUnsupportedResponseType)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_SigningAlgRequiresResponseType() {
 	p := &providers.OAuthProfile{
 		UserInfo: &providers.UserInfoConfig{SigningAlg: "RS256"},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoAlgRequiresResponseType)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoAlgRequiresResponseType)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_EncryptionAlgRequiresResponseType() {
@@ -1008,7 +1019,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_Encryptio
 			EncryptionAlg: "RSA-OAEP-256", EncryptionEnc: "A256GCM",
 		},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoAlgRequiresResponseType)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoAlgRequiresResponseType)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_AllAlgsRequireResponseType() {
@@ -1018,27 +1029,27 @@ func (suite *InboundClientServiceTestSuite) TestValidateUserInfoConfig_AllAlgsRe
 			SigningAlg: "RS256", EncryptionAlg: "RSA-OAEP-256", EncryptionEnc: "A256GCM",
 		},
 	}
-	assert.ErrorIs(suite.T(), validateUserInfoConfig(p), ErrOAuthUserInfoAlgRequiresResponseType)
+	assert.ErrorIs(suite.T(), validateUserInfoConfig(p, suite.cryptoMock), ErrOAuthUserInfoAlgRequiresResponseType)
 }
 
 // validateIDTokenConfig — happy paths
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NilToken() {
-	assert.NoError(suite.T(), validateIDTokenConfig(&providers.OAuthProfile{}))
+	assert.NoError(suite.T(), validateIDTokenConfig(&providers.OAuthProfile{}, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NilIDToken() {
 	p := &providers.OAuthProfile{
 		Token: &providers.OAuthTokenConfig{},
 	}
-	assert.NoError(suite.T(), validateIDTokenConfig(p))
+	assert.NoError(suite.T(), validateIDTokenConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NoEncryption() {
 	p := &providers.OAuthProfile{
 		Token: &providers.OAuthTokenConfig{IDToken: &providers.IDTokenConfig{ValidityPeriod: 3600}},
 	}
-	assert.NoError(suite.T(), validateIDTokenConfig(p))
+	assert.NoError(suite.T(), validateIDTokenConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_ValidAlgEncWithCert() {
@@ -1050,7 +1061,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_ValidAlgEn
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.NoError(suite.T(), validateIDTokenConfig(p))
+	assert.NoError(suite.T(), validateIDTokenConfig(p, suite.cryptoMock))
 }
 
 // validateIDTokenConfig — error paths
@@ -1062,7 +1073,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_Encryption
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenEncryptionAlgRequiresEnc)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenEncryptionAlgRequiresEnc)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_EncryptionAlgWithoutEnc() {
@@ -1073,7 +1084,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_Encryption
 			EncryptionAlg: "RSA-OAEP-256",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenEncryptionAlgRequiresEnc)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenEncryptionAlgRequiresEnc)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_UnsupportedEncryptionAlg() {
@@ -1085,7 +1096,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_Unsupporte
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenUnsupportedEncryptionAlg)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenUnsupportedEncryptionAlg)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_UnsupportedEncryptionEnc() {
@@ -1097,7 +1108,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_Unsupporte
 			EncryptionEnc: "BOGUS",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenUnsupportedEncryptionEnc)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenUnsupportedEncryptionEnc)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_EncryptionRequiresCertificate() {
@@ -1108,7 +1119,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_Encryption
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenEncryptionRequiresCertificate)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenEncryptionRequiresCertificate)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_JWKSURISSRFRejection() {
@@ -1120,14 +1131,14 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_JWKSURISSR
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenJWKSURINotSSRFSafe)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenJWKSURINotSSRFSafe)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_EmptyResponseType_DefaultsToJWT() {
 	p := &providers.OAuthProfile{
 		Token: &providers.OAuthTokenConfig{IDToken: &providers.IDTokenConfig{ValidityPeriod: 3600}},
 	}
-	assert.NoError(suite.T(), validateIDTokenConfig(p))
+	assert.NoError(suite.T(), validateIDTokenConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_JWTResponseType_NoEncryption() {
@@ -1136,7 +1147,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_JWTRespons
 			ResponseType: providers.IDTokenResponseTypeJWT,
 		}},
 	}
-	assert.NoError(suite.T(), validateIDTokenConfig(p))
+	assert.NoError(suite.T(), validateIDTokenConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_JWTResponseType_WithEncryptionAlg() {
@@ -1146,7 +1157,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_JWTRespons
 			EncryptionAlg: "RSA-OAEP-256",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenEncryptionFieldsNotAllowed)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenEncryptionFieldsNotAllowed)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NESTEDJWTResponseType_ValidFullConfig() {
@@ -1158,7 +1169,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NESTEDJWTR
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.NoError(suite.T(), validateIDTokenConfig(p))
+	assert.NoError(suite.T(), validateIDTokenConfig(p, suite.cryptoMock))
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NESTEDJWTResponseType_MissingAlg() {
@@ -1169,7 +1180,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_NESTEDJWTR
 			EncryptionEnc: "A256GCM",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenEncryptionAlgRequiresEnc)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenEncryptionAlgRequiresEnc)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_UnsupportedResponseType() {
@@ -1178,7 +1189,7 @@ func (suite *InboundClientServiceTestSuite) TestValidateIDTokenConfig_Unsupporte
 			ResponseType: "INVALID",
 		}},
 	}
-	assert.ErrorIs(suite.T(), validateIDTokenConfig(p), ErrOAuthIDTokenUnsupportedResponseType)
+	assert.ErrorIs(suite.T(), validateIDTokenConfig(p, suite.cryptoMock), ErrOAuthIDTokenUnsupportedResponseType)
 }
 
 func (suite *InboundClientServiceTestSuite) TestResolveUserInfo_DefaultsResponseTypeToJSON() {
@@ -1220,11 +1231,11 @@ func (suite *InboundClientServiceTestSuite) TestValidateOAuthProfile_PropagatesU
 		TokenEndpointAuthMethod: "client_secret_basic",
 		UserInfo:                &providers.UserInfoConfig{SigningAlg: "BOGUS"},
 	}
-	assert.ErrorIs(suite.T(), validateOAuthProfile(p, true), ErrOAuthUserInfoUnsupportedSigningAlg)
+	assert.ErrorIs(suite.T(), validateOAuthProfile(p, true, suite.cryptoMock), ErrOAuthUserInfoUnsupportedSigningAlg)
 }
 
 func (suite *InboundClientServiceTestSuite) TestValidateOAuthProfile_NilProfile() {
-	assert.NoError(suite.T(), validateOAuthProfile(nil, false))
+	assert.NoError(suite.T(), validateOAuthProfile(nil, false, suite.cryptoMock))
 }
 
 // ----- BuildOAuthClient -----
@@ -1926,7 +1937,7 @@ func (suite *InboundClientServiceTestSuite) TestUpdateInboundClient_WithRecovery
 	})).Return(nil)
 	store.EXPECT().GetOAuthProfileByEntityID(mock.Anything, "p1").Return(nil, ErrInboundClientNotFound)
 
-	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, nil, nil)
 	client := ptrInboundClient()
 	client.RecoveryFlowID = "recovery-1"
 	client.IsRecoveryFlowEnabled = true
@@ -2229,7 +2240,7 @@ func (suite *InboundClientServiceTestSuite) TestRevalidateFKs_FlowMismatchSurfac
 	flowMgt.EXPECT().GetReachableCallTargets(mock.Anything, "auth").Return(
 		[]flowmgt.CallTarget{{FlowID: "reg-b", FlowType: providers.FlowTypeRegistration}}, nil)
 	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(),
-		nil, nil, nil, nil, flowMgt, nil).(*inboundClientService)
+		nil, nil, nil, nil, flowMgt, nil, nil).(*inboundClientService)
 
 	err := svc.RevalidateFKs(context.Background(), "app-1")
 	var fm *FlowMismatchError
@@ -2620,7 +2631,7 @@ func (suite *InboundClientServiceTestSuite) TestCreateInboundClient_RejectsInval
 	us.EXPECT().GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "employee", false, true, false).
 		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}}, nil)
 
-	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, us)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, us, nil)
 
 	c := validInboundClient()
 	c.AllowedUserTypes = []string{"employee"}
@@ -2643,7 +2654,7 @@ func (suite *InboundClientServiceTestSuite) TestValidate_RejectsInvalidUserAttri
 	us.EXPECT().GetAttributes(mock.Anything, entitytypepkg.TypeCategoryUser, "employee", false, true, false).
 		Return([]entitytypepkg.AttributeInfo{{Attribute: "email"}}, nil)
 
-	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, us)
+	svc := newInboundClientService(store, transaction.NewNoOpTransactioner(), nil, nil, nil, nil, nil, us, nil)
 
 	c := validInboundClient()
 	c.AllowedUserTypes = []string{"employee"}

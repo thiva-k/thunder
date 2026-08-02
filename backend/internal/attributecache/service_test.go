@@ -175,7 +175,7 @@ func (suite *AttributeCacheServiceTestSuite) TestCreateAttributeCache_Encrypted(
 	plaintext, _ := json.Marshal(cache.Attributes)
 	ciphertext := []byte("encrypted-blob")
 
-	suite.mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, plaintext).
+	suite.mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, plaintext).
 		Return(ciphertext, nil, nil).Once()
 	suite.mockStore.On("CreateAttributeCache", suite.ctx, nonEmptyID(), ciphertext, int64(3600)).
 		Return(nil).Once()
@@ -195,7 +195,7 @@ func (suite *AttributeCacheServiceTestSuite) TestCreateAttributeCache_EncryptErr
 		TTLSeconds: 3600,
 	}
 
-	suite.mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+	suite.mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return(nil, nil, errors.New("encrypt failed")).Once()
 
 	result, err := encService.CreateAttributeCache(suite.ctx, cache)
@@ -280,7 +280,7 @@ func (suite *AttributeCacheServiceTestSuite) TestGetAttributeCache_Encrypted() {
 
 	suite.mockStore.On("GetAttributeCache", suite.ctx, suite.testID).
 		Return(ciphertext, nil).Once()
-	suite.mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, ciphertext).
+	suite.mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, ciphertext).
 		Return(plaintext, nil).Once()
 
 	result, err := encService.GetAttributeCache(suite.ctx, suite.testID)
@@ -297,7 +297,7 @@ func (suite *AttributeCacheServiceTestSuite) TestGetAttributeCache_DecryptError(
 
 	suite.mockStore.On("GetAttributeCache", suite.ctx, suite.testID).
 		Return(ciphertext, nil).Once()
-	suite.mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, ciphertext).
+	suite.mockCrypto.EXPECT().Decrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, ciphertext).
 		Return(nil, errors.New("decrypt failed")).Once()
 
 	result, err := encService.GetAttributeCache(suite.ctx, suite.testID)

@@ -24,12 +24,12 @@ import (
 
 	httpservice "github.com/thunder-id/thunderid/internal/system/http"
 	joseconfig "github.com/thunder-id/thunderid/internal/system/jose/config"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize initializes the JWT service.
 func Initialize(
-	runtimeProvider kmprovider.RuntimeCryptoProvider, cfg joseconfig.Config,
+	runtimeProvider providers.RuntimeCryptoProvider, cfg joseconfig.Config,
 ) (JWTServiceInterface, error) {
 	httpClient := httpservice.NewHTTPClientWithTimeout(10 * time.Second)
 	return newJWTService(httpClient, runtimeProvider, cfg)

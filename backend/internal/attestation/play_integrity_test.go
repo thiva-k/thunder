@@ -84,7 +84,7 @@ func (s *PlayIntegrityVerifierTestSuite) SetupTest() {
 // expectDecrypt configures the crypto mock to decrypt the stored test credentials to their
 // plaintext form, as every successful path must decrypt before decoding the token.
 func (s *PlayIntegrityVerifierTestSuite) expectDecrypt() {
-	s.crypto.EXPECT().Decrypt(context.Background(), mock.Anything, mock.Anything, []byte(testEncrypted)).
+	s.crypto.EXPECT().Decrypt(context.Background(), mock.Anything, mock.Anything, mock.Anything, []byte(testEncrypted)).
 		Return([]byte(testCredentials), nil)
 }
 
@@ -109,7 +109,7 @@ func (s *PlayIntegrityVerifierTestSuite) TestVerify_NotConfigured() {
 }
 
 func (s *PlayIntegrityVerifierTestSuite) TestVerify_DecryptError() {
-	s.crypto.EXPECT().Decrypt(context.Background(), mock.Anything, mock.Anything, []byte(testEncrypted)).
+	s.crypto.EXPECT().Decrypt(context.Background(), mock.Anything, mock.Anything, mock.Anything, []byte(testEncrypted)).
 		Return(nil, errors.New("decrypt failure"))
 
 	verified, svcErr := s.verifier.Verify(context.Background(), androidConfig(), testToken)

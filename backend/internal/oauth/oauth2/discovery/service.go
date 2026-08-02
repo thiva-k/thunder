@@ -24,11 +24,10 @@ import (
 	"slices"
 	"sort"
 
-	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/pkce"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
@@ -42,12 +41,12 @@ type DiscoveryServiceInterface interface {
 // discoveryService implements DiscoveryServiceInterface
 type discoveryService struct {
 	cfg            oauthconfig.Config
-	cryptoProvider kmprovider.RuntimeCryptoProvider
+	cryptoProvider providers.RuntimeCryptoProvider
 }
 
 // newDiscoveryService creates a new discovery service instance
 func newDiscoveryService(
-	cryptoProvider kmprovider.RuntimeCryptoProvider, cfg oauthconfig.Config,
+	cryptoProvider providers.RuntimeCryptoProvider, cfg oauthconfig.Config,
 ) DiscoveryServiceInterface {
 	return &discoveryService{
 		cfg:            cfg,
@@ -97,6 +96,9 @@ func (ds *discoveryService) GetOIDCMetadata(ctx context.Context) (*OIDCProviderM
 	if err != nil {
 		return nil, err
 	}
+	encryptionAlgs := ds.cryptoProvider.GetSupportedEncryptionAlgorithms()
+	encryptionEncs := jwe.SupportedContentEncryptionAlgorithms()
+
 	oidcProviderMetadata := &OIDCProviderMetadata{
 		OAuth2AuthorizationServerMetadata:    *oauth2Meta,
 		UserInfoEndpoint:                     ds.getUserInfoEndpoint(),
@@ -104,10 +106,10 @@ func (ds *discoveryService) GetOIDCMetadata(ctx context.Context) (*OIDCProviderM
 		SubjectTypesSupported:                ds.getSupportedSubjectTypes(),
 		IDTokenSigningAlgValuesSupported:     signingAlgs,
 		UserInfoSigningAlgValuesSupported:    signingAlgs,
-		UserInfoEncryptionAlgValuesSupported: inboundmodel.SupportedUserInfoEncryptionAlgs,
-		UserInfoEncryptionEncValuesSupported: inboundmodel.SupportedUserInfoEncryptionEncs,
-		IDTokenEncryptionAlgValuesSupported:  inboundmodel.SupportedIDTokenEncryptionAlgs,
-		IDTokenEncryptionEncValuesSupported:  inboundmodel.SupportedIDTokenEncryptionEncs,
+		UserInfoEncryptionAlgValuesSupported: encryptionAlgs,
+		UserInfoEncryptionEncValuesSupported: encryptionEncs,
+		IDTokenEncryptionAlgValuesSupported:  encryptionAlgs,
+		IDTokenEncryptionEncValuesSupported:  encryptionEncs,
 		ClaimsSupported:                      ds.getSupportedClaims(),
 		ClaimsParameterSupported:             true,
 		AcrValuesSupported:                   ds.getSupportedAcrValues(),
@@ -193,13 +195,7 @@ func (ds *discoveryService) isGlobalPARRequired() bool {
 }
 
 func (ds *discoveryService) getSupportedDPoPSigningAlgs() []string {
-	algs := ds.cfg.OAuth.DPoP.AllowedAlgs
-	if len(algs) == 0 {
-		return nil
-	}
-	out := make([]string, len(algs))
-	copy(out, algs)
-	return out
+	return ds.cryptoProvider.GetSupportedSigningAlgorithms()
 }
 
 func (ds *discoveryService) getSupportedSubjectTypes() []string {
@@ -207,7 +203,7 @@ func (ds *discoveryService) getSupportedSubjectTypes() []string {
 }
 
 func (ds *discoveryService) getSupportedSigningAlgorithms(ctx context.Context) ([]string, error) {
-	keys, err := ds.cryptoProvider.GetPublicKeys(ctx, kmprovider.PublicKeyFilter{})
+	keys, err := ds.cryptoProvider.GetPublicKeys(ctx, providers.PublicKeyFilter{})
 	if err != nil {
 		log.GetLogger().Error(ctx,
 			"Failed to retrieve public keys for signing algorithm discovery", log.Error(err))
@@ -215,7 +211,7 @@ func (ds *discoveryService) getSupportedSigningAlgorithms(ctx context.Context) (
 	}
 	result := make([]string, 0, len(keys))
 	for _, k := range keys {
-		alg := string(k.Algorithm)
+		alg := k.Algorithm
 		if alg == "" || slices.Contains(result, alg) {
 			continue
 		}

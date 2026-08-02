@@ -19,18 +19,23 @@
 package export
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/thunder-id/thunderid/internal/application"
 	"github.com/thunder-id/thunderid/internal/connection"
 	"github.com/thunder-id/thunderid/internal/entitytype"
+	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/cors/corstest"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
+	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/tests/mocks/applicationmock"
 	"github.com/thunder-id/thunderid/tests/mocks/entitytypemock"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
@@ -40,6 +45,30 @@ import (
 	"github.com/stretchr/testify/suite"
 	yaml "gopkg.in/yaml.v3"
 )
+
+// testCryptoKey is the shared key used so secret property encryption works in tests.
+const testCryptoKey = "0579f866ac7c9273580d0ff163fa01a7b2401a7ff3ddc3e3b14ae3136fa6025e"
+
+// TestMain wires cmodels' package-level config crypto provider once for the whole test
+// binary, so secret Property encryption works regardless of which test's SetupTest last
+// reset the server runtime.
+func TestMain(m *testing.M) {
+	config.ResetServerRuntime()
+	if err := config.InitializeServerRuntime("/tmp/test", &config.Config{
+		Crypto: config.CryptoConfig{Encryption: engineconfig.EncryptionConfig{Key: testCryptoKey}},
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize server runtime: %v\n", err)
+		os.Exit(1)
+	}
+	_, cfgCryptoSvc, err := defaultkm.Initialize(nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize default crypto provider: %v\n", err)
+		os.Exit(1)
+	}
+	cmodels.SetConfigCryptoProvider(cfgCryptoSvc)
+	config.ResetServerRuntime()
+	os.Exit(m.Run())
+}
 
 // InitTestSuite contains comprehensive tests for the init.go file.
 // The test suite covers:

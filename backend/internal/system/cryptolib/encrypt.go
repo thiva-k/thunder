@@ -28,6 +28,8 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Encrypt performs cryptographic key establishment or symmetric encryption for the algorithm
@@ -48,7 +50,7 @@ import (
 //   - AlgorithmA128GCMKW / AlgorithmA192GCMKW / AlgorithmA256GCMKW: key must be []byte (symmetric KEK).
 //     content is ignored.
 //     Returns wrappedCEK, CryptoDetails{CEK, IV, Tag}, nil. params.AESGCMKW.ContentEncryptionAlgorithm must be set.
-func Encrypt(key any, params *AlgorithmParams, content []byte) ([]byte, *CryptoDetails, error) {
+func Encrypt(key any, params *AlgorithmParams, content []byte) ([]byte, *providers.CryptoDetails, error) {
 	if params == nil {
 		return nil, nil, errors.New("algorithm params required")
 	}
@@ -117,7 +119,7 @@ func encryptAESGCM(key, plaintext []byte) ([]byte, error) {
 	return aesgcm.Seal(nonce, nonce, plaintext, nil), nil
 }
 
-func encryptRSAOAEP256(rsaPub *rsa.PublicKey, params AlgorithmParams) ([]byte, *CryptoDetails, error) {
+func encryptRSAOAEP256(rsaPub *rsa.PublicKey, params AlgorithmParams) ([]byte, *providers.CryptoDetails, error) {
 	if params.RSAOAEP256.ContentEncryptionAlgorithm == "" {
 		return nil, nil, errors.New("ContentEncryptionAlgorithm required for RSA-OAEP-256 CEK generation")
 	}
@@ -136,10 +138,10 @@ func encryptRSAOAEP256(rsaPub *rsa.PublicKey, params AlgorithmParams) ([]byte, *
 		}
 		return nil, nil, err
 	}
-	return encryptedCEK, &CryptoDetails{CEK: cek}, nil
+	return encryptedCEK, &providers.CryptoDetails{CEK: cek}, nil
 }
 
-func encryptECDHES(ecdsaPub *ecdsa.PublicKey, params AlgorithmParams) ([]byte, *CryptoDetails, error) {
+func encryptECDHES(ecdsaPub *ecdsa.PublicKey, params AlgorithmParams) ([]byte, *providers.CryptoDetails, error) {
 	ephemeralPriv, ephemeralPub, err := ecdhGenerateEphemeralKeyPair(ecdsaPub)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ephemeral key generation failed: %w", err)
@@ -160,10 +162,10 @@ func encryptECDHES(ecdsaPub *ecdsa.PublicKey, params AlgorithmParams) ([]byte, *
 	if err != nil {
 		return nil, nil, fmt.Errorf("key derivation failed: %w", err)
 	}
-	return nil, &CryptoDetails{EPK: ephemeralPub, CEK: derivedCEK}, nil
+	return nil, &providers.CryptoDetails{EPK: ephemeralPub, CEK: derivedCEK}, nil
 }
 
-func encryptECDHESKW(ecdsaPub *ecdsa.PublicKey, params AlgorithmParams) ([]byte, *CryptoDetails, error) {
+func encryptECDHESKW(ecdsaPub *ecdsa.PublicKey, params AlgorithmParams) ([]byte, *providers.CryptoDetails, error) {
 	ephemeralPriv, ephemeralPub, err := ecdhGenerateEphemeralKeyPair(ecdsaPub)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ephemeral key generation failed: %w", err)
@@ -204,10 +206,10 @@ func encryptECDHESKW(ecdsaPub *ecdsa.PublicKey, params AlgorithmParams) ([]byte,
 		}
 		return nil, nil, fmt.Errorf("AES key wrap failed: %w", err)
 	}
-	return wrappedKey, &CryptoDetails{EPK: ephemeralPub, CEK: cek}, nil
+	return wrappedKey, &providers.CryptoDetails{EPK: ephemeralPub, CEK: cek}, nil
 }
 
-func encryptRSAOAEP(rsaPub *rsa.PublicKey, params AlgorithmParams) ([]byte, *CryptoDetails, error) {
+func encryptRSAOAEP(rsaPub *rsa.PublicKey, params AlgorithmParams) ([]byte, *providers.CryptoDetails, error) {
 	if params.RSAOAEP.ContentEncryptionAlgorithm == "" {
 		return nil, nil, errors.New("ContentEncryptionAlgorithm required for RSA-OAEP CEK generation")
 	}
@@ -226,10 +228,10 @@ func encryptRSAOAEP(rsaPub *rsa.PublicKey, params AlgorithmParams) ([]byte, *Cry
 		}
 		return nil, nil, err
 	}
-	return encryptedCEK, &CryptoDetails{CEK: cek}, nil
+	return encryptedCEK, &providers.CryptoDetails{CEK: cek}, nil
 }
 
-func encryptAESKW(kek []byte, alg Algorithm, params AlgorithmParams) ([]byte, *CryptoDetails, error) {
+func encryptAESKW(kek []byte, alg Algorithm, params AlgorithmParams) ([]byte, *providers.CryptoDetails, error) {
 	expectedLen := 16
 	switch alg {
 	case AlgorithmA192KW:
@@ -258,10 +260,10 @@ func encryptAESKW(kek []byte, alg Algorithm, params AlgorithmParams) ([]byte, *C
 		}
 		return nil, nil, fmt.Errorf("AES key wrap failed: %w", err)
 	}
-	return wrappedKey, &CryptoDetails{CEK: cek}, nil
+	return wrappedKey, &providers.CryptoDetails{CEK: cek}, nil
 }
 
-func encryptAESGCMKW(kek []byte, alg Algorithm, params AlgorithmParams) ([]byte, *CryptoDetails, error) {
+func encryptAESGCMKW(kek []byte, alg Algorithm, params AlgorithmParams) ([]byte, *providers.CryptoDetails, error) {
 	expectedLen := 16
 	switch alg {
 	case AlgorithmA192GCMKW:
@@ -299,5 +301,5 @@ func encryptAESGCMKW(kek []byte, alg Algorithm, params AlgorithmParams) ([]byte,
 	tagSize := gcm.Overhead()
 	encryptedKey := sealed[:len(sealed)-tagSize]
 	tag := sealed[len(sealed)-tagSize:]
-	return encryptedKey, &CryptoDetails{CEK: cek, IV: iv, Tag: tag}, nil
+	return encryptedKey, &providers.CryptoDetails{CEK: cek, IV: iv, Tag: tag}, nil
 }

@@ -1499,7 +1499,7 @@ func (suite *TokenBuilderTestSuite) TestBuildIDToken_Success_WithEncryption_Inli
 			return strings.Count(string(payload), ".") == 2
 		}),
 		mock.Anything,
-		jwe.KeyEncAlgorithm("RSA-OAEP-256"),
+		"RSA-OAEP-256",
 		jwe.ContentEncAlgorithm("A256GCM"),
 		"JWT",
 		mock.Anything,
@@ -1617,7 +1617,7 @@ func (suite *TokenBuilderTestSuite) TestBuildIDToken_Error_EncryptionFailed() {
 	mockJWE := jwemock.NewJWEServiceInterfaceMock(suite.T())
 	mockJWE.On("Encrypt",
 		mock.Anything, mock.Anything, mock.Anything,
-		jwe.KeyEncAlgorithm("RSA-OAEP-256"),
+		"RSA-OAEP-256",
 		jwe.ContentEncAlgorithm("A256GCM"),
 		"JWT",
 		mock.Anything,
@@ -1687,7 +1687,7 @@ func (suite *TokenBuilderTestSuite) TestBuildIDToken_Success_WithEncryption_JWKS
 	mockJWE := jwemock.NewJWEServiceInterfaceMock(suite.T())
 	mockJWE.On("Encrypt",
 		mock.Anything, mock.Anything, mock.Anything,
-		jwe.KeyEncAlgorithm("RSA-OAEP-256"),
+		"RSA-OAEP-256",
 		jwe.ContentEncAlgorithm("A256GCM"),
 		"JWT",
 		mock.Anything,

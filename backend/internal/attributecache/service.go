@@ -112,8 +112,8 @@ func (s *attributeCacheService) CreateAttributeCache(
 		return nil, &tidcommon.InternalServerError
 	}
 	if s.encryptionEnabled {
-		ciphertext, _, encErr := s.crypto.Encrypt(ctx, nil,
-			cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}, data)
+		ciphertext, _, encErr := s.crypto.Encrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM),
+			nil, data)
 		if encErr != nil {
 			logger.Error(ctx, "Failed to encrypt attributes", log.Error(encErr))
 			return nil, &tidcommon.InternalServerError
@@ -153,8 +153,8 @@ func (s *attributeCacheService) GetAttributeCache(
 	}
 
 	if s.encryptionEnabled {
-		plaintext, decErr := s.crypto.Decrypt(ctx, nil,
-			cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}, data)
+		plaintext, decErr := s.crypto.Decrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM),
+			nil, data)
 		if decErr != nil {
 			logger.Error(ctx, "Failed to decrypt attributes", log.Error(decErr), log.String("id", id))
 			return nil, &tidcommon.InternalServerError

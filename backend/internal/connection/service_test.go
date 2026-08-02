@@ -50,7 +50,7 @@ func TestServiceSuite(t *testing.T) {
 }
 
 func (s *ServiceTestSuite) SetupTest() {
-	initConfigWithTestCryptoKey()
+	initConfigWithTestCryptoKey(s.T())
 	s.mockIDP = idpmock.NewIDPServiceInterfaceMock(s.T())
 	s.mockNotif = notificationmock.NewNotificationSenderMgtSvcInterfaceMock(s.T())
 	s.svc = newService(s.mockIDP, s.mockNotif)

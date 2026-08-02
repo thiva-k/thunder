@@ -31,7 +31,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/cert"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
-	"github.com/thunder-id/thunderid/internal/system/jose/jws"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/utils"
@@ -276,12 +275,8 @@ func validateClientAssertion(ctx context.Context,
 		return fmt.Errorf("no matching key found in JWKS for kid: %v", kid)
 	}
 
-	pubKey, err := jws.JWKToPublicKey(jwk)
-	if err != nil {
-		return fmt.Errorf("failed to convert JWK to public key: %w", err)
-	}
-
-	if err := jwtService.VerifyJWTWithPublicKey(ctx, clientAssertion, pubKey, issuer, clientID); err != nil {
+	if err := jwtService.VerifyJWTWithPublicKey(ctx, clientAssertion, providers.KeyRef{PublicKeyJWK: jwk},
+		issuer, clientID); err != nil {
 		return fmt.Errorf("client assertion verification failed: %v", err.Error)
 	}
 

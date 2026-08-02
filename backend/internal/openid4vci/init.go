@@ -23,14 +23,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/system/config"
-	"github.com/thunder-id/thunderid/internal/system/jose/jws"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/user"
 	"github.com/thunder-id/thunderid/internal/vc/credential"
@@ -41,7 +40,7 @@ import (
 // credSvc is the already-initialized credential-configuration service (owned by the caller).
 // When no signing key is configured, issuance is disabled and Initialize returns nil without error.
 func Initialize(
-	mux *http.ServeMux, cryptoProvider kmprovider.RuntimeCryptoProvider,
+	mux *http.ServeMux, cryptoProvider providers.RuntimeCryptoProvider,
 	jwtService jwt.JWTServiceInterface, userService user.UserServiceInterface,
 	dpopVerifier dpop.VerifierInterface, credSvc credential.CredentialConfigurationServiceInterface,
 	store providers.RuntimeStoreProvider,
@@ -69,7 +68,7 @@ func Initialize(
 		return nil, nil
 	}
 
-	keys, err := cryptoProvider.GetPublicKeys(context.Background(), kmprovider.PublicKeyFilter{KeyID: cfg.SigningKeyID})
+	keys, err := cryptoProvider.GetPublicKeys(context.Background(), providers.PublicKeyFilter{KeyID: cfg.SigningKeyID})
 	if err != nil {
 		return nil, fmt.Errorf("failed to load signing key %q: %w", cfg.SigningKeyID, err)
 	}
@@ -77,7 +76,7 @@ func Initialize(
 		return nil, fmt.Errorf("%w: no signing key found for key id %q", ErrPolicy, cfg.SigningKeyID)
 	}
 	signingKey := keys[0]
-	if _, err := jws.MapAlgorithmToSignAlg(jws.Algorithm(signingKey.Algorithm)); err != nil {
+	if !slices.Contains(cryptoProvider.GetSupportedSigningAlgorithms(), signingKey.Algorithm) {
 		return nil, fmt.Errorf("%w: unsupported signing algorithm for key %q", ErrPolicy, cfg.SigningKeyID)
 	}
 	if len(signingKey.CertificateDER) == 0 {
@@ -102,8 +101,8 @@ func Initialize(
 		CredentialValidity:   time.Duration(cfg.CredentialValiditySeconds) * time.Second,
 		BatchSize:            cfg.BatchSize,
 		EnforceScope:         cfg.EnforceScope,
-	}, cryptoProvider, kmprovider.KeyRef{KeyID: cfg.SigningKeyID},
-		string(signingKey.Algorithm), signingKey.Thumbprint, x5c,
+	}, cryptoProvider, providers.KeyRef{KeyID: cfg.SigningKeyID},
+		signingKey.Algorithm, signingKey.Thumbprint, x5c,
 		newOpenID4VCIStore(store), jwtService, userService, credSvc)
 	if err != nil {
 		return nil, err

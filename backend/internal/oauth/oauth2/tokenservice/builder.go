@@ -415,8 +415,8 @@ func (tb *tokenBuilder) BuildIDToken(
 			}
 			// cty="JWT" indicates a nested JWT (signed JWS payload encrypted as JWE per OIDC spec)
 			encrypted, svcErr := tb.jweService.Encrypt(ctx,
-				[]byte(token), rpKey,
-				jwe.KeyEncAlgorithm(idTokenCfg.EncryptionAlg),
+				[]byte(token), &providers.KeyRef{PublicKeyJWK: rpKey},
+				idTokenCfg.EncryptionAlg,
 				jwe.ContentEncAlgorithm(idTokenCfg.EncryptionEnc),
 				"JWT", rpKID,
 			)

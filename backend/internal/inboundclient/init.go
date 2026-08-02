@@ -40,13 +40,14 @@ func Initialize(
 	layoutMgt layoutmgt.LayoutMgtServiceInterface,
 	flowMgt flowmgt.FlowMgtServiceInterface,
 	entityType entitytype.EntityTypeServiceInterface,
+	cryptoProvider providers.RuntimeCryptoProvider,
 ) (InboundClientServiceInterface, error) {
 	store, transactioner, err := initializeStore(cacheManager)
 	if err != nil {
 		return nil, err
 	}
 	return newInboundClientService(store, transactioner, certService, entityProvider,
-		themeMgt, layoutMgt, flowMgt, entityType), nil
+		themeMgt, layoutMgt, flowMgt, entityType, cryptoProvider), nil
 }
 
 // initializeStore always creates a composite store (DB + in-memory file store).

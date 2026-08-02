@@ -20,7 +20,6 @@ package attestation
 
 import (
 	"github.com/thunder-id/thunderid/internal/system/config"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -28,7 +27,7 @@ import (
 // Android clients and Apple App Attest for iOS clients based on the application's configuration. It
 // returns an error if a platform verifier cannot be constructed, so the caller can fail server
 // startup rather than run with a non-functional verifier.
-func Initialize(cryptoSvc kmprovider.RuntimeCryptoProvider) (providers.AttestationProvider, error) {
+func Initialize(cryptoSvc providers.RuntimeCryptoProvider) (providers.AttestationProvider, error) {
 	appleRootPEM := config.GetServerRuntime().Config.Attestation.Apple.RootCertificate
 	appAttestVsvc, err := newAppAttestVerifier(appleRootPEM)
 	if err != nil {

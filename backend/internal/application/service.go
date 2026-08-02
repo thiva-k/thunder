@@ -39,7 +39,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -73,7 +72,7 @@ type applicationService struct {
 	entityProvider       entityprovider.EntityProviderInterface
 	ouService            oupkg.OrganizationUnitServiceInterface
 	i18nService          i18nmgt.I18nServiceInterface
-	cryptoSvc            kmprovider.RuntimeCryptoProvider
+	cryptoSvc            providers.RuntimeCryptoProvider
 	dependencyRegistry   resourcedependency.Registry
 	serverConfigService  serverconfig.ServerConfigService
 }
@@ -84,7 +83,7 @@ func newApplicationService(
 	entityProvider entityprovider.EntityProviderInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	i18nService i18nmgt.I18nServiceInterface,
-	cryptoSvc kmprovider.RuntimeCryptoProvider,
+	cryptoSvc providers.RuntimeCryptoProvider,
 	serverConfigSvc serverconfig.ServerConfigService,
 ) ApplicationServiceInterface {
 	return &applicationService{
@@ -1746,8 +1745,7 @@ func (as *applicationService) resolveAttestationCredentialsForPersist(
 		inboundClient.Attestation.Android.CertificateSha256Digests...)
 
 	if android.ServiceAccountCredentials != "" {
-		params := cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}
-		ciphertext, _, err := as.cryptoSvc.Encrypt(ctx, nil, params,
+		ciphertext, _, err := as.cryptoSvc.Encrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM), nil,
 			[]byte(android.ServiceAccountCredentials))
 		if err != nil {
 			as.logger.Error(ctx, "Failed to encrypt attestation credentials",

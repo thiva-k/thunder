@@ -23,10 +23,11 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // RuntimeCryptoProvider is a type alias for convenience.
-type RuntimeCryptoProvider = common.RuntimeCryptoProvider
+type RuntimeCryptoProvider = providers.RuntimeCryptoProvider
 
 // ConfigCryptoProvider is a type alias for convenience.
 type ConfigCryptoProvider = common.ConfigCryptoProvider
@@ -35,6 +36,8 @@ type ConfigCryptoProvider = common.ConfigCryptoProvider
 // The pkiService is injected as a dependency.
 // Currently hardcoded to use the default KM provider, but structured to support
 // provider selection based on server configuration in the future.
-func Initialize(pkiService pki.PKIServiceInterface) (common.RuntimeCryptoProvider, common.ConfigCryptoProvider, error) {
+func Initialize(
+	pkiService pki.PKIServiceInterface,
+) (providers.RuntimeCryptoProvider, common.ConfigCryptoProvider, error) {
 	return defaultkm.Initialize(pkiService)
 }

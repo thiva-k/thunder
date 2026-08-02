@@ -29,6 +29,7 @@ import (
 	"strings"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
 	// Use crypto/sha1 only for JWKS x5t as required by spec for thumbprint.
 	"crypto/sha1" //nolint:gosec
@@ -38,7 +39,6 @@ import (
 	"github.com/cloudflare/circl/sign/mldsa/mldsa87"
 
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 )
 
@@ -49,12 +49,12 @@ type JWKSServiceInterface interface {
 
 // jwksService implements the JWKSServiceInterface.
 type jwksService struct {
-	cryptoProvider kmprovider.RuntimeCryptoProvider
+	cryptoProvider providers.RuntimeCryptoProvider
 	logger         *log.Logger
 }
 
 // newJWKSService creates a new instance of JWKSService.
-func newJWKSService(cryptoProvider kmprovider.RuntimeCryptoProvider) JWKSServiceInterface {
+func newJWKSService(cryptoProvider providers.RuntimeCryptoProvider) JWKSServiceInterface {
 	return &jwksService{
 		cryptoProvider: cryptoProvider,
 		logger:         log.GetLogger().With(log.String(log.LoggerKeyComponentName, "JWKSService")),
@@ -63,7 +63,7 @@ func newJWKSService(cryptoProvider kmprovider.RuntimeCryptoProvider) JWKSService
 
 // GetJWKS retrieves the JSON Web Key Set (JWKS) from the runtime crypto provider.
 func (s *jwksService) GetJWKS(ctx context.Context) (*JWKSResponse, *tidcommon.ServiceError) {
-	publicKeys, err := s.cryptoProvider.GetPublicKeys(ctx, kmprovider.PublicKeyFilter{})
+	publicKeys, err := s.cryptoProvider.GetPublicKeys(ctx, providers.PublicKeyFilter{})
 	if err != nil {
 		s.logger.Error(ctx, "Failed to retrieve public keys", log.Error(err))
 		return nil, &tidcommon.InternalServerError
@@ -148,8 +148,9 @@ func getRSAPublicKeyJWKS(pub *rsa.PublicKey, kid string, x5c []string, x5t, x5tS
 // getECDSAPublicKeyJWKS converts an ECDSA public key to JWKS format.
 func getECDSAPublicKeyJWKS(pub *ecdsa.PublicKey, kid string, x5c []string, x5t, x5tS256 string) JWKS {
 	crv := pub.Curve.Params().Name
-	x := encodeBase64URL(pub.X.Bytes())
-	y := encodeBase64URL(pub.Y.Bytes())
+	coordLen := (pub.Curve.Params().BitSize + 7) / 8
+	x := encodeBase64URL(padCoordinate(pub.X.Bytes(), coordLen))
+	y := encodeBase64URL(padCoordinate(pub.Y.Bytes(), coordLen))
 
 	alg := "ES256"
 	switch crv {
@@ -216,4 +217,15 @@ func getMLDSAPublicKeyJWKS(pub crypto.PublicKey, kid string, x5c []string, x5t, 
 
 func encodeBase64URL(b []byte) string {
 	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "=")
+}
+
+// padCoordinate left-pads an EC coordinate with zero bytes to the curve's fixed
+// coordinate size, per RFC 7518 Section 6.2.1.2.
+func padCoordinate(b []byte, coordLen int) []byte {
+	if len(b) >= coordLen {
+		return b
+	}
+	padded := make([]byte, coordLen)
+	copy(padded[coordLen-len(b):], b)
+	return padded
 }

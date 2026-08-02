@@ -22,35 +22,16 @@ package defaultkm
 import (
 	"encoding/hex"
 	"errors"
-	"sync"
 
 	"github.com/thunder-id/thunderid/internal/system/config"
 	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm/pki"
+	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
-
-var (
-	globalCfgSvc kmprovider.ConfigCryptoProvider
-	globalOnce   sync.Once
-	initErr      error
-)
-
-// GetConfigCryptoService returns the singleton ConfigCryptoProvider for the default key manager.
-//
-// Deprecated
-func GetConfigCryptoService() (kmprovider.ConfigCryptoProvider, error) {
-	globalOnce.Do(func() {
-		globalCfgSvc, initErr = initConfigProvider()
-	})
-	if initErr != nil {
-		return nil, initErr
-	}
-	return globalCfgSvc, nil
-}
 
 // Initialize returns a fully wired RuntimeCryptoProvider and ConfigCryptoProvider.
 func Initialize(pkiSvc pki.PKIServiceInterface) (
-	kmprovider.RuntimeCryptoProvider, kmprovider.ConfigCryptoProvider, error,
+	providers.RuntimeCryptoProvider, kmprovider.ConfigCryptoProvider, error,
 ) {
 	cfgSvc, err := initConfigProvider()
 	if err != nil {
