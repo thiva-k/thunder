@@ -1980,6 +1980,90 @@ describe('SignInBox', () => {
     expect(screen.getByTestId('thunderid-signin')).toBeInTheDocument();
   });
 
+  it('shows the error alert without a spinner when the flow fails with no components', () => {
+    mockSignInRenderProps = createMockSignInRenderProps({
+      components: [],
+      error: {message: 'Session expired'},
+      isLoading: false,
+    });
+    const {container} = render(<SignInBox />);
+
+    expect(screen.getByText('Session expired')).toBeInTheDocument();
+    expect(container.querySelector('.MuiCircularProgress-root')).not.toBeInTheDocument();
+  });
+
+  it('renders a return to application action when flow metadata carries the application URL', () => {
+    mockSignInRenderProps = createMockSignInRenderProps({
+      components: [],
+      error: {message: 'Session expired'},
+      isLoading: false,
+      meta: {application: {url: 'https://app.example.com'}},
+    });
+    render(<SignInBox />);
+
+    expect(screen.getByRole('link', {name: 'Return to application'})).toHaveAttribute(
+      'href',
+      'https://app.example.com',
+    );
+  });
+
+  it('guides the user back to the application when the application URL is unavailable', () => {
+    mockSignInRenderProps = createMockSignInRenderProps({
+      components: [],
+      error: {message: 'Session expired'},
+      isLoading: false,
+      meta: {},
+    });
+    const {container} = render(<SignInBox />);
+
+    expect(screen.getByText('Session expired')).toBeInTheDocument();
+    expect(screen.getByText('Please return to the application and try again.')).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(container.querySelector('.MuiCircularProgress-root')).not.toBeInTheDocument();
+  });
+
+  it('shows the spinner while loading with no components and no error', () => {
+    mockSignInRenderProps = createMockSignInRenderProps({
+      components: [],
+      error: null,
+      isLoading: true,
+    });
+    const {container} = render(<SignInBox />);
+
+    expect(container.querySelector('.MuiCircularProgress-root')).toBeInTheDocument();
+  });
+
+  it('keeps the form rendered while a submission is in flight', () => {
+    mockSignInRenderProps = createMockSignInRenderProps({
+      isLoading: true,
+      components: [
+        {
+          id: 'block-1',
+          type: 'BLOCK',
+          components: [
+            {
+              id: 'username-input',
+              type: 'TEXT_INPUT',
+              ref: 'username',
+              label: 'Username',
+              required: true,
+            },
+            {
+              id: 'submit-btn',
+              type: 'ACTION',
+              eventType: 'SUBMIT',
+              label: 'Continue',
+              variant: 'PRIMARY',
+            },
+          ],
+        },
+      ],
+    });
+    render(<SignInBox />);
+
+    expect(screen.getByLabelText(/Username/)).toBeInTheDocument();
+  });
+
   it('renders block without components property', () => {
     mockSignInRenderProps = createMockSignInRenderProps({
       components: [
