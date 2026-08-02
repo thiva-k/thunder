@@ -18,6 +18,7 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
+	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -36,6 +37,11 @@ type RoleServiceInterface interface {
 	GetAuthorizedPermissionsByResourceServer(
 		ctx context.Context, entityID string, groups []string, resourceServerID string, requestedPermissions []string,
 	) ([]string, *tidcommon.ServiceError)
+	// GetAllPermissions returns every permission the entity and/or groups hold, keyed by resource
+	// server. Unlike GetAuthorizedPermissionsByResourceServer it enumerates rather than checks.
+	GetAllPermissions(
+		ctx context.Context, entityID string, groupIDs []string,
+	) (security.PermissionSet, *tidcommon.ServiceError)
 	GetUserRoles(ctx context.Context, entityID string, groupIDs []string) ([]string, *tidcommon.ServiceError)
 	ResolveRoleOUHandle(
 		ctx context.Context, role *RoleWithPermissionsAndAssignments,
@@ -50,6 +56,7 @@ type roleService struct {
 	ouService       oupkg.OrganizationUnitServiceInterface
 	resourceService resourcepkg.ResourceServiceInterface
 	transactioner   providers.Transactioner
+	authzService    sysauthz.SystemAuthorizationServiceInterface
 }
 
 // newRoleService creates a new instance of RoleService with injected dependencies.
@@ -60,6 +67,7 @@ func newRoleService(
 	ouService oupkg.OrganizationUnitServiceInterface,
 	resourceService resourcepkg.ResourceServiceInterface,
 	transactioner providers.Transactioner,
+	authzService sysauthz.SystemAuthorizationServiceInterface,
 ) RoleServiceInterface {
 	return &roleService{
 		roleStore:       roleStore,
@@ -68,6 +76,7 @@ func newRoleService(
 		ouService:       ouService,
 		resourceService: resourceService,
 		transactioner:   transactioner,
+		authzService:    authzService,
 	}
 }
 
@@ -163,6 +172,14 @@ func (rs *roleService) CreateRole(
 	// Validate permissions exist in resource management system
 	if err := rs.validatePermissions(ctx, role.Permissions); err != nil {
 		return nil, err
+	}
+
+	// Defining a role conveys its permissions to future assignees. Inline assignments need no
+	// separate check: they assign this same role, already covered above.
+	if svcErr := rs.authzService.CanGrantPermissions(
+		ctx, toPermissionSet(role.Permissions),
+	); svcErr != nil {
+		return nil, svcErr
 	}
 
 	// Validate assignment IDs (existence + category check) before normalization.
@@ -281,6 +298,13 @@ func (rs *roleService) UpdateRoleWithPermissions(
 	// Validate permissions exist in resource management system
 	if err := rs.validatePermissions(ctx, role.Permissions); err != nil {
 		return nil, err
+	}
+
+	// An update replaces the permission list, so the incoming set is what the role will confer.
+	if svcErr := rs.authzService.CanGrantPermissions(
+		ctx, toPermissionSet(role.Permissions),
+	); svcErr != nil {
+		return nil, svcErr
 	}
 
 	exists, err := rs.roleStore.IsRoleExist(ctx, id)
@@ -432,6 +456,43 @@ func (rs *roleService) GetAuthorizedPermissionsByResourceServer(
 		log.Int("authorizedCount", len(authorizedPermissions)))
 
 	return authorizedPermissions, nil
+}
+
+// GetAllPermissions retrieves every permission the entity and/or groups hold through their assigned
+// roles, keyed by resource server. Unlike GetAuthorizedPermissionsByResourceServer, no entity and no
+// groups is not an error: callers legitimately ask what a set of groups confers.
+func (rs *roleService) GetAllPermissions(
+	ctx context.Context, entityID string, groupIDs []string,
+) (security.PermissionSet, *tidcommon.ServiceError) {
+	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, loggerComponentName))
+
+	if groupIDs == nil {
+		groupIDs = []string{}
+	}
+	if entityID == "" && len(groupIDs) == 0 {
+		return security.PermissionSet{}, nil
+	}
+
+	resourcePermissions, err := rs.roleStore.GetAllPermissionsForAssignees(ctx, entityID, groupIDs)
+	if err != nil {
+		logger.Error(ctx, "Failed to enumerate permissions for assignees",
+			log.MaskedString(log.LoggerKeyUserID, entityID),
+			log.Int("groupCount", len(groupIDs)),
+			log.Error(err))
+		return nil, &tidcommon.InternalServerError
+	}
+
+	permissionSet := make(security.PermissionSet, len(resourcePermissions))
+	for _, rp := range resourcePermissions {
+		permissionSet[rp.ResourceServerID] = rp.Permissions
+	}
+
+	logger.Debug(ctx, "Enumerated permissions for assignees",
+		log.MaskedString(log.LoggerKeyUserID, entityID),
+		log.Int("groupCount", len(groupIDs)),
+		log.Int("resourceServerCount", len(permissionSet)))
+
+	return permissionSet, nil
 }
 
 // GetUserRoles retrieves the names of roles assigned to an entity directly and/or through group membership.

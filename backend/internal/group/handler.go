@@ -15,6 +15,7 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/error/apierror"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
 )
 
@@ -406,7 +407,7 @@ func (gh *groupHandler) handleError(ctx context.Context, w http.ResponseWriter, 
 			ErrorEmptyMembers.Code, ErrorInvalidMemberType.Code,
 			ErrorInvalidMemberID.Code, ErrorInvalidGroupMemberID.Code:
 			statusCode = http.StatusBadRequest
-		case tidcommon.ErrorUnauthorized.Code:
+		case tidcommon.ErrorUnauthorized.Code, sysauthz.ErrorGrantNotPermitted.Code:
 			statusCode = http.StatusForbidden
 		default:
 			statusCode = http.StatusBadRequest

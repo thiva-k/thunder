@@ -17,6 +17,7 @@ import (
 	oupkg "github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
+	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	"github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/entitymock"
@@ -24,6 +25,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/groupmock"
 	"github.com/thunder-id/thunderid/tests/mocks/oumock"
 	"github.com/thunder-id/thunderid/tests/mocks/resourcemock"
+	"github.com/thunder-id/thunderid/tests/mocks/sysauthzmock"
 )
 
 const (
@@ -88,6 +90,7 @@ func (suite *RoleServiceTestSuite) SetupTest() {
 		suite.mockOUService,
 		suite.mockResourceService,
 		suite.transactioner,
+		newAllowAllRoleAuthz(suite.T()),
 	)
 }
 
@@ -1539,4 +1542,15 @@ permissions:
 	if role.OUID != "" {
 		t.Errorf("OUID = %q, want empty (resolution happens later)", role.OUID)
 	}
+}
+
+// newAllowAllRoleAuthz returns an authz mock that permits every grant check, so that
+// tests unrelated to the guard need not configure it.
+func newAllowAllRoleAuthz(t *testing.T) sysauthz.SystemAuthorizationServiceInterface {
+	mockAuthz := sysauthzmock.NewSystemAuthorizationServiceInterfaceMock(t)
+	mockAuthz.On("CanGrantPermissions", mock.Anything, mock.Anything).
+		Return((*tidcommon.ServiceError)(nil)).Maybe()
+	mockAuthz.On("CanGrantMembership", mock.Anything, mock.Anything, mock.Anything).
+		Return((*tidcommon.ServiceError)(nil)).Maybe()
+	return mockAuthz
 }

@@ -15,6 +15,7 @@ import (
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
+	"github.com/thunder-id/thunderid/internal/system/sysauthz"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -26,6 +27,7 @@ func Initialize(
 	ouService oupkg.OrganizationUnitServiceInterface,
 	resourceService resourcepkg.ResourceServiceInterface,
 	entityTypeService entitytype.EntityTypeServiceInterface,
+	authzService sysauthz.SystemAuthorizationServiceInterface,
 ) (
 	RoleServiceInterface, RoleAssignmentServiceInterface, oupkg.OURoleResolver,
 	declarativeresource.ResourceExporter, error,
@@ -39,7 +41,7 @@ func Initialize(
 	// Step 2: Create service with store
 	roleService := newRoleService(
 		roleStore, entityService, groupService, ouService, resourceService,
-		transactioner,
+		transactioner, authzService,
 	)
 
 	// Step 3: Load declarative resources into store (if applicable)
@@ -50,7 +52,7 @@ func Initialize(
 	}
 
 	assignmentService := newRoleAssignmentService(
-		roleStore, entityService, groupService, entityTypeService, transactioner,
+		roleStore, entityService, groupService, entityTypeService, transactioner, authzService,
 	)
 	roleHandler := newRoleHandler(roleService, assignmentService)
 	registerRoutes(mux, roleHandler)

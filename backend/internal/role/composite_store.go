@@ -510,6 +510,79 @@ func (c *compositeRoleStore) crossStoreAuthorizedPermissions(
 	return result, nil
 }
 
+// GetAllPermissionsForAssignees returns every permission the entity and/or groups hold, unioned
+// across the three places a role-to-assignee binding can live: a database role with a database
+// assignment, a declarative role with a YAML-declared assignment, and a declarative role whose
+// assignment was added at runtime. The third case is why no single store can answer this.
+func (c *compositeRoleStore) GetAllPermissionsForAssignees(
+	ctx context.Context, entityID string, groupIDs []string,
+) ([]ResourcePermissions, error) {
+	if entityID == "" && len(groupIDs) == 0 {
+		return []ResourcePermissions{}, nil
+	}
+
+	dbPerms, err := c.dbStore.GetAllPermissionsForAssignees(ctx, entityID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	filePerms, err := c.fileStore.GetAllPermissionsForAssignees(ctx, entityID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	crossStorePerms, err := c.crossStoreAllPermissions(ctx, entityID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return mergeResourcePermissions(dbPerms, filePerms, crossStorePerms), nil
+}
+
+// crossStoreAllPermissions resolves declarative roles whose assignment rows live in the database.
+// It differs from crossStoreAuthorizedPermissions on corruption: a removed role (ErrRoleNotFound)
+// confers nothing and is skipped, while a corrupt one is returned as an error, since its contents
+// are unknown.
+func (c *compositeRoleStore) crossStoreAllPermissions(
+	ctx context.Context, entityID string, groupIDs []string,
+) ([]ResourcePermissions, error) {
+	roleIDs, err := c.dbStore.GetEntityRoleIDs(ctx, entityID, groupIDs)
+	if err != nil {
+		return nil, err
+	}
+	if len(roleIDs) == 0 {
+		return []ResourcePermissions{}, nil
+	}
+
+	byResourceServer := make(map[string][]string)
+	for _, id := range roleIDs {
+		exists, err := c.fileStore.IsRoleExist(ctx, id)
+		if err != nil {
+			return nil, err
+		}
+		if !exists {
+			// Role is DB-only; already covered by the DB-store enumeration.
+			continue
+		}
+		role, err := c.fileStore.GetRole(ctx, id)
+		if err != nil {
+			if errors.Is(err, ErrRoleNotFound) {
+				continue
+			}
+			log.GetLogger().Error(ctx,
+				"Failed to load declarative role for cross-store permission enumeration",
+				log.String("roleID", id), log.Error(err))
+			return nil, fmt.Errorf("composite role store: load declarative role %q: %w", id, err)
+		}
+		for _, rp := range role.Permissions {
+			byResourceServer[rp.ResourceServerID] = append(
+				byResourceServer[rp.ResourceServerID], rp.Permissions...)
+		}
+	}
+
+	return resourcePermissionsFromMap(byResourceServer), nil
+}
+
 // GetEntityRoleIDs returns the IDs of roles assigned to an entity (directly or via groups).
 // Delegates to the database store since assignments are persisted there even for declarative
 // roles. The file store has no independent record of API-added assignments.

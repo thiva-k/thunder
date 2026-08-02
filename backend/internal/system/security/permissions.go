@@ -352,6 +352,42 @@ func HasSufficientPermission(userPermissions []string, required string) bool {
 	return false
 }
 
+// ---- Permission set coverage ----
+
+// PermissionSet maps a resource server ID to the permissions granted on that resource server.
+type PermissionSet map[string][]string
+
+// Covers reports whether actor holds every permission in required, and answers "may this caller
+// confer these permissions on someone else?".
+//
+// Coverage is evaluated per resource server: a permission held on one never satisfies a
+// requirement on another. Within a resource server, matching is hierarchical, so "system:user"
+// covers "system:user:view" but not the reverse. Coverage is a partial order, not an ordering:
+// two sets can each hold what the other lacks.
+//
+// An empty required set is covered. A required permission that is empty, or keyed under an empty
+// resource server ID, is never covered, since approving a malformed grant would be unsafe.
+func Covers(actor, required PermissionSet) bool {
+	for resourceServerID, requiredPerms := range required {
+		if len(requiredPerms) == 0 {
+			continue
+		}
+		if resourceServerID == "" {
+			return false
+		}
+		heldPerms := actor[resourceServerID]
+		for _, requiredPerm := range requiredPerms {
+			if requiredPerm == "" {
+				return false
+			}
+			if !HasSufficientPermission(heldPerms, requiredPerm) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // ResolveActionPermission returns the minimum permission required to perform the given
 // action. Falls back to the root system permission for actions not listed in the action permission map.
 func ResolveActionPermission(action Action) string {

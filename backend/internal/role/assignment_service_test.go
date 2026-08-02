@@ -49,6 +49,7 @@ func (suite *RoleAssignmentServiceTestSuite) SetupTest() {
 		suite.mockGroupService,
 		suite.mockEntityTypeService,
 		suite.transactioner,
+		newAllowAllRoleAuthz(suite.T()),
 	)
 }
 

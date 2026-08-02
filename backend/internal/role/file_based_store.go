@@ -6,6 +6,7 @@ package role
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
@@ -379,6 +380,50 @@ func (f *fileBasedStore) CheckRoleNameExistsExcludingID(
 	}
 
 	return false, nil
+}
+
+// GetAllPermissionsForAssignees returns every permission granted to the entity and/or groups by
+// declarative roles assigned to them, grouped by resource server.
+func (f *fileBasedStore) GetAllPermissionsForAssignees(
+	ctx context.Context, entityID string, groupIDs []string,
+) ([]ResourcePermissions, error) {
+	if entityID == "" && len(groupIDs) == 0 {
+		return []ResourcePermissions{}, nil
+	}
+
+	list, err := f.GenericFileBasedStore.List()
+	if err != nil {
+		return nil, err
+	}
+
+	groupSet := make(map[string]bool, len(groupIDs))
+	for _, groupID := range groupIDs {
+		groupSet[groupID] = true
+	}
+
+	byResourceServer := make(map[string][]string)
+	for _, item := range list {
+		roleData, err := roleFromDeclarativeData(item.ID.ID, item.Data)
+		if err != nil {
+			// Return the error rather than skipping: this enumeration feeds an authorization
+			// decision. GetAuthorizedPermissionsByResourceServer keeps skipping, since it filters
+			// against an explicit requested set.
+			log.GetLogger().Error(ctx, "Malformed declarative role while enumerating permissions",
+				log.String("roleID", item.ID.ID),
+				log.Error(err))
+			return nil, fmt.Errorf("declarative role %q could not be parsed while enumerating "+
+				"permissions: %w", item.ID.ID, err)
+		}
+		if !matchesAssignee(roleData.Assignments, entityID, groupSet) {
+			continue
+		}
+		for _, resourcePerms := range roleData.Permissions {
+			byResourceServer[resourcePerms.ResourceServerID] = append(
+				byResourceServer[resourcePerms.ResourceServerID], resourcePerms.Permissions...)
+		}
+	}
+
+	return resourcePermissionsFromMap(byResourceServer), nil
 }
 
 // GetAuthorizedPermissionsByResourceServer returns permissions from roles assigned to the entity or groups in
