@@ -84,6 +84,3 @@ For code contributions, refer to the [Contributing Code](https://thunderid.dev/d
 ## License
 
 Licenses this source under the Apache License, Version 2.0 ([LICENSE](LICENSE)), You may not use this file except in compliance with the License.
-
----------------------------------------------------------------------------
-(c) Copyright 2026 WSO2 LLC.
