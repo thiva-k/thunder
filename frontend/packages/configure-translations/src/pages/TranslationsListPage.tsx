@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ExternalLink} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {Button, PageContent, PageTitle} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
@@ -50,7 +51,9 @@ export default function TranslationsListPage(): JSX.Element {
     <PageContent>
       <PageTitle>
         <PageTitle.Header>{t('page.title')}</PageTitle.Header>
-        <PageTitle.SubHeader>{t('page.subtitle')}</PageTitle.SubHeader>
+        <PageTitle.SubHeader>
+          {t('page.subtitle')} <ExternalLink docKey="translations" />
+        </PageTitle.SubHeader>
         <PageTitle.Actions>
           <Button variant="contained" startIcon={<Plus size={18} />} onClick={handleAddLanguage}>
             {t('listing.addLanguage')}

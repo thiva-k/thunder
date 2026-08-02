@@ -32,6 +32,19 @@ function loadConfig(): ProductConfig {
 }
 
 /**
+ * Resolves a documentation link path against the configured base URL. Absolute URLs
+ * (starting with `http`) are returned as-is.
+ *
+ * @internal
+ */
+function resolveDocumentationUrl(baseUrl: string, path: string): string {
+  if (/^https?:\/\//.test(path)) {
+    return path;
+  }
+  return `${baseUrl.replace(/\/+$/, '')}/${path.replace(/^\/+/, '')}`;
+}
+
+/**
  * Resolves the resource server URL from config, falling back to the served origin.
  *
  * @internal
@@ -86,6 +99,9 @@ function buildServerUrl(config: ProductConfig): string {
 export default function ConfigProvider({children}: ConfigProviderProps) {
   const config = useMemo(() => loadConfig(), []);
 
+  // `config` is exposed on the context below, so consumers can read a plain field (e.g.
+  // config.documentation?.baseUrl) directly. Only add a getter method here when it does real
+  // work, resolving, merging, or falling back, beyond a single optional-chained property access.
   const contextValue: ConfigContextType = useMemo(
     () => ({
       config,
@@ -176,6 +192,16 @@ export default function ConfigProvider({children}: ConfigProviderProps) {
         return config.client.scopes ?? [];
       },
       isTrustedIssuerGenericOidc: () => config.trusted_issuer?.type === 'generic',
+      getDocumentationLink: (key: string) => {
+        const baseUrl = config.documentation?.baseUrl;
+        const path = config.documentation?.links?.[key];
+
+        if (!baseUrl || !path) {
+          return undefined;
+        }
+
+        return resolveDocumentationUrl(baseUrl, path);
+      },
     }),
     [config],
   );

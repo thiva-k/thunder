@@ -59,6 +59,7 @@ describe('HowProductRunInHostedIllustration', () => {
       getTrustedIssuerClientId: () => '',
       getTrustedIssuerScopes: () => [],
       isTrustedIssuerGenericOidc: () => false,
+      getDocumentationLink: () => undefined,
     });
   });
 
@@ -120,6 +121,7 @@ describe('HowProductRunInHostedIllustration', () => {
       getTrustedIssuerClientId: () => '',
       getTrustedIssuerScopes: () => [],
       isTrustedIssuerGenericOidc: () => false,
+      getDocumentationLink: () => undefined,
     });
 
     const {container} = render(<HowProductRunInHostedIllustration />);

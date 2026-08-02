@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ExternalLink} from '@thunderid/components';
 import {Box, PageContent, PageTitle, Tab, Tabs} from '@wso2/oxygen-ui';
 import {useState, type JSX, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -19,7 +20,9 @@ export default function SettingsPage(): JSX.Element {
     <PageContent>
       <PageTitle>
         <PageTitle.Header>{t('settings:page.title')}</PageTitle.Header>
-        <PageTitle.SubHeader>{t('settings:page.subtitle')}</PageTitle.SubHeader>
+        <PageTitle.SubHeader>
+          {t('settings:page.subtitle')} <ExternalLink docKey="settings" confirmBeforeNavigate={false} />
+        </PageTitle.SubHeader>
       </PageTitle>
 
       <Tabs value={activeTab} onChange={handleTabChange} aria-label={t('settings:tabs.ariaLabel')}>

@@ -112,6 +112,15 @@ export interface ConfigContextType {
    * @returns True if the trusted issuer is a generic OIDC provider
    */
   isTrustedIssuerGenericOidc: () => boolean;
+
+  /**
+   * Resolves the "Learn more" documentation link for a given section key.
+   * Returns undefined when the documentation block, its base URL, or the key's entry in
+   * `links` is not configured, so callers can hide the link entirely.
+   * @param key - The section id to look up in `documentation.links` (e.g. "users")
+   * @returns The resolved absolute URL, or undefined when not configured
+   */
+  getDocumentationLink: (key: string) => string | undefined;
 }
 
 /**

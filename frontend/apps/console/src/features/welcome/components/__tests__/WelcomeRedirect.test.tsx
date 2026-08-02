@@ -98,6 +98,7 @@ describe('WelcomeRedirect', () => {
       getTrustedIssuerClientId: () => '',
       getTrustedIssuerScopes: () => [],
       isTrustedIssuerGenericOidc: () => false,
+      getDocumentationLink: () => undefined,
     });
     mockIsSignedIn.mockReturnValue(true);
     mockLocation.pathname = '/dashboard';
@@ -174,6 +175,7 @@ describe('WelcomeRedirect', () => {
         getTrustedIssuerClientId: () => '',
         getTrustedIssuerScopes: () => [],
         isTrustedIssuerGenericOidc: () => false,
+        getDocumentationLink: () => undefined,
       });
 
       render(<WelcomeRedirect />);
@@ -205,6 +207,7 @@ describe('WelcomeRedirect', () => {
         getTrustedIssuerClientId: () => '',
         getTrustedIssuerScopes: () => [],
         isTrustedIssuerGenericOidc: () => false,
+        getDocumentationLink: () => undefined,
       });
       mockSessionStorage.set('welcomeDismissed-ProductB', 'true');
 

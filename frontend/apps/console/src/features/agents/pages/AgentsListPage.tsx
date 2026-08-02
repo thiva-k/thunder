@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ExternalLink} from '@thunderid/components';
 import {useGetAgentTypes} from '@thunderid/configure-agent-types';
 import {useLogger} from '@thunderid/logger/react';
 import {Button, PageContent, PageTitle} from '@wso2/oxygen-ui';
@@ -36,7 +37,8 @@ export default function AgentsListPage(): JSX.Element {
       <PageTitle>
         <PageTitle.Header>{t('agents:listing.title', 'Agents')}</PageTitle.Header>
         <PageTitle.SubHeader>
-          {t('agents:listing.subtitle', 'Manage service identities and machine clients')}
+          {t('agents:listing.subtitle', 'Manage service identities and machine clients')}{' '}
+          <ExternalLink docKey="agents" confirmBeforeNavigate={false} />
         </PageTitle.SubHeader>
         <PageTitle.Actions>
           <Button

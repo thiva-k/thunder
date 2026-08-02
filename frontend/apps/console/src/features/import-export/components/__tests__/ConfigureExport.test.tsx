@@ -284,6 +284,7 @@ type: google
         getTrustedIssuerClientId: () => 'CONSOLE',
         getTrustedIssuerScopes: () => ['openid', 'profile'],
         isTrustedIssuerGenericOidc: () => false,
+        getDocumentationLink: () => undefined,
       });
 
       render(<ConfigureExport />);
