@@ -8,8 +8,7 @@
     "testing",
     "vitest",
     "react",
-    "testing-library",
-    "wso2"
+    "testing-library"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/test-utils#readme",
   "bugs": {

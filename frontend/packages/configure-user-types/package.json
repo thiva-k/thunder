@@ -8,8 +8,7 @@
     "admin",
     "user-types",
     "react",
-    "feature",
-    "wso2"
+    "feature"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/configure-user-types#readme",
   "bugs": {

@@ -1055,10 +1055,10 @@ func (suite *OAuthAuthnServiceTestSuite) TestBuildFederatedAuthResultResolvesExt
 		map[string]interface{}{"sub": testSub}).Return(nil, errEntityNotFound)
 
 	result, svcErr := suite.service.BuildFederatedAuthResult(
-		context.Background(), testIDPID, testSub, map[string]interface{}{"email": "sadil@wso2.com"})
+		context.Background(), testIDPID, testSub, map[string]interface{}{"email": "sadil@example.com"})
 	suite.Nil(svcErr)
-	suite.Equal("sadil@wso2.com", result.AuthenticatedClaims["family_name"])
-	suite.Equal("sadil@wso2.com", result.Token["family_name"])
+	suite.Equal("sadil@example.com", result.AuthenticatedClaims["family_name"])
+	suite.Equal("sadil@example.com", result.Token["family_name"])
 	suite.NotContains(result.Token, "sub")
 }
 

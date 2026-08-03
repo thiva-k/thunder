@@ -10,7 +10,7 @@ This framework uses the **Page Object Model (POM)** design pattern and Playwrigh
 
 - **Centralized Authentication**: Login once via `setup` project, reuse session state across all tests.
 - **Cross-Browser Support**: Configured for Chromium, Firefox, and WebKit (Safari).
-- **Token-Based Auth Support**: Specialized utilities to capture and inject OIDC/OAuth2 tokens for the WSO2 IS backend.
+- **Token-Based Auth Support**: Specialized utilities to capture and inject OIDC/OAuth2 tokens for the ThunderID backend.
 - **Robustness**: Auto-retry logic, network idle waits, and intelligent locator handling.
 - **CI/CD Friendly**: Includes a GitHub Actions workflow that maps repository secrets/variables (e.g., `PLAYWRIGHT_BASE_URL`, `PLAYWRIGHT_ADMIN_PASSWORD`) to test environment variables. Refer to the workflow file for the complete list of required configurations.
 

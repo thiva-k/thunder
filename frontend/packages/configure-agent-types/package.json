@@ -8,8 +8,7 @@
     "admin",
     "agent-types",
     "react",
-    "feature",
-    "wso2"
+    "feature"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/configure-agent-types#readme",
   "bugs": {

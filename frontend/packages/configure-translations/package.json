@@ -8,8 +8,7 @@
     "configure",
     "translations",
     "react",
-    "feature",
-    "wso2"
+    "feature"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/configure-translations#readme",
   "bugs": {

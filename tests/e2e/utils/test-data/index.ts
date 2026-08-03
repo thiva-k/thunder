@@ -31,7 +31,7 @@ export class TestDataFactory {
    */
   static generateEmail(username?: string): string {
     const user = username || `user_${this.generateUniqueId()}`;
-    return `${user}@test.wso2.com`;
+    return `${user}@example.com`;
   }
 
   /**

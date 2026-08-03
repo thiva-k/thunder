@@ -7,8 +7,7 @@
     "thunderid",
     "hooks",
     "react",
-    "shareable",
-    "wso2"
+    "shareable"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/hooks#readme",
   "bugs": {

@@ -17,8 +17,7 @@
   "keywords": [
     "thunderid",
     "frontend",
-    "workspace",
-    "wso2"
+    "workspace"
   ],
   "scripts": {
     "build:apps": "turbo run build --filter=./apps/*",
