@@ -21,8 +21,9 @@ export interface ToastContextType {
    *
    * @param message - The text to display inside the toast
    * @param severity - The visual style of the toast. Defaults to `'success'`
+   * @param durationMs - How long the toast stays open, in milliseconds. Defaults to 6000
    */
-  showToast: (message: string, severity?: ToastSeverity) => void;
+  showToast: (message: string, severity?: ToastSeverity, durationMs?: number) => void;
 }
 
 /**
