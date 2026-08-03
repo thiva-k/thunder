@@ -16,8 +16,7 @@
   },
   "keywords": [
     "thunderid",
-    "workspace",
-    "wso2"
+    "workspace"
   ],
   "scripts": {
     "build": "turbo run build",

@@ -17,7 +17,7 @@ func TestExtractFromDirectory(t *testing.T) {
 	file1Content := `
 package main
 
-import "github.com/wso2/thunder/backend/internal/system/i18n/core"
+import "github.com/thunder-id/thunderid/backend/internal/system/i18n/core"
 
 var msg1 = core.I18nMessage{
     Key: "key.one",
@@ -28,7 +28,7 @@ var msg1 = core.I18nMessage{
 	file2Content := `
 package sub
 
-import "github.com/wso2/thunder/backend/internal/system/i18n/core"
+import "github.com/thunder-id/thunderid/backend/internal/system/i18n/core"
 
 var msg2 = core.I18nMessage{
     Key: "key.two",
@@ -39,7 +39,7 @@ var msg2 = core.I18nMessage{
 	file3Content := `
 package deep
 
-import "github.com/wso2/thunder/backend/internal/system/i18n/core"
+import "github.com/thunder-id/thunderid/backend/internal/system/i18n/core"
 
 var msg3 = core.I18nMessage{
     Key: "key.three",
@@ -71,7 +71,7 @@ var msg3 = core.I18nMessage{
 	// Create a test file (should be ignored)
 	testFileContent := `
 package main
-import "github.com/wso2/thunder/backend/internal/system/i18n/core"
+import "github.com/thunder-id/thunderid/backend/internal/system/i18n/core"
 var testMsg = core.I18nMessage{Key: "ignored", DefaultValue: "Ignored"}
 `
 	if err := os.WriteFile(filepath.Join(tempDir, "file_test.go"), []byte(testFileContent), 0644); err != nil {
@@ -121,7 +121,7 @@ func TestExtractParenthesizedStringExpression(t *testing.T) {
 	fileContent := `
 package main
 
-import "github.com/wso2/thunder/backend/internal/system/i18n/core"
+import "github.com/thunder-id/thunderid/backend/internal/system/i18n/core"
 
 var msg1 = core.I18nMessage{
     Key: ("paren.key"),
@@ -180,7 +180,7 @@ func TestExtractMultilineStringConcatenation(t *testing.T) {
 	fileContent := `
 package main
 
-import "github.com/wso2/thunder/backend/internal/system/i18n/core"
+import "github.com/thunder-id/thunderid/backend/internal/system/i18n/core"
 
 var msg1 = core.I18nMessage{
     Key: "multiline.key",

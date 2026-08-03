@@ -7,8 +7,7 @@
     "thunderid",
     "logger",
     "winston",
-    "shareable",
-    "wso2"
+    "shareable"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/logger#readme",
   "bugs": {

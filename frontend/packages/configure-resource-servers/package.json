@@ -9,8 +9,7 @@
     "resource-servers",
     "apis",
     "react",
-    "feature",
-    "wso2"
+    "feature"
   ],
   "homepage": "https://github.com/asgardeo/thunder/tree/main/frontend/packages/configure-resource-servers#readme",
   "bugs": {

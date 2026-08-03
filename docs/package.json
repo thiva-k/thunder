@@ -17,8 +17,7 @@
     "thunderid",
     "thunderid",
     "docs",
-    "documentation",
-    "wso2"
+    "documentation"
   ],
   "scripts": {
     "build": "pnpm setup && docusaurus build",

@@ -1,6 +1,6 @@
 name: 'Update Sample Apps Version'
 description: 'Updates version for all sample applications'
-author: 'WSO2'
+author: 'The ThunderID Authors'
 
 inputs:
   version:

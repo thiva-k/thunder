@@ -9,8 +9,7 @@
     "scaffolding",
     "generator",
     "template",
-    "create",
-    "wso2"
+    "create"
   ],
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend/packages/create#readme",
   "bugs": {

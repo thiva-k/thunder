@@ -29,7 +29,7 @@ const generateTestData = (suffix: string = ""): UserFormData => {
 
   return {
     username: `${baseUsername}${uniqueSuffix}`,
-    email: `${baseUsername}${uniqueSuffix}@wso2.com`,
+    email: `${baseUsername}${uniqueSuffix}@example.com`,
     given_name: `Testfname${suffix}`,
     family_name: `Testlname${suffix}`,
   };
