@@ -16,9 +16,6 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock the SCSS file
-vi.mock('../ValidationStatusLabels.scss', () => ({}));
-
 describe('ValidationStatusLabels', () => {
   const mockSetCurrentActiveTab = vi.fn();
   const mockSetOpenValidationPanel = vi.fn();

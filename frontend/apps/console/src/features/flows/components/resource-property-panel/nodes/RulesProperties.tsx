@@ -4,7 +4,6 @@
 import {Stack, Typography} from '@wso2/oxygen-ui';
 import type {ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
-import './RulesProperties.scss';
 
 /**
  * Rules properties component.

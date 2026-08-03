@@ -12,9 +12,6 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-// Mock the SCSS
-vi.mock('../RulesProperties.scss', () => ({}));
-
 describe('RulesProperties', () => {
   describe('Rendering', () => {
     it('should render the component', () => {
