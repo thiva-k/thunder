@@ -371,6 +371,12 @@ const sidebars: SidebarsConfig = {
                       items: [
                         {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization/identity-concepts', label: 'Identity Concepts', key: 'mcp-authorization-identity-concepts'},
                         {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization/configure-it-yourself', label: 'Configure It Yourself', key: 'mcp-authorization-configure-it-yourself'},
+                        {
+                          type: 'doc',
+                          id: 'use-cases/ai-agents/mcp-authorization/enterprise-managed-authorization',
+                          label: 'Enterprise-Managed Authorization',
+                          key: 'mcp-authorization-ema',
+                        },
                       ],
                     },
                   ],
@@ -735,6 +741,26 @@ const sidebars: SidebarsConfig = {
                       id: 'guides/protocols/oauth-oidc/token-exchange',
                       label: 'Token Exchange',
                       key: 'oauth-token-exchange',
+                    },
+                    {
+                      type: 'category',
+                      label: 'Identity Assertion Grant (ID-JAG)',
+                      link: {
+                        type: 'doc',
+                        id: 'guides/protocols/oauth-oidc/identity-assertion-grant/index',
+                      },
+                      items: [
+                        {
+                          type: 'doc',
+                          id: 'guides/protocols/oauth-oidc/identity-assertion-grant/issue-identity-assertions',
+                          label: 'Issue Identity Assertions',
+                        },
+                        {
+                          type: 'doc',
+                          id: 'guides/protocols/oauth-oidc/identity-assertion-grant/accept-identity-assertions',
+                          label: 'Accept Identity Assertions',
+                        },
+                      ],
                     },
                     {
                       type: 'doc',

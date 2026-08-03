@@ -67,6 +67,7 @@ const config: Config = {
   onBrokenLinks: 'throw',
 
   markdown: {
+    mermaid: true,
     hooks: {
       onBrokenMarkdownLinks: 'throw',
     },
@@ -83,6 +84,8 @@ const config: Config = {
       return result;
     },
   },
+
+  themes: ['@docusaurus/theme-mermaid'],
 
   // Internationalization (i18n) configuration.
   // See: https://docusaurus.io/docs/i18n/introduction
