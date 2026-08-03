@@ -1133,7 +1133,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_Credential_ReturnsCredent
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "customer", true, false, false,
+		context.Background(), TypeCategoryUser, "customer", AttributeFilter{AllowCredential: true},
 	)
 
 	s.Require().Nil(svcErr)
@@ -1166,7 +1166,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_Credential_NoCredentials_
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "customer", true, false, false,
+		context.Background(), TypeCategoryUser, "customer", AttributeFilter{AllowCredential: true},
 	)
 
 	s.Require().Nil(svcErr)
@@ -1186,7 +1186,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_SchemaNotFound_ReturnsErr
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "unknown", true, false, false,
+		context.Background(), TypeCategoryUser, "unknown", AttributeFilter{AllowCredential: true},
 	)
 
 	s.Require().Nil(attrs)
@@ -1203,7 +1203,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_EmptyEntityType_ReturnsEr
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "", true, false, false,
+		context.Background(), TypeCategoryUser, "", AttributeFilter{AllowCredential: true},
 	)
 
 	s.Require().Nil(attrs)
@@ -1224,7 +1224,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_StoreError_ReturnsInterna
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "customer", true, false, false,
+		context.Background(), TypeCategoryUser, "customer", AttributeFilter{AllowCredential: true},
 	)
 
 	s.Require().Nil(attrs)
@@ -1251,7 +1251,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_CredentialRequiredOnly_Re
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "customer", true, false, true,
+		context.Background(), TypeCategoryUser, "customer", AttributeFilter{AllowCredential: true, RequiredOnly: true},
 	)
 
 	s.Require().Nil(svcErr)
@@ -1280,7 +1280,7 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_CredentialAllAttrs_Includ
 	}
 
 	attrs, svcErr := service.GetAttributes(
-		context.Background(), TypeCategoryUser, "customer", true, false, false,
+		context.Background(), TypeCategoryUser, "customer", AttributeFilter{AllowCredential: true},
 	)
 
 	s.Require().Nil(svcErr)
@@ -1773,7 +1773,8 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredentialRequiredOnly
 		transactioner:   &mockTransactioner{},
 	}
 
-	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL", false, true, true)
+	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL",
+		AttributeFilter{AllowNonCredential: true, RequiredOnly: true})
 
 	s.Require().Nil(svcErr)
 	s.Require().Len(attrs, 2)
@@ -1807,7 +1808,8 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredential_UnknownEnti
 		transactioner:   &mockTransactioner{},
 	}
 
-	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "unknown", false, true, true)
+	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "unknown",
+		AttributeFilter{AllowNonCredential: true, RequiredOnly: true})
 
 	s.Require().NotNil(svcErr)
 	s.Require().Equal(ErrorEntityTypeNotFound.Code, svcErr.Code)
@@ -1820,7 +1822,8 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredential_EmptyEntity
 		transactioner:   &mockTransactioner{},
 	}
 
-	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "", false, true, true)
+	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "",
+		AttributeFilter{AllowNonCredential: true, RequiredOnly: true})
 
 	s.Require().NotNil(svcErr)
 	s.Require().Equal(ErrorEntityTypeNotFound.Code, svcErr.Code)
@@ -1843,7 +1846,8 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredential_AllCredenti
 		transactioner:   &mockTransactioner{},
 	}
 
-	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL", false, true, true)
+	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL",
+		AttributeFilter{AllowNonCredential: true, RequiredOnly: true})
 
 	s.Require().Nil(svcErr)
 	s.Require().Empty(attrs)
@@ -1867,7 +1871,8 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredentialAllAttrs_Inc
 		transactioner:   &mockTransactioner{},
 	}
 
-	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL", false, true, false)
+	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL",
+		AttributeFilter{AllowNonCredential: true})
 
 	s.Require().Nil(svcErr)
 	s.Require().Len(attrs, 2, "email and mobile_number should be returned; password excluded as credential")
@@ -1894,7 +1899,8 @@ func (s *EntityTypeServiceTestSuite) TestGetAttributes_NonCredential_StoreError_
 		transactioner:   &mockTransactioner{},
 	}
 
-	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL", false, true, false)
+	attrs, svcErr := service.GetAttributes(context.Background(), TypeCategoryUser, "INTERNAL",
+		AttributeFilter{AllowNonCredential: true})
 
 	s.Require().NotNil(svcErr)
 	s.Require().Equal(tidcommon.InternalServerError, *svcErr)

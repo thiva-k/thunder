@@ -28,6 +28,10 @@ const entityTypeLoggerComponentName = "EntityTypeService"
 // level so callers do not need to import the internal model package directly.
 type AttributeInfo = model.AttributeInfo
 
+// AttributeFilter is an alias for model.AttributeFilter, exported at the entitytype package
+// level so callers do not need to import the internal model package directly.
+type AttributeFilter = model.AttributeFilter
+
 // EntityTypeServiceInterface defines the interface for the entity type service.
 // All methods take a TypeCategory to scope the operation to a specific entity kind
 // (user or agent).
@@ -59,8 +63,7 @@ type EntityTypeServiceInterface interface {
 		exists func(map[string]interface{}) (bool, error),
 	) (bool, *tidcommon.ServiceError)
 	GetAttributes(
-		ctx context.Context, category TypeCategory, entityType string,
-		allowCredential, allowNonCredential, requiredOnly bool,
+		ctx context.Context, category TypeCategory, entityType string, filter AttributeFilter,
 	) ([]AttributeInfo, *tidcommon.ServiceError)
 	GetUniqueAttributes(
 		ctx context.Context, category TypeCategory, entityType string,
@@ -588,12 +591,9 @@ func (us *entityTypeService) ValidateEntityUniqueness(
 	return true, nil
 }
 
-// GetAttributes returns schema properties filtered by the provided flags for the given entity type.
-// allowCredential includes credential properties; allowNonCredential includes non-credential properties.
-// When requiredOnly is true, only required properties are included.
+// GetAttributes returns schema properties matching the given filter for the given entity type.
 func (us *entityTypeService) GetAttributes(
-	ctx context.Context, category TypeCategory, entityType string,
-	allowCredential, allowNonCredential, requiredOnly bool,
+	ctx context.Context, category TypeCategory, entityType string, filter AttributeFilter,
 ) ([]AttributeInfo, *tidcommon.ServiceError) {
 	logger := log.GetLogger().With(log.String(log.LoggerKeyComponentName, entityTypeLoggerComponentName))
 
@@ -609,7 +609,7 @@ func (us *entityTypeService) GetAttributes(
 		return nil, logAndReturnServerError(ctx, logger, "Failed to load entity type for attribute infos", err)
 	}
 
-	return compiledSchema.GetAttributes(allowCredential, allowNonCredential, requiredOnly), nil
+	return compiledSchema.GetAttributes(filter), nil
 }
 
 // GetUniqueAttributes returns the names of schema properties marked as unique for a given entity type.

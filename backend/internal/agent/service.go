@@ -147,7 +147,7 @@ func (s *agentService) CreateAgent(ctx context.Context, agent *model.Agent) (
 		agent.Type, agent.Name, agent.Description, agent.LogoURL, createdEntity.Attributes,
 		authFlowID, regFlowID, agent.IsRegistrationFlowEnabled,
 		agent.ThemeID, agent.LayoutID, assertion, loginConsent,
-		agent.AllowedUserTypes, inboundConfigs)
+		agent.AllowedUserTypes, agent.SubjectAttribute, inboundConfigs)
 	resp.OUID = agent.OUID
 	s.populateOUHandleForComplete(ctx, resp)
 	return resp, nil
@@ -339,7 +339,7 @@ func (s *agentService) UpdateAgent(ctx context.Context, agentID string,
 		req.Type, req.Name, req.Description, req.LogoURL, req.Attributes,
 		authFlowID, regFlowID, resolvedClient.IsRegistrationFlowEnabled,
 		req.ThemeID, req.LayoutID, assertion, loginConsent,
-		req.AllowedUserTypes, inboundConfigs)
+		req.AllowedUserTypes, req.SubjectAttribute, inboundConfigs)
 	resp.OUID = ouID
 	s.populateOUHandleForComplete(ctx, resp)
 	return resp, nil
@@ -688,7 +688,7 @@ func (s *agentService) ValidateAgent(ctx context.Context, agent *model.Agent, ex
 
 	client := buildInboundClientRecord("", agent.AuthFlowID, agent.RegistrationFlowID,
 		agent.IsRegistrationFlowEnabled, agent.ThemeID, agent.LayoutID, agent.Assertion,
-		agent.LoginConsent, agent.AllowedUserTypes)
+		agent.LoginConsent, agent.AllowedUserTypes, agent.SubjectAttribute)
 
 	if needsInboundClient(agent) {
 		oauthProfile := buildOAuthProfile(agent.InboundAuthConfig)
@@ -901,7 +901,7 @@ func (s *agentService) createInboundForAgent(ctx context.Context, agentID string
 	inboundmodel.InboundClient, *providers.OAuthProfile, *tidcommon.ServiceError) {
 	client := buildInboundClientRecord(agentID, agent.AuthFlowID, agent.RegistrationFlowID,
 		agent.IsRegistrationFlowEnabled, agent.ThemeID, agent.LayoutID, agent.Assertion,
-		agent.LoginConsent, agent.AllowedUserTypes)
+		agent.LoginConsent, agent.AllowedUserTypes, agent.SubjectAttribute)
 	setLogoProperty(&client, agent.LogoURL)
 
 	oauthProfile := buildOAuthProfile(agent.InboundAuthConfig)
@@ -946,7 +946,7 @@ func (s *agentService) reconcileInboundForUpdate(ctx context.Context, agentID st
 
 	client := buildInboundClientRecord(agentID, req.AuthFlowID, req.RegistrationFlowID,
 		req.IsRegistrationFlowEnabled, req.ThemeID, req.LayoutID, req.Assertion,
-		req.LoginConsent, req.AllowedUserTypes)
+		req.LoginConsent, req.AllowedUserTypes, req.SubjectAttribute)
 	setLogoProperty(&client, req.LogoURL)
 	oauthProfile := buildOAuthProfile(req.InboundAuthConfig)
 	hasSecret := clientSecret != ""
@@ -1010,6 +1010,7 @@ func (s *agentService) composeGetResponse(ctx context.Context, e *providers.Enti
 	resp.Assertion = inbound.Assertion
 	resp.LoginConsent = inbound.LoginConsent
 	resp.AllowedUserTypes = inbound.AllowedUserTypes
+	resp.SubjectAttribute = inbound.SubjectAttribute
 	resp.LogoURL = logoURLFromProperties(inbound.Properties)
 
 	oauth, oauthErr := s.inboundClientService.GetOAuthProfileByEntityID(ctx, e.ID)
@@ -1334,7 +1335,8 @@ func readSystemAttributes(raw json.RawMessage) (name, description, owner, client
 // buildInboundClientRecord constructs an InboundClient record from the agent's identity and inbound auth fields.
 func buildInboundClientRecord(agentID, authFlowID, regFlowID string, isRegEnabled bool,
 	themeID, layoutID string, assertion *inboundmodel.AssertionConfig,
-	loginConsent *inboundmodel.LoginConsentConfig, allowedUserTypes []string) inboundmodel.InboundClient {
+	loginConsent *inboundmodel.LoginConsentConfig, allowedUserTypes []string,
+	subjectAttribute map[string]string) inboundmodel.InboundClient {
 	return inboundmodel.InboundClient{
 		ID:                        agentID,
 		AuthFlowID:                authFlowID,
@@ -1345,6 +1347,7 @@ func buildInboundClientRecord(agentID, authFlowID, regFlowID string, isRegEnable
 		Assertion:                 assertion,
 		LoginConsent:              loginConsent,
 		AllowedUserTypes:          allowedUserTypes,
+		SubjectAttribute:          subjectAttribute,
 	}
 }
 
@@ -1475,6 +1478,7 @@ func buildCompleteResponse(agentID, owner, clientID, clientSecret, agentType, na
 	attributes json.RawMessage, authFlowID, regFlowID string, isRegEnabled bool,
 	themeID, layoutID string, assertion *inboundmodel.AssertionConfig,
 	loginConsent *inboundmodel.LoginConsentConfig, allowedUserTypes []string,
+	subjectAttribute map[string]string,
 	inboundAuthConfig []providers.InboundAuthConfigWithSecret,
 ) *model.AgentCompleteResponse {
 	resp := &model.AgentCompleteResponse{
@@ -1494,6 +1498,7 @@ func buildCompleteResponse(agentID, owner, clientID, clientSecret, agentType, na
 			Assertion:                 assertion,
 			LoginConsent:              loginConsent,
 			AllowedUserTypes:          allowedUserTypes,
+			SubjectAttribute:          subjectAttribute,
 		},
 	}
 	if len(inboundAuthConfig) > 0 {
@@ -1796,6 +1801,10 @@ func translateInboundClientFKError(err error) *tidcommon.ServiceError {
 		return &ErrorInvalidUserType
 	case errors.Is(err, inboundclient.ErrUserSchemaLookupFailed):
 		return &tidcommon.InternalServerError
+	case errors.Is(err, inboundclient.ErrUniqueAttributeLookupFailed):
+		return &tidcommon.InternalServerError
+	case errors.Is(err, inboundclient.ErrFKInvalidSubjectAttributeMapping):
+		return &ErrorInvalidSubjectAttributeMapping
 	case errors.Is(err, inboundclient.ErrInvalidUserAttribute):
 		return &ErrorInvalidUserAttribute
 	}

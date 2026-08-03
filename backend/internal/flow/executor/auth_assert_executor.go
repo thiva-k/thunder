@@ -243,6 +243,13 @@ func (a *authAssertExecutor) generateAuthAssertion(
 		return "", errors.New("failed to fetch entity references: " + svcErr.ErrorDescription.DefaultValue)
 	}
 
+	// Ensure the configured subject attribute for this user type is fetched
+	if mappedAttr := ctx.Application.SubjectAttribute[entityRef.EntityType]; mappedAttr != "" {
+		if _, ok := reqAttrs.Attributes[mappedAttr]; !ok {
+			reqAttrs.Attributes[mappedAttr] = nil
+		}
+	}
+
 	authUser, attrResp, svcErr := a.authnProvider.GetUserAttributes(ctx.Context, reqAttrs, metadata, execResp.AuthUser)
 	execResp.AuthUser = authUser
 	if svcErr != nil {
@@ -251,8 +258,6 @@ func (a *authAssertExecutor) generateAuthAssertion(
 		}
 		return "", errors.New("failed to fetch user attributes: " + svcErr.ErrorDescription.DefaultValue)
 	}
-
-	tokenSub = entityRef.EntityID
 
 	fetchedAttributes := make(map[string]interface{})
 
@@ -263,6 +268,9 @@ func (a *authAssertExecutor) generateAuthAssertion(
 			}
 		}
 	}
+
+	tokenSub = resolveSubject(ctx.Application.SubjectAttribute, entityRef.EntityType, fetchedAttributes,
+		entityRef.EntityID)
 
 	resolvedAttributes, attrErr := a.resolveUserAttributes(ctx, requiredAttributes, fetchedAttributes,
 		entityRef.EntityID, entityRef.EntityType, entityRef.OUID)
@@ -311,6 +319,22 @@ func (a *authAssertExecutor) generateAuthAssertion(
 	}
 
 	return token, nil
+}
+
+// resolveSubject returns the token subject for the user: the value of the attribute mapped for the
+// user's type in the application's subject-attribute config, or defaultSub when there is no mapping
+// for the type or the mapped attribute has no string value in attrs.
+func resolveSubject(
+	mapping map[string]string, userType string, attrs map[string]interface{}, defaultSub string,
+) string {
+	mappedAttr := mapping[userType]
+	if mappedAttr == "" {
+		return defaultSub
+	}
+	if value, ok := attrs[mappedAttr].(string); ok && value != "" {
+		return value
+	}
+	return defaultSub
 }
 
 // extractAuthenticatorReferences extracts authenticator references from execution history.

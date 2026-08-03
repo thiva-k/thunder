@@ -573,4 +573,19 @@ var (
 			DefaultValue: "The provided Privacy Policy URI is not a valid URI",
 		},
 	}
+	// ErrorInvalidSubjectAttributeMapping is the error returned when the subject attribute mapping
+	// references an attribute that is not unique, required, and string-typed in an allowed user type.
+	ErrorInvalidSubjectAttributeMapping = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "APP-1045",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.applicationservice.invalid_subject_attribute_mapping",
+			DefaultValue: "Invalid subject attribute mapping",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.applicationservice.invalid_subject_attribute_mapping_description",
+			DefaultValue: "The subject attribute mapping must reference an attribute that is unique, required, " +
+				"and string-typed in an allowed user type",
+		},
+	}
 )

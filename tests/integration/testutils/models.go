@@ -41,6 +41,7 @@ type Application struct {
 	ClientSecret              string                   `json:"clientSecret,omitempty"`
 	RedirectURIs              []string                 `json:"redirectUris,omitempty"`
 	AllowedUserTypes          []string                 `json:"allowedUserTypes,omitempty"`
+	SubjectAttribute          map[string]string        `json:"subjectAttribute,omitempty"`
 	Certificate               map[string]interface{}   `json:"certificate,omitempty"`
 	InboundAuthConfig         []map[string]interface{} `json:"inboundAuthConfig,omitempty"`
 	AssertionConfig           map[string]interface{}   `json:"assertion,omitempty"`

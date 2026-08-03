@@ -20,6 +20,7 @@ import (
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
+	entitytypemodel "github.com/thunder-id/thunderid/internal/entitytype/model"
 	flowmgt "github.com/thunder-id/thunderid/internal/flow/mgt"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -146,6 +147,10 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 			return vErr
 		}
 	}
+	if err := s.validateSubjectAttributeMapping(
+		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
+		return err
+	}
 	applyInboundDefaults(client, oauthProfile)
 	oauthClientID := s.resolveClientID(ctx, client.ID)
 	if err := validateOAuthCertificateClientID(oauthProfile, oauthClientID); err != nil {
@@ -226,6 +231,10 @@ func (s *inboundClientService) UpdateInboundClient(ctx context.Context, client *
 			return vErr
 		}
 	}
+	if err := s.validateSubjectAttributeMapping(
+		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
+		return err
+	}
 	applyInboundDefaults(client, oauthProfile)
 	// Capture existing OAuth client_id before the caller updates entity system attributes.
 	oldOAuthClientID := s.resolveClientID(ctx, client.ID)
@@ -281,6 +290,10 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
+	}
+	if err := s.validateSubjectAttributeMapping(
+		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
+		return err
 	}
 	return nil
 }
@@ -1279,6 +1292,46 @@ func (s *inboundClientService) validateAllowedUserTypes(
 	return nil
 }
 
+// validateSubjectAttributeMapping validates that the subject attribute mapping is well-formed.
+// assumes that allowedUserTypes has been validated.
+func (s *inboundClientService) validateSubjectAttributeMapping(
+	ctx context.Context, subjectAttributeMapping map[string]string, allowedUserTypes []string,
+) error {
+	if len(subjectAttributeMapping) == 0 || s.entityType == nil {
+		return nil
+	}
+	for entityType, subjectAttribute := range subjectAttributeMapping {
+		if entityType == "" || subjectAttribute == "" {
+			return ErrFKInvalidSubjectAttributeMapping
+		}
+		if !slices.Contains(allowedUserTypes, entityType) {
+			return ErrFKInvalidSubjectAttributeMapping
+		}
+		// A subject attribute must be unique, required, non-credential, and string-typed: unique so it
+		// identifies a single user, required so every user of the type has it (a stable sub), and
+		// string so it can be emitted as the string sub claim.
+		attrs, svcErr := s.entityType.GetAttributes(
+			security.WithRuntimeContext(ctx), entitytype.TypeCategoryUser, entityType,
+			entitytype.AttributeFilter{
+				AllowNonCredential: true,
+				RequiredOnly:       true,
+				UniqueOnly:         true,
+				Type:               entitytypemodel.TypeString,
+			})
+		if svcErr != nil {
+			s.logger.Error(ctx, "Failed to retrieve attributes for subject mapping validation",
+				log.String("error", svcErr.Error.DefaultValue), log.String("code", svcErr.Code))
+			return ErrUniqueAttributeLookupFailed
+		}
+		if !slices.ContainsFunc(attrs, func(a entitytype.AttributeInfo) bool {
+			return a.Attribute == subjectAttribute
+		}) {
+			return ErrFKInvalidSubjectAttributeMapping
+		}
+	}
+	return nil
+}
+
 // validateUserAttributesAgainstAllowedTypes validates that every user attribute specified in the
 // assertion, token, and userinfo configs is a non-credential attribute defined in at least one
 // of the application's allowed entity types. Returns ErrInvalidUserAttribute when any attribute
@@ -1327,7 +1380,8 @@ func (s *inboundClientService) resolveValidUserAttributes(
 	validAttrs := make(map[string]bool)
 	for _, entityTypeName := range allowedEntityTypes {
 		attrInfos, svcErr := s.entityType.GetAttributes(
-			security.WithRuntimeContext(ctx), entitytype.TypeCategoryUser, entityTypeName, false, true, false)
+			security.WithRuntimeContext(ctx), entitytype.TypeCategoryUser, entityTypeName,
+			entitytype.AttributeFilter{AllowNonCredential: true})
 		if svcErr != nil {
 			if svcErr.Type == tidcommon.ServerErrorType {
 				return nil, ErrUserSchemaLookupFailed

@@ -812,6 +812,7 @@ func toInboundClient(dto *model.ApplicationProcessedDTO) inboundmodel.InboundCli
 		Assertion:                 dto.Assertion,
 		LoginConsent:              dto.LoginConsent,
 		AllowedUserTypes:          dto.AllowedUserTypes,
+		SubjectAttribute:          dto.SubjectAttribute,
 		PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 		Attestation:               dto.Attestation,
 	}
@@ -868,6 +869,7 @@ func toProcessedDTO(
 			Assertion:                 dao.Assertion,
 			LoginConsent:              dao.LoginConsent,
 			AllowedUserTypes:          dao.AllowedUserTypes,
+			SubjectAttribute:          dao.SubjectAttribute,
 			PasskeyAllowedOrigins:     dao.PasskeyAllowedOrigins,
 			Attestation:               dao.Attestation.WithoutCredentials(),
 		},
@@ -1548,6 +1550,10 @@ func translateInboundClientFKError(err error) *tidcommon.ServiceError {
 		return &ErrorInvalidUserType
 	case errors.Is(err, inboundclient.ErrUserSchemaLookupFailed):
 		return &tidcommon.InternalServerError
+	case errors.Is(err, inboundclient.ErrUniqueAttributeLookupFailed):
+		return &tidcommon.InternalServerError
+	case errors.Is(err, inboundclient.ErrFKInvalidSubjectAttributeMapping):
+		return &ErrorInvalidSubjectAttributeMapping
 	case errors.Is(err, inboundclient.ErrInvalidUserAttribute):
 		return &ErrorInvalidUserAttribute
 	}
@@ -1801,6 +1807,7 @@ func buildApplicationResponse(dto *model.ApplicationProcessedDTO) *providers.App
 			LayoutID:                  dto.LayoutID,
 			Assertion:                 dto.Assertion,
 			AllowedUserTypes:          dto.AllowedUserTypes,
+			SubjectAttribute:          dto.SubjectAttribute,
 			PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 			LoginConsent:              dto.LoginConsent,
 			Attestation:               dto.Attestation,
@@ -1913,6 +1920,7 @@ func buildBaseApplicationProcessedDTO(appID string, app *model.ApplicationDTO,
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			SubjectAttribute:          app.SubjectAttribute,
 			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation,
@@ -1998,6 +2006,7 @@ func buildReturnApplicationDTO(
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			SubjectAttribute:          app.SubjectAttribute,
 			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation.WithoutCredentials(),

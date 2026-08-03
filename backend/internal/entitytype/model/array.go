@@ -38,6 +38,10 @@ func (p *array) isUnique() bool {
 	return false
 }
 
+func (p *array) getType() string {
+	return TypeArray
+}
+
 func (p *array) validateValue(ctx context.Context, value interface{}, path string, logger *log.Logger) (bool, error) {
 	arrayValue, ok := value.([]interface{})
 	if !ok {

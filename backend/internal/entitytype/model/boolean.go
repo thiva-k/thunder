@@ -37,6 +37,10 @@ func (p *boolean) isUnique() bool {
 	return false
 }
 
+func (p *boolean) getType() string {
+	return TypeBoolean
+}
+
 func (p *boolean) validateValue(ctx context.Context, value interface{}, path string, logger *log.Logger) (bool, error) {
 	_, ok := value.(bool)
 	if !ok {
