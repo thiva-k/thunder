@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ExternalLink} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {Stack, Button, PageContent, PageTitle} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
@@ -19,7 +20,9 @@ export default function RolesListPage(): JSX.Element {
     <PageContent>
       <PageTitle>
         <PageTitle.Header>{t('roles:listing.title')}</PageTitle.Header>
-        <PageTitle.SubHeader>{t('roles:listing.subtitle')}</PageTitle.SubHeader>
+        <PageTitle.SubHeader>
+          {t('roles:listing.subtitle')} <ExternalLink docKey="roles" confirmBeforeNavigate={false} />
+        </PageTitle.SubHeader>
         <PageTitle.Actions>
           <Stack direction="row" spacing={2}>
             <Button

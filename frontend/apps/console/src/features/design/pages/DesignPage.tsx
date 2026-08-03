@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ExternalLink} from '@thunderid/components';
 import {useGetThemes, useGetLayouts, useCreateLayout} from '@thunderid/design';
 import {Box, Button, Card, Grid, PageContent, PageTitle, Skeleton, Typography} from '@wso2/oxygen-ui';
 import {ArrowUpRight, LayoutTemplate, Palette, Plus} from '@wso2/oxygen-ui-icons-react';
@@ -72,7 +73,8 @@ export default function DesignPage(): JSX.Element {
       <PageTitle>
         <PageTitle.Header>{t('page.title', 'Design')}</PageTitle.Header>
         <PageTitle.SubHeader>
-          {t('page.subtitle', 'Create, customize, and manage visual themes & layouts for your applications.')}
+          {t('page.subtitle', 'Create, customize, and manage visual themes & layouts for your applications.')}{' '}
+          <ExternalLink docKey="design" confirmBeforeNavigate={false} />
         </PageTitle.SubHeader>
       </PageTitle>
 

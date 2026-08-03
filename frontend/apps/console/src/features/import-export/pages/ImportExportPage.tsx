@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ExternalLink} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {
   AppBreadcrumbs,
@@ -110,7 +111,8 @@ export default function ImportExportPage(): JSX.Element {
                   {t('landing.title', 'Import / Export')}
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
-                  {t('landing.subtitle', 'Choose whether to import a configuration file or export your current one.')}
+                  {t('landing.subtitle', 'Choose whether to import a configuration file or export your current one.')}{' '}
+                  <ExternalLink docKey="importExport" confirmBeforeNavigate={false} />
                 </Typography>
                 <Box
                   sx={{
