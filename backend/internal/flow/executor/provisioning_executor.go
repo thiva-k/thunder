@@ -515,7 +515,8 @@ func (p *provisioningExecutor) fetchSchemaAttributes(
 		return nil, fmt.Errorf("user type not found")
 	}
 	attrs, svcErr := p.entityTypeService.GetAttributes(ctx.Context,
-		entitytype.TypeCategoryUser, userType, allowCredential, allowNonCredential, false)
+		entitytype.TypeCategoryUser, userType,
+		entitytype.AttributeFilter{AllowCredential: allowCredential, AllowNonCredential: allowNonCredential})
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to fetch schema attributes for user type %q: %s",
 			userType, svcErr.Error.DefaultValue)

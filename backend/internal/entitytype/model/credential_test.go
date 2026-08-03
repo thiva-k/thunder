@@ -78,7 +78,7 @@ func (s *CredentialTestSuite) TestGetAttributes_CredentialOnly_ReturnsOnlyCreden
 	}`))
 	s.Require().NoError(err)
 
-	attrs := schema.GetAttributes(true, false, false)
+	attrs := schema.GetAttributes(AttributeFilter{AllowCredential: true})
 	names := make([]string, 0, len(attrs))
 	for _, a := range attrs {
 		names = append(names, a.Attribute)
@@ -95,7 +95,7 @@ func (s *CredentialTestSuite) TestGetAttributes_CredentialOnly_EmptyWhenNoCreden
 	}`))
 	s.Require().NoError(err)
 
-	attrs := schema.GetAttributes(true, false, false)
+	attrs := schema.GetAttributes(AttributeFilter{AllowCredential: true})
 	s.Require().Empty(attrs)
 }
 

@@ -144,7 +144,8 @@ func (s *ServiceTestSuite) newSvcWithEntityType() (*entityService, *entitytypemo
 
 func (s *ServiceTestSuite) TestStripUndeclaredAttributes_DropsUndeclared() {
 	svc, ets := s.newSvcWithEntityType()
-	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee", true, true, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee",
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "username"}, {Attribute: "email"}}, nil)
 
 	out, err := svc.stripUndeclaredAttributes(s.ctx, providers.EntityCategoryUser, "employee",
@@ -157,7 +158,8 @@ func (s *ServiceTestSuite) TestStripUndeclaredAttributes_DropsUndeclared() {
 
 func (s *ServiceTestSuite) TestStripUndeclaredAttributes_PreservesLargeIntWhileDropping() {
 	svc, ets := s.newSvcWithEntityType()
-	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee", true, true, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee",
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "bigId"}}, nil)
 
 	// bigId is above 2^53; decoding through float64 would round it to 9007254740992.
@@ -170,7 +172,8 @@ func (s *ServiceTestSuite) TestStripUndeclaredAttributes_PreservesLargeIntWhileD
 
 func (s *ServiceTestSuite) TestStripUndeclaredAttributes_NoDeclaredAttrs_NoOp() {
 	svc, ets := s.newSvcWithEntityType()
-	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee", true, true, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee",
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{}, nil)
 
 	in := json.RawMessage(`{"anything":"x"}`)
@@ -181,7 +184,8 @@ func (s *ServiceTestSuite) TestStripUndeclaredAttributes_NoDeclaredAttrs_NoOp() 
 
 func (s *ServiceTestSuite) TestStripUndeclaredAttributes_AllDeclared_NoOp() {
 	svc, ets := s.newSvcWithEntityType()
-	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee", true, true, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, "employee",
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "username"}}, nil)
 
 	in := json.RawMessage(`{"username":"x"}`)
@@ -195,10 +199,11 @@ func (s *ServiceTestSuite) TestUpdateAttributes_DropsUndeclaredBeforeValidateAnd
 	e := testEntity("uad1")
 	s.store.On("GetEntity", mock.Anything, e.ID).Return(*e, nil)
 	// strip: all declared attributes (username only).
-	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type, true, true, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type,
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "username"}}, nil)
 	// credential extraction: no credential attributes.
-	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type, true, false, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type, entitytype.AttributeFilter{AllowCredential: true}).
 		Return([]entitytype.AttributeInfo{}, nil)
 	// Validation must receive the already-stripped payload, proving strip runs before validate.
 	cleaned := json.RawMessage(`{"username":"new"}`)
@@ -218,10 +223,11 @@ func (s *ServiceTestSuite) TestUpdateEntity_DropsUndeclaredBeforeValidateAndStor
 	e := testEntity("ue-strip")
 	e.Attributes = json.RawMessage(`{"username":"new","stale":"x"}`)
 	// strip: only username is declared.
-	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type, true, true, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type,
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "username"}}, nil)
 	// credential extraction: no credential attributes.
-	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type, true, false, false).
+	ets.On("GetAttributes", mock.Anything, mock.Anything, e.Type, entitytype.AttributeFilter{AllowCredential: true}).
 		Return([]entitytype.AttributeInfo{}, nil)
 	// Validation must receive the already-stripped payload, proving strip runs before validate.
 	cleaned := json.RawMessage(`{"username":"new"}`)

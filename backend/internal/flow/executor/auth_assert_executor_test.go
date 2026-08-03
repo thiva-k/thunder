@@ -1675,3 +1675,74 @@ func (suite *AuthAssertExecutorTestSuite) TestExecute_CallbackType_AbsentWhenNot
 	_, hasCallbackType := resp.AdditionalData[propertyKeyCallbackType]
 	assert.False(suite.T(), hasCallbackType, "callbackType must not be present for auth code flows")
 }
+
+func (suite *AuthAssertExecutorTestSuite) TestResolveSubject() {
+	const defaultSub = "entity-123"
+	tests := []struct {
+		name     string
+		mapping  map[string]string
+		userType string
+		attrs    map[string]interface{}
+		want     string
+	}{
+		{"nil mapping", nil, "employee", map[string]interface{}{"email": "a@b.com"}, defaultSub},
+		{"no mapping for user type", map[string]string{"customer": "email"}, "employee",
+			map[string]interface{}{"email": "a@b.com"}, defaultSub},
+		{"empty mapped attribute name", map[string]string{"employee": ""}, "employee",
+			map[string]interface{}{"email": "a@b.com"}, defaultSub},
+		{"mapped attribute missing from attrs", map[string]string{"employee": "email"}, "employee",
+			map[string]interface{}{}, defaultSub},
+		{"mapped attribute is non-string", map[string]string{"employee": "age"}, "employee",
+			map[string]interface{}{"age": 42}, defaultSub},
+		{"mapped attribute is empty string", map[string]string{"employee": "email"}, "employee",
+			map[string]interface{}{"email": ""}, defaultSub},
+		{"mapped attribute resolved", map[string]string{"employee": "email"}, "employee",
+			map[string]interface{}{"email": "u@corp.com"}, "u@corp.com"},
+	}
+	for _, tc := range tests {
+		suite.Run(tc.name, func() {
+			suite.Equal(tc.want, resolveSubject(tc.mapping, tc.userType, tc.attrs, defaultSub))
+		})
+	}
+}
+
+// TestExecute_ResolvesMappedSubjectFromUnreleasedAttribute verifies resolve-then-drop: the mapped
+// attribute is fetched and used as the assertion subject even though it is not released to the
+// client, and it does not leak into the assertion claims.
+func (suite *AuthAssertExecutorTestSuite) TestExecute_ResolvesMappedSubjectFromUnreleasedAttribute() {
+	ctx := &providers.NodeContext{
+		ExecutionID:      "flow-123",
+		EntityID:         "app-123",
+		FlowType:         providers.FlowTypeAuthentication,
+		AuthUser:         newTestAuthenticatedAuthUser(),
+		NodeProperties:   map[string]interface{}{},
+		RuntimeData:      map[string]string{},
+		ExecutionHistory: map[string]*providers.NodeExecutionRecord{},
+		Application: providers.Application{
+			InboundAuthProfile: providers.InboundAuthProfile{
+				// external_id is mapped as the subject but NOT released via UserAttributes.
+				SubjectAttribute: map[string]string{"INTERNAL": "external_id"},
+				Assertion:        &inboundmodel.AssertionConfig{UserAttributes: []string{}},
+			},
+		},
+	}
+
+	suite.setupGetEntityReference("INTERNAL", testAuthOUID)
+	suite.setupGetUserAttributesWith(map[string]*providers.AttributeResponse{
+		"external_id": {Value: "ext-987"},
+	})
+
+	suite.mockJWTService.On("GenerateJWT", mock.Anything, "ext-987", mock.Anything, mock.Anything,
+		mock.MatchedBy(func(claims map[string]interface{}) bool {
+			_, leaked := claims["external_id"]
+			return !leaked
+		}), mock.Anything, mock.Anything).Return("jwt-token", int64(3600), nil)
+
+	resp, err := suite.executor.Execute(ctx)
+
+	assert.NoError(suite.T(), err)
+	assert.NotNil(suite.T(), resp)
+	assert.Equal(suite.T(), providers.ExecComplete, resp.Status)
+	assert.Equal(suite.T(), "jwt-token", resp.Assertion)
+	suite.mockJWTService.AssertExpectations(suite.T())
+}

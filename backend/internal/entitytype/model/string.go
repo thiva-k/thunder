@@ -25,6 +25,10 @@ func (p *str) isUnique() bool {
 	return p.unique
 }
 
+func (p *str) getType() string {
+	return TypeString
+}
+
 func (p *str) isRequired() bool {
 	return p.required
 }

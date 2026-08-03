@@ -457,7 +457,7 @@ func (is *idpService) validateAttributeConfiguration(
 
 		// Local targets must be non-credential attributes defined in the user type's schema.
 		attributes, svcErr := is.entityTypeService.GetAttributes(
-			ctx, entitytype.TypeCategoryUser, entry.UserType, false, true, false)
+			ctx, entitytype.TypeCategoryUser, entry.UserType, entitytype.AttributeFilter{AllowNonCredential: true})
 		if svcErr != nil {
 			return tidcommon.CustomServiceError(ErrorInvalidAttributeConfiguration, tidcommon.I18nMessage{
 				Key: "error.idpservice.attribute_configuration_user_type_invalid_description",
@@ -524,7 +524,8 @@ func (is *idpService) validateUserTypeResolution(
 			})
 		}
 		if _, svcErr := is.entityTypeService.GetAttributes(
-			ctx, entitytype.TypeCategoryUser, trimmedUserType, false, true, false); svcErr != nil {
+			ctx, entitytype.TypeCategoryUser, trimmedUserType,
+			entitytype.AttributeFilter{AllowNonCredential: true}); svcErr != nil {
 			return tidcommon.CustomServiceError(ErrorInvalidAttributeConfiguration, tidcommon.I18nMessage{
 				Key: "error.idpservice.attribute_configuration_resolution_target_invalid_description",
 				DefaultValue: "user type resolution maps to invalid user type " +

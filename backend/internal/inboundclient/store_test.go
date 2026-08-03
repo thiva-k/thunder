@@ -864,3 +864,22 @@ func (suite *InboundClientStoreTestSuite) TestGetEntityIDsByReference_UnknownTyp
 	suite.Empty(ids)
 	suite.mockDBProvider.AssertNotCalled(suite.T(), "GetConfigDBClient")
 }
+
+func (suite *InboundClientStoreTestSuite) TestSubjectAttribute_RoundTrip() {
+	mapping := map[string]string{"employee": "email", "customer": "username"}
+
+	propertiesBytes, _, _, _, _, _, _, _, err := marshalInboundClient(inboundmodel.InboundClient{
+		SubjectAttribute: mapping,
+	})
+	suite.Require().NoError(err)
+
+	row := map[string]interface{}{
+		"entity_id":  testEntityID,
+		"properties": propertiesBytes,
+	}
+	result, err := buildInboundClientFromRow(context.Background(), row)
+
+	suite.NoError(err)
+	suite.Require().NotNil(result)
+	suite.Equal(mapping, result.SubjectAttribute)
+}

@@ -657,7 +657,7 @@ func (s *entityService) validateCredentialKeys(
 	}
 
 	credInfos, svcErr := s.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategory(category), entityType, true, false, false)
+		entitytype.TypeCategory(category), entityType, entitytype.AttributeFilter{AllowCredential: true})
 	if svcErr != nil {
 		return fmt.Errorf("failed to get credential attributes from schema: %s", svcErr.ErrorDescription)
 	}
@@ -684,7 +684,8 @@ func (s *entityService) stripUndeclaredAttributes(
 	}
 
 	attrInfos, svcErr := s.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategory(category), entityType, true, true, false)
+		entitytype.TypeCategory(category), entityType,
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true})
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to get schema attributes: %s", svcErr.ErrorDescription)
 	}
@@ -923,7 +924,7 @@ func (s *entityService) extractAndHashSchemaCredentials(
 	}
 
 	credentialInfos, svcErr := s.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategory(entity.Category), entity.Type, true, false, false)
+		entitytype.TypeCategory(entity.Category), entity.Type, entitytype.AttributeFilter{AllowCredential: true})
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to get credential attributes from schema: %s", svcErr.ErrorDescription)
 	}

@@ -37,6 +37,10 @@ func (p *object) isUnique() bool {
 	return false
 }
 
+func (p *object) getType() string {
+	return TypeObject
+}
+
 func (p *object) validateValue(ctx context.Context, value interface{}, path string, logger *log.Logger) (bool, error) {
 	valueMap, ok := value.(map[string]interface{})
 	if !ok {

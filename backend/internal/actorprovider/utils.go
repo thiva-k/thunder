@@ -44,6 +44,7 @@ func assembleApplication(
 			Assertion:             client.Assertion,
 			LoginConsent:          client.LoginConsent,
 			AllowedUserTypes:      client.AllowedUserTypes,
+			SubjectAttribute:      client.SubjectAttribute,
 			PasskeyAllowedOrigins: client.PasskeyAllowedOrigins,
 		},
 	}

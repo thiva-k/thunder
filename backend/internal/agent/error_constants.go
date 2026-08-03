@@ -499,4 +499,20 @@ var (
 			DefaultValue: "The provided logo URL is not valid",
 		},
 	}
+
+	// ErrorInvalidSubjectAttributeMapping is returned when the subject attribute mapping references an
+	// attribute that is not unique, required, and string-typed in an allowed agent type.
+	ErrorInvalidSubjectAttributeMapping = tidcommon.ServiceError{
+		Type: tidcommon.ClientErrorType,
+		Code: "AGT-1042",
+		Error: tidcommon.I18nMessage{
+			Key:          "error.agentservice.invalid_subject_attribute_mapping",
+			DefaultValue: "Invalid subject attribute mapping",
+		},
+		ErrorDescription: tidcommon.I18nMessage{
+			Key: "error.agentservice.invalid_subject_attribute_mapping_description",
+			DefaultValue: "The subject attribute mapping must reference an attribute that is unique, required, " +
+				"and string-typed in an allowed agent type",
+		},
+	}
 )

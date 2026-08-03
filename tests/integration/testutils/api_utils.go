@@ -418,6 +418,11 @@ func CreateApplication(app Application) (string, error) {
 		appData["allowedUserTypes"] = app.AllowedUserTypes
 	}
 
+	// Add subject attribute mapping if provided
+	if len(app.SubjectAttribute) > 0 {
+		appData["subjectAttribute"] = app.SubjectAttribute
+	}
+
 	// Add assertion config if provided
 	if app.AssertionConfig != nil {
 		appData["assertion"] = app.AssertionConfig

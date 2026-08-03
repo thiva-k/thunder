@@ -560,7 +560,7 @@ func (us *userService) UpdateUser(
 	// Credentials must go through the dedicated update-credentials endpoint.
 	if len(user.Attributes) > 0 {
 		schemaCredentialInfos, svcErr := us.entityTypeService.GetAttributes(ctx,
-			entitytype.TypeCategoryUser, user.Type, true, false, false)
+			entitytype.TypeCategoryUser, user.Type, entitytype.AttributeFilter{AllowCredential: true})
 		if svcErr != nil {
 			if svcErr.Code == entitytype.ErrorEntityTypeNotFound.Code {
 				return nil, &ErrorEntityTypeNotFound
@@ -636,7 +636,7 @@ func (us *userService) UpdateUserAttributes(
 		return nil, &tidcommon.InternalServerError
 	}
 	schemaCredentialInfos, svcErr := us.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategoryUser, existingUser.Type, true, false, false)
+		entitytype.TypeCategoryUser, existingUser.Type, entitytype.AttributeFilter{AllowCredential: true})
 	if svcErr != nil {
 		if svcErr.Code == entitytype.ErrorEntityTypeNotFound.Code {
 			return nil, &ErrorEntityTypeNotFound

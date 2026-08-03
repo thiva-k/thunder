@@ -23,6 +23,10 @@ func (p *number) isUnique() bool {
 	return p.unique
 }
 
+func (p *number) getType() string {
+	return TypeNumber
+}
+
 func (p *number) isRequired() bool {
 	return p.required
 }

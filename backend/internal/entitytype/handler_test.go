@@ -70,7 +70,7 @@ func (s *InlineStubEntityTypeService) GetEntityTypeList(
 }
 
 func (s *InlineStubEntityTypeService) GetAttributes(
-	ctx context.Context, cat TypeCategory, id string, f1, f2, f3 bool,
+	ctx context.Context, cat TypeCategory, id string, filter AttributeFilter,
 ) ([]AttributeInfo, *tidcommon.ServiceError) {
 	return []AttributeInfo{}, nil
 }

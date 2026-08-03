@@ -49,10 +49,16 @@ var (
 	ErrFKLayoutNotFound = errors.New("layout not found")
 	// ErrFKInvalidUserType is returned when the specified user type is invalid.
 	ErrFKInvalidUserType = errors.New("invalid user type")
+	// ErrFKInvalidSubjectAttributeMapping is returned when the specified subject attribute mapping is invalid.
+	ErrFKInvalidSubjectAttributeMapping = errors.New("invalid subject attribute mapping")
 	// ErrUserSchemaLookupFailed is returned when the user-schema service fails (e.g. DB outage)
 	// while validating allowed user types. Distinct from ErrFKInvalidUserType so the handler
 	// can map it to a server error instead of a client validation error.
 	ErrUserSchemaLookupFailed = errors.New("user schema lookup failed")
+	// ErrUniqueAttributeLookupFailed is returned when the user-schema service fails (e.g. DB outage)
+	// while retrieving unique attributes for validation. Distinct from ErrFKInvalidSubjectAttributeMapping
+	// so the handler can map it to a server error instead of a client validation error.
+	ErrUniqueAttributeLookupFailed = errors.New("unique attribute lookup failed")
 	// ErrInvalidUserAttribute is returned when a user attribute is not valid for any of the allowed user types.
 	ErrInvalidUserAttribute = errors.New("invalid user attribute")
 
