@@ -16,6 +16,8 @@ const (
 	ConfigNameSession ConfigName = "session"
 	// ConfigNameFlow is the configuration key for the flow defaults.
 	ConfigNameFlow ConfigName = "flow"
+	// ConfigNameCSP is the configuration key for the deny-first Content-Security-Policy baseline.
+	ConfigNameCSP ConfigName = "csp"
 )
 
 // supportedConfigNames lists all the supported server configuration names.
@@ -24,6 +26,7 @@ var supportedConfigNames = []ConfigName{
 	ConfigNameDefaultResourceServer,
 	ConfigNameSession,
 	ConfigNameFlow,
+	ConfigNameCSP,
 }
 
 // IsValid reports whether the config name is one of the supported values.
