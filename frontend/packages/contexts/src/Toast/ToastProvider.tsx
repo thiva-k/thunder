@@ -13,7 +13,10 @@ interface ToastState {
   open: boolean;
   message: string;
   severity: ToastSeverity;
+  durationMs: number;
 }
+
+const DEFAULT_TOAST_DURATION_MS = 6000;
 
 /**
  * Props for the ToastProvider component.
@@ -70,11 +73,15 @@ export default function ToastProvider({children}: ToastProviderProps): JSX.Eleme
     open: false,
     message: '',
     severity: 'success',
+    durationMs: DEFAULT_TOAST_DURATION_MS,
   });
 
-  const showToast = useCallback((message: string, severity: ToastSeverity = 'success'): void => {
-    setToast({open: true, message, severity});
-  }, []);
+  const showToast = useCallback(
+    (message: string, severity: ToastSeverity = 'success', durationMs: number = DEFAULT_TOAST_DURATION_MS): void => {
+      setToast({open: true, message, severity, durationMs});
+    },
+    [],
+  );
 
   const handleClose = useCallback((_event?: SyntheticEvent | Event, reason?: string): void => {
     if (reason === 'clickaway') return;
@@ -88,7 +95,7 @@ export default function ToastProvider({children}: ToastProviderProps): JSX.Eleme
       {children}
       <Snackbar
         open={toast.open}
-        autoHideDuration={6000}
+        autoHideDuration={toast.durationMs}
         onClose={handleClose}
         anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
       >

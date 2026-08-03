@@ -2866,7 +2866,7 @@ const translations = {
     'errors.APP-1030': 'This application is managed declaratively and cannot be edited or deleted.',
     'errors.APP-1035': 'One or more user attributes are not valid for the selected user types.',
     'errors.APP-1039':
-      "A referenced flow does not match the application's flow configuration. Ensure the registration and authentication flows are consistent.",
+      "The {{sourceFlowType}} references a different {{flowType}} than the one configured for this application. Update the {{sourceFlowType}} so it calls the same {{flowType}}, or change the application's {{flowType}} configuration.",
   },
 
   // ============================================================================
