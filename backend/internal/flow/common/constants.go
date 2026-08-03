@@ -272,11 +272,12 @@ const (
 	ActionTypeSubmit ActionType = "SUBMIT"
 	// ActionTypeReject represents a reject/deny action
 	ActionTypeReject ActionType = "REJECT"
-	// ActionTypeSignOutConfirm marks the confirmation prompt's action edge in a sign-out flow. When the
-	// End-User confirms, the prompt node forwards this type to the session sign-out node (as the action
-	// type in ForwardedData), which reads it to tell a confirmed re-run apart from the initial request,
-	// so no runtime flag has to be persisted.
-	ActionTypeSignOutConfirm ActionType = "SIGN_OUT_CONFIRM"
+	// ActionTypeConfirm marks a confirmation prompt's action edge. When the End-User confirms, the
+	// prompt node forwards this type to the next node (as the action type in ForwardedData), where the
+	// executor that routed to the prompt reads it to tell a confirmed re-run apart from the initial
+	// request, so no runtime flag has to be persisted. It is deliberately not tied to one use case:
+	// the session sign-out executor is its first consumer, not its only possible one.
+	ActionTypeConfirm ActionType = "CONFIRM"
 )
 
 // ForwardedData key constants define keys used in the ForwardedData map.

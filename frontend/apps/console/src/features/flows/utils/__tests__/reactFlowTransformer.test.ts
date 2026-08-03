@@ -248,7 +248,7 @@ describe('reactFlowTransformer', () => {
             type: ElementTypes.Action,
             category: ElementCategories.Action,
             eventType: 'SUBMIT',
-            actionType: 'SIGN_OUT_CONFIRM',
+            actionType: 'CONFIRM',
           } as Element & {eventType: string},
         ];
 
@@ -262,7 +262,7 @@ describe('reactFlowTransformer', () => {
         expect(result.nodes[0].prompts?.[0].action).toEqual({
           ref: 'button-1',
           nextNode: 'session_signout',
-          type: 'SIGN_OUT_CONFIRM',
+          type: 'CONFIRM',
         });
       });
 

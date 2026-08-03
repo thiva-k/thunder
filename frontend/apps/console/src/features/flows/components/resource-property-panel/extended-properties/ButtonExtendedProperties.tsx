@@ -10,12 +10,14 @@ import {ActionEventTypes, PromptActionTypes} from '@/features/flows/models/eleme
 
 /**
  * The options offered by the Action selector. `Submit` and `Trigger` are the
- * button's `eventType`; `SignOut` is a submit button that additionally raises
- * the `SIGN_OUT_CONFIRM` prompt action, so one selection maps onto two fields.
+ * button's `eventType`; `Confirm` is a submit button that additionally raises
+ * the `CONFIRM` prompt action, so one selection maps onto two fields.
  *
- * `SignOut` deliberately carries the same literal that is persisted as
+ * `Confirm` deliberately carries the same literal that is persisted as
  * `prompts[].action.type`, so the value selected here and the value in the flow
- * definition are one vocabulary rather than a UI-only alias.
+ * definition are one vocabulary rather than a UI-only alias. It is not specific
+ * to signing out: the session sign-out executor reads it today, but any executor
+ * that routes to a confirmation prompt can.
  *
  * The remaining `ActionEventTypes` (navigate, cancel, reset, back) are handled
  * by the SDK renderers but deliberately not offered here.
@@ -23,7 +25,7 @@ import {ActionEventTypes, PromptActionTypes} from '@/features/flows/models/eleme
 const ACTION_OPTIONS = {
   Submit: 'SUBMIT',
   Trigger: 'TRIGGER',
-  SignOut: PromptActionTypes.SignOutConfirm,
+  Confirm: PromptActionTypes.Confirm,
 } as const;
 
 type ActionOption = (typeof ACTION_OPTIONS)[keyof typeof ACTION_OPTIONS];
@@ -46,28 +48,28 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
   const element = resource as Element & {eventType?: string};
   const eventTypeValue = element?.eventType ?? ActionEventTypes.Trigger;
 
-  // Sign out is a submit button carrying an extra prompt action type, so it
+  // Confirm is a submit button carrying an extra prompt action type, so it
   // takes precedence over the plain event type when deriving the selection.
   const actionValue: ActionOption =
-    element?.actionType === PromptActionTypes.SignOutConfirm
-      ? ACTION_OPTIONS.SignOut
+    element?.actionType === PromptActionTypes.Confirm
+      ? ACTION_OPTIONS.Confirm
       : eventTypeValue === ActionEventTypes.Submit
         ? ACTION_OPTIONS.Submit
         : ACTION_OPTIONS.Trigger;
 
   const handleActionChange = (nextAction: ActionOption): void => {
-    if (nextAction === ACTION_OPTIONS.SignOut) {
+    if (nextAction === ACTION_OPTIONS.Confirm) {
       onChange('eventType', ActionEventTypes.Submit, resource);
-      onChange('actionType', PromptActionTypes.SignOutConfirm, resource);
+      onChange('actionType', PromptActionTypes.Confirm, resource);
       return;
     }
 
     onChange('eventType', nextAction, resource);
-    // Clearing keeps the button from silently staying a sign-out confirmation
+    // Clearing keeps the button from silently staying a confirmation action
     // after the author picks a plain action. Only the type this selector owns is
     // cleared, so an action type it does not model (e.g. REJECT, authored in the
     // flow definition directly) is left untouched rather than discarded.
-    if (element?.actionType === PromptActionTypes.SignOutConfirm) {
+    if (element?.actionType === PromptActionTypes.Confirm) {
       onChange('actionType', '', resource);
     }
   };
@@ -125,8 +127,8 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
           <MenuItem value={ACTION_OPTIONS.Trigger}>
             {t('flows:core.buttonExtendedProperties.action.trigger', 'Trigger Action')}
           </MenuItem>
-          <MenuItem value={ACTION_OPTIONS.SignOut}>
-            {t('flows:core.buttonExtendedProperties.action.signOut', 'Sign Out Action')}
+          <MenuItem value={ACTION_OPTIONS.Confirm}>
+            {t('flows:core.buttonExtendedProperties.action.confirm', 'Confirm Action')}
           </MenuItem>
         </Select>
         <FormHelperText>

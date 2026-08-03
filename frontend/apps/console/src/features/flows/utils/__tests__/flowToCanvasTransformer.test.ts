@@ -458,7 +458,7 @@ describe('flowToCanvasTransformer', () => {
             meta: {
               components: [{id: 'action_confirm', type: 'ACTION', label: 'Sign out'}],
             },
-            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'next-node'}}],
+            prompts: [{action: {ref: 'action_confirm', type: 'CONFIRM', nextNode: 'next-node'}}],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },
         ]);
@@ -466,7 +466,7 @@ describe('flowToCanvasTransformer', () => {
         const result = transformFlowToCanvas(flowData);
 
         const component = result.nodes[0].data.components?.[0] as Record<string, unknown> | undefined;
-        expect(component?.actionType).toBe('SIGN_OUT_CONFIRM');
+        expect(component?.actionType).toBe('CONFIRM');
       });
 
       it('should restore the type when the element carries a cleared action type', () => {
@@ -480,7 +480,7 @@ describe('flowToCanvasTransformer', () => {
             meta: {
               components: [{id: 'action_confirm', type: 'ACTION', actionType: '', label: 'Sign out'}],
             },
-            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'next-node'}}],
+            prompts: [{action: {ref: 'action_confirm', type: 'CONFIRM', nextNode: 'next-node'}}],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },
         ]);
@@ -488,7 +488,7 @@ describe('flowToCanvasTransformer', () => {
         const result = transformFlowToCanvas(flowData);
 
         const component = result.nodes[0].data.components?.[0] as Record<string, unknown> | undefined;
-        expect(component?.actionType).toBe('SIGN_OUT_CONFIRM');
+        expect(component?.actionType).toBe('CONFIRM');
       });
 
       it('should keep an action type already on the element over the prompt action', () => {
@@ -501,7 +501,7 @@ describe('flowToCanvasTransformer', () => {
             meta: {
               components: [{id: 'action_confirm', type: 'ACTION', actionType: 'REJECT', label: 'No'}],
             },
-            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'next-node'}}],
+            prompts: [{action: {ref: 'action_confirm', type: 'CONFIRM', nextNode: 'next-node'}}],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },
         ]);
@@ -758,7 +758,7 @@ describe('flowToCanvasTransformer', () => {
             meta: {
               components: [{id: 'action_confirm', type: 'ACTION', label: 'Sign out'}],
             },
-            prompts: [{action: {ref: 'action_confirm', type: 'SIGN_OUT_CONFIRM', nextNode: 'session_signout'}}],
+            prompts: [{action: {ref: 'action_confirm', type: 'CONFIRM', nextNode: 'session_signout'}}],
             layout: {position: {x: 0, y: 0}, size: {width: 300, height: 200}},
           },
           {
@@ -781,7 +781,7 @@ describe('flowToCanvasTransformer', () => {
         expect(prompt?.prompts?.[0].action).toMatchObject({
           ref: 'action_confirm',
           nextNode: 'session_signout',
-          type: 'SIGN_OUT_CONFIRM',
+          type: 'CONFIRM',
         });
       });
     });

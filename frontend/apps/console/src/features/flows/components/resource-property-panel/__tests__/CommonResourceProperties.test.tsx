@@ -95,7 +95,7 @@ describe('CommonResourceProperties', () => {
         <button type="button" onClick={() => onChange('label', 'New Label', resource)}>
           Change Label
         </button>
-        <button type="button" onClick={() => onChange('actionType', 'SIGN_OUT_CONFIRM', resource)}>
+        <button type="button" onClick={() => onChange('actionType', 'CONFIRM', resource)}>
           Change Action Type
         </button>
         <button
@@ -245,7 +245,7 @@ describe('CommonResourceProperties', () => {
       // generic field.
       const resourceWithActionType: Base = {
         ...mockBaseResource,
-        actionType: 'SIGN_OUT_CONFIRM',
+        actionType: 'CONFIRM',
       } as Base & {actionType: string};
 
       render(<CommonResourceProperties />, {
@@ -409,7 +409,7 @@ describe('CommonResourceProperties', () => {
       const updated = mockSetLastInteractedResource.mock.calls.at(-1)?.[0] as Record<string, unknown> & {
         data?: Record<string, unknown>;
       };
-      expect(updated.actionType).toBe('SIGN_OUT_CONFIRM');
+      expect(updated.actionType).toBe('CONFIRM');
       expect(updated.data?.actionType).toBeUndefined();
     });
 

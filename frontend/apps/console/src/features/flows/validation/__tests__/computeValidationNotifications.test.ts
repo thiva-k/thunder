@@ -583,7 +583,7 @@ describe('computeValidationNotifications', () => {
               type: 'BLOCK',
               category: 'BLOCK',
               components: [
-                {id: buttonId, type: 'ACTION', category: 'ACTION', eventType: 'SUBMIT', actionType: 'SIGN_OUT_CONFIRM'},
+                {id: buttonId, type: 'ACTION', category: 'ACTION', eventType: 'SUBMIT', actionType: 'CONFIRM'},
               ],
             },
           ],

@@ -218,37 +218,37 @@ describe('ButtonExtendedProperties', () => {
       expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.action.submit');
     });
 
-    it('should display Sign out when the button carries the sign-out confirm action', () => {
-      // A sign-out button is a submit button plus the prompt action type, so
+    it('should display Confirm when the button carries the confirm action', () => {
+      // A confirmation button is a submit button plus the prompt action type, so
       // the action type has to win over the plain event type.
       const resource = createMockResource({
-        actionType: 'SIGN_OUT_CONFIRM',
+        actionType: 'CONFIRM',
         eventType: 'SUBMIT',
       } as Partial<Resource>);
 
       const {container} = render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
 
       const select = container.querySelector('#event-type-select');
-      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.action.signOut');
+      expect(select).toHaveTextContent('flows:core.buttonExtendedProperties.action.confirm');
     });
 
-    it('should write both the event type and the action type when Sign out is picked', async () => {
+    it('should write both the event type and the action type when Confirm is picked', async () => {
       const user = userEvent.setup();
       const resource = createMockResource({eventType: 'TRIGGER'} as Partial<Resource>);
 
       render(<ButtonExtendedProperties resource={resource} onChange={mockOnChange} />);
 
       await user.click(screen.getByRole('combobox'));
-      await user.click(screen.getByRole('option', {name: 'flows:core.buttonExtendedProperties.action.signOut'}));
+      await user.click(screen.getByRole('option', {name: 'flows:core.buttonExtendedProperties.action.confirm'}));
 
       expect(mockOnChange).toHaveBeenCalledWith('eventType', 'SUBMIT', resource);
-      expect(mockOnChange).toHaveBeenCalledWith('actionType', 'SIGN_OUT_CONFIRM', resource);
+      expect(mockOnChange).toHaveBeenCalledWith('actionType', 'CONFIRM', resource);
     });
 
-    it('should clear the action type when moving from Sign out back to a plain action', async () => {
+    it('should clear the action type when moving from Confirm back to a plain action', async () => {
       const user = userEvent.setup();
       const resource = createMockResource({
-        actionType: 'SIGN_OUT_CONFIRM',
+        actionType: 'CONFIRM',
         eventType: 'SUBMIT',
       } as Partial<Resource>);
 
