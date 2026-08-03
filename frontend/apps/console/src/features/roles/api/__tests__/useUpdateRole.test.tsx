@@ -238,7 +238,7 @@ describe('useUpdateRole', () => {
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success');
   });
 
-  it('should show error toast on error', async () => {
+  it('should not show a toast on error', async () => {
     mockHttpRequest.mockRejectedValueOnce(new Error('Failed'));
 
     const {result} = renderHook(() => useUpdateRole());
@@ -249,7 +249,7 @@ describe('useUpdateRole', () => {
       expect(result.current.isError).toBe(true);
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('should send JSON-stringified data in request body', async () => {

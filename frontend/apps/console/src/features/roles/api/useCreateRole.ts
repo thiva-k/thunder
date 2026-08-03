@@ -39,8 +39,5 @@ export default function useCreateRole(): UseMutationResult<Role, Error, CreateRo
       });
       showToast(t('create.success'), 'success');
     },
-    onError: () => {
-      showToast(t('create.error'), 'error');
-    },
   });
 }

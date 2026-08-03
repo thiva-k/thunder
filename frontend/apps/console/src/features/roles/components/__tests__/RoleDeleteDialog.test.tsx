@@ -14,17 +14,22 @@ vi.mock('../../api/useDeleteRole');
 // Mock translations
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallbackOrOptions?: string | {defaultValue?: string}) => {
       const translations: Record<string, string> = {
-        'roles:delete.title': 'Delete Role',
-        'roles:delete.message': 'Are you sure you want to delete this role?',
-        'roles:delete.disclaimer':
-          'This action cannot be undone. All data associated with this role will be permanently deleted.',
+        'delete.title': 'Delete Role',
+        'delete.message': 'Are you sure you want to delete this role?',
+        'delete.disclaimer':
+          'This action cannot be undone. All role assignments and permissions will be permanently removed.',
+        'delete.error': 'Failed to delete role. Please try again.',
+        'errors.ROL-1013': 'This role is managed declaratively and cannot be edited or deleted.',
         'common:actions.cancel': 'Cancel',
         'common:actions.delete': 'Delete',
         'common:status.deleting': 'Deleting...',
       };
-      return translations[key] || key;
+      if (translations[key] !== undefined) return translations[key];
+      if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
+      if (fallbackOrOptions && 'defaultValue' in fallbackOrOptions) return fallbackOrOptions.defaultValue ?? key;
+      return key;
     },
   }),
 }));
@@ -95,7 +100,7 @@ describe('RoleDeleteDialog', () => {
 
       expect(
         screen.getByText(
-          'This action cannot be undone. All data associated with this role will be permanently deleted.',
+          'This action cannot be undone. All role assignments and permissions will be permanently removed.',
         ),
       ).toBeInTheDocument();
     });
@@ -180,13 +185,12 @@ describe('RoleDeleteDialog', () => {
   });
 
   describe('Delete Error Flow', () => {
-    it('should display error message when delete fails', async () => {
+    it('should display generic error message when delete fails', async () => {
       const user = userEvent.setup();
-      const errorMessage = 'Failed to delete role';
 
       mockMutate.mockImplementation(
         (_roleId: string, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
-          options?.onError?.(new Error(errorMessage));
+          options?.onError?.(new Error('Failed to delete role'));
         },
       );
 
@@ -196,7 +200,32 @@ describe('RoleDeleteDialog', () => {
       await user.click(deleteButton);
 
       await waitFor(() => {
-        expect(screen.getByText(errorMessage)).toBeInTheDocument();
+        expect(screen.getByText('Failed to delete role. Please try again.')).toBeInTheDocument();
+      });
+
+      expect(mockOnClose).not.toHaveBeenCalled();
+    });
+
+    it('should display mapped error message for a declarative role', async () => {
+      const user = userEvent.setup();
+
+      mockMutate.mockImplementation(
+        (_roleId: string, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+          error.response = {data: {code: 'ROL-1013'}};
+          options?.onError?.(error);
+        },
+      );
+
+      renderWithProviders();
+
+      const deleteButton = screen.getByRole('button', {name: 'Delete'});
+      await user.click(deleteButton);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('This role is managed declaratively and cannot be edited or deleted.'),
+        ).toBeInTheDocument();
       });
 
       expect(mockOnClose).not.toHaveBeenCalled();

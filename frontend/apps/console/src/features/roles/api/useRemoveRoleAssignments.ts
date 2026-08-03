@@ -41,8 +41,5 @@ export default function useRemoveRoleAssignments(): UseMutationResult<void, Erro
       });
       showToast(t('assignments.remove.success'), 'success');
     },
-    onError: () => {
-      showToast(t('assignments.remove.error'), 'error');
-    },
   });
 }

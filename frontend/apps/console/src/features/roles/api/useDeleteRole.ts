@@ -34,8 +34,5 @@ export default function useDeleteRole(): UseMutationResult<void, Error, string> 
       });
       showToast(t('delete.success'), 'success');
     },
-    onError: () => {
-      showToast(t('delete.error'), 'error');
-    },
   });
 }

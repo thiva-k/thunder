@@ -1,6 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Stack, Button, Alert} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, type JSX} from 'react';
@@ -24,7 +25,7 @@ export default function EditAssignmentsSettings({
   roleId,
   isReadOnly = false,
 }: EditAssignmentsSettingsProps): JSX.Element {
-  const {t} = useTranslation();
+  const {t} = useTranslation('roles');
   const addRoleAssignments = useAddRoleAssignments();
   const removeRoleAssignments = useRemoveRoleAssignments();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -42,7 +43,7 @@ export default function EditAssignmentsSettings({
             setError(null);
           },
           onError: (err: Error) => {
-            setError(err.message ?? t('roles:assignments.add.error'));
+            setError(getErrorMessage(err, t, 'assignments.add.error'));
           },
         },
       );
@@ -59,7 +60,7 @@ export default function EditAssignmentsSettings({
             setError(null);
           },
           onError: (err: Error) => {
-            setError(err.message ?? t('roles:assignments.remove.error'));
+            setError(getErrorMessage(err, t, 'assignments.remove.error'));
           },
         },
       );
@@ -89,7 +90,7 @@ export default function EditAssignmentsSettings({
               startIcon={<Plus size={16} />}
               onClick={() => setAddDialogOpen(true)}
             >
-              {t('roles:edit.assignments.sections.manage.addAssignment')}
+              {t('edit.assignments.sections.manage.addAssignment', 'Add')}
             </Button>
           ) : undefined
         }
