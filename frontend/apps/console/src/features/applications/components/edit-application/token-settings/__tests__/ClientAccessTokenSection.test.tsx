@@ -14,11 +14,11 @@ vi.mock('../JwtPreview', () => ({
 }));
 
 const copy: ClientAccessTokenCopy = {
-  attributesTitle: 'Access Token Claims',
-  attributesDescription: 'Optional claims for the client access token.',
-  attributesLabel: 'Add or Remove Claims',
-  attributesHint: 'Click a claim to include it.',
-  attributesEmpty: 'No optional claims available.',
+  attributesTitle: 'Access Token Attributes',
+  attributesDescription: 'Extra attributes for the access token.',
+  attributesLabel: 'Add or Remove Attributes',
+  attributesHint: 'Click an attribute to include it.',
+  attributesEmpty: 'No attributes available.',
   validityTitle: 'Token Validity',
   validityDescription: 'How long the token is valid.',
   validityLabel: 'Token Validity',

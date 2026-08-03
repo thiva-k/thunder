@@ -83,7 +83,7 @@ export default function EditTokenSettingsTabs({
       onChange={setAudience}
       footnote={t(
         'applications:edit.token.audience.footnote',
-        'Claim sets are configured independently for each audience.',
+        'Attribute sets are configured independently for each audience.',
       )}
     >
       {audience === CLIENT_AUDIENCE && !clientUnlocked && (
@@ -113,21 +113,21 @@ export default function EditTokenSettingsTabs({
           onValidationChange={setClientTabHasError}
           subjectValue={application.id}
           copy={{
-            attributesTitle: t('applications:edit.token.client.attributes.title', 'Access Token Claims'),
+            attributesTitle: t('applications:edit.token.client.attributes.title', 'Access Token Attributes'),
             attributesDescription: t(
               'applications:edit.token.client.attributes.description',
-              'Extra claims to add to the access token this application receives for itself.',
+              'Extra attributes to add to the access token this application receives for itself.',
             ),
-            attributesLabel: t('applications:edit.token.client.attributes.label', 'Add or Remove Claims'),
+            attributesLabel: t('applications:edit.token.client.attributes.label', 'Add or Remove Attributes'),
             attributesHint: t(
               'applications:edit.token.client.attributes.hint',
-              "Click a claim to include it in this application's client access token.",
+              "Click on attributes to add them to this application's access token.",
             ),
-            attributesEmpty: t('applications:edit.token.client.attributes.empty', 'No optional claims available.'),
+            attributesEmpty: t('applications:edit.token.client.attributes.empty', 'No attributes available.'),
             validityTitle: t('applications:edit.token.client.validity.title', 'Token Validity'),
             validityDescription: t(
               'applications:edit.token.client.validity.description',
-              'How long this client access token remains valid before expiration.',
+              'How long this access token remains valid before expiration.',
             ),
             validityLabel: t('applications:edit.token.client.validity.label', 'Token Validity'),
             validityHint: t(

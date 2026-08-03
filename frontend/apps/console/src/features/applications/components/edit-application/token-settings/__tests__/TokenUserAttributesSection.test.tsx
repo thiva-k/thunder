@@ -75,7 +75,7 @@ describe('TokenUserAttributesSection', () => {
       // "& Response" title and the multi-token wording.
       expect(screen.getByTestId('card-title')).toHaveTextContent('Token Attributes');
       expect(screen.getByTestId('card-description')).toHaveTextContent(
-        'Choose the claims included in the token issued to this application.',
+        'Choose the attributes included in the token issued to this application.',
       );
     });
 
@@ -108,7 +108,7 @@ describe('TokenUserAttributesSection', () => {
       );
 
       expect(screen.getByTestId('card-description')).toHaveTextContent(
-        'Choose the claims in each token issued to this agent, and how each is returned.',
+        'Choose the attributes in each token issued to this agent, and how each is returned.',
       );
     });
   });
