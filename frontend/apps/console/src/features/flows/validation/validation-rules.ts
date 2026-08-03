@@ -346,9 +346,7 @@ function collectSignOutConfirmElements(elements: FlowElement[] | undefined): Flo
   }
 
   return elements.flatMap((element) => [
-    ...((element as FlowElement & {actionType?: string}).actionType === PromptActionTypes.SignOutConfirm
-      ? [element]
-      : []),
+    ...((element as FlowElement & {actionType?: string}).actionType === PromptActionTypes.Confirm ? [element] : []),
     ...collectSignOutConfirmElements(element.components),
   ]);
 }

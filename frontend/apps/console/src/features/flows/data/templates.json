@@ -13177,7 +13177,7 @@
                 "category": "BLOCK",
                 "components": [
                   {
-                    "actionType": "SIGN_OUT_CONFIRM",
+                    "actionType": "CONFIRM",
                     "category": "ACTION",
                     "eventType": "SUBMIT",
                     "id": "action_confirm",
@@ -13197,7 +13197,7 @@
             {
               "action": {
                 "ref": "action_confirm",
-                "type": "SIGN_OUT_CONFIRM",
+                "type": "CONFIRM",
                 "nextNode": "session_signout"
               }
             }

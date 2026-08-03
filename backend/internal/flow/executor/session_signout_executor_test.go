@@ -115,7 +115,7 @@ func (suite *SessionSignOutExecutorTestSuite) TestPromptsWhenConfirmationRequire
 }
 
 // TestTerminatesAfterConfirmation covers the re-run after the End-User confirms: the confirmation
-// prompt forwards its sign-out confirm action type, so the executor terminates the session instead of
+// prompt forwards its confirm action type, so the executor terminates the session instead of
 // prompting again.
 func (suite *SessionSignOutExecutorTestSuite) TestTerminatesAfterConfirmation() {
 	sso := sessionmock.NewServiceMock(suite.T())
@@ -127,7 +127,7 @@ func (suite *SessionSignOutExecutorTestSuite) TestTerminatesAfterConfirmation() 
 	ctx.NodeProperties = map[string]interface{}{propertyKeyPromptOnSignOut: true}
 	ctx.RuntimeData = map[string]string{common.RuntimeKeyLogoutPromptRequired: dataValueTrue}
 	ctx.ForwardedData = map[string]interface{}{
-		common.ForwardedDataKeyActionType: string(common.ActionTypeSignOutConfirm),
+		common.ForwardedDataKeyActionType: string(common.ActionTypeConfirm),
 	}
 
 	resp, err := exec.Execute(ctx)

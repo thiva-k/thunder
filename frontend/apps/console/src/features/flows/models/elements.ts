@@ -135,9 +135,13 @@ export type ActionEventTypes = (typeof ActionEventTypes)[keyof typeof ActionEven
  * executor as edge metadata. Distinct from {@link ActionEventTypes}, which
  * describes how the button behaves in the rendered form, and from
  * `action.type` on the element, which carries canvas navigation semantics.
+ *
+ * The values are deliberately not tied to a single use case: `Confirm` is read
+ * by the session sign-out executor today, but any executor that routes to a
+ * confirmation prompt can consume it.
  */
 export const PromptActionTypes = {
-  SignOutConfirm: 'SIGN_OUT_CONFIRM',
+  Confirm: 'CONFIRM',
 } as const;
 
 export type PromptActionTypes = (typeof PromptActionTypes)[keyof typeof PromptActionTypes];

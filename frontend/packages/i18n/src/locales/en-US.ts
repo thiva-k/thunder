@@ -3846,7 +3846,7 @@ const translations = {
     'core.buttonExtendedProperties.action.label': 'Action',
     'core.buttonExtendedProperties.action.submit': 'Submit Form',
     'core.buttonExtendedProperties.action.trigger': 'Trigger Action',
-    'core.buttonExtendedProperties.action.signOut': 'Sign Out Action',
+    'core.buttonExtendedProperties.action.confirm': 'Confirm Action',
     'core.buttonExtendedProperties.action.hint': 'What happens when the button is activated',
     'core.buttonExtendedProperties.startIcon.label': 'Start Icon',
     'core.buttonExtendedProperties.startIcon.placeholder': 'Enter icon path (e.g., assets/images/icons/icon.svg)',

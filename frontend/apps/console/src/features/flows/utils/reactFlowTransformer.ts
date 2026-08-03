@@ -81,8 +81,8 @@ interface FlowAction {
   nextNode: string;
   /**
    * Semantic action type forwarded by the prompt node to the next executor
-   * (e.g. `SIGN_OUT_CONFIRM`, which tells the session sign-out executor the
-   * End-User has confirmed).
+   * (e.g. `CONFIRM`, which tells the session sign-out executor the End-User
+   * has confirmed).
    */
   type?: string;
   executor?: {

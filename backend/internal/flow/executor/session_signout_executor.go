@@ -115,7 +115,7 @@ func (e *sessionSignOutExecutor) decide(ctx *providers.NodeContext) signOutOutco
 
 	actionType, _ := ctx.ForwardedData[common.ForwardedDataKeyActionType].(string)
 	switch common.ActionType(actionType) {
-	case common.ActionTypeSignOutConfirm:
+	case common.ActionTypeConfirm:
 		return signOutTerminate
 	default:
 		// The initial request forwards no action type at all, and a type this executor does not
