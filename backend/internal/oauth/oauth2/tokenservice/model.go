@@ -156,8 +156,8 @@ type IDJAGAssertionClaims struct {
 	// Resources holds the RFC 8707 `resource` claim values carried by the assertion, when present.
 	// Empty when the assertion carries no resource claim.
 	Resources []string
-	// JTI is the assertion's unique identifier. It is required by the draft and validated for presence;
-	// one-time-use (replay) caching keyed on it is deferred to a future version.
+	// JTI is the assertion's unique identifier, required by the draft. Enforced as single-use via
+	// the JTI replay cache; a replayed assertion is rejected.
 	JTI string
 }
 

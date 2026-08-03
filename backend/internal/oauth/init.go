@@ -20,6 +20,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/granthandlers"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/introspect"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jwksresolver"
 	oauth2logout "github.com/thunder-id/thunderid/internal/oauth/oauth2/logout"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/par"
@@ -73,8 +74,9 @@ func Initialize(
 			tokenFamilyRevocationTTL, cfg.OAuth.Revocation.TokenFamily.OnExplicitRevoke)
 	}
 
+	jtiStore := jti.Initialize(runtimeStore)
 	tokenBuilder, tokenValidator := tokenservice.Initialize(
-		cfg, jwtService, jweService, resolver, idpService, enforcementService)
+		cfg, jwtService, jweService, resolver, idpService, enforcementService, jtiStore)
 	parService := par.Initialize(mux, actorProvider, authnProvider, jwtService, discoveryService,
 		resourceService, dpopVerifier, cfg, runtimeStore)
 	oauth2AuthzService, err := oauth2authz.Initialize(mux, actorProvider, resourceService,
