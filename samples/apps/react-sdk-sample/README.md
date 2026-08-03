@@ -198,6 +198,3 @@ const accessToken = await getAccessToken();
 ## License
 
 Licensed under the Apache License, Version 2.0. You may not use this file except in compliance with the License.
-
----------------------------------------------------------------------------
-(c) Copyright 2025 WSO2 LLC.

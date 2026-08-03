@@ -32,7 +32,7 @@
     "wso2",
     "thunderid"
   ],
-  "author": "WSO2 LLC",
+  "author": "The ThunderID Authors",
   "license": "Apache-2.0",
   "type": "commonjs",
   "devDependencies": {

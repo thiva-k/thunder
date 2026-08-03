@@ -88,6 +88,3 @@ See [docs/REFERENCE.md](docs/REFERENCE.md) for:
 ## License
 
 Licensed under the Apache License, Version 2.0.
-
----------------------------------------------------------------------------
-(c) Copyright 2025 WSO2 LLC.

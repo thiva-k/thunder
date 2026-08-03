@@ -116,7 +116,7 @@ Generate TLS certificates:
 ```bash
 openssl req -x509 -newkey rsa:2048 -nodes -sha256 -days 365 \
   -keyout server.key -out server.cert \
-  -subj "/O=WSO2/OU={{ProductName}}/CN=localhost"
+  -subj "/O=ThunderID/OU={{ProductName}}/CN=localhost"
 ```
 
 Run the sample app:
