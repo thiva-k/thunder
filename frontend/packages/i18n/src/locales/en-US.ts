@@ -1606,7 +1606,6 @@ const translations = {
     'edit.page.reset': 'Reset',
     'edit.page.save': 'Save Changes',
     'edit.page.saving': 'Saving...',
-    'edit.page.saveError': 'Failed to save role. Please try again.',
 
     // General settings
     'edit.general.sections.quickCopy.copyRoleId': 'Copy Role ID',
@@ -1666,6 +1665,12 @@ const translations = {
     'delete.success': 'Role deleted successfully.',
     'assignments.add.success': 'Assignment added successfully.',
     'assignments.remove.success': 'Assignment removed successfully.',
+    'errors.ROL-1003': 'This role no longer exists. It may have already been deleted.',
+    'errors.ROL-1004': 'A role with this name already exists in this organization unit. Choose a different name.',
+    'errors.ROL-1007': 'One or more selected assignees no longer exist. Refresh and try again.',
+    'errors.ROL-1012': 'One or more selected permissions are no longer valid. Refresh the page and try again.',
+    'errors.ROL-1013': 'This role is managed declaratively and cannot be edited or deleted.',
+    'errors.ROL-1015': 'New roles cannot be created while the server is running in declarative-only mode.',
   },
 
   // ============================================================================

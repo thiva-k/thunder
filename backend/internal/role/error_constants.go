@@ -76,19 +76,6 @@ var (
 			DefaultValue: "Organization unit not found",
 		},
 	}
-	// ErrorCannotDeleteRole is the error returned when role cannot be deleted.
-	ErrorCannotDeleteRole = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "ROL-1006",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.roleservice.cannot_delete_role",
-			DefaultValue: "Cannot delete role",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.roleservice.cannot_delete_role_description",
-			DefaultValue: "Cannot delete role that is currently assigned to users or groups",
-		},
-	}
 	// ErrorInvalidAssignmentID is the error returned when assignment ID is invalid.
 	ErrorInvalidAssignmentID = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
@@ -180,19 +167,6 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.roleservice.cannot_modify_declarative_role_description",
 			DefaultValue: "The role is defined in declarative configuration and cannot be modified",
-		},
-	}
-	// ErrorImmutableAssignment is the error returned when attempting to modify a declarative assignment.
-	ErrorImmutableAssignment = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "ROL-1014",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.roleservice.cannot_modify_declarative_assignment",
-			DefaultValue: "Cannot modify declarative assignment",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.roleservice.cannot_modify_declarative_assignment_description",
-			DefaultValue: "The assignment is defined in declarative configuration and cannot be modified",
 		},
 	}
 	// ErrorDeclarativeModeCreateNotAllowed is the error returned when attempting to create

@@ -8,6 +8,7 @@ import {
   useHasMultipleOUs,
 } from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {Box, Typography, Button, CircularProgress, Alert, Snackbar} from '@wso2/oxygen-ui';
 import {Home} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useEffect, useMemo} from 'react';
@@ -23,7 +24,7 @@ import {RoleCreateFlowStep} from '../models/role-create-flow';
 
 export default function CreateRolePage(): JSX.Element {
   const navigate = useNavigate();
-  const {t} = useTranslation();
+  const {t} = useTranslation('roles');
   const logger = useLogger('CreateRolePage');
   const createRole = useCreateRole();
 
@@ -66,10 +67,10 @@ export default function CreateRolePage(): JSX.Element {
   const steps: Partial<Record<RoleCreateFlowStep, {label: string}>> = useMemo(() => {
     const map: Partial<Record<RoleCreateFlowStep, {label: string}>> = {};
     if (hasMultipleOUs) {
-      map.ORGANIZATION_UNIT = {label: t('roles:createWizard.steps.organizationUnit')};
+      map.ORGANIZATION_UNIT = {label: t('createWizard.steps.organizationUnit', 'Organization Unit')};
     }
-    map.BASIC_INFO = {label: t('roles:createWizard.steps.basicInfo', 'Details')};
-    map.PERMISSIONS = {label: t('roles:createWizard.steps.permissions')};
+    map.BASIC_INFO = {label: t('createWizard.steps.basicInfo', 'Details')};
+    map.PERMISSIONS = {label: t('createWizard.steps.permissions', 'Permissions')};
     return map;
   }, [t, hasMultipleOUs]);
 
@@ -96,14 +97,14 @@ export default function CreateRolePage(): JSX.Element {
     setError(null);
 
     if (!name.trim()) {
-      setValidationError(t('roles:create.form.name.required'));
+      setValidationError(t('create.form.name.required', 'Role name is required'));
       setSnackbarOpen(true);
       return;
     }
 
     const selectedOuId = hasMultipleOUs ? ouId : ouList[0]?.id;
     if (!selectedOuId) {
-      setValidationError(t('roles:create.form.organizationUnit.required'));
+      setValidationError(t('create.form.organizationUnit.required', 'Organization unit is required'));
       setSnackbarOpen(true);
       return;
     }
@@ -193,9 +194,9 @@ export default function CreateRolePage(): JSX.Element {
     return (
       <OrganizationUnitPickerScreen
         icon={<Home size={26} />}
-        title={t('roles:createWizard.organizationUnit.title', 'Where should this role belong?')}
+        title={t('createWizard.organizationUnit.title', 'Where should this role belong?')}
         subtitle={t(
-          'roles:createWizard.organizationUnit.subtitle',
+          'createWizard.organizationUnit.subtitle',
           "Choose the organization unit that will own this role. You can't change this once created.",
         )}
         value={ouId}
@@ -246,7 +247,7 @@ export default function CreateRolePage(): JSX.Element {
         {createRole.error && (
           <Alert severity="error" sx={{mb: 3}}>
             <Typography variant="body2" sx={{fontWeight: 'bold', mb: 0.5}}>
-              {createRole.error.message}
+              {getErrorMessage(createRole.error, t, 'create.error')}
             </Typography>
           </Alert>
         )}

@@ -202,7 +202,7 @@ describe('useCreateRole', () => {
     expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success');
   });
 
-  it('should show error toast on error', async () => {
+  it('should not show a toast on error', async () => {
     mockHttpRequest.mockRejectedValueOnce(new Error('Failed'));
 
     const {result} = renderHook(() => useCreateRole());
@@ -213,7 +213,7 @@ describe('useCreateRole', () => {
       expect(result.current.isError).toBe(true);
     });
 
-    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'error');
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('should handle invalidateQueries rejection gracefully', async () => {

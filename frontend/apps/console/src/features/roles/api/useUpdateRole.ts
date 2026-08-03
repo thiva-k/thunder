@@ -53,8 +53,5 @@ export default function useUpdateRole(): UseMutationResult<Role, Error, UpdateRo
       });
       showToast(t('update.success'), 'success');
     },
-    onError: () => {
-      showToast(t('update.error'), 'error');
-    },
   });
 }

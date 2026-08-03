@@ -305,7 +305,37 @@ describe('CreateRolePage', () => {
 
     render(<CreateRolePage />);
 
-    expect(screen.getByText('Failed to create role')).toBeInTheDocument();
+    expect(screen.getByText('Failed to create role. Please try again.')).toBeInTheDocument();
+  });
+
+  it('should render mapped error message when the role name conflicts', () => {
+    const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+    error.response = {data: {code: 'ROL-1004'}};
+
+    vi.mocked(useCreateRole).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: true,
+      isSuccess: false,
+      error,
+      data: undefined,
+      reset: vi.fn(),
+      context: undefined,
+      failureCount: 1,
+      failureReason: null,
+      isIdle: false,
+      isPaused: false,
+      status: 'error',
+      submittedAt: 0,
+      variables: undefined,
+    } as unknown as ReturnType<typeof useCreateRole>);
+
+    render(<CreateRolePage />);
+
+    expect(
+      screen.getByText('A role with this name already exists in this organization unit. Choose a different name.'),
+    ).toBeInTheDocument();
   });
 
   it('should disable Continue button while mutation is pending', () => {

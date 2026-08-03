@@ -41,8 +41,5 @@ export default function useAddRoleAssignments(): UseMutationResult<void, Error, 
       });
       showToast(t('assignments.add.success'), 'success');
     },
-    onError: () => {
-      showToast(t('assignments.add.error'), 'error');
-    },
   });
 }

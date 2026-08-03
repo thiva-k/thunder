@@ -159,7 +159,7 @@ describe('RolesList', () => {
   });
 
   it('should render error state', () => {
-    const error = new Error('Failed to load roles');
+    const error = new Error('Network error');
     vi.mocked(useGetRoles).mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -169,6 +169,7 @@ describe('RolesList', () => {
     renderComponent();
 
     expect(screen.getByText('Failed to load roles')).toBeInTheDocument();
+    expect(screen.getByText('Network error')).toBeInTheDocument();
   });
 
   it('should render roles list successfully', () => {

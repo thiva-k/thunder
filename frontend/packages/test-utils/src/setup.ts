@@ -21,6 +21,7 @@ beforeAll(async () => {
         applications: enUS.applications,
         groups: enUS.groups,
         organizationUnits: enUS.organizationUnits,
+        roles: enUS.roles,
         auth: enUS.auth,
         mfa: enUS.mfa,
         social: enUS.social,
