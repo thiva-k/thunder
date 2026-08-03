@@ -17,4 +17,7 @@ var (
 	// ErrAudienceNotAccepted indicates the token's aud claim names none of the audiences the grant
 	// accepts, such as this server's issuer or an identity provider's trusted token audience.
 	ErrAudienceNotAccepted = errors.New("token audience is not accepted")
+
+	// ErrAssertionReplayed indicates the assertion's jti has already been recorded in the replay cache.
+	ErrAssertionReplayed = errors.New("assertion has already been used")
 )
