@@ -885,7 +885,7 @@ function ensure_certificates() {
                 openssl req -new -x509 -nodes -days 3650 \
                     -key "$local_key_file" \
                     -out "$local_cert_file" \
-                    -subj "/O=WSO2/OU=${PRODUCT_NAME}/CN=localhost" \
+                    -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
                     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
                     2>&1 >/dev/null
             )
@@ -894,7 +894,7 @@ function ensure_certificates() {
                 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
                     -keyout "$local_key_file" \
                     -out "$local_cert_file" \
-                    -subj "/O=WSO2/OU=${PRODUCT_NAME}/CN=localhost" \
+                    -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
                     -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" \
                     2>&1 >/dev/null
             )

@@ -3,7 +3,7 @@
   "name": "@thunderid/frontend",
   "version": "0.0.0",
   "description": "Frontend workspace for ⚡️ ThunderID",
-  "author": "WSO2",
+  "author": "The ThunderID Authors",
   "license": "Apache-2.0",
   "type": "module",
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/frontend#readme",

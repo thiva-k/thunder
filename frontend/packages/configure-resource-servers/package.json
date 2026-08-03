@@ -16,7 +16,7 @@
   "bugs": {
     "url": "https://github.com/asgardeo/thunder/issues"
   },
-  "author": "WSO2",
+  "author": "The ThunderID Authors",
   "license": "Apache-2.0",
   "type": "module",
   "main": "./dist/cjs/index.cjs",

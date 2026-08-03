@@ -97,13 +97,13 @@ terminate TLS). This mirrors what `setup.sh` generates for a local install:
 # RSA signing pair
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
   -keyout signing.key -out signing.cert \
-  -subj "/O=WSO2/OU=ThunderID/CN=localhost" \
+  -subj "/O=ThunderID/OU=ThunderID/CN=localhost" \
   -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 
 # ECDSA signing pair
 openssl ecparam -name prime256v1 -genkey -noout -param_enc named_curve -out ecdsa-signing.key
 openssl req -new -x509 -nodes -days 3650 -key ecdsa-signing.key -out ecdsa-signing.cert \
-  -subj "/O=WSO2/OU=ThunderID/CN=localhost" \
+  -subj "/O=ThunderID/OU=ThunderID/CN=localhost" \
   -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
 ```
 

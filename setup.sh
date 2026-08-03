@@ -394,11 +394,11 @@ generate_x509_cert() {
     if [ "$algo" = "ecdsa" ]; then
         openssl ecparam -name prime256v1 -genkey -noout -param_enc named_curve -out "$key_file" >/dev/null 2>&1 || true
         openssl req -new -x509 -nodes -days 3650 -key "$key_file" -out "$cert_file" \
-            -subj "/O=WSO2/OU=${PRODUCT_NAME}/CN=localhost" \
+            -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
     else
         openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout "$key_file" -out "$cert_file" \
-            -subj "/O=WSO2/OU=${PRODUCT_NAME}/CN=localhost" \
+            -subj "/O=ThunderID/OU=${PRODUCT_NAME}/CN=localhost" \
             -addext "subjectAltName=DNS:localhost,IP:127.0.0.1" >/dev/null 2>&1 || true
     fi
     if [ ! -f "$cert_file" ] || [ ! -f "$key_file" ]; then

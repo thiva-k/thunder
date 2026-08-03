@@ -431,7 +431,7 @@ function New-SelfSignedCertPair {
         return
     }
 
-    $subject = "CN=localhost, OU=$PRODUCT_NAME, O=WSO2"
+    $subject = "CN=localhost, OU=$PRODUCT_NAME, O=ThunderID"
     $san = New-Object System.Security.Cryptography.X509Certificates.SubjectAlternativeNameBuilder
     $san.AddDnsName("localhost")
     $san.AddIpAddress([System.Net.IPAddress]::Parse("127.0.0.1"))
