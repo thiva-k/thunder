@@ -325,6 +325,7 @@ export default function AgentEditPage(): JSX.Element {
           onFieldChange={handleFieldChange}
           onValidationChange={handleValidationChange('token')}
           sectionResetKey={sectionResetKey}
+          onNavigateToAdvanced={() => handleNavigateToTab('advanced')}
         />
       ),
     });
@@ -342,6 +343,16 @@ export default function AgentEditPage(): JSX.Element {
       ),
     });
   }
+
+  // Lets a tab's content send the user to a sibling tab, e.g. the Tokens tab pointing at where
+  // Delegated mode is turned on. Resolved by key at click time, since which tabs exist depends on
+  // the agent's configuration.
+  const handleNavigateToTab = (key: string): void => {
+    const index = tabs.findIndex((tab) => tab.key === key);
+    if (index >= 0) {
+      setActiveTab(index);
+    }
+  };
 
   const safeActiveTab = activeTab >= tabs.length ? 0 : activeTab;
 

@@ -1222,11 +1222,15 @@ const translations = {
     // Edit page - Tokens tab
     'edit.tokens.tabs.user': 'User',
     'edit.tokens.tabs.agent': 'Agent',
+    'edit.tokens.audience.title': 'Issued to',
+    'edit.tokens.audience.agent.description': 'Tokens for the agent acting on its own',
+    'edit.tokens.audience.user.description': 'Tokens for the agent acting on behalf of a user',
+    'edit.tokens.audience.footnote': 'Claim sets are configured independently for each audience.',
     'edit.tokens.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
+      'This agent does not receive tokens on behalf of a user. Turn on Delegated mode in the <advancedLink>Advanced tab</advancedLink> to configure them.',
     'edit.tokens.agent.attributes.title': 'Access Token Attributes',
     'edit.tokens.agent.attributes.description':
-      'Attributes included in the access token this agent receives for its own requests (client_credentials grant).',
+      'Extra attributes to add to the access token this agent receives for itself.',
     'edit.tokens.agent.attributes.label': 'Add or Remove Attributes',
     'edit.tokens.agent.attributes.hint': 'Click on agent attributes to add them to its access token.',
     'edit.tokens.agent.attributes.empty':
@@ -2725,8 +2729,13 @@ const translations = {
     'edit.token.validity.hint': 'Token validity period in seconds (e.g., 3600 for 1 hour)',
     'edit.token.validity.error': 'Validity period must be at least 1 second',
     'edit.token.token_profile_card.title': 'Token Attributes & Response',
+    'edit.token.token_profile_card.title.native': 'Token Attributes',
     'edit.token.token_profile_card.description':
-      'Configure the response types and user attributes included in your tokens and user info responses',
+      'Choose the claims in each token and the user info response, and how each is returned.',
+    'edit.token.token_profile_card.description.noUserInfo':
+      'Choose the claims in each token issued to this {{entity}}, and how each is returned.',
+    'edit.token.token_profile_card.description.native':
+      'Choose the claims included in the token issued to this {{entity}}.',
     'edit.token.tabs.access_token': 'Access Token',
     'edit.token.tabs.id_token': 'ID Token',
     'edit.token.tabs.refresh_token': 'Refresh Token',
@@ -2750,13 +2759,17 @@ const translations = {
     'edit.token.scopes.openid_required': 'The openid scope is required and cannot be removed',
     'edit.token.tabs.application': 'Application',
     'edit.token.tabs.user': 'User',
+    'edit.token.audience.title': 'Issued to',
+    'edit.token.audience.application.description': 'M2M access token',
+    'edit.token.audience.user.description': 'Tokens for a signed-in user',
+    'edit.token.audience.footnote': 'Claim sets are configured independently for each audience.',
     'edit.token.clientLock.message':
-      'These settings apply only when the client credentials grant is enabled. Add it in the Advanced tab to configure them.',
+      'This application does not receive tokens for itself, so there is nothing to configure here.',
     'edit.token.userLock.message':
-      'These settings apply only when a user-facing grant is enabled. Add one in the Advanced tab to configure them.',
+      'This application does not receive tokens for signed-in users, so there is nothing to configure here.',
     'edit.token.client.attributes.title': 'Access Token Claims',
     'edit.token.client.attributes.description':
-      'Optional claims to include in the access token this application receives for its own requests (client_credentials grant).',
+      'Extra claims to add to the access token this application receives for itself.',
     'edit.token.client.attributes.label': 'Add or Remove Claims',
     'edit.token.client.attributes.hint': "Click a claim to include it in this application's client access token.",
     'edit.token.client.attributes.empty': 'No optional claims available.',

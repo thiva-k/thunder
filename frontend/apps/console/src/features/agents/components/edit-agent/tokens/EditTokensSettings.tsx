@@ -3,13 +3,19 @@
 
 import {OAuth2GrantTypes} from '@thunderid/configure-applications';
 import type {Application} from '@thunderid/configure-applications';
-import {Box, Stack, Tab, Tabs} from '@wso2/oxygen-ui';
-import {useEffect, useState, type JSX, type SyntheticEvent} from 'react';
-import {useTranslation} from 'react-i18next';
+import {Alert, Link, Stack} from '@wso2/oxygen-ui';
+import {Lock} from '@wso2/oxygen-ui-icons-react';
+import {useEffect, useState, type JSX} from 'react';
+import {Trans, useTranslation} from 'react-i18next';
 import AgentAccessTokenSection from './AgentAccessTokenSection';
-import SettingsLockNotice from '../../../../applications/components/common/SettingsLockNotice';
+import TokenAudienceSelector, {
+  type TokenAudienceOption,
+} from '../../../../applications/components/common/TokenAudienceSelector';
 import EditTokenSettings from '../../../../applications/components/edit-application/token-settings/EditTokenSettings';
 import type {Agent, OAuthAgentConfig} from '../../../models/agent';
+
+const AGENT_AUDIENCE = 'agent';
+const USER_AUDIENCE = 'user';
 
 interface EditTokensSettingsProps {
   agent: Agent;
@@ -18,6 +24,8 @@ interface EditTokensSettingsProps {
   onFieldChange: (field: keyof Agent, value: unknown) => void;
   onValidationChange?: (hasErrors: boolean) => void;
   sectionResetKey?: number;
+  /** Switches the edit page to its Advanced tab, where Delegated mode is turned on. */
+  onNavigateToAdvanced?: () => void;
 }
 
 export default function EditTokensSettings({
@@ -27,69 +35,83 @@ export default function EditTokensSettings({
   onFieldChange,
   onValidationChange = undefined,
   sectionResetKey = 0,
+  onNavigateToAdvanced = undefined,
 }: EditTokensSettingsProps): JSX.Element {
   const {t} = useTranslation();
-  const [subTab, setSubTab] = useState(0);
+  const [audience, setAudience] = useState(AGENT_AUDIENCE);
   const [userTabHasError, setUserTabHasError] = useState(false);
   const [agentTabHasError, setAgentTabHasError] = useState(false);
 
   const isUnlocked = oauth2Config?.grantTypes?.includes(OAuth2GrantTypes.AUTHORIZATION_CODE) ?? false;
 
+  // The user audience is not mounted without Delegated mode, so its last reported error state must
+  // not keep blocking the save bar.
   useEffect(() => {
-    onValidationChange?.(userTabHasError || agentTabHasError);
-  }, [userTabHasError, agentTabHasError, onValidationChange]);
+    onValidationChange?.((isUnlocked && userTabHasError) || agentTabHasError);
+  }, [isUnlocked, userTabHasError, agentTabHasError, onValidationChange]);
 
-  // Forcing isReadOnly disables every input via EditTokenSettings' existing
-  // disabled={application.isReadOnly} wiring when Delegated mode isn't on.
-  const appLikeAgent = {...agent, isReadOnly: (agent.isReadOnly ?? false) || !isUnlocked} as unknown as Application;
+  const appLikeAgent = {...agent, isReadOnly: agent.isReadOnly ?? false} as unknown as Application;
   const appHandleFieldChange = onFieldChange as unknown as (field: keyof Application, value: unknown) => void;
 
-  const handleSubTabChange = (_event: SyntheticEvent, newValue: number): void => {
-    setSubTab(newValue);
-  };
+  const audienceOptions: TokenAudienceOption[] = [
+    {
+      value: AGENT_AUDIENCE,
+      label: t('agents:edit.tokens.tabs.agent', 'Agent'),
+      description: t('agents:edit.tokens.audience.agent.description', 'Tokens for the agent acting on its own'),
+    },
+    {
+      value: USER_AUDIENCE,
+      label: t('agents:edit.tokens.tabs.user', 'User'),
+      description: t('agents:edit.tokens.audience.user.description', 'Tokens for the agent acting on behalf of a user'),
+      isLocked: !isUnlocked,
+    },
+  ];
 
   return (
-    <Box>
-      <Tabs value={subTab} onChange={handleSubTabChange} aria-label="agent token settings sub-tabs">
-        <Tab label={t('agents:edit.tokens.tabs.agent', 'Agent')} sx={{textTransform: 'none'}} />
-        <Tab label={t('agents:edit.tokens.tabs.user', 'User')} sx={{textTransform: 'none'}} />
-      </Tabs>
-      <Box sx={{pt: 3}}>
-        {subTab === 0 && (
-          <AgentAccessTokenSection
-            key={sectionResetKey}
-            agent={agent}
-            editedAgent={editedAgent}
-            oauth2Config={oauth2Config}
-            onFieldChange={onFieldChange}
-            onValidationChange={setAgentTabHasError}
+    <TokenAudienceSelector
+      title={t('agents:edit.tokens.audience.title', 'Issued to')}
+      options={audienceOptions}
+      value={audience}
+      onChange={setAudience}
+      footnote={t('agents:edit.tokens.audience.footnote', 'Claim sets are configured independently for each audience.')}
+    >
+      {audience === AGENT_AUDIENCE && (
+        <AgentAccessTokenSection
+          key={sectionResetKey}
+          agent={agent}
+          editedAgent={editedAgent}
+          oauth2Config={oauth2Config}
+          onFieldChange={onFieldChange}
+          onValidationChange={setAgentTabHasError}
+        />
+      )}
+      {audience === USER_AUDIENCE && !isUnlocked && (
+        <Alert severity="info" icon={<Lock size={20} />}>
+          <Trans
+            i18nKey="agents:edit.tokens.delegationLock.message"
+            defaults="This agent does not receive tokens on behalf of a user. Turn on Delegated mode in the <advancedLink>Advanced tab</advancedLink> to configure them."
+            components={{
+              advancedLink: <Link component="button" type="button" underline="always" onClick={onNavigateToAdvanced} />,
+            }}
           />
-        )}
-        {subTab === 1 && (
-          <SettingsLockNotice
-            isUnlocked={isUnlocked}
-            message={t(
-              'agents:edit.tokens.delegationLock.message',
-              'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
-            )}
-          >
-            <Stack spacing={3}>
-              <EditTokenSettings
-                application={appLikeAgent}
-                oauth2Config={oauth2Config}
-                onFieldChange={appHandleFieldChange}
-                onValidationChange={setUserTabHasError}
-                entityLabel="agent"
-                showUserInfoTab={false}
-                showActorClaim
-                actorSub={agent.id}
-                certificateLocation="Credentials"
-                sectionResetKey={sectionResetKey}
-              />
-            </Stack>
-          </SettingsLockNotice>
-        )}
-      </Box>
-    </Box>
+        </Alert>
+      )}
+      {audience === USER_AUDIENCE && isUnlocked && (
+        <Stack spacing={3}>
+          <EditTokenSettings
+            application={appLikeAgent}
+            oauth2Config={oauth2Config}
+            onFieldChange={appHandleFieldChange}
+            onValidationChange={setUserTabHasError}
+            entityLabel="agent"
+            showUserInfoTab={false}
+            showActorClaim
+            actorSub={agent.id}
+            certificateLocation="Credentials"
+            sectionResetKey={sectionResetKey}
+          />
+        </Stack>
+      )}
+    </TokenAudienceSelector>
   );
 }

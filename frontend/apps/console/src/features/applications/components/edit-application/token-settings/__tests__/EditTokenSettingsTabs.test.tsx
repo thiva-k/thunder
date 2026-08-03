@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
-import type {Application} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {render, screen} from '@thunderid/test-utils';
 import {useState} from 'react';
 import {describe, it, expect, vi} from 'vitest';
@@ -36,63 +36,103 @@ vi.mock('../EditTokenSettings', () => ({
 }));
 
 const application: Application = {id: 'app-1', name: 'Test App'};
-const clientLockMessage = /client credentials grant is enabled/i;
-const userLockMessage = /user-facing grant is enabled/i;
+const clientLockMessage = /does not receive tokens for itself/i;
+const userLockMessage = /does not receive tokens for signed-in users/i;
+
+/**
+ * Builds an OAuth2 config shaped like one loaded from the API, where the backend has always
+ * materialized the access token and ID token blocks.
+ */
+const oauthConfig = (grantTypes: string[]): OAuth2Config => ({
+  grantTypes,
+  responseTypes: [],
+  token: {
+    accessToken: {userConfig: {validityPeriod: 3600, attributes: []}},
+    idToken: {validityPeriod: 3600, userAttributes: []},
+  },
+});
 
 describe('EditTokenSettingsTabs', () => {
   const onFieldChange = vi.fn();
 
-  it('renders Application and User sub-tabs', () => {
+  it('renders Application and User audiences in a side selector', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
-        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
+        oauth2Config={oauthConfig(['client_credentials'])}
         onFieldChange={onFieldChange}
       />,
     );
 
+    expect(screen.getByRole('tablist', {name: 'Issued to'})).toBeInTheDocument();
     expect(screen.getByRole('tab', {name: 'Application'})).toBeInTheDocument();
     expect(screen.getByRole('tab', {name: 'User'})).toBeInTheDocument();
+    expect(screen.getByText('M2M access token')).toBeInTheDocument();
+    expect(screen.getByText('Tokens for a signed-in user')).toBeInTheDocument();
+    expect(screen.getByText(/configured independently for each audience/i)).toBeInTheDocument();
   });
 
   it('unlocks the Application tab when client_credentials is granted', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
-        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
+        oauth2Config={oauthConfig(['client_credentials'])}
         onFieldChange={onFieldChange}
       />,
     );
 
+    expect(screen.getByRole('tab', {name: 'Application'})).toBeEnabled();
     expect(screen.getByTestId('client-token-section')).toBeInTheDocument();
     expect(screen.queryByText(clientLockMessage)).not.toBeInTheDocument();
   });
 
-  it('freezes the Application tab with a lock notice when client_credentials is not granted', () => {
-    render(
-      <EditTokenSettingsTabs
-        application={application}
-        oauth2Config={{grantTypes: ['authorization_code'], responseTypes: []}}
-        onFieldChange={onFieldChange}
-      />,
-    );
-
-    expect(screen.getByText(clientLockMessage)).toBeInTheDocument();
-  });
-
-  it('freezes the User tab with a lock notice when no user-facing grant is present', async () => {
+  it('shows the Application notice in place of its settings when client_credentials is not granted', async () => {
     const user = userEvent.setup();
     render(
       <EditTokenSettingsTabs
         application={application}
-        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
+        oauth2Config={oauthConfig(['authorization_code'])}
         onFieldChange={onFieldChange}
       />,
     );
 
+    // The notice belongs to the Application sub-tab, so it stays out of the way until opened.
+    expect(screen.queryByText(clientLockMessage)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', {name: 'Application'}));
+
+    expect(screen.getByText(clientLockMessage)).toBeInTheDocument();
+    expect(screen.queryByTestId('client-token-section')).not.toBeInTheDocument();
+  });
+
+  it('shows the User notice in place of its settings when no user-facing grant is present', async () => {
+    const user = userEvent.setup();
+    render(
+      <EditTokenSettingsTabs
+        application={application}
+        oauth2Config={oauthConfig(['client_credentials'])}
+        onFieldChange={onFieldChange}
+      />,
+    );
+
+    expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('tab', {name: 'User'}));
 
     expect(screen.getByText(userLockMessage)).toBeInTheDocument();
+    expect(screen.queryByTestId('user-token-section')).not.toBeInTheDocument();
+  });
+
+  it('keeps a sub-tab with no applicable settings selectable', () => {
+    render(
+      <EditTokenSettingsTabs
+        application={application}
+        oauth2Config={oauthConfig(['authorization_code'])}
+        onFieldChange={onFieldChange}
+      />,
+    );
+
+    expect(screen.getByRole('tab', {name: 'Application'})).toBeEnabled();
   });
 
   it('unlocks the User tab when a user-facing grant is present', async () => {
@@ -100,7 +140,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
-        oauth2Config={{grantTypes: ['authorization_code'], responseTypes: []}}
+        oauth2Config={oauthConfig(['authorization_code'])}
         onFieldChange={onFieldChange}
       />,
     );
@@ -109,6 +149,45 @@ describe('EditTokenSettingsTabs', () => {
 
     expect(screen.getByTestId('user-token-section')).toBeInTheDocument();
     expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
+  });
+
+  it('selects the User tab by default when the Application tab is locked', () => {
+    render(
+      <EditTokenSettingsTabs
+        application={application}
+        oauth2Config={oauthConfig(['authorization_code'])}
+        onFieldChange={onFieldChange}
+      />,
+    );
+
+    expect(screen.getByRole('tab', {name: 'User'})).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('user-token-section')).toBeInTheDocument();
+  });
+
+  describe('app-native application (no OAuth2 configuration)', () => {
+    it('unlocks the User tab so the assertion config can be edited', () => {
+      render(
+        <EditTokenSettingsTabs application={application} oauth2Config={undefined} onFieldChange={onFieldChange} />,
+      );
+
+      expect(screen.getByRole('tab', {name: 'User'})).toBeEnabled();
+      expect(screen.getByTestId('user-token-section')).toBeInTheDocument();
+      expect(screen.queryByText(userLockMessage)).not.toBeInTheDocument();
+    });
+
+    it('opens on the User sub-tab and keeps the Application notice behind its own tab', async () => {
+      const user = userEvent.setup();
+      render(
+        <EditTokenSettingsTabs application={application} oauth2Config={undefined} onFieldChange={onFieldChange} />,
+      );
+
+      expect(screen.getByRole('tab', {name: 'User'})).toHaveAttribute('aria-selected', 'true');
+      expect(screen.queryByText(clientLockMessage)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('tab', {name: 'Application'}));
+
+      expect(screen.getByText(clientLockMessage)).toBeInTheDocument();
+    });
   });
 
   it('remounts ClientAccessTokenSection when sectionResetKey changes', async () => {

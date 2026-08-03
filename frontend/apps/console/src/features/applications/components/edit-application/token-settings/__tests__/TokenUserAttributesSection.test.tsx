@@ -71,9 +71,11 @@ describe('TokenUserAttributesSection', () => {
     it('renders the settings card with correct title for native mode', () => {
       render(<TokenUserAttributesSection {...baseProps} sharedAttributes={[]} />);
 
-      expect(screen.getByTestId('card-title')).toHaveTextContent('Token Attributes & Response');
+      // Native mode issues one token and has no response-format controls, so it drops the
+      // "& Response" title and the multi-token wording.
+      expect(screen.getByTestId('card-title')).toHaveTextContent('Token Attributes');
       expect(screen.getByTestId('card-description')).toHaveTextContent(
-        'Configure the response types and user attributes included in your tokens and user info responses',
+        'Choose the claims included in the token issued to this application.',
       );
     });
 
@@ -106,7 +108,7 @@ describe('TokenUserAttributesSection', () => {
       );
 
       expect(screen.getByTestId('card-description')).toHaveTextContent(
-        'Configure the response types and user attributes included in the tokens issued to this agent.',
+        'Choose the claims in each token issued to this agent, and how each is returned.',
       );
     });
   });

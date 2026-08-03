@@ -69,6 +69,18 @@ export function hasClientAccess(grantTypes: string[] | undefined): boolean {
 }
 
 /**
+ * Returns whether the application's tokens are governed by its OAuth2 token config rather than by
+ * its assertion config. An application with no OAuth2 configuration (app-native sign-in) receives
+ * only the flow assertion, whose validity and user attributes come from `application.assertion`.
+ *
+ * The backend always materializes `token.accessToken` and `token.idToken` whenever an OAuth profile
+ * exists, so this is equivalent to "has an OAuth profile" for any config loaded from the API.
+ */
+export function isOAuthTokenMode(oauth2Config: OAuth2Config | undefined): boolean {
+  return oauth2Config?.token?.accessToken !== undefined || oauth2Config?.token?.idToken !== undefined;
+}
+
+/**
  * Returns whether the grant list contains a token-issuing grant.
  */
 function hasTokenIssuingGrant(grants: string[]): boolean {

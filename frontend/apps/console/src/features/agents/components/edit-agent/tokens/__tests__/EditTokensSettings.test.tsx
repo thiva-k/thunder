@@ -34,11 +34,13 @@ vi.mock('../AgentAccessTokenSection', () => ({
   },
 }));
 
+const delegationLockMessage = /does not receive tokens on behalf of a user/i;
+
 describe('EditTokensSettings', () => {
   const mockOnFieldChange = vi.fn();
   const baseAgent: Agent = {id: 'agent-1', ouId: 'ou-1', type: 'default', name: 'Test Agent'};
 
-  it('shows both "Agent" and "User" secondary tabs, defaulting to Agent', () => {
+  it('shows both "Agent" and "User" audiences, defaulting to Agent', () => {
     render(
       <EditTokensSettings
         agent={baseAgent}
@@ -48,9 +50,24 @@ describe('EditTokensSettings', () => {
       />,
     );
 
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Agent', 'User']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.getAttribute('aria-label'))).toEqual(['Agent', 'User']);
+    expect(screen.getByRole('tab', {name: 'Agent'})).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByTestId('agent-access-token')).toBeInTheDocument();
     expect(screen.queryByTestId('token-settings')).not.toBeInTheDocument();
+  });
+
+  it('describes each audience next to its label', () => {
+    render(
+      <EditTokensSettings
+        agent={baseAgent}
+        editedAgent={{}}
+        oauth2Config={{grantTypes: ['authorization_code'], responseTypes: ['code']}}
+        onFieldChange={mockOnFieldChange}
+      />,
+    );
+
+    expect(screen.getByText('Tokens for the agent acting on its own')).toBeInTheDocument();
+    expect(screen.getByText('Tokens for the agent acting on behalf of a user')).toBeInTheDocument();
   });
 
   it('switches to the User tab content when clicked', async () => {
@@ -84,10 +101,10 @@ describe('EditTokensSettings', () => {
     await user.click(screen.getByRole('tab', {name: 'User'}));
 
     expect(screen.getByTestId('token-settings')).toHaveAttribute('data-readonly', 'false');
-    expect(screen.queryByText(/These settings are frozen for this agent/)).not.toBeInTheDocument();
+    expect(screen.queryByText(delegationLockMessage)).not.toBeInTheDocument();
   });
 
-  it('forces token settings read-only and shows the lock notice when Delegated mode is off', async () => {
+  it('shows only the notice in place of token settings when Delegated mode is off', async () => {
     const user = userEvent.setup();
     render(
       <EditTokensSettings
@@ -98,10 +115,32 @@ describe('EditTokensSettings', () => {
       />,
     );
 
+    // The notice belongs to the User audience, so it stays out of the way until opened.
+    expect(screen.queryByText(delegationLockMessage)).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('tab', {name: 'User'}));
 
-    expect(screen.getByTestId('token-settings')).toHaveAttribute('data-readonly', 'true');
-    expect(screen.getByText(/These settings are frozen for this agent/)).toBeInTheDocument();
+    expect(screen.getByText(delegationLockMessage)).toBeInTheDocument();
+    expect(screen.queryByTestId('token-settings')).not.toBeInTheDocument();
+  });
+
+  it('sends the user to the Advanced tab from the delegation notice', async () => {
+    const user = userEvent.setup();
+    const onNavigateToAdvanced = vi.fn();
+    render(
+      <EditTokensSettings
+        agent={baseAgent}
+        editedAgent={{}}
+        oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
+        onFieldChange={mockOnFieldChange}
+        onNavigateToAdvanced={onNavigateToAdvanced}
+      />,
+    );
+
+    await user.click(screen.getByRole('tab', {name: 'User'}));
+    await user.click(screen.getByRole('button', {name: 'Advanced tab'}));
+
+    expect(onNavigateToAdvanced).toHaveBeenCalledTimes(1);
   });
 
   it('stays read-only when the agent is already read-only, even with Delegated mode on', async () => {
