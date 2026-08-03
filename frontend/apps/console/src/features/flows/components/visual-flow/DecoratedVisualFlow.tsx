@@ -887,6 +887,11 @@ function DecoratedVisualFlow({
         flexDirection: 'column',
         '& .react-flow__edges': {zIndex: 9999},
         '& .react-flow__node': {zIndex: '0 !important'},
+        // While a stack's fan preview is out, lift the hovered stack above
+        // neighboring nodes and edges so the pushed-out chips render on top of
+        // them. The edge layer sits at z-index 9999 above and `.react-flow__nodes`
+        // creates no stacking context, so the node competes with it directly.
+        '& .react-flow__node:has([data-execution-stack-content]:hover)': {zIndex: '10000 !important'},
         '& .react-flow__handle': {
           width: 10,
           height: 10,
@@ -907,7 +912,7 @@ function DecoratedVisualFlow({
         '& .react-flow__edge.simulation-kind-failure .react-flow__edge-path': {
           stroke: `${theme.palette.error.main} !important`,
         },
-        // Mirrors the validation error-pulse (ValidationErrorBoundary.scss) in the
+        // Mirrors the validation error-pulse (ValidationErrorBoundary.tsx) in the
         // previewed option's kind color — same palette values as the edge strokes above.
         '& .react-flow__node.simulation-preview-target': {
           opacity: 1,
@@ -918,12 +923,10 @@ function DecoratedVisualFlow({
           '&.simulation-kind-failure': {'--simulation-preview-color': theme.palette.error.main},
         },
         // The ring sits on the node's own card element so it follows each node type's
-        // border radius. Cards are addressed by class because node roots are wrapped
-        // in unstyled divs (e.g. ValidationErrorBoundary) whose radius doesn't match.
-        ['& .react-flow__node.simulation-preview-target .flow-builder-step, ' +
-        '& .react-flow__node.simulation-preview-target .execution-minimal-step, ' +
-        '& .react-flow__node.simulation-preview-target .flow-builder-rule, ' +
-        '& .react-flow__node.simulation-preview-target .MuiFab-root']: {
+        // border radius. Cards are marked with `data-flow-node-surface` because node
+        // roots are wrapped in unstyled divs (e.g. ValidationErrorBoundary) whose
+        // radius doesn't match.
+        '& .react-flow__node.simulation-preview-target [data-flow-node-surface]': {
           outline: '2px solid var(--simulation-preview-color)',
           outlineOffset: '4px',
           animation: 'simulation-preview-target-pulse 1s infinite',
@@ -945,10 +948,7 @@ function DecoratedVisualFlow({
               [`& .react-flow__edge[data-id="${hoveredEdge.id}"] .react-flow__edge-path`]: {
                 stroke: `${theme.palette.primary.main} !important`,
               },
-              [`& .react-flow__node[data-id="${hoveredEdge.targetId}"] .flow-builder-step, ` +
-              `& .react-flow__node[data-id="${hoveredEdge.targetId}"] .execution-minimal-step, ` +
-              `& .react-flow__node[data-id="${hoveredEdge.targetId}"] .flow-builder-rule, ` +
-              `& .react-flow__node[data-id="${hoveredEdge.targetId}"] .MuiFab-root`]: {
+              [`& .react-flow__node[data-id="${hoveredEdge.targetId}"] [data-flow-node-surface]`]: {
                 outline: `2px solid ${theme.palette.primary.main}`,
                 outlineOffset: '4px',
                 animation: 'edge-hover-target-pulse 1s infinite',

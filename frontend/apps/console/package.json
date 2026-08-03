@@ -118,7 +118,6 @@
     "eslint": "catalog:",
     "jsdom": "catalog:",
     "rollup-plugin-visualizer": "catalog:",
-    "sass-embedded": "1.98.0",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vite-plugin-svgr": "catalog:",

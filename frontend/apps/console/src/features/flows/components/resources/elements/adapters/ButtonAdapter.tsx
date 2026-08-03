@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
-import {Button, useColorScheme, type ButtonProps, type SxProps, type Theme} from '@wso2/oxygen-ui';
+import {Box, Button, useColorScheme, type ButtonProps, type SxProps, type Theme} from '@wso2/oxygen-ui';
 import {Position} from '@xyflow/react';
 import {useCallback, useMemo, type ReactElement, type ReactNode} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -150,7 +150,7 @@ function ButtonAdapter({resource, elementIndex = undefined}: ButtonAdapterPropsI
   );
 
   return (
-    <div className="adapter button-adapter">
+    <Box data-testid="button-adapter" sx={{position: 'relative', width: '100%'}}>
       <Button sx={buttonConfig?.styles} startIcon={startIcon} endIcon={endIcon} {...config}>
         {labelNode}
       </Button>
@@ -160,7 +160,7 @@ function ButtonAdapter({resource, elementIndex = undefined}: ButtonAdapterPropsI
         position={Position.Right}
         positionKey={elementIndex}
       />
-    </div>
+    </Box>
   );
 }
 

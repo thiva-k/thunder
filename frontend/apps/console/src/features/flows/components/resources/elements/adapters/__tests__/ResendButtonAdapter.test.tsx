@@ -61,15 +61,14 @@ describe('ResendButtonAdapter', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the resend button adapter with correct class names', () => {
+    it('should render the resend button adapter container', () => {
       const resource = createMockElement();
 
-      const {container} = render(<ResendButtonAdapter resource={resource} stepId="step-1" />, {
+      render(<ResendButtonAdapter resource={resource} stepId="step-1" />, {
         wrapper: createWrapper(),
       });
 
-      expect(container.querySelector('.adapter')).toBeInTheDocument();
-      expect(container.querySelector('.button-adapter')).toBeInTheDocument();
+      expect(screen.getByTestId('resend-button-adapter')).toBeInTheDocument();
     });
 
     it('should render a Button component', () => {

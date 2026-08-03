@@ -4,7 +4,6 @@
 import {CollisionPriority} from '@dnd-kit/abstract';
 import {Badge, Box, Button, Menu, MenuItem, Typography} from '@wso2/oxygen-ui';
 import {PlusIcon} from '@wso2/oxygen-ui-icons-react';
-import classNames from 'classnames';
 import {useMemo, useState, type MouseEvent, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
 import Droppable from '../../../dnd/Droppable';
@@ -14,7 +13,6 @@ import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants'
 import useFlowPlugins from '@/features/flows/hooks/useFlowPlugins';
 import {ElementCategories, ElementTypes, type Element as FlowElement} from '@/features/flows/models/elements';
 import generateResourceId from '@/features/flows/utils/generateResourceId';
-import './FormAdapter.scss';
 
 /**
  * Form element type.
@@ -86,7 +84,22 @@ function FormAdapter({
         vertical: 'top',
       }}
       badgeContent={t('flows:core.adapters.form.badgeLabel')}
-      className={classNames('adapter', 'form-adapter')}
+      data-testid="form-adapter"
+      sx={{
+        backgroundColor: 'background.paper',
+        border: '1px dashed',
+        borderColor: 'divider',
+        borderRadius: 2,
+        display: 'block',
+        minHeight: 80,
+        width: '100%',
+        '& .MuiBadge-badge': {
+          backgroundColor: 'background.default',
+          color: 'text.secondary',
+          fontWeight: 500,
+          ml: '25px',
+        },
+      }}
     >
       <Box>
         <Droppable
@@ -100,7 +113,25 @@ function FormAdapter({
           ]}
         >
           {shouldShowFormFieldsPlaceholder && (
-            <Box className="form-adapter-placeholder">
+            <Box
+              data-testid="form-adapter-placeholder"
+              sx={{
+                alignItems: 'center',
+                backgroundColor: 'action.hover',
+                border: '2px dashed',
+                borderColor: 'divider',
+                borderRadius: 0.5,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                m: 2,
+                minHeight: 80,
+                p: 2,
+                transition:
+                  'background-color 200ms cubic-bezier(0.2, 0, 0, 1), border-color 200ms cubic-bezier(0.2, 0, 0, 1)',
+                '&:hover': {backgroundColor: 'action.selected'},
+              }}
+            >
               <Typography variant="body2">{t('flows:core.adapters.form.placeholder')}</Typography>
             </Box>
           )}
@@ -110,7 +141,6 @@ function FormAdapter({
               id={component.id}
               index={index}
               element={component}
-              className={classNames('flow-builder-step-content-form-field')}
               group={resource.id}
               type={resource.id}
               accept={[resource.id, ...VisualFlowConstants.FLOW_BUILDER_FORM_ALLOWED_RESOURCE_TYPES]}

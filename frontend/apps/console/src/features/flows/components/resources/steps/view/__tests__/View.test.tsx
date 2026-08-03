@@ -116,10 +116,10 @@ describe('View', () => {
       expect(screen.getByText('Login Form')).toBeInTheDocument();
     });
 
-    it('should render with flow-builder-step class', () => {
+    it('should render the node surface', () => {
       const {container} = render(<View />);
 
-      expect(container.querySelector('.flow-builder-step')).toBeInTheDocument();
+      expect(container.querySelector('[data-flow-node-surface]')).toBeInTheDocument();
     });
 
     it('should accept custom className', () => {

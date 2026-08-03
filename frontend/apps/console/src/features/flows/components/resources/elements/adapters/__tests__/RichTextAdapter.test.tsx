@@ -1,14 +1,13 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {render} from '@testing-library/react';
+import {render, screen} from '@testing-library/react';
 import type {ReactNode} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import RichTextAdapter from '../RichTextAdapter';
 import type {Element as FlowElement} from '@/features/flows/models/elements';
 
 // Mock dependencies
-vi.mock('../RichTextAdapter.scss', () => ({}));
 
 const mockUpdateNodeInternals = vi.fn();
 const mockUseNodeId = vi.fn<() => string | null>(() => 'node-1');
@@ -50,28 +49,28 @@ describe('RichTextAdapter', () => {
   });
 
   describe('Rendering', () => {
-    it('should render with rich-text-content class', () => {
+    it('should render the rich text content container', () => {
       const resource = createMockElement();
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toBeInTheDocument();
+      expect(screen.getByTestId('rich-text-content')).toBeInTheDocument();
     });
 
     it('should render label content', () => {
       const resource = createMockElement();
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('World');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('World');
     });
 
     it('should render label text', () => {
       const resource = createMockElement({label: 'Test Label'});
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('Test Label');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('Test Label');
     });
   });
 
@@ -79,17 +78,17 @@ describe('RichTextAdapter', () => {
     it('should render sanitized HTML content', () => {
       const resource = createMockElement({label: '<p>Paragraph content</p>'});
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('Paragraph content');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('Paragraph content');
     });
 
     it('should handle plain text content', () => {
       const resource = createMockElement({label: 'Plain text without HTML'});
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('Plain text without HTML');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('Plain text without HTML');
     });
   });
 
@@ -97,17 +96,17 @@ describe('RichTextAdapter', () => {
     it('should handle empty label', () => {
       const resource = createMockElement({label: ''});
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('');
     });
 
     it('should handle undefined label', () => {
       const resource = createMockElement({label: undefined});
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('');
     });
   });
 
@@ -119,8 +118,8 @@ describe('RichTextAdapter', () => {
       const {container: container1} = render(<RichTextAdapter resource={resource1} />);
       const {container: container2} = render(<RichTextAdapter resource={resource2} />);
 
-      expect(container1.querySelector('.rich-text-content')).toBeInTheDocument();
-      expect(container2.querySelector('.rich-text-content')).toBeInTheDocument();
+      expect(container1.querySelector('[data-testid="rich-text-content"]')).toBeInTheDocument();
+      expect(container2.querySelector('[data-testid="rich-text-content"]')).toBeInTheDocument();
     });
   });
 
@@ -181,9 +180,9 @@ describe('RichTextAdapter', () => {
         label: '<a href="https://example.com" target="_blank">External Link</a>',
       });
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('External Link');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('External Link');
     });
 
     it('should handle anchor tags without target attribute', () => {
@@ -191,9 +190,9 @@ describe('RichTextAdapter', () => {
         label: '<a href="https://example.com">Regular Link</a>',
       });
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('Regular Link');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('Regular Link');
     });
 
     it('should handle anchor tags with target="_self"', () => {
@@ -201,9 +200,9 @@ describe('RichTextAdapter', () => {
         label: '<a href="https://example.com" target="_self">Same Window Link</a>',
       });
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('Same Window Link');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('Same Window Link');
     });
 
     it('should handle multiple anchor tags', () => {
@@ -211,9 +210,9 @@ describe('RichTextAdapter', () => {
         label: '<a href="https://link1.com" target="_blank">Link 1</a> and <a href="https://link2.com">Link 2</a>',
       });
 
-      const {container} = render(<RichTextAdapter resource={resource} />);
+      render(<RichTextAdapter resource={resource} />);
 
-      expect(container.querySelector('.rich-text-content')).toHaveTextContent('Link 1 and Link 2');
+      expect(screen.getByTestId('rich-text-content')).toHaveTextContent('Link 1 and Link 2');
     });
   });
 });

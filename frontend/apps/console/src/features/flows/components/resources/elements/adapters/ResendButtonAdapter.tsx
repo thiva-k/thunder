@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
-import {Button, type ButtonProps, type SxProps, type Theme} from '@wso2/oxygen-ui';
+import {Box, Button, type ButtonProps, type SxProps, type Theme} from '@wso2/oxygen-ui';
 import {Position} from '@xyflow/react';
 import type {ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -58,7 +58,7 @@ function ResendButtonAdapter({resource}: ResendButtonAdapterPropsInterface): Rea
   const resendElement = resource as ResendButtonElement;
 
   return (
-    <div className="adapter button-adapter">
+    <Box data-testid="resend-button-adapter" sx={{position: 'relative', width: '100%'}}>
       <Button sx={resendConfig?.styles} {...config}>
         {resolve(resendElement?.label, {t}) ?? resendElement?.label ?? ''}
       </Button>
@@ -67,7 +67,7 @@ function ResendButtonAdapter({resource}: ResendButtonAdapterPropsInterface): Rea
         type="source"
         position={Position.Right}
       />
-    </div>
+    </Box>
   );
 }
 

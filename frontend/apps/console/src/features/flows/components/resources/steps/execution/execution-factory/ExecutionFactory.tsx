@@ -28,7 +28,7 @@ function ExecutionFactory({resource}: ExecutionFactoryPropsInterface): ReactElem
   const displayLabel = resource.display?.label;
 
   return (
-    <Box className="flow-builder-execution">
+    <Box>
       <Box display="flex" gap={1} alignItems="center">
         <ResourceDisplayImage
           image={displayImage}

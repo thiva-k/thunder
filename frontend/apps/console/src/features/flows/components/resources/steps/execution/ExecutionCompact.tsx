@@ -6,13 +6,18 @@ import {Layers} from '@wso2/oxygen-ui-icons-react';
 import {Handle, Position, useNodeId} from '@xyflow/react';
 import {useContext, type KeyboardEvent, type MouseEvent, type ReactElement} from 'react';
 import {useTranslation} from 'react-i18next';
+import OutcomeHandleWrapper, {
+  executionSurfaceMixin,
+  executionSurfaceScheme,
+  mixWithPrimary,
+  nodeShadowMixin,
+} from '../flowNodeStyles';
 import ResourceDisplayImage from '@/features/flows/components/ResourceDisplayImage';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 import CompactStacksContext from '@/features/flows/context/CompactStacksContext';
 import useInteractionState from '@/features/flows/hooks/useInteractionState';
 import useUIPanelState from '@/features/flows/hooks/useUIPanelState';
 import type {Step, StepData} from '@/features/flows/models/steps';
-import './ExecutionCompact.scss';
 
 /**
  * Props interface of {@link ExecutionCompact}
@@ -72,7 +77,17 @@ function ExecutionCompact({resource}: ExecutionCompactPropsInterface): ReactElem
   };
 
   return (
-    <Box className="execution-compact-step">
+    <Box
+      data-testid="execution-compact-step"
+      sx={{
+        height: 48,
+        position: 'relative',
+        width: 48,
+        // Scale the plain in/out handle dots down to chip proportions. The class
+        // is doubled so this wins over the canvas-wide sizing rule.
+        '& > .react-flow__handle.react-flow__handle': {borderWidth: 1, height: 8, width: 8},
+      }}
+    >
       <Tooltip
         placement="top"
         title={
@@ -83,7 +98,28 @@ function ExecutionCompact({resource}: ExecutionCompactPropsInterface): ReactElem
         }
       >
         <Box
-          className="execution-compact-step-content"
+          data-flow-node-surface
+          data-testid="execution-compact-step-content"
+          sx={[
+            executionSurfaceMixin,
+            nodeShadowMixin,
+            {
+              alignItems: 'center',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'flex',
+              height: '100%',
+              justifyContent: 'center',
+              width: '100%',
+              // Selection lives on React Flow's own node element, which is not an
+              // ancestor in this component's tree.
+              '.react-flow__node.selected &': {
+                outline: '2px solid',
+                outlineColor: 'primary.main',
+                outlineOffset: '2px',
+              },
+            },
+          ]}
           role="button"
           tabIndex={0}
           aria-label={displayLabel}
@@ -105,7 +141,7 @@ function ExecutionCompact({resource}: ExecutionCompactPropsInterface): ReactElem
               preserveColor={resource.display?.preserveImageColor}
             />
           ) : (
-            <Typography variant="subtitle1" className="execution-compact-step-fallback">
+            <Typography variant="subtitle1" sx={{fontWeight: 600, lineHeight: 1}}>
               {displayLabel.charAt(0).toUpperCase()}
             </Typography>
           )}
@@ -115,7 +151,25 @@ function ExecutionCompact({resource}: ExecutionCompactPropsInterface): ReactElem
         <Tooltip title={t('flows:core.executions.stack.restack', 'Restack executors')} placement="top">
           <IconButton
             size="small"
-            className="execution-compact-step-restack"
+            data-testid="execution-compact-step-restack"
+            sx={[
+              (theme) =>
+                executionSurfaceScheme(theme, (surface: string) => ({
+                  backgroundColor: surface,
+                  '&:hover': {backgroundColor: mixWithPrimary(theme, surface, 80)},
+                })),
+              {
+                border: '2px solid',
+                borderColor: 'background.default',
+                color: 'text.primary',
+                height: 22,
+                position: 'absolute',
+                right: -10,
+                top: -10,
+                width: 22,
+                zIndex: 1,
+              },
+            ]}
             aria-label={t('flows:core.executions.stack.restack', 'Restack executors')}
             onClick={(event: MouseEvent<HTMLElement>) => {
               event.stopPropagation();
@@ -130,14 +184,14 @@ function ExecutionCompact({resource}: ExecutionCompactPropsInterface): ReactElem
       {/* Success handle - always shown on the right */}
       {hasBranchingSupport ? (
         <Tooltip title={successLabel} placement="right">
-          <Box className="handle-wrapper success-wrapper">
+          <OutcomeHandleWrapper kind="success" handleSize={8}>
             <Handle
               type="source"
               position={Position.Right}
               id={`${resource.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`}
-              className="execution-handle-success"
+              data-handle="execution-handle-success"
             />
-          </Box>
+          </OutcomeHandleWrapper>
         </Tooltip>
       ) : (
         <Handle
@@ -149,22 +203,22 @@ function ExecutionCompact({resource}: ExecutionCompactPropsInterface): ReactElem
       {/* Failure handle - shown at the bottom when the action supports branching (has onFailure property) */}
       {hasBranchingSupport && (
         <Tooltip title={failureLabel} placement="bottom">
-          <Box className="handle-wrapper failure-wrapper">
-            <Handle type="source" position={Position.Bottom} id="failure" className="execution-handle-failure" />
-          </Box>
+          <OutcomeHandleWrapper kind="failure" handleSize={8}>
+            <Handle type="source" position={Position.Bottom} id="failure" data-handle="execution-handle-failure" />
+          </OutcomeHandleWrapper>
         </Tooltip>
       )}
       {/* Incomplete handle - shown at the top when the action supports incomplete (has onIncomplete property) */}
       {hasIncompleteSupport && (
         <Tooltip title={incompleteLabel} placement="top">
-          <Box className="handle-wrapper incomplete-wrapper">
+          <OutcomeHandleWrapper kind="incomplete" handleSize={8}>
             <Handle
               type="source"
               position={Position.Top}
               id={`${resource.id}${VisualFlowConstants.FLOW_BUILDER_INCOMPLETE_HANDLE_SUFFIX}`}
-              className="execution-handle-incomplete"
+              data-handle="execution-handle-incomplete"
             />
-          </Box>
+          </OutcomeHandleWrapper>
         </Tooltip>
       )}
     </Box>

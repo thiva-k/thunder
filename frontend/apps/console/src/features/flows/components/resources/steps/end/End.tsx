@@ -6,7 +6,6 @@ import {Handle, Position} from '@xyflow/react';
 import type {ReactElement} from 'react';
 import type {CommonStepFactoryPropsInterface} from '../CommonStepFactory';
 import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
-import './End.scss';
 
 /**
  * Props interface of {@link End}
@@ -27,12 +26,18 @@ function End(_props: EndPropsInterface): ReactElement {
   return (
     <div>
       <Handle
-        className="hidden-handle"
         id={`end${VisualFlowConstants.FLOW_BUILDER_PREVIOUS_HANDLE_SUFFIX}`}
         type="target"
         position={Position.Left}
       />
-      <Fab aria-label="end" className="end" variant="extended" size="small">
+      <Fab
+        aria-label="end"
+        color="success"
+        variant="extended"
+        size="small"
+        data-flow-node-surface
+        sx={{boxShadow: 'none', pointerEvents: 'none', zIndex: 0}}
+      >
         End
       </Fab>
     </div>

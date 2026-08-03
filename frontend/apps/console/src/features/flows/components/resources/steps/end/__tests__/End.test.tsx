@@ -19,9 +19,6 @@ vi.mock('@xyflow/react', () => ({
   },
 }));
 
-// Mock SCSS
-vi.mock('../End.scss', () => ({}));
-
 // Default mock props for End component
 const createMockProps = (overrides: Partial<CommonStepFactoryPropsInterface> = {}): CommonStepFactoryPropsInterface =>
   ({
@@ -57,11 +54,10 @@ describe('End', () => {
       expect(fab).toBeInTheDocument();
     });
 
-    it('should render with end class on Fab', () => {
+    it('should render the Fab in the success color', () => {
       render(<End {...createMockProps()} />);
 
-      const fab = screen.getByRole('button');
-      expect(fab).toHaveClass('end');
+      expect(screen.getByRole('button', {name: 'end'})).toHaveClass('MuiFab-success');
     });
   });
 
@@ -87,15 +83,6 @@ describe('End', () => {
       // Handle id should contain 'end' and '_PREVIOUS' suffix
       expect(handle.getAttribute('data-handle-id')).toContain('end');
       expect(handle.getAttribute('data-handle-id')).toContain('_PREVIOUS');
-    });
-
-    it('should have hidden-handle class', () => {
-      // Note: Since we're mocking Handle, we can't directly test the class
-      // but the component should pass the className prop
-      render(<End {...createMockProps()} />);
-
-      const handle = screen.getByTestId('handle-target');
-      expect(handle).toBeInTheDocument();
     });
   });
 

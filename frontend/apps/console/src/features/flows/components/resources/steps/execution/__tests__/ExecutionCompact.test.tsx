@@ -16,18 +16,18 @@ vi.mock('@xyflow/react', () => ({
     type,
     position,
     id = '',
-    className = '',
+    'data-handle': dataHandle = '',
   }: {
     type: string;
     position: string;
     id?: string;
-    className?: string;
+    'data-handle'?: string;
   }) => (
     <div
-      data-testid={`handle-${type}${className ? `-${className}` : ''}`}
+      data-testid={`handle-${type}${dataHandle ? `-${dataHandle}` : ''}`}
       data-position={position}
       data-id={id}
-      data-classname={className}
+      data-handle={dataHandle}
     />
   ),
   Position: {
