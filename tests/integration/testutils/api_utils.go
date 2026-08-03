@@ -669,6 +669,8 @@ func idpToConnectionBody(idp IDP) map[string]interface{} {
 			body["scopes"] = strings.Split(prop.Value, ",")
 		case "token_exchange_enabled":
 			body["tokenExchangeEnabled"] = prop.Value == "true"
+		case "id_jag_enabled":
+			body["idJagEnabled"] = prop.Value == "true"
 		default:
 			if field, ok := idpPropertyToConnectionField[prop.Name]; ok {
 				body[field] = prop.Value
