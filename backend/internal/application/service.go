@@ -1757,7 +1757,11 @@ func (as *applicationService) resolveAttestationCredentialsForPersist(
 		}
 	}
 
-	inboundClient.Attestation = &providers.AttestationConfig{Android: &android, Apple: inboundClient.Attestation.Apple}
+	inboundClient.Attestation = &providers.AttestationConfig{
+		Android: &android,
+		Apple:   inboundClient.Attestation.Apple,
+		DevMode: inboundClient.Attestation.DevMode,
+	}
 	return nil
 }
 

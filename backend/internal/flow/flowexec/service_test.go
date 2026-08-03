@@ -2432,6 +2432,11 @@ func (s *ServiceTestSuite) TestResolveFlowInitiationMode_ByType() {
 			expectMode:  flowInitiationAttestation,
 		},
 		{
+			name: "mobile with dev mode skips attestation", appType: model.ApplicationTypeMobile,
+			attestation: &providers.AttestationConfig{DevMode: true},
+			expectMode:  flowInitiationDevMode,
+		},
+		{
 			name: "mcp embedded uses flow secret", appType: model.ApplicationTypeMCP,
 			profile:    &providers.OAuthProfile{GrantTypes: []string{"client_credentials", tokenExchange}},
 			expectMode: flowInitiationFlowSecret,
@@ -3055,6 +3060,30 @@ func (s *ServiceTestSuite) TestCheckDirectFlowInitiationAllowed_AppleAttestation
 
 	svcErr := service.checkDirectFlowInitiationAllowed(context.Background(), "mobile-app",
 		providers.FlowTypeAuthentication, "", "good-token", log.GetLogger())
+	s.Nil(svcErr)
+}
+
+// A mobile app with attestation dev mode enabled may initiate a flow directly without presenting an
+// attestation token, and no verification is attempted.
+func (s *ServiceTestSuite) TestCheckDirectFlowInitiationAllowed_DevModeSkipsAttestation() {
+	t := s.T()
+	mockActorProvider := actorprovidermock.NewActorProviderMock(t)
+	devModeClient := &providers.InboundClient{
+		ID: "mobile-app",
+		Properties: map[string]interface{}{
+			applicationTypePropertyKey: string(model.ApplicationTypeMobile),
+		},
+		Attestation: &providers.AttestationConfig{DevMode: true},
+	}
+	mockActorProvider.EXPECT().GetInboundClientByID(mock.Anything, "mobile-app").Return(devModeClient, nil)
+
+	service := &flowExecService{
+		actorProvider: mockActorProvider,
+		cfg:           testFlowExecCfg,
+	}
+
+	svcErr := service.checkDirectFlowInitiationAllowed(context.Background(), "mobile-app",
+		providers.FlowTypeAuthentication, "", "", log.GetLogger())
 	s.Nil(svcErr)
 }
 

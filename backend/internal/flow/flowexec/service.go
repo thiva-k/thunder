@@ -219,6 +219,9 @@ func (s *flowExecService) loadNewContext(ctx context.Context, appID, flowTypeStr
 //     profile) that must authenticate at flow initiation by presenting its Flow Secret.
 //   - Attestation — a mobile application that authenticates at flow initiation by presenting a valid
 //     platform attestation (e.g. a Google Play Integrity token) proving its binary identity.
+//   - DevMode — a mobile application with attestation dev mode enabled, which may initiate a flow
+//     without presenting an attestation. Disabled by default; intended for testing and trying out
+//     sample/development mobile clients.
 //
 // Sign-out is guarded like authentication so a native caller must prove its identity before ending a
 // session; a redirect-based app is pushed to the RP-initiated /oauth2/logout endpoint instead. Other
@@ -266,6 +269,8 @@ func (s *flowExecService) checkDirectFlowInitiationAllowed(ctx context.Context, 
 		return nil
 	case flowInitiationAttestation:
 		return s.verifyAttestation(ctx, attestationCfg, attestationToken)
+	case flowInitiationDevMode:
+		return nil
 	default:
 		logger.Error(ctx, "Unknown flow initiation mode for application",
 			log.String("appID", appID))
@@ -309,7 +314,12 @@ func (s *flowExecService) resolveFlowInitiationMode(
 		// M2M apps get tokens directly; browser apps are public redirect clients. Neither runs flows.
 		return flowInitiationNotPermitted, nil, nil
 	case appmodel.ApplicationTypeMobile:
-		// Mobile apps authenticate with platform attestation, which must be configured first.
+		// Dev mode lets a mobile app initiate flows without a platform attestation, for testing or
+		// trying out sample/development clients. Disabled by default.
+		if client.Attestation != nil && client.Attestation.DevMode {
+			return flowInitiationDevMode, nil, nil
+		}
+		// Otherwise, mobile apps authenticate with platform attestation, which must be configured first.
 		if client.Attestation == nil || (client.Attestation.Android == nil && client.Attestation.Apple == nil) {
 			return 0, nil, &ErrorAttestationNotConfigured
 		}

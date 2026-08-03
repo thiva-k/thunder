@@ -2544,6 +2544,20 @@ const translations = {
     'edit.advanced.attestation.hint.teamId': 'The Apple Developer Team ID.',
     'edit.advanced.attestation.hint.bundleId': 'The iOS bundle identifier that must match the attested app.',
     'edit.advanced.attestation.error.appleIncomplete': 'Both Team ID and Bundle ID are required together.',
+    'edit.advanced.attestation.labels.devMode': 'Dev Mode',
+    'edit.advanced.attestation.hint.devMode':
+      'Skips attestation verification for this application. Enable only for testing or trying out ' +
+      'sample/development mobile clients; leave disabled otherwise.',
+    'edit.advanced.attestation.warning.devMode':
+      'Dev mode is enabled. Attestation verification is skipped for this application. Use this only for ' +
+      'testing, do not enable it in production.',
+    'edit.advanced.attestation.devModeConfirmDialog.title': 'Enable Dev Mode?',
+    'edit.advanced.attestation.devModeConfirmDialog.description':
+      'This skips attestation verification for this application, so it can initiate a sign-in flow ' +
+      'without presenting an attestation token. Use it only for testing, or to try out a sample or ' +
+      'development client. Do not enable it in production.',
+    'edit.advanced.attestation.devModeConfirmDialog.cancelButton': 'Cancel',
+    'edit.advanced.attestation.devModeConfirmDialog.confirmButton': 'Enable Dev Mode',
 
     /* Passkeys section */
     'edit.advanced.labels.passkeys': 'Passkey Allowed Origins',

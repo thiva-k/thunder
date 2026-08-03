@@ -105,6 +105,10 @@ Attestation-Token: <attestation-token>
 
 A Mobile application that has not configured attestation is rejected with `400 Bad Request`. Once attestation is configured, an application that omits the token is rejected with `401 Unauthorized`, and an invalid or malformed token is also rejected with `401 Unauthorized`. Flow **continuation** requests (those carrying an `executionId`) do not require an attestation token.
 
+:::note
+A Mobile application with **Dev Mode** enabled is an exception to the rejections above. It can initiate a flow without presenting an attestation token, regardless of whether a platform is configured. **Dev Mode** is intended for testing and trying out sample or development clients, not production use. See [Dev Mode](../../guides/applications/application-settings.mdx#dev-mode).
+:::
+
 ### Integration Modes
 
 App-native authentication supports two modes, **Verbose** and **Non-Verbose**, controlled via the `verbose` field in the Flow Execution API. These modes offer different levels of UI granularity to the application. A <ProductName /> SDK typically consumes these modes and manages API calls, state, and response parsing. Both modes follow the same request-response cycle: the application calls the Flow Execution API, receives the next step, renders the screen, collects user input, and submits the response back. The difference lies in how much detail <ProductName /> returns for each step.
