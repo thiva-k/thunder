@@ -1216,6 +1216,8 @@ const translations = {
     'edit.advanced.security.par.label': 'Require Pushed Authorization Requests',
     'edit.advanced.security.par.hint':
       'Require this agent to push its authorization request to the PAR endpoint before redirecting a user to sign in.',
+    'edit.advanced.security.par.notApplicable':
+      'Pushed Authorization Requests only apply to the <code>authorization_code</code> grant. Turn that on to enable this setting.',
 
     // Edit page - Tokens tab
     'edit.tokens.tabs.user': 'User',
@@ -2794,6 +2796,7 @@ const translations = {
     'edit.advanced.labels.pkceRequired': 'PKCE Required',
     'edit.advanced.labels.requirePAR': 'Require Pushed Authorization Requests',
     'edit.advanced.par.hint': 'Require the client to use the PAR endpoint before authorization.',
+    'edit.advanced.par.requiresAuthorizationCode': 'Available only when the authorization code grant is enabled.',
     'edit.advanced.labels.tokenEndpointAuthMethod': 'Client Authentication Method',
     'edit.advanced.labels.certificate': 'Certificate',
     'edit.advanced.labels.certificateType': 'Certificate Type',

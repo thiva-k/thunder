@@ -86,8 +86,10 @@ export default function SecuritySection({
           <FormControlLabel
             control={
               <Switch
-                checked={oauth2Config.requirePushedAuthorizationRequests ?? false}
-                disabled={!isEditable}
+                checked={
+                  flags.isParDisabledByGrants ? false : (oauth2Config.requirePushedAuthorizationRequests ?? false)
+                }
+                disabled={!isEditable || flags.isParDisabledByGrants}
                 onChange={(e) => onOAuth2ConfigChange?.({requirePushedAuthorizationRequests: e.target.checked})}
                 inputProps={{
                   'aria-label': t('agents:edit.advanced.security.par.label', 'Require Pushed Authorization Requests'),
@@ -101,9 +103,17 @@ export default function SecuritySection({
             }
           />
           <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {t(
-              'agents:edit.advanced.security.par.hint',
-              'Require this agent to push its authorization request to the PAR endpoint before redirecting a user to sign in.',
+            {flags.isParDisabledByGrants ? (
+              <Trans
+                i18nKey="agents:edit.advanced.security.par.notApplicable"
+                defaults="Pushed Authorization Requests only apply to the <code>authorization_code</code> grant. Turn that on to enable this setting."
+                components={codeComponents}
+              />
+            ) : (
+              t(
+                'agents:edit.advanced.security.par.hint',
+                'Require this agent to push its authorization request to the PAR endpoint before redirecting a user to sign in.',
+              )
             )}
           </Typography>
         </Box>

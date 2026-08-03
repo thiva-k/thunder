@@ -85,7 +85,7 @@ describe('SecuritySection (agent)', () => {
 
     render(<SecuritySection oauth2Config={oauth2Config} />);
 
-    expect(screen.getByText(/authorization_code/)).toBeInTheDocument();
+    expect(screen.getByText(/PKCE only applies to the/)).toBeInTheDocument();
     const pkceSwitch = screen.getByLabelText('agents:edit.advanced.security.pkce.label');
     expect(pkceSwitch).toBeDisabled();
   });
@@ -130,6 +130,23 @@ describe('SecuritySection (agent)', () => {
       render(<SecuritySection oauth2Config={oauth2Config} />);
 
       expect(screen.getByLabelText('agents:edit.advanced.security.par.label')).toBeDisabled();
+    });
+
+    it('is disabled and unchecked when the authorization_code grant is off', () => {
+      render(
+        <SecuritySection
+          oauth2Config={{
+            grantTypes: ['client_credentials'],
+            responseTypes: [],
+            requirePushedAuthorizationRequests: true,
+          }}
+          onOAuth2ConfigChange={vi.fn()}
+        />,
+      );
+
+      const parSwitch = screen.getByLabelText('agents:edit.advanced.security.par.label');
+      expect(parSwitch).toBeDisabled();
+      expect(parSwitch).not.toBeChecked();
     });
   });
 });

@@ -35,6 +35,15 @@ describe('deriveOAuth2Flags', () => {
     expect(flags.isPublicClientDisabledByGrants).toBe(true);
   });
 
+  it('disables PAR when authorization_code is absent', () => {
+    expect(deriveOAuth2Flags(baseConfig({grantTypes: [OAuth2GrantTypes.TOKEN_EXCHANGE]})).isParDisabledByGrants).toBe(
+      true,
+    );
+    expect(
+      deriveOAuth2Flags(baseConfig({grantTypes: [OAuth2GrantTypes.AUTHORIZATION_CODE]})).isParDisabledByGrants,
+    ).toBe(false);
+  });
+
   it('disables public client when client_credentials is present', () => {
     const flags = deriveOAuth2Flags(
       baseConfig({
@@ -86,6 +95,28 @@ describe('applyGrantTypesChange', () => {
       [OAuth2GrantTypes.CLIENT_CREDENTIALS],
     );
     expect(updates.pkceRequired).toBe(false);
+  });
+
+  it('turns off PAR when authorization_code is removed', () => {
+    const updates = applyGrantTypesChange(
+      baseConfig({
+        grantTypes: [OAuth2GrantTypes.AUTHORIZATION_CODE],
+        requirePushedAuthorizationRequests: true,
+      }),
+      [OAuth2GrantTypes.TOKEN_EXCHANGE],
+    );
+    expect(updates.requirePushedAuthorizationRequests).toBe(false);
+  });
+
+  it('keeps PAR when authorization_code remains', () => {
+    const updates = applyGrantTypesChange(
+      baseConfig({
+        grantTypes: [OAuth2GrantTypes.AUTHORIZATION_CODE],
+        requirePushedAuthorizationRequests: true,
+      }),
+      [OAuth2GrantTypes.AUTHORIZATION_CODE, OAuth2GrantTypes.TOKEN_EXCHANGE],
+    );
+    expect(updates.requirePushedAuthorizationRequests).toBeUndefined();
   });
 
   it('turns off public client and reverts token method when grants become invalid', () => {

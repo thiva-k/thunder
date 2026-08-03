@@ -19,6 +19,7 @@ export interface OAuth2Flags {
   isPkceDisabledByGrants: boolean;
   isPkceForcedByPublicClient: boolean;
   isPublicClientDisabledByGrants: boolean;
+  isParDisabledByGrants: boolean;
 }
 
 /**
@@ -37,6 +38,9 @@ export function deriveOAuth2Flags(config: OAuth2Config): OAuth2Flags {
     isPkceDisabledByGrants: !hasAuthorizationCodeGrant,
     isPkceForcedByPublicClient: isPublicClient,
     isPublicClientDisabledByGrants: hasClientCredentialsGrant || !hasAuthorizationCodeGrant,
+    // PAR is an authorization-endpoint feature, so it only applies when the authorization code grant
+    // is present (e.g. it has no effect on the token exchange or client credentials grants).
+    isParDisabledByGrants: !hasAuthorizationCodeGrant,
   };
 }
 
@@ -76,6 +80,7 @@ function hasTokenIssuingGrant(grants: string[]): boolean {
  * Enforces cross-field invariants:
  * - refresh_token requires a token-issuing grant (authorization_code or ciba)
  * - PKCE requires authorization_code
+ * - PAR (requirePushedAuthorizationRequests) requires authorization_code
  * - public client is incompatible with client_credentials and requires authorization_code
  * - response type 'code' is added/removed alongside the authorization_code grant
  */
@@ -92,6 +97,10 @@ export function applyGrantTypesChange(current: OAuth2Config, selected: string[])
 
   if (current.pkceRequired && !nextHasAuthzCode) {
     updates.pkceRequired = false;
+  }
+
+  if (current.requirePushedAuthorizationRequests && !nextHasAuthzCode) {
+    updates.requirePushedAuthorizationRequests = false;
   }
 
   if (current.publicClient && (nextHasCC || !nextHasAuthzCode)) {
