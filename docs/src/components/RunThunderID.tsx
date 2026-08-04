@@ -8,6 +8,7 @@ import CliLogo from './icons/CliLogo';
 import CodexLogo from './icons/CodexLogo';
 import DockerLogo from './icons/DockerLogo';
 import SkillsLogo from './icons/SkillsLogo';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 type TabId = 'cli' | 'docker' | 'claude' | 'codex' | 'skills';
 
@@ -80,6 +81,7 @@ export default function RunThunderID({tabs, defaultTab}: RunThunderIDProps = {})
   const visibleTabs = tabs ? TABS.filter(({id}) => tabs.includes(id)) : TABS;
   const [activeTab, setActiveTab] = useState<TabId>(defaultTab ?? visibleTabs[0]?.id ?? 'cli');
   const theme = useTheme();
+  const docsUrl = useDocsUrl();
   const {command, hint, shell} = CONTENT[activeTab];
 
   return (
@@ -227,7 +229,7 @@ export default function RunThunderID({tabs, defaultTab}: RunThunderIDProps = {})
         <Typography sx={{color: 'text.disabled', fontSize: '0.75rem'}}>{hint}</Typography>
         <Box
           component="a"
-          href="/docs/next/getting-started/get-thunderid"
+          href={docsUrl('/docs/next/getting-started/get-thunderid')}
           sx={{
             color: 'text.disabled',
             flexShrink: 0,

@@ -7,6 +7,7 @@ import {JSX} from 'react';
 import DeveloperShortcut from './DeveloperShortcut';
 import UseCaseBranchCards from './UseCaseBranchCards';
 import useScrollAnimation from '../hooks/useScrollAnimation';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 function QuickstartPanel({isVisible}: {isVisible: boolean}): JSX.Element {
   return (
@@ -113,6 +114,7 @@ const BROWSE_TOPICS = [
 
 function BrowseTopics(): JSX.Element {
   const theme = useTheme();
+  const docsUrl = useDocsUrl();
   return (
     <Box>
       <Typography component="h2" variant="h5" sx={{fontWeight: 700, mb: 2, fontSize: '1.2rem', color: 'text.primary'}}>
@@ -123,7 +125,7 @@ function BrowseTopics(): JSX.Element {
           <Box
             key={topic.label}
             component={Link}
-            to={topic.href}
+            to={docsUrl(topic.href)}
             sx={{
               display: 'flex',
               flexDirection: 'column',

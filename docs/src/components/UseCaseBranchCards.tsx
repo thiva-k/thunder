@@ -6,6 +6,7 @@ import {Bot, Building2, Fingerprint} from '@wso2/oxygen-ui-icons-react';
 import React from 'react';
 
 import UseCaseBranchCard from './UseCaseBranchCard';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 interface BranchCard {
   href: string;
@@ -71,6 +72,7 @@ const cards: BranchCard[] = [
 ];
 
 export default function UseCaseBranchCards() {
+  const docsUrl = useDocsUrl();
   return (
     <Box
       sx={{
@@ -85,7 +87,7 @@ export default function UseCaseBranchCards() {
       {cards.map((card) => (
         <UseCaseBranchCard
           key={card.href}
-          href={card.href}
+          href={docsUrl(card.href)}
           animationDelay={card.animationDelay}
           icon={card.icon}
           accentColor={card.accentColor}

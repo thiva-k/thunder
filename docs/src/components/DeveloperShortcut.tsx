@@ -18,6 +18,7 @@ import NuxtLogo from './icons/NuxtLogo';
 import ReactLogo from './icons/ReactLogo';
 import VueLogo from './icons/VueLogo';
 import {applyConnectType, useConnectType} from '../utils/connectType';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 type ConnectType = 'app' | 'agent' | 'mcp';
 
@@ -84,6 +85,7 @@ export default function DeveloperShortcut({
 }: DeveloperShortcutProps): React.ReactElement {
   const windowSize = useWindowSize();
   const isMobile = windowSize === 'mobile';
+  const docsUrl = useDocsUrl();
 
   const selected = useConnectType();
 
@@ -267,7 +269,7 @@ export default function DeveloperShortcut({
                 <Box
                   key={label}
                   component={Link}
-                  to={href}
+                  to={docsUrl(href)}
                   sx={{
                     alignItems: 'center',
                     bgcolor: 'rgba(255,255,255,0.06)',
@@ -334,7 +336,7 @@ export default function DeveloperShortcut({
               </Typography>
               <Box
                 component={Link}
-                to="/docs/next/getting-started/get-thunderid"
+                to={docsUrl('/docs/next/getting-started/get-thunderid')}
                 sx={{
                   color: 'primary.main',
                   fontSize: '0.875rem',

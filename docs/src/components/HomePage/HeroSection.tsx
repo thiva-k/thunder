@@ -17,6 +17,7 @@ import IOSLogo from '../icons/IOSLogo';
 import LinuxLogo from '../icons/LinuxLogo';
 import SkillsLogo from '../icons/SkillsLogo';
 import WindowsLogo from '../icons/WindowsLogo';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 const INSTALL_TABS = [
   {id: 'cli', label: 'npx', icon: CliLogo, command: 'npx thunderid', brandColor: null, enabled: true},
@@ -97,6 +98,7 @@ export default function HeroSection(): JSX.Element {
   const theme = useTheme();
   const isLight = !useIsDarkMode();
   const {withBaseUrl} = useBaseUrlUtils();
+  const docsUrl = useDocsUrl();
 
   const [activeTab, setActiveTabRaw] = useState('cli');
   const setActiveTab = setActiveTabRaw as (v: string) => void;
@@ -244,7 +246,7 @@ export default function HeroSection(): JSX.Element {
             >
               <Button
                 component={Link}
-                href="/docs/next"
+                href={docsUrl('/docs/next')}
                 variant="contained"
                 color="primary"
                 size="large"
@@ -269,7 +271,7 @@ export default function HeroSection(): JSX.Element {
               </Button>
               <Button
                 component={Link}
-                href="/docs/next/getting-started/get-thunderid"
+                href={docsUrl('/docs/next/getting-started/get-thunderid')}
                 variant="text"
                 size="large"
                 sx={{
@@ -682,7 +684,7 @@ export default function HeroSection(): JSX.Element {
               ) : null}
               <Typography
                 component={Link}
-                href="/docs/next/getting-started/get-thunderid"
+                href={docsUrl('/docs/next/getting-started/get-thunderid')}
                 sx={{
                   fontSize: '0.82rem',
                   color: dimColor,

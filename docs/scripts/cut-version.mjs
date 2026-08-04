@@ -21,7 +21,7 @@
  */
 
 import {execFileSync} from 'child_process';
-import {existsSync} from 'fs';
+import {existsSync, readdirSync, rmSync} from 'fs';
 import {join, dirname} from 'path';
 import {fileURLToPath} from 'url';
 import {createLogger} from '@thunderid/logger';
@@ -59,6 +59,25 @@ try {
   // Step 2: Cut the Docusaurus doc version (snapshots content/ and versioned_sidebars/).
   logger.info(`📸 Cutting Docusaurus doc version ${version}...`);
   execFileSync('pnpm', ['docusaurus', 'docs:version', version], {stdio: 'inherit'});
+
+  // Step 3: docs:version copies the entire content/ tree, including the SDK sidebar.ts
+  // files under content/sdks/*/. Those are never imported for versioned docs (the frozen
+  // sidebar lives in versioned_sidebars/version-<v>-sidebars.json), so they're dead
+  // clutter in the snapshot — drop them.
+  const snapshotSdksDir = join(__dirname, '..', 'versioned_docs', `version-${version}`, 'sdks');
+  if (existsSync(snapshotSdksDir)) {
+    let removed = 0;
+    for (const sdk of readdirSync(snapshotSdksDir)) {
+      const sidebarFile = join(snapshotSdksDir, sdk, 'sidebar.ts');
+      if (existsSync(sidebarFile)) {
+        rmSync(sidebarFile);
+        removed++;
+      }
+    }
+    if (removed > 0) {
+      logger.info(`🧹 Removed ${removed} copied SDK sidebar.ts file(s) from the snapshot.`);
+    }
+  }
 
   logger.info(`✅ Version ${version} cut successfully.`);
   logger.info(`   → API spec: static/api/${version}/combined.yaml`);
