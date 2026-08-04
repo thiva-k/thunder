@@ -123,6 +123,22 @@ describe('formValuesToRequest', () => {
     });
   });
 
+  it('still sends the SMS gateway transport defaults now that neither field is required', () => {
+    const values = {
+      ...emptyFormValues(SMS_GATEWAY_FIELDS, REDIRECT),
+      name: 'Custom SMS Sender',
+      url: 'https://sms.example.com/send',
+    };
+
+    expect(validateConnectionForm(values, SMS_GATEWAY_FIELDS, 'create')).toEqual({});
+    expect(formValuesToRequest(values, SMS_GATEWAY_FIELDS, {mode: 'create'})).toEqual({
+      name: 'Custom SMS Sender',
+      url: 'https://sms.example.com/send',
+      httpMethod: 'POST',
+      contentType: 'JSON',
+    });
+  });
+
   it('omits the secret on edit when not replacing (keep stored value)', () => {
     const payload = formValuesToRequest(base, GOOGLE_FIELDS, {
       mode: 'edit',

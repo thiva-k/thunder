@@ -344,7 +344,6 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       labelKey: 'connections:form.fields.httpMethod.label',
       hintKey: 'connections:form.fields.httpMethod.hint',
       kind: 'select',
-      required: true,
       defaultValue: 'POST',
       options: [
         {value: 'POST', label: 'POST'},
@@ -356,7 +355,6 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       labelKey: 'connections:form.fields.contentType.label',
       hintKey: 'connections:form.fields.contentType.hint',
       kind: 'select',
-      required: true,
       defaultValue: 'JSON',
       options: [
         {value: 'JSON', label: 'JSON'},

@@ -234,6 +234,16 @@ describe('ConnectionForm', () => {
       expect(isFieldMarkedRequired('url')).toBe(true);
     });
 
+    it('marks only the gateway URL required, leaving the defaulted transport fields unmarked', () => {
+      render(<ConnectionForm {...smsGatewayProps} showNameField />);
+
+      expect(isFieldMarkedRequired('name')).toBe(true);
+      expect(isFieldMarkedRequired('url')).toBe(true);
+      expect(isFieldMarkedRequired('httpMethod')).toBe(false);
+      expect(isFieldMarkedRequired('contentType')).toBe(false);
+      expect(isFieldMarkedRequired('httpHeaders')).toBe(false);
+    });
+
     it('reports a select change through onFieldChange', async () => {
       const onFieldChange = vi.fn();
       render(<ConnectionForm {...smsGatewayProps} onFieldChange={onFieldChange} />);

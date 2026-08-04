@@ -89,10 +89,18 @@ describe('fieldsForMode', () => {
     const httpMethod = fields.find((field) => field.name === 'httpMethod');
     const contentType = fields.find((field) => field.name === 'contentType');
 
-    expect(httpMethod).toMatchObject({kind: 'select', required: true, defaultValue: 'POST'});
+    expect(httpMethod).toMatchObject({kind: 'select', defaultValue: 'POST'});
     expect(httpMethod?.options?.map((option) => option.value)).toEqual(['POST', 'GET']);
-    expect(contentType).toMatchObject({kind: 'select', required: true, defaultValue: 'JSON'});
+    expect(contentType).toMatchObject({kind: 'select', defaultValue: 'JSON'});
     expect(contentType?.options?.map((option) => option.value)).toEqual(['JSON', 'FORM']);
+  });
+
+  it('marks only name and the gateway URL required, matching the API contract', () => {
+    const required: string[] = fieldsForMode(ConnectionTypes.SMS_GATEWAY, 'create')
+      .filter((field) => field.required)
+      .map((field) => field.name);
+
+    expect(required).toEqual(['name', 'url']);
   });
 
   it('edits SMS gateway headers as key-value rows rather than one packed string', () => {
