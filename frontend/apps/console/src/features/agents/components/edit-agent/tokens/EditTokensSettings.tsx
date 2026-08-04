@@ -73,7 +73,10 @@ export default function EditTokensSettings({
       options={audienceOptions}
       value={audience}
       onChange={setAudience}
-      footnote={t('agents:edit.tokens.audience.footnote', 'Claim sets are configured independently for each audience.')}
+      footnote={t(
+        'agents:edit.tokens.audience.footnote',
+        'Attribute sets are configured independently for each audience.',
+      )}
     >
       {audience === AGENT_AUDIENCE && (
         <AgentAccessTokenSection
