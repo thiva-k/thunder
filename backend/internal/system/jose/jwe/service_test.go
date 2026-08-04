@@ -352,12 +352,24 @@ func (suite *JWEServiceTestSuite) TestIsSupportedEnc() {
 }
 
 func (suite *JWEServiceTestSuite) TestSupportedContentEncryptionAlgorithms() {
-	algs := SupportedContentEncryptionAlgorithms()
+	svc := &jweService{}
+	algs := svc.SupportedContentEncryptionAlgorithms()
 	expected := []string{
 		string(A128CBCHS256), string(A192CBCHS384), string(A256CBCHS512),
 		string(A128GCM), string(A192GCM), string(A256GCM),
 	}
 	assert.ElementsMatch(suite.T(), expected, algs)
+}
+
+func (suite *JWEServiceTestSuite) TestSupportedKeyEncryptionAlgorithms() {
+	mockProvider := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
+	mockProvider.EXPECT().GetSupportedEncryptionAlgorithms().Return([]string{
+		string(RSAOAEP), string(RSAOAEP256), string(ECDHES), "SOME-UNKNOWN-ALG",
+	}).Once()
+	svc := &jweService{cryptoProvider: mockProvider}
+
+	algs := svc.SupportedKeyEncryptionAlgorithms()
+	assert.ElementsMatch(suite.T(), []string{string(RSAOAEP), string(RSAOAEP256), string(ECDHES)}, algs)
 }
 
 func (suite *JWEServiceTestSuite) TestBuildDecryptParams() {

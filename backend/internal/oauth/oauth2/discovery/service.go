@@ -27,15 +27,17 @@ type DiscoveryServiceInterface interface {
 type discoveryService struct {
 	cfg            oauthconfig.Config
 	cryptoProvider providers.RuntimeCryptoProvider
+	jweService     jwe.JWEServiceInterface
 }
 
 // newDiscoveryService creates a new discovery service instance
 func newDiscoveryService(
-	cryptoProvider providers.RuntimeCryptoProvider, cfg oauthconfig.Config,
+	cryptoProvider providers.RuntimeCryptoProvider, jweService jwe.JWEServiceInterface, cfg oauthconfig.Config,
 ) DiscoveryServiceInterface {
 	return &discoveryService{
 		cfg:            cfg,
 		cryptoProvider: cryptoProvider,
+		jweService:     jweService,
 	}
 }
 
@@ -81,8 +83,8 @@ func (ds *discoveryService) GetOIDCMetadata(ctx context.Context) (*OIDCProviderM
 	if err != nil {
 		return nil, err
 	}
-	encryptionAlgs := ds.cryptoProvider.GetSupportedEncryptionAlgorithms()
-	encryptionEncs := jwe.SupportedContentEncryptionAlgorithms()
+	encryptionAlgs := ds.jweService.SupportedKeyEncryptionAlgorithms()
+	encryptionEncs := ds.jweService.SupportedContentEncryptionAlgorithms()
 
 	oidcProviderMetadata := &OIDCProviderMetadata{
 		OAuth2AuthorizationServerMetadata:    *oauth2Meta,

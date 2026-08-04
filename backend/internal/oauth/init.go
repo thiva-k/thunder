@@ -62,7 +62,7 @@ func Initialize(
 	})
 	resolver := jwksresolver.Initialize(httpClient)
 	scopeValidator := scope.Initialize()
-	discoveryService := discovery.Initialize(mux, runtimeCrypto, cfg)
+	discoveryService := discovery.Initialize(mux, runtimeCrypto, jweService, cfg)
 	var enforcementService revocation.EnforcementServiceInterface
 	var revocationSvc revocation.RevocationServiceInterface
 	if cfg.OAuth.TokenRevocation.Enabled {

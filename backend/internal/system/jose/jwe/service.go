@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
@@ -24,6 +25,15 @@ type JWEServiceInterface interface {
 	Encrypt(ctx context.Context, payload []byte, recipientPublicKey *providers.KeyRef,
 		alg string, enc ContentEncAlgorithm, cty string, kid string) (string, *tidcommon.ServiceError)
 	Decrypt(ctx context.Context, jweToken string) ([]byte, *tidcommon.ServiceError)
+
+	// SupportedKeyEncryptionAlgorithms returns the JWE "alg" (key management) algorithm values
+	// usable by Encrypt and Decrypt: the intersection of the algorithms this package recognizes as
+	// key-management roles with what the configured crypto provider actually supports.
+	SupportedKeyEncryptionAlgorithms() []string
+
+	// SupportedContentEncryptionAlgorithms returns the JWE "enc" (content encryption) algorithm
+	// values supported by Encrypt and Decrypt.
+	SupportedContentEncryptionAlgorithms() []string
 }
 
 // jweService implements the JWEServiceInterface.
@@ -190,6 +200,30 @@ func (js *jweService) Decrypt(ctx context.Context, jweToken string) ([]byte, *ti
 	return payload, nil
 }
 
+// SupportedKeyEncryptionAlgorithms returns the JWE "alg" (key management) algorithm values usable
+// by Encrypt and Decrypt: the intersection of the algorithms this package recognizes as
+// key-management roles with what the configured crypto provider actually supports.
+func (js *jweService) SupportedKeyEncryptionAlgorithms() []string {
+	providerSupported := js.cryptoProvider.GetSupportedEncryptionAlgorithms()
+	result := make([]string, 0, len(knownKeyEncAlgorithms))
+	for _, alg := range knownKeyEncAlgorithms {
+		if slices.Contains(providerSupported, string(alg)) {
+			result = append(result, string(alg))
+		}
+	}
+	return result
+}
+
+// SupportedContentEncryptionAlgorithms returns the JWE "enc" (content encryption) algorithm
+// values supported by Encrypt and Decrypt.
+func (js *jweService) SupportedContentEncryptionAlgorithms() []string {
+	result := make([]string, len(supportedContentEncAlgorithms))
+	for i, enc := range supportedContentEncAlgorithms {
+		result[i] = string(enc)
+	}
+	return result
+}
+
 // DecryptWithKey decrypts a JWE compact serialization using an explicitly
 // supplied recipient private key instead of the server's configured key. It
 // supports ephemeral per-request keys, as required by OpenID4VP encrypted
@@ -243,16 +277,6 @@ func isSupportedEnc(enc ContentEncAlgorithm) bool {
 		}
 	}
 	return false
-}
-
-// SupportedContentEncryptionAlgorithms returns the list of JWE "enc" (content encryption)
-// algorithm values supported by Encrypt and Decrypt.
-func SupportedContentEncryptionAlgorithms() []string {
-	result := make([]string, len(supportedContentEncAlgorithms))
-	for i, enc := range supportedContentEncAlgorithms {
-		result[i] = string(enc)
-	}
-	return result
 }
 
 // buildDecryptParams builds cryptolib.AlgorithmParams for server-side CEK decryption.

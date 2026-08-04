@@ -33,6 +33,14 @@ const (
 	A256GCMKW KeyEncAlgorithm = "A256GCMKW"
 )
 
+// knownKeyEncAlgorithms lists every JWE "alg" (key management) algorithm value this package
+// recognizes, regardless of whether the configured crypto provider actually supports it.
+var knownKeyEncAlgorithms = []KeyEncAlgorithm{
+	RSAOAEP, RSAOAEP256, A128KW, A192KW, A256KW,
+	ECDHES, ECDHESA128KW, ECDHESA192KW, ECDHESA256KW,
+	A128GCMKW, A192GCMKW, A256GCMKW,
+}
+
 // ContentEncAlgorithm represents the JWE content encryption algorithm (enc header parameter)
 type ContentEncAlgorithm string
 

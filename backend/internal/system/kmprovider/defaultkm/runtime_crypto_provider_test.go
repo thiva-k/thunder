@@ -992,6 +992,7 @@ func TestGetSupportedEncryptionAlgorithms(t *testing.T) {
 	svc := &runtimeCryptoService{}
 	algs := svc.GetSupportedEncryptionAlgorithms()
 	assert.ElementsMatch(t, []string{
+		string(cryptolib.AlgorithmAESGCM),
 		string(cryptolib.AlgorithmRSAOAEP), string(cryptolib.AlgorithmRSAOAEP256),
 		string(cryptolib.AlgorithmECDHES),
 		string(cryptolib.AlgorithmECDHESA128KW),

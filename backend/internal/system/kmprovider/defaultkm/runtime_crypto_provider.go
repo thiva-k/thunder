@@ -377,6 +377,7 @@ func (s *runtimeCryptoService) GetSupportedSigningAlgorithms() []string {
 // GetSupportedEncryptionAlgorithms returns the list of algorithms supported by Encrypt and Decrypt.
 func (s *runtimeCryptoService) GetSupportedEncryptionAlgorithms() []string {
 	return []string{
+		string(cryptolib.AlgorithmAESGCM),
 		string(cryptolib.AlgorithmRSAOAEP), string(cryptolib.AlgorithmRSAOAEP256),
 		string(cryptolib.AlgorithmECDHES),
 		string(cryptolib.AlgorithmECDHESA128KW),
