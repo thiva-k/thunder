@@ -52,6 +52,11 @@ export interface AutoWireMeta {
     stepRef: string;
     matchBy: 'executorName';
     match: string;
+    /**
+     * Companion steps to remove when the primary step is replaced by an existing node. This is used
+     * for steps such as a prompt view associated with an executor.
+     */
+    alsoDrop?: string[];
   }[];
 }
 
@@ -148,10 +153,13 @@ const autoWireWidget = (
     const existing: Node | undefined = preExistingNodes.find((node: Node) => executorName(node) === rule.match);
 
     if (dupNode && existing) {
+      const companionIds: string[] = (rule.alsoDrop ?? []).map(resolve);
+      const discardedIds = new Set<string>([dupId, ...companionIds]);
+
       edges = edges
-        .filter((edge: Edge) => edge.source !== dupId)
+        .filter((edge: Edge) => !discardedIds.has(edge.source))
         .map((edge: Edge) => (edge.target === dupId ? {...edge, id: `${edge.id}__reuse`, target: existing.id} : edge));
-      nodesToDrop.add(dupId);
+      discardedIds.forEach((id: string) => nodesToDrop.add(id));
       remapTarget.set(dupId, existing.id);
     }
   });

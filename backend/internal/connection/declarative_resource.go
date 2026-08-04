@@ -16,6 +16,7 @@ import (
 	declarativeresource "github.com/thunder-id/thunderid/internal/system/declarative_resource"
 	"github.com/thunder-id/thunderid/internal/system/declarative_resource/entity"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	tidcommon "github.com/thunder-id/thunderid/pkg/thunderidengine/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 
@@ -416,13 +417,27 @@ func connectionResourceID(dto interface{}) string {
 // /connections create/update API runs. Notification-sender DTOs only get a name presence check —
 // full semantic validation for senders (e.g. a custom sender's required URL) is deferred to
 // runtime use, matching the legacy declarative notification-sender behavior.
-func validateConnectionDTOWrapper(dto interface{}) error {
+//
+// idpService may be nil, in which case the schema-aware defaults the live API applies are skipped
+// and the declarative document stands entirely on its own.
+func validateConnectionDTOWrapper(dto interface{}, idpService idp.IDPServiceInterface) error {
 	switch d := dto.(type) {
 	case *providers.IDPDTO:
 		if d.Name == "" {
 			return fmt.Errorf("connection resource %q is missing a name", d.ID)
 		}
-		return idp.ValidateIDP(d)
+		if err := idp.ValidateIDP(d); err != nil {
+			return err
+		}
+		if idpService != nil {
+			// Declarative resources load at startup with no authenticated subject, so the
+			// entity-type reads the seeding performs would otherwise be authorized against nothing
+			// and return nothing. Elevate here, where the absence of a subject is a fact about the
+			// caller, rather than inside the service, where it would also bypass a real
+			// administrator's scope on the REST path.
+			idpService.ApplySchemaAwareDefaults(security.WithRuntimeContext(context.Background()), d)
+		}
+		return nil
 	case *ncommon.NotificationSenderDTO:
 		if d.Name == "" {
 			return fmt.Errorf("connection resource %q is missing a name", d.ID)
@@ -466,7 +481,7 @@ func (s *connectionDeclarativeStore) Create(id string, data interface{}) error {
 // (identity_provider.store) calls for loading, or when no connection files are present.
 // connectionDeclarativeStore.Create further gates IdP-typed documents individually so a
 // composite/declarative identity_provider.store is honored even when the global flag is off.
-func loadDeclarativeResources() error {
+func loadDeclarativeResources(idpService idp.IDPServiceInterface) error {
 	if !declarativeresource.IsDeclarativeModeEnabled() && !idp.ShouldLoadDeclarativeIDPResources() {
 		return nil
 	}
@@ -479,8 +494,10 @@ func loadDeclarativeResources() error {
 		ResourceType:  paramTypeConnection,
 		DirectoryName: "connections",
 		Parser:        parseToConnectionDTOWrapper,
-		Validator:     validateConnectionDTOWrapper,
-		IDExtractor:   connectionResourceID,
+		Validator: func(dto interface{}) error {
+			return validateConnectionDTOWrapper(dto, idpService)
+		},
+		IDExtractor: connectionResourceID,
 	}
 
 	loader := declarativeresource.NewResourceLoader(resourceConfig, storer)

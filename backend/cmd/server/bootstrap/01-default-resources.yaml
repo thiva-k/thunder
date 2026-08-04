@@ -10,6 +10,7 @@ id: 01900000-0000-7000-8000-000000000010
 category: user
 name: Person
 ouHandle: default
+allowSelfRegistration: true
 systemAttributes:
   display: username
 schema:
@@ -5152,6 +5153,8 @@ translations:
     forms.credentials.links.forgot_password.label: Reset
     forms.credentials.links.sign_up.prefix: Don't have an account?
     forms.credentials.links.sign_up.label: Sign up
+    forms.schema_attrs.title: Tell us about you
+    forms.schema_attrs.actions.continue.label: Continue
   signup:
     images.app_logo.alt: Application logo
     forms.credentials.title: Sign Up

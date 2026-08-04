@@ -89,6 +89,12 @@
                 "stepRef": "AUTH_ASSERT_EXECUTOR_ID",
                 "matchBy": "executorName",
                 "match": "AuthAssertExecutor"
+              },
+              {
+                "stepRef": "PROVISIONING_EXECUTOR_STEP_ID",
+                "matchBy": "executorName",
+                "match": "ProvisioningExecutor",
+                "alsoDrop": ["PROVISIONING_PROMPT_STEP_ID"]
               }
             ]
           },
@@ -100,6 +106,14 @@
             },
             {
               "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PROVISIONING_EXECUTOR_STEP_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PROVISIONING_PROMPT_STEP_ID",
               "type": "ID"
             }
           ]
@@ -152,13 +166,102 @@
                 "executor": {
                   "name": "GoogleOIDCAuthExecutor"
                 },
-                "onSuccess": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+                "onSuccess": "{{PROVISIONING_EXECUTOR_STEP_ID}}",
                 "onFailure": "",
                 "onIncomplete": ""
               },
               "properties": {
-                "idpId": "{{IDP_ID}}"
+                "idpId": "{{IDP_ID}}",
+                "allowAuthenticationWithoutLocalUser": true
               }
+            }
+          },
+          {
+            "id": "{{PROVISIONING_EXECUTOR_STEP_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1070,
+              "y": 350
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "ProvisioningExecutor"
+                },
+                "onSuccess": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+                "onFailure": "",
+                "onIncomplete": "{{PROVISIONING_PROMPT_STEP_ID}}"
+              },
+              "properties": {
+                "allowCrossOUProvisioning": false,
+                "includeOptional": false,
+                "includeOptionalCredentials": false,
+                "maxPerPrompt": 5,
+                "assignGroup": "",
+                "assignRole": ""
+              }
+            }
+          },
+          {
+            "id": "{{PROVISIONING_PROMPT_STEP_ID}}",
+            "type": "VIEW",
+            "size": {
+              "width": 360,
+              "height": 220
+            },
+            "position": {
+              "x": 1110,
+              "y": 50
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "IMAGE",
+                  "src": "{{ meta(application.logoUrl) }}",
+                  "alt": "Application logo",
+                  "height": "60",
+                  "width": ""
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "align": "center",
+                  "variant": "HEADING_1",
+                  "label": "Complete your details"
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "DISPLAY",
+                      "type": "DYNAMIC_INPUT_PLACEHOLDER"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
+                      "action": {
+                        "type": "NEXT",
+                        "onSuccess": "{{PROVISIONING_EXECUTOR_STEP_ID}}"
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           },
           {
@@ -169,7 +272,7 @@
               "height": 113
             },
             "position": {
-              "x": 1234,
+              "x": 1550,
               "y": 230
             },
             "data": {
@@ -206,6 +309,12 @@
                 "stepRef": "AUTH_ASSERT_EXECUTOR_ID",
                 "matchBy": "executorName",
                 "match": "AuthAssertExecutor"
+              },
+              {
+                "stepRef": "PROVISIONING_EXECUTOR_STEP_ID",
+                "matchBy": "executorName",
+                "match": "ProvisioningExecutor",
+                "alsoDrop": ["PROVISIONING_PROMPT_STEP_ID"]
               }
             ]
           },
@@ -217,6 +326,14 @@
             },
             {
               "key": "AUTH_ASSERT_EXECUTOR_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PROVISIONING_EXECUTOR_STEP_ID",
+              "type": "ID"
+            },
+            {
+              "key": "PROVISIONING_PROMPT_STEP_ID",
               "type": "ID"
             }
           ]
@@ -269,13 +386,102 @@
                 "executor": {
                   "name": "GithubOAuthExecutor"
                 },
-                "onSuccess": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+                "onSuccess": "{{PROVISIONING_EXECUTOR_STEP_ID}}",
                 "onFailure": "",
                 "onIncomplete": ""
               },
               "properties": {
-                "idpId": "{{IDP_ID}}"
+                "idpId": "{{IDP_ID}}",
+                "allowAuthenticationWithoutLocalUser": true
               }
+            }
+          },
+          {
+            "id": "{{PROVISIONING_EXECUTOR_STEP_ID}}",
+            "type": "TASK_EXECUTION",
+            "size": {
+              "width": 200,
+              "height": 113
+            },
+            "position": {
+              "x": 1070,
+              "y": 350
+            },
+            "data": {
+              "action": {
+                "type": "EXECUTOR",
+                "executor": {
+                  "name": "ProvisioningExecutor"
+                },
+                "onSuccess": "{{AUTH_ASSERT_EXECUTOR_ID}}",
+                "onFailure": "",
+                "onIncomplete": "{{PROVISIONING_PROMPT_STEP_ID}}"
+              },
+              "properties": {
+                "allowCrossOUProvisioning": false,
+                "includeOptional": false,
+                "includeOptionalCredentials": false,
+                "maxPerPrompt": 5,
+                "assignGroup": "",
+                "assignRole": ""
+              }
+            }
+          },
+          {
+            "id": "{{PROVISIONING_PROMPT_STEP_ID}}",
+            "type": "VIEW",
+            "size": {
+              "width": 360,
+              "height": 220
+            },
+            "position": {
+              "x": 1110,
+              "y": 50
+            },
+            "data": {
+              "components": [
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "IMAGE",
+                  "src": "{{ meta(application.logoUrl) }}",
+                  "alt": "Application logo",
+                  "height": "60",
+                  "width": ""
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "DISPLAY",
+                  "type": "TEXT",
+                  "align": "center",
+                  "variant": "HEADING_1",
+                  "label": "Complete your details"
+                },
+                {
+                  "id": "{{ID}}",
+                  "category": "BLOCK",
+                  "type": "BLOCK",
+                  "components": [
+                    {
+                      "id": "{{ID}}",
+                      "category": "DISPLAY",
+                      "type": "DYNAMIC_INPUT_PLACEHOLDER"
+                    },
+                    {
+                      "id": "{{ID}}",
+                      "category": "ACTION",
+                      "type": "ACTION",
+                      "variant": "PRIMARY",
+                      "eventType": "SUBMIT",
+                      "label": "Continue",
+                      "action": {
+                        "type": "NEXT",
+                        "onSuccess": "{{PROVISIONING_EXECUTOR_STEP_ID}}"
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           },
           {
@@ -286,7 +492,7 @@
               "height": 113
             },
             "position": {
-              "x": 1234,
+              "x": 1550,
               "y": 230
             },
             "data": {

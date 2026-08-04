@@ -216,6 +216,72 @@ describe('autoWireWidget', () => {
       expect(onSuccessOf(nodes, 'google')).toBe('auth_assert');
     });
 
+    // Dropping a second federated widget must converge on the provisioning node the first one
+    // brought, not add a parallel one. The bundled prompt is dropped with it via alsoDrop, since a
+    // VIEW node cannot be matched by executor name and would otherwise survive as an orphan.
+    it('reuses an existing provisioning node and drops its bundled prompt', () => {
+      const autoWire: AutoWireMeta = {
+        reuse: [
+          {stepRef: 'AUTH_ASSERT_EXECUTOR_ID', matchBy: 'executorName', match: 'AuthAssertExecutor'},
+          {
+            stepRef: 'PROVISIONING_EXECUTOR_STEP_ID',
+            matchBy: 'executorName',
+            match: 'ProvisioningExecutor',
+            alsoDrop: ['PROVISIONING_PROMPT_STEP_ID'],
+          },
+        ],
+      };
+      const resolvedRefs = new Map([
+        ['AUTH_ASSERT_EXECUTOR_ID', 'bundled_auth'],
+        ['PROVISIONING_EXECUTOR_STEP_ID', 'bundled_prov'],
+        ['PROVISIONING_PROMPT_STEP_ID', 'bundled_prompt'],
+      ]);
+
+      // The canvas already holds a Google widget: google -> provisioning -> auth_assert -> end.
+      const preExisting: Node[] = [
+        executorNode('google', 'GoogleOIDCAuthExecutor', 'provisioning'),
+        executorNode('provisioning', 'ProvisioningExecutor', 'auth_assert'),
+        viewNode('prov_prompt'),
+        executorNode('auth_assert', 'AuthAssertExecutor', 'END'),
+        endNode('end'),
+      ];
+      // A GitHub widget is dropped, bringing its own provisioning, prompt and assertion.
+      const cluster: Node[] = [
+        executorNode('github', 'GithubOAuthExecutor', 'bundled_prov'),
+        executorNode('bundled_prov', 'ProvisioningExecutor', 'bundled_auth'),
+        viewNode('bundled_prompt'),
+        executorNode('bundled_auth', 'AuthAssertExecutor', 'END'),
+      ];
+      const resultNodes: Node[] = [...preExisting, ...cluster];
+      const resultEdges: Edge[] = [
+        edge('google', 'provisioning'),
+        edge('provisioning', 'auth_assert'),
+        edge('auth_assert', 'end'),
+        edge('github', 'bundled_prov'),
+        edge('bundled_prov', 'bundled_auth'),
+        edge('bundled_prompt', 'bundled_prov'),
+      ];
+
+      const {nodes, edges} = autoWireWidget(preExisting, resultNodes, resultEdges, autoWire, resolvedRefs, EDGE_STYLE);
+
+      const provisioningNodes = nodes.filter(
+        (n: Node) =>
+          (n as {data?: {action?: {executor?: {name?: string}}}}).data?.action?.executor?.name ===
+          'ProvisioningExecutor',
+      );
+
+      expect(provisioningNodes).toHaveLength(1);
+      expect(provisioningNodes[0].id).toBe('provisioning');
+      expect(nodes.some((n: Node) => n.id === 'bundled_prompt')).toBe(false);
+      expect(nodes.some((n: Node) => n.id === 'bundled_prov')).toBe(false);
+      // GitHub converges on the pre-existing provisioning node, by edge and by action.onSuccess.
+      expect(has(edges, 'github', 'provisioning')).toBe(true);
+      expect(onSuccessOf(nodes, 'github')).toBe('provisioning');
+      // The reused provisioning keeps its own prompt and onward wiring.
+      expect(nodes.some((n: Node) => n.id === 'prov_prompt')).toBe(true);
+      expect(has(edges, 'provisioning', 'auth_assert')).toBe(true);
+    });
+
     it('keeps the bundled AuthAssert on a blank canvas and wires it to the END node by type', () => {
       const preExisting: Node[] = [viewNode('v'), endNode('end')];
       const cluster: Node[] = [
