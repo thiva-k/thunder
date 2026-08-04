@@ -33,7 +33,7 @@ export default function AuthPageLayout({
       className={variant ? cn(`${variant}--root`) : undefined}
       sx={[
         {
-          justifyContent: 'center',
+          justifyContent: 'safe center',
           height: 'calc((1 - var(--template-frame-height, 0)) * 100%)',
           minHeight: '100%',
           ...(background ? {backgroundColor: background} : {}),

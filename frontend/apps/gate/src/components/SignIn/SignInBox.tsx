@@ -5,7 +5,7 @@ import {useDesign, FlowComponentRenderer, AuthCardLayout} from '@thunderid/desig
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
 import {EmbeddedFlowComponentType, SignIn, type EmbeddedFlowComponent} from '@thunderid/react';
 import {EMAIL_REGEX, TemplateLiteralType} from '@thunderid/utils';
-import {Box, Alert, CircularProgress} from '@wso2/oxygen-ui';
+import {Box, Alert, CircularProgress, Link, Typography} from '@wso2/oxygen-ui';
 import {useEffect, useRef, useState} from 'react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -141,8 +141,8 @@ export default function SignInBox(): JSX.Element {
       logoDisplay={!isDesignEnabled ? {xs: 'flex', md: 'none'} : {display: 'none'}}
     >
       <SignIn>
-        {({onSubmit, isLoading, components, error, isInitialized, meta: flowMeta, additionalData}) =>
-          (isLoading ?? !isInitialized) ? (
+        {({onSubmit, isLoading, components, error, meta: flowMeta, additionalData}) =>
+          isLoading && !components?.length ? (
             <Box sx={{display: 'flex', justifyContent: 'center', p: 3}}>
               <CircularProgress />
             </Box>
@@ -150,7 +150,11 @@ export default function SignInBox(): JSX.Element {
             <>
               {error && (
                 <Alert severity="error" sx={{mb: 2}}>
-                  {error.message ?? t('signin:errors.signin.failed.description')}
+                  {error.message ??
+                    t(
+                      'signin:errors.signin.failed.description',
+                      'We are sorry, something has gone wrong here. Please try again.',
+                    )}
                 </Alert>
               )}
               {(() => {
@@ -196,6 +200,30 @@ export default function SignInBox(): JSX.Element {
                         />
                       ))}
                     </Box>
+                  );
+                }
+
+                // Terminal failure with nothing to render. A spinner here would look like loading,
+                // so offer the way back to the application instead.
+                if (error) {
+                  const applicationUrl = flowMeta?.application?.url;
+                  if (!applicationUrl) {
+                    // No application URL to link back to, so at least tell the user what to do.
+                    return (
+                      <Typography sx={{textAlign: 'center', p: 1}}>
+                        {t(
+                          'signin:errors.signin.returnToApplicationUnavailable',
+                          'Please return to the application and try again.',
+                        )}
+                      </Typography>
+                    );
+                  }
+                  return (
+                    <Typography sx={{textAlign: 'center', p: 1}}>
+                      <Link href={applicationUrl}>
+                        {t('signin:errors.signin.returnToApplication', 'Return to application')}
+                      </Link>
+                    </Typography>
                   );
                 }
 
