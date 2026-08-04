@@ -55,7 +55,7 @@ export const AUTH_FLOW_GRAPHS = {
 
 /**
  * Registration flow graph identifiers that define the available user registration flows
- * supported by the identity management platform.
+ * supported by the IAM stack.
  *
  * These graph IDs correspond to pre-configured registration flow definitions in the backend
  * that orchestrate the user onboarding process based on the selected registration methods

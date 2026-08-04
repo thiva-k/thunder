@@ -4,7 +4,7 @@
 apiVersion: v2
 name: thunderid
 description: |
-  Umbrella Helm chart for the ThunderID Identity Provider on OpenChoreo.
+  Umbrella Helm chart for ThunderID, an open-source IAM stack, on OpenChoreo.
 
   Sub-charts:
     thunderid-oc-componenttype  — Registers the ComponentType (or ClusterComponentType) once

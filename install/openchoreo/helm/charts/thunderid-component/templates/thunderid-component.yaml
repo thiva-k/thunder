@@ -7,7 +7,7 @@ kind: Component
 metadata:
   name: {{ .Values.componentName }}
   annotations:
-    openchoreo.dev/description: "ThunderID Identity Management Service"
+    openchoreo.dev/description: "ThunderID, an open-source IAM stack"
     openchoreo.dev/display-name: "ThunderID"
 spec:
   owner:

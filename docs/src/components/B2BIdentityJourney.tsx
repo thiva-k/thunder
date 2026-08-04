@@ -65,7 +65,7 @@ const journeySteps: JourneyStep[] = [
   },
   {
     title: 'Prepare for Agent Access',
-    scenario: 'Extend the same organization boundary to AI agents and workloads.',
+    scenario: 'Extend the same organization boundary to AI agents and machines.',
     thunder: 'Uses the same workspace and policy model for future agent identity and control.',
     flow: ['Organization boundary', 'Agent identity added', 'Policy-based access'],
   },

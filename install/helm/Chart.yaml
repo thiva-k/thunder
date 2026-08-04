@@ -3,7 +3,7 @@
 
 apiVersion: v2
 name: thunderid
-description: A Helm chart for ThunderID - Lightweight user and identity management system
+description: A Helm chart for ThunderID - Open-source IAM stack
 type: application
 version: 0.48.0
 appVersion: "0.48.0"

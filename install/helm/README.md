@@ -1,6 +1,6 @@
 # ThunderID Helm Chart
 
-This repository contains the Helm chart for ThunderID, a lightweight user and identity management system designed for modern application development.
+This repository contains the Helm chart for ThunderID, an open-source IAM stack designed for modern application development.
 
 ## Configuration Value Types
 

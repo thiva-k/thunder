@@ -4,7 +4,7 @@
 apiVersion: v2
 name: thunderid-component
 description: |
-  ThunderID Identity Provider component resources for OpenChoreo.
+  Component resources for ThunderID, an open-source IAM stack, on OpenChoreo.
   Deploys the Component, Workload, ComponentRelease, ReleaseBinding,
   and supporting platform resources. Requires the thunderid-oc-componenttype
   chart (or an equivalent ClusterComponentType) to be installed first.

@@ -235,7 +235,7 @@ export default function HeroSection(): JSX.Element {
                 animation: 'fadeInUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.2s both',
               }}
             >
-              Authentication, authorization, and identity for humans, AI agents, and workloads.
+              Authentication, authorization, and identity for humans, AI agents, and machines.
             </Typography>
 
             <Stack

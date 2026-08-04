@@ -1,6 +1,6 @@
 # ThunderID Helm Chart
 
-This Helm chart deploys ThunderID Identity Management Service on the OpenChoreo platform. ThunderID provides OAuth2, OpenID Connect, and other identity protocols.
+This Helm chart deploys ThunderID, an open-source IAM stack, on the OpenChoreo platform. ThunderID provides OAuth2, OpenID Connect, and other identity protocols.
 
 ## Overview
 

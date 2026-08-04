@@ -8,7 +8,7 @@ metadata:
   name: thunderid
   annotations:
     openchoreo.dev/description: >-
-      ThunderID Identity Provider, provisioned fully declaratively: all
+      ThunderID, an open-source IAM stack, provisioned fully declaratively: all
       resources (organization units, user types, applications, flows, users)
       come from the declarativeResources parameter. Runs on the bundled
       SQLite databases by default (ephemeral, development only) or an
