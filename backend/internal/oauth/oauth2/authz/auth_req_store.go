@@ -32,11 +32,18 @@ type authorizationRequestStore struct {
 	validityPeriod time.Duration
 }
 
-// newAuthorizationRequestStore creates a new instance of authorizationRequestStore with injected dependencies.
-func newAuthorizationRequestStore(storeProvider providers.RuntimeStoreProvider) authorizationRequestStoreInterface {
+// newAuthorizationRequestStore creates a new instance of authorizationRequestStore with injected
+// dependencies. A non-positive validityPeriodSeconds falls back to defaultAuthzRequestValidity.
+func newAuthorizationRequestStore(
+	storeProvider providers.RuntimeStoreProvider, validityPeriodSeconds int64) authorizationRequestStoreInterface {
+	validityPeriod := defaultAuthzRequestValidity
+	if validityPeriodSeconds > 0 {
+		validityPeriod = time.Duration(validityPeriodSeconds) * time.Second
+	}
+
 	return &authorizationRequestStore{
 		storeProvider:  storeProvider,
-		validityPeriod: 10 * time.Minute,
+		validityPeriod: validityPeriod,
 	}
 }
 

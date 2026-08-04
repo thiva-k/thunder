@@ -28,7 +28,7 @@ func Initialize(
 	transactioner providers.Transactioner,
 ) (AuthorizeServiceInterface, error) {
 	authzCodeStore := newAuthorizationCodeStore(storeProvider)
-	authzReqStore := newAuthorizationRequestStore(storeProvider)
+	authzReqStore := newAuthorizationRequestStore(storeProvider, cfg.OAuth.AuthorizationRequest.ValidityPeriod)
 
 	authzService := newAuthorizeService(
 		actorProvider, resourceService, jwtService, flowExecService,

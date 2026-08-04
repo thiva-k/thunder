@@ -235,6 +235,8 @@ oauth:
     validity_period: {{ .Values.configuration.oauth.refreshToken.validityPeriod }}
   authorization_code:
     validity_period: {{ .Values.configuration.oauth.authorizationCode.validityPeriod }}
+  authorization_request:
+    validity_period: {{ .Values.configuration.oauth.authorizationRequest.validityPeriod }}
   dcr:
     enabled: {{ .Values.configuration.oauth.dcr.enabled }}
     insecure: {{ .Values.configuration.oauth.dcr.insecure }}

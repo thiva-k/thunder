@@ -172,6 +172,13 @@ type AuthorizationCodeConfig struct {
 	ValidityPeriod int64 `yaml:"validity_period" json:"validity_period"`
 }
 
+// AuthorizationRequestConfig holds the authorization request context configuration details.
+type AuthorizationRequestConfig struct {
+	// ValidityPeriod is how long (in seconds) the authorization request context survives while the
+	// user completes the login flow at the gate.
+	ValidityPeriod int64 `yaml:"validity_period" json:"validity_period"`
+}
+
 // DCRConfig holds the Dynamic Client Registration configuration.
 type DCRConfig struct {
 	Enabled  *bool `yaml:"enabled" json:"enabled"`
@@ -206,15 +213,16 @@ type CIBAConfig struct {
 
 // OAuthConfig holds the OAuth configuration details.
 type OAuthConfig struct {
-	RefreshToken      RefreshTokenConfig      `yaml:"refresh_token"               json:"refresh_token"`
-	AuthorizationCode AuthorizationCodeConfig `yaml:"authorization_code"          json:"authorization_code"`
-	DCR               DCRConfig               `yaml:"dcr"                         json:"dcr"`
-	PAR               PARConfig               `yaml:"par"                         json:"par"`
-	DPoP              DPoPConfig              `yaml:"dpop"                        json:"dpop"`
-	AuthClass         AuthClassConfig         `yaml:"auth_class"                  json:"auth_class"`
-	CIBA              CIBAConfig              `yaml:"ciba"                        json:"ciba"`
-	Revocation        RevocationConfig        `yaml:"revocation"                  json:"revocation"`
-	TokenExchange     TokenExchangeConfig     `yaml:"token_exchange"              json:"token_exchange"`
+	RefreshToken         RefreshTokenConfig         `yaml:"refresh_token"               json:"refresh_token"`
+	AuthorizationCode    AuthorizationCodeConfig    `yaml:"authorization_code"          json:"authorization_code"`
+	AuthorizationRequest AuthorizationRequestConfig `yaml:"authorization_request"       json:"authorization_request"`
+	DCR                  DCRConfig                  `yaml:"dcr"                         json:"dcr"`
+	PAR                  PARConfig                  `yaml:"par"                         json:"par"`
+	DPoP                 DPoPConfig                 `yaml:"dpop"                        json:"dpop"`
+	AuthClass            AuthClassConfig            `yaml:"auth_class"                  json:"auth_class"`
+	CIBA                 CIBAConfig                 `yaml:"ciba"                        json:"ciba"`
+	Revocation           RevocationConfig           `yaml:"revocation"                  json:"revocation"`
+	TokenExchange        TokenExchangeConfig        `yaml:"token_exchange"              json:"token_exchange"`
 	// AllowWildcardRedirectURI enables wildcard pattern matching for redirect URIs.
 	// When false (default), only exact redirect URI matching is performed.
 	AllowWildcardRedirectURI bool `yaml:"allow_wildcard_redirect_uri" json:"allow_wildcard_redirect_uri"`
