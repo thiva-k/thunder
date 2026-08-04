@@ -18,18 +18,23 @@ type TranslateFn = (key: string, options?: {defaultValue: string}) => string;
  * @param error - The error thrown by the mutation
  * @param t - The i18next translation function scoped to the relevant namespace
  * @param fallbackKey - i18n key to use when no specific message is found (e.g. `'create.error'`)
+ * @param fallbackDefaultValue - Default string for `fallbackKey`, per the i18n Fallback Values convention, so a
+ *   missing locale key degrades to readable text instead of the raw key
  * @returns Localized error message string
  *
  * @example
  * ```typescript
- * onError: (error) => {
- *   showToast(getErrorMessage(error, t, 'create.error'), 'error');
- * }
+ * setError(getErrorMessage(error, t, 'create.error', 'Failed to create application. Please try again.'));
  * ```
  *
  * @public
  */
-export default function getErrorMessage(error: Error, t: TranslateFn, fallbackKey: string): string {
+export default function getErrorMessage(
+  error: Error,
+  t: TranslateFn,
+  fallbackKey: string,
+  fallbackDefaultValue?: string,
+): string {
   const apiError = (error as {response?: {data?: ApiError}}).response?.data;
 
   if (apiError?.code) {
@@ -38,6 +43,10 @@ export default function getErrorMessage(error: Error, t: TranslateFn, fallbackKe
     if (specific) {
       return specific;
     }
+  }
+
+  if (fallbackDefaultValue !== undefined) {
+    return t(fallbackKey, {defaultValue: fallbackDefaultValue});
   }
 
   return t(fallbackKey);

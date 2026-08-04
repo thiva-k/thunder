@@ -37,6 +37,44 @@ Every route destination is centralized in a per-app `RouteConfig` (`frontend/app
 - Adding a new route means updating `RouteConfig` (or a package's `routes/types.ts`) first, then consuming it — never
   add a `navigate('/new/path')` call without registering the path there.
 
+## Error Display
+
+Failed writes belong inline, next to the form or action that failed. Failed reads belong wherever the missing data was
+going to render. `useToast` from `@thunderid/contexts` is for confirmations, and for failures that have nowhere on the
+page to live.
+
+- A mutation failure renders inline wherever the action has a form or dialog — create wizards, edit pages, and confirm
+  dialogs. Put an `<Alert severity="error">` beside the submit control, driven off the mutation's own `error` state. The
+  user has to read the reason, correct an input, and retry, and a toast dismisses itself before that. Some messages are
+  long and interpolated (e.g. `errors.APP-1039`) and do not fit a snackbar at all.
+- Do not put the error toast in the mutation hook. A hook cannot know whether its caller has somewhere to show the
+  message, and a hook-level `onError` plus a call-site one is the standard way duplicates get introduced. Hooks keep
+  their `onSuccess` toast; failures are the caller's decision.
+- Mutations fired straight from a row action, toggle, or menu item may toast, because there is no form to attach to and
+  no dialog to keep open. Decide by asking where the user's attention already is and whether they need the text to
+  persist while they fix something, not by the HTTP verb.
+- Mutation successes stay toasts — `showToast(t('create.success'), 'success')` in the hook's `onSuccess`. That is
+  already the pattern in every `use{Create,Update,Delete}*` hook.
+- Read failures follow the data. If the failed query is the surface's primary content (a detail page, a list, a tab
+  body), render the error in place of that content with a way to retry. If the query is secondary and the page is still
+  usable without it (a picker's options, an optional count, a background prefetch), a toast is right, because there is
+  nowhere natural to put it inline. React Query has no query `onError`, so a query hook cannot toast on its own —
+  reaching for one means adding a render-phase or effect watcher on `isError`, which is a signal the error belongs
+  inline instead.
+- Clear an inline error as soon as the user acts on it. Any change to the form invalidates the message, so a
+  duplicate-name error must disappear when the name is edited rather than sitting there contradicting the field. Reset
+  the mutation (`mutation.reset()`) or the local error state from whatever the form's field-change path is, and on
+  cancel or reset too. A stale error next to a now-valid form is worse than no error.
+- Resolve every message through the error catalog: `getErrorMessage` from `@thunderid/utils`, or a feature-specific
+  wrapper such as `getApplicationErrorMessage`, so a backend error code maps to `errors.<CODE>` with a generic fallback
+  key. Pass the fallback's default string too, per the i18n Fallback Values rule below, so a missing key degrades to
+  readable English instead of rendering `create.error` at the user. Never render a raw `error.message` — that is
+  unlocalized backend text.
+- Keep one surface per failure. TanStack Query fires both `useMutation({onError})` and the per-call
+  `mutate(vars, {onError})`, so defining an error surface in both is how duplicates appear. Two toasts for one failure
+  are worse than visibly duplicated: the second silently replaces the first, since `ToastProvider` holds only one
+  message at a time, so the user may never see the specific one.
+
 ## Build & Test
 
 Use `make` / `pnpm` targets, not Nx (frontend build tooling is migrating to Turborepo).

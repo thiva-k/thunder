@@ -14,18 +14,23 @@ const LABELS: Record<string, string> = {
   'update.error': 'Failed to update the application.',
 };
 
-const t = (key: string, options?: Record<string, unknown>): string => {
-  const template = LABELS[key] ?? '';
+function makeT(labels: Record<string, string>) {
+  return (key: string, options?: Record<string, unknown>): string => {
+    const template = labels[key] ?? (typeof options?.defaultValue === 'string' ? options.defaultValue : '');
 
-  if (!options) {
-    return template;
-  }
+    if (!options) {
+      return template;
+    }
 
-  return Object.entries(options).reduce(
-    (message, [name, value]) => message.replaceAll(`{{${name}}}`, String(value)),
-    template,
-  );
-};
+    return Object.entries(options).reduce(
+      (message, [name, value]) =>
+        name === 'defaultValue' ? message : message.replaceAll(`{{${name}}}`, String(value)),
+      template,
+    );
+  };
+}
+
+const t = makeT(LABELS);
 
 function apiErrorFor(code: string, params?: {sourceFlowType?: string; flowType?: string}): Error {
   return {
@@ -77,5 +82,34 @@ describe('getApplicationErrorMessage', () => {
     const error = new Error('Network Error');
 
     expect(getApplicationErrorMessage(error, t, 'update.error')).toBe('Failed to update the application.');
+  });
+
+  it('uses fallbackDefaultValue for the generic message when the fallback key is missing', () => {
+    const withoutFallback = Object.fromEntries(Object.entries(LABELS).filter(([key]) => key !== 'update.error'));
+    const error = apiErrorFor('APP-1020');
+
+    expect(
+      getApplicationErrorMessage(error, makeT(withoutFallback), 'update.error', 'Failed to update application.'),
+    ).toBe('Failed to update application.');
+  });
+
+  it('uses fallbackDefaultValue when APP-1039 has no params and the fallback key is missing', () => {
+    const withoutFallback = Object.fromEntries(Object.entries(LABELS).filter(([key]) => key !== 'update.error'));
+    const error = apiErrorFor('APP-1039');
+
+    expect(
+      getApplicationErrorMessage(error, makeT(withoutFallback), 'update.error', 'Failed to update application.'),
+    ).toBe('Failed to update application.');
+  });
+
+  it('resolves flow labels from their own defaultValue when the label keys are missing', () => {
+    const withoutLabels = Object.fromEntries(
+      Object.entries(LABELS).filter(([key]) => !key.startsWith('edit.flows.labels')),
+    );
+    const error = apiErrorFor('APP-1039', {sourceFlowType: 'registration', flowType: 'authentication'});
+
+    expect(getApplicationErrorMessage(error, makeT(withoutLabels), 'update.error')).toBe(
+      "The Sign-up Flow references a different Sign-in Flow than the one configured for this application. Update the Sign-up Flow so it calls the same Sign-in Flow, or change the application's Sign-in Flow configuration.",
+    );
   });
 });

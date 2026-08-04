@@ -30,29 +30,35 @@ vi.mock('react-router', async () => {
   };
 });
 
+const APPLICATIONS_TRANSLATIONS: Record<string, string> = {
+  'applications:edit.page.back': 'Back to Applications',
+  'applications:edit.page.logoUpdate.label': 'Update Logo',
+  'applications:edit.page.loading': 'Loading application...',
+  'applications:edit.page.notFound.title': 'Application Not Found',
+  'applications:edit.page.notFound.description': 'The application you are looking for does not exist.',
+  'applications:edit.page.description.placeholder': 'Add a description',
+  'applications:edit.page.description.empty': 'No description provided',
+  'applications:edit.page.tabs.overview': 'Overview',
+  'applications:edit.page.tabs.general': 'General',
+  'applications:edit.page.tabs.flows': 'Flows',
+  'applications:edit.page.tabs.customization': 'Customization',
+  'applications:edit.page.tabs.token': 'Token',
+  'applications:edit.page.tabs.advanced': 'Advanced Settings',
+  'applications:edit.page.unsavedChanges': 'You have unsaved changes',
+  'applications:edit.page.reset': 'Reset',
+  'applications:edit.page.save': 'Save Changes',
+  'applications:edit.page.saving': 'Saving...',
+  'applications:update.error': 'Failed to update application. Please try again.',
+  'applications:errors.APP-1020': 'An application with this name already exists. Choose a different name.',
+};
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        'applications:edit.page.back': 'Back to Applications',
-        'applications:edit.page.logoUpdate.label': 'Update Logo',
-        'applications:edit.page.loading': 'Loading application...',
-        'applications:edit.page.notFound.title': 'Application Not Found',
-        'applications:edit.page.notFound.description': 'The application you are looking for does not exist.',
-        'applications:edit.page.description.placeholder': 'Add a description',
-        'applications:edit.page.description.empty': 'No description provided',
-        'applications:edit.page.tabs.overview': 'Overview',
-        'applications:edit.page.tabs.general': 'General',
-        'applications:edit.page.tabs.flows': 'Flows',
-        'applications:edit.page.tabs.customization': 'Customization',
-        'applications:edit.page.tabs.token': 'Token',
-        'applications:edit.page.tabs.advanced': 'Advanced Settings',
-        'applications:edit.page.unsavedChanges': 'You have unsaved changes',
-        'applications:edit.page.reset': 'Reset',
-        'applications:edit.page.save': 'Save Changes',
-        'applications:edit.page.saving': 'Saving...',
-      };
-      return translations[key] || key;
+    t: (key: string, fallbackOrOptions?: string | {defaultValue?: string}) => {
+      if (APPLICATIONS_TRANSLATIONS[key] !== undefined) return APPLICATIONS_TRANSLATIONS[key];
+      if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
+      if (fallbackOrOptions && 'defaultValue' in fallbackOrOptions) return fallbackOrOptions.defaultValue ?? key;
+      return key;
     },
   }),
 }));
@@ -156,6 +162,7 @@ vi.mock('@thunderid/components', async () => {
         savingLabel,
         isSaving,
         saveDisabled,
+        error,
         onReset,
         onSave,
       }: {
@@ -165,10 +172,12 @@ vi.mock('@thunderid/components', async () => {
         savingLabel: string;
         isSaving: boolean;
         saveDisabled?: boolean;
+        error?: string;
         onReset: () => void;
         onSave: () => void;
       }) => (
         <div data-testid="unsaved-changes-bar">
+          {error && <div role="alert">{error}</div>}
           <span>{message}</span>
           <button type="button" onClick={onReset}>
             {resetLabel}
@@ -329,6 +338,7 @@ describe('ApplicationEditPage', () => {
       isPending: false,
       isError: false,
       error: null,
+      reset: vi.fn(),
     } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
   });
 
@@ -845,7 +855,7 @@ describe('ApplicationEditPage', () => {
       await user.type(nameInput, 'Updated Application{Enter}');
 
       await waitFor(() => {
-        expect(screen.getByText('applications:edit.page.validation.missingRedirectUri')).toBeInTheDocument();
+        expect(screen.getByText(/A redirect URI is required\./)).toBeInTheDocument();
       });
       expect(screen.getByRole('button', {name: /save changes/i})).toBeDisabled();
     });
@@ -865,7 +875,11 @@ describe('ApplicationEditPage', () => {
 
       await user.click(screen.getByRole('tab', {name: /flows/i}));
 
-      expect(screen.getByText('applications:edit.userAccessLock.message')).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'These settings apply only to user-facing flows. Enable a user-facing grant (e.g. authorization code) in the Advanced tab to configure them.',
+        ),
+      ).toBeInTheDocument();
     });
 
     it('should display reset and save buttons in action bar', async () => {
@@ -1009,6 +1023,7 @@ describe('ApplicationEditPage', () => {
         isPending: false,
         isError: false,
         error: null,
+        reset: vi.fn(),
       } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
 
       renderComponent();
@@ -1047,6 +1062,7 @@ describe('ApplicationEditPage', () => {
         isPending: false,
         isError: false,
         error: null,
+        reset: vi.fn(),
       } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
 
       // The bump only fires after refetch() resolves
@@ -1085,6 +1101,7 @@ describe('ApplicationEditPage', () => {
         isPending: true,
         isError: false,
         error: null,
+        reset: vi.fn(),
       } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
 
       renderComponent();
@@ -1114,6 +1131,7 @@ describe('ApplicationEditPage', () => {
         isPending: false,
         isError: false,
         error: null,
+        reset: vi.fn(),
       } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
 
       renderComponent();
@@ -1236,6 +1254,7 @@ describe('ApplicationEditPage', () => {
         isPending: false,
         isError: false,
         error: null,
+        reset: vi.fn(),
       } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
 
       renderComponent();
@@ -1277,6 +1296,7 @@ describe('ApplicationEditPage', () => {
         isPending: false,
         isError: false,
         error: null,
+        reset: vi.fn(),
       } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
 
       renderComponent();
@@ -1303,6 +1323,120 @@ describe('ApplicationEditPage', () => {
 
       // Restore original mock
       (useParams as ReturnType<typeof vi.fn>).mockReturnValue({applicationId: 'test-app-id'});
+    });
+
+    it('should display an update error inline in the save bar, not a toast', async () => {
+      const user = userEvent.setup();
+      const mockReset = vi.fn();
+
+      mockUseUpdateApplication.mockReturnValue({
+        mutate: mockUpdateApplicationMutate,
+        mutateAsync: vi.fn(),
+        isPending: false,
+        isError: true,
+        error: Object.assign(new Error('Request failed'), {response: {data: {code: 'APP-1020'}}}),
+        reset: mockReset,
+      } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
+
+      renderComponent();
+
+      // Make a change to trigger the floating save bar
+      const nameSection = screen.getByText('Test Application').closest('div');
+      const editButton = nameSection?.querySelector('button');
+      await user.click(editButton!);
+
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Application{Enter}');
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('An application with this name already exists. Choose a different name.'),
+        ).toBeInTheDocument();
+      });
+    });
+
+    it('should clear the update error when Reset is clicked', async () => {
+      const user = userEvent.setup();
+      const mockReset = vi.fn();
+
+      mockUseUpdateApplication.mockReturnValue({
+        mutate: mockUpdateApplicationMutate,
+        mutateAsync: vi.fn(),
+        isPending: false,
+        isError: true,
+        error: new Error('Request failed'),
+        reset: mockReset,
+      } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
+
+      renderComponent();
+
+      const nameSection = screen.getByText('Test Application').closest('div');
+      const editButton = nameSection?.querySelector('button');
+      await user.click(editButton!);
+
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Application{Enter}');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: /reset/i})).toBeInTheDocument();
+      });
+
+      const resetButton = screen.getByRole('button', {name: /reset/i});
+      await user.click(resetButton);
+
+      expect(mockReset).toHaveBeenCalled();
+    });
+
+    it('should clear a stale update error as soon as another field changes', async () => {
+      const user = userEvent.setup();
+      const mockReset = vi.fn();
+
+      mockUseUpdateApplication.mockReturnValue({
+        mutate: mockUpdateApplicationMutate,
+        mutateAsync: vi.fn(),
+        isPending: false,
+        isError: true,
+        error: new Error('Request failed'),
+        reset: mockReset,
+      } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
+
+      renderComponent();
+
+      const nameSection = screen.getByText('Test Application').closest('div');
+      const editButton = nameSection?.querySelector('button');
+      await user.click(editButton!);
+
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Updated Application{Enter}');
+
+      expect(mockReset).toHaveBeenCalled();
+    });
+
+    it('should clear a stale update error when the logo changes', async () => {
+      const user = userEvent.setup();
+      const mockReset = vi.fn();
+
+      mockUseUpdateApplication.mockReturnValue({
+        mutate: mockUpdateApplicationMutate,
+        mutateAsync: vi.fn(),
+        isPending: false,
+        isError: true,
+        error: new Error('Request failed'),
+        reset: mockReset,
+      } as unknown as UseMutationResult<Application, Error, Partial<Application>>);
+
+      renderComponent();
+
+      // The logo goes through ResourceAvatar.onSelect, which sets editedApp directly rather than
+      // going through handleFieldChange, so it needs its own reset.
+      await user.click(screen.getByRole('img'));
+      const modal = screen.getByTestId('emoji-picker');
+      await user.click(within(modal).getByRole('button', {name: /select icon/i}));
+
+      expect(mockReset).toHaveBeenCalled();
     });
   });
 
