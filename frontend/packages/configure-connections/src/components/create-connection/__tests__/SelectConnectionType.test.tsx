@@ -16,7 +16,7 @@ describe('SelectConnectionType', () => {
     expect(screen.getByTestId('connection-type-option-oidc')).toBeInTheDocument();
     expect(screen.getByTestId('connection-type-option-oauth')).toBeInTheDocument();
     expect(screen.getByTestId('connection-type-option-trusted-idp')).toBeInTheDocument();
-    expect(screen.getByTestId('connection-type-option-custom-sms')).toBeInTheDocument();
+    expect(screen.getByTestId('connection-type-option-sms-gateway')).toBeInTheDocument();
   });
 
   it('selects the OIDC type when clicked', () => {
@@ -31,10 +31,10 @@ describe('SelectConnectionType', () => {
     expect(onSelect).toHaveBeenCalledWith('oauth');
   });
 
-  it('does not select the disabled Custom SMS gateway option', () => {
+  it('selects the SMS gateway type when clicked', () => {
     render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
-    fireEvent.click(screen.getByTestId('connection-type-option-custom-sms'));
-    expect(onSelect).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('connection-type-option-sms-gateway'));
+    expect(onSelect).toHaveBeenCalledWith('sms-gateway');
   });
 
   it('selects the Trusted Token Issuer type when clicked', () => {
@@ -43,12 +43,12 @@ describe('SelectConnectionType', () => {
     expect(onSelect).toHaveBeenCalledWith('trusted-idp');
   });
 
-  it('renders the Trusted Token Issuer option before the coming-soon SMS gateway option', () => {
+  it('renders the Trusted Token Issuer option before the SMS gateway option', () => {
     render(<SelectConnectionType selectedType={null} onSelect={onSelect} />);
 
     const optionIds = screen.getAllByTestId(/^connection-type-option-/).map((el) => el.getAttribute('data-testid'));
     expect(optionIds.indexOf('connection-type-option-trusted-idp')).toBeLessThan(
-      optionIds.indexOf('connection-type-option-custom-sms'),
+      optionIds.indexOf('connection-type-option-sms-gateway'),
     );
   });
 });

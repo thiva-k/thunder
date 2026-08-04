@@ -74,5 +74,39 @@ describe('fieldsForMode', () => {
   it('does not hide any SMS vendor fields on create', () => {
     expect(fieldNames(ConnectionTypes.TWILIO, 'create')).toEqual(fieldNames(ConnectionTypes.TWILIO, 'edit'));
     expect(fieldNames(ConnectionTypes.VONAGE, 'create')).toEqual(fieldNames(ConnectionTypes.VONAGE, 'edit'));
+    expect(fieldNames(ConnectionTypes.SMS_GATEWAY, 'create')).toEqual([
+      'name',
+      'url',
+      'httpMethod',
+      'contentType',
+      'httpHeaders',
+    ]);
+    expect(fieldNames(ConnectionTypes.SMS_GATEWAY, 'create')).toEqual(fieldNames(ConnectionTypes.SMS_GATEWAY, 'edit'));
+  });
+
+  it('offers the SMS gateway method and content type as selects with the API-accepted values', () => {
+    const fields = fieldsForMode(ConnectionTypes.SMS_GATEWAY, 'create');
+    const httpMethod = fields.find((field) => field.name === 'httpMethod');
+    const contentType = fields.find((field) => field.name === 'contentType');
+
+    expect(httpMethod).toMatchObject({kind: 'select', defaultValue: 'POST'});
+    expect(httpMethod?.options?.map((option) => option.value)).toEqual(['POST', 'GET']);
+    expect(contentType).toMatchObject({kind: 'select', defaultValue: 'JSON'});
+    expect(contentType?.options?.map((option) => option.value)).toEqual(['JSON', 'FORM']);
+  });
+
+  it('marks only name and the gateway URL required, matching the API contract', () => {
+    const required: string[] = fieldsForMode(ConnectionTypes.SMS_GATEWAY, 'create')
+      .filter((field) => field.required)
+      .map((field) => field.name);
+
+    expect(required).toEqual(['name', 'url']);
+  });
+
+  it('edits SMS gateway headers as key-value rows rather than one packed string', () => {
+    const headers = fieldsForMode(ConnectionTypes.SMS_GATEWAY, 'create').find((field) => field.name === 'httpHeaders');
+
+    expect(headers).toMatchObject({kind: 'key-value', addLabelKey: 'connections:form.fields.httpHeaders.add'});
+    expect(headers?.required).toBeUndefined();
   });
 });

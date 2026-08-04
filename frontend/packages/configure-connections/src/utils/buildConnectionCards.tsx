@@ -37,7 +37,7 @@ function isTrustedIdpInstance(instance: ConnectionInstance): boolean {
  * - custom vendors with no instances → no card (creation goes through the custom-connection
  *   wizard entry point).
  * - coming-soon vendors → one static, non-interactive card.
- * - instances whose type has no vendor meta (e.g. custom SMS gateway senders) are not rendered.
+ * - instances whose type has no vendor meta are not rendered.
  *
  * Pure function — no i18n, no hooks — so it is trivially unit-testable. The card carries a
  * `descriptionKey`; the rendering component resolves it.

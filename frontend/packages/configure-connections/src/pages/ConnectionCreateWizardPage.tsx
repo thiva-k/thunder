@@ -52,9 +52,9 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
 
   const isTrustedIdp: boolean = selectedType === 'trusted-idp';
 
-  // Defaults to OIDC before the user picks a type on the first step; the SMS placeholder is
-  // disabled and unselectable, and the trusted-idp pseudo-type renders via TrustedIssuerCreateForm
-  // instead, so this is only read when rendering the generic configure step.
+  // Defaults to OIDC before the user picks a type on the first step; the trusted-idp pseudo-type
+  // renders via TrustedIssuerCreateForm instead, so this is only read when rendering the generic
+  // configure step.
   const activeType: ConnectionType =
     selectedType && selectedType !== 'trusted-idp' ? selectedType : ConnectionTypes.OIDC;
   const createMutation = useCreateConnection(activeType);
@@ -63,6 +63,9 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
   const createFields = useMemo(() => fieldsForMode(activeType, 'create'), [activeType]);
   const redirectUri = getGateCallbackUrl();
   const emptyValues = useMemo(() => emptyFormValues(fields, redirectUri), [fields, redirectUri]);
+
+  // Only federated login providers carry a redirect URI to register with the provider.
+  const usesRedirectUri: boolean = fields.some((field) => field.name === 'redirectUri');
 
   const trimmedName: string = connectionName.trim();
   const values: ConnectionFormValues = {...emptyValues, ...editedValues, name: trimmedName};
@@ -174,13 +177,15 @@ export default function ConnectionCreateWizardPage(): JSX.Element {
             </Typography>
           </Stack>
 
-          <ConnectionCreateHint
-            instruction={t(
-              'wizard.configure.redirectHint',
-              'Register the redirect URI below with your identity provider as an allowed callback URL, then enter the credentials and endpoints it gives you.',
-            )}
-            redirectUri={redirectUri}
-          />
+          {usesRedirectUri && (
+            <ConnectionCreateHint
+              instruction={t(
+                'wizard.configure.redirectHint',
+                'Register the redirect URI below with your identity provider as an allowed callback URL, then enter the credentials and endpoints it gives you.',
+              )}
+              redirectUri={redirectUri}
+            />
+          )}
 
           <Paper variant="outlined" sx={{p: 3}}>
             <ConnectionForm

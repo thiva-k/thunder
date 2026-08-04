@@ -14,6 +14,7 @@ import {
 const GOOGLE_FIELDS = CONNECTION_FORM_FIELDS.google;
 const OIDC_FIELDS = CONNECTION_FORM_FIELDS.oidc;
 const TWILIO_FIELDS = CONNECTION_FORM_FIELDS.twilio;
+const SMS_GATEWAY_FIELDS = CONNECTION_FORM_FIELDS['sms-gateway'];
 const REDIRECT = 'https://id.acme.io/oauth/callback/google';
 const VALID_ACCOUNT_SID = `AC${'a1b2c3d4e5f6'.repeat(2)}01234567`;
 
@@ -24,6 +25,14 @@ describe('emptyFormValues', () => {
     expect(values.name).toBe('');
     expect(values.clientId).toBe('');
     expect(values.clientSecret).toBe('');
+  });
+
+  it('prefills fields that declare a default value', () => {
+    const values = emptyFormValues(SMS_GATEWAY_FIELDS, REDIRECT);
+    expect(values.httpMethod).toBe('POST');
+    expect(values.contentType).toBe('JSON');
+    expect(values.url).toBe('');
+    expect(values.httpHeaders).toBe('');
   });
 });
 
@@ -97,6 +106,37 @@ describe('formValuesToRequest', () => {
       {mode: 'create'},
     ) as unknown as Record<string, unknown>;
     expect(payload.trustedTokenAudience).toBe('my-external-client-id');
+  });
+
+  it('sends the SMS gateway transport fields and omits empty optional headers', () => {
+    const payload = formValuesToRequest(
+      {name: 'Custom SMS Sender', url: 'https://sms.example.com/send', httpMethod: 'POST', contentType: 'JSON'},
+      SMS_GATEWAY_FIELDS,
+      {mode: 'create'},
+    ) as unknown as Record<string, unknown>;
+
+    expect(payload).toEqual({
+      name: 'Custom SMS Sender',
+      url: 'https://sms.example.com/send',
+      httpMethod: 'POST',
+      contentType: 'JSON',
+    });
+  });
+
+  it('still sends the SMS gateway transport defaults now that neither field is required', () => {
+    const values = {
+      ...emptyFormValues(SMS_GATEWAY_FIELDS, REDIRECT),
+      name: 'Custom SMS Sender',
+      url: 'https://sms.example.com/send',
+    };
+
+    expect(validateConnectionForm(values, SMS_GATEWAY_FIELDS, 'create')).toEqual({});
+    expect(formValuesToRequest(values, SMS_GATEWAY_FIELDS, {mode: 'create'})).toEqual({
+      name: 'Custom SMS Sender',
+      url: 'https://sms.example.com/send',
+      httpMethod: 'POST',
+      contentType: 'JSON',
+    });
   });
 
   it('omits the secret on edit when not replacing (keep stored value)', () => {

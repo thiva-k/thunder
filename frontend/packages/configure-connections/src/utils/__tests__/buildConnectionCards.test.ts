@@ -37,6 +37,15 @@ const VENDORS: ConnectionVendorMeta[] = [
     presentation: 'custom',
   },
   {
+    key: 'sms-gateway',
+    backendType: 'sms-gateway',
+    displayName: 'SMS Gateway',
+    descriptionKey: 'connections:vendor.sms-gateway.description',
+    logo: LOGO,
+    categories: ['sms', 'custom'],
+    presentation: 'custom',
+  },
+  {
     key: 'twilio',
     displayName: 'Twilio',
     descriptionKey: 'connections:vendor.twilio.description',
@@ -100,6 +109,21 @@ describe('buildConnectionCards', () => {
     expect(oidcCards[1].navTarget).toBe('/connections/oidc/b2');
   });
 
+  it('renders one card per SMS gateway instance', () => {
+    const instances: ConnectionInstance[] = [
+      {id: 's1', name: 'Prod SMS Gateway', type: 'sms-gateway', categories: ['sms-provider']},
+    ];
+    const cards = buildConnectionCards(instances, VENDORS);
+
+    expect(cards.filter((c) => c.vendorKey === 'sms-gateway')).toHaveLength(1);
+    expect(cards.find((c) => c.vendorKey === 'sms-gateway')).toMatchObject({
+      id: 'sms-gateway:s1',
+      displayName: 'Prod SMS Gateway',
+      status: 'configured',
+      navTarget: '/connections/sms-gateway/s1',
+    });
+  });
+
   it('renders no custom cards when there are no instances', () => {
     const cards = buildConnectionCards([], VENDORS);
     expect(cards.filter((c) => c.vendorKey === 'oidc')).toHaveLength(0);
@@ -107,7 +131,7 @@ describe('buildConnectionCards', () => {
 
   it('ignores instances whose type has no vendor meta', () => {
     const instances: ConnectionInstance[] = [
-      {id: 's1', name: 'Custom Gateway', type: 'sms-gateway', categories: ['sms-provider']},
+      {id: 's1', name: 'Custom Gateway', type: 'vonage', categories: ['sms-provider']},
     ];
     const cards = buildConnectionCards(instances, VENDORS);
     expect(cards.some((c) => c.displayName === 'Custom Gateway')).toBe(false);

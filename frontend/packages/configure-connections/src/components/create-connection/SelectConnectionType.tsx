@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {Box, Card, CardActionArea, CardContent, Chip, Stack, Typography} from '@wso2/oxygen-ui';
-import {ArrowLeftRight, CircleCheck, KeyRound, LogIn, Send, ShieldCheck, Webhook} from '@wso2/oxygen-ui-icons-react';
+import {
+  ArrowLeftRight,
+  CircleCheck,
+  KeyRound,
+  LogIn,
+  MessagesSquare,
+  Send,
+  ShieldCheck,
+} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {type ConnectionType, ConnectionTypes} from '../../models/connection';
@@ -62,15 +70,13 @@ export default function SelectConnectionType({selectedType, onSelect}: SelectCon
       comingSoon: false,
     },
     {
-      // Backend support (/connections/sms-gateway) is wired; the console wizard for this
-      // card is a follow-up, so it stays comingSoon here.
-      type: 'custom-sms' as ConnectionType,
+      type: ConnectionTypes.SMS_GATEWAY,
       labelKey: 'wizard.type.sms.label',
       descriptionKey: 'wizard.type.sms.description',
       tagKey: 'wizard.type.sms.tag',
-      icon: <Webhook size={28} />,
+      icon: <MessagesSquare size={28} />,
       tagIcon: <Send size={14} />,
-      comingSoon: true,
+      comingSoon: false,
     },
   ];
 
