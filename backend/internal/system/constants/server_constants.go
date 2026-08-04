@@ -67,8 +67,8 @@ const XFrameOptionsDeny = "DENY"
 // ContentSecurityPolicyHeaderName is the name of the Content-Security-Policy header used in HTTP responses.
 const ContentSecurityPolicyHeaderName = "Content-Security-Policy"
 
-// ContentSecurityPolicyFrameAncestorsNone is the CSP directive that prevents the page from being embedded in frames.
-const ContentSecurityPolicyFrameAncestorsNone = "frame-ancestors 'none'"
+// ContentSecurityPolicyReportOnlyHeaderName is the name of the Content-Security-Policy-Report-Only header.
+const ContentSecurityPolicyReportOnlyHeaderName = "Content-Security-Policy-Report-Only"
 
 // CacheControlHeaderName is the name of the cache-control header used in HTTP responses.
 const CacheControlHeaderName = "Cache-Control"
