@@ -94,4 +94,11 @@ describe('fieldsForMode', () => {
     expect(contentType).toMatchObject({kind: 'select', required: true, defaultValue: 'JSON'});
     expect(contentType?.options?.map((option) => option.value)).toEqual(['JSON', 'FORM']);
   });
+
+  it('edits SMS gateway headers as key-value rows rather than one packed string', () => {
+    const headers = fieldsForMode(ConnectionTypes.SMS_GATEWAY, 'create').find((field) => field.name === 'httpHeaders');
+
+    expect(headers).toMatchObject({kind: 'key-value', addLabelKey: 'connections:form.fields.httpHeaders.add'});
+    expect(headers?.required).toBeUndefined();
+  });
 });

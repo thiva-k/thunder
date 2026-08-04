@@ -1835,7 +1835,12 @@ const translations = {
     'form.fields.contentType.hint': 'Format of the request body sent to the gateway.',
     'form.fields.httpHeaders.label': 'HTTP headers',
     'form.fields.httpHeaders.hint':
-      'Optional headers sent with every request, as comma-separated <code>Key: value</code> pairs.',
+      'Optional headers sent with every request. Commas are not supported in a name or value.',
+    'form.fields.httpHeaders.add': 'Add header',
+    'form.keyValue.name': 'Name',
+    'form.keyValue.value': 'Value',
+    'form.keyValue.add': 'Add',
+    'form.keyValue.remove': 'Remove',
     'form.sections.federation': 'Federation',
     'form.secret.update': 'Update',
     'form.secret.keepHelp': 'Leave unchanged to keep the stored secret.',

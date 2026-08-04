@@ -18,6 +18,7 @@ import {
 } from '@wso2/oxygen-ui';
 import {type JSX, type ReactNode, useMemo, useState} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
+import KeyValuePairsField from './KeyValuePairsField';
 import MaskedSecretField from './MaskedSecretField';
 import ReadOnlyCopyField from './ReadOnlyCopyField';
 import {fieldsForMode, type ConnectionFieldDef} from '../config/connectionFormFields';
@@ -150,6 +151,18 @@ export default function ConnectionForm({
               required={mode === 'create' && field.required}
               error={fieldError(field.name)}
               hint={field.hintKey ? t(field.hintKey) : undefined}
+            />
+          );
+        } else if (field.kind === 'key-value') {
+          fieldContent = (
+            <KeyValuePairsField
+              id={`connection-field-${field.name}`}
+              label={label}
+              value={values[field.name] ?? ''}
+              onChange={(next) => setField(field.name, next)}
+              hint={field.hintKey ? renderHint(field.hintKey) : undefined}
+              namePlaceholder={field.placeholder}
+              addLabel={field.addLabelKey ? t(field.addLabelKey) : t('form.keyValue.add')}
             />
           );
         } else if (field.kind === 'select') {

@@ -3,7 +3,15 @@
 
 import {type ConnectionType, ConnectionTypes} from '../models/connection';
 
-export type ConnectionFieldKind = 'text' | 'url' | 'secret' | 'scopes' | 'readonly-copy' | 'switch' | 'select';
+export type ConnectionFieldKind =
+  | 'text'
+  | 'url'
+  | 'secret'
+  | 'scopes'
+  | 'readonly-copy'
+  | 'switch'
+  | 'select'
+  | 'key-value';
 
 /** Which form mode renders a field. Defaults to 'both' when unset. */
 export type ConnectionFieldVisibility = 'create' | 'edit' | 'both';
@@ -26,6 +34,8 @@ export interface ConnectionFieldDef {
   placeholder?: string;
   /** Choices of a 'select' field. */
   options?: ConnectionFieldOption[];
+  /** i18n key for the add-row button of a 'key-value' field. */
+  addLabelKey?: string;
   /** Value prefilled on create (and used when the API returns none). */
   defaultValue?: string;
   /** Format the value must match (checked only when non-empty). Mirrors backend validation. */
@@ -357,8 +367,9 @@ export const CONNECTION_FORM_FIELDS: Record<ConnectionType, ConnectionFieldDef[]
       name: 'httpHeaders',
       labelKey: 'connections:form.fields.httpHeaders.label',
       hintKey: 'connections:form.fields.httpHeaders.hint',
-      kind: 'text',
-      placeholder: 'X-API-Key: abc123',
+      kind: 'key-value',
+      placeholder: 'X-API-Key',
+      addLabelKey: 'connections:form.fields.httpHeaders.add',
     },
   ],
 };
