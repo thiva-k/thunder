@@ -29,12 +29,13 @@ export function parseKeyValuePairs(raw: string): KeyValuePair[] {
 }
 
 /**
- * Serialize rows back to the wire format, dropping rows with no name so a half-filled row never
- * produces a segment the backend would reject.
+ * Serialize rows back to the wire format. A row is only included when both parts are filled in, so
+ * a half-typed row never reaches the API as a segment the backend would reject or as a header with
+ * an empty value.
  */
 export function serializeKeyValuePairs(pairs: KeyValuePair[]): string {
   return pairs
-    .filter((pair) => pair.name.trim() !== '')
+    .filter((pair) => pair.name.trim() !== '' && pair.value.trim() !== '')
     .map((pair) => `${pair.name.trim()}: ${pair.value.trim()}`)
     .join(', ');
 }

@@ -36,7 +36,7 @@ describe('serializeKeyValuePairs', () => {
     ).toBe('X-API-Key: abc123, Accept: application/json');
   });
 
-  it('drops rows with no name so a half-filled row never reaches the API', () => {
+  it('drops half-filled rows so they never reach the API', () => {
     expect(
       serializeKeyValuePairs([
         {name: '', value: 'orphan'},
@@ -46,8 +46,14 @@ describe('serializeKeyValuePairs', () => {
     ).toBe('X-Real: v');
   });
 
-  it('keeps a named row with an empty value, which the backend accepts', () => {
-    expect(serializeKeyValuePairs([{name: 'X-Flag', value: ''}])).toBe('X-Flag: ');
+  it('drops a named row whose value is empty, name included', () => {
+    expect(serializeKeyValuePairs([{name: 'X-Flag', value: ''}])).toBe('');
+    expect(
+      serializeKeyValuePairs([
+        {name: 'Content-Type', value: 'application/json'},
+        {name: 'Accept', value: '   '},
+      ]),
+    ).toBe('Content-Type: application/json');
   });
 
   it('round-trips a parsed value unchanged', () => {

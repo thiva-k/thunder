@@ -299,6 +299,26 @@ describe('ConnectionForm', () => {
       expect(getConnectionField('httpHeaders-name-1')).toHaveValue('Accept');
     });
 
+    it('omits a header row whose value is empty, keeping the row on screen to finish', () => {
+      const onFieldChange = vi.fn();
+      render(<ControlledConnectionForm {...smsGatewayProps} onFieldChange={onFieldChange} />);
+
+      fireEvent.change(getConnectionField('httpHeaders-name-1'), {target: {value: 'Content-Type'}});
+      fireEvent.change(getConnectionField('httpHeaders-value-1'), {target: {value: 'application/json'}});
+      fireEvent.click(screen.getByTestId('connection-field-httpHeaders-add'));
+      fireEvent.change(getConnectionField('httpHeaders-name-2'), {target: {value: 'Accept'}});
+
+      expect(onFieldChange).toHaveBeenLastCalledWith('httpHeaders', 'Content-Type: application/json');
+      expect(getConnectionField('httpHeaders-name-2')).toHaveValue('Accept');
+
+      fireEvent.change(getConnectionField('httpHeaders-value-2'), {target: {value: 'text/plain'}});
+
+      expect(onFieldChange).toHaveBeenLastCalledWith(
+        'httpHeaders',
+        'Content-Type: application/json, Accept: text/plain',
+      );
+    });
+
     it('re-derives rows when the value changes outside the editor, as the detail page Reset does', () => {
       const {rerender} = render(
         <ConnectionForm {...smsGatewayProps} values={{...smsGatewayProps.values, httpHeaders: 'X-API-Key: abc123'}} />,
