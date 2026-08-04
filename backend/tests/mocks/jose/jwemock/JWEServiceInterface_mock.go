@@ -207,3 +207,95 @@ func (_c *JWEServiceInterfaceMock_Encrypt_Call) RunAndReturn(run func(ctx contex
 	_c.Call.Return(run)
 	return _c
 }
+
+// SupportedContentEncryptionAlgorithms provides a mock function for the type JWEServiceInterfaceMock
+func (_mock *JWEServiceInterfaceMock) SupportedContentEncryptionAlgorithms() []string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for SupportedContentEncryptionAlgorithms")
+	}
+
+	var r0 []string
+	if returnFunc, ok := ret.Get(0).(func() []string); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	return r0
+}
+
+// JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SupportedContentEncryptionAlgorithms'
+type JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call struct {
+	*mock.Call
+}
+
+// SupportedContentEncryptionAlgorithms is a helper method to define mock.On call
+func (_e *JWEServiceInterfaceMock_Expecter) SupportedContentEncryptionAlgorithms() *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call {
+	return &JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call{Call: _e.mock.On("SupportedContentEncryptionAlgorithms")}
+}
+
+func (_c *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call) Run(run func()) *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call) Return(strings []string) *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call {
+	_c.Call.Return(strings)
+	return _c
+}
+
+func (_c *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call) RunAndReturn(run func() []string) *JWEServiceInterfaceMock_SupportedContentEncryptionAlgorithms_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SupportedKeyEncryptionAlgorithms provides a mock function for the type JWEServiceInterfaceMock
+func (_mock *JWEServiceInterfaceMock) SupportedKeyEncryptionAlgorithms() []string {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for SupportedKeyEncryptionAlgorithms")
+	}
+
+	var r0 []string
+	if returnFunc, ok := ret.Get(0).(func() []string); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+	return r0
+}
+
+// JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SupportedKeyEncryptionAlgorithms'
+type JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call struct {
+	*mock.Call
+}
+
+// SupportedKeyEncryptionAlgorithms is a helper method to define mock.On call
+func (_e *JWEServiceInterfaceMock_Expecter) SupportedKeyEncryptionAlgorithms() *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call {
+	return &JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call{Call: _e.mock.On("SupportedKeyEncryptionAlgorithms")}
+}
+
+func (_c *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call) Run(run func()) *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call) Return(strings []string) *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call {
+	_c.Call.Return(strings)
+	return _c
+}
+
+func (_c *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call) RunAndReturn(run func() []string) *JWEServiceInterfaceMock_SupportedKeyEncryptionAlgorithms_Call {
+	_c.Call.Return(run)
+	return _c
+}

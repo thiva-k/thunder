@@ -18,7 +18,7 @@ const renderSelector = (value = 'application', onChange = vi.fn()) => {
       options={options}
       value={value}
       onChange={onChange}
-      footnote="Claim sets are configured independently for each audience."
+      footnote="Attribute sets are configured independently for each audience."
     >
       <div data-testid="panel-content" />
     </TokenAudienceSelector>,

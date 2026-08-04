@@ -93,6 +93,7 @@ type inboundClientService struct {
 	flowMgt        flowmgt.FlowMgtServiceInterface
 	entityType     entitytype.EntityTypeServiceInterface
 	cryptoProvider providers.RuntimeCryptoProvider
+	jweService     jwe.JWEServiceInterface
 	logger         *log.Logger
 }
 
@@ -105,6 +106,7 @@ func newInboundClientService(store inboundClientStoreInterface, transactioner pr
 	flowMgt flowmgt.FlowMgtServiceInterface,
 	entityType entitytype.EntityTypeServiceInterface,
 	cryptoProvider providers.RuntimeCryptoProvider,
+	jweService jwe.JWEServiceInterface,
 ) InboundClientServiceInterface {
 	return &inboundClientService{
 		store:          store,
@@ -116,6 +118,7 @@ func newInboundClientService(store inboundClientStoreInterface, transactioner pr
 		flowMgt:        flowMgt,
 		entityType:     entityType,
 		cryptoProvider: cryptoProvider,
+		jweService:     jweService,
 		logger:         log.GetLogger().With(log.String(log.LoggerKeyComponentName, "InboundClientService")),
 	}
 }
@@ -143,7 +146,7 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider, s.jweService); vErr != nil {
 			return vErr
 		}
 	}
@@ -227,7 +230,7 @@ func (s *inboundClientService) UpdateInboundClient(ctx context.Context, client *
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider, s.jweService); vErr != nil {
 			return vErr
 		}
 	}
@@ -287,7 +290,7 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider, s.jweService); vErr != nil {
 			return vErr
 		}
 	}
@@ -780,7 +783,7 @@ func validateCertificateInput(refID, existingCertID string, in *inboundmodel.Cer
 
 // validateOAuthProfile validates all fields of an OAuth profile data object.
 func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool,
-	cryptoProvider providers.RuntimeCryptoProvider) error {
+	cryptoProvider providers.RuntimeCryptoProvider, jweService jwe.JWEServiceInterface) error {
 	if p == nil {
 		return nil
 	}
@@ -798,10 +801,10 @@ func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool,
 			return err
 		}
 	}
-	if err := validateUserInfoConfig(p, cryptoProvider); err != nil {
+	if err := validateUserInfoConfig(p, cryptoProvider, jweService); err != nil {
 		return err
 	}
-	if err := validateIDTokenConfig(p, cryptoProvider); err != nil {
+	if err := validateIDTokenConfig(p, jweService); err != nil {
 		return err
 	}
 	if err := validateAccessTokenConfig(p); err != nil {
@@ -826,7 +829,8 @@ func validateAccessTokenConfig(p *providers.OAuthProfile) error {
 }
 
 // validateUserInfoConfig validates the UserInfo signing and encryption configuration.
-func validateUserInfoConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider) error {
+func validateUserInfoConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider,
+	jweService jwe.JWEServiceInterface) error {
 	if p.UserInfo == nil {
 		return nil
 	}
@@ -841,13 +845,13 @@ func validateUserInfoConfig(p *providers.OAuthProfile, cryptoProvider providers.
 	}
 
 	if cfg.EncryptionAlg != "" {
-		if !slices.Contains(cryptoProvider.GetSupportedEncryptionAlgorithms(), cfg.EncryptionAlg) {
+		if !slices.Contains(jweService.SupportedKeyEncryptionAlgorithms(), cfg.EncryptionAlg) {
 			return ErrOAuthUserInfoUnsupportedEncryptionAlg
 		}
 		if cfg.EncryptionEnc == "" {
 			return ErrOAuthUserInfoEncryptionAlgRequiresEnc
 		}
-		if !slices.Contains(jwe.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
+		if !slices.Contains(jweService.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
 			return ErrOAuthUserInfoUnsupportedEncryptionEnc
 		}
 		hasCert := p.Certificate != nil && p.Certificate.Type != ""
@@ -888,7 +892,7 @@ func validateUserInfoConfig(p *providers.OAuthProfile, cryptoProvider providers.
 
 // validateIDTokenConfig validates the ID token configuration.
 // responseType is the authoritative field; empty defaults to JWT.
-func validateIDTokenConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider) error {
+func validateIDTokenConfig(p *providers.OAuthProfile, jweService jwe.JWEServiceInterface) error {
 	if p.Token == nil || p.Token.IDToken == nil {
 		return nil
 	}
@@ -907,10 +911,10 @@ func validateIDTokenConfig(p *providers.OAuthProfile, cryptoProvider providers.R
 		if cfg.EncryptionAlg == "" || cfg.EncryptionEnc == "" {
 			return ErrOAuthIDTokenEncryptionAlgRequiresEnc
 		}
-		if !slices.Contains(cryptoProvider.GetSupportedEncryptionAlgorithms(), cfg.EncryptionAlg) {
+		if !slices.Contains(jweService.SupportedKeyEncryptionAlgorithms(), cfg.EncryptionAlg) {
 			return ErrOAuthIDTokenUnsupportedEncryptionAlg
 		}
-		if !slices.Contains(jwe.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
+		if !slices.Contains(jweService.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
 			return ErrOAuthIDTokenUnsupportedEncryptionEnc
 		}
 		hasCert := p.Certificate != nil && p.Certificate.Type != ""

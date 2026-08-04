@@ -7,15 +7,17 @@ import (
 	"net/http"
 
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
 // Initialize initializes the discovery service and registers its routes
 func Initialize(
-	mux *http.ServeMux, cryptoProvider providers.RuntimeCryptoProvider, cfg oauthconfig.Config,
+	mux *http.ServeMux, cryptoProvider providers.RuntimeCryptoProvider, jweService jwe.JWEServiceInterface,
+	cfg oauthconfig.Config,
 ) DiscoveryServiceInterface {
-	discoveryService := newDiscoveryService(cryptoProvider, cfg)
+	discoveryService := newDiscoveryService(cryptoProvider, jweService, cfg)
 	discoveryHandler := newDiscoveryHandler(discoveryService)
 	registerRoutes(mux, discoveryHandler)
 	return discoveryService

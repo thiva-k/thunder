@@ -346,10 +346,7 @@ export default function TokenUserAttributesSection({
           {t('applications:edit.token.configure_attributes', 'Add or Remove Attributes')}
         </Typography>
         <Typography variant="body2" color="text.disabled" sx={{mb: 2}}>
-          {t(
-            'applications:edit.token.configure_attributes.hint',
-            'Click on user attributes to add them to your token.',
-          )}
+          {t('applications:edit.token.configure_attributes.hint', 'Click on user attributes to add them to the token.')}
         </Typography>
 
         <Card>
@@ -443,19 +440,19 @@ export default function TokenUserAttributesSection({
     if (!isOAuthMode) {
       return t(
         'applications:edit.token.token_profile_card.description.native',
-        'Choose the claims included in the token issued to this {{entity}}.',
+        'Choose the attributes included in the token issued to this {{entity}}.',
         {entity: entityLabel},
       );
     }
     if (showUserInfoTab) {
       return t(
         'applications:edit.token.token_profile_card.description',
-        'Choose the claims in each token and the user info response, and how each is returned.',
+        'Choose the attributes in each token and the user info response, and how each is returned.',
       );
     }
     return t(
       'applications:edit.token.token_profile_card.description.noUserInfo',
-      'Choose the claims in each token issued to this {{entity}}, and how each is returned.',
+      'Choose the attributes in each token issued to this {{entity}}, and how each is returned.',
       {entity: entityLabel},
     );
   };
