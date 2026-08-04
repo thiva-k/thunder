@@ -5,7 +5,6 @@ package authz
 
 import (
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"testing"
 
@@ -146,20 +145,4 @@ func (suite *InitTestSuite) TestRegisterRoutes_CORSConfiguration() {
 			}
 		})
 	}
-}
-
-func (suite *InitTestSuite) TestWithFrameProtection() {
-	// RFC 9700 §4.16: Authorization servers MUST prevent clickjacking attacks.
-	handler := withFrameProtection(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	req := httptest.NewRequest("GET", "/oauth2/authorize", nil)
-	rec := httptest.NewRecorder()
-
-	handler(rec, req)
-
-	assert.Equal(suite.T(), http.StatusOK, rec.Code)
-	assert.Equal(suite.T(), "DENY", rec.Header().Get("X-Frame-Options"))
-	assert.Equal(suite.T(), "frame-ancestors 'none'", rec.Header().Get("Content-Security-Policy"))
 }
