@@ -22,6 +22,7 @@ import (
 
 	systemconfig "github.com/thunder-id/thunderid/internal/system/config"
 	joseconfig "github.com/thunder-id/thunderid/internal/system/jose/config"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/actorprovidermock"
@@ -30,6 +31,7 @@ import (
 	"github.com/thunder-id/thunderid/tests/mocks/authzmock"
 	"github.com/thunder-id/thunderid/tests/mocks/captchamock"
 	"github.com/thunder-id/thunderid/tests/mocks/consentprovidermock"
+	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 	"github.com/thunder-id/thunderid/tests/mocks/designprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/coremock"
 	"github.com/thunder-id/thunderid/tests/mocks/flow/executormock"
@@ -70,6 +72,10 @@ func newTestAttestationProvider(t *testing.T) providers.AttestationProvider {
 
 func newTestCaptchaValidationProvider(t *testing.T) providers.CaptchaValidationProvider {
 	return captchamock.NewCaptchaValidationProviderMock(t)
+}
+
+func newTestRuntimeCryptoProvider(t *testing.T) kmprovider.RuntimeCryptoProvider {
+	return cryptomock.NewRuntimeCryptoProviderMock(t)
 }
 
 func newTestExecutor(t *testing.T, name string) providers.Executor {
@@ -261,6 +267,7 @@ func (suite *EngineTestSuite) TestEngineOptions() {
 		WithDefaultAuthnProvider(newTestDefaultAuthnProvider(suite.T())),
 		WithAttestationProvider(newTestAttestationProvider(suite.T())),
 		WithCaptchaValidationProvider(newTestCaptchaValidationProvider(suite.T())),
+		WithRuntimeCryptoProvider(newTestRuntimeCryptoProvider(suite.T())),
 	}
 	for _, opt := range opts {
 		opt(&ctx)
@@ -286,6 +293,7 @@ func (suite *EngineTestSuite) TestEngineOptions() {
 	assert.NotNil(suite.T(), ctx.defaultAuthnProvider)
 	assert.NotNil(suite.T(), ctx.attestationProvider)
 	assert.NotNil(suite.T(), ctx.captchaValidationProvider)
+	assert.NotNil(suite.T(), ctx.runtimeCryptoSvc)
 }
 
 func (suite *EngineTestSuite) TestJOSEConfig() {

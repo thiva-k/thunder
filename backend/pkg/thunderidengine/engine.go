@@ -283,7 +283,6 @@ type engineContext struct {
 	cacheManager          cache.CacheManagerInterface
 	jwtService            jwt.JWTServiceInterface
 	jweService            jwe.JWEServiceInterface
-	runtimeCryptoSvc      kmprovider.RuntimeCryptoProvider
 	flowFactory           core.FlowFactoryInterface
 	execRegistry          executor.ExecutorRegistryInterface
 	interceptorRegistry   interceptor.InterceptorRegistryInterface
@@ -325,6 +324,7 @@ type engineContext struct {
 
 	transactioner        providers.Transactioner
 	runtimeStoreProvider providers.RuntimeStoreProvider
+	runtimeCryptoSvc     kmprovider.RuntimeCryptoProvider
 }
 
 // Option configures engine initialization.
@@ -493,4 +493,9 @@ func WithTransactioner(provider providers.Transactioner) Option {
 // WithCaptchaValidationProvider supplies the CaptchaValidationProvider.
 func WithCaptchaValidationProvider(provider providers.CaptchaValidationProvider) Option {
 	return func(c *engineContext) { c.captchaValidationProvider = provider }
+}
+
+// WithRuntimeCryptoProvider supplies the RuntimeCryptoProvider.
+func WithRuntimeCryptoProvider(provider kmprovider.RuntimeCryptoProvider) Option {
+	return func(c *engineContext) { c.runtimeCryptoSvc = provider }
 }
