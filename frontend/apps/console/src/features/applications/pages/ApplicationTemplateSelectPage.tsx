@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {useLogger} from '@thunderid/logger/react';
 import {
@@ -37,7 +22,6 @@ import {Link, useLocation, useNavigate, useSearchParams} from 'react-router';
 import PlatformBasedApplicationTemplateMetadata from '../config/PlatformBasedApplicationTemplateMetadata';
 import TechnologyBasedApplicationTemplateMetadata from '../config/TechnologyBasedApplicationTemplateMetadata';
 import useApplicationCreate from '../contexts/ApplicationCreate/useApplicationCreate';
-import {ApplicationCreateFlowStep} from '../models/application-create-flow';
 import type {ApplicationTemplateMetadata, TemplateCategory} from '../models/application-templates';
 import {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../models/application-templates';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
@@ -124,10 +108,9 @@ export default function ApplicationTemplateSelectPage(): JSX.Element {
     }
 
     // The wizard no longer owns the template step, so advance to the first real step of this
-    // template's creation flow before handing off.
-    const firstStep = resolveCreationFlow(option.template).steps.find(
-      (step) => step !== ApplicationCreateFlowStep.STACK,
-    );
+    // template's creation flow before handing off (the organization unit, when there's a choice
+    // of one; otherwise the Details step).
+    const firstStep = resolveCreationFlow(option.template).steps[0];
     if (firstStep) {
       setCurrentStep(firstStep);
     }

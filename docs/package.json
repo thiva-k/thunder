@@ -3,7 +3,7 @@
   "name": "@thunderid/docs",
   "version": "0.0.0",
   "description": "Documentation for ⚡️ ThunderID",
-  "author": "WSO2",
+  "author": "The ThunderID Authors",
   "license": "Apache-2.0",
   "homepage": "https://github.com/thunder-id/thunderid/tree/main/docs#readme",
   "bugs": {
@@ -17,8 +17,7 @@
     "thunderid",
     "thunderid",
     "docs",
-    "documentation",
-    "wso2"
+    "documentation"
   ],
   "scripts": {
     "build": "pnpm setup && docusaurus build",
@@ -49,6 +48,7 @@
     "@docusaurus/plugin-content-docs": "3.9.2",
     "@docusaurus/preset-classic": "3.9.2",
     "@docusaurus/theme-common": "3.9.2",
+    "@docusaurus/theme-mermaid": "3.9.2",
     "@mdx-js/react": "3.0.0",
     "@scalar/api-reference-react": "0.9.38",
     "@thunderid/design": "workspace:^",

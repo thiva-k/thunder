@@ -1,30 +1,16 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
-import type {Node} from '@xyflow/react';
+import type {Edge, Node} from '@xyflow/react';
 import {createElement} from 'react';
 import {Trans} from 'react-i18next';
-import {ActionEventTypes, BlockTypes, ElementCategories, ElementTypes} from '../models/elements';
+import {ActionEventTypes, BlockTypes, ElementCategories, ElementTypes, PromptActionTypes} from '../models/elements';
 import type {Element as FlowElement} from '../models/elements';
 import Notification, {NotificationType} from '../models/notification';
 import type {Resource} from '../models/resources';
 import {ExecutionTypes, StepTypes} from '../models/steps';
 import type {StepData} from '../models/steps';
+import VisualFlowConstants from '@/features/flows/constants/VisualFlowConstants';
 
 /**
  * A single field that must have a non-empty value on a resource.
@@ -250,10 +236,11 @@ export const VALIDATION_RULES: ValidationRuleDefinition[] = [
 // ---------------------------------------------------------------------------
 
 /**
- * A validation rule that inspects the whole node set instead of a single
- * resource, for constraints that span multiple nodes.
+ * A validation rule that inspects the whole graph instead of a single
+ * resource, for constraints that span multiple nodes. Edges are passed too, so
+ * a rule can also check what a node or one of its elements connects to.
  */
-export type GraphValidationRule = (nodes: Node[]) => Notification[];
+export type GraphValidationRule = (nodes: Node[], edges: Edge[]) => Notification[];
 
 function getNodeExecutorName(node: Node): string | undefined {
   return (node.data as StepData | undefined)?.action?.executor?.name;
@@ -268,6 +255,28 @@ function createGraphErrorNotification(errorId: string, i18nKey: string, node: No
   const notification = new Notification(errorId, message, NotificationType.ERROR);
 
   notification.addResource(node as unknown as Resource);
+
+  return notification;
+}
+
+/**
+ * Attaches the notification to an element rather than a whole step, so the
+ * canvas highlights the offending element itself.
+ */
+function createGraphElementNotification(
+  notificationId: string,
+  i18nKey: string,
+  element: FlowElement,
+  type: NotificationType,
+): Notification {
+  const message = createElement(Trans, {
+    i18nKey,
+    values: {id: element.id},
+    components: {code: createElement('code')},
+  });
+  const notification = new Notification(notificationId, message, type);
+
+  notification.addResource(element as unknown as Resource);
 
   return notification;
 }
@@ -327,4 +336,75 @@ export const ssoPairingRule: GraphValidationRule = (nodes: Node[]): Notification
   return notifications;
 };
 
+/**
+ * Collects every element in a step that raises the sign-out confirmation
+ * action, including ones nested inside containers such as a form block.
+ */
+function collectSignOutConfirmElements(elements: FlowElement[] | undefined): FlowElement[] {
+  if (!elements) {
+    return [];
+  }
+
+  return elements.flatMap((element) => [
+    ...((element as FlowElement & {actionType?: string}).actionType === PromptActionTypes.Confirm ? [element] : []),
+    ...collectSignOutConfirmElements(element.components),
+  ]);
+}
+
+/**
+ * A sign-out confirmation button only does anything if it leads to the session
+ * sign-out node: the prompt node forwards the action type to whatever comes
+ * next, and only that executor acts on it. Wiring the button elsewhere, or
+ * leaving it unwired, is silently inert at runtime, so it is surfaced here.
+ *
+ * Mirrors the handle convention the serializer uses, where a button's outgoing
+ * edge leaves the step from `${elementId}_NEXT`.
+ */
+export const signOutConfirmActionRule: GraphValidationRule = (nodes: Node[], edges: Edge[]): Notification[] => {
+  const notifications: Notification[] = [];
+
+  const signOutNodeIds = new Set(
+    nodes.filter((node) => getNodeExecutorName(node) === ExecutionTypes.SessionSignOut).map((node) => node.id),
+  );
+
+  for (const node of nodes) {
+    const elements = collectSignOutConfirmElements((node.data as StepData | undefined)?.components);
+
+    for (const element of elements) {
+      const handleId = `${element.id}${VisualFlowConstants.FLOW_BUILDER_NEXT_HANDLE_SUFFIX}`;
+      const edge = edges.find((candidate) => candidate.source === node.id && candidate.sourceHandle === handleId);
+
+      if (!edge) {
+        notifications.push(
+          createGraphElementNotification(
+            `${element.id}_SIGN_OUT_CONFIRM_NOT_CONNECTED`,
+            'flows:core.validation.signOut.confirmNotConnected',
+            element,
+            NotificationType.WARNING,
+          ),
+        );
+        continue;
+      }
+
+      if (!signOutNodeIds.has(edge.target)) {
+        notifications.push(
+          createGraphElementNotification(
+            `${element.id}_SIGN_OUT_CONFIRM_INVALID_TARGET`,
+            'flows:core.validation.signOut.confirmInvalidTarget',
+            element,
+            NotificationType.WARNING,
+          ),
+        );
+      }
+    }
+  }
+
+  return notifications;
+};
+
 export const GRAPH_VALIDATION_RULES: GraphValidationRule[] = [ssoPairingRule];
+
+/**
+ * Rules that apply to sign-out flows.
+ */
+export const SIGN_OUT_GRAPH_VALIDATION_RULES: GraphValidationRule[] = [signOutConfirmActionRule];

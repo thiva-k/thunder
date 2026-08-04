@@ -1,22 +1,8 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
+import type {InboundAuthConfig, OAuth2Config} from '@thunderid/configure-applications';
 import {
   Alert,
   Card,
@@ -33,8 +19,6 @@ import {useEffect, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import JwtPreview from './JwtPreview';
 import TokenConstants from '../../../constants/token-constants';
-import type {InboundAuthConfig} from '../../../models/inbound-auth';
-import type {OAuth2Config} from '../../../models/oauth';
 
 // The client_credentials grant carries no scopes, so `scope` never appears on this token.
 const ACCESS_TOKEN_DEFAULT_CLAIMS = TokenConstants.DEFAULT_TOKEN_ATTRIBUTES.filter((attr) => attr !== 'scope');
@@ -145,7 +129,7 @@ export default function ClientAccessTokenSection({
     <Stack spacing={3}>
       <SettingsCard title={copy.attributesTitle} description={copy.attributesDescription}>
         <Grid container spacing={3}>
-          <Grid size={{xs: 12, md: 7}}>
+          <Grid size={{xs: 12, lg: 7}}>
             <Typography variant="body2" sx={{mb: 1}}>
               {copy.attributesLabel}
             </Typography>
@@ -183,7 +167,7 @@ export default function ClientAccessTokenSection({
               </CardContent>
             </Card>
           </Grid>
-          <Grid size={{xs: 12, md: 5}}>
+          <Grid size={{xs: 12, lg: 5}}>
             <JwtPreview payload={jwtPreview} defaultClaims={ACCESS_TOKEN_DEFAULT_CLAIMS} />
           </Grid>
         </Grid>

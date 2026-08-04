@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package inboundclient
 
@@ -35,6 +20,7 @@ import (
 	thememgt "github.com/thunder-id/thunderid/internal/design/theme/mgt"
 	"github.com/thunder-id/thunderid/internal/entityprovider"
 	"github.com/thunder-id/thunderid/internal/entitytype"
+	entitytypemodel "github.com/thunder-id/thunderid/internal/entitytype/model"
 	flowmgt "github.com/thunder-id/thunderid/internal/flow/mgt"
 	inboundmodel "github.com/thunder-id/thunderid/internal/inboundclient/model"
 	oauth2const "github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
@@ -42,6 +28,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/config"
 	serverconst "github.com/thunder-id/thunderid/internal/system/constants"
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/security"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -105,6 +92,7 @@ type inboundClientService struct {
 	layoutMgt      layoutmgt.LayoutMgtServiceInterface
 	flowMgt        flowmgt.FlowMgtServiceInterface
 	entityType     entitytype.EntityTypeServiceInterface
+	cryptoProvider providers.RuntimeCryptoProvider
 	logger         *log.Logger
 }
 
@@ -116,6 +104,7 @@ func newInboundClientService(store inboundClientStoreInterface, transactioner pr
 	layoutMgt layoutmgt.LayoutMgtServiceInterface,
 	flowMgt flowmgt.FlowMgtServiceInterface,
 	entityType entitytype.EntityTypeServiceInterface,
+	cryptoProvider providers.RuntimeCryptoProvider,
 ) InboundClientServiceInterface {
 	return &inboundClientService{
 		store:          store,
@@ -126,6 +115,7 @@ func newInboundClientService(store inboundClientStoreInterface, transactioner pr
 		layoutMgt:      layoutMgt,
 		flowMgt:        flowMgt,
 		entityType:     entityType,
+		cryptoProvider: cryptoProvider,
 		logger:         log.GetLogger().With(log.String(log.LoggerKeyComponentName, "InboundClientService")),
 	}
 }
@@ -153,9 +143,13 @@ func (s *inboundClientService) CreateInboundClient(ctx context.Context, client *
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
+	}
+	if err := s.validateSubjectAttributeMapping(
+		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
+		return err
 	}
 	applyInboundDefaults(client, oauthProfile)
 	oauthClientID := s.resolveClientID(ctx, client.ID)
@@ -233,9 +227,13 @@ func (s *inboundClientService) UpdateInboundClient(ctx context.Context, client *
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
+	}
+	if err := s.validateSubjectAttributeMapping(
+		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
+		return err
 	}
 	applyInboundDefaults(client, oauthProfile)
 	// Capture existing OAuth client_id before the caller updates entity system attributes.
@@ -289,9 +287,13 @@ func (s *inboundClientService) Validate(ctx context.Context, client *inboundmode
 		return err
 	}
 	if oauthProfile != nil {
-		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret); vErr != nil {
+		if vErr := validateOAuthProfile(oauthProfile, hasClientSecret, s.cryptoProvider); vErr != nil {
 			return vErr
 		}
+	}
+	if err := s.validateSubjectAttributeMapping(
+		ctx, client.SubjectAttribute, client.AllowedUserTypes); err != nil {
+		return err
 	}
 	return nil
 }
@@ -777,7 +779,8 @@ func validateCertificateInput(refID, existingCertID string, in *inboundmodel.Cer
 }
 
 // validateOAuthProfile validates all fields of an OAuth profile data object.
-func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool) error {
+func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool,
+	cryptoProvider providers.RuntimeCryptoProvider) error {
 	if p == nil {
 		return nil
 	}
@@ -795,10 +798,10 @@ func validateOAuthProfile(p *providers.OAuthProfile, hasClientSecret bool) error
 			return err
 		}
 	}
-	if err := validateUserInfoConfig(p); err != nil {
+	if err := validateUserInfoConfig(p, cryptoProvider); err != nil {
 		return err
 	}
-	if err := validateIDTokenConfig(p); err != nil {
+	if err := validateIDTokenConfig(p, cryptoProvider); err != nil {
 		return err
 	}
 	if err := validateAccessTokenConfig(p); err != nil {
@@ -823,13 +826,13 @@ func validateAccessTokenConfig(p *providers.OAuthProfile) error {
 }
 
 // validateUserInfoConfig validates the UserInfo signing and encryption configuration.
-func validateUserInfoConfig(p *providers.OAuthProfile) error {
+func validateUserInfoConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider) error {
 	if p.UserInfo == nil {
 		return nil
 	}
 	cfg := p.UserInfo
 
-	if cfg.SigningAlg != "" && !slices.Contains(inboundmodel.SupportedUserInfoSigningAlgs, cfg.SigningAlg) {
+	if cfg.SigningAlg != "" && !slices.Contains(cryptoProvider.GetSupportedSigningAlgorithms(), cfg.SigningAlg) {
 		return ErrOAuthUserInfoUnsupportedSigningAlg
 	}
 
@@ -838,13 +841,13 @@ func validateUserInfoConfig(p *providers.OAuthProfile) error {
 	}
 
 	if cfg.EncryptionAlg != "" {
-		if !slices.Contains(inboundmodel.SupportedUserInfoEncryptionAlgs, cfg.EncryptionAlg) {
+		if !slices.Contains(cryptoProvider.GetSupportedEncryptionAlgorithms(), cfg.EncryptionAlg) {
 			return ErrOAuthUserInfoUnsupportedEncryptionAlg
 		}
 		if cfg.EncryptionEnc == "" {
 			return ErrOAuthUserInfoEncryptionAlgRequiresEnc
 		}
-		if !slices.Contains(inboundmodel.SupportedUserInfoEncryptionEncs, cfg.EncryptionEnc) {
+		if !slices.Contains(jwe.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
 			return ErrOAuthUserInfoUnsupportedEncryptionEnc
 		}
 		hasCert := p.Certificate != nil && p.Certificate.Type != ""
@@ -885,7 +888,7 @@ func validateUserInfoConfig(p *providers.OAuthProfile) error {
 
 // validateIDTokenConfig validates the ID token configuration.
 // responseType is the authoritative field; empty defaults to JWT.
-func validateIDTokenConfig(p *providers.OAuthProfile) error {
+func validateIDTokenConfig(p *providers.OAuthProfile, cryptoProvider providers.RuntimeCryptoProvider) error {
 	if p.Token == nil || p.Token.IDToken == nil {
 		return nil
 	}
@@ -904,10 +907,10 @@ func validateIDTokenConfig(p *providers.OAuthProfile) error {
 		if cfg.EncryptionAlg == "" || cfg.EncryptionEnc == "" {
 			return ErrOAuthIDTokenEncryptionAlgRequiresEnc
 		}
-		if !slices.Contains(inboundmodel.SupportedIDTokenEncryptionAlgs, cfg.EncryptionAlg) {
+		if !slices.Contains(cryptoProvider.GetSupportedEncryptionAlgorithms(), cfg.EncryptionAlg) {
 			return ErrOAuthIDTokenUnsupportedEncryptionAlg
 		}
-		if !slices.Contains(inboundmodel.SupportedIDTokenEncryptionEncs, cfg.EncryptionEnc) {
+		if !slices.Contains(jwe.SupportedContentEncryptionAlgorithms(), cfg.EncryptionEnc) {
 			return ErrOAuthIDTokenUnsupportedEncryptionEnc
 		}
 		hasCert := p.Certificate != nil && p.Certificate.Type != ""
@@ -1289,6 +1292,46 @@ func (s *inboundClientService) validateAllowedUserTypes(
 	return nil
 }
 
+// validateSubjectAttributeMapping validates that the subject attribute mapping is well-formed.
+// assumes that allowedUserTypes has been validated.
+func (s *inboundClientService) validateSubjectAttributeMapping(
+	ctx context.Context, subjectAttributeMapping map[string]string, allowedUserTypes []string,
+) error {
+	if len(subjectAttributeMapping) == 0 || s.entityType == nil {
+		return nil
+	}
+	for entityType, subjectAttribute := range subjectAttributeMapping {
+		if entityType == "" || subjectAttribute == "" {
+			return ErrFKInvalidSubjectAttributeMapping
+		}
+		if !slices.Contains(allowedUserTypes, entityType) {
+			return ErrFKInvalidSubjectAttributeMapping
+		}
+		// A subject attribute must be unique, required, non-credential, and string-typed: unique so it
+		// identifies a single user, required so every user of the type has it (a stable sub), and
+		// string so it can be emitted as the string sub claim.
+		attrs, svcErr := s.entityType.GetAttributes(
+			security.WithRuntimeContext(ctx), entitytype.TypeCategoryUser, entityType,
+			entitytype.AttributeFilter{
+				AllowNonCredential: true,
+				RequiredOnly:       true,
+				UniqueOnly:         true,
+				Type:               entitytypemodel.TypeString,
+			})
+		if svcErr != nil {
+			s.logger.Error(ctx, "Failed to retrieve attributes for subject mapping validation",
+				log.String("error", svcErr.Error.DefaultValue), log.String("code", svcErr.Code))
+			return ErrUniqueAttributeLookupFailed
+		}
+		if !slices.ContainsFunc(attrs, func(a entitytype.AttributeInfo) bool {
+			return a.Attribute == subjectAttribute
+		}) {
+			return ErrFKInvalidSubjectAttributeMapping
+		}
+	}
+	return nil
+}
+
 // validateUserAttributesAgainstAllowedTypes validates that every user attribute specified in the
 // assertion, token, and userinfo configs is a non-credential attribute defined in at least one
 // of the application's allowed entity types. Returns ErrInvalidUserAttribute when any attribute
@@ -1337,7 +1380,8 @@ func (s *inboundClientService) resolveValidUserAttributes(
 	validAttrs := make(map[string]bool)
 	for _, entityTypeName := range allowedEntityTypes {
 		attrInfos, svcErr := s.entityType.GetAttributes(
-			security.WithRuntimeContext(ctx), entitytype.TypeCategoryUser, entityTypeName, false, true, false)
+			security.WithRuntimeContext(ctx), entitytype.TypeCategoryUser, entityTypeName,
+			entitytype.AttributeFilter{AllowNonCredential: true})
 		if svcErr != nil {
 			if svcErr.Type == tidcommon.ServerErrorType {
 				return nil, ErrUserSchemaLookupFailed

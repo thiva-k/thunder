@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package idp
 
@@ -1230,7 +1215,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_AccountLinkingO
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_Valid() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "firstName"}, {Attribute: "email"}},
 			(*tidcommon.ServiceError)(nil))
 
@@ -1254,7 +1240,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_EmptyEntityType
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_EmptyMappings() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "firstName"}}, (*tidcommon.ServiceError)(nil))
 	idp := &providers.IDPDTO{AttributeConfiguration: singleProfileMapping("person", nil)}
 	svcErr := s.idpService.validateAttributeConfiguration(context.Background(), idp)
@@ -1262,7 +1249,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_EmptyMappings()
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_OneSourceToMultipleTargets() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "email"}, {Attribute: "contactEmail"}},
 			(*tidcommon.ServiceError)(nil))
 
@@ -1297,7 +1285,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_DuplicateTarget
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_DuplicateEntityType() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "firstName"}}, (*tidcommon.ServiceError)(nil))
 	idp := &providers.IDPDTO{AttributeConfiguration: &providers.AttributeConfiguration{
 		UserTypeResolution: &providers.UserTypeResolution{Default: "person"},
@@ -1323,7 +1312,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_DuplicateEntity
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_TargetNotInSchema() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "person",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "email"}}, (*tidcommon.ServiceError)(nil))
 
 	idp := &providers.IDPDTO{AttributeConfiguration: singleProfileMapping("person", []providers.AttributeMapping{
@@ -1336,7 +1326,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_TargetNotInSche
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_UnknownEntityType() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "ghost", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "ghost",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo(nil), &tidcommon.ServiceError{
 			Type: tidcommon.ClientErrorType, Code: "ETS-1004",
 			ErrorDescription: tidcommon.I18nMessage{DefaultValue: "user type not found"},
@@ -1351,7 +1342,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_UnknownEntityTy
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_DynamicResolutionValid() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "employee", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "employee",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo{{Attribute: "firstName"}}, (*tidcommon.ServiceError)(nil))
 
 	idp := &providers.IDPDTO{AttributeConfiguration: &providers.AttributeConfiguration{
@@ -1417,7 +1409,8 @@ func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_DynamicResoluti
 }
 
 func (s *IDPServiceTestSuite) TestValidateAttributeConfiguration_DynamicResolutionInvalidTarget() {
-	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "ghost", false, true, false).
+	s.mockET.On("GetAttributes", mock.Anything, entitytype.TypeCategoryUser, "ghost",
+		entitytype.AttributeFilter{AllowNonCredential: true}).
 		Return([]entitytype.AttributeInfo(nil), &tidcommon.ServiceError{
 			Type: tidcommon.ClientErrorType, Code: "ETS-1004",
 			ErrorDescription: tidcommon.I18nMessage{DefaultValue: "user type not found"},

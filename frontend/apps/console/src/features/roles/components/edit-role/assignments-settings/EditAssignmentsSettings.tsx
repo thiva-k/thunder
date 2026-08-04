@@ -1,21 +1,7 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import {Stack, Button, Alert} from '@wso2/oxygen-ui';
 import {Plus} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, type JSX} from 'react';
@@ -39,7 +25,7 @@ export default function EditAssignmentsSettings({
   roleId,
   isReadOnly = false,
 }: EditAssignmentsSettingsProps): JSX.Element {
-  const {t} = useTranslation();
+  const {t} = useTranslation('roles');
   const addRoleAssignments = useAddRoleAssignments();
   const removeRoleAssignments = useRemoveRoleAssignments();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -57,7 +43,7 @@ export default function EditAssignmentsSettings({
             setError(null);
           },
           onError: (err: Error) => {
-            setError(err.message ?? t('roles:assignments.add.error'));
+            setError(getErrorMessage(err, t, 'assignments.add.error'));
           },
         },
       );
@@ -74,7 +60,7 @@ export default function EditAssignmentsSettings({
             setError(null);
           },
           onError: (err: Error) => {
-            setError(err.message ?? t('roles:assignments.remove.error'));
+            setError(getErrorMessage(err, t, 'assignments.remove.error'));
           },
         },
       );
@@ -104,7 +90,7 @@ export default function EditAssignmentsSettings({
               startIcon={<Plus size={16} />}
               onClick={() => setAddDialogOpen(true)}
             >
-              {t('roles:edit.assignments.sections.manage.addAssignment')}
+              {t('edit.assignments.sections.manage.addAssignment', 'Add')}
             </Button>
           ) : undefined
         }

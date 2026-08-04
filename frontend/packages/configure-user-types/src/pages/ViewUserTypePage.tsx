@@ -1,24 +1,10 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {PageLoadingAnimation, UnsavedChangesBar} from '@thunderid/components';
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
+import {isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -206,11 +192,23 @@ export default function ViewUserTypePage(): JSX.Element {
     }
   }
 
-  // Change detection
-  const hasChanges = useMemo(
-    () => Object.keys(editedUserType).length > 0 || editedProperties !== null,
-    [editedUserType, editedProperties],
-  );
+  // Change detection — compares each edited field against its saved value (fields don't map 1:1
+  // to userType keys, e.g. displayAttribute lives under systemAttributes.display) and the edited
+  // schema properties against the server's, so reverting every edit by hand clears the bar.
+  const hasChanges = useMemo(() => {
+    const originalOf: Record<string, unknown> = {
+      name: userType?.name,
+      ouId: userType?.ouId,
+      allowSelfRegistration: userType?.allowSelfRegistration,
+      displayAttribute: userType?.systemAttributes?.display ?? '',
+    };
+    const fieldsChanged = Object.entries(editedUserType).some(
+      ([key, value]) => !isEqualIgnoringEmpty(value, originalOf[key]),
+    );
+    const propertiesChanged = editedProperties !== null && !isEqualIgnoringEmpty(editedProperties, baseProperties);
+
+    return fieldsChanged || propertiesChanged;
+  }, [editedUserType, editedProperties, userType, baseProperties]);
 
   const handleBack = async (): Promise<void> => {
     await navigate(listUrl);

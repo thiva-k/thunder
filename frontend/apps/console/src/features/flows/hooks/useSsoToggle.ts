@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import type {Edge, Node} from '@xyflow/react';
 import type {Dispatch, MouseEvent as ReactMouseEvent, SetStateAction} from 'react';
@@ -118,7 +103,7 @@ const useSsoToggle = ({
   showSuccess,
 }: UseSsoToggleProps): UseSsoToggleReturn => {
   const {t} = useTranslation();
-  const {edgeStyle, isVerboseMode, setIsVerboseMode} = useFlowConfig();
+  const {edgeStyle} = useFlowConfig();
   const {lastInteractedResource, lastInteractedStepId} = useInteractionState();
   const {setIsOpenResourcePropertiesPanel} = useUIPanelState();
 
@@ -174,11 +159,6 @@ const useSsoToggle = ({
         return;
       }
 
-      // Execution nodes are hidden in non-verbose mode; never mutate the graph invisibly.
-      if (!isVerboseMode) {
-        setIsVerboseMode(true);
-      }
-
       const resolvedNodes = resolveCollisions(result.nodes, {
         margin: 50,
         maxIterations: 10,
@@ -204,7 +184,7 @@ const useSsoToggle = ({
         ),
       );
     },
-    [ssoResources, edgeStyle, isVerboseMode, setIsVerboseMode, setNodes, setEdges, showInfo, t],
+    [ssoResources, edgeStyle, setNodes, setEdges, showInfo, t],
   );
 
   const handleEnable = useCallback((): void => {
@@ -218,15 +198,10 @@ const useSsoToggle = ({
     }
 
     if (joinResolution.status === 'ambiguous') {
-      // The candidate edges enter execution nodes, which non-verbose mode
-      // hides; force verbose mode so the highlights are actually visible.
-      if (!isVerboseMode) {
-        setIsVerboseMode(true);
-      }
       // Don't guess the join point; let the user click one of the candidate edges.
       setPlacement({active: true, candidateEdgeIds: joinResolution.candidateEdgeIds});
     }
-  }, [ssoState.enabled, joinResolution, applyEnable, isVerboseMode, setIsVerboseMode]);
+  }, [ssoState.enabled, joinResolution, applyEnable]);
 
   const handleDisableRequest = useCallback((): void => {
     if (ssoState.enabled) {

@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
 import {render, screen, waitFor} from '@thunderid/test-utils';
@@ -81,13 +66,18 @@ vi.mock('../AddAssignmentDialog', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallbackOrOptions?: string | {defaultValue?: string}) => {
       const translations: Record<string, string> = {
-        'roles:edit.assignments.sections.manage.addAssignment': 'Add Assignment',
-        'roles:assignments.add.error': 'Failed to add assignments',
-        'roles:assignments.remove.error': 'Failed to remove assignment',
+        'edit.assignments.sections.manage.addAssignment': 'Add Assignment',
+        'assignments.add.error': 'Failed to add assignment. Please try again.',
+        'assignments.remove.error': 'Failed to remove assignment. Please try again.',
+        'errors.ROL-1007': 'One or more selected assignees no longer exist. Refresh and try again.',
+        'errors.ROL-1003': 'This role no longer exists. It may have already been deleted.',
       };
-      return translations[key] || key;
+      if (translations[key] !== undefined) return translations[key];
+      if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
+      if (fallbackOrOptions && 'defaultValue' in fallbackOrOptions) return fallbackOrOptions.defaultValue ?? key;
+      return key;
     },
   }),
 }));
@@ -224,7 +214,29 @@ describe('EditAssignmentsSettings', () => {
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
-        expect(screen.getByText('Network error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to add assignment. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('should show mapped error message when a selected assignee no longer exists', async () => {
+      const user = userEvent.setup();
+      mockAddMutate.mockImplementation(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+          error.response = {data: {code: 'ROL-1007'}};
+          options?.onError?.(error);
+        },
+      );
+
+      renderComponent();
+
+      await user.click(screen.getByRole('button', {name: 'Add Assignment'}));
+      await user.click(screen.getByTestId('confirm-add'));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('One or more selected assignees no longer exist. Refresh and try again.'),
+        ).toBeInTheDocument();
       });
     });
 
@@ -272,7 +284,7 @@ describe('EditAssignmentsSettings', () => {
       await user.click(screen.getByTestId('confirm-add'));
 
       await waitFor(() => {
-        expect(screen.getByText('Some error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to add assignment. Please try again.')).toBeInTheDocument();
       });
 
       mockRemoveMutate.mockImplementation(
@@ -301,7 +313,26 @@ describe('EditAssignmentsSettings', () => {
       await user.click(screen.getByTestId('remove-btn'));
 
       await waitFor(() => {
-        expect(screen.getByText('Remove failed')).toBeInTheDocument();
+        expect(screen.getByText('Failed to remove assignment. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('should show mapped error message when the role no longer exists on remove', async () => {
+      const user = userEvent.setup();
+      mockRemoveMutate.mockImplementation(
+        (_variables: unknown, options: {onSuccess?: () => void; onError?: (error: Error) => void}) => {
+          const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+          error.response = {data: {code: 'ROL-1003'}};
+          options?.onError?.(error);
+        },
+      );
+
+      renderComponent();
+
+      await user.click(screen.getByTestId('remove-btn'));
+
+      await waitFor(() => {
+        expect(screen.getByText('This role no longer exists. It may have already been deleted.')).toBeInTheDocument();
       });
     });
   });
@@ -347,7 +378,7 @@ describe('EditAssignmentsSettings', () => {
       await user.click(screen.getByTestId('remove-btn'));
 
       await waitFor(() => {
-        expect(screen.getByText('Previous error')).toBeInTheDocument();
+        expect(screen.getByText('Failed to remove assignment. Please try again.')).toBeInTheDocument();
       });
 
       mockAddMutate.mockImplementation(

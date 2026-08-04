@@ -1,22 +1,8 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
+import type {Application} from '@thunderid/configure-applications';
 import type {Theme} from '@thunderid/design';
 import {render, screen, waitFor, within} from '@thunderid/test-utils';
 import type {JSX} from 'react';
@@ -24,7 +10,6 @@ import {useEffect} from 'react';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import ApplicationCreateProvider from '../../contexts/ApplicationCreate/ApplicationCreateProvider';
 import useApplicationCreateContext from '../../hooks/useApplicationCreateContext';
-import type {Application} from '../../models/application';
 import {OrganizationUnitDefaultItem} from '../../models/application-create-flow';
 import ApplicationCreatePage from '../ApplicationCreatePage';
 
@@ -392,7 +377,7 @@ function TemplateSeeder(): JSX.Element {
     setSelectedTechnology(technology as never);
     setSelectedPlatform(platform as never);
     setSelectedTemplateConfig(template as never);
-    setCurrentStep('DETAILS');
+    setCurrentStep('ORGANIZATION_UNIT');
   };
 
   return (
@@ -455,7 +440,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, 'BACKEND', {
             id: 'backend',
-            creationFlow: {steps: ['DETAILS', 'COMPLETE'], previewSteps: []},
+            creationFlow: {steps: ['ORGANIZATION_UNIT', 'DETAILS', 'COMPLETE'], previewSteps: []},
           })
         }
       >
@@ -470,7 +455,7 @@ function TemplateSeeder(): JSX.Element {
             id: 'wallet',
             type: 'mobile',
             creationFlow: {
-              steps: ['DETAILS', 'SECURITY', 'DESIGN', 'CONFIGURE', 'COMPLETE'],
+              steps: ['ORGANIZATION_UNIT', 'DETAILS', 'SECURITY', 'DESIGN', 'CONFIGURE', 'COMPLETE'],
               previewSteps: ['DETAILS', 'SECURITY', 'DESIGN'],
             },
             defaults: {
@@ -540,7 +525,7 @@ function TemplateSeeder(): JSX.Element {
         onClick={() =>
           seed(null, null, {
             id: 'mcp-client',
-            creationFlow: {steps: ['DETAILS', 'CLIENT_TYPE', 'COMPLETE'], previewSteps: []},
+            creationFlow: {steps: ['ORGANIZATION_UNIT', 'DETAILS', 'CLIENT_TYPE', 'COMPLETE'], previewSteps: []},
             defaults: {
               inboundAuthConfig: [
                 {

@@ -1,30 +1,17 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import type {EdgeTypes, NodeProps, NodeTypes} from '@xyflow/react';
 import {useEffect, useMemo, useRef} from 'react';
 import StepFactory from '../components/resources/steps/StepFactory';
 import BaseEdge from '@/features/flows/components/react-flow-overrides/BaseEdge';
 import {CommonStaticStepFactory} from '@/features/flows/components/resources/steps/CommonStaticStepFactory';
+import ExecutionStack from '@/features/flows/components/resources/steps/execution/ExecutionStack';
 import FlowConstants from '@/features/flows/constants/FlowConstants';
 import type {Element} from '@/features/flows/models/elements';
 import type {Resources} from '@/features/flows/models/resources';
 import {StaticStepTypes, type Step} from '@/features/flows/models/steps';
+import {EXECUTION_STACK_NODE_TYPE} from '@/features/flows/utils/compactGraphTransforms';
 
 /**
  * Props for the useNodeTypes hook.
@@ -122,6 +109,8 @@ const useNodeTypes = (props: UseNodeTypesProps): UseNodeTypesReturn => {
     return {
       ...staticStepNodes,
       ...stepNodes,
+      // Synthetic display node for collapsed executor runs in compact mode.
+      [EXECUTION_STACK_NODE_TYPE]: (nodeProps: NodeProps) => <ExecutionStack {...nodeProps} />,
     };
     // IMPORTANT: Only depend on the step types array, not resources
     // The actual data is accessed via refs at render time

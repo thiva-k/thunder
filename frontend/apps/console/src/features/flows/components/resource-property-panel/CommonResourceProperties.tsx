@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {Stack, Typography} from '@wso2/oxygen-ui';
 import {useReactFlow, type Node as FlowNode} from '@xyflow/react';
@@ -89,6 +74,10 @@ const TOP_LEVEL_EDITABLE_PROPS = [
   'startIcon',
   'endIcon',
   'eventType',
+  // Paired with eventType by the button's Action selector. Without it here the
+  // change is written into `data` instead of onto the element, so the selector
+  // cannot read its own value back and cannot clear it again.
+  'actionType',
   'items',
   'direction',
   'gap',
@@ -279,6 +268,7 @@ function CommonResourceProperties(): ReactElement {
         if (element.id === lastInteractedResourceIdRef.current && currentResource) {
           const updatedResource: Resource = cloneDeep(currentResource);
           set(updatedResource as unknown as Record<string, unknown>, propertyKey, newValue);
+          lastInteractedResourceRef.current = updatedResource;
           setLastInteractedResourceRef.current(updatedResource);
         }
         return;
@@ -338,6 +328,11 @@ function CommonResourceProperties(): ReactElement {
         } else {
           set(updatedResource.data as Record<string, unknown>, propertyKey, newValue);
         }
+        // The ref otherwise only catches up on the next render, so a second
+        // change applied in the same tick (a control that writes a pair of
+        // properties, such as the button's Action selector) would rebase on the
+        // pre-change resource and drop the first one.
+        lastInteractedResourceRef.current = updatedResource;
         setLastInteractedResourceRef.current(updatedResource);
       }
     };

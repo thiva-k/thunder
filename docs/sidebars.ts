@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 
@@ -142,16 +127,16 @@ const sidebars: SidebarsConfig = {
       ],
     },
 
-    // Working with AI Section
+    // Build with AI Section
     {
       type: 'html',
       value:
-        '<div class="sidebar-section-label sidebar-section-label--ai"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg><span>Working with AI</span></div>',
+        '<div class="sidebar-section-label sidebar-section-label--ai"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M19 17v4"/><path d="M3 5h4"/><path d="M17 19h4"/></svg><span>Build with AI</span></div>',
       className: 'sidebar-html-section-header sidebar-persona-iam sidebar-persona-not-devops',
     },
     {
       type: 'category',
-      label: 'Working with AI',
+      label: 'Build with AI',
       collapsed: false,
       collapsible: false,
       className: 'sidebar-section sidebar-persona-iam sidebar-persona-not-devops',
@@ -386,6 +371,12 @@ const sidebars: SidebarsConfig = {
                       items: [
                         {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization/identity-concepts', label: 'Identity Concepts', key: 'mcp-authorization-identity-concepts'},
                         {type: 'doc', id: 'use-cases/ai-agents/mcp-authorization/configure-it-yourself', label: 'Configure It Yourself', key: 'mcp-authorization-configure-it-yourself'},
+                        {
+                          type: 'doc',
+                          id: 'use-cases/ai-agents/mcp-authorization/enterprise-managed-authorization',
+                          label: 'Enterprise-Managed Authorization',
+                          key: 'mcp-authorization-ema',
+                        },
                       ],
                     },
                   ],
@@ -750,6 +741,26 @@ const sidebars: SidebarsConfig = {
                       id: 'guides/protocols/oauth-oidc/token-exchange',
                       label: 'Token Exchange',
                       key: 'oauth-token-exchange',
+                    },
+                    {
+                      type: 'category',
+                      label: 'Identity Assertion Grant (ID-JAG)',
+                      link: {
+                        type: 'doc',
+                        id: 'guides/protocols/oauth-oidc/identity-assertion-grant/index',
+                      },
+                      items: [
+                        {
+                          type: 'doc',
+                          id: 'guides/protocols/oauth-oidc/identity-assertion-grant/issue-identity-assertions',
+                          label: 'Issue Identity Assertions',
+                        },
+                        {
+                          type: 'doc',
+                          id: 'guides/protocols/oauth-oidc/identity-assertion-grant/accept-identity-assertions',
+                          label: 'Accept Identity Assertions',
+                        },
+                      ],
                     },
                     {
                       type: 'doc',

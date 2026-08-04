@@ -1,21 +1,8 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
+import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {Stack} from '@wso2/oxygen-ui';
 import {useState, useCallback} from 'react';
@@ -24,9 +11,6 @@ import {useTranslation} from 'react-i18next';
 import AccessSection from './AccessSection';
 import DangerZoneSection from './DangerZoneSection';
 import QuickCopySection from './QuickCopySection';
-import type {Application} from '../../../models/application';
-import {TokenEndpointAuthMethods} from '../../../models/oauth';
-import type {OAuth2Config} from '../../../models/oauth';
 import resolveApplicationType, {isClientCredentialsOnlyGrantSet} from '../../../utils/resolveApplicationType';
 import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';
@@ -55,6 +39,11 @@ interface EditGeneralSettingsProps {
    * OAuth2 configuration for the application (optional)
    */
   oauth2Config?: OAuth2Config;
+  /**
+   * Bumped by the parent on Save/Reset to force AccessSection to remount and drop its local
+   * redirect URI list state.
+   */
+  sectionResetKey?: number;
   /**
    * The name of the field that was recently copied to clipboard
    */
@@ -97,6 +86,7 @@ export default function EditGeneralSettings({
   editedApp,
   onFieldChange,
   oauth2Config = undefined,
+  sectionResetKey = 0,
   copiedField,
   onCopyToClipboard,
   onDeleteSuccess = undefined,
@@ -170,6 +160,7 @@ export default function EditGeneralSettings({
           onCopyToClipboard={onCopyToClipboard}
         />
         <AccessSection
+          key={sectionResetKey}
           application={application}
           editedApp={editedApp}
           oauth2Config={oauth2Config}

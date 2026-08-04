@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * Sample App Login Page Object
@@ -119,44 +104,22 @@ export class SampleAppLoginPage extends BasePage {
 
     // Check for common logged-in indicators (adjust selectors based on your app)
     const loggedInIndicators = [
-      'button[aria-haspopup="true"]', // Avatar menu button
-      'button:has(> div[class*="MuiAvatar"])', // Avatar button
-      '[role="menuitem"]:has-text("Sign Out")', // May be visible if menu is open
-      '[data-testid="user-profile"]',
-      "text=/welcome|hello/i",
-      ".user-profile",
-      ".logged-in",
-      ".token-container", // Token display container
+      this.page.locator('button[aria-haspopup="true"]'), // Avatar menu button
+      this.page.locator('button:has(> div[class*="MuiAvatar"])'), // Avatar button
+      this.page.locator('[role="menuitem"]:has-text("Sign Out")'), // May be visible if menu is open
+      this.page.locator('[data-testid="user-profile"]'),
+      this.page.getByText(/welcome|hello/i),
+      this.page.locator(".user-profile"),
+      this.page.locator(".logged-in"),
+      this.page.locator(".token-container"), // Token display container
     ];
 
-    // Wait for at least one indicator to appear
-    let found = false;
-    for (const selector of loggedInIndicators) {
-      const element = this.page.locator(selector).first();
-      const count = await element.count();
-      if (count > 0) {
-        const isVisible = await element.isVisible().catch(() => false);
-        if (isVisible) {
-          found = true;
-          break;
-        }
-      }
-    }
-
-    // If none of the indicators are found, check if we're no longer on login page
-    if (!found) {
-      // Verify login form is no longer visible
-      const usernameInput = this.page.locator('input[name="username"], input[placeholder*="username" i]');
-      const usernameCount = await usernameInput.count();
-
-      if (usernameCount > 0) {
-        const isLoginFormVisible = await usernameInput
-          .first()
-          .isVisible()
-          .catch(() => false);
-        expect(isLoginFormVisible).toBe(false);
-      }
-    }
+    // Require at least one indicator to appear. This must assert rather than probe: a sign-in that
+    // fails client-side (for example a blocked cross-origin token read) still leaves the app on a
+    // page with no login form, so tolerating a missing indicator would report success for a broken
+    // sign-in and push the failure into whatever assertion happens to run next.
+    const anyLoggedInIndicator = loggedInIndicators.reduce((combined, locator) => combined.or(locator));
+    await expect(anyLoggedInIndicator.first()).toBeVisible({ timeout: Timeouts.DEFAULT_ACTION });
 
     // Take a screenshot for verification
     await this.screenshot("logged-in-state");
@@ -182,12 +145,16 @@ export class SampleAppLoginPage extends BasePage {
       )
       .first();
 
-    // Check if avatar button exists (indicates logged in state with menu)
-    const avatarCount = await avatarButton.count();
+    // Fallback: direct logout button (for other app implementations)
+    const logoutButton = this.page
+      .locator('button:has-text("Logout"), button:has-text("Sign Out"), [data-testid="logout-button"]')
+      .first();
 
-    if (avatarCount > 0) {
+    // Wait (with auto-retry) for whichever logout indicator is visible first
+    await avatarButton.or(logoutButton).first().waitFor({ state: "visible", timeout: Timeouts.DEFAULT_ACTION });
+
+    if (await avatarButton.isVisible().catch(() => false)) {
       // Click avatar to open menu
-      await avatarButton.waitFor({ state: "visible", timeout: Timeouts.DEFAULT_ACTION });
       await avatarButton.click();
 
       // Wait for menu to appear
@@ -202,15 +169,20 @@ export class SampleAppLoginPage extends BasePage {
         .first();
 
       await signOutMenuItem.waitFor({ state: "visible", timeout: Timeouts.DEFAULT_ACTION });
-      await signOutMenuItem.click();
+      await signOutMenuItem.dispatchEvent("click");
     } else {
-      // Fallback: Try direct logout button (for other app implementations)
-      const logoutButton = this.page
-        .locator('button:has-text("Logout"), button:has-text("Sign Out"), [data-testid="logout-button"]')
-        .first();
-
-      await logoutButton.waitFor({ state: "visible", timeout: Timeouts.DEFAULT_ACTION });
       await logoutButton.click();
+    }
+
+    // RP-initiated logout redirects to the gate's sign-out confirmation flow before the
+    // post-logout redirect back to the app; confirm it if it appears.
+    const confirmSignOutButton = this.page.getByRole("button", { name: "Sign out" });
+    const confirmed = await confirmSignOutButton
+      .waitFor({ state: "visible", timeout: Timeouts.DEFAULT_ACTION })
+      .then(() => true)
+      .catch(() => false);
+    if (confirmed) {
+      await confirmSignOutButton.click();
     }
 
     await this.page.waitForLoadState("networkidle");
@@ -218,9 +190,11 @@ export class SampleAppLoginPage extends BasePage {
 
   /**
    * Verify logout was successful
+   * RP-initiated logout redirects back to the app's post-logout redirect URI (the home page),
+   * not the login form.
    */
   async verifyLoggedOut() {
-    await this.verifyLoginPageLoaded();
+    await this.verifyHomePageLoaded();
   }
 
   /**
@@ -302,5 +276,17 @@ export class SampleAppLoginPage extends BasePage {
 
     // Wait for navigation/response after OTP verification
     await this.page.waitForLoadState("networkidle");
+  }
+
+  /**
+   * Returns the visible OTP error message text, or an empty string if none is present.
+   */
+  async getOTPErrorMessage(): Promise<string> {
+    const text = await this.page
+      .locator(".MuiAlert-message, .MuiAlert-colorError .MuiAlertTitle-root")
+      .first()
+      .textContent()
+      .catch(() => "");
+    return text?.trim() ?? "";
   }
 }

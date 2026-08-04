@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package inboundclient
 
@@ -64,10 +49,16 @@ var (
 	ErrFKLayoutNotFound = errors.New("layout not found")
 	// ErrFKInvalidUserType is returned when the specified user type is invalid.
 	ErrFKInvalidUserType = errors.New("invalid user type")
+	// ErrFKInvalidSubjectAttributeMapping is returned when the specified subject attribute mapping is invalid.
+	ErrFKInvalidSubjectAttributeMapping = errors.New("invalid subject attribute mapping")
 	// ErrUserSchemaLookupFailed is returned when the user-schema service fails (e.g. DB outage)
 	// while validating allowed user types. Distinct from ErrFKInvalidUserType so the handler
 	// can map it to a server error instead of a client validation error.
 	ErrUserSchemaLookupFailed = errors.New("user schema lookup failed")
+	// ErrUniqueAttributeLookupFailed is returned when the user-schema service fails (e.g. DB outage)
+	// while retrieving unique attributes for validation. Distinct from ErrFKInvalidSubjectAttributeMapping
+	// so the handler can map it to a server error instead of a client validation error.
+	ErrUniqueAttributeLookupFailed = errors.New("unique attribute lookup failed")
 	// ErrInvalidUserAttribute is returned when a user attribute is not valid for any of the allowed user types.
 	ErrInvalidUserAttribute = errors.New("invalid user attribute")
 

@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package flowexec provides the FlowExecService interface and its implementation.
 package flowexec
@@ -37,7 +22,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/flow/session"
 	sysContext "github.com/thunder-id/thunderid/internal/system/context"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/observability/event"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -60,7 +44,7 @@ type flowExecService struct {
 	actorProvider       providers.ActorProvider
 	observabilitySvc    providers.ObservabilityProvider
 	transactioner       providers.Transactioner
-	cryptoSvc           kmprovider.RuntimeCryptoProvider
+	cryptoSvc           providers.RuntimeCryptoProvider
 	attestationVerifier providers.AttestationProvider
 	serverConfigSvc     serverConfigProvider
 	cfg                 flowconfig.Config
@@ -72,7 +56,7 @@ func newFlowExecService(flowProvider providers.FlowProvider,
 	actorProvider providers.ActorProvider,
 	observabilitySvc providers.ObservabilityProvider,
 	transactioner providers.Transactioner,
-	cryptoSvc kmprovider.RuntimeCryptoProvider,
+	cryptoSvc providers.RuntimeCryptoProvider,
 	attestationVerifier providers.AttestationProvider,
 	graphBuilder graphbuilder.GraphBuilderInterface,
 	serverConfigSvc serverConfigProvider,
@@ -235,6 +219,9 @@ func (s *flowExecService) loadNewContext(ctx context.Context, appID, flowTypeStr
 //     profile) that must authenticate at flow initiation by presenting its Flow Secret.
 //   - Attestation — a mobile application that authenticates at flow initiation by presenting a valid
 //     platform attestation (e.g. a Google Play Integrity token) proving its binary identity.
+//   - DevMode — a mobile application with attestation dev mode enabled, which may initiate a flow
+//     without presenting an attestation. Disabled by default; intended for testing and trying out
+//     sample/development mobile clients.
 //
 // Sign-out is guarded like authentication so a native caller must prove its identity before ending a
 // session; a redirect-based app is pushed to the RP-initiated /oauth2/logout endpoint instead. Other
@@ -282,6 +269,8 @@ func (s *flowExecService) checkDirectFlowInitiationAllowed(ctx context.Context, 
 		return nil
 	case flowInitiationAttestation:
 		return s.verifyAttestation(ctx, attestationCfg, attestationToken)
+	case flowInitiationDevMode:
+		return nil
 	default:
 		logger.Error(ctx, "Unknown flow initiation mode for application",
 			log.String("appID", appID))
@@ -325,7 +314,12 @@ func (s *flowExecService) resolveFlowInitiationMode(
 		// M2M apps get tokens directly; browser apps are public redirect clients. Neither runs flows.
 		return flowInitiationNotPermitted, nil, nil
 	case appmodel.ApplicationTypeMobile:
-		// Mobile apps authenticate with platform attestation, which must be configured first.
+		// Dev mode lets a mobile app initiate flows without a platform attestation, for testing or
+		// trying out sample/development clients. Disabled by default.
+		if client.Attestation != nil && client.Attestation.DevMode {
+			return flowInitiationDevMode, nil, nil
+		}
+		// Otherwise, mobile apps authenticate with platform attestation, which must be configured first.
 		if client.Attestation == nil || (client.Attestation.Android == nil && client.Attestation.Apple == nil) {
 			return 0, nil, &ErrorAttestationNotConfigured
 		}
@@ -628,8 +622,8 @@ func (s *flowExecService) encryptEngineContext(ctx context.Context, engineCtx *E
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize engine context: %w", err)
 	}
-	params := cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}
-	ciphertext, _, err := s.cryptoSvc.Encrypt(ctx, nil, params, []byte(serialized.Context))
+	ciphertext, _, err := s.cryptoSvc.Encrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM),
+		nil, []byte(serialized.Context))
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt context: %w", err)
 	}
@@ -903,8 +897,8 @@ func (s *flowExecService) getFlowContext(ctx context.Context, executionID string
 	}
 
 	if isContextEncrypted(dbModel.Context) {
-		decryptParams := cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}
-		decrypted, decryptErr := s.cryptoSvc.Decrypt(ctx, nil, decryptParams, []byte(dbModel.Context))
+		decrypted, decryptErr := s.cryptoSvc.Decrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM),
+			nil, []byte(dbModel.Context))
 		if decryptErr != nil {
 			logger.Error(ctx, "Failed to decrypt flow context",
 				log.String(log.LoggerKeyExecutionID, executionID), log.Error(decryptErr))

@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package tokenservice
 
@@ -28,12 +13,19 @@ import (
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	oauth2model "github.com/thunder-id/thunderid/internal/oauth/oauth2/model"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/utils"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
+
+// idjagJTINamespace identifies ID-JAG assertions in the shared JTI replay store.
+const idjagJTINamespace = "idjag"
+
+// maxIDJAGJTILength is the maximum accepted length of an ID-JAG assertion's jti claim.
+const maxIDJAGJTILength = 256
 
 // TokenValidatorInterface defines the interface for validating tokens. Every method verifies the
 // token and then enforces the revocation deny list as a final step, so a caller cannot obtain claims
@@ -66,6 +58,7 @@ type tokenValidator struct {
 	jwtService         jwt.JWTServiceInterface
 	idpService         providers.IDPProvider
 	enforcementService revocation.EnforcementServiceInterface
+	jtiStore           jti.JTIStoreInterface
 }
 
 // NewTokenValidator creates a new TokenValidator instance.
@@ -74,12 +67,14 @@ func newTokenValidator(
 	jwtService jwt.JWTServiceInterface,
 	idpService providers.IDPProvider,
 	enforcementService revocation.EnforcementServiceInterface,
+	jtiStore jti.JTIStoreInterface,
 ) TokenValidatorInterface {
 	return &tokenValidator{
 		cfg:                cfg,
 		jwtService:         jwtService,
 		idpService:         idpService,
 		enforcementService: enforcementService,
+		jtiStore:           jtiStore,
 	}
 }
 
@@ -391,16 +386,15 @@ func (tv *tokenValidator) ValidateIDJAGAssertion(
 		return nil, err
 	}
 
-	// The draft lists jti, iat, and exp as REQUIRED; exp is enforced by validateTimeClaims above.
-	// Require a non-empty jti and an iat here. One-time-use (replay) caching keyed on jti is
-	// intentionally deferred to a future version, so this remains a presence check for forward
-	// compatibility.
 	if _, iatErr := extractInt64Claim(claims, "iat"); iatErr != nil {
 		return nil, fmt.Errorf("assertion is missing 'iat' claim: %w", iatErr)
 	}
 	jti, jtiErr := extractStringClaim(claims, "jti")
 	if jtiErr != nil {
 		return nil, fmt.Errorf("assertion is missing 'jti' claim: %w", jtiErr)
+	}
+	if len(jti) > maxIDJAGJTILength {
+		return nil, fmt.Errorf("assertion 'jti' exceeds maximum length")
 	}
 
 	serverIssuer := tv.cfg.JWT.Issuer
@@ -428,6 +422,16 @@ func (tv *tokenValidator) ValidateIDJAGAssertion(
 	sub, err := extractStringClaim(claims, "sub")
 	if err != nil {
 		return nil, fmt.Errorf("assertion is missing 'sub' claim: %w", err)
+	}
+
+	exp, _ := extractInt64Claim(claims, "exp")
+	expiry := time.Unix(exp+tv.cfg.JWT.Leeway, 0)
+	inserted, recordErr := tv.jtiStore.RecordJTI(ctx, idjagJTINamespace, jti, expiry)
+	if recordErr != nil {
+		return nil, fmt.Errorf("failed to record assertion jti: %w", recordErr)
+	}
+	if !inserted {
+		return nil, ErrAssertionReplayed
 	}
 
 	return &IDJAGAssertionClaims{

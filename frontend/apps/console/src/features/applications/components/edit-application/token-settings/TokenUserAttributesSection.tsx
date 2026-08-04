@@ -1,22 +1,8 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
+import type {IDTokenResponseType, UserInfoResponseType} from '@thunderid/configure-applications';
 import {
   Box,
   Stack,
@@ -40,7 +26,6 @@ import type React from 'react';
 import {useTranslation} from 'react-i18next';
 import JwtPreview from './JwtPreview';
 import TokenConstants from '../../../constants/token-constants';
-import type {IDTokenResponseType, UserInfoResponseType} from '../../../models/oauth';
 
 /**
  * Props for the {@link TokenUserAttributesSection} component.
@@ -428,8 +413,8 @@ export default function TokenUserAttributesSection({
 
     return (
       <Grid container spacing={3}>
-        <Grid size={{xs: 12, md: 7}}>{renderAttributeChips(currentAttrs, tokenType)}</Grid>
-        <Grid size={{xs: 12, md: 5}}>
+        <Grid size={{xs: 12, lg: 7}}>{renderAttributeChips(currentAttrs, tokenType)}</Grid>
+        <Grid size={{xs: 12, lg: 5}}>
           {tokenType === 'access' && showActorClaim && (
             <Alert severity="info" sx={{mb: 2}}>
               {t(
@@ -445,17 +430,38 @@ export default function TokenUserAttributesSection({
     );
   };
 
-  const cardTitle = t('applications:edit.token.token_profile_card.title', 'Token Attributes & Response');
-  const cardDescription = showUserInfoTab
-    ? t(
-        'applications:edit.token.token_profile_card.description',
-        'Configure the response types and user attributes included in your tokens and user info responses',
-      )
-    : t(
-        'applications:edit.token.token_profile_card.description.noUserInfo',
-        'Configure the response types and user attributes included in the tokens issued to this {{entity}}.',
+  // Native mode issues a single token and offers no response-format controls, so it gets its own
+  // title and description rather than the multi-token, multi-response wording.
+  const resolveCardTitle = (): string => {
+    if (!isOAuthMode) {
+      return t('applications:edit.token.token_profile_card.title.native', 'Token Attributes');
+    }
+    return t('applications:edit.token.token_profile_card.title', 'Token Attributes & Response');
+  };
+
+  const resolveCardDescription = (): string => {
+    if (!isOAuthMode) {
+      return t(
+        'applications:edit.token.token_profile_card.description.native',
+        'Choose the claims included in the token issued to this {{entity}}.',
         {entity: entityLabel},
       );
+    }
+    if (showUserInfoTab) {
+      return t(
+        'applications:edit.token.token_profile_card.description',
+        'Choose the claims in each token and the user info response, and how each is returned.',
+      );
+    }
+    return t(
+      'applications:edit.token.token_profile_card.description.noUserInfo',
+      'Choose the claims in each token issued to this {{entity}}, and how each is returned.',
+      {entity: entityLabel},
+    );
+  };
+
+  const cardTitle = resolveCardTitle();
+  const cardDescription = resolveCardDescription();
   if (isOAuthMode) {
     let tabIndex = showUserInfoTab ? 2 : 0;
 
@@ -500,7 +506,7 @@ export default function TokenUserAttributesSection({
                 return (
                   <Grid container spacing={3}>
                     {/* Left Column - Attributes + Response Format */}
-                    <Grid size={{xs: 12, md: 7}}>
+                    <Grid size={{xs: 12, lg: 7}}>
                       <Stack spacing={3}>
                         {renderAttributeChips(idAttrs, 'id')}
                         <Divider />
@@ -648,7 +654,7 @@ export default function TokenUserAttributesSection({
                     </Grid>
 
                     {/* Right Column - JWT Preview */}
-                    <Grid size={{xs: 12, md: 5}}>
+                    <Grid size={{xs: 12, lg: 5}}>
                       <JwtPreview payload={jwtPreview} defaultClaims={defaultAttrs} header={buildIdTokenHeader()} />
                     </Grid>
                   </Grid>
@@ -668,7 +674,7 @@ export default function TokenUserAttributesSection({
                 return (
                   <Grid container spacing={3}>
                     {/* Left Column - Attributes + Response Format */}
-                    <Grid size={{xs: 12, md: 7}}>
+                    <Grid size={{xs: 12, lg: 7}}>
                       <Stack spacing={3}>
                         {/* User Attributes */}
                         <Box>
@@ -856,7 +862,7 @@ export default function TokenUserAttributesSection({
                     </Grid>
 
                     {/* Right Column - JWT/JSON Preview */}
-                    <Grid size={{xs: 12, md: 5}}>
+                    <Grid size={{xs: 12, lg: 5}}>
                       <JwtPreview
                         payload={jwtPreview}
                         defaultClaims={defaultAttrs}

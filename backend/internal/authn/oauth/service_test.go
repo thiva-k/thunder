@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package oauth
 
@@ -1070,10 +1055,10 @@ func (suite *OAuthAuthnServiceTestSuite) TestBuildFederatedAuthResultResolvesExt
 		map[string]interface{}{"sub": testSub}).Return(nil, errEntityNotFound)
 
 	result, svcErr := suite.service.BuildFederatedAuthResult(
-		context.Background(), testIDPID, testSub, map[string]interface{}{"email": "sadil@wso2.com"})
+		context.Background(), testIDPID, testSub, map[string]interface{}{"email": "sadil@example.com"})
 	suite.Nil(svcErr)
-	suite.Equal("sadil@wso2.com", result.AuthenticatedClaims["family_name"])
-	suite.Equal("sadil@wso2.com", result.Token["family_name"])
+	suite.Equal("sadil@example.com", result.AuthenticatedClaims["family_name"])
+	suite.Equal("sadil@example.com", result.Token["family_name"])
 	suite.NotContains(result.Token, "sub")
 }
 

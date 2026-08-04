@@ -1,29 +1,13 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {
   OAuth2GrantTypes,
   OAuth2ResponseTypes,
   REFRESH_TOKEN_ISSUING_GRANTS,
   TokenEndpointAuthMethods,
-  type OAuth2Config,
-} from '../models/oauth';
-
+} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 /**
  * Derived boolean flags describing the current OAuth2 configuration state.
  * Used by the OAuth2 config UI to drive toggle/picker disabled states and captions.
@@ -35,6 +19,7 @@ export interface OAuth2Flags {
   isPkceDisabledByGrants: boolean;
   isPkceForcedByPublicClient: boolean;
   isPublicClientDisabledByGrants: boolean;
+  isParDisabledByGrants: boolean;
 }
 
 /**
@@ -53,6 +38,9 @@ export function deriveOAuth2Flags(config: OAuth2Config): OAuth2Flags {
     isPkceDisabledByGrants: !hasAuthorizationCodeGrant,
     isPkceForcedByPublicClient: isPublicClient,
     isPublicClientDisabledByGrants: hasClientCredentialsGrant || !hasAuthorizationCodeGrant,
+    // PAR is an authorization-endpoint feature, so it only applies when the authorization code grant
+    // is present (e.g. it has no effect on the token exchange or client credentials grants).
+    isParDisabledByGrants: !hasAuthorizationCodeGrant,
   };
 }
 
@@ -81,6 +69,18 @@ export function hasClientAccess(grantTypes: string[] | undefined): boolean {
 }
 
 /**
+ * Returns whether the application's tokens are governed by its OAuth2 token config rather than by
+ * its assertion config. An application with no OAuth2 configuration (app-native sign-in) receives
+ * only the flow assertion, whose validity and user attributes come from `application.assertion`.
+ *
+ * The backend always materializes `token.accessToken` and `token.idToken` whenever an OAuth profile
+ * exists, so this is equivalent to "has an OAuth profile" for any config loaded from the API.
+ */
+export function isOAuthTokenMode(oauth2Config: OAuth2Config | undefined): boolean {
+  return oauth2Config?.token?.accessToken !== undefined || oauth2Config?.token?.idToken !== undefined;
+}
+
+/**
  * Returns whether the grant list contains a token-issuing grant.
  */
 function hasTokenIssuingGrant(grants: string[]): boolean {
@@ -92,6 +92,7 @@ function hasTokenIssuingGrant(grants: string[]): boolean {
  * Enforces cross-field invariants:
  * - refresh_token requires a token-issuing grant (authorization_code or ciba)
  * - PKCE requires authorization_code
+ * - PAR (requirePushedAuthorizationRequests) requires authorization_code
  * - public client is incompatible with client_credentials and requires authorization_code
  * - response type 'code' is added/removed alongside the authorization_code grant
  */
@@ -108,6 +109,10 @@ export function applyGrantTypesChange(current: OAuth2Config, selected: string[])
 
   if (current.pkceRequired && !nextHasAuthzCode) {
     updates.pkceRequired = false;
+  }
+
+  if (current.requirePushedAuthorizationRequests && !nextHasAuthzCode) {
+    updates.requirePushedAuthorizationRequests = false;
   }
 
   if (current.publicClient && (nextHasCC || !nextHasAuthzCode)) {

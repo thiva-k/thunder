@@ -1,25 +1,10 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {AttestationConfig} from '@thunderid/configure-applications';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {AttestationConfig} from '../../../../models/oauth';
 import AttestationSection from '../AttestationSection';
 
 vi.mock('react-i18next', () => ({
@@ -96,6 +81,20 @@ describe('AttestationSection', () => {
       );
 
       expect(screen.queryByDisplayValue('secret-json')).not.toBeInTheDocument();
+    });
+
+    it('should render the dev mode toggle unchecked by default', () => {
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      const toggle = screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode');
+      expect(toggle).not.toBeChecked();
+    });
+
+    it('should render the dev mode toggle checked when dev mode is enabled', () => {
+      render(<AttestationSection attestation={{devMode: true}} onAttestationChange={mockOnAttestationChange} />);
+
+      const toggle = screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode');
+      expect(toggle).toBeChecked();
     });
 
     it('should render the Apple fields with values when an apple config is present', () => {
@@ -230,6 +229,119 @@ describe('AttestationSection', () => {
       const calls = mockOnAttestationChange.mock.calls as [AttestationConfig | null][];
       const lastArg = calls[calls.length - 1][0];
       expect(lastArg?.android?.serviceAccountCredentials).toBe('{"type":"service_account"}');
+    });
+  });
+
+  describe('Dev Mode', () => {
+    it('should open the confirm dialog without emitting when toggled on', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(mockOnAttestationChange).not.toHaveBeenCalled();
+    });
+
+    it('should emit a dev mode config when the confirm dialog is accepted', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+      await user.click(screen.getByTestId('dev-mode-confirm-button'));
+
+      expect(mockOnAttestationChange).toHaveBeenLastCalledWith({devMode: true});
+    });
+
+    it('should not emit or check the toggle when the confirm dialog is canceled', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+      await user.click(screen.getByText('applications:edit.advanced.attestation.devModeConfirmDialog.cancelButton'));
+
+      expect(mockOnAttestationChange).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode')).not.toBeChecked();
+    });
+
+    it('should emit null immediately when dev mode is disabled again, without a confirm dialog', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<AttestationSection attestation={{devMode: true}} onAttestationChange={mockOnAttestationChange} />);
+
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+
+      expect(mockOnAttestationChange).toHaveBeenLastCalledWith(null);
+    });
+
+    it('should keep dev mode set alongside an android config once confirmed', async () => {
+      const user = userEvent.setup({delay: null});
+      render(
+        <AttestationSection
+          attestation={{android: {packageName: 'com.example.app'}}}
+          onAttestationChange={mockOnAttestationChange}
+        />,
+      );
+
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+      await user.click(screen.getByTestId('dev-mode-confirm-button'));
+
+      expect(mockOnAttestationChange).toHaveBeenLastCalledWith({
+        android: {packageName: 'com.example.app'},
+        devMode: true,
+      });
+    });
+
+    it('should still emit enabling dev mode when the apple config is left incomplete', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      await selectPlatform(user, 'applications:edit.advanced.attestation.platform.apple');
+      await user.type(screen.getByLabelText('applications:edit.advanced.attestation.labels.teamId'), 'A');
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+      await user.click(screen.getByTestId('dev-mode-confirm-button'));
+
+      expect(mockOnAttestationChange).toHaveBeenLastCalledWith({devMode: true});
+    });
+
+    it('should still emit the preserved apple config when disabling dev mode while apple is left incomplete', async () => {
+      const user = userEvent.setup({delay: null});
+      render(
+        <AttestationSection
+          attestation={{apple: {teamId: 'ABCDE12345', bundleId: 'com.example.myapp'}, devMode: true}}
+          onAttestationChange={mockOnAttestationChange}
+        />,
+      );
+
+      await user.clear(screen.getByLabelText('applications:edit.advanced.attestation.labels.bundleId'));
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+
+      expect(mockOnAttestationChange).toHaveBeenLastCalledWith({
+        apple: {teamId: 'ABCDE12345', bundleId: 'com.example.myapp'},
+      });
+    });
+
+    it('should not show the warning banner when dev mode is disabled', () => {
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      expect(screen.queryByText('applications:edit.advanced.attestation.warning.devMode')).not.toBeInTheDocument();
+    });
+
+    it('should show the warning banner when dev mode is enabled', () => {
+      render(<AttestationSection attestation={{devMode: true}} onAttestationChange={mockOnAttestationChange} />);
+
+      expect(screen.getByText('applications:edit.advanced.attestation.warning.devMode')).toBeInTheDocument();
+    });
+
+    it('should not show the warning banner until the confirm dialog is accepted', async () => {
+      const user = userEvent.setup({delay: null});
+      render(<AttestationSection onAttestationChange={mockOnAttestationChange} />);
+
+      await user.click(screen.getByLabelText('applications:edit.advanced.attestation.labels.devMode'));
+      expect(screen.queryByText('applications:edit.advanced.attestation.warning.devMode')).not.toBeInTheDocument();
+
+      await user.click(screen.getByTestId('dev-mode-confirm-button'));
+
+      expect(screen.getByText('applications:edit.advanced.attestation.warning.devMode')).toBeInTheDocument();
     });
   });
 

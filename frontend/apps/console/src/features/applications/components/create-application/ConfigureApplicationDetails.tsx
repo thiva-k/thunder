@@ -1,25 +1,10 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
-import {useGetOrganizationUnit} from '@thunderid/configure-organization-units';
+import {OrganizationUnitSummaryChip} from '@thunderid/components';
+import {OrganizationUnitTreeConstants, useGetOrganizationUnit} from '@thunderid/configure-organization-units';
 import type {UserTypeListItem} from '@thunderid/configure-user-types';
 import {Stack, Typography, Box, Divider} from '@wso2/oxygen-ui';
-import {Home} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useEffect, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -206,61 +191,13 @@ export default function ConfigureApplicationDetails({
       </Typography>
 
       {hasMultipleOUs && (
-        <Box
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-            p: '12px 14px',
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: '10px',
-            bgcolor: 'background.paper',
-          }}
-        >
-          <Box
-            sx={{
-              width: 32,
-              height: 32,
-              borderRadius: '8px',
-              bgcolor: 'primary.main',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <Home size={15} color="#fff" />
-          </Box>
-          <Box sx={{flex: 1, minWidth: 0}}>
-            <Typography
-              variant="overline"
-              color="text.secondary"
-              sx={{display: 'block', lineHeight: 1.2, fontWeight: 600}}
-            >
-              {t('applications:onboarding.organizationUnit.fieldLabel', 'Organization Unit')}
-            </Typography>
-            <Typography variant="body2" sx={{fontWeight: 600}}>
-              {isOuLoading ? t('common:status.loading') : organizationUnit?.name}
-            </Typography>
-          </Box>
-          <Typography
-            component="span"
-            variant="body2"
-            onClick={onChangeOu}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onChangeOu();
-              }
-            }}
-            sx={{fontWeight: 500, color: 'primary.main', cursor: 'pointer', flexShrink: 0}}
-          >
-            {t('common:actions.change')}
-          </Typography>
-        </Box>
+        <OrganizationUnitSummaryChip
+          logoUrl={organizationUnit?.logoUrl}
+          icon={OrganizationUnitTreeConstants.DEFAULT_AVATAR}
+          label={t('applications:onboarding.organizationUnit.fieldLabel', 'Organization Unit')}
+          value={isOuLoading ? t('common:status.loading', 'Loading...') : organizationUnit?.name}
+          onChange={onChangeOu}
+        />
       )}
 
       <ConfigureName

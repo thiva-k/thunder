@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {renderWithProviders, screen, fireEvent, waitFor} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
@@ -31,9 +16,13 @@ vi.mock('react-router', async () => {
   };
 });
 
-vi.mock('@thunderid/react', () => ({
-  useThunderID: () => ({http: {request: vi.fn()}}),
-}));
+vi.mock('@thunderid/react', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return {
+    ...actual,
+    useThunderID: () => ({http: {request: vi.fn()}}),
+  };
+});
 
 const mockShowToast = vi.fn();
 
@@ -50,9 +39,13 @@ vi.mock('@thunderid/logger/react', () => ({
   useLogger: () => ({error: vi.fn(), info: vi.fn(), debug: vi.fn()}),
 }));
 
-vi.mock('@thunderid/utils', () => ({
-  generateRandomHumanReadableIdentifiers: () => ['Alpha Service', 'Beta Platform'],
-}));
+vi.mock('@thunderid/utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@thunderid/utils')>();
+  return {
+    ...actual,
+    generateRandomHumanReadableIdentifiers: () => ['Alpha Service', 'Beta Platform'],
+  };
+});
 
 const mockCreateResourceServerMutate = vi.fn();
 

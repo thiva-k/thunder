@@ -1,22 +1,9 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
+import {OAuth2ResponseTypes, TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {useThunderID} from '@thunderid/react';
 import {
   Box,
@@ -37,7 +24,6 @@ import {
 import {Lock} from '@wso2/oxygen-ui-icons-react';
 import {useTranslation} from 'react-i18next';
 import type {ApplicationTemplate} from '../../../models/application-templates';
-import {OAuth2ResponseTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../../../models/oauth';
 import {getGrantTypeLabel} from '../../../utils/getGrantTypeLabel';
 import {
   applyGrantTypesChange,
@@ -194,6 +180,7 @@ export default function OAuth2ConfigSection({
     isPkceDisabledByGrants,
     isPkceForcedByPublicClient,
     isPublicClientDisabledByGrants,
+    isParDisabledByGrants,
   } = flags;
 
   return (
@@ -442,8 +429,8 @@ export default function OAuth2ConfigSection({
           <FormControlLabel
             control={
               <Switch
-                checked={oauth2Config.requirePushedAuthorizationRequests ?? false}
-                disabled={!isEditable || isParLocked}
+                checked={isParDisabledByGrants ? false : (oauth2Config.requirePushedAuthorizationRequests ?? false)}
+                disabled={!isEditable || isParLocked || isParDisabledByGrants}
                 onChange={(e) => onOAuth2ConfigChange?.({requirePushedAuthorizationRequests: e.target.checked})}
                 inputProps={{
                   'aria-label': t(
@@ -467,10 +454,15 @@ export default function OAuth2ConfigSection({
             }
           />
           <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {t(
-              'applications:edit.advanced.par.hint',
-              'Require the client to use the PAR endpoint before authorization.',
-            )}
+            {isParDisabledByGrants
+              ? t(
+                  'applications:edit.advanced.par.requiresAuthorizationCode',
+                  'Available only when the authorization code grant is enabled.',
+                )
+              : t(
+                  'applications:edit.advanced.par.hint',
+                  'Require the client to use the PAR endpoint before authorization.',
+                )}
           </Typography>
         </Box>
       </Stack>

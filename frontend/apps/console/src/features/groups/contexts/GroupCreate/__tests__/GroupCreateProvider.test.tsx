@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
 import {render, screen} from '@thunderid/test-utils';
@@ -34,8 +19,8 @@ function TestConsumer() {
       <div data-testid="organization-unit-id">{context.ouId || 'empty'}</div>
       <div data-testid="error">{context.error ?? 'null'}</div>
 
-      <button type="button" onClick={() => context.setCurrentStep(GroupCreateFlowStep.ORGANIZATION_UNIT)}>
-        Set OU Step
+      <button type="button" onClick={() => context.setCurrentStep(GroupCreateFlowStep.NAME)}>
+        Set Name Step
       </button>
       <button type="button" onClick={() => context.setName('Test Group')}>
         Set Name
@@ -68,7 +53,7 @@ describe('GroupCreateProvider', () => {
       </GroupCreateProvider>,
     );
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
     expect(screen.getByTestId('name')).toHaveTextContent('empty');
     expect(screen.getByTestId('description')).toHaveTextContent('empty');
     expect(screen.getByTestId('organization-unit-id')).toHaveTextContent('empty');
@@ -84,9 +69,9 @@ describe('GroupCreateProvider', () => {
       </GroupCreateProvider>,
     );
 
-    await user.click(screen.getByText('Set OU Step'));
+    await user.click(screen.getByText('Set Name Step'));
 
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
   });
 
   it('updates name when setName is called', async () => {
@@ -155,14 +140,14 @@ describe('GroupCreateProvider', () => {
     );
 
     // Set some values
-    await user.click(screen.getByText('Set OU Step'));
+    await user.click(screen.getByText('Set Name Step'));
     await user.click(screen.getByText('Set Name'));
     await user.click(screen.getByText('Set Description'));
     await user.click(screen.getByText('Set OU Id'));
     await user.click(screen.getByText('Set Error'));
 
     // Verify values are set
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
     expect(screen.getByTestId('name')).toHaveTextContent('Test Group');
     expect(screen.getByTestId('description')).toHaveTextContent('A test description');
     expect(screen.getByTestId('organization-unit-id')).toHaveTextContent('ou-123');
@@ -172,7 +157,7 @@ describe('GroupCreateProvider', () => {
     await user.click(screen.getByText('Reset'));
 
     // Verify back to initial state
-    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.NAME);
+    expect(screen.getByTestId('current-step')).toHaveTextContent(GroupCreateFlowStep.ORGANIZATION_UNIT);
     expect(screen.getByTestId('name')).toHaveTextContent('empty');
     expect(screen.getByTestId('description')).toHaveTextContent('empty');
     expect(screen.getByTestId('organization-unit-id')).toHaveTextContent('empty');

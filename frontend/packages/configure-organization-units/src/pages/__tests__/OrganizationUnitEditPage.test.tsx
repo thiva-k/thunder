@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {screen, fireEvent, waitFor, renderWithProviders, renderHook} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
@@ -470,6 +455,39 @@ describe('OrganizationUnitEditPage', () => {
     });
   });
 
+  it('hides the action bar when the description is retyped back to its original value', async () => {
+    renderWithProviders(<OrganizationUnitEditPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('A test description')).toBeInTheDocument();
+    });
+
+    const openDescriptionEditor = (matchText: string): void => {
+      const editButton = screen
+        .getAllByRole('button')
+        .find((btn) => btn.querySelector('svg') && btn.closest('div')?.textContent?.includes(matchText));
+      fireEvent.click(editButton!);
+    };
+
+    openDescriptionEditor('A test description');
+    let textbox = screen.getByDisplayValue('A test description');
+    fireEvent.change(textbox, {target: {value: 'Changed description'}});
+    fireEvent.blur(textbox);
+
+    await waitFor(() => {
+      expect(screen.getByText(t('organizationUnits:edit.actions.unsavedChanges.label'))).toBeInTheDocument();
+    });
+
+    openDescriptionEditor('Changed description');
+    textbox = screen.getByDisplayValue('Changed description');
+    fireEvent.change(textbox, {target: {value: 'A test description'}});
+    fireEvent.blur(textbox);
+
+    await waitFor(() => {
+      expect(screen.queryByText(t('organizationUnits:edit.actions.unsavedChanges.label'))).not.toBeInTheDocument();
+    });
+  });
+
   it('should cancel description editing on Escape key', async () => {
     renderWithProviders(<OrganizationUnitEditPage />);
 
@@ -789,7 +807,7 @@ describe('OrganizationUnitEditPage', () => {
     });
 
     // Back button should show the parent OU name - find by partial text
-    const backButton = screen.getByText(t('organizationUnits:edit.page.backToOU'));
+    const backButton = screen.getByText(t('organizationUnits:edit.page.backToOU', {name: 'Parent OU'}));
     fireEvent.click(backButton);
 
     await waitFor(() => {
@@ -870,10 +888,14 @@ describe('OrganizationUnitEditPage', () => {
 
     // Open delete dialog
     await waitFor(() => {
-      expect(screen.getByText(t('organizationUnits:edit.general.dangerZone.delete.button.label'))).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {name: t('organizationUnits:edit.general.dangerZone.delete.button.label')}),
+      ).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByText(t('organizationUnits:edit.general.dangerZone.delete.button.label')));
+    fireEvent.click(
+      screen.getByRole('button', {name: t('organizationUnits:edit.general.dangerZone.delete.button.label')}),
+    );
 
     await waitFor(() => {
       expect(screen.getByText(t('organizationUnits:delete.dialog.message'))).toBeInTheDocument();
@@ -900,11 +922,15 @@ describe('OrganizationUnitEditPage', () => {
     renderWithProviders(<OrganizationUnitEditPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(t('organizationUnits:edit.general.dangerZone.delete.button.label'))).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', {name: t('organizationUnits:edit.general.dangerZone.delete.button.label')}),
+      ).toBeInTheDocument();
     });
 
     // Open delete dialog
-    fireEvent.click(screen.getByText(t('organizationUnits:edit.general.dangerZone.delete.button.label')));
+    fireEvent.click(
+      screen.getByRole('button', {name: t('organizationUnits:edit.general.dangerZone.delete.button.label')}),
+    );
 
     await waitFor(() => {
       expect(screen.getByText(t('organizationUnits:delete.dialog.message'))).toBeInTheDocument();
@@ -998,9 +1024,7 @@ describe('OrganizationUnitEditPage', () => {
 
       renderWithProviders(<OrganizationUnitEditPage />);
 
-      const logoEditButton = await screen.findByLabelText(
-        t('organizationUnits:edit.page.logoUpdate.label', 'Update Logo'),
-      );
+      const logoEditButton = await screen.findByLabelText(t('organizationUnits:edit.page.logoUpdate.label'));
       fireEvent.click(logoEditButton);
 
       await waitFor(() => {
@@ -1023,9 +1047,7 @@ describe('OrganizationUnitEditPage', () => {
       renderWithProviders(<OrganizationUnitEditPage />);
 
       // Open the modal via logo edit icon button
-      const logoEditButton = await screen.findByLabelText(
-        t('organizationUnits:edit.page.logoUpdate.label', 'Update Logo'),
-      );
+      const logoEditButton = await screen.findByLabelText(t('organizationUnits:edit.page.logoUpdate.label'));
       fireEvent.click(logoEditButton);
 
       await waitFor(() => {
@@ -1041,10 +1063,11 @@ describe('OrganizationUnitEditPage', () => {
     });
 
     it('should update logo and close modal when logo is updated', async () => {
+      // Original logo differs from the one the picker selects ('emoji:🚀'), so this is a real change.
       mockUseGetOrganizationUnit.mockReturnValue({
         data: {
           ...mockOrganizationUnit,
-          logoUrl: 'https://example.com/logo.png',
+          logoUrl: 'emoji:🌟',
         },
         isLoading: false,
         error: null,
@@ -1054,9 +1077,7 @@ describe('OrganizationUnitEditPage', () => {
       renderWithProviders(<OrganizationUnitEditPage />);
 
       // Open the modal
-      const logoEditButton = await screen.findByLabelText(
-        t('organizationUnits:edit.page.logoUpdate.label', 'Update Logo'),
-      );
+      const logoEditButton = await screen.findByLabelText(t('organizationUnits:edit.page.logoUpdate.label'));
       fireEvent.click(logoEditButton);
 
       await waitFor(() => {
@@ -1087,12 +1108,14 @@ describe('OrganizationUnitEditPage', () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(t('organizationUnits:edit.general.dangerZone.delete.button.label')),
+          screen.getByRole('button', {name: t('organizationUnits:edit.general.dangerZone.delete.button.label')}),
         ).toBeInTheDocument();
       });
 
       // Open delete dialog
-      fireEvent.click(screen.getByText(t('organizationUnits:edit.general.dangerZone.delete.button.label')));
+      fireEvent.click(
+        screen.getByRole('button', {name: t('organizationUnits:edit.general.dangerZone.delete.button.label')}),
+      );
 
       await waitFor(() => {
         expect(screen.getByText(t('organizationUnits:delete.dialog.message'))).toBeInTheDocument();

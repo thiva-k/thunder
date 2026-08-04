@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, waitFor, within, userEvent} from '@thunderid/test-utils';
 import type {User} from '@thunderid/types';
@@ -158,6 +143,15 @@ vi.mock('@/components/edit-user/EditUserAttributes', () => ({
     <div data-testid="edit-user-attributes">
       <button type="button" onClick={() => onFieldChange('attributes', {department: 'sales'})}>
         Edit an attribute
+      </button>
+      {/* Emits the original saved attributes, so the page treats it as no change. */}
+      <button
+        type="button"
+        onClick={() =>
+          onFieldChange('attributes', {username: 'john_doe', email: 'john@example.com', age: 30, active: true})
+        }
+      >
+        Revert attributes
       </button>
     </div>
   ),
@@ -479,6 +473,18 @@ describe('UserEditPage', () => {
       expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
       expect(screen.getByRole('button', {name: 'Save'})).toBeInTheDocument();
       expect(screen.getByRole('button', {name: 'Reset'})).toBeInTheDocument();
+    });
+
+    it('hides the unsaved-changes bar when attributes are manually reverted to the saved values', async () => {
+      const user = userEvent.setup();
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('tab', {name: 'Attributes'}));
+      await user.click(screen.getByText('Edit an attribute'));
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+
+      await user.click(screen.getByText('Revert attributes'));
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
     });
 
     it('does not submit if user ouId is missing', async () => {

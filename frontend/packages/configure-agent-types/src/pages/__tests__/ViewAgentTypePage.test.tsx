@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, waitFor, within, userEvent} from '@thunderid/test-utils';
 import type {ReactNode} from 'react';
@@ -114,6 +99,37 @@ vi.mock('@/components/edit-agent-type/schema-settings/EditSchemaSettings', () =>
         }
       >
         Update Properties
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onPropertiesChange([
+            {
+              id: '0',
+              name: 'email',
+              displayName: '',
+              type: 'string',
+              required: true,
+              unique: true,
+              credential: false,
+              enum: [],
+              regex: '',
+            },
+            {
+              id: '1',
+              name: 'age',
+              displayName: '',
+              type: 'number',
+              required: false,
+              unique: false,
+              credential: false,
+              enum: [],
+              regex: '',
+            },
+          ])
+        }
+      >
+        Revert Properties
       </button>
       <button
         type="button"
@@ -304,6 +320,22 @@ describe('ViewAgentTypePage', () => {
 
       await user.click(screen.getByRole('button', {name: /Reset/i}));
 
+      await waitFor(() => {
+        expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+      });
+    });
+
+    it('hides the unsaved-changes bar when properties are manually reverted to the server schema', async () => {
+      const user = userEvent.setup();
+      render(<ViewAgentTypePage />);
+
+      await user.click(screen.getByText('Update Properties'));
+      await waitFor(() => {
+        expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+      });
+
+      // Edit back to the exact server schema — no real change remains.
+      await user.click(screen.getByText('Revert Properties'));
       await waitFor(() => {
         expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
       });

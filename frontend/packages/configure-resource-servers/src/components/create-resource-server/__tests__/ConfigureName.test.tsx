@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, fireEvent} from '@thunderid/test-utils';
 import {describe, expect, it, vi, beforeEach} from 'vitest';
@@ -107,14 +92,13 @@ describe('ConfigureName', () => {
     expect(onReadyChange).toHaveBeenCalledWith(false);
   });
 
-  it('renders suggestion chips from the returned suggestions', () => {
+  it('renders a name suggestion', () => {
     render(<ConfigureName name="" identifier="" onNameChange={vi.fn()} onIdentifierChange={vi.fn()} />);
 
     expect(screen.getByText('Alpha Service')).toBeInTheDocument();
-    expect(screen.getByText('Beta Platform')).toBeInTheDocument();
   });
 
-  it('fills name when a suggestion chip is clicked', () => {
+  it('fills name when the suggestion is clicked', () => {
     const onNameChange = vi.fn();
     const onIdentifierChange = vi.fn();
     render(<ConfigureName name="" identifier="" onNameChange={onNameChange} onIdentifierChange={onIdentifierChange} />);
@@ -130,7 +114,7 @@ describe('ConfigureName', () => {
       <ConfigureName name="" identifier="" selectedType="API" onNameChange={vi.fn()} onIdentifierChange={vi.fn()} />,
     );
 
-    expect(screen.getByText('Name your resource server')).toBeInTheDocument();
+    expect(screen.getByText("Let's collect some details about your resource server")).toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: /resource server name/i})).toBeInTheDocument();
   });
 
@@ -139,7 +123,7 @@ describe('ConfigureName', () => {
       <ConfigureName name="" identifier="" selectedType="MCP" onNameChange={vi.fn()} onIdentifierChange={vi.fn()} />,
     );
 
-    expect(screen.getByText('Name your MCP server')).toBeInTheDocument();
+    expect(screen.getByText("Let's collect some details about your MCP server")).toBeInTheDocument();
     expect(screen.getByRole('textbox', {name: /mcp server name/i})).toBeInTheDocument();
   });
 

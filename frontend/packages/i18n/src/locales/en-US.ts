@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * English (US) translations for applications
@@ -48,6 +33,7 @@ const translations = {
     'actions.yes': 'Yes',
     'actions.no': 'No',
     'actions.continue': 'Continue',
+    'actions.stay': 'Stay',
     'actions.skip': 'Skip',
     'actions.finish': 'Finish',
     'actions.done': 'Done',
@@ -136,6 +122,11 @@ const translations = {
     'messages.noResults': 'No results found',
     'messages.somethingWentWrong': 'Something went wrong',
     'messages.tryAgain': 'Please try again',
+
+    // External links
+    learnMore: 'Learn more',
+    'externalLink.title': 'You are leaving {{productName}}',
+    'externalLink.message': 'This link leads to an external site that {{productName}} does not control:',
 
     // Navigation
     'navigation.home': 'Home',
@@ -862,15 +853,17 @@ const translations = {
     'createUserType.subtitle': 'Add a new user type to your organization',
 
     // Create wizard steps
-    'createWizard.steps.name': 'Create a User Type',
-    'createWizard.steps.general': 'General',
+    'createWizard.steps.organizationUnit': 'Organization Unit',
+    'createWizard.steps.name': 'Details',
     'createWizard.steps.properties': 'Properties',
-    'createWizard.name.title': "Let's name your user type",
+    'createWizard.organizationUnit.title': 'Where should this user type belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this user type. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
+    'createWizard.name.title': "Let's collect some details about your user type",
     'createWizard.name.fieldLabel': 'User Type Name',
     'createWizard.name.placeholder': 'Enter your user type name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
-    'createWizard.general.title': 'Configure general settings',
-    'createWizard.general.subtitle': 'Choose an organization unit and set registration preferences',
+    'createWizard.general.subtitle': 'Set registration preferences for this user type.',
     'createWizard.properties.title': 'Define your schema properties',
     'createWizard.properties.subtitle': 'Add the fields that make up this user type',
     'create.success': 'User type created successfully.',
@@ -987,7 +980,6 @@ const translations = {
     'createWizard.name.title': "Let's name your agent type",
     'createWizard.name.fieldLabel': 'Agent Type Name',
     'createWizard.name.placeholder': 'Enter your agent type name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
     'createWizard.general.title': 'Configure general settings',
     'createWizard.general.subtitle': 'Choose an organization unit and set registration preferences',
     'createWizard.properties.title': 'Define your schema properties',
@@ -1026,14 +1018,17 @@ const translations = {
     'createWizard.errors.createFailed': 'Failed to create agent. Please try again.',
     'createWizard.errors.ouRequired': 'Organization unit is required',
     'createWizard.errors.schemaRequired': 'Schema is required',
-    'createWizard.steps.name': 'Name',
+    'createWizard.steps.name': 'Details',
     'createWizard.steps.organizationUnit': 'Organization unit',
     'createWizard.steps.profile': 'Profile',
     'createWizard.steps.owner': 'Owner',
-    'createWizard.name.title': "What's this agent called?",
+    'createWizard.organizationUnit.title': 'Where should this agent belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this agent. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
+    'createWizard.name.title': "Let's collect some details about your agent",
     'createWizard.name.fieldLabel': 'Agent name',
     'createWizard.name.placeholder': 'e.g. Billing Service',
-    'createWizard.name.suggestions.label': 'Need inspiration? Pick one:',
     'createWizard.agentDetails.title': 'Agent attributes',
     'createWizard.agentDetails.subtitle': 'Provide values for the attributes defined by the agent schema.',
     'createWizard.owner.title': 'Owner',
@@ -1221,15 +1216,21 @@ const translations = {
     'edit.advanced.security.par.label': 'Require Pushed Authorization Requests',
     'edit.advanced.security.par.hint':
       'Require this agent to push its authorization request to the PAR endpoint before redirecting a user to sign in.',
+    'edit.advanced.security.par.notApplicable':
+      'Pushed Authorization Requests only apply to the <code>authorization_code</code> grant. Turn that on to enable this setting.',
 
     // Edit page - Tokens tab
     'edit.tokens.tabs.user': 'User',
     'edit.tokens.tabs.agent': 'Agent',
+    'edit.tokens.audience.title': 'Issued to',
+    'edit.tokens.audience.agent.description': 'Tokens for the agent acting on its own',
+    'edit.tokens.audience.user.description': 'Tokens for the agent acting on behalf of a user',
+    'edit.tokens.audience.footnote': 'Claim sets are configured independently for each audience.',
     'edit.tokens.delegationLock.message':
-      'These settings are frozen for this agent. Turn on Delegated mode in the Advanced tab to unlock and start using them.',
+      'This agent does not receive tokens on behalf of a user. Turn on Delegated mode in the <advancedLink>Advanced tab</advancedLink> to configure them.',
     'edit.tokens.agent.attributes.title': 'Access Token Attributes',
     'edit.tokens.agent.attributes.description':
-      'Attributes included in the access token this agent receives for its own requests (client_credentials grant).',
+      'Extra attributes to add to the access token this agent receives for itself.',
     'edit.tokens.agent.attributes.label': 'Add or Remove Attributes',
     'edit.tokens.agent.attributes.hint': 'Click on agent attributes to add them to its access token.',
     'edit.tokens.agent.attributes.empty':
@@ -1307,7 +1308,6 @@ const translations = {
     'create.heading': "Let's set up your organization unit",
     'create.subtitle': 'Define a new organization unit',
     'create.error': 'Failed to create organization unit. Please try again.',
-    'create.suggestions.label': 'In a hurry? Pick a random name:',
 
     'delete.dialog.title': 'Delete Organization Unit',
     'delete.dialog.message': 'Are you sure you want to delete this organization unit? This action cannot be undone.',
@@ -1466,12 +1466,13 @@ const translations = {
     'create.form.organizationUnit.required': 'Organization unit is required',
 
     // Create wizard
-    'createWizard.steps.name': 'Create a Group',
+    'createWizard.steps.name': 'Details',
     'createWizard.steps.organizationUnit': 'Organization Unit',
-    'createWizard.name.title': "Let's give a name to your group",
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
-    'createWizard.organizationUnit.title': 'Select an organization unit',
-    'createWizard.organizationUnit.subtitle': 'Choose the organization unit this group will belong to.',
+    'createWizard.name.title': "Let's collect some details about your group",
+    'createWizard.organizationUnit.title': 'Where should this group belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this group. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
     'createWizard.createGroup': 'Create Group',
 
     // Edit page
@@ -1546,6 +1547,11 @@ const translations = {
     'delete.success': 'Group deleted successfully.',
     'addMember.success': 'Member added successfully.',
     'removeMember.success': 'Member removed successfully.',
+    'errors.GRP-1003': 'This group no longer exists. It may have already been deleted.',
+    'errors.GRP-1004': 'A group with this name already exists in this organization unit. Choose a different name.',
+    'errors.GRP-1007': 'One or more selected members no longer exist. Refresh and try again.',
+    'errors.GRP-1015': 'This group is managed declaratively and cannot be edited or deleted.',
+    'errors.GRP-1016': 'New groups cannot be created while the server is running in declarative-only mode.',
   },
 
   // ============================================================================
@@ -1575,13 +1581,14 @@ const translations = {
     'create.form.organizationUnit.required': 'Organization unit is required',
 
     // Create wizard
-    'createWizard.steps.basicInfo': 'Create a Role',
+    'createWizard.steps.basicInfo': 'Details',
     'createWizard.steps.organizationUnit': 'Organization Unit',
     'createWizard.steps.permissions': 'Permissions',
-    'createWizard.basicInfo.title': "Let's give a name to your role",
-    'createWizard.basicInfo.suggestions.label': 'In a hurry? Pick a random name:',
-    'createWizard.organizationUnit.title': 'Select an organization unit',
-    'createWizard.organizationUnit.subtitle': 'Choose the organization unit this role will belong to.',
+    'createWizard.basicInfo.title': "Let's collect some details about your role",
+    'createWizard.organizationUnit.title': 'Where should this role belong?',
+    'createWizard.organizationUnit.subtitle':
+      "Choose the organization unit that will own this role. You can't change this once created.",
+    'createWizard.organizationUnit.fieldLabel': 'Organization Unit',
     'createWizard.permissions.title': 'Assign permissions (optional)',
     'createWizard.permissions.subtitle':
       'Choose what this role grants. You can skip this step and add permissions later.',
@@ -1603,7 +1610,6 @@ const translations = {
     'edit.page.reset': 'Reset',
     'edit.page.save': 'Save Changes',
     'edit.page.saving': 'Saving...',
-    'edit.page.saveError': 'Failed to save role. Please try again.',
 
     // General settings
     'edit.general.sections.quickCopy.copyRoleId': 'Copy Role ID',
@@ -1663,6 +1669,12 @@ const translations = {
     'delete.success': 'Role deleted successfully.',
     'assignments.add.success': 'Assignment added successfully.',
     'assignments.remove.success': 'Assignment removed successfully.',
+    'errors.ROL-1003': 'This role no longer exists. It may have already been deleted.',
+    'errors.ROL-1004': 'A role with this name already exists in this organization unit. Choose a different name.',
+    'errors.ROL-1007': 'One or more selected assignees no longer exist. Refresh and try again.',
+    'errors.ROL-1012': 'One or more selected permissions are no longer valid. Refresh the page and try again.',
+    'errors.ROL-1013': 'This role is managed declaratively and cannot be edited or deleted.',
+    'errors.ROL-1015': 'New roles cannot be created while the server is running in declarative-only mode.',
   },
 
   // ============================================================================
@@ -1712,7 +1724,7 @@ const translations = {
     // Add custom connection wizard
     'wizard.title': 'Add custom connection',
     'wizard.steps.type': 'Connection type',
-    'wizard.steps.name': 'Name',
+    'wizard.steps.name': 'Details',
     'wizard.steps.configure': 'Configure',
     'wizard.type.heading': 'What kind of connection do you want to add?',
     'wizard.type.subheading':
@@ -1730,10 +1742,9 @@ const translations = {
     'wizard.type.trustedIdp.description':
       "Trust an external IdP's identity assertions and exchange them for access tokens.",
     'wizard.type.trustedIdp.tag': 'Token exchange · ID-JAG',
-    'wizard.name.title': "Let's give a name to your connection",
+    'wizard.name.title': "Let's collect some details about your connection",
     'wizard.name.fieldLabel': 'Connection name',
     'wizard.name.placeholder': 'Enter your connection name',
-    'wizard.name.suggestions.label': 'In a hurry? Pick a random name:',
     'wizard.configure.heading': 'Configure your connection',
     'wizard.configure.subheading':
       'Enter the credentials and endpoints for your custom connection. Secrets are stored write-only.',
@@ -2097,10 +2108,10 @@ const translations = {
     'onboarding.preview.dividerText': 'or',
     'onboarding.preview.continueWith': 'Continue with {{providerName}}',
     'onboarding.preview.stepOf': 'Step {{n}} of {{total}}',
+    'onboarding.steps.organizationUnit': 'Organization Unit',
     'onboarding.steps.details': 'Details',
     'onboarding.steps.design': 'Experience',
     'onboarding.steps.security': 'Security',
-    'onboarding.steps.stack': 'Technology Stack',
     'onboarding.steps.configure': 'Configuration',
     'onboarding.steps.quickTest': 'Quick Test',
     'onboarding.steps.export': 'Integration Setup',
@@ -2114,8 +2125,6 @@ const translations = {
     'onboarding.configure.name.fieldLabel': 'Name & Logo',
     'onboarding.configure.name.placeholder': 'Enter your application name',
     'onboarding.configure.name.logoAriaLabel': 'Change application logo',
-    'onboarding.configure.name.suggestions.prefix': 'Need inspiration? How about',
-    'onboarding.configure.name.suggestions.shuffleAriaLabel': 'Try another suggestion',
     'onboarding.configure.applicationDetails.title': "Let's collect some details about your application",
     'onboarding.configure.applicationDetails.ouDefaults.title': 'Use organization defaults',
     'onboarding.configure.applicationDetails.ouDefaults.subtitle':
@@ -2544,6 +2553,20 @@ const translations = {
     'edit.advanced.attestation.hint.teamId': 'The Apple Developer Team ID.',
     'edit.advanced.attestation.hint.bundleId': 'The iOS bundle identifier that must match the attested app.',
     'edit.advanced.attestation.error.appleIncomplete': 'Both Team ID and Bundle ID are required together.',
+    'edit.advanced.attestation.labels.devMode': 'Dev Mode',
+    'edit.advanced.attestation.hint.devMode':
+      'Skips attestation verification for this application. Enable only for testing or trying out ' +
+      'sample/development mobile clients; leave disabled otherwise.',
+    'edit.advanced.attestation.warning.devMode':
+      'Dev mode is enabled. Attestation verification is skipped for this application. Use this only for ' +
+      'testing, do not enable it in production.',
+    'edit.advanced.attestation.devModeConfirmDialog.title': 'Enable Dev Mode?',
+    'edit.advanced.attestation.devModeConfirmDialog.description':
+      'This skips attestation verification for this application, so it can initiate a sign-in flow ' +
+      'without presenting an attestation token. Use it only for testing, or to try out a sample or ' +
+      'development client. Do not enable it in production.',
+    'edit.advanced.attestation.devModeConfirmDialog.cancelButton': 'Cancel',
+    'edit.advanced.attestation.devModeConfirmDialog.confirmButton': 'Enable Dev Mode',
 
     /* Passkeys section */
     'edit.advanced.labels.passkeys': 'Passkey Allowed Origins',
@@ -2706,8 +2729,13 @@ const translations = {
     'edit.token.validity.hint': 'Token validity period in seconds (e.g., 3600 for 1 hour)',
     'edit.token.validity.error': 'Validity period must be at least 1 second',
     'edit.token.token_profile_card.title': 'Token Attributes & Response',
+    'edit.token.token_profile_card.title.native': 'Token Attributes',
     'edit.token.token_profile_card.description':
-      'Configure the response types and user attributes included in your tokens and user info responses',
+      'Choose the claims in each token and the user info response, and how each is returned.',
+    'edit.token.token_profile_card.description.noUserInfo':
+      'Choose the claims in each token issued to this {{entity}}, and how each is returned.',
+    'edit.token.token_profile_card.description.native':
+      'Choose the claims included in the token issued to this {{entity}}.',
     'edit.token.tabs.access_token': 'Access Token',
     'edit.token.tabs.id_token': 'ID Token',
     'edit.token.tabs.refresh_token': 'Refresh Token',
@@ -2731,13 +2759,17 @@ const translations = {
     'edit.token.scopes.openid_required': 'The openid scope is required and cannot be removed',
     'edit.token.tabs.application': 'Application',
     'edit.token.tabs.user': 'User',
+    'edit.token.audience.title': 'Issued to',
+    'edit.token.audience.application.description': 'M2M access token',
+    'edit.token.audience.user.description': 'Tokens for a signed-in user',
+    'edit.token.audience.footnote': 'Claim sets are configured independently for each audience.',
     'edit.token.clientLock.message':
-      'These settings apply only when the client credentials grant is enabled. Add it in the Advanced tab to configure them.',
+      'This application does not receive tokens for itself, so there is nothing to configure here.',
     'edit.token.userLock.message':
-      'These settings apply only when a user-facing grant is enabled. Add one in the Advanced tab to configure them.',
+      'This application does not receive tokens for signed-in users, so there is nothing to configure here.',
     'edit.token.client.attributes.title': 'Access Token Claims',
     'edit.token.client.attributes.description':
-      'Optional claims to include in the access token this application receives for its own requests (client_credentials grant).',
+      'Extra claims to add to the access token this application receives for itself.',
     'edit.token.client.attributes.label': 'Add or Remove Claims',
     'edit.token.client.attributes.hint': "Click a claim to include it in this application's client access token.",
     'edit.token.client.attributes.empty': 'No optional claims available.',
@@ -2796,6 +2828,7 @@ const translations = {
     'edit.advanced.labels.pkceRequired': 'PKCE Required',
     'edit.advanced.labels.requirePAR': 'Require Pushed Authorization Requests',
     'edit.advanced.par.hint': 'Require the client to use the PAR endpoint before authorization.',
+    'edit.advanced.par.requiresAuthorizationCode': 'Available only when the authorization code grant is enabled.',
     'edit.advanced.labels.tokenEndpointAuthMethod': 'Client Authentication Method',
     'edit.advanced.labels.certificate': 'Certificate',
     'edit.advanced.labels.certificateType': 'Certificate Type',
@@ -2851,7 +2884,7 @@ const translations = {
     'errors.APP-1030': 'This application is managed declaratively and cannot be edited or deleted.',
     'errors.APP-1035': 'One or more user attributes are not valid for the selected user types.',
     'errors.APP-1039':
-      "A referenced flow does not match the application's flow configuration. Ensure the registration and authentication flows are consistent.",
+      "The {{sourceFlowType}} references a different {{flowType}} than the one configured for this application. Update the {{sourceFlowType}} so it calls the same {{flowType}}, or change the application's {{flowType}} configuration.",
   },
 
   // ============================================================================
@@ -3146,6 +3179,11 @@ const translations = {
     'logo_picker.emoji_dialog.title': 'Choose an emoji',
     'logo_picker.shuffle': 'Shuffle',
 
+    // Name suggestion
+    'name_suggestion.prefix': 'Need inspiration? How about',
+    'name_suggestion.suffix': '?',
+    'name_suggestion.shuffle_aria_label': 'Try another suggestion',
+
     // Resource logo dialog
     'resource_logo_dialog.title': 'Choose a Logo',
     'resource_logo_dialog.divider.or': 'Or',
@@ -3198,11 +3236,10 @@ const translations = {
     // Create flow wizard
     'create.steps.type': 'Flow Type',
     'create.steps.template': 'Template',
-    'create.steps.configure': 'Configure',
-    'create.configure.title': 'Name your flow',
+    'create.steps.configure': 'Details',
+    'create.configure.title': "Let's collect some details about your flow",
     'create.configure.name.label': 'Flow name',
     'create.configure.name.placeholder': 'e.g. Customer Sign-in',
-    'create.configure.suggestions.label': 'Need inspiration? Try one of these:',
     'create.configure.handle.label': 'Handle',
     'create.configure.handle.placeholder': 'e.g. customer-sign-in',
     'create.configure.handle.hint': 'Lowercase letters, numbers, and hyphens only',
@@ -3481,6 +3518,8 @@ const translations = {
     'core.executions.landing.message': 'This {{executor}} step will redirect users to a landing page.',
 
     // Execution steps - branching handles
+    'core.executions.stack.expandHint': 'Click to expand',
+    'core.executions.stack.restack': 'Restack executors',
     'core.executions.handles.success': 'onSuccess',
     'core.executions.handles.failure': 'onFailure',
     'core.executions.handles.incomplete': 'onIncomplete',
@@ -3570,6 +3609,12 @@ const translations = {
       'SSO check <code>{{id}}</code> references a session step that no longer exists. Select a valid session checkpoint in its properties.',
     'core.validation.sso.orphanSession':
       'Session step <code>{{id}}</code> is not referenced by any SSO check. Add an SSO check that uses it, or remove the step.',
+
+    // Validation messages - sign out
+    'core.validation.signOut.confirmNotConnected':
+      'Sign-out button <code>{{id}}</code> is not connected, so it will not sign the user out. Connect it to the session sign-out step, or change its action.',
+    'core.validation.signOut.confirmInvalidTarget':
+      'Sign-out button <code>{{id}}</code> does not lead to a session sign-out step, so it will not sign the user out. Connect it to one, or change its action.',
 
     // Elements - rich text
     'core.elements.richText.placeholder': 'Enter text here...',
@@ -3734,6 +3779,9 @@ const translations = {
     'core.headerPanel.saveTitle': 'Save flow name',
     'core.headerPanel.cancelEdit': 'Cancel',
     'core.headerPanel.edgeStyleTooltip': 'Change edge style',
+    'core.headerPanel.compactView': 'Compact view',
+    'core.headerPanel.compactViewTooltip': 'Switch to compact view',
+    'core.headerPanel.detailedViewTooltip': 'Switch to detailed view',
     'core.headerPanel.simulate': 'Preview',
     'core.headerPanel.stopSimulation': 'Stop preview',
     'core.headerPanel.saveDisabledDuringPreview': 'Stop the preview before saving',
@@ -3813,9 +3861,11 @@ const translations = {
     'core.fieldExtendedProperties.selectAttribute': 'Select an attribute',
 
     // Button extended properties
-    'core.buttonExtendedProperties.type.label': 'Type',
-    'core.buttonExtendedProperties.type.submit': 'Submit',
-    'core.buttonExtendedProperties.type.trigger': 'Trigger',
+    'core.buttonExtendedProperties.action.label': 'Action',
+    'core.buttonExtendedProperties.action.submit': 'Submit Form',
+    'core.buttonExtendedProperties.action.trigger': 'Trigger Action',
+    'core.buttonExtendedProperties.action.confirm': 'Confirm Action',
+    'core.buttonExtendedProperties.action.hint': 'What happens when the button is activated',
     'core.buttonExtendedProperties.startIcon.label': 'Start Icon',
     'core.buttonExtendedProperties.startIcon.placeholder': 'Enter icon path (e.g., assets/images/icons/icon.svg)',
     'core.buttonExtendedProperties.startIcon.hint': 'Optional icon displayed before the button label',
@@ -3981,7 +4031,10 @@ const translations = {
     'themes.builder.sections.typography.description': 'Font family & type scale',
     'themes.config.select_theme.message': 'Select a theme to view configuration',
     'themes.config.errors.load.message': 'Failed to load theme configuration.',
-    'themes.forms.configure_name.title': 'Create a Theme',
+    'themes.createWizard.steps.name': 'Details',
+    'themes.forms.configure_name.title': "Let's collect some details about your theme",
+    'themes.forms.configure_name.fieldLabel': 'Theme name',
+    'themes.forms.configure_name.placeholder': 'e.g. Solarized Light',
     'themes.forms.configure_color.title': 'Primary Color',
     'themes.forms.configure_color.actions.back.label': 'Back',
     'themes.forms.configure_color.actions.continue.label': 'Continue',
@@ -4329,7 +4382,7 @@ const translations = {
     'delete.disclaimer':
       'Warning: All associated resources, actions, and permission strings will be permanently removed.',
     'create.steps.type': 'Type',
-    'create.steps.name': 'Name',
+    'create.steps.name': 'Details',
     'create.steps.separator': 'Permission Delimiter',
     'create.steps.organizationUnit': 'Organization',
     'create.type.title': 'What type of resource server are you adding?',
@@ -4392,12 +4445,11 @@ const translations = {
     'common.confirm': 'Confirm',
     'common.back': 'Back',
     'common.next': 'Next',
-    'create.name.title': 'Name your resource server',
-    'create.name.titleMcp': 'Name your MCP server',
+    'create.name.title': "Let's collect some details about your resource server",
+    'create.name.titleMcp': "Let's collect some details about your MCP server",
     'create.name.nameLabel': 'Resource Server Name',
     'create.name.nameLabelMcp': 'MCP Server Name',
     'create.name.namePlaceholder': 'e.g. Payments API',
-    'create.name.suggestions': 'Need inspiration? Pick one:',
     'create.name.identifierLabel': 'Identifier',
     'create.name.identifierPlaceholder': 'https://api.example.com',
     'create.name.identifierPlaceholderMcp': 'https://mcp.example.com',
@@ -4578,12 +4630,17 @@ const translations = {
     'claims.add': 'Add Claim',
 
     // Create wizard
-    'createWizard.steps.name': 'Name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
+    'createWizard.steps.name': 'Details',
+    'createWizard.name.title': "Let's collect some details about your verifiable presentation",
     'create.title': 'New Presentation Definition',
     'create.subtitle': 'Configure the credential type and the claims to request from the wallet.',
-    'create.steps.details': 'Details',
+    'create.steps.organizationUnit': 'Organization Unit',
+    'create.steps.details': 'Type',
     'create.steps.claims': 'Claims',
+    'create.organizationUnit.title': 'Where should this verifiable presentation belong?',
+    'create.organizationUnit.subtitle':
+      "Choose the organization unit that will own this verifiable presentation. You can't change this once created.",
+    'create.organizationUnit.fieldLabel': 'Organization Unit',
     'create.claims.help': 'Add each claim once and set whether it is mandatory and restrict its allowed values.',
     'create.success': 'Presentation definition created',
     'create.error': 'Failed to create presentation definition',
@@ -4620,12 +4677,17 @@ const translations = {
     'listing.columns.actions': 'Actions',
 
     // Create page
-    'createWizard.steps.name': 'Name',
-    'createWizard.name.suggestions.label': 'In a hurry? Pick a random name:',
+    'createWizard.steps.name': 'Details',
+    'createWizard.name.title': "Let's collect some details about your verifiable credential",
     'create.title': 'New Credential Template',
     'create.subtitle': 'Define the credential type, claims and display shown in wallets.',
-    'create.steps.details': 'Details',
+    'create.steps.organizationUnit': 'Organization Unit',
+    'create.steps.details': 'Type',
     'create.steps.claims': 'Claims',
+    'create.organizationUnit.title': 'Where should this verifiable credential belong?',
+    'create.organizationUnit.subtitle':
+      "Choose the organization unit that will own this verifiable credential. You can't change this once created.",
+    'create.organizationUnit.fieldLabel': 'Organization Unit',
     'create.claims.help':
       'Add each claim once and set the attribute name as it appears in the user profile and how it should be displayed in the wallet.',
     'create.success': 'Credential template created',

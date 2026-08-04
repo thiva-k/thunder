@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * Authentication Flows — Accessibility Tests
@@ -27,6 +12,7 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { ConsoleRoutes } from "../../configs/routes/console-routes";
 import {
   expectNoA11yViolations,
   checkKeyboardNavigation,
@@ -54,8 +40,10 @@ const VISIBLE_INTERACTIVE_SELECTOR =
 test.describe("Accessibility — Authentication Flows @accessibility", () => {
   test.describe("Sign-In Page", () => {
     test.beforeEach(async ({ page }) => {
-    // relative navigation ensures the config baseURL is applied
-    await page.goto("/", { waitUntil: "networkidle" });
+    // The console is served under /console; requesting it unauthenticated redirects to the gate's
+    // sign-in page, which is what this suite audits. Navigating to "/" instead would land on the
+    // API root and audit its 401 response.
+    await page.goto(ConsoleRoutes.home, { waitUntil: "networkidle" });
     });
 
     test(
@@ -108,11 +96,12 @@ test.describe("Accessibility — Authentication Flows @accessibility", () => {
         await test.step("Verify Tab navigation through interactive elements", async () => {
           const interactiveCount = await page.locator(VISIBLE_INTERACTIVE_SELECTOR).count();
 
-          // run the helper to exercise tabbing; do not assert on the
-          // returned data since duplicates may inflate the array and
-          // lead to flaky failures.  See upstream TODO in
-          // checkKeyboardNavigation for a proper fix.
-          await checkKeyboardNavigation(page, interactiveCount);
+          const result = await checkKeyboardNavigation(page, interactiveCount);
+
+          // Only the reachable set is asserted, not a count derived from the selector: which elements
+          // are tabbable depends on the browser and OS (macOS Firefox and WebKit leave links out of
+          // the tab order), and browsers also differ on what happens after the last control.
+          expect(result.focusedElements.length, "tabbing should reach more than one control").toBeGreaterThan(1);
         });
 
         await test.step("Verify focus is received by interactive elements", async () => {

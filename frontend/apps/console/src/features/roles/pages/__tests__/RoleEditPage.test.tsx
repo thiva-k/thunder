@@ -1,24 +1,9 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
 import type {ResourcePermissions} from '@thunderid/configure-resource-servers';
-import {render, screen} from '@thunderid/test-utils';
+import {render, screen, waitFor} from '@thunderid/test-utils';
 import type {NavigateFunction} from 'react-router';
 import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import type {UpdateRoleRequest} from '../../models/requests';
@@ -108,11 +93,13 @@ vi.mock('@thunderid/logger/react', () => ({
   }),
 }));
 
+const mockShowToast = vi.fn();
+
 vi.mock('@thunderid/contexts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/contexts')>();
   return {
     ...actual,
-    useToast: () => ({showToast: vi.fn()}),
+    useToast: () => ({showToast: mockShowToast}),
   };
 });
 
@@ -233,11 +220,7 @@ describe('RoleEditPage', () => {
       render(<RoleEditPage />);
 
       const tabs = await screen.findAllByRole('tab');
-      expect(tabs.map((tab) => tab.textContent)).toEqual([
-        'edit.page.tabs.general',
-        'edit.page.tabs.permissions',
-        'edit.page.tabs.assignments',
-      ]);
+      expect(tabs.map((tab) => tab.textContent)).toEqual(['General', 'Permissions', 'Assignments']);
 
       await user.click(tabs[1]);
       expect(screen.getByTestId('permissions-settings')).toBeInTheDocument();
@@ -251,6 +234,93 @@ describe('RoleEditPage', () => {
       await user.click(tabs[2]);
 
       expect(screen.getByTestId('edit-assignments-settings')).toBeInTheDocument();
+    });
+  });
+
+  describe('Save Error Flow', () => {
+    it('should show a generic toast when save fails', async () => {
+      const user = userEvent.setup();
+      const mockMutateAsync = vi.fn().mockRejectedValue(new Error('Network error'));
+      vi.mocked(useUpdateRole).mockReturnValue({
+        mutate: vi.fn(),
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        isError: false,
+        isSuccess: false,
+        error: null,
+        data: undefined,
+        reset: vi.fn(),
+        context: undefined,
+        failureCount: 0,
+        failureReason: null,
+        isIdle: true,
+        isPaused: false,
+        status: 'idle',
+        submittedAt: 0,
+        variables: undefined,
+      } as unknown as ReturnType<typeof useUpdateRole>);
+
+      render(<RoleEditPage />);
+
+      const nameEditButton = screen.getByRole('button', {name: 'Edit role name'});
+      await user.click(nameEditButton);
+
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'New Name');
+      await user.tab();
+
+      const saveButton = screen.getByRole('button', {name: 'Save Changes'});
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith('Failed to update role. Please try again.', 'error');
+      });
+    });
+
+    it('should show a mapped toast when the role name conflicts on save', async () => {
+      const user = userEvent.setup();
+      const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+      error.response = {data: {code: 'ROL-1004'}};
+      const mockMutateAsync = vi.fn().mockRejectedValue(error);
+      vi.mocked(useUpdateRole).mockReturnValue({
+        mutate: vi.fn(),
+        mutateAsync: mockMutateAsync,
+        isPending: false,
+        isError: false,
+        isSuccess: false,
+        error: null,
+        data: undefined,
+        reset: vi.fn(),
+        context: undefined,
+        failureCount: 0,
+        failureReason: null,
+        isIdle: true,
+        isPaused: false,
+        status: 'idle',
+        submittedAt: 0,
+        variables: undefined,
+      } as unknown as ReturnType<typeof useUpdateRole>);
+
+      render(<RoleEditPage />);
+
+      const nameEditButton = screen.getByRole('button', {name: 'Edit role name'});
+      await user.click(nameEditButton);
+
+      const nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'New Name');
+      await user.tab();
+
+      const saveButton = screen.getByRole('button', {name: 'Save Changes'});
+      await user.click(saveButton);
+
+      await waitFor(() => {
+        expect(mockShowToast).toHaveBeenCalledWith(
+          'A role with this name already exists in this organization unit. Choose a different name.',
+          'error',
+        );
+      });
     });
   });
 
@@ -273,7 +343,7 @@ describe('RoleEditPage', () => {
 
       render(<RoleEditPage />);
 
-      const nameEditButton = screen.getByRole('button', {name: /edit.page.editName/i});
+      const nameEditButton = screen.getByRole('button', {name: 'Edit role name'});
       await user.click(nameEditButton);
 
       const nameInput = screen.getByRole('textbox');
@@ -281,8 +351,31 @@ describe('RoleEditPage', () => {
       await user.type(nameInput, 'New Name');
       await user.tab();
 
-      const saveButton = screen.getByRole('button', {name: /edit.page.save/i});
+      const saveButton = screen.getByRole('button', {name: 'Save Changes'});
       expect(saveButton).toBeDisabled();
+    });
+  });
+
+  describe('General field revert', () => {
+    it('hides the save bar when the name is retyped back to its original value', async () => {
+      const user = userEvent.setup();
+      render(<RoleEditPage />);
+
+      await user.click(screen.getByRole('button', {name: 'Edit role name'}));
+      let nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Renamed Role');
+      await user.tab();
+
+      expect(screen.getByRole('button', {name: 'Save Changes'})).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', {name: 'Edit role name'}));
+      nameInput = screen.getByRole('textbox');
+      await user.clear(nameInput);
+      await user.type(nameInput, 'Admin Role');
+      await user.tab();
+
+      expect(screen.queryByRole('button', {name: 'Save Changes'})).not.toBeInTheDocument();
     });
   });
 
@@ -326,7 +419,7 @@ describe('RoleEditPage', () => {
       await user.click(screen.getByTestId('permissions-change'));
 
       // Save bar should be visible
-      const saveButton = screen.getByRole('button', {name: /edit.page.save/i});
+      const saveButton = screen.getByRole('button', {name: 'Save Changes'});
       expect(saveButton).toBeInTheDocument();
 
       // Click Save
@@ -353,11 +446,11 @@ describe('RoleEditPage', () => {
 
       // Change permissions → save bar appears
       await user.click(screen.getByTestId('permissions-change'));
-      expect(screen.getByRole('button', {name: /edit.page.save/i})).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: 'Save Changes'})).toBeInTheDocument();
 
       // Restore to original (order-insensitively equal) → save bar hides
       await user.click(screen.getByTestId('permissions-restore'));
-      expect(screen.queryByRole('button', {name: /edit.page.save/i})).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', {name: 'Save Changes'})).not.toBeInTheDocument();
     });
 
     it('reset discards staged permission changes', async () => {
@@ -375,7 +468,7 @@ describe('RoleEditPage', () => {
       );
 
       // Click Reset
-      const resetButton = screen.getByRole('button', {name: /edit.page.reset/i});
+      const resetButton = screen.getByRole('button', {name: 'Reset'});
       await user.click(resetButton);
 
       // Catalog selected should return to role.permissions

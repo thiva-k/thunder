@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {fireEvent} from '@testing-library/react';
 import {render, screen} from '@thunderid/test-utils';
@@ -26,14 +11,26 @@ import CreateRolePage from '../CreateRolePage';
 // Mock dependencies
 vi.mock('../../api/useCreateRole');
 vi.mock('../../contexts/RoleCreate/useRoleCreate');
-vi.mock('@thunderid/configure-organization-units');
+vi.mock('@thunderid/configure-organization-units', () => ({
+  useHasMultipleOUs: vi.fn(),
+  useGetOrganizationUnit: (id?: string) => ({
+    data: id ? {id, name: 'Test Organization Unit'} : undefined,
+    isLoading: false,
+  }),
+  OrganizationUnitPickerScreen: ({onBack, onContinue}: {onBack: () => void; onContinue: () => void}) => (
+    <div data-testid="organization-unit-picker-screen">
+      <button type="button" onClick={onBack}>
+        Back
+      </button>
+      <button type="button" onClick={onContinue}>
+        Continue
+      </button>
+    </div>
+  ),
+}));
 
 vi.mock('../../components/create-role/ConfigureBasicInfo', () => ({
   default: () => <div data-testid="configure-basic-info">Configure Basic Info</div>,
-}));
-
-vi.mock('../../components/create-role/ConfigureOrganizationUnit', () => ({
-  default: () => <div data-testid="configure-organization-unit">Configure Organization Unit</div>,
 }));
 
 vi.mock('../../components/create-role/ConfigurePermissions', () => ({
@@ -168,7 +165,7 @@ describe('CreateRolePage', () => {
     expect(screen.queryByRole('button', {name: /back/i})).not.toBeInTheDocument();
   });
 
-  it('should render ConfigureOrganizationUnit on OU step', () => {
+  it('should render OrganizationUnitPickerScreen on the organization unit step', () => {
     vi.mocked(useRoleCreate).mockReturnValue({
       currentStep: RoleCreateFlowStep.ORGANIZATION_UNIT,
       setCurrentStep: mockSetCurrentStep,
@@ -194,10 +191,10 @@ describe('CreateRolePage', () => {
 
     render(<CreateRolePage />);
 
-    expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
+    expect(screen.getByTestId('organization-unit-picker-screen')).toBeInTheDocument();
   });
 
-  it('should render Back button on OU step', () => {
+  it('should render Back button on the OU picker', () => {
     vi.mocked(useRoleCreate).mockReturnValue({
       currentStep: RoleCreateFlowStep.ORGANIZATION_UNIT,
       setCurrentStep: mockSetCurrentStep,
@@ -308,7 +305,37 @@ describe('CreateRolePage', () => {
 
     render(<CreateRolePage />);
 
-    expect(screen.getByText('Failed to create role')).toBeInTheDocument();
+    expect(screen.getByText('Failed to create role. Please try again.')).toBeInTheDocument();
+  });
+
+  it('should render mapped error message when the role name conflicts', () => {
+    const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+    error.response = {data: {code: 'ROL-1004'}};
+
+    vi.mocked(useCreateRole).mockReturnValue({
+      mutate: vi.fn(),
+      mutateAsync: vi.fn(),
+      isPending: false,
+      isError: true,
+      isSuccess: false,
+      error,
+      data: undefined,
+      reset: vi.fn(),
+      context: undefined,
+      failureCount: 1,
+      failureReason: null,
+      isIdle: false,
+      isPaused: false,
+      status: 'error',
+      submittedAt: 0,
+      variables: undefined,
+    } as unknown as ReturnType<typeof useCreateRole>);
+
+    render(<CreateRolePage />);
+
+    expect(
+      screen.getByText('A role with this name already exists in this organization unit. Choose a different name.'),
+    ).toBeInTheDocument();
   });
 
   it('should disable Continue button while mutation is pending', () => {

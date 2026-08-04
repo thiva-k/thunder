@@ -2,15 +2,14 @@
 title: Export Resources
 docType: reference
 sidebar_position: 90
-description: Export resources as combined YAML in JSON responses or as ZIP archives with optional environment file output.
+description: Export resources as combined YAML in JSON responses with optional environment file output.
 ---
 
 # Export Resources
 
-Use the export API to retrieve <ProductName /> resources in two delivery formats:
+Use the export API to retrieve <ProductName /> resources:
 
 - `POST /export`: returns a JSON object.
-- `POST /export/zip`: returns a ZIP archive of individual files.
 
 ## JSON Response Shape
 
@@ -29,29 +28,6 @@ Field behavior:
 - `environment_variables`: environment file content with one empty assignment per detected template variable.
 
 If the export has no template variables, `environment_variables` is an empty string.
-
-## ZIP Export Behavior
-
-`POST /export/zip` includes one file per exported resource. When template variables are detected, the ZIP root includes a generated environment file.
-
-Example ZIP contents when template variables are detected:
-
-```text
-export.zip
-├── applications/
-│   └── my-app.yaml
-├── flows/
-│   └── login-flow.yaml
-└── .env
-```
-
-Generated environment file semantics:
-
-- `fileName`: Always `.env`.
-- `content`: Same key/value lines returned by `environment_variables` in JSON exports.
-- `size`: Byte length of the generated content.
-
-If no template variables are detected, the ZIP export omits `.env`.
 
 ## Internal API Model Reference
 
@@ -78,7 +54,7 @@ The API reference schema also defines an internal `ExportResponse` model (see `E
 }
 ```
 
-When no template variables are detected, `envFile` is omitted (or `null` in internal JSON serialization paths), and ZIP output does not include `.env`.
+When no template variables are detected, `envFile` is omitted (or `null` in internal JSON serialization paths).
 
 ## Format Option
 

@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package inboundclient
 
@@ -39,6 +24,7 @@ type inboundClientJSONBlob struct {
 	Assertion             *inboundmodel.AssertionConfig    `json:"assertion,omitempty"`
 	LoginConsent          *inboundmodel.LoginConsentConfig `json:"loginConsent,omitempty"`
 	AllowedUserTypes      []string                         `json:"allowedUserTypes,omitempty"`
+	SubjectAttribute      map[string]string                `json:"subjectAttribute,omitempty"`
 	PasskeyAllowedOrigins []string                         `json:"passkeyAllowedOrigins,omitempty"`
 	Attestation           *providers.AttestationConfig     `json:"attestation,omitempty"`
 	Properties            map[string]interface{}           `json:"properties,omitempty"`
@@ -114,6 +100,7 @@ func marshalInboundClient(c inboundmodel.InboundClient) (
 		Assertion:             c.Assertion,
 		LoginConsent:          c.LoginConsent,
 		AllowedUserTypes:      c.AllowedUserTypes,
+		SubjectAttribute:      c.SubjectAttribute,
 		PasskeyAllowedOrigins: c.PasskeyAllowedOrigins,
 		Attestation:           c.Attestation,
 		Properties:            c.Properties,
@@ -504,6 +491,7 @@ func buildInboundClientFromRow(ctx context.Context, row map[string]interface{}) 
 			client.Assertion = blob.Assertion
 			client.LoginConsent = blob.LoginConsent
 			client.AllowedUserTypes = blob.AllowedUserTypes
+			client.SubjectAttribute = blob.SubjectAttribute
 			client.PasskeyAllowedOrigins = blob.PasskeyAllowedOrigins
 			client.Attestation = blob.Attestation
 			client.Properties = blob.Properties

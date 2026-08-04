@@ -1,24 +1,10 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {PageLoadingAnimation} from '@thunderid/components';
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -68,7 +54,7 @@ function TabPanel({children = null, value, index, ...other}: TabPanelProps): JSX
 export default function GroupEditPage(): JSX.Element {
   const {groupId} = useParams<{groupId: string}>();
   const navigate = useNavigate();
-  const {t} = useTranslation();
+  const {t} = useTranslation('groups');
   const logger = useLogger('GroupEditPage');
   const {showToast} = useToast();
 
@@ -114,12 +100,15 @@ export default function GroupEditPage(): JSX.Element {
       await refetch();
     } catch (err: unknown) {
       logger.error('Failed to update group', {error: err});
-      const message = err instanceof Error ? err.message : t('groups:edit.page.saveError');
-      showToast(message, 'error');
+      const error = err instanceof Error ? err : new Error(String(err));
+      showToast(getErrorMessage(error, t, 'update.error'), 'error');
     }
   }, [group, groupId, editedGroup, updateGroup, refetch, logger, showToast, t]);
 
-  const hasChanges = useMemo(() => Object.keys(editedGroup).length > 0, [editedGroup]);
+  const hasChanges = useMemo(
+    () => Object.entries(editedGroup).some(([key, value]) => !isEqualIgnoringEmpty(value, group?.[key as keyof Group])),
+    [editedGroup, group],
+  );
 
   // Resolve the effective description accounting for user edits (including clearing).
   // 'description' in editedGroup means the user has touched the field; otherwise fall back to server value.
@@ -142,7 +131,7 @@ export default function GroupEditPage(): JSX.Element {
     return (
       <PageContent>
         <Alert severity="error" sx={{mb: 2}}>
-          {fetchError.message ?? t('groups:edit.page.error')}
+          {fetchError.message ?? t('edit.page.error', 'Failed to load group')}
         </Alert>
         <Button
           onClick={() => {
@@ -152,7 +141,7 @@ export default function GroupEditPage(): JSX.Element {
           }}
           startIcon={<ArrowLeft size={16} />}
         >
-          {t('groups:edit.page.back')}
+          {t('edit.page.back', 'Back to Groups')}
         </Button>
       </PageContent>
     );
@@ -162,7 +151,7 @@ export default function GroupEditPage(): JSX.Element {
     return (
       <PageContent>
         <Alert severity="warning" sx={{mb: 2}}>
-          {t('groups:edit.page.notFound')}
+          {t('edit.page.notFound', 'Group not found')}
         </Alert>
         <Button
           onClick={() => {
@@ -172,7 +161,7 @@ export default function GroupEditPage(): JSX.Element {
           }}
           startIcon={<ArrowLeft size={16} />}
         >
-          {t('groups:edit.page.back')}
+          {t('edit.page.back', 'Back to Groups')}
         </Button>
       </PageContent>
     );
@@ -187,7 +176,9 @@ export default function GroupEditPage(): JSX.Element {
       )}
       {/* Header */}
       <PageTitle>
-        <PageTitle.BackButton component={<Link to={listUrl} />}>{t('groups:edit.page.back')}</PageTitle.BackButton>
+        <PageTitle.BackButton component={<Link to={listUrl} />}>
+          {t('edit.page.back', 'Back to Groups')}
+        </PageTitle.BackButton>
         <PageTitle.Header>
           <Stack direction="row" alignItems="center" spacing={1} mb={1}>
             {isEditingName ? (
@@ -269,7 +260,7 @@ export default function GroupEditPage(): JSX.Element {
                   }
                 }}
                 size="small"
-                placeholder={t('groups:edit.page.description.placeholder')}
+                placeholder={t('edit.page.description.placeholder', 'Add a description...')}
                 sx={{
                   maxWidth: '600px',
                   '& .MuiInputBase-root': {
@@ -280,7 +271,7 @@ export default function GroupEditPage(): JSX.Element {
             ) : (
               <>
                 <Typography variant="body2" color="text.secondary">
-                  {effectiveDescription || t('groups:edit.page.description.empty')}
+                  {effectiveDescription || t('edit.page.description.empty', 'No description')}
                 </Typography>
                 {!group.isReadOnly && (
                   <IconButton
@@ -308,13 +299,13 @@ export default function GroupEditPage(): JSX.Element {
       {/* Tabs */}
       <Tabs value={activeTab} onChange={handleTabChange} aria-label="group settings tabs">
         <Tab
-          label={t('groups:edit.page.tabs.general')}
+          label={t('edit.page.tabs.general', 'General')}
           id="group-tab-0"
           aria-controls="group-tabpanel-0"
           sx={{textTransform: 'none'}}
         />
         <Tab
-          label={t('groups:edit.page.tabs.members')}
+          label={t('edit.page.tabs.members', 'Members')}
           id="group-tab-1"
           aria-controls="group-tabpanel-1"
           sx={{textTransform: 'none'}}
@@ -381,10 +372,10 @@ export default function GroupEditPage(): JSX.Element {
               >
                 !
               </Box>
-              {t('groups:edit.page.unsavedChanges')}
+              {t('edit.page.unsavedChanges', 'You have unsaved changes')}
             </Typography>
             <Button variant="outlined" color="error" onClick={() => setEditedGroup({})}>
-              {t('groups:edit.page.reset')}
+              {t('edit.page.reset', 'Reset')}
             </Button>
             <Button
               variant="contained"
@@ -393,7 +384,7 @@ export default function GroupEditPage(): JSX.Element {
               }}
               disabled={updateGroup.isPending || group.isReadOnly === true}
             >
-              {updateGroup.isPending ? t('groups:edit.page.saving') : t('groups:edit.page.save')}
+              {updateGroup.isPending ? t('edit.page.saving', 'Saving...') : t('edit.page.save', 'Save Changes')}
             </Button>
           </Stack>
         </Paper>

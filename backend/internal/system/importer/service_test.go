@@ -1,26 +1,12 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package importer
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,7 +30,9 @@ import (
 	"github.com/thunder-id/thunderid/internal/ou"
 	"github.com/thunder-id/thunderid/internal/resource"
 	"github.com/thunder-id/thunderid/internal/role"
+	"github.com/thunder-id/thunderid/internal/system/cmodels"
 	"github.com/thunder-id/thunderid/internal/system/config"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 	"github.com/thunder-id/thunderid/internal/user"
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 
@@ -55,6 +43,27 @@ import (
 // testCryptoKey is the shared key used so secret property encryption works in tests
 // that round-trip a connection with a secret field through the declarative parser.
 const testCryptoKey = "0579f866ac7c9273580d0ff163fa01a7b2401a7ff3ddc3e3b14ae3136fa6025e"
+
+// TestMain wires cmodels' package-level config crypto provider once for the whole test
+// binary, so secret Property encryption works regardless of which test's setup last
+// reset the server runtime.
+func TestMain(m *testing.M) {
+	config.ResetServerRuntime()
+	if err := config.InitializeServerRuntime("/tmp/test", &config.Config{
+		Crypto: config.CryptoConfig{Encryption: engineconfig.EncryptionConfig{Key: testCryptoKey}},
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize server runtime: %v\n", err)
+		os.Exit(1)
+	}
+	_, cfgCryptoSvc, err := defaultkm.Initialize(nil)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to initialize default crypto provider: %v\n", err)
+		os.Exit(1)
+	}
+	cmodels.SetConfigCryptoProvider(cfgCryptoSvc)
+	config.ResetServerRuntime()
+	os.Exit(m.Run())
+}
 
 func boolPtr(v bool) *bool {
 	return &v

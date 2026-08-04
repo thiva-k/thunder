@@ -1,41 +1,29 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
-import {OrganizationUnitTreePicker, useHasMultipleOUs} from '@thunderid/configure-organization-units';
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
+import {
+  OrganizationUnitPickerScreen,
+  useGetOrganizationUnit,
+  useHasMultipleOUs,
+} from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {
   Alert,
   Box,
-  Breadcrumbs,
   Button,
+  CircularProgress,
   FormControl,
   FormHelperText,
   FormLabel,
-  IconButton,
-  LinearProgress,
   MenuItem,
   Select,
   Stack,
   TextField,
   Typography,
 } from '@wso2/oxygen-ui';
-import {ChevronRight, X} from '@wso2/oxygen-ui-icons-react';
-import {useState, type ChangeEvent, type JSX} from 'react';
+import {Home} from '@wso2/oxygen-ui-icons-react';
+import {useMemo, useState, type ChangeEvent, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
@@ -44,8 +32,7 @@ import ClaimsEditor from '../components/ClaimsEditor';
 import ConfigureName from '../components/create-verifiable-presentation/ConfigureName';
 import {claimRowsToRequest, emptyClaimRow, type ClaimRow} from '../models/claims';
 
-type Step = 'NAME' | 'DETAILS' | 'CLAIMS';
-const STEP_ORDER: Step[] = ['NAME', 'DETAILS', 'CLAIMS'];
+type Step = 'ORGANIZATION_UNIT' | 'NAME' | 'DETAILS' | 'CLAIMS';
 
 export default function VerifiablePresentationCreatePage(): JSX.Element {
   const navigate = useNavigate();
@@ -53,9 +40,9 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
   const logger = useLogger('VerifiablePresentationCreatePage');
   const createVP = useCreateVerifiablePresentation();
 
-  const {hasMultipleOUs, ouList} = useHasMultipleOUs();
+  const {hasMultipleOUs, isLoading: isOuLoading, ouList} = useHasMultipleOUs();
 
-  const [step, setStep] = useState<Step>('NAME');
+  const [step, setStep] = useState<Step>('ORGANIZATION_UNIT');
   const [name, setName] = useState<string>('');
   const [handle, setHandle] = useState<string>('');
   const [handleEdited, setHandleEdited] = useState<boolean>(false);
@@ -66,21 +53,40 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
 
   const effectiveOuId: string = ouId !== '' ? ouId : !hasMultipleOUs && ouList.length === 1 ? ouList[0].id : '';
 
+  // The organization unit whose name is shown in the Details step's summary chip.
+  const {data: resolvedOrganizationUnit, isLoading: isResolvedOuLoading} = useGetOrganizationUnit(
+    effectiveOuId,
+    Boolean(effectiveOuId),
+  );
+
+  // The organization unit is the wizard's first step whenever there's a choice to make. Single-OU
+  // deployments never need it, so once that's known, skip straight past it.
+  const effectiveStep: Step = step === 'ORGANIZATION_UNIT' && !isOuLoading && !hasMultipleOUs ? 'NAME' : step;
+
+  const stepOrder = useMemo((): Step[] => {
+    const base: Step[] = [];
+    if (hasMultipleOUs) base.push('ORGANIZATION_UNIT');
+    base.push('NAME', 'DETAILS', 'CLAIMS');
+    return base;
+  }, [hasMultipleOUs]);
+
   const stepLabels: Record<Step, string> = {
-    NAME: t('createWizard.steps.name'),
-    DETAILS: t('create.steps.details'),
-    CLAIMS: t('create.steps.claims'),
+    ORGANIZATION_UNIT: t('create.steps.organizationUnit', 'Organization Unit'),
+    NAME: t('createWizard.steps.name', 'Details'),
+    DETAILS: t('create.steps.details', 'Type'),
+    CLAIMS: t('create.steps.claims', 'Claims'),
   };
 
   const stepReady: Record<Step, boolean> = {
+    ORGANIZATION_UNIT: effectiveOuId !== '',
     NAME: name.trim() !== '' && handle.trim() !== '',
     DETAILS: vct.trim() !== '' && effectiveOuId !== '',
     CLAIMS: claims.some((c) => c.name.trim() !== ''),
   };
 
-  const stepIndex = STEP_ORDER.indexOf(step);
-  const isLastStep = step === 'CLAIMS';
-  const progress = ((stepIndex + 1) / STEP_ORDER.length) * 100;
+  const stepIndex = stepOrder.indexOf(effectiveStep);
+  const isLastStep = effectiveStep === 'CLAIMS';
+  const progress = ((stepIndex + 1) / stepOrder.length) * 100;
 
   const close = (): void => {
     void navigate(RouteConfig.verifiablePresentations.list());
@@ -113,12 +119,12 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
       handleCreate();
       return;
     }
-    setStep(STEP_ORDER[stepIndex + 1]);
+    setStep(stepOrder[stepIndex + 1]);
   };
 
   const handleBack = (): void => {
     if (stepIndex > 0) {
-      setStep(STEP_ORDER[stepIndex - 1]);
+      setStep(stepOrder[stepIndex - 1]);
     }
   };
 
@@ -145,7 +151,7 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
   );
 
   const renderStep = (): JSX.Element => {
-    if (step === 'NAME') {
+    if (effectiveStep === 'NAME') {
       return (
         <ConfigureName
           name={name}
@@ -154,10 +160,15 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
           onNameChange={setName}
           onHandleChange={setHandle}
           onHandleEditedChange={setHandleEdited}
+          hasMultipleOUs={hasMultipleOUs}
+          organizationUnitName={resolvedOrganizationUnit?.name}
+          organizationUnitLogoUrl={resolvedOrganizationUnit?.logoUrl}
+          isOrganizationUnitLoading={isResolvedOuLoading}
+          onChangeOu={() => setStep('ORGANIZATION_UNIT')}
         />
       );
     }
-    if (step === 'DETAILS') {
+    if (effectiveStep === 'DETAILS') {
       return (
         <Stack spacing={3}>
           {textField('vp-vct', t('form.vct.label'), vct, setVct, 'urn:eudi:pid:de:1', true, t('form.vct.hint'))}
@@ -168,18 +179,6 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
             </Select>
             <FormHelperText>{t('form.format.hint')}</FormHelperText>
           </FormControl>
-          {hasMultipleOUs && (
-            <FormControl fullWidth required>
-              <FormLabel>{t('form.organizationUnit.label')}</FormLabel>
-              <OrganizationUnitTreePicker
-                id="vp-ou-picker"
-                value={effectiveOuId}
-                onChange={setOuId}
-                maxHeight={320}
-                helperText={t('form.organizationUnit.pickerHint')}
-              />
-            </FormControl>
-          )}
         </Stack>
       );
     }
@@ -193,88 +192,82 @@ export default function VerifiablePresentationCreatePage(): JSX.Element {
     );
   };
 
+  if (effectiveStep === 'ORGANIZATION_UNIT') {
+    if (isOuLoading || !hasMultipleOUs) {
+      return (
+        <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    return (
+      <OrganizationUnitPickerScreen
+        icon={<Home size={26} />}
+        title={t('create.organizationUnit.title', 'Where should this verifiable presentation belong?')}
+        subtitle={t(
+          'create.organizationUnit.subtitle',
+          "Choose the organization unit that will own this verifiable presentation. You can't change this once created.",
+        )}
+        value={effectiveOuId}
+        onChange={setOuId}
+        onBack={close}
+        onContinue={handleNext}
+        backLabel={t('common:actions.back', 'Back')}
+        continueLabel={t('common:actions.continue', 'Continue')}
+      />
+    );
+  }
+
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      <LinearProgress variant="determinate" value={progress} sx={{height: 6}} />
-
-      <Box sx={{p: 4, display: 'flex', alignItems: 'center'}}>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <IconButton
-            aria-label={t('common:actions.close')}
-            onClick={close}
-            sx={{bgcolor: 'background.paper', '&:hover': {bgcolor: 'action.hover'}, boxShadow: 1}}
+    <FullScreenCreationWizardLayout
+      onClose={close}
+      progress={progress}
+      breadcrumbItems={stepOrder.slice(0, stepIndex + 1).map((s, index, array) => ({
+        key: s,
+        label: stepLabels[s],
+        onClick: index < array.length - 1 ? () => setStep(s) : undefined,
+      }))}
+      footer={
+        <Stack direction="row" justifyContent="flex-end" spacing={2}>
+          {stepIndex > 0 && (
+            <Button variant="text" onClick={handleBack} disabled={createVP.isPending}>
+              {t('common:actions.back')}
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            sx={{minWidth: 140}}
+            disabled={!stepReady[effectiveStep] || createVP.isPending}
+            onClick={handleNext}
           >
-            <X size={24} />
-          </IconButton>
-          <Breadcrumbs separator={<ChevronRight size={16} />} aria-label="breadcrumb">
-            {STEP_ORDER.slice(0, stepIndex + 1).map((s, index, array) => {
-              const isCurrent = index === array.length - 1;
-              return isCurrent ? (
-                <Typography key={s} variant="h5" color="text.primary">
-                  {stepLabels[s]}
-                </Typography>
-              ) : (
-                <Typography
-                  key={s}
-                  variant="h5"
-                  color="inherit"
-                  role="button"
-                  tabIndex={0}
-                  onClick={(): void => setStep(s)}
-                  onKeyDown={(e): void => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setStep(s);
-                    }
-                  }}
-                  sx={{cursor: 'pointer', '&:hover': {textDecoration: 'underline'}}}
-                >
-                  {stepLabels[s]}
-                </Typography>
-              );
-            })}
-          </Breadcrumbs>
+            {(() => {
+              if (!isLastStep) return t('common:actions.continue');
+              if (createVP.isPending) return t('common:status.saving');
+              return t('common:actions.create');
+            })()}
+          </Button>
         </Stack>
-      </Box>
-
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'column', py: 8, px: 20}}>
-        <Box sx={{width: '100%', maxWidth: 800}}>
+      }
+    >
+      {effectiveStep !== 'NAME' && (
+        <>
           <Typography variant="h4" sx={{mb: 1}}>
             {t('create.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{mb: 4}}>
             {t('create.subtitle')}
           </Typography>
+        </>
+      )}
 
-          {createVP.error && (
-            <Alert severity="error" sx={{mb: 3}}>
-              {createVP.error.message}
-            </Alert>
-          )}
+      {createVP.error && (
+        <Alert severity="error" sx={{mb: 3}}>
+          {createVP.error.message}
+        </Alert>
+      )}
 
-          {renderStep()}
-
-          <Stack direction="row" justifyContent="flex-end" spacing={2} sx={{mt: 4}}>
-            {stepIndex > 0 && (
-              <Button variant="text" onClick={handleBack} disabled={createVP.isPending}>
-                {t('common:actions.back')}
-              </Button>
-            )}
-            <Button
-              variant="contained"
-              sx={{minWidth: 140}}
-              disabled={!stepReady[step] || createVP.isPending}
-              onClick={handleNext}
-            >
-              {(() => {
-                if (!isLastStep) return t('common:actions.continue');
-                if (createVP.isPending) return t('common:status.saving');
-                return t('common:actions.create');
-              })()}
-            </Button>
-          </Stack>
-        </Box>
-      </Box>
-    </Box>
+      {renderStep()}
+    </FullScreenCreationWizardLayout>
   );
 }

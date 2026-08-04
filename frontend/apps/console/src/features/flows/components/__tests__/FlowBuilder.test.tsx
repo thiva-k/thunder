@@ -1,24 +1,9 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
-import {render, screen, fireEvent, waitFor} from '@testing-library/react';
+import {act, render, screen, fireEvent, waitFor} from '@testing-library/react';
 import type {Node, Edge} from '@xyflow/react';
-import {describe, it, expect, vi, beforeEach} from 'vitest';
+import {describe, it, expect, vi, beforeEach, afterEach} from 'vitest';
 import FlowBuilder from '../FlowBuilder';
 import FlowConstants from '@/features/flows/constants/FlowConstants';
 import {
@@ -145,6 +130,12 @@ vi.mock('@xyflow/react', () => ({
   MarkerType: {Arrow: 'arrow'},
 }));
 
+// Captures the onNodesChange prop handed to FlowCanvas so tests can feed
+// canvas changes through FlowBuilder's stack-aware wrapper.
+const {onNodesChangeCapture} = vi.hoisted(() => ({
+  onNodesChangeCapture: {current: null as ((changes: unknown[]) => void) | null},
+}));
+
 // Mock FlowCanvas component
 vi.mock('@/features/flows/components/FlowCanvas', () => ({
   default: ({
@@ -154,12 +145,14 @@ vi.mock('@/features/flows/components/FlowCanvas', () => ({
     onSave,
     nodes,
     edges,
+    onNodesChange,
     onResourceAdd,
     onTemplateLoad,
     onWidgetLoad,
     onStepLoad,
     triggerAutoLayoutOnLoad,
     mutateComponents,
+    isDirty,
   }: {
     flowTitle: string;
     flowHandle: string;
@@ -167,248 +160,254 @@ vi.mock('@/features/flows/components/FlowCanvas', () => ({
     onSave: (data: {nodes: Node[]; edges: Edge[]; viewport: {x: number; y: number; zoom: number}}) => void;
     nodes: Node[];
     edges: Edge[];
+    onNodesChange: (changes: unknown[]) => void;
     onResourceAdd: (resource: unknown) => void;
     onTemplateLoad: (template: unknown) => unknown;
     onWidgetLoad: (widget: unknown, target: unknown, nodes: Node[], edges: Edge[]) => unknown;
     onStepLoad: (step: unknown) => unknown;
     triggerAutoLayoutOnLoad?: boolean;
     mutateComponents: (components: Element[]) => Element[];
-  }) => (
-    <div data-testid="flow-builder">
-      <div data-testid="flow-title">{flowTitle}</div>
-      <div data-testid="flow-handle">{flowHandle}</div>
-      <div data-testid="auto-layout">{String(triggerAutoLayoutOnLoad)}</div>
-      <div data-testid="nodes-count">{nodes.length}</div>
-      <div data-testid="edges-count">{edges.length}</div>
-      <button data-testid="change-title-btn" onClick={() => onFlowTitleChange('New Flow Name')} type="button">
-        Change Title
-      </button>
-      <button
-        data-testid="save-btn"
-        onClick={() => onSave({nodes, edges, viewport: {x: 0, y: 0, zoom: 1}})}
-        type="button"
-      >
-        Save
-      </button>
-      <button
-        data-testid="add-resource-btn"
-        onClick={() => onResourceAdd({resourceType: 'ELEMENT', type: 'FORM', id: 'form-1'})}
-        type="button"
-      >
-        Add Resource
-      </button>
-      <button
-        data-testid="add-non-element-resource-btn"
-        onClick={() => onResourceAdd({resourceType: 'STEP', type: 'VIEW', id: 'step-1'})}
-        type="button"
-      >
-        Add Non-Element Resource
-      </button>
-      <button
-        data-testid="load-template-btn"
-        onClick={() => onTemplateLoad({type: 'BASIC', config: {data: {steps: []}}})}
-        type="button"
-      >
-        Load Template
-      </button>
-      <button
-        data-testid="load-template-with-end-step-btn"
-        onClick={() =>
-          onTemplateLoad({
-            type: 'BASIC',
-            config: {
-              data: {
-                steps: [
-                  {id: 'step-1', type: 'VIEW', position: {x: 0, y: 0}},
-                  {id: 'end-1', type: 'END', position: {x: 100, y: 0}, config: {redirectUrl: '/success'}},
-                ],
-              },
-            },
-          })
-        }
-        type="button"
-      >
-        Load Template With End Step
-      </button>
-      <button
-        data-testid="load-basic-federated-template-btn"
-        onClick={() =>
-          onTemplateLoad({
-            type: 'BASIC_FEDERATED',
-            config: {
-              data: {
-                steps: [
-                  {id: 'step-1', type: 'VIEW', position: {x: 0, y: 0}},
-                  {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}},
-                ],
-              },
-            },
-          })
-        }
-        type="button"
-      >
-        Load Basic Federated Template
-      </button>
-      <button
-        data-testid="load-widget-btn"
-        onClick={() => onWidgetLoad({config: {data: {steps: []}}}, {id: 'target-1'}, nodes, edges)}
-        type="button"
-      >
-        Load Widget
-      </button>
-      <button
-        data-testid="load-widget-with-merge-strategy-btn"
-        onClick={() =>
-          onWidgetLoad(
-            {
+    isDirty?: boolean;
+  }) => {
+    onNodesChangeCapture.current = onNodesChange;
+    return (
+      <div data-testid="flow-builder">
+        <div data-testid="flow-title">{flowTitle}</div>
+        <div data-testid="flow-handle">{flowHandle}</div>
+        <div data-testid="auto-layout">{String(triggerAutoLayoutOnLoad)}</div>
+        <div data-testid="is-dirty">{String(Boolean(isDirty))}</div>
+        <div data-testid="nodes-count">{nodes.length}</div>
+        <div data-testid="edges-count">{edges.length}</div>
+        <button data-testid="change-title-btn" onClick={() => onFlowTitleChange('New Flow Name')} type="button">
+          Change Title
+        </button>
+        <button
+          data-testid="save-btn"
+          onClick={() => onSave({nodes, edges, viewport: {x: 0, y: 0, zoom: 1}})}
+          type="button"
+        >
+          Save
+        </button>
+        <button
+          data-testid="add-resource-btn"
+          onClick={() => onResourceAdd({resourceType: 'ELEMENT', type: 'FORM', id: 'form-1'})}
+          type="button"
+        >
+          Add Resource
+        </button>
+        <button
+          data-testid="add-non-element-resource-btn"
+          onClick={() => onResourceAdd({resourceType: 'STEP', type: 'VIEW', id: 'step-1'})}
+          type="button"
+        >
+          Add Non-Element Resource
+        </button>
+        <button
+          data-testid="load-template-btn"
+          onClick={() => onTemplateLoad({type: 'BASIC', config: {data: {steps: []}}})}
+          type="button"
+        >
+          Load Template
+        </button>
+        <button
+          data-testid="load-template-with-end-step-btn"
+          onClick={() =>
+            onTemplateLoad({
+              type: 'BASIC',
               config: {
                 data: {
                   steps: [
-                    {
-                      id: 'widget-step-1',
-                      type: 'VIEW',
-                      __generationMeta__: {strategy: 'MERGE_WITH_DROP_POINT'},
-                      data: {components: [{id: 'comp-1', type: 'BUTTON'}]},
-                    },
+                    {id: 'step-1', type: 'VIEW', position: {x: 0, y: 0}},
+                    {id: 'end-1', type: 'END', position: {x: 100, y: 0}, config: {redirectUrl: '/success'}},
                   ],
                 },
               },
-            },
-            {id: 'target-1'},
-            nodes,
-            edges,
-          )
-        }
-        type="button"
-      >
-        Load Widget With Merge Strategy
-      </button>
-      <button
-        data-testid="load-step-btn"
-        onClick={() => onStepLoad({id: 'step-1', type: 'VIEW', data: {}})}
-        type="button"
-      >
-        Load Step
-      </button>
-      <button
-        data-testid="load-step-with-components-btn"
-        onClick={() =>
-          onStepLoad({
-            id: 'step-1',
-            type: 'VIEW',
-            data: {components: [{id: 'comp-1', type: 'BUTTON'}]},
-          })
-        }
-        type="button"
-      >
-        Load Step With Components
-      </button>
-      <button
-        data-testid="load-non-view-step-btn"
-        onClick={() => onStepLoad({id: 'step-1', type: 'EXECUTION', data: {}})}
-        type="button"
-      >
-        Load Non-View Step
-      </button>
-      <button
-        data-testid="mutate-components-btn"
-        onClick={() => {
-          if (mutateComponents) {
-            mutateComponents([{id: 'test-1', type: 'FORM', resourceType: 'ELEMENT'} as Element]);
+            })
           }
-        }}
-        type="button"
-      >
-        Mutate Components
-      </button>
-      <button
-        data-testid="mutate-components-with-form-btn"
-        onClick={() => {
-          if (mutateComponents) {
-            mutateComponents([
-              {
-                id: 'form-1',
-                type: 'FORM',
-                category: 'BLOCK',
-                resourceType: 'ELEMENT',
-                components: [
-                  {id: 'password-1', type: 'PASSWORD_INPUT', config: {}},
-                  {id: 'button-1', type: 'BUTTON', variant: 'PRIMARY', config: {}},
-                ],
-              } as unknown as Element,
-            ]);
-          }
-        }}
-        type="button"
-      >
-        Mutate Components With Form
-      </button>
-      <button
-        data-testid="load-widget-with-default-selector-btn"
-        onClick={() =>
-          onWidgetLoad(
-            {
+          type="button"
+        >
+          Load Template With End Step
+        </button>
+        <button
+          data-testid="load-basic-federated-template-btn"
+          onClick={() =>
+            onTemplateLoad({
+              type: 'BASIC_FEDERATED',
               config: {
                 data: {
                   steps: [
-                    {
-                      id: '{{VIEW_STEP_ID}}',
-                      type: 'VIEW',
-                      position: {x: 0, y: 0},
-                      data: {
-                        components: [
-                          {
-                            id: '{{FORM_ID}}',
-                            type: 'FORM',
-                            components: [{id: '{{INPUT_ID}}', type: 'TEXT_INPUT'}],
-                          },
-                        ],
-                      },
-                    },
+                    {id: 'step-1', type: 'VIEW', position: {x: 0, y: 0}},
+                    {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}},
                   ],
-                  __generationMeta__: {
-                    defaultPropertySelectorId: '{{INPUT_ID}}',
-                    replacers: [
-                      {placeholder: 'VIEW_STEP_ID', type: 'uuid'},
-                      {placeholder: 'FORM_ID', type: 'uuid'},
-                      {placeholder: 'INPUT_ID', type: 'uuid'},
+                },
+              },
+            })
+          }
+          type="button"
+        >
+          Load Basic Federated Template
+        </button>
+        <button
+          data-testid="load-widget-btn"
+          onClick={() => onWidgetLoad({config: {data: {steps: []}}}, {id: 'target-1'}, nodes, edges)}
+          type="button"
+        >
+          Load Widget
+        </button>
+        <button
+          data-testid="load-widget-with-merge-strategy-btn"
+          onClick={() =>
+            onWidgetLoad(
+              {
+                config: {
+                  data: {
+                    steps: [
+                      {
+                        id: 'widget-step-1',
+                        type: 'VIEW',
+                        __generationMeta__: {strategy: 'MERGE_WITH_DROP_POINT'},
+                        data: {components: [{id: 'comp-1', type: 'BUTTON'}]},
+                      },
                     ],
                   },
                 },
               },
-            },
-            {id: 'target-1'},
-            nodes,
-            edges,
-          )
-        }
-        type="button"
-      >
-        Load Widget With Default Selector
-      </button>
-      <button
-        data-testid="load-template-null-config-btn"
-        onClick={() => onTemplateLoad({type: 'BASIC', config: null})}
-        type="button"
-      >
-        Load Template Null Config
-      </button>
-      <button
-        data-testid="add-non-form-element-btn"
-        onClick={() =>
-          onResourceAdd({
-            resourceType: 'ELEMENT',
-            type: 'BUTTON',
-            id: 'button-1',
-            category: 'ACTION',
-          })
-        }
-        type="button"
-      >
-        Add Non-Form Element
-      </button>
-    </div>
-  ),
+              {id: 'target-1'},
+              nodes,
+              edges,
+            )
+          }
+          type="button"
+        >
+          Load Widget With Merge Strategy
+        </button>
+        <button
+          data-testid="load-step-btn"
+          onClick={() => onStepLoad({id: 'step-1', type: 'VIEW', data: {}})}
+          type="button"
+        >
+          Load Step
+        </button>
+        <button
+          data-testid="load-step-with-components-btn"
+          onClick={() =>
+            onStepLoad({
+              id: 'step-1',
+              type: 'VIEW',
+              data: {components: [{id: 'comp-1', type: 'BUTTON'}]},
+            })
+          }
+          type="button"
+        >
+          Load Step With Components
+        </button>
+        <button
+          data-testid="load-non-view-step-btn"
+          onClick={() => onStepLoad({id: 'step-1', type: 'EXECUTION', data: {}})}
+          type="button"
+        >
+          Load Non-View Step
+        </button>
+        <button
+          data-testid="mutate-components-btn"
+          onClick={() => {
+            if (mutateComponents) {
+              mutateComponents([{id: 'test-1', type: 'FORM', resourceType: 'ELEMENT'} as Element]);
+            }
+          }}
+          type="button"
+        >
+          Mutate Components
+        </button>
+        <button
+          data-testid="mutate-components-with-form-btn"
+          onClick={() => {
+            if (mutateComponents) {
+              mutateComponents([
+                {
+                  id: 'form-1',
+                  type: 'FORM',
+                  category: 'BLOCK',
+                  resourceType: 'ELEMENT',
+                  components: [
+                    {id: 'password-1', type: 'PASSWORD_INPUT', config: {}},
+                    {id: 'button-1', type: 'BUTTON', variant: 'PRIMARY', config: {}},
+                  ],
+                } as unknown as Element,
+              ]);
+            }
+          }}
+          type="button"
+        >
+          Mutate Components With Form
+        </button>
+        <button
+          data-testid="load-widget-with-default-selector-btn"
+          onClick={() =>
+            onWidgetLoad(
+              {
+                config: {
+                  data: {
+                    steps: [
+                      {
+                        id: '{{VIEW_STEP_ID}}',
+                        type: 'VIEW',
+                        position: {x: 0, y: 0},
+                        data: {
+                          components: [
+                            {
+                              id: '{{FORM_ID}}',
+                              type: 'FORM',
+                              components: [{id: '{{INPUT_ID}}', type: 'TEXT_INPUT'}],
+                            },
+                          ],
+                        },
+                      },
+                    ],
+                    __generationMeta__: {
+                      defaultPropertySelectorId: '{{INPUT_ID}}',
+                      replacers: [
+                        {placeholder: 'VIEW_STEP_ID', type: 'uuid'},
+                        {placeholder: 'FORM_ID', type: 'uuid'},
+                        {placeholder: 'INPUT_ID', type: 'uuid'},
+                      ],
+                    },
+                  },
+                },
+              },
+              {id: 'target-1'},
+              nodes,
+              edges,
+            )
+          }
+          type="button"
+        >
+          Load Widget With Default Selector
+        </button>
+        <button
+          data-testid="load-template-null-config-btn"
+          onClick={() => onTemplateLoad({type: 'BASIC', config: null})}
+          type="button"
+        >
+          Load Template Null Config
+        </button>
+        <button
+          data-testid="add-non-form-element-btn"
+          onClick={() =>
+            onResourceAdd({
+              resourceType: 'ELEMENT',
+              type: 'BUTTON',
+              id: 'button-1',
+              category: 'ACTION',
+            })
+          }
+          type="button"
+        >
+          Add Non-Form Element
+        </button>
+      </div>
+    );
+  },
 }));
 
 // Mock BaseEdge
@@ -1770,49 +1769,208 @@ describe('handleStepLoad Callback', () => {
   });
 });
 
-describe('Verbose Mode Node Filtering', () => {
+describe('Compact (Non-Verbose) Mode', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseParams.mockReturnValue({});
-    mockUseEdgesState.mockReturnValue([[], mockSetEdges, vi.fn()]);
     mockUseUpdateNodeInternals.mockReturnValue(vi.fn());
     mockIsFlowValid.value = true;
     mockExistingFlowData.value = null;
+    mockIsVerboseMode.value = false;
   });
 
-  it('should filter execution nodes when verbose mode is disabled', () => {
-    // Test the filtering logic directly
+  afterEach(() => {
+    mockIsVerboseMode.value = true;
+  });
+
+  it('should keep execution nodes on the canvas when verbose mode is disabled', () => {
     const nodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'execution-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
     ];
+    mockUseNodesState.mockReturnValue([nodes, mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([[], mockSetEdges, vi.fn()]);
 
-    const isVerboseMode = false;
-    const filtered = isVerboseMode ? nodes : nodes.filter((node) => node.type !== 'EXECUTION');
+    render(<FlowBuilder />);
 
-    expect(filtered.length).toBe(1);
-    expect(filtered[0].type).toBe('VIEW');
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('2');
   });
 
-  it('should filter edges connected to execution nodes when verbose mode is disabled', () => {
+  it('should keep edges connected to execution nodes when verbose mode is disabled', () => {
     const nodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'execution-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
+      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
     ];
     const edges: Edge[] = [
       {id: 'edge-1', source: 'view-1', target: 'execution-1'},
-      {id: 'edge-2', source: 'execution-1', target: 'view-1'},
-      {id: 'edge-3', source: 'view-1', target: 'view-1'},
+      {id: 'edge-2', source: 'execution-1', target: 'view-2'},
+      {id: 'edge-3', source: 'view-1', target: 'view-2'},
     ];
+    mockUseNodesState.mockReturnValue([nodes, mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([edges, mockSetEdges, vi.fn()]);
 
-    const isVerboseMode = false;
-    const executionNodeIds = new Set(nodes.filter((node) => node.type === 'EXECUTION').map((node) => node.id));
-    const filteredEdges = isVerboseMode
-      ? edges
-      : edges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
+    render(<FlowBuilder />);
 
-    expect(filteredEdges.length).toBe(1);
-    expect(filteredEdges[0].id).toBe('edge-3');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('3');
+  });
+
+  it('should collapse a run of consecutive executors into one stack display node', () => {
+    const nodes: Node[] = [
+      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      {id: 'exec-a', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
+      {id: 'exec-b', type: 'TASK_EXECUTION', position: {x: 200, y: 0}, data: {}},
+      {id: 'view-2', type: 'VIEW', position: {x: 300, y: 0}, data: {}},
+    ];
+    const edges: Edge[] = [
+      {id: 'e1', source: 'view-1', target: 'exec-a'},
+      {id: 'e2', source: 'exec-a', target: 'exec-b'},
+      {id: 'e3', source: 'exec-b', target: 'view-2'},
+    ];
+    mockUseNodesState.mockReturnValue([nodes, mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([edges, mockSetEdges, vi.fn()]);
+
+    render(<FlowBuilder />);
+
+    // exec-a and exec-b merge into one stack node; the interior edge is dropped
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('2');
+  });
+
+  it('should expand canvas changes on a stack onto its member nodes', () => {
+    const nodes: Node[] = [
+      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      {id: 'exec-a', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
+      {id: 'exec-b', type: 'TASK_EXECUTION', position: {x: 200, y: 0}, data: {}},
+      {id: 'view-2', type: 'VIEW', position: {x: 300, y: 0}, data: {}},
+    ];
+    const edges: Edge[] = [
+      {id: 'e1', source: 'view-1', target: 'exec-a'},
+      {id: 'e2', source: 'exec-a', target: 'exec-b'},
+      {id: 'e3', source: 'exec-b', target: 'view-2'},
+    ];
+    const defaultOnNodesChange = vi.fn();
+    mockUseNodesState.mockReturnValue([nodes, mockSetNodes, defaultOnNodesChange]);
+    mockUseEdgesState.mockReturnValue([edges, mockSetEdges, vi.fn()]);
+
+    render(<FlowBuilder />);
+
+    onNodesChangeCapture.current?.([{id: 'execution-stack_exec-a', position: {x: 9, y: 9}, type: 'position'}]);
+
+    expect(defaultOnNodesChange).toHaveBeenCalledWith([
+      {id: 'exec-a', position: {x: 9, y: 9}, type: 'position'},
+      {id: 'exec-b', position: {x: 9, y: 9}, type: 'position'},
+    ]);
+  });
+
+  it('should not mark the flow dirty when the load-time auto-layout lands after a click', async () => {
+    // A flow stored without layout data loads with every node at the origin.
+    const unpositioned: Node[] = [
+      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      {id: 'exec-a', type: 'TASK_EXECUTION', position: {x: 0, y: 0}, data: {}},
+    ];
+    mockIsVerboseMode.value = true;
+    mockUseNodesState.mockReturnValue([unpositioned, mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([[], mockSetEdges, vi.fn()]);
+
+    const {rerender} = render(<FlowBuilder />);
+
+    // The user clicks while the layout is still pending.
+    fireEvent.pointerDown(window);
+
+    // The layout lands afterwards and positions every node.
+    mockUseNodesState.mockReturnValue([
+      unpositioned.map((node, index) => ({...node, position: {x: index * 220, y: 60}})),
+      mockSetNodes,
+      vi.fn(),
+    ]);
+    rerender(<FlowBuilder />);
+
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(screen.getByTestId('is-dirty')).toHaveTextContent('false');
+  });
+
+  it('should not mark the flow dirty when a view-mode toggle relayouts the canvas', async () => {
+    const nodesBefore: Node[] = [
+      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      {id: 'exec-a', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
+    ];
+    mockIsVerboseMode.value = true;
+    mockUseNodesState.mockReturnValue([nodesBefore, mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([[], mockSetEdges, vi.fn()]);
+
+    const {rerender} = render(<FlowBuilder />);
+
+    // Freeze the clean baseline the way a first user interaction does.
+    fireEvent.pointerDown(window);
+    await waitFor(() => expect(screen.getByTestId('is-dirty')).toHaveTextContent('false'), {timeout: 2000});
+
+    // Toggle the view mode, then let its relayout move the nodes.
+    mockIsVerboseMode.value = false;
+    rerender(<FlowBuilder />);
+    mockUseNodesState.mockReturnValue([
+      nodesBefore.map((node) => ({...node, position: {x: node.position.x + 40, y: 25}})),
+      mockSetNodes,
+      vi.fn(),
+    ]);
+    rerender(<FlowBuilder />);
+
+    // The relayout settles onto the clean baseline instead of dirtying it.
+    await new Promise((resolve) => setTimeout(resolve, 700));
+    expect(screen.getByTestId('is-dirty')).toHaveTextContent('false');
+  });
+
+  it('should still mark the flow dirty when the graph moves without a view-mode toggle', async () => {
+    const nodesBefore: Node[] = [
+      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      {id: 'exec-a', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
+    ];
+    mockIsVerboseMode.value = true;
+    mockUseNodesState.mockReturnValue([nodesBefore, mockSetNodes, vi.fn()]);
+    mockUseEdgesState.mockReturnValue([[], mockSetEdges, vi.fn()]);
+
+    const {rerender} = render(<FlowBuilder />);
+
+    fireEvent.pointerDown(window);
+    await waitFor(() => expect(screen.getByTestId('is-dirty')).toHaveTextContent('false'), {timeout: 2000});
+
+    mockUseNodesState.mockReturnValue([
+      nodesBefore.map((node) => ({...node, position: {x: node.position.x + 40, y: 25}})),
+      mockSetNodes,
+      vi.fn(),
+    ]);
+    rerender(<FlowBuilder />);
+
+    await waitFor(() => expect(screen.getByTestId('is-dirty')).toHaveTextContent('true'), {timeout: 2000});
+  });
+
+  it('should keep stack dimension changes on the display node so its edges stay rendered', () => {
+    const nodes: Node[] = [
+      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
+      {id: 'exec-a', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
+      {id: 'exec-b', type: 'TASK_EXECUTION', position: {x: 200, y: 0}, data: {}},
+      {id: 'view-2', type: 'VIEW', position: {x: 300, y: 0}, data: {}},
+    ];
+    const edges: Edge[] = [
+      {id: 'e1', source: 'view-1', target: 'exec-a'},
+      {id: 'e2', source: 'exec-a', target: 'exec-b'},
+      {id: 'e3', source: 'exec-b', target: 'view-2'},
+    ];
+    const defaultOnNodesChange = vi.fn();
+    mockUseNodesState.mockReturnValue([nodes, mockSetNodes, defaultOnNodesChange]);
+    mockUseEdgesState.mockReturnValue([edges, mockSetEdges, vi.fn()]);
+
+    render(<FlowBuilder />);
+
+    act(() => {
+      onNodesChangeCapture.current?.([
+        {dimensions: {height: 48, width: 88}, id: 'execution-stack_exec-a', type: 'dimensions'},
+      ]);
+    });
+
+    // The synthetic node has no state counterpart, so nothing reaches the
+    // default handler, but the display node absorbs the measured size.
+    expect(defaultOnNodesChange).toHaveBeenCalledWith([]);
   });
 });
 
@@ -2417,69 +2575,6 @@ describe('handleResourceAdd with Form Replacement', () => {
   });
 });
 
-describe('Verbose Mode Edge Filtering - Non-Verbose Mode', () => {
-  // Use vi.hoisted to create a mock that can be toggled
-  const mockIsVerboseModeValue = {value: false};
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseParams.mockReturnValue({});
-    mockUseUpdateNodeInternals.mockReturnValue(vi.fn());
-    mockIsFlowValid.value = true;
-    mockExistingFlowData.value = null;
-    mockIsVerboseModeValue.value = false;
-  });
-
-  it('should hide execution nodes when verbose mode is disabled', () => {
-    // Simulate the filtering logic used in the component
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'execution-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
-    ];
-
-    const isVerboseMode = false;
-    const filteredNodes = isVerboseMode ? nodes : nodes.filter((node) => node.type !== 'EXECUTION');
-
-    expect(filteredNodes.length).toBe(2);
-    expect(filteredNodes.every((n) => n.type !== 'EXECUTION')).toBe(true);
-  });
-
-  it('should hide edges connected to execution nodes when verbose mode is disabled', () => {
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'execution-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
-    ];
-    const edges: Edge[] = [
-      {id: 'edge-1', source: 'view-1', target: 'execution-1'}, // Should be filtered
-      {id: 'edge-2', source: 'execution-1', target: 'view-2'}, // Should be filtered
-      {id: 'edge-3', source: 'view-1', target: 'view-2'}, // Should remain
-    ];
-
-    const isVerboseMode = false;
-    const executionNodeIds = new Set(nodes.filter((node) => node.type === 'EXECUTION').map((node) => node.id));
-    const filteredEdges = isVerboseMode
-      ? edges
-      : edges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
-
-    expect(filteredEdges.length).toBe(1);
-    expect(filteredEdges[0].id).toBe('edge-3');
-  });
-
-  it('should show all nodes when verbose mode is enabled', () => {
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'execution-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-    ];
-
-    const isVerboseMode = true;
-    const filteredNodes = isVerboseMode ? nodes : nodes.filter((node) => node.type !== 'EXECUTION');
-
-    expect(filteredNodes.length).toBe(2);
-  });
-});
-
 describe('Snackbar Close Handler Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -2887,87 +2982,6 @@ describe('handleAddElementToView - INPUT_ELEMENT_TYPES handling', () => {
     render(<FlowBuilder />);
 
     expect(screen.getByTestId('flow-builder')).toBeInTheDocument();
-  });
-});
-
-describe('Verbose Mode - Non-Verbose Filtering Logic', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    mockUseParams.mockReturnValue({});
-    mockUseUpdateNodeInternals.mockReturnValue(vi.fn());
-    mockIsFlowValid.value = true;
-    mockExistingFlowData.value = null;
-  });
-
-  it('should filter out EXECUTION nodes when isVerboseMode is false', () => {
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
-    ];
-
-    // Simulate the filtering logic
-    const isVerboseMode = false;
-    const filteredNodes = isVerboseMode ? nodes : nodes.filter((node) => node.type !== 'EXECUTION');
-
-    expect(filteredNodes).toHaveLength(2);
-    expect(filteredNodes.every((n) => n.type === 'VIEW')).toBe(true);
-  });
-
-  it('should filter edges connected to EXECUTION nodes when isVerboseMode is false', () => {
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
-    ];
-
-    const edges: Edge[] = [
-      {id: 'e1', source: 'view-1', target: 'exec-1'},
-      {id: 'e2', source: 'exec-1', target: 'view-2'},
-      {id: 'e3', source: 'view-1', target: 'view-2'},
-    ];
-
-    // Simulate filtering logic
-    const isVerboseMode = false;
-    const executionNodeIds = new Set(nodes.filter((node) => node.type === 'EXECUTION').map((node) => node.id));
-    const filteredEdges = isVerboseMode
-      ? edges
-      : edges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
-
-    expect(filteredEdges).toHaveLength(1);
-    expect(filteredEdges[0].id).toBe('e3');
-  });
-
-  it('should keep all nodes when isVerboseMode is true', () => {
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-    ];
-
-    const isVerboseMode = true;
-    const filteredNodes = isVerboseMode ? nodes : nodes.filter((node) => node.type !== 'EXECUTION');
-
-    expect(filteredNodes).toHaveLength(2);
-  });
-
-  it('should keep all edges when isVerboseMode is true', () => {
-    const nodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-    ];
-
-    const edges: Edge[] = [
-      {id: 'e1', source: 'view-1', target: 'exec-1'},
-      {id: 'e2', source: 'exec-1', target: 'view-1'},
-    ];
-
-    const isVerboseMode = true;
-    const executionNodeIds = new Set(nodes.filter((node) => node.type === 'EXECUTION').map((node) => node.id));
-    const filteredEdges = isVerboseMode
-      ? edges
-      : edges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
-
-    expect(filteredEdges).toHaveLength(2);
   });
 });
 
@@ -4351,29 +4365,6 @@ describe('Verbose Mode Filtering - Component Integration', () => {
     mockExistingFlowData.value = null;
   });
 
-  it('should correctly filter nodes based on verbose mode - logic test', () => {
-    const mockNodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
-    ];
-
-    // Test filtering logic for non-verbose mode
-    const isVerboseModeFalse = false;
-    const filteredNodesNonVerbose = isVerboseModeFalse
-      ? mockNodes
-      : mockNodes.filter((node) => node.type !== 'EXECUTION');
-
-    expect(filteredNodesNonVerbose).toHaveLength(2);
-    expect(filteredNodesNonVerbose.every((n) => n.type === 'VIEW')).toBe(true);
-
-    // Test filtering logic for verbose mode
-    const isVerboseModeTrue = true;
-    const filteredNodesVerbose = isVerboseModeTrue ? mockNodes : mockNodes.filter((node) => node.type !== 'EXECUTION');
-
-    expect(filteredNodesVerbose).toHaveLength(3);
-  });
-
   it('should render component with nodes state', () => {
     const mockNodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
@@ -4394,31 +4385,6 @@ describe('Verbose Mode Filtering - Component Integration', () => {
 
     // Component renders with nodes
     expect(screen.getByTestId('flow-builder')).toBeInTheDocument();
-  });
-
-  it('should correctly filter edges based on verbose mode - logic test', () => {
-    const mockNodes: Node[] = [
-      {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
-      {id: 'exec-1', type: 'EXECUTION', position: {x: 100, y: 0}, data: {}},
-      {id: 'view-2', type: 'VIEW', position: {x: 200, y: 0}, data: {}},
-    ];
-
-    const mockEdges: Edge[] = [
-      {id: 'e1', source: 'view-1', target: 'exec-1'},
-      {id: 'e2', source: 'exec-1', target: 'view-2'},
-      {id: 'e3', source: 'view-1', target: 'view-2'},
-    ];
-
-    // Test filtering logic for non-verbose mode
-    const isVerboseMode = false;
-    const executionNodeIds = new Set(mockNodes.filter((node) => node.type === 'EXECUTION').map((node) => node.id));
-    const filteredEdges = isVerboseMode
-      ? mockEdges
-      : mockEdges.filter((edge) => !executionNodeIds.has(edge.source) && !executionNodeIds.has(edge.target));
-
-    // Only edge e3 (view-1 -> view-2) should remain
-    expect(filteredEdges).toHaveLength(1);
-    expect(filteredEdges[0].id).toBe('e3');
   });
 });
 
@@ -5641,7 +5607,7 @@ describe('Verbose Mode Filtering Integration', () => {
     mockIsVerboseMode.value = true;
   });
 
-  it('should filter out EXECUTION nodes when isVerboseMode is false in rendered component', () => {
+  it('should keep EXECUTION nodes and their edges when isVerboseMode is false in rendered component', () => {
     // Set up nodes with execution type (TASK_EXECUTION is the actual type used by StepTypes.Execution)
     const nodesWithExecution: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
@@ -5657,7 +5623,6 @@ describe('Verbose Mode Filtering Integration', () => {
     mockUseNodesState.mockReturnValue([nodesWithExecution, mockSetNodes, vi.fn()]);
     mockUseEdgesState.mockReturnValue([edgesWithExecution, mockSetEdges, vi.fn()]);
 
-    // Set verbose mode to false BEFORE render to trigger filtering
     mockIsVerboseMode.value = false;
     // Override the mock implementation
     mockUseFlowConfig.mockImplementation(() => ({
@@ -5669,10 +5634,10 @@ describe('Verbose Mode Filtering Integration', () => {
 
     render(<FlowBuilder />);
 
-    // The FlowBuilder should receive filtered nodes (2 instead of 3)
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('2');
-    // The FlowBuilder should receive filtered edges (1 instead of 3)
-    expect(screen.getByTestId('edges-count')).toHaveTextContent('1');
+    // Compact mode renders execution nodes as compact chips instead of hiding
+    // them, so the full graph is passed through to the canvas.
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('3');
   });
 
   it('should keep all nodes and edges when isVerboseMode is true', () => {
@@ -5914,7 +5879,7 @@ describe('Verbose Mode Filtering - Component Integration with Execution Nodes', 
     mockValidateFlowGraph.mockReturnValue([]);
   });
 
-  it('should filter EXECUTION nodes and their edges when isVerboseMode is false', () => {
+  it('should keep EXECUTION nodes and their edges when isVerboseMode is false', () => {
     const nodesWithExecution: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
@@ -5940,10 +5905,10 @@ describe('Verbose Mode Filtering - Component Integration with Execution Nodes', 
 
     render(<FlowBuilder />);
 
-    // Execution node should be filtered out (2 VIEW nodes remain)
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('2');
-    // Edges connected to execution node should be filtered out (only e3 remains)
-    expect(screen.getByTestId('edges-count')).toHaveTextContent('1');
+    // Execution nodes render as compact chips in non-verbose mode, so the
+    // whole graph reaches the canvas.
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('3');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('3');
   });
 
   it('should keep all nodes and edges when isVerboseMode is true', () => {
@@ -5978,7 +5943,7 @@ describe('Verbose Mode Filtering - Component Integration with Execution Nodes', 
     expect(screen.getByTestId('edges-count')).toHaveTextContent('3');
   });
 
-  it('should only filter edges where source OR target is an execution node', () => {
+  it('should keep edges where source OR target is an execution node', () => {
     const nodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
@@ -5986,10 +5951,10 @@ describe('Verbose Mode Filtering - Component Integration with Execution Nodes', 
       {id: 'view-3', type: 'VIEW', position: {x: 300, y: 0}, data: {}},
     ];
     const edges: Edge[] = [
-      {id: 'e1', source: 'view-1', target: 'exec-1'}, // filtered (target is execution)
-      {id: 'e2', source: 'exec-1', target: 'view-2'}, // filtered (source is execution)
-      {id: 'e3', source: 'view-1', target: 'view-2'}, // kept
-      {id: 'e4', source: 'view-2', target: 'view-3'}, // kept
+      {id: 'e1', source: 'view-1', target: 'exec-1'},
+      {id: 'e2', source: 'exec-1', target: 'view-2'},
+      {id: 'e3', source: 'view-1', target: 'view-2'},
+      {id: 'e4', source: 'view-2', target: 'view-3'},
     ];
 
     mockUseNodesState.mockReturnValue([nodes, mockSetNodes, vi.fn()]);
@@ -6006,10 +5971,8 @@ describe('Verbose Mode Filtering - Component Integration with Execution Nodes', 
 
     render(<FlowBuilder />);
 
-    // 3 VIEW nodes should remain
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('3');
-    // Only e3 and e4 should remain
-    expect(screen.getByTestId('edges-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('4');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('4');
   });
 });
 
@@ -6180,10 +6143,9 @@ describe('Verbose Mode - Empty Arrays Edge Cases', () => {
 
     render(<FlowBuilder />);
 
-    // All nodes filtered out
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('0');
-    // All edges filtered out
-    expect(screen.getByTestId('edges-count')).toHaveTextContent('0');
+    // Execution nodes stay on the canvas as compact chips
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('1');
   });
 });
 
@@ -6306,7 +6268,7 @@ describe('Verbose Mode Node and Edge Filtering', () => {
     mockValidateFlowGraph.mockReturnValue([]);
   });
 
-  it('should filter out execution nodes and keep view nodes when verbose mode is disabled', () => {
+  it('should keep execution nodes alongside view nodes when verbose mode is disabled', () => {
     const mixedNodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
@@ -6325,10 +6287,10 @@ describe('Verbose Mode Node and Edge Filtering', () => {
 
     render(<FlowBuilder />);
 
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('2');
   });
 
-  it('should filter out all nodes when only execution nodes exist and verbose mode is disabled', () => {
+  it('should keep all nodes when only execution nodes exist and verbose mode is disabled', () => {
     const executionOnlyNodes: Node[] = [{id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 0, y: 0}, data: {}}];
     const edges: Edge[] = [];
 
@@ -6344,10 +6306,10 @@ describe('Verbose Mode Node and Edge Filtering', () => {
 
     render(<FlowBuilder />);
 
-    expect(screen.getByTestId('nodes-count')).toHaveTextContent('0');
+    expect(screen.getByTestId('nodes-count')).toHaveTextContent('1');
   });
 
-  it('should filter edges where source node is an execution node', () => {
+  it('should keep edges where source node is an execution node', () => {
     const nodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
@@ -6370,10 +6332,10 @@ describe('Verbose Mode Node and Edge Filtering', () => {
 
     render(<FlowBuilder />);
 
-    expect(screen.getByTestId('edges-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('2');
   });
 
-  it('should filter edges where target node is an execution node', () => {
+  it('should keep edges where target node is an execution node', () => {
     const nodes: Node[] = [
       {id: 'view-1', type: 'VIEW', position: {x: 0, y: 0}, data: {}},
       {id: 'exec-1', type: 'TASK_EXECUTION', position: {x: 100, y: 0}, data: {}},
@@ -6396,7 +6358,7 @@ describe('Verbose Mode Node and Edge Filtering', () => {
 
     render(<FlowBuilder />);
 
-    expect(screen.getByTestId('edges-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('edges-count')).toHaveTextContent('2');
   });
 
   it('should show all nodes including execution nodes when verbose mode is enabled', () => {

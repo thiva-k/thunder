@@ -1,28 +1,17 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
+import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useGetAgentType, useGetAgentTypes} from '@thunderid/configure-agent-types';
-import {useGetChildOrganizationUnits} from '@thunderid/configure-organization-units';
-import {ConfigureOrganizationUnit} from '@thunderid/configure-users';
+import {
+  OrganizationUnitPickerScreen,
+  useGetChildOrganizationUnits,
+  useGetOrganizationUnit,
+} from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {useThunderID} from '@thunderid/react';
-import {Alert, Box, Button, IconButton, LinearProgress, Stack, Typography, AppBreadcrumbs} from '@wso2/oxygen-ui';
-import {X} from '@wso2/oxygen-ui-icons-react';
+import {Alert, Box, Button, CircularProgress, Stack, Typography} from '@wso2/oxygen-ui';
+import {Home} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useState, useCallback, useEffect, useMemo} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -72,6 +61,14 @@ export default function AgentCreatePage(): JSX.Element {
   const isChildOuForbidden = (childOuError as {response?: {status?: number}} | null)?.response?.status === 403;
   const hasChildOUs = !isChildOuLoading && !childOuError && (childOuData?.totalResults ?? 0) > 0;
 
+  // The organization unit whose name is shown in the Details step's summary chip: the picked one
+  // when there was a choice to make, or the schema's own OU otherwise.
+  const resolvedOuId = selectedOuId ?? selectedSchema?.ouId;
+  const {data: resolvedOrganizationUnit, isLoading: isResolvedOuLoading} = useGetOrganizationUnit(
+    resolvedOuId,
+    Boolean(resolvedOuId),
+  );
+
   const agentTypes = useMemo(() => agentTypesData?.types ?? [], [agentTypesData]);
 
   // Agent types are restricted to a single bootstrap-provisioned `default` schema. Auto-pick it
@@ -84,16 +81,41 @@ export default function AgentCreatePage(): JSX.Element {
     }
   }, [agentTypes, selectedSchema, setSelectedSchema]);
 
+  // The organization unit is the wizard's first step, scoped to the agent type's own OU subtree,
+  // whenever there's an actual choice to make (the schema's OU has children). When there's no
+  // choice, the schema's own OU (or, if the lookup is forbidden, the caller's token OU) is
+  // resolved automatically and the wizard skips straight to the Name step.
+  useEffect(() => {
+    if (!selectedSchema?.ouId || isChildOuLoading || currentStep !== AgentCreateFlowStep.ORGANIZATION_UNIT) return;
+    if (isChildOuForbidden) {
+      if (tokenOuId) setSelectedOuId(tokenOuId);
+      setCurrentStep(AgentCreateFlowStep.NAME);
+    } else if (!hasChildOUs) {
+      setSelectedOuId(selectedSchema.ouId);
+      setCurrentStep(AgentCreateFlowStep.NAME);
+    }
+  }, [
+    selectedSchema,
+    isChildOuLoading,
+    isChildOuForbidden,
+    hasChildOUs,
+    tokenOuId,
+    currentStep,
+    setSelectedOuId,
+    setCurrentStep,
+  ]);
+
   const [stepReady, setStepReady] = useState<Record<AgentCreateFlowStep, boolean>>({
-    NAME: false,
     ORGANIZATION_UNIT: false,
+    NAME: false,
     PROFILE: true,
     OWNER: true,
   });
 
   const activeSteps = useMemo((): AgentCreateFlowStep[] => {
-    const base: AgentCreateFlowStep[] = [AgentCreateFlowStep.NAME];
+    const base: AgentCreateFlowStep[] = [];
     if (hasChildOUs) base.push(AgentCreateFlowStep.ORGANIZATION_UNIT);
+    base.push(AgentCreateFlowStep.NAME);
     if (schemaDetails && Object.keys(schemaDetails.schema ?? {}).length > 0) {
       base.push(AgentCreateFlowStep.PROFILE);
     }
@@ -101,15 +123,16 @@ export default function AgentCreatePage(): JSX.Element {
     return base;
   }, [hasChildOUs, schemaDetails]);
 
-  const steps: Record<AgentCreateFlowStep, {label: string}> = useMemo(
-    () => ({
-      NAME: {label: t('agents:createWizard.steps.name', 'Name')},
-      ORGANIZATION_UNIT: {label: t('agents:createWizard.steps.organizationUnit', 'Organization unit')},
-      PROFILE: {label: t('agents:createWizard.steps.profile', 'Profile')},
-      OWNER: {label: t('agents:createWizard.steps.owner', 'Owner')},
-    }),
-    [t],
-  );
+  const steps: Partial<Record<AgentCreateFlowStep, {label: string}>> = useMemo(() => {
+    const map: Partial<Record<AgentCreateFlowStep, {label: string}>> = {};
+    if (hasChildOUs) {
+      map.ORGANIZATION_UNIT = {label: t('agents:createWizard.steps.organizationUnit', 'Organization unit')};
+    }
+    map.NAME = {label: t('agents:createWizard.steps.name', 'Details')};
+    map.PROFILE = {label: t('agents:createWizard.steps.profile', 'Profile')};
+    map.OWNER = {label: t('agents:createWizard.steps.owner', 'Owner')};
+    return map;
+  }, [t, hasChildOUs]);
 
   const isLastStep = currentStep === activeSteps[activeSteps.length - 1];
 
@@ -202,22 +225,10 @@ export default function AgentCreatePage(): JSX.Element {
     }
 
     switch (currentStep) {
-      case AgentCreateFlowStep.NAME: {
-        if (selectedSchema?.ouId && isChildOuLoading) return;
-        if (isChildOuForbidden) {
-          if (tokenOuId) setSelectedOuId(tokenOuId);
-        } else if (!hasChildOUs) {
-          setSelectedOuId(selectedSchema?.ouId ?? null);
-        }
-        const hasSchemaFields = schemaDetails && Object.keys(schemaDetails.schema ?? {}).length > 0;
-        if (hasChildOUs) {
-          setCurrentStep(AgentCreateFlowStep.ORGANIZATION_UNIT);
-        } else {
-          setCurrentStep(hasSchemaFields ? AgentCreateFlowStep.PROFILE : AgentCreateFlowStep.OWNER);
-        }
+      case AgentCreateFlowStep.ORGANIZATION_UNIT:
+        setCurrentStep(AgentCreateFlowStep.NAME);
         break;
-      }
-      case AgentCreateFlowStep.ORGANIZATION_UNIT: {
+      case AgentCreateFlowStep.NAME: {
         const hasSchemaFields = schemaDetails && Object.keys(schemaDetails.schema ?? {}).length > 0;
         setCurrentStep(hasSchemaFields ? AgentCreateFlowStep.PROFILE : AgentCreateFlowStep.OWNER);
         break;
@@ -232,25 +243,15 @@ export default function AgentCreatePage(): JSX.Element {
 
   const handlePrevStep = (): void => {
     switch (currentStep) {
-      case AgentCreateFlowStep.ORGANIZATION_UNIT:
-        setCurrentStep(AgentCreateFlowStep.NAME);
+      case AgentCreateFlowStep.NAME:
+        if (hasChildOUs) setCurrentStep(AgentCreateFlowStep.ORGANIZATION_UNIT);
         break;
       case AgentCreateFlowStep.PROFILE:
-        if (hasChildOUs) {
-          setCurrentStep(AgentCreateFlowStep.ORGANIZATION_UNIT);
-        } else {
-          setCurrentStep(AgentCreateFlowStep.NAME);
-        }
+        setCurrentStep(AgentCreateFlowStep.NAME);
         break;
       case AgentCreateFlowStep.OWNER: {
         const hasSchemaFields = schemaDetails && Object.keys(schemaDetails.schema ?? {}).length > 0;
-        if (hasSchemaFields) {
-          setCurrentStep(AgentCreateFlowStep.PROFILE);
-        } else if (hasChildOUs) {
-          setCurrentStep(AgentCreateFlowStep.ORGANIZATION_UNIT);
-        } else {
-          setCurrentStep(AgentCreateFlowStep.NAME);
-        }
+        setCurrentStep(hasSchemaFields ? AgentCreateFlowStep.PROFILE : AgentCreateFlowStep.NAME);
         break;
       }
       default:
@@ -276,18 +277,11 @@ export default function AgentCreatePage(): JSX.Element {
             agentName={agentName}
             onAgentNameChange={setAgentName}
             onReadyChange={(isReady) => handleStepReadyChange(AgentCreateFlowStep.NAME, isReady)}
-          />
-        );
-
-      case AgentCreateFlowStep.ORGANIZATION_UNIT:
-        if (!selectedSchema?.ouId) return null;
-        return (
-          <ConfigureOrganizationUnit
-            key={selectedSchema.ouId}
-            rootOuId={selectedSchema.ouId}
-            selectedOuId={selectedOuId ?? ''}
-            onOuIdChange={setSelectedOuId}
-            onReadyChange={(isReady) => handleStepReadyChange(AgentCreateFlowStep.ORGANIZATION_UNIT, isReady)}
+            hasChildOUs={hasChildOUs}
+            organizationUnitName={resolvedOrganizationUnit?.name}
+            organizationUnitLogoUrl={resolvedOrganizationUnit?.logoUrl}
+            isOrganizationUnitLoading={isResolvedOuLoading}
+            onChangeOu={() => setCurrentStep(AgentCreateFlowStep.ORGANIZATION_UNIT)}
           />
         );
 
@@ -328,83 +322,72 @@ export default function AgentCreatePage(): JSX.Element {
     }
   };
 
+  if (currentStep === AgentCreateFlowStep.ORGANIZATION_UNIT) {
+    if (!selectedSchema || isChildOuLoading || !hasChildOUs) {
+      return (
+        <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    return (
+      <OrganizationUnitPickerScreen
+        rootOuId={selectedSchema.ouId}
+        icon={<Home size={26} />}
+        title={t('agents:createWizard.organizationUnit.title', 'Where should this agent belong?')}
+        subtitle={t(
+          'agents:createWizard.organizationUnit.subtitle',
+          "Choose the organization unit that will own this agent. You can't change this once created.",
+        )}
+        value={selectedOuId ?? ''}
+        onChange={setSelectedOuId}
+        onBack={handleClose}
+        onContinue={handleNextStep}
+        backLabel={t('common:actions.back', 'Back')}
+        continueLabel={t('common:actions.continue', 'Continue')}
+      />
+    );
+  }
+
   return (
-    <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
-      <LinearProgress variant="determinate" value={getStepProgress()} sx={{height: 6}} />
-
-      <Box sx={{flex: 1, display: 'flex', flexDirection: 'column'}}>
-        <Box sx={{p: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <Stack direction="row" alignItems="center" spacing={2}>
-            <IconButton
-              onClick={handleClose}
-              sx={{
-                bgcolor: 'background.paper',
-                '&:hover': {bgcolor: 'action.hover'},
-                boxShadow: 1,
-              }}
-            >
-              <X size={24} />
-            </IconButton>
-            <AppBreadcrumbs
-              items={getBreadcrumbSteps().map((step, index, array) => ({
-                key: step,
-                label: steps[step].label,
-                onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
-              }))}
-            />
-          </Stack>
-        </Box>
-
-        <Box sx={{flex: 1, display: 'flex', minHeight: 0}}>
-          <Box
-            sx={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              pt: 8,
-              pb: 8,
-              px: 20,
-              mx: 'auto',
-              alignItems: 'flex-start',
-              justifyContent: 'flex-start',
-            }}
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={getStepProgress()}
+      breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
+        key: step,
+        label: steps[step]?.label ?? step,
+        onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
+      }))}
+      footer={
+        <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2}>
+          {activeSteps.indexOf(currentStep) > 0 && (
+            <Button variant="text" onClick={handlePrevStep} disabled={createAgent.isPending}>
+              {t('common:actions.back')}
+            </Button>
+          )}
+          <Button
+            variant="contained"
+            disabled={!stepReady[currentStep] || createAgent.isPending}
+            sx={{minWidth: 140}}
+            onClick={handleNextStep}
           >
-            <Box sx={{width: '100%', maxWidth: 800, display: 'flex', flexDirection: 'column'}}>
-              {error && (
-                <Alert severity="error" sx={{my: 3}} onClose={() => setError(null)}>
-                  {error}
-                </Alert>
-              )}
+            {(() => {
+              if (!isLastStep) return t('common:actions.continue');
+              if (createAgent.isPending) return t('common:status.saving');
+              return t('agents:createWizard.createAgent', 'Create agent');
+            })()}
+          </Button>
+        </Stack>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
-              {renderStepContent()}
-
-              <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} sx={{mt: 4}}>
-                {currentStep !== AgentCreateFlowStep.NAME && (
-                  <Button variant="text" onClick={handlePrevStep} disabled={createAgent.isPending}>
-                    {t('common:actions.back')}
-                  </Button>
-                )}
-                <Button
-                  variant="contained"
-                  disabled={
-                    !stepReady[currentStep] ||
-                    createAgent.isPending ||
-                    (currentStep === AgentCreateFlowStep.NAME && Boolean(selectedSchema?.ouId) && isChildOuLoading)
-                  }
-                  sx={{minWidth: 140}}
-                  onClick={handleNextStep}
-                >
-                  {(() => {
-                    if (!isLastStep) return t('common:actions.continue');
-                    if (createAgent.isPending) return t('common:status.saving');
-                    return t('agents:createWizard.createAgent', 'Create agent');
-                  })()}
-                </Button>
-              </Stack>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-    </Box>
+      {renderStepContent()}
+    </FullScreenCreationWizardLayout>
   );
 }

@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package providers provides constants for the providers module.
 package providers
@@ -533,4 +518,36 @@ const (
 var (
 	// ErrRuntimeStoreKeyNotFound to identify key not found error in the runtime store providers
 	ErrRuntimeStoreKeyNotFound = errors.New("RuntimeStore key not found")
+)
+
+// Runtime crypto provider errors
+var (
+	// ErrKeyNotFound indicates that no key managed by the provider matches the
+	// requested identifier.
+	ErrKeyNotFound = errors.New("RuntimeCryptoProvider: no key found matching the requested identifier")
+
+	// ErrUnsupportedAlgorithm indicates the requested signature algorithm is not
+	// supported by the provider or is incompatible with the resolved key.
+	ErrUnsupportedAlgorithm = errors.New("RuntimeCryptoProvider: unsupported signature algorithm")
+)
+
+// Runtime crypto provider Encrypt/Decrypt param map keys. These identify the algorithm-specific
+// inputs a caller may pass via the params map (e.g. ECDH-ES key establishment).
+const (
+	// ParamContentEncryptionAlgorithm is the content encryption algorithm identifier (e.g. "A128GCM"),
+	// used to size the CEK for RSA-OAEP, RSA-OAEP-256, and ECDH-ES variants. Value type: string.
+	ParamContentEncryptionAlgorithm = "contentEncryptionAlgorithm"
+
+	// ParamKeyEncryptionAlgorithm
+	ParamKeyEncryptionAlgorithm = "contentKeyAlgorithm"
+
+	// ParamEPK is the ECDH-ES ephemeral public key. Required for ECDH-ES decrypt; populated by the
+	// provider on ECDH-ES encrypt. Value type: crypto.PublicKey.
+	ParamEPK = "epk"
+
+	// ParamAPU is the raw (already base64url-decoded) ECDH-ES apu header value. Value type: []byte.
+	ParamAPU = "apu"
+
+	// ParamAPV is the raw (already base64url-decoded) ECDH-ES apv header value. Value type: []byte.
+	ParamAPV = "apv"
 )

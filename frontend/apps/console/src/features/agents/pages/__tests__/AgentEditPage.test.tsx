@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 import userEvent from '@testing-library/user-event';
@@ -346,6 +331,57 @@ describe('AgentEditPage', () => {
     });
   });
 
+  describe('Unsaved-changes bar', () => {
+    const editName = async (user: ReturnType<typeof userEvent.setup>, from: string, to: string): Promise<void> => {
+      const editIcons = screen.getAllByRole('button').filter((b) => b.querySelector('svg'));
+      const nameEditButton = editIcons.find((btn) => btn.parentElement?.textContent?.includes(from));
+      if (!nameEditButton) throw new Error(`name edit button for "${from}" not found`);
+      await user.click(nameEditButton);
+      const input = screen.getByRole('textbox');
+      await user.clear(input);
+      await user.type(input, `${to}{Enter}`);
+    };
+
+    it('hides the bar when a field is manually retyped back to its original value', async () => {
+      const user = userEvent.setup();
+      render(<AgentEditPage />);
+
+      await editName(user, 'Test Agent', 'Renamed Agent');
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+
+      await editName(user, 'Renamed Agent', 'Test Agent');
+      await waitFor(() => {
+        expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
+      });
+    });
+
+    it('keeps the bar visible when only one of two edited fields is reverted', async () => {
+      const user = userEvent.setup();
+      render(<AgentEditPage />);
+
+      // Edit description
+      const editIcons = screen.getAllByRole('button').filter((b) => b.querySelector('svg'));
+      const descEditButton = editIcons.find((btn) => btn.parentElement?.textContent?.includes('Test description'));
+      if (!descEditButton) throw new Error('description edit button not found');
+      await user.click(descEditButton);
+      const descInput = screen
+        .getAllByRole('textbox')
+        .find((el) => (el as HTMLTextAreaElement).value === 'Test description');
+      if (!descInput) throw new Error('description textarea not found');
+      await user.clear(descInput);
+      await user.type(descInput, 'Changed description');
+      descInput.dispatchEvent(new FocusEvent('blur', {bubbles: true}));
+
+      // Edit name, then revert only the name
+      await editName(user, 'Test Agent', 'Renamed Agent');
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+      await editName(user, 'Renamed Agent', 'Test Agent');
+
+      // Description is still changed, so the bar must stay visible
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    });
+  });
+
   describe('Delete success', () => {
     it('navigates back to /agents when EditGeneralSettings reports onDeleteSuccess', async () => {
       const user = userEvent.setup();
@@ -387,15 +423,9 @@ describe('AgentEditPage', () => {
       });
     });
 
-    it('drops an optional attribute whose value no longer matches the schema', async () => {
+    it('keeps the unsaved-changes bar and edited state when saving fails', async () => {
       const user = userEvent.setup();
-      // department is optional and typed number, but the staged value is the string 'sales'.
-      mockUseGetAgentType.mockReturnValue({
-        data: {id: 'default-type', name: 'default', schema: {department: {type: 'number'}}},
-        isLoading: false,
-        error: null,
-      });
-
+      mockMutateAsync.mockRejectedValueOnce(new Error('Boom'));
       render(<AgentEditPage />);
 
       await user.click(screen.getByRole('tab', {name: 'Attributes'}));
@@ -403,35 +433,25 @@ describe('AgentEditPage', () => {
       await user.click(screen.getByRole('button', {name: 'Save'}));
 
       await waitFor(() => {
-        expect(mockMutateAsync).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({attributes: {}}) as Record<string, unknown>,
-          }),
-        );
+        expect(mockMutateAsync).toHaveBeenCalled();
       });
+      expect(mockRefetch).not.toHaveBeenCalled();
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
     });
+  });
 
-    it('keeps a required attribute even when its value no longer matches the schema', async () => {
+  describe('Reset', () => {
+    it('clears edited fields and resets tab content when Reset is clicked', async () => {
       const user = userEvent.setup();
-      mockUseGetAgentType.mockReturnValue({
-        data: {id: 'default-type', name: 'default', schema: {department: {type: 'number', required: true}}},
-        isLoading: false,
-        error: null,
-      });
-
       render(<AgentEditPage />);
 
       await user.click(screen.getByRole('tab', {name: 'Attributes'}));
       await user.click(screen.getByText('Edit an attribute'));
-      await user.click(screen.getByRole('button', {name: 'Save'}));
+      expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
 
-      await waitFor(() => {
-        expect(mockMutateAsync).toHaveBeenCalledWith(
-          expect.objectContaining({
-            data: expect.objectContaining({attributes: {department: 'sales'}}) as Record<string, unknown>,
-          }),
-        );
-      });
+      await user.click(screen.getByRole('button', {name: 'Reset'}));
+
+      expect(screen.queryByText('You have unsaved changes')).not.toBeInTheDocument();
     });
   });
 

@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package application
 
@@ -39,7 +24,6 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cors"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	i18nmgt "github.com/thunder-id/thunderid/internal/system/i18n/mgt"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/resourcedependency"
 	sysutils "github.com/thunder-id/thunderid/internal/system/utils"
@@ -73,7 +57,7 @@ type applicationService struct {
 	entityProvider       entityprovider.EntityProviderInterface
 	ouService            oupkg.OrganizationUnitServiceInterface
 	i18nService          i18nmgt.I18nServiceInterface
-	cryptoSvc            kmprovider.RuntimeCryptoProvider
+	cryptoSvc            providers.RuntimeCryptoProvider
 	dependencyRegistry   resourcedependency.Registry
 	serverConfigService  serverconfig.ServerConfigService
 }
@@ -84,7 +68,7 @@ func newApplicationService(
 	entityProvider entityprovider.EntityProviderInterface,
 	ouService oupkg.OrganizationUnitServiceInterface,
 	i18nService i18nmgt.I18nServiceInterface,
-	cryptoSvc kmprovider.RuntimeCryptoProvider,
+	cryptoSvc providers.RuntimeCryptoProvider,
 	serverConfigSvc serverconfig.ServerConfigService,
 ) ApplicationServiceInterface {
 	return &applicationService{
@@ -828,6 +812,7 @@ func toInboundClient(dto *model.ApplicationProcessedDTO) inboundmodel.InboundCli
 		Assertion:                 dto.Assertion,
 		LoginConsent:              dto.LoginConsent,
 		AllowedUserTypes:          dto.AllowedUserTypes,
+		SubjectAttribute:          dto.SubjectAttribute,
 		PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 		Attestation:               dto.Attestation,
 	}
@@ -884,6 +869,7 @@ func toProcessedDTO(
 			Assertion:                 dao.Assertion,
 			LoginConsent:              dao.LoginConsent,
 			AllowedUserTypes:          dao.AllowedUserTypes,
+			SubjectAttribute:          dao.SubjectAttribute,
 			PasskeyAllowedOrigins:     dao.PasskeyAllowedOrigins,
 			Attestation:               dao.Attestation.WithoutCredentials(),
 		},
@@ -1564,6 +1550,10 @@ func translateInboundClientFKError(err error) *tidcommon.ServiceError {
 		return &ErrorInvalidUserType
 	case errors.Is(err, inboundclient.ErrUserSchemaLookupFailed):
 		return &tidcommon.InternalServerError
+	case errors.Is(err, inboundclient.ErrUniqueAttributeLookupFailed):
+		return &tidcommon.InternalServerError
+	case errors.Is(err, inboundclient.ErrFKInvalidSubjectAttributeMapping):
+		return &ErrorInvalidSubjectAttributeMapping
 	case errors.Is(err, inboundclient.ErrInvalidUserAttribute):
 		return &ErrorInvalidUserAttribute
 	}
@@ -1746,8 +1736,7 @@ func (as *applicationService) resolveAttestationCredentialsForPersist(
 		inboundClient.Attestation.Android.CertificateSha256Digests...)
 
 	if android.ServiceAccountCredentials != "" {
-		params := cryptolib.AlgorithmParams{Algorithm: cryptolib.AlgorithmAESGCM}
-		ciphertext, _, err := as.cryptoSvc.Encrypt(ctx, nil, params,
+		ciphertext, _, err := as.cryptoSvc.Encrypt(ctx, nil, string(cryptolib.AlgorithmAESGCM), nil,
 			[]byte(android.ServiceAccountCredentials))
 		if err != nil {
 			as.logger.Error(ctx, "Failed to encrypt attestation credentials",
@@ -1774,7 +1763,11 @@ func (as *applicationService) resolveAttestationCredentialsForPersist(
 		}
 	}
 
-	inboundClient.Attestation = &providers.AttestationConfig{Android: &android, Apple: inboundClient.Attestation.Apple}
+	inboundClient.Attestation = &providers.AttestationConfig{
+		Android: &android,
+		Apple:   inboundClient.Attestation.Apple,
+		DevMode: inboundClient.Attestation.DevMode,
+	}
 	return nil
 }
 
@@ -1818,6 +1811,7 @@ func buildApplicationResponse(dto *model.ApplicationProcessedDTO) *providers.App
 			LayoutID:                  dto.LayoutID,
 			Assertion:                 dto.Assertion,
 			AllowedUserTypes:          dto.AllowedUserTypes,
+			SubjectAttribute:          dto.SubjectAttribute,
 			PasskeyAllowedOrigins:     dto.PasskeyAllowedOrigins,
 			LoginConsent:              dto.LoginConsent,
 			Attestation:               dto.Attestation,
@@ -1930,6 +1924,7 @@ func buildBaseApplicationProcessedDTO(appID string, app *model.ApplicationDTO,
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			SubjectAttribute:          app.SubjectAttribute,
 			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation,
@@ -2015,6 +2010,7 @@ func buildReturnApplicationDTO(
 			LayoutID:                  app.LayoutID,
 			Assertion:                 assertion,
 			AllowedUserTypes:          app.AllowedUserTypes,
+			SubjectAttribute:          app.SubjectAttribute,
 			PasskeyAllowedOrigins:     app.PasskeyAllowedOrigins,
 			LoginConsent:              app.LoginConsent,
 			Attestation:               app.Attestation.WithoutCredentials(),

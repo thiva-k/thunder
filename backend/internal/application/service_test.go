@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package application
 
@@ -1763,7 +1748,7 @@ func (suite *ServiceTestSuite) TestCreateApplication_WithAttestation_EncryptsAnd
 	service.cryptoSvc = mockCrypto
 
 	const rawCreds = `{"type":"service_account"}`
-	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, []byte(rawCreds)).
+	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, []byte(rawCreds)).
 		Return([]byte("encrypted-creds"), nil, nil)
 
 	var persistedClient *inboundmodel.InboundClient
@@ -1846,6 +1831,30 @@ func (suite *ServiceTestSuite) TestResolveAttestationCredentials_PreservesExisti
 	require.Nil(suite.T(), svcErr)
 	assert.Equal(suite.T(), "stored-encrypted", inboundClient.Attestation.Android.ServiceAccountCredentials)
 	assert.Equal(suite.T(), "com.example.app", inboundClient.Attestation.Android.PackageName)
+}
+
+// The Android credential rebuild must not drop a DevMode setting configured alongside it.
+func (suite *ServiceTestSuite) TestResolveAttestationCredentials_PreservesDevMode() {
+	service, mockStore := suite.setupTestService()
+
+	const appID = "app-1"
+	mockStore.On("GetInboundClientByEntityID", mock.Anything, appID).Return(
+		&inboundmodel.InboundClient{
+			Attestation: &providers.AttestationConfig{
+				Android: &providers.AndroidAttestationConfig{ServiceAccountCredentials: "stored-encrypted"},
+			},
+		}, nil)
+
+	inboundClient := &inboundmodel.InboundClient{
+		Attestation: &providers.AttestationConfig{
+			Android: &providers.AndroidAttestationConfig{PackageName: "com.example.app"},
+			DevMode: true,
+		},
+	}
+
+	svcErr := service.resolveAttestationCredentialsForPersist(context.Background(), appID, inboundClient)
+	require.Nil(suite.T(), svcErr)
+	assert.True(suite.T(), inboundClient.Attestation.DevMode)
 }
 
 // A non-"not found" lookup failure while preserving omitted credentials is propagated as an internal

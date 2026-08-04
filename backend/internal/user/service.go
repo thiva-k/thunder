@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package user provides user management functionality.
 package user
@@ -59,6 +44,7 @@ type UserServiceInterface interface {
 	UpdateUser(ctx context.Context, userID string, user *User) (*User, *tidcommon.ServiceError)
 	UpdateUserAttributes(ctx context.Context, userID string,
 		attributes json.RawMessage) (*User, *tidcommon.ServiceError)
+	GetUserMetadata(ctx context.Context, userID string) (*entitytype.EntityType, *tidcommon.ServiceError)
 	UpdateUserCredentials(ctx context.Context, userID string,
 		credentials json.RawMessage) *tidcommon.ServiceError
 	DeleteUser(ctx context.Context, userID string) *tidcommon.ServiceError
@@ -436,6 +422,23 @@ func (us *userService) GetUser(
 	return &user, nil
 }
 
+// GetUserMetadata retrieves the schema metadata for the authenticated user's type.
+func (us *userService) GetUserMetadata(
+	ctx context.Context, userID string,
+) (*entitytype.EntityType, *tidcommon.ServiceError) {
+	user, svcErr := us.GetUser(ctx, userID, false)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+
+	schema, svcErr := us.entityTypeService.GetEntityTypeSchema(ctx, entitytype.TypeCategoryUser, user.Type)
+	if svcErr != nil {
+		return nil, svcErr
+	}
+
+	return schema, nil
+}
+
 // GetUserGroups retrieves groups of a user with pagination.
 func (as *userService) GetUserGroups(ctx context.Context, userID string, limit, offset int) (
 	*UserGroupListResponse, *tidcommon.ServiceError) {
@@ -557,7 +560,7 @@ func (us *userService) UpdateUser(
 	// Credentials must go through the dedicated update-credentials endpoint.
 	if len(user.Attributes) > 0 {
 		schemaCredentialInfos, svcErr := us.entityTypeService.GetAttributes(ctx,
-			entitytype.TypeCategoryUser, user.Type, true, false, false)
+			entitytype.TypeCategoryUser, user.Type, entitytype.AttributeFilter{AllowCredential: true})
 		if svcErr != nil {
 			if svcErr.Code == entitytype.ErrorEntityTypeNotFound.Code {
 				return nil, &ErrorEntityTypeNotFound
@@ -633,7 +636,7 @@ func (us *userService) UpdateUserAttributes(
 		return nil, &tidcommon.InternalServerError
 	}
 	schemaCredentialInfos, svcErr := us.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategoryUser, existingUser.Type, true, false, false)
+		entitytype.TypeCategoryUser, existingUser.Type, entitytype.AttributeFilter{AllowCredential: true})
 	if svcErr != nil {
 		if svcErr.Code == entitytype.ErrorEntityTypeNotFound.Code {
 			return nil, &ErrorEntityTypeNotFound

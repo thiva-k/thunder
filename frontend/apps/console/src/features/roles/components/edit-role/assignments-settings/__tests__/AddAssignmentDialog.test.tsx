@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import userEvent from '@testing-library/user-event';
 import {render, screen, waitFor} from '@thunderid/test-utils';
@@ -23,7 +8,10 @@ import AddAssignmentDialog from '../AddAssignmentDialog';
 
 vi.mock('@thunderid/configure-users');
 vi.mock('../../../../../groups/api/useGetGroups');
-vi.mock('../../../../../applications/api/useGetApplications');
+vi.mock('@thunderid/configure-applications', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/configure-applications')>()),
+  useGetApplications: vi.fn(),
+}));
 vi.mock('../../../../api/useGetRoleAssignments');
 vi.mock('@thunderid/hooks', () => ({
   useDataGridLocaleText: vi.fn(),
@@ -106,7 +94,7 @@ vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
 
 const {useGetUsers} = await import('@thunderid/configure-users');
 const {default: useGetGroups} = await import('../../../../../groups/api/useGetGroups');
-const {default: useGetApplications} = await import('../../../../../applications/api/useGetApplications');
+const {useGetApplications} = await import('@thunderid/configure-applications');
 const {default: useGetRoleAssignments} = await import('../../../../api/useGetRoleAssignments');
 const {useDataGridLocaleText} = await import('@thunderid/hooks');
 

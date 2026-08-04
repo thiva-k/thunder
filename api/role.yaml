@@ -536,16 +536,6 @@ paths:
                     description:
                       key: "error.roleservice.missing_role_id_description"
                       defaultValue: "Role ID is required"
-                cannot-delete-role:
-                  summary: Cannot delete role
-                  value:
-                    code: "ROL-1006"
-                    message:
-                      key: "error.roleservice.cannot_delete_role"
-                      defaultValue: "Cannot delete role"
-                    description:
-                      key: "error.roleservice.cannot_delete_role_description"
-                      defaultValue: "Cannot delete role that is currently assigned to users or groups"
                 immutable-role:
                   summary: Cannot modify declarative role
                   value:
@@ -771,16 +761,6 @@ paths:
                     description:
                       key: "error.roleservice.empty_assignments_list_description"
                       defaultValue: "At least one assignment must be provided"
-                immutable-assignment:
-                  summary: Cannot modify declarative assignment
-                  value:
-                    code: "ROL-1014"
-                    message:
-                      key: "error.roleservice.cannot_modify_declarative_assignment"
-                      defaultValue: "Cannot modify declarative assignment"
-                    description:
-                      key: "error.roleservice.cannot_modify_declarative_assignment_description"
-                      defaultValue: "The assignment is defined in declarative configuration and cannot be modified"
         "404":
           description: Role not found
           content:
@@ -865,16 +845,6 @@ paths:
                     description:
                       key: "error.roleservice.empty_assignments_list_description"
                       defaultValue: "At least one assignment must be provided"
-                immutable-assignment:
-                  summary: Cannot modify declarative assignment
-                  value:
-                    code: "ROL-1014"
-                    message:
-                      key: "error.roleservice.cannot_modify_declarative_assignment"
-                      defaultValue: "Cannot modify declarative assignment"
-                    description:
-                      key: "error.roleservice.cannot_modify_declarative_assignment_description"
-                      defaultValue: "The assignment is defined in declarative configuration and cannot be modified"
         "404":
           description: Role not found
           content:

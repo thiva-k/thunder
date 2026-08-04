@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package entity
 
@@ -672,7 +657,7 @@ func (s *entityService) validateCredentialKeys(
 	}
 
 	credInfos, svcErr := s.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategory(category), entityType, true, false, false)
+		entitytype.TypeCategory(category), entityType, entitytype.AttributeFilter{AllowCredential: true})
 	if svcErr != nil {
 		return fmt.Errorf("failed to get credential attributes from schema: %s", svcErr.ErrorDescription)
 	}
@@ -699,7 +684,8 @@ func (s *entityService) stripUndeclaredAttributes(
 	}
 
 	attrInfos, svcErr := s.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategory(category), entityType, true, true, false)
+		entitytype.TypeCategory(category), entityType,
+		entitytype.AttributeFilter{AllowCredential: true, AllowNonCredential: true})
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to get schema attributes: %s", svcErr.ErrorDescription)
 	}
@@ -938,7 +924,7 @@ func (s *entityService) extractAndHashSchemaCredentials(
 	}
 
 	credentialInfos, svcErr := s.entityTypeService.GetAttributes(ctx,
-		entitytype.TypeCategory(entity.Category), entity.Type, true, false, false)
+		entitytype.TypeCategory(entity.Category), entity.Type, entitytype.AttributeFilter{AllowCredential: true})
 	if svcErr != nil {
 		return nil, fmt.Errorf("failed to get credential attributes from schema: %s", svcErr.ErrorDescription)
 	}

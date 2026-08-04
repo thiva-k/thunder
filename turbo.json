@@ -21,6 +21,11 @@
       "dependsOn": ["^build"],
       "passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
     },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH", "CI"],
+      "outputs": ["coverage/**"]
+    },
     "dev": {
       "cache": false,
       "persistent": true

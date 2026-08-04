@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package clientauth
 
@@ -1170,10 +1155,25 @@ func (suite *ClientAuthTestSuite) TestValidateClientAssertion_InvalidJWKCannotCo
 	fakeJWT := buildTestJWT(map[string]any{"alg": "RS256", "kid": "test-kid", "typ": "JWT"},
 		map[string]any{"sub": "test-client"})
 
+	// JWK-to-public-key conversion now happens inside the JWT service's crypto provider
+	// rather than locally, so the invalid JWK surfaces as a verification failure.
+	suite.mockJwtService.EXPECT().
+		VerifyJWTWithPublicKey(
+			mock.Anything,
+			fakeJWT,
+			mock.Anything,
+			testIssuer,
+			"test-client").
+		Return(&tidcommon.ServiceError{
+			Code:  "JWT-00001",
+			Type:  tidcommon.ClientErrorType,
+			Error: tidcommon.I18nMessage{DefaultValue: "invalid_token"},
+		})
+
 	err := validateClientAssertion(context.Background(),
 		oauthApp, suite.mockJwtService, testIssuer, "test-client", fakeJWT)
 	assert.NotNil(suite.T(), err)
-	assert.Contains(suite.T(), err.Error(), "failed to convert JWK to public key")
+	assert.Contains(suite.T(), err.Error(), "client assertion verification failed")
 }
 
 func (suite *ClientAuthTestSuite) TestValidateClientAssertion_VerificationFails() {

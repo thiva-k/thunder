@@ -1,37 +1,34 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, fireEvent} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
+import {useState} from 'react';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
-import type {Application} from '../../../../models/application';
-import type {OAuth2Config} from '../../../../models/oauth';
 import McpConnectTab from '../McpConnectTab';
 
 vi.mock('../McpAccessSection', () => ({
-  default: ({onValidationChange}: {onValidationChange?: (hasErrors: boolean) => void}) => (
-    <div data-testid="mcp-access-section">
-      McpAccessSection
-      <button type="button" data-testid="mcp-access-section-report-invalid" onClick={() => onValidationChange?.(true)}>
-        Report invalid
-      </button>
-    </div>
-  ),
+  default: function MockMcpAccessSection({onValidationChange}: {onValidationChange?: (hasErrors: boolean) => void}) {
+    // Mimics McpAccessSection's real redirect-URI list, which lives in local state — used to
+    // prove that a changed sectionResetKey remounts (rather than just re-renders) it.
+    const [clicks, setClicks] = useState(0);
+    return (
+      <div data-testid="mcp-access-section">
+        McpAccessSection, Clicks: {clicks}
+        <button
+          type="button"
+          data-testid="mcp-access-section-report-invalid"
+          onClick={() => onValidationChange?.(true)}
+        >
+          Report invalid
+        </button>
+        <button type="button" data-testid="mcp-access-section-bump" onClick={() => setClicks((c) => c + 1)}>
+          Bump
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('../../general-settings/DangerZoneSection', () => ({
@@ -440,6 +437,62 @@ describe('McpConnectTab', () => {
       fireEvent.click(screen.getByTestId('delete-button'));
 
       expect(screen.getByTestId('delete-dialog')).toBeInTheDocument();
+    });
+  });
+
+  describe('Access section reset', () => {
+    it('remounts McpAccessSection, dropping its local state, when sectionResetKey changes', () => {
+      const {rerender} = render(
+        <McpConnectTab
+          application={buildApplication()}
+          oauth2Config={userDelegatedOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          isReadOnly={false}
+          sectionResetKey={0}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('mcp-access-section-bump'));
+      expect(screen.getByTestId('mcp-access-section')).toHaveTextContent('Clicks: 1');
+
+      rerender(
+        <McpConnectTab
+          application={buildApplication()}
+          oauth2Config={userDelegatedOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          isReadOnly={false}
+          sectionResetKey={1}
+        />,
+      );
+
+      expect(screen.getByTestId('mcp-access-section')).toHaveTextContent('Clicks: 0');
+    });
+
+    it('keeps McpAccessSection mounted when sectionResetKey stays the same', () => {
+      const {rerender} = render(
+        <McpConnectTab
+          application={buildApplication()}
+          oauth2Config={userDelegatedOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          isReadOnly={false}
+          sectionResetKey={0}
+        />,
+      );
+
+      fireEvent.click(screen.getByTestId('mcp-access-section-bump'));
+      expect(screen.getByTestId('mcp-access-section')).toHaveTextContent('Clicks: 1');
+
+      rerender(
+        <McpConnectTab
+          application={buildApplication()}
+          oauth2Config={userDelegatedOAuth2Config}
+          onFieldChange={mockOnFieldChange}
+          isReadOnly={false}
+          sectionResetKey={0}
+        />,
+      );
+
+      expect(screen.getByTestId('mcp-access-section')).toHaveTextContent('Clicks: 1');
     });
   });
 });

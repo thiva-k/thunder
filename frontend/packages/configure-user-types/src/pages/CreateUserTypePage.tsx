@@ -1,26 +1,17 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
+import {
+  OrganizationUnitPickerScreen,
+  useGetOrganizationUnit,
+  useHasMultipleOUs,
+} from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {
   Box,
   Stack,
   Button,
+  CircularProgress,
   IconButton,
   LinearProgress,
   Typography,
@@ -28,13 +19,12 @@ import {
   Snackbar,
   AppBreadcrumbs,
 } from '@wso2/oxygen-ui';
-import {X} from '@wso2/oxygen-ui-icons-react';
-import {useState, useCallback, useMemo} from 'react';
+import {Home, X} from '@wso2/oxygen-ui-icons-react';
+import {useState, useCallback, useEffect, useMemo} from 'react';
 import type {JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useCreateUserType from '../api/useCreateUserType';
-import ConfigureGeneral from '../components/create-user-type/ConfigureGeneral';
 import ConfigureName from '../components/create-user-type/ConfigureName';
 import ConfigureProperties from '../components/create-user-type/ConfigureProperties';
 import useUserTypeCreate from '../contexts/UserTypeCreate/useUserTypeCreate';
@@ -68,21 +58,47 @@ export default function CreateUserTypePage(): JSX.Element {
     setError,
   } = useUserTypeCreate();
 
-  const steps: Record<UserTypeCreateFlowStep, {label: string; order: number}> = useMemo(
-    () => ({
-      NAME: {label: t('userTypes:createWizard.steps.name'), order: 1},
-      GENERAL: {label: t('userTypes:createWizard.steps.general'), order: 2},
-      PROPERTIES: {label: t('userTypes:createWizard.steps.properties'), order: 3},
-    }),
-    [t],
+  const {hasMultipleOUs, isLoading: isOuLoading, ouList} = useHasMultipleOUs();
+
+  // The organization unit is the wizard's first step whenever there's a choice to make. Single-OU
+  // deployments never need it, so once that's known, resolve it automatically and skip straight
+  // past it.
+  useEffect(() => {
+    if (isOuLoading || hasMultipleOUs || currentStep !== UserTypeCreateFlowStep.ORGANIZATION_UNIT) return;
+    setOuId(ouList[0]?.id ?? '');
+    setCurrentStep(UserTypeCreateFlowStep.NAME);
+  }, [isOuLoading, hasMultipleOUs, ouList, currentStep, setOuId, setCurrentStep]);
+
+  // The organization unit whose name is shown in the Details step's summary chip.
+  const resolvedOuId = hasMultipleOUs ? ouId : ouList[0]?.id;
+  const {data: resolvedOrganizationUnit, isLoading: isResolvedOuLoading} = useGetOrganizationUnit(
+    resolvedOuId,
+    Boolean(resolvedOuId),
   );
+
+  const activeSteps = useMemo((): UserTypeCreateFlowStep[] => {
+    const base: UserTypeCreateFlowStep[] = [];
+    if (hasMultipleOUs) base.push(UserTypeCreateFlowStep.ORGANIZATION_UNIT);
+    base.push(UserTypeCreateFlowStep.NAME, UserTypeCreateFlowStep.PROPERTIES);
+    return base;
+  }, [hasMultipleOUs]);
+
+  const steps: Partial<Record<UserTypeCreateFlowStep, {label: string}>> = useMemo(() => {
+    const map: Partial<Record<UserTypeCreateFlowStep, {label: string}>> = {};
+    if (hasMultipleOUs) {
+      map.ORGANIZATION_UNIT = {label: t('userTypes:createWizard.steps.organizationUnit', 'Organization Unit')};
+    }
+    map.NAME = {label: t('userTypes:createWizard.steps.name', 'Details')};
+    map.PROPERTIES = {label: t('userTypes:createWizard.steps.properties', 'Properties')};
+    return map;
+  }, [t, hasMultipleOUs]);
 
   const [validationError, setValidationError] = useState<string | null>(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const [stepReady, setStepReady] = useState<Record<UserTypeCreateFlowStep, boolean>>({
+    ORGANIZATION_UNIT: false,
     NAME: false,
-    GENERAL: false,
     PROPERTIES: false,
   });
 
@@ -100,13 +116,6 @@ export default function CreateUserTypePage(): JSX.Element {
   const handleNameStepReadyChange = useCallback(
     (isReady: boolean): void => {
       handleStepReadyChange(UserTypeCreateFlowStep.NAME, isReady);
-    },
-    [handleStepReadyChange],
-  );
-
-  const handleGeneralStepReadyChange = useCallback(
-    (isReady: boolean): void => {
-      handleStepReadyChange(UserTypeCreateFlowStep.GENERAL, isReady);
     },
     [handleStepReadyChange],
   );
@@ -214,10 +223,10 @@ export default function CreateUserTypePage(): JSX.Element {
 
   const handleNextStep = (): void => {
     switch (currentStep) {
-      case UserTypeCreateFlowStep.NAME:
-        setCurrentStep(UserTypeCreateFlowStep.GENERAL);
+      case UserTypeCreateFlowStep.ORGANIZATION_UNIT:
+        setCurrentStep(UserTypeCreateFlowStep.NAME);
         break;
-      case UserTypeCreateFlowStep.GENERAL:
+      case UserTypeCreateFlowStep.NAME:
         setCurrentStep(UserTypeCreateFlowStep.PROPERTIES);
         break;
       case UserTypeCreateFlowStep.PROPERTIES:
@@ -232,11 +241,11 @@ export default function CreateUserTypePage(): JSX.Element {
 
   const handlePrevStep = (): void => {
     switch (currentStep) {
-      case UserTypeCreateFlowStep.GENERAL:
-        setCurrentStep(UserTypeCreateFlowStep.NAME);
+      case UserTypeCreateFlowStep.NAME:
+        if (hasMultipleOUs) setCurrentStep(UserTypeCreateFlowStep.ORGANIZATION_UNIT);
         break;
       case UserTypeCreateFlowStep.PROPERTIES:
-        setCurrentStep(UserTypeCreateFlowStep.GENERAL);
+        setCurrentStep(UserTypeCreateFlowStep.NAME);
         break;
       default:
         break;
@@ -246,15 +255,18 @@ export default function CreateUserTypePage(): JSX.Element {
   const renderStepContent = (): JSX.Element | null => {
     switch (currentStep) {
       case UserTypeCreateFlowStep.NAME:
-        return <ConfigureName name={name} onNameChange={setName} onReadyChange={handleNameStepReadyChange} />;
-      case UserTypeCreateFlowStep.GENERAL:
         return (
-          <ConfigureGeneral
-            ouId={ouId}
-            onOuIdChange={setOuId}
+          <ConfigureName
+            name={name}
+            onNameChange={setName}
+            onReadyChange={handleNameStepReadyChange}
+            hasMultipleOUs={hasMultipleOUs}
+            organizationUnitName={resolvedOrganizationUnit?.name}
+            organizationUnitLogoUrl={resolvedOrganizationUnit?.logoUrl}
+            isOrganizationUnitLoading={isResolvedOuLoading}
+            onChangeOu={() => setCurrentStep(UserTypeCreateFlowStep.ORGANIZATION_UNIT)}
             allowSelfRegistration={allowSelfRegistration}
             onAllowSelfRegistrationChange={setAllowSelfRegistration}
-            onReadyChange={handleGeneralStepReadyChange}
           />
         );
       case UserTypeCreateFlowStep.PROPERTIES:
@@ -276,19 +288,13 @@ export default function CreateUserTypePage(): JSX.Element {
   };
 
   const getStepProgress = (): number => {
-    const stepNames = Object.keys(steps) as UserTypeCreateFlowStep[];
-    return ((stepNames.indexOf(currentStep) + 1) / stepNames.length) * 100;
+    const currentIndex = activeSteps.indexOf(currentStep);
+    return ((currentIndex + 1) / activeSteps.length) * 100;
   };
 
   const getBreadcrumbSteps = (): UserTypeCreateFlowStep[] => {
-    const allSteps: UserTypeCreateFlowStep[] = [
-      UserTypeCreateFlowStep.NAME,
-      UserTypeCreateFlowStep.GENERAL,
-      UserTypeCreateFlowStep.PROPERTIES,
-    ];
-
-    const currentIndex = allSteps.indexOf(currentStep);
-    return allSteps.slice(0, currentIndex + 1);
+    const currentIndex = activeSteps.indexOf(currentStep);
+    return activeSteps.slice(0, currentIndex + 1);
   };
 
   const handleCloseSnackbar = () => {
@@ -299,6 +305,33 @@ export default function CreateUserTypePage(): JSX.Element {
   // The Properties step uses a two-panel builder that needs more horizontal room
   // than the single-column Name/General forms.
   const isPropertiesStep = currentStep === UserTypeCreateFlowStep.PROPERTIES;
+
+  if (currentStep === UserTypeCreateFlowStep.ORGANIZATION_UNIT) {
+    if (isOuLoading || !hasMultipleOUs) {
+      return (
+        <Box sx={{minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+          <CircularProgress />
+        </Box>
+      );
+    }
+
+    return (
+      <OrganizationUnitPickerScreen
+        icon={<Home size={26} />}
+        title={t('userTypes:createWizard.organizationUnit.title', 'Where should this user type belong?')}
+        subtitle={t(
+          'userTypes:createWizard.organizationUnit.subtitle',
+          "Choose the organization unit that will own this user type. You can't change this once created.",
+        )}
+        value={ouId}
+        onChange={setOuId}
+        onBack={handleClose}
+        onContinue={handleNextStep}
+        backLabel={t('common:actions.back', 'Back')}
+        continueLabel={t('common:actions.continue', 'Continue')}
+      />
+    );
+  }
 
   return (
     <Box sx={{minHeight: '100vh', display: 'flex', flexDirection: 'column'}}>
@@ -323,7 +356,7 @@ export default function CreateUserTypePage(): JSX.Element {
             <AppBreadcrumbs
               items={getBreadcrumbSteps().map((step, index, array) => ({
                 key: step,
-                label: steps[step].label,
+                label: steps[step]?.label ?? step,
                 onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
               }))}
             />
@@ -337,9 +370,8 @@ export default function CreateUserTypePage(): JSX.Element {
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
-              py: 8,
-              px: isPropertiesStep ? 8 : 20,
-              mx: currentStep === UserTypeCreateFlowStep.NAME ? 'auto' : 0,
+              py: 4,
+              px: {xs: 4, md: 10},
               alignItems: 'flex-start',
             }}
           >
@@ -370,7 +402,7 @@ export default function CreateUserTypePage(): JSX.Element {
 
               {/* Navigation buttons */}
               <Stack direction="row" justifyContent="flex-end" alignItems="center" spacing={2} sx={{mt: 4}}>
-                {currentStep !== UserTypeCreateFlowStep.NAME && (
+                {activeSteps.indexOf(currentStep) > 0 && (
                   <Button variant="text" onClick={handlePrevStep} disabled={createUserTypeMutation.isPending}>
                     {t('common:actions.back')}
                   </Button>

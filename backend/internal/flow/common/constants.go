@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package common defines common constants and models used across the flow components.
 package common
@@ -248,10 +233,6 @@ const (
 	// requested without a valid id_token_hint. A sign-out flow's session sign-out node reads it to
 	// decide whether the End-User must confirm the logout before the session is terminated.
 	RuntimeKeyLogoutPromptRequired = "logoutPromptRequired"
-	// RuntimeKeyLogoutPromptShown is the session sign-out node's own guard, set when it routes to the
-	// confirmation prompt so that on re-run (after the user confirms) it terminates instead of
-	// prompting again.
-	RuntimeKeyLogoutPromptShown = "logoutPromptShown"
 )
 
 // SSOCheckpointKey scopes a per-checkpoint SSO control key (RuntimeKeySSOSessionPresent,
@@ -291,6 +272,12 @@ const (
 	ActionTypeSubmit ActionType = "SUBMIT"
 	// ActionTypeReject represents a reject/deny action
 	ActionTypeReject ActionType = "REJECT"
+	// ActionTypeConfirm marks a confirmation prompt's action edge. When the End-User confirms, the
+	// prompt node forwards this type to the next node (as the action type in ForwardedData), where the
+	// executor that routed to the prompt reads it to tell a confirmed re-run apart from the initial
+	// request, so no runtime flag has to be persisted. It is deliberately not tied to one use case:
+	// the session sign-out executor is its first consumer, not its only possible one.
+	ActionTypeConfirm ActionType = "CONFIRM"
 )
 
 // ForwardedData key constants define keys used in the ForwardedData map.

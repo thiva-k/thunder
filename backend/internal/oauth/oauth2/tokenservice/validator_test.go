@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package tokenservice
 
@@ -27,6 +12,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -42,6 +28,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
 	"github.com/thunder-id/thunderid/tests/mocks/idp/idpmock"
 	"github.com/thunder-id/thunderid/tests/mocks/jose/jwtmock"
+	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/jtimock"
 	"github.com/thunder-id/thunderid/tests/mocks/oauth/oauth2/revocationmock"
 )
 
@@ -2940,6 +2927,7 @@ type IDJAGValidatorTestSuite struct {
 	mockJWTService         *jwtmock.JWTServiceInterfaceMock
 	mockIDPService         *idpmock.IDPServiceInterfaceMock
 	mockEnforcementService *revocationmock.EnforcementServiceInterfaceMock
+	mockJTIStore           *jtimock.JTIStoreInterfaceMock
 	validator              *tokenValidator
 }
 
@@ -2963,6 +2951,7 @@ func (suite *IDJAGValidatorTestSuite) SetupTest() {
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockEnforcementService = revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
 	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	suite.mockJTIStore = jtimock.NewJTIStoreInterfaceMock(suite.T())
 	suite.validator = &tokenValidator{
 		cfg: oauthconfig.Config{
 			JWT: engineconfig.JWTConfig{
@@ -2975,6 +2964,7 @@ func (suite *IDJAGValidatorTestSuite) SetupTest() {
 		jwtService:         suite.mockJWTService,
 		idpService:         suite.mockIDPService,
 		enforcementService: suite.mockEnforcementService,
+		jtiStore:           suite.mockJTIStore,
 	}
 }
 
@@ -3006,6 +2996,8 @@ func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_Success() {
 	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
 		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
 	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(true, nil)
 
 	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
 
@@ -3027,6 +3019,8 @@ func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_SingleResourceC
 	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
 		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
 	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(true, nil)
 
 	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
 
@@ -3043,6 +3037,8 @@ func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_MultipleResourc
 	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
 		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
 	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(true, nil)
 
 	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
 
@@ -3057,6 +3053,8 @@ func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_NoResourceClaim
 	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
 		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
 	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(true, nil)
 
 	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
 
@@ -3221,6 +3219,8 @@ func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_SingleElementAu
 	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
 		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
 	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(true, nil)
 
 	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
 
@@ -3229,4 +3229,44 @@ func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_SingleElementAu
 	assert.Equal(suite.T(), "ext-user-123", result.Sub)
 	suite.mockIDPService.AssertExpectations(suite.T())
 	suite.mockJWTService.AssertExpectations(suite.T())
+}
+
+func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_ReplayedJTI() {
+	claims := suite.idjagClaims()
+	assertion := suite.createAssertion(jwt.TokenTypeIDJAG, claims)
+
+	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
+		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
+	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(false, nil)
+
+	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.ErrorIs(suite.T(), err, ErrAssertionReplayed)
+}
+
+func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_JTIStoreError() {
+	claims := suite.idjagClaims()
+	assertion := suite.createAssertion(jwt.TokenTypeIDJAG, claims)
+
+	suite.mockIDPService.On("GetIdentityProvidersByProperty", context.Background(),
+		idp.PropIssuer, testExternalIssuer).Return(buildIDJAGIDPDTOs(), nil)
+	suite.mockJWTService.On("VerifyJWTSignatureWithJWKS", mock.Anything, assertion, testExternalJWKS).Return(nil)
+	suite.mockJTIStore.On("RecordJTI", mock.Anything, idjagJTINamespace, testIDJAGAssertionJTI,
+		mock.AnythingOfType("time.Time")).Return(false, fmt.Errorf("store unavailable"))
+
+	result, err := suite.validator.ValidateIDJAGAssertion(context.Background(), assertion, testClientID)
+
+	assert.Error(suite.T(), err)
+	assert.Nil(suite.T(), result)
+	assert.Contains(suite.T(), err.Error(), "failed to record assertion jti")
+}
+
+func (suite *IDJAGValidatorTestSuite) TestValidateIDJAGAssertion_JTIExceedsMaxLength() {
+	claims := suite.idjagClaims()
+	claims["jti"] = strings.Repeat("a", 257)
+	suite.assertRejectsSignedAssertion(claims, "assertion 'jti' exceeds maximum length")
 }

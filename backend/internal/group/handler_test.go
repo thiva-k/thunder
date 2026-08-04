@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package group
 
@@ -1170,25 +1155,6 @@ func (suite *GroupHandlerTestSuite) TestGroupHandler_HandleGroupDeleteRequest() 
 			},
 			assertService: func(serviceMock *GroupServiceInterfaceMock) {
 				serviceMock.AssertNotCalled(suite.T(), "DeleteGroup", mock.Anything, mock.Anything)
-			},
-		},
-		{
-			name:           "conflict",
-			method:         http.MethodDelete,
-			url:            "/groups/grp-001",
-			pathParamKey:   "id",
-			pathParamValue: "grp-001",
-			setup: func(serviceMock *GroupServiceInterfaceMock) {
-				serviceMock.
-					On("DeleteGroup", mock.Anything, "grp-001").
-					Return(&ErrorCannotDeleteGroup).
-					Once()
-			},
-			assert: func(rr *httptest.ResponseRecorder) {
-				require.Equal(suite.T(), http.StatusBadRequest, rr.Code)
-				var body apierror.ErrorResponse
-				require.NoError(suite.T(), json.Unmarshal(rr.Body.Bytes(), &body))
-				require.Equal(suite.T(), ErrorCannotDeleteGroup.Code, body.Code)
 			},
 		},
 		{

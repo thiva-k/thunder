@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package providers provides models for the providers module.
 //
@@ -29,6 +14,8 @@ import (
 	"slices"
 	"sort"
 	"time"
+
+	gocrypto "crypto"
 
 	"gopkg.in/yaml.v3"
 
@@ -648,6 +635,7 @@ type Certificate struct {
 type AttestationConfig struct {
 	Android *AndroidAttestationConfig `json:"android,omitempty" yaml:"android,omitempty" jsonschema:"Google Play Integrity attestation configuration for Android clients."`
 	Apple   *AppleAttestationConfig   `json:"apple,omitempty"   yaml:"apple,omitempty"   jsonschema:"Apple App Attest attestation configuration for iOS clients."`
+	DevMode bool                      `json:"devMode,omitempty" yaml:"devMode,omitempty" jsonschema:"When true, skips the platform-attestation check for a mobile application during direct flow initiation. Disabled by default; enable only for testing or trying out sample/development mobile clients."`
 }
 
 // AndroidAttestationConfig holds the Google Play Integrity settings for an Android application.
@@ -669,7 +657,7 @@ func (c *AttestationConfig) WithoutCredentials() *AttestationConfig {
 	if c == nil {
 		return nil
 	}
-	sanitized := &AttestationConfig{}
+	sanitized := &AttestationConfig{DevMode: c.DevMode}
 	if c.Android != nil {
 		android := *c.Android
 		android.ServiceAccountCredentials = ""
@@ -717,6 +705,7 @@ type InboundClient struct {
 	Assertion                 *AssertionConfig
 	LoginConsent              *LoginConsentConfig
 	AllowedUserTypes          []string
+	SubjectAttribute          map[string]string
 	PasskeyAllowedOrigins     []string
 	// Attestation holds the optional platform attestation config that lets a mobile client prove
 	// its binary identity to initiate a flow directly, independent of any protocol profile.
@@ -1035,6 +1024,7 @@ type InboundAuthProfile struct {
 	Assertion                 *AssertionConfig    `json:"assertion,omitempty"              yaml:"assertion,omitempty"              jsonschema:"Assertion configuration. Optional. Customize assertion validity periods and included user attributes."`
 	LoginConsent              *LoginConsentConfig `json:"loginConsent,omitempty"           yaml:"loginConsent,omitempty"           jsonschema:"Login consent configuration settings."`
 	AllowedUserTypes          []string            `json:"allowedUserTypes,omitempty"           yaml:"allowedUserTypes,omitempty"           jsonschema:"Allowed user types. Optional. Restricts which user types can authenticate to and register against this resource."`
+	SubjectAttribute          map[string]string   `json:"subjectAttribute,omitempty"           yaml:"subjectAttribute,omitempty"           jsonschema:"Per-user-type mapping of the schema attribute to use as the token subject (sub) claim, keyed by user type name. The attribute must be unique, required, and string-typed in that user type's schema. When no entry applies, the user's ID is used as the subject."`
 	PasskeyAllowedOrigins     []string            `json:"passkeyAllowedOrigins,omitempty"      yaml:"passkeyAllowedOrigins,omitempty"      jsonschema:"Allowed origins for WebAuthn/passkey operations for this application. Optional. When set, overrides the server-level passkey allowed origins for flow-based passkey operations."`
 	Attestation               *AttestationConfig  `json:"attestation,omitempty"                yaml:"attestation,omitempty"                jsonschema:"Platform attestation configuration. Optional. Enables a mobile client to initiate flows directly by proving its binary identity (e.g. Google Play Integrity), regardless of protocol. The service account credentials are write-only and never returned in responses."`
 }
@@ -1323,4 +1313,43 @@ type CaptchaVerificationResult struct {
 type CustomAuthnProvider struct {
 	Instance AuthnProviderInterface
 	Creds    []string
+}
+
+// KeyRef identifies a cryptographic key by its ID.
+// KeyID takes high precedence over PublicKey when both are present.
+// PublicKey is included for convenience when the key is already loaded; it may be nil if not available.
+type KeyRef struct {
+	KeyID        string
+	PublicKey    gocrypto.PublicKey
+	PublicKeyJWK map[string]interface{}
+}
+
+// PublicKeyFilter specifies criteria for filtering public keys in GetPublicKeys.
+type PublicKeyFilter struct {
+	KeyID     string
+	Algorithm string
+}
+
+// CryptoDetails carries algorithm-specific outputs from an Encrypt operation.
+// EPK is the generated ephemeral public key for ECDH-ES variants, to be embedded in the JWE header.
+// CEK is the content encryption key generated or derived during key establishment.
+// Nil CryptoDetails is returned for algorithms that produce no extra output (e.g. AES-GCM).
+// For RSA-OAEP, RSA-OAEP-256 and ECDH-ES variants, both EPK (where applicable) and CEK are populated.
+// CEK is nil for AES-GCM; EPK is nil for RSA-OAEP and RSA-OAEP-256 (no ephemeral key is generated).
+// IV and Tag are set only for AES-GCM Key Wrap (A128GCMKW etc.) and must be embedded in the JWE protected header.
+type CryptoDetails struct {
+	EPK gocrypto.PublicKey // ECDH-ES variants only; nil for RSA-OAEP, RSA-OAEP-256 and AES-GCM
+	CEK []byte             // Generated or derived CEK; nil for AES-GCM
+	IV  []byte             // AES-GCM Key Wrap only: IV used to wrap the CEK
+	Tag []byte             // AES-GCM Key Wrap only: authentication tag from wrapping the CEK
+}
+
+// PublicKeyInfo describes a public key returned by GetPublicKeys.
+type PublicKeyInfo struct {
+	KeyID               string
+	Algorithm           string
+	PublicKey           gocrypto.PublicKey
+	Thumbprint          string
+	CertificateDER      []byte
+	CertificateChainDER [][]byte // leaf first, then intermediates; nil if not certificate-backed
 }

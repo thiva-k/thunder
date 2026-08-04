@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen, fireEvent, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -86,9 +71,11 @@ describe('TokenUserAttributesSection', () => {
     it('renders the settings card with correct title for native mode', () => {
       render(<TokenUserAttributesSection {...baseProps} sharedAttributes={[]} />);
 
-      expect(screen.getByTestId('card-title')).toHaveTextContent('Token Attributes & Response');
+      // Native mode issues one token and has no response-format controls, so it drops the
+      // "& Response" title and the multi-token wording.
+      expect(screen.getByTestId('card-title')).toHaveTextContent('Token Attributes');
       expect(screen.getByTestId('card-description')).toHaveTextContent(
-        'Configure the response types and user attributes included in your tokens and user info responses',
+        'Choose the claims included in the token issued to this application.',
       );
     });
 
@@ -121,7 +108,7 @@ describe('TokenUserAttributesSection', () => {
       );
 
       expect(screen.getByTestId('card-description')).toHaveTextContent(
-        'Configure the response types and user attributes included in the tokens issued to this agent.',
+        'Choose the claims in each token issued to this agent, and how each is returned.',
       );
     });
   });

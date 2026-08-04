@@ -1,22 +1,9 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {ResourceAvatar} from '@thunderid/components';
+import {useGetApplications} from '@thunderid/configure-applications';
+import type {BasicApplication} from '@thunderid/configure-applications';
 import {useConfig} from '@thunderid/contexts';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
@@ -27,9 +14,7 @@ import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import ApplicationDeleteDialog from './ApplicationDeleteDialog';
 import RouteConfig from '../../../configs/RouteConfig';
-import useGetApplications from '../api/useGetApplications';
 import ApplicationConstants from '../constants/application-constants';
-import type {BasicApplication} from '../models/application';
 import getTemplateMetadata from '../utils/getTemplateMetadata';
 
 export default function ApplicationsList(): JSX.Element {

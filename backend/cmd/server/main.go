@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package main is the entry point for starting the server.
 package main
@@ -41,7 +26,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/constants"
 	"github.com/thunder-id/thunderid/internal/system/database/provider"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	"github.com/thunder-id/thunderid/internal/system/kmprovider"
+	"github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/internal/system/log"
 	"github.com/thunder-id/thunderid/internal/system/middleware"
 	"github.com/thunder-id/thunderid/internal/system/revocationcache"
@@ -129,7 +114,11 @@ func main() {
 		logger.Info(ctx, "TLS is not enabled, starting server without TLS")
 		ln = createListener(ctx, logger, server)
 	} else {
-		tlsConfig := loadCertConfig(ctx, logger, runtimeCryptoSvc)
+		tlsConfigProvider, ok := runtimeCryptoSvc.(common.TLSConfigProvider)
+		if !ok {
+			logger.Fatal(ctx, "Runtime crypto provider does not support TLS material retrieval")
+		}
+		tlsConfig := loadCertConfig(ctx, logger, tlsConfigProvider)
 		ln = createTLSListener(ctx, logger, server, tlsConfig)
 	}
 
@@ -212,7 +201,7 @@ func initThunderConfigurations(ctx context.Context, logger *log.Logger, serverHo
 }
 
 // loadCertConfig loads the TLS material via the runtime crypto provider.
-func loadCertConfig(ctx context.Context, logger *log.Logger, runtimeSvc kmprovider.RuntimeCryptoProvider) *tls.Config {
+func loadCertConfig(ctx context.Context, logger *log.Logger, runtimeSvc common.TLSConfigProvider) *tls.Config {
 	mat, err := runtimeSvc.GetTLSMaterial(ctx)
 	if err != nil {
 		logger.Fatal(ctx, "Failed to load TLS material", log.Error(err))

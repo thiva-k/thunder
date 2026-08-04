@@ -1,26 +1,11 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {Box, FormControlLabel, Switch, Typography} from '@wso2/oxygen-ui';
 import type {ReactNode} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
-import type {OAuth2Config} from '../../../../applications/models/oauth';
 import {deriveOAuth2Flags} from '../../../../applications/utils/oauth2Rules';
 import {codeComponents} from '../shared/transCodeComponents';
 
@@ -101,8 +86,10 @@ export default function SecuritySection({
           <FormControlLabel
             control={
               <Switch
-                checked={oauth2Config.requirePushedAuthorizationRequests ?? false}
-                disabled={!isEditable}
+                checked={
+                  flags.isParDisabledByGrants ? false : (oauth2Config.requirePushedAuthorizationRequests ?? false)
+                }
+                disabled={!isEditable || flags.isParDisabledByGrants}
                 onChange={(e) => onOAuth2ConfigChange?.({requirePushedAuthorizationRequests: e.target.checked})}
                 inputProps={{
                   'aria-label': t('agents:edit.advanced.security.par.label', 'Require Pushed Authorization Requests'),
@@ -116,9 +103,17 @@ export default function SecuritySection({
             }
           />
           <Typography variant="caption" color="text.secondary" sx={{display: 'block', ml: '52px'}}>
-            {t(
-              'agents:edit.advanced.security.par.hint',
-              'Require this agent to push its authorization request to the PAR endpoint before redirecting a user to sign in.',
+            {flags.isParDisabledByGrants ? (
+              <Trans
+                i18nKey="agents:edit.advanced.security.par.notApplicable"
+                defaults="Pushed Authorization Requests only apply to the <code>authorization_code</code> grant. Turn that on to enable this setting."
+                components={codeComponents}
+              />
+            ) : (
+              t(
+                'agents:edit.advanced.security.par.hint',
+                'Require this agent to push its authorization request to the PAR endpoint before redirecting a user to sign in.',
+              )
             )}
           </Typography>
         </Box>

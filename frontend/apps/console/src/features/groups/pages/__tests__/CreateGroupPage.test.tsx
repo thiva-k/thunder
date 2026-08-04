@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -52,7 +37,42 @@ vi.mock('@thunderid/configure-organization-units', () => ({
       </button>
     </div>
   ),
+  OrganizationUnitPickerScreen: ({
+    value,
+    onChange,
+    onBack,
+    onContinue,
+    backLabel,
+    continueLabel,
+  }: {
+    value: string;
+    onChange: (id: string) => void;
+    onBack: () => void;
+    onContinue: () => void;
+    backLabel: string;
+    continueLabel: string;
+  }) => (
+    <div data-testid="configure-organization-unit">
+      <span data-testid="ou-value">{value}</span>
+      <button type="button" data-testid="select-ou" onClick={() => onChange('ou-123')}>
+        Select OU
+      </button>
+      <button type="button" onClick={onBack}>
+        {backLabel}
+      </button>
+      <button type="button" onClick={onContinue}>
+        {continueLabel}
+      </button>
+    </div>
+  ),
   useHasMultipleOUs: (): unknown => mockUseHasMultipleOUs(),
+  useGetOrganizationUnit: (id?: string) => ({
+    data: id ? {id, name: 'Test Organization Unit'} : undefined,
+    isLoading: false,
+  }),
+  OrganizationUnitTreeConstants: {
+    DEFAULT_AVATAR: 'avatar:shape=rounded,variant=anonymous_entity,content=pavilion,colors=0',
+  },
 }));
 
 function renderPage() {
@@ -87,7 +107,7 @@ describe('CreateGroupPage', () => {
       renderPage();
 
       expect(screen.getByTestId('configure-name')).toBeInTheDocument();
-      expect(screen.getByText("Let's give a name to your group")).toBeInTheDocument();
+      expect(screen.getByText("Let's collect some details about your group")).toBeInTheDocument();
     });
 
     it('should have disabled button initially', () => {
@@ -164,60 +184,43 @@ describe('CreateGroupPage', () => {
       });
     });
 
-    it('should show continue button on name step', async () => {
-      const user = userEvent.setup();
+    it('should render the OU picker before the name step', () => {
       renderPage();
 
-      const nameInput = screen.getByPlaceholderText('Enter group name');
-      await user.type(nameInput, 'Test Group');
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
-      });
+      expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
+      expect(screen.queryByTestId('configure-name')).not.toBeInTheDocument();
     });
 
-    it('should navigate to OU step after name step', async () => {
+    it('should navigate to the name step after picking an OU', async () => {
       const user = userEvent.setup();
       renderPage();
-
-      const nameInput = screen.getByPlaceholderText('Enter group name');
-      await user.type(nameInput, 'Test Group');
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
-      });
-
-      await user.click(screen.getByRole('button', {name: 'Continue'}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
-      });
-    });
-
-    it('should submit after selecting OU in step 2', async () => {
-      const user = userEvent.setup();
-      renderPage();
-
-      // Step 1: Enter name
-      const nameInput = screen.getByPlaceholderText('Enter group name');
-      await user.type(nameInput, 'Test Group');
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
-      });
-
-      await user.click(screen.getByRole('button', {name: 'Continue'}));
-
-      // Step 2: Select OU
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
-      });
 
       await user.click(screen.getByTestId('select-ou'));
+      await user.click(screen.getByRole('button', {name: 'Continue'}));
 
       await waitFor(() => {
-        const button = screen.getByRole('button', {name: 'Continue'});
-        expect(button).not.toBeDisabled();
+        expect(screen.getByTestId('configure-name')).toBeInTheDocument();
+      });
+    });
+
+    it('should submit with the picked OU after entering a name', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      // Step 1: Pick the OU
+      await user.click(screen.getByTestId('select-ou'));
+      await user.click(screen.getByRole('button', {name: 'Continue'}));
+
+      // Step 2: Enter name
+      await waitFor(() => {
+        expect(screen.getByTestId('configure-name')).toBeInTheDocument();
+      });
+
+      const nameInput = screen.getByPlaceholderText('Enter group name');
+      await user.type(nameInput, 'Test Group');
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
       });
 
       await user.click(screen.getByRole('button', {name: 'Continue'}));
@@ -230,80 +233,14 @@ describe('CreateGroupPage', () => {
       });
     });
 
-    it('should navigate back to name step via breadcrumb click', async () => {
+    it('should navigate to the groups list from the OU picker', async () => {
       const user = userEvent.setup();
       renderPage();
-
-      const nameInput = screen.getByPlaceholderText('Enter group name');
-      await user.type(nameInput, 'Test Group');
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
-      });
-
-      await user.click(screen.getByRole('button', {name: 'Continue'}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
-      });
-
-      // On OU step, "Create a Group" breadcrumb is a Typography with role="button"
-      const nameStepBreadcrumb = screen.getByRole('button', {name: 'Create a Group'});
-      await user.click(nameStepBreadcrumb);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-name')).toBeInTheDocument();
-      });
-    });
-
-    it('should navigate back to name step via breadcrumb keyboard', async () => {
-      const user = userEvent.setup();
-      renderPage();
-
-      const nameInput = screen.getByPlaceholderText('Enter group name');
-      await user.type(nameInput, 'Test Group');
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
-      });
-
-      await user.click(screen.getByRole('button', {name: 'Continue'}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
-      });
-
-      // Navigate via keyboard Enter on the breadcrumb
-      const nameStepBreadcrumb = screen.getByRole('button', {name: 'Create a Group'});
-      nameStepBreadcrumb.focus();
-      await user.keyboard('{Enter}');
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-name')).toBeInTheDocument();
-      });
-    });
-
-    it('should go back from OU step to name step', async () => {
-      const user = userEvent.setup();
-      renderPage();
-
-      const nameInput = screen.getByPlaceholderText('Enter group name');
-      await user.type(nameInput, 'Test Group');
-
-      await waitFor(() => {
-        expect(screen.getByRole('button', {name: 'Continue'})).not.toBeDisabled();
-      });
-
-      await user.click(screen.getByRole('button', {name: 'Continue'}));
-
-      await waitFor(() => {
-        expect(screen.getByTestId('configure-organization-unit')).toBeInTheDocument();
-      });
 
       await user.click(screen.getByRole('button', {name: 'Back'}));
 
       await waitFor(() => {
-        expect(screen.getByTestId('configure-name')).toBeInTheDocument();
+        expect(mockNavigate).toHaveBeenCalledWith('/groups');
       });
     });
   });
@@ -367,7 +304,7 @@ describe('CreateGroupPage', () => {
     });
   });
 
-  it('should disable continue button while OUs are loading', () => {
+  it('should show a loading indicator while OUs are loading, without the wizard', () => {
     mockUseHasMultipleOUs.mockReturnValue({
       hasMultipleOUs: false,
       isLoading: true,
@@ -376,8 +313,8 @@ describe('CreateGroupPage', () => {
 
     renderPage();
 
-    const button = screen.getByRole('button', {name: 'Continue'});
-    expect(button).toBeDisabled();
+    expect(screen.queryByTestId('configure-name')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {name: 'Continue'})).not.toBeInTheDocument();
   });
 
   it('should navigate back when close button is clicked', async () => {

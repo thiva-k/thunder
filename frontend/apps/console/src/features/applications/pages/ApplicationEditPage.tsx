@@ -1,23 +1,11 @@
-/**
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {OAuth2GrantTypes, TokenEndpointAuthMethods, useGetApplication} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {useLogger} from '@thunderid/logger/react';
+import {isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -39,7 +27,6 @@ import {useState, useCallback, useMemo, type SyntheticEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useLocation, useNavigate, useParams} from 'react-router';
 import RouteConfig from '../../../configs/RouteConfig';
-import useGetApplication from '../api/useGetApplication';
 import useUpdateApplication from '../api/useUpdateApplication';
 import SettingsLockNotice from '../components/common/SettingsLockNotice';
 import ShowClientSecret from '../components/create-application/ShowClientSecret';
@@ -53,9 +40,7 @@ import EditTokenSettings from '../components/edit-application/token-settings/Edi
 import EditTokenSettingsTabs from '../components/edit-application/token-settings/EditTokenSettingsTabs';
 import ApplicationConstants from '../constants/application-constants';
 import TemplateConstants from '../constants/template-constants';
-import type {Application} from '../models/application';
 import {McpClientTypes} from '../models/mcp-client';
-import {OAuth2GrantTypes, TokenEndpointAuthMethods, type OAuth2Config} from '../models/oauth';
 import deriveMcpClientType from '../utils/deriveMcpClientType';
 import {getIntegrationGuideForTemplate} from '../utils/getIntegrationGuidesForTemplate';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';
@@ -113,6 +98,10 @@ export default function ApplicationEditPage() {
 
   const [activeTab, setActiveTab] = useState(0);
   const [editedApp, setEditedApp] = useState<Partial<Application>>({});
+  // Bumped on Save/Reset to force AccessSection/McpAccessSection/UrlsSection to remount with a
+  // clean form — they keep local state (redirect URI list, react-hook-form defaults) that a
+  // `setEditedApp({})` alone wouldn't reset.
+  const [sectionResetKey, setSectionResetKey] = useState(0);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -181,12 +170,20 @@ export default function ApplicationEditPage() {
       });
       setEditedApp({});
       await refetch();
+      // Bumped only after refetch resolves to prevent stale data being passed to the remounted sections.
+      setSectionResetKey((key) => key + 1);
     } catch {
       logger.error('Failed to update application');
     }
   }, [application, applicationId, editedApp, updateApplication, refetch, logger]);
 
-  const hasChanges = useMemo(() => Object.keys(editedApp).length > 0, [editedApp]);
+  const hasChanges = useMemo(
+    () =>
+      Object.entries(editedApp).some(
+        ([key, value]) => !isEqualIgnoringEmpty(value, application?.[key as keyof Application]),
+      ),
+    [editedApp, application],
+  );
 
   if (isLoading) {
     return <PageLoadingAnimation />;
@@ -285,6 +282,7 @@ export default function ApplicationEditPage() {
                   handleBack().catch(() => null);
                 }}
                 onValidationChange={setMcpAccessInvalid}
+                sectionResetKey={sectionResetKey}
               />
             ),
           },
@@ -305,6 +303,7 @@ export default function ApplicationEditPage() {
                 editedApp={editedApp}
                 onFieldChange={handleFieldChange}
                 onValidationChange={setCustomizationSettingsInvalid}
+                sectionResetKey={sectionResetKey}
               />
             ),
             hidden: isMcpM2mOnly,
@@ -314,6 +313,7 @@ export default function ApplicationEditPage() {
             label: t('applications:edit.page.tabs.token'),
             panel: (
               <EditTokenSettings
+                sectionResetKey={sectionResetKey}
                 application={application}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
@@ -596,6 +596,7 @@ export default function ApplicationEditPage() {
                 }}
                 onValidationChange={setGeneralSettingsInvalid}
                 showUserAccessConfig={userAccessUnlocked}
+                sectionResetKey={sectionResetKey}
               />
             </TabPanel>
 
@@ -618,6 +619,7 @@ export default function ApplicationEditPage() {
                   editedApp={editedApp}
                   onFieldChange={handleFieldChange}
                   onValidationChange={setCustomizationSettingsInvalid}
+                  sectionResetKey={sectionResetKey}
                 />
               </SettingsLockNotice>
             </TabPanel>
@@ -625,6 +627,7 @@ export default function ApplicationEditPage() {
             {/* Token Tab */}
             <TabPanel value={activeTab} index={hasIntegrationGuides ? 4 : 3}>
               <EditTokenSettingsTabs
+                sectionResetKey={sectionResetKey}
                 application={application}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
@@ -673,6 +676,7 @@ export default function ApplicationEditPage() {
             setAdvancedSettingsInvalid(false);
             setCustomizationSettingsInvalid(false);
             setGeneralSettingsInvalid(false);
+            setSectionResetKey((key) => key + 1);
           }}
           onSave={() => {
             handleSave().catch(() => null);

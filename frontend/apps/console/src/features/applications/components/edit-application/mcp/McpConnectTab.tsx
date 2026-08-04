@@ -1,31 +1,15 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {SettingsCard} from '@thunderid/components';
+import {TokenEndpointAuthMethods} from '@thunderid/configure-applications';
+import type {Application, OAuth2Config} from '@thunderid/configure-applications';
 import {Box, Button, Chip, FormControl, FormLabel, Stack, TextField} from '@wso2/oxygen-ui';
 import {Bot, UserRound} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
 import {useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import McpAccessSection from './McpAccessSection';
-import type {Application} from '../../../models/application';
-import {TokenEndpointAuthMethods} from '../../../models/oauth';
-import type {OAuth2Config} from '../../../models/oauth';
 import resolveApplicationType, {isClientCredentialsOnlyGrantSet} from '../../../utils/resolveApplicationType';
 import ApplicationDeleteDialog from '../../ApplicationDeleteDialog';
 import ClientSecretSuccessDialog from '../../ClientSecretSuccessDialog';
@@ -56,6 +40,12 @@ export interface McpConnectTabProps {
    * @param value - The new value for the field
    */
   onFieldChange: (field: keyof Application, value: unknown) => void;
+
+  /**
+   * Bumped by the parent on Save/Reset to force McpAccessSection to remount and drop its local
+   * redirect URI list state.
+   */
+  sectionResetKey?: number;
 
   /**
    * Whether the application is read-only, disabling all inputs and actions
@@ -112,6 +102,7 @@ export default function McpConnectTab({
   application,
   oauth2Config = undefined,
   onFieldChange,
+  sectionResetKey = 0,
   isReadOnly,
   onDeleteSuccess = undefined,
   onValidationChange = undefined,
@@ -252,6 +243,7 @@ export default function McpConnectTab({
 
         {!isM2m && (
           <McpAccessSection
+            key={sectionResetKey}
             application={application}
             oauth2Config={oauth2Config}
             onFieldChange={onFieldChange}

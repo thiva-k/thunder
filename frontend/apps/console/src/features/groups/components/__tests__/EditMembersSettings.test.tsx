@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {screen, waitFor} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -181,7 +166,31 @@ describe('EditMembersSettings', () => {
     await user.click(screen.getByText('Add'));
 
     await waitFor(() => {
-      expect(screen.getByText('Add failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to add member. Please try again.')).toBeInTheDocument();
+    });
+  });
+
+  it('should show mapped error message when a selected member no longer exists', async () => {
+    mockAddMutate.mockImplementation((_data: unknown, opts: {onError: (err: Error) => void}) => {
+      const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+      error.response = {data: {code: 'GRP-1007'}};
+      opts.onError(error);
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<EditMembersSettings group={mockGroup} />);
+
+    await user.click(screen.getByText('Add Member'));
+    await waitFor(() => {
+      expect(screen.getByTestId('add-member-dialog')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText('Add'));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('One or more selected members no longer exist. Refresh and try again.'),
+      ).toBeInTheDocument();
     });
   });
 
@@ -212,7 +221,7 @@ describe('EditMembersSettings', () => {
     });
     await user.click(screen.getByText('Add'));
     await waitFor(() => {
-      expect(screen.getByText('Some error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to add member. Please try again.')).toBeInTheDocument();
     });
 
     // Now trigger successful remove which should clear the error
@@ -223,7 +232,7 @@ describe('EditMembersSettings', () => {
     await user.click(screen.getByTestId('remove-member-btn'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Some error')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed to add member. Please try again.')).not.toBeInTheDocument();
     });
   });
 
@@ -238,7 +247,7 @@ describe('EditMembersSettings', () => {
     await user.click(screen.getByTestId('remove-member-btn'));
 
     await waitFor(() => {
-      expect(screen.getByText('Remove failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to remove member. Please try again.')).toBeInTheDocument();
     });
   });
 
@@ -252,14 +261,14 @@ describe('EditMembersSettings', () => {
 
     await user.click(screen.getByTestId('remove-member-btn'));
     await waitFor(() => {
-      expect(screen.getByText('Remove failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to remove member. Please try again.')).toBeInTheDocument();
     });
 
     const closeAlertButton = screen.getByRole('button', {name: /close/i});
     await user.click(closeAlertButton);
 
     await waitFor(() => {
-      expect(screen.queryByText('Remove failed')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed to remove member. Please try again.')).not.toBeInTheDocument();
     });
   });
 });

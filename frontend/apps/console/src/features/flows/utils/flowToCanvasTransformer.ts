@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import type {Edge, Node} from '@xyflow/react';
 import {MarkerType} from '@xyflow/react';
@@ -123,6 +108,13 @@ function restoreButtonAction(
   if (matchingAction) {
     return {
       ...component,
+      // Backfill the prompt action's type onto the element, which is where the property panel reads
+      // it from and where serialization projects it back out of. Only when the element does not
+      // already carry one: an unwired button keeps its type on the element alone, since a prompt
+      // action is only emitted once the button has a nextNode. Clearing the selector writes an empty
+      // string rather than dropping the key, and that empty string is persisted, so treat it as no
+      // type rather than as a type worth preserving.
+      ...(matchingAction.type && !component.actionType ? {actionType: matchingAction.type} : {}),
       action: {
         type: matchingAction.executor ? 'EXECUTOR' : 'NEXT',
         onSuccess: matchingAction.nextNode,

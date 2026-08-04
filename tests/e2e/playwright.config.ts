@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * Playwright E2E Test Configuration
@@ -34,8 +19,6 @@ import { Timeouts } from "./constants/timeouts";
 
 const envPath = path.resolve(__dirname, ".env");
 dotenv.config({ path: envPath });
-
-const STORAGE_STATE = path.join(__dirname, "playwright/.auth/console-admin.json");
 
 /**
  * Configure number of workers. Workers parallelize test *files* across all projects (including the
@@ -135,6 +118,14 @@ export default defineConfig({
     },
   },
 
+  /**
+   * Browser projects deliberately do NOT set `storageState`. The saved state contains localStorage
+   * entries, and restoring those makes `browser.newContext()` navigate to the origin internally
+   * (waiting for `load`) before a test starts, which is charged to the test timeout and is slow
+   * against the console's large bundles. It is also redundant: the `authenticatedPage` fixture
+   * restores cookies and injects both localStorage and sessionStorage itself. Tests that need an
+   * authenticated session take `authenticatedPage`; tests that need a signed-out one take `page`.
+   */
   projects: [
     /** Setup project - only runs auth.setup.ts */
     {
@@ -151,7 +142,6 @@ export default defineConfig({
       testIgnore: SERIAL_SPECS,
       use: {
         ...devices["Desktop Chrome"],
-        storageState: STORAGE_STATE,
       },
       dependencies: ["setup"],
     },
@@ -162,7 +152,6 @@ export default defineConfig({
       testIgnore: SERIAL_SPECS,
       use: {
         ...devices["Desktop Firefox"],
-        storageState: STORAGE_STATE,
       },
       dependencies: ["setup"],
     },
@@ -173,7 +162,6 @@ export default defineConfig({
       testIgnore: SERIAL_SPECS,
       use: {
         ...devices["Desktop Safari"],
-        storageState: STORAGE_STATE,
       },
       dependencies: ["setup"],
     },
@@ -189,7 +177,6 @@ export default defineConfig({
       testMatch: SERIAL_SPECS,
       use: {
         ...devices["Desktop Chrome"],
-        storageState: STORAGE_STATE,
       },
       dependencies: ["setup"],
     },
@@ -198,7 +185,6 @@ export default defineConfig({
       testMatch: SERIAL_SPECS,
       use: {
         ...devices["Desktop Firefox"],
-        storageState: STORAGE_STATE,
       },
       dependencies: ["serial-chromium"],
     },
@@ -207,7 +193,6 @@ export default defineConfig({
       testMatch: SERIAL_SPECS,
       use: {
         ...devices["Desktop Safari"],
-        storageState: STORAGE_STATE,
       },
       dependencies: ["serial-firefox"],
     },

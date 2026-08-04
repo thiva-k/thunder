@@ -1,25 +1,10 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type {OAuth2Config} from '@thunderid/configure-applications';
 import {describe, it, expect, vi} from 'vitest';
-import type {OAuth2Config} from '../../../../../applications/models/oauth';
 import SecuritySection from '../SecuritySection';
 
 vi.mock('react-i18next', () => ({
@@ -100,7 +85,7 @@ describe('SecuritySection (agent)', () => {
 
     render(<SecuritySection oauth2Config={oauth2Config} />);
 
-    expect(screen.getByText(/authorization_code/)).toBeInTheDocument();
+    expect(screen.getByText(/PKCE only applies to the/)).toBeInTheDocument();
     const pkceSwitch = screen.getByLabelText('agents:edit.advanced.security.pkce.label');
     expect(pkceSwitch).toBeDisabled();
   });
@@ -145,6 +130,23 @@ describe('SecuritySection (agent)', () => {
       render(<SecuritySection oauth2Config={oauth2Config} />);
 
       expect(screen.getByLabelText('agents:edit.advanced.security.par.label')).toBeDisabled();
+    });
+
+    it('is disabled and unchecked when the authorization_code grant is off', () => {
+      render(
+        <SecuritySection
+          oauth2Config={{
+            grantTypes: ['client_credentials'],
+            responseTypes: [],
+            requirePushedAuthorizationRequests: true,
+          }}
+          onOAuth2ConfigChange={vi.fn()}
+        />,
+      );
+
+      const parSwitch = screen.getByLabelText('agents:edit.advanced.security.par.label');
+      expect(parSwitch).toBeDisabled();
+      expect(parSwitch).not.toBeChecked();
     });
   });
 });

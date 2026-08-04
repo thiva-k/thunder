@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 package logout
 
@@ -70,7 +55,9 @@ func (h *logoutHandler) HandleLogout(w http.ResponseWriter, r *http.Request) {
 		PostLogoutRedirectURI: r.FormValue(constants.RequestParamPostLogoutRedirect),
 		State:                 r.FormValue(constants.RequestParamState),
 		Headers:               sysutils.SanitizeRawMultiValueStringMap(r.Header),
-		QueryParams:           sysutils.SanitizeRawMultiValueStringMap(r.URL.Query()),
+		// r.Form, not r.URL.Query(): on a POST the parameters arrive in the form body, which the query
+		// string does not carry. ParseForm merges both, so the flow sees the same set either way.
+		QueryParams: sysutils.SanitizeRawMultiValueStringMap(r.Form),
 	}
 
 	// Validate before initiating anything: the post-logout redirect URI is validated here (against the

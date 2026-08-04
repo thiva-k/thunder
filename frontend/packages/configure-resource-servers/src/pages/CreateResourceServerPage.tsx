@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {useHasMultipleOUs} from '@thunderid/configure-organization-units';
 import {useToast} from '@thunderid/contexts';
@@ -85,7 +70,7 @@ export default function CreateResourceServerPage(): JSX.Element {
   const steps: Record<ResourceServerCreateStep, {label: string; order: number}> = useMemo(
     () => ({
       TYPE: {label: t('resourceServers:create.steps.type', 'Type'), order: 1},
-      NAME: {label: t('resourceServers:create.steps.name', 'Name'), order: 2},
+      NAME: {label: t('resourceServers:create.steps.name', 'Details'), order: 2},
       SEPARATOR: {label: t('resourceServers:create.steps.separator', 'Permission Delimiter'), order: 3},
       ORGANIZATION_UNIT: {label: t('resourceServers:create.steps.organizationUnit', 'Organization'), order: 4},
     }),
@@ -288,9 +273,8 @@ export default function CreateResourceServerPage(): JSX.Element {
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                py: 8,
-                px: 20,
-                mx: 'auto',
+                py: 4,
+                px: {xs: 4, md: 10},
               }}
             >
               <Box sx={{width: '100%', maxWidth: 800, display: 'flex', flexDirection: 'column'}}>

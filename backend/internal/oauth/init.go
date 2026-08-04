@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2025-2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025-2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package oauth provides centralized initialization for all OAuth-related services.
 package oauth
@@ -35,6 +20,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/granthandlers"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/introspect"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jwksresolver"
 	oauth2logout "github.com/thunder-id/thunderid/internal/oauth/oauth2/logout"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/par"
@@ -46,7 +32,6 @@ import (
 	syshttp "github.com/thunder-id/thunderid/internal/system/http"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/internal/system/jose/jwt"
-	kmprovider "github.com/thunder-id/thunderid/internal/system/kmprovider/common"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
 
@@ -59,7 +44,7 @@ func Initialize(
 	jweService jwe.JWEServiceInterface,
 	flowExecService flowexec.FlowExecServiceInterface,
 	observabilitySvc providers.ObservabilityProvider,
-	runtimeCrypto kmprovider.RuntimeCryptoProvider,
+	runtimeCrypto providers.RuntimeCryptoProvider,
 	ouService providers.OrganizationUnitProvider,
 	attributeCacheSvc attributecache.AttributeCacheServiceInterface,
 	authzService providers.AuthorizationProvider,
@@ -89,8 +74,9 @@ func Initialize(
 			tokenFamilyRevocationTTL, cfg.OAuth.Revocation.TokenFamily.OnExplicitRevoke)
 	}
 
+	jtiStore := jti.Initialize(runtimeStore)
 	tokenBuilder, tokenValidator := tokenservice.Initialize(
-		cfg, jwtService, jweService, resolver, idpService, enforcementService)
+		cfg, jwtService, jweService, resolver, idpService, enforcementService, jtiStore)
 	parService := par.Initialize(mux, actorProvider, authnProvider, jwtService, discoveryService,
 		resourceService, dpopVerifier, cfg, runtimeStore)
 	oauth2AuthzService, err := oauth2authz.Initialize(mux, actorProvider, resourceService,

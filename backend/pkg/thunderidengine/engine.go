@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package thunderidengine provides the core engine for the Thunder ID platform.
 package thunderidengine
@@ -83,6 +68,7 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 			Keys:       engineCtx.keyConfigs,
 			Encryption: engineCtx.encryptionConfig,
 		},
+		AttributeCache: engineCtx.attributeCacheConfig,
 	}
 
 	err = systemconfig.InitializeServerRuntime(engineCtx.serverHome, &sysConfig)
@@ -118,7 +104,8 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		}
 	}
 
-	engineCtx.attributeCacheService = attributecache.Initialize(engineCtx.runtimeStoreProvider)
+	engineCtx.attributeCacheService = attributecache.Initialize(engineCtx.runtimeStoreProvider,
+		engineCtx.runtimeCryptoSvc, systemconfig.GetServerRuntime().Config.AttributeCache.Encryption.Enabled)
 	engineCtx.authAssertGen = assert.Initialize()
 
 	authnProviderManager, err := authnprovidermgr.Initialize(
@@ -186,7 +173,8 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		GateClient:             engineCtx.gateClientConfig,
 	}
 
-	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider))
+	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider),
+		engineCtx.runtimeCryptoSvc)
 
 	// The embedded engine has no server-config store, so no default resource server is available: the
 	// resource provider is passed undecorated. Implicit no-resource requests that carry permission
@@ -317,6 +305,7 @@ type engineContext struct {
 	keyConfigs             []engineconfig.KeyConfig
 	encryptionConfig       engineconfig.EncryptionConfig
 	logConfig              engineconfig.LogConfig
+	attributeCacheConfig   engineconfig.AttributeCacheConfig
 
 	actorProvider             providers.ActorProvider
 	defaultAuthnProvider      providers.AuthnProviderInterface
@@ -360,6 +349,11 @@ func WithKeyConfigs(keyConfigs []engineconfig.KeyConfig) Option {
 // WithEncryptionConfig supplies the encryption configs.
 func WithEncryptionConfig(encryptionConfig engineconfig.EncryptionConfig) Option {
 	return func(c *engineContext) { c.encryptionConfig = encryptionConfig }
+}
+
+// WithAttributeCacheConfig supplies the attribute cache configuration.
+func WithAttributeCacheConfig(config engineconfig.AttributeCacheConfig) Option {
+	return func(c *engineContext) { c.attributeCacheConfig = config }
 }
 
 // WithServerConfig supplies the server configuration.

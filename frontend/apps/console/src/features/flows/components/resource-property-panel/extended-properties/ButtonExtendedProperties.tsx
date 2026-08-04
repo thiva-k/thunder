@@ -1,27 +1,34 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {Divider, FormHelperText, FormLabel, MenuItem, Select, Stack, TextField} from '@wso2/oxygen-ui';
 import {useState, type ReactNode, type ChangeEvent} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CommonResourcePropertiesPropsInterface} from '@/features/flows/components/resource-property-panel/CommonResourceProperties';
 import type {Element} from '@/features/flows/models/elements';
-import {ActionEventTypes} from '@/features/flows/models/elements';
+import {ActionEventTypes, PromptActionTypes} from '@/features/flows/models/elements';
+
+/**
+ * The options offered by the Action selector. `Submit` and `Trigger` are the
+ * button's `eventType`; `Confirm` is a submit button that additionally raises
+ * the `CONFIRM` prompt action, so one selection maps onto two fields.
+ *
+ * `Confirm` deliberately carries the same literal that is persisted as
+ * `prompts[].action.type`, so the value selected here and the value in the flow
+ * definition are one vocabulary rather than a UI-only alias. It is not specific
+ * to signing out: the session sign-out executor reads it today, but any executor
+ * that routes to a confirmation prompt can.
+ *
+ * The remaining `ActionEventTypes` (navigate, cancel, reset, back) are handled
+ * by the SDK renderers but deliberately not offered here.
+ */
+const ACTION_OPTIONS = {
+  Submit: 'SUBMIT',
+  Trigger: 'TRIGGER',
+  Confirm: PromptActionTypes.Confirm,
+} as const;
+
+type ActionOption = (typeof ACTION_OPTIONS)[keyof typeof ACTION_OPTIONS];
 
 /**
  * Props interface of {@link ButtonExtendedProperties}
@@ -38,7 +45,34 @@ export type ButtonExtendedPropertiesPropsInterface = CommonResourcePropertiesPro
 function ButtonExtendedProperties({resource, onChange}: ButtonExtendedPropertiesPropsInterface): ReactNode {
   const {t} = useTranslation();
 
-  const eventTypeValue = (resource as Element & {eventType?: string})?.eventType ?? ActionEventTypes.Trigger;
+  const element = resource as Element & {eventType?: string};
+  const eventTypeValue = element?.eventType ?? ActionEventTypes.Trigger;
+
+  // Confirm is a submit button carrying an extra prompt action type, so it
+  // takes precedence over the plain event type when deriving the selection.
+  const actionValue: ActionOption =
+    element?.actionType === PromptActionTypes.Confirm
+      ? ACTION_OPTIONS.Confirm
+      : eventTypeValue === ActionEventTypes.Submit
+        ? ACTION_OPTIONS.Submit
+        : ACTION_OPTIONS.Trigger;
+
+  const handleActionChange = (nextAction: ActionOption): void => {
+    if (nextAction === ACTION_OPTIONS.Confirm) {
+      onChange('eventType', ActionEventTypes.Submit, resource);
+      onChange('actionType', PromptActionTypes.Confirm, resource);
+      return;
+    }
+
+    onChange('eventType', nextAction, resource);
+    // Clearing keeps the button from silently staying a confirmation action
+    // after the author picks a plain action. Only the type this selector owns is
+    // cleared, so an action type it does not model (e.g. REJECT, authored in the
+    // flow definition directly) is left untouched rather than discarded.
+    if (element?.actionType === PromptActionTypes.Confirm) {
+      onChange('actionType', '', resource);
+    }
+  };
 
   // Use local state for text inputs — provides immediate keystroke feedback while onChange is debounced
   const [startIconValue, setStartIconValue] = useState(() => {
@@ -77,17 +111,29 @@ function ButtonExtendedProperties({resource, onChange}: ButtonExtendedProperties
       <Divider sx={{marginY: 2}} />
 
       <div>
-        <FormLabel htmlFor="event-type-select">{t('flows:core.buttonExtendedProperties.type.label')}</FormLabel>
+        <FormLabel htmlFor="event-type-select">
+          {t('flows:core.buttonExtendedProperties.action.label', 'Action')}
+        </FormLabel>
         <Select
           id="event-type-select"
-          value={eventTypeValue}
-          onChange={(e) => onChange('eventType', e.target.value, resource)}
+          value={actionValue}
+          onChange={(e) => handleActionChange(e.target.value as ActionOption)}
           fullWidth
           size="small"
         >
-          <MenuItem value={ActionEventTypes.Submit}>{t('flows:core.buttonExtendedProperties.type.submit')}</MenuItem>
-          <MenuItem value={ActionEventTypes.Trigger}>{t('flows:core.buttonExtendedProperties.type.trigger')}</MenuItem>
+          <MenuItem value={ACTION_OPTIONS.Submit}>
+            {t('flows:core.buttonExtendedProperties.action.submit', 'Submit Form')}
+          </MenuItem>
+          <MenuItem value={ACTION_OPTIONS.Trigger}>
+            {t('flows:core.buttonExtendedProperties.action.trigger', 'Trigger Action')}
+          </MenuItem>
+          <MenuItem value={ACTION_OPTIONS.Confirm}>
+            {t('flows:core.buttonExtendedProperties.action.confirm', 'Confirm Action')}
+          </MenuItem>
         </Select>
+        <FormHelperText>
+          {t('flows:core.buttonExtendedProperties.action.hint', 'What happens when the button is activated')}
+        </FormHelperText>
       </div>
 
       <div>

@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * Accessibility Testing Utilities
@@ -513,24 +498,31 @@ export async function expectNoA11yViolations(
 }
 
 /**
- * Check keyboard navigation accessibility.
+ * Walk the tab sequence and report which elements actually received focus.
  *
- * Verifies that interactive elements receive focus via Tab key
- * and that focused elements have visible focus indicators.
+ * `expectedFocusableCount` only bounds how many times Tab is pressed and produces a log line when
+ * fewer elements are reached; it is not a guarantee, because the tabbable set is browser and OS
+ * dependent (on macOS, Firefox and WebKit leave links out of the tab order by default). Assert on the
+ * returned `focusedElements`, not on a count derived from a CSS selector.
+ *
+ * `focusStopped` records that the walk ended because focus stopped advancing. That marks the end of
+ * the tab sequence and is not evidence of a keyboard trap: browsers differ on end-of-sequence
+ * behaviour, so proving a trap needs a dedicated test of a specific container.
  *
  * @param page - Playwright Page to check
- * @param expectedFocusableCount - Minimum number of focusable elements to verify
+ * @param expectedFocusableCount - How many elements are expected to be reachable, for logging
  */
 export async function checkKeyboardNavigation(
   page: Page,
   expectedFocusableCount: number = 1,
 ): Promise<{
   focusedElements: Array<{ tagName: string; role: string | null; ariaLabel: string | null }>;
-  tabTrapDetected: boolean;
+  focusStopped: boolean;
 }> {
   const focusedElements: Array<{ tagName: string; role: string | null; ariaLabel: string | null }> = [];
   const seenSelectors = new Set<string>();
-  let tabTrapDetected = false;
+  let previousSelector: string | null = null;
+  let focusStopped = false;
   const maxTabs = expectedFocusableCount + 10;
 
   for (let i = 0; i < maxTabs; i++) {
@@ -543,31 +535,40 @@ export async function checkKeyboardNavigation(
         return null;
       }
 
+      // Identify the element by its position in the DOM tree. A tag name plus a class name is not
+      // unique: sibling controls rendered by a component library share generated class names, so
+      // every sibling would look like the same element and be misreported as a tab trap.
+      const path: string[] = [];
+      let node: Element | null = el;
+      while (node && node !== document.documentElement) {
+        const parent: Element | null = node.parentElement;
+        const index = parent ? Array.prototype.indexOf.call(parent.children, node) : 0;
+        path.unshift(`${node.tagName.toLowerCase()}:${index}`);
+        node = parent;
+      }
+
       return {
         tagName: el.tagName.toLowerCase(),
         role: el.getAttribute("role"),
         ariaLabel: el.getAttribute("aria-label"),
-        // Unique identifier for tab-trap detection
-        selector: el.id
-          ? `#${el.id}`
-          : `${el.tagName.toLowerCase()}${el.className ? "." + el.className.split(" ")[0] : ""}`,
+        selector: path.join(">"),
       };
     });
 
     if (focusedElement) {
       const { selector, ...elementInfo } = focusedElement;
 
-      // Tab-trap detection: as soon as a selector repeats we stop the loop
-      // and mark a trap; do not add the duplicate to focusedElements.
-      if (seenSelectors.has(selector)) {
-        tabTrapDetected = true;
-        console.warn(
-          `🔄 Tab-trap detected! selector ${selector} reappeared after ${
-            focusedElements.length
-          } focusable element(s).`,
-        );
+      // Focus stopped advancing, or came back to an element already visited: either way the tab
+      // sequence is exhausted, so stop. Neither condition proves a keyboard trap. Browsers disagree
+      // about what happens at the end of the sequence - Chromium wraps around to the first element,
+      // while on macOS Firefox and WebKit hand focus to the browser chrome, leaving activeElement
+      // unchanged - and they also disagree about what is tabbable, since those two leave links out of
+      // the tab order by default.
+      if (selector === previousSelector || seenSelectors.has(selector)) {
+        focusStopped = true;
         break;
       }
+      previousSelector = selector;
 
       seenSelectors.add(selector);
       focusedElements.push(elementInfo);
@@ -590,7 +591,7 @@ export async function checkKeyboardNavigation(
     console.log(`✅ Keyboard navigation: ${focusedElements.length} focusable elements found`);
   }
 
-  return { focusedElements, tabTrapDetected };
+  return { focusedElements, focusStopped };
 }
 
 /**

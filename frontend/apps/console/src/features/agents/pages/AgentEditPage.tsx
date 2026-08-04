@@ -1,25 +1,11 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {PageLoadingAnimation, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
 import {useGetAgentType, useGetAgentTypes} from '@thunderid/configure-agent-types';
 import {dropNonConformingOptionalAttributes} from '@thunderid/configure-users';
 import {useLogger} from '@thunderid/logger/react';
+import {isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Alert,
   Box,
@@ -101,9 +87,7 @@ export default function AgentEditPage(): JSX.Element {
 
   const [activeTab, setActiveTab] = useState(0);
   const [editedAgent, setEditedAgent] = useState<Partial<Agent>>({});
-  // Bumped on Save/Reset to force EditAgentAttributes to remount with a clean form — it keeps
-  // its own react-hook-form state locally, which a `setEditedAgent({})` alone wouldn't reset.
-  const [attributesResetKey, setAttributesResetKey] = useState(0);
+  const [sectionResetKey, setSectionResetKey] = useState(0);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -159,14 +143,17 @@ export default function AgentEditPage(): JSX.Element {
     try {
       await updateAgent.mutateAsync({agentId, data: {...updatedData, attributes}});
       setEditedAgent({});
-      setAttributesResetKey((key) => key + 1);
       await refetch();
-    } catch {
-      logger.error('Failed to update agent');
+      setSectionResetKey((key) => key + 1);
+    } catch (err) {
+      logger.error('Failed to update agent', {error: err});
     }
   }, [agent, agentId, editedAgent, agentTypeDetails, updateAgent, refetch, logger]);
 
-  const hasChanges = useMemo(() => Object.keys(editedAgent).length > 0, [editedAgent]);
+  const hasChanges = useMemo(
+    () => Object.entries(editedAgent).some(([key, value]) => !isEqualIgnoringEmpty(value, agent?.[key as keyof Agent])),
+    [editedAgent, agent],
+  );
 
   if (isLoading || isSchemaResolving) {
     return <PageLoadingAnimation />;
@@ -281,7 +268,7 @@ export default function AgentEditPage(): JSX.Element {
       label: t('agents:edit.page.tabs.attributes', 'Attributes'),
       render: () => (
         <EditAgentAttributes
-          key={attributesResetKey}
+          key={sectionResetKey}
           agent={agent}
           editedAgent={editedAgent}
           onFieldChange={handleFieldChange}
@@ -337,6 +324,8 @@ export default function AgentEditPage(): JSX.Element {
           oauth2Config={oauth2Config}
           onFieldChange={handleFieldChange}
           onValidationChange={handleValidationChange('token')}
+          sectionResetKey={sectionResetKey}
+          onNavigateToAdvanced={() => handleNavigateToTab('advanced')}
         />
       ),
     });
@@ -354,6 +343,16 @@ export default function AgentEditPage(): JSX.Element {
       ),
     });
   }
+
+  // Lets a tab's content send the user to a sibling tab, e.g. the Tokens tab pointing at where
+  // Delegated mode is turned on. Resolved by key at click time, since which tabs exist depends on
+  // the agent's configuration.
+  const handleNavigateToTab = (key: string): void => {
+    const index = tabs.findIndex((tab) => tab.key === key);
+    if (index >= 0) {
+      setActiveTab(index);
+    }
+  };
 
   const safeActiveTab = activeTab >= tabs.length ? 0 : activeTab;
 
@@ -487,7 +486,7 @@ export default function AgentEditPage(): JSX.Element {
           saveDisabled={hasAnyValidationError || agent.isReadOnly === true}
           onReset={() => {
             setEditedAgent({});
-            setAttributesResetKey((key) => key + 1);
+            setSectionResetKey((key) => key + 1);
           }}
           onSave={() => {
             void handleSave();

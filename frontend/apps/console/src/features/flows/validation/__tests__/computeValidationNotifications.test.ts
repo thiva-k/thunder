@@ -1,27 +1,12 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
-import type {Node} from '@xyflow/react';
+import type {Edge, Node} from '@xyflow/react';
 import {describe, it, expect, vi} from 'vitest';
 import {NotificationType} from '../../models/notification';
 import type {StepData} from '../../models/steps';
 import {computeValidationNotifications} from '../computeValidationNotifications';
-import {GRAPH_VALIDATION_RULES, VALIDATION_RULES} from '../validation-rules';
+import {GRAPH_VALIDATION_RULES, SIGN_OUT_GRAPH_VALIDATION_RULES, VALIDATION_RULES} from '../validation-rules';
 
 // Simple mock t function that returns the key
 const t = vi.fn((key: string) => key) as unknown as import('i18next').TFunction;
@@ -585,6 +570,90 @@ describe('computeValidationNotifications', () => {
       const notification = result.get('session_1_SSO_ORPHAN_SESSION')!;
       expect(notification.getType()).toBe(NotificationType.ERROR);
       expect(notification.hasResource('session_1')).toBe(true);
+    });
+  });
+  describe('Sign-out confirmation action rule', () => {
+    const signOutButtonNode = (nodeId: string, buttonId: string): Node =>
+      createNode({
+        id: nodeId,
+        data: {
+          components: [
+            {
+              id: 'block_1',
+              type: 'BLOCK',
+              category: 'BLOCK',
+              components: [
+                {id: buttonId, type: 'ACTION', category: 'ACTION', eventType: 'SUBMIT', actionType: 'CONFIRM'},
+              ],
+            },
+          ],
+        } as unknown as StepData,
+      });
+
+    const signOutExecutorNode = (nodeId: string): Node =>
+      createNode({
+        id: nodeId,
+        data: {action: {executor: {name: 'SessionSignOutExecutor'}}} as unknown as StepData,
+      });
+
+    const edge = (source: string, sourceHandle: string, target: string) =>
+      ({id: `${source}-${target}`, source, sourceHandle, target}) as Edge;
+
+    it('should accept a sign-out button wired to a session sign-out step', () => {
+      const nodes = [signOutButtonNode('prompt_1', 'action_confirm'), signOutExecutorNode('session_signout')];
+      const edges = [edge('prompt_1', 'action_confirm_NEXT', 'session_signout')];
+
+      const result = computeValidationNotifications(nodes, VALIDATION_RULES, t, SIGN_OUT_GRAPH_VALIDATION_RULES, edges);
+
+      expect(result.has('action_confirm_SIGN_OUT_CONFIRM_INVALID_TARGET')).toBe(false);
+      expect(result.has('action_confirm_SIGN_OUT_CONFIRM_NOT_CONNECTED')).toBe(false);
+    });
+
+    it('should report a sign-out button that leads somewhere else', () => {
+      const nodes = [
+        signOutButtonNode('prompt_1', 'action_confirm'),
+        signOutExecutorNode('session_signout'),
+        createNode({id: 'some_other_step'}),
+      ];
+      const edges = [edge('prompt_1', 'action_confirm_NEXT', 'some_other_step')];
+
+      const result = computeValidationNotifications(nodes, VALIDATION_RULES, t, SIGN_OUT_GRAPH_VALIDATION_RULES, edges);
+
+      const notification = result.get('action_confirm_SIGN_OUT_CONFIRM_INVALID_TARGET')!;
+      expect(notification).toBeDefined();
+      // Semantically wrong rather than structurally broken: it must not block
+      // saving, and it highlights the button itself rather than the step.
+      expect(notification.getType()).toBe(NotificationType.WARNING);
+      expect(notification.hasResource('action_confirm')).toBe(true);
+    });
+
+    it('should report a sign-out button with no outgoing connection', () => {
+      const nodes = [signOutButtonNode('prompt_1', 'action_confirm'), signOutExecutorNode('session_signout')];
+
+      const result = computeValidationNotifications(nodes, VALIDATION_RULES, t, SIGN_OUT_GRAPH_VALIDATION_RULES, []);
+
+      const notification = result.get('action_confirm_SIGN_OUT_CONFIRM_NOT_CONNECTED')!;
+      expect(notification).toBeDefined();
+      expect(notification.getType()).toBe(NotificationType.WARNING);
+      expect(notification.hasResource('action_confirm')).toBe(true);
+    });
+
+    it('should ignore buttons that do not raise the sign-out action', () => {
+      const nodes = [
+        createNode({
+          id: 'prompt_1',
+          data: {
+            components: [{id: 'action_next', type: 'ACTION', category: 'ACTION', eventType: 'SUBMIT'}],
+          } as unknown as StepData,
+        }),
+      ];
+
+      const result = computeValidationNotifications(nodes, VALIDATION_RULES, t, SIGN_OUT_GRAPH_VALIDATION_RULES, []);
+
+      // Element-level rules may still report on the button; only the sign-out
+      // rule must stay silent.
+      const signOutIds = [...result.keys()].filter((id) => id.includes('SIGN_OUT_CONFIRM'));
+      expect(signOutIds).toEqual([]);
     });
   });
 });

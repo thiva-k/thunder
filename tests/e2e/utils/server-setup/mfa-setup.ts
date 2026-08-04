@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 /**
  * MFA Setup Utilities
@@ -99,19 +84,8 @@ export class MFASetup {
       }
       const senderId = notificationSenderId.replace("created:", "");
 
-      // Step 3: Create MFA authentication flow
-      const authFlowId = await this.createOrGetMFAAuthFlow(adminToken, senderId);
-      if (authFlowId.startsWith("created:")) {
-        const id = authFlowId.replace("created:", "");
-        console.log(`✓ MFA authentication flow created: ${id}`);
-        cleanupFunctions.push(() => this.deleteFlow(adminToken, id));
-        resourcesCreated.authFlow = true;
-      } else {
-        console.log(`✓ Using existing MFA authentication flow: ${authFlowId}`);
-      }
-      const actualAuthFlowId = authFlowId.replace("created:", "");
-
-      // Step 4: Create MFA registration flow
+      // Step 3: Create MFA registration flow. It is created before the authentication flow because
+      // the authentication flow's call_registration node has to reference this flow's id.
       const regFlowId = await this.createOrGetMFARegistrationFlow(adminToken);
       if (regFlowId.startsWith("created:")) {
         const id = regFlowId.replace("created:", "");
@@ -122,6 +96,18 @@ export class MFASetup {
         console.log(`✓ Using existing MFA registration flow: ${regFlowId}`);
       }
       const actualRegFlowId = regFlowId.replace("created:", "");
+
+      // Step 4: Create MFA authentication flow
+      const authFlowId = await this.createOrGetMFAAuthFlow(adminToken, senderId, actualRegFlowId);
+      if (authFlowId.startsWith("created:")) {
+        const id = authFlowId.replace("created:", "");
+        console.log(`✓ MFA authentication flow created: ${id}`);
+        cleanupFunctions.push(() => this.deleteFlow(adminToken, id));
+        resourcesCreated.authFlow = true;
+      } else {
+        console.log(`✓ Using existing MFA authentication flow: ${authFlowId}`);
+      }
+      const actualAuthFlowId = authFlowId.replace("created:", "");
 
       // Step 5: Create test user
       const userResult = await this.createOrGetTestUser(adminToken);
@@ -136,8 +122,13 @@ export class MFASetup {
       const userId = userResult.replace("created:", "");
 
       // Step 6: Update application with MFA flows
-      const actualAppId = await this.updateApplicationFlows(adminToken, actualAuthFlowId, actualRegFlowId);
+      const { appId: actualAppId, originalFlows } = await this.updateApplicationFlows(
+        adminToken,
+        actualAuthFlowId,
+        actualRegFlowId
+      );
       console.log(`✓ Application updated with MFA flows`);
+      cleanupFunctions.push(() => this.revertApplicationFlows(adminToken, actualAppId, originalFlows));
       console.log("=== MFA Setup Completed ===\n");
 
       return {
@@ -297,16 +288,22 @@ export class MFASetup {
   /**
    * Create or get existing MFA authentication flow
    */
-  private async createOrGetMFAAuthFlow(adminToken: string, senderId: string): Promise<string> {
+  private async createOrGetMFAAuthFlow(
+    adminToken: string,
+    senderId: string,
+    registrationFlowId: string
+  ): Promise<string> {
     const flowHandle = "e2e-mfa-auth-flow";
+    const flowName = "E2E MFA Authentication Flow";
+    const nodes = this.getMFAFlowNodes(senderId, registrationFlowId);
 
     const response = await this.request.post(`${this.config.serverUrl}/flows`, {
       data: {
         handle: flowHandle,
-        name: "E2E MFA Authentication Flow",
+        name: flowName,
         flowType: "AUTHENTICATION",
         activeVersion: 3,
-        nodes: this.getMFAFlowNodes(senderId),
+        nodes,
       },
       headers: {
         Authorization: `Bearer ${adminToken}`,
@@ -323,11 +320,40 @@ export class MFASetup {
     // Check if it's a duplicate error
     const errorText = await response.text();
     if (errorText.includes("duplicate") || errorText.includes("already exists") || response.status() === 409) {
-      const existingId = await this.getExistingFlow(adminToken, flowHandle);
+      const existingId = await this.getExistingFlow(adminToken, flowHandle, "AUTHENTICATION");
+      // A leftover flow from an earlier run still points its call_registration node at that run's
+      // registration flow, which no longer matches the one just created. Overwrite its nodes so the
+      // reused flow references the current registration flow.
+      await this.updateFlowNodes(adminToken, existingId, flowHandle, flowName, "AUTHENTICATION", nodes);
       return existingId; // Return without "created:" prefix
     }
 
     throw new Error(`Failed to create MFA authentication flow: ${errorText}`);
+  }
+
+  /**
+   * Overwrite an existing flow's node definitions.
+   */
+  private async updateFlowNodes(
+    adminToken: string,
+    flowId: string,
+    handle: string,
+    name: string,
+    flowType: string,
+    nodes: any[]
+  ): Promise<void> {
+    const response = await this.request.put(`${this.config.serverUrl}/flows/${flowId}`, {
+      data: { handle, name, flowType, nodes },
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        "Content-Type": "application/json",
+      },
+      ignoreHTTPSErrors: true,
+    });
+
+    if (!response.ok()) {
+      throw new Error(`Failed to update flow ${flowId}: ${await response.text()}`);
+    }
   }
 
   /**
@@ -341,7 +367,6 @@ export class MFASetup {
         handle: flowHandle,
         name: "E2E MFA Registration Flow",
         flowType: "REGISTRATION",
-        activeVersion: 2,
         nodes: this.getMFARegistrationFlowNodes(),
       },
       headers: {
@@ -490,13 +515,26 @@ export class MFASetup {
   }
 
   /**
-   * Update application with MFA authentication and registration flows
+   * Update application with MFA authentication and registration flows.
+   * Returns the app id together with its prior flow bindings
    */
   private async updateApplicationFlows(
     adminToken: string,
     authFlowId: string,
     registrationFlowId: string
-  ): Promise<string> {
+  ): Promise<{
+    appId: string;
+    originalFlows: {
+      authFlowId: string;
+      registrationFlowId: string;
+      recoveryFlowId: string | null;
+      isRegistrationFlowEnabled: boolean;
+    };
+  }> {
+    if (!authFlowId || !registrationFlowId) {
+      throw new Error(`Cannot update application flows: missing ${!authFlowId ? "authFlowId" : "registrationFlowId"}`);
+    }
+
     // First, get all applications and find the one with clientId = "REACT_SDK_SAMPLE"
     const listResponse = await this.request.get(`${this.config.serverUrl}/applications`, {
       headers: {
@@ -531,12 +569,20 @@ export class MFASetup {
     }
 
     const appData = await getResponse.json();
+    const originalFlows = {
+      authFlowId: appData.authFlowId,
+      registrationFlowId: appData.registrationFlowId,
+      recoveryFlowId: appData.recoveryFlowId ?? null,
+      isRegistrationFlowEnabled: appData.isRegistrationFlowEnabled,
+    };
 
-    // Update with new flow IDs
+    // Update with new flow IDs. recoveryFlowId is cleared to avoid conflicts
+    // with MFA registration flow, and isRegistrationFlowEnabled is set to true.
     const updatedApp = {
       ...appData,
       authFlowId: authFlowId,
       registrationFlowId: registrationFlowId,
+      recoveryFlowId: null,
       isRegistrationFlowEnabled: true,
     };
 
@@ -553,7 +599,58 @@ export class MFASetup {
       throw new Error(`Failed to update application: ${await updateResponse.text()}`);
     }
 
-    return actualAppId;
+    return { appId: actualAppId, originalFlows };
+  }
+
+  /**
+   * Restore an application's flow bindings to what they were before MFA setup rewired them.
+   */
+  private async revertApplicationFlows(
+    adminToken: string,
+    appId: string,
+    originalFlows: {
+      authFlowId: string;
+      registrationFlowId: string;
+      recoveryFlowId: string | null;
+      isRegistrationFlowEnabled: boolean;
+    }
+  ): Promise<void> {
+    // This runs during cleanup (afterAll), where the beforeAll-scoped `this.request` fixture
+    // can no longer be used, so a fresh request context is created here (as the other cleanup
+    // methods below already do).
+    let requestContext: APIRequestContext | null = null;
+    try {
+      requestContext = await playwrightRequest.newContext({ ignoreHTTPSErrors: true });
+
+      const getResponse = await requestContext.get(`${this.config.serverUrl}/applications/${appId}`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
+
+      if (!getResponse.ok()) {
+        console.log(`⚠️  Could not fetch application for revert: ${await getResponse.text()}`);
+        return;
+      }
+
+      const appData = await getResponse.json();
+      const revertedApp = { ...appData, ...originalFlows };
+
+      const updateResponse = await requestContext.put(`${this.config.serverUrl}/applications/${appId}`, {
+        data: revertedApp,
+        headers: { Authorization: `Bearer ${adminToken}`, "Content-Type": "application/json" },
+      });
+
+      if (updateResponse.ok()) {
+        console.log(`✓ Application flows reverted: ${appId}`);
+      } else {
+        console.log(`⚠️  Could not revert application flows: ${await updateResponse.text()}`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Error reverting application flows: ${error}`);
+    } finally {
+      if (requestContext) {
+        await requestContext.dispose();
+      }
+    }
   }
 
   /**
@@ -567,14 +664,11 @@ export class MFASetup {
         ignoreHTTPSErrors: true,
       });
 
-      const response = await requestContext.delete(
-        `${this.config.serverUrl}/connections/sms-gateway/${senderId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${adminToken}`,
-          },
-        }
-      );
+      const response = await requestContext.delete(`${this.config.serverUrl}/connections/sms-gateway/${senderId}`, {
+        headers: {
+          Authorization: `Bearer ${adminToken}`,
+        },
+      });
 
       if (response.ok()) {
         console.log(`✓ Notification sender deleted: ${senderId}`);
@@ -653,13 +747,19 @@ export class MFASetup {
   }
 
   /**
-   * Get MFA flow node definitions with senderId injected
+   * Get MFA flow node definitions with senderId and registration flow id injected.
+   *
+   * The auth flow's `call_registration` node must target the same registration flow the application
+   * is bound to, otherwise the server rejects the application update with APP-1039
+   * ("Conflicting flow references"), so the id is templated in rather than hardcoded.
    */
-  private getMFAFlowNodes(senderId: string): any[] {
-    // Deep clone the template and replace senderId placeholder
+  private getMFAFlowNodes(senderId: string, registrationFlowId: string): any[] {
+    // Deep clone the template and replace the placeholders
     const nodesJson = JSON.stringify(mfaFlowNodesTemplate);
-    const nodesWithSenderId = nodesJson.replace(/\{\{SENDER_ID\}\}/g, senderId);
-    return JSON.parse(nodesWithSenderId);
+    const nodesWithPlaceholders = nodesJson
+      .replace(/\{\{SENDER_ID\}\}/g, senderId)
+      .replace(/\{\{REGISTRATION_FLOW_ID\}\}/g, registrationFlowId);
+    return JSON.parse(nodesWithPlaceholders);
   }
 
   /**

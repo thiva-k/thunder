@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2025, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2025 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import type {Edge, Node} from '@xyflow/react';
 import generateResourceId from './generateResourceId';
@@ -94,6 +79,12 @@ interface FlowInput {
 interface FlowAction {
   ref: string;
   nextNode: string;
+  /**
+   * Semantic action type forwarded by the prompt node to the next executor
+   * (e.g. `CONFIRM`, which tells the session sign-out executor the End-User
+   * has confirmed).
+   */
+  type?: string;
   executor?: {
     name: string;
     [key: string]: unknown;
@@ -373,6 +364,13 @@ function extractPrompts(components: Element[], nodeId: string, edges: Edge[]): F
 
       if (component.action?.executor) {
         action.executor = component.action.executor as {name: string; [key: string]: unknown};
+      }
+
+      // Authored on the button itself, so it survives the connection being
+      // redrawn; a prompt action only exists once the button is wired, which
+      // the `nextNode` guard below enforces.
+      if (component.actionType) {
+        action.type = component.actionType;
       }
 
       return action.nextNode ? action : undefined;

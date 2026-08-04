@@ -26,7 +26,7 @@ The Model Context Protocol (MCP) connects AI agents to tools and data sources th
 
 ## Securing MCP Journey
 
-Securing MCP requires two pieces working together: an MCP server that enforces access decisions at the tool boundary, and a way to govern which MCP clients are allowed to connect at all. The patterns below cover those two responsibilities.
+Securing MCP requires an MCP server that enforces access decisions at the tool boundary and a way to govern which MCP clients are allowed to connect at all. The patterns below cover these responsibilities.
 
 ### Protect Your MCP Server
 
@@ -79,6 +79,10 @@ The token the MCP server validates identifies both the user or agent on whose be
 ### Credential Lifecycle
 
 Each registered MCP client has its own credentials. Rotate them on a schedule, revoke immediately when a client is decommissioned, and apply the same hygiene to dynamically registered clients once they're in use. Because each MCP client is a distinct identity, revoking one does not affect any other client's ability to operate.
+
+## Enterprise-Managed Authorization
+
+Enterprises that already centralize access decisions in their identity provider can extend that same model to MCP. <ProductName /> supports the ID-JAG grant that the [Enterprise-Managed Authorization (EMA)](../enterprise-managed-authorization) extension builds on, letting the enterprise IdP authorize MCP client access before the MCP server ever sees the request.
 
 ## Next Steps
 

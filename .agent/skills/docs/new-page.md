@@ -86,7 +86,7 @@ For `docsSidebar`:
 | File path starts with | Section |
 |---|---|
 | `getting-started/` | **Get Started** |
-| `working-with-ai/` | **Working with AI** |
+| `working-with-ai/` | **Build with AI** |
 | `use-cases/` | **Use Cases** |
 | `guides/` | **Guides** |
 | `key-concepts/` | **Key Concepts** |

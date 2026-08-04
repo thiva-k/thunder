@@ -1,20 +1,5 @@
-/*
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 // Package providers provides interfaces for the providers module.
 package providers
@@ -273,4 +258,31 @@ type Transactioner interface {
 	// If a transaction already exists in the context, it reuses it.
 	// Otherwise, it creates a new transaction and commits/rolls back automatically.
 	Transact(ctx context.Context, txFunc func(context.Context) error) error
+}
+
+// RuntimeCryptoProvider provides asymmetric cryptographic operations including
+// encryption, decryption, signing, verification, and key discovery.
+type RuntimeCryptoProvider interface {
+	//	 Encrypt encrypts the given content using the specified key reference, algorithm, and parameters.
+	Encrypt(ctx context.Context, keyRef *KeyRef, algorithm string, params map[string]interface{},
+		content []byte) ([]byte, *CryptoDetails, error)
+
+	// Decrypt decrypts the given content using the specified key reference, algorithm, and parameters.
+	Decrypt(ctx context.Context, keyRef *KeyRef, algorithm string, params map[string]interface{},
+		content []byte) ([]byte, error)
+
+	// Sign signs the given content using the specified key reference and algorithm.
+	Sign(ctx context.Context, keyRef KeyRef, alg string, content []byte) ([]byte, error)
+
+	// Verify verifies the signature of the given content using the specified key reference and algorithm.
+	Verify(ctx context.Context, keyRef KeyRef, alg string, content, signature []byte) error
+
+	// GetPublicKeys retrieves public keys based on the provided filter criteria.
+	GetPublicKeys(ctx context.Context, filter PublicKeyFilter) ([]PublicKeyInfo, error)
+
+	// GetSupportedSigningAlgorithms returns the list of signing algorithms supported by Sign and Verify.
+	GetSupportedSigningAlgorithms() []string
+
+	// GetSupportedEncryptionAlgorithms returns the list of algorithms supported by Encrypt and Decrypt.
+	GetSupportedEncryptionAlgorithms() []string
 }

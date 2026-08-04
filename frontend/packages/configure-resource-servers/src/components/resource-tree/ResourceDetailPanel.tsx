@@ -1,20 +1,5 @@
-/**
- * Copyright (c) 2026, WSO2 LLC. (https://www.wso2.com).
- *
- * WSO2 LLC. licenses this file to you under the Apache License,
- * Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations
- * under the License.
- */
+// Copyright 2026 The ThunderID Authors
+// SPDX-License-Identifier: Apache-2.0
 
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
@@ -34,7 +19,7 @@ import {
   Typography,
 } from '@wso2/oxygen-ui';
 import {Check, Copy} from '@wso2/oxygen-ui-icons-react';
-import {useCallback, useState, type JSX} from 'react';
+import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {PANEL_HEADER_ROW_HEIGHT} from './constants';
 import type {SelectedNode} from './ResourceTree';
@@ -76,8 +61,19 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
   const [name, setName] = useState(initial.name);
   const [description, setDescription] = useState(initial.description);
   const [identifier, setIdentifier] = useState(initial.identifier);
-  const [dirty, setDirty] = useState(false);
+  // Snapshot to compare current field values against — advanced on mount, Save, and Discard —
+  // so typing a value back to its original clears the bar instead of a one-way "touched" flag.
+  const [baseline, setBaseline] = useState(initial);
   const [copiedPermission, setCopiedPermission] = useState(false);
+
+  const dirty = useMemo(() => {
+    const norm = (v: string): string => v.trim();
+    return (
+      norm(name) !== norm(baseline.name) ||
+      norm(description) !== norm(baseline.description) ||
+      norm(identifier) !== norm(baseline.identifier)
+    );
+  }, [name, description, identifier, baseline]);
 
   const updateRs = useUpdateResourceServer();
   const updateResource = useUpdateResource(resourceServer.id);
@@ -88,12 +84,10 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
   );
 
   const resetForm = useCallback(() => {
-    const vals = deriveInitialValues(selectedNode);
-    setName(vals.name);
-    setDescription(vals.description);
-    setIdentifier(vals.identifier);
-    setDirty(false);
-  }, [selectedNode]);
+    setName(baseline.name);
+    setDescription(baseline.description);
+    setIdentifier(baseline.identifier);
+  }, [baseline]);
 
   const handleSave = (): void => {
     if (selectedNode.type === 'server') {
@@ -111,7 +105,7 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
         {
           onSuccess: () => {
             showToast(t('resourceServers:detail.saved', 'Changes saved.'), 'success');
-            setDirty(false);
+            setBaseline({name, description, identifier: nextIdentifier});
             onRefresh();
           },
           onError: (err: Error) => {
@@ -126,7 +120,7 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
         {
           onSuccess: () => {
             showToast(t('resourceServers:detail.saved', 'Changes saved.'), 'success');
-            setDirty(false);
+            setBaseline((prev) => ({...prev, name, description}));
             onRefresh();
           },
           onError: (err: Error) => {
@@ -142,7 +136,7 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
         {
           onSuccess: () => {
             showToast(t('resourceServers:detail.saved', 'Changes saved.'), 'success');
-            setDirty(false);
+            setBaseline((prev) => ({...prev, name, description}));
             onRefresh();
           },
           onError: (err: Error) => {
@@ -183,7 +177,6 @@ function DetailForm({selectedNode, resourceServer, onRefresh}: DetailFormProps):
 
   const handleField = (setter: (v: string) => void) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setter(e.target.value);
-    setDirty(true);
   };
 
   const isMcpNonServer = resourceServer.type === 'MCP' && selectedNode.type !== 'server';
