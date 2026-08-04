@@ -2920,6 +2920,7 @@ func TestUserService_DeleteUser_BlockedByOwnedAgent(t *testing.T) {
 	err := service.DeleteUser(context.Background(), userID)
 	require.NotNil(t, err)
 	require.Equal(t, ErrorUserHasBlockingDependencies.Code, err.Code)
+	require.NotEmpty(t, err.ErrorDescription.Params["dependencies"])
 	storeMock.AssertNotCalled(t, "DeleteEntity", mock.Anything, mock.Anything)
 }
 

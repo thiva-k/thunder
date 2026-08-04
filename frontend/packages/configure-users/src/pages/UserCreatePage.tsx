@@ -11,6 +11,8 @@ import {
   type InviteUserRenderProps,
 } from '@thunderid/react';
 import {
+  Alert,
+  AlertTitle,
   Box,
   Stack,
   Typography,
@@ -30,6 +32,7 @@ import {useState, useCallback, useEffect, useRef} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
 import useUserRoutes from '../hooks/useUserRoutes';
+import getUserErrorMessage from '../utils/getUserErrorMessage';
 
 const ONBOARDING_MODE_CREATE_ACTION_ID = 'action_create_user_now';
 
@@ -45,9 +48,13 @@ type FlowSubComponent = EmbeddedFlowComponent & {
 
 function UserCreateStepContent({
   renderProps,
+  error,
+  onFieldChange,
   onStepLabelChange,
 }: {
   renderProps: InviteUserRenderProps;
+  error: string | null;
+  onFieldChange: () => void;
   onStepLabelChange: (label: string) => void;
 }): JSX.Element {
   const {resolveFlowTemplateLiterals: rawResolve} = useThunderID();
@@ -80,7 +87,14 @@ function UserCreateStepContent({
     }
   }, [stepLabel, resolve, t, onStepLabelChange]);
 
-  const {values, additionalData, handleInputChange} = renderProps;
+  const {values, additionalData, handleInputChange: rawHandleInputChange} = renderProps;
+  const handleInputChange = useCallback(
+    (name: string, value: string) => {
+      onFieldChange(); // a create failure is stale once the form changes
+      rawHandleInputChange(name, value);
+    },
+    [rawHandleInputChange, onFieldChange],
+  );
 
   const renderComponent = (component: EmbeddedFlowComponent, index: number): JSX.Element | null => {
     // Render text components
@@ -239,6 +253,12 @@ function UserCreateStepContent({
 
   return (
     <Stack direction="column" spacing={4}>
+      {error && (
+        <Alert severity="error">
+          <AlertTitle>{t('users:errors.failed.title', 'Error')}</AlertTitle>
+          {error}
+        </Alert>
+      )}
       {components?.map((component: EmbeddedFlowComponent, index: number) => renderComponent(component, index))}
     </Stack>
   );
@@ -250,6 +270,7 @@ export default function UserCreatePage(): JSX.Element {
   const routes = useUserRoutes();
   const logger = useLogger('UserCreatePage');
   const [breadcrumbs, setBreadcrumbs] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const handleClose = useCallback(() => {
     Promise.resolve(navigate(routes.list())).catch((err: unknown) => {
@@ -262,6 +283,21 @@ export default function UserCreatePage(): JSX.Element {
       setBreadcrumbs([t('users:addUser', 'Add User'), label]);
     },
     [t],
+  );
+
+  const handleError = useCallback(
+    (err: Error) => {
+      logger.error('Failed to create user', {error: err});
+      setError(
+        getUserErrorMessage(
+          err,
+          (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+          'errors.failed.description',
+          'An error occurred. Please try again.',
+        ),
+      );
+    },
+    [logger, t],
   );
 
   return (
@@ -316,9 +352,14 @@ export default function UserCreatePage(): JSX.Element {
                 flexDirection: 'column',
               }}
             >
-              <InviteUser>
+              <InviteUser onError={handleError}>
                 {(renderProps: InviteUserRenderProps) => (
-                  <UserCreateStepContent renderProps={renderProps} onStepLabelChange={handleStepLabelChange} />
+                  <UserCreateStepContent
+                    renderProps={renderProps}
+                    error={error}
+                    onFieldChange={() => setError(null)}
+                    onStepLabelChange={handleStepLabelChange}
+                  />
                 )}
               </InviteUser>
             </Box>

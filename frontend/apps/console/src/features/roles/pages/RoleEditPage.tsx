@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useIsMutating} from '@tanstack/react-query';
-import {PageLoadingAnimation} from '@thunderid/components';
+import {PageLoadingAnimation, UnsavedChangesBar} from '@thunderid/components';
 import {arePermissionsEqual, type ResourcePermissions} from '@thunderid/configure-resource-servers';
-import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -13,15 +12,15 @@ import {
   Typography,
   Button,
   TextField,
-  Paper,
   Alert,
   IconButton,
   Tabs,
   Tab,
   PageContent,
   PageTitle,
+  ListingTable,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
+import {AlertCircle, ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useMemo} from 'react';
 import type {ReactNode, SyntheticEvent, JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -60,7 +59,6 @@ export default function RoleEditPage(): JSX.Element {
   const navigate = useNavigate();
   const {t} = useTranslation('roles');
   const logger = useLogger('RoleEditPage');
-  const {showToast} = useToast();
 
   const {data: role, isLoading, error: fetchError, refetch} = useGetRole(roleId ?? '');
   const updateRole = useUpdateRole();
@@ -83,14 +81,19 @@ export default function RoleEditPage(): JSX.Element {
     setActiveTab(newValue);
   };
 
-  const handleFieldChange = useCallback((field: keyof Role, value: unknown): void => {
-    setEditedRole((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof Role, value: unknown): void => {
+      updateRole.reset(); // a save error is stale once the form changes
+      setEditedRole((prev) => ({...prev, [field]: value}));
+    },
+    [updateRole],
+  );
 
   const serverPermissions = useMemo(() => role?.permissions ?? [], [role]);
 
   const handlePermissionsChange = useCallback(
     (next: ResourcePermissions[]): void => {
+      updateRole.reset(); // a save error is stale once the form changes
       setEditedRole((prev) => {
         if (arePermissionsEqual(next, serverPermissions)) {
           const {permissions: _permissions, ...rest} = prev;
@@ -100,7 +103,7 @@ export default function RoleEditPage(): JSX.Element {
         return {...prev, permissions: next};
       });
     },
-    [serverPermissions],
+    [serverPermissions, updateRole],
   );
 
   const handleSave = useCallback(async (): Promise<void> => {
@@ -119,10 +122,8 @@ export default function RoleEditPage(): JSX.Element {
       await refetch();
     } catch (err: unknown) {
       logger.error('Failed to update role', {error: err});
-      const error = err instanceof Error ? err : new Error(String(err));
-      showToast(getErrorMessage(error, t, 'update.error'), 'error');
     }
-  }, [role, roleId, editedRole, updateRole, refetch, logger, showToast, t]);
+  }, [role, roleId, editedRole, updateRole, refetch, logger]);
 
   const hasChanges = useMemo(
     () => Object.entries(editedRole).some(([key, value]) => !isEqualIgnoringEmpty(value, role?.[key as keyof Role])),
@@ -146,19 +147,27 @@ export default function RoleEditPage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {fetchError.message ?? t('edit.page.error', 'Failed to load role')}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch((error: unknown) => {
-              logger.error('Failed to navigate back', {error});
-            });
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('edit.page.back', 'Back to Roles')}
-        </Button>
+        <ListingTable.EmptyState
+          illustration={<AlertCircle size={40} />}
+          title={getErrorMessage(fetchError, t, 'edit.page.error', 'Failed to load role')}
+          action={
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <Button variant="outlined" onClick={() => void refetch()}>
+                {t('common:actions.refresh', 'Refresh')}
+              </Button>
+              <Button
+                onClick={() => {
+                  handleBack().catch((error: unknown) => {
+                    logger.error('Failed to navigate back', {error});
+                  });
+                }}
+                startIcon={<ArrowLeft size={16} />}
+              >
+                {t('edit.page.back', 'Back to Roles')}
+              </Button>
+            </Stack>
+          }
+        />
       </PageContent>
     );
   }
@@ -349,66 +358,28 @@ export default function RoleEditPage(): JSX.Element {
 
       {/* Floating Action Bar */}
       {hasChanges && (
-        <Paper
-          sx={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
-            borderRadius: '12px 12px 0 0',
-            boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.1)',
-            zIndex: 1000,
-            bgcolor: 'background.paper',
+        <UnsavedChangesBar
+          message={t('edit.page.unsavedChanges', 'You have unsaved changes')}
+          resetLabel={t('edit.page.reset', 'Reset')}
+          saveLabel={t('edit.page.save', 'Save Changes')}
+          savingLabel={t('edit.page.saving', 'Saving...')}
+          isSaving={updateRole.isPending}
+          saveDisabled={isRoleUpdating || role.isReadOnly === true}
+          error={
+            updateRole.error
+              ? getErrorMessage(updateRole.error, t, 'update.error', 'Failed to update role. Please try again.')
+              : undefined
+          }
+          onReset={() => {
+            updateRole.reset();
+            setEditedRole({});
           }}
-        >
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Typography variant="body2" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-              <Box
-                component="span"
-                sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: 'warning.main',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                }}
-              >
-                !
-              </Box>
-              {t('edit.page.unsavedChanges', 'You have unsaved changes')}
-            </Typography>
-            <Button
-              variant="outlined"
-              color="error"
-              onClick={() => {
-                setEditedRole({});
-              }}
-            >
-              {t('edit.page.reset', 'Reset')}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => {
-                handleSave().catch(() => {
-                  /* noop */
-                });
-              }}
-              disabled={updateRole.isPending || isRoleUpdating || role.isReadOnly === true}
-            >
-              {updateRole.isPending ? t('edit.page.saving', 'Saving...') : t('edit.page.save', 'Save Changes')}
-            </Button>
-          </Stack>
-        </Paper>
+          onSave={() => {
+            handleSave().catch(() => {
+              /* noop */
+            });
+          }}
+        />
       )}
     </PageContent>
   );

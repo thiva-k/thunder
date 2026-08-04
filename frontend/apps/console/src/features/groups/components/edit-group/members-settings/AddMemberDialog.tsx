@@ -6,6 +6,7 @@ import type {BasicApplication} from '@thunderid/configure-applications';
 import {useGetUsers} from '@thunderid/configure-users';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import type {User} from '@thunderid/types';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Dialog,
   DialogTitle,
@@ -33,12 +34,25 @@ interface AddMemberDialogProps {
   open: boolean;
   onClose: () => void;
   onAdd: (members: Member[]) => void;
+  /** Inline error shown in the dialog when the last add attempt failed. */
+  error?: string | null;
+  /** Called when the tab or a selection changes, so the parent can clear a stale error. */
+  onErrorDismiss?: () => void;
+  /** Whether the add mutation is in flight, so the confirm button can show progress. */
+  isSubmitting?: boolean;
 }
 
 /**
  * Dialog for searching and adding user or app members to a group.
  */
-export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogProps): JSX.Element {
+export default function AddMemberDialog({
+  open,
+  onClose,
+  onAdd,
+  error = null,
+  onErrorDismiss = undefined,
+  isSubmitting = false,
+}: AddMemberDialogProps): JSX.Element {
   const {t} = useTranslation();
   const theme = useTheme();
   const dataGridLocaleText = useDataGridLocaleText();
@@ -273,13 +287,16 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
       ...[...appSelectionModel.ids].map((id) => ({id: String(id), type: 'app' as const})),
       ...[...agentSelectionModel.ids].map((id) => ({id: String(id), type: 'agent' as const})),
     ];
+    // Selections are deliberately left as-is here: the dialog unmounts on a successful add (the
+    // parent closes it), and on failure the user needs their selection intact to retry.
     onAdd(newMembers);
-    setUserSelectionModel({type: 'include', ids: new Set()});
-    setAppSelectionModel({type: 'include', ids: new Set()});
-    setAgentSelectionModel({type: 'include', ids: new Set()});
   }, [userSelectionModel, appSelectionModel, agentSelectionModel, onAdd]);
 
   const handleClose = (): void => {
+    // Also reached via Escape and backdrop clicks, so guard the in-flight case here rather than
+    // only disabling Cancel: closing mid-request would discard the selection needed to retry.
+    if (isSubmitting) return;
+
     setUserSelectionModel({type: 'include', ids: new Set()});
     setAppSelectionModel({type: 'include', ids: new Set()});
     setAgentSelectionModel({type: 'include', ids: new Set()});
@@ -290,6 +307,7 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
 
   const handleTabChange = (_event: SyntheticEvent, tab: number): void => {
     setActiveTab(tab);
+    onErrorDismiss?.();
   };
 
   return (
@@ -306,7 +324,12 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
           <>
             {usersError && !usersLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {usersError.message ?? t('groups:addMember.fetchError')}
+                {getErrorMessage(
+                  usersError,
+                  t,
+                  'groups:addMember.fetchError',
+                  'Failed to load users. Please try again.',
+                )}
               </Alert>
             )}
             {!usersError && users.length === 0 && !usersLoading && (
@@ -325,6 +348,7 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
                 rowSelectionModel={userSelectionModel}
                 onRowSelectionModelChange={(newSelection) => {
                   setUserSelectionModel(newSelection);
+                  onErrorDismiss?.();
                 }}
                 paginationMode="server"
                 rowCount={usersData?.totalResults ?? 0}
@@ -342,7 +366,12 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
           <>
             {appsError && !appsLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {appsError.message ?? t('groups:addMember.fetchAppsError')}
+                {getErrorMessage(
+                  appsError,
+                  t,
+                  'groups:addMember.fetchAppsError',
+                  'Failed to load apps. Please try again.',
+                )}
               </Alert>
             )}
             {!appsError && applications.length === 0 && !appsLoading && (
@@ -361,6 +390,7 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
                 rowSelectionModel={appSelectionModel}
                 onRowSelectionModelChange={(newSelection) => {
                   setAppSelectionModel(newSelection);
+                  onErrorDismiss?.();
                 }}
                 paginationMode="server"
                 rowCount={appsData?.totalResults ?? 0}
@@ -378,7 +408,12 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
           <>
             {agentsError && !agentsLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {agentsError.message ?? t('groups:addMember.fetchAgentsError', 'Failed to load agents')}
+                {getErrorMessage(
+                  agentsError,
+                  t,
+                  'groups:addMember.fetchAgentsError',
+                  'Failed to load agents. Please try again.',
+                )}
               </Alert>
             )}
             {!agentsError && agents.length === 0 && !agentsLoading && (
@@ -397,6 +432,7 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
                 rowSelectionModel={agentSelectionModel}
                 onRowSelectionModelChange={(newSelection) => {
                   setAgentSelectionModel(newSelection);
+                  onErrorDismiss?.();
                 }}
                 paginationMode="server"
                 rowCount={agentsData?.totalResults ?? 0}
@@ -410,10 +446,17 @@ export default function AddMemberDialog({open, onClose, onAdd}: AddMemberDialogP
           </>
         )}
       </DialogContent>
+      {error && (
+        <Box sx={{px: 3, pt: 2}}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      )}
       <DialogActions>
-        <Button onClick={handleClose}>{t('common:actions.cancel')}</Button>
-        <Button variant="contained" onClick={handleAdd} disabled={totalSelected === 0}>
-          {t('groups:addMember.add')}
+        <Button onClick={handleClose} disabled={isSubmitting}>
+          {t('common:actions.cancel', 'Cancel')}
+        </Button>
+        <Button variant="contained" onClick={handleAdd} disabled={totalSelected === 0 || isSubmitting}>
+          {t('groups:addMember.add', 'Add Selected')}
         </Button>
       </DialogActions>
     </Dialog>

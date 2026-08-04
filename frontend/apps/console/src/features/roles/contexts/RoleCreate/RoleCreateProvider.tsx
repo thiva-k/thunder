@@ -28,6 +28,19 @@ export default function RoleCreateProvider({children}: PropsWithChildren) {
   const [error, setError] = useState<string | null>(INITIAL_STATE.error);
   const [permissions, setPermissions] = useState<ResourcePermissions[]>(INITIAL_STATE.permissions);
 
+  // A create failure goes stale the moment any wizard input changes, so any edit clears it.
+  // currentStep is deliberately excluded: stepping back and forth is navigation, not a field edit.
+  // Adjusted during render (React's documented pattern for state that must stay in sync with
+  // another value) rather than in an effect, since a useEffect here would run a fully committed
+  // render with the stale error still visible before clearing it a tick later.
+  const formFingerprint = JSON.stringify([name, ouId, permissions]);
+  const [prevFormFingerprint, setPrevFormFingerprint] = useState(formFingerprint);
+
+  if (formFingerprint !== prevFormFingerprint) {
+    setPrevFormFingerprint(formFingerprint);
+    setError(null);
+  }
+
   const reset = useCallback((): void => {
     setCurrentStep(INITIAL_STATE.currentStep);
     setName(INITIAL_STATE.name);

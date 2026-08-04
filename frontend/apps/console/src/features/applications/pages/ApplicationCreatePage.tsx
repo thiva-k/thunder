@@ -658,7 +658,7 @@ export default function ApplicationCreatePage(): JSX.Element {
         setError(
           getApplicationErrorMessage(
             err,
-            (key, options) => t(`applications:${key}`, options),
+            (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
             'create.error',
             'Failed to create application. Please try again.',
           ),

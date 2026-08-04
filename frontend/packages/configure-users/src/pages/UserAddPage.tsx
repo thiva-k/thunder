@@ -44,6 +44,7 @@ import {useNavigate} from 'react-router';
 import {z} from 'zod';
 import CredentialFieldInput from '../components/CredentialFieldInput';
 import useUserRoutes from '../hooks/useUserRoutes';
+import getUserErrorMessage from '../utils/getUserErrorMessage';
 
 /** Typed shape for flow sub-components */
 type FlowSubComponent = EmbeddedFlowComponent & {
@@ -159,11 +160,13 @@ function InviteUserStepContent({
   flowError,
   handleClose,
   onResetLocalState,
+  onClearFlowError,
 }: {
   renderProps: InviteUserRenderProps;
   flowError: string | null;
   handleClose: () => void;
   onResetLocalState: () => void;
+  onClearFlowError: () => void;
 }): JSX.Element {
   const {
     additionalData,
@@ -180,6 +183,16 @@ function InviteUserStepContent({
   const resolve = useCallback((text?: string) => (text ? rawResolve(text) : undefined), [rawResolve]);
   const {t} = useTranslation();
   const [activeActionId, setActiveActionId] = useState<string | null>(null);
+
+  // A submit failure is stale once the user edits a field. Only user-driven edits clear it: the
+  // automatic organization unit prefill below keeps the raw handler so it cannot wipe a fresh error.
+  const handleUserInputChange = useCallback(
+    (field: string, value: string): void => {
+      onClearFlowError();
+      handleInputChange(field, value);
+    },
+    [handleInputChange, onClearFlowError],
+  );
 
   const buildFormSchema = useMemo(
     () =>
@@ -538,7 +551,12 @@ function InviteUserStepContent({
       <Box>
         <Alert severity="error" sx={{mb: 2}}>
           <AlertTitle>{t('users:errors.failed.title', 'Error')}</AlertTitle>
-          {error.message ?? t('users:errors.failed.description', 'An error occurred.')}
+          {getUserErrorMessage(
+            error,
+            (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+            'errors.failed.description',
+            'An error occurred. Please try again.',
+          )}
         </Alert>
         <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
           <Button variant="outlined" onClick={handleClose}>
@@ -561,7 +579,14 @@ function InviteUserStepContent({
       {(flowError ?? error) && (
         <Alert severity="error" sx={{mb: 2}}>
           <AlertTitle>{t('users:errors.failed.title', 'Error')}</AlertTitle>
-          {flowError ?? error?.message ?? t('users:errors.failed.description', 'An error occurred.')}
+          {flowError ??
+            (error &&
+              getUserErrorMessage(
+                error,
+                (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+                'errors.failed.description',
+                'An error occurred. Please try again.',
+              ))}
         </Alert>
       )}
       <Stack direction="column" spacing={4}>
@@ -641,7 +666,14 @@ function InviteUserStepContent({
                 sx={{display: 'flex', flexDirection: 'column', width: '100%', gap: 2}}
               >
                 {blockComponents.map((subComponent, compIndex) => {
-                  const field = renderFormField(subComponent, compIndex, control, errors, isLoading, handleInputChange);
+                  const field = renderFormField(
+                    subComponent,
+                    compIndex,
+                    control,
+                    errors,
+                    isLoading,
+                    handleUserInputChange,
+                  );
                   if (field) return field;
 
                   // STACK — render action children side by side
@@ -841,6 +873,7 @@ function InviteUserFlowBridge({
   onInviteComplete,
   onOuStepDetected,
   onResetLocalState,
+  onClearFlowError,
   onResetFlowAvailable = undefined,
 }: {
   renderProps: InviteUserRenderProps;
@@ -850,6 +883,7 @@ function InviteUserFlowBridge({
   onInviteComplete: () => void;
   onOuStepDetected: () => void;
   onResetLocalState: () => void;
+  onClearFlowError: () => void;
   onResetFlowAvailable?: (resetFn: () => void) => void;
 }): JSX.Element {
   const {resolveFlowTemplateLiterals: rawResolve} = useThunderID();
@@ -898,6 +932,7 @@ function InviteUserFlowBridge({
       flowError={flowError}
       handleClose={handleClose}
       onResetLocalState={onResetLocalState}
+      onClearFlowError={onClearFlowError}
     />
   );
 }
@@ -957,6 +992,10 @@ export default function UserAddPage(): JSX.Element {
     setHasOuStep(true);
   }, []);
 
+  const handleClearFlowError = useCallback(() => {
+    setFlowError(null);
+  }, []);
+
   const handleResetLocalState = useCallback(() => {
     setBreadcrumbs([t('users:addUser', 'Add User')]);
     prevStepLabelRef.current = '';
@@ -1002,6 +1041,7 @@ export default function UserAddPage(): JSX.Element {
                         if (resetFlowRef.current) {
                           resetFlowRef.current();
                           setBreadcrumbs([t('users:addUser', 'Add User')]);
+                          setFlowError(null);
                         }
                       }
                     : undefined,
@@ -1041,6 +1081,14 @@ export default function UserAddPage(): JSX.Element {
                     return;
                   }
                   logger.error('User onboarding error', {error: err});
+                  setFlowError(
+                    getUserErrorMessage(
+                      err,
+                      (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+                      'errors.failed.description',
+                      'An error occurred. Please try again.',
+                    ),
+                  );
                 }}
                 onFlowChange={(response) => {
                   if (isMissingOnboardingFlow(response)) {
@@ -1082,6 +1130,7 @@ export default function UserAddPage(): JSX.Element {
                     onInviteComplete={handleInviteComplete}
                     onOuStepDetected={handleOuStepDetected}
                     onResetLocalState={handleResetLocalState}
+                    onClearFlowError={handleClearFlowError}
                     onResetFlowAvailable={(resetFn) => {
                       resetFlowRef.current = resetFn;
                     }}

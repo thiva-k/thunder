@@ -600,7 +600,8 @@ describe('UserAddPage', () => {
       render(<UserAddPage />);
 
       expect(screen.getByText('Error')).toBeInTheDocument();
-      expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument();
     });
 
     it('should show close button in error state without components', () => {
@@ -624,7 +625,8 @@ describe('UserAddPage', () => {
       render(<UserAddPage />);
 
       expect(screen.getByText('Error')).toBeInTheDocument();
-      expect(screen.getByText('Validation failed')).toBeInTheDocument();
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('An error occurred. Please try again.')).toBeInTheDocument();
       // Form fields should still be visible
       expect(screen.getByLabelText(/name/i)).toBeInTheDocument();
     });
@@ -654,6 +656,39 @@ describe('UserAddPage', () => {
       await waitFor(() => {
         expect(screen.getByText('User already exists')).toBeInTheDocument();
       });
+    });
+
+    it('should clear the flow error when the user edits a field', async () => {
+      mockInviteUserRenderProps.components = [
+        heading('Step 1'),
+        block([textInput('name', 'Name'), submitAction('Next')]),
+      ];
+
+      const {rerender} = render(<UserAddPage />);
+
+      if (capturedOnFlowChange) {
+        capturedOnFlowChange({
+          error: {
+            code: 'FEE-60005',
+            message: {key: 'flows.errors.user_exists', defaultValue: 'User already exists'},
+            description: {key: 'flows.errors.user_exists_desc', defaultValue: 'User already exists'},
+          },
+        });
+      }
+      rerender(<UserAddPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText('User already exists')).toBeInTheDocument();
+      });
+
+      // Editing any field makes the previous submit failure stale.
+      const user = userEvent.setup();
+      await user.type(screen.getByLabelText(/name/i), 'J');
+
+      await waitFor(() => {
+        expect(screen.queryByText('User already exists')).not.toBeInTheDocument();
+      });
+      expect(mockHandleInputChange).toHaveBeenCalled();
     });
 
     it('should call onError callback when simulateInviteUserError is true', async () => {

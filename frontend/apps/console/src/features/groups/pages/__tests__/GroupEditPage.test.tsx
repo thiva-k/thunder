@@ -58,12 +58,18 @@ vi.mock('../../api/useGetGroup', () => ({
 }));
 
 const mockMutateAsync = vi.fn();
+const mockUpdateGroupReset = vi.fn();
 let mockIsPending = false;
+let mockUpdateError: Error | null = null;
 vi.mock('../../api/useUpdateGroup', () => ({
   default: () => ({
     mutateAsync: mockMutateAsync,
+    reset: mockUpdateGroupReset,
     get isPending() {
       return mockIsPending;
+    },
+    get error() {
+      return mockUpdateError;
     },
   }),
 }));
@@ -133,6 +139,7 @@ describe('GroupEditPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsPending = false;
+    mockUpdateError = null;
     mockNavigate.mockResolvedValue(undefined);
     mockRefetch = vi.fn().mockResolvedValue(undefined);
     mockWriteText = vi.fn().mockResolvedValue(undefined);
@@ -179,7 +186,8 @@ describe('GroupEditPage', () => {
     });
     renderWithProviders(<GroupEditPage />);
 
-    expect(screen.getByText('Fetch failed')).toBeInTheDocument();
+    // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+    expect(screen.getByText('Failed to load group')).toBeInTheDocument();
     expect(screen.getByText('Back to Groups')).toBeInTheDocument();
   });
 
@@ -508,8 +516,8 @@ describe('GroupEditPage', () => {
     expect(mockRefetch).toHaveBeenCalled();
   });
 
-  it('should show error snackbar when save fails', async () => {
-    mockMutateAsync.mockRejectedValue(new Error('Save failed'));
+  it('should display the generic error inline in the save bar, not a toast, when save fails', async () => {
+    mockUpdateError = new Error('Request failed');
     const user = userEvent.setup();
     renderWithProviders(<GroupEditPage />);
 
@@ -521,12 +529,6 @@ describe('GroupEditPage', () => {
     await user.clear(nameInput);
     await user.type(nameInput, 'New Name');
     await user.keyboard('{Enter}');
-
-    await waitFor(() => {
-      expect(screen.getByText('Save Changes')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByText('Save Changes'));
 
     await waitFor(() => {
       expect(screen.getByText('Failed to update group. Please try again.')).toBeInTheDocument();
@@ -584,12 +586,11 @@ describe('GroupEditPage', () => {
     });
   });
 
-  it('should close error snackbar when close button is clicked', async () => {
-    mockMutateAsync.mockRejectedValue(new Error('Save failed'));
+  it('should clear a stale update error as soon as another field changes', async () => {
+    mockUpdateError = new Error('Request failed');
     const user = userEvent.setup();
     renderWithProviders(<GroupEditPage />);
 
-    // Edit the name to trigger hasChanges
     const h3Heading = screen.getAllByText('Test Group').find((el) => el.tagName === 'H3');
     const nameEditBtn = h3Heading!.parentElement?.querySelector('button');
     await user.click(nameEditBtn!);
@@ -597,34 +598,19 @@ describe('GroupEditPage', () => {
     await user.clear(nameInput);
     await user.type(nameInput, 'New Name');
     await user.keyboard('{Enter}');
-
-    await waitFor(() => {
-      expect(screen.getByText('Save Changes')).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByText('Save Changes'));
 
     await waitFor(() => {
       expect(screen.getByText('Failed to update group. Please try again.')).toBeInTheDocument();
     });
 
-    // Close the snackbar via the Alert's close button
-    const closeButton = screen.getByRole('button', {name: /close/i});
-    await user.click(closeButton);
-
-    await waitFor(() => {
-      expect(screen.queryByText('Failed to update group. Please try again.')).not.toBeInTheDocument();
-    });
+    expect(mockUpdateGroupReset).toHaveBeenCalled();
   });
 
-  it('should show mapped error message when the group name conflicts on save', async () => {
-    const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
-    error.response = {data: {code: 'GRP-1004'}};
-    mockMutateAsync.mockRejectedValue(error);
+  it('should clear the update error when Reset is clicked', async () => {
+    mockUpdateError = new Error('Request failed');
     const user = userEvent.setup();
     renderWithProviders(<GroupEditPage />);
 
-    // Edit the name to trigger hasChanges
     const h3Heading = screen.getAllByText('Test Group').find((el) => el.tagName === 'H3');
     const nameEditBtn = h3Heading!.parentElement?.querySelector('button');
     await user.click(nameEditBtn!);
@@ -634,10 +620,30 @@ describe('GroupEditPage', () => {
     await user.keyboard('{Enter}');
 
     await waitFor(() => {
-      expect(screen.getByText('Save Changes')).toBeInTheDocument();
+      expect(screen.getByText('Reset')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByText('Save Changes'));
+    mockUpdateGroupReset.mockClear();
+    await user.click(screen.getByText('Reset'));
+
+    expect(mockUpdateGroupReset).toHaveBeenCalled();
+  });
+
+  it('should show mapped error message when the group name conflicts on save', async () => {
+    const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+    error.response = {data: {code: 'GRP-1004'}};
+    mockUpdateError = error;
+    const user = userEvent.setup();
+    renderWithProviders(<GroupEditPage />);
+
+    // Edit the name to trigger hasChanges, so the save bar (and its error) is visible
+    const h3Heading = screen.getAllByText('Test Group').find((el) => el.tagName === 'H3');
+    const nameEditBtn = h3Heading!.parentElement?.querySelector('button');
+    await user.click(nameEditBtn!);
+    const nameInput = screen.getByDisplayValue('Test Group');
+    await user.clear(nameInput);
+    await user.type(nameInput, 'New Name');
+    await user.keyboard('{Enter}');
 
     await waitFor(() => {
       expect(

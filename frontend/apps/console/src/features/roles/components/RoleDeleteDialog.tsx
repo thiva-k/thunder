@@ -30,6 +30,7 @@ export default function RoleDeleteDialog({
   const handleCancel = (): void => {
     if (deleteRole.isPending) return;
     setError(null);
+    deleteRole.reset();
     onClose();
   };
 
@@ -44,7 +45,7 @@ export default function RoleDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(getErrorMessage(err, t, 'delete.error'));
+        setError(getErrorMessage(err, t, 'delete.error', 'Failed to delete role. Please try again.'));
       },
     });
   };

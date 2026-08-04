@@ -25,6 +25,7 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
   const addGroupMembers = useAddGroupMembers();
   const removeGroupMembers = useRemoveGroupMembers();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleAddMembers = useCallback(
@@ -37,10 +38,10 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
         {
           onSuccess: () => {
             setAddDialogOpen(false);
-            setError(null);
+            setAddError(null);
           },
           onError: (err: Error) => {
-            setError(getErrorMessage(err, t, 'addMember.error'));
+            setAddError(getErrorMessage(err, t, 'addMember.error', 'Failed to add member. Please try again.'));
           },
         },
       );
@@ -60,7 +61,7 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
             setError(null);
           },
           onError: (err: Error) => {
-            setError(getErrorMessage(err, t, 'removeMember.error'));
+            setError(getErrorMessage(err, t, 'removeMember.error', 'Failed to remove member. Please try again.'));
           },
         },
       );
@@ -86,7 +87,10 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
               variant="contained"
               size="small"
               startIcon={<Plus size={16} />}
-              onClick={() => setAddDialogOpen(true)}
+              onClick={() => {
+                setAddError(null);
+                setAddDialogOpen(true);
+              }}
             >
               {t('edit.members.sections.manage.addMember', 'Add Member')}
             </Button>
@@ -95,7 +99,17 @@ export default function EditMembersSettings({group}: EditMembersSettingsProps): 
       />
 
       {addDialogOpen && !group.isReadOnly && (
-        <AddMemberDialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} onAdd={handleAddMembers} />
+        <AddMemberDialog
+          open={addDialogOpen}
+          onClose={() => {
+            setAddDialogOpen(false);
+            setAddError(null);
+          }}
+          onAdd={handleAddMembers}
+          error={addError}
+          onErrorDismiss={() => setAddError(null)}
+          isSubmitting={addGroupMembers.isPending}
+        />
       )}
     </Stack>
   );

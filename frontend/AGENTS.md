@@ -55,25 +55,39 @@ page to live.
   persist while they fix something, not by the HTTP verb.
 - Mutation successes stay toasts — `showToast(t('create.success'), 'success')` in the hook's `onSuccess`. That is
   already the pattern in every `use{Create,Update,Delete}*` hook.
-- Read failures follow the data. If the failed query is the surface's primary content (a detail page, a list, a tab
-  body), render the error in place of that content with a way to retry. If the query is secondary and the page is still
-  usable without it (a picker's options, an optional count, a background prefetch), a toast is right, because there is
-  nowhere natural to put it inline. React Query has no query `onError`, so a query hook cannot toast on its own —
-  reaching for one means adding a render-phase or effect watcher on `isError`, which is a signal the error belongs
-  inline instead.
+- Read failures render in place of the data. If a query is a surface's primary content — a list, a grid, a detail page,
+  a tab body — render an error component where that content would have gone, with a way to retry. A toast alongside it
+  is fine, but never instead of it: a toast auto-dismisses and leaves the user staring at an empty page with no
+  explanation. If the query is secondary and the page is still usable without it (a picker's options, an optional count,
+  a background prefetch), a toast on its own is right, because there is nowhere natural to put it inline. React Query
+  has no query `onError`, so a query hook cannot toast on its own — reaching for one means adding a render-phase or
+  effect watcher on `isError`, which is a signal the error belongs inline.
 - Clear an inline error as soon as the user acts on it. Any change to the form invalidates the message, so a
   duplicate-name error must disappear when the name is edited rather than sitting there contradicting the field. Reset
   the mutation (`mutation.reset()`) or the local error state from whatever the form's field-change path is, and on
   cancel or reset too. A stale error next to a now-valid form is worse than no error.
+- Never surface server-returned error text. No `error.message`, no `response.data.message`, and no `description`
+  `defaultValue` from the error envelope. That text is unlocalized, is written for API consumers rather than end users,
+  and leaks backend and HTTP wording into the product. This applies to read failures exactly as much as to writes. Note
+  that `error.message ?? t('fallback')` never reaches the fallback — `Error.message` is always a string — so that idiom
+  silently guarantees the raw text wins.
 - Resolve every message through the error catalog: `getErrorMessage` from `@thunderid/utils`, or a feature-specific
   wrapper such as `getApplicationErrorMessage`, so a backend error code maps to `errors.<CODE>` with a generic fallback
   key. Pass the fallback's default string too, per the i18n Fallback Values rule below, so a missing key degrades to
-  readable English instead of rendering `create.error` at the user. Never render a raw `error.message` — that is
-  unlocalized backend text.
+  readable English instead of rendering `create.error` at the user. Codes shared across services (e.g. `SSE-4030` for an
+  authorization denial) resolve from `common:errors.<CODE>` when the feature namespace has no entry, so they need
+  mapping only once. This requires `t` to forward an explicit `ns:` prefix, so a per-call-site namespace wrapper must
+  pass keys that already carry one straight through.
 - Keep one surface per failure. TanStack Query fires both `useMutation({onError})` and the per-call
   `mutate(vars, {onError})`, so defining an error surface in both is how duplicates appear. Two toasts for one failure
   are worse than visibly duplicated: the second silently replaces the first, since `ToastProvider` holds only one
   message at a time, so the user may never see the specific one.
+- An error from a dialog belongs in that dialog. If the action was fired from a modal, close the modal only in the
+  success path and render the `<Alert>` inside it, next to the confirm button. Closing on submit, or rendering the error
+  on the surface behind the modal, leaves the user looking at a re-enabled dialog with no explanation. When the parent
+  component owns the mutation because it also serves a non-dialog path, pass the error into the dialog as a prop rather
+  than rendering it in the parent. Never discard the user's input — a selection, a filled form — on failure; only clear
+  it once the mutation succeeds, or the error costs them the whole task.
 
 ## Build & Test
 

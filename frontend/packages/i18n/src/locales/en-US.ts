@@ -123,6 +123,9 @@ const translations = {
     'messages.somethingWentWrong': 'Something went wrong',
     'messages.tryAgain': 'Please try again',
 
+    // Backend error code translations shared across services (per the shared service error envelope).
+    'errors.SSE-4030': 'You do not have permission to perform this action in this organization unit.',
+
     // External links
     learnMore: 'Learn more',
     'externalLink.title': 'You are leaving {{productName}}',
@@ -703,24 +706,6 @@ const translations = {
     'createUser.title': 'Create User',
     'createUser.subtitle': 'Add a new user to your organization',
 
-    // Create wizard steps
-    'createWizard.steps.userType': 'User Type',
-    'createWizard.steps.organizationUnit': 'Organization Unit',
-    'createWizard.steps.userDetails': 'User Details',
-    'createWizard.selectUserType.title': 'Select a user type',
-    'createWizard.selectUserType.subtitle': 'Choose a user type (schema) for the new user.',
-    'createWizard.selectUserType.fieldLabel': 'User Type',
-    'createWizard.selectUserType.placeholder': 'Select a user type',
-    'createWizard.selectOrganizationUnit.title': 'Select an organization unit',
-    'createWizard.selectOrganizationUnit.subtitle': 'Choose which organization unit this user should belong to.',
-    'createWizard.selectOrganizationUnit.fieldLabel': 'Organization Unit',
-    'createWizard.userDetails.title': 'Enter user details',
-    'createWizard.userDetails.subtitle': 'Fill in the required information for the new user.',
-    'createWizard.validationErrors.userTypeRequired': 'Please select a user type before proceeding.',
-    'createWizard.validationErrors.ouIdMissing': 'Organization unit ID is missing for the selected user type.',
-    'createWizard.errors.noOuAccess':
-      'You do not have permission to access the organization units for the selected user type, and no organization unit could be resolved.',
-    'createWizard.errors.childOuProbeFailed': 'Unable to retrieve organization units for the selected user type.',
     'create.success': 'User created successfully.',
     'create.error': 'Failed to create user. Please try again.',
     'update.success': 'User updated successfully.',
@@ -749,9 +734,23 @@ const translations = {
     'updateCredentials.error': 'Failed to update credentials. Please try again.',
 
     // Backend error code translations (per user service error envelope).
+    'errors.USR-1003': 'This user no longer exists. It may have already been deleted.',
+    'errors.USR-1005': 'The organization unit for this user no longer exists. Refresh and try again.',
     'errors.USR-1014': 'A user with the same unique attribute value already exists.',
     'errors.USR-1019':
       "Some attributes no longer match this user type's schema. Review the user type or the user's attributes.",
+    'errors.USR-1021': 'The user type for this user no longer exists. Refresh and try again.',
+    'errors.USR-1023': 'This organization unit is not allowed for the selected user type.',
+    'errors.USR-1024': 'One or more credential fields are not valid for this user type.',
+    'errors.USR-1025': 'This user is managed declaratively and cannot be edited or deleted.',
+    'errors.USR-1027':
+      'This user cannot be deleted because {{dependencies}} depend on it. Remove or reassign them first.',
+    'errors.USR-1028': 'Credentials for this user cannot be updated here.',
+
+    // Read failures
+    'listing.error': 'Failed to load users',
+    'manageUser.loadError': 'Failed to load user information',
+    'manageUser.notFound': 'User not found',
   },
 
   // ============================================================================

@@ -6,23 +6,30 @@ import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {UpdateUserCredentialsVariables} from '../../../api/useUpdateUserCredentials';
 import CredentialResetDialog from '../CredentialResetDialog';
 
-// Mock react-i18next. Returns the inline default string.
+// Mock react-i18next. Resolves inline defaults (string or {defaultValue}) like the real i18n.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, defaultValueOrOptions?: unknown, options?: unknown): string => {
+    t: (key: string, defaultValueOrOptions?: unknown, options?: unknown): string => {
+      const translations: Record<string, string> = {
+        'errors.USR-1024': 'One or more credential fields are not valid for this user type.',
+      };
+      if (translations[key]) return translations[key];
+
       // t(key, defaultString, { label }) — e.g. t('...', 'Reset {{label}}?', { label: 'Password' })
       if (typeof defaultValueOrOptions === 'string') {
         const vars = (options ?? {}) as Record<string, string>;
         return defaultValueOrOptions.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? '');
       }
-      // t(key, { defaultValue, ...vars })
-      if (defaultValueOrOptions && typeof defaultValueOrOptions === 'object') {
+      // t(key, { defaultValue, ...vars }) — the '' probe used to detect a missing translation
+      if (
+        defaultValueOrOptions &&
+        typeof defaultValueOrOptions === 'object' &&
+        'defaultValue' in defaultValueOrOptions
+      ) {
         const obj = defaultValueOrOptions as Record<string, string>;
-        if (obj['defaultValue']) {
-          return obj['defaultValue'].replace(/\{\{(\w+)\}\}/g, (_, k: string) => obj[k] ?? '');
-        }
+        return (obj['defaultValue'] ?? '').replace(/\{\{(\w+)\}\}/g, (_, k: string) => obj[k] ?? '');
       }
-      return typeof defaultValueOrOptions === 'string' ? defaultValueOrOptions : _key;
+      return typeof defaultValueOrOptions === 'string' ? defaultValueOrOptions : key;
     },
   }),
 }));
@@ -188,12 +195,40 @@ describe('CredentialResetDialog', () => {
     });
   });
 
-  it('should display an error alert on mutation failure', () => {
+  it('should display the generic fallback message on mutation failure', () => {
     mockUpdateCredentials.error = new Error('Network error');
 
     render(<CredentialResetDialog open field={passwordField} userId="user-123" onClose={mockOnClose} />);
 
-    expect(screen.getByText('Network error')).toBeInTheDocument();
+    expect(screen.getByText('Failed to update credentials. Please try again.')).toBeInTheDocument();
+  });
+
+  it('should display the mapped error message for a mapped credential error code', () => {
+    const error = new Error('Conflict') as Error & {response?: {data?: {code: string}}};
+    error.response = {data: {code: 'USR-1024'}};
+    mockUpdateCredentials.error = error;
+
+    render(<CredentialResetDialog open field={passwordField} userId="user-123" onClose={mockOnClose} />);
+
+    expect(screen.getByText('One or more credential fields are not valid for this user type.')).toBeInTheDocument();
+  });
+
+  it('should reset the mutation state when the new value input changes', () => {
+    render(<CredentialResetDialog open field={passwordField} userId="user-123" onClose={mockOnClose} />);
+
+    const newInput = screen.getByPlaceholderText('Enter new password');
+    fireEvent.change(newInput, {target: {value: 'newpass123'}});
+
+    expect(mockReset).toHaveBeenCalled();
+  });
+
+  it('should reset the mutation state when the confirm value input changes', () => {
+    render(<CredentialResetDialog open field={passwordField} userId="user-123" onClose={mockOnClose} />);
+
+    const confirmInput = screen.getByPlaceholderText('Confirm new password');
+    fireEvent.change(confirmInput, {target: {value: 'newpass123'}});
+
+    expect(mockReset).toHaveBeenCalled();
   });
 
   it('should not call mutate when new value is only whitespace', () => {

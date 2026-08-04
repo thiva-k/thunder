@@ -10,6 +10,7 @@ import useCreateUser from '../useCreateUser';
 
 const mockHttpRequest = vi.fn();
 const mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
+const mockShowToast = vi.fn();
 
 // Mock the dependencies
 vi.mock('@thunderid/react', () => ({
@@ -26,6 +27,9 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
     ...actual,
     useConfig: () => ({
       getServerUrl: mockGetServerUrl,
+    }),
+    useToast: () => ({
+      showToast: mockShowToast,
     }),
   };
 });
@@ -47,10 +51,39 @@ describe('useCreateUser', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
     mockGetServerUrl.mockReset().mockReturnValue('https://api.test.com');
+    mockShowToast.mockReset();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('should show a success toast on successful creation', async () => {
+    mockHttpRequest.mockResolvedValueOnce({data: mockUser});
+
+    const {result} = renderHook(() => useCreateUser());
+
+    result.current.mutate(mockRequest);
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success');
+  });
+
+  it('should not show a toast on error', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('Failed to create user'));
+
+    const {result} = renderHook(() => useCreateUser());
+
+    result.current.mutate(mockRequest);
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('should initialize with idle state', () => {

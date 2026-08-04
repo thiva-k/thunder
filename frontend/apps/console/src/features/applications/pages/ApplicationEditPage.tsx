@@ -682,7 +682,7 @@ export default function ApplicationEditPage() {
             updateApplication.error
               ? getApplicationErrorMessage(
                   updateApplication.error,
-                  (key, options) => t(`applications:${key}`, options),
+                  (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
                   'update.error',
                   'Failed to update application. Please try again.',
                 )

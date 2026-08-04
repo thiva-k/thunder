@@ -1,8 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation} from '@thunderid/components';
-import {useToast} from '@thunderid/contexts';
+import {PageLoadingAnimation, UnsavedChangesBar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -11,15 +10,15 @@ import {
   Typography,
   Button,
   TextField,
-  Paper,
   Alert,
   IconButton,
   Tabs,
   Tab,
   PageContent,
   PageTitle,
+  ListingTable,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
+import {AlertCircle, ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useMemo} from 'react';
 import type {ReactNode, SyntheticEvent, JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -56,7 +55,6 @@ export default function GroupEditPage(): JSX.Element {
   const navigate = useNavigate();
   const {t} = useTranslation('groups');
   const logger = useLogger('GroupEditPage');
-  const {showToast} = useToast();
 
   const {data: group, isLoading, error: fetchError, refetch} = useGetGroup(groupId ?? '');
   const updateGroup = useUpdateGroup();
@@ -78,9 +76,13 @@ export default function GroupEditPage(): JSX.Element {
     setActiveTab(newValue);
   };
 
-  const handleFieldChange = useCallback((field: keyof Group, value: unknown): void => {
-    setEditedGroup((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof Group, value: unknown): void => {
+      updateGroup.reset(); // a save error is stale once the form changes
+      setEditedGroup((prev) => ({...prev, [field]: value}));
+    },
+    [updateGroup],
+  );
 
   const handleSave = useCallback(async (): Promise<void> => {
     if (!group || !groupId) return;
@@ -100,10 +102,8 @@ export default function GroupEditPage(): JSX.Element {
       await refetch();
     } catch (err: unknown) {
       logger.error('Failed to update group', {error: err});
-      const error = err instanceof Error ? err : new Error(String(err));
-      showToast(getErrorMessage(error, t, 'update.error'), 'error');
     }
-  }, [group, groupId, editedGroup, updateGroup, refetch, logger, showToast, t]);
+  }, [group, groupId, editedGroup, updateGroup, refetch, logger]);
 
   const hasChanges = useMemo(
     () => Object.entries(editedGroup).some(([key, value]) => !isEqualIgnoringEmpty(value, group?.[key as keyof Group])),
@@ -130,19 +130,27 @@ export default function GroupEditPage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {fetchError.message ?? t('edit.page.error', 'Failed to load group')}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch((error: unknown) => {
-              logger.error('Failed to navigate back', {error});
-            });
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('edit.page.back', 'Back to Groups')}
-        </Button>
+        <ListingTable.EmptyState
+          illustration={<AlertCircle size={40} />}
+          title={getErrorMessage(fetchError, t, 'edit.page.error', 'Failed to load group')}
+          action={
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <Button variant="outlined" onClick={() => void refetch()}>
+                {t('common:actions.refresh', 'Refresh')}
+              </Button>
+              <Button
+                onClick={() => {
+                  handleBack().catch((error: unknown) => {
+                    logger.error('Failed to navigate back', {error});
+                  });
+                }}
+                startIcon={<ArrowLeft size={16} />}
+              >
+                {t('edit.page.back', 'Back to Groups')}
+              </Button>
+            </Stack>
+          }
+        />
       </PageContent>
     );
   }
@@ -336,58 +344,26 @@ export default function GroupEditPage(): JSX.Element {
 
       {/* Floating Action Bar */}
       {hasChanges && (
-        <Paper
-          sx={{
-            position: 'fixed',
-            bottom: 0,
-            left: 0,
-            right: 0,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
-            borderRadius: '12px 12px 0 0',
-            boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.1)',
-            zIndex: 1000,
-            bgcolor: 'background.paper',
+        <UnsavedChangesBar
+          message={t('edit.page.unsavedChanges', 'You have unsaved changes')}
+          resetLabel={t('edit.page.reset', 'Reset')}
+          saveLabel={t('edit.page.save', 'Save Changes')}
+          savingLabel={t('edit.page.saving', 'Saving...')}
+          isSaving={updateGroup.isPending}
+          saveDisabled={group.isReadOnly === true}
+          error={
+            updateGroup.error
+              ? getErrorMessage(updateGroup.error, t, 'update.error', 'Failed to update group. Please try again.')
+              : undefined
+          }
+          onReset={() => {
+            updateGroup.reset();
+            setEditedGroup({});
           }}
-        >
-          <Stack direction="row" spacing={2} alignItems="center">
-            <Typography variant="body2" sx={{display: 'flex', alignItems: 'center', gap: 1}}>
-              <Box
-                component="span"
-                sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  border: '2px solid',
-                  borderColor: 'warning.main',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                }}
-              >
-                !
-              </Box>
-              {t('edit.page.unsavedChanges', 'You have unsaved changes')}
-            </Typography>
-            <Button variant="outlined" color="error" onClick={() => setEditedGroup({})}>
-              {t('edit.page.reset', 'Reset')}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={() => {
-                handleSave().catch(() => null);
-              }}
-              disabled={updateGroup.isPending || group.isReadOnly === true}
-            >
-              {updateGroup.isPending ? t('edit.page.saving', 'Saving...') : t('edit.page.save', 'Save Changes')}
-            </Button>
-          </Stack>
-        </Paper>
+          onSave={() => {
+            handleSave().catch(() => null);
+          }}
+        />
       )}
     </PageContent>
   );

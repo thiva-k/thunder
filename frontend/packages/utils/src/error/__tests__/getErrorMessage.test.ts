@@ -62,4 +62,30 @@ describe('getErrorMessage', () => {
       getErrorMessage(makeApiError('APP-1020'), t, 'create.error', 'Failed to create application. Please try again.'),
     ).toBe('An application with this name already exists.');
   });
+
+  it('should fall back to the shared common catalog when the feature namespace has no entry', () => {
+    const t = vi.fn((key: string) =>
+      key === 'common:errors.SSE-4030' ? 'You do not have permission to perform this action.' : '',
+    );
+
+    expect(getErrorMessage(makeApiError('SSE-4030'), t, 'update.error')).toBe(
+      'You do not have permission to perform this action.',
+    );
+  });
+
+  it('should prefer the feature namespace over the shared common catalog', () => {
+    const t = vi.fn((key: string) => {
+      if (key === 'errors.SSE-4030') return 'Feature-specific permission message.';
+      if (key === 'common:errors.SSE-4030') return 'Generic permission message.';
+      return '';
+    });
+
+    expect(getErrorMessage(makeApiError('SSE-4030'), t, 'update.error')).toBe('Feature-specific permission message.');
+  });
+
+  it('should fall back to the fallback key when neither namespace resolves the code', () => {
+    const t = vi.fn((key: string) => (key === 'update.error' ? 'Failed to update. Please try again.' : ''));
+
+    expect(getErrorMessage(makeApiError('XYZ-0000'), t, 'update.error')).toBe('Failed to update. Please try again.');
+  });
 });

@@ -301,6 +301,26 @@ describe('AddAssignmentDialog', () => {
         expect(screen.getByRole('button', {name: /Add.*\(1\)/})).toBeInTheDocument();
       });
     });
+
+    it('should call onErrorDismiss when the selection changes', async () => {
+      const mockOnErrorDismiss = vi.fn();
+      const user = userEvent.setup();
+      renderComponent({error: 'Failed to add assignment. Please try again.', onErrorDismiss: mockOnErrorDismiss});
+
+      await user.click(screen.getByTestId('checkbox-user-1'));
+
+      expect(mockOnErrorDismiss).toHaveBeenCalledTimes(1);
+    });
+
+    it('should call onErrorDismiss when switching tabs', async () => {
+      const mockOnErrorDismiss = vi.fn();
+      const user = userEvent.setup();
+      renderComponent({error: 'Failed to add assignment. Please try again.', onErrorDismiss: mockOnErrorDismiss});
+
+      await user.click(screen.getByText('Groups'));
+
+      expect(mockOnErrorDismiss).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe('Error States', () => {
@@ -313,7 +333,7 @@ describe('AddAssignmentDialog', () => {
 
       renderComponent();
 
-      expect(screen.getByText('User fetch failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch data')).toBeInTheDocument();
     });
 
     it('should show error alert when groups fetch fails', async () => {
@@ -327,7 +347,7 @@ describe('AddAssignmentDialog', () => {
       renderComponent();
       await user.click(screen.getByText('Groups'));
 
-      expect(screen.getByText('Group fetch failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch data')).toBeInTheDocument();
     });
 
     it('should show error alert when apps fetch fails', async () => {
@@ -341,7 +361,7 @@ describe('AddAssignmentDialog', () => {
       renderComponent();
       await user.click(screen.getByText('Apps'));
 
-      expect(screen.getByText('App fetch failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to fetch data')).toBeInTheDocument();
     });
 
     it('should not show error alert while loading', () => {
