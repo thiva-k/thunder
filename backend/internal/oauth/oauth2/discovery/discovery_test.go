@@ -22,8 +22,17 @@ import (
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/constants"
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
+	joseconfig "github.com/thunder-id/thunderid/internal/system/jose/config"
+	"github.com/thunder-id/thunderid/internal/system/jose/jwe"
 	"github.com/thunder-id/thunderid/tests/mocks/crypto/cryptomock"
 )
+
+// newTestJWEService builds a real jwe service backed by the given crypto provider, for tests that
+// need discoveryService to read the alg/enc lists it exposes.
+func newTestJWEService(cryptoProvider providers.RuntimeCryptoProvider) jwe.JWEServiceInterface {
+	svc, _ := jwe.Initialize(cryptoProvider, joseconfig.Config{})
+	return svc
+}
 
 type DiscoveryTestSuite struct {
 	suite.Suite
@@ -84,7 +93,7 @@ func (suite *DiscoveryTestSuite) SetupTest() {
 		Return(testConfig.OAuth.DPoP.AllowedAlgs).Maybe()
 	suite.cryptoMock.EXPECT().GetSupportedEncryptionAlgorithms().
 		Return([]string{string(cryptolib.AlgorithmRSAOAEP256)}).Maybe()
-	suite.discoveryService = newDiscoveryService(suite.cryptoMock, suite.oauthCfg)
+	suite.discoveryService = newDiscoveryService(suite.cryptoMock, newTestJWEService(suite.cryptoMock), suite.oauthCfg)
 	suite.handler = newDiscoveryHandler(suite.discoveryService)
 }
 
@@ -207,7 +216,7 @@ func (suite *DiscoveryTestSuite) TestDPoPSigningAlgValuesOmittedWhenUnconfigured
 	cryptoMock := cryptomock.NewRuntimeCryptoProviderMock(suite.T())
 	cryptoMock.EXPECT().GetSupportedSigningAlgorithms().Return(nil)
 
-	svc := newDiscoveryService(cryptoMock, oauthCfgFromServerConfig(testConfig))
+	svc := newDiscoveryService(cryptoMock, newTestJWEService(cryptoMock), oauthCfgFromServerConfig(testConfig))
 	oauth2Meta := svc.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Nil(suite.T(), oauth2Meta.DPoPSigningAlgValuesSupported)
 
@@ -225,7 +234,8 @@ func (suite *DiscoveryTestSuite) TestDCRRevocationLogoutEndpointsOmittedWhenDisa
 	_ = config.InitializeServerRuntime("test", testConfig)
 	defer config.ResetServerRuntime()
 
-	svc := newDiscoveryService(suite.cryptoMock, oauthCfgFromServerConfig(testConfig))
+	svc := newDiscoveryService(
+		suite.cryptoMock, newTestJWEService(suite.cryptoMock), oauthCfgFromServerConfig(testConfig))
 	oauth2Meta := svc.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Empty(suite.T(), oauth2Meta.RegistrationEndpoint)
 	assert.Empty(suite.T(), oauth2Meta.RevocationEndpoint)
@@ -379,7 +389,7 @@ func (suite *DiscoveryTestSuite) TestInitialize() {
 		Return([]providers.PublicKeyInfo{{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)}}, nil)
 
 	mux := http.NewServeMux()
-	service := Initialize(mux, suite.cryptoMock, suite.oauthCfg)
+	service := Initialize(mux, suite.cryptoMock, newTestJWEService(suite.cryptoMock), suite.oauthCfg)
 
 	assert.NotNil(suite.T(), service)
 	assert.Implements(suite.T(), (*DiscoveryServiceInterface)(nil), service)
@@ -421,7 +431,8 @@ func (suite *DiscoveryTestSuite) TestGetBaseURL_WithPublicHostname() {
 	}
 	_ = config.InitializeServerRuntime("test", testConfig)
 
-	service := newDiscoveryService(suite.cryptoMock, oauthCfgFromServerConfig(testConfig))
+	service := newDiscoveryService(
+		suite.cryptoMock, newTestJWEService(suite.cryptoMock), oauthCfgFromServerConfig(testConfig))
 	metadata := service.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Contains(suite.T(), metadata.AuthorizationEndpoint, "public.thunder.io")
 	config.ResetServerRuntime()
@@ -441,7 +452,8 @@ func (suite *DiscoveryTestSuite) TestGetBaseURL_WithHTTPOnly() {
 	}
 	_ = config.InitializeServerRuntime("test", testConfig)
 
-	service := newDiscoveryService(suite.cryptoMock, oauthCfgFromServerConfig(testConfig))
+	service := newDiscoveryService(
+		suite.cryptoMock, newTestJWEService(suite.cryptoMock), oauthCfgFromServerConfig(testConfig))
 	metadata := service.GetOAuth2AuthorizationServerMetadata(context.Background())
 	assert.Contains(suite.T(), metadata.AuthorizationEndpoint, "http://")
 	config.ResetServerRuntime()
@@ -457,7 +469,7 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery_MultipleKeyAlgorithms() {
 			{KeyID: "k2", Algorithm: string(cryptolib.AlgorithmES256)},
 			{KeyID: "k3", Algorithm: string(cryptolib.AlgorithmEdDSA)},
 		}, nil)
-	svc := newDiscoveryService(cryptoMock, suite.oauthCfg)
+	svc := newDiscoveryService(cryptoMock, newTestJWEService(cryptoMock), suite.oauthCfg)
 	meta, err := svc.GetOIDCMetadata(context.Background())
 	assert.NoError(suite.T(), err)
 	algs := meta.IDTokenSigningAlgValuesSupported
@@ -477,7 +489,7 @@ func (suite *DiscoveryTestSuite) TestOIDCDiscovery_DeduplicatesAlgorithms() {
 			{KeyID: "k1", Algorithm: string(cryptolib.AlgorithmRS256)},
 			{KeyID: "k2", Algorithm: string(cryptolib.AlgorithmRS256)},
 		}, nil)
-	svc := newDiscoveryService(cryptoMock, suite.oauthCfg)
+	svc := newDiscoveryService(cryptoMock, newTestJWEService(cryptoMock), suite.oauthCfg)
 	meta, err := svc.GetOIDCMetadata(context.Background())
 	assert.NoError(suite.T(), err)
 	algs := meta.IDTokenSigningAlgValuesSupported
