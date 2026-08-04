@@ -185,4 +185,40 @@ describe('ConnectionForm', () => {
       expect(isFieldMarkedRequired('jwksEndpoint')).toBe(true);
     });
   });
+
+  describe('SMS gateway create', () => {
+    const smsGatewayProps = {
+      ...baseProps,
+      type: 'sms-gateway' as const,
+      vendorDisplayName: 'SMS Gateway',
+      values: {
+        name: '',
+        url: '',
+        httpMethod: 'POST',
+        contentType: 'JSON',
+        httpHeaders: '',
+      },
+    };
+
+    it('renders the gateway fields, with the transport options as selects', () => {
+      render(<ConnectionForm {...smsGatewayProps} />);
+
+      expect(getConnectionField('url')).toBeInTheDocument();
+      expect(getConnectionField('httpHeaders')).toBeInTheDocument();
+      expect(screen.getByTestId('connection-field-select-httpMethod')).toHaveTextContent('POST');
+      expect(screen.getByTestId('connection-field-select-contentType')).toHaveTextContent('JSON');
+      expect(isFieldMarkedRequired('url')).toBe(true);
+      expect(isFieldMarkedRequired('httpHeaders')).toBe(false);
+    });
+
+    it('reports a select change through onFieldChange', async () => {
+      const onFieldChange = vi.fn();
+      render(<ConnectionForm {...smsGatewayProps} onFieldChange={onFieldChange} />);
+
+      fireEvent.mouseDown(getConnectionField('contentType'));
+      fireEvent.click(await screen.findByRole('option', {name: 'FORM'}));
+
+      expect(onFieldChange).toHaveBeenCalledWith('contentType', 'FORM');
+    });
+  });
 });

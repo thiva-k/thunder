@@ -27,12 +27,14 @@ vi.mock('../../api/useCreateConnection', () => ({default: () => ({mutate: mutate
 vi.mock('../../components/ConnectionForm', () => ({
   default: function StubConnectionForm({onFieldChange}: {onFieldChange: (name: string, value: string) => void}) {
     useEffect(() => {
-      // Populate the fields required by every connection type used in these tests (oidc, oauth).
+      // Populate the fields required by every connection type used in these tests
+      // (oidc, oauth, sms-gateway).
       onFieldChange('clientId', 'x');
       onFieldChange('clientSecret', 's');
       onFieldChange('authorizationEndpoint', 'https://idp.example.com/authorize');
       onFieldChange('tokenEndpoint', 'https://idp.example.com/token');
       onFieldChange('userInfoEndpoint', 'https://idp.example.com/userinfo');
+      onFieldChange('url', 'https://sms.example.com/send');
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return <div data-testid="stub-connection-form" />;
@@ -146,6 +148,35 @@ describe('ConnectionCreateWizardPage', () => {
     onSuccess({id: 'conn-1'});
 
     expect(navigateMock).toHaveBeenCalledWith('/connections/oidc/conn-1');
+  });
+
+  it('creates an SMS gateway connection with the selected transport defaults', () => {
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-sms-gateway', 'Custom SMS Sender');
+    fireEvent.click(screen.getByTestId('wizard-create'));
+
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    expect(mutateMock.mock.calls[0][0]).toEqual({
+      name: 'Custom SMS Sender',
+      url: 'https://sms.example.com/send',
+      httpMethod: 'POST',
+      contentType: 'JSON',
+    });
+
+    const {onSuccess} = mutateMock.mock.calls[0][1] as {onSuccess: (data: {id: string}) => void};
+    onSuccess({id: 'sms-1'});
+
+    expect(navigateMock).toHaveBeenCalledWith('/connections/sms-gateway/sms-1');
+  });
+
+  it('hides the redirect-URI hint for connection types that do not use one', () => {
+    render(<ConnectionCreateWizardPage />);
+
+    selectTypeAndName('connection-type-option-sms-gateway');
+
+    expect(screen.getByTestId('stub-connection-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('connection-create-hint')).not.toBeInTheDocument();
   });
 
   it('returns to the name step with a duplicate-name error on a 409 create conflict', () => {

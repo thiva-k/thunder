@@ -7,7 +7,10 @@ import {
   Divider,
   FormControl,
   FormControlLabel,
+  FormHelperText,
   FormLabel,
+  MenuItem,
+  Select,
   Stack,
   Switch,
   TextField,
@@ -148,6 +151,30 @@ export default function ConnectionForm({
               error={fieldError(field.name)}
               hint={field.hintKey ? t(field.hintKey) : undefined}
             />
+          );
+        } else if (field.kind === 'select') {
+          const error: string | undefined = fieldError(field.name);
+          fieldContent = (
+            <FormControl fullWidth required={isRequiredNow(field)} error={Boolean(error)}>
+              <FormLabel htmlFor={`connection-field-${field.name}`}>{label}</FormLabel>
+              <Select
+                id={`connection-field-${field.name}`}
+                value={values[field.name] ?? ''}
+                onChange={(e) => setField(field.name, e.target.value)}
+                data-testid={`connection-field-select-${field.name}`}
+              >
+                {(field.options ?? []).map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+              {error ? (
+                <FormHelperText>{error}</FormHelperText>
+              ) : (
+                field.hintKey && <FormHelperText>{t(field.hintKey)}</FormHelperText>
+              )}
+            </FormControl>
           );
         } else if (field.kind === 'readonly-copy') {
           fieldContent = (

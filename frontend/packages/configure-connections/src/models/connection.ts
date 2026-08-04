@@ -13,6 +13,7 @@ export const ConnectionTypes = {
   OAUTH: 'oauth',
   TWILIO: 'twilio',
   VONAGE: 'vonage',
+  SMS_GATEWAY: 'sms-gateway',
 } as const;
 
 export type ConnectionType = (typeof ConnectionTypes)[keyof typeof ConnectionTypes];
@@ -45,19 +46,13 @@ export type ConnectionInstanceCategory =
   (typeof ConnectionInstanceCategories)[keyof typeof ConnectionInstanceCategories];
 
 /**
- * Instance vendor type — ConnectionType plus 'sms-gateway' (the generic HTTP webhook SMS
- * sender vendor).
- */
-export type ConnectionInstanceType = ConnectionType | 'sms-gateway';
-
-/**
  * One entry of GET /connections — a configured connection instance.
  */
 export interface ConnectionInstance {
   id: string;
   name: string;
   description?: string;
-  type: ConnectionInstanceType;
+  type: ConnectionType;
   categories: ConnectionInstanceCategory[];
   /**
    * Present only for trust-only OIDC instances (trusted issuers); absent for plain federation
@@ -231,12 +226,28 @@ export interface VonageConnectionRequest {
   senderId: string;
 }
 
+/**
+ * Request payload for a generic HTTP SMS gateway connection — a webhook ThunderID calls to
+ * deliver the message, for SMS providers without a dedicated vendor integration.
+ */
+export interface SMSGatewayConnectionRequest {
+  name: string;
+  description?: string;
+  /** The HTTP endpoint called to send an SMS. */
+  url: string;
+  httpMethod: string;
+  contentType: string;
+  /** Comma-separated "Key: value" pairs sent with every request. */
+  httpHeaders?: string;
+}
+
 export type ConnectionRequest =
   | OAuthConnectionRequest
   | OIDCConnectionRequest
   | OAuth2ConnectionRequest
   | TwilioConnectionRequest
-  | VonageConnectionRequest;
+  | VonageConnectionRequest
+  | SMSGatewayConnectionRequest;
 
 /**
  * Vendor response — secrets returned masked as "******". A superset carrying every vendor's
@@ -253,6 +264,11 @@ export interface ConnectionResponse extends OIDCConnectionRequest {
   apiSecret?: string;
   /** SMS (shared) field. */
   senderId?: string;
+  /** SMS gateway fields. */
+  url?: string;
+  httpMethod?: string;
+  contentType?: string;
+  httpHeaders?: string;
 }
 
 /**
@@ -268,7 +284,7 @@ export type ConnectionPresentation = 'branded' | 'custom' | 'coming-soon';
  * Frontend-owned presentation metadata for a vendor.
  */
 export interface ConnectionVendorMeta {
-  /** Stable map key (matches backendType for real vendors, e.g. "google", or "custom-sms"). */
+  /** Stable map key (matches backendType for real vendors, e.g. "google"). */
   key: string;
   /** The backend /connections type, when this vendor maps to one. */
   backendType?: ConnectionType;
