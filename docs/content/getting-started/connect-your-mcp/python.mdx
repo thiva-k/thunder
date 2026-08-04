@@ -16,6 +16,8 @@ import {
   Server,
   FileCode,
 } from '@wso2/oxygen-ui-icons-react';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 # Secure Your MCP Server
 
@@ -33,10 +35,14 @@ Use this guide to build a Python MCP server whose tools are each protected by a 
 
 <TutorialHeroItem icon={<Clock />}>About 10 minutes</TutorialHeroItem>
 <TutorialHeroItem icon={<Terminal />}><code>uv</code>, which manages Python and dependencies automatically</TutorialHeroItem>
-<TutorialHeroItem icon={<Server />}>Node.js 20+ (for MCP Inspector)</TutorialHeroItem>
+<TutorialHeroItem icon={<Server />}>Node.js 22.19+ (for MCP Inspector)</TutorialHeroItem>
 <TutorialHeroItem icon={<FileCode />}>Your preferred code editor</TutorialHeroItem>
 
 </TutorialHero>
+
+:::tip Example Source Code
+Check out the complete <RepoLink path="/tree/main/samples/apps/mcp-calculator-sample">Calculator MCP Sample</RepoLink> in the <ProductName /> repository.
+:::
 
 ## How It Works
 
@@ -52,7 +58,7 @@ Start a local <ProductName /> instance. Pick the method that works best for you:
 
 <RunThunderID />
 
-Once it's running, the console is available at [https://localhost:8090/console](https://localhost:8090/console).
+Once it's running, the console is available at <ConsoleUrl />.
 
 ## Register the MCP Resource and Scopes
 
@@ -65,8 +71,8 @@ Once it's running, the console is available at [https://localhost:8090/console](
 2. Navigate to **Resource Servers** and click **Add resource server**.
 3. On the **Type** step, select **MCP**.
 4. On the **Name** step, enter:
-   - **MCP Server Name**: `Calculator MCP`
-   - **Identifier**: `http://localhost:8000/mcp`
+    - **MCP Server Name**: `Calculator MCP`
+    - **Identifier**: `http://localhost:8000/mcp`
 5. On the **Permission Delimiter** step, keep the default colon (`:`) and click **Create MCP server**. If your deployment has multiple organization units, click **Continue** instead, select one, then click **Create MCP server**.
 
 Now add each of the four calculator tools as a tool permission:
@@ -247,7 +253,18 @@ The response names <ProductName /> as the authorization server and lists the fou
 }
 ```
 
-## Connect with MCP Inspector
+## Connect an MCP Client
+
+<ProductName /> supports two ways for a client to obtain OAuth credentials: pre-register an application in the Console, which MCP Inspector uses below, or let the client register itself automatically through Dynamic Client Registration, which Claude Code uses.
+
+<Tabs>
+<TabItem value="mcp-inspector" label="MCP Inspector" default>
+
+### Connect with MCP Inspector
+
+MCP Inspector connects with a client application you pre-register in the Console.
+
+<Stepper stepNode="h3" as="h3">
 
 ### Register an MCP Client for Inspector
 
@@ -288,10 +305,10 @@ NODE_EXTRA_CA_CERTS=./thunderid.cert npx @modelcontextprotocol/inspector
 Inspector opens in your browser at `http://localhost:6274`.
 
 1. Set **Transport Type** to **Streamable HTTP** and **URL** to `http://localhost:8000/mcp`.
-2. Expand the **Authentication** section and select **OAuth**.
-3. Enter the **Client ID** you copied earlier. Leave **Client Secret** empty.
+2. Expand the **Authentication** section.
+3. Under **OAuth 2.0 Flow**, enter the **Client ID** you copied earlier. Leave **Client Secret** empty.
 4. Click **Connect**. Inspector reads your server's protected-resource metadata, discovers <ProductName /> as the authorization server, and requests all four scopes by default.
-5. A browser tab opens with <ProductName />'s sign-in page. Sign in with your test user and approve the request.
+5. A browser tab opens with <ProductName />'s sign-in page. Sign in with your test user.
 6. You're redirected back to Inspector, now connected.
 7. Open the **Tools** tab and click **List Tools**. You see `add`, `subtract`, `multiply`, and `divide`.
 
@@ -300,8 +317,101 @@ If the browser shows "Cannot GET /authorize" instead of the sign-in page, first 
 :::
 
 :::tip Success
-The tools you see in Inspector are exactly the ones your token's scopes allow. Try it: click **Disconnect**, edit the **Scope** field in the Auth panel to remove `divide`, then **Connect** again. Sign in once more and list the tools. `divide` is gone, because the token Inspector obtained this time never carries that scope, and `require_scopes("divide")` hides the tool from anyone without it.
+The tools you see in Inspector are exactly the ones your token's scopes allow. Try it: click **Disconnect**, then in the Auth panel's **Scope** field, type `add subtract multiply`, leaving out `divide`, and **Connect** again. Sign in once more and list the tools. `divide` is gone, because the token Inspector obtained this time never carries that scope, and `require_scopes("divide")` hides the tool from anyone without it.
 :::
+
+</Stepper>
+
+</TabItem>
+<TabItem value="claude-code" label="Claude Code">
+
+Claude Code registers its own OAuth client automatically through Dynamic Client Registration (DCR), instead of using a pre-registered application.
+
+<Stepper stepNode="h3" as="h3">
+
+### Enable Dynamic Client Registration
+
+MCP Inspector connected with the Client ID of an application you registered in the Console. Claude Code registers its own OAuth client automatically through Dynamic Client Registration (DCR) instead, so enable DCR before connecting it. Add the following to `deployment.yaml` in your <ProductName /> distribution:
+
+```yaml
+oauth:
+  dcr:
+    enabled: true
+    insecure: true
+```
+
+:::warning
+`insecure: true` lets anyone who can reach the server register OAuth clients without authentication. Use it for local development only.
+:::
+
+Restart <ProductName /> after saving the file.
+
+Optionally, confirm DCR is live before connecting Claude Code by registering a throwaway public client directly:
+
+```bash
+curl -sk -i -X POST https://localhost:8090/oauth2/dcr/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "client_name": "dcr-probe",
+    "redirect_uris": ["http://localhost:52344/callback"],
+    "grant_types": ["authorization_code"],
+    "response_types": ["code"],
+    "token_endpoint_auth_method": "none"
+  }'
+```
+
+```text
+HTTP/1.1 201 Created
+
+{
+  "app_id": "019fa36e-6b16-7908-9bc9-d848c00db406",
+  "client_id": "ZjWMmW04V6ZCl1xKR70FuQ",
+  "client_name": "dcr-probe",
+  "client_secret_expires_at": 0,
+  "grant_types": ["authorization_code"],
+  "redirect_uris": ["http://localhost:52344/callback"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}
+```
+
+A `201` response with a `client_id` and no `client_secret` confirms DCR accepted the registration. Before you set `insecure: true`, the same request returns `401 unauthorized_client`. The `dcr-probe` client this creates appears in **Applications**.
+
+Running the command again returns a `400` error because an application named `dcr-probe` already exists; delete it in the Console to repeat the check.
+
+### Connect Claude Code
+
+Add the Calculator server, from the same directory as `server.py`:
+
+```bash
+claude mcp add --transport http calculator http://localhost:8000/mcp
+```
+
+Start Claude Code, reusing the exported certificate so its Node.js runtime trusts <ProductName />'s TLS connection:
+
+```bash
+NODE_EXTRA_CA_CERTS=./thunderid.cert claude
+```
+
+1. Inside Claude Code, run `/mcp`.
+2. Choose the `calculator` server and authenticate.
+3. A browser tab opens with <ProductName />'s sign-in page. Sign in with your test user.
+4. Back in Claude Code, ask it to run both tools:
+
+   > "Add 7 and 5, then divide 10 by 4."
+
+   Claude Code calls the `add` and `divide` tools and returns the results.
+
+You never registered an application for Claude Code in the Console. DCR did that automatically the moment Claude Code first connected: open **Applications** and you find the client Claude Code registered, alongside `Calculator Inspector`.
+
+:::tip Success
+Claude Code only sees the tools your token's scopes allow, the same as Inspector. Try it: in the Console, open the `Calculator` role, remove the `divide` permission, then run `/mcp` in Claude Code again and re-authenticate. Ask Claude to divide two numbers again: it can no longer call the tool, because your token no longer carries the `divide` scope.
+:::
+
+</Stepper>
+
+</TabItem>
+</Tabs>
 
 </Stepper>
 

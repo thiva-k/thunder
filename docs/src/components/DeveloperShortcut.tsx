@@ -4,7 +4,7 @@
 import Link from '@docusaurus/Link';
 import {useWindowSize} from '@docusaurus/theme-common';
 import {Box, Chip, Typography} from '@wso2/oxygen-ui';
-import {AppWindow, Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
+import {Bot, Check, Download, MonitorSmartphone, Server, Zap} from '@wso2/oxygen-ui-icons-react';
 import React, {useCallback} from 'react';
 import AndroidLogo from './icons/AndroidLogo';
 import ExpressLogo from './icons/ExpressLogo';
@@ -40,8 +40,7 @@ const AGENT_QUICKSTARTS = [
 ];
 
 const MCP_QUICKSTARTS = [
-  {Logo: Server, href: '/docs/next/getting-started/connect-your-mcp/server/python', label: 'Server'},
-  {Logo: AppWindow, href: '/docs/next/getting-started/connect-your-mcp/client/connect/mcp-inspector', label: 'Client'},
+  {Logo: Server, href: '/docs/next/getting-started/connect-your-mcp/python', label: 'MCP'},
 ];
 
 const CATEGORIES: {id: ConnectType; icon: React.ReactElement; label: string; description: string; comingSoon: boolean}[] = [
