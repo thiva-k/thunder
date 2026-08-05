@@ -123,6 +123,10 @@ func authenticate(
 	}
 
 	if oauthApp.TokenEndpointAuthMethod != detectedMethod {
+		// No credentials presented for a client that requires authentication.
+		if detectedMethod == providers.TokenEndpointAuthMethodNone {
+			return nil, errClientAuthRequired
+		}
 		return nil, errUnauthorizedAuthMethod
 	}
 

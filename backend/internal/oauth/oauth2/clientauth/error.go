@@ -62,4 +62,9 @@ var (
 		"Invalid client assertion",
 		http.StatusUnauthorized,
 	)
+	errClientAuthRequired = newAuthError(
+		constants.ErrorInvalidClient,
+		"Client authentication is required",
+		http.StatusUnauthorized,
+	)
 )
