@@ -6,6 +6,7 @@ import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import React from 'react';
 import {createGettingStartedSteps} from './GettingStartedSteps';
 import type {DocusaurusProductConfig} from '@site/docusaurus.product.config';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 interface GettingStartedJourneyProps {
   current: number; // 1-based index
@@ -15,6 +16,7 @@ export default function GettingStartedJourney({current}: GettingStartedJourneyPr
   const {siteConfig} = useDocusaurusContext();
   const config = siteConfig.customFields?.product as DocusaurusProductConfig;
   const steps = createGettingStartedSteps(config.project.name);
+  const docsUrl = useDocsUrl();
 
   return (
     <div className="gsj">
@@ -56,7 +58,7 @@ export default function GettingStartedJourney({current}: GettingStartedJourneyPr
         return (
           <React.Fragment key={step.href}>
             {isNext ? (
-              <Link to={step.href} className="gsj__step-link" aria-label={`Next: ${step.label}`}>
+              <Link to={docsUrl(step.href)} className="gsj__step-link" aria-label={`Next: ${step.label}`}>
                 {content}
               </Link>
             ) : isActive ? (
@@ -64,7 +66,7 @@ export default function GettingStartedJourney({current}: GettingStartedJourneyPr
                 {content}
               </div>
             ) : (
-              <Link to={step.href} className="gsj__step-link gsj__step-link--muted">
+              <Link to={docsUrl(step.href)} className="gsj__step-link gsj__step-link--muted">
                 {content}
               </Link>
             )}

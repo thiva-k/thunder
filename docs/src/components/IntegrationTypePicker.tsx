@@ -5,6 +5,7 @@ import Link from '@docusaurus/Link';
 import {Box, Chip, Typography, useTheme} from '@wso2/oxygen-ui';
 import {Bot, MonitorSmartphone, Server} from '@wso2/oxygen-ui-icons-react';
 import React from 'react';
+import {useDocsUrl} from '@site/src/hooks/useDocsUrl';
 
 interface IntegrationType {
   icon: React.ReactElement;
@@ -37,6 +38,7 @@ const TYPES: IntegrationType[] = [
 
 export default function IntegrationTypePicker(): React.ReactElement {
   const theme = useTheme();
+  const docsUrl = useDocsUrl();
 
   return (
     <Box
@@ -102,7 +104,7 @@ export default function IntegrationTypePicker(): React.ReactElement {
         return comingSoon ? (
           <div key={title}>{card}</div>
         ) : (
-          <Link key={title} to={href} style={{textDecoration: 'none', color: 'inherit'}}>
+          <Link key={title} to={href ? docsUrl(href) : href} style={{textDecoration: 'none', color: 'inherit'}}>
             {card}
           </Link>
         );
