@@ -10,6 +10,7 @@ import {
 } from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {useThunderID} from '@thunderid/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress, Stack, Typography} from '@wso2/oxygen-ui';
 import {Home} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
@@ -140,6 +141,58 @@ export default function AgentCreatePage(): JSX.Element {
     void navigate(RouteConfig.agents.list());
   };
 
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
+
+  // A create failure is stale once the user edits any field, so every field-change path below
+  // clears both the validation error and the mutation's own error before applying the change.
+  // Only reset the mutation once it has actually failed: resetting while it's still pending would
+  // flip isPending back to false and re-enable the submit button before the in-flight request
+  // settles, letting the user fire a second concurrent create.
+  const clearCreateError = useCallback((): void => {
+    setError(null);
+    if (createAgent.isError) {
+      createAgent.reset();
+    }
+  }, [setError, createAgent]);
+
+  const handleAgentNameChange = useCallback(
+    (newName: string): void => {
+      clearCreateError();
+      setAgentName(newName);
+    },
+    [clearCreateError, setAgentName],
+  );
+
+  const handleOuIdChange = useCallback(
+    (newOuId: string): void => {
+      clearCreateError();
+      setSelectedOuId(newOuId);
+    },
+    [clearCreateError, setSelectedOuId],
+  );
+
+  const handleFormValuesChange = useCallback(
+    (newFormValues: typeof formValues): void => {
+      clearCreateError();
+      setFormValues(newFormValues);
+    },
+    [clearCreateError, setFormValues],
+  );
+
+  const handleOwnerIdChange = useCallback(
+    (newOwnerId: string | null): void => {
+      clearCreateError();
+      setSelectedOwnerId(newOwnerId);
+    },
+    [clearCreateError, setSelectedOwnerId],
+  );
+
   const handleStepReadyChange = useCallback((step: AgentCreateFlowStep, isReady: boolean): void => {
     setStepReady((prev) => (prev[step] === isReady ? prev : {...prev, [step]: isReady}));
   }, []);
@@ -212,7 +265,12 @@ export default function AgentCreatePage(): JSX.Element {
       },
       onError: (err: Error) => {
         setError(
-          err.message ?? t('agents:createWizard.errors.createFailed', 'Failed to create agent. Please try again.'),
+          getErrorMessage(
+            err,
+            tForErrors,
+            'createWizard.errors.createFailed',
+            'Failed to create agent. Please try again.',
+          ),
         );
       },
     });
@@ -275,7 +333,7 @@ export default function AgentCreatePage(): JSX.Element {
         return (
           <ConfigureName
             agentName={agentName}
-            onAgentNameChange={setAgentName}
+            onAgentNameChange={handleAgentNameChange}
             onReadyChange={(isReady) => handleStepReadyChange(AgentCreateFlowStep.NAME, isReady)}
             hasChildOUs={hasChildOUs}
             organizationUnitName={resolvedOrganizationUnit?.name}
@@ -302,7 +360,7 @@ export default function AgentCreatePage(): JSX.Element {
             key={selectedSchema?.id}
             schema={schemaDetails}
             defaultValues={formValues}
-            onFormValuesChange={setFormValues}
+            onFormValuesChange={handleFormValuesChange}
             onReadyChange={(isReady: boolean) => handleStepReadyChange(AgentCreateFlowStep.PROFILE, isReady)}
           />
         );
@@ -312,7 +370,7 @@ export default function AgentCreatePage(): JSX.Element {
         return (
           <ConfigureOwner
             selectedOwnerId={selectedOwnerId}
-            onOwnerIdChange={setSelectedOwnerId}
+            onOwnerIdChange={handleOwnerIdChange}
             onReadyChange={(isReady) => handleStepReadyChange(AgentCreateFlowStep.OWNER, isReady)}
           />
         );
@@ -341,7 +399,7 @@ export default function AgentCreatePage(): JSX.Element {
           "Choose the organization unit that will own this agent. You can't change this once created.",
         )}
         value={selectedOuId ?? ''}
-        onChange={setSelectedOuId}
+        onChange={handleOuIdChange}
         onBack={handleClose}
         onContinue={handleNextStep}
         backLabel={t('common:actions.back', 'Back')}
@@ -382,7 +440,7 @@ export default function AgentCreatePage(): JSX.Element {
       }
     >
       {error && (
-        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{mb: 3}} onClose={clearCreateError}>
           {error}
         </Alert>
       )}

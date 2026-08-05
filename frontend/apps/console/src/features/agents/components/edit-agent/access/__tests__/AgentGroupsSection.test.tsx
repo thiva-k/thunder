@@ -26,7 +26,13 @@ describe('AgentGroupsSection', () => {
   });
 
   it('shows an error message instead of the empty-state placeholder when the request fails', () => {
-    mockUseGetAgentGroups.mockReturnValue({data: undefined, isLoading: false, isError: true});
+    mockUseGetAgentGroups.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Boom'),
+      refetch: vi.fn(),
+    });
     render(<AgentGroupsSection agentId="agent-1" />);
 
     expect(screen.getByText('Failed to load groups for this agent.')).toBeInTheDocument();

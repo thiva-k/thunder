@@ -3,7 +3,7 @@
 
 import {FullScreenCreationWizardLayout} from '@thunderid/components';
 import {useCreateTheme, useGetTheme, useGetThemes, type Theme} from '@thunderid/design';
-import {kebabCase} from '@thunderid/utils';
+import {getErrorMessage, kebabCase} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress} from '@wso2/oxygen-ui';
 import {useState, useCallback, useMemo, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -98,6 +98,33 @@ export default function ThemeCreatePage(): JSX.Element {
     if (currentStep === 'COLOR') setCurrentStep('NAME');
   };
 
+  // A create failure is stale once the user edits the name or color, so both field-change paths
+  // below clear the error before applying the change. Only reset the mutation once it has
+  // actually failed: resetting while it's still pending would flip isPending back to false and
+  // re-enable the create button before the in-flight request settles.
+  const clearCreateError = useCallback((): void => {
+    setError(null);
+    if (createTheme.isError) {
+      createTheme.reset();
+    }
+  }, [createTheme]);
+
+  const handleThemeNameChange = useCallback(
+    (newName: string): void => {
+      clearCreateError();
+      setThemeName(newName);
+    },
+    [clearCreateError],
+  );
+
+  const handlePrimaryColorChange = useCallback(
+    (newColor: string): void => {
+      clearCreateError();
+      setPrimaryColor(newColor);
+    },
+    [clearCreateError],
+  );
+
   const handleCreate = (): void => {
     setError(null);
     const handle = kebabCase(themeName);
@@ -113,11 +140,12 @@ export default function ThemeCreatePage(): JSX.Element {
         },
         onError: (err: Error) => {
           setError(
-            err.message ??
-              t(
-                'themes.forms.configure_color.errors.create_failed.message',
-                'Failed to create theme. Please try again.',
-              ),
+            getErrorMessage(
+              err,
+              t,
+              'themes.forms.configure_color.errors.create_failed.message',
+              'Failed to create theme. Please try again.',
+            ),
           );
         },
       },
@@ -132,7 +160,7 @@ export default function ThemeCreatePage(): JSX.Element {
         return (
           <ConfigureThemeName
             themeName={themeName}
-            onThemeNameChange={setThemeName}
+            onThemeNameChange={handleThemeNameChange}
             onReadyChange={handleNameReadyChange}
           />
         );
@@ -141,7 +169,7 @@ export default function ThemeCreatePage(): JSX.Element {
           <ConfigureThemeColor
             themeName={themeName}
             primaryColor={primaryColor}
-            onPrimaryColorChange={setPrimaryColor}
+            onPrimaryColorChange={handlePrimaryColorChange}
           />
         );
       default:
@@ -195,7 +223,7 @@ export default function ThemeCreatePage(): JSX.Element {
       }
     >
       {error && (
-        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+        <Alert severity="error" sx={{mb: 3}} onClose={clearCreateError}>
           {error}
         </Alert>
       )}

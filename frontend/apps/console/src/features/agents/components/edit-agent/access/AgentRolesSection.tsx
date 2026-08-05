@@ -1,9 +1,9 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard} from '@thunderid/components';
-import {Alert, Autocomplete, CircularProgress, FormControl, FormLabel, TextField} from '@wso2/oxygen-ui';
-import {type JSX} from 'react';
+import {QueryErrorNotice, SettingsCard} from '@thunderid/components';
+import {Autocomplete, CircularProgress, FormControl, FormLabel, TextField} from '@wso2/oxygen-ui';
+import {useCallback, type JSX} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
 import {Link} from 'react-router';
 import RouteConfig from '../../../../../configs/RouteConfig';
@@ -15,8 +15,16 @@ interface AgentRolesSectionProps {
 
 export default function AgentRolesSection({agentId}: AgentRolesSectionProps): JSX.Element {
   const {t} = useTranslation();
-  const {data, isLoading, isError} = useGetAgentRoles(agentId, {limit: 100, offset: 0});
+  const {data, isLoading, error, refetch} = useGetAgentRoles(agentId, {limit: 100, offset: 0});
   const roles = data?.roles ?? [];
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   return (
     <SettingsCard
@@ -31,8 +39,15 @@ export default function AgentRolesSection({agentId}: AgentRolesSectionProps): JS
     >
       {isLoading ? (
         <CircularProgress size={20} />
-      ) : isError ? (
-        <Alert severity="error">{t('agents:edit.access.roles.error', 'Failed to load roles for this agent.')}</Alert>
+      ) : error ? (
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="inline"
+          fallbackKey="agents:edit.access.roles.error"
+          fallbackDefaultValue="Failed to load roles for this agent."
+          onRetry={() => void refetch()}
+        />
       ) : (
         <FormControl fullWidth>
           <FormLabel htmlFor="agent-roles">{t('agents:edit.access.roles.label', 'Roles')}</FormLabel>

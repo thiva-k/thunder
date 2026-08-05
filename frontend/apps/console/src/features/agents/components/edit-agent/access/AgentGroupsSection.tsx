@@ -1,9 +1,9 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard} from '@thunderid/components';
-import {Alert, Autocomplete, CircularProgress, FormControl, FormLabel, TextField} from '@wso2/oxygen-ui';
-import {type JSX} from 'react';
+import {QueryErrorNotice, SettingsCard} from '@thunderid/components';
+import {Autocomplete, CircularProgress, FormControl, FormLabel, TextField} from '@wso2/oxygen-ui';
+import {useCallback, type JSX} from 'react';
 import {Trans, useTranslation} from 'react-i18next';
 import {Link} from 'react-router';
 import RouteConfig from '../../../../../configs/RouteConfig';
@@ -15,8 +15,16 @@ interface AgentGroupsSectionProps {
 
 export default function AgentGroupsSection({agentId}: AgentGroupsSectionProps): JSX.Element {
   const {t} = useTranslation();
-  const {data, isLoading, isError} = useGetAgentGroups(agentId, {limit: 100, offset: 0});
+  const {data, isLoading, error, refetch} = useGetAgentGroups(agentId, {limit: 100, offset: 0});
   const groups = data?.groups ?? [];
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   return (
     <SettingsCard
@@ -31,8 +39,15 @@ export default function AgentGroupsSection({agentId}: AgentGroupsSectionProps): 
     >
       {isLoading ? (
         <CircularProgress size={20} />
-      ) : isError ? (
-        <Alert severity="error">{t('agents:edit.access.groups.error', 'Failed to load groups for this agent.')}</Alert>
+      ) : error ? (
+        <QueryErrorNotice
+          error={error}
+          t={tForErrors}
+          variant="inline"
+          fallbackKey="agents:edit.access.groups.error"
+          fallbackDefaultValue="Failed to load groups for this agent."
+          onRetry={() => void refetch()}
+        />
       ) : (
         <FormControl fullWidth>
           <FormLabel htmlFor="agent-groups">{t('agents:edit.access.groups.label', 'Groups')}</FormLabel>

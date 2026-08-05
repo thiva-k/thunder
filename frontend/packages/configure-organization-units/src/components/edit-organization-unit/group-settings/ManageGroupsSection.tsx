@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ReadErrorState, SettingsCard, getInitials} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard, getInitials} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {Box, DataGrid, Avatar} from '@wso2/oxygen-ui';
 import {useMemo, type JSX} from 'react';
@@ -95,7 +95,7 @@ export default function ManageGroupsSection({organizationUnitId}: ManageGroupsSe
           'View groups belonging to this organization unit',
         )}
       >
-        <ReadErrorState
+        <QueryErrorNotice
           error={error}
           t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
           variant="inline"

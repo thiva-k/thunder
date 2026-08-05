@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useIsMutating} from '@tanstack/react-query';
-import {PageLoadingAnimation, ReadErrorState, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, UnsavedChangesBar} from '@thunderid/components';
 import {arePermissionsEqual, type ResourcePermissions} from '@thunderid/configure-resource-servers';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
@@ -146,27 +146,23 @@ export default function RoleEditPage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <ReadErrorState
+        <QueryErrorNotice
           error={fetchError}
           t={t}
           variant="block"
           title={t('edit.page.error', 'Failed to load role')}
+          onRetry={() => void refetch()}
           action={
-            <Stack direction="row" spacing={1} justifyContent="center">
-              <Button variant="outlined" onClick={() => void refetch()}>
-                {t('common:actions.refresh', 'Refresh')}
-              </Button>
-              <Button
-                onClick={() => {
-                  handleBack().catch((error: unknown) => {
-                    logger.error('Failed to navigate back', {error});
-                  });
-                }}
-                startIcon={<ArrowLeft size={16} />}
-              >
-                {t('edit.page.back', 'Back to Roles')}
-              </Button>
-            </Stack>
+            <Button
+              onClick={() => {
+                handleBack().catch((error: unknown) => {
+                  logger.error('Failed to navigate back', {error});
+                });
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('edit.page.back', 'Back to Roles')}
+            </Button>
           }
         />
       </PageContent>

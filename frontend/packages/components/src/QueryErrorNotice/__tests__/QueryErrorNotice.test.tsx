@@ -3,15 +3,15 @@
 
 import {render, screen, fireEvent} from '@testing-library/react';
 import {describe, it, expect, vi} from 'vitest';
-import ReadErrorState from '../ReadErrorState';
+import QueryErrorNotice from '../QueryErrorNotice';
 
 const t = (key: string, options?: Record<string, unknown>): string =>
   (options?.defaultValue as string | undefined) ?? key;
 
-describe('ReadErrorState', () => {
+describe('QueryErrorNotice', () => {
   it('renders the block variant with a title and resolved description', () => {
     render(
-      <ReadErrorState
+      <QueryErrorNotice
         error={new Error('boom')}
         t={t}
         title="Failed to load users"
@@ -26,7 +26,7 @@ describe('ReadErrorState', () => {
 
   it('renders the inline variant as a plain alert with no title', () => {
     render(
-      <ReadErrorState
+      <QueryErrorNotice
         error={new Error('boom')}
         t={t}
         variant="inline"
@@ -42,7 +42,7 @@ describe('ReadErrorState', () => {
   it('renders the onRetry action alongside the inline alert', () => {
     const onRetry = vi.fn();
     render(
-      <ReadErrorState
+      <QueryErrorNotice
         error={new Error('boom')}
         t={t}
         variant="inline"
@@ -59,21 +59,19 @@ describe('ReadErrorState', () => {
 
   it('renders a refresh button that calls onRetry', () => {
     const onRetry = vi.fn();
-    render(<ReadErrorState error={new Error('boom')} t={t} title="Failed" onRetry={onRetry} />);
+    render(<QueryErrorNotice error={new Error('boom')} t={t} title="Failed" onRetry={onRetry} />);
 
     fireEvent.click(screen.getByText('Refresh'));
 
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('prefers a custom action over the default retry button', () => {
-    const onRetry = vi.fn();
+  it('renders a custom action alone when no onRetry is given', () => {
     render(
-      <ReadErrorState
+      <QueryErrorNotice
         error={new Error('boom')}
         t={t}
         title="Failed"
-        onRetry={onRetry}
         action={<button type="button">Back to Users</button>}
       />,
     );
@@ -82,9 +80,30 @@ describe('ReadErrorState', () => {
     expect(screen.queryByText('Refresh')).not.toBeInTheDocument();
   });
 
+  it('stacks the retry button above a custom action when both are given', () => {
+    const onRetry = vi.fn();
+    render(
+      <QueryErrorNotice
+        error={new Error('boom')}
+        t={t}
+        title="Failed"
+        onRetry={onRetry}
+        action={<button type="button">Back to Users</button>}
+      />,
+    );
+
+    expect(screen.getByText('Refresh')).toBeInTheDocument();
+    expect(screen.getByText('Back to Users')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Refresh'));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   it('uses a custom resolveErrorMessage to interpolate error-specific params', () => {
     const resolveErrorMessage = vi.fn().mockReturnValue('Custom resolved message');
-    render(<ReadErrorState error={new Error('boom')} t={t} title="Failed" resolveErrorMessage={resolveErrorMessage} />);
+    render(
+      <QueryErrorNotice error={new Error('boom')} t={t} title="Failed" resolveErrorMessage={resolveErrorMessage} />,
+    );
 
     expect(screen.getByText('Custom resolved message')).toBeInTheDocument();
     expect(resolveErrorMessage).toHaveBeenCalledWith(

@@ -3,7 +3,9 @@
 
 import {useToast} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
+  Alert,
   Box,
   Button,
   Chip,
@@ -16,7 +18,7 @@ import {
   TextField,
   Typography,
 } from '@wso2/oxygen-ui';
-import {type JSX, useState} from 'react';
+import {type JSX, useCallback, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import useCreateAction from '../../api/useCreateAction';
 import useCreateResource from '../../api/useCreateResource';
@@ -86,6 +88,7 @@ export default function AddNodeDialog({
   const [handle, setHandle] = useState('');
   const [description, setDescription] = useState('');
   const [handleEdited, setHandleEdited] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isAction = MODE_CONFIG[mode].isAction;
   const resourceId = MODE_CONFIG[mode].usesParentResourceId ? parentResourceId : undefined;
@@ -93,6 +96,15 @@ export default function AddNodeDialog({
 
   const createResource = useCreateResource(resourceServerId);
   const createAction = useCreateAction(resourceServerId, resourceId);
+
+  // Resolves an error through the `resourceServers` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `resourceServers:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `resourceServers:${key}`, options),
+    [t],
+  );
 
   const permissionPrefix = parentPermission ? `${parentPermission}${delimiter}` : '';
   const derivedPermission = handle.trim() ? `${permissionPrefix}${handle.trim()}` : `${permissionPrefix}…`;
@@ -102,6 +114,7 @@ export default function AddNodeDialog({
     setHandle('');
     setDescription('');
     setHandleEdited(false);
+    setError(null);
     onClose();
   };
 
@@ -118,17 +131,17 @@ export default function AddNodeDialog({
     return t('resourceServers:tree.addResource.success', 'Resource added.');
   };
 
-  const resolveErrorToast = (): string => {
+  const resolveErrorFallback = (): {key: string; defaultValue: string} => {
     if (mode === 'mcp-server-tool') {
-      return t('resourceServers:mcp.addTool.error', 'Failed to add tool.');
+      return {key: 'mcp.addTool.error', defaultValue: 'Failed to add tool.'};
     }
     if (mode === 'mcp-server-resource') {
-      return t('resourceServers:mcp.addResource.error', 'Failed to add resource.');
+      return {key: 'mcp.addResource.error', defaultValue: 'Failed to add resource.'};
     }
     if (isAction) {
-      return t('resourceServers:tree.addAction.error', 'Failed to add action.');
+      return {key: 'tree.addAction.error', defaultValue: 'Failed to add action.'};
     }
-    return t('resourceServers:tree.addResource.error', 'Failed to add resource.');
+    return {key: 'tree.addResource.error', defaultValue: 'Failed to add resource.'};
   };
 
   const resolveNamePlaceholder = (): string => {
@@ -182,7 +195,8 @@ export default function AddNodeDialog({
           },
           onError: (err: Error) => {
             logger.error('Failed to create action', {error: err});
-            showToast(resolveErrorToast(), 'error');
+            const fallback = resolveErrorFallback();
+            setError(getErrorMessage(err, tForErrors, fallback.key, fallback.defaultValue));
           },
         },
       );
@@ -198,7 +212,8 @@ export default function AddNodeDialog({
           },
           onError: (err: Error) => {
             logger.error('Failed to create resource', {error: err});
-            showToast(resolveErrorToast(), 'error');
+            const fallback = resolveErrorFallback();
+            setError(getErrorMessage(err, tForErrors, fallback.key, fallback.defaultValue));
           },
         },
       );
@@ -228,6 +243,7 @@ export default function AddNodeDialog({
             <TextField
               value={name}
               onChange={(e) => {
+                if (error) setError(null);
                 const newName = e.target.value;
                 setName(newName);
                 if (!handleEdited) {
@@ -246,6 +262,7 @@ export default function AddNodeDialog({
             <TextField
               value={handle}
               onChange={(e) => {
+                if (error) setError(null);
                 setHandleEdited(true);
                 const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9._\-:/]/g, '');
                 setHandle(sanitized);
@@ -273,7 +290,10 @@ export default function AddNodeDialog({
             <FormLabel>{t('resourceServers:tree.fields.description', 'Description')}</FormLabel>
             <TextField
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                if (error) setError(null);
+                setDescription(e.target.value);
+              }}
               fullWidth
               size="small"
               multiline
@@ -297,6 +317,8 @@ export default function AddNodeDialog({
               </Box>
             </Box>
           )}
+
+          {error && <Alert severity="error">{error}</Alert>}
         </Box>
       </DialogContent>
       <DialogActions>

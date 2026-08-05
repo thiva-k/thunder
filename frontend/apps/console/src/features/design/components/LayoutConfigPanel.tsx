@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useGetLayout, useUpdateLayout, type Stylesheet} from '@thunderid/design';
-import {Box, CircularProgress, Typography} from '@wso2/oxygen-ui';
-import {useCallback, useEffect, useMemo, useRef, type JSX, type RefObject} from 'react';
+import {getErrorMessage} from '@thunderid/utils';
+import {Alert, Box, CircularProgress, Typography} from '@wso2/oxygen-ui';
+import {useCallback, useEffect, useMemo, useRef, useState, type JSX, type RefObject} from 'react';
 import {useTranslation} from 'react-i18next';
 import CustomCSSEditor from './layouts/CustomCSSEditor';
 import type {CustomCSSEditorHandle} from './layouts/CustomCSSEditor';
@@ -46,6 +47,7 @@ export default function LayoutConfigPanel({
   const {t} = useTranslation('design');
   const {data: layout, isLoading} = useGetLayout(layoutId ?? '');
   const {mutateAsync} = useUpdateLayout();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const screens = useMemo(() => (layout?.layout?.screens ?? {}) as Record<string, Record<string, unknown>>, [layout]);
   const screenNames = Object.keys(screens);
@@ -72,13 +74,20 @@ export default function LayoutConfigPanel({
 
   const updateField = (path: string[], value: unknown): void => {
     if (!screenDraft) return;
+    setSaveError(null);
     onScreenDraftChange(setIn(screenDraft, path, value));
     onDirtyChange?.(true);
+  };
+
+  const handleStylesheetsChange = (next: Stylesheet[]): void => {
+    setSaveError(null);
+    onStylesheetsChange?.(next);
   };
 
   const handleSave = useCallback(() => {
     if (!layout) return;
 
+    setSaveError(null);
     let updatedLayout = {...layout.layout};
 
     // Merge screen draft if a screen is selected
@@ -102,8 +111,12 @@ export default function LayoutConfigPanel({
       data: {handle: layout.handle, displayName: layout.displayName, layout: updatedLayout},
     })
       .then(() => onDirtyChange?.(false))
-      .catch(() => undefined);
-  }, [screenDraft, layout, selectedScreen, screens, stylesheets, onStylesheetsChange, mutateAsync, onDirtyChange]);
+      .catch((err: Error) => {
+        setSaveError(
+          getErrorMessage(err, t, 'layouts.config.errors.save.message', 'Failed to save layout. Please try again.'),
+        );
+      });
+  }, [screenDraft, layout, selectedScreen, screens, stylesheets, onStylesheetsChange, mutateAsync, onDirtyChange, t]);
 
   // Keep the parent's save ref pointing to the latest handleSave
   const handleSaveLatest = useRef(handleSave);
@@ -145,12 +158,18 @@ export default function LayoutConfigPanel({
 
   return (
     <>
+      {saveError && (
+        <Alert severity="error" sx={{m: 1.5, mb: 0}} onClose={() => setSaveError(null)}>
+          {saveError}
+        </Alert>
+      )}
+
       {/* Screen config editor */}
       {screenDraft && selectedScreen && <ScreenEditor screenDraft={screenDraft} onUpdate={updateField} />}
 
       {/* Custom CSS — layout-level, not per-screen */}
       {onStylesheetsChange && (
-        <CustomCSSEditor ref={cssEditorRef} stylesheets={stylesheets} onChange={onStylesheetsChange} />
+        <CustomCSSEditor ref={cssEditorRef} stylesheets={stylesheets} onChange={handleStylesheetsChange} />
       )}
     </>
   );

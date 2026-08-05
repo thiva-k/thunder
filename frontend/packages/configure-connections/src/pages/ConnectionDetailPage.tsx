@@ -1,10 +1,11 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard, UnsavedChangesBar} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
-import {Alert, Box, Button, PageContent, Skeleton, Stack, Tab, Tabs, Typography} from '@wso2/oxygen-ui';
-import {ChevronLeft, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {getErrorMessage} from '@thunderid/utils';
+import {Alert, Box, Button, ListingTable, PageContent, Skeleton, Stack, Tab, Tabs, Typography} from '@wso2/oxygen-ui';
+import {AlertCircle, ChevronLeft, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, type ReactNode, type SyntheticEvent, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router';
@@ -88,6 +89,8 @@ export default function ConnectionDetailPage(): JSX.Element | null {
   const [attrsKey, setAttrsKey] = useState(0);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const updateMutation = useUpdateConnection(connectionType, resolvedId ?? '');
   const deleteMutation = useDeleteConnection(connectionType);
@@ -124,6 +127,7 @@ export default function ConnectionDetailPage(): JSX.Element | null {
     setAttrValid(true);
     setAttrsKey((k) => k + 1);
     setNameError(null);
+    setGeneralError(null);
   };
 
   const formDirty: boolean = JSON.stringify(values) !== JSON.stringify(baseline) || secretReplacing;
@@ -131,11 +135,23 @@ export default function ConnectionDetailPage(): JSX.Element | null {
   const dirty: boolean = formDirty || attrDirty;
   const valid: boolean = Object.keys(validateConnectionForm(values, fields, 'edit')).length === 0 && attrValid;
 
+  // A save failure is stale once the user edits any field. Only reset the mutation once it has
+  // actually failed: resetting while it's still pending would flip isPending back to false and
+  // re-enable save before the in-flight request settles.
+  const clearSaveError = (): void => {
+    setNameError(null);
+    setGeneralError(null);
+    if (updateMutation.isError) {
+      updateMutation.reset();
+    }
+  };
+
   const handleSave = (): void => {
     if (!valid || !resolvedId) {
       return;
     }
     setNameError(null);
+    setGeneralError(null);
     const payload = {
       ...formValuesToRequest(values, fields, {mode: 'edit', secretReplaced: secretReplacing}),
       ...(supportsAttributes ? {attributeConfiguration: editedAttr ?? baselineAttr} : {}),
@@ -147,6 +163,8 @@ export default function ConnectionDetailPage(): JSX.Element | null {
       .catch((error: unknown) => {
         if (isConflictError(error)) {
           setNameError(t('error.duplicateName', 'A connection with this name already exists.'));
+        } else {
+          setGeneralError(getErrorMessage(error as Error, t, 'update.error', 'Failed to update connection.'));
         }
       });
   };
@@ -159,6 +177,9 @@ export default function ConnectionDetailPage(): JSX.Element | null {
       onSuccess: () => {
         setDeleteOpen(false);
         void navigate(routes.connections.list());
+      },
+      onError: (error) => {
+        setDeleteError(getErrorMessage(error, t, 'delete.error', 'Failed to delete connection.'));
       },
     });
   };
@@ -176,8 +197,28 @@ export default function ConnectionDetailPage(): JSX.Element | null {
 
       {isResolving ? (
         <Skeleton variant="rounded" height={480} />
-      ) : notFound || connectionQuery.isError ? (
-        <Alert severity="error">{t('error.loadFailed')}</Alert>
+      ) : connectionQuery.error ? (
+        <QueryErrorNotice
+          error={connectionQuery.error}
+          t={t}
+          variant="block"
+          title={t('detail.loadError.title', 'Failed to load connection')}
+          onRetry={() => void connectionQuery.refetch()}
+        />
+      ) : notFound ? (
+        <ListingTable.EmptyState
+          illustration={<AlertCircle size={40} />}
+          title={t('detail.notFound.title', 'Connection not found')}
+          description={t(
+            'detail.notFound.description',
+            'This connection may have been deleted or the link is incorrect.',
+          )}
+          action={
+            <Button variant="outlined" onClick={() => void navigate(routes.connections.list())}>
+              {t('detail.backToConnections')}
+            </Button>
+          }
+        />
       ) : (
         <>
           <Stack direction="row" spacing={2} alignItems="flex-start" sx={{mb: 3}}>
@@ -207,6 +248,12 @@ export default function ConnectionDetailPage(): JSX.Element | null {
               </Stack>
             </Stack>
           </Stack>
+
+          {generalError && (
+            <Alert severity="error" onClose={clearSaveError} sx={{mb: 3}}>
+              {generalError}
+            </Alert>
+          )}
 
           <Tabs
             value={activeTab}
@@ -245,10 +292,8 @@ export default function ConnectionDetailPage(): JSX.Element | null {
                   nameError={nameError}
                   showNameField={isCustom}
                   onFieldChange={(name, value) => {
+                    clearSaveError();
                     setEditedValues((prev) => ({...prev, [name]: value}));
-                    if (name === 'name') {
-                      setNameError(null);
-                    }
                   }}
                   onSecretReplacingChange={setSecretReplacing}
                 />
@@ -265,7 +310,10 @@ export default function ConnectionDetailPage(): JSX.Element | null {
                   variant="contained"
                   color="error"
                   startIcon={<Trash2 size={16} />}
-                  onClick={() => setDeleteOpen(true)}
+                  onClick={() => {
+                    setDeleteError(null);
+                    setDeleteOpen(true);
+                  }}
                   data-testid="connection-delete-button"
                 >
                   {t('form.actions.delete')}
@@ -306,8 +354,12 @@ export default function ConnectionDetailPage(): JSX.Element | null {
             connectionId={resolvedId ?? ''}
             connectionName={data?.name ?? ''}
             isPending={deleteMutation.isPending}
+            error={deleteError}
             onConfirm={handleDelete}
-            onClose={() => setDeleteOpen(false)}
+            onClose={() => {
+              setDeleteOpen(false);
+              setDeleteError(null);
+            }}
           />
         </>
       )}

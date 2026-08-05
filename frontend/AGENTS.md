@@ -62,12 +62,13 @@ page to live.
   a background prefetch), a toast on its own is right, because there is nowhere natural to put it inline. React Query
   has no query `onError`, so a query hook cannot toast on its own — reaching for one means adding a render-phase or
   effect watcher on `isError`, which is a signal the error belongs inline.
-- Render every read failure with `ReadErrorState` from `@thunderid/components` rather than a hand-rolled
+- Render every read failure with `QueryErrorNotice` from `@thunderid/components` rather than a hand-rolled
   `ListingTable.EmptyState` or `<Alert>`. Use `variant="block"` (the default) for a list, grid, or page body, and
   `variant="inline"` for a tab section or in-card region. It takes the error and `t` and resolves the message itself —
   there is no `description` prop, so `error.message` is not representable through it. Pass `resolveErrorMessage` for a
   feature-specific resolver (e.g. `getUserErrorMessage`); it defaults to `getErrorMessage`. Pass `onRetry` for the
-  default refresh button, or `action` to override it (e.g. an edit page's "Back to X").
+  default refresh button and `action` for a second action stacked below it (e.g. an edit page's "Back to X"); with no
+  `onRetry`, `action` renders alone.
 - Clear an inline error as soon as the user acts on it. Any change to the form invalidates the message, so a
   duplicate-name error must disappear when the name is edited rather than sitting there contradicting the field. Reset
   the mutation (`mutation.reset()`) or the local error state from whatever the form's field-change path is, and on

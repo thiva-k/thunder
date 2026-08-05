@@ -1,7 +1,7 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ReadErrorState, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, UnsavedChangesBar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -129,27 +129,23 @@ export default function GroupEditPage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <ReadErrorState
+        <QueryErrorNotice
           error={fetchError}
           t={t}
           variant="block"
           title={t('edit.page.error', 'Failed to load group')}
+          onRetry={() => void refetch()}
           action={
-            <Stack direction="row" spacing={1} justifyContent="center">
-              <Button variant="outlined" onClick={() => void refetch()}>
-                {t('common:actions.refresh', 'Refresh')}
-              </Button>
-              <Button
-                onClick={() => {
-                  handleBack().catch((error: unknown) => {
-                    logger.error('Failed to navigate back', {error});
-                  });
-                }}
-                startIcon={<ArrowLeft size={16} />}
-              >
-                {t('edit.page.back', 'Back to Groups')}
-              </Button>
-            </Stack>
+            <Button
+              onClick={() => {
+                handleBack().catch((error: unknown) => {
+                  logger.error('Failed to navigate back', {error});
+                });
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('edit.page.back', 'Back to Groups')}
+            </Button>
           }
         />
       </PageContent>

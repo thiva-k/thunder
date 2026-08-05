@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useLogger} from '@thunderid/logger';
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
-import {useState, type JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useRegenerateAgentSecret from '../api/useRegenerateAgentSecret';
 
@@ -26,6 +27,14 @@ export default function RegenerateSecretDialog({
   const logger = useLogger('RegenerateSecretDialog');
   const [error, setError] = useState<string | null>(null);
   const regenerateClientSecret = useRegenerateAgentSecret();
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   const handleCancel = (): void => {
     setError(null);
@@ -50,10 +59,12 @@ export default function RegenerateSecretDialog({
           onSuccess?.(clientSecret);
         },
         onError: (err) => {
-          const errorMessage =
-            err instanceof Error
-              ? err.message
-              : t('agents:regenerateSecret.dialog.error', 'Failed to regenerate client secret');
+          const errorMessage = getErrorMessage(
+            err,
+            tForErrors,
+            'regenerateSecret.dialog.error',
+            'Failed to regenerate client secret',
+          );
           logger.error('Failed to regenerate agent client secret', {
             agentId,
             errorMessage,

@@ -1,22 +1,24 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ResourceAvatar, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
+import {QueryErrorNotice, ResourceAvatar, SettingsCard, UnsavedChangesBar} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Box,
   Button,
   FormControl,
   FormLabel,
+  ListingTable,
   PageContent,
   Skeleton,
   Stack,
   TextField,
   Typography,
 } from '@wso2/oxygen-ui';
-import {ChevronLeft, Trash2} from '@wso2/oxygen-ui-icons-react';
-import {useMemo, useState, type JSX} from 'react';
+import {AlertCircle, ChevronLeft, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {useCallback, useMemo, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router';
 import useDeleteConnection from '../api/useDeleteConnection';
@@ -49,7 +51,9 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
   const [editedValues, setEditedValues] = useState<Partial<TrustedIssuerFormData>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [nameError, setNameError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const data = trustedIssuerQuery.data;
 
@@ -81,7 +85,28 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
     return undefined;
   };
 
+  // Resolves an error through the `trustedIssuers` catalog. `t` defaults to the `common`
+  // namespace, so this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with
+  // `trustedIssuers:`, per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `trustedIssuers:${key}`, options),
+    [t],
+  );
+
+  // An update failure is stale once the user edits any field. Only reset the mutation once it
+  // has actually failed: resetting while it's still pending would flip isPending back to false
+  // and re-enable save before the in-flight request settles.
+  const clearUpdateError = useCallback((): void => {
+    setNameError(null);
+    setGeneralError(null);
+    if (updateMutation.isError) {
+      updateMutation.reset();
+    }
+  }, [updateMutation]);
+
   const setField = <K extends keyof TrustedIssuerFormData>(field: K, value: TrustedIssuerFormData[K]): void => {
+    clearUpdateError();
     setEditedValues((prev) => ({...prev, [field]: value}));
   };
 
@@ -91,6 +116,7 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
     setEditedValues({});
     setTouched({});
     setNameError(null);
+    setGeneralError(null);
   };
 
   const isLoading: boolean = trustedIssuerQuery.isLoading;
@@ -100,6 +126,7 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
     if (!valid || !id) return;
 
     setNameError(null);
+    setGeneralError(null);
     updateMutation.mutate(values, {
       onSuccess: () => {
         void trustedIssuerQuery.refetch();
@@ -108,6 +135,10 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
       onError: (error) => {
         if (isConflictError(error)) {
           setNameError(t('trustedIssuers:detail.duplicateName', 'A trusted issuer with this name already exists.'));
+        } else {
+          setGeneralError(
+            getErrorMessage(error, tForErrors, 'update.error', 'Failed to update trusted issuer. Please try again.'),
+          );
         }
       },
     });
@@ -126,8 +157,28 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
 
       {isLoading ? (
         <Skeleton variant="rounded" height={480} />
-      ) : notFound || trustedIssuerQuery.isError ? (
-        <Alert severity="error">{t('trustedIssuers:detail.loadError', 'Failed to load trusted issuer.')}</Alert>
+      ) : trustedIssuerQuery.error ? (
+        <QueryErrorNotice
+          error={trustedIssuerQuery.error}
+          t={tForErrors}
+          variant="block"
+          title={t('trustedIssuers:detail.loadError', 'Failed to load trusted issuer.')}
+          onRetry={() => void trustedIssuerQuery.refetch()}
+        />
+      ) : notFound ? (
+        <ListingTable.EmptyState
+          illustration={<AlertCircle size={40} />}
+          title={t('trustedIssuers:detail.notFound.title', 'Trusted issuer not found')}
+          description={t(
+            'trustedIssuers:detail.notFound.description',
+            'This trusted issuer may have been deleted or the link is incorrect.',
+          )}
+          action={
+            <Button variant="outlined" onClick={() => void navigate(routes.connections.list())}>
+              {t('trustedIssuers:detail.back', 'Back to connections')}
+            </Button>
+          }
+        />
       ) : (
         <>
           <Stack direction="row" spacing={2} alignItems="flex-start" sx={{mb: 3}}>
@@ -155,6 +206,12 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
             </Stack>
           </Stack>
 
+          {generalError && (
+            <Alert severity="error" onClose={clearUpdateError} sx={{mb: 3}}>
+              {generalError}
+            </Alert>
+          )}
+
           <Stack direction="column" spacing={4}>
             <SettingsCard
               title={t('trustedIssuers:detail.general.title', 'General')}
@@ -171,10 +228,7 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
                     value={values.name}
                     error={Boolean(nameError ?? (touched['name'] && errors.name))}
                     helperText={nameError ?? (touched['name'] ? fieldErrorMessage(errors.name) : undefined)}
-                    onChange={(e) => {
-                      setField('name', e.target.value);
-                      setNameError(null);
-                    }}
+                    onChange={(e) => setField('name', e.target.value)}
                     onBlur={() => setTouchedField('name')}
                   />
                 </FormControl>
@@ -285,7 +339,10 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
                 variant="contained"
                 color="error"
                 startIcon={<Trash2 size={16} />}
-                onClick={() => setDeleteOpen(true)}
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteOpen(true);
+                }}
                 data-testid="trusted-issuer-delete-button"
               >
                 {t('common:actions.delete')}
@@ -312,13 +369,27 @@ export default function TrustedIssuerDetailPage(): JSX.Element {
             connectionId={id ?? ''}
             connectionName={data?.name ?? ''}
             isPending={deleteMutation.isPending}
-            onClose={() => setDeleteOpen(false)}
+            error={deleteError}
+            onClose={() => {
+              setDeleteOpen(false);
+              setDeleteError(null);
+            }}
             onConfirm={() => {
               if (!id) return;
               deleteMutation.mutate(id, {
                 onSuccess: () => {
                   setDeleteOpen(false);
                   void navigate(routes.connections.list());
+                },
+                onError: (error) => {
+                  setDeleteError(
+                    getErrorMessage(
+                      error,
+                      tForErrors,
+                      'delete.error',
+                      'Failed to delete trusted issuer. Please try again.',
+                    ),
+                  );
                 },
               });
             }}

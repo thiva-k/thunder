@@ -12,6 +12,7 @@ import FlowsList from '../FlowsList';
 
 // Mock logger with accessible mock functions
 const mockLoggerError = vi.fn();
+const mockRefetch = vi.fn();
 vi.mock('@thunderid/logger/react', () => ({
   useLogger: () => ({
     debug: vi.fn(),
@@ -30,7 +31,7 @@ vi.mock('@thunderid/logger/react', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, options?: string | Record<string, unknown>) => {
       const translations: Record<string, string> = {
         'flows:listing.columns.name': 'Name',
         'flows:listing.columns.flowType': 'Type',
@@ -40,8 +41,14 @@ vi.mock('react-i18next', () => ({
         'flows:listing.error.unknown': 'Unknown error occurred',
         'common:actions.edit': 'Edit',
         'common:actions.delete': 'Delete',
+        'common:actions.refresh': 'Refresh',
       };
-      return translations[key] || key;
+      if (translations[key] !== undefined) return translations[key];
+      if (typeof options === 'string') return options || key;
+      if (options && typeof options === 'object' && 'defaultValue' in options) {
+        return (options.defaultValue as string) || '';
+      }
+      return key;
     },
   }),
 }));
@@ -89,6 +96,7 @@ let mockUseGetFlowsReturn = {
   data: mockFlowsData,
   isLoading: false,
   error: null as Error | null,
+  refetch: mockRefetch,
 };
 
 vi.mock('../../api/useGetFlows', () => ({
@@ -194,6 +202,21 @@ vi.mock('@wso2/oxygen-ui', async () => {
         </>
       ),
       RowActions: ({children}: {children: React.ReactNode}): React.ReactElement => children as React.ReactElement,
+      EmptyState: ({
+        title = undefined,
+        description = undefined,
+        action = undefined,
+      }: {
+        title?: string;
+        description?: string;
+        action?: React.ReactNode;
+      }): React.ReactElement => (
+        <div>
+          {title && <h2>{title}</h2>}
+          {description && <p>{description}</p>}
+          {action}
+        </div>
+      ),
     },
   };
 });
@@ -205,6 +228,7 @@ describe('FlowsList', () => {
       data: mockFlowsData,
       isLoading: false,
       error: null,
+      refetch: mockRefetch,
     };
     capturedColumns.value = [];
   });
@@ -255,6 +279,7 @@ describe('FlowsList', () => {
         data: null as unknown as {flows: BasicFlowDefinition[]},
         isLoading: true,
         error: null,
+        refetch: mockRefetch,
       };
 
       render(
@@ -268,28 +293,12 @@ describe('FlowsList', () => {
   });
 
   describe('Error State', () => {
-    it('should display error message when error occurs', () => {
+    it('should render a resolved error message via QueryErrorNotice, never the raw server text', () => {
       mockUseGetFlowsReturn = {
         data: null as unknown as {flows: BasicFlowDefinition[]},
         isLoading: false,
         error: new Error('Failed to fetch flows'),
-      };
-
-      render(
-        <MemoryRouter>
-          <FlowsList />
-        </MemoryRouter>,
-      );
-
-      expect(screen.getByText('Error loading flows')).toBeInTheDocument();
-      expect(screen.getByText('Failed to fetch flows')).toBeInTheDocument();
-    });
-
-    it('should display unknown error message when error has no message', () => {
-      mockUseGetFlowsReturn = {
-        data: null as unknown as {flows: BasicFlowDefinition[]},
-        isLoading: false,
-        error: {} as Error,
+        refetch: mockRefetch,
       };
 
       render(
@@ -300,6 +309,44 @@ describe('FlowsList', () => {
 
       expect(screen.getByText('Error loading flows')).toBeInTheDocument();
       expect(screen.getByText('Unknown error occurred')).toBeInTheDocument();
+      expect(screen.queryByText('Failed to fetch flows')).not.toBeInTheDocument();
+    });
+
+    it('should display unknown error message when error has no message', () => {
+      mockUseGetFlowsReturn = {
+        data: null as unknown as {flows: BasicFlowDefinition[]},
+        isLoading: false,
+        error: {} as Error,
+        refetch: mockRefetch,
+      };
+
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      expect(screen.getByText('Error loading flows')).toBeInTheDocument();
+      expect(screen.getByText('Unknown error occurred')).toBeInTheDocument();
+    });
+
+    it('should call refetch when the retry action is clicked', () => {
+      mockUseGetFlowsReturn = {
+        data: null as unknown as {flows: BasicFlowDefinition[]},
+        isLoading: false,
+        error: new Error('Failed to fetch flows'),
+        refetch: mockRefetch,
+      };
+
+      render(
+        <MemoryRouter>
+          <FlowsList />
+        </MemoryRouter>,
+      );
+
+      fireEvent.click(screen.getByRole('button', {name: 'Refresh'}));
+
+      expect(mockRefetch).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -342,6 +389,7 @@ describe('FlowsList', () => {
         data: {flows: []},
         isLoading: false,
         error: null,
+        refetch: mockRefetch,
       };
 
       render(
@@ -359,6 +407,7 @@ describe('FlowsList', () => {
         data: undefined as unknown as {flows: BasicFlowDefinition[]},
         isLoading: false,
         error: null,
+        refetch: mockRefetch,
       };
 
       render(

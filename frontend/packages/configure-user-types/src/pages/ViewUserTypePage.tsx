@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ReadErrorState, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, UnsavedChangesBar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -340,27 +340,23 @@ export default function ViewUserTypePage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <ReadErrorState
+        <QueryErrorNotice
           error={fetchError}
           t={tForErrors}
           variant="block"
           title={t('userTypes:edit.loadErrorTitle', 'Failed to load user type')}
           fallbackKey="userTypes:edit.loadError"
           fallbackDefaultValue="Failed to load user type information"
+          onRetry={() => void refetch()}
           action={
-            <Stack direction="row" spacing={1} justifyContent="center">
-              <Button variant="outlined" onClick={() => void refetch()}>
-                {t('common:actions.refresh', 'Refresh')}
-              </Button>
-              <Button
-                onClick={() => {
-                  handleBack().catch(() => null);
-                }}
-                startIcon={<ArrowLeft size={16} />}
-              >
-                {t('userTypes:edit.back', 'Back to User Types')}
-              </Button>
-            </Stack>
+            <Button
+              onClick={() => {
+                handleBack().catch(() => null);
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('userTypes:edit.back', 'Back to User Types')}
+            </Button>
           }
         />
       </PageContent>

@@ -89,19 +89,6 @@ var (
 			DefaultValue: "Cannot delete resource server/resource that has dependencies",
 		},
 	}
-	// ErrorCircularDependency is returned when a circular dependency is detected.
-	ErrorCircularDependency = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "RES-1007",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.resourceservice.circular_dependency_detected",
-			DefaultValue: "Circular dependency detected",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.resourceservice.circular_dependency_detected_description",
-			DefaultValue: "Setting this parent would create a circular dependency",
-		},
-	}
 	// ErrorResourceNotFound is returned when a resource is not found.
 	ErrorResourceNotFound = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,

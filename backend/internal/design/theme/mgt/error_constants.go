@@ -150,48 +150,6 @@ var (
 		},
 	}
 
-	// ErrorCannotUpdateDeclarativeTheme is returned when attempting to update a declarative theme.
-	ErrorCannotUpdateDeclarativeTheme = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "THM-1012",
-		Error: tidcommon.I18nMessage{
-			Key:          "theme.error.cannot_update_declarative",
-			DefaultValue: "Cannot update declarative theme",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "theme.error.cannot_update_declarative_description",
-			DefaultValue: "Theme is defined in declarative resources and cannot be modified",
-		},
-	}
-
-	// ErrorCannotDeleteDeclarativeTheme is returned when attempting to delete a declarative theme.
-	ErrorCannotDeleteDeclarativeTheme = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "THM-1013",
-		Error: tidcommon.I18nMessage{
-			Key:          "theme.error.cannot_delete_declarative",
-			DefaultValue: "Cannot delete declarative theme",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "theme.error.cannot_delete_declarative_description",
-			DefaultValue: "Theme is defined in declarative resources and cannot be deleted",
-		},
-	}
-
-	// ErrorResultLimitExceededInCompositeMode is returned when composite store result count exceeds max limit.
-	ErrorResultLimitExceededInCompositeMode = tidcommon.ServiceError{
-		Type: tidcommon.ServerErrorType,
-		Code: "THM-5001",
-		Error: tidcommon.I18nMessage{
-			Key:          "theme.error.result_limit_exceeded",
-			DefaultValue: "Result limit exceeded",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "theme.error.result_limit_exceeded_description",
-			DefaultValue: "Total count of themes exceeds maximum allowed limit in composite mode",
-		},
-	}
-
 	// ErrorCannotModifyDeclarativeResource is returned when attempting to modify a declarative theme.
 	ErrorCannotModifyDeclarativeResource = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,

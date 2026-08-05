@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ReadErrorState, ResourceAvatar, getInitials} from '@thunderid/components';
+import {QueryErrorNotice, ResourceAvatar, getInitials} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import {IconButton, Tooltip, Typography, ListingTable, DataGrid} from '@wso2/oxygen-ui';
@@ -150,7 +150,7 @@ export default function UsersList() {
 
   if (error) {
     return (
-      <ReadErrorState
+      <QueryErrorNotice
         error={error}
         t={t}
         variant="block"

@@ -4,17 +4,15 @@
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 import ConnectionQueryKeys from '../constants/query-keys';
 import type {ConnectionRequest, ConnectionResponse, ConnectionType} from '../models/connection';
-import isConflictError from '../utils/isConflictError';
 
 /**
  * Create a connection instance of the given type (POST /connections/{type}).
  *
- * Conflicts (409 duplicate name) are not toasted here — the caller surfaces them inline
- * next to the name field.
+ * Failures are not toasted here — the caller surfaces them inline next to the name field
+ * (409 duplicate name) or next to the create action (any other failure).
  */
 export default function useCreateConnection(
   type: ConnectionType,
@@ -49,11 +47,6 @@ export default function useCreateConnection(
         // Ignore invalidation errors
       });
       showToast(t('create.success'), 'success');
-    },
-    onError: (error) => {
-      if (!isConflictError(error)) {
-        showToast(getErrorMessage(error, t, 'create.error'), 'error');
-      }
     },
   });
 }

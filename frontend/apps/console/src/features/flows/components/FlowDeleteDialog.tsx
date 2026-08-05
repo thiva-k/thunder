@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Alert,
   Button,
@@ -15,7 +16,7 @@ import {
   ListItemText,
   Typography,
 } from '@wso2/oxygen-ui';
-import {useState, type JSX} from 'react';
+import {useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useDeleteFlow from '../api/useDeleteFlow';
 import useGetFlowUsages from '../api/useGetFlowUsages';
@@ -60,9 +61,22 @@ export default function FlowDeleteDialog({
   const visibleUsages = usagesData?.usages.slice(0, MAX_VISIBLE_USAGES) ?? [];
   const hiddenCount = (usagesData?.totalResults ?? 0) - visibleUsages.length;
 
+  // Resolves an error through the `flows` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `flows:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `flows:${key}`, options),
+    [t],
+  );
+
   const handleCancel = (): void => {
     if (deleteFlow.isPending) return;
     setError(null);
+    // Only reset once the mutation has actually failed: resetting a still-pending mutation
+    // flips isPending back to false before the in-flight request settles.
+    if (deleteFlow.isError) {
+      deleteFlow.reset();
+    }
     onClose();
   };
 
@@ -76,7 +90,7 @@ export default function FlowDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(err.message ?? t('flows:delete.error'));
+        setError(getErrorMessage(err, tForErrors, 'delete.error', 'Failed to delete flow. Please try again.'));
       },
     });
   };

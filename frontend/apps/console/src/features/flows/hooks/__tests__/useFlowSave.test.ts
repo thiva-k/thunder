@@ -9,7 +9,17 @@ import useFlowSave from '../useFlowSave';
 // Mock dependencies
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, options?: string | Record<string, unknown>) => {
+      const translations: Record<string, string> = {
+        'flows:errors.FLM-1020': 'The flow definition has structural issues.',
+      };
+      if (translations[key] !== undefined) return translations[key];
+      if (typeof options === 'string') return options || key;
+      if (options && typeof options === 'object' && 'defaultValue' in options) {
+        return (options.defaultValue as string) || '';
+      }
+      return key;
+    },
   }),
 }));
 
@@ -171,9 +181,9 @@ describe('useFlowSave', () => {
       expect(mockShowSuccess).toHaveBeenCalledWith('flows:core.loginFlowBuilder.success.flowCreated');
     });
 
-    it('should show error message on create failure', () => {
-      mockCreateFlowMutate.mockImplementation((_, options: {onError: () => void}) => {
-        options.onError();
+    it('should show a resolved error message on create failure, never the raw server text', () => {
+      mockCreateFlowMutate.mockImplementation((_, options: {onError: (err: Error) => void}) => {
+        options.onError(new Error('Internal server error'));
       });
 
       const {result} = renderUseFlowSave({
@@ -185,7 +195,26 @@ describe('useFlowSave', () => {
         result.current.handleSave(createMockCanvasData());
       });
 
-      expect(mockShowError).toHaveBeenCalledWith('flows:core.loginFlowBuilder.errors.saveFailed');
+      expect(mockShowError).toHaveBeenCalledWith('Failed to save flow. Please try again.');
+    });
+
+    it('should show the specific message for a known backend error code on create failure', () => {
+      mockCreateFlowMutate.mockImplementation((_, options: {onError: (err: Error) => void}) => {
+        const err = new Error('Bad Request') as Error & {response: {data: {code: string}}};
+        err.response = {data: {code: 'FLM-1020'}};
+        options.onError(err);
+      });
+
+      const {result} = renderUseFlowSave({
+        isEditingExistingFlow: false,
+        isFlowValid: true,
+      });
+
+      act(() => {
+        result.current.handleSave(createMockCanvasData());
+      });
+
+      expect(mockShowError).toHaveBeenCalledWith('The flow definition has structural issues.');
     });
 
     it('should invoke onSaved with the persisted canvas data on create success', () => {
@@ -210,8 +239,8 @@ describe('useFlowSave', () => {
     });
 
     it('should not invoke onSaved on create failure', () => {
-      mockCreateFlowMutate.mockImplementation((_, options: {onError: () => void}) => {
-        options.onError();
+      mockCreateFlowMutate.mockImplementation((_, options: {onError: (err: Error) => void}) => {
+        options.onError(new Error('Internal server error'));
       });
       const onSaved = vi.fn();
 
@@ -304,9 +333,9 @@ describe('useFlowSave', () => {
       expect(onSaved).toHaveBeenCalledWith(canvasData);
     });
 
-    it('should show error message on update failure', () => {
-      mockUpdateFlowMutate.mockImplementation((_, options: {onError: () => void}) => {
-        options.onError();
+    it('should show a resolved error message on update failure, never the raw server text', () => {
+      mockUpdateFlowMutate.mockImplementation((_, options: {onError: (err: Error) => void}) => {
+        options.onError(new Error('Internal server error'));
       });
 
       const {result} = renderUseFlowSave({
@@ -319,7 +348,7 @@ describe('useFlowSave', () => {
         result.current.handleSave(createMockCanvasData());
       });
 
-      expect(mockShowError).toHaveBeenCalledWith('flows:core.loginFlowBuilder.errors.saveFailed');
+      expect(mockShowError).toHaveBeenCalledWith('Failed to save flow. Please try again.');
     });
 
     it('should call createFlow when flowId is missing even if isEditingExistingFlow is true', () => {

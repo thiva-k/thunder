@@ -4,7 +4,6 @@
 import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/react-query';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 import AgentQueryKeys from '../constants/agent-query-keys';
 import type {Agent, UpdateAgentRequest} from '../models/agent';
@@ -37,9 +36,6 @@ export default function useUpdateAgent(): UseMutationResult<Agent, Error, Update
       queryClient.invalidateQueries({queryKey: [AgentQueryKeys.AGENT, agentId]}).catch(() => undefined);
       queryClient.invalidateQueries({queryKey: [AgentQueryKeys.AGENTS]}).catch(() => undefined);
       showToast(t('update.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'update.error'), 'error');
     },
   });
 }

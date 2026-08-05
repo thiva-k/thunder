@@ -1,12 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard} from '@thunderid/components';
 import {useGetAgentType, useGetAgentTypes} from '@thunderid/configure-agent-types';
 import {useResolveDisplayName} from '@thunderid/hooks';
 import {Box, Chip, CircularProgress, Stack, Typography} from '@wso2/oxygen-ui';
 import {Tag} from '@wso2/oxygen-ui-icons-react';
-import type {JSX} from 'react';
+import {useCallback, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {Agent} from '../../../models/agent';
 import EmptyState from '../shared/EmptyState';
@@ -43,7 +43,15 @@ export default function AttributesSummarySection({
 
   const {data: agentTypesData} = useGetAgentTypes();
   const matchedSchema = agentTypesData?.types?.find((s) => s.name === agent.type);
-  const {data: schemaDetails, isLoading} = useGetAgentType(matchedSchema?.id);
+  const {data: schemaDetails, isLoading, error, refetch} = useGetAgentType(matchedSchema?.id);
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   const attributes = agent.attributes ?? {};
 
@@ -66,6 +74,8 @@ export default function AttributesSummarySection({
     <Box sx={{display: 'flex', justifyContent: 'center', py: variant === 'bare' ? 2 : 4}}>
       <CircularProgress size={32} />
     </Box>
+  ) : error ? (
+    <QueryErrorNotice error={error} t={tForErrors} variant="inline" onRetry={() => void refetch()} />
   ) : Object.keys(attributes).length > 0 ? (
     variant === 'bare' ? (
       <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1}}>

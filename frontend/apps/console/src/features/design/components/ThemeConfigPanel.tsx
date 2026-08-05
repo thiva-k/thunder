@@ -2,7 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useGetTheme, useUpdateTheme, type Theme} from '@thunderid/design';
-import {Box, CircularProgress, ToggleButton, ToggleButtonGroup, Typography, type CssVarsPalette} from '@wso2/oxygen-ui';
+import {getErrorMessage} from '@thunderid/utils';
+import {
+  Alert,
+  Box,
+  CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup,
+  Typography,
+  type CssVarsPalette,
+} from '@wso2/oxygen-ui';
 import {useCallback, useEffect, useImperativeHandle, useRef, useState, type JSX, type RefObject} from 'react';
 import {useTranslation} from 'react-i18next';
 import ColorBuilderContent from './themes/ColorBuilderContent';
@@ -44,12 +53,14 @@ export default function ThemeConfigPanel({
   const {draftTheme, setDraftTheme, setIsDirty, setPreviewColorScheme} = useThemeBuilder();
 
   const [colorSchemeTab, setColorSchemeTab] = useState<'light' | 'dark'>('light');
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   /**
    * Apply an updater function to a deep-cloned copy of draftTheme and push the
    * result back into the context so the preview panel re-renders automatically.
    */
   const updateDraft = (updater: (d: Theme) => void): void => {
+    setSaveError(null);
     setDraftTheme(
       (() => {
         if (!draftTheme) return draftTheme;
@@ -70,13 +81,18 @@ export default function ThemeConfigPanel({
 
   const handleSave = useCallback(() => {
     if (!draftTheme || !theme) return;
+    setSaveError(null);
     mutateAsync({
       themeId: theme.id,
       data: {handle: theme.handle, displayName: theme.displayName, description: theme.description, theme: draftTheme},
     })
       .then(() => setIsDirty(false))
-      .catch(() => undefined);
-  }, [draftTheme, theme, mutateAsync, setIsDirty]);
+      .catch((err: Error) => {
+        setSaveError(
+          getErrorMessage(err, t, 'themes.config.errors.save.message', 'Failed to save theme. Please try again.'),
+        );
+      });
+  }, [draftTheme, theme, mutateAsync, setIsDirty, t]);
 
   const handleSaveLatest = useRef(handleSave);
 
@@ -119,6 +135,12 @@ export default function ThemeConfigPanel({
 
   return (
     <Box sx={{flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column'}}>
+      {saveError && (
+        <Alert severity="error" sx={{mb: 2}} onClose={() => setSaveError(null)}>
+          {saveError}
+        </Alert>
+      )}
+
       {/* Light / Dark toggle — only for Colors section */}
       {activeSection === 'colors' && (
         <ToggleButtonGroup

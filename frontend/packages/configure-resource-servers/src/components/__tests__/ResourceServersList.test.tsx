@@ -1,14 +1,16 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {renderWithProviders, screen} from '@thunderid/test-utils';
+import * as thunderIdReactModule from '@thunderid/react';
+import {renderWithProviders, screen, fireEvent} from '@thunderid/test-utils';
 import {describe, it, expect, vi, beforeEach} from 'vitest';
 import type {DefaultResourceServerConfigResponse, ResourceServerListResponse} from '../../models/resource-server';
 import ResourceServersList from '../ResourceServersList';
 
-vi.mock('@thunderid/react', () => ({
-  useThunderID: () => ({http: {request: vi.fn()}}),
-}));
+vi.mock('@thunderid/react', {spy: true});
+
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- vi.mock({spy:true}) type inference doesn't resolve for this package's conditional exports
+vi.mocked(thunderIdReactModule.useThunderID).mockImplementation(() => ({http: {request: vi.fn()}}) as never);
 
 vi.mock('@thunderid/contexts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@thunderid/contexts')>();
@@ -36,6 +38,7 @@ vi.mock('../ResourceServerDeleteDialog', () => ({
 }));
 
 const mockUseGetResourceServers = vi.fn();
+const mockRefetch = vi.fn();
 
 vi.mock('../../api/useGetResourceServers', () => ({
   default: (...args: unknown[]) =>
@@ -43,6 +46,7 @@ vi.mock('../../api/useGetResourceServers', () => ({
       data: ResourceServerListResponse | undefined;
       isLoading: boolean;
       error: Error | null;
+      refetch: () => void;
     },
 }));
 
@@ -84,6 +88,7 @@ describe('ResourceServersList', () => {
       data: twoRowsResponse,
       isLoading: false,
       error: null,
+      refetch: mockRefetch,
     });
     mockUseGetDefaultResourceServer.mockReturnValue({
       data: {readOnly: {}, writable: {}, merged: {resourceServerId: 'rs-1'}},
@@ -134,5 +139,35 @@ describe('ResourceServersList', () => {
     renderWithProviders(<ResourceServersList />);
 
     expect(screen.queryByText('Default')).not.toBeInTheDocument();
+  });
+
+  it('renders the resolved catalog message in the error state, never the raw server text, when the fetch fails', () => {
+    mockUseGetResourceServers.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('raw backend list failure detail'),
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<ResourceServersList />);
+
+    expect(screen.getByText('Failed to load resource servers')).toBeInTheDocument();
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
+    expect(screen.queryByText('raw backend list failure detail')).not.toBeInTheDocument();
+  });
+
+  it('retries the fetch when Refresh is clicked in the error state', () => {
+    mockUseGetResourceServers.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<ResourceServersList />);
+
+    fireEvent.click(screen.getByRole('button', {name: /Refresh/i}));
+
+    expect(mockRefetch).toHaveBeenCalled();
   });
 });

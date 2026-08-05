@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {getErrorMessage} from '@thunderid/utils';
 import type {Edge, Node} from '@xyflow/react';
 import {useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -86,6 +87,14 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
   const createFlow = useCreateFlow();
   const updateFlow = useUpdateFlow();
 
+  // Resolves an error through the `flows` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `flows:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `flows:${key}`, options),
+    [t],
+  );
+
   /**
    * Handle save button click - transforms React Flow data to backend format.
    */
@@ -119,8 +128,15 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
               showSuccess(t('flows:core.loginFlowBuilder.success.flowUpdated'));
               onSaved?.(canvasData);
             },
-            onError: () => {
-              showError(t('flows:core.loginFlowBuilder.errors.saveFailed'));
+            onError: (err: Error) => {
+              showError(
+                getErrorMessage(
+                  err,
+                  tForErrors,
+                  'core.loginFlowBuilder.errors.saveFailed',
+                  'Failed to save flow. Please try again.',
+                ),
+              );
             },
           },
         );
@@ -131,8 +147,15 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
             showSuccess(t('flows:core.loginFlowBuilder.success.flowCreated'));
             onSaved?.(canvasData);
           },
-          onError: () => {
-            showError(t('flows:core.loginFlowBuilder.errors.saveFailed'));
+          onError: (err: Error) => {
+            showError(
+              getErrorMessage(
+                err,
+                tForErrors,
+                'core.loginFlowBuilder.errors.saveFailed',
+                'Failed to save flow. Please try again.',
+              ),
+            );
           },
         });
       }
@@ -149,6 +172,7 @@ const useFlowSave = (props: UseFlowSaveProps): UseFlowSaveReturn => {
       setOpenValidationPanel,
       onSaved,
       t,
+      tForErrors,
       createFlow,
       updateFlow,
     ],

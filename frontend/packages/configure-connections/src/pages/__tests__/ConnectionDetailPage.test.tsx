@@ -7,9 +7,11 @@ import {beforeEach, describe, expect, it, vi} from 'vitest';
 import ConnectionDetailPage from '../ConnectionDetailPage';
 
 const updateMock = vi.fn().mockResolvedValue({});
+const updateResetMock = vi.fn();
 const refetchMock = vi.fn().mockResolvedValue({});
 const deleteMock = vi.fn((_id: string, opts: {onSuccess: () => void}) => opts.onSuccess());
 const navigateMock = vi.fn();
+const updateMutationState = {isPending: false, isError: false};
 
 const ATTR_CONFIG = {
   userTypeResolution: {default: 'employee'},
@@ -62,7 +64,8 @@ vi.mock('@thunderid/contexts', async (importOriginal) => ({
   useConfig: () => ({getGateCallbackUrl: () => 'https://id.acme.io/gate/callback'}),
   useToast: () => ({showToast: vi.fn()}),
 }));
-vi.mock('@thunderid/components', () => ({
+vi.mock('@thunderid/components', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/components')>()),
   SettingsCard: ({title, children}: {title: string; children: ReactNode}) => (
     <section aria-label={title}>{children}</section>
   ),
@@ -77,7 +80,9 @@ vi.mock('../../api/useConnection', () => ({
   default: () => ({data: mockConn.data, isLoading: false, isError: false, refetch: refetchMock}),
 }));
 vi.mock('../../api/useConnectionInstances', () => ({default: () => ({data: [], isLoading: false})}));
-vi.mock('../../api/useUpdateConnection', () => ({default: () => ({mutateAsync: updateMock, isPending: false})}));
+vi.mock('../../api/useUpdateConnection', () => ({
+  default: () => ({mutateAsync: updateMock, reset: updateResetMock, ...updateMutationState}),
+}));
 vi.mock('../../api/useDeleteConnection', () => ({default: () => ({mutate: deleteMock, isPending: false})}));
 vi.mock('../../api/useGetConnectionUsages', () => ({
   default: () => ({data: {totalResults: 0, count: 0, summary: {}, usages: []}, isLoading: false}),
@@ -120,6 +125,8 @@ describe('ConnectionDetailPage', () => {
     mockParams.type = 'google';
     mockParams.id = 'g1';
     mockConn.data = CONNECTION;
+    updateMutationState.isPending = false;
+    updateMutationState.isError = false;
   });
 
   it('renders the general tab with quick-copy, the credentials form, and a danger-zone delete', () => {
@@ -176,6 +183,24 @@ describe('ConnectionDetailPage', () => {
 
     fireEvent.click(screen.getByTestId('edit-name'));
     expect(screen.queryByTestId('stub-name-error')).not.toBeInTheDocument();
+  });
+
+  it('resets a failed (settled) update mutation as soon as a field is edited', () => {
+    updateMutationState.isError = true;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('edit-client-id'));
+
+    expect(updateResetMock).toHaveBeenCalled();
+  });
+
+  it('does not reset a still-pending update mutation when a field is edited', () => {
+    updateMutationState.isPending = true;
+    render(<ConnectionDetailPage />);
+
+    fireEvent.click(screen.getByTestId('edit-client-id'));
+
+    expect(updateResetMock).not.toHaveBeenCalled();
   });
 
   it('deletes the connection and returns to the list', () => {

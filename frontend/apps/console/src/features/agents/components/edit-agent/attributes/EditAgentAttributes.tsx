@@ -1,12 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard} from '@thunderid/components';
+import {QueryErrorNotice, SettingsCard} from '@thunderid/components';
 import {useGetAgentType, useGetAgentTypes} from '@thunderid/configure-agent-types';
 import {renderSchemaField} from '@thunderid/configure-users';
 import {useResolveDisplayName} from '@thunderid/hooks';
 import {Box, CircularProgress, Typography} from '@wso2/oxygen-ui';
-import {useEffect, useRef, type JSX} from 'react';
+import {useCallback, useEffect, useRef, type JSX} from 'react';
 import {useForm, useWatch} from 'react-hook-form';
 import {useTranslation} from 'react-i18next';
 import AttributesSummarySection from './AttributesSummarySection';
@@ -49,7 +49,15 @@ export default function EditAgentAttributes({
 
   const {data: agentTypesData} = useGetAgentTypes();
   const matchedSchema = agentTypesData?.types?.find((s) => s.name === agent.type);
-  const {data: schemaDetails, isLoading} = useGetAgentType(matchedSchema?.id);
+  const {data: schemaDetails, isLoading, error, refetch} = useGetAgentType(matchedSchema?.id);
+
+  // Resolves an error through the `agents` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `agents:`, per
+  // getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string => t(key.includes(':') ? key : `agents:${key}`, options),
+    [t],
+  );
 
   const attributes = (editedAgent.attributes ?? agent.attributes ?? {}) as AttributeFormData;
 
@@ -81,6 +89,10 @@ export default function EditAgentAttributes({
         <CircularProgress size={32} />
       </Box>
     );
+  }
+
+  if (error) {
+    return <QueryErrorNotice error={error} t={tForErrors} variant="inline" onRetry={() => void refetch()} />;
   }
 
   // A read-only agent can't be edited at all, so there's nothing for a form to do here — fall

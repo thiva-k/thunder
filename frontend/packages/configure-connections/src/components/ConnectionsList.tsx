@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {Button, Grid, InputAdornment, Paper, Skeleton, Stack, TextField, Typography} from '@wso2/oxygen-ui';
 import {Search, SearchX, X} from '@wso2/oxygen-ui-icons-react';
 import {type JSX, useMemo, useState} from 'react';
@@ -105,6 +106,14 @@ export default function ConnectionsList(): JSX.Element {
             </Grid>
           ))}
         </Grid>
+      ) : connectionsQuery.error ? (
+        <QueryErrorNotice
+          error={connectionsQuery.error}
+          t={t}
+          variant="block"
+          title={t('listing.loadError', 'Failed to load connections')}
+          onRetry={() => void connectionsQuery.refetch()}
+        />
       ) : filteredCards.length === 0 ? (
         <Paper variant="outlined" sx={{p: 8, textAlign: 'center'}}>
           <Stack direction="column" spacing={2} alignItems="center">

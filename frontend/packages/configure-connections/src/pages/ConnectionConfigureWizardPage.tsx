@@ -1,8 +1,9 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {useConfig, useToast} from '@thunderid/contexts';
-import {AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
+import {useConfig} from '@thunderid/contexts';
+import {getErrorMessage} from '@thunderid/utils';
+import {Alert, AppBreadcrumbs, Box, Button, Paper, Stack, Typography} from '@wso2/oxygen-ui';
 import {type JSX, useEffect, useMemo, useState} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate, useParams} from 'react-router';
@@ -20,7 +21,6 @@ import {
   formValuesToRequest,
   validateConnectionForm,
 } from '../utils/connectionFormMapping';
-import isConflictError from '../utils/isConflictError';
 
 /**
  * Full-screen wizard for configuring a branded catalog vendor: a single credentials step. The
@@ -31,7 +31,6 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
   const navigate = useNavigate();
   const routes = useConnectionRoutes();
   const {getGateCallbackUrl} = useConfig();
-  const {showToast} = useToast();
   const {type} = useParams<{type: string}>();
 
   const connectionType = type as ConnectionType;
@@ -40,6 +39,7 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
   const createMutation = useCreateConnection(connectionType);
 
   const [editedValues, setEditedValues] = useState<ConnectionFormValues>({});
+  const [generalError, setGeneralError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!meta) {
@@ -64,10 +64,21 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
     void navigate(routes.connections.list());
   };
 
+  // A create failure is stale once the user edits any field. Only reset the mutation once it has
+  // actually failed: resetting while it's still pending would flip isPending back to false and
+  // re-enable the create button before the in-flight request settles.
+  const clearCreateError = (): void => {
+    setGeneralError(null);
+    if (createMutation.isError) {
+      createMutation.reset();
+    }
+  };
+
   const handleCreate = (): void => {
     if (!formValid) {
       return;
     }
+    setGeneralError(null);
     const payload = {
       ...formValuesToRequest(values, fields, {mode: 'create', secretReplaced: true}),
       name: meta.displayName,
@@ -75,9 +86,10 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
     createMutation.mutate(payload, {
       onSuccess: (created: ConnectionResponse) => void navigate(routes.connections.detail(connectionType, created.id)),
       onError: (error: Error) => {
-        if (isConflictError(error)) {
-          showToast(t('error.duplicateName', 'A connection with this name already exists.'), 'error');
-        }
+        // The connection name here is fixed to the vendor display name and is not user-editable
+        // (see the visibleFields filter above), so a 409 duplicate-name conflict has no more
+        // specific place to go than the same general error surface as any other failure.
+        setGeneralError(getErrorMessage(error, t, 'create.error', 'Failed to create connection.'));
       },
     });
   };
@@ -124,10 +136,19 @@ export default function ConnectionConfigureWizardPage(): JSX.Element | null {
             hasStoredSecret={false}
             vendorDisplayName={meta.displayName}
             showNameField={false}
-            onFieldChange={(name, value) => setEditedValues((prev) => ({...prev, [name]: value}))}
+            onFieldChange={(name, value) => {
+              clearCreateError();
+              setEditedValues((prev) => ({...prev, [name]: value}));
+            }}
             onSecretReplacingChange={() => undefined}
           />
         </Paper>
+
+        {generalError && (
+          <Alert severity="error" onClose={clearCreateError}>
+            {generalError}
+          </Alert>
+        )}
 
         <Box sx={{display: 'flex', justifyContent: 'flex-end'}}>
           <Button

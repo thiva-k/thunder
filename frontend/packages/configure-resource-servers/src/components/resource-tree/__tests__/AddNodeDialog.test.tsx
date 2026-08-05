@@ -224,4 +224,91 @@ describe('AddNodeDialog', () => {
     expect(textboxes[1]).toHaveAttribute('placeholder', 'e.g. send-message');
     expect(textboxes[2]).toHaveAttribute('placeholder', 'e.g. Sends a message to the specified channel');
   });
+
+  it('shows the resolved catalog message inline, never the raw server text, when creating a resource fails', async () => {
+    const rawServerMessage = 'raw backend create-resource failure detail';
+    mockCreateResourceMutate.mockImplementation((_payload: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error(rawServerMessage));
+    });
+
+    renderWithProviders(<AddNodeDialog {...defaultProps} />);
+
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[0], {target: {value: 'Docs'}});
+
+    await waitFor(() => expect(textboxes[1]).toHaveValue('docs'));
+
+    fireEvent.click(screen.getByRole('button', {name: /^add$/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to add resource.')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(rawServerMessage)).not.toBeInTheDocument();
+  });
+
+  it('shows the resolved catalog message inline, never the raw server text, when creating an action fails', async () => {
+    const rawServerMessage = 'raw backend create-action failure detail';
+    mockCreateActionMutate.mockImplementation((_payload: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error(rawServerMessage));
+    });
+
+    renderWithProviders(<AddNodeDialog {...defaultProps} mode="server-action" />);
+
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[0], {target: {value: 'Read'}});
+
+    await waitFor(() => expect(textboxes[1]).toHaveValue('read'));
+
+    fireEvent.click(screen.getByRole('button', {name: /^add$/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to add action.')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(rawServerMessage)).not.toBeInTheDocument();
+  });
+
+  it('clears the create error when the name field is edited again', async () => {
+    mockCreateResourceMutate.mockImplementation((_payload: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error('nope'));
+    });
+
+    renderWithProviders(<AddNodeDialog {...defaultProps} />);
+
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[0], {target: {value: 'Docs'}});
+    await waitFor(() => expect(textboxes[1]).toHaveValue('docs'));
+
+    fireEvent.click(screen.getByRole('button', {name: /^add$/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to add resource.')).toBeInTheDocument();
+    });
+
+    fireEvent.change(textboxes[0], {target: {value: 'Docs 2'}});
+
+    expect(screen.queryByText('Failed to add resource.')).not.toBeInTheDocument();
+  });
+
+  it('clears the create error and resets the fields when Cancel is clicked after a failed create', async () => {
+    mockCreateResourceMutate.mockImplementation((_payload: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error('nope'));
+    });
+
+    renderWithProviders(<AddNodeDialog {...defaultProps} />);
+
+    const textboxes = screen.getAllByRole('textbox');
+    fireEvent.change(textboxes[0], {target: {value: 'Docs'}});
+    await waitFor(() => expect(textboxes[1]).toHaveValue('docs'));
+
+    fireEvent.click(screen.getByRole('button', {name: /^add$/i}));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to add resource.')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole('button', {name: 'Cancel'}));
+
+    expect(screen.queryByText('Failed to add resource.')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('textbox')[0]).toHaveValue('');
+  });
 });

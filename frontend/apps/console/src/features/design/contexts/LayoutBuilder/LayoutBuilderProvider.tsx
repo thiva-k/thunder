@@ -1,8 +1,10 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {QueryErrorNotice} from '@thunderid/components';
 import {useGetLayout} from '@thunderid/design';
 import {useState, useMemo, useCallback, type PropsWithChildren} from 'react';
+import {useTranslation} from 'react-i18next';
 import {useParams} from 'react-router';
 import LayoutBuilderContext, {type LayoutBuilderContextType, type LayoutConfig} from './LayoutBuilderContext';
 
@@ -43,8 +45,9 @@ export type LayoutBuilderProviderProps = PropsWithChildren;
  * @public
  */
 export default function LayoutBuilderProvider({children}: LayoutBuilderProviderProps) {
+  const {t} = useTranslation('design');
   const {layoutId = ''} = useParams<{layoutId: string}>();
-  const {data: layoutData, isLoading} = useGetLayout(layoutId);
+  const {data: layoutData, isLoading, error, refetch} = useGetLayout(layoutId);
 
   const [draftLayout, setDraftLayout] = useState<LayoutConfig | null>(
     () => (layoutData?.layout as LayoutConfig) ?? null,
@@ -187,6 +190,18 @@ export default function LayoutBuilderProvider({children}: LayoutBuilderProviderP
       getBaseScreenNames,
     ],
   );
+
+  if (error) {
+    return (
+      <QueryErrorNotice
+        error={error}
+        t={t}
+        variant="block"
+        title={t('layouts.builder.errors.load.title', 'Failed to load layout')}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
 
   if (isLoading) {
     return null; // or a loading spinner

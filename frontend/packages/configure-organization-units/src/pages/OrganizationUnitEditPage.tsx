@@ -1,7 +1,7 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, ReadErrorState, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, QueryErrorNotice, ResourceAvatar, UnsavedChangesBar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
@@ -209,29 +209,25 @@ export default function OrganizationUnitEditPage({
   if (fetchError) {
     return (
       <PageContent>
-        <ReadErrorState
+        <QueryErrorNotice
           error={fetchError}
           t={tForErrors}
           variant="block"
           title={t('organizationUnits:edit.page.errorTitle', 'Failed to load organization unit')}
           fallbackKey="organizationUnits:edit.page.error"
           fallbackDefaultValue="Failed to load organization unit information"
+          onRetry={() => void refetch()}
           action={
-            <Stack direction="row" spacing={1} justifyContent="center">
-              <Button variant="outlined" onClick={() => void refetch()}>
-                {t('common:actions.refresh', 'Refresh')}
-              </Button>
-              <Button
-                onClick={() => {
-                  handleBack().catch((error: unknown) => {
-                    logger.error('Failed to navigate back', {error});
-                  });
-                }}
-                startIcon={<ArrowLeft size={16} />}
-              >
-                {t('organizationUnits:edit.page.back', 'Back to Organization Units')}
-              </Button>
-            </Stack>
+            <Button
+              onClick={() => {
+                handleBack().catch((error: unknown) => {
+                  logger.error('Failed to navigate back', {error});
+                });
+              }}
+              startIcon={<ArrowLeft size={16} />}
+            >
+              {t('organizationUnits:edit.page.back', 'Back to Organization Units')}
+            </Button>
           }
         />
       </PageContent>
