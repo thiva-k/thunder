@@ -22,7 +22,7 @@
           "responseTypes": ["code"],
           "redirectUris": ["http://localhost:3000/api/auth/callback"],
           "pkceRequired": true,
-          "tokenEndpointAuthMethod": "client_secret_post",
+          "tokenEndpointAuthMethod": "client_secret_basic",
           "publicClient": false
         }
       }
@@ -40,8 +40,7 @@
         "value": true
       },
       "tokenEndpointAuthMethod": {
-        "readOnly": true,
-        "value": "client_secret_post"
+        "readOnly": false
       }
     }
   },
