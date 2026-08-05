@@ -17,6 +17,7 @@ const USER_AUDIENCE = 'user';
 
 interface EditTokenSettingsTabsProps {
   application: Application;
+  editedApp: Partial<Application>;
   oauth2Config?: OAuth2Config;
   onFieldChange: (field: keyof Application, value: unknown) => void;
   onValidationChange?: (hasErrors: boolean) => void;
@@ -36,6 +37,7 @@ interface EditTokenSettingsTabsProps {
  */
 export default function EditTokenSettingsTabs({
   application,
+  editedApp,
   oauth2Config = undefined,
   onFieldChange,
   onValidationChange = undefined,
@@ -144,6 +146,7 @@ export default function EditTokenSettingsTabs({
       {audience === USER_AUDIENCE && userUnlocked && (
         <EditTokenSettings
           application={application}
+          editedApp={editedApp}
           oauth2Config={oauth2Config}
           sectionResetKey={sectionResetKey}
           onFieldChange={onFieldChange}

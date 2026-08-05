@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {zodResolver} from '@hookform/resolvers/zod';
-import type {Application, OAuth2Config, ScopeClaims} from '@thunderid/configure-applications';
+import type {Application, AssertionConfig, OAuth2Config, ScopeClaims} from '@thunderid/configure-applications';
 import type {PropertyDefinition, ApiUserType} from '@thunderid/configure-user-types';
 import {useGetUserTypes} from '@thunderid/configure-user-types';
 import {useConfig} from '@thunderid/contexts';
@@ -26,6 +26,12 @@ interface EditTokenSettingsProps {
    * The application being edited
    */
   application: Application;
+  /**
+   * Pending, unsaved changes to the application as tracked by the edit page. Fields present here
+   * take precedence over the stored ones, so successive edits to the same field accumulate instead
+   * of each being applied on top of the stored value.
+   */
+  editedApp?: Partial<Application>;
   /**
    * OAuth2 configuration containing token settings (optional)
    */
@@ -84,12 +90,19 @@ const createTokenConfigSchema = (t: (key: string) => string) => {
 
 type TokenConfigFormData = z.infer<ReturnType<typeof createTokenConfigSchema>>;
 
-const computeValidityDefaults = (config: OAuth2Config | undefined, app: Application): TokenConfigFormData => ({
-  validityPeriod: config?.token?.validityPeriod ?? app.assertion?.validityPeriod ?? 3600,
+const computeValidityDefaults = (
+  config: OAuth2Config | undefined,
+  assertion: AssertionConfig | undefined,
+): TokenConfigFormData => ({
+  validityPeriod: config?.token?.validityPeriod ?? assertion?.validityPeriod ?? 3600,
   accessTokenValidity: config?.token?.accessToken?.userConfig?.validityPeriod ?? 3600,
   idTokenValidity: config?.token?.idToken?.validityPeriod ?? 3600,
   refreshTokenValidity: config?.token?.refreshToken?.validityPeriod ?? 86400,
 });
+
+// Stable identity for the default, so an untouched application doesn't invalidate the memos below
+// on every render.
+const NO_PENDING_CHANGES: Partial<Application> = {};
 
 type TokenAttributeScope = 'shared' | 'access' | 'id' | 'userinfo';
 
@@ -136,6 +149,7 @@ const areSetsEqual = (set1: Set<string>, set2: Set<string>): boolean => {
  */
 export default function EditTokenSettings({
   application,
+  editedApp = NO_PENDING_CHANGES,
   oauth2Config = undefined,
   onFieldChange,
   onValidationChange = undefined,
@@ -183,6 +197,15 @@ export default function EditTokenSettings({
   // Determine if this is OAuth/OIDC mode (has separate token configs) or Native mode
   const isOAuthMode = useMemo(() => isOAuthTokenMode(oauth2Config), [oauth2Config]);
 
+  // In Native mode both the attribute list and the validity period live on this single config, so
+  // each is written by spreading the other's current value. Prefer the pending assertion whenever
+  // the field has been touched — including an explicit undefined — otherwise the second edit would
+  // spread the stored value and discard the first.
+  const currentAssertion = useMemo(
+    () => ('assertion' in editedApp ? editedApp.assertion : application.assertion),
+    [editedApp, application.assertion],
+  );
+
   const tokenConfigSchema = useMemo(() => createTokenConfigSchema(t), [t]);
 
   const {
@@ -193,7 +216,7 @@ export default function EditTokenSettings({
   } = useForm<TokenConfigFormData>({
     resolver: zodResolver(tokenConfigSchema),
     mode: 'onChange',
-    defaultValues: computeValidityDefaults(oauth2Config, application),
+    defaultValues: computeValidityDefaults(oauth2Config, currentAssertion),
   });
 
   const [validityPeriod, accessTokenValidity, idTokenValidity, refreshTokenValidity] = useWatch({
@@ -207,6 +230,7 @@ export default function EditTokenSettings({
 
   const oauth2ConfigRef = useRef(oauth2Config);
   const applicationRef = useRef(application);
+  const currentAssertionRef = useRef(currentAssertion);
   const isFirstRenderRef = useRef(true);
   const prevSectionResetKeyRef = useRef(sectionResetKey);
 
@@ -218,18 +242,22 @@ export default function EditTokenSettings({
     applicationRef.current = application;
   }, [application]);
 
+  useEffect(() => {
+    currentAssertionRef.current = currentAssertion;
+  }, [currentAssertion]);
+
   // Resets the Token Validity fields in place on Save/Reset — deliberately not a remount
   //  since TokenValidationSection owns its own local Access/ID/Refresh Token
   // sub-tab selection that must survive this. Also clears the pending attribute add/remove
   // highlight state below, which is edit-tracking state that should be cleared on Save/Reset.
-  // Relies on the two ref-sync effects above running first in the same commit so oauth2ConfigRef
-  // and applicationRef hold the latest values by the time this reads them — keep this effect
+  // Relies on the ref-sync effects above running first in the same commit so oauth2ConfigRef and
+  // currentAssertionRef hold the latest values by the time this reads them — keep this effect
   // declared after them.
   useEffect(() => {
     if (sectionResetKey === prevSectionResetKeyRef.current) return;
     prevSectionResetKeyRef.current = sectionResetKey;
 
-    reset(computeValidityDefaults(oauth2ConfigRef.current, applicationRef.current));
+    reset(computeValidityDefaults(oauth2ConfigRef.current, currentAssertionRef.current));
 
     setPendingAdditionsByToken(createEmptyAttributeSetState());
     setPendingRemovalsByToken(createEmptyAttributeSetState());
@@ -248,7 +276,7 @@ export default function EditTokenSettings({
       const valid = await trigger();
       if (cancelled || !valid) return;
 
-      const baseline = computeValidityDefaults(oauth2ConfigRef.current, applicationRef.current);
+      const baseline = computeValidityDefaults(oauth2ConfigRef.current, currentAssertionRef.current);
 
       if (isOAuthMode) {
         const config = oauth2ConfigRef.current;
@@ -292,7 +320,7 @@ export default function EditTokenSettings({
           return; // No changes, skip update
         }
 
-        onFieldChange('assertion', {...applicationRef.current.assertion, validityPeriod});
+        onFieldChange('assertion', {...currentAssertionRef.current, validityPeriod});
       }
     };
 
@@ -424,8 +452,8 @@ export default function EditTokenSettings({
       return [];
     }
 
-    return oauth2Config?.token?.userAttributes ?? application.assertion?.userAttributes ?? [];
-  }, [isOAuthMode, oauth2Config, application]);
+    return currentAssertion?.userAttributes ?? [];
+  }, [isOAuthMode, currentAssertion]);
 
   const currentAccessTokenAttributes = useMemo(
     () => oauth2Config?.token?.accessToken?.userConfig?.attributes ?? [],
@@ -714,7 +742,7 @@ export default function EditTokenSettings({
       });
       onFieldChange('inboundAuthConfig', updatedInboundAuth);
     } else if (scope === 'shared') {
-      onFieldChange('assertion', {...application.assertion, userAttributes: nextAttrs});
+      onFieldChange('assertion', {...currentAssertion, userAttributes: nextAttrs});
     }
   };
 
