@@ -42,8 +42,5 @@ export default function useCreateUserType(): UseMutationResult<ApiUserType, Erro
       });
       showToast(t('create.success'), 'success');
     },
-    onError: () => {
-      showToast(t('create.error'), 'error');
-    },
   });
 }

@@ -1,14 +1,15 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ReadErrorState} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Chip,
   IconButton,
   Tooltip,
   Typography,
-  Snackbar,
   Alert,
   ListingTable,
   Dialog,
@@ -39,27 +40,11 @@ export default function UserTypesList() {
   const routes = useUserTypeRoutes();
   const dataGridLocaleText = useDataGridLocaleText();
 
-  const {data: userTypesData, isLoading, error: userTypesRequestError} = useGetUserTypes();
+  const {data: userTypesData, isLoading, error: userTypesRequestError, refetch} = useGetUserTypes();
   const deleteUserTypeMutation = useDeleteUserType();
 
-  const error = userTypesRequestError;
-
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [selectedUserTypeId, setSelectedUserTypeId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  // Show snackbar when error occurs
-  const [prevError, setPrevError] = useState<typeof error>(null);
-  if (prevError !== error) {
-    setPrevError(error);
-    if (error) {
-      setSnackbarOpen(true);
-    }
-  }
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
 
   const handleDeleteClick = useCallback((userTypeId: string): void => {
     setSelectedUserTypeId(userTypeId);
@@ -190,6 +175,18 @@ export default function UserTypesList() {
     [t, handleDeleteClick, handleViewClick],
   );
 
+  if (userTypesRequestError) {
+    return (
+      <ReadErrorState
+        error={userTypesRequestError}
+        t={(key, options) => t(key.includes(':') ? key : `userTypes:${key}`, options)}
+        variant="block"
+        title={t('userTypes:listing.error', 'Failed to load user types')}
+        onRetry={() => void refetch()}
+      />
+    );
+  }
+
   return (
     <>
       <ListingTable.Provider variant="data-grid-card" loading={isLoading}>
@@ -227,7 +224,12 @@ export default function UserTypesList() {
           {deleteUserTypeMutation.error && (
             <Alert severity="error" sx={{mt: 2}}>
               <Typography variant="body2" sx={{fontWeight: 'bold'}}>
-                {deleteUserTypeMutation.error.message}
+                {getErrorMessage(
+                  deleteUserTypeMutation.error,
+                  (key, options) => t(key.includes(':') ? key : `userTypes:${key}`, options),
+                  'delete.error',
+                  'Failed to delete user type. Please try again.',
+                )}
               </Typography>
             </Alert>
           )}
@@ -250,17 +252,6 @@ export default function UserTypesList() {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-      >
-        <Alert onClose={handleCloseSnackbar} severity="error" sx={{width: '100%'}}>
-          {error?.message ?? t('common:messages.saveError')}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

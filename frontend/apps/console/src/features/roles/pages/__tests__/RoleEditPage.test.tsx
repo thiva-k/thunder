@@ -69,7 +69,8 @@ vi.mock('../../components/edit-role/permissions-settings/EditPermissionsSettings
   ),
 }));
 
-vi.mock('@thunderid/components', () => ({
+vi.mock('@thunderid/components', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@thunderid/components')>()),
   CopyableId: vi.fn(() => null),
   PageLoadingAnimation: vi.fn(() => <div data-testid="page-loading-animation" />),
   UnsavedChangesBar: vi.fn(

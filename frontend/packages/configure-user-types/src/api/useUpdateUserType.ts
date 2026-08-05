@@ -59,8 +59,5 @@ export default function useUpdateUserType(): UseMutationResult<ApiUserType, Erro
       });
       showToast(t('update.success'), 'success');
     },
-    onError: () => {
-      showToast(t('update.error'), 'error');
-    },
   });
 }

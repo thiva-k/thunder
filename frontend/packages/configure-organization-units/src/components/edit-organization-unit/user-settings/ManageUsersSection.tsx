@@ -1,7 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {SettingsCard, getInitials} from '@thunderid/components';
+import {ReadErrorState, SettingsCard, getInitials} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import type {User} from '@thunderid/types';
 import {Box, DataGrid, Avatar} from '@wso2/oxygen-ui';
@@ -35,7 +35,7 @@ export default function ManageUsersSection({organizationUnitId}: ManageUsersSect
   const {t} = useTranslation();
   const dataGridLocaleText = useDataGridLocaleText();
 
-  const {data: usersData, isLoading} = useGetOrganizationUnitUsers(organizationUnitId);
+  const {data: usersData, isLoading, error, refetch} = useGetOrganizationUnitUsers(organizationUnitId);
 
   const columns: DataGrid.GridColDef<User>[] = useMemo(
     () => [
@@ -94,10 +94,34 @@ export default function ManageUsersSection({organizationUnitId}: ManageUsersSect
     [t],
   );
 
+  if (error) {
+    return (
+      <SettingsCard
+        title={t('organizationUnits:edit.users.sections.manage.title', 'Users')}
+        description={t(
+          'organizationUnits:edit.users.sections.manage.description',
+          'View users belonging to this organization unit',
+        )}
+      >
+        <ReadErrorState
+          error={error}
+          t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
+          variant="inline"
+          onRetry={() => void refetch()}
+          fallbackKey="organizationUnits:edit.users.sections.manage.error"
+          fallbackDefaultValue="Failed to load users"
+        />
+      </SettingsCard>
+    );
+  }
+
   return (
     <SettingsCard
-      title={t('organizationUnits:edit.users.sections.manage.title')}
-      description={t('organizationUnits:edit.users.sections.manage.description')}
+      title={t('organizationUnits:edit.users.sections.manage.title', 'Users')}
+      description={t(
+        'organizationUnits:edit.users.sections.manage.description',
+        'View users belonging to this organization unit',
+      )}
       slotProps={{
         content: {
           sx: {

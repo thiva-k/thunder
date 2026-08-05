@@ -1,12 +1,11 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {ResourceAvatar, getInitials} from '@thunderid/components';
+import {ReadErrorState, ResourceAvatar, getInitials} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {getErrorMessage} from '@thunderid/utils';
-import {Button, IconButton, Tooltip, Typography, ListingTable, DataGrid} from '@wso2/oxygen-ui';
-import {AlertCircle, Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {IconButton, Tooltip, Typography, ListingTable, DataGrid} from '@wso2/oxygen-ui';
+import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useMemo, useState, useCallback} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -151,15 +150,12 @@ export default function UsersList() {
 
   if (error) {
     return (
-      <ListingTable.EmptyState
-        illustration={<AlertCircle size={40} />}
+      <ReadErrorState
+        error={error}
+        t={t}
+        variant="block"
         title={t('users:listing.error', 'Failed to load users')}
-        description={getErrorMessage(error, t, 'common:messages.somethingWentWrong', 'Something went wrong')}
-        action={
-          <Button variant="outlined" onClick={() => void refetch()}>
-            {t('common:actions.refresh', 'Refresh')}
-          </Button>
-        }
+        onRetry={() => void refetch()}
       />
     );
   }

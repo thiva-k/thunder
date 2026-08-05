@@ -118,7 +118,7 @@ describe('UserTypeDeleteDialog', () => {
     await user.click(screen.getByRole('button', {name: /^delete$/i}));
 
     await waitFor(() => {
-      expect(screen.getByText('Delete failed')).toBeInTheDocument();
+      expect(screen.getByText('Failed to delete user type. Please try again.')).toBeInTheDocument();
     });
   });
 

@@ -57,20 +57,28 @@ vi.mock('@/api/useGetOrganizationUnit', () => ({
 
 // Mock update hook
 const mockMutateAsync = vi.fn();
+const mockUpdateReset = vi.fn();
+const mockUpdateHook: {
+  mutateAsync: typeof mockMutateAsync;
+  isPending: boolean;
+  error: Error | null;
+  reset: typeof mockUpdateReset;
+} = {mutateAsync: mockMutateAsync, isPending: false, error: null, reset: mockUpdateReset};
 vi.mock('@/api/useUpdateOrganizationUnit', () => ({
-  default: () => ({
-    mutateAsync: mockMutateAsync,
-    isPending: false,
-  }),
+  default: () => mockUpdateHook,
 }));
 
 // Mock delete hook
 const mockDeleteMutate = vi.fn();
+const mockDeleteReset = vi.fn();
+const mockDeleteHook: {
+  mutate: typeof mockDeleteMutate;
+  isPending: boolean;
+  error: Error | null;
+  reset: typeof mockDeleteReset;
+} = {mutate: mockDeleteMutate, isPending: false, error: null, reset: mockDeleteReset};
 vi.mock('@/api/useDeleteOrganizationUnit', () => ({
-  default: () => ({
-    mutate: mockDeleteMutate,
-    isPending: false,
-  }),
+  default: () => mockDeleteHook,
 }));
 
 // Mock child hooks
@@ -109,9 +117,11 @@ vi.mock('@thunderid/hooks', async (importOriginal) => {
 });
 
 // Mock EmojiPicker
-vi.mock('@thunderid/components', async () => {
+vi.mock('@thunderid/components', async (importOriginal) => {
   const React = await import('react');
+  const actual = await importOriginal<typeof import('@thunderid/components')>();
   return {
+    ...actual,
     EmojiPicker: vi.fn(() => null),
     UnsavedChangesBar: vi.fn(
       ({
@@ -120,6 +130,7 @@ vi.mock('@thunderid/components', async () => {
         saveLabel,
         savingLabel,
         isSaving,
+        error = undefined,
         onReset,
         onSave,
       }: {
@@ -128,11 +139,13 @@ vi.mock('@thunderid/components', async () => {
         saveLabel: string;
         savingLabel: string;
         isSaving: boolean;
+        error?: string;
         onReset: () => void;
         onSave: () => void;
       }) => (
         <div data-testid="unsaved-changes-bar">
           <span>{message}</span>
+          {error && <span>{error}</span>}
           <button type="button" onClick={onReset}>
             {resetLabel}
           </button>
@@ -219,6 +232,12 @@ describe('OrganizationUnitEditPage', () => {
     mockMutateAsync.mockReset();
     mockRefetch.mockReset();
     mockDeleteMutate.mockReset();
+    mockUpdateReset.mockReset();
+    mockDeleteReset.mockReset();
+    mockUpdateHook.error = null;
+    mockUpdateHook.isPending = false;
+    mockDeleteHook.error = null;
+    mockDeleteHook.isPending = false;
     mockUseLocation.mockReturnValue({
       state: null,
       pathname: '/organization-units/ou-123',
@@ -304,8 +323,26 @@ describe('OrganizationUnitEditPage', () => {
     renderWithProviders(<OrganizationUnitEditPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText(t('organizationUnits:edit.page.errorTitle'))).toBeInTheDocument();
+      expect(screen.getByText('Failed to load organization unit information')).toBeInTheDocument();
     });
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+  });
+
+  it('should retry the query when Refresh is clicked on the read error state', async () => {
+    mockUseGetOrganizationUnit.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetch,
+    });
+
+    renderWithProviders(<OrganizationUnitEditPage />);
+
+    const refreshButton = await screen.findByRole('button', {name: /refresh/i});
+    fireEvent.click(refreshButton);
+
+    expect(mockRefetch).toHaveBeenCalled();
   });
 
   it('should show not found state when OU is undefined', async () => {
@@ -705,7 +742,7 @@ describe('OrganizationUnitEditPage', () => {
     renderWithProviders(<OrganizationUnitEditPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText(t('organizationUnits:edit.page.errorTitle'))).toBeInTheDocument();
     });
 
     // Click back button
@@ -827,7 +864,7 @@ describe('OrganizationUnitEditPage', () => {
     renderWithProviders(<OrganizationUnitEditPage />);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText(t('organizationUnits:edit.page.errorTitle'))).toBeInTheDocument();
     });
 
     // Click back button - should not throw
@@ -1097,14 +1134,15 @@ describe('OrganizationUnitEditPage', () => {
     });
   });
 
-  describe('Delete Error and Snackbar', () => {
-    it('should show error snackbar when delete fails', async () => {
-      // Mock delete to trigger onError
-      mockDeleteMutate.mockImplementation((_id: string, options: {onError?: (err: Error) => void}) => {
-        options.onError?.(new Error('Delete failed'));
+  describe('Delete Error', () => {
+    it('should keep the dialog open and show the resolved error inline when delete fails', async () => {
+      // The dialog owns the delete mutation itself and reads its `error` state directly,
+      // rather than a parent-forwarded onError callback.
+      mockDeleteMutate.mockImplementation(() => {
+        mockDeleteHook.error = Object.assign(new Error('Delete failed'), {response: {data: {code: 'ERR'}}});
       });
 
-      renderWithProviders(<OrganizationUnitEditPage />);
+      const {rerender} = renderWithProviders(<OrganizationUnitEditPage />);
 
       await waitFor(() => {
         expect(
@@ -1126,10 +1164,12 @@ describe('OrganizationUnitEditPage', () => {
       const confirmDeleteButton = deleteButtons.find((btn) => btn.closest('.MuiDialog-root'));
       expect(confirmDeleteButton).toBeDefined();
       fireEvent.click(confirmDeleteButton!);
+      rerender(<OrganizationUnitEditPage />);
 
-      // Snackbar should appear with error
+      // The dialog stays open and shows the resolved error inline
       await waitFor(() => {
-        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByText(t('organizationUnits:delete.dialog.message'))).toBeInTheDocument();
+        expect(screen.getByText('Failed to delete organization unit. Please try again.')).toBeInTheDocument();
       });
     });
   });

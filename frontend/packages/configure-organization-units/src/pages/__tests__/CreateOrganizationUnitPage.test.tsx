@@ -248,8 +248,9 @@ describe('CreateOrganizationUnitPage', () => {
     fireEvent.click(createButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to create organization unit. Please try again.')).toBeInTheDocument();
     });
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
   });
 
   it('should close error alert when close button is clicked', async () => {
@@ -272,7 +273,7 @@ describe('CreateOrganizationUnitPage', () => {
     fireEvent.click(createButton);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to create organization unit. Please try again.')).toBeInTheDocument();
     });
 
     // Close the alert
@@ -280,8 +281,34 @@ describe('CreateOrganizationUnitPage', () => {
     fireEvent.click(alertCloseButton);
 
     await waitFor(() => {
-      expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed to create organization unit. Please try again.')).not.toBeInTheDocument();
     });
+  });
+
+  it('should clear the create error when a field changes', async () => {
+    mockMutate.mockImplementation((_data, options: {onError: (err: Error) => void}) => {
+      options.onError(new Error('Network error'));
+    });
+
+    renderWithProviders(<CreateOrganizationUnitPage />);
+
+    const nameInput = screen.getByLabelText(/Name/i);
+    fireEvent.change(nameInput, {target: {value: 'Test Organization'}});
+
+    await waitFor(() => {
+      const createButton = screen.getByText(t('common:actions.create'));
+      expect(createButton).not.toBeDisabled();
+    });
+
+    fireEvent.click(screen.getByText(t('common:actions.create')));
+
+    await waitFor(() => {
+      expect(screen.getByText('Failed to create organization unit. Please try again.')).toBeInTheDocument();
+    });
+
+    fireEvent.change(nameInput, {target: {value: 'Test Organization Updated'}});
+
+    expect(screen.queryByText('Failed to create organization unit. Please try again.')).not.toBeInTheDocument();
   });
 
   it('should include description in request when provided', async () => {

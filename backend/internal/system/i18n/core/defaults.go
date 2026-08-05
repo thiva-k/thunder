@@ -499,8 +499,6 @@ var defaultMessages = map[string]string{
 	"error.entitytypeservice.user_type_name_conflict_description": "A user type with the same name already exists",
 	"error.entitytypeservice.user_type_not_found": "User type not found",
 	"error.entitytypeservice.user_type_not_found_description": "The user type with the specified id does not exist",
-	"error.entitytypeservice.user_validation_failed": "User validation failed",
-	"error.entitytypeservice.user_validation_failed_description": "User attributes do not conform to the required schema",
 	"error.eudi.expired_state": "Expired request",
 	"error.eudi.expired_state_description": "The request associated with the supplied state value has expired",
 	"error.eudi.invalid_request": "Invalid request",

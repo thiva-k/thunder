@@ -69,6 +69,7 @@ interface UseGetUserTypesReturn {
   data: UserTypeListResponse | undefined;
   isLoading: boolean;
   error: Error | null;
+  refetch: ReturnType<typeof vi.fn>;
 }
 
 interface UseGetUserTypeReturn {
@@ -102,6 +103,7 @@ interface UseDeleteUserReturn {
 }
 
 const mockRefetch = vi.fn();
+const mockRefetchUserTypes = vi.fn();
 const mockUseGetUser = vi.fn<() => UseGetUserReturn>();
 const mockUseGetUserTypes = vi.fn<() => UseGetUserTypesReturn>();
 const mockUseGetUserType = vi.fn<() => UseGetUserTypeReturn>();
@@ -236,6 +238,7 @@ describe('UserEditPage', () => {
       data: mockSchemasData,
       isLoading: false,
       error: null,
+      refetch: mockRefetchUserTypes,
     });
     mockUseGetUserType.mockReturnValue({
       data: mockSchemaData,
@@ -270,6 +273,50 @@ describe('UserEditPage', () => {
       render(<UserEditPage />);
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('displays loading spinner when the user type list is loading', () => {
+      mockUseGetUserTypes.mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+        refetch: mockRefetchUserTypes,
+      });
+
+      render(<UserEditPage />);
+
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('displays error alert when the user type list fails to load', () => {
+      mockUseGetUserTypes.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('User types list failed'),
+        refetch: mockRefetchUserTypes,
+      });
+
+      render(<UserEditPage />);
+
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
+      expect(screen.getByRole('button', {name: /back to users/i})).toBeInTheDocument();
+    });
+
+    it('retries the user type list query when Refresh is clicked', async () => {
+      const user = userEvent.setup();
+      mockUseGetUserTypes.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('User types list failed'),
+        refetch: mockRefetchUserTypes,
+      });
+
+      render(<UserEditPage />);
+
+      await user.click(screen.getByRole('button', {name: /refresh/i}));
+
+      expect(mockRefetchUserTypes).toHaveBeenCalledTimes(1);
     });
 
     it('displays error alert when user fails to load', () => {
@@ -501,6 +548,7 @@ describe('UserEditPage', () => {
         data: {...mockSchemasData, types: [{...mockSchemasData.types[0], ouId: ''}]},
         isLoading: false,
         error: null,
+        refetch: mockRefetchUserTypes,
       });
 
       render(<UserEditPage />);
@@ -612,6 +660,7 @@ describe('UserEditPage', () => {
         data: {...mockSchemasData, types: [{...mockSchemasData.types[0], ouId: 'schema-ou'}]},
         isLoading: false,
         error: null,
+        refetch: mockRefetchUserTypes,
       });
 
       render(<UserEditPage />);
@@ -633,6 +682,7 @@ describe('UserEditPage', () => {
         data: {...mockSchemasData, types: [{...mockSchemasData.types[0], ouId: ''}]},
         isLoading: false,
         error: null,
+        refetch: mockRefetchUserTypes,
       });
 
       render(<UserEditPage />);

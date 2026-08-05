@@ -89,19 +89,6 @@ var (
 			DefaultValue: "The offset parameter must be a non-negative integer",
 		},
 	}
-	// ErrorUserValidationFailed is the error returned when user attributes do not conform to the schema.
-	ErrorUserValidationFailed = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "USRS-1007",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.entitytypeservice.user_validation_failed",
-			DefaultValue: "User validation failed",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.entitytypeservice.user_validation_failed_description",
-			DefaultValue: "User attributes do not conform to the required schema",
-		},
-	}
 	// ErrorCannotModifyDeclarativeResource is the error returned when trying to modify a declarative resource.
 	ErrorCannotModifyDeclarativeResource = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
