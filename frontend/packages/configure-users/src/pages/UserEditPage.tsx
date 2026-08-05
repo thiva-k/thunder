@@ -3,6 +3,7 @@
 
 import {
   PageLoadingAnimation,
+  ReadErrorState,
   ResourceAvatar,
   SettingsCard,
   UnsavedChangesBar,
@@ -29,9 +30,8 @@ import {
   PageTitle,
   FormControl,
   FormLabel,
-  ListingTable,
 } from '@wso2/oxygen-ui';
-import {AlertCircle, ArrowLeft, Copy, Check} from '@wso2/oxygen-ui-icons-react';
+import {ArrowLeft, Copy, Check} from '@wso2/oxygen-ui-icons-react';
 import {useState, useEffect, useMemo, useCallback, useRef, type SyntheticEvent, type ReactNode, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
@@ -96,7 +96,12 @@ export default function UserEditPage() {
   const updateUserMutation = useUpdateUser();
 
   // Get all schemas to find the schema ID from the schema name
-  const {data: userTypeList} = useGetUserTypes();
+  const {
+    data: userTypeList,
+    isLoading: isUserTypeListLoading,
+    error: userTypeListError,
+    refetch: refetchUserTypeList,
+  } = useGetUserTypes();
 
   // Find the schema ID based on the user's type (which is the schema name)
   const matchedSchema = userTypeList?.types?.find((s) => s.name === user?.type);
@@ -205,29 +210,28 @@ export default function UserEditPage() {
   };
 
   // Loading state
-  if (isUserLoading || isSchemaLoading) {
+  if (isUserLoading || isUserTypeListLoading || isSchemaLoading) {
     return <PageLoadingAnimation />;
   }
 
   // Error state
-  if (userError ?? schemaError) {
+  if (userError ?? userTypeListError ?? schemaError) {
     return (
       <PageContent>
-        <ListingTable.EmptyState
-          illustration={<AlertCircle size={40} />}
-          title={getUserErrorMessage(
-            (userError ?? schemaError)!,
-            (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
-            'manageUser.loadError',
-            'Failed to load user information',
-          )}
+        <ReadErrorState
+          error={(userError ?? userTypeListError ?? schemaError)!}
+          t={(key, options) => t(key.includes(':') ? key : `users:${key}`, options)}
+          resolveErrorMessage={getUserErrorMessage}
+          variant="block"
+          title={t('users:manageUser.loadError', 'Failed to load user information')}
           action={
             <Stack direction="row" spacing={1} justifyContent="center">
               <Button
                 variant="outlined"
                 onClick={() => {
-                  // The error state covers both queries, so retry only the one that failed.
+                  // The error state covers all three queries, so retry only the one(s) that failed.
                   if (userError) void refetch();
+                  if (userTypeListError) void refetchUserTypeList();
                   if (schemaError) void refetchUserType();
                 }}
               >

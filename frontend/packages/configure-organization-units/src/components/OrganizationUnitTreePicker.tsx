@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useQueryClient} from '@tanstack/react-query';
-import {PageLoadingAnimation, ResourceAvatar} from '@thunderid/components';
+import {PageLoadingAnimation, ReadErrorState, ResourceAvatar} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {useThunderID} from '@thunderid/react';
@@ -227,18 +227,29 @@ export default function OrganizationUnitTreePicker({
   const {http} = useThunderID();
   const {getServerUrl} = useConfig();
   const queryClient = useQueryClient();
-  const {data, isLoading} = useGetOrganizationUnits(undefined, !rootOuId);
+  const {
+    data,
+    isLoading,
+    error: rootListError,
+    refetch: refetchRootList,
+  } = useGetOrganizationUnits(undefined, !rootOuId);
 
   useEffect((): void => {
     if (!autoSelectFirst || rootOuId || value) return;
     const firstRootOuId = data?.organizationUnits[0]?.id;
     if (firstRootOuId) onChange(firstRootOuId);
   }, [autoSelectFirst, rootOuId, value, data, onChange]);
-  const {data: rootOuData, isLoading: isRootOuLoading, error: rootOuError} = useGetOrganizationUnit(rootOuId);
+  const {
+    data: rootOuData,
+    isLoading: isRootOuLoading,
+    error: rootOuError,
+    refetch: refetchRootOu,
+  } = useGetOrganizationUnit(rootOuId);
   const {
     data: rootOuChildrenData,
     isLoading: isRootOuChildrenLoading,
     error: rootOuChildrenError,
+    refetch: refetchRootOuChildren,
   } = useGetChildOrganizationUnits(rootOuId);
 
   const [treeItems, setTreeItems] = useState<OrganizationUnitTreeItem[]>([]);
@@ -541,17 +552,29 @@ export default function OrganizationUnitTreePicker({
   );
 
   const isTreeLoading = rootOuId ? isRootOuLoading || isRootOuChildrenLoading : isLoading;
-  const rootedModeError = rootOuId ? (rootOuError ?? rootOuChildrenError) : null;
+  const activeError = rootOuId ? (rootOuError ?? rootOuChildrenError) : rootListError;
 
   if (isTreeLoading) {
     return <PageLoadingAnimation />;
   }
 
-  if (rootedModeError) {
+  if (activeError) {
     return (
-      <Typography variant="body2" color="error">
-        {rootedModeError.message ?? t('organizationUnits:treePicker.error')}
-      </Typography>
+      <ReadErrorState
+        error={activeError}
+        t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
+        variant="inline"
+        fallbackKey="organizationUnits:treePicker.error"
+        fallbackDefaultValue="Failed to load organization unit data"
+        onRetry={() => {
+          if (rootOuId) {
+            if (rootOuError) void refetchRootOu();
+            if (rootOuChildrenError) void refetchRootOuChildren();
+          } else {
+            void refetchRootList();
+          }
+        }}
+      />
     );
   }
 

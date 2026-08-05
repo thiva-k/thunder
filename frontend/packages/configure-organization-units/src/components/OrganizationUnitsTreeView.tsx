@@ -2,22 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useQueryClient} from '@tanstack/react-query';
-import {PageLoadingAnimation, ResourceAvatar} from '@thunderid/components';
+import {PageLoadingAnimation, ReadErrorState, ResourceAvatar} from '@thunderid/components';
 import {useConfig} from '@thunderid/contexts';
 import {useLogger} from '@thunderid/logger/react';
 import {useThunderID} from '@thunderid/react';
-import {
-  Box,
-  IconButton,
-  Typography,
-  CircularProgress,
-  TreeView,
-  Snackbar,
-  Alert,
-  useTheme,
-  Avatar,
-  Tooltip,
-} from '@wso2/oxygen-ui';
+import {Box, IconButton, Typography, CircularProgress, TreeView, useTheme, Avatar, Tooltip} from '@wso2/oxygen-ui';
 import {Eye, Pencil, Plus, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useEffect, useRef, useMemo} from 'react';
 import type {ReactNode, MouseEvent, KeyboardEvent, SyntheticEvent, JSX} from 'react';
@@ -369,7 +358,7 @@ export default function OrganizationUnitsTreeView(): JSX.Element {
   const {http} = useThunderID();
   const {getServerUrl} = useConfig();
   const queryClient = useQueryClient();
-  const {data, isLoading, error} = useGetOrganizationUnits();
+  const {data, isLoading, error, refetch} = useGetOrganizationUnits();
   const {treeItems, setTreeItems, expandedItems, setExpandedItems, loadedItems, setLoadedItems, resetTreeState} =
     useOrganizationUnit();
 
@@ -392,11 +381,6 @@ export default function OrganizationUnitsTreeView(): JSX.Element {
   const builtFromDataRef = useRef<unknown>(null);
   const [selectedOU, setSelectedOU] = useState<{id: string; name: string} | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
-  const [snackbar, setSnackbar] = useState<{open: boolean; message: string; severity: 'success' | 'error'}>({
-    open: false,
-    message: '',
-    severity: 'success',
-  });
 
   const fetchChildPage = useCallback(
     async (parentId: string, offset: number): Promise<OrganizationUnitListResponse> =>
@@ -741,17 +725,9 @@ export default function OrganizationUnitsTreeView(): JSX.Element {
   };
 
   const handleDeleteSuccess = useCallback((): void => {
+    // useDeleteOrganizationUnit's own onSuccess already toasts the success message.
     resetTreeState();
-    setSnackbar({
-      open: true,
-      message: t('organizationUnits:edit.general.dangerZone.delete.success'),
-      severity: 'success',
-    });
-  }, [resetTreeState, t]);
-
-  const handleDeleteError = useCallback((message: string): void => {
-    setSnackbar({open: true, message, severity: 'error'});
-  }, []);
+  }, [resetTreeState]);
 
   const handleAddChildClick = useCallback(
     (_event: MouseEvent<HTMLElement>, ou: {id: string; name: string; handle: string}): void => {
@@ -804,14 +780,15 @@ export default function OrganizationUnitsTreeView(): JSX.Element {
 
   if (error) {
     return (
-      <Box sx={{textAlign: 'center', py: 8}}>
-        <Typography variant="h6" color="error" gutterBottom>
-          {t('organizationUnits:listing.error.title')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error.message ?? t('organizationUnits:listing.error.unknown')}
-        </Typography>
-      </Box>
+      <ReadErrorState
+        error={error}
+        t={(key, options) => t(key.includes(':') ? key : `organizationUnits:${key}`, options)}
+        variant="block"
+        title={t('organizationUnits:listing.error.title', 'Failed to load organization units')}
+        fallbackKey="organizationUnits:listing.error.unknown"
+        fallbackDefaultValue="An unknown error occurred"
+        onRetry={() => void refetch()}
+      />
     );
   }
 
@@ -1010,23 +987,7 @@ export default function OrganizationUnitsTreeView(): JSX.Element {
         organizationUnitId={selectedOU?.id ?? null}
         onClose={handleDeleteDialogClose}
         onSuccess={handleDeleteSuccess}
-        onError={handleDeleteError}
       />
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar((prev) => ({...prev, open: false}))}
-        anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
-      >
-        <Alert
-          onClose={() => setSnackbar((prev) => ({...prev, open: false}))}
-          severity={snackbar.severity}
-          sx={{width: '100%'}}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </>
   );
 }

@@ -1,11 +1,11 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {ReadErrorState} from '@thunderid/components';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {getErrorMessage} from '@thunderid/utils';
-import {Button, IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
-import {AlertCircle, Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
+import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useMemo, useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -139,15 +139,12 @@ export default function GroupsList(): JSX.Element {
 
   if (error) {
     return (
-      <ListingTable.EmptyState
-        illustration={<AlertCircle size={40} />}
+      <ReadErrorState
+        error={error}
+        t={t}
+        variant="block"
         title={t('groups:listing.error', 'Failed to load groups')}
-        description={getErrorMessage(error, t, 'common:messages.somethingWentWrong', 'Something went wrong')}
-        action={
-          <Button variant="outlined" onClick={() => void refetch()}>
-            {t('common:actions.refresh', 'Refresh')}
-          </Button>
-        }
+        onRetry={() => void refetch()}
       />
     );
   }

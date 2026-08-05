@@ -1,10 +1,9 @@
 // Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
-import {PageLoadingAnimation, UnsavedChangesBar} from '@thunderid/components';
-import {useToast} from '@thunderid/contexts';
+import {PageLoadingAnimation, ReadErrorState, UnsavedChangesBar} from '@thunderid/components';
 import {useLogger} from '@thunderid/logger/react';
-import {isEqualIgnoringEmpty} from '@thunderid/utils';
+import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
 import {
   Box,
   Stack,
@@ -128,16 +127,27 @@ export default function ViewUserTypePage(): JSX.Element {
   const navigate = useNavigate();
   const {t} = useTranslation();
   const logger = useLogger('ViewUserTypePage');
-  const {showToast} = useToast();
   const {id} = useParams<{id: string}>();
   const routes = useUserTypeRoutes();
   const listUrl = routes.list();
 
-  const {data: userType, isLoading, error: fetchError} = useGetUserType(id);
+  const {data: userType, isLoading, error: fetchError, refetch} = useGetUserType(id);
   const updateUserTypeMutation = useUpdateUserType();
+
+  // Resolves an error through the `userTypes` catalog. `t` defaults to the `common` namespace, so
+  // this forwards explicit `ns:` prefixes unchanged and prefixes bare keys with `userTypes:`,
+  // per getErrorMessage's namespace-resolution contract.
+  const tForErrors = useCallback(
+    (key: string, options?: Record<string, unknown>): string =>
+      t(key.includes(':') ? key : `userTypes:${key}`, options),
+    [t],
+  );
 
   // Tab state
   const [activeTab, setActiveTab] = useState(0);
+
+  // Validation error from the last save attempt. Takes precedence over the mutation's own error.
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Inline name editing
   const [isEditingName, setIsEditingName] = useState(false);
@@ -218,17 +228,28 @@ export default function ViewUserTypePage(): JSX.Element {
     setActiveTab(newValue);
   };
 
-  const handleFieldChange = useCallback((field: string, value: unknown): void => {
-    setEditedUserType((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: string, value: unknown): void => {
+      updateUserTypeMutation.reset(); // a save error is stale once the form changes
+      setValidationError(null);
+      setEditedUserType((prev) => ({...prev, [field]: value}));
+    },
+    [updateUserTypeMutation],
+  );
 
-  const handlePropertiesChange = useCallback((newProperties: SchemaPropertyInput[]): void => {
-    setEditedProperties(newProperties);
-  }, []);
+  const handlePropertiesChange = useCallback(
+    (newProperties: SchemaPropertyInput[]): void => {
+      updateUserTypeMutation.reset(); // a save error is stale once the form changes
+      setValidationError(null);
+      setEditedProperties(newProperties);
+    },
+    [updateUserTypeMutation],
+  );
 
   const handleReset = useCallback((): void => {
     setEditedUserType({});
     setEditedProperties(null);
+    setValidationError(null);
     updateUserTypeMutation.reset();
   }, [updateUserTypeMutation]);
 
@@ -256,17 +277,17 @@ export default function ViewUserTypePage(): JSX.Element {
       setEditedProperties(null);
     } catch (err: unknown) {
       logger.error('Failed to update user type', {error: err});
-      const message = err instanceof Error ? err.message : t('userTypes:edit.saveError', 'Failed to save user type');
-      showToast(message, 'error');
     }
-  }, [id, userType, editedUserType, effectiveProperties, updateUserTypeMutation, logger, showToast, t]);
+  }, [id, userType, editedUserType, effectiveProperties, updateUserTypeMutation, logger]);
 
   const handleSave = useCallback(async (): Promise<void> => {
     if (!id || !userType) return;
 
+    setValidationError(null);
+
     const ouId = (editedUserType.ouId ?? userType.ouId).trim();
     if (!ouId) {
-      showToast(t('userTypes:validationErrors.ouIdRequired'), 'error');
+      setValidationError(t('userTypes:validationErrors.ouIdRequired', 'Please provide an organization unit ID'));
       return;
     }
 
@@ -274,9 +295,11 @@ export default function ViewUserTypePage(): JSX.Element {
     const trimmedNames = effectiveProperties.filter((p) => p.name.trim()).map((p) => p.name.trim());
     const duplicates = trimmedNames.filter((n, i) => trimmedNames.indexOf(n) !== i);
     if (duplicates.length > 0) {
-      showToast(
-        t('userTypes:validationErrors.duplicateProperties', {duplicates: [...new Set(duplicates)].join(', ')}),
-        'error',
+      setValidationError(
+        t('userTypes:validationErrors.duplicateProperties', {
+          duplicates: [...new Set(duplicates)].join(', '),
+          defaultValue: 'Duplicate property names found: {{duplicates}}',
+        }),
       );
       return;
     }
@@ -293,7 +316,7 @@ export default function ViewUserTypePage(): JSX.Element {
     }
 
     await performSave();
-  }, [id, userType, editedUserType, effectiveProperties, baseProperties, showToast, t, performSave]);
+  }, [id, userType, editedUserType, effectiveProperties, baseProperties, t, performSave]);
 
   const handleConfirmSchemaChange = useCallback((): void => {
     setShowSchemaWarning(false);
@@ -317,17 +340,29 @@ export default function ViewUserTypePage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {fetchError.message ?? t('userTypes:edit.loadError', 'Failed to load user type information')}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch(() => null);
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('userTypes:edit.back', 'Back to User Types')}
-        </Button>
+        <ReadErrorState
+          error={fetchError}
+          t={tForErrors}
+          variant="block"
+          title={t('userTypes:edit.loadErrorTitle', 'Failed to load user type')}
+          fallbackKey="userTypes:edit.loadError"
+          fallbackDefaultValue="Failed to load user type information"
+          action={
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <Button variant="outlined" onClick={() => void refetch()}>
+                {t('common:actions.refresh', 'Refresh')}
+              </Button>
+              <Button
+                onClick={() => {
+                  handleBack().catch(() => null);
+                }}
+                startIcon={<ArrowLeft size={16} />}
+              >
+                {t('userTypes:edit.back', 'Back to User Types')}
+              </Button>
+            </Stack>
+          }
+        />
       </PageContent>
     );
   }
@@ -505,6 +540,17 @@ export default function ViewUserTypePage(): JSX.Element {
           savingLabel={t('common:status.saving', 'Saving...')}
           isSaving={updateUserTypeMutation.isPending}
           saveDisabled={userType.isReadOnly === true}
+          error={
+            validationError ??
+            (updateUserTypeMutation.error
+              ? getErrorMessage(
+                  updateUserTypeMutation.error,
+                  tForErrors,
+                  'update.error',
+                  'Failed to update user type. Please try again.',
+                )
+              : undefined)
+          }
           onReset={handleReset}
           onSave={() => {
             handleSave().catch(() => null);

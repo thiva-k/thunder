@@ -806,6 +806,7 @@ const translations = {
     'validationErrors.duplicateProperties': 'Duplicate property names found: {{duplicates}}',
     'errors.organizationUnitsFailedTitle': 'Failed to load organization units',
     noUserTypes: 'No user types found',
+    'listing.error': 'Failed to load user types',
     'listing.columns.name': 'Name',
     'listing.columns.id': 'User Type ID',
     'listing.columns.organizationUnit': 'Organization Unit',
@@ -813,6 +814,14 @@ const translations = {
     'listing.columns.actions': 'Actions',
     noOrganizationUnits: 'No organization units available',
     confirmDeleteUserType: 'Are you sure you want to delete this user type?',
+    'errors.USRS-1002': 'This user type no longer exists. It may have already been deleted.',
+    'errors.USRS-1003': 'A user type with the same name already exists.',
+    'errors.USRS-1004': 'The user type request is missing required fields or contains invalid data.',
+    'errors.USRS-1008': 'This user type is managed by the system and cannot be modified or deleted.',
+    'errors.USRS-1009': 'Too many user types matched this request. Refine your search and try again.',
+    'errors.USRS-1011': 'Display attribute must reference an attribute defined in the schema.',
+    'errors.USRS-1012': 'Display attribute must reference a string or number type.',
+    'errors.USRS-1013': 'Display attribute cannot reference a credential attribute.',
 
     // Edit page
     'manageUserType.title': 'Manage User Type',
@@ -827,6 +836,7 @@ const translations = {
     'edit.unsavedChanges': 'You have unsaved changes',
     'edit.saveError': 'Failed to save user type',
     'edit.loadError': 'Failed to load user type information',
+    'edit.loadErrorTitle': 'Failed to load user type',
     'edit.notFound': 'User type not found',
     'schemaChangeWarning.title': 'Confirm schema changes',
     'schemaChangeWarning.description':
@@ -1316,7 +1326,7 @@ const translations = {
 
     /* -------------------- Edit page -------------------- */
     // Common
-    'edit.page.error': 'Failed to load organization unit',
+    'edit.page.error': 'Failed to load organization unit information',
     'edit.page.notFound': 'Organization unit not found',
     'edit.page.logoUpdate.label': 'Update Logo',
     'edit.page.copyOuId': 'Copy Organization Unit ID',
@@ -1434,6 +1444,29 @@ const translations = {
     'update.error': 'Failed to update organization unit. Please try again.',
     'delete.success': 'Organization unit deleted successfully.',
     'delete.error': 'Failed to delete organization unit. Please try again.',
+
+    // Edit page - read error
+    'edit.page.errorTitle': 'Failed to load organization unit',
+
+    // Tab sections - read errors
+    'edit.users.sections.manage.error': 'Failed to load users',
+    'edit.groups.sections.manage.error': 'Failed to load groups',
+    'edit.childOUs.sections.manage.error': 'Failed to load child organization units',
+
+    // Backend error codes (organization unit service)
+    'errors.OU-1003': 'This organization unit no longer exists. It may have already been deleted.',
+    'errors.OU-1004': 'An organization unit with the same name already exists under the same parent.',
+    'errors.OU-1005': 'The selected parent organization unit could not be found.',
+    'errors.OU-1006':
+      'This organization unit has child units, users, or groups and cannot be deleted while they exist.',
+    'errors.OU-1007': 'This parent selection would create a circular dependency in the organization hierarchy.',
+    'errors.OU-1008': 'An organization unit with the same handle already exists under the same parent.',
+    'errors.OU-1012': 'This organization unit is managed by configuration and cannot be modified or deleted.',
+    'errors.OU-1013': 'Too many results were returned for this request. Please narrow your search and try again.',
+    'errors.OU-1015': 'The selected sign-in flow could not be found. Refresh and try again.',
+    'errors.OU-1016': 'The selected sign-up flow could not be found. Refresh and try again.',
+    'errors.OU-1017': 'The selected recovery flow could not be found. Refresh and try again.',
+    'errors.OU-1018': 'The selected sign-out flow could not be found. Refresh and try again.',
   },
 
   // ============================================================================

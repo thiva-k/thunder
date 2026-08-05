@@ -37,8 +37,5 @@ export default function useDeleteUserType(): UseMutationResult<void, Error, stri
       });
       showToast(t('delete.success'), 'success');
     },
-    onError: () => {
-      showToast(t('delete.error'), 'error');
-    },
   });
 }

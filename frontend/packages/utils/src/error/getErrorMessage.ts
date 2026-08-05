@@ -6,7 +6,7 @@ import type {ApiError} from '@thunderid/types';
 /**
  * A minimal subset of the i18next TFunction interface used by {@link getErrorMessage}.
  */
-type TranslateFn = (key: string, options?: {defaultValue: string}) => string;
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 /**
  * Extracts a localized error message from an API error response.

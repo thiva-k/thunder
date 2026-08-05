@@ -1,6 +1,7 @@
 // Copyright 2025 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import userEvent from '@testing-library/user-event';
 import {screen, renderWithProviders, renderHook} from '@thunderid/test-utils';
 import type {User} from '@thunderid/types';
 import {useTranslation} from 'react-i18next';
@@ -125,6 +126,37 @@ describe('ManageUsersSection', () => {
     renderWithProviders(<ManageUsersSection organizationUnitId="ou-123" />);
 
     expect(screen.getByRole('grid')).toBeInTheDocument();
+  });
+
+  it('should render an inline read error state instead of the grid when the query fails', () => {
+    mockUseGetOrganizationUnitUsers.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+    });
+
+    renderWithProviders(<ManageUsersSection organizationUnitId="ou-123" />);
+
+    expect(screen.getByText('Failed to load users')).toBeInTheDocument();
+    expect(screen.queryByRole('grid')).not.toBeInTheDocument();
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+  });
+
+  it('should refetch when the retry action is clicked', async () => {
+    const mockRefetch = vi.fn();
+    mockUseGetOrganizationUnitUsers.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetch,
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<ManageUsersSection organizationUnitId="ou-123" />);
+
+    await user.click(screen.getByText('Refresh'));
+
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 
   it('should call useGetOrganizationUnitUsers with correct ID', () => {

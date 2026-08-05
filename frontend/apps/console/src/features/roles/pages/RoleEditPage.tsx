@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useIsMutating} from '@tanstack/react-query';
-import {PageLoadingAnimation, UnsavedChangesBar} from '@thunderid/components';
+import {PageLoadingAnimation, ReadErrorState, UnsavedChangesBar} from '@thunderid/components';
 import {arePermissionsEqual, type ResourcePermissions} from '@thunderid/configure-resource-servers';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage, isEqualIgnoringEmpty} from '@thunderid/utils';
@@ -18,9 +18,8 @@ import {
   Tab,
   PageContent,
   PageTitle,
-  ListingTable,
 } from '@wso2/oxygen-ui';
-import {AlertCircle, ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
+import {ArrowLeft, Edit} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useMemo} from 'react';
 import type {ReactNode, SyntheticEvent, JSX} from 'react';
 import {useTranslation} from 'react-i18next';
@@ -147,9 +146,11 @@ export default function RoleEditPage(): JSX.Element {
   if (fetchError) {
     return (
       <PageContent>
-        <ListingTable.EmptyState
-          illustration={<AlertCircle size={40} />}
-          title={getErrorMessage(fetchError, t, 'edit.page.error', 'Failed to load role')}
+        <ReadErrorState
+          error={fetchError}
+          t={t}
+          variant="block"
+          title={t('edit.page.error', 'Failed to load role')}
           action={
             <Stack direction="row" spacing={1} justifyContent="center">
               <Button variant="outlined" onClick={() => void refetch()}>

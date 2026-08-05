@@ -76,8 +76,5 @@ export default function useCreateOrganizationUnit(): UseMutationResult<
       });
       showToast(t('create.success'), 'success');
     },
-    onError: () => {
-      showToast(t('create.error'), 'error');
-    },
   });
 }

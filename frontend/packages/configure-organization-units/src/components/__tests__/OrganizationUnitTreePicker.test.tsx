@@ -137,6 +137,35 @@ describe('OrganizationUnitTreePicker', () => {
     expect(screen.getByText(t('organizationUnits:treePicker.empty'))).toBeInTheDocument();
   });
 
+  it('should render an inline read error state, never the raw error message, when the root list fails to load', () => {
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+    });
+
+    renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} />);
+
+    expect(screen.getByText('Failed to load organization unit data')).toBeInTheDocument();
+    expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+  });
+
+  it('should refetch the root list when the retry action is clicked', () => {
+    const mockRefetchRootList = vi.fn();
+    mockUseGetOrganizationUnits.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: new Error('Network error'),
+      refetch: mockRefetchRootList,
+    });
+
+    renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} />);
+
+    fireEvent.click(screen.getByText('Refresh'));
+
+    expect(mockRefetchRootList).toHaveBeenCalledTimes(1);
+  });
+
   it('should display handles for tree items', async () => {
     renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} />);
 
@@ -606,6 +635,42 @@ describe('OrganizationUnitTreePicker', () => {
       renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} rootOuId="root-ou-1" />);
 
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    });
+
+    it('should render an inline read error state, never the raw error message, when the root OU fails to load', async () => {
+      mockUseGetOrganizationUnit.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Network error'),
+      });
+      mockUseGetChildOrganizationUnits.mockReturnValue({data: undefined, isLoading: false, error: null});
+
+      renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} rootOuId="root-ou-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Failed to load organization unit data')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('Network error')).not.toBeInTheDocument();
+    });
+
+    it('should refetch the root OU when the retry action is clicked', async () => {
+      const mockRefetchRootOu = vi.fn();
+      mockUseGetOrganizationUnit.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error('Network error'),
+        refetch: mockRefetchRootOu,
+      });
+      mockUseGetChildOrganizationUnits.mockReturnValue({data: undefined, isLoading: false, error: null});
+
+      renderWithProviders(<OrganizationUnitTreePicker {...defaultProps} rootOuId="root-ou-1" />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Refresh')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('Refresh'));
+
+      expect(mockRefetchRootOu).toHaveBeenCalledTimes(1);
     });
 
     it('should render root OU as top-level node with children', async () => {

@@ -17,6 +17,8 @@ export type {ExternalLinkProps} from './ExternalLink/ExternalLink';
 export {default as OrganizationUnitSummaryChip} from './OrganizationUnitSummaryChip/OrganizationUnitSummaryChip';
 export type {OrganizationUnitSummaryChipProps} from './OrganizationUnitSummaryChip/OrganizationUnitSummaryChip';
 export {default as PageLoader} from './PageLoader/PageLoader';
+export {default as ReadErrorState} from './ReadErrorState/ReadErrorState';
+export type {ReadErrorStateProps, ReadErrorMessageResolver} from './ReadErrorState/ReadErrorState';
 export {default as ToggleCard} from './ToggleCard/ToggleCard';
 export type {ToggleCardProps} from './ToggleCard/ToggleCard';
 
