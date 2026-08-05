@@ -31,13 +31,17 @@ vi.mock('../edit-group/members-settings/AddMemberDialog', () => ({
     open,
     onClose,
     onAdd,
+    error,
   }: {
     open: boolean;
     onClose: () => void;
     onAdd: (members: {id: string; type: string}[]) => void;
+    error?: string | null;
+    isSubmitting?: boolean;
   }) =>
     open ? (
       <div data-testid="add-member-dialog">
+        {error && <div role="alert">{error}</div>}
         <button type="button" onClick={onClose}>
           Close
         </button>
@@ -206,10 +210,36 @@ describe('EditMembersSettings', () => {
     );
   });
 
-  it('should clear error on successful remove', async () => {
-    // First trigger an error
+  it('should clear the remove error on a successful remove retry', async () => {
+    mockRemoveMutate.mockImplementationOnce((_data: unknown, opts: {onError: (err: Error) => void}) => {
+      opts.onError(new Error('Some error'));
+    });
+
+    const user = userEvent.setup();
+    renderWithProviders(<EditMembersSettings group={mockGroup} />);
+
+    await user.click(screen.getByTestId('remove-member-btn'));
+    await waitFor(() => {
+      expect(screen.getByText('Failed to remove member. Please try again.')).toBeInTheDocument();
+    });
+
+    mockRemoveMutate.mockImplementation((_data: unknown, opts: {onSuccess: () => void}) => {
+      opts.onSuccess();
+    });
+
+    await user.click(screen.getByTestId('remove-member-btn'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+  });
+
+  it('should not clear an unrelated add error still shown in the open dialog on a successful remove', async () => {
     mockAddMutate.mockImplementation((_data: unknown, opts: {onError: (err: Error) => void}) => {
       opts.onError(new Error('Some error'));
+    });
+    mockRemoveMutate.mockImplementation((_data: unknown, opts: {onSuccess: () => void}) => {
+      opts.onSuccess();
     });
 
     const user = userEvent.setup();
@@ -224,16 +254,13 @@ describe('EditMembersSettings', () => {
       expect(screen.getByText('Failed to add member. Please try again.')).toBeInTheDocument();
     });
 
-    // Now trigger successful remove which should clear the error
-    mockRemoveMutate.mockImplementation((_data: unknown, opts: {onSuccess: () => void}) => {
-      opts.onSuccess();
-    });
-
     await user.click(screen.getByTestId('remove-member-btn'));
 
     await waitFor(() => {
-      expect(screen.queryByText('Failed to add member. Please try again.')).not.toBeInTheDocument();
+      expect(mockRemoveMutate).toHaveBeenCalled();
     });
+    // The add dialog's own error is unrelated to the remove action and stays visible.
+    expect(screen.getByText('Failed to add member. Please try again.')).toBeInTheDocument();
   });
 
   it('should show error when remove fails', async () => {

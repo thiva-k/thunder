@@ -282,7 +282,8 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('User not found');
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
       expect(screen.getByRole('button', {name: /back to users/i})).toBeInTheDocument();
     });
 
@@ -320,10 +321,11 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('Schema not found');
+      // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
     });
 
-    it('displays generic error message when error message is empty', () => {
+    it('displays the generic fallback message when the error has no mapped code', () => {
       mockUseGetUser.mockReturnValue({
         data: undefined,
         isLoading: false,
@@ -333,7 +335,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toHaveTextContent('');
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
     });
 
     it('displays warning when user is null but no error', () => {
@@ -389,7 +391,7 @@ describe('UserEditPage', () => {
 
       render(<UserEditPage />);
 
-      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load user information')).toBeInTheDocument();
     });
   });
 
@@ -858,7 +860,7 @@ describe('UserEditPage', () => {
       await user.click(confirmButton);
 
       await waitFor(() => {
-        expect(within(dialog).getByText('Failed to delete user')).toBeInTheDocument();
+        expect(within(dialog).getByText('Failed to delete user. Please try again.')).toBeInTheDocument();
       });
     });
 
@@ -896,7 +898,7 @@ describe('UserEditPage', () => {
       await user.click(confirmButton);
 
       await waitFor(() => {
-        expect(within(dialog).getByText('Delete failed')).toBeInTheDocument();
+        expect(within(dialog).getByText('Failed to delete user. Please try again.')).toBeInTheDocument();
       });
     });
 
@@ -916,7 +918,7 @@ describe('UserEditPage', () => {
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(within(dialog).getByText('Delete failed')).toBeInTheDocument();
+        expect(within(dialog).getByText('Failed to delete user. Please try again.')).toBeInTheDocument();
       });
     });
   });

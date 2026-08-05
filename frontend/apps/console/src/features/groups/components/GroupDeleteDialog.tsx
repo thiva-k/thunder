@@ -30,6 +30,7 @@ export default function GroupDeleteDialog({
   const handleCancel = (): void => {
     if (deleteGroup.isPending) return;
     setError(null);
+    deleteGroup.reset();
     onClose();
   };
 
@@ -44,7 +45,7 @@ export default function GroupDeleteDialog({
         onSuccess?.();
       },
       onError: (err: Error) => {
-        setError(getErrorMessage(err, t, 'delete.error'));
+        setError(getErrorMessage(err, t, 'delete.error', 'Failed to delete group. Please try again.'));
       },
     });
   };

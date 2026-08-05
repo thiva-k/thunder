@@ -6,6 +6,7 @@ import type {BasicApplication} from '@thunderid/configure-applications';
 import {useGetUsers} from '@thunderid/configure-users';
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import type {User} from '@thunderid/types';
+import {getErrorMessage} from '@thunderid/utils';
 import {
   Dialog,
   DialogTitle,
@@ -37,6 +38,12 @@ interface AddAssignmentDialogProps {
   roleId: string;
   onClose: () => void;
   onAdd: (assignments: RoleAssignment[]) => void;
+  /** Inline error shown in the dialog when the last add attempt failed. */
+  error?: string | null;
+  /** Called when the tab or a selection changes, so the parent can clear a stale error. */
+  onErrorDismiss?: () => void;
+  /** Whether the add mutation is in flight, so the confirm button can show progress. */
+  isSubmitting?: boolean;
   initialTab?: number;
 }
 
@@ -48,6 +55,9 @@ export default function AddAssignmentDialog({
   roleId,
   onClose,
   onAdd,
+  error = null,
+  onErrorDismiss = undefined,
+  isSubmitting = false,
   initialTab = 0,
 }: AddAssignmentDialogProps): JSX.Element {
   const {t} = useTranslation();
@@ -382,14 +392,16 @@ export default function AddAssignmentDialog({
       id: String(id),
       type: 'agent' as const,
     }));
+    // Selections are deliberately left as-is here: the dialog unmounts on a successful add (the
+    // parent closes it), and on failure the user needs their selection intact to retry.
     onAdd([...userAssignments, ...groupAssignments, ...appAssignments, ...agentAssignments]);
-    setUserSelectionModel({type: 'include', ids: new Set()});
-    setGroupSelectionModel({type: 'include', ids: new Set()});
-    setAppSelectionModel({type: 'include', ids: new Set()});
-    setAgentSelectionModel({type: 'include', ids: new Set()});
   }, [userSelectionModel, groupSelectionModel, appSelectionModel, agentSelectionModel, onAdd]);
 
   const handleClose = (): void => {
+    // Also reached via Escape and backdrop clicks, so guard the in-flight case here rather than
+    // only disabling Cancel: closing mid-request would discard the selection needed to retry.
+    if (isSubmitting) return;
+
     setUserSelectionModel({type: 'include', ids: new Set()});
     setGroupSelectionModel({type: 'include', ids: new Set()});
     setAppSelectionModel({type: 'include', ids: new Set()});
@@ -407,7 +419,14 @@ export default function AddAssignmentDialog({
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>{t('roles:assignments.dialog.title')}</DialogTitle>
       <DialogContent>
-        <Tabs value={activeTab} onChange={(_e: SyntheticEvent, v: number) => setActiveTab(v)} sx={{mb: 2}}>
+        <Tabs
+          value={activeTab}
+          onChange={(_e: SyntheticEvent, v: number) => {
+            setActiveTab(v);
+            onErrorDismiss?.();
+          }}
+          sx={{mb: 2}}
+        >
           <Tab label={t('roles:assignments.dialog.tabs.users')} />
           <Tab label={t('roles:assignments.dialog.tabs.groups')} />
           <Tab label={t('roles:assignments.dialog.tabs.apps')} />
@@ -418,7 +437,12 @@ export default function AddAssignmentDialog({
           <>
             {usersError && !usersLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {usersError.message ?? t('roles:assignments.dialog.fetchError')}
+                {getErrorMessage(
+                  usersError,
+                  t,
+                  'roles:assignments.dialog.fetchError',
+                  'Failed to load data. Please try again.',
+                )}
               </Alert>
             )}
             <Box sx={{height: 400, width: '100%'}}>
@@ -429,7 +453,10 @@ export default function AddAssignmentDialog({
                 getRowId={(row): string => row.id}
                 checkboxSelection
                 rowSelectionModel={userSelectionModel}
-                onRowSelectionModelChange={setUserSelectionModel}
+                onRowSelectionModelChange={(newSelection) => {
+                  setUserSelectionModel(newSelection);
+                  onErrorDismiss?.();
+                }}
                 paginationMode="server"
                 rowCount={usersData?.totalResults ?? 0}
                 paginationModel={userPaginationModel}
@@ -446,7 +473,12 @@ export default function AddAssignmentDialog({
           <>
             {groupsError && !groupsLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {groupsError.message ?? t('roles:assignments.dialog.fetchError')}
+                {getErrorMessage(
+                  groupsError,
+                  t,
+                  'roles:assignments.dialog.fetchError',
+                  'Failed to load data. Please try again.',
+                )}
               </Alert>
             )}
             <Box sx={{height: 400, width: '100%'}}>
@@ -457,7 +489,10 @@ export default function AddAssignmentDialog({
                 getRowId={(row): string => row.id}
                 checkboxSelection
                 rowSelectionModel={groupSelectionModel}
-                onRowSelectionModelChange={setGroupSelectionModel}
+                onRowSelectionModelChange={(newSelection) => {
+                  setGroupSelectionModel(newSelection);
+                  onErrorDismiss?.();
+                }}
                 paginationMode="server"
                 rowCount={groupsData?.totalResults ?? 0}
                 paginationModel={groupPaginationModel}
@@ -474,7 +509,12 @@ export default function AddAssignmentDialog({
           <>
             {appsError && !appsLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {appsError.message ?? t('roles:assignments.dialog.fetchError')}
+                {getErrorMessage(
+                  appsError,
+                  t,
+                  'roles:assignments.dialog.fetchError',
+                  'Failed to load data. Please try again.',
+                )}
               </Alert>
             )}
             <Box sx={{height: 400, width: '100%'}}>
@@ -485,7 +525,10 @@ export default function AddAssignmentDialog({
                 getRowId={(row): string => row.id}
                 checkboxSelection
                 rowSelectionModel={appSelectionModel}
-                onRowSelectionModelChange={setAppSelectionModel}
+                onRowSelectionModelChange={(newSelection) => {
+                  setAppSelectionModel(newSelection);
+                  onErrorDismiss?.();
+                }}
                 paginationMode="server"
                 rowCount={applicationsData?.totalResults ?? 0}
                 paginationModel={appPaginationModel}
@@ -502,7 +545,12 @@ export default function AddAssignmentDialog({
           <>
             {agentsError && !agentsLoading && (
               <Alert severity="error" sx={{mb: 2}}>
-                {agentsError.message ?? t('roles:assignments.dialog.fetchError')}
+                {getErrorMessage(
+                  agentsError,
+                  t,
+                  'roles:assignments.dialog.fetchError',
+                  'Failed to load data. Please try again.',
+                )}
               </Alert>
             )}
             <Box sx={{height: 400, width: '100%'}}>
@@ -513,7 +561,10 @@ export default function AddAssignmentDialog({
                 getRowId={(row): string => row.id}
                 checkboxSelection
                 rowSelectionModel={agentSelectionModel}
-                onRowSelectionModelChange={setAgentSelectionModel}
+                onRowSelectionModelChange={(newSelection) => {
+                  setAgentSelectionModel(newSelection);
+                  onErrorDismiss?.();
+                }}
                 paginationMode="server"
                 rowCount={agentsData?.totalResults ?? 0}
                 paginationModel={agentPaginationModel}
@@ -526,9 +577,16 @@ export default function AddAssignmentDialog({
           </>
         )}
       </DialogContent>
+      {error && (
+        <Box sx={{px: 3, pt: 2}}>
+          <Alert severity="error">{error}</Alert>
+        </Box>
+      )}
       <DialogActions>
-        <Button onClick={handleClose}>{t('common:actions.cancel')}</Button>
-        <Button variant="contained" onClick={handleAdd} disabled={totalSelected === 0}>
+        <Button onClick={handleClose} disabled={isSubmitting}>
+          {t('common:actions.cancel')}
+        </Button>
+        <Button variant="contained" onClick={handleAdd} disabled={totalSelected === 0 || isSubmitting}>
           {t('roles:assignments.dialog.add')} {totalSelected > 0 ? `(${totalSelected})` : ''}
         </Button>
       </DialogActions>

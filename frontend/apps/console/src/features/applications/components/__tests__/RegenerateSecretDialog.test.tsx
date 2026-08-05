@@ -38,19 +38,23 @@ vi.mock('../../api/useRegenerateClientSecret', () => ({
 // Mock translations
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, fallbackOrOptions?: string | {defaultValue?: string}) => {
       const translations: Record<string, string> = {
-        'applications:regenerateSecret.dialog.title': 'Regenerate Client Secret',
-        'applications:regenerateSecret.dialog.message':
-          'Are you sure you want to regenerate the client secret for this application? This will regenerate the client secret.',
-        'applications:regenerateSecret.dialog.disclaimer':
-          'This action will regenerate the client secret. All existing access tokens will be invalidated and the application will stop working until the new client secret is updated in your application configuration.',
-        'applications:regenerateSecret.dialog.confirmButton': 'Regenerate',
-        'applications:regenerateSecret.dialog.regenerating': 'Regenerating...',
-        'applications:regenerateSecret.dialog.error': 'Failed to regenerate client secret. Please try again.',
+        'regenerateSecret.dialog.title': 'Regenerate Client Secret',
+        'regenerateSecret.dialog.message':
+          'Are you sure you want to regenerate the client secret for this application? This will immediately invalidate the current client secret and generate a new one.',
+        'regenerateSecret.dialog.disclaimer':
+          'Warning: Regenerating the client secret will invalidate the current secret and the application may stop working until the new client secret is updated in its configuration.',
+        'regenerateSecret.dialog.confirmButton': 'Regenerate',
+        'regenerateSecret.dialog.regenerating': 'Regenerating...',
+        'regenerateSecret.dialog.error': 'Failed to regenerate client secret. Please try again.',
+        'errors.APP-1030': 'This application is managed declaratively and cannot be edited or deleted.',
         'common:actions.cancel': 'Cancel',
       };
-      return translations[key] || key;
+      if (translations[key] !== undefined) return translations[key];
+      if (typeof fallbackOrOptions === 'string') return fallbackOrOptions;
+      if (fallbackOrOptions && 'defaultValue' in fallbackOrOptions) return fallbackOrOptions.defaultValue ?? key;
+      return key;
     },
   }),
 }));
@@ -88,7 +92,7 @@ describe('RegenerateSecretDialog', () => {
       expect(screen.getByText('Regenerate Client Secret')).toBeInTheDocument();
       expect(
         screen.getByText(
-          'Are you sure you want to regenerate the client secret for this application? This will regenerate the client secret.',
+          'Are you sure you want to regenerate the client secret for this application? This will immediately invalidate the current client secret and generate a new one.',
         ),
       ).toBeInTheDocument();
     });
@@ -98,7 +102,7 @@ describe('RegenerateSecretDialog', () => {
 
       expect(
         screen.getByText(
-          'This action will regenerate the client secret. All existing access tokens will be invalidated and the application will stop working until the new client secret is updated in your application configuration.',
+          'Warning: Regenerating the client secret will invalidate the current secret and the application may stop working until the new client secret is updated in its configuration.',
         ),
       ).toBeInTheDocument();
     });
@@ -221,6 +225,32 @@ describe('RegenerateSecretDialog', () => {
 
       await waitFor(() => {
         expect(screen.getByText('Failed to regenerate client secret. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('should display the mapped error message when the API returns a known error code', async () => {
+      mockMutate.mockImplementation(
+        (
+          vars: RegenerateSecretVariables,
+          options?: MutateOptions<RegenerateSecretResult, Error, RegenerateSecretVariables>,
+        ) => {
+          const mockContext = {} as MutationFunctionContext;
+          const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
+          error.response = {data: {code: 'APP-1030'}};
+          options?.onError?.(error, vars, undefined, mockContext);
+        },
+      );
+
+      const user = userEvent.setup();
+      renderDialog();
+
+      const regenerateButton = screen.getByRole('button', {name: 'Regenerate'});
+      await user.click(regenerateButton);
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('This application is managed declaratively and cannot be edited or deleted.'),
+        ).toBeInTheDocument();
       });
     });
 

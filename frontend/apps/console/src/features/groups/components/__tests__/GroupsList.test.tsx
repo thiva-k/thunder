@@ -75,6 +75,21 @@ vi.mock('@wso2/oxygen-ui', async () => {
           })}
         </div>
       ),
+      EmptyState: ({
+        title = undefined,
+        description = undefined,
+        action = undefined,
+      }: {
+        title?: string;
+        description?: string;
+        action?: React.ReactNode;
+      }) => (
+        <div>
+          {title && <div>{title}</div>}
+          {description && <div>{description}</div>}
+          {action}
+        </div>
+      ),
     },
   };
 });
@@ -94,9 +109,11 @@ vi.mock('../../api/useGetGroups', () => ({
 }));
 
 const mockDeleteMutate = vi.fn();
+const mockDeleteReset = vi.fn();
 vi.mock('../../api/useDeleteGroup', () => ({
   default: () => ({
     mutate: mockDeleteMutate,
+    reset: mockDeleteReset,
     isPending: false,
   }),
 }));
@@ -152,7 +169,8 @@ describe('GroupsList', () => {
     renderWithProviders(<GroupsList />);
 
     expect(screen.getByText('Failed to load groups')).toBeInTheDocument();
-    expect(screen.getByText('Fetch failed')).toBeInTheDocument();
+    // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
   it('should navigate to group on row click', async () => {

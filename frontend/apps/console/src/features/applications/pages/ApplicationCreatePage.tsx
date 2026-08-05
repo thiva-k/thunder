@@ -15,7 +15,6 @@ import {DefaultTheme, useGetTheme, type Theme} from '@thunderid/design';
 import {useTemplateLiteralResolver} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
 import type {EmbeddedFlowComponent} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {Alert, Box, Button, CircularProgress, IconButton, Typography} from '@wso2/oxygen-ui';
 import {ChevronLeft, ChevronRight, Home} from '@wso2/oxygen-ui-icons-react';
 import type {JSX} from 'react';
@@ -48,6 +47,7 @@ import {
 import {PlatformApplicationTemplate} from '../models/application-templates';
 import {McpClientTypes} from '../models/mcp-client';
 import type {CreateApplicationRequest} from '../models/requests';
+import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import getConfigurationTypeFromTemplate from '../utils/getConfigurationTypeFromTemplate';
 import isRedirectCapableTemplate from '../utils/isRedirectCapableTemplate';
 import mergeCorsOrigins from '../utils/mergeCorsOrigins';
@@ -476,6 +476,18 @@ export default function ApplicationCreatePage(): JSX.Element {
     setAppLogo(logoUrl);
   };
 
+  // Both of these feed the create payload but live in page state rather than the provider, so the
+  // provider's form fingerprint doesn't cover them. Clear a stale create error here instead.
+  const handleUserTypesChange = (userTypes: string[]): void => {
+    setError(null);
+    setSelectedUserTypes(userTypes);
+  };
+
+  const handleWalletClientIdChange = (clientId: string): void => {
+    setError(null);
+    setWalletClientId(clientId);
+  };
+
   const handleCreateApplication = (skipOAuthConfig = false, overrideFlowId?: string): void => {
     setError(null);
 
@@ -643,7 +655,14 @@ export default function ApplicationCreatePage(): JSX.Element {
         });
       },
       onError: (err: Error) => {
-        setError(getErrorMessage(err, (key, options) => t(`applications:${key}`, options), 'create.error'));
+        setError(
+          getApplicationErrorMessage(
+            err,
+            (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
+            'create.error',
+            'Failed to create application. Please try again.',
+          ),
+        );
       },
     });
   };
@@ -787,7 +806,7 @@ export default function ApplicationCreatePage(): JSX.Element {
             hasDesignStep={hasDesignStep}
             userTypes={userTypesData?.types ?? []}
             selectedUserTypes={selectedUserTypes}
-            onUserTypesChange={setSelectedUserTypes}
+            onUserTypesChange={handleUserTypesChange}
             onReadyChange={handleDetailsStepReadyChange}
           />
         );
@@ -834,7 +853,7 @@ export default function ApplicationCreatePage(): JSX.Element {
             platform={selectedPlatform}
             onHostingUrlChange={setHostingUrl}
             onCallbackUrlChange={setCallbackUrlFromConfig}
-            onClientIdChange={setWalletClientId}
+            onClientIdChange={handleWalletClientIdChange}
             existingClientIds={existingClientIds}
             selectedApproach={signInApproach}
             onReadyChange={handleConfigureStepReadyChange}

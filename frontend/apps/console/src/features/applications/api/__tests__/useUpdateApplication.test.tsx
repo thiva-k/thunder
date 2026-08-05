@@ -18,16 +18,17 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
   return {
     ...actual,
     useConfig: vi.fn(),
-    useToast: vi.fn().mockReturnValue({showToast: vi.fn()}),
+    useToast: vi.fn(),
   };
 });
 
 const {useThunderID} = await import('@thunderid/react');
-const {useConfig} = await import('@thunderid/contexts');
+const {useConfig, useToast} = await import('@thunderid/contexts');
 
 describe('useUpdateApplication', () => {
   let mockHttpRequest: ReturnType<typeof vi.fn>;
   let mockGetServerUrl: ReturnType<typeof vi.fn>;
+  let mockShowToast: ReturnType<typeof vi.fn>;
 
   const mockApplication: Application = {
     id: '550e8400-e29b-41d4-a716-446655440000',
@@ -106,6 +107,7 @@ describe('useUpdateApplication', () => {
   beforeEach(() => {
     mockHttpRequest = vi.fn();
     mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
+    mockShowToast = vi.fn();
 
     vi.mocked(useThunderID).mockReturnValue({
       http: {
@@ -116,6 +118,10 @@ describe('useUpdateApplication', () => {
     vi.mocked(useConfig).mockReturnValue({
       getServerUrl: mockGetServerUrl,
     } as unknown as ReturnType<typeof useConfig>);
+
+    vi.mocked(useToast).mockReturnValue({
+      showToast: mockShowToast,
+    } as unknown as ReturnType<typeof useToast>);
   });
 
   afterEach(() => {
@@ -153,6 +159,7 @@ describe('useUpdateApplication', () => {
     expect(result.current.data?.name).toBe('Updated Test Application');
     expect(result.current.error).toBeNull();
     expect(result.current.isPending).toBe(false);
+    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success');
   });
 
   it('should make correct API call with application ID and data', async () => {
@@ -223,6 +230,21 @@ describe('useUpdateApplication', () => {
     expect(result.current.error).toEqual(apiError);
     expect(result.current.data).toBeUndefined();
     expect(result.current.isPending).toBe(false);
+  });
+
+  it('should not show a toast on error', async () => {
+    const applicationId = '550e8400-e29b-41d4-a716-446655440000';
+    mockHttpRequest.mockRejectedValueOnce(new Error('Failed to update application'));
+
+    const {result} = renderHook(() => useUpdateApplication());
+
+    result.current.mutate({applicationId, data: mockUpdateRequest});
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('should handle network error', async () => {

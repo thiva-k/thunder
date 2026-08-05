@@ -870,11 +870,12 @@ func (us *userService) ensureNoBlockingDependencies(
 
 	logger.Debug(ctx, "User has blocking dependencies; deletion refused",
 		log.MaskedString(log.LoggerKeyUserID, userID), log.Int("blockingCount", len(blocking)))
+	dependencies := summarizeBlockingUsages(blocking)
 	return tidcommon.CustomServiceError(ErrorUserHasBlockingDependencies, tidcommon.I18nMessage{
 		Key: "error.userservice.user_has_blocking_dependencies_description",
 		DefaultValue: fmt.Sprintf(
-			"The user cannot be deleted because %s depend on it. Remove or reassign them first.",
-			summarizeBlockingUsages(blocking)),
+			"The user cannot be deleted because %s depend on it. Remove or reassign them first.", dependencies),
+		Params: map[string]string{"dependencies": dependencies},
 	})
 }
 

@@ -29,8 +29,9 @@ import {
   PageTitle,
   FormControl,
   FormLabel,
+  ListingTable,
 } from '@wso2/oxygen-ui';
-import {ArrowLeft, Copy, Check} from '@wso2/oxygen-ui-icons-react';
+import {AlertCircle, ArrowLeft, Copy, Check} from '@wso2/oxygen-ui-icons-react';
 import {useState, useEffect, useMemo, useCallback, useRef, type SyntheticEvent, type ReactNode, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {Link, useNavigate, useParams} from 'react-router';
@@ -46,6 +47,7 @@ import UserDeleteDialog from '../components/UserDeleteDialog';
 import UserConstants from '../constants/user-constants';
 import useUserRoutes from '../hooks/useUserRoutes';
 import {dropNonConformingOptionalAttributes} from '../utils/dropNonConformingAttributes';
+import getUserErrorMessage from '../utils/getUserErrorMessage';
 
 interface TabPanelProps {
   children?: ReactNode;
@@ -103,7 +105,12 @@ export default function UserEditPage() {
   const trimmedOuId = matchedSchema?.ouId?.trim();
   const schemaOuId = trimmedOuId === '' ? undefined : trimmedOuId;
 
-  const {data: userTypeDetails, isLoading: isSchemaLoading, error: schemaError} = useGetUserType(schemaId);
+  const {
+    data: userTypeDetails,
+    isLoading: isSchemaLoading,
+    error: schemaError,
+    refetch: refetchUserType,
+  } = useGetUserType(schemaId);
 
   const credentialFields: CredentialFieldInfo[] = useMemo(() => {
     if (!userTypeDetails?.schema) return [];
@@ -145,9 +152,13 @@ export default function UserEditPage() {
     setActiveTab(newValue);
   };
 
-  const handleFieldChange = useCallback((field: keyof User, value: unknown) => {
-    setEditedUser((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof User, value: unknown) => {
+      updateUserMutation.reset(); // a save error is stale once the form changes
+      setEditedUser((prev) => ({...prev, [field]: value}));
+    },
+    [updateUserMutation],
+  );
 
   const handleSave = useCallback(async () => {
     const organizationUnitId = schemaOuId ?? user?.ouId;
@@ -202,17 +213,37 @@ export default function UserEditPage() {
   if (userError ?? schemaError) {
     return (
       <PageContent>
-        <Alert severity="error" sx={{mb: 2}}>
-          {userError?.message ?? schemaError?.message ?? 'Failed to load user information'}
-        </Alert>
-        <Button
-          onClick={() => {
-            handleBack().catch(() => null);
-          }}
-          startIcon={<ArrowLeft size={16} />}
-        >
-          {t('users:manageUser.back')}
-        </Button>
+        <ListingTable.EmptyState
+          illustration={<AlertCircle size={40} />}
+          title={getUserErrorMessage(
+            (userError ?? schemaError)!,
+            (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+            'manageUser.loadError',
+            'Failed to load user information',
+          )}
+          action={
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  // The error state covers both queries, so retry only the one that failed.
+                  if (userError) void refetch();
+                  if (schemaError) void refetchUserType();
+                }}
+              >
+                {t('common:actions.refresh', 'Refresh')}
+              </Button>
+              <Button
+                onClick={() => {
+                  handleBack().catch(() => null);
+                }}
+                startIcon={<ArrowLeft size={16} />}
+              >
+                {t('users:manageUser.back', 'Back to Users')}
+              </Button>
+            </Stack>
+          }
+        />
       </PageContent>
     );
   }
@@ -459,7 +490,18 @@ export default function UserEditPage() {
           savingLabel={t('users:manageUser.saving', 'Saving…')}
           isSaving={updateUserMutation.isPending}
           saveDisabled={user.isReadOnly === true}
+          error={
+            updateUserMutation.error
+              ? getUserErrorMessage(
+                  updateUserMutation.error,
+                  (key, options) => t(key.includes(':') ? key : `users:${key}`, options),
+                  'update.error',
+                  'Failed to update user. Please try again.',
+                )
+              : undefined
+          }
           onReset={() => {
+            updateUserMutation.reset();
             setEditedUser({});
             setAttributesResetKey((key) => key + 1);
           }}

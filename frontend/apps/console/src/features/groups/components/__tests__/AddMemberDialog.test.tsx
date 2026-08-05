@@ -219,7 +219,72 @@ describe('AddMemberDialog', () => {
     });
     renderWithProviders(<AddMemberDialog {...defaultProps} />);
 
-    expect(screen.getByText('Network error')).toBeInTheDocument();
+    // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+    expect(screen.getByText('Failed to load users. Please try again.')).toBeInTheDocument();
     expect(screen.queryByText('No users found')).not.toBeInTheDocument();
+  });
+
+  it('should render the add mutation error inside the dialog', () => {
+    renderWithProviders(<AddMemberDialog {...defaultProps} error="Failed to add member. Please try again." />);
+
+    expect(screen.getByText('Failed to add member. Please try again.')).toBeInTheDocument();
+  });
+
+  it('should call onErrorDismiss when the selection changes', async () => {
+    const user = userEvent.setup();
+    const onErrorDismiss = vi.fn();
+    renderWithProviders(
+      <AddMemberDialog
+        {...defaultProps}
+        error="Failed to add member. Please try again."
+        onErrorDismiss={onErrorDismiss}
+      />,
+    );
+
+    await user.click(screen.getByTestId('checkbox-u1'));
+
+    expect(onErrorDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('should call onErrorDismiss when switching tabs', async () => {
+    const user = userEvent.setup();
+    const onErrorDismiss = vi.fn();
+    renderWithProviders(
+      <AddMemberDialog
+        {...defaultProps}
+        error="Failed to add member. Please try again."
+        onErrorDismiss={onErrorDismiss}
+      />,
+    );
+
+    await user.click(screen.getByText('Apps'));
+
+    expect(onErrorDismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it('should disable actions while the add mutation is submitting', () => {
+    renderWithProviders(<AddMemberDialog {...defaultProps} isSubmitting />);
+
+    expect(screen.getByText('Cancel').closest('button')).toBeDisabled();
+  });
+
+  it('should not close on Escape while the add mutation is submitting', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(<AddMemberDialog {...defaultProps} onClose={onClose} isSubmitting />);
+
+    await user.keyboard('{Escape}');
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('should close on Escape once the add mutation has settled', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithProviders(<AddMemberDialog {...defaultProps} onClose={onClose} />);
+
+    await user.keyboard('{Escape}');
+
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

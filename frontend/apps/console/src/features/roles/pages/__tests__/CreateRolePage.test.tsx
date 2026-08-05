@@ -283,59 +283,73 @@ describe('CreateRolePage', () => {
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
-  it('should render mutation error alert when createRole.error exists', () => {
-    vi.mocked(useCreateRole).mockReturnValue({
-      mutate: vi.fn(),
-      mutateAsync: vi.fn(),
-      isPending: false,
-      isError: true,
-      isSuccess: false,
-      error: new Error('Failed to create role'),
-      data: undefined,
+  it('should render the provider error inline', () => {
+    vi.mocked(useRoleCreate).mockReturnValue({
+      currentStep: RoleCreateFlowStep.BASIC_INFO,
+      setCurrentStep: mockSetCurrentStep,
+      name: 'Test Role',
+      setName: mockSetName,
+      ouId: '',
+      setOuId: mockSetOuId,
+      error: 'Failed to create role. Please try again.',
+      setError: mockSetError,
+      permissions: [],
+      setPermissions: mockSetPermissions,
       reset: vi.fn(),
-      context: undefined,
-      failureCount: 1,
-      failureReason: null,
-      isIdle: false,
-      isPaused: false,
-      status: 'error',
-      submittedAt: 0,
-      variables: undefined,
-    } as unknown as ReturnType<typeof useCreateRole>);
+    } as unknown as ReturnType<typeof useRoleCreate>);
 
     render(<CreateRolePage />);
 
     expect(screen.getByText('Failed to create role. Please try again.')).toBeInTheDocument();
   });
 
-  it('should render mapped error message when the role name conflicts', () => {
+  it('should resolve and store the mapped error message when the role name conflicts on submit', async () => {
     const error = new Error('Request failed') as Error & {response?: {data?: {code: string}}};
     error.response = {data: {code: 'ROL-1004'}};
+    const mockMutateAsync = vi.fn().mockRejectedValue(error);
 
     vi.mocked(useCreateRole).mockReturnValue({
       mutate: vi.fn(),
-      mutateAsync: vi.fn(),
+      mutateAsync: mockMutateAsync,
       isPending: false,
-      isError: true,
+      isError: false,
       isSuccess: false,
-      error,
+      error: null,
       data: undefined,
       reset: vi.fn(),
       context: undefined,
-      failureCount: 1,
+      failureCount: 0,
       failureReason: null,
-      isIdle: false,
+      isIdle: true,
       isPaused: false,
-      status: 'error',
+      status: 'idle',
       submittedAt: 0,
       variables: undefined,
     } as unknown as ReturnType<typeof useCreateRole>);
 
+    vi.mocked(useRoleCreate).mockReturnValue({
+      currentStep: RoleCreateFlowStep.PERMISSIONS,
+      setCurrentStep: mockSetCurrentStep,
+      name: 'Test Role',
+      setName: mockSetName,
+      ouId: '',
+      setOuId: mockSetOuId,
+      error: null,
+      setError: mockSetError,
+      permissions: [],
+      setPermissions: mockSetPermissions,
+      reset: vi.fn(),
+    } as unknown as ReturnType<typeof useRoleCreate>);
+
     render(<CreateRolePage />);
 
-    expect(
-      screen.getByText('A role with this name already exists in this organization unit. Choose a different name.'),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {name: /continue/i}));
+
+    await vi.waitFor(() => {
+      expect(mockSetError).toHaveBeenCalledWith(
+        'A role with this name already exists in this organization unit. Choose a different name.',
+      );
+    });
   });
 
   it('should disable Continue button while mutation is pending', () => {

@@ -6,7 +6,6 @@ import {ApplicationQueryKeys} from '@thunderid/configure-applications';
 import type {Application, InboundAuthConfig} from '@thunderid/configure-applications';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 
 /**
@@ -189,9 +188,6 @@ export default function useRegenerateClientSecret(): UseMutationResult<
         // Ignore invalidation errors
       });
       showToast(t('regenerateSecret.snackbar.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'regenerateSecret.dialog.error'), 'error');
     },
   });
 }

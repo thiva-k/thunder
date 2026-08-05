@@ -9,7 +9,7 @@ import {
 } from '@thunderid/configure-organization-units';
 import {useLogger} from '@thunderid/logger/react';
 import {getErrorMessage} from '@thunderid/utils';
-import {Box, Typography, Button, CircularProgress, Alert, Snackbar} from '@wso2/oxygen-ui';
+import {Box, Button, CircularProgress, Alert} from '@wso2/oxygen-ui';
 import {Home} from '@wso2/oxygen-ui-icons-react';
 import {useState, useCallback, useEffect, useMemo} from 'react';
 import type {JSX} from 'react';
@@ -45,9 +45,6 @@ export default function CreateGroupPage(): JSX.Element {
     resolvedOuId,
     Boolean(resolvedOuId),
   );
-
-  const [validationError, setValidationError] = useState<string | null>(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
 
   const [stepReady, setStepReady] = useState<Record<GroupCreateFlowStep, boolean>>({
     ORGANIZATION_UNIT: false,
@@ -92,19 +89,16 @@ export default function CreateGroupPage(): JSX.Element {
   );
 
   const handleSubmit = async (): Promise<void> => {
-    setValidationError(null);
     setError(null);
 
     if (!name.trim()) {
-      setValidationError(t('create.form.name.required', 'Group name is required'));
-      setSnackbarOpen(true);
+      setError(t('create.form.name.required', 'Group name is required'));
       return;
     }
 
     // If only one OU, use it directly
     if (!resolvedOuId) {
-      setValidationError(t('groups:create.form.organizationUnit.required', 'Organization unit is required'));
-      setSnackbarOpen(true);
+      setError(t('create.form.organizationUnit.required', 'Organization unit is required'));
       return;
     }
 
@@ -118,6 +112,7 @@ export default function CreateGroupPage(): JSX.Element {
       await navigate(listUrl);
     } catch (submitError) {
       logger.error('Failed to create group or navigate', {error: submitError});
+      setError(getErrorMessage(submitError as Error, t, 'create.error', 'Failed to create group. Please try again.'));
     }
   };
 
@@ -173,10 +168,6 @@ export default function CreateGroupPage(): JSX.Element {
     return activeSteps.slice(0, currentIndex + 1);
   };
 
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-  };
-
   if (currentStep === GroupCreateFlowStep.ORGANIZATION_UNIT) {
     if (isOuLoading || !hasMultipleOUs) {
       return (
@@ -205,65 +196,43 @@ export default function CreateGroupPage(): JSX.Element {
   }
 
   return (
-    <>
-      <FullScreenCreationWizardLayout
-        onClose={handleClose}
-        progress={getStepProgress()}
-        breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
-          key: step,
-          label: steps[step]?.label ?? step,
-          onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
-        }))}
-        footer={
-          <Box sx={{display: 'flex', justifyContent: 'flex-end', gap: 2}}>
-            {activeSteps.indexOf(currentStep) > 0 && (
-              <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createGroup.isPending}>
-                {t('common:actions.back')}
-              </Button>
-            )}
-
-            <Button
-              variant="contained"
-              disabled={!stepReady[currentStep] || createGroup.isPending || isOuLoading}
-              sx={{minWidth: 100}}
-              onClick={handleNextStep}
-            >
-              {(() => {
-                if (createGroup.isPending) return t('common:status.saving');
-                return t('common:actions.continue');
-              })()}
+    <FullScreenCreationWizardLayout
+      onClose={handleClose}
+      progress={getStepProgress()}
+      breadcrumbItems={getBreadcrumbSteps().map((step, index, array) => ({
+        key: step,
+        label: steps[step]?.label ?? step,
+        onClick: index < array.length - 1 ? () => setCurrentStep(step) : undefined,
+      }))}
+      footer={
+        <Box sx={{display: 'flex', justifyContent: 'flex-end', gap: 2}}>
+          {activeSteps.indexOf(currentStep) > 0 && (
+            <Button variant="outlined" onClick={handlePrevStep} sx={{minWidth: 100}} disabled={createGroup.isPending}>
+              {t('common:actions.back', 'Back')}
             </Button>
-          </Box>
-        }
-      >
-        {error && (
-          <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+          )}
 
-        {createGroup.error && (
-          <Alert severity="error" sx={{mb: 3}}>
-            <Typography variant="body2" sx={{fontWeight: 'bold', mb: 0.5}}>
-              {getErrorMessage(createGroup.error, t, 'create.error')}
-            </Typography>
-          </Alert>
-        )}
-
-        {renderStepContent()}
-      </FullScreenCreationWizardLayout>
-
-      {/* Validation Error Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{vertical: 'top', horizontal: 'right'}}
-      >
-        <Alert onClose={handleCloseSnackbar} severity="error" sx={{width: '100%'}}>
-          {validationError}
+          <Button
+            variant="contained"
+            disabled={!stepReady[currentStep] || createGroup.isPending || isOuLoading}
+            sx={{minWidth: 100}}
+            onClick={handleNextStep}
+          >
+            {(() => {
+              if (createGroup.isPending) return t('common:status.saving', 'Saving...');
+              return t('common:actions.continue', 'Continue');
+            })()}
+          </Button>
+        </Box>
+      }
+    >
+      {error && (
+        <Alert severity="error" sx={{mb: 3}} onClose={() => setError(null)}>
+          {error}
         </Alert>
-      </Snackbar>
-    </>
+      )}
+
+      {renderStepContent()}
+    </FullScreenCreationWizardLayout>
   );
 }

@@ -11,33 +11,46 @@ type TranslateFn = (key: string, options?: {defaultValue: string}) => string;
 /**
  * Extracts a localized error message from an API error response.
  *
- * Attempts to resolve a specific i18n message for the error code returned
- * by the API (e.g. `errors.APP-1020`). If no specific translation exists,
- * falls back to the provided generic key.
+ * Attempts to resolve a specific i18n message for the error code returned by the API, first against the
+ * caller's own namespace (e.g. `errors.APP-1020`), then against the shared `common` namespace (e.g.
+ * `common:errors.SSE-4030`) for codes that are shared across services rather than owned by one feature. If
+ * neither resolves, falls back to the provided generic key.
  *
  * @param error - The error thrown by the mutation
- * @param t - The i18next translation function scoped to the relevant namespace
+ * @param t - The i18next translation function scoped to the relevant namespace. Must forward an explicit `ns:`
+ *   prefix unchanged (rather than re-prefixing it) so the `common:errors.<CODE>` lookup can resolve
  * @param fallbackKey - i18n key to use when no specific message is found (e.g. `'create.error'`)
+ * @param fallbackDefaultValue - Default string for `fallbackKey`, per the i18n Fallback Values convention, so a
+ *   missing locale key degrades to readable text instead of the raw key
  * @returns Localized error message string
  *
  * @example
  * ```typescript
- * onError: (error) => {
- *   showToast(getErrorMessage(error, t, 'create.error'), 'error');
- * }
+ * setError(getErrorMessage(error, t, 'create.error', 'Failed to create application. Please try again.'));
  * ```
  *
  * @public
  */
-export default function getErrorMessage(error: Error, t: TranslateFn, fallbackKey: string): string {
+export default function getErrorMessage(
+  error: Error,
+  t: TranslateFn,
+  fallbackKey: string,
+  fallbackDefaultValue?: string,
+): string {
   const apiError = (error as {response?: {data?: ApiError}}).response?.data;
 
   if (apiError?.code) {
-    const specific = t(`errors.${apiError.code}`, {defaultValue: ''});
+    // Feature namespace first, then the shared catalog for codes shared across services (e.g. SSE-4030).
+    const specific =
+      t(`errors.${apiError.code}`, {defaultValue: ''}) || t(`common:errors.${apiError.code}`, {defaultValue: ''});
 
     if (specific) {
       return specific;
     }
+  }
+
+  if (fallbackDefaultValue !== undefined) {
+    return t(fallbackKey, {defaultValue: fallbackDefaultValue});
   }
 
   return t(fallbackKey);

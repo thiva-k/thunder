@@ -5,7 +5,6 @@ import {useMutation, useQueryClient, type UseMutationResult} from '@tanstack/rea
 import {ApplicationQueryKeys} from '@thunderid/configure-applications';
 import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
-import {getErrorMessage} from '@thunderid/utils';
 import {useTranslation} from 'react-i18next';
 
 /**
@@ -72,9 +71,6 @@ export default function useDeleteApplication(): UseMutationResult<void, Error, s
         // Ignore invalidation errors
       });
       showToast(t('delete.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getErrorMessage(error, t, 'delete.error'), 'error');
     },
   });
 }

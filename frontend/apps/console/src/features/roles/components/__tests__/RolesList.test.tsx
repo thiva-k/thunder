@@ -81,6 +81,21 @@ vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
         </div>
       ),
       RowActions: ({children}: {children: React.ReactNode}): React.ReactElement => children as React.ReactElement,
+      EmptyState: ({
+        title = undefined,
+        description = undefined,
+        action = undefined,
+      }: {
+        title?: string;
+        description?: string;
+        action?: React.ReactNode;
+      }) => (
+        <div>
+          {title && <div>{title}</div>}
+          {description && <div>{description}</div>}
+          {action}
+        </div>
+      ),
     },
   };
 });
@@ -169,7 +184,8 @@ describe('RolesList', () => {
     renderComponent();
 
     expect(screen.getByText('Failed to load roles')).toBeInTheDocument();
-    expect(screen.getByText('Network error')).toBeInTheDocument();
+    // Resolved through the i18n catalog, not the raw (unlocalized) error message.
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 
   it('should render roles list successfully', () => {

@@ -8,7 +8,6 @@ import {useConfig, useToast} from '@thunderid/contexts';
 import {useThunderID} from '@thunderid/react';
 import {useTranslation} from 'react-i18next';
 import type {CreateApplicationRequest} from '../models/requests';
-import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 
 /**
  * Variables for the {@link useUpdateApplication} mutation.
@@ -100,9 +99,6 @@ export default function useUpdateApplication(): UseMutationResult<Application, E
         // Ignore invalidation errors
       });
       showToast(t('update.success'), 'success');
-    },
-    onError: (error) => {
-      showToast(getApplicationErrorMessage(error, t, 'update.error'), 'error', 12000);
     },
   });
 }

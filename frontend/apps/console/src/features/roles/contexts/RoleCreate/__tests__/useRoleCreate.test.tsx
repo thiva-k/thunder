@@ -5,6 +5,7 @@ import {act, renderHook} from '@testing-library/react';
 import {render, screen} from '@thunderid/test-utils';
 import React from 'react';
 import {describe, expect, it, vi} from 'vitest';
+import {RoleCreateFlowStep} from '../../../models/role-create-flow';
 import RoleCreateProvider from '../RoleCreateProvider';
 import useRoleCreate from '../useRoleCreate';
 
@@ -182,6 +183,38 @@ describe('useRoleCreate', () => {
       result.current.reset();
     });
     expect(result.current.permissions).toEqual([]);
+  });
+
+  it('clears a stale error when a form field changes', () => {
+    const {result} = renderUseRoleCreate();
+
+    act(() => {
+      result.current.setName('Duplicate Role');
+    });
+    act(() => {
+      result.current.setError('A role with this name already exists in this organization unit.');
+    });
+    expect(result.current.error).toBe('A role with this name already exists in this organization unit.');
+
+    act(() => {
+      result.current.setName('A Different Role');
+    });
+
+    expect(result.current.error).toBeNull();
+  });
+
+  it('does not clear the error when only the current step changes', () => {
+    const {result} = renderUseRoleCreate();
+
+    act(() => {
+      result.current.setError('A role with this name already exists in this organization unit.');
+    });
+
+    act(() => {
+      result.current.setCurrentStep(RoleCreateFlowStep.PERMISSIONS);
+    });
+
+    expect(result.current.error).toBe('A role with this name already exists in this organization unit.');
   });
 
   it('has exactly 11 properties in the context interface', () => {

@@ -5,7 +5,6 @@ import {PageLoader} from '@thunderid/components';
 import {OrganizationUnitProvider} from '@thunderid/configure-organization-units';
 import {TranslationCreateProvider} from '@thunderid/configure-translations';
 import {UserTypeCreateProvider} from '@thunderid/configure-user-types';
-import {UserCreateProvider} from '@thunderid/configure-users';
 import {RoutesProvider, ToastProvider} from '@thunderid/contexts';
 import {ProtectedRoute} from '@thunderid/react-router';
 import {lazy, Suspense, type JSX} from 'react';
@@ -266,9 +265,7 @@ export default function App(): JSX.Element {
                 path={RouteConfig.users.addCreate()}
                 element={
                   <ProtectedRoute>
-                    <UserCreateProvider>
-                      <FullScreenLayout />
-                    </UserCreateProvider>
+                    <FullScreenLayout />
                   </ProtectedRoute>
                 }
               >

@@ -42,6 +42,7 @@ import ApplicationConstants from '../constants/application-constants';
 import TemplateConstants from '../constants/template-constants';
 import {McpClientTypes} from '../models/mcp-client';
 import deriveMcpClientType from '../utils/deriveMcpClientType';
+import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
 import {getIntegrationGuideForTemplate} from '../utils/getIntegrationGuidesForTemplate';
 import getTemplateCapabilities from '../utils/getTemplateCapabilities';
 import getTemplateFieldConstraints from '../utils/getTemplateFieldConstraints';
@@ -150,9 +151,14 @@ export default function ApplicationEditPage() {
     [application?.template],
   );
 
-  const handleFieldChange = useCallback((field: keyof Application, value: unknown) => {
-    setEditedApp((prev) => ({...prev, [field]: value}));
-  }, []);
+  const handleFieldChange = useCallback(
+    (field: keyof Application, value: unknown) => {
+      // A previous save error is stale the moment the form changes again.
+      updateApplication.reset();
+      setEditedApp((prev) => ({...prev, [field]: value}));
+    },
+    [updateApplication],
+  );
 
   const handleSave = useCallback(async () => {
     if (!application || !applicationId) return;
@@ -366,7 +372,10 @@ export default function ApplicationEditPage() {
             value={editedApp.logoUrl ?? application.logoUrl}
             fallback={ApplicationConstants.DEFAULT_AVATAR}
             editAriaLabel={t('applications:edit.page.logoUpdate.label', 'Update Logo')}
-            onSelect={(newLogoUrl: string) =>
+            onSelect={(newLogoUrl: string) => {
+              // Can't go through handleFieldChange: reverting to the original logo drops the key
+              // rather than setting it, so the stale save error has to be cleared here too.
+              updateApplication.reset();
               setEditedApp((prev) => {
                 if (newLogoUrl === application.logoUrl) {
                   const {logoUrl, ...rest} = prev;
@@ -374,8 +383,8 @@ export default function ApplicationEditPage() {
                   return rest;
                 }
                 return {...prev, logoUrl: newLogoUrl};
-              })
-            }
+              });
+            }}
             onSave={handleSave}
           />
         </PageTitle.Avatar>
@@ -669,7 +678,18 @@ export default function ApplicationEditPage() {
             isMissingCertificate ||
             application.isReadOnly === true
           }
+          error={
+            updateApplication.error
+              ? getApplicationErrorMessage(
+                  updateApplication.error,
+                  (key, options) => t(key.includes(':') ? key : `applications:${key}`, options),
+                  'update.error',
+                  'Failed to update application. Please try again.',
+                )
+              : undefined
+          }
           onReset={() => {
+            updateApplication.reset();
             setEditedApp({});
             setHasValidationErrors(false);
             setMcpAccessInvalid(false);

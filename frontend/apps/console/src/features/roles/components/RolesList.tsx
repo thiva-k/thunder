@@ -3,8 +3,9 @@
 
 import {useDataGridLocaleText} from '@thunderid/hooks';
 import {useLogger} from '@thunderid/logger/react';
-import {Box, IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
-import {Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
+import {getErrorMessage} from '@thunderid/utils';
+import {Button, IconButton, Typography, Tooltip, DataGrid, ListingTable} from '@wso2/oxygen-ui';
+import {AlertCircle, Eye, Pencil, Trash2} from '@wso2/oxygen-ui-icons-react';
 import {useMemo, useCallback, useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import {useNavigate} from 'react-router';
@@ -30,7 +31,7 @@ export default function RolesList(): JSX.Element {
     }),
     [paginationModel],
   );
-  const {data, isLoading, error} = useGetRoles(rolesParams);
+  const {data, isLoading, error, refetch} = useGetRoles(rolesParams);
 
   const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState<boolean>(false);
@@ -138,14 +139,16 @@ export default function RolesList(): JSX.Element {
 
   if (error) {
     return (
-      <Box sx={{textAlign: 'center', py: 8}}>
-        <Typography variant="h6" color="error" gutterBottom>
-          {t('roles:listing.error')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {error.message ?? t('common:messages.somethingWentWrong')}
-        </Typography>
-      </Box>
+      <ListingTable.EmptyState
+        illustration={<AlertCircle size={40} />}
+        title={t('roles:listing.error', 'Failed to load roles')}
+        description={getErrorMessage(error, t, 'common:messages.somethingWentWrong', 'Something went wrong')}
+        action={
+          <Button variant="outlined" onClick={() => void refetch()}>
+            {t('common:actions.refresh', 'Refresh')}
+          </Button>
+        }
+      />
     );
   }
 

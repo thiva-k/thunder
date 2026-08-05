@@ -29,6 +29,7 @@ export default function EditAssignmentsSettings({
   const addRoleAssignments = useAddRoleAssignments();
   const removeRoleAssignments = useRemoveRoleAssignments();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeAssignmentTab, setActiveAssignmentTab] = useState(0);
 
@@ -40,10 +41,12 @@ export default function EditAssignmentsSettings({
         {
           onSuccess: () => {
             setAddDialogOpen(false);
-            setError(null);
+            setAddError(null);
           },
           onError: (err: Error) => {
-            setError(getErrorMessage(err, t, 'assignments.add.error'));
+            setAddError(
+              getErrorMessage(err, t, 'assignments.add.error', 'Failed to add assignment. Please try again.'),
+            );
           },
         },
       );
@@ -60,7 +63,9 @@ export default function EditAssignmentsSettings({
             setError(null);
           },
           onError: (err: Error) => {
-            setError(getErrorMessage(err, t, 'assignments.remove.error'));
+            setError(
+              getErrorMessage(err, t, 'assignments.remove.error', 'Failed to remove assignment. Please try again.'),
+            );
           },
         },
       );
@@ -88,7 +93,10 @@ export default function EditAssignmentsSettings({
               variant="contained"
               size="small"
               startIcon={<Plus size={16} />}
-              onClick={() => setAddDialogOpen(true)}
+              onClick={() => {
+                setAddError(null);
+                setAddDialogOpen(true);
+              }}
             >
               {t('edit.assignments.sections.manage.addAssignment', 'Add')}
             </Button>
@@ -100,8 +108,14 @@ export default function EditAssignmentsSettings({
         <AddAssignmentDialog
           open={addDialogOpen}
           roleId={roleId}
-          onClose={() => setAddDialogOpen(false)}
+          onClose={() => {
+            setAddDialogOpen(false);
+            setAddError(null);
+          }}
           onAdd={handleAddAssignments}
+          error={addError}
+          onErrorDismiss={() => setAddError(null)}
+          isSubmitting={addRoleAssignments.isPending}
           initialTab={activeAssignmentTab}
         />
       )}

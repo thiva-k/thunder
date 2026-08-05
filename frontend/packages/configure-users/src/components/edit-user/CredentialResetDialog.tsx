@@ -17,6 +17,7 @@ import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import type {CredentialFieldInfo} from './CredentialsTabPanel';
 import useUpdateUserCredentials from '../../api/useUpdateUserCredentials';
+import getUserErrorMessage from '../../utils/getUserErrorMessage';
 import CredentialFieldInput from '../CredentialFieldInput';
 
 interface CredentialValues {
@@ -32,7 +33,7 @@ interface CredentialResetDialogProps {
 }
 
 export default function CredentialResetDialog({open, field, userId, onClose}: CredentialResetDialogProps): JSX.Element {
-  const {t} = useTranslation();
+  const {t} = useTranslation('users');
   const updateCredentialsMutation = useUpdateUserCredentials();
 
   const [formValues, setFormValues] = useState<CredentialValues>({newValue: '', confirmValue: ''});
@@ -74,19 +75,19 @@ export default function CredentialResetDialog({open, field, userId, onClose}: Cr
       {field && (
         <>
           <DialogTitle>
-            {t('users:manageUser.sections.credentials.resetTitle', 'Reset {{label}}?', {label: field.label})}
+            {t('manageUser.sections.credentials.resetTitle', 'Reset {{label}}?', {label: field.label})}
           </DialogTitle>
           <DialogContent>
             <DialogContentText sx={{mb: 2}}>
               {t(
-                'users:manageUser.sections.credentials.resetDialogMessage',
+                'manageUser.sections.credentials.resetDialogMessage',
                 'A new {{label}} will be set for this user. The current {{label}} will be invalidated immediately.',
                 {label: field.label.toLowerCase()},
               )}
             </DialogContentText>
             <Alert severity="warning" sx={{mb: 2}}>
               {t(
-                'users:manageUser.sections.credentials.resetDialogDisclaimer',
+                'manageUser.sections.credentials.resetDialogDisclaimer',
                 'This action cannot be undone. The current {{label}} will stop working as soon as you confirm.',
                 {label: field.label.toLowerCase()},
               )}
@@ -94,13 +95,13 @@ export default function CredentialResetDialog({open, field, userId, onClose}: Cr
             <Stack spacing={2}>
               <FormControl fullWidth>
                 <FormLabel sx={{mb: 0.5}}>
-                  {t('users:manageUser.sections.credentials.newValue', 'New {{label}}', {label: field.label})}
+                  {t('manageUser.sections.credentials.newValue', 'New {{label}}', {label: field.label})}
                 </FormLabel>
                 <CredentialFieldInput
                   id={`credential-new-${field.fieldName}`}
                   name={`new-${field.fieldName}`}
                   value={formValues.newValue}
-                  placeholder={t('users:manageUser.sections.credentials.newValuePlaceholder', 'Enter new {{label}}', {
+                  placeholder={t('manageUser.sections.credentials.newValuePlaceholder', 'Enter new {{label}}', {
                     label: field.label.toLowerCase(),
                   })}
                   required
@@ -109,13 +110,14 @@ export default function CredentialResetDialog({open, field, userId, onClose}: Cr
                   onChange={(e) => {
                     setFormValues((prev) => ({...prev, newValue: e.target.value}));
                     setMismatchError(false);
+                    updateCredentialsMutation.reset(); // a save error is stale once the form changes
                   }}
                   inputRef={null}
                 />
               </FormControl>
               <FormControl fullWidth>
                 <FormLabel sx={{mb: 0.5}}>
-                  {t('users:manageUser.sections.credentials.confirmValue', 'Confirm {{label}}', {
+                  {t('manageUser.sections.credentials.confirmValue', 'Confirm {{label}}', {
                     label: field.label,
                   })}
                 </FormLabel>
@@ -123,24 +125,19 @@ export default function CredentialResetDialog({open, field, userId, onClose}: Cr
                   id={`credential-confirm-${field.fieldName}`}
                   name={`confirm-${field.fieldName}`}
                   value={formValues.confirmValue}
-                  placeholder={t(
-                    'users:manageUser.sections.credentials.confirmValuePlaceholder',
-                    'Confirm new {{label}}',
-                    {
-                      label: field.label.toLowerCase(),
-                    },
-                  )}
+                  placeholder={t('manageUser.sections.credentials.confirmValuePlaceholder', 'Confirm new {{label}}', {
+                    label: field.label.toLowerCase(),
+                  })}
                   required
                   error={mismatchError}
                   helperText={
-                    mismatchError
-                      ? t('users:manageUser.sections.credentials.mismatch', 'Values do not match.')
-                      : undefined
+                    mismatchError ? t('manageUser.sections.credentials.mismatch', 'Values do not match.') : undefined
                   }
                   color={mismatchError ? 'error' : 'primary'}
                   onChange={(e) => {
                     setFormValues((prev) => ({...prev, confirmValue: e.target.value}));
                     setMismatchError(false);
+                    updateCredentialsMutation.reset(); // a save error is stale once the form changes
                   }}
                   inputRef={null}
                 />
@@ -148,7 +145,12 @@ export default function CredentialResetDialog({open, field, userId, onClose}: Cr
             </Stack>
             {updateCredentialsMutation.error && (
               <Alert severity="error" sx={{mt: 2}}>
-                {updateCredentialsMutation.error.message}
+                {getUserErrorMessage(
+                  updateCredentialsMutation.error,
+                  t,
+                  'updateCredentials.error',
+                  'Failed to update credentials. Please try again.',
+                )}
               </Alert>
             )}
           </DialogContent>
@@ -163,8 +165,8 @@ export default function CredentialResetDialog({open, field, userId, onClose}: Cr
               disabled={isSubmitting || formValues.newValue.trim() === ''}
             >
               {isSubmitting
-                ? t('users:manageUser.sections.credentials.resetting', 'Resetting…')
-                : t('users:manageUser.sections.credentials.resetButton', 'Reset {{label}}', {
+                ? t('manageUser.sections.credentials.resetting', 'Resetting…')
+                : t('manageUser.sections.credentials.resetButton', 'Reset {{label}}', {
                     label: field.label,
                   })}
             </Button>

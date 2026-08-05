@@ -8,6 +8,7 @@ import useDeleteUser from '../useDeleteUser';
 
 const mockHttpRequest = vi.fn();
 const mockGetServerUrl = vi.fn().mockReturnValue('https://api.test.com');
+const mockShowToast = vi.fn();
 
 // Mock the dependencies
 vi.mock('@thunderid/react', () => ({
@@ -25,6 +26,9 @@ vi.mock('@thunderid/contexts', async (importOriginal) => {
     useConfig: () => ({
       getServerUrl: mockGetServerUrl,
     }),
+    useToast: () => ({
+      showToast: mockShowToast,
+    }),
   };
 });
 
@@ -32,10 +36,39 @@ describe('useDeleteUser', () => {
   beforeEach(() => {
     mockHttpRequest.mockReset();
     mockGetServerUrl.mockReset().mockReturnValue('https://api.test.com');
+    mockShowToast.mockReset();
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('should show a success toast on successful deletion', async () => {
+    mockHttpRequest.mockResolvedValueOnce(undefined);
+
+    const {result} = renderHook(() => useDeleteUser());
+
+    result.current.mutate('user-1');
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(mockShowToast).toHaveBeenCalledWith(expect.any(String), 'success');
+  });
+
+  it('should not show a toast on error', async () => {
+    mockHttpRequest.mockRejectedValueOnce(new Error('Failed to delete user'));
+
+    const {result} = renderHook(() => useDeleteUser());
+
+    result.current.mutate('user-1');
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(mockShowToast).not.toHaveBeenCalled();
   });
 
   it('should initialize with idle state', () => {

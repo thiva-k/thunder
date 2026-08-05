@@ -408,6 +408,41 @@ describe('ApplicationCreateProvider', () => {
     expect(screen.getByTestId('error')).toHaveTextContent('Test error');
   });
 
+  it('clears the error as soon as a wizard field changes', async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <ApplicationCreateProvider>
+        <TestConsumer />
+      </ApplicationCreateProvider>,
+    );
+
+    await user.click(screen.getByText('Set Error'));
+    expect(screen.getByTestId('error')).toHaveTextContent('Test error');
+
+    await user.click(screen.getByText('Set App Name'));
+
+    expect(screen.getByTestId('error')).toHaveTextContent('null');
+  });
+
+  it('does not clear the error when only currentStep changes', async () => {
+    const user = userEvent.setup();
+
+    renderWithQueryClient(
+      <ApplicationCreateProvider>
+        <TestConsumer />
+      </ApplicationCreateProvider>,
+    );
+
+    await user.click(screen.getByText('Set Error'));
+    expect(screen.getByTestId('error')).toHaveTextContent('Test error');
+
+    await user.click(screen.getByText('Set Design Step'));
+
+    expect(screen.getByTestId('current-step')).toHaveTextContent(ApplicationCreateFlowStep.DESIGN);
+    expect(screen.getByTestId('error')).toHaveTextContent('Test error');
+  });
+
   it('resets all state when reset is called', async () => {
     const user = userEvent.setup();
 
@@ -417,15 +452,17 @@ describe('ApplicationCreateProvider', () => {
       </ApplicationCreateProvider>,
     );
 
-    // Set some values
+    // Set some values. "Set Error" is clicked last: any field change clears a stale error
+    // (see the formFingerprint check in the provider), so setting it first would have it wiped by the
+    // subsequent field changes before the assertions below even run.
     await user.click(screen.getByText('Set App Name'));
     await user.click(screen.getByText('Set Theme to null'));
-    await user.click(screen.getByText('Set Error'));
     await user.click(screen.getByText('Set M2M Client Type'));
     await user.click(screen.getByText('Set MCP Redirect URIs'));
     await user.click(screen.getByText('Enable Email OTP MFA'));
     await user.click(screen.getByText('Enable SMS OTP MFA'));
     await user.click(screen.getByText('Set SMS Sender'));
+    await user.click(screen.getByText('Set Error'));
 
     // Verify values are set
     expect(screen.getByTestId('app-name')).toHaveTextContent('Test App');

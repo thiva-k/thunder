@@ -975,16 +975,6 @@ paths:
                     description:
                       key: "error.userservice.invalid_request_format_description"
                       defaultValue: "The request body is malformed, contains invalid data, or required fields are missing/empty"
-                invalid-group-id:
-                  summary: Invalid group ID
-                  value:
-                    code: "USR-1007"
-                    message:
-                      key: "error.userservice.invalid_group_id"
-                      defaultValue: "Invalid group ID"
-                    description:
-                      key: "error.userservice.invalid_group_id_description"
-                      defaultValue: "One or more group IDs in the request do not exist"
                 schema-validation-failed:
                   summary: Schema validation failed
                   value:
@@ -1069,16 +1059,6 @@ paths:
                     description:
                       key: "error.userservice.attribute_conflict_description"
                       defaultValue: "A user with the same unique attribute value already exists"
-                email-conflict:
-                  summary: Email already exists
-                  value:
-                    code: "USR-1015"
-                    message:
-                      key: "error.userservice.email_conflict"
-                      defaultValue: "Email conflict"
-                    description:
-                      key: "error.userservice.email_conflict_description"
-                      defaultValue: "A user with the same email already exists"
         "500":
           description: Internal server error
           content:

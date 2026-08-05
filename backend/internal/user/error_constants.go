@@ -63,19 +63,6 @@ var (
 			DefaultValue: "The specified organization unit does not exist",
 		},
 	}
-	// ErrorInvalidGroupID is the error returned when group ID is invalid.
-	ErrorInvalidGroupID = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "USR-1007",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.userservice.invalid_group_id",
-			DefaultValue: "Invalid group ID",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.userservice.invalid_group_id_description",
-			DefaultValue: "One or more group IDs in the request do not exist",
-		},
-	}
 	// ErrorHandlePathRequired is the error returned when handle path is missing.
 	ErrorHandlePathRequired = tidcommon.ServiceError{
 		Type: tidcommon.ClientErrorType,
@@ -139,19 +126,6 @@ var (
 		ErrorDescription: tidcommon.I18nMessage{
 			Key:          "error.userservice.attribute_conflict_description",
 			DefaultValue: "A user with the same unique attribute value already exists",
-		},
-	}
-	// ErrorEmailConflict is the error returned when email already exists.
-	ErrorEmailConflict = tidcommon.ServiceError{
-		Type: tidcommon.ClientErrorType,
-		Code: "USR-1015",
-		Error: tidcommon.I18nMessage{
-			Key:          "error.userservice.email_conflict",
-			DefaultValue: "Email conflict",
-		},
-		ErrorDescription: tidcommon.I18nMessage{
-			Key:          "error.userservice.email_conflict_description",
-			DefaultValue: "A user with the same email already exists",
 		},
 	}
 	// ErrorMissingRequiredFields is the error returned when required fields are missing.

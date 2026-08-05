@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import {useLogger} from '@thunderid/logger';
+import {getErrorMessage} from '@thunderid/utils';
 import {Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button, Alert} from '@wso2/oxygen-ui';
 import {useState, type JSX} from 'react';
 import {useTranslation} from 'react-i18next';
 import useRegenerateFlowSecret from '../api/useRegenerateFlowSecret';
+
+const DEFAULT_REGENERATE_FLOW_SECRET_ERROR = 'Failed to regenerate Flow Secret. Please try again.';
 
 /**
  * Props for the {@link RegenerateFlowSecretDialog} component.
@@ -49,7 +52,7 @@ export default function RegenerateFlowSecretDialog({
   onSuccess = undefined,
   onError = undefined,
 }: RegenerateFlowSecretDialogProps): JSX.Element {
-  const {t} = useTranslation();
+  const {t} = useTranslation('applications');
   const logger = useLogger('RegenerateFlowSecretDialog');
   const [error, setError] = useState<string | null>(null);
   const regenerateFlowSecret = useRegenerateFlowSecret();
@@ -61,7 +64,7 @@ export default function RegenerateFlowSecretDialog({
 
   const handleConfirm = (): void => {
     if (!applicationId) {
-      setError(t('applications:regenerateFlowSecret.dialog.error'));
+      setError(t('regenerateFlowSecret.dialog.error', DEFAULT_REGENERATE_FLOW_SECRET_ERROR));
       return;
     }
 
@@ -77,7 +80,12 @@ export default function RegenerateFlowSecretDialog({
           onSuccess?.(flowSecret);
         },
         onError: (err) => {
-          const errorMessage = err instanceof Error ? err.message : t('applications:regenerateFlowSecret.dialog.error');
+          const errorMessage = getErrorMessage(
+            err,
+            t,
+            'regenerateFlowSecret.dialog.error',
+            DEFAULT_REGENERATE_FLOW_SECRET_ERROR,
+          );
           logger.error('Failed to regenerate Flow Secret', {
             applicationId,
             errorMessage,
@@ -92,11 +100,19 @@ export default function RegenerateFlowSecretDialog({
 
   return (
     <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
-      <DialogTitle>{t('applications:regenerateFlowSecret.dialog.title')}</DialogTitle>
+      <DialogTitle>{t('regenerateFlowSecret.dialog.title', 'Regenerate Flow Secret')}</DialogTitle>
       <DialogContent>
-        <DialogContentText sx={{mb: 2}}>{t('applications:regenerateFlowSecret.dialog.message')}</DialogContentText>
+        <DialogContentText sx={{mb: 2}}>
+          {t(
+            'regenerateFlowSecret.dialog.message',
+            'Are you sure you want to regenerate the Flow Secret for this application? This will immediately invalidate the current Flow Secret and generate a new one.',
+          )}
+        </DialogContentText>
         <Alert severity="warning" sx={{mb: 2}}>
-          {t('applications:regenerateFlowSecret.dialog.disclaimer')}
+          {t(
+            'regenerateFlowSecret.dialog.disclaimer',
+            'Warning: Regenerating the Flow Secret invalidates the current secret. Server-side flow initiation will fail until the new Flow Secret is deployed.',
+          )}
         </Alert>
         {error && (
           <Alert severity="error" sx={{mt: 2}}>
@@ -115,8 +131,8 @@ export default function RegenerateFlowSecretDialog({
           disabled={regenerateFlowSecret.isPending || !applicationId}
         >
           {regenerateFlowSecret.isPending
-            ? t('applications:regenerateFlowSecret.dialog.regenerating')
-            : t('applications:regenerateFlowSecret.dialog.confirmButton')}
+            ? t('regenerateFlowSecret.dialog.regenerating', 'Regenerating...')
+            : t('regenerateFlowSecret.dialog.confirmButton', 'Regenerate')}
         </Button>
       </DialogActions>
     </Dialog>

@@ -108,6 +108,20 @@ describe('UnsavedChangesBar', () => {
     });
   });
 
+  describe('Error', () => {
+    it('should not render an alert when error is not provided', () => {
+      render(<UnsavedChangesBar {...defaultProps} />);
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('should render an alert with the error message when provided', () => {
+      render(<UnsavedChangesBar {...defaultProps} error="Failed to save. Please try again." />);
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Failed to save. Please try again.');
+    });
+  });
+
   describe('Custom Labels', () => {
     it('should render custom message, resetLabel, saveLabel, and savingLabel', () => {
       render(
