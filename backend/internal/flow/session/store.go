@@ -57,6 +57,26 @@ func (st *store) GetByExecutionID(ctx context.Context, flowExecutionID string) (
 	return st.getSingle(ctx, queryGetSessionByExecutionID, flowExecutionID)
 }
 
+// ListBySubject returns every session owned by the subject.
+func (st *store) ListBySubject(ctx context.Context, subjectID string) ([]Session, error) {
+	result := make([]Session, 0)
+	err := withRuntimePersistentDBClient(st.dbProvider, func(dbClient provider.DBClientInterface) error {
+		rows, err := dbClient.QueryContext(ctx, queryListSessionsBySubject, subjectID, st.deploymentID)
+		if err != nil {
+			return fmt.Errorf("failed to list sessions by subject: %w", err)
+		}
+		for _, row := range rows {
+			sess, buildErr := buildSessionFromRow(row)
+			if buildErr != nil {
+				return buildErr
+			}
+			result = append(result, *sess)
+		}
+		return nil
+	})
+	return result, err
+}
+
 // getSingle runs a single-key lookup query and maps the at-most-one row into a Session, returning
 // (nil, nil) when no row matches.
 func (st *store) getSingle(ctx context.Context, query model.DBQuery, key string) (*Session, error) {

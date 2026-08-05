@@ -66,7 +66,7 @@ func (suite *TokenValidatorTestSuite) SetupTest() {
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockEnforcementService = revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
 	// Default: tokens are not revoked. Individual tests override this to exercise revocation.
-	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything).Return(nil).Maybe()
 	suite.validator = &tokenValidator{
 		cfg: oauthconfig.Config{
 			JWT: engineconfig.JWTConfig{
@@ -2001,7 +2001,10 @@ func (suite *TokenValidatorTestSuite) validatorWithEnforcement(
 	jti string, returnedErr error,
 ) *tokenValidator {
 	enforcement := revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
-	enforcement.On("EnsureNotRevoked", mock.Anything, jti, mock.Anything).Return(returnedErr)
+	enforcement.On("EnsureNotRevoked", mock.Anything,
+		mock.MatchedBy(func(identity revocation.RevocationIdentity) bool {
+			return identity.JTI == jti
+		})).Return(returnedErr)
 	return &tokenValidator{
 		cfg:                suite.validator.cfg,
 		jwtService:         suite.mockJWTService,
@@ -2025,7 +2028,11 @@ func (suite *TokenValidatorTestSuite) TestValidateAccessToken_Revoked() {
 
 	// The token's tfid claim must reach the enforcement service verbatim so family-scoped revocation works.
 	enforcement := revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
-	enforcement.On("EnsureNotRevoked", mock.Anything, "at-jti-revoked", "tfid-at-revoked").
+	enforcement.On("EnsureNotRevoked", mock.Anything, mock.MatchedBy(func(identity revocation.RevocationIdentity) bool {
+		return identity.JTI == "at-jti-revoked" && len(identity.Criteria) > 0 &&
+			identity.Criteria[0].Type == revocation.CriterionTypeTokenFamily &&
+			identity.Criteria[0].Value == "tfid-at-revoked"
+	})).
 		Return(revocation.ErrTokenRevoked)
 	validator := &tokenValidator{
 		cfg:                suite.validator.cfg,
@@ -2037,6 +2044,21 @@ func (suite *TokenValidatorTestSuite) TestValidateAccessToken_Revoked() {
 
 	assert.Nil(suite.T(), result)
 	assert.ErrorIs(suite.T(), err, revocation.ErrTokenRevoked)
+}
+
+func (suite *TokenValidatorTestSuite) TestRevocationIdentity_RefreshTokenUsesAccessTokenSubject() {
+	identity := revocationIdentity(map[string]interface{}{
+		"sub":              "oauth-client",
+		"access_token_sub": "user-123",
+		"iat":              float64(1_700_000_000),
+	}, "refresh-jti", "refresh-family")
+
+	assert.Contains(suite.T(), identity.Criteria, revocation.Criterion{
+		Type: revocation.CriterionTypeSubject, Value: "user-123",
+	})
+	assert.NotContains(suite.T(), identity.Criteria, revocation.Criterion{
+		Type: revocation.CriterionTypeSubject, Value: "oauth-client",
+	})
 }
 
 // When the deny list cannot be consulted, the validator surfaces revocation.ErrEnforcementUnavailable
@@ -2053,7 +2075,10 @@ func (suite *TokenValidatorTestSuite) TestValidateAccessToken_EnforcementUnavail
 	suite.mockJWTService.On("VerifyJWT", mock.Anything, token, "", "https://example.com").Return(nil)
 
 	enforcement := revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
-	enforcement.On("EnsureNotRevoked", mock.Anything, "at-jti-unknown", mock.Anything).
+	enforcement.On("EnsureNotRevoked", mock.Anything,
+		mock.MatchedBy(func(identity revocation.RevocationIdentity) bool {
+			return identity.JTI == "at-jti-unknown"
+		})).
 		Return(revocation.ErrEnforcementUnavailable)
 	validator := &tokenValidator{
 		cfg:                suite.validator.cfg,
@@ -2406,7 +2431,7 @@ func (suite *ExternalIDPValidatorTestSuite) SetupTest() {
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockEnforcementService = revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
-	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything).Return(nil).Maybe()
 	suite.validator = &tokenValidator{
 		cfg: oauthconfig.Config{
 			JWT: engineconfig.JWTConfig{
@@ -2951,7 +2976,7 @@ func (suite *IDJAGValidatorTestSuite) SetupTest() {
 	suite.mockJWTService = jwtmock.NewJWTServiceInterfaceMock(suite.T())
 	suite.mockIDPService = idpmock.NewIDPServiceInterfaceMock(suite.T())
 	suite.mockEnforcementService = revocationmock.NewEnforcementServiceInterfaceMock(suite.T())
-	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	suite.mockEnforcementService.On("EnsureNotRevoked", mock.Anything, mock.Anything).Return(nil).Maybe()
 	suite.mockJTIStore = jtimock.NewJTIStoreInterfaceMock(suite.T())
 	suite.validator = &tokenValidator{
 		cfg: oauthconfig.Config{

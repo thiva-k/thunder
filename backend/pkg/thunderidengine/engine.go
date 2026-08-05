@@ -24,6 +24,7 @@ import (
 	oauthconfig "github.com/thunder-id/thunderid/internal/oauth/config"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/dpop"
 	"github.com/thunder-id/thunderid/internal/oauth/oauth2/jti"
+	"github.com/thunder-id/thunderid/internal/oauth/oauth2/revocation"
 	"github.com/thunder-id/thunderid/internal/runtimestore"
 	"github.com/thunder-id/thunderid/internal/system/cache"
 	systemconfig "github.com/thunder-id/thunderid/internal/system/config"
@@ -175,6 +176,10 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 
 	engineCtx.dpopVerifier = dpop.Initialize(oauthConfig, jti.Initialize(engineCtx.runtimeStoreProvider),
 		engineCtx.runtimeCryptoSvc)
+	tokenFamilyRevocationTTL := time.Duration(engineCtx.oauthConfig.RefreshToken.ValidityPeriod) * time.Second
+	revocationEnforcer, revocationService := revocation.Initialize(engineCtx.jwtService,
+		engineCtx.observabilitySvc, tokenFamilyRevocationTTL,
+		engineCtx.oauthConfig.Revocation.TokenFamily.OnExplicitRevokeEnabled())
 
 	// The embedded engine has no server-config store, so no default resource server is available: the
 	// resource provider is passed undecorated. Implicit no-resource requests that carry permission
@@ -184,7 +189,7 @@ func New(mux *http.ServeMux, opts ...Option) *Engine {
 		engineCtx.jweService, engineCtx.flowExecService, engineCtx.observabilitySvc, engineCtx.runtimeCryptoSvc,
 		engineCtx.ouProvider, engineCtx.attributeCacheService, engineCtx.authzProvider, engineCtx.resourceProvider,
 		engineCtx.i18nProvider, engineCtx.idpProvider, engineCtx.dpopVerifier, engineCtx.runtimeStoreProvider,
-		engineCtx.transactioner, oauthConfig)
+		engineCtx.transactioner, revocationEnforcer, revocationService, oauthConfig)
 	if err != nil {
 		logger.Fatal(ctx, "Failed to initialize OAuth services", log.Error(err))
 	}

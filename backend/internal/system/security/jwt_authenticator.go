@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/thunder-id/thunderid/internal/system/config"
 	"github.com/thunder-id/thunderid/internal/system/constants"
@@ -22,6 +23,22 @@ const claimJTI = "jti"
 // token whose whole authorization grant has been revoked. It is defined here (not imported from the
 // OAuth package) to keep the security layer decoupled from OAuth internals.
 const claimTokenFamilyID = "tfid"
+
+// The remaining claims consulted during authentication. Like the two above, they are declared here
+// rather than imported from the OAuth package so the security layer stays decoupled from it.
+const (
+	// claimIssuer is the issuer claim (RFC 7519 §4.1.1), used to tell a self-issued token from a
+	// federated one before any of its subject values are trusted for revocation.
+	claimIssuer = "iss"
+
+	// claimIssuedAt is the issued-at claim (RFC 7519 §4.1.6); it establishes when the token was minted
+	// so boundary revocations can decide whether it predates the revoked action.
+	claimIssuedAt = "iat"
+
+	// claimAccessTokenSubject carries the end user behind a token minted for a delegated call. When
+	// present it, not sub, is the subject the deny list is evaluated against.
+	claimAccessTokenSubject = "access_token_sub"
+)
 
 // jwtAuthenticator handles authentication and authorization using JWT Bearer tokens.
 type jwtAuthenticator struct {
@@ -85,6 +102,17 @@ func (h *jwtAuthenticator) Authenticate(r *http.Request) (*SecurityContext, erro
 	securityCtx := newSecurityContext(subject, ouID, token, scopes, attributes)
 	securityCtx.revocationID = extractAttribute(attributes, claimJTI)
 	securityCtx.tokenFamilyID = extractAttribute(attributes, claimTokenFamilyID)
+	// Subject-dimension revocation is only meaningful for subjects this deployment issued, so a
+	// federated token contributes no revocation subject and is enforced on jti and tfid alone.
+	if issuer, _ := attributes[claimIssuer].(string); issuer == config.GetServerRuntime().Config.JWT.Issuer {
+		securityCtx.revocationSubject = subject
+		if accessTokenSubject, _ := attributes[claimAccessTokenSubject].(string); accessTokenSubject != "" {
+			securityCtx.revocationSubject = accessTokenSubject
+		}
+		if issuedAt, ok := attributes[claimIssuedAt].(float64); ok {
+			securityCtx.establishedAt = time.Unix(int64(issuedAt), 0).UTC()
+		}
+	}
 	return securityCtx, nil
 }
 

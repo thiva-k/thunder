@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package executor
@@ -8,12 +8,50 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	authncm "github.com/thunder-id/thunderid/internal/authn/common"
 	"github.com/thunder-id/thunderid/internal/flow/common"
+	"github.com/thunder-id/thunderid/internal/revocation"
 	systemutils "github.com/thunder-id/thunderid/internal/system/utils"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 )
+
+// revocationPlan is the trusted intent a flow's pre-processing node produces and the executors that
+// follow act on. It is never built from request input, so the criteria, breadth and reason recorded
+// here are authoritative for the rest of the flow.
+type revocationPlan struct {
+	Criteria []revocation.Criterion `json:"criteria"`
+	Mode     revocation.Mode        `json:"mode"`
+	Cutoff   time.Time              `json:"cutoff,omitempty"`
+	Reason   revocation.Reason      `json:"reason"`
+}
+
+// encodeRevocationPlan serializes the plan for carriage on the engine context's cross-frame store.
+func encodeRevocationPlan(plan revocationPlan) (string, error) {
+	encoded, err := json.Marshal(plan)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode revocation plan: %w", err)
+	}
+	return string(encoded), nil
+}
+
+// decodeRevocationPlan reads the plan an earlier node published. A missing or empty plan is an error
+// rather than a no-op: an executor that acts on revocation must never proceed without one.
+func decodeRevocationPlan(data map[string]string) (revocationPlan, error) {
+	encoded := data[common.RuntimeKeyRevocationPlan]
+	if encoded == "" {
+		return revocationPlan{}, errors.New("trusted revocation plan is missing")
+	}
+	var plan revocationPlan
+	if err := json.Unmarshal([]byte(encoded), &plan); err != nil {
+		return revocationPlan{}, fmt.Errorf("failed to decode trusted revocation plan: %w", err)
+	}
+	if len(plan.Criteria) == 0 {
+		return revocationPlan{}, errors.New("trusted revocation plan has no criteria")
+	}
+	return plan, nil
+}
 
 // getAuthnServiceName returns the authn service name for an executor.
 // Returns empty string if executor doesn't map to an authn service.

@@ -19,3 +19,11 @@ var querySnapshotRevokedTokenFamilies = dbmodel.DBQuery{
 	Query: `SELECT CRITERION_VALUE, EXPIRY_TIME FROM "REVOCATION_CRITERIA" ` +
 		`WHERE CRITERION_TYPE = $1 AND EXPIRY_TIME > $2 AND DEPLOYMENT_ID = $3`,
 }
+
+// querySnapshotRevokedSubjects reads subject criteria together with the reason and action boundary
+// needed to distinguish permanent revocations from time-bounded revocations.
+var querySnapshotRevokedSubjects = dbmodel.DBQuery{
+	ID: "RVC-SRC-03",
+	Query: `SELECT CRITERION_VALUE, REASON, REVOKED_AT, EXPIRY_TIME FROM "REVOCATION_CRITERIA" ` +
+		`WHERE CRITERION_TYPE = $1 AND EXPIRY_TIME > $2 AND DEPLOYMENT_ID = $3`,
+}

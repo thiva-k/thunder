@@ -59,6 +59,12 @@ func (s *HandlerTestSuite) TestHandleFlowError_ForbiddenError_Returns403() {
 	s.Equal(http.StatusForbidden, w.Code)
 }
 
+func (s *HandlerTestSuite) TestHandleFlowError_AdministrationAuthenticationRequired_Returns401() {
+	w := httptest.NewRecorder()
+	handleFlowError(context.Background(), w, &ErrorAdministrationAuthenticationRequired, "")
+	s.Equal(http.StatusUnauthorized, w.Code)
+}
+
 func (s *HandlerTestSuite) TestHandleFlowError_ServerError_Returns500() {
 	w := httptest.NewRecorder()
 	svcErr := &tidcommon.ServiceError{
@@ -116,6 +122,23 @@ func (s *HandlerTestSuite) TestHandleFlowExecutionRequest_ServiceError() {
 
 	h.HandleFlowExecutionRequest(w, req)
 	s.Equal(http.StatusForbidden, w.Code)
+}
+
+func (s *HandlerTestSuite) TestHandleFlowExecutionRequest_ByFlowID() {
+	t := s.T()
+	mockSvc := NewFlowExecServiceInterfaceMock(t)
+	mockSvc.EXPECT().ExecuteByID(mock.Anything, "administration-1", "", true,
+		"", mock.Anything, "").Return(&FlowStep{
+		ExecutionID: "execution-1", Status: providers.FlowStatusComplete,
+	}, nil)
+	h := newFlowExecutionHandler(mockSvc, session.NewCookieTransport(false), 0)
+	req := httptest.NewRequest(http.MethodPost, "/flow/execute",
+		bytes.NewBufferString(`{"flowId":"administration-1","verbose":true}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	h.HandleFlowExecutionRequest(w, req)
+	s.Equal(http.StatusOK, w.Code)
 }
 
 func (s *HandlerTestSuite) TestHandleFlowExecutionRequest_Success() {

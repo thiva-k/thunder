@@ -107,6 +107,7 @@ export const ExecutionTypes = {
   SSOCheck: 'SSOCheckExecutor',
   Session: 'SessionExecutor',
   SessionSignOut: 'SessionSignOutExecutor',
+  PreDelete: 'PreDeleteExecutor',
   AuthAssert: 'AuthAssertExecutor',
   Authorization: 'AuthorizationExecutor',
 } as const;

@@ -35,6 +35,10 @@ const (
 	ExecutorNameSession                      = "SessionExecutor"
 	ExecutorNameSessionSignOut               = "SessionSignOutExecutor"
 	ExecutorNameOTPExecutor                  = "OTPExecutor"
+	ExecutorNamePreDelete                    = "PreDeleteExecutor"
+	ExecutorNameCriteriaRevocation           = "CriteriaRevocationExecutor"
+	ExecutorNameSessionRevocation            = "SessionRevocationExecutor"
+	ExecutorNameUserDelete                   = "UserDeleteExecutor"
 )
 
 // Executor mode constants
@@ -67,6 +71,7 @@ const (
 	userInputMagicLinkToken   = "token"
 	userInputConsentDecisions = "consent_decisions"
 	userInputLoginHint        = "login_hint"
+	revocationInputSubject    = "subject"
 
 	ouIDKey        = "ouId"
 	defaultOUIDKey = "defaultOUID"

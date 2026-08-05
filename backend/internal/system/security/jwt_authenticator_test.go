@@ -1,4 +1,4 @@
-// Copyright 2025 The ThunderID Authors
+// Copyright 2025-2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package security
@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	engineconfig "github.com/thunder-id/thunderid/pkg/thunderidengine/config"
 
@@ -867,9 +868,11 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate_SelfIssuedTokenUnderFed
 	token := buildFakeJWT(
 		map[string]interface{}{"alg": "RS256", "kid": "local-kid"},
 		map[string]interface{}{
-			"sub":   "service-app",
-			"iss":   testLocalIssuer,
-			"scope": "system",
+			"sub":              "service-app",
+			"access_token_sub": "user-123",
+			"iat":              float64(1_700_000_000),
+			"iss":              testLocalIssuer,
+			"scope":            "system",
 		},
 	)
 
@@ -886,6 +889,8 @@ func (suite *JWTAuthenticatorTestSuite) TestAuthenticate_SelfIssuedTokenUnderFed
 
 	baseCtx := withSecurityContext(context.Background(), authCtx)
 	assert.Equal(suite.T(), "service-app", GetSubject(baseCtx))
+	assert.Equal(suite.T(), "user-123", authCtx.revocationSubject)
+	assert.Equal(suite.T(), time.Unix(1_700_000_000, 0).UTC(), authCtx.establishedAt)
 	mockJWT.AssertExpectations(suite.T())
 	mockJWT.AssertNotCalled(suite.T(), "VerifyJWTWithJWKS")
 }

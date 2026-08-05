@@ -956,5 +956,81 @@
         "promptOnSignOut": false
       }
     }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
+      "header": "Pre Delete Executor",
+      "label": "Validate and Plan Full Revocation",
+      "description": "Validate the target of an administrative operation, then plan revocation of every grant the subject holds",
+      "image": "assets/images/icons/magnifying-glass.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {"name": "PreDeleteExecutor", "mode": "revoke_all"},
+        "onSuccess": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
+      "header": "Criteria Revocation Executor",
+      "label": "Revoke Tokens",
+      "description": "Persist every token criterion from the trusted revocation plan",
+      "image": "assets/images/icons/link.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {"name": "CriteriaRevocationExecutor"},
+        "onSuccess": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
+      "header": "Session Revocation Executor",
+      "label": "Revoke Sessions",
+      "description": "Terminate sessions selected by the trusted revocation plan",
+      "image": "assets/images/icons/link.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {"name": "SessionRevocationExecutor"},
+        "onSuccess": ""
+      }
+    }
+  },
+  {
+    "resourceType": "STEP",
+    "category": "EXECUTOR",
+    "type": "TASK_EXECUTION",
+    "display": {
+      "header": "User Delete Executor",
+      "label": "Delete User",
+      "description": "Delete the validated user after tokens and sessions have been revoked",
+      "image": "assets/images/icons/link.svg",
+      "showOnResourcePanel": true
+    },
+    "data": {
+      "action": {
+        "type": "EXECUTOR",
+        "executor": {"name": "UserDeleteExecutor"},
+        "onSuccess": ""
+      }
+    }
   }
 ]

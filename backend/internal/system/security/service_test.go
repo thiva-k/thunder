@@ -50,7 +50,7 @@ func (suite *SecurityServiceTestSuite) SetupTest() {
 	suite.mockRevocation = &RevocationEnforcerInterfaceMock{}
 	// Default to "not revoked" so existing authentication paths pass; Maybe() keeps it optional for
 	// tests where authentication never yields a security context.
-	suite.mockRevocation.On("EnsureNotRevoked", mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	suite.mockRevocation.On("EnsureNotRevoked", mock.Anything, mock.Anything).Return(nil).Maybe()
 
 	var err error
 	suite.service, err = newSecurityService(
@@ -218,7 +218,9 @@ func (suite *SecurityServiceTestSuite) TestProcess_RevokedToken() {
 
 	mockRevocation := &RevocationEnforcerInterfaceMock{}
 	revokedErr := errors.New("token has been revoked")
-	mockRevocation.On("EnsureNotRevoked", mock.Anything, "jti-123", mock.Anything).Return(revokedErr)
+	mockRevocation.On("EnsureNotRevoked", mock.Anything, mock.MatchedBy(func(identity RevocationIdentity) bool {
+		return identity.JTI == "jti-123"
+	})).Return(revokedErr)
 
 	service, err := newSecurityService(
 		[]AuthenticatorInterface{suite.mockAuth1}, mockRevocation, testPublicPaths, apiPermissionEntries)
@@ -242,7 +244,9 @@ func (suite *SecurityServiceTestSuite) TestProcess_RevokedTokenFamily() {
 	suite.mockAuth1.On("Authenticate", req).Return(suite.testCtx, nil)
 
 	mockRevocation := &RevocationEnforcerInterfaceMock{}
-	mockRevocation.On("EnsureNotRevoked", mock.Anything, "jti-clean", "tfid-revoked").
+	mockRevocation.On("EnsureNotRevoked", mock.Anything, mock.MatchedBy(func(identity RevocationIdentity) bool {
+		return identity.JTI == "jti-clean" && identity.TokenFamilyID == "tfid-revoked"
+	})).
 		Return(errors.New("token family has been revoked"))
 
 	service, err := newSecurityService(
@@ -266,7 +270,9 @@ func (suite *SecurityServiceTestSuite) TestProcess_NotRevokedToken() {
 	suite.mockAuth1.On("Authenticate", req).Return(suite.testCtx, nil)
 
 	mockRevocation := &RevocationEnforcerInterfaceMock{}
-	mockRevocation.On("EnsureNotRevoked", mock.Anything, "jti-456", mock.Anything).Return(nil)
+	mockRevocation.On("EnsureNotRevoked", mock.Anything, mock.MatchedBy(func(identity RevocationIdentity) bool {
+		return identity.JTI == "jti-456"
+	})).Return(nil)
 
 	service, err := newSecurityService(
 		[]AuthenticatorInterface{suite.mockAuth1}, mockRevocation, testPublicPaths, apiPermissionEntries)

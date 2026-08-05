@@ -5,6 +5,7 @@ package security
 
 import (
 	"context"
+	"time"
 )
 
 type contextKey string
@@ -19,13 +20,15 @@ const (
 
 // SecurityContext holds immutable authenticated subject information.
 type SecurityContext struct {
-	subject       string
-	ouID          string
-	token         string
-	revocationID  string
-	tokenFamilyID string
-	permissions   []string
-	attributes    map[string]interface{}
+	subject           string
+	ouID              string
+	token             string
+	revocationID      string
+	tokenFamilyID     string
+	revocationSubject string
+	establishedAt     time.Time
+	permissions       []string
+	attributes        map[string]interface{}
 }
 
 // newSecurityContext creates a new immutable SecurityContext.

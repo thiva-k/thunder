@@ -600,6 +600,74 @@ func (_c *sessionStoreMock_ListBySessionID_Call) RunAndReturn(run func(ctx conte
 	return _c
 }
 
+// ListBySubject provides a mock function for the type sessionStoreMock
+func (_mock *sessionStoreMock) ListBySubject(ctx context.Context, subjectID string) ([]Session, error) {
+	ret := _mock.Called(ctx, subjectID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListBySubject")
+	}
+
+	var r0 []Session
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) ([]Session, error)); ok {
+		return returnFunc(ctx, subjectID)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string) []Session); ok {
+		r0 = returnFunc(ctx, subjectID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]Session)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = returnFunc(ctx, subjectID)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// sessionStoreMock_ListBySubject_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListBySubject'
+type sessionStoreMock_ListBySubject_Call struct {
+	*mock.Call
+}
+
+// ListBySubject is a helper method to define mock.On call
+//   - ctx context.Context
+//   - subjectID string
+func (_e *sessionStoreMock_Expecter) ListBySubject(ctx interface{}, subjectID interface{}) *sessionStoreMock_ListBySubject_Call {
+	return &sessionStoreMock_ListBySubject_Call{Call: _e.mock.On("ListBySubject", ctx, subjectID)}
+}
+
+func (_c *sessionStoreMock_ListBySubject_Call) Run(run func(ctx context.Context, subjectID string)) *sessionStoreMock_ListBySubject_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		run(
+			arg0,
+			arg1,
+		)
+	})
+	return _c
+}
+
+func (_c *sessionStoreMock_ListBySubject_Call) Return(sessions []Session, err error) *sessionStoreMock_ListBySubject_Call {
+	_c.Call.Return(sessions, err)
+	return _c
+}
+
+func (_c *sessionStoreMock_ListBySubject_Call) RunAndReturn(run func(ctx context.Context, subjectID string) ([]Session, error)) *sessionStoreMock_ListBySubject_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Record provides a mock function for the type sessionStoreMock
 func (_mock *sessionStoreMock) Record(ctx context.Context, p Participant) error {
 	ret := _mock.Called(ctx, p)

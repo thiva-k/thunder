@@ -34,6 +34,7 @@ import (
 	"github.com/thunder-id/thunderid/internal/system/cryptolib"
 	"github.com/thunder-id/thunderid/internal/system/kmprovider/defaultkm"
 	"github.com/thunder-id/thunderid/internal/system/log"
+	"github.com/thunder-id/thunderid/internal/system/security"
 	"github.com/thunder-id/thunderid/pkg/thunderidengine/providers"
 	"github.com/thunder-id/thunderid/tests/mocks/actorprovidermock"
 	"github.com/thunder-id/thunderid/tests/mocks/attestationprovidermock"
@@ -2270,12 +2271,250 @@ func (s *ServiceTestSuite) TestExecute_ExistingFlow_CompleteRemovesContext() {
 func (s *ServiceTestSuite) TestLoadNewContext_InvalidFlowType() {
 	service := &flowExecService{cfg: testFlowExecCfg}
 
-	engineCtx, svcErr := service.loadNewContext(context.Background(), "test-app", "INVALID_TYPE",
+	engineCtx, svcErr := service.loadNewContext(context.Background(), "", "test-app", "INVALID_TYPE",
 		false, "submit", map[string]string{}, "", "", log.GetLogger())
 
 	s.Nil(engineCtx)
 	s.NotNil(svcErr)
 	s.Equal(ErrorInvalidFlowType.Code, svcErr.Code)
+}
+
+// The caller here is a legitimate administrator, so the rejection is about the target flow's type
+// rather than the caller's identity.
+func (s *ServiceTestSuite) TestLoadNewContext_ByIDRejectsInteractiveFlow() {
+	security.InitSystemPermissions("")
+	mockFlowProvider := NewFlowProviderMock(s.T())
+	mockFlowProvider.EXPECT().GetFlow(mock.Anything, "authentication-flow").Return(
+		&providers.CompleteFlowDefinition{
+			ID:       "authentication-flow",
+			FlowType: providers.FlowTypeAuthentication,
+		}, nil)
+	service := &flowExecService{flowProvider: mockFlowProvider, cfg: testFlowExecCfg}
+
+	engineCtx, svcErr := service.loadNewContext(authenticatedAdminContext([]string{"system"}),
+		"authentication-flow", "", "", false, "", map[string]string{}, "", "", log.GetLogger())
+
+	s.Nil(engineCtx)
+	s.NotNil(svcErr)
+	s.Equal(ErrorFlowIDExecutionNotPermitted.Code, svcErr.Code)
+}
+
+func (s *ServiceTestSuite) TestLoadNewContext_ByIDLoadsAdministrationFlow() {
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(), &config.Config{}))
+	flowFactory, _ := core.Initialize(cache.Initialize(config.GetServerRuntime().Config.Cache, "test-deployment"))
+	graph := flowFactory.CreateGraph("administration-1", providers.FlowTypeAdministration, 1)
+	flow := &providers.CompleteFlowDefinition{
+		ID: "administration-1", FlowType: providers.FlowTypeAdministration, ActiveVersion: 1,
+	}
+	mockFlowProvider := NewFlowProviderMock(s.T())
+	mockFlowProvider.EXPECT().GetFlow(mock.Anything, "administration-1").Return(flow, nil).Once()
+	mockGraphBuilder := NewGraphBuilderInterfaceMock(s.T())
+	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, flow).Return(graph, nil)
+	service := &flowExecService{
+		flowProvider: mockFlowProvider, graphBuilder: mockGraphBuilder, cfg: testFlowExecCfg,
+	}
+
+	engineCtx, svcErr := service.loadNewContext(authenticatedAdminContext([]string{"system"}),
+		"administration-1", "", "", true, "", map[string]string{}, "", "", log.GetLogger())
+
+	s.Nil(svcErr)
+	s.Require().NotNil(engineCtx)
+	s.Equal(providers.FlowTypeAdministration, engineCtx.FlowType)
+	s.True(engineCtx.Verbose)
+}
+
+// A caller that already knows the flow's inputs can supply them on the initiating request and get
+// the finished result back, instead of being told which inputs are required and having to send a
+// second call. The inputs must therefore be on the context the very first time the engine runs.
+func (s *ServiceTestSuite) TestLoadNewContext_ByIDCarriesInitiatingInputs() {
+	security.InitSystemPermissions("")
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(), &config.Config{}))
+	flowFactory, _ := core.Initialize(cache.Initialize(config.GetServerRuntime().Config.Cache, "test-deployment"))
+	graph := flowFactory.CreateGraph("administration-1", providers.FlowTypeAdministration, 1)
+	flow := &providers.CompleteFlowDefinition{
+		ID: "administration-1", FlowType: providers.FlowTypeAdministration, ActiveVersion: 1,
+	}
+	mockFlowProvider := NewFlowProviderMock(s.T())
+	mockFlowProvider.EXPECT().GetFlow(mock.Anything, "administration-1").Return(flow, nil).Once()
+	mockGraphBuilder := NewGraphBuilderInterfaceMock(s.T())
+	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, flow).Return(graph, nil)
+	service := &flowExecService{
+		flowProvider: mockFlowProvider, graphBuilder: mockGraphBuilder, cfg: testFlowExecCfg,
+	}
+
+	engineCtx, svcErr := service.loadNewContext(authenticatedAdminContext([]string{"system"}),
+		"administration-1", "", "", true, "",
+		map[string]string{"subject": "019fd0e4-de6c-7ea5-9541-7982f40beeb9"}, "", "", log.GetLogger())
+
+	s.Nil(svcErr)
+	s.Require().NotNil(engineCtx)
+	s.Equal("019fd0e4-de6c-7ea5-9541-7982f40beeb9", engineCtx.UserInputs["subject"])
+}
+
+// Omitting the inputs must stay valid: that is the first leg of the two-request exchange, where the
+// response tells the caller which inputs to send back with the execution ID.
+func (s *ServiceTestSuite) TestLoadNewContext_ByIDWithoutInputsStartsEmpty() {
+	security.InitSystemPermissions("")
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(), &config.Config{}))
+	flowFactory, _ := core.Initialize(cache.Initialize(config.GetServerRuntime().Config.Cache, "test-deployment"))
+	graph := flowFactory.CreateGraph("administration-1", providers.FlowTypeAdministration, 1)
+	flow := &providers.CompleteFlowDefinition{
+		ID: "administration-1", FlowType: providers.FlowTypeAdministration, ActiveVersion: 1,
+	}
+	mockFlowProvider := NewFlowProviderMock(s.T())
+	mockFlowProvider.EXPECT().GetFlow(mock.Anything, "administration-1").Return(flow, nil).Once()
+	mockGraphBuilder := NewGraphBuilderInterfaceMock(s.T())
+	mockGraphBuilder.EXPECT().GetGraph(mock.Anything, flow).Return(graph, nil)
+	service := &flowExecService{
+		flowProvider: mockFlowProvider, graphBuilder: mockGraphBuilder, cfg: testFlowExecCfg,
+	}
+
+	engineCtx, svcErr := service.loadNewContext(authenticatedAdminContext([]string{"system"}),
+		"administration-1", "", "", true, "", nil, "", "", log.GetLogger())
+
+	s.Nil(svcErr)
+	s.Require().NotNil(engineCtx)
+	s.NotNil(engineCtx.UserInputs, "an empty input map must still be initialized for the engine")
+	s.Empty(engineCtx.UserInputs)
+}
+
+// authenticatedAdminContext returns a context carrying an authenticated caller with the permissions
+// supplied, as the security middleware would produce for a request bearing a valid token.
+func authenticatedAdminContext(permissions []string) context.Context {
+	authCtx := security.NewSecurityContextForTest(
+		"admin-1", "ou-1", "token", permissions, map[string]interface{}{})
+	return security.WithSecurityContextTest(context.Background(), authCtx)
+}
+
+func (s *ServiceTestSuite) TestValidateAdministrationCaller() {
+	security.InitSystemPermissions("")
+
+	s.Run("RejectsPublicRuntimeContext", func() {
+		svcErr := validateAdministrationCaller(
+			security.WithRuntimeContext(context.Background()), providers.FlowTypeAdministration)
+
+		s.Require().NotNil(svcErr)
+		s.Equal(ErrorAdministrationAuthenticationRequired.Code, svcErr.Code)
+	})
+
+	// A bare context carries no authenticated subject. The gate must assert the caller's identity
+	// positively rather than inferring it from the absence of the runtime marker.
+	s.Run("RejectsContextWithoutAuthenticatedSubject", func() {
+		svcErr := validateAdministrationCaller(context.Background(), providers.FlowTypeAdministration)
+
+		s.Require().NotNil(svcErr)
+		s.Equal(ErrorAdministrationAuthenticationRequired.Code, svcErr.Code)
+	})
+
+	// Authenticated but unprivileged callers are rejected here, not merely by the API permission
+	// table. /flow/execute is a public path, so this boundary must hold on its own.
+	s.Run("RejectsAuthenticatedCallerWithoutSystemPermission", func() {
+		svcErr := validateAdministrationCaller(
+			authenticatedAdminContext([]string{"system:user:view"}), providers.FlowTypeAdministration)
+
+		s.Require().NotNil(svcErr)
+		s.Equal(ErrorAdministrationPermissionRequired.Code, svcErr.Code)
+	})
+
+	s.Run("AllowsAuthenticatedCallerWithSystemPermission", func() {
+		s.Nil(validateAdministrationCaller(
+			authenticatedAdminContext([]string{"system"}), providers.FlowTypeAdministration))
+	})
+
+	s.Run("AllowsPublicInteractiveFlow", func() {
+		s.Nil(validateAdministrationCaller(
+			security.WithRuntimeContext(context.Background()), providers.FlowTypeAuthentication))
+	})
+
+	// The gate must never fire for a non-administration flow, whatever the caller holds.
+	s.Run("IgnoresNonAdministrationFlowForAuthenticatedCaller", func() {
+		s.Nil(validateAdministrationCaller(
+			authenticatedAdminContext(nil), providers.FlowTypeRegistration))
+	})
+}
+
+// Initiation entry points must apply the same gate as execution, so neither becomes a way around it.
+func (s *ServiceTestSuite) TestInitiateFlow_RejectsUnauthenticatedAdministrationFlow() {
+	security.InitSystemPermissions("")
+	service := &flowExecService{cfg: testFlowExecCfg}
+
+	executionID, svcErr := service.InitiateFlow(security.WithRuntimeContext(context.Background()),
+		&FlowInitContext{FlowType: string(providers.FlowTypeAdministration), ApplicationID: "app-1"})
+
+	s.Empty(executionID)
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorAdministrationAuthenticationRequired.Code, svcErr.Code)
+}
+
+func (s *ServiceTestSuite) TestInitiateAndExecute_RejectsUnauthenticatedAdministrationFlow() {
+	security.InitSystemPermissions("")
+	service := &flowExecService{cfg: testFlowExecCfg}
+
+	flowStep, svcErr := service.InitiateAndExecute(security.WithRuntimeContext(context.Background()),
+		&FlowInitContext{FlowType: string(providers.FlowTypeAdministration), ApplicationID: "app-1"})
+
+	s.Nil(flowStep)
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorAdministrationAuthenticationRequired.Code, svcErr.Code)
+}
+
+// An unauthenticated caller is rejected before the flow is resolved, so the error cannot reveal
+// whether the flow ID exists or what type it is, and no lookup work is done on its behalf.
+func (s *ServiceTestSuite) TestExecuteByID_RejectsUnauthenticatedPublicRequest() {
+	security.InitSystemPermissions("")
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(), &config.Config{}))
+	mockFlowProvider := NewFlowProviderMock(s.T())
+	mockObservability := observabilitymock.NewObservabilityServiceInterfaceMock(s.T())
+	mockObservability.EXPECT().IsEnabled().Return(false)
+	service := &flowExecService{
+		flowProvider: mockFlowProvider, observabilitySvc: mockObservability, cfg: testFlowExecCfg,
+	}
+
+	flowStep, svcErr := service.ExecuteByID(security.WithRuntimeContext(context.Background()),
+		"does-not-matter", "", false, "", map[string]string{}, "")
+
+	s.Nil(flowStep)
+	s.Require().NotNil(svcErr)
+	s.Equal(ErrorAdministrationAuthenticationRequired.Code, svcErr.Code)
+	mockFlowProvider.AssertNotCalled(s.T(), "GetFlow", mock.Anything, mock.Anything)
+}
+
+// An authenticated administrator still cannot use the flow-ID entry point to start a flow of any
+// other type, which would bypass that type's application binding and initiation guards.
+func (s *ServiceTestSuite) TestExecuteByID_RejectsNonAdministrationFlowType() {
+	security.InitSystemPermissions("")
+	config.ResetServerRuntime()
+	s.Require().NoError(config.InitializeServerRuntime(s.T().TempDir(), &config.Config{}))
+
+	for _, flowType := range []providers.FlowType{
+		providers.FlowTypeAuthentication,
+		providers.FlowTypeRegistration,
+		providers.FlowTypeRecovery,
+		providers.FlowTypeSignOut,
+		providers.FlowTypeUserOnboarding,
+	} {
+		s.Run(string(flowType), func() {
+			flow := &providers.CompleteFlowDefinition{ID: "flow-1", FlowType: flowType, ActiveVersion: 1}
+			mockFlowProvider := NewFlowProviderMock(s.T())
+			mockFlowProvider.EXPECT().GetFlow(mock.Anything, "flow-1").Return(flow, nil).Once()
+			mockObservability := observabilitymock.NewObservabilityServiceInterfaceMock(s.T())
+			mockObservability.EXPECT().IsEnabled().Return(false)
+			service := &flowExecService{
+				flowProvider: mockFlowProvider, observabilitySvc: mockObservability, cfg: testFlowExecCfg,
+			}
+
+			flowStep, svcErr := service.ExecuteByID(authenticatedAdminContext([]string{"system"}),
+				"flow-1", "", true, "", map[string]string{}, "")
+
+			s.Nil(flowStep)
+			s.Require().NotNil(svcErr)
+			s.Equal(ErrorFlowIDExecutionNotPermitted.Code, svcErr.Code)
+		})
+	}
 }
 
 func (s *ServiceTestSuite) TestSetApplicationToContext_ActorNotFound() {

@@ -933,15 +933,17 @@ type ExecutorMeta struct {
 
 // ExecutorResponse represents the response from an executor
 type ExecutorResponse struct {
-	Status         ExecutorStatus         `json:"status"`
-	Inputs         []Input                `json:"inputs,omitempty"`
-	AdditionalData map[string]string      `json:"additionalData,omitempty"`
-	RedirectURL    string                 `json:"redirectUrl,omitempty"`
-	RuntimeData    map[string]string      `json:"runtimeData,omitempty"`
-	ForwardedData  map[string]interface{} `json:"forwardedData,omitempty"`
-	Assertion      string                 `json:"assertion,omitempty"`
-	Error          *common.ServiceError   `json:"error,omitempty"`
-	AuthUser       AuthUser               `json:"-"`
+	Status         ExecutorStatus    `json:"status"`
+	Inputs         []Input           `json:"inputs,omitempty"`
+	AdditionalData map[string]string `json:"additionalData,omitempty"`
+	RedirectURL    string            `json:"redirectUrl,omitempty"`
+	RuntimeData    map[string]string `json:"runtimeData,omitempty"`
+	// SharedRuntimeData carries trusted executor output across CALL flow boundaries.
+	SharedRuntimeData map[string]string      `json:"-"`
+	ForwardedData     map[string]interface{} `json:"forwardedData,omitempty"`
+	Assertion         string                 `json:"assertion,omitempty"`
+	Error             *common.ServiceError   `json:"error,omitempty"`
+	AuthUser          AuthUser               `json:"-"`
 	// EngineData carries executor output the flow engine consumes internally (for example, a
 	// transport signal such as a minted session handle). Unlike AdditionalData, it is never
 	// serialized to the client.
@@ -1084,7 +1086,9 @@ type NodeContext struct {
 	NodeInputs     []Input
 	UserInputs     map[string]string
 	RuntimeData    map[string]string
-	ForwardedData  map[string]interface{}
+	// SharedRuntimeData contains trusted data shared by every frame in the execution.
+	SharedRuntimeData map[string]string
+	ForwardedData     map[string]interface{}
 	// consumedInputs accumulates identifiers of inputs the node has used up
 	consumedInputs   []string
 	Application      Application

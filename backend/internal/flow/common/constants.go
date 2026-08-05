@@ -135,6 +135,10 @@ const (
 	RuntimeKeyUserEligibleForProvisioning = "userEligibleForProvisioning"
 	// RuntimeKeyUserAmbiguous indicates the user exists in multiple OUs and requires disambiguation
 	RuntimeKeyUserAmbiguous = "userAmbiguous"
+	// RuntimeKeyRevocationPlan holds the trusted revocation plan an administrative flow's
+	// pre-processing node produces for the executors that follow. It travels on the engine context's
+	// cross-frame store, so it survives a CALL into another flow.
+	RuntimeKeyRevocationPlan = "revocationPlan"
 	// RuntimeKeyClientID holds the OAuth client ID for the current flow execution, if applicable.
 	RuntimeKeyClientID = "clientId"
 	// RuntimeKeyRequestedPermissions holds the space-separated permission scopes requested by the OAuth client.

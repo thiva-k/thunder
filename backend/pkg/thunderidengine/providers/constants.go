@@ -45,6 +45,8 @@ const (
 	FlowTypeRecovery FlowType = "RECOVERY"
 	// FlowTypeSignOut represents a flow execution for terminating an SSO session.
 	FlowTypeSignOut FlowType = "SIGNOUT"
+	// FlowTypeAdministration represents an administrator-designed operational flow.
+	FlowTypeAdministration FlowType = "ADMINISTRATION"
 )
 
 // ValidFlowTypes is the set of supported flow types.
@@ -54,6 +56,7 @@ var ValidFlowTypes = []FlowType{
 	FlowTypeUserOnboarding,
 	FlowTypeRecovery,
 	FlowTypeSignOut,
+	FlowTypeAdministration,
 }
 
 // NodeVariant identifies a PROMPT node sub-type that activates a variant-specific code path.
