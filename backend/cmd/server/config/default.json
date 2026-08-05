@@ -132,6 +132,9 @@
     "authorization_code": {
       "validity_period": 600
     },
+    "authorization_request": {
+      "validity_period": 3600
+    },
     "dcr": {
       "enabled" : true,
       "insecure": false

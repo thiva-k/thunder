@@ -631,7 +631,7 @@ func TestGetFlowExpirySeconds(t *testing.T) {
 		{
 			name:     "Authentication flow",
 			flowType: providers.FlowTypeAuthentication,
-			expected: 1800,
+			expected: 3600,
 		},
 		{
 			name:     "Registration flow",
@@ -646,7 +646,7 @@ func TestGetFlowExpirySeconds(t *testing.T) {
 		{
 			name:     "Unknown flow type (fallback)",
 			flowType: providers.FlowType("UNKNOWN_FLOW"),
-			expected: 1800,
+			expected: 3600,
 		},
 	}
 
@@ -1740,7 +1740,7 @@ func TestInitiateAndExecute_ZeroExpiryUsesDefault(t *testing.T) {
 	mockCrypto.EXPECT().Encrypt(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 		Return([]byte("encrypted"), nil, nil)
 	mockStore.EXPECT().StoreFlowContext(mock.Anything, mock.Anything,
-		mock.MatchedBy(func(exp int64) bool { return exp == int64(1800) })).
+		mock.MatchedBy(func(exp int64) bool { return exp == int64(3600) })).
 		Return(nil)
 	mockEngineInner.EXPECT().Execute(mock.Anything).
 		Return(FlowStep{Status: providers.FlowStatusIncomplete}, nil)

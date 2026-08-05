@@ -407,6 +407,8 @@ configuration:
       validityPeriod: 86400
     authorizationCode:
       validityPeriod: 600
+    authorizationRequest:
+      validityPeriod: 3600
     dcr:
       enabled: true
       insecure: false

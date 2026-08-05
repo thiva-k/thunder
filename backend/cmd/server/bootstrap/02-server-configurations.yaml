@@ -3,7 +3,7 @@ name: flow
 value:
   authFlow:
     defaultHandle: default-flow
-    expirySeconds: 1800
+    expirySeconds: 3600
   registrationFlow:
     expirySeconds: 3600
   recoveryFlow:
