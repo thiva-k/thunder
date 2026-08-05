@@ -174,7 +174,12 @@ describe('EditTokenSettingsTabs', () => {
   describe('app-native application (no OAuth2 configuration)', () => {
     it('unlocks the User tab so the assertion config can be edited', () => {
       render(
-        <EditTokenSettingsTabs application={application} editedApp={{}} oauth2Config={undefined} onFieldChange={onFieldChange} />,
+        <EditTokenSettingsTabs
+          application={application}
+          editedApp={{}}
+          oauth2Config={undefined}
+          onFieldChange={onFieldChange}
+        />,
       );
 
       expect(screen.getByRole('tab', {name: 'User'})).toBeEnabled();
@@ -185,7 +190,12 @@ describe('EditTokenSettingsTabs', () => {
     it('opens on the User sub-tab and keeps the Application notice behind its own tab', async () => {
       const user = userEvent.setup();
       render(
-        <EditTokenSettingsTabs application={application} editedApp={{}} oauth2Config={undefined} onFieldChange={onFieldChange} />,
+        <EditTokenSettingsTabs
+          application={application}
+          editedApp={{}}
+          oauth2Config={undefined}
+          onFieldChange={onFieldChange}
+        />,
       );
 
       expect(screen.getByRole('tab', {name: 'User'})).toHaveAttribute('aria-selected', 'true');
