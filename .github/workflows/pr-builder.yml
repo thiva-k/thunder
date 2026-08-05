@@ -374,13 +374,6 @@ jobs:
         shell: bash
     timeout-minutes: 30
     steps:
-      - name: 🔧 Install Native-Build Toolchain
-        # Some transitive workspace deps (better-sqlite3) don't ship prebuilt binaries for the
-        # Node version in this image and fall back to `node-gyp rebuild`, which needs make + g++.
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends build-essential
-
       - name: 📥 Checkout Code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -895,9 +888,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: 🔧 Install Required OS Utilities
-        # jq/lsof/unzip are used by the bash setup steps below. No toolchain is
-        # needed: the install below is scoped to @thunderid/e2e, so it never
-        # reaches the better-sqlite3 postinstall that would want node-gyp.
+        # jq/lsof/unzip are used by the bash setup steps below. No build toolchain
+        # is needed: no workspace dependency compiles from source.
         run: |
           apt-get update
           apt-get install -y --no-install-recommends jq lsof unzip

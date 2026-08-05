@@ -17,7 +17,7 @@ graph LR
 
     subgraph Backend["Backend Services"]
         Agent["AI Agent<br/>(HTTP API)"]
-        Wayfinder["Wayfinder Server<br/>(REST + MCP + SQLite)"]
+        Wayfinder["Wayfinder Server<br/>(REST + MCP + in-memory data)"]
     end
 
     ThunderID["ThunderID<br/>(Identity Provider)"]
@@ -74,7 +74,7 @@ AuthZEN mode uses the server-level Direct Auth Secret for the backend-to-PDP cal
 wayfinder-sample/
 ├── frontend/          React + Vite UI. Hosts the chat widget, the
 │                      /agent-callback route, and the Sky Pass issuance QR.
-├── backend/           Node server backed by SQLite. Hosts both the REST API
+├── backend/           Node server with in-memory sample data. Hosts both the REST API
 │                      (/api/*) and the MCP server (/mcp), validates JWTs,
 │                      enforces scopes per route and per MCP tool.
 ├── smtp-server/       Sample SMTP server with a web inbox UI.
@@ -298,13 +298,13 @@ The background scheduler that processes CIBA upgrade requests is **disabled by d
 From the sample root, install all workspace dependencies:
 
 ```bash
-cd backend     && npm install && npm run seed && npm start   # http://localhost:8787 (REST + /mcp)
+cd backend     && npm install && npm start                   # http://localhost:8787 (REST + /mcp)
 cd smtp-server && npm install && npm run dev                 # SMTP :2525 | Inbox http://localhost:8788
 cd ai-agent    && npm install && npm run dev                 # http://localhost:8790/chat
 cd frontend    && npm install && npm run dev                 # http://localhost:5173
 ```
 
-The Wayfinder server hosts both the REST API on `/api/*` and the MCP server on `/mcp`. `npm run seed` initializes the local SQLite database with sample flights, hotels, and trips. Run it once on first setup.
+The Wayfinder server hosts both the REST API on `/api/*` and the MCP server on `/mcp`. Sample flights, hotels, and trips are held in memory and reloaded on every start, so there is no database to set up. Bookings and upgrade requests are in memory too, and reset when the server restarts.
 
 The SMTP server captures all emails sent by ThunderID (password recovery, staff invitations, CIBA upgrade notifications) and displays them at `http://localhost:8788`. It accepts any username/password, matching the `deployment.yaml` defaults (`dev` / `dev`).
 

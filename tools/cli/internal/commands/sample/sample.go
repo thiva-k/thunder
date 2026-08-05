@@ -249,17 +249,6 @@ func runWithResult(
 		}
 	}
 
-	// Seed database on first run.
-	if _, err := os.Stat(filepath.Join(sampleDir, "backend", "wayfinder.sqlite")); os.IsNotExist(err) {
-		progress("Seeding database...")
-		seedCmd := exec.Command("npm", "run", "seed")
-		seedCmd.Dir = filepath.Join(sampleDir, "backend")
-		if out, seedErr := seedCmd.CombinedOutput(); seedErr != nil {
-			return proc, meta.sampleURL, serverURL,
-				fmt.Errorf("seed failed: %w\n%s", seedErr, out)
-		}
-	}
-
 	// Write service .env files so each process starts with the right credentials.
 	aiEnabled := hasFeature(opts, "ai")
 	if err := writeFrontendEnv(sampleDir, serverURL, aiEnabled); err != nil {
