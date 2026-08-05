@@ -20,6 +20,9 @@ export const TechnologyApplicationTemplate = {
   VUE: 'VUE',
   NUXT: 'NUXT',
   NODEJS: 'NODEJS',
+  IOS: 'IOS',
+  ANDROID: 'ANDROID',
+  FLUTTER: 'FLUTTER',
   OTHER: 'OTHER',
   MCP_CLIENT: 'MCP_CLIENT',
 } as const;
@@ -47,90 +50,19 @@ export const PlatformApplicationTemplate = {
  */
 export interface IntegrationGuide {
   /**
-   * Unique identifier for the guide
+   * Hosted prompt document for this guide. Either a literal URL, or a
+   * `{{documentation.links key}}` reference (e.g.
+   * '{{applications.templates.react.llmPrompt.redirectBased}}') resolved against the configured
+   * docs site, same convention as {@link QuickstartLink.docsUrl}. The referenced document is
+   * fetched at render time and may contain `{{productName}}`, `{{clientId}}`, and
+   * `{{applicationId}}` placeholders.
    */
-  id: string;
-  /**
-   * Display title of the guide
-   */
-  title: string;
-  /**
-   * Brief description of what the guide offers
-   */
-  description: string;
-  /**
-   * Type of guide (llm for AI-assisted, manual for step-by-step)
-   */
-  type: 'llm' | 'manual';
-  /**
-   * Icon identifier for the guide
-   */
-  icon: string;
-  /**
-   * Markdown content for LLM prompts
-   */
-  content?: string;
-}
-
-/**
- * Integration step code block.
- *
- * @public
- */
-export interface IntegrationStepCode {
-  /**
-   * Programming language for syntax highlighting
-   */
-  language: string;
-  /**
-   * Optional filename to display
-   */
-  filename?: string;
-  /**
-   * Code content
-   */
-  content: string;
-  /**
-   * Optional tabs for different package managers
-   */
-  tabs?: string[];
-}
-
-/**
- * Integration step for manual integration guide.
- *
- * @public
- */
-export interface IntegrationStep {
-  /**
-   * Step number
-   */
-  step: number;
-  /**
-   * Step title
-   */
-  title: string;
-  /**
-   * Main description
-   */
-  description: string;
-  /**
-   * Optional sub-description
-   */
-  subDescription?: string;
-  /**
-   * Optional bullet points
-   */
-  bullets?: string[];
-  /**
-   * Optional code block
-   */
-  code?: IntegrationStepCode;
+  docsUrl?: string;
 }
 
 /**
  * Integration guides structure containing LLM prompt and manual steps.
- * Keys represent different integration approaches (e.g., 'inbuilt', 'embedded').
+ * Keys represent different integration approaches (e.g., 'redirect_based', 'embedded').
  *
  * @public
  */
@@ -141,10 +73,6 @@ export type IntegrationGuides = Record<
      * LLM prompt guide option
      */
     llm_prompt: IntegrationGuide;
-    /**
-     * Manual step-by-step integration guide
-     */
-    manual_steps: IntegrationStep[];
   }
 >;
 
@@ -215,6 +143,14 @@ export interface ApplicationTemplate {
     cors?: boolean;
   };
   /**
+   * Which device frame the application-creation wizard's live sign-in preview should render at.
+   * Defaults to `'desktop'` when omitted. Set to `'mobile'` for templates whose sign-in UI is
+   * actually rendered on a phone screen (e.g. the native Android/iOS/Flutter templates and the
+   * generic Mobile platform template) — everything else, including other public-client templates
+   * like digital wallets, previews at desktop size.
+   */
+  previewDevice?: 'desktop' | 'mobile';
+  /**
    * Optional metadata describing the template's local development server, used to offer a
    * "quick add" shortcut on the Configuration step for its conventional default URL.
    */
@@ -230,6 +166,59 @@ export interface ApplicationTemplate {
    * Optional integration guides for this template
    */
   integrationGuides?: IntegrationGuides;
+  /**
+   * Optional quickstart guides for this template, shown on the application's Overview tab as
+   * "read the docs" cards. Most templates have exactly one; templates that cover more than one
+   * platform SDK (e.g. the generic Mobile template covering iOS, Android, and Flutter) list one
+   * entry per platform.
+   */
+  quickstarts?: QuickstartLink[];
+  /**
+   * Optional runnable playgrounds for this template, shown as a banner on the application's
+   * Overview tab when there's exactly one. Distinct from {@link quickstarts}: a quickstart is a
+   * hosted docs link, a playground is a live, runnable environment (e.g. StackBlitz). Not every
+   * template has a runnable playground (e.g. native mobile platforms don't).
+   */
+  playgrounds?: PlaygroundLink[];
+}
+
+/**
+ * A single quickstart guide entry for a template.
+ *
+ * @public
+ */
+export interface QuickstartLink {
+  /** Short label identifying the guide, e.g. 'React', 'iOS', 'Android', 'Flutter'. */
+  label: string;
+  /**
+   * Hosted documentation guide for connecting an application built with this template/platform.
+   * Either a literal URL, or a `{{documentation.links key}}` reference (e.g.
+   * '{{applications.templates.react.docs}}') resolved against the configured docs site, letting
+   * the docs site stay the source of truth.
+   */
+  docsUrl: string;
+}
+
+/**
+ * A single runnable playground entry for a template.
+ *
+ * @public
+ */
+export interface PlaygroundLink {
+  /** Short label identifying the guide, e.g. 'React', 'Next.js', 'Nuxt'. */
+  label: string;
+  /**
+   * The runnable environment this playground is hosted on, e.g. `'stackblitz'`. Only
+   * `'stackblitz'` is currently rendered; other values are reserved for future environments the
+   * console doesn't support yet, and are silently not rendered.
+   */
+  environment: string;
+  /**
+   * URL of the runnable sample. Either a literal URL, or a `{{documentation.links key}}`
+   * reference (e.g. '{{applications.templates.react.playground}}'), same resolution rules as
+   * {@link QuickstartLink.docsUrl}.
+   */
+  url: string;
 }
 
 /**

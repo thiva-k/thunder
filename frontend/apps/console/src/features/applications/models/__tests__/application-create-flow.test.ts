@@ -44,8 +44,8 @@ describe('application-create-flow models', () => {
   });
 
   describe('ApplicationCreateFlowSignInApproach', () => {
-    it('should have INBUILT approach', () => {
-      expect(ApplicationCreateFlowSignInApproach.INBUILT).toBe('INBUILT');
+    it('should have REDIRECT_BASED approach', () => {
+      expect(ApplicationCreateFlowSignInApproach.REDIRECT_BASED).toBe('REDIRECT_BASED');
     });
 
     it('should have EMBEDDED approach', () => {

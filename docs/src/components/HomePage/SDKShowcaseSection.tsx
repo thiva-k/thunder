@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import Link from '@docusaurus/Link';
+import {AndroidLogo, FlutterLogo} from '@thunderid/components';
 import {Box, Container, Typography} from '@wso2/oxygen-ui';
 import {JSX, useState} from 'react';
-import AndroidLogo from '../icons/AndroidLogo';
 import ExpressLogo from '../icons/ExpressLogo';
-import FlutterLogo from '../icons/FlutterLogo';
 import IOSLogo from '../icons/IOSLogo';
 import JavaScriptLogo from '../icons/JavaScriptLogo';
 import NextLogo from '../icons/NextLogo';

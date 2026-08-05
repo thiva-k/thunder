@@ -64,7 +64,11 @@ Once it's running, the console is available at [https://localhost:8090/console](
 
 3. Under **Application Type**, select **Mobile App**.
 4. Enter a name (e.g. `My Android App`) and create an application. The rest of the settings can stay at their defaults.
-5. Copy the **Client ID** from the **General** tab. You'll add the redirect URI in the next step after configuring your URL scheme.
+5. Copy the **Application ID** from the **General** tab, under **Quick Copy**.
+
+:::info App-Native Authentication
+This quickstart uses app-native authentication through the Flow Execution API. The Android SDK renders the sign-in and sign-up forms natively in your app, so you only need the **Application ID**, no OAuth 2.0 Client ID and no redirect URI.
+:::
 
 ## Create an Android App
 
@@ -102,48 +106,6 @@ implementation 'dev.thunderid:compose:0.1.0'
 ```
 :::
 
-## Configure a Callback URL Scheme
-
-<ProductName /> redirects back to your app after sign-in and sign-out using a custom URL scheme. You need to register this scheme in two places.
-
-**1. Register the scheme in your app**
-
-Open `AndroidManifest.xml` and add an intent filter with your scheme to your launcher activity. Use `singleTask` launch mode so the redirect reuses the existing activity instance instead of creating a new one.
-
-```xml title="AndroidManifest.xml" showLineNumbers
-<activity
-    android:name=".MainActivity"
-    android:exported="true"
-    android:launchMode="singleTask">
-
-    <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-    </intent-filter>
-
-    <intent-filter>
-        <action android:name="android.intent.action.VIEW" />
-        <category android:name="android.intent.category.DEFAULT" />
-        <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="dev.thunderid.quickstart" />
-    </intent-filter>
-</activity>
-```
-
-**2. Register the redirect URI in the <ProductName /> console**
-
-In the console, open your registered application and add the following as an **Allowed Redirect URI**:
-
-```text
-dev.thunderid.quickstart://callback
-```
-
-Add the same value as an **Allowed Post-Logout Redirect URI**:
-
-```text
-dev.thunderid.quickstart://logout
-```
-
 ## Initialize the SDK
 
 Open your `MainActivity` and wrap the content you pass to `setContent` with the `ThunderIDProvider` composable. This provides `ThunderIDState` to all child composables through `LocalThunderID`.
@@ -167,10 +129,7 @@ class MainActivity : ComponentActivity() {
                 ThunderIDProvider(
                     config = ThunderIDConfig(
                         baseUrl = "https://localhost:8090",
-                        clientId = "<your-client-id>",
                         scopes = listOf("openid", "profile", "email"),
-                        afterSignInUrl = "dev.thunderid.quickstart://callback",
-                        afterSignOutUrl = "dev.thunderid.quickstart://logout",
                         applicationId = "<your-application-id>"
                     )
                 ) {
@@ -183,7 +142,7 @@ class MainActivity : ComponentActivity() {
 ```
 
 :::warning Configuration
-Replace `<your-client-id>` with the **Client ID** and `<your-application-id>` with the **Application ID** from your <ProductName /> application settings.
+Replace `<your-application-id>` with the **Application ID** from your <ProductName /> application settings.
 :::
 
 ### Configuration Parameters
@@ -191,11 +150,8 @@ Replace `<your-client-id>` with the **Client ID** and `<your-application-id>` wi
 | Parameter | Description |
 |-----------|-------------|
 | `baseUrl` | Your <ProductName /> instance URL. Must use HTTPS. |
-| `clientId` | The Client ID from your <ProductName /> application |
 | `scopes` | OAuth 2.0 scopes to request. Include `"openid"` at minimum. |
-| `afterSignInUrl` | The redirect URI to return to after sign-in |
-| `afterSignOutUrl` | The redirect URI to return to after sign-out |
-| `applicationId` | The Application ID used for embedded (app-native) sign-in flows |
+| `applicationId` | The Application ID used for the app-native sign-in and sign-up flows |
 
 ## Add Sign-In and Sign-Out
 

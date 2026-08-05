@@ -155,7 +155,9 @@ describe('ApplicationCreateProvider', () => {
     expect(screen.getByTestId('email-otp-mfa')).toHaveTextContent('false');
     expect(screen.getByTestId('sms-otp-mfa')).toHaveTextContent('false');
     expect(screen.getByTestId('sms-otp-sender-id')).toHaveTextContent('');
-    expect(screen.getByTestId('sign-in-approach')).toHaveTextContent(ApplicationCreateFlowSignInApproach.INBUILT);
+    expect(screen.getByTestId('sign-in-approach')).toHaveTextContent(
+      ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
+    );
     expect(screen.getByTestId('selected-technology')).toHaveTextContent('null');
     expect(screen.getByTestId('selected-platform')).toHaveTextContent('null');
     expect(screen.getByTestId('mcp-client-type')).toHaveTextContent('userDelegated');

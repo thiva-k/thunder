@@ -1,0 +1,47 @@
+# Integrate {{productName}} Authentication in an Express Application (Custom UI / Embedded Mode)
+
+## Context
+I have an Express application and I want to integrate {{productName}} authentication using the ThunderID Express SDK in embedded (app-native) mode, rendering my own sign-in form instead of redirecting to {{productName}}-hosted pages.
+
+## Requirements
+- Use `@thunderid/express` in a Node.js + Express application
+- Use `cookie-parser` and `express.json()` middleware
+- Configure ThunderID middleware with `baseUrl`, `applicationId`, and `mode: 'embedded'`
+- Add a `/flow/sign-in` route using `handleFlow()` that proxies each step of the flow to the Flow Execution API
+- Serve a `/login` page with a plain HTML form that POSTs to `/flow/sign-in` and re-renders whatever fields the flow response asks for next
+- Add `/logout` with `handleSignOut()`
+- Protect a route (`/protected`) using `protect((res) => res.redirect('/login'))`
+- Add a `/me` route that returns the authenticated user profile as JSON
+- Keep the code minimal, production-lean, and fully runnable
+
+## Configuration
+- **Application ID**: {{applicationId}}
+- **Base URL**: https://localhost:8090 (or your {{productName}} instance URL)
+- **App URL**: http://localhost:3000
+- **Sign-In Page**: `/login`
+- **Flow Route**: `/flow/sign-in`
+- **Logout Callback Route**: `/logout`
+- **SDK**: @thunderid/express
+
+## Important Rules
+- Use CommonJS syntax (`require`) in `index.js`
+- `@thunderid/express` has NO bundled sign-in UI component — this is a server-side SDK. `mode: 'embedded'` only changes what `handleFlow()` proxies to; you must write the actual HTML/JS form yourself
+- Set `mode: 'embedded'` in the `thunderID({...})` middleware config (defaults to `'redirect'` if omitted)
+- `handleFlow()` calls the Flow Execution API on each POST and returns the flow's JSON step (`executionId`, `challengeToken`, `authId`, `components`) — render whatever `components` the response contains as form fields, and POST the user's input back to the same route with the returned `executionId`
+- Do not invent unsupported SDK APIs or custom wrappers
+- Do not use `clientId`/`clientSecret` in this mode — embedded mode is driven by `applicationId`, not an OAuth2 client
+
+## Implementation Steps
+1. Create a new project and install `express` and `cookie-parser`
+2. Install `@thunderid/express`
+3. Add `index.js` with `thunderID({ applicationId, baseUrl, mode: 'embedded' })` middleware
+4. Add `/login` route serving a minimal HTML form, and `/flow/sign-in` using `handleFlow()`
+5. Add `/logout`, `/protected`, and `/me` routes
+6. Start the server with `node index.js`
+7. Validate the flow by opening `/login`, submitting the form, then `/protected` and `/me`
+
+Please provide:
+- The exact terminal commands
+- A complete `index.js` file
+- A minimal HTML sign-in form driven by the flow's `components` response (not a redirect)
+- A short verification checklist for sign-in, sign-out, and protected route behavior

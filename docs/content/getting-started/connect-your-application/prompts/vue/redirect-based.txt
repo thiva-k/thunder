@@ -1,0 +1,35 @@
+# Integrate {{productName}} Authentication in Vue 3 Application
+
+## Context
+I have a Vue 3 application and I want to integrate {{productName}}'s authentication system using the @thunderid/vue SDK with {{productName}}-hosted login pages.
+
+## Requirements
+- Use @thunderid/vue SDK for authentication
+- Register the ThunderIDPlugin in main.js
+- Wrap the app with ThunderIDProvider in App.vue
+- Implement sign-in and sign-out with prebuilt components
+- Display signed-in user's profile using the UserDropdown component
+
+## Configuration
+- **Client ID**: {{clientId}}
+- **Base URL**: https://localhost:8090 (or your {{productName}} instance URL)
+- **SDK**: @thunderid/vue
+
+## IMPORTANT Configuration Rules
+- Register ThunderIDPlugin via app.use(ThunderIDPlugin) in src/main.js
+- Import ThunderIDPlugin from '@thunderid/vue'
+- Wrap the app root in App.vue with <ThunderIDProvider client-id="..." base-url="...">
+- Pass configuration as kebab-case attributes: `client-id` and `base-url`
+- Import UI components (SignInButton, SignOutButton, SignedIn, SignedOut, UserDropdown) from '@thunderid/vue'
+- Use <UserDropdown /> inside <SignedIn> to display the signed-in user's profile and sign-out option
+
+## Implementation Steps
+1. Create a Vue 3 app: npm create vite@latest my-vue-app -- --template vue
+2. Navigate into the project: cd my-vue-app && npm install
+3. Install @thunderid/vue: npm install @thunderid/vue
+4. Register ThunderIDPlugin in src/main.js with app.use(ThunderIDPlugin)
+5. Wrap app content with <ThunderIDProvider client-id="{{clientId}}" base-url="https://localhost:8090"> in src/App.vue
+6. Add SignInButton inside SignedOut and UserDropdown inside SignedIn conditional wrappers
+7. Run: npm run dev
+
+Please provide complete, working code with proper configuration for {{productName}} authentication using the @thunderid/vue SDK.

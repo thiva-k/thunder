@@ -45,7 +45,7 @@ describe('useApplicationCreateContext', () => {
     setSmsOtpSenderId: vi.fn(),
     selectedAuthFlow: null,
     setSelectedAuthFlow: vi.fn(),
-    signInApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+    signInApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
     setSignInApproach: vi.fn(),
     registrationFlowId: null,
     setRegistrationFlowId: vi.fn(),
@@ -103,7 +103,7 @@ describe('useApplicationCreateContext', () => {
     expect(result.current.currentStep).toBe(ApplicationCreateFlowStep.DETAILS);
     expect(result.current.appName).toBe('Test App');
     expect(result.current.selectedTheme).toBeNull();
-    expect(result.current.signInApproach).toBe(ApplicationCreateFlowSignInApproach.INBUILT);
+    expect(result.current.signInApproach).toBe(ApplicationCreateFlowSignInApproach.REDIRECT_BASED);
   });
 
   it('should throw an error when used outside of ApplicationCreateProvider', () => {
@@ -221,7 +221,10 @@ describe('useApplicationCreateContext', () => {
   });
 
   it('should return sign-in approach values', () => {
-    const approaches = [ApplicationCreateFlowSignInApproach.INBUILT, ApplicationCreateFlowSignInApproach.EMBEDDED];
+    const approaches = [
+      ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
+      ApplicationCreateFlowSignInApproach.EMBEDDED,
+    ];
 
     approaches.forEach((approach) => {
       const contextWithApproach: ApplicationCreateContextType = {

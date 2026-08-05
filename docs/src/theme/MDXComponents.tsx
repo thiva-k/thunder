@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import MDXComponents from '@theme-original/MDXComponents';
+import {AndroidLogo, FlutterLogo} from '@thunderid/components';
 import {
   Box,
   Card,
@@ -40,7 +41,6 @@ import DocsGetStarted from '@site/src/components/DocsGetStarted';
 import FloatingLogosBackground from '@site/src/components/FloatingLogosBackground';
 import {BuildAFlowDiagram, FlowNodeTypesRoadmap, FlowBuildingBlocksRoadmap} from '@site/src/components/FlowConcepts';
 import GettingStartedJourney from '@site/src/components/GettingStartedJourney';
-import AndroidLogo from '@site/src/components/icons/AndroidLogo';
 import AngularLogo from '@site/src/components/icons/AngularLogo';
 import BrowserLogo from '@site/src/components/icons/BrowserLogo';
 import ClaudeLogo from '@site/src/components/icons/ClaudeLogo';
@@ -48,7 +48,6 @@ import CliLogo from '@site/src/components/icons/CliLogo';
 import CodexLogo from '@site/src/components/icons/CodexLogo';
 import DockerLogo from '@site/src/components/icons/DockerLogo';
 import ExpressLogo from '@site/src/components/icons/ExpressLogo';
-import FlutterLogo from '@site/src/components/icons/FlutterLogo';
 import GoLogo from '@site/src/components/icons/GoLogo';
 import Html5Logo from '@site/src/components/icons/Html5Logo';
 import IOSLogo from '@site/src/components/icons/IOSLogo';

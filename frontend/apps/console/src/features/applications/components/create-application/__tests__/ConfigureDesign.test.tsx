@@ -26,7 +26,7 @@ describe('ConfigureDesign', () => {
   const defaultProps: ConfigureDesignProps = {
     onThemeSelect: mockOnThemeSelect,
     onLayoutSelect: mockOnLayoutSelect,
-    selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+    selectedApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
     onApproachChange: vi.fn(),
     showApproachSection: false,
   };
@@ -102,7 +102,7 @@ describe('ConfigureDesign', () => {
 
       renderComponent({
         showApproachSection: true,
-        selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+        selectedApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
         onApproachChange,
       });
 
@@ -115,7 +115,7 @@ describe('ConfigureDesign', () => {
       renderComponent({
         showApproachSection: true,
         allowEmbeddedApproach: false,
-        selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+        selectedApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
       });
 
       expect(screen.getByText(/Redirect to .* Gate/)).toBeInTheDocument();

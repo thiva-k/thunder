@@ -1,0 +1,44 @@
+# Integrate {{productName}} Authentication in Nuxt 3 Application (Custom UI Mode)
+
+## Context
+I have a Nuxt 3 application and I want to integrate {{productName}}'s authentication system using the @thunderid/nuxt module with a custom sign-in UI instead of {{productName}}-hosted pages.
+
+## Requirements
+- Use @thunderid/nuxt module for authentication
+- Register the module in nuxt.config.ts
+- Configure via environment variables (no inline config)
+- Wrap app.vue content with <ThunderIDRoot>
+- Render sign-in on a custom page using the module's own SignIn component (not a redirect to {{productName}}-hosted pages)
+- Display signed-in user's profile information
+- Optionally protect pages with the built-in thunderIDMiddleware
+
+## Configuration
+- **Application ID**: {{applicationId}}
+- **Base URL**: https://localhost:8090 (or your {{productName}} instance URL)
+- **Sign In Page**: /signin (custom page)
+- **SDK**: @thunderid/nuxt
+
+## IMPORTANT Configuration Rules
+- Add '@thunderid/nuxt' to the modules array in nuxt.config.ts — no other config needed there
+- All configuration is read from environment variables with NUXT_PUBLIC_ prefix for public values
+- Required env vars: NUXT_PUBLIC_THUNDERID_BASE_URL, NUXT_PUBLIC_THUNDERID_APPLICATION_ID, THUNDERID_SESSION_SECRET (without the NUXT_PUBLIC_ prefix)
+- Wrap <NuxtPage /> with <ThunderIDRoot> in app.vue
+- All components (`SignedIn`, `SignedOut`, `SignIn`, `SignOutButton`, `User`) and composables are auto-imported — no manual import needed
+- The `<SignIn>` component mirrors the Vue SDK's `SignIn`/`BaseSignIn` and drives the embedded (app-native) Flow Execution API directly — it replaces `window.location` navigation with Nuxt's `navigateTo` internally, so no manual redirect handling is needed
+- Render `<SignIn @success="..." @error="..." />` inside `<SignedOut>` on pages/signin.vue
+- Protect pages by adding definePageMeta({ middleware: ['thunderIDMiddleware'] })
+- NEVER redirect to a {{productName}}-hosted URL for sign-in in this mode
+
+## Implementation Steps
+1. Create a Nuxt 3 app: npx nuxi@latest init my-nuxt-app
+2. Navigate into the project: cd my-nuxt-app && npm install
+3. Install @thunderid/nuxt: npm install @thunderid/nuxt
+4. Add '@thunderid/nuxt' to modules in nuxt.config.ts
+5. Create .env with NUXT_PUBLIC_THUNDERID_BASE_URL, NUXT_PUBLIC_THUNDERID_APPLICATION_ID, THUNDERID_SESSION_SECRET
+6. Wrap <NuxtPage /> with <ThunderIDRoot> in app.vue
+7. Create pages/signin.vue rendering `<SignedOut><SignIn @success="..." /></SignedOut>`
+8. Create pages/index.vue with SignedIn, SignOutButton, and User components
+9. Optionally add definePageMeta({ middleware: ['thunderIDMiddleware'] }) to protected pages
+10. Run: npm run dev
+
+Please provide complete, working code for {{productName}} authentication using the @thunderid/nuxt module, with a custom sign-in page rendering `<SignIn>` instead of a hosted-page redirect.

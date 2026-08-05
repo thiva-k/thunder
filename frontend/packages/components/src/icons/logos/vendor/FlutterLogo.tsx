@@ -1,8 +1,14 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {JSX} from 'react';
 
-export default function FlutterLogo({size = 64}: {size?: number}) {
+export interface FlutterLogoProps {
+  size?: number;
+}
+
+/** Flutter's full-color twin-peaks mark, used to identify Flutter quickstart guides. */
+export default function FlutterLogo({size = 64}: FlutterLogoProps): JSX.Element {
   return (
     <svg width={size} height={size * 1.238} viewBox="0 0 300 371.43">
       <defs>

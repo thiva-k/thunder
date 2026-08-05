@@ -101,7 +101,7 @@ const INITIAL_STATE: {
   isSmsOtpMfaEnabled: false,
   smsOtpSenderId: '',
   selectedAuthFlow: null,
-  signInApproach: ApplicationCreateFlowSignInApproach.INBUILT as ApplicationCreateFlowSignInApproach,
+  signInApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED as ApplicationCreateFlowSignInApproach,
   registrationFlowId: null,
   isRegistrationFlowEnabled: false,
   recoveryFlowId: null,

@@ -67,7 +67,7 @@ const defaultProps: Parameters<typeof ConfigureDetails>[0] = {
   onHostingUrlChange: vi.fn(),
   onCallbackUrlChange: vi.fn(),
   onReadyChange: vi.fn(),
-  selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+  selectedApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
 };
 
 const renderWithContext = (
@@ -895,7 +895,7 @@ describe('ConfigureDetails', () => {
         {
           technology: TechnologyApplicationTemplate.REACT,
           platform: PlatformApplicationTemplate.BROWSER,
-          selectedApproach: ApplicationCreateFlowSignInApproach.INBUILT,
+          selectedApproach: ApplicationCreateFlowSignInApproach.REDIRECT_BASED,
         },
         {selectedTemplateConfig: template},
       );

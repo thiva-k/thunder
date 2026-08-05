@@ -44,7 +44,7 @@ import {
   ApplicationCreateFlowStep,
   OrganizationUnitDefaultItem,
 } from '../models/application-create-flow';
-import {PlatformApplicationTemplate} from '../models/application-templates';
+import {PlatformApplicationTemplate, TechnologyApplicationTemplate} from '../models/application-templates';
 import {McpClientTypes} from '../models/mcp-client';
 import type {CreateApplicationRequest} from '../models/requests';
 import getApplicationErrorMessage from '../utils/getApplicationErrorMessage';
@@ -54,6 +54,7 @@ import mergeCorsOrigins from '../utils/mergeCorsOrigins';
 import resolveApplicationType from '../utils/resolveApplicationType';
 import resolveCreationFlow from '../utils/resolveCreationFlow';
 import GatePreview from '@/components/GatePreview/GatePreview';
+import {VIEWPORT_WIDTHS, VIEWPORT_HEIGHTS} from '@/features/design/components/viewportConstants';
 
 export default function ApplicationCreatePage(): JSX.Element {
   const {t} = useTranslation();
@@ -372,13 +373,17 @@ export default function ApplicationCreatePage(): JSX.Element {
   );
 
   // Browser-based SPAs are public clients that must use the redirect-based flow, so the
-  // embedded (native) sign-in approach is not offered for them. Native mobile apps and digital
-  // wallets are also public clients but legitimately use app-native flows, so they are excluded
-  // from this rule.
+  // embedded (native) sign-in approach is not offered for them. Native mobile apps (both the
+  // generic Mobile platform template and the individual Android/iOS/Flutter technology
+  // templates) and digital wallets are also public clients but legitimately use app-native
+  // flows, so they are excluded from this rule.
   const isBrowserSpaTemplate = useMemo((): boolean => {
     if (
       selectedPlatform === PlatformApplicationTemplate.MOBILE ||
-      selectedPlatform === PlatformApplicationTemplate.WALLET
+      selectedPlatform === PlatformApplicationTemplate.WALLET ||
+      selectedTechnology === TechnologyApplicationTemplate.ANDROID ||
+      selectedTechnology === TechnologyApplicationTemplate.IOS ||
+      selectedTechnology === TechnologyApplicationTemplate.FLUTTER
     ) {
       return false;
     }
@@ -386,7 +391,7 @@ export default function ApplicationCreatePage(): JSX.Element {
       (config) => config.type === 'oauth2',
     )?.config;
     return oauthConfig?.publicClient === true;
-  }, [selectedTemplateConfig, selectedPlatform]);
+  }, [selectedTemplateConfig, selectedPlatform, selectedTechnology]);
 
   // Wallets are OID4VCI issuance flows that redirect to a hosted page; there's no native UI to
   // embed, so unlike mobile apps they get no sign-in approach choice at all.
@@ -396,7 +401,7 @@ export default function ApplicationCreatePage(): JSX.Element {
   // selected (e.g. after switching away from a BYOUI-capable template).
   useEffect((): void => {
     if (isBrowserSpaTemplate && signInApproach === ApplicationCreateFlowSignInApproach.EMBEDDED) {
-      setSignInApproach(ApplicationCreateFlowSignInApproach.INBUILT);
+      setSignInApproach(ApplicationCreateFlowSignInApproach.REDIRECT_BASED);
     }
   }, [isBrowserSpaTemplate, signInApproach, setSignInApproach]);
 
@@ -907,6 +912,14 @@ export default function ApplicationCreatePage(): JSX.Element {
   // `previewSteps` list.
   const hasNoPreview = !creationFlow.previewSteps.includes(currentStep);
 
+  // The wizard preview has no viewport switcher of its own (see the `showToolbar={false}` below)
+  // — the device frame it renders at is fixed per template via `previewDevice`, defaulting to
+  // desktop when a template doesn't set it.
+  const isMobilePreview = selectedTemplateConfig?.previewDevice === 'mobile';
+  const previewViewport = isMobilePreview
+    ? {width: VIEWPORT_WIDTHS.mobile, height: VIEWPORT_HEIGHTS.mobile}
+    : undefined;
+
   const isFirstStep = visibleSteps.indexOf(currentStep) === 0;
   const isLastStep = visibleSteps.indexOf(currentStep) === visibleSteps.length - 1;
 
@@ -973,6 +986,9 @@ export default function ApplicationCreatePage(): JSX.Element {
               baseTheme={DefaultTheme as Theme}
               mock={activePreviewMock}
               displayName={appName ?? undefined}
+              showToolbar={false}
+              viewport={previewViewport}
+              frameStyle={isMobilePreview ? 'phone' : 'browser'}
               footer={
                 currentStep === ApplicationCreateFlowStep.SECURITY && totalPreviewSteps >= 2 ? (
                   <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, py: 1.5}}>

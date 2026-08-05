@@ -1,8 +1,14 @@
 // Copyright 2024 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import type {JSX} from 'react';
 
-export default function AndroidLogo({size = 64}: {size?: number}) {
+export interface AndroidLogoProps {
+  size?: number;
+}
+
+/** Android's full-color bugdroid mark, used to identify Android quickstart guides. */
+export default function AndroidLogo({size = 64}: AndroidLogoProps): JSX.Element {
   return (
     <svg width={size} height={size * 0.586} viewBox="0 0 430 252" fill="none">
       <defs>

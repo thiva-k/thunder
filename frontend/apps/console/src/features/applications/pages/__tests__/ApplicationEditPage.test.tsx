@@ -83,23 +83,7 @@ vi.mock('../../utils/getIntegrationGuidesForTemplate', () => ({
 
 // Mock child components
 vi.mock('../../components/edit-application/general-settings/EditGeneralSettings', () => ({
-  default: vi.fn(
-    ({
-      onCopyToClipboard,
-      copiedField,
-    }: {
-      onCopyToClipboard?: (text: string, fieldName: string) => void;
-      copiedField?: string | null;
-    }) => (
-      <div data-testid="edit-general-settings">
-        General Settings
-        {copiedField && <span data-testid="copied-field">{copiedField}</span>}
-        <button type="button" data-testid="copy-button" onClick={() => onCopyToClipboard?.('test-text', 'clientId')}>
-          Copy
-        </button>
-      </div>
-    ),
-  ),
+  default: vi.fn(() => <div data-testid="edit-general-settings">General Settings</div>),
 }));
 
 vi.mock('../../components/edit-application/flows-settings/EditFlowsSettings', () => ({
@@ -151,6 +135,9 @@ vi.mock('../../components/edit-application/mcp/McpConnectTab', () => ({
 vi.mock('@thunderid/components', async () => {
   const React = await import('react');
   return {
+    AppleIcon: vi.fn(() => null),
+    AndroidLogo: vi.fn(() => null),
+    FlutterLogo: vi.fn(() => null),
     CopyableId: vi.fn(() => null),
     EmojiPicker: vi.fn(() => null),
     PageLoadingAnimation: vi.fn(() => <div data-testid="page-loading-animation" />),
@@ -465,13 +452,13 @@ describe('ApplicationEditPage', () => {
       expect(screen.getByRole('tab', {name: /overview/i})).toBeInTheDocument();
     });
 
-    it('should display general settings tab by default when no integration guides', () => {
-      // Mock returns null by default (no integration guides)
+    it('should display the overview tab by default even when there are no integration guides', () => {
+      // Mock returns null by default (no integration guides) — the Overview tab still shows,
+      // since it also surfaces application identifiers and endpoints regardless of guides.
       renderComponent();
 
-      // When there are no integration guides, general tab should be first and selected
-      const generalTab = screen.getByRole('tab', {name: /general/i});
-      expect(generalTab).toHaveAttribute('aria-selected', 'true');
+      const overviewTab = screen.getByRole('tab', {name: /overview/i});
+      expect(overviewTab).toHaveAttribute('aria-selected', 'true');
     });
 
     it('should display overview tab by default when integration guides are available', async () => {
@@ -972,6 +959,9 @@ describe('ApplicationEditPage', () => {
       const user = userEvent.setup();
       renderComponent();
 
+      // EditGeneralSettings only mounts once its TabPanel is active
+      await mountSectionTab(user, 'General', 'edit-general-settings');
+
       const {initialKey, keyAfterReset} = await editFieldAndResetSection(
         user,
         EditGeneralSettings,
@@ -1075,6 +1065,9 @@ describe('ApplicationEditPage', () => {
       } as unknown as UseQueryResult<Application>);
 
       renderComponent();
+
+      // EditGeneralSettings only mounts once its TabPanel is active
+      await mountSectionTab(user, 'General', 'edit-general-settings');
 
       const initialKey = vi.mocked(EditGeneralSettings).mock.calls.at(-1)?.[0].sectionResetKey;
 
@@ -1607,59 +1600,6 @@ describe('ApplicationEditPage', () => {
     });
   });
 
-  describe('Copy to Clipboard', () => {
-    const originalClipboard = navigator.clipboard;
-
-    afterEach(() => {
-      Object.defineProperty(navigator, 'clipboard', {
-        value: originalClipboard,
-        writable: true,
-        configurable: true,
-      });
-    });
-
-    it('should copy text to clipboard when copy button is clicked', async () => {
-      const writeTextMock = vi.fn().mockResolvedValue(undefined);
-      Object.defineProperty(navigator, 'clipboard', {
-        value: {writeText: writeTextMock},
-        writable: true,
-        configurable: true,
-      });
-
-      renderComponent();
-
-      fireEvent.click(screen.getByTestId('copy-button'));
-
-      await waitFor(() => {
-        expect(writeTextMock).toHaveBeenCalledWith('test-text');
-      });
-
-      await waitFor(() => {
-        expect(screen.getByTestId('copied-field')).toHaveTextContent('clientId');
-      });
-    });
-
-    it('should handle clipboard write failure gracefully', async () => {
-      const writeTextMock = vi.fn().mockRejectedValue(new Error('Clipboard error'));
-      Object.defineProperty(navigator, 'clipboard', {
-        value: {writeText: writeTextMock},
-        writable: true,
-        configurable: true,
-      });
-
-      renderComponent();
-
-      fireEvent.click(screen.getByTestId('copy-button'));
-
-      await waitFor(() => {
-        expect(writeTextMock).toHaveBeenCalledWith('test-text');
-      });
-
-      // Component should still be functional after error
-      expect(screen.getByText('Test Application')).toBeInTheDocument();
-    });
-  });
-
   describe('Avatar Image Error', () => {
     it('should hide avatar image when image fails to load', () => {
       renderComponent();
@@ -1916,7 +1856,7 @@ describe('ApplicationEditPage', () => {
       expect(screen.getByRole('tab', {name: 'Advanced Settings'})).toBeInTheDocument();
     });
 
-    it('renders the General tab panel by default', () => {
+    it('renders the Overview tab panel by default, and the General tab panel once selected', async () => {
       mockUseGetApplication.mockReturnValue({
         data: mockMcpApplication,
         isLoading: false,
@@ -1924,7 +1864,13 @@ describe('ApplicationEditPage', () => {
         error: null,
       } as UseQueryResult<Application>);
 
+      const user = userEvent.setup();
       renderComponent();
+
+      expect(screen.getByTestId('integration-guides')).toBeInTheDocument();
+      expect(screen.queryByTestId('mcp-connect-tab')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('tab', {name: 'General'}));
 
       expect(screen.getByTestId('mcp-connect-tab')).toBeInTheDocument();
     });
@@ -1977,6 +1923,9 @@ describe('ApplicationEditPage', () => {
 
       const user = userEvent.setup();
       renderComponent();
+
+      // McpConnectTab only mounts once its General TabPanel is active
+      await mountSectionTab(user, 'General', 'mcp-connect-tab');
 
       // Make a change via the page header, which is shared across MCP and non-MCP layouts
       const {initialKey, keyAfterReset} = await editFieldAndResetSection(
@@ -2101,6 +2050,9 @@ describe('ApplicationEditPage', () => {
 
       const user = userEvent.setup();
       renderComponent();
+
+      // McpConnectTab only mounts once its General TabPanel is active
+      await mountSectionTab(user, 'General', 'mcp-connect-tab');
 
       await user.click(screen.getByTestId('mcp-connect-tab-report-invalid'));
 

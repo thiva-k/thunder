@@ -18,23 +18,6 @@ vi.mock('@thunderid/contexts', () => ({
 }));
 
 // Mock the child components
-vi.mock('../QuickCopySection', () => ({
-  default: ({
-    application,
-    oauth2Config,
-    copiedField,
-  }: {
-    application: Application;
-    oauth2Config?: OAuth2Config;
-    copiedField: string | null;
-  }) => (
-    <div data-testid="quick-copy-section">
-      QuickCopySection - App: {application.id}, OAuth: {oauth2Config?.clientId ?? 'None'}, Copied:{' '}
-      {copiedField ?? 'None'}
-    </div>
-  ),
-}));
-
 vi.mock('../AccessSection', () => ({
   default: function MockAccessSection({
     application,
@@ -181,7 +164,6 @@ vi.mock('../../../ApplicationDeleteDialog', () => ({
 
 describe('EditGeneralSettings', () => {
   const mockOnFieldChange = vi.fn();
-  const mockOnCopyToClipboard = vi.fn();
   const mockApplication: Application = {
     id: 'app-123',
     name: 'Test App',
@@ -199,33 +181,15 @@ describe('EditGeneralSettings', () => {
   });
 
   describe('Rendering', () => {
-    it('should render both QuickCopySection and AccessSection', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+    it('should render AccessSection', () => {
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
-      expect(screen.getByTestId('quick-copy-section')).toBeInTheDocument();
       expect(screen.getByTestId('access-section')).toBeInTheDocument();
     });
 
     it('should pass application to child components', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
-      expect(screen.getByTestId('quick-copy-section')).toHaveTextContent('App: app-123');
       expect(screen.getByTestId('access-section')).toHaveTextContent('App: app-123');
     });
 
@@ -233,13 +197,7 @@ describe('EditGeneralSettings', () => {
       const editedApp = {url: 'https://edited.com'};
 
       render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={editedApp}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
+        <EditGeneralSettings application={mockApplication} editedApp={editedApp} onFieldChange={mockOnFieldChange} />,
       );
 
       expect(screen.getByTestId('access-section')).toHaveTextContent('Edited URL: https://edited.com');
@@ -252,56 +210,16 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
-      expect(screen.getByTestId('quick-copy-section')).toHaveTextContent('OAuth: client-123');
       expect(screen.getByTestId('access-section')).toHaveTextContent('OAuth: client-123');
     });
 
     it('should handle missing oauth2Config', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
-      expect(screen.getByTestId('quick-copy-section')).toHaveTextContent('OAuth: None');
       expect(screen.getByTestId('access-section')).toHaveTextContent('OAuth: None');
-    });
-
-    it('should pass copiedField to QuickCopySection', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField="app_id"
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
-
-      expect(screen.getByTestId('quick-copy-section')).toHaveTextContent('Copied: app_id');
-    });
-
-    it('should handle null copiedField', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
-
-      expect(screen.getByTestId('quick-copy-section')).toHaveTextContent('Copied: None');
     });
   });
 
@@ -312,8 +230,6 @@ describe('EditGeneralSettings', () => {
           application={mockApplication}
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
           sectionResetKey={0}
         />,
       );
@@ -326,8 +242,6 @@ describe('EditGeneralSettings', () => {
           application={mockApplication}
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
           sectionResetKey={1}
         />,
       );
@@ -341,8 +255,6 @@ describe('EditGeneralSettings', () => {
           application={mockApplication}
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
           sectionResetKey={0}
         />,
       );
@@ -355,8 +267,6 @@ describe('EditGeneralSettings', () => {
           application={mockApplication}
           editedApp={{url: 'https://re-rendered.com'}}
           onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
           sectionResetKey={0}
         />,
       );
@@ -368,33 +278,13 @@ describe('EditGeneralSettings', () => {
   describe('Props Propagation', () => {
     it('should pass onFieldChange to AccessSection', () => {
       const {container} = render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
+        <EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />,
       );
 
       expect(container.querySelector('[data-testid="access-section"]')).toBeInTheDocument();
     });
 
-    it('should pass onCopyToClipboard to QuickCopySection', () => {
-      const {container} = render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
-
-      expect(container.querySelector('[data-testid="quick-copy-section"]')).toBeInTheDocument();
-    });
-
-    it('should pass all required props to both child components', () => {
+    it('should pass all required props to child components', () => {
       const editedApp = {url: 'https://new.com'};
 
       render(
@@ -403,12 +293,9 @@ describe('EditGeneralSettings', () => {
           editedApp={editedApp}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField="clientId"
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
-      expect(screen.getByTestId('quick-copy-section')).toBeInTheDocument();
       expect(screen.getByTestId('access-section')).toBeInTheDocument();
     });
   });
@@ -421,15 +308,12 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
       const sections = container.querySelectorAll('[data-testid]');
-      expect(sections[0]).toHaveAttribute('data-testid', 'quick-copy-section');
-      expect(sections[1]).toHaveAttribute('data-testid', 'access-section');
-      expect(sections[2]).toHaveAttribute('data-testid', 'danger-zone-section');
+      expect(sections[0]).toHaveAttribute('data-testid', 'access-section');
+      expect(sections[1]).toHaveAttribute('data-testid', 'danger-zone-section');
     });
 
     it('should render DangerZoneSection for confidential client', () => {
@@ -439,8 +323,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -460,8 +342,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={publicClientConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -470,30 +350,14 @@ describe('EditGeneralSettings', () => {
     });
 
     it('should render DangerZoneSection without regenerate when no oauth2Config provided', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
       expect(screen.getByTestId('danger-zone-section')).toBeInTheDocument();
       expect(screen.queryByTestId('regenerate-button')).not.toBeInTheDocument();
     });
 
     it('should show regenerate Flow Secret for an embedded app (no OAuth profile)', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
       expect(screen.getByTestId('regenerate-flow-secret-button')).toBeInTheDocument();
     });
@@ -512,8 +376,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={flowNativeConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -535,8 +397,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={flowNativeConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -558,8 +418,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={m2mShapedConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -580,8 +438,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={m2mConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -602,8 +458,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={redirectConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -622,8 +476,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={pkjwtClientConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -644,8 +496,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={postClientConfig}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -662,8 +512,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -680,8 +528,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -698,8 +544,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -721,8 +565,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -743,8 +585,6 @@ describe('EditGeneralSettings', () => {
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
           oauth2Config={mockOAuth2Config}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
         />,
       );
 
@@ -767,15 +607,7 @@ describe('EditGeneralSettings', () => {
 
   describe('Delete Application Flow', () => {
     it('should open delete dialog when delete button is clicked', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
       const deleteButton = screen.getByTestId('delete-button');
       fireEvent.click(deleteButton);
@@ -784,15 +616,7 @@ describe('EditGeneralSettings', () => {
     });
 
     it('should pass application id to delete dialog', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
       const deleteButton = screen.getByTestId('delete-button');
       fireEvent.click(deleteButton);
@@ -801,15 +625,7 @@ describe('EditGeneralSettings', () => {
     });
 
     it('should close delete dialog when cancel is triggered', () => {
-      render(
-        <EditGeneralSettings
-          application={mockApplication}
-          editedApp={{}}
-          onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
-        />,
-      );
+      render(<EditGeneralSettings application={mockApplication} editedApp={{}} onFieldChange={mockOnFieldChange} />);
 
       const deleteButton = screen.getByTestId('delete-button');
       fireEvent.click(deleteButton);
@@ -830,8 +646,6 @@ describe('EditGeneralSettings', () => {
           application={mockApplication}
           editedApp={{}}
           onFieldChange={mockOnFieldChange}
-          copiedField={null}
-          onCopyToClipboard={mockOnCopyToClipboard}
           onDeleteSuccess={mockOnDeleteSuccess}
         />,
       );
