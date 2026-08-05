@@ -5713,6 +5713,12 @@ paths:
                 value:
                   applicationId: 550e8400-e29b-41d4-a716-446655440000
                   flowType: AUTHENTICATION
+              initialSignOutRequest:
+                summary: Initial request to terminate the SSO session established for the
+                  application
+                value:
+                  applicationId: 550e8400-e29b-41d4-a716-446655440000
+                  flowType: SIGNOUT
               subSequentRequestExample:
                 summary: Subsequent request
                 value:
@@ -20225,6 +20231,7 @@ components:
             - AUTHENTICATION
             - REGISTRATION
             - RECOVERY
+            - SIGNOUT
           example: AUTHENTICATION
         verbose:
           type: boolean

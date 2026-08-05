@@ -1139,6 +1139,11 @@
                     },
                     {
                       "type": "doc",
+                      "id": "guides/protocols/oauth-oidc/rp-initiated-logout",
+                      "label": "RP-Initiated Logout"
+                    },
+                    {
+                      "type": "doc",
                       "id": "guides/protocols/oauth-oidc/userinfo",
                       "label": "UserInfo"
                     },
