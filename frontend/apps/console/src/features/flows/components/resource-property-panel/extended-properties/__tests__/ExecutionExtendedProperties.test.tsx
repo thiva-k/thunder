@@ -133,6 +133,27 @@ describe('ExecutionExtendedProperties', () => {
       ).not.toBeInTheDocument();
     });
 
+    // The panel may only write properties the federated executors declare as supported in their
+    // backend ExecutorMeta. Writing any other key makes the whole flow unsavable, and unchecking
+    // the box does not recover it because the validator rejects on key presence, not value.
+    it('should only write properties the federated executors support', () => {
+      mockIdentityProviders.mockReturnValue({
+        data: [{id: 'google-idp-1', name: 'Google IDP', type: IdentityProviderTypes.GOOGLE}],
+        isLoading: false,
+      });
+
+      render(<ExecutionExtendedProperties resource={googleResource} onChange={mockOnChange} />);
+
+      screen.getAllByRole('checkbox').forEach((checkbox) => fireEvent.click(checkbox));
+
+      expect(new Set(mockOnChange.mock.calls.map((call) => call[0] as string))).toEqual(
+        new Set([
+          'data.properties.allowAuthenticationWithoutLocalUser',
+          'data.properties.allowRegistrationWithExistingUser',
+        ]),
+      );
+    });
+
     it('should show available Google connections in dropdown', async () => {
       const user = userEvent.setup();
       mockIdentityProviders.mockReturnValue({
