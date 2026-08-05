@@ -109,9 +109,11 @@ function searchFlights(params) {
 }
 
 function searchHotels(params) {
+  const maxNightlyRate = params.get("maxNightlyRate");
+
   return findHotels({
     location: params.get("location"),
-    maxNightlyRate: Number(params.get("maxNightlyRate") || 0)
+    maxNightlyRate: maxNightlyRate ? Number(maxNightlyRate) : null
   });
 }
 
