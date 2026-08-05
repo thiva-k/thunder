@@ -59,6 +59,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['client_credentials'])}
         onFieldChange={onFieldChange}
       />,
@@ -76,6 +77,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['client_credentials'])}
         onFieldChange={onFieldChange}
       />,
@@ -91,6 +93,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['authorization_code'])}
         onFieldChange={onFieldChange}
       />,
@@ -110,6 +113,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['client_credentials'])}
         onFieldChange={onFieldChange}
       />,
@@ -127,6 +131,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['authorization_code'])}
         onFieldChange={onFieldChange}
       />,
@@ -140,6 +145,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['authorization_code'])}
         onFieldChange={onFieldChange}
       />,
@@ -155,6 +161,7 @@ describe('EditTokenSettingsTabs', () => {
     render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={oauthConfig(['authorization_code'])}
         onFieldChange={onFieldChange}
       />,
@@ -167,7 +174,7 @@ describe('EditTokenSettingsTabs', () => {
   describe('app-native application (no OAuth2 configuration)', () => {
     it('unlocks the User tab so the assertion config can be edited', () => {
       render(
-        <EditTokenSettingsTabs application={application} oauth2Config={undefined} onFieldChange={onFieldChange} />,
+        <EditTokenSettingsTabs application={application} editedApp={{}} oauth2Config={undefined} onFieldChange={onFieldChange} />,
       );
 
       expect(screen.getByRole('tab', {name: 'User'})).toBeEnabled();
@@ -178,7 +185,7 @@ describe('EditTokenSettingsTabs', () => {
     it('opens on the User sub-tab and keeps the Application notice behind its own tab', async () => {
       const user = userEvent.setup();
       render(
-        <EditTokenSettingsTabs application={application} oauth2Config={undefined} onFieldChange={onFieldChange} />,
+        <EditTokenSettingsTabs application={application} editedApp={{}} oauth2Config={undefined} onFieldChange={onFieldChange} />,
       );
 
       expect(screen.getByRole('tab', {name: 'User'})).toHaveAttribute('aria-selected', 'true');
@@ -195,6 +202,7 @@ describe('EditTokenSettingsTabs', () => {
     const {rerender} = render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
         onFieldChange={onFieldChange}
         sectionResetKey={0}
@@ -207,6 +215,7 @@ describe('EditTokenSettingsTabs', () => {
     rerender(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={{grantTypes: ['client_credentials'], responseTypes: []}}
         onFieldChange={onFieldChange}
         sectionResetKey={1}
@@ -222,6 +231,7 @@ describe('EditTokenSettingsTabs', () => {
     const {rerender} = render(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={{grantTypes: ['authorization_code'], responseTypes: []}}
         onFieldChange={onFieldChange}
         sectionResetKey={0}
@@ -235,6 +245,7 @@ describe('EditTokenSettingsTabs', () => {
     rerender(
       <EditTokenSettingsTabs
         application={application}
+        editedApp={{}}
         oauth2Config={{grantTypes: ['authorization_code'], responseTypes: []}}
         onFieldChange={onFieldChange}
         sectionResetKey={1}

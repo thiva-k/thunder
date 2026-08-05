@@ -321,6 +321,7 @@ export default function ApplicationEditPage() {
               <EditTokenSettings
                 sectionResetKey={sectionResetKey}
                 application={application}
+                editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
                 onValidationChange={setHasValidationErrors}
@@ -638,6 +639,7 @@ export default function ApplicationEditPage() {
               <EditTokenSettingsTabs
                 sectionResetKey={sectionResetKey}
                 application={application}
+                editedApp={editedApp}
                 oauth2Config={oauth2Config}
                 onFieldChange={handleFieldChange}
                 onValidationChange={setHasValidationErrors}
