@@ -40,8 +40,10 @@ export class ApplicationsPage extends BasePage {
   // Edit page — shared
   readonly saveButton: Locator;
 
-  // Edit page — General tab
+  // Edit page — Overview tab
   readonly applicationIdField: Locator;
+
+  // Edit page — General tab
   readonly clientIdField: Locator;
   readonly applicationUrlInput: Locator;
   readonly addUriButton: Locator;
@@ -87,8 +89,8 @@ export class ApplicationsPage extends BasePage {
     // Edit page — shared
     this.saveButton = page.getByRole("button", { name: /^save$/i }).or(page.locator('button:has-text("Save")'));
 
-    // Edit page — General tab
-    this.applicationIdField = page.locator("#application-id-input").or(page.getByLabel("Application ID"));
+    // Edit page — Overview tab
+    this.applicationIdField = page.getByText("Application ID", { exact: true });
     this.clientIdField = page.getByLabel("Client ID");
     this.applicationUrlInput = page.locator("#application-url-input").or(page.getByLabel("Application URL"));
     this.addUriButton = page.getByRole("button", { name: /add uri/i }).or(page.locator('button:has-text("Add URI")'));

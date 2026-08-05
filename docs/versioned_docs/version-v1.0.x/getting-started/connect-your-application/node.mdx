@@ -4,7 +4,7 @@ title: Node.js Quickstart
 docType: quickstart
 sidebar_position: 5
 persona: app
-description: Add {{ProductName}} authentication to a vanilla Node.js application using the @thunderid/node SDK.
+description: Authenticate a Node.js service to {{ProductName}} as itself using the OAuth 2.0 client_credentials grant with the @thunderid/node SDK.
 ---
 
 import {
@@ -20,7 +20,7 @@ import {
 
 # Node.js Quickstart
 
-Use this guide to add <ProductName /> authentication to a vanilla Node.js application using the `@thunderid/node` SDK and the built-in `http` module. No framework required.
+Use this guide to authenticate a Node.js service to <ProductName /> using the `@thunderid/node` SDK. Unlike the other quickstarts in this section, there's no user and no browser sign-in: the service authenticates as **itself** with the OAuth 2.0 `client_credentials` grant, then uses the resulting access token to call another piece of business logic. Use this pattern for background jobs, cron tasks, or one backend service calling another, where there's no human in the loop to redirect through a login page.
 
 <TutorialHero>
 
@@ -28,17 +28,21 @@ Use this guide to add <ProductName /> authentication to a vanilla Node.js applic
 
 <TutorialHeroItem icon={<Boxes />}>Create a Node.js project</TutorialHeroItem>
 <TutorialHeroItem icon={<Package />}>Install the <code>@thunderid/node</code> package</TutorialHeroItem>
-<TutorialHeroItem icon={<LogIn />}>Add working sign-in and sign-out routes</TutorialHeroItem>
-<TutorialHeroItem icon={<BookOpen />}>Protect routes and display the signed-in user's profile</TutorialHeroItem>
+<TutorialHeroItem icon={<LogIn />}>Authenticate a service with the <code>client_credentials</code> grant</TutorialHeroItem>
+<TutorialHeroItem icon={<BookOpen />}>Use the resulting access token to call business logic</TutorialHeroItem>
 
 ## Prerequisites
 
-<TutorialHeroItem icon={<Clock />}>About 15 minutes</TutorialHeroItem>
+<TutorialHeroItem icon={<Clock />}>About 10 minutes</TutorialHeroItem>
 <TutorialHeroItem icon={<Hexagon />}>Node.js 18+ installed on your system</TutorialHeroItem>
 <TutorialHeroItem icon={<Package />}>npm, yarn, or pnpm</TutorialHeroItem>
 <TutorialHeroItem icon={<FileCode />}>Your preferred code editor</TutorialHeroItem>
 
 </TutorialHero>
+
+:::tip Example Source Code
+Check out the complete <RepoLink path="/tree/main/sdks/javascript-sdks/samples/node/quickstart">Node.js Quickstart Sample</RepoLink> in the <ProductName /> repository.
+:::
 
 <Stepper stepNode="h2" as="h2">
 
@@ -50,7 +54,9 @@ Start a local <ProductName /> instance. Pick the method that works best for you:
 
 Once it's running, the console is available at [https://localhost:8090/console](https://localhost:8090/console).
 
-## Create an Application
+## Create an Agent
+
+Agents are <ProductName />'s machine identities, distinct from user-facing applications. A background service like this one authenticates as an agent, not as an application.
 
 1. Sign in to the Console.
 
@@ -58,12 +64,11 @@ Once it's running, the console is available at [https://localhost:8090/console](
     If you used the default setup, sign in to the Console as `admin` with the password generated during setup and printed to the setup output (unless you supplied your own).
     :::
 
-2. Navigate to **Applications**, and click **Add Application**.
-
-3. Under **Technology**, select **Node.js**.
-4. Enter a name (e.g. `My Node.js App`) and create an application. The rest of the settings can stay at their defaults.
-5. Copy both the **Client ID** and **Client Secret** from the window that pops up. The Client ID can also be found in the **General** tab.
-6. Under **General**, add `http://localhost:3000/callback` to the list of **Authorized Redirect URIs**.
+2. Navigate to **Agents** and click **Add Agent**.
+3. Enter an **Agent name** (e.g. `node-service-quickstart`) and select an **Owner**, then click **Create agent**.
+4. <ProductName /> displays the agent's **Client Secret** once. Copy it now; it cannot be retrieved again.
+5. Open the agent's **Advanced Settings** tab, enable the `client_credentials` grant type, and set the **Client authentication method** to `client_secret_basic`.
+6. Copy the **Client ID** from the **General** tab.
 
 ## Create a Node.js Project
 
@@ -71,20 +76,20 @@ Initialize a new Node.js project:
 
 <CodeGroup>
   <CodeBlock lang="bash" label="npm">
-    mkdir my-node-app
-    cd my-node-app
+    mkdir my-node-service
+    cd my-node-service
     npm init -y
   </CodeBlock>
 
   <CodeBlock lang="bash" label="Yarn">
-    mkdir my-node-app
-    cd my-node-app
+    mkdir my-node-service
+    cd my-node-service
     yarn init -y
   </CodeBlock>
 
   <CodeBlock lang="bash" label="pnpm">
-    mkdir my-node-app
-    cd my-node-app
+    mkdir my-node-service
+    cd my-node-service
     pnpm init
   </CodeBlock>
 </CodeGroup>
@@ -107,309 +112,92 @@ Install the <ProductName /> Node.js SDK:
   </CodeBlock>
 </CodeGroup>
 
-## Initialize the Client
+## Authenticate as the Service
 
-Create an `index.js` file and initialize the `ThunderIDNodeClient` with your application credentials:
+Create an `index.mjs` file and initialize `ThunderIDNodeClient` with `grantType: 'client_credentials'`. With that set, `getAccessToken()` authenticates as the service itself, no session and no sign-in, and transparently fetches, caches, and refreshes the token.
 
-```js title="index.js" showLineNumbers
-const http = require('http');
-const { URL } = require('url');
-const { randomUUID } = require('crypto');
-const { ThunderIDNodeClient } = require('@thunderid/node');
+```js title="index.mjs" showLineNumbers
+import { ThunderIDNodeClient } from '@thunderid/node';
 
-const PORT = 3000;
-const SESSION_COOKIE = 'tid_session';
+const client = new ThunderIDNodeClient();
 
-const auth = new ThunderIDNodeClient();
+await client.initialize({
+  baseUrl: 'https://localhost:8090',
+  clientId: '<your-agent-client-id>',
+  clientSecret: '<your-agent-client-secret>',
+  grantType: 'client_credentials',
+});
 
-function getSessionId(req) {
-  const cookieHeader = req.headers.cookie ?? '';
-  for (const part of cookieHeader.split(';')) {
-    const [name, value] = part.trim().split('=');
-    if (name === SESSION_COOKIE) return decodeURIComponent(value);
-  }
-  return null;
-}
+const accessToken = await client.getAccessToken();
+const { scope } = await client.decodeJwtToken(accessToken);
 
-async function main() {
-  await auth.initialize({
-    clientId: '<your-client-id>',
-    clientSecret: '<your-client-secret>',
-    baseUrl: 'https://localhost:8090',
-    afterSignInUrl: 'http://localhost:3000/callback',
-    afterSignOutUrl: 'http://localhost:3000',
-  });
-
-  const server = http.createServer(async (req, res) => {
-    // routes added in the next step
-  });
-
-  server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-main();
+console.log(`Authenticated with scope: ${scope}`);
 ```
 
 :::warning Configuration
-Replace `<your-client-id>` and `<your-client-secret>` with the values from your <ProductName /> application. Set the authorized redirect URL in your application settings to `http://localhost:3000/callback`.
+Replace `<your-agent-client-id>` and `<your-agent-client-secret>` with the **Client ID** and **Client Secret** from your <ProductName /> agent.
 :::
 
 ### Configuration Parameters
 
 | Parameter | Description |
 |-----------|-------------|
-| `clientId` | The Client ID from your <ProductName /> application |
-| `clientSecret` | The Client Secret from your <ProductName /> application |
 | `baseUrl` | Your <ProductName /> instance URL (e.g., `https://localhost:8090`) |
-| `afterSignInUrl` | The callback URL <ProductName /> redirects to after sign-in |
-| `afterSignOutUrl` | The URL to redirect to after sign-out |
+| `clientId` | The Client ID from your <ProductName /> agent |
+| `clientSecret` | The Client Secret from your <ProductName /> agent |
+| `grantType` | Set to `'client_credentials'` to authenticate the service as itself, with no user and no browser redirect |
 
-## Add Sign-In and Sign-Out Routes
+## Call Business Logic With the Token
 
-The `signIn` method works in two phases: it first redirects the user to <ProductName />, then handles the authorization code on the callback. Session state is tied to a session ID stored in a cookie.
+A real backend keeps authentication in its own module instead of scattering it across business logic. Update `index.mjs` so the rest of the app asks for a token only when it needs one, instead of handling `getAccessToken()` and the `Authorization` header directly:
 
-Replace the `// routes added in the next step` comment with:
+```js title="index.mjs" showLineNumbers
+import { ThunderIDNodeClient } from '@thunderid/node';
 
-```js title="index.js" showLineNumbers
-    const url = new URL(req.url, `http://localhost:${PORT}`);
+const client = new ThunderIDNodeClient();
 
-    try {
-      if (url.pathname === '/login') {
-        let sessionId = getSessionId(req);
-        const extraHeaders = {};
-        if (!sessionId) {
-          sessionId = randomUUID();
-          extraHeaders['Set-Cookie'] =
-            `${SESSION_COOKIE}=${sessionId}; HttpOnly; SameSite=Lax; Path=/`;
-        }
-        await auth.signIn((authUrl) => {
-          res.writeHead(302, { ...extraHeaders, Location: authUrl });
-          res.end();
-        }, sessionId);
+await client.initialize({
+  baseUrl: 'https://localhost:8090',
+  clientId: '<your-agent-client-id>',
+  clientSecret: '<your-agent-client-secret>',
+  grantType: 'client_credentials',
+});
 
-      } else if (url.pathname === '/callback') {
-        const code = url.searchParams.get('code');
-        const state = url.searchParams.get('state');
-        const sessionState = url.searchParams.get('session_state');
-        const sessionId = getSessionId(req);
+async function getStock(sku) {
+  const accessToken = await client.getAccessToken();
 
-        if (!sessionId || !code || !state) {
-          res.writeHead(400);
-          return res.end('Bad request');
-        }
+  // A real backend would attach this as `Authorization: Bearer ${accessToken}`
+  // on a request to a separate inventory service. This quickstart just proves
+  // the token was obtained before answering.
+  console.log(`Requesting ${sku} with a valid access token`);
 
-        await auth.signIn(() => {}, sessionId, code, sessionState, state);
-        res.writeHead(302, { Location: '/profile' });
-        res.end();
-
-      } else if (url.pathname === '/logout') {
-        const sessionId = getSessionId(req);
-        if (!sessionId) {
-          res.writeHead(302, { Location: '/' });
-          return res.end();
-        }
-        const signOutUrl = await auth.signOut(sessionId);
-        res.writeHead(302, {
-          Location: signOutUrl,
-          'Set-Cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`,
-        });
-        res.end();
-
-      }
-    } catch {
-      res.writeHead(500);
-      res.end('Internal server error');
-    }
-```
-
-**How the sign-in flow works:**
-
-1. `GET /login`: generates a session ID, stores it in a cookie, and calls `signIn` with an `authUrlCallback`. The callback receives the <ProductName /> authorization URL and redirects the user's browser there.
-2. `GET /callback`: <ProductName /> redirects back with `code` and `state` query parameters. Calling `signIn` again with those values exchanges the code for tokens and stores the session.
-3. `GET /logout`: calls `signOut` to get the OIDC end-session URL, clears the local cookie, then redirects the browser to complete the logout at <ProductName />.
-
-## Protect a Route and Display User Info
-
-Use `isSignedIn` to guard routes and `getUser` to retrieve the authenticated user's profile. Add these inside the same `try` block, before the closing `}`:
-
-```js title="index.js" showLineNumbers
-      if (url.pathname === '/') {
-        const sessionId = getSessionId(req);
-        const signedIn = sessionId && (await auth.isSignedIn(sessionId));
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(signedIn
-          ? '<a href="/profile">View profile</a> | <a href="/logout">Sign out</a>'
-          : '<a href="/login">Sign in</a>'
-        );
-
-      } else if (url.pathname === '/profile') {
-        const sessionId = getSessionId(req);
-        if (!sessionId || !(await auth.isSignedIn(sessionId))) {
-          res.writeHead(302, { Location: '/login' });
-          return res.end();
-        }
-        const user = await auth.getUser(sessionId);
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`
-          <h1>Welcome, ${user.name || user.username}!</h1>
-          <p><strong>Email:</strong> ${user.email}</p>
-          <p><strong>First name:</strong> ${user.given_name}</p>
-          <p><strong>Last name:</strong> ${user.family_name}</p>
-          <a href="/logout">Sign out</a>
-        `);
-
-      } else if (url.pathname === '/login') {
-```
-
-## Complete index.js
-
-Here is the full file for reference:
-
-```js title="index.js" showLineNumbers
-const http = require('http');
-const { URL } = require('url');
-const { randomUUID } = require('crypto');
-const { ThunderIDNodeClient } = require('@thunderid/node');
-
-const PORT = 3000;
-const SESSION_COOKIE = 'tid_session';
-
-const auth = new ThunderIDNodeClient();
-
-function getSessionId(req) {
-  const cookieHeader = req.headers.cookie ?? '';
-  for (const part of cookieHeader.split(';')) {
-    const [name, value] = part.trim().split('=');
-    if (name === SESSION_COOKIE) return decodeURIComponent(value);
-  }
-  return null;
+  return { sku, inStock: true };
 }
 
-async function main() {
-  await auth.initialize({
-    clientId: '<your-client-id>',
-    clientSecret: '<your-client-secret>',
-    baseUrl: 'https://localhost:8090',
-    afterSignInUrl: 'http://localhost:3000/callback',
-    afterSignOutUrl: 'http://localhost:3000',
-  });
-
-  const server = http.createServer(async (req, res) => {
-    const url = new URL(req.url, `http://localhost:${PORT}`);
-
-    try {
-      if (url.pathname === '/') {
-        const sessionId = getSessionId(req);
-        const signedIn = sessionId && (await auth.isSignedIn(sessionId));
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(signedIn
-          ? '<a href="/profile">View profile</a> | <a href="/logout">Sign out</a>'
-          : '<a href="/login">Sign in</a>'
-        );
-
-      } else if (url.pathname === '/profile') {
-        const sessionId = getSessionId(req);
-        if (!sessionId || !(await auth.isSignedIn(sessionId))) {
-          res.writeHead(302, { Location: '/login' });
-          return res.end();
-        }
-        const user = await auth.getUser(sessionId);
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(`
-          <h1>Welcome, ${user.name || user.username}!</h1>
-          <p><strong>Email:</strong> ${user.email}</p>
-          <p><strong>First name:</strong> ${user.given_name}</p>
-          <p><strong>Last name:</strong> ${user.family_name}</p>
-          <a href="/logout">Sign out</a>
-        `);
-
-      } else if (url.pathname === '/login') {
-        let sessionId = getSessionId(req);
-        const extraHeaders = {};
-        if (!sessionId) {
-          sessionId = randomUUID();
-          extraHeaders['Set-Cookie'] =
-            `${SESSION_COOKIE}=${sessionId}; HttpOnly; SameSite=Lax; Path=/`;
-        }
-        await auth.signIn((authUrl) => {
-          res.writeHead(302, { ...extraHeaders, Location: authUrl });
-          res.end();
-        }, sessionId);
-
-      } else if (url.pathname === '/callback') {
-        const code = url.searchParams.get('code');
-        const state = url.searchParams.get('state');
-        const sessionState = url.searchParams.get('session_state');
-        const sessionId = getSessionId(req);
-
-        if (!sessionId || !code || !state) {
-          res.writeHead(400);
-          return res.end('Bad request');
-        }
-
-        await auth.signIn(() => {}, sessionId, code, sessionState, state);
-        res.writeHead(302, { Location: '/profile' });
-        res.end();
-
-      } else if (url.pathname === '/logout') {
-        const sessionId = getSessionId(req);
-        if (!sessionId) {
-          res.writeHead(302, { Location: '/' });
-          return res.end();
-        }
-        const signOutUrl = await auth.signOut(sessionId);
-        res.writeHead(302, {
-          Location: signOutUrl,
-          'Set-Cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`,
-        });
-        res.end();
-
-      } else {
-        res.writeHead(404);
-        res.end('Not found');
-      }
-    } catch {
-      res.writeHead(500);
-      res.end('Internal server error');
-    }
-  });
-
-  server.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
-}
-
-main();
+const item = await getStock('SKU-100');
+console.log(item);
 ```
 
-## Run Your App
+## Run Your Service
 
-Start the server:
+Start the script:
 
 <CodeGroup>
   <CodeBlock lang="bash" label="npm">
-    node index.js
+    node index.mjs
   </CodeBlock>
 
   <CodeBlock lang="bash" label="Yarn">
-    yarn node index.js
+    yarn node index.mjs
   </CodeBlock>
 
   <CodeBlock lang="bash" label="pnpm">
-    pnpm node index.js
+    pnpm node index.mjs
   </CodeBlock>
 </CodeGroup>
 
-Open [http://localhost:3000](http://localhost:3000).
-
-:::note Test credentials
-You'll need a user to sign in with. If you haven't created one yet, open <ConsoleUrl />, navigate to **Users**, and add a test user with an email and password.
-:::
-
 :::tip Success
-You should see the sign-in link. Click it to be redirected to the <ProductName />-hosted sign-in page. After authenticating with your test user, you'll return to the `/profile` route with your user profile displayed.
+The script authenticates once, prints the scope it received, then calls `getStock()` and prints the result before exiting.
 :::
 
 </Stepper>
@@ -418,11 +206,11 @@ You should see the sign-in link. Click it to be redirected to the <ProductName /
 
 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', marginTop: '1.5rem'}}>
 
-  <a href="../../../guides/flows/what-are-flows" style={{textDecoration: 'none', color: 'inherit'}}>
+  <a href="../../../guides/agents/agent-authentication" style={{textDecoration: 'none', color: 'inherit'}}>
     <div style={{border: '1px solid var(--ifm-color-emphasis-300)', borderRadius: '10px', padding: '1.25rem', cursor: 'pointer'}}>
-      <div style={{fontSize: '1rem', fontWeight: '700', marginBottom: '0.4rem'}}>Upgrade the sign-in flow</div>
-      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', marginBottom: '0.75rem'}}>Add MFA, passkeys, or social login to your flow without changing your route wiring.</div>
-      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-primary)', fontWeight: 600}}>Flow Designer →</div>
+      <div style={{fontSize: '1rem', fontWeight: '700', marginBottom: '0.4rem'}}>Agent Authentication</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-emphasis-700)', marginBottom: '0.75rem'}}>Request specific scopes, narrow tokens to a resource server, and troubleshoot the token endpoint directly.</div>
+      <div style={{fontSize: '0.875rem', color: 'var(--ifm-color-primary)', fontWeight: 600}}>Read the Guide →</div>
     </div>
   </a>
 

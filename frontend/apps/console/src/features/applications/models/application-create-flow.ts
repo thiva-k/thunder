@@ -23,7 +23,7 @@ export const ApplicationCreateFlowStep = {
  * @public
  */
 export const ApplicationCreateFlowSignInApproach = {
-  INBUILT: 'INBUILT',
+  REDIRECT_BASED: 'REDIRECT_BASED',
   EMBEDDED: 'EMBEDDED',
 } as const;
 

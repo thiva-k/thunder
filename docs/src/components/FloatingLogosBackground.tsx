@@ -1,13 +1,12 @@
 // Copyright 2026 The ThunderID Authors
 // SPDX-License-Identifier: Apache-2.0
 
+import {AndroidLogo, FlutterLogo} from '@thunderid/components';
 import {Box} from '@wso2/oxygen-ui';
 import {JSX} from 'react';
-import AndroidLogo from './icons/AndroidLogo';
 import AngularLogo from './icons/AngularLogo';
 import BrowserLogo from './icons/BrowserLogo';
 import ExpressLogo from './icons/ExpressLogo';
-import FlutterLogo from './icons/FlutterLogo';
 import GoLogo from './icons/GoLogo';
 import IOSLogo from './icons/IOSLogo';
 import NextLogo from './icons/NextLogo';

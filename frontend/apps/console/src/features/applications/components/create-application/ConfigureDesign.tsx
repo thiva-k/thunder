@@ -306,14 +306,14 @@ export default function ConfigureDesign({
           redirect-only and have no choice to make here. */}
       {showApproachSection &&
         (() => {
-          const isInbuiltSelected = selectedApproach === ApplicationCreateFlowSignInApproach.INBUILT;
+          const isInbuiltSelected = selectedApproach === ApplicationCreateFlowSignInApproach.REDIRECT_BASED;
           const isEmbeddedSelected = selectedApproach === ApplicationCreateFlowSignInApproach.EMBEDDED;
 
           const hostedPagesCard = (
             <Card
               key="hosted-pages"
               variant="outlined"
-              onClick={() => onApproachChange(ApplicationCreateFlowSignInApproach.INBUILT)}
+              onClick={() => onApproachChange(ApplicationCreateFlowSignInApproach.REDIRECT_BASED)}
               sx={{borderRadius: '14px'}}
             >
               <CardActionArea
@@ -333,7 +333,7 @@ export default function ConfigureDesign({
                 <CardContent sx={{p: 3}}>
                   <Stack direction="row" spacing={2} alignItems="flex-start">
                     <FormControlLabel
-                      value={ApplicationCreateFlowSignInApproach.INBUILT}
+                      value={ApplicationCreateFlowSignInApproach.REDIRECT_BASED}
                       control={<Radio />}
                       label=""
                       sx={{m: 0, mt: 0.25}}

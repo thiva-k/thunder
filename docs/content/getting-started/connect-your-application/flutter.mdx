@@ -65,7 +65,11 @@ Once it's running, the console is available at [https://localhost:8090/console](
 
 3. Under **Application Type**, select **Mobile App**.
 4. Enter a name (e.g. `My Flutter App`) and create an application. The rest of the settings can stay at their defaults.
-5. Copy the **Client ID** from the **General** tab. You'll add the redirect URI in the next step after configuring your URL scheme.
+5. Copy the **Application ID** from the **General** tab, under **Quick Copy**.
+
+:::info App-Native Authentication
+This quickstart uses app-native authentication through the Flow Execution API. The Flutter SDK renders the sign-in and sign-up forms natively in your app, so you only need the **Application ID**, no OAuth 2.0 Client ID and no redirect URI.
+:::
 
 ## Create a Flutter App
 
@@ -95,55 +99,6 @@ Then install it:
 flutter pub get
 ```
 
-## Configure a Callback URL Scheme
-
-<ProductName /> redirects back to your app after sign-in and sign-out using a custom URL scheme. You need to register this scheme on both platforms.
-
-### iOS
-
-Open `ios/Runner/Info.plist` and add a URL scheme under **URL Types**:
-
-```xml title="ios/Runner/Info.plist"
-<key>CFBundleURLTypes</key>
-<array>
-  <dict>
-    <key>CFBundleURLSchemes</key>
-    <array>
-      <string>dev.thunderid.app</string>
-    </array>
-  </dict>
-</array>
-```
-
-### Android
-
-Open `android/app/src/main/AndroidManifest.xml` and add an intent filter inside your `<activity>` tag:
-
-```xml title="android/app/src/main/AndroidManifest.xml"
-<intent-filter>
-  <action android:name="android.intent.action.VIEW" />
-  <category android:name="android.intent.category.DEFAULT" />
-  <category android:name="android.intent.category.BROWSABLE" />
-  <data
-    android:scheme="dev.thunderid.app"
-    android:host="callback" />
-</intent-filter>
-```
-
-### Register the URIs in the console
-
-In the <ProductName /> console, open your registered application and add the following as an **Allowed Redirect URI**:
-
-```text
-dev.thunderid.app://callback
-```
-
-Add the same value as an **Allowed Post-Logout Redirect URI**:
-
-```text
-dev.thunderid.app://logout
-```
-
 ## Initialize the SDK
 
 Wrap your root widget with `ThunderIDProvider` in `lib/main.dart`:
@@ -157,10 +112,7 @@ void main() {
     ThunderIDProvider(
       config: ThunderIDConfig(
         baseUrl: 'https://localhost:8090',
-        clientId: '<your-client-id>',
         scopes: const ['openid', 'profile', 'email'],
-        afterSignInUrl: 'dev.thunderid.app://callback',
-        afterSignOutUrl: 'dev.thunderid.app://logout',
         applicationId: '<your-application-id>',
       ),
       child: const MyApp(),
@@ -181,7 +133,7 @@ class MyApp extends StatelessWidget {
 ```
 
 :::warning Configuration
-Replace `<your-client-id>` with the **Client ID** and `<your-application-id>` with the **Application ID** from your <ProductName /> application settings.
+Replace `<your-application-id>` with the **Application ID** from your <ProductName /> application settings.
 :::
 
 ### Configuration Parameters
@@ -189,11 +141,8 @@ Replace `<your-client-id>` with the **Client ID** and `<your-application-id>` wi
 | Parameter | Description |
 |-----------|-------------|
 | `baseUrl` | Your <ProductName /> instance URL. Must use HTTPS. |
-| `clientId` | The Client ID from your <ProductName /> application |
 | `scopes` | OAuth 2.0 scopes to request. Include `'openid'` at minimum. |
-| `afterSignInUrl` | The redirect URI to return to after sign-in |
-| `afterSignOutUrl` | The redirect URI to return to after sign-out |
-| `applicationId` | The Application ID used for embedded (app-native) sign-in flows |
+| `applicationId` | The Application ID used for the app-native sign-in and sign-up flows |
 
 ## Add Sign-In and Sign-Out
 

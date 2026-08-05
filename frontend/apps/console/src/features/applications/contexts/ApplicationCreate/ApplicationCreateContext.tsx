@@ -176,7 +176,7 @@ export interface ApplicationCreateContextType {
   setSmsOtpSenderId: (senderId: string) => void;
 
   /**
-   * The selected sign-in approach (INBUILT or CUSTOM).
+   * The selected sign-in approach (REDIRECT_BASED or CUSTOM).
    * @remark Needed for step 04: Configure Approach.
    */
   signInApproach: ApplicationCreateFlowSignInApproach;

@@ -241,7 +241,7 @@ function DefaultConfigureDesignImpl({
       <button type="button" data-testid="select-embedded-approach" onClick={() => onApproachChange('EMBEDDED')}>
         Select Embedded
       </button>
-      <button type="button" data-testid="select-inbuilt-approach" onClick={() => onApproachChange('INBUILT')}>
+      <button type="button" data-testid="select-inbuilt-approach" onClick={() => onApproachChange('REDIRECT_BASED')}>
         Select Inbuilt
       </button>
       <button type="button" data-testid="select-theme-btn" onClick={() => onThemeSelect?.('theme-1', {} as Theme)}>
@@ -341,7 +341,9 @@ vi.mock('../../components/create-application/ConfigureDetails', () => ({
 }));
 
 vi.mock('../../../../components/GatePreview/GatePreview', () => ({
-  default: () => <div data-testid="preview" />,
+  default: ({showToolbar, viewport}: {showToolbar?: boolean; viewport?: {width: string; height: string}}) => (
+    <div data-testid="preview" data-show-toolbar={String(showToolbar)} data-viewport-width={viewport?.width ?? ''} />
+  ),
 }));
 
 vi.mock('@wso2/oxygen-ui', async (importOriginal) => {
@@ -491,6 +493,33 @@ function TemplateSeeder(): JSX.Element {
         }
       >
         Select Browser
+      </button>
+      <button
+        type="button"
+        aria-label="seed android technology template"
+        data-testid="select-android-technology"
+        onClick={() =>
+          seed('ANDROID', null, {
+            id: 'android',
+            type: 'mobile',
+            previewDevice: 'mobile',
+            creationFlow: {
+              steps: ['ORGANIZATION_UNIT', 'DETAILS', 'SECURITY', 'DESIGN', 'CONFIGURE', 'COMPLETE'],
+              previewSteps: ['DETAILS', 'SECURITY', 'DESIGN'],
+            },
+            defaults: {
+              signInApproach: 'EMBEDDED',
+              inboundAuthConfig: [
+                {
+                  type: 'oauth2',
+                  config: {grantTypes: ['authorization_code'], responseTypes: ['code'], publicClient: true},
+                },
+              ],
+            },
+          })
+        }
+      >
+        Select Android
       </button>
       <button
         type="button"
@@ -1086,6 +1115,18 @@ describe('ApplicationCreatePage', () => {
       expect(screen.getByTestId('allow-embedded-approach')).toHaveTextContent('true');
     });
 
+    it('should offer the embedded approach for the Android technology template', async () => {
+      // Android (like iOS/Flutter) is a public client for the same reason browser SPAs are, but
+      // it's a native app-native flow, not a redirect-only one — the embedded approach must still
+      // be offered, matching the generic Mobile platform template's behavior.
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-android-technology'));
+      await goToDesignStep();
+
+      expect(screen.getByTestId('allow-embedded-approach')).toHaveTextContent('true');
+    });
+
     it('should show the CONFIGURE step after DESIGN for the wallet platform', async () => {
       renderWithProviders();
 
@@ -1149,6 +1190,40 @@ describe('ApplicationCreatePage', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('application-configure-details')).toBeInTheDocument();
+      });
+    });
+  });
+
+  describe('Preview Device', () => {
+    it('always hides the preview toolbar', async () => {
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-browser-platform'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('preview')).toHaveAttribute('data-show-toolbar', 'false');
+      });
+    });
+
+    it('renders the mobile-sized viewport for the Android technology template', async () => {
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-android-technology'));
+
+      await waitFor(() => {
+        const preview = screen.getByTestId('preview');
+        expect(preview).toHaveAttribute('data-show-toolbar', 'false');
+        expect(preview).toHaveAttribute('data-viewport-width', '40%');
+      });
+    });
+
+    it('renders the default desktop-sized viewport for non-mobile templates', async () => {
+      renderWithProviders();
+
+      await user.click(screen.getByTestId('select-browser-platform'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('preview')).toHaveAttribute('data-viewport-width', '');
       });
     });
   });

@@ -7,7 +7,7 @@
 const TemplateConstants = {
   /**
    * Template modifier suffix for embedded (inbuilt) approach.
-   * Appended to technology template IDs when INBUILT approach is selected.
+   * Appended to technology template IDs when REDIRECT_BASED approach is selected.
    */
   EMBEDDED_SUFFIX: '-embedded',
 

@@ -101,25 +101,25 @@ test.describe("Application Edit", () => {
     }
   });
 
-  /** TC006: Edit page - General tab is default and shows Quick Copy fields */
-  test("TC006: Edit page - General tab is default and shows Quick Copy fields", async ({ applicationsPage }) => {
+  /** TC006: Edit page - Overview tab shows application details */
+  test("TC006: Edit page - Overview tab shows application details", async ({ applicationsPage }) => {
     await test.step("Navigate to application edit page", async () => {
       console.log(`Navigating to edit page for app: ${testAppId}`);
       await applicationsPage.gotoEdit(testAppId);
       await applicationsPage.screenshot("tc006-edit-page");
     });
 
-    await test.step("Verify General tab is selected by default", async () => {
-      const generalTab = applicationsPage.page.getByRole("tab", { name: /general/i });
-      await expect(generalTab).toBeVisible();
-      await expect(generalTab).toHaveAttribute("aria-selected", "true");
-      console.log("General tab is active by default");
+    await test.step("Click Overview tab", async () => {
+      await applicationsPage.clickTab("Overview");
+      const overviewTab = applicationsPage.page.getByRole("tab", { name: /overview/i });
+      await expect(overviewTab).toHaveAttribute("aria-selected", "true");
+      console.log("Overview tab is active");
     });
 
-    await test.step("Verify Application ID field is visible in Quick Copy section", async () => {
+    await test.step("Verify Application ID field is visible in application details", async () => {
       await expect(applicationsPage.applicationIdField).toBeVisible();
       console.log("Application ID field visible");
-      await applicationsPage.screenshot("tc006-quick-copy-fields");
+      await applicationsPage.screenshot("tc006-application-details");
     });
   });
 
@@ -130,6 +130,10 @@ test.describe("Application Edit", () => {
     await test.step("Navigate to application edit page", async () => {
       await applicationsPage.gotoEdit(testAppId);
       await applicationsPage.screenshot("tc007-edit-page");
+    });
+
+    await test.step("Click General tab", async () => {
+      await applicationsPage.clickTab("General");
     });
 
     await test.step("Add a redirect URI", async () => {
@@ -156,6 +160,10 @@ test.describe("Application Edit", () => {
   test("TC008: Edit page - Application URL rejects invalid URL", async ({ applicationsPage }) => {
     await test.step("Navigate to application edit page", async () => {
       await applicationsPage.gotoEdit(testAppId);
+    });
+
+    await test.step("Click General tab", async () => {
+      await applicationsPage.clickTab("General");
     });
 
     await test.step("Type an invalid URL into Application URL field", async () => {
@@ -313,6 +321,10 @@ test.describe("Application Edit", () => {
       await test.step("Navigate to application edit page", async () => {
         await applicationsPage.gotoEdit(deleteTestAppId!);
         await applicationsPage.screenshot("tc012-before-delete");
+      });
+
+      await test.step("Click General tab", async () => {
+        await applicationsPage.clickTab("General");
       });
 
       await test.step("Click Delete Application and confirm", async () => {
