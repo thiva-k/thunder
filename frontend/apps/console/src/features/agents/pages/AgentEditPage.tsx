@@ -34,7 +34,7 @@ import EditAdvancedSettings from '../components/edit-agent/advanced-settings/Edi
 import EditAgentAttributes from '../components/edit-agent/attributes/EditAgentAttributes';
 import EditCredentialsSettings from '../components/edit-agent/credentials/EditCredentialsSettings';
 import EditFlowsSettings from '../components/edit-agent/flows/EditFlowsSettings';
-import EditGeneralSettings from '../components/edit-agent/general/EditGeneralSettings';
+import AgentOverview from '../components/edit-agent/overview/AgentOverview';
 import EditTokensSettings from '../components/edit-agent/tokens/EditTokensSettings';
 import AgentConstants from '../constants/agent-constants';
 import type {Agent, OAuthAgentConfig} from '../models/agent';
@@ -250,16 +250,13 @@ export default function AgentEditPage(): JSX.Element {
 
   const tabs: TabConfig[] = [
     {
-      key: 'general',
-      label: t('agents:edit.page.tabs.general', 'General'),
+      key: 'overview',
+      label: t('agents:edit.page.tabs.overview', 'Overview'),
       render: () => (
-        <EditGeneralSettings
+        <AgentOverview
           agent={agent}
-          copiedField={copiedField}
-          onCopyToClipboard={handleCopyToClipboard}
-          onDeleteSuccess={() => {
-            void handleBack();
-          }}
+          oauth2Config={oauth2Config}
+          onGoToAdvanced={() => handleNavigateToTab('advanced')}
         />
       ),
     },
@@ -329,20 +326,25 @@ export default function AgentEditPage(): JSX.Element {
         />
       ),
     });
-
-    tabs.push({
-      key: 'advanced',
-      label: t('agents:edit.page.tabs.advanced', 'Advanced'),
-      render: () => (
-        <EditAdvancedSettings
-          agent={agent}
-          editedAgent={editedAgent}
-          oauth2Config={oauth2Config}
-          onFieldChange={handleFieldChange}
-        />
-      ),
-    });
   }
+
+  // Always present, even for entity-only agents with no OAuth2 inbound config (Owner assignment
+  // and the Danger Zone apply regardless of OAuth; the OAuth-specific sections hide themselves).
+  tabs.push({
+    key: 'advanced',
+    label: t('agents:edit.page.tabs.advanced', 'Advanced'),
+    render: () => (
+      <EditAdvancedSettings
+        agent={agent}
+        editedAgent={editedAgent}
+        oauth2Config={oauth2Config}
+        onFieldChange={handleFieldChange}
+        onDeleteSuccess={() => {
+          void handleBack();
+        }}
+      />
+    ),
+  });
 
   // Lets a tab's content send the user to a sibling tab, e.g. the Tokens tab pointing at where
   // Delegated mode is turned on. Resolved by key at click time, since which tabs exist depends on

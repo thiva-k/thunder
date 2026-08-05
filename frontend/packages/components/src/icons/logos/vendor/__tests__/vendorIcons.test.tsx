@@ -11,6 +11,7 @@ import GithubIcon from '../GithubIcon';
 import GoogleIcon from '../GoogleIcon';
 import HeidiIcon from '../HeidiIcon';
 import JavaScriptIcon from '../JavaScriptIcon';
+import LangChainLogo from '../LangChainLogo';
 import LissiIcon from '../LissiIcon';
 import NextjsIcon from '../NextjsIcon';
 import NodeIcon from '../NodeIcon';
@@ -49,6 +50,7 @@ const SQUARE_ICONS: SquareIconCase[] = [
   {Component: GithubIcon, defaultSize: 20, name: 'GithubIcon'},
   {Component: GoogleIcon, defaultSize: 20, name: 'GoogleIcon'},
   {Component: JavaScriptIcon, defaultSize: 20, name: 'JavaScriptIcon'},
+  {Component: LangChainLogo, defaultSize: 64, name: 'LangChainLogo'},
   {Component: NextjsIcon, defaultSize: 20, name: 'NextjsIcon'},
   {Component: NuxtIcon, defaultSize: 20, name: 'NuxtIcon'},
   {Component: ReactIcon, defaultSize: 20, name: 'ReactIcon'},

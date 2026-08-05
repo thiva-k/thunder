@@ -1090,7 +1090,7 @@ const translations = {
     'edit.page.back': 'Back to agents',
     'edit.page.description.empty': 'No description',
     'edit.page.description.placeholder': 'Add a description',
-    'edit.page.tabs.general': 'General',
+    'edit.page.tabs.overview': 'Overview',
     'edit.page.tabs.attributes': 'Attributes',
     'edit.page.tabs.credentials': 'Credentials',
     'edit.page.tabs.access': 'Access',
@@ -1117,30 +1117,48 @@ const translations = {
     'edit.attributes.noSchema': 'No schema available for editing',
 
     // Edit page - General tab
-    'edit.general.sections.quickCopy.title': 'Identifier',
-    'edit.general.sections.quickCopy.description': 'The unique identifier for this agent.',
     'edit.general.labels.agentId': 'Agent ID',
     'edit.general.labels.ownerId': 'Owner ID',
-    'edit.general.agentId.hint': 'Unique identifier for this agent',
-    'edit.general.clientId.hint': 'OAuth2 client identifier used by this agent to obtain tokens',
-    'edit.general.owner.hint': 'Identifier of the user that owns this agent',
-    'edit.general.owner.empty': 'No owner assigned',
     'edit.general.sections.owner.title': 'Owner',
     'edit.general.sections.owner.description': 'The user accountable for this agent.',
     'edit.general.sections.owner.label': 'Owner',
-    'edit.general.sections.owner.summaryDescription':
-      'The user who is accountable for this agent, shown in audit records and used as the contact point for questions about what this agent does. Assigning an owner does not give that user any special access to the agent. Manage this from the Advanced tab.',
+    'edit.general.owner.empty': 'No owner assigned',
     'edit.general.sections.attributes.title': 'Attributes',
     'edit.general.sections.attributes.description':
       "A preview of this agent's attribute values. Manage them from the Attributes tab.",
-    'edit.general.sections.organizationUnit.title': 'Organization Unit',
-    'edit.general.sections.organizationUnit.description': 'The organization unit this agent belongs to.',
     'edit.general.sections.dangerZone.title': 'Danger Zone',
     'edit.general.sections.dangerZone.description': 'Actions here are permanent. Make sure before you proceed.',
     'edit.general.dangerZone.deleteAgent.title': 'Delete Agent',
     'edit.general.dangerZone.deleteAgent.description':
       'Permanently deletes this agent and immediately invalidates any tokens it has issued. This action cannot be undone.',
     'edit.general.dangerZone.deleteAgent.button': 'Delete Agent',
+
+    // Edit page - Overview tab
+    'edit.overview.agentDetails.title': 'Agent details',
+    'edit.overview.agentDetails.description': 'Identifiers used in your integration code.',
+    'edit.overview.agentDetails.organizationUnitId': 'Organization Unit ID',
+    'edit.overview.agentDetails.organizationUnitHandle': 'Organization Unit Handle',
+    'edit.overview.endpoints.title': 'Useful Endpoints',
+    'edit.overview.endpoints.description': 'For authenticating this agent, on its own or on behalf of a user.',
+    'edit.overview.endpoints.wellknown': 'OpenID configuration',
+    'edit.overview.endpoints.authorization': 'Authorization endpoint',
+    'edit.overview.endpoints.token': 'Token endpoint',
+    'edit.overview.endpoints.userinfo': 'Userinfo endpoint',
+    'edit.overview.endpoints.jwks': 'JWKS URI',
+    'edit.overview.attributes.title': 'Attributes',
+    'edit.overview.attributes.description':
+      "A preview of this agent's attribute values. Manage them from the Attributes tab.",
+    'edit.overview.accessMode.title': 'Access mode',
+    'edit.overview.accessMode.description': 'How this agent is allowed to authenticate.',
+    'edit.overview.accessMode.editAdvanced': 'Edit in Advanced',
+    'edit.overview.accessMode.own': 'Own identity',
+    'edit.overview.accessMode.delegated': 'On behalf of a user',
+    'edit.overview.accessMode.allowedUserTypes': 'Allowed user types',
+    'edit.overview.signInPreview.notConfigured': 'Not configured',
+    'edit.overview.quickstart.title': 'Connect with LangChain',
+    'edit.overview.quickstart.description':
+      "Register this agent and call it from a LangChain app, running under its own identity or a user's delegated authority.",
+    'edit.overview.quickstart.action': 'Open quickstart',
 
     // Edit page - Credentials tab
     'edit.credentials.clientId.title': 'Client ID',

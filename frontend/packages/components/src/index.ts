@@ -44,6 +44,7 @@ export {default as ExpressIcon} from './icons/logos/vendor/ExpressIcon';
 export {default as NodeIcon} from './icons/logos/vendor/NodeIcon';
 export {default as JavaScriptIcon} from './icons/logos/vendor/JavaScriptIcon';
 export {default as PythonLogo} from './icons/logos/vendor/PythonLogo';
+export {default as LangChainLogo} from './icons/logos/vendor/LangChainLogo';
 
 /* -------------------------- LAB -------------------------- */
 
