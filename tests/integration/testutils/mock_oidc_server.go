@@ -208,6 +208,39 @@ func (m *MockOIDCServer) AddUser(user *OIDCUserInfo) {
 	m.users[user.Sub] = user
 }
 
+// SignJWT signs an arbitrary JWT with the server's RSA private key. Header
+// defaults: alg=RS256, kid=oidc-key-1 (matching the JWKS endpoint).
+func (m *MockOIDCServer) SignJWT(header, claims map[string]interface{}) (string, error) {
+	if _, ok := header["alg"]; !ok {
+		header["alg"] = "RS256"
+	}
+	if _, ok := header["kid"]; !ok {
+		header["kid"] = "oidc-key-1"
+	}
+
+	headerJSON, err := json.Marshal(header)
+	if err != nil {
+		return "", err
+	}
+	headerEncoded := base64.RawURLEncoding.EncodeToString(headerJSON)
+
+	payloadJSON, err := json.Marshal(claims)
+	if err != nil {
+		return "", err
+	}
+	payloadEncoded := base64.RawURLEncoding.EncodeToString(payloadJSON)
+
+	signingInput := headerEncoded + "." + payloadEncoded
+
+	hashed := sha256.Sum256([]byte(signingInput))
+	signature, err := rsa.SignPKCS1v15(rand.Reader, m.privateKey, crypto.SHA256, hashed[:])
+	if err != nil {
+		return "", err
+	}
+
+	return signingInput + "." + base64.RawURLEncoding.EncodeToString(signature), nil
+}
+
 // handleDiscovery handles OIDC discovery endpoint
 func (m *MockOIDCServer) handleDiscovery(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {

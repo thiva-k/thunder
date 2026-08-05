@@ -3529,6 +3529,18 @@ func (suite *ServiceTestSuite) TestTranslateOAuthValidationError() {
 			wantDescKey: "error.applicationservice.client_credentials_cannot_use_none_auth_description",
 		},
 		{
+			name:        "ClientJWTBearerCannotUseNoneAuth",
+			err:         inboundclient.ErrOAuthClientJWTBearerCannotUseNoneAuth,
+			wantCode:    ErrorInvalidOAuthConfiguration.Code,
+			wantDescKey: "error.applicationservice.jwt_bearer_cannot_use_none_auth_description",
+		},
+		{
+			name:        "ClientIDJAGCannotUseNoneAuth",
+			err:         inboundclient.ErrOAuthClientIDJAGCannotUseNoneAuth,
+			wantCode:    ErrorInvalidOAuthConfiguration.Code,
+			wantDescKey: "error.applicationservice.idjag_cannot_use_none_auth_description",
+		},
+		{
 			name:        "PublicClientMustUseNoneAuth",
 			err:         inboundclient.ErrOAuthPublicClientMustUseNoneAuth,
 			wantCode:    ErrorInvalidPublicClientConfiguration.Code,

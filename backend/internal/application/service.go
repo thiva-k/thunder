@@ -1392,6 +1392,18 @@ func translateOAuthValidationError(err error) *tidcommon.ServiceError {
 			Key:          "error.applicationservice.client_credentials_cannot_use_none_auth_description",
 			DefaultValue: "client_credentials grant type cannot use 'none' authentication method",
 		})
+	case errors.Is(err, inboundclient.ErrOAuthClientJWTBearerCannotUseNoneAuth):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.applicationservice.jwt_bearer_cannot_use_none_auth_description",
+			DefaultValue: "jwt-bearer grant type requires a confidential client and cannot use 'none' " +
+				"token endpoint authentication method",
+		})
+	case errors.Is(err, inboundclient.ErrOAuthClientIDJAGCannotUseNoneAuth):
+		return tidcommon.CustomServiceError(ErrorInvalidOAuthConfiguration, tidcommon.I18nMessage{
+			Key: "error.applicationservice.idjag_cannot_use_none_auth_description",
+			DefaultValue: "ID-JAG configuration requires a confidential client and cannot use 'none' " +
+				"token endpoint authentication method",
+		})
 
 	// OAuth: public client
 	case errors.Is(err, inboundclient.ErrOAuthPublicClientMustUseNoneAuth):
